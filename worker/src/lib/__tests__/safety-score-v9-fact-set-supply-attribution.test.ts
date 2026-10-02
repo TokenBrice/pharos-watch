@@ -576,10 +576,7 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
       `supply-review-outcome:v1:${outcomeEvidence.contentSha256}`,
     );
     const outcomeDigest = () => {
-      const current = buildSafetyScoreV9BaselineExtension(fixed, {
-        metaById: new Map([["wm-m0", wmFactSetMeta()]]),
-      });
-      return compileSafetyScoreV9FactSetFromFixedInput(fixed, current).assets[0]!.evidence.find(
+      return compileWm(fixed).wm.evidence.find(
         (evidence) => evidence.evidenceId === "wm-m0:supply-review-outcome",
       )!.contentSha256;
     };

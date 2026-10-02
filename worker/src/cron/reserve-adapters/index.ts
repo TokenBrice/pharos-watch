@@ -86,6 +86,7 @@ import { fetchSgForgeCoinvertibleReserves } from "./sgforge-coinvertible";
 import { fetchSingleAssetReserves } from "./single-asset";
 import { fetchSkyMakercoreReserves } from "./sky-makercore";
 import { fetchSolomonProtocolReserves } from "./solomon-protocol";
+import { fetchSolomonChanceryReserves } from "./solomon-chancery";
 
 import { fetchSolsticeAttestationReserves } from "./solstice-attestation";
 import { fetchSpikoApiReserves } from "./spiko-api";
@@ -207,6 +208,7 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS: Record<LiveReserveAdapterKey, Adapte
   "single-asset": fetchSingleAssetReserves,
   "sky-makercore": fetchSkyMakercoreReserves,
   "solomon-protocol": fetchSolomonProtocolReserves,
+  "solomon-chancery": fetchSolomonChanceryReserves,
 
   "spiko-api": fetchSpikoApiReserves,
   "stoneyield-router-pool": fetchStoneyieldRouterPoolReserves,

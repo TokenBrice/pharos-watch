@@ -264,7 +264,7 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
   "vnxau-vnx": {
     ...commodityIssuerBase,
     ...documentedBoundSupplyFull(REVIEWED_COVERAGE_EXPANSION_AT),
-    reviewedAt: "2026-10-01",
+    reviewedAt: "2026-10-02",
     routeStatus: "unknown",
     unresolvedOutputDisposition: "issuer-undisclosed",
     costModel: documentedVariableFee(
@@ -285,13 +285,42 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
       ),
       sourceRef(
         "VNXAU AREVA report",
-        "https://vnx.li/wp-content/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf",
+        "https://vnx.li/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf",
         ["capacity"],
+      ),
+      sourceRef(
+        "VNXAU current service and contractual-rights disclosure",
+        "https://vnx.li/vnxau",
+        ["route", "access", "settlement"],
+      ),
+      sourceRef(
+        "VNXAU current transparency and report inventory",
+        "https://vnx.li/vnxau-transparency",
+        ["capacity"],
+      ),
+      sourceRef(
+        "VNX Global current terms: commodity-token proprietary exchange",
+        "https://prod-global-terms.s3.sa-east-1.amazonaws.com/VNX-Global-Terms.pdf",
+        ["route", "access", "settlement"],
+      ),
+      sourceRef(
+        "Metals.io physical gold FAQ: legacy issuer contact, no release timeline",
+        "https://help.metals.io/en/articles/14129282-how-can-i-redeem-physical-gold",
+        ["route", "access", "settlement"],
+      ),
+      sourceRef(
+        "Metals.io current Etherlink VNXAU market interface",
+        "https://app.metals.io/en/VNXAU",
+        ["route"],
       ),
     ],
     notes: [
       "The historical VNX platform route offered fiat or supported cryptocurrency sale proceeds and physical bars starting at 1 kg; this is not a fixed complete payout basket or an atomic stablecoin redemption.",
-      "Re-reviewed 2026-10-01: VNX's current primary notice suspends platform exchange operations from June 30, 2026 and ends the remaining-balance withdrawal window on July 31. Current VNX Global mint/redeem docs cover VCHF/VGBP, not VNXAU. Route status is therefore unknown pending a maintained VNXAU-specific exit; historical gold-delivery terms are not promoted as a currently executable route.",
+      "Re-reviewed 2026-10-02: VNX's current primary notice suspends platform exchange operations from June 30, 2026 and ends the remaining-balance withdrawal window on July 31. The current VNXAU page states that purchase, sale, exchange, custody and trading services are not provided, while existing holder rights remain governed by contractual arrangements. Route status remains unknown because the config has no suspended state; no maintained physical-release or fully specified issuer cash-out route is established for admission here.",
+      "Historical physical collection/delivery starts at 1 kg in kilogram multiples. The historical one-business-day statement applies to purchase/sale transactions, not bullion release or delivery, so it cannot supply a physicalToUsd settlement leg. Unpriced cross-border logistics remain unavailable. No physicalToUsd block is admitted from these suspended-platform disclosures.",
+      "The current transparency page still links only the December 31, 2025 AREVA AUP. Its historical 13,100 gross grams and non-assured holder-rights notes do not establish current bar inventory, release throughput, purity-adjusted weight or currently available holder service.",
+      "VNX Global's current terms separately permit proprietary exchange of Commodity Tokens, including VNXAU, for fiat or other digital assets. Section 6 makes that service resource-dependent, discretionary and not guaranteed. This successor venue is not a physical redemption obligation and does not establish a complete payout set, current same-notional execution capacity or settlement maximum. The old issuer-platform suspension is not evidence that all VNXAU market exits have ceased.",
+      "Independent verification found that Metals.io still directs physical-redemption requests in 1 kg multiples to support@vnx.li, without publishing a release timeline or evidence that the issuer service resumed. Its current Etherlink VNXAU market interface separately returned an indicative 1,000-token sale quote in USDC, subject to sign-in and execution. This is a secondary-market diagnostic, not physical redemption, measured same-notional capacity or proof that every holder can execute."
     ],
   },
   "xagm-matrixdock": {

@@ -10,7 +10,7 @@ Safety Score V10 is the sole active stablecoin safety model. It publishes eviden
 - **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v10.0`<!-- GENERATED-END: methodology-version-safety-score -->
 - Public response schema: report v6 with score trace v3; report v5 publications remain readable
 - Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`, parsed and digested by `shared/lib/safety-score-v9/policy.ts`
-- **Evaluation build:** `a10cc10a9bcf2cabc28be2aae0e61cf75ab5e1a61d85da48815d7b6acf2590a2` (`SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST`), generated from the evaluator and fact-producer source manifest. The manifest's evaluator closure includes the policy's reviewed chain-maturity registry, so score-bearing source edits rotate the identity used by replay and publication comparability.
+- **Evaluation build:** `e6e1cc1b9b95b09e6a14721fce9907d8df91a3bd08eb447843e8e64153b7db78` (`SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST`), generated from the evaluator and fact-producer source manifest. The manifest's evaluator closure includes the policy's reviewed chain-maturity registry, so score-bearing source edits rotate the identity used by replay and publication comparability.
 - Implementation: `shared/lib/safety-score-v9/`
 - Structured changelog: `shared/data/methodology-changelogs/safety-score/`
 - Public methodology: `/methodology/#safety-scores-methodology`
@@ -46,7 +46,7 @@ Financial report coverage and independently dated reserve observations use [sepa
 
 Reviewed receipt/bridge graphs expose originating reserve-access authorities and explicit unknown remainder through diagnostic-only `accessPosture.freezeLookthrough`, with no new freeze penalty. Holder-transfer posture is independent; [reserve-access look-through](./access-lookthrough.md) owns exact deployment, denominator and evidence admission.
 
-Data waves B–D author these facts from primary sources (coins in the scoring changelog). Facts still unknown after exhaustive research keep their charges; scopes without a current partition stay diagnostic. Proven Safe-module reach counts in partial inventories. Disclosed internal mint-ledger reconciliation clears only the Control process question, not Backing assurance. An unresolved [Centrifuge route](./supply-snapshot.md#supply-pipeline) with observed zero supply no longer voids sibling attribution.
+Data waves B–D and the NR wave author facts from primary sources; facts unknown after exhaustive research keep their charges, and unpartitioned scopes stay diagnostic. Proven Safe-module reach counts in partial inventories; a fresh scoped question on an unknown-reach partial mint path stays bounded-unknown. Internal mint-ledger reconciliation clears only the Control process question. An unresolved [Centrifuge route](./supply-snapshot.md#supply-pipeline) with observed zero supply keeps sibling attribution.
 
 Configured open live-only redemption routes whose producer reports missing capacity remain explicit producer-failed diagnostic facts. The existing missing-same-notional bounded-uncertainty treatment applies even when a small DEX route is observed; failed telemetry cannot certify that no viable redemption path exists. No stale capacity is credited, and absent, paused, or degraded redemption routes retain their existing treatment.
 

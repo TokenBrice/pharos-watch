@@ -16,9 +16,32 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://midas.app/transparency",
-    "provider": "Midas Attestation Engine: on-chain NAV/proof-of-reserves/price, independently verified via Chainlink, Canary, LlamaRisk and vLayer (launched first on mHYPER)",
+    "provider": "Midas Attestation Engine: issuer NAV and 1token protocol-level assets/liabilities, published through Chainlink CRE; workflow verification is distinct from an independent financial audit",
     "attestorTier": "self",
-    "cadence": "daily-nav"
+    "cadence": "daily-nav",
+    "latestReport": {
+      "publishedAt": "2026-09-29",
+      "publishedAtBasis": "explicit",
+      "assuranceMethod": "self-verification",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "partial",
+      "reviewer": "Sol NR wave 2026-10-02 (NrMhyper)",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "mHYPER SAVE checkpoint, published on Ethereum 2026-09-29; protocol assets, borrow liabilities and reported token supply",
+          "url": "https://gateway.pinata.cloud/ipfs/QmQxfaGhtGrP4im4B8TYyPHBn2MkxZQMx8Ta8JeDsUVCSX"
+        },
+        {
+          "label": "Midas attestation registry, latest mHYPER checkpoint pinned at Ethereum block 26103204",
+          "url": "https://etherscan.io/address/0x2d6e9f608807436de5d9603b00abe3fed1bc809d"
+        },
+        {
+          "label": "Midas public PoR workflow and source scope",
+          "url": "https://github.com/midas-apps/midas-por-v2/blob/bb7308eb5e3bdd4f882b039db580279c098c011f/README.md"
+        }
+      ]
+    }
   },
   "links": [
     {
@@ -112,9 +135,9 @@
   "launchDate": "2025-08-14",
   "mechanismArchetypeReview": {
     "disposition": "unresolved",
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (RuleC08)",
-    "rationale": "The exact mHYPER KID identifies a German-law bearer debt security with qualified subordinated issuer claims, no ownership of underlying assets and no deposit protection. Product Final Terms list Custodian, Collateral and Security Agent as n/a and define redemption through hypothetical best-efforts liquidation of a dynamically allocated crypto stablecoin strategy spanning spot, lending, arbitrage, derivatives and token rewards. These holder rights and the mixed reference strategy do not establish a token-level synthetic delta-neutral hedge, a direct fund share or a cash/Treasury claim. No existing archetype is asserted without exact-product evidence that it fits; classification remains explicitly unresolved under owner ruling D18.",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol NR wave 2026-10-02 (NrMhyper)",
+    "rationale": "The product KID and Final Terms identify a qualified subordinated issuer debt certificate referencing a dynamically allocated stablecoin strategy spanning spot, lending, arbitrage, derivatives and rewards, without direct asset ownership or a product-specific security agent. The 17 July 2026 succeeding prospectus expressly continues mHYPER ISIN CH1475894585 and states that the underlying is notional and the issuer is not obliged to acquire or hold it. Current Ethereum, Plasma, Monad and Katana token identities were pinned on 2 October. The dated 1token reports expose protocol assets and borrow liabilities but no complete hedge inventory. The siblings' delta-neutral descriptions do not establish mHYPER's exact hedge mechanism. Neither a UCITS/TRS fund share, shared-reserve liability nor a redeemable protocol-position claim is established by the notional issuer certificate. Existing families therefore remain unresolved under D18; no archetype is selected merely to remove NR.",
     "sources": [
       {
         "label": "mHYPER Key Information Document (produced 2026-02-02, accessed 2026-10-01)",
@@ -123,6 +146,14 @@
       {
         "label": "mHYPER Final Terms (dated 2025-08-11, accessed 2026-10-01)",
         "url": "https://content.gitbook.com/content/MndxFHqGeA4nzBBeKDTV/blobs/Rh0tXsofDB8UQWaklyuE/Midas_Final_Terms_mHYPER_2025.pdf"
+      },
+      {
+        "label": "Midas succeeding Base Prospectus, 17 July 2026, continuing mHYPER",
+        "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FkVT2uAi2AipgeMIyZAJe%2FMidas%20Software%20GmbH%20Base%20Prospectus%202026.pdf?alt=media&token=d80ceabb-07a6-4dc4-9020-70ec86b4f42f"
+      },
+      {
+        "label": "Midas current mHYPER protocol exposures, accessed 2026-10-02",
+        "url": "https://api-prod.midas.app/api/transparency?token=mHYPER"
       }
     ]
   }

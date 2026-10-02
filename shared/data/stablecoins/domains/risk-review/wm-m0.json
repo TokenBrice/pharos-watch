@@ -232,17 +232,19 @@
         "sourceChain": "ethereum",
         "destinationChain": "linea",
         "canonicalChain": "ethereum",
+        "controllerChain": "linea",
+        "controllerAddress": "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
         "contractAddress": "0x437cc33344a0b27a429f795ff6b469c72698b291",
-        "protocol": "M0 Portal V2 (deployment directory; current adapter unverified)",
+        "protocol": "M0 Portal V2 (Hyperlane default adapter; route semantics unresolved)",
         "issuanceModel": "unknown",
         "routeClass": "unknown",
         "riskTier": "opaque-or-unknown",
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "The official M0 directory identifies Wrapped M and a Spoke Portal on this chain. Independent pinned token reads confirm the WrappedM name, wM symbol and 6 decimals. Current Portal adapters, trusted peers, controllers, rate limits and active transfer semantics have not been reviewed here; classification remains explicitly unresolved and opaque-or-unknown, without inferred protective controls.",
+        "reviewNote": "Pinned linea block 32208392: underlying M portal() is 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd; the supported default adapter to Ethereum (chain 1) is Hyperlane 0xfcc1d596ad6cab0b5394eaa447d8626813180f32 with peer equal to that address and domain 1. Portal send/receive pause flags are false. DEFAULT_ADMIN is Safe 0x48670b46380fe1645f0e3e821a25162db2589d19 (3-of-5); OPERATOR/PAUSER is 0xf2f1acbe0ba726fee8d75f3e32900526874740bb. The observed M-to-M path is not enabled; all tested paths involving wM are false. These reads establish addressed controls, not full route viability: active holder transfer semantics, all optional adapters, Mailbox default ISM controls, and aggregate limits remain unresolved. Retain unknown route classification, not a fabricated safe bridge tier.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-01",
+        "observedAt": "2026-10-02",
         "sources": [
           {
             "label": "Current M0 platform deployment directory",
@@ -253,24 +255,26 @@
             "url": "https://docs.m0.org/raw/build/cross-chain.md"
           }
         ],
-        "observedBlock": 32198772
+        "observedBlock": 32208392
       },
       {
         "id": "bsc:0x437cc33344a0b27a429f795ff6b469c72698b291",
         "sourceChain": "ethereum",
         "destinationChain": "bsc",
         "canonicalChain": "ethereum",
+        "controllerChain": "bsc",
+        "controllerAddress": "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
         "contractAddress": "0x437cc33344a0b27a429f795ff6b469c72698b291",
-        "protocol": "M0 Portal V2 (deployment directory; current adapter unverified)",
+        "protocol": "M0 Portal V2 (Hyperlane default adapter; route semantics unresolved)",
         "issuanceModel": "unknown",
         "routeClass": "unknown",
         "riskTier": "opaque-or-unknown",
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "The official M0 directory identifies Wrapped M and a Spoke Portal on this chain. Independent pinned token reads confirm the WrappedM name, wM symbol and 6 decimals. Current Portal adapters, trusted peers, controllers, rate limits and active transfer semantics have not been reviewed here; classification remains explicitly unresolved and opaque-or-unknown, without inferred protective controls.",
+        "reviewNote": "Pinned bsc block 125256534: underlying M portal() is 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd; the supported default adapter to Ethereum (chain 1) is Hyperlane 0xfcc1d596ad6cab0b5394eaa447d8626813180f32 with peer equal to that address and domain 1. Portal send/receive pause flags are false. DEFAULT_ADMIN is Safe 0x48670b46380fe1645f0e3e821a25162db2589d19 (3-of-5); OPERATOR/PAUSER is 0xf2f1acbe0ba726fee8d75f3e32900526874740bb. The observed M-to-M path is not enabled; all tested paths involving wM are false. These reads establish addressed controls, not full route viability: active holder transfer semantics, all optional adapters, Mailbox default ISM controls, and aggregate limits remain unresolved. Retain unknown route classification, not a fabricated safe bridge tier.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-01",
+        "observedAt": "2026-10-02",
         "sources": [
           {
             "label": "Current M0 platform deployment directory",
@@ -281,24 +285,26 @@
             "url": "https://docs.m0.org/raw/build/cross-chain.md"
           }
         ],
-        "observedBlock": 125062299
+        "observedBlock": 125256534
       },
       {
         "id": "hyperevm:0x437cc33344a0b27a429f795ff6b469c72698b291",
         "sourceChain": "ethereum",
         "destinationChain": "hyperevm",
         "canonicalChain": "ethereum",
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
         "contractAddress": "0x437cc33344a0b27a429f795ff6b469c72698b291",
-        "protocol": "M0 Portal V2 (deployment directory; current adapter unverified)",
+        "protocol": "M0 Portal V2 (Hyperlane default adapter; route semantics unresolved)",
         "issuanceModel": "unknown",
         "routeClass": "unknown",
         "riskTier": "opaque-or-unknown",
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "The official M0 directory identifies Wrapped M and a Spoke Portal on this chain. Independent pinned token reads confirm the WrappedM name, wM symbol and 6 decimals. Current Portal adapters, trusted peers, controllers, rate limits and active transfer semantics have not been reviewed here; classification remains explicitly unresolved and opaque-or-unknown, without inferred protective controls.",
+        "reviewNote": "Pinned hyperevm block 47449269: underlying M portal() is 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd; the supported default adapter to Ethereum (chain 1) is Hyperlane 0xfcc1d596ad6cab0b5394eaa447d8626813180f32 with peer equal to that address and domain 1. Portal send/receive pause flags are false. DEFAULT_ADMIN is Safe 0x48670b46380fe1645f0e3e821a25162db2589d19 (3-of-5); OPERATOR/PAUSER is 0xf2f1acbe0ba726fee8d75f3e32900526874740bb. The observed M-to-M path is not enabled; all tested paths involving wM are false. These reads establish addressed controls, not full route viability: active holder transfer semantics, all optional adapters, Mailbox default ISM controls, and aggregate limits remain unresolved. Retain unknown route classification, not a fabricated safe bridge tier. Independent verification at block 47450364 also found supportedBridgeAdapter(1,0x77ef4e9d37524069f81890c537a5c5d390bb4b4d)=true. The default adapter's Mailbox 0x3a464f746d23ab22155710f44db16dca53e0775e returned defaultIsm 0xcc8aaa232674c735f17015540e22e73854052ef5, whose moduleType was 2. These bounded identities do not certify the alternative adapter or the ISM's full security configuration.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-01",
+        "observedAt": "2026-10-02",
         "sources": [
           {
             "label": "Current M0 platform deployment directory",
@@ -309,24 +315,26 @@
             "url": "https://docs.m0.org/raw/build/cross-chain.md"
           }
         ],
-        "observedBlock": 47360381
+        "observedBlock": 47449269
       },
       {
         "id": "soneium:0x437cc33344a0b27a429f795ff6b469c72698b291",
         "sourceChain": "ethereum",
         "destinationChain": "soneium",
         "canonicalChain": "ethereum",
+        "controllerChain": "soneium",
+        "controllerAddress": "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
         "contractAddress": "0x437cc33344a0b27a429f795ff6b469c72698b291",
-        "protocol": "M0 Portal V2 (deployment directory; current adapter unverified)",
+        "protocol": "M0 Portal V2 (Hyperlane default adapter; route semantics unresolved)",
         "issuanceModel": "unknown",
         "routeClass": "unknown",
         "riskTier": "opaque-or-unknown",
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "The official M0 directory identifies Wrapped M and a Spoke Portal on this chain. Independent pinned token reads confirm the WrappedM name, wM symbol and 6 decimals. Current Portal adapters, trusted peers, controllers, rate limits and active transfer semantics have not been reviewed here; classification remains explicitly unresolved and opaque-or-unknown, without inferred protective controls.",
+        "reviewNote": "Pinned soneium block 28896580: underlying M portal() is 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd; the supported default adapter to Ethereum (chain 1) is Hyperlane 0xfcc1d596ad6cab0b5394eaa447d8626813180f32 with peer equal to that address and domain 1. Portal send/receive pause flags are false. DEFAULT_ADMIN is Safe 0x8c645e201dd944677864479357f8255ea943b18b (3-of-5); OPERATOR/PAUSER is 0xf2f1acbe0ba726fee8d75f3e32900526874740bb. The observed M-to-M path is not enabled; all tested paths involving wM are false. These reads establish addressed controls, not full route viability: active holder transfer semantics, all optional adapters, Mailbox default ISM controls, and aggregate limits remain unresolved. Retain unknown route classification, not a fabricated safe bridge tier.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-01",
+        "observedAt": "2026-10-02",
         "sources": [
           {
             "label": "Current M0 platform deployment directory",
@@ -337,24 +345,26 @@
             "url": "https://docs.m0.org/raw/build/cross-chain.md"
           }
         ],
-        "observedBlock": 28852919
+        "observedBlock": 28896580
       },
       {
         "id": "plasma:0x437cc33344a0b27a429f795ff6b469c72698b291",
         "sourceChain": "ethereum",
         "destinationChain": "plasma",
         "canonicalChain": "ethereum",
+        "controllerChain": "plasma",
+        "controllerAddress": "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
         "contractAddress": "0x437cc33344a0b27a429f795ff6b469c72698b291",
-        "protocol": "M0 Portal V2 (deployment directory; current adapter unverified)",
+        "protocol": "M0 Portal V2 (Hyperlane default adapter; route semantics unresolved)",
         "issuanceModel": "unknown",
         "routeClass": "unknown",
         "riskTier": "opaque-or-unknown",
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "The official M0 directory identifies Wrapped M and a Spoke Portal on this chain. Independent pinned token reads confirm the WrappedM name, wM symbol and 6 decimals. Current Portal adapters, trusted peers, controllers, rate limits and active transfer semantics have not been reviewed here; classification remains explicitly unresolved and opaque-or-unknown, without inferred protective controls.",
+        "reviewNote": "Pinned plasma block 33986960: underlying M portal() is 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd; the supported default adapter to Ethereum (chain 1) is Hyperlane 0xfcc1d596ad6cab0b5394eaa447d8626813180f32 with peer equal to that address and domain 1. Portal send/receive pause flags are false. DEFAULT_ADMIN is Safe 0x48670b46380fe1645f0e3e821a25162db2589d19 (3-of-5); OPERATOR/PAUSER is 0xf2f1acbe0ba726fee8d75f3e32900526874740bb. The observed M-to-M path is not enabled; all tested paths involving wM are false. These reads establish addressed controls, not full route viability: active holder transfer semantics, all optional adapters, Mailbox default ISM controls, and aggregate limits remain unresolved. Retain unknown route classification, not a fabricated safe bridge tier.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-01",
+        "observedAt": "2026-10-02",
         "sources": [
           {
             "label": "Current M0 platform deployment directory",
@@ -365,24 +375,26 @@
             "url": "https://docs.m0.org/raw/build/cross-chain.md"
           }
         ],
-        "observedBlock": 33899519
+        "observedBlock": 33986960
       },
       {
         "id": "citrea:0x437cc33344a0b27a429f795ff6b469c72698b291",
         "sourceChain": "ethereum",
         "destinationChain": "citrea",
         "canonicalChain": "ethereum",
+        "controllerChain": "citrea",
+        "controllerAddress": "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
         "contractAddress": "0x437cc33344a0b27a429f795ff6b469c72698b291",
-        "protocol": "M0 Portal V2 (deployment directory; current adapter unverified)",
+        "protocol": "M0 Portal V2 (Hyperlane default adapter; route semantics unresolved)",
         "issuanceModel": "unknown",
         "routeClass": "unknown",
         "riskTier": "opaque-or-unknown",
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "The official M0 directory identifies Wrapped M and a Spoke Portal on this chain. Independent pinned token reads confirm the WrappedM name, wM symbol and 6 decimals. Current Portal adapters, trusted peers, controllers, rate limits and active transfer semantics have not been reviewed here; classification remains explicitly unresolved and opaque-or-unknown, without inferred protective controls.",
+        "reviewNote": "Pinned citrea block 13412716: underlying M portal() is 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd; the supported default adapter to Ethereum (chain 1) is Hyperlane 0xfcc1d596ad6cab0b5394eaa447d8626813180f32 with peer equal to that address and domain 1. Portal send/receive pause flags are false. DEFAULT_ADMIN is Safe 0x8c645e201dd944677864479357f8255ea943b18b (3-of-5); OPERATOR/PAUSER is 0xf2f1acbe0ba726fee8d75f3e32900526874740bb. The observed M-to-M path is enabled; all tested paths involving wM are false. These reads establish addressed controls, not full route viability: active holder transfer semantics, all optional adapters, Mailbox default ISM controls, and aggregate limits remain unresolved. Retain unknown route classification, not a fabricated safe bridge tier.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-01",
+        "observedAt": "2026-10-02",
         "sources": [
           {
             "label": "Current M0 platform deployment directory",
@@ -393,24 +405,26 @@
             "url": "https://docs.m0.org/raw/build/cross-chain.md"
           }
         ],
-        "observedBlock": 13369050
+        "observedBlock": 13412716
       },
       {
         "id": "monad:0x437cc33344a0b27a429f795ff6b469c72698b291",
         "sourceChain": "ethereum",
         "destinationChain": "monad",
         "canonicalChain": "ethereum",
+        "controllerChain": "monad",
+        "controllerAddress": "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
         "contractAddress": "0x437cc33344a0b27a429f795ff6b469c72698b291",
-        "protocol": "M0 Portal V2 (deployment directory; current adapter unverified)",
+        "protocol": "M0 Portal V2 (Hyperlane default adapter; route semantics unresolved)",
         "issuanceModel": "unknown",
         "routeClass": "unknown",
         "riskTier": "opaque-or-unknown",
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "The official M0 directory identifies Wrapped M and a Spoke Portal on this chain. Independent pinned token reads confirm the WrappedM name, wM symbol and 6 decimals. Current Portal adapters, trusted peers, controllers, rate limits and active transfer semantics have not been reviewed here; classification remains explicitly unresolved and opaque-or-unknown, without inferred protective controls.",
+        "reviewNote": "Pinned monad block 109840715: underlying M portal() is 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd; the supported default adapter to Ethereum (chain 1) is Hyperlane 0xfcc1d596ad6cab0b5394eaa447d8626813180f32 with peer equal to that address and domain 1. Portal send/receive pause flags are false. DEFAULT_ADMIN is Safe 0x48670b46380fe1645f0e3e821a25162db2589d19 (3-of-5); OPERATOR/PAUSER is 0xf2f1acbe0ba726fee8d75f3e32900526874740bb. The observed M-to-M path is not enabled; all tested paths involving wM are false. These reads establish addressed controls, not full route viability: active holder transfer semantics, all optional adapters, Mailbox default ISM controls, and aggregate limits remain unresolved. Retain unknown route classification, not a fabricated safe bridge tier. Independent verification at block 109844192 also found supportedBridgeAdapter(1,0xacffec28c4eee21c889a4e6c0704c540ed9d4fdd)=true. The default adapter's Mailbox 0x3a464f746d23ab22155710f44db16dca53e0775e returned defaultIsm 0x2a3ec2f98ca5840061567fe38428bac697281fe1, whose moduleType was 2. These bounded identities do not certify the alternative adapter or the ISM's full security configuration.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-01",
+        "observedAt": "2026-10-02",
         "sources": [
           {
             "label": "Current M0 platform deployment directory",
@@ -421,7 +435,7 @@
             "url": "https://docs.m0.org/raw/build/cross-chain.md"
           }
         ],
-        "observedBlock": 109551099
+        "observedBlock": 109840715
       }
     ],
     "controls": [
@@ -880,6 +894,699 @@
           }
         ],
         "evidence": "At finalized Solana slot 439806760, m_ext ProgramData BZzPduAchLyMwRZXgYcXnqvDmecBuWroEjgRSSHj9uSF named 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW as upgrade authority. This EOA can replace the local wrapper logic and change the current deposit-before-mint bound; it is bridge-representation upgrade risk, not an issuer of native M."
+      },
+      {
+        "id": "wm-linea-portal-v2-admin",
+        "label": "wM linea Portal V2 admin Safe",
+        "routeRefs": [
+          "linea:0x437cc33344a0b27a429f795ff6b469c72698b291"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "linea",
+        "controllerAddress": "0x48670b46380fe1645f0e3e821a25162db2589d19",
+        "failureDomainKeys": [
+          "protocol:m0-portal-v2-hyperlane",
+          "contract:linea:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+          "contract:linea:0xfcc1d596ad6cab0b5394eaa447d8626813180f32",
+          "safe:linea:0x48670b46380fe1645f0e3e821a25162db2589d19"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "owners": [
+            "0x02490f751d7d69115d2466239391faad0a00b650",
+            "0xa00baef9adb918bf57a124ec0ca469b68362ee3a",
+            "0xa10f81bcaa44135fd15f15446b4e7531b753e698",
+            "0xcf4d90c0ce49e0db337b3bd8042916145d5387be",
+            "0x9ced0724b8b93c2c7ce6c6c314d21cbf88d93687"
+          ],
+          "threshold": 3,
+          "observedBlock": 32208392,
+          "source": "onchain",
+          "observedAt": "2026-10-02"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "DEFAULT_ADMIN administers Portal and default Hyperlane-adapter roles and authorizes UUPS replacement logic for the local M bridge representation. This is not native Ethereum M issuance. No immutable cap protection or Safe-extension non-interference is claimed.",
+        "canRaiseCap": "unknown",
+        "routeChecks": {
+          "trustedPeerOrRemote": "Pinned block 32208392: hubChainId 1; defaultBridgeAdapter(1)=0xfcc1d596ad6cab0b5394eaa447d8626813180f32; supportedBridgeAdapter true; getPeer(1) equals the adapter; getBridgeChainId(1)=1 (Hyperlane Ethereum domain). Tested wM paths are false; do not infer active wM transfer support.",
+          "rateLimits": "No quantitative aggregate mint/bridge limit was established. Adapter uses Mailbox default ISM (interchainSecurityModule() zero), whose current security controls are not reviewed here.",
+          "pausersAdminsUpgraders": "Pinned block 32208392: Portal implementation 0xb1f6696e804777152c89dc6ab1aa6711055a3a59; DEFAULT_ADMIN_ROLE is held by 0x48670b46380fe1645f0e3e821a25162db2589d19, OPERATOR_ROLE/PAUSER_ROLE by 0xf2f1acbe0ba726fee8d75f3e32900526874740bb; sendPaused and receivePaused false."
+        },
+        "observedAt": "2026-10-02",
+        "observedBlock": 32208392,
+        "sources": [
+          {
+            "label": "M0 Portal V2 control source",
+            "url": "https://github.com/m0-platform/m-portal-v2/blob/27820ee62b2bedfdf089df96492aadf1976cdb47/evm/src/Portal.sol"
+          },
+          {
+            "label": "Pinned linea JSON-RPC (2026-10-02)",
+            "url": "https://api-linea-mainnet-archive.n.dwellir.com"
+          }
+        ],
+        "evidence": "At block 32208392, hasRole(DEFAULT_ADMIN_ROLE,0x48670b46380fe1645f0e3e821a25162db2589d19) was true on Portal and default adapter; getOwners and getThreshold returned the recorded 5-owner/3-signature state at the same pin. Guard/fallback/module non-interference and exhaustive role membership are not certified."
+      },
+      {
+        "id": "wm-linea-portal-v2-operator-pauser",
+        "label": "wM linea Portal V2 operator and pauser",
+        "routeRefs": [
+          "linea:0x437cc33344a0b27a429f795ff6b469c72698b291"
+        ],
+        "capabilities": [
+          "pause",
+          "peer-config"
+        ],
+        "controllerChain": "linea",
+        "controllerAddress": "0xf2f1acbe0ba726fee8d75f3e32900526874740bb",
+        "failureDomainKeys": [
+          "protocol:m0-portal-v2-hyperlane",
+          "contract:linea:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+          "contract:linea:0xfcc1d596ad6cab0b5394eaa447d8626813180f32",
+          "account:linea:0xf2f1acbe0ba726fee8d75f3e32900526874740bb"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The addressed Portal OPERATOR can change supported adapter/path settings and the PAUSER can stop send/receive. Adapter OPERATOR can alter peers; no independent quorum or immutable limit is claimed.",
+        "canRaiseCap": "unknown",
+        "routeChecks": {
+          "trustedPeerOrRemote": "Pinned block 32208392: hubChainId 1; defaultBridgeAdapter(1)=0xfcc1d596ad6cab0b5394eaa447d8626813180f32; supportedBridgeAdapter true; getPeer(1) equals the adapter; getBridgeChainId(1)=1 (Hyperlane Ethereum domain). Tested wM paths are false; do not infer active wM transfer support.",
+          "rateLimits": "No quantitative aggregate mint/bridge limit was established. Adapter uses Mailbox default ISM (interchainSecurityModule() zero), whose current security controls are not reviewed here.",
+          "pausersAdminsUpgraders": "Pinned block 32208392: Portal implementation 0xb1f6696e804777152c89dc6ab1aa6711055a3a59; DEFAULT_ADMIN_ROLE is held by 0x48670b46380fe1645f0e3e821a25162db2589d19, OPERATOR_ROLE/PAUSER_ROLE by 0xf2f1acbe0ba726fee8d75f3e32900526874740bb; sendPaused and receivePaused false."
+        },
+        "observedAt": "2026-10-02",
+        "observedBlock": 32208392,
+        "sources": [
+          {
+            "label": "M0 Portal V2 control source",
+            "url": "https://github.com/m0-platform/m-portal-v2/blob/27820ee62b2bedfdf089df96492aadf1976cdb47/evm/src/Portal.sol"
+          },
+          {
+            "label": "Pinned linea JSON-RPC (2026-10-02)",
+            "url": "https://api-linea-mainnet-archive.n.dwellir.com"
+          }
+        ],
+        "evidence": "Pinned block 32208392: hasRole(OPERATOR_ROLE,0xf2f1acbe0ba726fee8d75f3e32900526874740bb) and hasRole(PAUSER_ROLE,0xf2f1acbe0ba726fee8d75f3e32900526874740bb) were true on Portal; adapter OPERATOR_ROLE also true. Controller runtime code was 0x. Controller account code is empty at this pin."
+      },
+      {
+        "id": "wm-bsc-portal-v2-admin",
+        "label": "wM bsc Portal V2 admin Safe",
+        "routeRefs": [
+          "bsc:0x437cc33344a0b27a429f795ff6b469c72698b291"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0x48670b46380fe1645f0e3e821a25162db2589d19",
+        "failureDomainKeys": [
+          "protocol:m0-portal-v2-hyperlane",
+          "contract:bsc:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+          "contract:bsc:0xfcc1d596ad6cab0b5394eaa447d8626813180f32",
+          "safe:bsc:0x48670b46380fe1645f0e3e821a25162db2589d19"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "owners": [
+            "0x02490f751d7d69115d2466239391faad0a00b650",
+            "0xa00baef9adb918bf57a124ec0ca469b68362ee3a",
+            "0xa10f81bcaa44135fd15f15446b4e7531b753e698",
+            "0xcf4d90c0ce49e0db337b3bd8042916145d5387be",
+            "0x9ced0724b8b93c2c7ce6c6c314d21cbf88d93687"
+          ],
+          "threshold": 3,
+          "observedBlock": 125256534,
+          "source": "onchain",
+          "observedAt": "2026-10-02"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "DEFAULT_ADMIN administers Portal and default Hyperlane-adapter roles and authorizes UUPS replacement logic for the local M bridge representation. This is not native Ethereum M issuance. No immutable cap protection or Safe-extension non-interference is claimed.",
+        "canRaiseCap": "unknown",
+        "routeChecks": {
+          "trustedPeerOrRemote": "Pinned block 125256534: hubChainId 1; defaultBridgeAdapter(1)=0xfcc1d596ad6cab0b5394eaa447d8626813180f32; supportedBridgeAdapter true; getPeer(1) equals the adapter; getBridgeChainId(1)=1 (Hyperlane Ethereum domain). Tested wM paths are false; do not infer active wM transfer support.",
+          "rateLimits": "No quantitative aggregate mint/bridge limit was established. Adapter uses Mailbox default ISM (interchainSecurityModule() zero), whose current security controls are not reviewed here.",
+          "pausersAdminsUpgraders": "Pinned block 125256534: Portal implementation 0xccd749bd719460dd0647a9439de0fbfe739da649; DEFAULT_ADMIN_ROLE is held by 0x48670b46380fe1645f0e3e821a25162db2589d19, OPERATOR_ROLE/PAUSER_ROLE by 0xf2f1acbe0ba726fee8d75f3e32900526874740bb; sendPaused and receivePaused false."
+        },
+        "observedAt": "2026-10-02",
+        "observedBlock": 125256534,
+        "sources": [
+          {
+            "label": "M0 Portal V2 control source",
+            "url": "https://github.com/m0-platform/m-portal-v2/blob/27820ee62b2bedfdf089df96492aadf1976cdb47/evm/src/Portal.sol"
+          },
+          {
+            "label": "Pinned bsc JSON-RPC (2026-10-02)",
+            "url": "https://api-bsc-mainnet-full.n.dwellir.com"
+          }
+        ],
+        "evidence": "At block 125256534, hasRole(DEFAULT_ADMIN_ROLE,0x48670b46380fe1645f0e3e821a25162db2589d19) was true on Portal and default adapter; getOwners and getThreshold returned the recorded 5-owner/3-signature state at the same pin. Guard/fallback/module non-interference and exhaustive role membership are not certified."
+      },
+      {
+        "id": "wm-bsc-portal-v2-operator-pauser",
+        "label": "wM bsc Portal V2 operator and pauser",
+        "routeRefs": [
+          "bsc:0x437cc33344a0b27a429f795ff6b469c72698b291"
+        ],
+        "capabilities": [
+          "pause",
+          "peer-config"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0xf2f1acbe0ba726fee8d75f3e32900526874740bb",
+        "failureDomainKeys": [
+          "protocol:m0-portal-v2-hyperlane",
+          "contract:bsc:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+          "contract:bsc:0xfcc1d596ad6cab0b5394eaa447d8626813180f32",
+          "account:bsc:0xf2f1acbe0ba726fee8d75f3e32900526874740bb"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The addressed Portal OPERATOR can change supported adapter/path settings and the PAUSER can stop send/receive. Adapter OPERATOR can alter peers; no independent quorum or immutable limit is claimed.",
+        "canRaiseCap": "unknown",
+        "routeChecks": {
+          "trustedPeerOrRemote": "Pinned block 125256534: hubChainId 1; defaultBridgeAdapter(1)=0xfcc1d596ad6cab0b5394eaa447d8626813180f32; supportedBridgeAdapter true; getPeer(1) equals the adapter; getBridgeChainId(1)=1 (Hyperlane Ethereum domain). Tested wM paths are false; do not infer active wM transfer support.",
+          "rateLimits": "No quantitative aggregate mint/bridge limit was established. Adapter uses Mailbox default ISM (interchainSecurityModule() zero), whose current security controls are not reviewed here.",
+          "pausersAdminsUpgraders": "Pinned block 125256534: Portal implementation 0xccd749bd719460dd0647a9439de0fbfe739da649; DEFAULT_ADMIN_ROLE is held by 0x48670b46380fe1645f0e3e821a25162db2589d19, OPERATOR_ROLE/PAUSER_ROLE by 0xf2f1acbe0ba726fee8d75f3e32900526874740bb; sendPaused and receivePaused false."
+        },
+        "observedAt": "2026-10-02",
+        "observedBlock": 125256534,
+        "sources": [
+          {
+            "label": "M0 Portal V2 control source",
+            "url": "https://github.com/m0-platform/m-portal-v2/blob/27820ee62b2bedfdf089df96492aadf1976cdb47/evm/src/Portal.sol"
+          },
+          {
+            "label": "Pinned bsc JSON-RPC (2026-10-02)",
+            "url": "https://api-bsc-mainnet-full.n.dwellir.com"
+          }
+        ],
+        "evidence": "Pinned block 125256534: hasRole(OPERATOR_ROLE,0xf2f1acbe0ba726fee8d75f3e32900526874740bb) and hasRole(PAUSER_ROLE,0xf2f1acbe0ba726fee8d75f3e32900526874740bb) were true on Portal; adapter OPERATOR_ROLE also true. Controller runtime code was 0x. Controller account code is empty at this pin."
+      },
+      {
+        "id": "wm-hyperevm-portal-v2-admin",
+        "label": "wM hyperevm Portal V2 admin Safe",
+        "routeRefs": [
+          "hyperevm:0x437cc33344a0b27a429f795ff6b469c72698b291"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0x48670b46380fe1645f0e3e821a25162db2589d19",
+        "failureDomainKeys": [
+          "protocol:m0-portal-v2-hyperlane",
+          "contract:hyperevm:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+          "contract:hyperevm:0xfcc1d596ad6cab0b5394eaa447d8626813180f32",
+          "safe:hyperevm:0x48670b46380fe1645f0e3e821a25162db2589d19"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "owners": [
+            "0x02490f751d7d69115d2466239391faad0a00b650",
+            "0xa00baef9adb918bf57a124ec0ca469b68362ee3a",
+            "0xa10f81bcaa44135fd15f15446b4e7531b753e698",
+            "0xcf4d90c0ce49e0db337b3bd8042916145d5387be",
+            "0x9ced0724b8b93c2c7ce6c6c314d21cbf88d93687"
+          ],
+          "threshold": 3,
+          "observedBlock": 47449269,
+          "source": "onchain",
+          "observedAt": "2026-10-02"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "DEFAULT_ADMIN administers Portal and default Hyperlane-adapter roles and authorizes UUPS replacement logic for the local M bridge representation. This is not native Ethereum M issuance. No immutable cap protection or Safe-extension non-interference is claimed.",
+        "canRaiseCap": "unknown",
+        "routeChecks": {
+          "trustedPeerOrRemote": "Pinned block 47449269: hubChainId 1; defaultBridgeAdapter(1)=0xfcc1d596ad6cab0b5394eaa447d8626813180f32; supportedBridgeAdapter true; getPeer(1) equals the adapter; getBridgeChainId(1)=1 (Hyperlane Ethereum domain). Tested wM paths are false; do not infer active wM transfer support.",
+          "rateLimits": "No quantitative aggregate mint/bridge limit was established. Adapter uses Mailbox default ISM (interchainSecurityModule() zero), whose current security controls are not reviewed here.",
+          "pausersAdminsUpgraders": "Pinned block 47449269: Portal implementation 0x065a618cd5f8a6875a7d7982d8b0d7a503cacf9c; DEFAULT_ADMIN_ROLE is held by 0x48670b46380fe1645f0e3e821a25162db2589d19, OPERATOR_ROLE/PAUSER_ROLE by 0xf2f1acbe0ba726fee8d75f3e32900526874740bb; sendPaused and receivePaused false."
+        },
+        "observedAt": "2026-10-02",
+        "observedBlock": 47449269,
+        "sources": [
+          {
+            "label": "M0 Portal V2 control source",
+            "url": "https://github.com/m0-platform/m-portal-v2/blob/27820ee62b2bedfdf089df96492aadf1976cdb47/evm/src/Portal.sol"
+          },
+          {
+            "label": "Pinned hyperevm JSON-RPC (2026-10-02)",
+            "url": "https://api-hyperliquid-mainnet-evm.n.dwellir.com"
+          }
+        ],
+        "evidence": "At block 47449269, hasRole(DEFAULT_ADMIN_ROLE,0x48670b46380fe1645f0e3e821a25162db2589d19) was true on Portal and default adapter; getOwners and getThreshold returned the recorded 5-owner/3-signature state at the same pin. Guard/fallback/module non-interference and exhaustive role membership are not certified."
+      },
+      {
+        "id": "wm-hyperevm-portal-v2-operator-pauser",
+        "label": "wM hyperevm Portal V2 operator and pauser",
+        "routeRefs": [
+          "hyperevm:0x437cc33344a0b27a429f795ff6b469c72698b291"
+        ],
+        "capabilities": [
+          "pause",
+          "peer-config"
+        ],
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0xf2f1acbe0ba726fee8d75f3e32900526874740bb",
+        "failureDomainKeys": [
+          "protocol:m0-portal-v2-hyperlane",
+          "contract:hyperevm:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+          "contract:hyperevm:0xfcc1d596ad6cab0b5394eaa447d8626813180f32",
+          "account:hyperevm:0xf2f1acbe0ba726fee8d75f3e32900526874740bb"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The addressed Portal OPERATOR can change supported adapter/path settings and the PAUSER can stop send/receive. Adapter OPERATOR can alter peers; no independent quorum or immutable limit is claimed.",
+        "canRaiseCap": "unknown",
+        "routeChecks": {
+          "trustedPeerOrRemote": "Pinned block 47449269: hubChainId 1; defaultBridgeAdapter(1)=0xfcc1d596ad6cab0b5394eaa447d8626813180f32; supportedBridgeAdapter true; getPeer(1) equals the adapter; getBridgeChainId(1)=1 (Hyperlane Ethereum domain). Tested wM paths are false; do not infer active wM transfer support.",
+          "rateLimits": "No quantitative aggregate mint/bridge limit was established. Adapter uses Mailbox default ISM (interchainSecurityModule() zero), whose current security controls are not reviewed here.",
+          "pausersAdminsUpgraders": "Pinned block 47449269: Portal implementation 0x065a618cd5f8a6875a7d7982d8b0d7a503cacf9c; DEFAULT_ADMIN_ROLE is held by 0x48670b46380fe1645f0e3e821a25162db2589d19, OPERATOR_ROLE/PAUSER_ROLE by 0xf2f1acbe0ba726fee8d75f3e32900526874740bb; sendPaused and receivePaused false."
+        },
+        "observedAt": "2026-10-02",
+        "observedBlock": 47449269,
+        "sources": [
+          {
+            "label": "M0 Portal V2 control source",
+            "url": "https://github.com/m0-platform/m-portal-v2/blob/27820ee62b2bedfdf089df96492aadf1976cdb47/evm/src/Portal.sol"
+          },
+          {
+            "label": "Pinned hyperevm JSON-RPC (2026-10-02)",
+            "url": "https://api-hyperliquid-mainnet-evm.n.dwellir.com"
+          }
+        ],
+        "evidence": "Pinned block 47449269: hasRole(OPERATOR_ROLE,0xf2f1acbe0ba726fee8d75f3e32900526874740bb) and hasRole(PAUSER_ROLE,0xf2f1acbe0ba726fee8d75f3e32900526874740bb) were true on Portal; adapter OPERATOR_ROLE also true. Controller runtime code was 0x. Controller account code is empty at this pin."
+      },
+      {
+        "id": "wm-soneium-portal-v2-admin",
+        "label": "wM soneium Portal V2 admin Safe",
+        "routeRefs": [
+          "soneium:0x437cc33344a0b27a429f795ff6b469c72698b291"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "soneium",
+        "controllerAddress": "0x8c645e201dd944677864479357f8255ea943b18b",
+        "failureDomainKeys": [
+          "protocol:m0-portal-v2-hyperlane",
+          "contract:soneium:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+          "contract:soneium:0xfcc1d596ad6cab0b5394eaa447d8626813180f32",
+          "safe:soneium:0x8c645e201dd944677864479357f8255ea943b18b"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "owners": [
+            "0x02490f751d7d69115d2466239391faad0a00b650",
+            "0xa00baef9adb918bf57a124ec0ca469b68362ee3a",
+            "0xa10f81bcaa44135fd15f15446b4e7531b753e698",
+            "0xcf4d90c0ce49e0db337b3bd8042916145d5387be",
+            "0x9ced0724b8b93c2c7ce6c6c314d21cbf88d93687"
+          ],
+          "threshold": 3,
+          "observedBlock": 28896580,
+          "source": "onchain",
+          "observedAt": "2026-10-02"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "DEFAULT_ADMIN administers Portal and default Hyperlane-adapter roles and authorizes UUPS replacement logic for the local M bridge representation. This is not native Ethereum M issuance. No immutable cap protection or Safe-extension non-interference is claimed.",
+        "canRaiseCap": "unknown",
+        "routeChecks": {
+          "trustedPeerOrRemote": "Pinned block 28896580: hubChainId 1; defaultBridgeAdapter(1)=0xfcc1d596ad6cab0b5394eaa447d8626813180f32; supportedBridgeAdapter true; getPeer(1) equals the adapter; getBridgeChainId(1)=1 (Hyperlane Ethereum domain). Tested wM paths are false; do not infer active wM transfer support.",
+          "rateLimits": "No quantitative aggregate mint/bridge limit was established. Adapter uses Mailbox default ISM (interchainSecurityModule() zero), whose current security controls are not reviewed here.",
+          "pausersAdminsUpgraders": "Pinned block 28896580: Portal implementation 0x46a8cfba44e5d29b6ee556277eac2c233cf52dda; DEFAULT_ADMIN_ROLE is held by 0x8c645e201dd944677864479357f8255ea943b18b, OPERATOR_ROLE/PAUSER_ROLE by 0xf2f1acbe0ba726fee8d75f3e32900526874740bb; sendPaused and receivePaused false."
+        },
+        "observedAt": "2026-10-02",
+        "observedBlock": 28896580,
+        "sources": [
+          {
+            "label": "M0 Portal V2 control source",
+            "url": "https://github.com/m0-platform/m-portal-v2/blob/27820ee62b2bedfdf089df96492aadf1976cdb47/evm/src/Portal.sol"
+          },
+          {
+            "label": "Pinned soneium JSON-RPC (2026-10-02)",
+            "url": "https://rpc.soneium.org"
+          }
+        ],
+        "evidence": "At block 28896580, hasRole(DEFAULT_ADMIN_ROLE,0x8c645e201dd944677864479357f8255ea943b18b) was true on Portal and default adapter; getOwners and getThreshold returned the recorded 5-owner/3-signature state at the same pin. Guard/fallback/module non-interference and exhaustive role membership are not certified."
+      },
+      {
+        "id": "wm-soneium-portal-v2-operator-pauser",
+        "label": "wM soneium Portal V2 operator and pauser",
+        "routeRefs": [
+          "soneium:0x437cc33344a0b27a429f795ff6b469c72698b291"
+        ],
+        "capabilities": [
+          "pause",
+          "peer-config"
+        ],
+        "controllerChain": "soneium",
+        "controllerAddress": "0xf2f1acbe0ba726fee8d75f3e32900526874740bb",
+        "failureDomainKeys": [
+          "protocol:m0-portal-v2-hyperlane",
+          "contract:soneium:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+          "contract:soneium:0xfcc1d596ad6cab0b5394eaa447d8626813180f32",
+          "account:soneium:0xf2f1acbe0ba726fee8d75f3e32900526874740bb"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The addressed Portal OPERATOR can change supported adapter/path settings and the PAUSER can stop send/receive. Adapter OPERATOR can alter peers; no independent quorum or immutable limit is claimed.",
+        "canRaiseCap": "unknown",
+        "routeChecks": {
+          "trustedPeerOrRemote": "Pinned block 28896580: hubChainId 1; defaultBridgeAdapter(1)=0xfcc1d596ad6cab0b5394eaa447d8626813180f32; supportedBridgeAdapter true; getPeer(1) equals the adapter; getBridgeChainId(1)=1 (Hyperlane Ethereum domain). Tested wM paths are false; do not infer active wM transfer support.",
+          "rateLimits": "No quantitative aggregate mint/bridge limit was established. Adapter uses Mailbox default ISM (interchainSecurityModule() zero), whose current security controls are not reviewed here.",
+          "pausersAdminsUpgraders": "Pinned block 28896580: Portal implementation 0x46a8cfba44e5d29b6ee556277eac2c233cf52dda; DEFAULT_ADMIN_ROLE is held by 0x8c645e201dd944677864479357f8255ea943b18b, OPERATOR_ROLE/PAUSER_ROLE by 0xf2f1acbe0ba726fee8d75f3e32900526874740bb; sendPaused and receivePaused false."
+        },
+        "observedAt": "2026-10-02",
+        "observedBlock": 28896580,
+        "sources": [
+          {
+            "label": "M0 Portal V2 control source",
+            "url": "https://github.com/m0-platform/m-portal-v2/blob/27820ee62b2bedfdf089df96492aadf1976cdb47/evm/src/Portal.sol"
+          },
+          {
+            "label": "Pinned soneium JSON-RPC (2026-10-02)",
+            "url": "https://rpc.soneium.org"
+          }
+        ],
+        "evidence": "Pinned block 28896580: hasRole(OPERATOR_ROLE,0xf2f1acbe0ba726fee8d75f3e32900526874740bb) and hasRole(PAUSER_ROLE,0xf2f1acbe0ba726fee8d75f3e32900526874740bb) were true on Portal; adapter OPERATOR_ROLE also true. Controller runtime code was 0x. Controller account code is empty at this pin."
+      },
+      {
+        "id": "wm-plasma-portal-v2-admin",
+        "label": "wM plasma Portal V2 admin Safe",
+        "routeRefs": [
+          "plasma:0x437cc33344a0b27a429f795ff6b469c72698b291"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "plasma",
+        "controllerAddress": "0x48670b46380fe1645f0e3e821a25162db2589d19",
+        "failureDomainKeys": [
+          "protocol:m0-portal-v2-hyperlane",
+          "contract:plasma:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+          "contract:plasma:0xfcc1d596ad6cab0b5394eaa447d8626813180f32",
+          "safe:plasma:0x48670b46380fe1645f0e3e821a25162db2589d19"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "owners": [
+            "0x02490f751d7d69115d2466239391faad0a00b650",
+            "0xa00baef9adb918bf57a124ec0ca469b68362ee3a",
+            "0xa10f81bcaa44135fd15f15446b4e7531b753e698",
+            "0xcf4d90c0ce49e0db337b3bd8042916145d5387be",
+            "0x9ced0724b8b93c2c7ce6c6c314d21cbf88d93687"
+          ],
+          "threshold": 3,
+          "observedBlock": 33986960,
+          "source": "onchain",
+          "observedAt": "2026-10-02"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "DEFAULT_ADMIN administers Portal and default Hyperlane-adapter roles and authorizes UUPS replacement logic for the local M bridge representation. This is not native Ethereum M issuance. No immutable cap protection or Safe-extension non-interference is claimed.",
+        "canRaiseCap": "unknown",
+        "routeChecks": {
+          "trustedPeerOrRemote": "Pinned block 33986960: hubChainId 1; defaultBridgeAdapter(1)=0xfcc1d596ad6cab0b5394eaa447d8626813180f32; supportedBridgeAdapter true; getPeer(1) equals the adapter; getBridgeChainId(1)=1 (Hyperlane Ethereum domain). Tested wM paths are false; do not infer active wM transfer support.",
+          "rateLimits": "No quantitative aggregate mint/bridge limit was established. Adapter uses Mailbox default ISM (interchainSecurityModule() zero), whose current security controls are not reviewed here.",
+          "pausersAdminsUpgraders": "Pinned block 33986960: Portal implementation 0x9c5e0f709ade610ad0fa1eea6e2b7756a3902adc; DEFAULT_ADMIN_ROLE is held by 0x48670b46380fe1645f0e3e821a25162db2589d19, OPERATOR_ROLE/PAUSER_ROLE by 0xf2f1acbe0ba726fee8d75f3e32900526874740bb; sendPaused and receivePaused false."
+        },
+        "observedAt": "2026-10-02",
+        "observedBlock": 33986960,
+        "sources": [
+          {
+            "label": "M0 Portal V2 control source",
+            "url": "https://github.com/m0-platform/m-portal-v2/blob/27820ee62b2bedfdf089df96492aadf1976cdb47/evm/src/Portal.sol"
+          },
+          {
+            "label": "Pinned plasma JSON-RPC (2026-10-02)",
+            "url": "https://api-plasma-mainnet.n.dwellir.com"
+          }
+        ],
+        "evidence": "At block 33986960, hasRole(DEFAULT_ADMIN_ROLE,0x48670b46380fe1645f0e3e821a25162db2589d19) was true on Portal and default adapter; getOwners and getThreshold returned the recorded 5-owner/3-signature state at the same pin. Guard/fallback/module non-interference and exhaustive role membership are not certified."
+      },
+      {
+        "id": "wm-plasma-portal-v2-operator-pauser",
+        "label": "wM plasma Portal V2 operator and pauser",
+        "routeRefs": [
+          "plasma:0x437cc33344a0b27a429f795ff6b469c72698b291"
+        ],
+        "capabilities": [
+          "pause",
+          "peer-config"
+        ],
+        "controllerChain": "plasma",
+        "controllerAddress": "0xf2f1acbe0ba726fee8d75f3e32900526874740bb",
+        "failureDomainKeys": [
+          "protocol:m0-portal-v2-hyperlane",
+          "contract:plasma:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+          "contract:plasma:0xfcc1d596ad6cab0b5394eaa447d8626813180f32",
+          "account:plasma:0xf2f1acbe0ba726fee8d75f3e32900526874740bb"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The addressed Portal OPERATOR can change supported adapter/path settings and the PAUSER can stop send/receive. Adapter OPERATOR can alter peers; no independent quorum or immutable limit is claimed.",
+        "canRaiseCap": "unknown",
+        "routeChecks": {
+          "trustedPeerOrRemote": "Pinned block 33986960: hubChainId 1; defaultBridgeAdapter(1)=0xfcc1d596ad6cab0b5394eaa447d8626813180f32; supportedBridgeAdapter true; getPeer(1) equals the adapter; getBridgeChainId(1)=1 (Hyperlane Ethereum domain). Tested wM paths are false; do not infer active wM transfer support.",
+          "rateLimits": "No quantitative aggregate mint/bridge limit was established. Adapter uses Mailbox default ISM (interchainSecurityModule() zero), whose current security controls are not reviewed here.",
+          "pausersAdminsUpgraders": "Pinned block 33986960: Portal implementation 0x9c5e0f709ade610ad0fa1eea6e2b7756a3902adc; DEFAULT_ADMIN_ROLE is held by 0x48670b46380fe1645f0e3e821a25162db2589d19, OPERATOR_ROLE/PAUSER_ROLE by 0xf2f1acbe0ba726fee8d75f3e32900526874740bb; sendPaused and receivePaused false."
+        },
+        "observedAt": "2026-10-02",
+        "observedBlock": 33986960,
+        "sources": [
+          {
+            "label": "M0 Portal V2 control source",
+            "url": "https://github.com/m0-platform/m-portal-v2/blob/27820ee62b2bedfdf089df96492aadf1976cdb47/evm/src/Portal.sol"
+          },
+          {
+            "label": "Pinned plasma JSON-RPC (2026-10-02)",
+            "url": "https://api-plasma-mainnet.n.dwellir.com"
+          }
+        ],
+        "evidence": "Pinned block 33986960: hasRole(OPERATOR_ROLE,0xf2f1acbe0ba726fee8d75f3e32900526874740bb) and hasRole(PAUSER_ROLE,0xf2f1acbe0ba726fee8d75f3e32900526874740bb) were true on Portal; adapter OPERATOR_ROLE also true. Controller runtime code was 0x. Controller account code is empty at this pin."
+      },
+      {
+        "id": "wm-citrea-portal-v2-admin",
+        "label": "wM citrea Portal V2 admin Safe",
+        "routeRefs": [
+          "citrea:0x437cc33344a0b27a429f795ff6b469c72698b291"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "citrea",
+        "controllerAddress": "0x8c645e201dd944677864479357f8255ea943b18b",
+        "failureDomainKeys": [
+          "protocol:m0-portal-v2-hyperlane",
+          "contract:citrea:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+          "contract:citrea:0xfcc1d596ad6cab0b5394eaa447d8626813180f32",
+          "safe:citrea:0x8c645e201dd944677864479357f8255ea943b18b"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "owners": [
+            "0x02490f751d7d69115d2466239391faad0a00b650",
+            "0xa00baef9adb918bf57a124ec0ca469b68362ee3a",
+            "0xa10f81bcaa44135fd15f15446b4e7531b753e698",
+            "0xcf4d90c0ce49e0db337b3bd8042916145d5387be",
+            "0x9ced0724b8b93c2c7ce6c6c314d21cbf88d93687"
+          ],
+          "threshold": 3,
+          "observedBlock": 13412716,
+          "source": "onchain",
+          "observedAt": "2026-10-02"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "DEFAULT_ADMIN administers Portal and default Hyperlane-adapter roles and authorizes UUPS replacement logic for the local M bridge representation. This is not native Ethereum M issuance. No immutable cap protection or Safe-extension non-interference is claimed.",
+        "canRaiseCap": "unknown",
+        "routeChecks": {
+          "trustedPeerOrRemote": "Pinned block 13412716: hubChainId 1; defaultBridgeAdapter(1)=0xfcc1d596ad6cab0b5394eaa447d8626813180f32; supportedBridgeAdapter true; getPeer(1) equals the adapter; getBridgeChainId(1)=1 (Hyperlane Ethereum domain). Tested wM paths are false; do not infer active wM transfer support.",
+          "rateLimits": "No quantitative aggregate mint/bridge limit was established. Adapter uses Mailbox default ISM (interchainSecurityModule() zero), whose current security controls are not reviewed here.",
+          "pausersAdminsUpgraders": "Pinned block 13412716: Portal implementation 0x7933191bfdbdc51f891d972e822880bcb3c98872; DEFAULT_ADMIN_ROLE is held by 0x8c645e201dd944677864479357f8255ea943b18b, OPERATOR_ROLE/PAUSER_ROLE by 0xf2f1acbe0ba726fee8d75f3e32900526874740bb; sendPaused and receivePaused false."
+        },
+        "observedAt": "2026-10-02",
+        "observedBlock": 13412716,
+        "sources": [
+          {
+            "label": "M0 Portal V2 control source",
+            "url": "https://github.com/m0-platform/m-portal-v2/blob/27820ee62b2bedfdf089df96492aadf1976cdb47/evm/src/Portal.sol"
+          },
+          {
+            "label": "Pinned citrea JSON-RPC (2026-10-02)",
+            "url": "https://rpc.mainnet.citrea.xyz"
+          }
+        ],
+        "evidence": "At block 13412716, hasRole(DEFAULT_ADMIN_ROLE,0x8c645e201dd944677864479357f8255ea943b18b) was true on Portal and default adapter; getOwners and getThreshold returned the recorded 5-owner/3-signature state at the same pin. Guard/fallback/module non-interference and exhaustive role membership are not certified."
+      },
+      {
+        "id": "wm-citrea-portal-v2-operator-pauser",
+        "label": "wM citrea Portal V2 operator and pauser",
+        "routeRefs": [
+          "citrea:0x437cc33344a0b27a429f795ff6b469c72698b291"
+        ],
+        "capabilities": [
+          "pause",
+          "peer-config"
+        ],
+        "controllerChain": "citrea",
+        "controllerAddress": "0xf2f1acbe0ba726fee8d75f3e32900526874740bb",
+        "failureDomainKeys": [
+          "protocol:m0-portal-v2-hyperlane",
+          "contract:citrea:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+          "contract:citrea:0xfcc1d596ad6cab0b5394eaa447d8626813180f32",
+          "account:citrea:0xf2f1acbe0ba726fee8d75f3e32900526874740bb"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The addressed Portal OPERATOR can change supported adapter/path settings and the PAUSER can stop send/receive. Adapter OPERATOR can alter peers; no independent quorum or immutable limit is claimed.",
+        "canRaiseCap": "unknown",
+        "routeChecks": {
+          "trustedPeerOrRemote": "Pinned block 13412716: hubChainId 1; defaultBridgeAdapter(1)=0xfcc1d596ad6cab0b5394eaa447d8626813180f32; supportedBridgeAdapter true; getPeer(1) equals the adapter; getBridgeChainId(1)=1 (Hyperlane Ethereum domain). Tested wM paths are false; do not infer active wM transfer support.",
+          "rateLimits": "No quantitative aggregate mint/bridge limit was established. Adapter uses Mailbox default ISM (interchainSecurityModule() zero), whose current security controls are not reviewed here.",
+          "pausersAdminsUpgraders": "Pinned block 13412716: Portal implementation 0x7933191bfdbdc51f891d972e822880bcb3c98872; DEFAULT_ADMIN_ROLE is held by 0x8c645e201dd944677864479357f8255ea943b18b, OPERATOR_ROLE/PAUSER_ROLE by 0xf2f1acbe0ba726fee8d75f3e32900526874740bb; sendPaused and receivePaused false."
+        },
+        "observedAt": "2026-10-02",
+        "observedBlock": 13412716,
+        "sources": [
+          {
+            "label": "M0 Portal V2 control source",
+            "url": "https://github.com/m0-platform/m-portal-v2/blob/27820ee62b2bedfdf089df96492aadf1976cdb47/evm/src/Portal.sol"
+          },
+          {
+            "label": "Pinned citrea JSON-RPC (2026-10-02)",
+            "url": "https://rpc.mainnet.citrea.xyz"
+          }
+        ],
+        "evidence": "Pinned block 13412716: hasRole(OPERATOR_ROLE,0xf2f1acbe0ba726fee8d75f3e32900526874740bb) and hasRole(PAUSER_ROLE,0xf2f1acbe0ba726fee8d75f3e32900526874740bb) were true on Portal; adapter OPERATOR_ROLE also true. Controller runtime code was 0x. Controller account code is empty at this pin."
+      },
+      {
+        "id": "wm-monad-portal-v2-admin",
+        "label": "wM monad Portal V2 admin Safe",
+        "routeRefs": [
+          "monad:0x437cc33344a0b27a429f795ff6b469c72698b291"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "monad",
+        "controllerAddress": "0x48670b46380fe1645f0e3e821a25162db2589d19",
+        "failureDomainKeys": [
+          "protocol:m0-portal-v2-hyperlane",
+          "contract:monad:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+          "contract:monad:0xfcc1d596ad6cab0b5394eaa447d8626813180f32",
+          "safe:monad:0x48670b46380fe1645f0e3e821a25162db2589d19"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "owners": [
+            "0x02490f751d7d69115d2466239391faad0a00b650",
+            "0xa00baef9adb918bf57a124ec0ca469b68362ee3a",
+            "0xa10f81bcaa44135fd15f15446b4e7531b753e698",
+            "0xcf4d90c0ce49e0db337b3bd8042916145d5387be",
+            "0x9ced0724b8b93c2c7ce6c6c314d21cbf88d93687"
+          ],
+          "threshold": 3,
+          "observedBlock": 109840715,
+          "source": "onchain",
+          "observedAt": "2026-10-02"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "DEFAULT_ADMIN administers Portal and default Hyperlane-adapter roles and authorizes UUPS replacement logic for the local M bridge representation. This is not native Ethereum M issuance. No immutable cap protection or Safe-extension non-interference is claimed.",
+        "canRaiseCap": "unknown",
+        "routeChecks": {
+          "trustedPeerOrRemote": "Pinned block 109840715: hubChainId 1; defaultBridgeAdapter(1)=0xfcc1d596ad6cab0b5394eaa447d8626813180f32; supportedBridgeAdapter true; getPeer(1) equals the adapter; getBridgeChainId(1)=1 (Hyperlane Ethereum domain). Tested wM paths are false; do not infer active wM transfer support.",
+          "rateLimits": "No quantitative aggregate mint/bridge limit was established. Adapter uses Mailbox default ISM (interchainSecurityModule() zero), whose current security controls are not reviewed here.",
+          "pausersAdminsUpgraders": "Pinned block 109840715: Portal implementation 0x6c0815281be10c9b929f6de50983fa0c61148da6; DEFAULT_ADMIN_ROLE is held by 0x48670b46380fe1645f0e3e821a25162db2589d19, OPERATOR_ROLE/PAUSER_ROLE by 0xf2f1acbe0ba726fee8d75f3e32900526874740bb; sendPaused and receivePaused false."
+        },
+        "observedAt": "2026-10-02",
+        "observedBlock": 109840715,
+        "sources": [
+          {
+            "label": "M0 Portal V2 control source",
+            "url": "https://github.com/m0-platform/m-portal-v2/blob/27820ee62b2bedfdf089df96492aadf1976cdb47/evm/src/Portal.sol"
+          },
+          {
+            "label": "Pinned monad JSON-RPC (2026-10-02)",
+            "url": "https://api-monad-mainnet-full.n.dwellir.com"
+          }
+        ],
+        "evidence": "At block 109840715, hasRole(DEFAULT_ADMIN_ROLE,0x48670b46380fe1645f0e3e821a25162db2589d19) was true on Portal and default adapter; getOwners and getThreshold returned the recorded 5-owner/3-signature state at the same pin. Guard/fallback/module non-interference and exhaustive role membership are not certified."
+      },
+      {
+        "id": "wm-monad-portal-v2-operator-pauser",
+        "label": "wM monad Portal V2 operator and pauser",
+        "routeRefs": [
+          "monad:0x437cc33344a0b27a429f795ff6b469c72698b291"
+        ],
+        "capabilities": [
+          "pause",
+          "peer-config"
+        ],
+        "controllerChain": "monad",
+        "controllerAddress": "0xf2f1acbe0ba726fee8d75f3e32900526874740bb",
+        "failureDomainKeys": [
+          "protocol:m0-portal-v2-hyperlane",
+          "contract:monad:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+          "contract:monad:0xfcc1d596ad6cab0b5394eaa447d8626813180f32",
+          "account:monad:0xf2f1acbe0ba726fee8d75f3e32900526874740bb"
+        ],
+        "authorityType": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "The addressed Portal OPERATOR can change supported adapter/path settings and the PAUSER can stop send/receive. Adapter OPERATOR can alter peers; no independent quorum or immutable limit is claimed.",
+        "canRaiseCap": "unknown",
+        "routeChecks": {
+          "trustedPeerOrRemote": "Pinned block 109840715: hubChainId 1; defaultBridgeAdapter(1)=0xfcc1d596ad6cab0b5394eaa447d8626813180f32; supportedBridgeAdapter true; getPeer(1) equals the adapter; getBridgeChainId(1)=1 (Hyperlane Ethereum domain). Tested wM paths are false; do not infer active wM transfer support.",
+          "rateLimits": "No quantitative aggregate mint/bridge limit was established. Adapter uses Mailbox default ISM (interchainSecurityModule() zero), whose current security controls are not reviewed here.",
+          "pausersAdminsUpgraders": "Pinned block 109840715: Portal implementation 0x6c0815281be10c9b929f6de50983fa0c61148da6; DEFAULT_ADMIN_ROLE is held by 0x48670b46380fe1645f0e3e821a25162db2589d19, OPERATOR_ROLE/PAUSER_ROLE by 0xf2f1acbe0ba726fee8d75f3e32900526874740bb; sendPaused and receivePaused false."
+        },
+        "observedAt": "2026-10-02",
+        "observedBlock": 109840715,
+        "sources": [
+          {
+            "label": "M0 Portal V2 control source",
+            "url": "https://github.com/m0-platform/m-portal-v2/blob/27820ee62b2bedfdf089df96492aadf1976cdb47/evm/src/Portal.sol"
+          },
+          {
+            "label": "Pinned monad JSON-RPC (2026-10-02)",
+            "url": "https://api-monad-mainnet-full.n.dwellir.com"
+          }
+        ],
+        "evidence": "Pinned block 109840715: hasRole(OPERATOR_ROLE,0xf2f1acbe0ba726fee8d75f3e32900526874740bb) and hasRole(PAUSER_ROLE,0xf2f1acbe0ba726fee8d75f3e32900526874740bb) were true on Portal; adapter OPERATOR_ROLE also true. Controller runtime code was 0xef010063c0c19a282a1b52b07dd5a65b58948a07dae32b. EIP-7702 delegated code is present; no EOA-only execution or delegation-controller protection is inferred."
       }
     ]
   }

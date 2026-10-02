@@ -458,6 +458,27 @@ describe("evm-rpc helpers", () => {
     });
   });
 
+  it("preserves successful empty direct returns and the default allowed failure", async () => {
+    const hash = `0x${"a".repeat(64)}` as `0x${string}`;
+    fetchWithRetryMock
+      .mockResolvedValueOnce(rpcResponse({ result: "0x" }))
+      .mockResolvedValueOnce(rpcResponse({ result: "0x" }))
+      .mockResolvedValueOnce(rpcResponse({ error: { code: 3, message: "execution reverted" } }))
+      .mockResolvedValueOnce(rpcResponse({ result: { number: "0x10", timestamp: "0x64", hash } }));
+
+    expect(await fetchEvmMulticall3Aggregate3AtBlock("ethereum", [
+      { label: "empty-success", target: "0x1111111111111111111111111111111111111111",
+        callData: "0x11111111", allowFailure: false },
+      { label: "optional-revert", target: "0x1111111111111111111111111111111111111111",
+        callData: "0x22222222" },
+    ], 16, {
+      extraRpcUrls: ["https://rpc.example"], multicallFallbackBlockHash: hash,
+    })).toEqual([
+      { label: "empty-success", success: true, returnData: "0x" },
+      { label: "optional-revert", success: false, returnData: "0x" },
+    ]);
+  });
+
   it("fetches raw hex call results from RPC URLs", async () => {
     fetchWithRetryMock.mockResolvedValue(rpcResponse({ result: "0x2a" }));
 

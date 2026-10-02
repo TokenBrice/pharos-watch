@@ -23,5 +23,108 @@
     "evidence": "2026-07-30 re-review of KGST holder freeze/blacklist posture. Sole tracked deployment is BSC proxy 0x94be0bba8e1e303fe998c9360b57b826f1a4f828. At BSC block 113079584, EIP-1967 implementation slot resolved to 0xa903a6c1c3bd45927542823528a6fa73a2a410e2 and admin slot to ProxyAdmin 0xcb628ce396f8f6ffbfae48721fe02a668a9a718b; token owner() returned 2-of-5 Safe 0xb94f9247bd181fc9aca4d8694fb3774ed99be5d5. Sourcify exact-matches the implementation as Stablecoin (ERC20PermitUpgradeable + Ownable2StepUpgradeable + PausableUpgradeable). Source exposes owner-only freeze(address)/unfreeze(address) over mapping frozen, owner-only pause()/unpause(), and _transfer/_approve overrides that require whenNotPaused and notFrozen(from/to). That is a direct individual holder freeze plus system-wide pause on the sole material deployment. paused() read false at the observation block. Issuer site confirms a centralized, regulator-supervised KGSToken LLC issuance model consistent with privileged admin controls. Conclusion: reviewedStatus=true (reach individual; pause also system-wide).",
     "reviewer": "Grok T28 safety-v9 unknown-reduction w2",
     "reviewedAt": "2026-07-30"
+  },
+  "bridgeRouteRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "KGST has a reviewed issuer-native BSC deployment and a verified TRON deployment with observed token/admin ownership and native multisignature permissions. TRON native-versus-representation liability accounting remains researched unknown; mechanical mint transactions do not establish reserve-book conservation. No bridge security, supply partition or financial assurance is inferred.",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol NR wave 2026-10-02 (VNrKgst)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "KGST issuer BSC deployment disclosure",
+        "url": "https://www.kgstoken.kg/"
+      },
+      {
+        "label": "KGST verified BSC mint implementation",
+        "url": "https://sourcify.dev/server/v2/contract/56/0xa903a6c1c3bd45927542823528a6fa73a2a410e2?fields=sources,compilation,abi"
+      },
+      {
+        "label": "Binance exact KGST TRON contract integration",
+        "url": "https://www.binance.com/en/support/announcement/detail/206adb88d0e84ab5baa192e25abe554e"
+      },
+      {
+        "label": "NAVA KGST TRON integration notice",
+        "url": "https://www.nava.gov.kg/articles/20260502-binance-KGST-TRON-NEWS"
+      },
+      {
+        "label": "TronScan verified Stablecoin implementation ABI",
+        "url": "https://apilist.tronscanapi.com/api/contracts/code?contract=TR9KpxsZ2F94ZnbwHR148d7U5mrFneKMtt"
+      },
+      {
+        "label": "TronGrid native account permissions and contract reads",
+        "url": "https://developers.tron.network/reference/account-getaccount"
+      }
+    ],
+    "routes": [
+      {
+        "id": "bsc:0x94be0bba8e1e303fe998c9360b57b826f1a4f828",
+        "destinationChain": "bsc",
+        "canonicalChain": "bsc",
+        "contractAddress": "0x94be0bba8e1e303fe998c9360b57b826f1a4f828",
+        "protocol": "KGST issuer-direct mint",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer names BSC as its token issuance deployment. Verified implementation has owner-only uncapped mint(uint256); owner Safe and ProxyAdmin remain independently confirmed. Financial reconciliation is not established.",
+        "controllerChain": "bsc",
+        "controllerAddress": "0xb94f9247bd181fc9aca4d8694fb3774ed99be5d5",
+        "failureDomainKeys": [
+          "bsc:0xb94f9247bd181fc9aca4d8694fb3774ed99be5d5"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 125256771,
+        "sources": [
+          {
+            "label": "KGST issuer BSC deployment disclosure",
+            "url": "https://www.kgstoken.kg/"
+          },
+          {
+            "label": "KGST verified BSC mint implementation",
+            "url": "https://sourcify.dev/server/v2/contract/56/0xa903a6c1c3bd45927542823528a6fa73a2a410e2?fields=sources,compilation,abi"
+          }
+        ]
+      },
+      {
+        "id": "tron:TN3cfcFhLrdNZhMdHZVZ4z2XFWb7uB9CXg",
+        "destinationChain": "tron",
+        "contractAddress": "TN3cfcFhLrdNZhMdHZVZ4z2XFWb7uB9CXg",
+        "protocol": "KGST TRC20 deployment; economic transfer model undisclosed",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Deployment identity is verified independently from Binance, NAVA and latest-state RPC: name/symbol KGST, decimals 18. Token owner and autoOwner are TV1qH8m835v1tPyKiZCMVGcWZduMKW33D8; ProxyAdmin TYhmr8dZMVAesxwpPyw3hyyJpmENSj96Hu has the same owner; implementation is TR9KpxsZ2F94ZnbwHR148d7U5mrFneKMtt. Native account owner permission is weight-1 threshold 2 across five keys; its active permission is weight-1 threshold 2 across four keys, including smart-contract calls. Neither signer independence nor custody is established. autoMintMaxLimit() is zero, which is not a cap on manual mint or upgrade. A successful direct mint(address,uint256) by that owner is confirmed at transaction 7b03bac02cea00ce01708c4efc9b099b0e06d9b8453f07d98027bd27516f365b (block 82925474), with two signatures. These observations establish mechanical issuance and administrative identities, not whether TRON balances are independent native reserve liabilities or an off-chain-conserved BSC representation. No escrow, backing partition, cross-chain conservation or financial reconciliation is asserted. RPC state reads were observed 2026-10-02 against latest; historical QUANTITY pins are unsupported and anchor block 86751699 is not a pin for those reads.",
+        "controllerChain": "tron",
+        "controllerAddress": "TV1qH8m835v1tPyKiZCMVGcWZduMKW33D8",
+        "failureDomainKeys": [
+          "tron:TV1qH8m835v1tPyKiZCMVGcWZduMKW33D8"
+        ],
+        "observedAt": "2026-10-02",
+        "sources": [
+          {
+            "label": "Binance exact KGST TRON contract integration",
+            "url": "https://www.binance.com/en/support/announcement/detail/206adb88d0e84ab5baa192e25abe554e"
+          },
+          {
+            "label": "NAVA KGST TRON integration notice",
+            "url": "https://www.nava.gov.kg/articles/20260502-binance-KGST-TRON-NEWS"
+          },
+          {
+            "label": "TronScan verified Stablecoin implementation ABI",
+            "url": "https://apilist.tronscanapi.com/api/contracts/code?contract=TR9KpxsZ2F94ZnbwHR148d7U5mrFneKMtt"
+          },
+          {
+            "label": "TronGrid native account permissions and contract reads",
+            "url": "https://developers.tron.network/reference/account-getaccount"
+          }
+        ]
+      }
+    ]
   }
 }

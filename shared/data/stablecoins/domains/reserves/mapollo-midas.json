@@ -22,8 +22,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-14",
-    "reviewer": "OpenAI Codex reserve disclosure review",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol NR wave 2026-10-02 (NrMapollo)",
     "confidence": "probable",
     "sources": [
       {
@@ -41,9 +41,17 @@
       {
         "label": "Midas mAPOLLO final terms (prospectus documents)",
         "url": "https://docs.midas.app/resources/legal-documents/prospectus-documents"
+      },
+      {
+        "label": "Official mAPOLLO transparency API, updated 2026-10-02T07:06:43.214Z: signed positions and protocol assets, liabilities and equity",
+        "url": "https://api-prod.midas.app/api/transparency?token=mAPOLLO"
+      },
+      {
+        "label": "Signed mAPOLLO Final Terms dated 17 July 2026: notional reference portfolio and holder claim",
+        "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2F7sSYvDMJYrWvBsvKGQFI%2F20260714_mAPOLLO_FT_signed_final.pdf?alt=media"
       }
     ],
-    "rationale": "Midas identifies mAPOLLO as an Apollo Crypto managed-yield strategy NAV. The September 14 transparency view discloses dated asset and protocol positions, including material borrow liabilities. Its main-position table is rounded and excludes absolute deltas below $100,000; it is not a complete reconciled balance sheet. The existing NAV envelope therefore retains unresolved allocation rather than converting positive positions alone into reserve weights.",
+    "rationale": "The official API updated 2026-10-02T07:06:43.214Z discloses signed main positions and protocol-level assets, borrow liabilities and equity. Net protocol equity shares sum to 99.99%, but protocol buckets do not establish complete asset-level backing weights, hedge reconciliation, custody allocation or a reserve-to-token-liability reconciliation. The signed 17 July 2026 terms define a notional reference portfolio without a requirement to acquire the underlying. Preserve the unresolved NAV envelope and omit compositionAsOf; this research date does not refresh a verified composition.",
     "compositionBasis": "Midas mAPOLLO product, final-terms, and transparency disclosures",
     "scope": "full-composition",
     "knownUnknownExposure": "Some assets and venues are disclosed, but complete signed positions, smaller residuals, token-backing scope and custody relationships remain unverified. The 100% unresolved envelope reflects the missing complete allocation, not a claim that no positions are published.",

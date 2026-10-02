@@ -13,8 +13,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-14",
-    "reviewer": "OpenAI Codex reserve disclosure review",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol NR wave 2026-10-02 (NrMhyper)",
     "confidence": "verified",
     "sources": [
       {
@@ -32,13 +32,25 @@
       {
         "label": "Fordefi Midas custody case study",
         "url": "https://www.fordefi.com/customer-stories/how-midas-brings-tokenized-investment-opportunities-on-chain-with-fordefis-defi-native-custody-2ti85"
+      },
+      {
+        "label": "Midas current mHYPER protocol exposures, updated 2026-10-02T07:06:50.671Z",
+        "url": "https://api-prod.midas.app/api/transparency?token=mHYPER"
+      },
+      {
+        "label": "mHYPER dated hourly protocol exposure snapshot, 2026-10-02T07:00 UTC",
+        "url": "https://api-prod.midas.app/api/transparency/by-timestamp?token=mHYPER&timestamp=2026-10-02T07:00"
+      },
+      {
+        "label": "mHYPER immutable SAVE checkpoint, 2026-09-29",
+        "url": "https://gateway.pinata.cloud/ipfs/QmQxfaGhtGrP4im4B8TYyPHBn2MkxZQMx8Ta8JeDsUVCSX"
       }
     ],
-    "rationale": "mHYPER is a certificate tracking a managed market-neutral reference portfolio. The September 14 dashboard discloses dated protocol exposures, including anonymously labelled Cex1, Cex2 and Cex3 positions. These protocol weights do not establish underlying asset composition or complete custody identity. The NAV envelope remains unresolved pending complete position and liability reconciliation.",
+    "rationale": "mHYPER references a managed market-neutral portfolio. The current issuer API, updated 2026-10-02T07:06:50.671Z and matched to the 07:00 hourly snapshot, reports protocol assets of 32.9521918602 million USD, borrow liabilities of -1.4642030152 million USD and net equity of 31.4879888449 million USD. The 29 September immutable SAVE checkpoint separately reports protocol assets, borrow liabilities and reported token supply. These are current protocol-level observations, not a complete underlying asset, signed hedge or legal custody inventory. The historical compositionAsOf is deliberately unchanged; this review adds diagnostic provenance without refreshing the old curated composition or reducing its unknown exposure.",
     "compositionBasis": "Current Midas product and attestation disclosures; live NAV row identity from the Midas Chainlink NAV oracle adapter",
     "compositionAsOf": "2026-07-20",
     "scope": "full-composition",
-    "knownUnknownExposure": "Dated protocol exposures are published, but the underlying assets, liability offsets and custody identities are incomplete. Anonymous CEX labels account for 38.24% of the rounded September 14 view; that observation is not a curated current reserve weight.",
+    "knownUnknownExposure": "The 2 October protocol net-equity table reports Pendle 37.38%, Morpho 17.24%, Fluid 10.37%, anonymous CEX1/CEX2/CEX3 28.30% combined, wallet 4.95%, USDai 1.61% and smaller rows. These net-equity percentages include borrow offsets and do not identify full reserve instruments, hedge legs, CEX operators or token liabilities. They are diagnostic exposure observations, not normalized gross reserve weights or current dependency links.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {

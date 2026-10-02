@@ -15,6 +15,7 @@
 import { readFileSync } from "node:fs";
 import { URL } from "node:url";
 import MIDAS_MTBILL_CAPTURE from "./fixtures/midas-mtbill-transparency.json";
+import SOLOMON_CHANCERY_CAPTURE from "./fixtures/solomon-chancery-token-backing.json";
 import { BLOX_ATTESTATIONS } from "./fixtures/blox-attestations";
 import { resolveAdapterCoin, type AdapterNetworkSpec, type AdapterRpcValue } from "./reserve-adapter.test-support";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
@@ -655,6 +656,32 @@ CORPUS_CASES["theo-thusd-redemption"] = {
   drift: {
     label: "USDT decimals drift from the reviewed six-decimal units",
     network: { block: THEO_BLOCK, rpc: { ...THEO_RPC, [`${THEO_USDT}:decimals()`]: 18n } },
+    outcome: "error",
+  },
+};
+
+// Captured 2026-10-02 from the issuer token-backing API; apart from the capture
+// stamp, copied unchanged from agents/2026-10-01-curation-pass/nr/scratch/usdv-solomon-v2/live-probe-validated.json.
+// Use an explicit HTTP envelope because the issuer's own `status` field would
+// otherwise be interpreted as the harness response status.
+const SOLOMON_CHANCERY_ENDPOINT = "https://data.solomonlabs.io/api/solomon-protocol/token-backing";
+CORPUS_CASES["solomon-chancery"] = {
+  coinId: "usdv-solomon-v2",
+  nowSec: Math.floor(Date.parse(SOLOMON_CHANCERY_CAPTURE.sourceAt) / 1000) + 120,
+  network: { json: { [SOLOMON_CHANCERY_ENDPOINT]: { status: 200, json: SOLOMON_CHANCERY_CAPTURE } } },
+  drift: {
+    label: "the issuer reserve total is dropped while plausible holdings remain",
+    network: {
+      json: {
+        [SOLOMON_CHANCERY_ENDPOINT]: {
+          status: 200,
+          json: {
+            ...SOLOMON_CHANCERY_CAPTURE,
+            data: { ...SOLOMON_CHANCERY_CAPTURE.data, totalUsd: undefined },
+          },
+        },
+      },
+    },
     outcome: "error",
   },
 };

@@ -20,7 +20,25 @@
     "url": "https://midas.app/transparency",
     "provider": "Midas transparency dashboard and issuer disclosures",
     "attestorTier": "self",
-    "cadence": "daily-nav"
+    "cadence": "daily-nav",
+    "latestReport": {
+      "periodEnd": "2026-09-30",
+      "assuranceMethod": "unknown",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "partial",
+      "reviewer": "Sol NR wave 2026-10-02 (NrMfOne)",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "September 30 mF-ONE SAVE checkpoint with manager correspondence and issuer-reported supply",
+          "url": "https://gateway.pinata.cloud/ipfs/QmZJJQCFAfso7idghMgMSrTKjwQGrN3p7DDhmU3x2zbZvb"
+        },
+        {
+          "label": "Midas attestation engine: NAV workflow verification scope",
+          "url": "https://midas-docs.gitbook.io/midas-docs/how-does-it-work/midas-attestation-engine.md"
+        }
+      ]
+    }
   },
   "links": [
     {
@@ -43,7 +61,7 @@
   "jurisdiction": {
     "country": "Germany",
     "regulator": "Liechtenstein FMA (prospectus-approving authority only; issuer not FMA-licensed)",
-    "license": "Historical EU-Prospectus-Regulation-approved blockchain-based certificate program under German law; the cited July 17, 2024 base prospectus was valid until July 17, 2025. Current mF-ONE final terms and prospectus renewal were not verified in the October 1, 2026 review; not available to U.S. retail persons."
+    "license": "Midas Software GmbH's succeeding blockchain-based certificate programme prospectus was FMA-approved July 17, 2026 and is valid until July 17, 2027. Approval is not an issuer license. The October 2, 2026 review did not recover mF-ONE-specific final terms or establish this product's inclusion in the renewed programme; restricted U.S. distribution applies under the issuer's published eligibility terms."
   },
   "contracts": [
     {

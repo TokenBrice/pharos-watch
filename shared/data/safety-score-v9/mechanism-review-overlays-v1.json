@@ -9796,29 +9796,47 @@
     {
       "assetId": "wars-argentine-peso",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-10-02",
       "sources": [
         {
-          "label": "Ripio local-stablecoins page: second wARS attestation completed and certified by local public accountants as of 2026-03-31 (973,000,960.19 wARS vs ARS 1,036,276,284 on deposit)",
-          "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+          "label": "wFIAT whitepaper Version 1.0 October 2025, still linked by official wARS page; page 3 expressly denies issuer claim and redemption right",
+          "url": "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf"
         },
         {
-          "label": "Independent public accountant certification for wARS, period end 2026-03-31, signed 2026-04-22 by Pablo Eduardo Soto (CPA) - PDF linked from the official Ripio page; reconciles on-chain issuance/burn across six networks against bank statements (assets-and-liabilities scope)",
-          "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331_wARS_Certification.pdf"
+          "label": "Current official wARS whitepaper download gateway",
+          "url": "https://www.ripio.com/es/assets/wars/whitepaper"
+        },
+        {
+          "label": "Independent accountant certification as of June 30 2026, signed July 28 2026; aggregate ARS deposits and issued wARS, no audit or review opinion",
+          "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/Aug%202026/Token%20wARS%2006.30.2026%20Certification%20vf.pdf?hsLang=en"
+        },
+        {
+          "label": "Official attestation index; June 2026 is latest wARS report on October 2 2026",
+          "url": "https://action.ripio.com/en/wfiat-attestations"
+        },
+        {
+          "label": "Ripio Argentina wallet terms updated September 28 2026; custody of user tokens is distinct from wARS reserve rights",
+          "url": "https://terms.ripio.com/ar/wallet"
+        },
+        {
+          "label": "Ripio Argentina on/off-ramp terms; sales at platform market quotations, conditional eligibility, 72-business-hour reasonable-efforts language",
+          "url": "https://terms.ripio.com/ar/on-off-ramp"
+        },
+        {
+          "label": "Ripio wFIAT product page; marketing burn/local-bank-payout description does not supersede explicit no-redemption whitepaper",
+          "url": "https://www.ripio.com/en/wfiat"
         }
       ],
-      "notes": "Assurance: a certification engagement under Argentine Technical Resolution No. 37 by an independent public accountant (Pablo Eduardo Soto, CPCECABA), period end 2026-03-31, which reconciles 973,000,960.19 wARS issued (on-chain mint/burn reports on Ethereum, World Chain, Base, Polygon, Gnosis and BSC, with transaction ID listings) against ARS 1,036,276,284 of collateral in Argentine bank accounts/financial institutions per bank statements - assets-and-liabilities scope with full liability reconciliation (~106.5% coverage); the document itself states it is not an audit or review, i.e. attestation-level, mapping to adequate. Segregation vehicle: NONE documented - the certification verifies balances 'as reported' against bank statements but names no trust, custodian, or even the bank(s). claimAndSegregation left uncurated: no issuer terms establishing a holder redemption right or segregated/bankruptcy-remote reserve structure were found on Ripio's public pages. custodyContinuity left uncurated: the holding bank(s) are unnamed. NOT established: any legal claim or redemption right for ordinary holders, segregation or bankruptcy remoteness, rehypothecation terms, and assurance cadence beyond ad-hoc quarterly certifications by a single niche practitioner.\n\n2026-09-23 assurance expiry review: the live Ripio local-stablecoins disclosure page still links the second wARS certification for 2026-03-31, signed 2026-04-22; no later certification within the 100-day assurance window is listed. Withdraw the assuranceAndReconciliation known-quality override while preserving latestReport and its historical reconciliation. The compiler owns the stale-evidence gap rather than an unsupported current adequate claim. Re-promote only when Ripio publishes a qualifying fresh certification. Other component dispositions retain their original evidence date.",
+      "notes": "Evidence re-pinned 2026-10-02. CLAIM AND SEGREGATION = weak, based on affirmative contrary legal disclosure, not missing evidence: the current official wFIAT whitepaper Version 1.0 (October 2025), page 3, states that a token holder cannot claim any funds or obligations from the issuer and can only sell in the market, with no redemption right. Page 2 asserts reserves in segregated accounts of issuer affiliates, but grants no beneficial ownership or issuer claim to token holders. Ripio's wallet terms protect users' custodied crypto as user property; that is ownership of tokens deposited with the exchange, not ownership of underlying wARS reserves. The marketing page describes burning and receiving local currency, while the binding ramp terms describe market-price purchases/sales and conditional execution. No protected reserve claim is inferred from those conversion services. CUSTODY CONTINUITY remains unavailable: the June certification identifies aggregate Argentine accounts/financial institutions, not named reserve providers, allocations, anti-reuse covenants or failure/replacement mechanics. Assurance is left to the compiler's report fallback, without an overlay quality upgrade: the June 30 certification reconciles 7,619,996,077 wARS against ARS 7,909,436,643.14, is signed July 28 by Pablo Eduardo Soto for SLD y Asociados, and expressly disclaims an audit, review and professional opinion. Re-fetching this old report does not renew its balance date. The exact issuing affiliate is not named; Moonbird SRL is independently verified as Argentina platform/ramp operator and CNV PSAV 36, not thereby identified as token issuer or reserve custodian.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
-          "applicability": "unavailable",
-          "rationale": "The live Ripio local-stablecoins page and March 31, 2026 accountant certification were searched for governing holder redemption terms, a reserve property claim, segregation covenant, trust, bankruptcy remoteness, and insolvency priority. They reconcile balances but publish none of those legal protections.",
-          "sourceUrl": "https://www.ripio.com/en/cryptos/local-stablecoins"
+          "quality": "weak"
         },
         "custodyContinuity": {
           "applicability": "unavailable",
-          "rationale": "The reviewed wFIAT disclosure surface (whitepaper, 2026-03-31 independent certification, and the live Ripio local-stablecoins page, all re-opened 2026-07-30) does not publish the active reserve custodian or venue set, provider allocations, anti-rehypothecation controls, and failure, replacement, or successor-custody mechanics. The missing evidence is recorded as issuer-undisclosed; no weak or failed grade is inferred from its absence.",
-          "sourceUrl": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331_wARS_Certification.pdf"
+          "rationale": "The current official whitepaper, June 30 certification, attestation index, and Argentina wallet/ramp terms were reviewed on October 2 2026. They disclose no active named reserve institution set, allocation shares, anti-rehypothecation covenant or failure, replacement and successor-custody mechanics. Segregated affiliate accounts are asserted, but no reserve account agreement or continuity safeguards are supplied.",
+          "sourceUrl": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/Aug%202026/Token%20wARS%2006.30.2026%20Certification%20vf.pdf?hsLang=en"
         }
       }
     },

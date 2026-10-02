@@ -2912,6 +2912,20 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     redemptionTelemetry: { capacity: "direct", fee: "none" },
     validation: DASHBOARD_WITH_UNKNOWN_CAP_VALIDATION,
   },
+  "solomon-chancery": {
+    primaryInputKinds: ["http-json"],
+    paramsSchema: noParamsSchema,
+    sourceModel: "dynamic-mix",
+    evidenceClass: "weak-live-probe",
+    sourceOriginClass: "issuer-attested",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: {
+      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
+      allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
+    },
+  },
   "solomon-protocol": {
     primaryInputKinds: ["http-json"],
     paramsSchema: noParamsSchema,

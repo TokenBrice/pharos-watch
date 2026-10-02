@@ -54,8 +54,8 @@
   "bridgeRouteRisk": {
     "tier": "canonical-rollup-bridge",
     "summary": "Ethereum, Etherlink, and TAC have reviewed Midas issuer-native issuance, while the tracked Starknet address is a canonical StarkGate lock-mint representation of Ethereum mRe7YIELD. StarkGate's Ethereum MultiBridge escrows the canonical token and its Starknet bridge L1 handler mints the mapped Starknet token; the route's Starknet governance account and zero-delay bridge/token upgrade paths are authored below. The generic Across liquidity/intent listing is not treated as a material mRe7YIELD route.",
-    "reviewedAt": "2026-09-05",
-    "reviewer": "Codex Mint/Bridge boundary migration RELOC-10; TAC deployment closeout",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol NR wave 2026-10-02 (NrMre7)",
     "confidence": "verified",
     "protocols": [
       {
@@ -73,11 +73,11 @@
     "sources": [
       {
         "label": "Midas smart-contract directory",
-        "url": "https://docs.midas.app/protocol-mechanics/smart-contracts"
+        "url": "https://midas-docs.gitbook.io/midas-docs/resources/smart-contracts-addresses.md"
       },
       {
         "label": "Midas mRe7YIELD product documentation",
-        "url": "https://docs.midas.app/tokens/mre7yield"
+        "url": "https://midas-docs.gitbook.io/midas-docs/tokens/mre7yield.md"
       },
       {
         "label": "StarkGate protocol documentation",
@@ -112,9 +112,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20: name 'Midas Re7 Yield', symbol mRe7YIELD, 18 decimals, Midas issuer-native deployment on Ethereum.",
+        "reviewNote": "At Ethereum block 26103187 on 2026-10-02, this token returns Midas Re7 Yield, mRe7YIELD and 18 decimals. MidasAccessControl 0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b confirms M_RE7_MINT_OPERATOR_ROLE for issuer EOA 0xb755ff07fd80b38265ae35639568cfcdc874f21d and issuance vault 0xce0a2953a5d46400af601a9857235312d1924ac7. The issuer registry lists this exact token and vault as the Ethereum deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26103187,
         "sources": [
           {
             "label": "Midas",
@@ -137,14 +138,14 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Midas's official smart-contract directory lists an mRe7YIELD token and issuance vault on Etherlink. At Etherlink block 51161116 on 2026-08-16, the chain-local vault and shared EOA retained M_RE7_MINT_OPERATOR_ROLE, confirming an issuer-native mint path rather than a conserved bridge representation.",
+        "reviewNote": "At Etherlink block 54732102 on 2026-10-02, this token returns Midas Re7 Yield, mRe7YIELD and 18 decimals. The chain-local MidasAccessControl confirms M_RE7_MINT_OPERATOR_ROLE for issuer EOA 0xb755ff07fd80b38265ae35639568cfcdc874f21d and issuance vault 0xbef85e71ecd0517d0c1446751667891b04860753, confirming the issuer-native mint path. The issuer registry lists this exact token and vault on Etherlink.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-08-16",
-        "observedBlock": 51161116,
+        "observedAt": "2026-10-02",
+        "observedBlock": 54732102,
         "sources": [
           {
             "label": "Midas smart-contract directory",
-            "url": "https://docs.midas.app/protocol-mechanics/smart-contracts"
+            "url": "https://midas-docs.gitbook.io/midas-docs/resources/smart-contracts-addresses.md"
           },
           {
             "label": "Etherlink mRe7YIELD proxy",
@@ -163,10 +164,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "At TAC block 24815585, the token returns Midas Re7 Yield, 18 decimals, and accessControl 0x2365d68d462e9a5660a3208f817519334a706a45. Current hasRole checks confirm M_RE7_MINT_OPERATOR_ROLE for chain-local MRe7DepositVault proxy 0xbd2ce9d5f2c682fca3ce587bf1c041ad8ddd2a69 and EOA 0xb755ff07fd80b38265ae35639568cfcdc874f21d. The verified mRE7 implementation gates mint() through that role, establishing local issuer issuance rather than inferring it merely from a token ABI.",
+        "reviewNote": "At TAC block 26315949 on 2026-10-02, this token returns Midas Re7 Yield, mRe7YIELD and 18 decimals. MidasAccessControl 0x2365d68d462e9a5660a3208f817519334a706a45 confirms M_RE7_MINT_OPERATOR_ROLE for issuance vault 0xbd2ce9d5f2c682fca3ce587bf1c041ad8ddd2a69 and issuer EOA 0xb755ff07fd80b38265ae35639568cfcdc874f21d. The issuer registry lists this exact token and vault on TAC. No Ethereum or Etherlink upgrade-delay claim is extended to TAC.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-09-05",
-        "observedBlock": 24815585,
+        "observedAt": "2026-10-02",
+        "observedBlock": 26315949,
         "sources": [
           {
             "label": "TAC mRe7YIELD proxy and verified implementation",
@@ -203,8 +204,8 @@
         "reviewDisposition": "reviewed",
         "reviewNote": "At Starknet block 13408053 on 2026-08-17, the StarkGate L2 bridge 0x0616757a151c21f9be8775098d591c2807316d992bbc3bb1a5c1821630589256 returned get_l1_bridge() = 0xf5b6ee2caeb6769659f6c091d209dfdcaf3f69eb, get_l1_token(mRe7YIELD) = Ethereum 0x87c9053c819bb28e0d73d33059e1b3da80afb0cf, and get_l2_token(Ethereum mRe7YIELD) = this Starknet address. The Ethereum transaction 0x56b9ff858cffd1376827ca5954e0f6d932071d924a256330fffa368bea8b1532 escrowed 0.01 mRe7YIELD in the L1 bridge on 2025-09-10; its accepted L1_HANDLER delivery 0x770c1231d4c9d19fc08f14cb02dfd5236389645572a5e8c59eaa63dceb59db8 at Starknet block 2105929 called the L2 bridge and emitted a zero-address mint Transfer from this token. The token class exposes permissioned_mint/permissioned_burn but no L1 handler because the separate StarkGate bridge invokes it. An earlier Starknet publication described the deployment as native; the fixed bridge mapping and transfer receipt are decisive, while Midas's public directory still omits the Starknet address and supply policy.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-08-17",
-        "observedBlock": 13408053,
+        "observedAt": "2026-10-02",
+        "observedBlock": 15770112,
         "sources": [
           {
             "label": "StarkGate protocol documentation",
@@ -275,8 +276,8 @@
           "The Ethereum StarkGate MultiBridge escrow and Starknet bridge governance are separate protocol domains.",
           "The Starknet token class can change the permissioned mint/burn behavior through its separately governed upgrade path."
         ],
-        "observedAt": "2026-08-17",
-        "observedBlock": 13408053,
+        "observedAt": "2026-10-02",
+        "observedBlock": 15770112,
         "sources": [
           {
             "label": "StarkGate protocol documentation",
@@ -299,7 +300,7 @@
             "url": "https://starkscan.co/tx/0x770c1231d4c9d19fc08f14cb02dfd5236389645572a5e8c59eaa63dceb59db8"
           }
         ],
-        "evidence": "At Starknet block 13408053, the verified StarkGate bridge mapped Ethereum mRe7YIELD 0x87c9053c819bb28e0d73d33059e1b3da80afb0cf to the tracked Starknet token and returned the Ethereum L1 bridge 0xf5b6ee2caeb6769659f6c091d209dfdcaf3f69eb. The fixed Ethereum deposit and accepted Starknet L1_HANDLER delivery prove the lock-mint transfer rail and identify this contract as the bridge minter/burner."
+        "evidence": "Reconfirmed on 2026-10-02 at Starknet block 15770112: the bridge maps the exact Ethereum and Starknet mRe7YIELD tokens and returns L1 bridge 0xf5b6ee2caeb6769659f6c091d209dfdcaf3f69eb. Its class hash remains 0x65d7265ac12b330bc42737281a9b73af17bd904d477779a014874d118c4ddbf and the withdrawal quota remains max-u128 in both limbs. At Ethereum block 26103187 the exact escrow balance equals the Starknet token's raw totalSupply at its pin, 52675170017239649676533 units. This diagnostic equality does not establish circulating-supply exclusions, synchronized in-flight accounting or runtime materiality; the historical escrow/deposit and L1_HANDLER proof remain above."
       },
       {
         "id": "mre7yield-starknet-token-governance",
@@ -336,8 +337,8 @@
           "The L1 StarkGate MultiBridge escrow and its Ethereum-side protocol governance are separate from this Starknet account.",
           "The StarkGate token-governance account 0x03103066e6c7037ba947ea9a7b5b8d110ae7f3d631fa5849435d0dc1fc5ef785 is a separate account returned by get_l2_token_governance()."
         ],
-        "observedAt": "2026-08-17",
-        "observedBlock": 13408053,
+        "observedAt": "2026-10-02",
+        "observedBlock": 15770112,
         "sources": [
           {
             "label": "StarkGate L2 bridge contract",
@@ -356,7 +357,7 @@
             "url": "https://rpc.starknet.lava.build"
           }
         ],
-        "evidence": "This control relocates the prior Mint Authority Starknet class-replacement evidence. At block 13408053, the governance account 0x04758595201d9d01be9f8bd232fe3a1c0b5c7b953219c9faa35779b3e73c214c was the mRe7YIELD token's governance admin; the token and the StarkGate bridge both reported zero upgrade delay. The bridge roles additionally identified the same account as app governor, governance admin, and security admin, so the zero-delay representation-upgrade and bridge-administration facts remain scoreable here."
+        "evidence": "Reconfirmed on 2026-10-02 at Starknet block 15770112: account 0x04758595201d9d01be9f8bd232fe3a1c0b5c7b953219c9faa35779b3e73c214c remains the token governance admin and returns true for bridge app-governor, governance-admin and security-admin roles. Token and bridge both return get_upgrade_delay() = 0. The token class remains 0x05ffbcfeb50d200a0677c48a129a11245a3fc519d1d98d76882d1c9a1b19c6ed. The separate get_l2_token_governance() address remains 0x03103066e6c7037ba947ea9a7b5b8d110ae7f3d631fa5849435d0dc1fc5ef785. Zero-delay representation authority is preserved without assigning an unobserved economic share."
       }
     ]
   }

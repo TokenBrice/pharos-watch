@@ -79,7 +79,7 @@ const MIDAS_LYT_FEE_DISCLOSURES: Partial<
     statement: "Tokenholder Fee 0.50 percent redemption fee and 10 percent interest fee",
     feeBpsMax: 50,
     label: "Midas mHYPER Final Terms",
-    url: "https://2732961456-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FsPjk0ggBxEJCCnVFFkDR%2Fuploads%2FuaPpattzf6RCr3YzNnLn%2FMidas_Final_Terms_mHYPER_2025.pdf?alt=media&token=c77039e7-684f-4a2f-b178-2f0af1ac8c9b",
+    url: "https://content.gitbook.com/content/MndxFHqGeA4nzBBeKDTV/blobs/Rh0tXsofDB8UQWaklyuE/Midas_Final_Terms_mHYPER_2025.pdf",
   },
   "mmev-midas": {
     statement: "Tokenholder Fee 0.50 percent redemption fee and 10 percent interest fee",
@@ -103,12 +103,12 @@ const MIDAS_LYT_TERMS_GAPS: Partial<Record<string, MidasLytTermsGap>> = {
   "mf-one-midas": {
     missingScoringFields: ["capacity", "settlement"],
     rationale:
-      "The reviewed standard-redemption fee is retained, but the Midas documentation URLs and mF-ONE page checked on 2026-09-04 still publish no dated terms establishing mF-ONE executable capacity, the holdback share, or its release SLA at the scoring notional.",
+      "The reviewed standard-redemption fee is retained. At Ethereum block 26103201 on 2026-10-02, the official mF-ONE vault is unpaused but greenlist-gated, charges 100 bps for instant redemption, and can source USDC through its mTBILL holdings and the upstream mTBILL vault. Those balances and a 30-million-mToken daily limit do not prove executable capacity for an authorized holder at the scoring notional. The recovered issuer documentation describes a queued fallback without product-specific binding calendar-day settlement or holdback-release terms, so capacity and settlement remain withheld.",
   },
   "mhyper-midas": {
     missingScoringFields: ["capacity", "settlement"],
     rationale:
-      "The reviewed mHYPER fee is retained, but the Midas documentation URLs and product materials checked on 2026-09-04 still publish no product-level executable capacity or binding calendar-day settlement SLA.",
+      "The mHYPER Final Terms retain a 0.50% redemption fee and USD/USDC/USDT/EURO settlement. Pinned Ethereum and Plasma vaults on 2026-10-02 each return instantFee=50; daily limits alone are not funded capacity. The current prospectus subjects redemption to realisation periods, gates and disruption postponements; generic 1-7 business-day documentation does not establish a product-specific unconditional calendar-day settlement bound or an executable same-notional route.",
   },
   "mmev-midas": {
     missingScoringFields: ["capacity", "settlement", "cost"],

@@ -460,12 +460,31 @@ function adaptMintControl(
   const economicSemantics = projection.reviewed && !projection.complete
     ? partialControlScopeSemantics({ capSemantics, claimImpairment }, projection.paths)
     : { capSemantics, claimImpairment };
-  const deploymentScopes = resolveMintControlDeploymentScopes(control, supplyReview, reviewComplete, hasMint);
+  // A named reach gap cannot close through the legacy fallback, but it also
+  // cannot erase an independently established adverse path on this authority.
+  const scopedMintReachUnresolved =
+    scopedQuestionFresh &&
+    projection.reviewed &&
+    !projection.complete &&
+    projection.paths.some((path) =>
+      path.activation === "active" &&
+      path.capabilities.includes("mint") &&
+      (path.reach === "unknown" || path.economicLossScope === "unknown"),
+    ) &&
+    !projection.paths.some((path) =>
+      path.activation !== "unknown" &&
+      path.activation !== "disabled-final" &&
+      path.capabilities.includes("mint") &&
+      (path.reach === "root" || path.reach === "deployment") &&
+      path.economicLossScope === "global-claim" &&
+      (path.capSemantics.kind === "unbounded" || path.claimImpairment === "unbounded"),
+    );
+  const deploymentScopes = resolveMintControlDeploymentScopes(control, supplyReview, reviewComplete && !scopedMintReachUnresolved, hasMint);
   const incidentState: ControlOverlay["incidentState"] = incidents?.some((incident) => incident.status === "active")
     ? "active"
     : incidents?.some((incident) => incident.status === "resolved")
       ? "resolved"
-      : reviewComplete
+      : reviewComplete && !scopedMintReachUnresolved
         ? "none"
         : "unknown";
   const controlKey = `mint-meta:${assetId}:${domainDigest("safety-score-v9.mint-control-key.v1", {
@@ -487,7 +506,7 @@ function adaptMintControl(
     scope: "global",
     capabilities,
     ...economicSemantics,
-    economicLossScope: economicSemantics.claimImpairment === "none" ? "access-only" : "global-claim",
+    economicLossScope: scopedMintReachUnresolved ? "unknown" : economicSemantics.claimImpairment === "none" ? "access-only" : "global-claim",
     authority: canonicalAuthorityType(assetId, control),
     delaySec: control.timelockDelaySec ?? null,
     materialSupplyShare: null,

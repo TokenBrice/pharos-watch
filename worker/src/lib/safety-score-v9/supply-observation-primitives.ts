@@ -123,7 +123,9 @@ export async function observeReviewedEvmDeployment<Identity>(input: {
     ...input.protocolCalls(identity),
   ];
   const [results, runtimeCode, implementationSlot] = await Promise.all([
-    dependencies.fetchEvmMulticall3Aggregate3AtBlock(chainId, calls, blockNumber, options),
+    dependencies.fetchEvmMulticall3Aggregate3AtBlock(chainId, calls, blockNumber, {
+      ...options, multicallFallbackBlockHash: blockHeader.hash,
+    }),
     dependencies.fetchEvmCodeAtBlock(chainId, contractAddress, blockNumber, options),
     dependencies.fetchEvmStorageAtBlock(chainId, contractAddress,
       EIP1967_IMPLEMENTATION_SLOT, blockNumber, options),

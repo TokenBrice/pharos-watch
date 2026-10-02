@@ -53,14 +53,14 @@
         "url": "https://docs.theo.xyz/products/thbill/fidelity-filq.md"
       },
       {
-        "label": "Theo official thBILL historical API (October 1, 2026 wrapper accounting observation)",
+        "label": "Theo official thBILL historical API (October 2, 2026 partial wrapper accounting observation)",
         "url": "https://theo-api.theo.xyz/v1/public/thbill/historical/7"
       }
     ],
     "rationale": "The September 29 review used a partial on-chain observation and issuer descriptions of the ULTRA/FILQ basket. Re-fetched at Ethereum block 26083836 on 2026-10-01, the thBILL vault's tULTRA balance is 35,645,094.648059 while tULTRA totalSupply is 35,645,094.648069; the prior claim that the balance equaled the entire supply was inaccurate. Theo's current documentation identifies Wellington ULTRA and Fidelity FILQ, states that Theo manages a variable allocation between them, and discloses FILQ's asset-backed commercial paper exposure. Current product documentation says minting is instant and redemption is T+1 in USDC or USDT, with no holder claim on underlying fund units or securities. The reviewed pages do not give current complete basket weights or a dated thBILL assets-to-liabilities reconciliation; observing tULTRA alone does not supply those missing facts.",
     "compositionBasis": "Issuer descriptions establish an ULTRA/FILQ strategy basket; pinned tULTRA reads observe a wrapper position only and do not establish complete assets, current allocation weights, or matching liabilities.",
     "scope": "selected-slices",
-    "knownUnknownExposure": "The official thBILL historical API reports a 2026-10-01T17:00:23Z wrapper accounting checkpoint: $36,081,868.999985 TVL, 34,752,237.545115 tokens, $36,079,775.50261039 pending tUltra, $2,092.441441 USDC and $1.055945 ULTRA. Its token count matches Ethereum block 26098830 and its composition sums to TVL within rounding. These issuer accounting categories do not reconcile pending tUltra to independently verified underlying fund units, off-chain receivables or fund liabilities. Current ULTRA/FILQ allocation and full look-through backing remain unresolved; the 100% opaque modeled slice is not a measured 100% allocation to fully reconciled fund units.",
+    "knownUnknownExposure": "The official thBILL historical API reports a 2026-10-02T07:00:32Z wrapper accounting checkpoint: 36,081,868.999985 TVL, 34,752,237.545115 tokens, 36,079,775.50261039 pending tUltra, 2,092.441441 USDC and 1.055945 ULTRA in its composition categories. The token count matches Ethereum totalSupply at block 26103217. The exact source bytes are retained in a partial portfolio observation with a null whole-asset denominator. These issuer accounting categories do not reconcile pending tUltra to independently verified underlying fund units, off-chain receivables or fund liabilities. Current ULTRA/FILQ allocation and full look-through backing remain unresolved; the 100% opaque modeled slice is not a measured 100% allocation to fully reconciled fund units.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -69,6 +69,47 @@
         "pct": 100,
         "disposition": "basket-needs-split",
         "rationale": "Issuer descriptions identify ULTRA and FILQ but do not disclose current whole-token allocation, cash or in-flight balances, wrapper-to-fund backing, or matching liabilities. D24 prohibits treating the selected tULTRA observation as a reconciled full composition."
+      }
+    ],
+    "observations": [
+      {
+        "scopeId": "theo:thbill:issuer-wrapper-accounting:1790924432",
+        "liabilityBookKey": "theo:thbill:issuer-wrapper-accounting",
+        "deploymentRefs": [],
+        "reviewer": "Sol NR wave 2026-10-02 (NrThbill)",
+        "confidence": "verified",
+        "sources": [
+          {
+            "url": "https://theo-api.theo.xyz/v1/public/thbill/historical/7",
+            "accessedAtSec": 1790926441,
+            "sha256": "9ff59f53f821e0229e8ca5c6cb7afa7212639e12ce236dc47b1bb6c012d0debb"
+          }
+        ],
+        "reviewedAtSec": 1790926441,
+        "expiresAtSec": 1793602832,
+        "sourceGeneration": "theo:thbill:historical:1790924432:9ff59f53f821e0229e8ca5c6cb7afa7212639e12ce236dc47b1bb6c012d0debb",
+        "sourceSha256": "9ff59f53f821e0229e8ca5c6cb7afa7212639e12ce236dc47b1bb6c012d0debb",
+        "completeness": "partial",
+        "obligations": [
+          {
+            "key": "pending-tUltra",
+            "disposition": "unresolved",
+            "reason": "Issuer API pending tUltra value 36079775.50261039 is not independently joined to settled underlying fund units, receivables or liabilities."
+          },
+          {
+            "key": "underlying-fund-liabilities",
+            "disposition": "unresolved",
+            "reason": "API categories do not enumerate underlying fund liabilities, encumbrances or complete fund look-through."
+          },
+          {
+            "key": "all-deployment-liability-book",
+            "disposition": "unresolved",
+            "reason": "API total_supply is issuer wrapper accounting, not an admitted B4 partition or independently verified complete cross-deployment economic liability book; deploymentRefs remains empty rather than inferred."
+          }
+        ],
+        "kind": "portfolio-observation",
+        "observedAtSec": 1790924432,
+        "wholeAssetDenominator": null
       }
     ]
   },

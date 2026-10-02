@@ -10,7 +10,9 @@ import type {
 } from "@shared/types/core";
 import { v9RepresentationGroupRouteKey } from "@shared/lib/safety-score-v9/facts";
 import { evaluateV9EconomicControlAssetFacts } from "@shared/lib/safety-score-v9/control";
+import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { reviewedScope, SCOPE_CLOCK } from "@shared/lib/__tests__/safety-score-v9-control-scope.test-support";
 import { describe, expect, it } from "vitest";
 import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9/fact-set";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
@@ -185,6 +187,43 @@ function compileFixture(
     extension,
   );
   return { extension, compiled };
+}
+
+function scopedMintReachMeta({ complete = false, unknownReach = true } = {}) {
+  const control = mintControl();
+  const scope = reviewedScope({
+    controllerDeployment: `${control.chain}:${control.address}`,
+    inventory: complete ? "complete" : "partial",
+    confidence: complete ? "verified" : "partial",
+    closure: {
+      entrypoints: complete, mutableTargets: complete, delegateAndFallback: complete,
+      permissions: complete, upgrades: complete, bypasses: complete, liabilityInventory: complete,
+    },
+  });
+  scope.paths[0] = {
+    ...scope.paths[0]!,
+    capSemantics: { kind: "unbounded", bound: null },
+    claimImpairment: "unbounded",
+    reach: unknownReach ? "unknown" : "root",
+    economicLossScope: unknownReach ? "unknown" : "global-claim",
+  };
+  return meta("fixture-scoped-mint-reach", {
+    mintAuthority: mintProfile({
+      controls: [{ ...control, executionScope: scope }, mintControl({
+        address: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        label: "Verified sibling minter",
+      })],
+      review: {
+        sources: [SOURCE], evidence: "The active mint path is reviewed independently of its economic reach.",
+        reviewer: "Fixture reviewer", reviewedAt: "2026-10-01", disposition: "scoreable",
+        scopedQuestions: [{
+          controlRef: `${control.chain}:${control.address}`,
+          question: "Which liability can this active mint path affect?",
+          reviewedAt: "2026-10-01", reviewer: "Fixture reviewer", sources: [SOURCE],
+        }],
+      },
+    }),
+  });
 }
 
 function controlsFor(
@@ -1066,6 +1105,102 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
 
     expect(unresolved).toHaveLength(1);
     expect(unresolved[0]!.scopedQuestionFresh).not.toBe(true);
+  });
+
+  it("keeps an investigated unknown mint reach bounded without erasing verified adverse mint power", () => {
+    const { compiled } = compileFixture(scopedMintReachMeta(), { clockSec: SCOPE_CLOCK });
+    const asset = compiled.assets[0]!;
+    const control = asset.controls.find((row) => row.scopedQuestionFresh)!;
+    expect(control).toMatchObject({
+      status: { observationState: "bounded-unknown" },
+      economicLossScope: "unknown", incidentState: "unknown",
+      capSemantics: { kind: "unbounded" }, claimImpairment: "unbounded",
+    });
+    expect(asset.controlStatus.observationState).toBe("bounded-unknown");
+    expect(asset.gaps.find((gap) => gap.gapId === control.status.gapIds[0])?.reasonCode).toBe("scoped-control-question");
+    const result = evaluateV9EconomicControlAssetFacts(
+      asset, { assetId: asset.assetId, ...asset.economicControlReview }, V9_CANDIDATE_POLICY_V1,
+    );
+    expect(result.reasons.map((reason) => reason.code)).toContain("scoped-control-question");
+    expect(result.reasons.map((reason) => reason.code)).not.toContain("unresolved-control-identity");
+    expect(evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!.scoreInput.pillars.control.evidenceLevel).toBe("limited");
+  });
+
+  it("does not soften a single authority's established adverse mint path when unknown reach is added", () => {
+    const metadata = scopedMintReachMeta({ unknownReach: false });
+    const profile = metadata.mintAuthority!;
+    profile.controls = [profile.controls![0]!];
+    profile.reconciliation = "none";
+    profile.upgradeability = { model: "immutable", canChangeMintLogic: false, sources: [] };
+    const before = compileFixture(metadata, { clockSec: SCOPE_CLOCK }).compiled.assets[0]!;
+    const scope = profile.controls[0]!.executionScope!;
+    scope.paths.push({
+      ...scope.paths[0]!, id: "unresolved-mint-tail",
+      reach: "unknown", economicLossScope: "unknown", affectedLiabilityIds: [],
+    });
+    const after = compileFixture(metadata, { clockSec: SCOPE_CLOCK }).compiled.assets[0]!;
+    expect(after.controls).toHaveLength(1);
+    const beforeResult = evaluateV9EconomicControlAssetFacts(
+      before, { assetId: before.assetId, ...before.economicControlReview }, V9_CANDIDATE_POLICY_V1,
+    );
+    const afterResult = evaluateV9EconomicControlAssetFacts(
+      after, { assetId: after.assetId, ...after.economicControlReview }, V9_CANDIDATE_POLICY_V1,
+    );
+    expect(afterResult.components.find((component) => component.kind === "mint")).toMatchObject({
+      binding: true, posture: "unbounded-or-compromised", score: 25,
+      controlKeys: [after.controls[0]!.controlKey],
+    });
+    expect(afterResult.components).toEqual(beforeResult.components);
+    expect(afterResult.structuralFailures).toContainEqual(expect.objectContaining({
+      kind: "centralized-mint", severity: "high", binding: true,
+      controlKeys: [after.controls[0]!.controlKey],
+    }));
+    expect(afterResult.structuralFailures).toEqual(beforeResult.structuralFailures);
+    expect(afterResult.score).toBe(beforeResult.score);
+  });
+
+  it("does not add a charge for a custody-only question on a partial scope with verified reach", () => {
+    const metadata = scopedMintReachMeta({ unknownReach: false });
+    metadata.mintAuthority!.review.scopedQuestions![0]!.question = "Which custody provider protects this exact signer key?";
+    const after = compileFixture(metadata, { clockSec: SCOPE_CLOCK }).compiled.assets[0]!;
+    delete metadata.mintAuthority!.review.scopedQuestions;
+    const before = compileFixture(metadata, { clockSec: SCOPE_CLOCK }).compiled.assets[0]!;
+    expect(after.controlStatus.observationState).toBe("known");
+    expect(after.controls.map((row) => row.status.observationState)).toEqual(["known", "known"]);
+    expect(after.gaps.map((gap) => ({ reasonCode: gap.reasonCode, path: gap.path })))
+      .toEqual(before.gaps.map((gap) => ({ reasonCode: gap.reasonCode, path: gap.path })));
+    const beforeResult = evaluateV9EconomicControlAssetFacts(
+      before, { assetId: before.assetId, ...before.economicControlReview }, V9_CANDIDATE_POLICY_V1,
+    );
+    const afterResult = evaluateV9EconomicControlAssetFacts(
+      after, { assetId: after.assetId, ...after.economicControlReview }, V9_CANDIDATE_POLICY_V1,
+    );
+    expect(afterResult.score).toBe(beforeResult.score);
+    expect(afterResult.reasons).toEqual(beforeResult.reasons);
+  });
+
+  it("leaves a complete closure-proven scope unchanged by a scoped question", () => {
+    const metadata = scopedMintReachMeta({ complete: true, unknownReach: false });
+    const after = compileFixture(metadata, { clockSec: SCOPE_CLOCK }).compiled.assets[0]!;
+    delete metadata.mintAuthority!.review.scopedQuestions;
+    const before = compileFixture(metadata, { clockSec: SCOPE_CLOCK }).compiled.assets[0]!;
+    expect(after.controls.map((row) => ({
+      status: row.status.observationState, cap: row.capSemantics, claim: row.claimImpairment,
+      loss: row.economicLossScope, incident: row.incidentState,
+    }))).toEqual(before.controls.map((row) => ({
+      status: row.status.observationState, cap: row.capSemantics, claim: row.claimImpairment,
+      loss: row.economicLossScope, incident: row.incidentState,
+    })));
+    expect(after.controls.every((row) => row.status.observationState === "known")).toBe(true);
+  });
+
+  it("keeps verified sibling controls known beside a named unresolved mint reach", () => {
+    const { compiled } = compileFixture(scopedMintReachMeta(), { clockSec: SCOPE_CLOCK });
+    const sibling = compiled.assets[0]!.controls.find((row) => !row.scopedQuestionFresh)!;
+    expect(sibling).toMatchObject({
+      status: { observationState: "known" }, economicLossScope: "global-claim",
+      incidentState: "none", capSemantics: { kind: "unbounded" }, claimImpairment: "unbounded",
+    });
   });
 
   it("marks a control named by a fresh scoped question and routes its gaps to scoped-control-question", () => {

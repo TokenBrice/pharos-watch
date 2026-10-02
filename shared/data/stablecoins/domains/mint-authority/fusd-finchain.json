@@ -175,19 +175,19 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-16",
-        "observedBlock": 25770551,
+        "observedAt": "2026-10-02",
+        "observedBlock": 26103182,
         "sources": [
           {
             "label": "Ethereum FUSD verified proxy and implementation",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c"
           },
           {
-            "label": "Ethereum observation block 25770551",
-            "url": "https://eth.blockscout.com/block/25770551"
+            "label": "Ethereum observation block 26103182",
+            "url": "https://eth.blockscout.com/block/26103182"
           }
         ],
-        "evidence": "At Ethereum block 25770551 (2026-08-16T22:14:59Z), Avalanche block 92978950 (2026-08-16T22:15:03Z), Sonic block 77632056 (2026-08-16T22:15:04Z), and Monad block 96606403 (2026-08-16T22:15:05Z), this codeless address was the sole token and gateway DEFAULT_ADMIN_ROLE holder on each chain and owned the shared ProxyAdmin. It can grant token MINTER_ROLE, invoke the gateway's arbitrary local mint, reconfigure issuer-owned pool route limits, or upgrade every proxy without a timelock."
+        "evidence": "Pinned 2026-10-02 reads at Ethereum 26103182, Avalanche 96586791, Sonic 80228511 and Monad 109835926 enumerate exactly one token and gateway DEFAULT_ADMIN_ROLE holder, this address, on each chain. eth_getCode returns 0x on every chain, so it is an EOA rather than a Safe; no signer threshold or MPC custody is inferred. ProxyAdmin.owner() returns this EOA on all four chains. An issuer-sender eth_call to gateway.mint(issuer, 1e18, 0) succeeds on each chain without a collateral transfer. Native mint and mint-logic replacement remain unbounded and immediate."
       },
       {
         "chain": "multichain",
@@ -204,15 +204,15 @@
         "directMintAbility": "direct",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-16",
-        "observedBlock": 25770551,
+        "observedAt": "2026-10-02",
+        "observedBlock": 26103182,
         "sources": [
           {
             "label": "Blockscout-verified FUSDGateway implementation",
-            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf4b49852fd3e4ed18ec2cc1e76a3fe2f9a31c9ed"
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3a4b7d8e5dc20788c52d3d5102d8ea3f2358c95f"
           }
         ],
-        "evidence": "This same-address gateway is a live token MINTER_ROLE holder on Ethereum, Avalanche, Sonic, and Monad. The verified FUSDGateway implementation exposes an admin-only arbitrary local mint when the destination selector is zero, so its direct issuer mint path remains uncapped; its own logic does not administer the token role or cap."
+        "evidence": "At Ethereum 26103182, Avalanche 96586791, Sonic 80228511 and Monad 109835926 on 2026-10-02, this gateway is a token MINTER_ROLE member and its implementation is 0x3a4b7d8e5dc20788c52d3d5102d8ea3f2358c95f. Fresh verified source and successful issuer-sender local mint simulations corroborate the DEFAULT_ADMIN_ROLE arbitrary-mint branch. The gateway's additional MINTER_ROLE enables mintWithMessageId without collateral on Avalanche, Sonic and Monad; the role-holder EOA is separately inventoried."
       },
       {
         "chain": "multichain",
@@ -229,8 +229,8 @@
         "directMintAbility": "upgrade-only",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-16",
-        "observedBlock": 25770580,
+        "observedAt": "2026-10-02",
+        "observedBlock": 26103182,
         "sources": [
           {
             "label": "Blockscout-verified OpenZeppelin ProxyAdmin",
@@ -253,7 +253,43 @@
             "url": "https://rpc.monad.xyz"
           }
         ],
-        "evidence": "At Ethereum block 25770580, Avalanche block 92979277, Sonic block 77632253, and Monad block 96607753, the token, gateway, and TokenBridgeSender proxies resolved to the reviewed implementations and the shared ProxyAdmin 0x29a48097055d6779e6832355680b7c7bf0d43c53. Its owner() was the codeless FinChain EOA 0xc61f22aa3a6469f4f90994421f4570459217c215 on every chain, with delaySec zero, so it can replace native token or gateway mint logic immediately. TokenBridgeSender replacement remains a bridge-route contingency, not current direct FUSD minting."
+        "evidence": "At Ethereum 26103182, Avalanche 96586791, Sonic 80228511 and Monad 109835926 on 2026-10-02, all three token/gateway/TokenBridgeSender EIP-1967 admin slots resolve to 0x29a48097055d6779e6832355680b7c7bf0d43c53. Their implementations remain the authored token, gateway and sender implementations. ProxyAdmin.owner() is the codeless issuer EOA 0xc61f22aa3a6469f4f90994421f4570459217c215 on every chain. Fresh verified ProxyAdmin source exposes onlyOwner upgrade and upgradeAndCall with no timelock, so delaySec remains zero. Current sender transfer logic remains bridge machinery; replacement remains an adverse contingency."
+      },
+      {
+        "chain": "multichain",
+        "address": "0x88a7141a3dd011e85ce5e18e4c7b679a6d9cd647",
+        "label": "FinChain gateway message-ID minter EOA",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "deploymentRefs": [
+          "avalanche:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
+          "sonic:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
+          "monad:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c"
+        ],
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 96586791,
+        "sources": [
+          {
+            "label": "Verified current FUSDGateway implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3a4b7d8e5dc20788c52d3d5102d8ea3f2358c95f"
+          },
+          {
+            "label": "Avalanche pinned role observation",
+            "url": "https://avalanche-c-chain-rpc.publicnode.com"
+          },
+          {
+            "label": "Sonic pinned role observation",
+            "url": "https://rpc.soniclabs.com"
+          },
+          {
+            "label": "Monad pinned role observation",
+            "url": "https://rpc.monad.xyz"
+          }
+        ],
+        "evidence": "At Avalanche 96586791, Sonic 80228511 and Monad 109835926 on 2026-10-02, gateway.getRoleMemberCount(MINTER_ROLE) is one and getRoleMember(MINTER_ROLE, 0) is this EOA; eth_getCode returns 0x. Ethereum gateway MINTER_ROLE count is zero. The verified mintWithMessageId(bytes32,address,uint256) branch checks MINTER_ROLE and an unused caller-supplied message ID, then invokes FUSD.mint(to,amount); it does not require collateral or an external authenticated-message proof. Replay prevention does not bound arbitrary fresh-ID issuance. Key custody remains unknown, not an inferred Safe or protected signer."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -288,14 +324,44 @@
         {
           "label": "Solana mainnet finalized FUSD mint and multisig reads",
           "url": "https://api.mainnet-beta.solana.com"
+        },
+        {
+          "label": "Verified current gateway arbitrary local and message-ID mint branches",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3a4b7d8e5dc20788c52d3d5102d8ea3f2358c95f"
+        },
+        {
+          "label": "Verified immediate owner-operated ProxyAdmin",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x29a48097055d6779e6832355680b7c7bf0d43c53"
         }
       ],
-      "evidence": "Historical role enumeration at Ethereum block 25770551, Avalanche 92978950, Sonic 77632056, and Monad 96606403 confirms the local gateway is a token MINTER_ROLE member on all four EVM deployments and that the shared FinChain EOA is the sole token and gateway DEFAULT_ADMIN_ROLE holder on each. The verified FUSDGateway zero-destination branch is an admin-only arbitrary local mint, so native EVM issuance remains unbounded; CCIP pools and the current TokenBridgeSender implementation are bridge machinery documented under bridgeRouteRisk. Proxy-slot and owner reads at Ethereum 25770580, Avalanche 92979277, Sonic 77632253, and Monad 96607753 resolve the shared zero-delay ProxyAdmin and the reviewed token, gateway, and sender implementations. The 2026-09-21 Solana review treated the cataloged SPL mint as FUSD. Current finalized reads on 2026-10-01 confirm its 1-of-3 authority but reveal FinChain Dollar LP / FUSDLP metadata, while both issuer token pages list the same address. Native FUSD liability attribution is therefore unresolved, and existing adverse exposure is retained pending identity adjudication. Issuer reserve reconciliation and claimed prudential Bermuda supervision are not independently verified reserve assurance or a current regulator authorization finding.",
-      "reviewer": "Claude curation campaign 2026-09-21 (Ctrl8)",
-      "reviewedAt": "2026-09-21",
+      "evidence": "Fresh 2026-10-02 pins at Ethereum 26103182, Avalanche 96586791, Sonic 80228511 and Monad 109835926 resolve every authored EVM token/gateway/sender implementation and admin slot. The sole token and gateway DEFAULT_ADMIN_ROLE holder is the same codeless issuer EOA; ProxyAdmin.owner() is that EOA on all four chains, with immediate onlyOwner upgrades. Token MINTER_ROLE is fully enumerated: gateway, TokenBridgeSender and the already inventoried CCIP pools; no unidentified token minter is omitted. Gateway MINTER_ROLE separately grants the codeless 0x88a7141a3dd011e85ce5e18e4c7b679a6d9cd647 arbitrary fresh-message-ID minting on Avalanche, Sonic and Monad; Ethereum has none. Gateway PAUSER_ROLE has one shared holder, 0xa7b5849cdde66c5c998252a3d4c03e11573a900d. Finalized Solana slot 452544757 confirms the cataloged mint, freeze authority and initialized 1-of-3 SPL multisig, plus FinChain Dollar LP / FUSDLP metadata. The SPL Token ProgramData header at slot 452544947 has no upgrade authority. Both freshly fetched issuer token pages still list the same Solana mint; the liability question is confined to that exact Solana controller and remains open. No Solana exposure is removed and no deployment-local economic exclusion is claimed. Issuer inventory/NAV accounting and claimed prudential supervision are retained as qualified issuer disclosures, not independently verified financial assurance or regulatory authorization.",
+      "reviewer": "Sol NR wave 2026-10-02 (NrFusd)",
+      "reviewedAt": "2026-10-02",
       "disposition": "scoreable",
       "unresolvedQuestions": [
         "Does Solana mint 51tpgun58apNKgrk96xAVUCN5yC7cDzt3EHov9UjBh3Q represent canonical FUSD liabilities or the distinct FUSDLP liquidity-provider token? Issuer FUSD and FUSDLP deployment pages conflict with its FUSDLP metadata."
+      ],
+      "scopedQuestions": [
+        {
+          "controlRef": "solana:Ch1Z9TZK7hiX73HZnhGQygsZ3zr1Rjh8ifspDfAqVRgm",
+          "question": "Does Solana mint 51tpgun58apNKgrk96xAVUCN5yC7cDzt3EHov9UjBh3Q represent canonical FUSD liabilities or the distinct FUSDLP liquidity-provider claim? The current issuer FUSD and FUSDLP tables both list it, while finalized metadata names FinChain Dollar LP / FUSDLP. Native liability identity and economic reach remain unresolved; retain its 1-of-3 mint exposure pending an issuer-authoritative correction.",
+          "reviewedAt": "2026-10-02",
+          "reviewer": "Sol NR wave 2026-10-02 (NrFusd)",
+          "sources": [
+            {
+              "label": "Issuer FUSD deployment table",
+              "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token"
+            },
+            {
+              "label": "Issuer FUSDLP deployment table",
+              "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusdlp-token"
+            },
+            {
+              "label": "Finalized mint, multisig and FUSDLP metadata at slot 452544757",
+              "url": "https://api.mainnet-beta.solana.com"
+            }
+          ]
+        }
       ]
     },
     "upgradeability": {
@@ -322,8 +388,8 @@
       "canChangeMintLogic": true,
       "delaySec": 0,
       "controlRef": "FUSD shared ProxyAdmin contract",
-      "observedAt": "2026-08-16",
-      "observedBlock": 25770580,
+      "observedAt": "2026-10-02",
+      "observedBlock": 26103182,
       "sources": [
         {
           "label": "Ethereum FUSD verified proxy and implementation",

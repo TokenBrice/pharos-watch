@@ -46720,6 +46720,825 @@
       ],
       "nextReviewTrigger": "2026-11-01, or earlier publication of V1-specific dated collateral/liability reconciliation, funded backstop/legal loss-waterfall terms, completed compensation ledger, or recovered Atlas transparency access.",
       "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:axcnh-anchorx",
+      "taskIds": [
+        "V9G-fef554da7c321564"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol NR wave 2026-10-02 (NrAxcnh)",
+      "evidence": [
+        "2026-10-02 independently recovered June30 AUP, published July15: https://anchorx-my.sharepoint.com/:b:/g/personal/sophiepu_anchorx_org/IQCIICwRyIxqTYlcEFCq_xhaARpGXEQU5c1pBNN5NowZ0HA?e=9k7D0I",
+        "2026-10-02 issuer frontend and primary GitHub feeds remain stale: https://www.anchorx.org/transparency ; https://raw.githubusercontent.com/v3-Swampy/anchorx-reserves/main/data.json ; https://raw.githubusercontent.com/v3-Swampy/anchorx-reserves/main/data_kz.json",
+        "2026-10-02 binding issuer platform terms newly retrieved: https://www.anchorx.org/terms",
+        "2026-10-02 exact AFSA entity/license register: https://publicreg.myafsa.com/details/250340900375/ ; https://publicreg.myafsa.com/licence_details/AFSA-A-LA-2025-0013/"
+      ],
+      "rationale": "New binding platform terms were found, but no bank identities, successor-custody mechanics or enforceable holder reserve protections. Independently read AUP distinguishes bank cash evidence from company assertions; licensed KZ and nonzero Global liabilities cannot be conflated. Current bounded custody component retained.",
+      "changeRefs": [],
+      "sentinels": [
+        "axcnh-anchorx:gap:mechanism-review:custodyContinuity"
+      ],
+      "nextReviewTrigger": "Recheck on 2026-10-15, or earlier when AnchorX publishes a post-2026-08-25 full reserve composition/report and exact issuer/custodian holder-rights disclosure.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:axcnh-anchorx",
+      "taskIds": [
+        "V9G-854d85d1edfe0861"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol NR wave 2026-10-02 (NrAxcnh)",
+      "evidence": [
+        "2026-10-02 independently recovered June30 AUP, published July15: https://anchorx-my.sharepoint.com/:b:/g/personal/sophiepu_anchorx_org/IQCIICwRyIxqTYlcEFCq_xhaARpGXEQU5c1pBNN5NowZ0HA?e=9k7D0I",
+        "2026-10-02 issuer frontend and primary GitHub feeds remain stale: https://www.anchorx.org/transparency ; https://raw.githubusercontent.com/v3-Swampy/anchorx-reserves/main/data.json ; https://raw.githubusercontent.com/v3-Swampy/anchorx-reserves/main/data_kz.json",
+        "2026-10-02 binding issuer platform terms newly retrieved: https://www.anchorx.org/terms",
+        "2026-10-02 exact AFSA entity/license register: https://publicreg.myafsa.com/details/250340900375/ ; https://publicreg.myafsa.com/licence_details/AFSA-A-LA-2025-0013/"
+      ],
+      "rationale": "No later combined reserve report or current full-composition data found after direct feeds, source-tree/history, browser report recovery, regulator, attestor, filings, whitepaper and archive attempts. June historical bank cash remains stale and cannot be re-dated. Smoke confirms the reserve-composition sentinel remains.",
+      "changeRefs": [],
+      "sentinels": [
+        "axcnh-anchorx:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "Recheck on 2026-10-15, or earlier when AnchorX publishes a post-2026-08-25 full reserve composition/report and exact issuer/custodian holder-rights disclosure.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:emxn-telcoin",
+      "taskIds": [
+        "V9G-dafbdf1a6bf11609"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol NR wave 2026-10-02 (NrEmxn)",
+      "evidence": [
+        "https://www.telco.in/en/terms-of-use",
+        "https://www.telco.in/en/digital-cash",
+        "https://bank.telco.in/customer-agreement",
+        "https://ndbf.nebraska.gov/about/news-publications/notice-application-digital-asset-depository-charter",
+        "2026-10-02 scoped eMXN reserve/attestation/provider/insolvency searches and primary-source re-fetches; no eligible dated eMXN composition recovered"
+      ],
+      "rationale": "No source supplies current eMXN asset-category or provider weights and matching liability denominator. The bank customer agreement's insolvency-priority and reserve provisions explicitly cover eUSD. Prior archive/sitemap research was reviewed; this wave added regulator application and bank-customer-agreement scope checks. Unknown reserves remain unknown, not a measured shortfall.",
+      "changeRefs": [],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "emxn-telcoin:gap:reserve-composition",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "First eMXN-specific dated reserve-to-liability report, named provider allocation or holder-priority filing; otherwise 2026-11-02.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:fusd-finchain",
+      "taskIds": [
+        "V9G-3af076692b824484"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol NR wave 2026-10-02 (NrFusd)",
+      "evidence": [
+        "https://api.finchain.global/api/v0/fusd-data",
+        "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token/reserve-assets",
+        "Ethereum block 26103182: itemized LP reserve values equal current issuer API values; all tracked quantities equal treasury balances; NAV publication timestamp 2026-10-02T07:05:01Z.",
+        "agents/2026-10-01-curation-pass/nr/scratch/fusd-finchain/smoke-report.txt"
+      ],
+      "rationale": "Current immediate token-inventory composition is now itemized, but unknown look-through exposure remains 100% and the smoke correctly retains missing-reserve-composition. Independent underlying fund reconciliation and holder/recovery scope remain prerequisites for qualifying composition; a dated publisher mark is not financial assurance.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/reserves/fusd-finchain.json"
+      ],
+      "sentinels": [
+        "fusd-finchain:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "Issuer publishes an accessible independent current reserve engagement or exact underlying holdings/liabilities and holder/recovery documents; otherwise re-review 2026-11-01.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:fusd-finchain",
+      "taskIds": [
+        "V9G-e2438727e55edb8d",
+        "V9G-a4dd3585d1cdd7e2",
+        "V9G-9e29b12eb64131a7",
+        "V9G-bffff76e04ab32ea"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol NR wave 2026-10-02 (NrFusd)",
+      "evidence": [
+        "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction/structuring",
+        "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction/vendors",
+        "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token/redeem",
+        "https://docsend.com/view/q23rapyw9azhzi5m",
+        "2026-10-02 DocSend retrieval: You appear to be a bot. If this is a mistake, please let us know.",
+        "Ethereum block 26103182: current NAV bundle remains issuer-published with three zero PoR values."
+      ],
+      "rationale": "Fresh issuer pages still disclose ordinary USDT redemption timing and a claimed SAC, but no enforceable FUSD holder priority instrument, current look-through tenor/stressed liquidity or financial loss-recovery covenant. Financial Auditor remains blank and linked report content remains inaccessible. Preserve existing bounded mechanism components; no overlay upgrade proposed.",
+      "changeRefs": [],
+      "sentinels": [
+        "fusd-finchain:gap:mechanism-review:durationAndLiquidity",
+        "fusd-finchain:gap:mechanism-review:fundClaimAndSeniority",
+        "fusd-finchain:gap:mechanism-review:lossRecoveryDesign",
+        "fusd-finchain:gap:mechanism-review:navValuation"
+      ],
+      "nextReviewTrigger": "Public or authorized underlying report, FUSD holder/SAC instrument, current fund liquidity roster or enforceable recovery covenant; otherwise re-review 2026-11-01.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:iauon-ondo",
+      "taskIds": [
+        "V9G-e340fee28aeaf186"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol NR wave 2026-10-02 (NrIauon)",
+      "evidence": [
+        "https://www.dropbox.com/scl/fo/jzkrw308mrhsasauqrjqq/AJxJak0F90kcwkADSN3DCD4?rlkey=nik1v5slekrzx5fbi0zan5sk3&dl=1",
+        "https://www.dropbox.com/scl/fo/7rlmba8f49nvbp3xwz1of/ABv0vSjd6cIDAUTIlwm2KwA?rlkey=hokf0tffqvezfmsto25cvpovs&dl=1",
+        "https://cdn.sanity.io/files/8k2tqa6n/production/f8568100c8d43609c8d83e6d57c7130d590711b0.pdf",
+        "https://cdn.sanity.io/files/8k2tqa6n/production/ae1f1ca8ce2c2197a45b563e3e9add041924a249.pdf",
+        "https://app.ondo.finance/api/v2/assets/iauon/info",
+        "Full current public report/API review2026-10-02 saved in agents/2026-10-01-curation-pass/nr/scratch/iauon-ondo/"
+      ],
+      "rationale": "Current aggregate attestation is not a complete IAUon reserve schedule. Underlying ETF exposure, shares multiplier, NAV and tokenSupply cannot close reserve composition. Unknowns/date stay intact.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/reserves/iauon-ondo.json"
+      ],
+      "sentinels": [
+        "iauon-ondo:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "Recheck2026-10-21 after the September monthly report publication deadline, or earlier if Ondo/Ankura publishes an IAUon-specific quantities/cash/OtherCollateral and corresponding holder-obligation schedule.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_ROUTE_REVIEW:iauon-ondo",
+      "taskIds": [
+        "V9G-5bb3075d0772879c"
+      ],
+      "workType": "BRIDGE_ROUTE_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol NR wave 2026-10-02 (NrIauon)",
+      "evidence": [
+        "October2 pinned ETH26103204 / BSC125253961 / Hyper47448102; agents/2026-10-01-curation-pass/nr/scratch/iauon-ondo/rpc-evidence.json",
+        "https://docs.ondo.finance/tools/ondo-bridge"
+      ],
+      "rationale": "Current reciprocal peers, required DVN roster/quorum and directional caps are now pinned, but accepted circulating liability partition and complete control authorization remain unresolved. Descriptive corrections do not close the economic-control gap.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/iauon-ondo.json"
+      ],
+      "sentinels": [
+        "iauon-ondo:gap:economic-control:bridge"
+      ],
+      "nextReviewTrigger": "Recheck2026-10-16, or earlier when an accepted generation-consistent circulating supply packet or verified BridgeRegistrar/extension authorization closure is published.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:kgst-kyrgyz-som",
+      "taskIds": [
+        "V9G-65fac3df23e646ab",
+        "V9G-1e235df73f7a8bd9"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol NR wave 2026-10-02 (NrKgst)",
+      "evidence": [
+        "https://www.kgstoken.kg/",
+        "https://fsa.gov.kg/2025/07/08/гос-регистрации-выпусков-ценных-бума/",
+        "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=206adb88d0e84ab5baa192e25abe554e",
+        "https://www.nava.gov.kg/registries",
+        "https://en.kabar.kg/news/kyrgyzstan-issues-first-national-stablecoin-kgst/",
+        "https://web.archive.org/web/20251229134414id_/https://www.kgstoken.kg/"
+      ],
+      "rationale": "Expanded primary/archival/regulatory research still yields issuer claims and public issuance registration, not dated reserve composition, reconciliation or documented custody continuity. Unknown remains unknown; no favorable date bump.",
+      "changeRefs": [],
+      "sentinels": [
+        "kgst-kyrgyz-som:gap:mechanism-review:assuranceAndReconciliation",
+        "kgst-kyrgyz-som:gap:mechanism-review:custodyContinuity"
+      ],
+      "nextReviewTrigger": "2026-11-01 or first signed dated KGST reserve-to-liability attestation, current bank allocation and custody/legal terms, whichever occurs first",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:kgst-kyrgyz-som",
+      "taskIds": [
+        "V9G-b75014b7441ba735"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol NR wave 2026-10-02 (NrKgst)",
+      "evidence": [
+        "https://www.kgstoken.kg/",
+        "https://fsa.gov.kg/2025/07/08/гос-регистрации-выпусков-ценных-бума/",
+        "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=206adb88d0e84ab5baa192e25abe554e",
+        "https://www.nava.gov.kg/registries",
+        "https://en.kabar.kg/news/kyrgyzstan-issues-first-national-stablecoin-kgst/",
+        "https://web.archive.org/web/20251229134414id_/https://www.kgstoken.kg/"
+      ],
+      "rationale": "Expanded primary/archival/regulatory research still yields issuer claims and public issuance registration, not dated reserve composition, reconciliation or documented custody continuity. Unknown remains unknown; no favorable date bump.",
+      "changeRefs": [],
+      "sentinels": [
+        "kgst-kyrgyz-som:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "2026-11-01 or first signed dated KGST reserve-to-liability attestation, current bank allocation and custody/legal terms, whichever occurs first",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:mapollo-midas",
+      "taskIds": [
+        "V9G-e5ccdb5e75cb032c"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol NR wave 2026-10-02 (NrMapollo)",
+      "evidence": [
+        "https://api-prod.midas.app/api/transparency?token=mAPOLLO",
+        "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2F7sSYvDMJYrWvBsvKGQFI%2F20260714_mAPOLLO_FT_signed_final.pdf?alt=media",
+        "https://raw.githubusercontent.com/midas-apps/midas-por-v2/main/INTEGRATION.md",
+        "agents/2026-10-01-curation-pass/nr/scratch/mapollo-midas/transparency-20261002.json"
+      ],
+      "rationale": "Fresh disclosure trigger checked. Current API recovered but protocol net-equity and selected signed positions do not establish complete asset-level backing or independent hedge reconciliation. Binding terms remain notional; missing numeric metrics remain null and favourable assurance not inferred.",
+      "changeRefs": [],
+      "sentinels": [
+        "mapollo-midas:gap:mechanism-review:hedgeReconciliation"
+      ],
+      "nextReviewTrigger": "Re-review by2026-11-02, or earlier upon an exact-product dated full asset/liability inventory and independently reconciled hedge disclosure or mainnet attestation carrying complete financial scope.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:mapollo-midas",
+      "taskIds": [
+        "V9G-5021b93a6eb62a36"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol NR wave 2026-10-02 (NrMapollo)",
+      "evidence": [
+        "https://api-prod.midas.app/api/transparency?token=mAPOLLO",
+        "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2F7sSYvDMJYrWvBsvKGQFI%2F20260714_mAPOLLO_FT_signed_final.pdf?alt=media",
+        "https://raw.githubusercontent.com/midas-apps/midas-por-v2/main/INTEGRATION.md",
+        "agents/2026-10-01-curation-pass/nr/scratch/mapollo-midas/transparency-20261002.json"
+      ],
+      "rationale": "Fresh disclosure trigger checked. Current API recovered but protocol net-equity and selected signed positions do not establish complete asset-level backing or independent hedge reconciliation. Binding terms remain notional; missing numeric metrics remain null and favourable assurance not inferred.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/reserves/mapollo-midas.json"
+      ],
+      "sentinels": [
+        "mapollo-midas:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "Re-review by2026-11-02, or earlier upon an exact-product dated full asset/liability inventory and independently reconciled hedge disclosure or mainnet attestation carrying complete financial scope.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:mf-one-midas",
+      "taskIds": [
+        "V9G-3bcf4eb2e3acaa44"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol NR wave 2026-10-02 (NrMfOne)",
+      "evidence": [
+        "https://gateway.pinata.cloud/ipfs/QmZJJQCFAfso7idghMgMSrTKjwQGrN3p7DDhmU3x2zbZvb",
+        "https://api-prod.midas.app/api/transparency?token=mFONE",
+        "Ethereum block26103201 SAVE registry latest report digest and mF-ONE vault state",
+        "https://www.fma.gv.at/wp-content/uploads/dynamic-downloads/auslaendAIF.pdf",
+        "Fresh current source recovery succeeded; source gap is portfolio/reconciliation non-disclosure rather than merely Cloudflare access.",
+        "https://api-prod.midas.app/api/transparency/by-timestamp?token=mFONE&timestamp=2026-09-30T15:00"
+      ],
+      "rationale": "The September30 checkpoint is now fetched and manager correspondence decoded, superseding the prior inaccessible-report prerequisite. It does not supply exhaustive facility/digital-asset/strategy weights or complete note-to-token reconciliation. Current reference-fund depositary identity cannot make the opaque reserve basket rateable. Smoke retains the sentinel.",
+      "changeRefs": [
+        "shared/data/stablecoins/coins/mf-one-midas.json",
+        "shared/data/stablecoins/domains/reserves/mf-one-midas.json"
+      ],
+      "sentinels": [
+        "mf-one-midas:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "Midas or Fasanara publishes a dated exhaustive portfolio and full note-to-token reserve reconciliation, or targeted source review on2026-10-15.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ARCHETYPE_CLASSIFICATION:mhyper-midas",
+      "taskIds": [
+        "V9G-02bd684b208ba26b"
+      ],
+      "workType": "ARCHETYPE_CLASSIFICATION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol NR wave 2026-10-02 (NrMhyper)",
+      "evidence": [
+        "https://content.gitbook.com/content/MndxFHqGeA4nzBBeKDTV/blobs/0mtdYQ1fSELYbNqAP9jd/KID_mHYPER.pdf",
+        "https://content.gitbook.com/content/MndxFHqGeA4nzBBeKDTV/blobs/Rh0tXsofDB8UQWaklyuE/Midas_Final_Terms_mHYPER_2025.pdf",
+        "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FkVT2uAi2AipgeMIyZAJe%2FMidas%20Software%20GmbH%20Base%20Prospectus%202026.pdf?alt=media&token=d80ceabb-07a6-4dc4-9020-70ec86b4f42f"
+      ],
+      "rationale": "The enforceable claim is a subordinated, notional issuer certificate over a discretionary mixed strategy. Published protocol NAV is not a complete token-level delta hedge or redeemable position claim. D18 remains applicable.",
+      "changeRefs": [
+        "shared/data/stablecoins/coins/mhyper-midas.json"
+      ],
+      "sentinels": [
+        "mhyper-midas:gap:mechanism-risk-review"
+      ],
+      "nextReviewTrigger": "Exact product mechanism/hedge/claim disclosure or owner-reviewed new family mapping; recheck2026-11-02",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:mhyper-midas",
+      "taskIds": [
+        "V9G-22ab9b92365e3e4c"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol NR wave 2026-10-02 (NrMhyper)",
+      "evidence": [
+        "https://api-prod.midas.app/api/transparency?token=mHYPER",
+        "https://gateway.pinata.cloud/ipfs/QmQxfaGhtGrP4im4B8TYyPHBn2MkxZQMx8Ta8JeDsUVCSX"
+      ],
+      "rationale": "A current dated protocol exposure schedule exists, but underlying token contracts, signed derivative legs, CEX identities, all liabilities and custody rights are absent from fetched reports. No protocol-net percentages are recast as gross reserves.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/reserves/mhyper-midas.json",
+        "shared/data/stablecoins/coins/mhyper-midas.json"
+      ],
+      "sentinels": [
+        "mhyper-midas:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "Complete dated underlying positions including signed hedge legs/CEX identities/all liabilities; recheck2026-11-02",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_ROUTE_REVIEW:mhyper-midas",
+      "taskIds": [
+        "V9G-8c1d5aa20573f30d"
+      ],
+      "workType": "BRIDGE_ROUTE_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol NR wave 2026-10-02 (NrMhyper)",
+      "evidence": [
+        "nr/scratch/mhyper-midas/rpc-20261002.json",
+        "https://api-prod.midas.app/api/transparency?token=mHYPER"
+      ],
+      "rationale": "All four token/adapter identities are pinned and positive supplies observed; canonical and chain balances cannot become production supply overrides. Runtime missing materiality/partition remains producer-owned.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/mhyper-midas.json"
+      ],
+      "sentinels": [
+        "mhyper-midas:gap:economic-control:bridge"
+      ],
+      "nextReviewTrigger": "Next accepted producer capture with canonical and route materiality; recheck2026-10-09",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:mmev-midas",
+      "taskIds": [
+        "V9G-f10e4cabdc342d3a",
+        "V9G-1af433cb3a8dd0bf",
+        "V9G-3ae62e1a3734ad52"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol NR wave 2026-10-02 (NrMmev)",
+      "evidence": [
+        "https://midas-docs.gitbook.io/midas-docs/tokens/mmev.md",
+        "https://midas-docs.gitbook.io/midas-docs/tokens/mmev/risks.md",
+        "https://content.gitbook.com/content/MndxFHqGeA4nzBBeKDTV/blobs/ExalrROLjCG6HOXvhzhn/KID_mMEV.pdf",
+        "https://api-prod.midas.app/api/transparency?token=mMEV",
+        "Ethereum block26103198"
+      ],
+      "rationale": "Expanded prior research with accessible official mirror, exact API capture and pinned vault reads. Complete exact-book hedge, funding and margin disclosures remain absent; preserve existing charges.",
+      "changeRefs": [],
+      "sentinels": [
+        "mmev-midas:gap:mechanism-review:fundingBasisStress",
+        "mmev-midas:gap:mechanism-review:hedgeReconciliation",
+        "mmev-midas:gap:mechanism-review:marginAndLiquidation"
+      ],
+      "nextReviewTrigger": "2026-10-09 or earlier on product-specific signed hedge reconciliation, funding-stress history and venue-margin disclosure.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:mmev-midas",
+      "taskIds": [
+        "V9G-f05e2284b2363555"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol NR wave 2026-10-02 (NrMmev)",
+      "evidence": [
+        "https://drive.usercontent.google.com/download?id=1Z7pi3nyarivuVjduAYHJ6ILvG4p2QkkZ&export=download",
+        "https://api-prod.midas.app/api/transparency?token=mMEV",
+        "https://api-prod.midas.app/api/transparency?token=mROX"
+      ],
+      "rationale": "Exact mMEV feed remains June18. September8 issuer-prepared report is joint and September18 mROX source does not publish complete standalone mMEV allocation or obligation partition. Unknown remains100%; no composition timestamp advanced.",
+      "changeRefs": [],
+      "sentinels": [
+        "mmev-midas:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "2026-10-09 or earlier on new exact-mMEV dated full holdings/obligation partition or independently reconciled shared-book allocation.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:mre7yield-midas",
+      "taskIds": [
+        "V9G-4b572dfbe2cb17cd",
+        "V9G-67373064b8a0253d",
+        "V9G-b749e0ae680fdd20"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol NR wave 2026-10-02 (NrMre7)",
+      "evidence": [
+        "https://midas-docs.gitbook.io/midas-docs/tokens/mre7yield.md",
+        "https://midas-docs.gitbook.io/midas-docs/tokens/mre7yield/risks.md",
+        "https://drive.google.com/uc?export=download&id=1dv8GfJiUsymD8HzQpkIqEHRq-2D97l8N",
+        "https://api-prod.midas.app/api/transparency?token=mRE7",
+        "https://midas-docs.gitbook.io/midas-docs/resources/smart-contracts-addresses.md",
+        "Fresh pins and exact results: agents/2026-10-01-curation-pass/nr/scratch/mre7yield-midas/rpc-observations.json",
+        "ETH26103352 SAVE engine0x2d6e9f608807436de5d9603b00abe3fed1bc809d proofId0xdcf290c7e95e3b8b9c2ec6e17ac08edd9067ee6bf3223830d4f0982db5c819a9: proof name=mre7yield-por; latestAttestation zero tuple; empty claims/verifications."
+      ],
+      "rationale": "Recovered full product/risk docs and manager research, current base and exact KID/terms plus current API; no eligible hedge,funding-stress or margin inputs. Keep unavailable without grade inventions.",
+      "changeRefs": [],
+      "sentinels": [
+        "mre7yield-midas:gap:mechanism-review:fundingBasisStress",
+        "mre7yield-midas:gap:mechanism-review:hedgeReconciliation",
+        "mre7yield-midas:gap:mechanism-review:marginAndLiquidation"
+      ],
+      "nextReviewTrigger": "New itemized mRe7YIELD issuer/manager portfolio,hedge,funding or margin disclosure or recovered current legal roster; recheck by2026-10-09.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:mre7yield-midas",
+      "taskIds": [
+        "V9G-4672542bd6e4994a"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol NR wave 2026-10-02 (NrMre7)",
+      "evidence": [
+        "https://midas-docs.gitbook.io/midas-docs/tokens/mre7yield.md",
+        "https://midas-docs.gitbook.io/midas-docs/tokens/mre7yield/risks.md",
+        "https://drive.google.com/uc?export=download&id=1dv8GfJiUsymD8HzQpkIqEHRq-2D97l8N",
+        "https://api-prod.midas.app/api/transparency?token=mRE7",
+        "https://midas-docs.gitbook.io/midas-docs/resources/smart-contracts-addresses.md",
+        "Fresh pins and exact results: agents/2026-10-01-curation-pass/nr/scratch/mre7yield-midas/rpc-observations.json",
+        "ETH26103352 SAVE engine0x2d6e9f608807436de5d9603b00abe3fed1bc809d proofId0xdcf290c7e95e3b8b9c2ec6e17ac08edd9067ee6bf3223830d4f0982db5c819a9: proof name=mre7yield-por; latestAttestation zero tuple; empty claims/verifications."
+      ],
+      "rationale": "Current and dated mRE7 report API returns no reports; downloaded September10 PDF and recovered full docs still lack itemized holdings. Preserve report/composition date and100% unresolved look-through.",
+      "changeRefs": [],
+      "sentinels": [
+        "mre7yield-midas:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "New itemized mRe7YIELD issuer/manager portfolio,hedge,funding or margin disclosure or recovered current legal roster; recheck by2026-10-09.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_ROUTE_REVIEW:mre7yield-midas",
+      "taskIds": [
+        "V9G-c328402a868c50cf"
+      ],
+      "workType": "BRIDGE_ROUTE_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": "structured-pending-production",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol NR wave 2026-10-02 (NrMre7)",
+      "evidence": [
+        "https://midas-docs.gitbook.io/midas-docs/tokens/mre7yield.md",
+        "https://midas-docs.gitbook.io/midas-docs/tokens/mre7yield/risks.md",
+        "https://drive.google.com/uc?export=download&id=1dv8GfJiUsymD8HzQpkIqEHRq-2D97l8N",
+        "https://api-prod.midas.app/api/transparency?token=mRE7",
+        "https://midas-docs.gitbook.io/midas-docs/resources/smart-contracts-addresses.md",
+        "Fresh pins and exact results: agents/2026-10-01-curation-pass/nr/scratch/mre7yield-midas/rpc-observations.json"
+      ],
+      "rationale": "Four exact route identities and native mint/representation governance refreshed from current pins. Economic materiality still needs an admitted complete reconciled circulating partition; raw escrow equality is diagnostic, not closure.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/mre7yield-midas.json"
+      ],
+      "sentinels": [
+        "mre7yield-midas:gap:economic-control:bridge"
+      ],
+      "nextReviewTrigger": "Producer publishes complete eligible circulating deployment partition with escrow,pending and exclusion accounting; recheck by2026-10-09.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:thbill-theo",
+      "taskIds": [
+        "V9G-9ed8f82b1396ee3f"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol NR wave 2026-10-02 (NrThbill)",
+      "evidence": [
+        "https://docs.theo.xyz/products/thbill/how-thbill-generates-yield.md",
+        "https://docs.theo.xyz/products/thbill/mint-and-redeem.md",
+        "https://theo-api.theo.xyz/v1/public/thbill/historical/7",
+        "https://www.fidelityinternational.com/legal/documents/en/hffs.en.xx.6470869.pdf",
+        "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf"
+      ],
+      "rationale": "Partial wrapper checkpoint is now structured and byte-verifiable; dated underlying holdings are expired and whole-token allocation/denominator still missing. No current composition admitted.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/reserves/thbill-theo.json"
+      ],
+      "sentinels": [
+        "thbill-theo:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "A new complete dated thBILL asset/liability report or itemized underlying holdings with fund-allocation evidence; re-check2026-11-01 if none published.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:thbill-theo",
+      "taskIds": [
+        "V9G-d42d268dd72334d1",
+        "V9G-23ce4ebbf69ab47e",
+        "V9G-7bc500982766411c",
+        "V9G-ec3c2b2c326a3cab"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol NR wave 2026-10-02 (NrThbill)",
+      "evidence": [
+        "https://docs.theo.xyz/products/thbill/how-thbill-generates-yield.md",
+        "https://docs.theo.xyz/products/thbill/mint-and-redeem.md",
+        "https://theo-api.theo.xyz/v1/public/thbill/historical/7",
+        "https://www.fidelityinternational.com/legal/documents/en/hffs.en.xx.6470869.pdf",
+        "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf"
+      ],
+      "rationale": "FILQ fund structure is partially recovered but whole-thBILL independent valuation, liquidity/stress and enforceable loss recovery remain unresolved.",
+      "changeRefs": [],
+      "sentinels": [
+        "thbill-theo:gap:mechanism-review:durationAndLiquidity",
+        "thbill-theo:gap:mechanism-review:fundClaimAndSeniority",
+        "thbill-theo:gap:mechanism-review:lossRecoveryDesign",
+        "thbill-theo:gap:mechanism-review:navValuation"
+      ],
+      "nextReviewTrigger": "A new complete dated thBILL asset/liability report or itemized underlying holdings with fund-allocation evidence; re-check2026-11-01 if none published.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:usdr-ring",
+      "taskIds": [
+        "V9G-4f93a199a7626336"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol NR wave 2026-10-02 (NrUsdr)",
+      "evidence": [
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x4ea40dcee961675683e0a2e1721bd49cb9bca913",
+        "https://docs.ring.exchange/llms.txt",
+        "https://raw.githubusercontent.com/RingProtocol/docs/a7061d4fd0b539fca55db53871d193a386e086ad/docs/concepts/usdr-mint.md",
+        "https://app.ring.exchange/static/js/main.facb7bb4.js.map",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x29a294f8fe285dfb259705213e375ecb7fcf9d9b",
+        "https://api.github.com/repos/RingProtocol/docs/compare/main...a7061d4fd0b539fca55db53871d193a386e086ad",
+        "Ethereum pinned 26103180; agents/2026-10-01-curation-pass/nr/scratch/usdr-ring/rpc-current.json"
+      ],
+      "rationale": "Expanded event, holder, wrapper, draft-history and production-source-map investigation does not establish current exact-token whole-book reserves. Await identity-bound issuer disclosure; no financial inventory inferred.",
+      "changeRefs": [],
+      "sentinels": [
+        "usdr-ring:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "Current mainnet RingStableMinter/vault deployment and whole-holder reserve/liability disclosure bound to tracked origin USDR, otherwise 2026-11-02.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:usdv-solomon-v2",
+      "taskIds": [
+        "V9G-4aa4b230ae29aabc",
+        "V9G-23084d300b7c42d5",
+        "V9G-71bced9a33591cd5"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol NR wave 2026-10-02 (NrUsdv)",
+      "evidence": [
+        "https://data.solomonlabs.io/api/solomon-protocol/token-backing",
+        "https://raw.githubusercontent.com/SolomonLabs/chancery/0dafa95d1aded954de098208f0f515d436aa496c/spec/06_Reserve_Compartments_Provenance_and_Enforcement.md",
+        "https://api.github.com/repos/SolomonLabs/attestations/git/trees/main?recursive=1",
+        "https://docs.solomonlabs.org/usdv/acquiring-and-redeeming/",
+        "Finalized atomic Solana slot 452544504; agents/2026-10-01-curation-pass/nr/scratch/usdv-solomon-v2/rpc-slot-452544504.json"
+      ],
+      "rationale": "No adequate enforceable legal or independent financial evidence found. Preserve unavailable/bounded mechanism components and issuer-undisclosed responsibility; do not date-bump the existing overlay.",
+      "changeRefs": [],
+      "sentinels": [
+        "usdv-solomon-v2:gap:mechanism-review:assuranceAndReconciliation",
+        "usdv-solomon-v2:gap:mechanism-review:claimAndSegregation",
+        "usdv-solomon-v2:gap:mechanism-review:custodyContinuity"
+      ],
+      "nextReviewTrigger": "Issuer publication of exact replacement-token enforceable holder rights or complete independently reconciled financial reserve report; otherwise re-review 2026-11-02.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:usdv-solomon-v2",
+      "taskIds": [
+        "V9G-82b377f69f438bf6"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol NR wave 2026-10-02 (NrUsdv)",
+      "evidence": [
+        "https://data.solomonlabs.io/api/solomon-protocol/token-backing",
+        "https://raw.githubusercontent.com/SolomonLabs/chancery/0dafa95d1aded954de098208f0f515d436aa496c/spec/06_Reserve_Compartments_Provenance_and_Enforcement.md",
+        "https://api.github.com/repos/SolomonLabs/attestations/git/trees/main?recursive=1",
+        "https://docs.solomonlabs.org/usdv/acquiring-and-redeeming/",
+        "Finalized atomic Solana slot 452544504; agents/2026-10-01-curation-pass/nr/scratch/usdv-solomon-v2/rpc-slot-452544504.json"
+      ],
+      "rationale": "New selected-account machine probe improves visibility without closing complete current reserve composition. Keep selected-slice observation out of whole-token assurance and score-grade independent admission.",
+      "changeRefs": [
+        "shared/data/stablecoins/coins/usdv-solomon-v2.json",
+        "worker/src/cron/reserve-adapters/solomon-chancery.ts"
+      ],
+      "sentinels": [
+        "usdv-solomon-v2:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "Issuer publication of exact replacement-token enforceable holder rights or complete independently reconciled financial reserve report; otherwise re-review 2026-11-02.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:vnxau-vnx",
+      "taskIds": [
+        "V9G-ece90481df0f8244"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol NR wave 2026-10-02 (NrVnxau)",
+      "evidence": [
+        "https://vnx.li/vnxau-transparency",
+        "https://vnx.li/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf",
+        "https://prod-global-terms.s3.sa-east-1.amazonaws.com/VNX-Global-Terms.pdf"
+      ],
+      "rationale": "Only a December 2025 non-assuring AUP is published; successor proprietary exchange does not refresh physical redemption, custody or reconciliation evidence.",
+      "changeRefs": [
+        "shared/lib/redemption-backstop-configs/offchain-issuer/commodity.ts"
+      ],
+      "sentinels": [
+        "vnxau-vnx:gap:mechanism-review:assuranceAndReconciliation"
+      ],
+      "nextReviewTrigger": "2026-11-01 or earlier current independent reserve-to-liability report and holder-facing physical release/custody recovery terms",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:vnxau-vnx",
+      "taskIds": [
+        "V9G-6aea7462c6ca4aae"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol NR wave 2026-10-02 (NrVnxau)",
+      "evidence": [
+        "https://vnx.li/vnxau-transparency",
+        "https://vnx.li/api/supply?ticker=VNXAU",
+        "https://vnx.io/transparency"
+      ],
+      "rationale": "Gold report remains 2025-12-31; current API reports token supply only, while Global transparency covers VCHF/VGBP rather than VNXAU bars or custody allocations.",
+      "changeRefs": [],
+      "sentinels": [
+        "vnxau-vnx:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "New dated gold bar list, custodian statement or independently reconciled reserve composition; recheck 2026-11-01",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MECHANISM_REVIEW:wars-argentine-peso",
+      "taskIds": [
+        "V9G-6d7aa810fc273eaf",
+        "V9G-4ff7269fd43764fe",
+        "V9G-c555ac2866a72427"
+      ],
+      "workType": "MECHANISM_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol NR wave 2026-10-02 (NrWars)",
+      "evidence": [
+        "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf",
+        "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/Aug%202026/Token%20wARS%2006.30.2026%20Certification%20vf.pdf?hsLang=en",
+        "https://terms.ripio.com/ar/wallet",
+        "https://terms.ripio.com/ar/on-off-ramp"
+      ],
+      "rationale": "Assurance now gains its honestly labelled signed-date stand-in; holder claim is no longer unknown but is affirmatively denied in the dated whitepaper, with a weak-quality correction proposed. Custody continuity remains issuer-undisclosed. Whole group remains deferred until custody disclosure; individual facts are not asserted closed from local smoke.",
+      "changeRefs": [
+        "shared/data/stablecoins/coins/wars-argentine-peso.json",
+        "wars-argentine-peso#N1",
+        "wars-argentine-peso#N2"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "wars-argentine-peso:gap:mechanism-review:assuranceAndReconciliation",
+          "doneWhenScoreReasonAbsent": null
+        },
+        {
+          "doneWhenGapIdAbsent": "wars-argentine-peso:gap:mechanism-review:claimAndSegregation",
+          "doneWhenScoreReasonAbsent": null
+        },
+        {
+          "doneWhenGapIdAbsent": "wars-argentine-peso:gap:mechanism-review:custodyContinuity",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "2026-10-15, or earlier publication of named reserve-custodian agreements, continuity procedures or a superseding holder-rights document; production replay after integration also checks the two resolved component sentinels.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:wars-argentine-peso",
+      "taskIds": [
+        "V9G-ffdd885a2d0788c6"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol NR wave 2026-10-02 (NrWars)",
+      "evidence": [
+        "https://action.ripio.com/en/wfiat-attestations",
+        "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/Aug%202026/Token%20wARS%2006.30.2026%20Certification%20vf.pdf?hsLang=en",
+        "agents/2026-10-01-curation-pass/nr/scratch/wars-argentine-peso/adapter-output.json"
+      ],
+      "rationale": "June 30 remains latest report; 94 days old at review, outside 31-day composition plus seven-day grace. The real existing adapter confirms the same balance date and configured-static-slices mode. September announcements and a security certification do not establish current reserve amounts or dated bank/bond composition.",
+      "changeRefs": [
+        "wars-argentine-peso#N4"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "wars-argentine-peso:gap:reserve-composition",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "2026-10-15, or earlier publication of a newer balance-dated wARS report/current reserve composition from the issuer or its attestor.",
+      "factsClosed": 0
     }
   ]
 }

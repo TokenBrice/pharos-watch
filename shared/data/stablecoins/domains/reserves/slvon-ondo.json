@@ -37,13 +37,17 @@
       {
         "label": "Ondo current-price API warning (display feed; no official oracle published)",
         "url": "https://docs.ondo.finance/api-reference/assets/get-current-price-for-an-asset"
+      },
+      {
+        "label": "SLVon Final Terms: collateral and named custody providers (signed 2026-02-19)",
+        "url": "https://cdn.sanity.io/files/8k2tqa6n/production/1e83310304939f644ad250b298c14f2a2ac6449c.pdf"
       }
     ],
     "rationale": "Re-opened 2026-08-29: Ondo's current Global Markets trust-and-transparency documentation states that tokenized stocks and ETFs are fully backed by the underlying security plus cash in transit, with daily holdings verification by Ankura Trust and custody at one or more US-registered broker-dealers. SLVon is the tokenized iShares Silver Trust (SLV) exposure. The reviewed Ondo API documentation says current price feeds are display-only and that an official oracle is still in development; no Chainlink or Chronicle NAV configuration is present for SLVon in the Pharos registry, and no current dated SLVon holdings report was retrieved from the public product page. The reserve remains one fund-share envelope because SLV shares versus cash-in-transit weights are undisclosed.",
     "compositionBasis": "Ondo SLVon product, trust and transparency, and oracle guidance",
     "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
-    "knownUnknownExposure": "Public Ankura-verified consolidated Ondo Stocks daily and monthly reports were retrieved on 2026-10-01, including the September 23 daily report and August monthly report. They do not disclose a SLVon-specific allocation between SLV shares and cash in transit or SLVon-specific custodial provider shares; the aggregate reserve basket remains 100% unresolved.",
+    "knownUnknownExposure": "Independently re-fetched public Ankura-verified consolidated Ondo Stocks daily and monthly report folders on 2026-10-02. The latest daily report is September 29 and the latest monthly report is August; neither discloses a SLVon-specific allocation between SLV shares, cash in transit, or other eligible collateral, nor SLVon-specific custodial provider shares. SLVon Final Terms identify the intended underlying security and permit other collateral, but do not supply dated holdings or weights. The aggregate reserve basket remains 100% unresolved.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -58,13 +62,13 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "US-registered custodial broker-dealer(s) holding the underlying SLV shares (undisclosed)",
+        "name": "BitGo Trust Company Inc. (named custodian in SLVon Final Terms)",
         "role": "custodian",
         "jurisdiction": "United States"
       },
       {
-        "name": "Alpaca Securities LLC (brokerage services to the token issuer)",
-        "role": "other",
+        "name": "Alpaca Securities LLC (named broker and custodian in SLVon Final Terms)",
+        "role": "custodian",
         "jurisdiction": "United States"
       },
       {
@@ -91,9 +95,13 @@
       {
         "label": "SLVon issuer product page: brokerage provider disclosure",
         "url": "https://app.ondo.finance/assets/slvon"
+      },
+      {
+        "label": "SLVon Final Terms: custodians and conditional collateral-lending restriction (signed 2026-02-19)",
+        "url": "https://cdn.sanity.io/files/8k2tqa6n/production/1e83310304939f644ad250b298c14f2a2ac6449c.pdf"
       }
     ],
-    "uncertainty": "Ondo documents a bankruptcy-remote SPV with segregated assets and accounts, daily Ankura verification, and a first-priority security interest over collateral at US-registered custodial broker-dealers. The SLVon product page names Alpaca Securities LLC as providing brokerage services to the issuer. SLVon-specific custodial provider shares, cash-in-transit allocation, and reuse restrictions remain unpublished; no share is assigned to Alpaca.",
+    "uncertainty": "SLVon-specific Final Terms name Alpaca Securities LLC and BitGo Trust Company Inc. as custodians, but do not disclose their current SLVon custody shares or a security-versus-cash allocation. The issuer may substitute other collateral. Collateral lending is prohibited unless explicitly agreed in advance between issuer and investor, so an unconditional no-reuse restriction is not established. Provider shares remain unassigned and 100% unresolved. The old safeguard review date is retained: the product-specific legal document's signature is February 19, 2026, not a newly dated custody attestation.",
     "knownUnknownExposurePct": 100
   }
 }
