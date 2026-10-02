@@ -79,7 +79,7 @@ describe("LeverUp LVUSD reserve census", () => {
 
   it("withholds composition when the registry adds an unreviewed vault", async () => {
     const expanded = encodeAbiParameters([{ type: "address[]" }], [[fixture.vault, "0x1111111111111111111111111111111111111111"]]);
-    await expect(observe({ [`${fixture.transparency}:getAllVaults()`]: expanded })).rejects.toThrow(/vault census/);
+    await expect(observe({ [`${fixture.transparency}:getAllVaults()`]: expanded })).rejects.toThrow(/census/);
   });
 
   it("withholds composition when the designated reserve identity changes", async () => {

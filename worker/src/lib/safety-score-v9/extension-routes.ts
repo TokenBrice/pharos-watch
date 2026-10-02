@@ -856,6 +856,13 @@ function buildRedemptionRouteReview(
     lane: "redemption",
     routeId: observation.routeId,
     ...(routeSuspension ? { routeSuspension } : {}),
+    // Old captures mislabeled published formulas as issuer non-disclosure.
+    // Correct provenance only: no formula evaluation or <=200 bps claim.
+    ...(observation.feeEvidence === "undisclosed-reviewed" &&
+    entry.feeConfidence === "formula" &&
+    (entry.feeModelKind === "formula" || entry.feeModelKind === "documented-variable")
+      ? { feeEvidence: "disclosed-unquantified" as const }
+      : {}),
     holderAccess: redemptionHolderAccess(entry),
     executionModel: redemptionExecutionModel(entry),
     executionCertainty: redemptionExecutionCertainty(entry, modelConfidence),

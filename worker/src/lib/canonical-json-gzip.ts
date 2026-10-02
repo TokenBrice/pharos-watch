@@ -38,41 +38,61 @@ function nextChunkEnd(value: string, offset: number): number {
   return end;
 }
 
-/** Compresses and hashes canonical JSON without materializing its full UTF-8 byte array. */
+function* canonicalTextChunks(value: string | Iterable<string>): Generator<string> {
+  let carry = "";
+  for (const part of typeof value === "string" ? [value] : value) {
+    const text = carry + part;
+    carry = "";
+    const last = text.charCodeAt(text.length - 1);
+    const length = last >= 0xd800 && last <= 0xdbff ? text.length - 1 : text.length;
+    if (length < text.length) carry = text.slice(length);
+    for (let offset = 0; offset < length;) {
+      const end = Math.min(length, nextChunkEnd(text, offset));
+      yield text.slice(offset, end);
+      offset = end;
+    }
+  }
+  if (carry) yield carry;
+}
+
+/** Compresses and hashes canonical text or chunks without a complete UTF-8 array/string. */
 export async function gzipCanonicalJson(
-  canonicalJson: string,
+  canonicalJson: string | Iterable<string>,
   options: CanonicalJsonGzipOptions,
 ): Promise<CanonicalJsonGzipResult> {
   const { label, maximumCompressedBytes, maximumUncompressedBytes, signal } = options;
   throwIfAborted(signal);
-  if (canonicalJson.length === 0) throw new Error(`${label} cannot be empty`);
+  if (typeof canonicalJson === "string" && canonicalJson.length === 0) throw new Error(`${label} cannot be empty`);
   if (!Number.isInteger(maximumCompressedBytes) || maximumCompressedBytes < 0) {
     throw new Error(`${label} compressed byte limit must be a non-negative integer`);
   }
-  if (canonicalJson.length > maximumUncompressedBytes) {
+  if (typeof canonicalJson === "string" && canonicalJson.length > maximumUncompressedBytes) {
     throw uncompressedByteLimitError(label, maximumUncompressedBytes);
   }
 
   const encoder = new TextEncoder();
   const hash = createHash("sha256");
-  let offset = 0;
+  const textChunks = canonicalTextChunks(canonicalJson);
   let uncompressedBytes = 0;
   const source = new ReadableStream<BufferSource>({
     pull(controller) {
       throwIfAborted(signal);
-      if (offset >= canonicalJson.length) {
+      const next = textChunks.next();
+      if (next.done) {
+        if (uncompressedBytes === 0) throw new Error(`${label} cannot be empty`);
         controller.close();
         return;
       }
-      const end = nextChunkEnd(canonicalJson, offset);
-      const chunk = encoder.encode(canonicalJson.slice(offset, end));
-      offset = end;
+      const chunk = encoder.encode(next.value);
       uncompressedBytes += chunk.byteLength;
       if (uncompressedBytes > maximumUncompressedBytes) {
         throw uncompressedByteLimitError(label, maximumUncompressedBytes);
       }
       hash.update(chunk);
       controller.enqueue(chunk);
+    },
+    cancel() {
+      textChunks.return(undefined);
     },
   });
   const compressedStream = source.pipeThrough(new CompressionStream("gzip"));

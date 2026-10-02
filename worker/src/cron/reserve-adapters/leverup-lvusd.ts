@@ -1,7 +1,7 @@
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
-import { decodeStrictAddressArrayWord, decodeStrictAddressWord } from "./abi-decode";
+import { decodeStrictAddressWord } from "./abi-decode";
 import { createAdapterIoLimiter } from "./concurrency";
 import { pinnedBlockPlan } from "./evm-observation-plan";
 import { fetchEvmBranchBalancesReserves } from "./evm-branch-balances";
@@ -17,15 +17,14 @@ const USDC = "0x754704bc059f8c67012fed69bc8a327a5aafb603";
 const RPC_URL = "https://rpc.monad.xyz";
 const BRANCH_PARAMS = {
   rpcUrl: RPC_URL,
-  // Independently reviewed 2026-10-01; the same-run vault/asset checks below
-  // refuse any registry change before this complete roster reaches accounting.
+  // The designated-vault registry is verified at the same pinned block as the
+  // reserve-token identities and balances; it is not a date-only roster proof.
   census: {
-    kind: "reviewed-roster",
-    reviewedAt: "2026-10-01",
-    sourceUrls: [
-      "https://raw.githubusercontent.com/leverup-xyz/DefiLlama-Adapters/main/projects/leverup/index.js",
-      "https://leverup.gitbook.io/docs/liquidity-layer/lvusd-stablecoin",
-    ],
+    kind: "onchain-registry",
+    contract: TRANSPARENCY,
+    selector: "0x97331bf9",
+    maxAssets: 1,
+    identity: "holder",
   },
   branches: [{
     name: "USDC liquidity-layer collateral",
@@ -68,11 +67,6 @@ export async function fetchLeverupLvusdReserves(
     if (decodeStrictAddressWord(await calls.raw(contract, selector)) !== expected) {
       throw new Error(`${ADAPTER_KEY}: ${label} identity mismatch or unreadable`);
     }
-  }
-  const vaults = decodeStrictAddressArrayWord(await calls.raw(TRANSPARENCY, "0x97331bf9"), { maxItems: 32 });
-  // Do not silently omit an added strategy or normalize an incomplete basket.
-  if (vaults?.length !== 1 || vaults[0] !== VAULT) {
-    throw new Error(`${ADAPTER_KEY}: designated vault census changed or unreadable`);
   }
   if (await calls.uint256(USDC, "0x313ce567") !== 6n ||
       await calls.uint256(TOKEN, "0x313ce567") !== 18n) {

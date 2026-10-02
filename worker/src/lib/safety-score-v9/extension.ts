@@ -410,7 +410,7 @@ function adaptMintControl(
   const coarseCapabilities = mintCapabilities(control, upgradeCapable);
   const capabilities = control.executionScope && projection.complete
     ? [...new Set(projection.paths.flatMap((path) => path.capabilities))].sort(compareText)
-    : [...new Set([...coarseCapabilities, ...(projection.reviewed ? projection.paths.flatMap((path) => path.capabilities) : [])])].sort(compareText);
+    : [...new Set([...coarseCapabilities, ...projection.provenPaths.flatMap((path) => path.capabilities)])].sort(compareText);
   const hasMint = capabilities.includes("mint");
   const capped = control.directMintAbility === "cap-limited" || control.canRaiseCap === true;
   // A reviewed economic cap supersedes the contract-encoding cap for a
@@ -461,24 +461,22 @@ function adaptMintControl(
     return "none";
   })();
   const economicSemantics = projection.reviewed && !projection.complete
-    ? partialControlScopeSemantics({ capSemantics, claimImpairment }, projection.paths)
+    ? partialControlScopeSemantics({ capSemantics, claimImpairment }, projection)
     : { capSemantics, claimImpairment };
-  // A named reach gap cannot close through the legacy fallback, but it also
-  // cannot erase an independently established adverse path on this authority.
+  // Unknown execution reach stays bounded without a redundant question record.
+  // Independently established legacy adverse economics remain binding unless
+  // the scoped review explicitly questions that economic reach.
   const scopedMintReachUnresolved =
-    scopedQuestionFresh &&
+    (scopedQuestionFresh || (capSemantics.kind !== "unbounded" && claimImpairment !== "unbounded")) &&
     projection.reviewed &&
     !projection.complete &&
     projection.paths.some((path) =>
-      path.activation === "active" &&
-      path.capabilities.includes("mint") &&
-      (path.reach === "unknown" || path.economicLossScope === "unknown"),
-    ) &&
-    !projection.paths.some((path) =>
-      path.activation !== "unknown" &&
       path.activation !== "disabled-final" &&
       path.capabilities.includes("mint") &&
-      (path.reach === "root" || path.reach === "deployment") &&
+      (path.activation === "unknown" || path.reach === "unknown" || path.economicLossScope === "unknown"),
+    ) &&
+    !projection.provenPaths.some((path) =>
+      path.capabilities.includes("mint") &&
       path.economicLossScope === "global-claim" &&
       (path.capSemantics.kind === "unbounded" || path.claimImpairment === "unbounded"),
     );

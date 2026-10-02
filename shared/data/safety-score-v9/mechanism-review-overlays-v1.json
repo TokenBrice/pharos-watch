@@ -325,7 +325,7 @@
     {
       "assetId": "reusd-resupply",
       "archetype": "cdp",
-      "reviewedAt": "2026-07-27",
+      "reviewedAt": "2026-10-02",
       "sources": [
         {
           "label": "Resupply Stability Mechanics (communal redemption, ~1% fee, price floor)",
@@ -346,17 +346,21 @@
         {
           "label": "Ethereum PublicNode RPC eth_call journal at finalized block 25627260",
           "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Fresh pinned full Resupply enumeration and collateral measurement, Ethereum block0x18e5205",
+          "url": "https://eth.blockscout.com/block/26104325"
         }
       ],
-      "notes": "Wave-8 phase-1 remeasure 2026-07-28. Prior overlay reviewedAt 2026-07-15. Fresh pin block 25627260: CR 1.076367 (was 1.078969), InsurancePool liquidation capacity 0.079132 (was 0.100629). Method matches scripts/lib/mechanism-measurement/families/resupply.ts: active-pair convertToAssets collateral over debt; insurance balance over debt. Write-time re-open of registry, all 19 pairs, insurance balance, and docs returned matching values. Merge note: liquidationCapacityRatio fell 0.100629 -> 0.079132 because the InsurancePool reUSD balance genuinely shrank (~3.24M -> ~2.55M reUSD) between the 2026-07-15 and 2026-07-27 pins — a real measured decline, not a methodology change. Prior measurement journal (method reference): shared/data/safety-score-v9/mechanism-measurements/reusd-resupply/2026-07-15-block-25536894.json (repo path, carried here because sources admit URLs only). Component evidence: collateralizationParameters (limited) — Per-pair CDP accounting is on-chain (getPairAccounting borrow + collateral shares; convertToAssets for vault claim). System CR only ~1.076 at pin — thin buffer versus conventional overcollateralized CDPs. Collateral is layered ERC-4626 claims on crvUSD/frxUSD lending markets at accounting par, not direct blue-chip collateral.; liquidationMechanics (adequate) — Insurance Pool documentation: on liquidation the pool buys collateral with reUSD (burned), liquidated collateral routes through LiquidationHandler which withdraws underlying from the lending pool when liquidity allows (can retry). Dual-source: Insurance Pool CDP Liquidations section + on-chain InsurancePool capital committed at pin (7.91% of debt).; backstop (limited) — Insurance Pool is the explicit bad-debt and liquidation backstop (docs + 2.546M reUSD on-chain). If bad debt exceeds the pool, docs state the protocol assumes residual bad debt and leftover collateral is held by the protocol — no unconditional external recapitalization. Limited depth at 7.91% of debt.; branchIsolation (limited) — Pairs are separate contracts with distinct collateral vaults (19 registry addresses observed). Redeemer may choose which pools to redeem against (Stability Mechanics). Cross-pair transmission exists via shared Insurance Pool and communal redemption. Limited isolation: pair-level accounting exists but insurance and redemptions are system-shared.; shutdownAndBadDebt (limited) — Defined bad-debt path: Insurance Pool purchases impaired collateral and burns reUSD; residual beyond the pool is assumed by the protocol with collateral held for pool holders to withdraw (Insurance Pool Bad Debt section). No dual-sourced global settlement/emergency shutdown. Limited, not adequate.; structuralRedemption (limited) — Communal redemption model with ~1% fee establishing a price floor (Stability Mechanics docs): redeemer burns reUSD against borrower collateral across chosen pairs with weighted discounts. Access is conditional (operator/oracle-price guard on RedemptionHandler per prior pinned implementation family). Limited structural redemption rather than unconditional 1:1 cash redeem..",
+      "notes": "Re-measured 2026-10-02 at Ethereum block0x18e5205. Enumerated all22registeredpairs;18havepositiveborrow. Each active pair collateral is valued with its ERC4626 convertToAssets, over totalBorrow49994424.24561783reUSD. Par-value CR1.0871595135954255, insurance balance2098994.006816931reUSD, funded liquidation capacity0.04198456204845513. Supply49988021.38319672reUSD; relative absolute supply/debt divergence0.012807153033003222%. All22underlyings are canonical crvUSD/frxUSD. Re-fetched current communal redemption and insurance/bad-debt docs; existing limiteddesign grades retained. These are layered-par-value collateral measurements, not immediate exit/liquidation market values, a current asset shortfall allegation, or a historicalhack remediation assertion. Exact raw reads: agents/2026-10-01-curation-pass/nr/scratch/reusd-resupply/df09-current-backing.json and df09-current-capacity.json.",
       "metrics": {
-        "collateralizationRatio": 1.076367,
-        "liquidationCapacityRatio": 0.079132
+        "collateralizationRatio": 1.08716,
+        "liquidationCapacityRatio": 0.041985
       },
       "analogousMetrics": {
-        "activePairCount": 15,
-        "pairCount": 19,
-        "supplyDebtDivergencePct": 0.0204
+        "activePairCount": 18,
+        "pairCount": 22,
+        "supplyDebtDivergencePct": 0.012807
       },
       "components": {
         "collateralizationParameters": {
@@ -440,7 +444,7 @@
     {
       "assetId": "usdq-quill",
       "archetype": "cdp",
-      "reviewedAt": "2026-07-15",
+      "reviewedAt": "2026-10-02",
       "sources": [
         {
           "label": "Quill CollateralRegistry and branch state on Scroll",
@@ -457,12 +461,20 @@
         {
           "label": "Quill liquidation and redemption documentation",
           "url": "https://docs.quill.finance/faq/liquidations-oracle-and-redemptions"
+        },
+        {
+          "label": "Current verified Quill TroveManager methods and branch measurement semantics",
+          "url": "https://scroll.blockscout.com/api/v2/smart-contracts/0x9d2ad9712f3905f3e7803c92d027a197b4c8da90"
+        },
+        {
+          "label": "Pinned Scroll RPC observation",
+          "url": "https://api-scroll-mainnet.n.dwellir.com"
         }
       ],
-      "notes": "Measured at finalized Scroll block 34367075; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/usdq-quill/2026-07-15-block-34367075.json. The token-derived registry enumerated all four configured branches and reconciled debt to supply within 0.3577%, so controller coverage is complete. The measured health state is failed: aggregate protocol-priced collateral over debt is 0.676425, Stability Pool deposits were only 506.7716 USDQ against 132,307.8984 supply (0.003830), and the SCR branch represented about 78.9% of debt while reporting shutdownTime 1775494874 and redeemable=false. Quill documents Stability Pool offsets and permissionless redemptions, but the pinned state leaves both resources materially impaired; backstop and structural redemption are therefore weak rather than adequate.",
+      "notes": "Fresh pinned Scroll block 35252180: the same four token-registry branches remain enumerated. Protocol-priced collateral totals $107044.5810856827821417945232 against 118152.068597239058944703 branch debt; collateralizationRatio=0.9059899023061553647547065099. USDQ supply is 117290.898394521252465607 and Stability Pool deposits total 506.771616160073437568, so liquidationCapacityRatio=0.004320638882443287067466001147. SCR still has shutdownTime 1775494874 and is not redeemable; the other three branches remain live/redeemable. Branch debt exceeds supply by 0.7342174154222629755562783232%; this review does not claim debt/supply equality or independent assurance. Whole branch-debt collateralization is measured from the complete registry, not inferred from supply. The July 15 historical snapshot (CR 0.676425, liquidationCapacityRatio 0.003830) remains historical; it is superseded numerically, not silently reused as current. CR remains below one and liquidation resources remain thin. Static risk-component assessments are retained; no evidence supports unconditional recapitalization or a recovery of the shutdown SCR branch.",
       "metrics": {
-        "collateralizationRatio": 0.676425,
-        "liquidationCapacityRatio": 0.00383
+        "collateralizationRatio": 0.9059899023061554,
+        "liquidationCapacityRatio": 0.004320638882443287
       },
       "metricApplicability": {
         "collateralizationRatio": {
@@ -4018,17 +4030,17 @@
           "url": "https://etherscan.io/address/0x56ba8b58b7d1f6d384a1c4dd553f39ebc8741b8e"
         }
       ],
-      "notes": "Kinesis self-reports that KAG holders legally own fully allocated bullion outside the Kinesis balance sheet, identifies ABX as custodian, and lists an April 2026 Bureau Veritas audit. This issuer disclosure supports limited claim and segregation and limited custody continuity. The operative trust/custody agreements, vault allocations, replacement and failure process, and reserve-wide rehypothecation prohibition were not public; Brinks and Loomis logistics references were not treated as custodians.\n\nv9.14 phase-2 migration (2026-08-09): archetype moved from fiat-cash to commodity-claim. claimAndSegregation carries over verbatim as titleAndAllocation; custodyContinuity and assuranceAndReconciliation keep their keys, values, and evidence.\n\n2026-08-11 physical-redemption evidence pin: the binding KMS Labs terms govern the exact Pharos-tracked ERC-20 KAG contract and document a mandatory two-step route. KMS Labs may, in its sole discretion, redeem ERC-20 KAG 1:1 only into native Kinesis KAG, gives no warranty that the first leg will remain available or complete within any timeframe, and states that physical redemption cannot occur directly from the wrapper. Current Kinesis operational disclosures then specify native-KAG redemption in 200-KAG increments through the account dashboard, an operations response within 1-2 working days, and a fee of 0.45% plus $100 and delivery costs through Brinks or Loomis. These exact-class structured terms plus the onchain identity anchor support limited physicalRedemption only. They do not establish an unconditional ERC-20-to-bullion right, an independently observed completed redemption, a settlement guarantee, or binding native-layer redemption terms; native KAG's allocated-bullion title must not be attributed to ERC-20 KAG holders. Supplemental re-verification on 2026-08-12 re-opened the same current terms and operating disclosures and confirmed at Ethereum block 25,737,315 that 0x56ba8b58b7d1f6d384a1c4dd553f39ebc8741b8e still has deployed code and identifies itself as Kinesis Silver (KAG); it did not introduce a new basis for the grade.",
+      "notes": "2026-10-02 exact-ERC-20-class correction: KMS Labs terms section 8(a) identify native KAG as immediate reserve, section 8(e) expressly deny holder legal/equitable/beneficial title to reserve, and section 3 states that native issuer Kinesis Cayman owes no obligations to ERC-20 holders. Native-bullion ownership marketing does not establish wrapper title. Physical redemption requires discretionary wrapper-to-native conversion with no availability or completion-time warranty before a separately requested native physical redemption; the operational 1-2 working-day contact is not a release deadline or USD settlement. These are published adverse terms, not absent evidence, and match the existing KAU exact-class weak title/weak physical-redemption treatment. Custody continuity remains limited; no assurance or reconciliation freshness is advanced. Historical review date and April physical report context are deliberately not refreshed.",
       "metrics": {},
       "components": {
         "titleAndAllocation": {
-          "quality": "limited"
+          "quality": "weak"
         },
         "custodyContinuity": {
           "quality": "limited"
         },
         "physicalRedemption": {
-          "quality": "limited"
+          "quality": "weak"
         }
       }
     },
@@ -5152,7 +5164,7 @@
     {
       "assetId": "usdm-moneta",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-09-24",
       "sources": [
         {
           "label": "Charli3 official ODV registry and USDM reserve-feed configuration",
@@ -5189,9 +5201,17 @@
         {
           "label": "Moneta USDM Litepaper (segregated accounts at regulated financial institutions and reserve-management controls)",
           "url": "https://moneta.global/USDM%20Lite%20Paper.pdf"
+        },
+        {
+          "label": "NBX modified USDM whitepaper notified2026-09-24: exact Cardano policy and separate reserve/continuity scopes",
+          "url": "https://cdn.prod.website-files.com/6152dfaed2ce58d94ef37b88/6ab4e90ceb46558d48fc093a_USDM%20White%20Paper%20-%20Modified%20version%202026-09-24.pdf"
+        },
+        {
+          "label": "Moneta Litepaper updated2025-09-05, fetched2026-10-02: segregation and no reuse",
+          "url": "https://moneta.global/USDM%20Lite%20Paper.pdf"
         }
       ],
-      "notes": "Refreshed 2026-08-08. Moneta's current Terms of Service identify Moneta Digital LLC as issuer, describe each USDM as backed by dollar-denominated reserve assets, and provide direct mint/redemption terms; the current Litepaper states that reserves are held in segregated accounts at regulated financial institutions. Those binding issuer materials now support limited claim and segregation, but no public trust instrument, independent legal opinion, or insolvency-priority analysis corroborates the structure. The transparency surface publishes an 80% money-market-fund and 20% bank-deposit policy and at-least-100% reserve ratio but continues to identify providers only as tier-one U.S. institutions, so custody continuity remains unavailable. Charli3's ODV contract provides an independently relayed reserve-balance value and the issuer-described mint control compares it with onchain supply. The pinned observation was stale after 2026-05-06 and is not an accounting examination, so assurance and reconciliation remains limited rather than adequate.",
+      "notes": "The issuer-linked whitepaper notified2026-09-24 identifies the exact shared Cardano policy, reserve-verification/counter mechanism and independently issued NBX/Moneta books with no cross-liability. It supports only the existing limited aggregate assurance and claim grades: no new independent financial attestation or token-wide legal priority is inferred. NBX-specific safeguarding, recovery/redemption plans, counterparty notice arrangements and continuing redemption after Moneta signing disruption are disclosed; they do not establish full custody/provider allocations, anti-reuse or successor-custody protection across the separate Moneta book. Custody continuity remains issuer-undisclosed only for that unclosed aggregate scope. Historical reserve ratios and Charli3 provider observations are not re-dated or asserted current.",
       "metrics": {},
       "components": {
         "assuranceAndReconciliation": {
@@ -5202,8 +5222,8 @@
         },
         "custodyContinuity": {
           "applicability": "unavailable",
-          "rationale": "The reviewed Moneta disclosure surface at https://medium.com/@USDMOfficial/transparent-stablecoin-the-power-of-the-charli3-oracle-for-mehens-bank-reserves-c14515ba9c25 does not publish the active reserve custodian or venue set, provider allocations, anti-rehypothecation controls, and failure, replacement, or successor-custody mechanics. The missing evidence is recorded as issuer-undisclosed; no weak or failed grade is inferred from its absence.",
-          "sourceUrl": "https://medium.com/@USDMOfficial/transparent-stablecoin-the-power-of-the-charli3-oracle-for-mehens-bank-reserves-c14515ba9c25"
+          "rationale": "Current NBX issuer materials name Sparebanken Norge and Amundi and disclose NBX-specific safeguarding, third-party notice protections and recovery/redemption continuity. Those protections do not cover Moneta-attributable issuance. The complete current provider allocation and failure/replacement/successor-custody arrangements across both independent reserve books remain unpublished; no absence of all provider names or anti-rehypothecation controls is claimed.",
+          "sourceUrl": "https://cdn.prod.website-files.com/6152dfaed2ce58d94ef37b88/6ab4e90ceb46558d48fc093a_USDM%20White%20Paper%20-%20Modified%20version%202026-09-24.pdf"
         }
       }
     },
@@ -6941,15 +6961,23 @@
     {
       "assetId": "ggbr-goldfish-gold",
       "archetype": "commodity-claim",
-      "reviewedAt": "2026-08-11",
+      "reviewedAt": "2026-09-09",
       "sources": [
         {
-          "label": "Goldfish GGBR whitepaper (1/1000 oz claim, over-collateralization, segregated I-ON treasury portion, UCC-1 lien, in-situ model)",
-          "url": "https://goldfishgold.com/whitepaper"
+          "label": "GGBR issuer disclosure of August19,2026 trust replacing intermediary lease; September9 release freshly read October2",
+          "url": "https://www.globenewswire.com/news-release/2026/09/09/3358496/0/en/ggbr-inc-announces-new-trust-based-collateral-structure-for-goldfish-tokens.html"
         },
         {
-          "label": "Goldfish collateral disclosure (ION.au backing, NI 43-101 claims, published on-chain reserve wallets including Fireblocks Reserve Wallet)",
+          "label": "Current Goldfish collateral page, read October2,2026",
           "url": "https://goldfishgold.com/collateral"
+        },
+        {
+          "label": "Current Goldfish Terms of Service, read October2,2026",
+          "url": "https://goldfishgold.com/terms-of-service"
+        },
+        {
+          "label": "Current Goldfish contract-audit and security disclosure, read October2,2026",
+          "url": "https://goldfishgold.com/security"
         },
         {
           "label": "Goldfish Cyfrin smart-contract audit report v2.0 (2025-10-10, contract-security scope only)",
@@ -6962,17 +6990,9 @@
         {
           "label": "Ethereum mainnet Goldfish RedemptionProxy (fresh parameter, eligibility, implementation-slot, and lifetime-activity reads)",
           "url": "https://etherscan.io/address/0x7856001E687694212697d67e810b0E05E0d4A046"
-        },
-        {
-          "label": "I-ON Digital Q1 2026 Form 10-Q (MTLCA continuation and GGBR responsibility for Goldfish minting, issuance, and redemption)",
-          "url": "https://www.sec.gov/Archives/edgar/data/1580490/000149315226024603/form10-q.htm"
-        },
-        {
-          "label": "Goldfish Terms of Service (reviewed legal surface contains no holder redemption or physical-delivery clause)",
-          "url": "https://goldfishgold.com/terms-of-service"
         }
       ],
-      "notes": "Goldfish's whitepaper and collateral pages state that each GGBR is 1/1000th of a troy ounce of gold, over-collateralized (up to 5:1) by a segregated portion of I-ON Digital Corp's (OTCQB: IONI) treasury of ION.au asset-backed securities, with I-ON's perfected UCC-1 lien on the mineral asset rights giving ION.au holders a secured-creditor position and redemption marketed as available; that issuer-published structure, with an indirect claim chain (GGBR to ION.au security to in-situ gold lien) and no cited trust or segregation statute, supports limited claim and segregation. The collateral page publishes the on-chain reserve wallets, including the 'Goldfish Collateral Wallet from ION' (0x2F371Ba19F89874689a91bA322194F9967Cb640D) and a 'Fireblocks Reserve Wallet' (0x590c0d2fEb641136984EC250c7287C27fA1A05bB), placing collateral custody in Fireblocks MPC wallets while the underlying gold deliberately stays in-situ under the UCC-1 lien rather than with any vault custodian; named but self-reported arrangements support limited custody continuity. CertiK and Cyfrin audit only the smart contracts (Cyfrin report v2.0 dated 2025-10-10 reviewed; it covers token, factory, staking and redemption contract security, not reserves), and NI 43-101 technical reports audit the geology of the in-situ gold, not token-versus-reserve reconciliation, so assurance and reconciliation is weak as an issuer-only assurance claim. Not established: any independent financial attestation reconciling GGBR supply to gold reserves, vault or custodian identities for physical metal (none exists by design in the in-situ model), provider shares, no-rehypothecation or replacement terms, and direct review of the NI 43-101 reports themselves, which were not obtained.\n\nv9.14 phase-2 migration (2026-08-09): archetype moved from fiat-cash to commodity-claim. claimAndSegregation carries over verbatim as titleAndAllocation; custodyContinuity and assuranceAndReconciliation keep their keys, values, and evidence.\n\n2026-08-11 physical-redemption evidence pin: the production bundle (sha256 63961e31a6114daec0fa5c67a512133a4a45dfd04ddca6b6e9a3fcc6cd19e046) pins the mainnet RedemptionProxy and ABI and publishes a 5-7-business-day process, vault storage or physical delivery, KYC, and possible shipping and insurance charges. Reads at Ethereum block 25,731,416 returned a minimumRedemption of 8,818.5 GGBR, a 300-basis-point fee, lifetime statistics of zero requests, zero completions, zero rejections, zero GGBR redeemed or locked, and nextRequestId 1. I-ON's Form 10-K independently confirmed the MTLCA and assigned Goldfish redemption to GGBR. The itemized issuer route plus onchain and regulatory anchors supports limited physicalRedemption only. The route remains wholly admin-mediated and unexercised, the reviewed Terms of Service grants no holder redemption or delivery right, no executed dealer or fulfillment agreement is public, and the in-situ reserve cannot itself be delivered: any physical gold must be sourced off-reserve. Cyfrin documents the intended KYC-gated flow and centralization but does not attest execution or delivery. Supplemental re-verification on 2026-08-12 confirmed the same parameters and all-zero activity at block 25,737,294 and confirmed through I-ON's newer Q1 2026 Form 10-Q that the MTLCA and GGBR redemption responsibility continued. It also corrected the implementation caveat: the proxy's EIP-1967 slot resolves to unverified implementation 0x1bc1370b0347d51a52e66c5279cece365f5b7359, while the unchanged app configuration still labels historical address 0xcfd90207497A04B75913165052260c46b2807D0e as RedemptionImpl, so no deployed-source equivalence is claimed. The supplemental check did not introduce a new basis for the grade.",
+      "notes": "Fresh October2 review distinguishes current issuer-described GGBR Trust from the historical GGBR-to-ION.au lease chain. The September9 issuer release states that an August19 trust agreement replaced the intermediary arrangement, names Le Petit Bouffant Ltd trustee, and describes1,000,000 troy ounces of Happy2 in-situ mineral resource. Trustee certification and geological documentation are available by request; no executed trust deed, title-transfer/lien evidence or independent current reserve-to-liability reconciliation was obtained. The issuer expressly warns the gold has not been extracted, refined or delivered. Therefore current titleAndAllocation and custodyContinuity stay limited and assuranceAndReconciliation stays weak; no structured-segregation or bankruptcy-remoteness credit is newly inferred. Historical August11 production-app/redemption-proxy observations support only the previously reviewed limited physicalRedemption design, not present measured USD exit capacity; no refreshed parameter or execution claim is made. Ordinary/fee/staking issuance and admin upgrade powers were checked against current verified factory source and pinned role reads; this is contract-control evidence, not mineral-title assurance. Prior ION.au custody or lease wording must not be presented as the current proven legal arrangement.",
       "metrics": {},
       "components": {
         "titleAndAllocation": {
@@ -8123,7 +8143,7 @@
           "url": "https://www.usdkg.com/blog/how-usdkg-builds-real-world-trust-from-gold-audits-to-transparent-reserve-verification"
         }
       ],
-      "notes": "Reviewed 2026-08-08. USDKG is backed by physical LBMA gold rather than a credit portfolio. The November 2025 Kreston Digital Assets ISRS 4400 report performed agreed-upon procedures, expressed no assurance opinion, inspected 30 bars held by LLC Virelint at an unnamed bank, reviewed a custody contract through 2026-12-31, and valued the gold at $50.3 million against $50 million circulation; the vault access log was withheld. weightedAverageMaturityDays is structurally not applicable to non-contractual physical gold. The issuer states a quarterly valuation/report cycle, so valuationCadenceDays remains 90, while the single stale report keeps valuationCadence limited. The inspected bars and custody contract support limited custody; nonmaturing gold plus an asserted fiat liquidity buffer and KYC-gated redemption support limited maturityAndLiquidity. No public holder priority, enforceable claim on the gold, or recovery waterfall was found, so seniority, legalEnforceability, and recovery are unavailable rather than adverse grades. Archetype note: rwa-credit-fund is materially misclassified because the reserve is a physical commodity with no borrowers or credit instruments; a commodity-reserve archetype is needed.",
+      "notes": "Reviewed 2026-08-08. USDKG is backed by physical LBMA gold rather than a credit portfolio. The November 2025 Kreston Digital Assets ISRS 4400 report performed agreed-upon procedures, expressed no assurance opinion, inspected 30 bars held by LLC Virelint at an unnamed bank, reviewed a custody contract through 2026-12-31, and valued the gold at $50,331,256 while reporting that the Company had not put any tokens in circulation at the report date; the vault access log was withheld. weightedAverageMaturityDays is structurally not applicable to non-contractual physical gold. The issuer states a quarterly valuation/report cycle, so valuationCadenceDays remains 90, while the single stale report keeps valuationCadence limited. The inspected bars and custody contract support limited custody; nonmaturing gold plus an asserted fiat liquidity buffer and KYC-gated redemption support limited maturityAndLiquidity. No public holder priority, enforceable claim on the gold, or recovery waterfall was found, so seniority, legalEnforceability, and recovery are unavailable rather than adverse grades. Archetype note: rwa-credit-fund is materially misclassified because the reserve is a physical commodity with no borrowers or credit instruments; a commodity-reserve archetype is needed.",
       "metrics": {
         "weightedAverageMaturityDays": null,
         "valuationCadenceDays": 90
@@ -8252,11 +8272,11 @@
           "url": "https://code4rena.com/reports/2026-04-monetrix"
         }
       ],
-      "notes": "Measured 2026-07-20 against issuer, venue, and chain reads. Monetrix documents a fully on-chain Hyperliquid-native design: USDC deposits are deployed into equal-dollar spot (HYPE, BTC) and short-perp legs run by MonetrixCoreVault, with an anti-ADL shield, dynamic HLP rebalancing when funding compresses, and a dedicated InsuranceFund for black-swan funding events and temporary hedge imbalances. The transparency positions API snapshot at asOf 1784527437422 (2026-07-20T06:03:57Z, stale=false) reports spot $2,942,365.649673739 versus short-perp notional $2,942,428.7075799997 (HYPE hedge 100.0018%, BTC hedge 100.0799%, net delta -0.0021%), giving hedgeCoverageRatio 1.000021 as an observed value. Independently, the Hyperliquid clearinghouseState read for MonetrixCoreVault 0x6E25e5D971BDa9799F7A5242f4720b5B3f939200 (about 06:13 UTC) returned accountValue $292,119.504393, totalNtlPos $2,944,283.8086399999 (matching the API's perp leg within 0.06%, BTC size -0.20396 exactly), and crossMaintenanceMarginUsed $146,723.393835 on 20x cross leverage: marginBufferPct 49.772818 = (accountValue - maintenanceMargin) / accountValue x 100, the observed share of cross-account equity above the maintenance-margin requirement. lossAbsorptionShare 0.000877 is the measured dedicated first-loss capital: the InsuranceFund contract 0x4D9f48F3055FA354254B1CA82a0badb88f7c2106 (contract-name verified on hyperevmscan) held 2,322.620125 USDC against USDM totalSupply() = 2,647,171.364808 USDM, both eth_call reads at HyperEVM block 40943295; the docs say the fund is 'funded from protocol reserves' but publish no sizing or replenishment policy, and at 0.088% of supply it is thin. Redemption is documented as a 3-day-cooldown burn-and-claim flow; RedeemEscrow and InstantRedeem contracts held 49,897.748146 and 2,404.525801 USDC and the MonetrixVault 15,544.817639 USDC (reads at approximately the same block), an operational liquidity layer of roughly 2.6% of supply, while a full unwind requires selling the $2.93M HYPE-dominated spot leg into Hyperliquid market depth, which is not measurable from public data. A Code4rena competitive audit of the core contracts is linked from the app. NOT established: any documented numeric margin or hedge-drift rebalance policy (only the current state is measurable), the insurance fund's replenishment rule, spot-leg unwind depth, and the strategy's HLP allocation share, none of which are published.",
+      "notes": "Measured 2026-07-20 against issuer, venue, and chain reads. Monetrix documents a fully on-chain Hyperliquid-native design: USDC deposits are deployed into equal-dollar spot (HYPE, BTC) and short-perp legs run by MonetrixCoreVault, with an anti-ADL shield, dynamic HLP rebalancing when funding compresses, and a dedicated InsuranceFund for black-swan funding events and temporary hedge imbalances. The transparency positions API snapshot at asOf 1784527437422 (2026-07-20T06:03:57Z, stale=false) reports spot $2,942,365.649673739 versus short-perp notional $2,942,428.7075799997 (HYPE hedge 100.0018%, BTC hedge 100.0799%, net delta -0.0021%), giving hedgeCoverageRatio 1.000021 as an observed value. Independently, the Hyperliquid clearinghouseState read for MonetrixCoreVault 0x6E25e5D971BDa9799F7A5242f4720b5B3f939200 (about 06:13 UTC) returned accountValue $292,119.504393, totalNtlPos $2,944,283.8086399999 (matching the API's perp leg within 0.06%, BTC size -0.20396 exactly), and crossMaintenanceMarginUsed $146,723.393835 on 20x cross leverage: marginBufferPct 49.772818 = (accountValue - maintenanceMargin) / accountValue x 100, the observed share of cross-account equity above the maintenance-margin requirement. lossAbsorptionShare 0.000877 is the measured dedicated first-loss capital: the InsuranceFund contract 0x4D9f48F3055FA354254B1CA82a0badb88f7c2106 (contract-name verified on hyperevmscan) held 2,322.620125 USDC against USDM totalSupply() = 2,647,171.364808 USDM, both eth_call reads at HyperEVM block 40943295; the docs say the fund is 'funded from protocol reserves' but publish no sizing or replenishment policy, and at 0.088% of supply it is thin. Redemption is documented as a 3-day-cooldown burn-and-claim flow; RedeemEscrow and InstantRedeem contracts held 49,897.748146 and 2,404.525801 USDC and the MonetrixVault 15,544.817639 USDC (reads at approximately the same block), an operational liquidity layer of roughly 2.6% of supply, while a full unwind requires selling the $2.93M HYPE-dominated spot leg into Hyperliquid market depth, which is not measurable from public data. A Code4rena competitive audit of the core contracts is linked from the app. NOT established: any documented numeric margin or hedge-drift rebalance policy (only the current state is measurable), the insurance fund's replenishment rule, spot-leg unwind depth, and the strategy's HLP allocation share, none of which are published. Fresh partial measurement on 2026-10-02 at HyperEVM block47462500: accountant.usdc() resolves to0xb88339cb7199b77e23db6e890353e22632ba630f; its balanceOf(InsuranceFund0x4D9f48F3055FA354254B1CA82a0badb88f7c2106)=7639.654385USDC and USDM.totalSupply()=3049844.517498, yielding dedicated-fund/supply share0.0025049324125110944. Only these observed insurance/supply values are refreshed; no full backing reconciliation, guarantee of future fund availability, hedge ratio or margin refresh is claimed.",
       "metrics": {
         "hedgeCoverageRatio": 1.000021,
         "marginBufferPct": 49.772818,
-        "lossAbsorptionShare": 0.000877
+        "lossAbsorptionShare": 0.0025049324125110944
       },
       "analogousMetrics": {
         "spotValueUsd": 2942365.649673739,
@@ -8265,8 +8285,8 @@
         "hlAccountValueUsd": 292119.504393,
         "hlMaintenanceMarginUsd": 146723.393835,
         "marginToMaintenanceRatio": 1.990954,
-        "insuranceFundUsdc": 2322.620125,
-        "usdmTotalSupply": 2647171.364808,
+        "insuranceFundUsdc": 7639.654385,
+        "usdmTotalSupply": 3049844.517498,
         "redeemEscrowUsdc": 49897.748146,
         "instantRedeemUsdc": 2404.525801,
         "vaultReserveUsdc": 15544.817639
@@ -9466,75 +9486,6 @@
       }
     },
     {
-      "assetId": "bnusd-balanced",
-      "archetype": "cdp",
-      "reviewedAt": "2026-08-29",
-      "sources": [
-        {
-          "label": "Balanced bnUSD product page and Stability Fund design (checked 2026-08-29)",
-          "url": "https://balanced.network/stablecoin/"
-        },
-        {
-          "label": "Balanced stablecoin mechanics and structural redemption documentation",
-          "url": "https://balanced.network/how"
-        },
-        {
-          "label": "Balanced official bnUSD supply/backing statistics script",
-          "url": "https://balanced.network/js/async-data-stablecoin.js"
-        },
-        {
-          "label": "SODAX money-market documentation",
-          "url": "https://docs.sodax.com/products/money-market"
-        },
-        {
-          "label": "SODAX audits index",
-          "url": "https://docs.sodax.com/welcome-to-sodax/audits"
-        },
-        {
-          "label": "SODAX backend API used to enumerate borrower positions",
-          "url": "https://api.sodax.com/v1/be/moneymarket/asset/all"
-        },
-        {
-          "label": "Sonic public RPC used for pinned state and oracle reads at block 76778944",
-          "url": "https://rpc.soniclabs.com"
-        }
-      ],
-      "notes": "Re-reviewed 2026-08-29 against the current Balanced bnUSD stablecoin/how pages, SODAX money-market documentation and audit index, and the existing pinned Sonic capture at block 76,778,944 (2026-07-30T21:18:20Z). That capture reconciles 82 borrower positions and reports collateralizationRatio 2.072361; the documented parameters and open-market liquidations support strong collateralizationParameters and adequate liquidationMechanics. Balanced describes the Stability Fund as USDC/USDT 1:1 peg-arbitrage swaps, not a committed borrower-loss absorber or bad-debt waterfall, so backstop is limited with capacity unmeasured. No shutdown, wind-down, deficit-elimination, or bad-debt allocation procedure is published; shutdownAndBadDebt remains unavailable. Branch isolation remains limited and structural redemption remains adequate.",
-      "metrics": {
-        "collateralizationRatio": 2.072361,
-        "liquidationCapacityRatio": null
-      },
-      "metricApplicability": {
-        "liquidationCapacityRatio": {
-          "state": "not-applicable",
-          "rationale": "The SODAX hub uses Aave-style open-market liquidations: third parties repay debt and seize collateral at the configured bonus, with no dedicated liquidation pool whose capacity can be measured.",
-          "sourceUrl": "https://balanced.network/how"
-        }
-      },
-      "components": {
-        "collateralizationParameters": {
-          "quality": "strong"
-        },
-        "liquidationMechanics": {
-          "quality": "adequate"
-        },
-        "backstop": {
-          "quality": "limited"
-        },
-        "branchIsolation": {
-          "quality": "limited"
-        },
-        "shutdownAndBadDebt": {
-          "applicability": "unavailable",
-          "rationale": "The SODAX money-market docs, Balanced stablecoin/mechanics pages, deployment material, and SODAX audit index publish no shutdown, wind-down, bad-debt allocation, or deficit-elimination procedure for the hub pool; the listed audits do not cover that EVM pool.",
-          "sourceUrl": "https://docs.sodax.com/welcome-to-sodax/audits"
-        },
-        "structuralRedemption": {
-          "quality": "adequate"
-        }
-      }
-    },
-    {
       "assetId": "hchf-hedera-swiss-franc",
       "archetype": "cdp",
       "reviewedAt": "2026-07-20",
@@ -9852,6 +9803,10 @@
         {
           "label": "Anzens terms: Reserves = cash, cash equivalents, US Treasury bills and Treasury-focused money market funds; redemption credited within 2 business days; 'segregated accounts' referenced; BitGo Trust Company account required for all custody and transaction execution; reserves not FDIC-insured",
           "url": "https://www.anzens.com/landing/terms-and-conditions"
+        },
+        {
+          "label": "Historical January31 USDA reserve examination recovered from issuer RSS; publishedFeb18, not current assurance",
+          "url": "https://anzensofficial.medium.com/feed"
         }
       ],
       "notes": "Segregation vehicle: Anzens Inc. (Delaware) issues USDA against 'Reserves' (cash, cash equivalents, T-bills, Treasury-focused MMFs) with all user funds flowing through mandatory BitGo Trust Company accounts - BitGo Trust is the named custodian responsible for onboarding and execution, and the terms reference 'segregated accounts' and document a redemption right (USDA redeemed for fiat credited within 2 business days). claimAndSegregation is limited: the claim, segregation reference and custodian are documented only in issuer self-disclosure (terms + homepage) with no attestation corroboration; the adequate tier's recent-attestation prong is unmet. custodyContinuity is limited: a single named qualified custodian (BitGo Trust Company, Inc.) with trust-style segregation implied, but no published account terms, no attestation naming custodians, and rehypothecation terms unstated. assuranceAndReconciliation left uncurated: no attestation, audit, or proof-of-reserves report exists for USDA. NOT established: any independent verification of reserves, the share of reserves held outside BitGo Trust (if any), explicit bankruptcy-remoteness structuring beyond the trust-custody arrangement, and reserve liquidity horizons.",
@@ -9865,8 +9820,8 @@
         },
         "assuranceAndReconciliation": {
           "applicability": "unavailable",
-          "rationale": "The reviewed Anzens homepage and terms do not publish a USDA reserve attestation, audit, proof-of-reserves report, or assets-and-liabilities reconciliation.",
-          "sourceUrl": "https://www.anzens.com/landing/terms-and-conditions"
+          "rationale": "Fresh research on 2026-10-02 recovered Anzens’ January 31, 2026 USDA-specific reserve and token-supply examination by The Network Firm LLP, signed February 9 and published February 18 in the issuer Medium RSS feed. That report is historical, not a current reserve-to-liability reconciliation. The current homepage, terms and latest issuer-feed items reviewed do not establish a newer dated reserve examination or current reserve composition; current assurance therefore remains unavailable rather than being graded failed.",
+          "sourceUrl": "https://anzensofficial.medium.com/feed"
         }
       }
     },
@@ -10135,9 +10090,13 @@
         {
           "label": "SEC Nigeria 2026 ARIP admission notice naming Wrapped CBDC Ltd and clarifying approval-in-principle status",
           "url": "https://home.sec.gov.ng/for-investors/keep-track-of-circulars/sec-clears-seven-new-fintech-firms-for-admission-into-the-accelerated-regulatory-incubation-programme-arip/"
+        },
+        {
+          "label": "Public financial reserve attestation, December31 2025, discovered via hydrated2025 archive on2026-10-02",
+          "url": "https://drive.google.com/file/d/1iyrdoJPs0EyBK-yZRNdjJDWiOKSB_GtD/view?usp=drive_link"
         }
       ],
-      "notes": "Re-reviewed 2026-08-08 under the canonical fiat evidence standard. cNGN's terms and transparency page state 1:1 naira reserve backing for holders, deposits in licensed/approved commercial banks, and a redeem-to-bank flow; SEC Nigeria's directory independently identifies Wrapped CBDC Ltd / cNGN as a stablecoin offering and the July 2026 notice confirms conditional ARIP approval-in-principle, not a final licence. That external regulatory anchor plus the issuer terms supports limited claim and segregation, but no trust, safeguarding agreement, account segregation, or insolvency treatment is published. Custodian banks remain unnamed and no allocation, anti-rehypothecation, or replacement mechanics are disclosed. The website claims monthly audits and shows a reserve number matching displayed chain supply, but no dated financial attestation is reachable: the report area exposes only a smart-contract audit, the older proof-of-funds widget has zero values, and the Bala Isah Garba engagement is not available as a primary report. A regulatory admission alone is explicitly insufficient reconciliation evidence, so the prior limited assurance grade is corrected to unavailable.",
+      "notes": "2026-10-02 archive correction: the hydrated 2025 issuer archive links ten financial reserve reports (March–December 2025). The newest linked report is Bala Isah Garba and Company's ISAE3000 reasonable-assurance examination as of December 31 2025. The accountant opinion is signed but undated; the management assertion is e-signed January 13 2026 at 13:11 UTC. Neither signature establishes publication date. It reconciles six then-listed chain supplies and NGN1,338,760,385.79 reported reserves against NGN1,313,200,176.66 circulating cNGN. Table 2 reports rounded 43% CardinalStone MMF and 57% unnamed bank deposits; the MMF amount is recorded at cost, with a different current value disclosed in Table 4. Notes state segregated accounts on behalf of holders and refund liabilities. The hydrated 2026 archive has no financial-report links. This corrects the absolute no-reachable-report assertion without establishing current eight-chain reconciliation, current custody balances or final prudential authorization. Existing review date and unavailable states remain; historical assurance is not refreshed.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
@@ -10145,13 +10104,13 @@
         },
         "custodyContinuity": {
           "applicability": "unavailable",
-          "rationale": "The transparency page, terms, ASC FAQ, and SEC directory identify only unnamed licensed or partner commercial banks. No active bank identity, provider allocation, segregation agreement, insolvency treatment, anti-rehypothecation covenant, or replacement plan is published.",
-          "sourceUrl": "https://cngn.co/transparency"
+          "rationale": "The December2025 financial report names CardinalStone Asset Management as MMF manager and says reserve assets are held in segregated accounts on behalf of holders. Bank names, current provider allocations, insolvency treatment, anti-rehypothecation covenant and successor mechanics remain undisclosed for the current reserve. Historical segregation is not current bank-continuity assurance.",
+          "sourceUrl": "https://drive.google.com/file/d/1iyrdoJPs0EyBK-yZRNdjJDWiOKSB_GtD/view?usp=drive_link"
         },
         "assuranceAndReconciliation": {
           "applicability": "unavailable",
-          "rationale": "The issuer claims monthly audits but publishes no reachable dated reserve attestation or accountant report. The displayed reserve amount is not accompanied by bank confirmation or assurance work, and the accessible audit document concerns smart-contract security rather than assets and liabilities.",
-          "sourceUrl": "https://cngn.co/transparency"
+          "rationale": "A dated ISAE3000 reasonable-assurance reserve report is publicly reachable: Bala Isah Garba and Company, as of December 31 2025 at 21:45 WAT. The accountant opinion is signed but undated; management e-signed January 13 2026 at 13:11 UTC, which does not establish publication date. The report covers six then-listed chains and concludes reserves exceed circulating cNGN only at that point in time. No 2026 financial report is linked in the hydrated 2026 archive; this 275-day-old inventory does not reconcile current eight-chain supply or current bank balances. The unavailable fact is current assurance/reconciliation, not the existence of a financial report.",
+          "sourceUrl": "https://drive.google.com/file/d/1iyrdoJPs0EyBK-yZRNdjJDWiOKSB_GtD/view?usp=drive_link"
         }
       }
     },
@@ -12128,9 +12087,13 @@
         {
           "label": "Ripio wFIAT product page (Spanish)",
           "url": "https://www.ripio.com/es/wfiat"
+        },
+        {
+          "label": "Published wCLP certification with unresolved period/currency inconsistencies",
+          "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/Aug%202026/Token%20wCLP%2006.30.2026%20Certification%20vf.pdf?hsLang=en"
         }
       ],
-      "notes": "Ripio's wFIAT product pages describe wCLP as a Chilean-peso wFIAT token with a claimed 1:1 parity and state that deposited funds are 'custodied in regulated liquid instruments' ('Los fondos quedan custodiados en instrumentos liquidos regulados'), but publish no trust deed, segregation terms, named custodian, or reserve-account structure. The binding Ripio Chile SpA terms establish only an irrevocable custodial mandate under which user assets may sit in public keys controlled by Ripio and/or its affiliates and/or third parties (clause 9.3.2), and clause 16 expressly states Ripio is not responsible for the insolvency of the financial institutions in which it keeps account funds. That insolvency disclaimer is affirmative adverse evidence against a documented segregated holder claim, so claim and segregation is weak rather than merely unestablished; with no named custodian, no bankruptcy treatment, no rehypothecation terms, and the same insolvency disclaimer, custody continuity is also weak. The wFIAT attestation section publishes CPA certifications for wARS (December 2025 and March 2026), wBRL, wCOP, and wMXN as of 2026-03-31, but no wCLP attestation or reserve report was found anywhere in the reviewed pages, so assurance and reconciliation remains uncurated (bounded). NOT established: any documented holder redemption right against reserves, trust or bankruptcy-remoteness structure, custodian identity, account segregation, rehypothecation terms, and any independent reconciliation of wCLP reserves to circulation.",
+      "notes": "Ripio's wFIAT product pages describe wCLP as a Chilean-peso wFIAT token with a claimed 1:1 parity and state that deposited funds are 'custodied in regulated liquid instruments' ('Los fondos quedan custodiados en instrumentos liquidos regulados'), but publish no trust deed, segregation terms, named custodian, or reserve-account structure. The binding Ripio Chile SpA terms establish only an irrevocable custodial mandate under which user assets may sit in public keys controlled by Ripio and/or its affiliates and/or third parties (clause 9.3.2), and clause 16 expressly states Ripio is not responsible for the insolvency of the financial institutions in which it keeps account funds. That insolvency disclaimer is affirmative adverse evidence against a documented segregated holder claim, so claim and segregation is weak rather than merely unestablished; with no named custodian, no bankruptcy treatment, no rehypothecation terms, and the same insolvency disclaimer, custody continuity is also weak. The wFIAT attestation section publishes CPA certifications for wARS (December 2025 and March 2026), wBRL, wCOP, and wMXN as of 2026-03-31, but no wCLP attestation or reserve report was found anywhere in the reviewed pages, so assurance and reconciliation remains uncurated (bounded). NOT established: any documented holder redemption right against reserves, trust or bankruptcy-remoteness structure, custodian identity, account segregation, rehypothecation terms, and any independent reconciliation of wCLP reserves to circulation. Disclosure-existence correction fetched 2026-10-02: a wCLP certification is now linked by the dedicated official attestation index. Its inconsistent liability date and reserve currency prevent balance admission. Earlier no-report inventory is historical, not a current absence claim. Original quality/review clocks are unchanged.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
@@ -12141,8 +12104,8 @@
         },
         "assuranceAndReconciliation": {
           "applicability": "unavailable",
-          "rationale": "The reviewed wFIAT attestation index publishes reports for other currencies but no wCLP attestation, reserve report, or independent reconciliation.",
-          "sourceUrl": "https://www.ripio.com/en/cryptos/local-stablecoins"
+          "rationale": "A wCLP-specific certification is published, headed June 30, 2026 and signed July 28, 2026. Its liability procedure instead names March 31 and its reserve statements mix Chilean pesos with ARS and Argentine pesos. The report therefore does not establish an unambiguous matched CLP assets/liabilities reconciliation; issuer/accountant clarification is required.",
+          "sourceUrl": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/Aug%202026/Token%20wCLP%2006.30.2026%20Certification%20vf.pdf?hsLang=en"
         }
       }
     },
@@ -12883,30 +12846,18 @@
     {
       "assetId": "brl1-brl1",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-09-05",
+      "reviewedAt": "2026-10-01",
       "sources": [
         {
-          "label": "BRL1 How It Works page and current proof-of-reserves link",
+          "label": "Current BRL1 October1 report or issuer report index",
+          "url": "https://drive.google.com/uc?export=download&id=1BuRUC6u3UTzf17kOChhKby_L9hE5IU73"
+        },
+        {
+          "label": "Current BRL1 October1 report or issuer report index",
           "url": "https://brl1.io/en/como_funciona"
-        },
-        {
-          "label": "BRL1 whitepaper v1.0 dated 2025-02-24",
-          "url": "https://drive.google.com/uc?export=download&id=1aOuxzC0DAiRKuUDklpifvdxMsSqR06Vr"
-        },
-        {
-          "label": "BRL1 issuer-produced August 1, 2026 reserve report (observed September 5; publication and separate signature dates unestablished)",
-          "url": "https://drive.google.com/uc?export=download&id=1xIHWuHqRiuNJNaBO4s-9xXbiiEp_24AD"
-        },
-        {
-          "label": "Polygon block 91256109 (August 1, 2026 12:59:44 UTC)",
-          "url": "https://polygonscan.com/block/91256109"
-        },
-        {
-          "label": "Polygon archival RPC used to verify BRL1 totalSupply at block 91256109",
-          "url": "https://polygon.drpc.org"
         }
       ],
-      "notes": "Reviewed 2026-09-05. The issuer-linked August 1 reserve report is publicly downloadable (PDF SHA-256 5b3eb3a0dba8731947887ef0b66047cef3e361cb7bc980b97d0e5abb09199312). It itemizes R$878,069 bank cash, R$6,177,240 LFTs and R$6,039,473 repos, totaling R$13,094,782, and identifies Banco XP S.A. as custodian of all reserves in a segregated, unencumbered account owned by BRL1 CONSORTIUM S.A. The report describes internal bank-balance/investment reconciliation, board approval and no independent audit. An archival eth_call at Polygon block 91256109 exactly reproduced the reported 12,725,909.54 BRL1 totalSupply; both queried block-header sources return hash 0x8cafd922ed5cf037c09ceae8f37b465f568eed85a9cedf0a84ff17afd77b2e68 and timestamp 12:59:44 UTC, one second after the issuer-stated 12:59:43 observation. The itemized issuer report plus external liability anchor supports limited assuranceAndReconciliation; it does not independently prove off-chain balances or support an adequate assurance grade. Current sole-provider attribution and segregated own-account custody support limited custodyContinuity, with no successor-custodian process, enforceable insolvency protections or prospective reuse prohibition established. claimAndSegregation remains limited: issuer reserve ownership and partner redemption are documented, but no trust or holder-priority instrument is supplied. Actual publication and separate signature dates are unknown; September 5 is the observation/review date, not a refreshed composition date. Review admission begins only after the reviewed UTC day ends.",
+      "notes": "Scoped October1,2026 primary report refresh: R$19,354,372 of reserve assets,17,381,384.54 circulatingBRL1 at Polygon94777137,111.35% claimed collateralization. Fully itemized reserve categories and BancoXP segregated account assertion; internal ledger reconciliation, boardapproval, explicitly unaudited. Retain limited component grades: no independent accounting assurance, enforceable bankruptcy-remoteness/successor-custodian instrument or public repo counterparty. This date labels the report evidence, not publication date or any blanket mint-control/supervision refresh.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
@@ -15432,9 +15383,13 @@
         {
           "label": "BSC PublicNode RPC used for the journaled eth_call reads (Vat.debt, Vat.vice, per-ilk ilks/Spot, GemJoin balances, lisUSD.totalSupply)",
           "url": "https://bsc-rpc.publicnode.com"
+        },
+        {
+          "label": "Fresh partial internal-credit measurement: BSC block125284292 Vat.debt and Vat.vice, October2; does not date-bump full collateralization",
+          "url": "https://api-bsc-mainnet-full.n.dwellir.com"
         }
       ],
-      "notes": "Reviewed 2026-07-20. Measured on BSC at block ~111154135 via journaled eth_call reads against the Lista Vat (0x33A34eAB3ee892D40420507B820347b1cA2201c4) plus the per-ilk GemJoin and Spot contracts from the developer registry. Vat.debt() = 24,622,565.46 lisUSD of internal credit and, critically, Vat.vice() = 2,821,803.63 lisUSD of realized, uncovered system bad debt = 11.46% of internal credit; this is a measured adverse fact and the anchor of the conservative ratings below. Enumerating the per-ilk GemJoin balances valued at each ilk's on-chain Spot*mat price gave aggregate CDP collateral 314,713,592.63 USD against enumerated ilk debt 21,796,591.81 lisUSD (aggregate collateralizationRatio 14.4387). That aggregate is high because collateral utilization is low: users deposit far more collateral than they borrow (e.g. the slisBNB ilk holds ~202M USD of collateral against only ~1.46M debt), while the dominant ceaBNBc ilk carries 89% of CDP debt at a 5.39 ratio. The risk-relevant measured fact is therefore the 11.46% realized bad debt, not the headline ratio. BSC lisUSD totalSupply was 75,097,217.50, well above Vat.debt because lisUSD is a cross-chain LayerZero OFT and because PSM pre-mint and D3M/AMO credit-minting expand supply without CDP collateral. collateralizationParameters is adequate: per-ilk liquidation ratios mat (measured 1.1-3.0) and debt ceilings line are enforced on-chain and governance-set. liquidationMechanics is limited rather than adequate: the documented Dutch auctions (10% penalty, tip/chip keeper rewards, tau/tail/cusp restart) rely on Lista-whitelisted bots and, for positions over $1M or after repeated failures, a manually team-activated community Liquidation Zone; the measured 2.82M of realized bad debt is direct evidence that liquidations did not fully protect the system. backstop is weak: there is measured uncovered bad debt in the Vat and no gov-token recapitalization mechanism is documented, while D3M/AMO credit-mint lisUSD into Aave/Venus without collateral. branchIsolation is adequate: each collateral is an isolated ilk with its own mat, line, and Clipper (measured), so risk admission is bounded per ilk, though losses mutualize in the shared Vow. shutdownAndBadDebt is limited: no emergency-shutdown or global-settlement mechanism is documented and the measured bad debt is simply carried in the Vat/Vow. structuralRedemption is limited: the PSM offers 1:1 lisUSD-to-USDT/USDC redemption but is capped at 500,000 lisUSD/day at a 2% fee (documented), and holders have no direct claim on vault collateral. liquidationCapacityRatio is structurally not applicable: liquidations are externally funded Dutch auctions and community liquidators, with no lisUSD-dedicated pool contractually committed to debt offset. NOT established: the split of each GemJoin balance between locked ink and unlocked free gem (so the aggregate collateralizationRatio is an upper bound on actively-borrowed collateralization), the PSM and D3M/AMO ilk debt outside the enumerated gemjoins, the cross-chain distribution of the OFT supply, and whether the 2.82M vice is being actively worked down.",
+      "notes": "Reviewed 2026-07-20. Measured on BSC at block ~111154135 via journaled eth_call reads against the Lista Vat (0x33A34eAB3ee892D40420507B820347b1cA2201c4) plus the per-ilk GemJoin and Spot contracts from the developer registry. Vat.debt() = 24,622,565.46 lisUSD of internal credit and, critically, Vat.vice() = 2,821,803.63 lisUSD of realized, uncovered system bad debt = 11.46% of internal credit; this is a measured adverse fact and the anchor of the conservative ratings below. Enumerating the per-ilk GemJoin balances valued at each ilk's on-chain Spot*mat price gave aggregate CDP collateral 314,713,592.63 USD against enumerated ilk debt 21,796,591.81 lisUSD (aggregate collateralizationRatio 14.4387). That aggregate is high because collateral utilization is low: users deposit far more collateral than they borrow (e.g. the slisBNB ilk holds ~202M USD of collateral against only ~1.46M debt), while the dominant ceaBNBc ilk carries 89% of CDP debt at a 5.39 ratio. The risk-relevant measured fact is therefore the 11.46% realized bad debt, not the headline ratio. BSC lisUSD totalSupply was 75,097,217.50, well above Vat.debt because lisUSD is a cross-chain LayerZero OFT and because PSM pre-mint and D3M/AMO credit-minting expand supply without CDP collateral. collateralizationParameters is adequate: per-ilk liquidation ratios mat (measured 1.1-3.0) and debt ceilings line are enforced on-chain and governance-set. liquidationMechanics is limited rather than adequate: the documented Dutch auctions (10% penalty, tip/chip keeper rewards, tau/tail/cusp restart) rely on Lista-whitelisted bots and, for positions over $1M or after repeated failures, a manually team-activated community Liquidation Zone; the measured 2.82M of realized bad debt is direct evidence that liquidations did not fully protect the system. backstop is weak: there is measured uncovered bad debt in the Vat and no gov-token recapitalization mechanism is documented, while D3M/AMO credit-mint lisUSD into Aave/Venus without collateral. branchIsolation is adequate: each collateral is an isolated ilk with its own mat, line, and Clipper (measured), so risk admission is bounded per ilk, though losses mutualize in the shared Vow. shutdownAndBadDebt is limited: no emergency-shutdown or global-settlement mechanism is documented and the measured bad debt is simply carried in the Vat/Vow. structuralRedemption is limited: the PSM offers 1:1 lisUSD-to-USDT/USDC redemption but is capped at 500,000 lisUSD/day at a 2% fee (documented), and holders have no direct claim on vault collateral. liquidationCapacityRatio is structurally not applicable: liquidations are externally funded Dutch auctions and community liquidators, with no lisUSD-dedicated pool contractually committed to debt offset. NOT established: the split of each GemJoin balance between locked ink and unlocked free gem (so the aggregate collateralizationRatio is an upper bound on actively-borrowed collateralization), the PSM and D3M/AMO ilk debt outside the enumerated gemjoins, the cross-chain distribution of the OFT supply, and whether the 2.82M vice is being actively worked down. Fresh partial measurement on 2026-10-02 at BSC block125284292: Vat.debt()=5,403,862.43835555 and Vat.vice()=2,821,886.554151024 (both RAD/1e45), updating only internal-credit vice/debt to 0.522198073385775. This does not refresh the historical collateralizationRatio or establish full reserve/multi-chain liability coverage.",
       "metrics": {
         "collateralizationRatio": 14.4387,
         "liquidationCapacityRatio": null
@@ -15450,7 +15405,7 @@
         }
       },
       "analogousMetrics": {
-        "realizedBadDebtRatio": 0.1146,
+        "realizedBadDebtRatio": 0.522198073385775,
         "dominantIlkCollateralizationRatio": 5.39,
         "bscVatDebtToSupplyRatio": 0.3279
       },
@@ -16904,32 +16859,37 @@
           "url": "https://docs.nest.credit/security-and-compliance/flow-of-funds/"
         },
         {
-          "label": "Nest Alpha price API",
-          "url": "https://api.nest.credit/v1/vaults/nest-alpha-vault/price"
+          "label": "Legacy inALPHA price API",
+          "url": "https://api.nest.credit/v1/vaults/nest-alpha-lp-vault/price"
         },
         {
-          "label": "Nest Alpha positions API",
-          "url": "https://api.nest.credit/v1/vaults/nest-alpha-vault/positions"
+          "label": "Legacy inALPHA positions API",
+          "url": "https://api.nest.credit/v1/vaults/nest-alpha-lp-vault/positions"
         },
         {
-          "label": "Nest Alpha last-price-update API",
-          "url": "https://api.nest.credit/v1/vaults/nest-alpha-vault/last-price-update"
+          "label": "Legacy inALPHA last-price-update API",
+          "url": "https://api.nest.credit/v1/vaults/nest-alpha-lp-vault/last-price-update"
         },
         {
           "label": "Nest terms and conditions",
           "url": "https://docs.nest.credit/security-and-compliance/terms-and-conditions/"
         }
       ],
-      "notes": "RWA multi-sleeve Nest vault. valuationCadenceDays=1/24 dual-sourced; WAM unavailable. Components limited. Component evidence: valuationCadence (limited) — Dual-source hourly Nest NAV process (docs) + live Nest price/last-price-update APIs and on-chain getRate match. Limited: issuer-operated, not independent fund-admin attestation.; maturityAndLiquidity (limited) — Nest available-vaults lists nALPHA with T+1 redemption estimate; liquidity docs state median ~1 hour and T+2–T+5 max for most strategies. Positions show multi-sleeve Nest vaults plus liquid stables buffer. Limited: no numeric WAM; large redemptions can queue.; custody (limited) — Nest flow-of-funds: non-custodial vault contracts with third-party custody for off-chain sleeves. On-chain BoringVault-style share token 0x64ab… dual-sourced via Nest smart-contract tables/API vaultAddress. Limited: look-through custodians for each sub-vault not fully named.; creditQuality (limited) — Live positions dominated by Nest private-credit sleeves (nOPAL, nFALCON) plus nTBILL buffer. Nest available-vaults + positions API dual-source composition. Limited: no independent combined credit rating.. Re-reviewed 2026-07-29 for the full manifest claim group. Task conclusions: legalEnforceability=weak; recovery=weak; seniority=limited. Component nondisclosures and access blockers remain outside the overlay; only evidence-supported quality grades are materialized. Every unrelated metric, applicability ruling, component, source URL, profile field, analogous metric, venue share, and optional field is preserved.",
+      "notes": "October 2, 2026 identity correction: this overlay previously cited active nest-alpha-vault, a different contract from legacy inALPHA. The hourly numeric cadence is withdrawn; the exact legacy API has only February 23 last-update observations. No favorable review date is renewed: reviewedAt remains the original historical review date, and the remaining historical components are not re-attested by this correction. Legacy composition and current loss-recovery facts remain unestablished.",
       "metrics": {
         "weightedAverageMaturityDays": null,
-        "valuationCadenceDays": 0.041666666666666664
+        "valuationCadenceDays": null
       },
       "metricApplicability": {
         "weightedAverageMaturityDays": {
           "state": "unavailable",
           "rationale": "inALPHA holds a diversified book of Nest sub-vaults (nOPAL Brazilian receivables, nFALCON CLO, nTBILL, nACRDX, etc.). No issuer-published portfolio WAM/WAL for the blended vault. Searched Nest available-vaults, vaults valuation docs, positions API (composition without tenor fields).",
           "sourceUrl": "https://docs.nest.credit/about/available-vaults/"
+        },
+        "valuationCadenceDays": {
+          "state": "unavailable",
+          "rationale": "Exact legacy vault 0x64ab176c545bb85eca75d53c3ffcb361deafb855 last-price-update returned February 23, 2026 observations on October 2. Active nest-alpha-vault is different contract 0x593ccca4c4bf58b7526a4c164ceef4003c6388db and cannot supply legacy valuation cadence.",
+          "sourceUrl": "https://api.nest.credit/v1/vaults/nest-alpha-lp-vault/last-price-update"
         }
       },
       "components": {

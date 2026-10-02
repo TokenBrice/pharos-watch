@@ -1,6 +1,6 @@
 import { base64ToBytes, bytesToBase64 } from "@shared/lib/base64";
 import { compareMethodologyVersions } from "@shared/lib/methodology-versions/base";
-import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { stableJsonStringifyChunksV1, stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import {
   SafetyScoreV9CurrentResponseSchema,
   type SafetyScoreV9CurrentResponse,
@@ -236,8 +236,7 @@ export async function serializeSafetyScoreV9Publication(
       "Safety Score v9.4+ publications require every evidence responsibility owner",
     );
   }
-  const canonical = stableJsonStringifyV1(publication);
-  const compressed = await gzipCanonicalJson(canonical, {
+  const compressed = await gzipCanonicalJson(stableJsonStringifyChunksV1(publication), {
     label: "Safety Score v9 publication",
     maximumCompressedBytes:
       SAFETY_SCORE_V9_PUBLICATION_MAX_COMPRESSED_BYTES,

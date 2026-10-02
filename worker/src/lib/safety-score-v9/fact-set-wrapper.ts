@@ -1,5 +1,4 @@
 import {
-  evaluateV9ExitAssetFacts,
   resolveV9ExitCapacityAtRequest,
   selectV9ExitCirculatingUsd,
   selectV9ExitStressRequest,
@@ -698,11 +697,18 @@ function buildWrapperExitDimensions(
     withdrawalTerms = reviewedWrapperFact(
       context,
       worstWrapperRisk(termsRisk),
-      knownRedemptionRoutes.flatMap((route) => [
-        `wrapper-withdrawal-access:${route.holderAccess}`,
-        `wrapper-withdrawal-execution:${route.executionModel}`,
-        `wrapper-withdrawal-settlement:${route.settlementModel}:${route.settlementSlaSec ?? "atomic"}`,
-      ]),
+      [
+        ...knownRedemptionRoutes.flatMap((route) => [
+          `wrapper-withdrawal-access:${route.holderAccess}`,
+          `wrapper-withdrawal-execution:${route.executionModel}`,
+          `wrapper-withdrawal-settlement:${route.settlementModel}:${route.settlementSlaSec ?? "atomic"}`,
+        ]),
+        // Fee quantification is a separate integration gap, never a reason to
+        // erase observed access, execution, or queue restrictions.
+        ...(knownRedemptionRoutes.some((route) => route.feeEvidence === "disclosed-unquantified")
+          ? ["wrapper-withdrawal-formula-fee-not-quantified-at-policy-notional"]
+          : []),
+      ],
       routeEvidenceRefIds,
     );
   }
@@ -711,28 +717,17 @@ function buildWrapperExitDimensions(
     selectV9ExitCirculatingUsd(input.supply),
     V9_CANDIDATE_POLICY_V1,
   );
-  const admittedDocumentedUnwindRouteKeys =
-    stressRequest === null
-      ? new Set<string>()
-      : new Set(
-          evaluateV9ExitAssetFacts(
-            {
-              supply: input.supply,
-              exitStatus: input.exitStatus,
-              exitRoutes: [...input.exitRoutes],
-            },
-            V9_CANDIDATE_POLICY_V1,
-            false,
-            { assetId: context.asset.assetId, clockSec: context.fixedInput.clockSec },
-          ).routes.flatMap((route) => (route.included ? [route.routeKey] : [])),
-        );
+  // A modeled route or partial inventory can establish a lower bound, not
+  // observed exhaustion. Keep the same measurement gate as the Exit pillar.
   const observedUnwindRoutes = input.exitRoutes.filter(
     (route) =>
-      (route.status.observationState === "known" && route.scoreEligible && route.capacityCurve.length > 0) ||
-      // Undisclosed-fee credit is conditionally withheld by a later danger gate
-      // that is unavailable while facts are being compiled.
-      (route.feeEvidence !== "undisclosed-reviewed" &&
-        admittedDocumentedUnwindRouteKeys.has(route.routeKey)),
+      route.status.observationState === "known" &&
+      route.scoreEligible &&
+      route.coverageClass === "exact-complete" &&
+      route.evidenceKind !== "documented-terms" &&
+      route.feeEvidence === undefined &&
+      !route.settlementBoundUnproven &&
+      route.capacityCurve.length > 0,
   );
   let measuredUnwind: V9WrapperLocalDimensionFact;
   const stressCompletions =
@@ -742,8 +737,9 @@ function buildWrapperExitDimensions(
           const point = resolveV9ExitCapacityAtRequest(route.capacityCurve, stressRequest);
           return point === null ? [] : [point.completionRatio];
         });
-  if (stressCompletions.length > 0) {
-    const bestCompletion = Math.max(...stressCompletions);
+  const bestCompletion = stressCompletions.length > 0 ? Math.max(...stressCompletions) : null;
+  const unwindInventoryComplete = stressCompletions.length === input.exitRoutes.length;
+  if (bestCompletion !== null && (bestCompletion >= 0.95 || unwindInventoryComplete)) {
     measuredUnwind = reviewedWrapperFact(
       context,
       bestCompletion >= 0.95
@@ -763,10 +759,9 @@ function buildWrapperExitDimensions(
       routeEvidenceRefIds,
     );
   } else if (input.exitStatus.observationState === "known" && stressRequest !== null) {
-    measuredUnwind = reviewedWrapperFact(
-      context,
-      "critical",
-      ["wrapper-measured-unwind:no-score-eligible-capacity"],
+    measuredUnwind = unavailableWrapperFact(
+      "integration-missing",
+      "wrapper-measured-unwind:no-observed-complete-capacity",
       routeEvidenceRefIds,
     );
   } else {
@@ -797,7 +792,21 @@ function buildWrapperLossAbsorptionFact(
   } else {
     const localControls =
       context.asset.variantKind === "strategy-vault" || context.asset.variantKind === "risk-absorption"
-        ? input.controls.filter((control) => control.controlKind !== "bridge")
+        ? input.controls.filter(
+            (control) =>
+              control.controlKind !== "bridge" &&
+              !input.dependencies.edges.some(
+                (edge) =>
+                  edge.pathKind === "serial-dependency" &&
+                  edge.dependencyType === "wrapper" &&
+                  (control.controllerAssetId === edge.upstreamAssetId ||
+                    control.failureDomains.some(
+                      (domain) =>
+                        domain.kind === "mint-control" &&
+                        domain.key === `asset:${edge.upstreamAssetId}`,
+                    )),
+              ),
+          )
         : [];
     const reviewableLocalControls = localControls.filter((control) =>
       isReviewableLocalControlStatus(control.status),
@@ -824,11 +833,24 @@ function buildWrapperLossAbsorptionFact(
               ],
               controlEvidenceRefIds,
             )
-          : unavailableWrapperFact(
-              "integration-missing",
-              "wrapper-emergency-control-review-has-no-local-controls",
-              controlEvidenceRefIds,
-            );
+          : input.controlStatus.observationState === "known" &&
+              input.controls.some((control) => control.controlKind !== "bridge")
+            ? context.asset.variantKind === "risk-absorption"
+              ? reviewedWrapperFact(
+                  context,
+                  "moderate",
+                  ["wrapper-holder-bears-protocol-loss-absorption"],
+                  reviewedFormEvidence,
+                )
+              : notApplicableWrapperFact(
+                  "wrapper-emergency-controls-priced-through-parent",
+                  controlEvidenceRefIds,
+                )
+            : unavailableWrapperFact(
+                "integration-missing",
+                "wrapper-emergency-control-review-has-no-local-controls",
+                controlEvidenceRefIds,
+              );
     } else {
       lossAbsorptionEmergencyControls = unavailableWrapperFact(
         wrapperFactDisposition(context, [input.controlStatus]),

@@ -1397,6 +1397,8 @@ const evmBranchBalancesParamsSchema = z
         contract: EvmAddressSchema,
         selector: EvmSelectorSchema,
         maxAssets: z.number().int().positive().max(128),
+        /** Registry entries identify reserve tokens unless it enumerates holders/vaults. */
+        identity: z.enum(["token", "holder"]).optional(),
       }).strict(),
     ]).optional(),
     /** Token-address price getter, read at the balance observation's pinned block. */

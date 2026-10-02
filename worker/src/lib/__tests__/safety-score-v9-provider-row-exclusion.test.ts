@@ -10,6 +10,8 @@ import type { SafetyScoreV9FactSetExtensionV2 } from "../safety-score-v9/fact-se
 import { evaluateV9EconomicControlAssetFacts } from "@shared/lib/safety-score-v9/control";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { boundedUnknown, makeDeploymentControl, makeEconomicControlFacts, noBridgeReview, noMintReview, noOracleReview, requiredKnown } from "@shared/lib/__tests__/safety-score-v9-fixtures.test-support";
+import { adaptBridgeReview } from "../safety-score-v9/extension-bridge";
+import { ReviewEvidenceBuilder, type V9ExtensionRegistryMeta } from "../safety-score-v9/extension-shared";
 
 const original = structuredClone(reviews.providerRowExclusionReviews);
 afterEach(() => { reviews.providerRowExclusionReviews = structuredClone(original); });
@@ -70,6 +72,47 @@ describe("reviewed attribution-only provider-row exclusion", () => {
     expect(admitted.controlFacts).toEqual(baseline.controlFacts);
   });
 
+  it.each([false, true])("excludes foreign supply from bridge numerators, retaining genuine rows (unreviewed route: %s)", (unreviewed) => {
+    const fixed = input();
+    const foreignUsd = unreviewed ? 16 : 10.09;
+    fixed.chainCirculatingById["frax-frax"] = { Ethereum: { current: 98 - foreignUsd }, Fraxtal: { current: foreignUsd }, Optimism: { current: 2 } };
+    const risk = { ...profile, confidence: "verified", reviewedAt: "2026-10-01", routes: [
+      ...profile.routes!, ...(unreviewed ? [{
+        id: `fraxtal:${original[0]!.contractAddress}`, contractAddress: original[0]!.contractAddress,
+        reviewDisposition: "unreviewed", routeClass: "canonical", issuanceModel: "bridge-representation", riskTier: "opaque-or-unknown",
+      }] : []),
+    ] } as BridgeRouteRiskProfile;
+    const supply = build(fixed, risk);
+    const { providerRowExclusions: _exclusions, ...baselineSupply } = supply;
+    const meta = { id: "frax-frax", bridgeRouteRisk: risk } as V9ExtensionRegistryMeta;
+    const adapt = (review: NonNullable<SafetyScoreV9FactSetExtensionV2["assets"][number]["supplyReview"]>) =>
+      adaptBridgeReview(meta, review, 3, new ReviewEvidenceBuilder(meta.id, fixed.clockSec), fixed.clockSec);
+    const baselineBridge = adapt(baselineSupply);
+    const admittedBridge = adapt(supply);
+    const controls = baselineBridge.controls.map(overlay => makeDeploymentControl(overlay.controlKey, overlay.controlKind, {
+      ...overlay, status: boundedUnknown(overlay.controlKey),
+    }));
+    const facts = {
+      ...makeEconomicControlFacts(controls), assetId: meta.id, controlStatus: boundedUnknown("controls"),
+      supply: { ...supply, status: requiredKnown("supply") },
+    };
+    const review = { assetId: meta.id, mint: noMintReview(), oracle: noOracleReview(), bridge: baselineBridge.review };
+    const baseline = evaluateV9EconomicControlAssetFacts({ ...facts, supply: { ...baselineSupply, status: requiredKnown("supply") } }, review, V9_CANDIDATE_POLICY_V1);
+    const admitted = evaluateV9EconomicControlAssetFacts(facts, review, V9_CANDIDATE_POLICY_V1);
+    expect(baseline.reasons).toContainEqual(expect.objectContaining({
+      code: unreviewed ? "runtime-bridge-materiality-unavailable" : "material-bridge-supply-unmatched",
+    }));
+    expect(admitted.reasons).not.toContainEqual(expect.objectContaining({ code: "material-bridge-supply-unmatched", path: "bridge:supply" }));
+    expect(admitted.reasons).not.toContainEqual(expect.objectContaining({ code: "runtime-bridge-materiality-unavailable" }));
+    expect(admittedBridge.review.status.observationState).toBe("known");
+    expect(admittedBridge.review.diagnostics?.unprovenRouteJoins).toEqual([]);
+    expect(admittedBridge.controls).toEqual(baselineBridge.controls);
+    expect(unresolvedDeploymentCohort(facts, facts.controls).share).toBeCloseTo(0.02);
+    expect(facts.supply.unknownRouteSupplyShare).toBeCloseTo(unreviewed ? 0.02 : 0.1209);
+    expect(facts.supply.unreviewedRouteSupplyShare).toBeCloseTo(unreviewed ? 0.16 : 0);
+    expect(facts.supply.selectedBridgeRoutes.find(row => row.deploymentRouteKey.endsWith(":optimism"))).toMatchObject({ supplyShare: 0.02, supplyUsd: 2 });
+  });
+
   it.each([
     ["label mismatch", { providerChainLabel: "fraxtal" }],
     ["target mismatch", { belongsToAssetId: "usdc-circle" }],
@@ -91,6 +134,20 @@ describe("reviewed attribution-only provider-row exclusion", () => {
     reviews.providerRowExclusionReviews = [];
     expect(rejected).toBe(JSON.stringify(build(fixed)));
     expect(fixed.aggregateCirculatingById["frax-frax"]).toEqual({ circulating: { peggedUSD: 120 }, observedAtSec: null });
+  });
+
+  it("admits a policy-tolerated conservation tail without renormalising facts or the aggregate denominator", () => {
+    const fixed = input();
+    const aggregate = 100 + 1e-8;
+    fixed.aggregateCirculatingById["frax-frax"] = { circulating: { peggedUSD: aggregate }, observedAtSec: null };
+    const captured = JSON.stringify(fixed);
+    const admitted = build(fixed);
+    expect(cohort(admitted)).toBeCloseTo(0.2);
+    expect(admitted.providerRowExclusions![0]!.supplyShare).toBe(10 / aggregate);
+    const { providerRowExclusions: _exclusions, ...unchanged } = admitted;
+    reviews.providerRowExclusionReviews = [];
+    expect(unchanged).toEqual(build(fixed));
+    expect(JSON.stringify(fixed)).toBe(captured);
   });
 
   it("retains an asset's own same-chain legacy deployment instead of excluding its route", () => {

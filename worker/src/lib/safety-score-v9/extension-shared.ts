@@ -4,15 +4,17 @@
  * The extension builder was one 2,500-line module; the reserve, bridge, and
  * oracle adapters now live in sibling files. This holds what all of them need:
  * the registry-meta projection, the extension-asset aliases, the reviewed-
- * research evidence builder, and the small clock/status helpers. Pure move —
- * every function here is byte-identical to its previous definition in
- * `safety-score-v9-extension.ts`.
+ * research evidence builder, and the small clock/status helpers. Reviewed
+ * evidence uses Worker-native incremental SHA-256 over the shared canonical
+ * JSON byte stream.
  */
+import { createHash } from "node:crypto";
+import { stableJsonStringifyChunksV1 } from "@shared/lib/stable-json";
 import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import type { V9PublishedEvidenceAttribution } from "@shared/lib/safety-score-v9/evidence";
-import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
+import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import { normalizeDeploymentId } from "@shared/lib/deployment-id";
 import type { V9WeightedQuorum } from "@shared/types/safety-score-v9-control-scope";
 import type { MintAuthorityControl, StablecoinLink, StablecoinMeta } from "@shared/types/core";
@@ -170,17 +172,22 @@ export class ReviewEvidenceBuilder {
         )
       : [null];
     const evidenceKeys = sources.map((source, index) => {
-      const contentSha256 = domainDigest("safety-score-v9.reviewed-metadata-evidence.v2", {
-        assetId: this.assetId,
-        sourceId: args.sourceId,
-        reviewedAt: args.reviewedAtSec ?? args.reviewedAt,
-        observedAt: args.observedAtSec ?? args.observedAt ?? args.reviewedAtSec ?? args.reviewedAt,
-        publishedAt: args.publishedAt ?? null,
-        publishedBy: args.publishedBy ?? "unknown",
-        confidence: args.confidence ?? "manual-review",
-        source,
-        payload: args.payload,
-      });
+      const hash = createHash("sha256");
+      for (const chunk of stableJsonStringifyChunksV1({
+        domain: "safety-score-v9.reviewed-metadata-evidence.v2",
+        payload: {
+          assetId: this.assetId,
+          sourceId: args.sourceId,
+          reviewedAt: args.reviewedAtSec ?? args.reviewedAt,
+          observedAt: args.observedAtSec ?? args.observedAt ?? args.reviewedAtSec ?? args.reviewedAt,
+          publishedAt: args.publishedAt ?? null,
+          publishedBy: args.publishedBy ?? "unknown",
+          confidence: args.confidence ?? "manual-review",
+          source,
+          payload: args.payload,
+        },
+      })) hash.update(chunk);
+      const contentSha256 = hash.digest("hex");
       const evidenceKey = `${args.sourceId}:${index}:${contentSha256.slice(0, 16)}`;
       this.evidence.set(evidenceKey, {
         evidenceKey,

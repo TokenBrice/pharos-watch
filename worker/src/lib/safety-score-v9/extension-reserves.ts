@@ -378,6 +378,7 @@ function independentlyAttestedComposition(
   const review = meta.reserveReview;
   const proof = meta.proofOfReserves;
   const report = proof?.latestReport;
+  const compositionRows = compositionRowsWithUnknownResidual(meta);
   if (reportScopeApplies(meta, clockSec, fixedInput)) return null;
   const attestorIndependent =
     proof?.attestorTier === "big4" || proof?.attestorTier === "regional" || proof?.attestorTier === "niche";
@@ -388,6 +389,7 @@ function independentlyAttestedComposition(
   const periodEndSec = report ? conservativeDateEndSec(report.periodEnd, clockSec) : null;
   if (
     rows.length === 0 ||
+    compositionRows === null ||
     review?.scope !== "full-composition" ||
     review.confidence === "unknown" ||
     review.sources.length === 0 ||
@@ -412,7 +414,7 @@ function independentlyAttestedComposition(
     return null;
   }
   return {
-    normalizedRows: normalizeReviewedStaticReserveRows(rows),
+    normalizedRows: review.knownUnknownExposurePct === 0 ? normalizeReviewedStaticReserveRows(compositionRows) : compositionRows,
     sourceRows: rows,
     review,
     proof,
@@ -476,19 +478,16 @@ export function buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(
  * evaluator charges its existing bounded-unknown residual, not `other` credit.
  * Normalize only the identified subtotal, keeping the authored unknown share.
  */
-function curatedCompositionRows(meta: V9ExtensionRegistryMeta, clockSec: number): ReserveSlice[] | null {
+function compositionRowsWithUnknownResidual(meta: V9ExtensionRegistryMeta): ReserveSlice[] | null {
   const rows = meta.reserves ?? [];
   const review = meta.reserveReview;
   const residualPct = review?.knownUnknownExposurePct;
-  if (residualPct === 0) return rows;
+  if (residualPct === 0) return review?.nonLinkDispositions?.some(disposition =>
+    UNRESOLVED_CURATED_RESERVE_DISPOSITIONS.has(disposition.disposition)) ? null : rows;
   if (residualPct == null || !Number.isFinite(residualPct) || residualPct / 100 <= SCORE_EPSILON ||
     residualPct > V9_CANDIDATE_POLICY_V1.policy.semantic.backing.reserve.maxUnclassifiedCuratedResidualPct ||
     !review || review.confidence !== "verified" || review.scope !== "full-composition" ||
     review.sources.length === 0 || !validateReserveCompositionTotal(rows, "full")) return null;
-  const reviewedAtSec = conservativeDateEndSec(review.reviewedAt, clockSec);
-  const compositionAtSec = conservativeDateEndSec(review.compositionAsOf, clockSec);
-  if (reviewedAtSec === null || compositionAtSec === null || reviewedAtSec < compositionAtSec ||
-    clockSec - compositionAtSec > REVIEWED_RESERVE_COMPOSITION_ADMISSION_MAX_AGE_SEC) return null;
 
   const residualIndexes = new Set<number>();
   let recordedResidualPct = 0;
@@ -533,7 +532,15 @@ function buildSafetyScoreV9ReviewedCuratedReserveRows(
 ): ReviewedStaticReserveRows | null {
   const rows = meta.reserves ?? [];
   const review = meta.reserveReview;
-  const curatedRows = curatedCompositionRows(meta, clockSec);
+  const curatedRows = compositionRowsWithUnknownResidual(meta);
+  if (review?.observations?.some(row => (row.kind === "standing-structure" || row.kind === "portfolio-observation") &&
+    row.obligations.some(obligation => obligation.disposition !== "included"))) return null;
+  if ((review?.knownUnknownExposurePct ?? 0) > 0) {
+    const reviewAtSec = conservativeDateEndSec(review?.reviewedAt, clockSec);
+    const compositionAtSec = conservativeDateEndSec(review?.compositionAsOf, clockSec);
+    if (reviewAtSec === null || compositionAtSec === null || reviewAtSec < compositionAtSec ||
+      clockSec - compositionAtSec > REVIEWED_RESERVE_COMPOSITION_ADMISSION_MAX_AGE_SEC) return null;
+  }
   const observationRefs = review?.observations?.length ? resolveV10ReserveObservationDeploymentRefs(meta) : [];
   const separate = review?.observations?.find(row =>
     row.kind === "standing-structure" && admitV10ReserveObservation({
@@ -567,9 +574,6 @@ function buildSafetyScoreV9ReviewedCuratedReserveRows(
     review?.scope !== "full-composition" ||
     review.confidence !== "verified" ||
     curatedRows === null ||
-    (review.knownUnknownExposurePct === 0 && review.nonLinkDispositions?.some((disposition) =>
-      UNRESOLVED_CURATED_RESERVE_DISPOSITIONS.has(disposition.disposition),
-    ) === true) ||
     review.sources.length === 0 ||
     reviewedAtSec === null ||
     compositionAtSec === null ||

@@ -339,7 +339,12 @@ export function buildRedemptionExitRouteObservation(
     settlementHorizonSec,
     output: resolveOutput(input.stablecoinId, input.config, outputValuation),
     evidenceKind: evidence.evidenceKind,
-    ...(boundedUnknownFee ? { feeEvidence: "undisclosed-reviewed" as const } : {}),
+    ...(boundedUnknownFee
+      ? { feeEvidence: input.config.costModel.kind === "dynamic-or-unclear" &&
+          input.config.costModel.confidence === "formula"
+            ? "disclosed-unquantified" as const
+            : "undisclosed-reviewed" as const }
+      : {}),
     ...(outputValuation && mainCostBps != null && allInCostBps != null
       ? {
           executionCostBps: mainCostBps,
@@ -424,13 +429,10 @@ export function deriveSupplyModelExitRouteObservation(
   // A defensible cost bound is a documented fixed-bps fee on the published row,
   // or (T1, owner ruling 2026-07-22 R3/R4) a reviewed documented ceiling
   // (`feeBpsMax`) on the same static config that already supplies this route's
-  // output composition — both producer and shadow read the identical registry,
-  // so derivations stay byte-identical. Formula and documented-variable fees
-  // without a stated ceiling remain cost-unbounded: they preserve the reviewed
-  // capacity but stay non-score-eligible and carry the same bounded-unknown fee
-  // marker as an `undisclosed-reviewed` route (SIM-EXIT-L2). The exit policy,
-  // rather than the producer, then bounds all such credit via
-  // `semantic.exit.undisclosedFeeRouteScoreCeiling`.
+  // output composition. Formula and documented-variable fees
+  // without a stated ceiling remain cost-unbounded. Preserve modeled capacity,
+  // but distinguish disclosed terms from issuer non-disclosure; neither proves
+  // a same-notional execution cost bound.
   const staticConfig = getRedemptionBackstopConfig(entry.stablecoinId);
   const feeBoundBps =
     entry.feeModelKind === "fixed-bps" && entry.feeBps != null
@@ -475,7 +477,12 @@ export function deriveSupplyModelExitRouteObservation(
         getRedemptionBackstopConfig(entry.stablecoinId)?.unresolvedOutputAssetKeys,
     }),
     evidenceKind: "documented-terms",
-    ...(boundedUnknownFee ? { feeEvidence: "undisclosed-reviewed" as const } : {}),
+    ...(boundedUnknownFee
+      ? { feeEvidence: entry.feeConfidence === "formula" &&
+          (entry.feeModelKind === "formula" || entry.feeModelKind === "documented-variable")
+          ? "disclosed-unquantified" as const
+          : "undisclosed-reviewed" as const }
+      : {}),
     confidence: "medium",
     scoreEligible: entry.outputAssetType !== "physical-commodity-delivery" && routeFamily !== "eventual-redemption" && withinCost,
     observedAt: reviewTimestamp,

@@ -46,14 +46,14 @@
   },
   "oracleRisk": {
     "tier": "opaque-or-unknown",
-    "summary": "Freedom Dollar documents one shared ZANO reserve and permissionless market-making bots that place orders near one dollar's worth of ZANO. The published whitepaper does not identify the bots' ZANO/USD input, update cadence, stale-price handling, fallback, liquidation engine, or reserve-shortfall procedure, so the system-wide pricing path is reviewed as opaque.",
+    "summary": "Freedom Dollar uses a shared ZANO reserve and independent market-making bots. Its issuer-linked public bot source reads ZANO/USDT order books from MEXC and optionally CoinEx, aggregates orders and maintains WebSocket connections on a 30-second loop. The source trades existing wallet funds and does not issue tokens. A complete inventory of live bot versions, operators, pricing configurations and enforced stale-price or fallback behavior remains unverified, so the system-wide pricing tier remains opaque.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "top-level-only",
-      "reviewedAt": "2026-08-28",
-      "reviewer": "Codex",
-      "rationale": "FUSD has one shared ZANO reserve and no borrower-specific collateral positions or liquidation markets. Its market-making path values ZANO in USD to place buy and sell orders near the one-dollar target and introduce supply, so the complete disclosed price-sensitive mechanism belongs at top level even though its implementation is not published.",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol final D/F review 2026-10-02 (DfReview11)",
+      "rationale": "FUSD has one shared ZANO reserve and no borrower-specific collateral positions or liquidation markets. Its market-making path values ZANO to place buy and sell orders near the dollar target. An issuer-linked implementation is now public and trades existing wallet funds without minting; the complete live operator and pricing configuration remains unverified. The disclosed price-sensitive mechanism is therefore reviewed at top level.",
       "sources": [
         {
           "label": "Freedom Dollar white paper (publisher HTTP Last-Modified 2026-08-24)",
@@ -62,11 +62,15 @@
         {
           "label": "Zano project article: fUSD targets $1 through market-making backed by ZANO reserves (published 2025-11-01)",
           "url": "https://blog.zano.org/zano-confidential-assets-in-action-real-world-private-defi/"
+        },
+        {
+          "label": "Issuer-linked public bot source, pinned ae474128",
+          "url": "https://github.com/freedomdollar/market-making-node/blob/ae474128aa43ad03c293d52b8d042fe6d1866df9/src/main/java/com/zanable/marketmaking/bot/services/ZanoPriceService.java"
         }
       ]
     },
-    "reviewedAt": "2026-08-28",
-    "reviewer": "Codex",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol final D/F review 2026-10-02 (DfReview11)",
     "confidence": "probable",
     "sources": [
       {
@@ -76,6 +80,14 @@
       {
         "label": "Zano: Freedom Dollar market making and ZANO reserves",
         "url": "https://blog.zano.org/zano-confidential-assets-in-action-real-world-private-defi/"
+      },
+      {
+        "label": "Issuer-linked market-making node, pinned source ae474128 (retrieved 2026-10-02)",
+        "url": "https://github.com/freedomdollar/market-making-node/blob/ae474128aa43ad03c293d52b8d042fe6d1866df9/src/main/java/com/zanable/marketmaking/bot/services/ZanoPriceService.java"
+      },
+      {
+        "label": "Freedom Dollar reserve verification page links the public market-making node",
+        "url": "https://www.freedomdollar.com/en/verify-reserves"
       }
     ]
   }

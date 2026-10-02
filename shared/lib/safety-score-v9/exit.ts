@@ -64,8 +64,8 @@ export interface V9ExitEvaluationRoute {
   scoreEligible: boolean;
   coverageClass: "exact-complete" | "exact-lower-bound" | "modelled-terms-lower-bound" | "diagnostic";
   evidenceKind: string;
-  /** The route's reviewed fee is undisclosed: modeled capacity with an unbounded cost. */
-  feeEvidence?: "undisclosed-reviewed" | null;
+  /** Reviewed fee disclosure without a same-notional execution cost bound. */
+  feeEvidence?: "undisclosed-reviewed" | "disclosed-unquantified" | null;
   observationConfidence: "high" | "medium" | "low" | "unknown";
   modelConfidence: "high" | "medium" | "low";
   observationHistory?: ExitRouteObservationHistory | null;
@@ -95,6 +95,7 @@ export interface V9ExitRouteTrace {
   routeSuspension?: RedemptionRouteSuspension;
   routeKey: string;
   routeFamily: V9ExitEvaluationRoute["routeFamily"];
+  feeEvidence?: V9ExitEvaluationRoute["feeEvidence"];
   observationConfidence: V9ExitEvaluationRoute["observationConfidence"];
   modelConfidence: V9ExitEvaluationRoute["modelConfidence"];
   observationHistory: ExitRouteObservationHistory | null;
@@ -335,14 +336,11 @@ export interface V9CreditableNonAtomicRedemptionInput {
  * hard-gating on a known observation, a resolved output, non-diagnostic
  * coverage, at least one enumerated failure domain, and a documented,
  * live-reserve, or on-chain redemption evidence kind. This gate decides only
- * *eligibility* for the discounted credit; whether the route actually clears
- * notional is settled downstream by its measured capacity curve. An impaired,
- * frozen, or discretionary route with a proven settlement bound does not
- * survive as a viable exit when its redemption cannot clear: its zero (or
- * immaterial) capacity curve removes its credit while preserving the measured
- * adverse trace. An open route whose settlement completion bound is unproven
- * is different: it is a bounded evidence gap, so it is excluded from scoring
- * and retained as a diagnostic rather than treated as measured zero.
+ * *eligibility* for discounted positive credit. Its capacity is a lower bound,
+ * not a measurement of exhaustion: zero or immaterial discounted capacity
+ * leaves missing same-notional evidence rather than measured adversity. A
+ * route whose settlement completion bound is unproven likewise stays a
+ * bounded evidence gap, excluded from scoring and retained diagnostically.
  */
 /**
  * A route output is resolved when it is both observed and valued. Two surfaces
@@ -557,16 +555,30 @@ export function resolveV9DistinctExitCapacity(
   };
 }
 
+/** Exhaustive measurements retain adverse force when stale; aging is not clearance. */
+function isExhaustionMeasurement(route: V9ExitEvaluationRoute): boolean {
+  return (route.observationState === "known" || route.observationState === "stale") &&
+    route.scoreEligible &&
+    route.outputResolved &&
+    route.coverageClass === "exact-complete" &&
+    route.evidenceKind !== "documented-terms";
+}
+
+function hasUnquantifiedFee(route: V9ExitEvaluationRoute): boolean {
+  return route.feeEvidence === "undisclosed-reviewed" ||
+    route.feeEvidence === "disclosed-unquantified";
+}
+
 function evaluateRoute(
   route: V9ExitEvaluationRoute,
   request: V9ExitStressRequest,
   envelope: V9ValidatedPolicyEnvelope,
   preExitDangerHeld: boolean,
-  portfolioReviewed: boolean,
 ): V9ExitRouteTrace {
   const horizon = routeCapacityHorizon(route, request);
   const attribution = {
     routeFamily: route.routeFamily,
+    ...(route.feeEvidence ? { feeEvidence: route.feeEvidence } : {}),
     observationConfidence: route.observationConfidence,
     modelConfidence: route.modelConfidence,
     observationHistory: route.observationHistory ?? null,
@@ -588,7 +600,7 @@ function evaluateRoute(
   // route resolved before the lever — so the pre-exit danger that gates the
   // credit never feeds back through the exit pillar it is measured on. Every
   // other route, and every route on a non-danger-held asset, is unaffected.
-  if (preExitDangerHeld && route.feeEvidence === "undisclosed-reviewed") {
+  if (preExitDangerHeld && hasUnquantifiedFee(route)) {
     return {
       routeKey: route.routeKey,
       ...attribution,
@@ -632,15 +644,11 @@ function evaluateRoute(
   const { capacityPoint, valuedExecutableUsd } = resolvedCapacity;
   const policy = envelope.policy.semantic.exit;
   const completionRatio = valuedExecutableUsd / request.requestedNotionalUsd;
-  // A discounted, score-ineligible redemption can turn zero capacity into a
-  // measured adverse fact only when the route inventory itself is reviewed
-  // complete. If the surrounding surface is still incomplete, preserve the
-  // bounded-unknown outcome rather than manufacturing a measured F from one
-  // weak route observation.
+  // A lower bound proves executable capacity, never its absence above that
+  // bound. Discounted or modeled terms are credit evidence, not measurements
+  // of exhaustion, even when the inventory was reviewed complete.
   if (
-    !route.scoreEligible &&
-    isCreditableNonAtomicRedemption(route, envelope) &&
-    !portfolioReviewed &&
+    !isExhaustionMeasurement(route) &&
     !hasMaterialExitCapacity(
       {
         executableCapacityUsd: capacityPoint.executableUsd,
@@ -654,7 +662,7 @@ function evaluateRoute(
       ...attribution,
       score: null,
       included: false,
-      exclusionReason: "unsupported-same-notional-route",
+      exclusionReason: "missing-same-notional-route",
       capacityPoint: null,
       components: null,
       confidenceFactor: null,
@@ -773,12 +781,12 @@ function evaluateRoute(
     score = policy.documentedTermsCreditCeiling;
     capsApplied.push("evidence-kind:documented-terms");
   }
-  // An undisclosed-reviewed fee leaves the route's exit cost unbounded even
-  // though its modeled capacity is emitted, so its credit is ceilinged below
-  // what a cost-bounded route can earn (SIM-EXIT-L2 lever).
-  if (route.feeEvidence === "undisclosed-reviewed" && score > policy.undisclosedFeeRouteScoreCeiling) {
+  // Both missing disclosure and an unevaluated published formula use the same
+  // conservative cost-credit ceiling. More disclosure cannot reduce credit;
+  // retain the provenance label without claiming an observed cost bound.
+  if (hasUnquantifiedFee(route) && score > policy.undisclosedFeeRouteScoreCeiling) {
     score = policy.undisclosedFeeRouteScoreCeiling;
-    capsApplied.push("fee-evidence:undisclosed-reviewed");
+    capsApplied.push(`fee-evidence:${route.feeEvidence}`);
   }
   return {
     routeKey: route.routeKey,
@@ -1019,7 +1027,9 @@ export function evaluateV9Exit(
           request: stressRequest,
         })
       : null;
-    return admission && admission.state !== "unavailable" ? route : { ...route, scoreEligible: false };
+    return admission && admission.state !== "unavailable"
+      ? { ...route, coverageClass: admission.point.certification }
+      : { ...route, scoreEligible: false };
   }).sort((left, right) => compareText(left.routeKey, right.routeKey));
   const traces = routes.map((route) =>
     evaluateRoute(
@@ -1027,7 +1037,6 @@ export function evaluateV9Exit(
       stressRequest,
       envelope,
       args.preExitDangerHeld ?? false,
-      args.portfolioStatus !== "incomplete",
     ));
   const evaluated = traces
     .flatMap((trace, index) => (trace.score === null ? [] : [{ trace, route: routes[index]!, score: trace.score }]))
@@ -1052,46 +1061,34 @@ export function evaluateV9Exit(
     }),
   ) as Record<V9ExitHorizon, V9ExitHorizonTrace>;
   if (evaluated.length === 0) {
-    const portfolioReviewed = args.portfolioStatus === "reviewed-complete";
     const hasBoundedMissingRoute = diagnosticReasons.includes("missing-same-notional-route") ||
-      routes.some((route) => route.routeSuspension !== undefined);
+      routes.some((route) => route.routeSuspension !== undefined ||
+        (route.applicability !== "not-applicable" && !route.settlementBoundUnproven &&
+          !isExhaustionMeasurement(route))) ||
+      diagnosticReasons.some((reason) => reason !== "unproven-settlement-bound");
     const hasUnprovenSettlementBound = diagnosticReasons.includes("unproven-settlement-bound");
-    const onlyUnsupportedDiagnostics =
-      diagnosticReasons.length > 0 &&
-      diagnosticReasons.every((reason) => reason === "unsupported-same-notional-route");
-    // A complete route inventory proves "no viable exit" only when the reviewed
-    // route facts themselves are complete. A diagnostic route carrying
-    // `missing-same-notional-route` is explicit bounded uncertainty (for example,
-    // a known issuer mechanism whose stress capacity/SLA/cost is not established),
-    // not measured zero exit. An open route carrying
-    // `unproven-settlement-bound` is the same bounded gap even when the portfolio
-    // status is reviewed-complete: review establishes the route, but not that
-    // its operator queue settles within the scoring horizon. Only a genuinely
-    // measured zero reaches `no-viable-exit-path`.
-    const defaultReason = hasBoundedMissingRoute
-      ? "missing-same-notional-route"
-      : hasUnprovenSettlementBound
+    const provenEmptyInventory = args.portfolioStatus === "reviewed-complete" && routes.length === 0;
+    // A reviewed census proving no routes exist is adverse. A non-empty
+    // inventory whose routes were excluded or unmeasured is missing evidence,
+    // not proof of exhaustion; admitted exhaustive zeros remain included.
+    const defaultReason = provenEmptyInventory
+      ? "no-viable-exit-path"
+      : !hasBoundedMissingRoute && hasUnprovenSettlementBound
         ? "unproven-settlement-bound"
-        : portfolioReviewed
-          ? "no-viable-exit-path"
-          : onlyUnsupportedDiagnostics
-            ? null
-            : "missing-same-notional-route";
+        : "missing-same-notional-route";
     return {
-      score: hasBoundedMissingRoute
-        ? boundedFloor
-        : hasUnprovenSettlementBound
+      score: provenEmptyInventory
+        ? 0
+        : defaultReason === "unproven-settlement-bound"
           ? unprovenSettlementBoundedFloor
-          : portfolioReviewed
-            ? 0
-            : boundedFloor,
+          : boundedFloor,
       stressRequest,
       primaryRouteKey: null,
       diversificationRouteKey: null,
       diversificationBonus: 0,
       horizons,
       reasons: uniqueSorted([
-        ...(defaultReason ? [defaultReason] : []),
+        defaultReason,
         ...diagnosticReasons,
       ]) as V9ReasonCode[],
       routes: traces,
@@ -1107,9 +1104,9 @@ export function evaluateV9Exit(
   // stay bounded at the portfolio level too: it neither earns nor donates the
   // independent-route bonus, so opaque-fee routes cannot stack past the ceiling
   // or lift a stronger primary (adversarial-review hardening of SIM-EXIT-L2).
-  const undisclosedFeeInvolved =
-    primary.route.feeEvidence === "undisclosed-reviewed" ||
-    independent?.route.feeEvidence === "undisclosed-reviewed";
+  const unquantifiedFeeInvolved =
+    hasUnquantifiedFee(primary.route) ||
+    (independent !== undefined && hasUnquantifiedFee(independent.route));
   // Redundancy can improve a strong primary route, but a merely adequate
   // backup must not automatically fill all remaining headroom. Scale the
   // bounded redundancy allowance by the backup route's own quality. Because
@@ -1120,13 +1117,15 @@ export function evaluateV9Exit(
     100 * envelope.policy.semantic.exit.independentRouteBenefitLimit,
   );
   const diversificationBonus =
-    independent && !undisclosedFeeInvolved
+    independent && !unquantifiedFeeInvolved
       ? redundancyHeadroom * (independent.score / 100)
       : 0;
   const hasOtherIncludedRoute = evaluated.length > 1;
   const boundedGapReason =
     boundedFloor !== null && (diagnosticReasons.includes("missing-same-notional-route") ||
-      (primary.score === 0 && routes.some((route) => route.routeSuspension !== undefined)))
+      !isExhaustionMeasurement(primary.route) ||
+      (primary.score === 0 && routes.some((route) =>
+        route.applicability !== "not-applicable" && !isExhaustionMeasurement(route))))
       ? "missing-same-notional-route"
       : unprovenSettlementBoundedFloor !== null && diagnosticReasons.includes("unproven-settlement-bound")
         ? "unproven-settlement-bound"

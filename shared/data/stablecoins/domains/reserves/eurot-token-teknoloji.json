@@ -37,8 +37,8 @@
         "url": "https://www.token.com.tr/wp-content/uploads/2024/08/Ziraat-Katilim-08082024.pdf"
       }
     ],
-    "rationale": "Reviewed 2026-10-01: the issuer's proof-of-reserves page names Ziraat Participation Bank and Akbank for EUROT euro reserves. Retrieved and visually read bank letters dated 2024-08-09 (Akbank) and 2024-08-08 (Ziraat Katılım) confirm Token Teknoloji euro balances alongside other currencies and assets. They are company balance certificates, not EUROT-specific reserve-to-liability reconciliations. The historical composition date is retained; no current bank allocation or safeguarding terms were established.",
-    "compositionBasis": "Token proof-of-reserves disclosure (re-verified 2026-07-30)",
+    "rationale": "The 2026-10-01 review identified named banks and historical company balance certificates, not a EUROT-specific holdings snapshot dated 2026-07-30. Fresh issuer proof-of-reserves and WordPress media searches on 2026-10-02 still expose historical 2024 bank letters and no current token-specific reserve-to-liability reconciliation. Ziraat Participation Bank and Akbank remain the disclosed reserve banks; their current allocations and safeguarding terms are not established. No composition date is inferred from a document re-verification date.",
+    "compositionBasis": "Standing issuer disclosure of euro bank reserves; historical multi-product bank letters do not establish a dated current EUROT composition",
     "scope": "full-composition",
     "knownUnknownExposure": "The reserve banks are named, but the retrieved bank letters are dated 2024-08-09 and 2024-08-08 and cover Token Teknoloji multi-product balances. Current EUROT-specific reserve amounts, liabilities, bank-level allocation, liquidity terms, and safeguarding terms remain unverified.",
     "knownUnknownExposurePct": 0,
@@ -50,8 +50,7 @@
         "disposition": "untracked-exogenous-asset",
         "rationale": "The disclosed backing is direct euro bank deposits rather than a tracked stablecoin dependency."
       }
-    ],
-    "compositionAsOf": "2026-07-30"
+    ]
   },
   "custodyProfile": {
     "providers": [

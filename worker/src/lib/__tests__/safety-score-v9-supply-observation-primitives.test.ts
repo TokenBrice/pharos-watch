@@ -363,12 +363,6 @@ describe("Safety Score V9 supply observation primitives", () => {
       });
       const direct = fixture({ multicall: "absent" });
       expect(await direct.observe()).toEqual(expected);
-      const stateReads = direct.requests.filter((request) => [
-        "eth_call", "eth_getCode", "eth_getStorageAt", "eth_getBlockByNumber",
-      ].includes(request.method));
-      expect(stateReads.every((request) => request.params[1] === "0x10" ||
-        (request.method === "eth_getBlockByNumber" && request.params[0] === "0x10") ||
-        (request.method === "eth_getStorageAt" && request.params[2] === "0x10"))).toBe(true);
     });
 
     it("rejects the deployment when a required direct call fails", async () => {

@@ -71,22 +71,28 @@
       {
         "label": "hq-v1 owner (SMJSVT0J9K2DKM8QWXSHXPVTYPJBV4CC5P1ZXAW0)",
         "role": "minter-admin",
-        "authorityType": "unknown",
+        "authorityType": "multisig",
         "directMintAbility": "can-authorize",
         "chain": "stacks",
         "address": "SMJSVT0J9K2DKM8QWXSHXPVTYPJBV4CC5P1ZXAW0",
         "canRaiseCap": true,
+        "threshold": 2,
+        "signerCount": 3,
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "At Stacks height 9101379, index block 0x1e6c41a0dc2c44e0df3eea451b67078185990c09bfc27f604955bc83aa6eda8c, the pinned hq-v1 owner data-var returned Clarity bytes 0x0514259de8124cc4d9d117e7731edb7af5a4bd918c2d, identifying SMJSVT0J9K2DKM8QWXSHXPVTYPJBV4CC5P1ZXAW0. The prior reviewed owner was SM1QXYXZG78DCWJZJKY0901KTK3350071W9YYRPMT. The SM address version does not reveal signer identities or threshold; those remain unverified. The fetched hq-v1 source enforces a 1008-burn-block activation delay on owner changes and minting-contract additions. AuthorityType is unknown because a valid required-of-total multisig threshold has not been established; the pinned owner identity and its issuance powers remain recorded.",
+        "evidence": "At Stacks height 9106999, index block 0x6211b0574e113e7ae2cdb5d4c8bf08caec41aab7c9829483e20e2c8b214b5c36, the pinned hq-v1 owner data-var returned Clarity bytes 0x0514259de8124cc4d9d117e7731edb7af5a4bd918c2d, identifying SMJSVT0J9K2DKM8QWXSHXPVTYPJBV4CC5P1ZXAW0. Canonical successful transaction 0xa40e4a5c61e6f14b8e618f61c653abf2f32ef37e442bbe72b064e473799c4409 from that owner calls hq-v1.set-contracts-enabled on September 18, 2026. Its raw origin authorization has hash mode 5, signer hash160 259de8124cc4d9d117e7731edb7af5a4bd918c2d, three authentication fields (two signatures and one public key), and signaturesRequired=2: verified 2-of-3 multisig, not inferred from the SM prefix. Signer operator identities and independence remain undisclosed. The hq-v1 source enforces a 1008-burn-block activation delay on owner changes and minting-contract additions.",
         "sources": [
           {
             "label": "Hiro API: hq-v1 owner data-var",
-            "url": "https://api.hiro.so/v2/data_var/SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG/hq-v1/owner?tip=0x1e6c41a0dc2c44e0df3eea451b67078185990c09bfc27f604955bc83aa6eda8c"
+            "url": "https://api.hiro.so/v2/data_var/SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG/hq-v1/owner?tip=0x6211b0574e113e7ae2cdb5d4c8bf08caec41aab7c9829483e20e2c8b214b5c36"
+          },
+          {
+            "label": "Hiro API: canonical successful owner transaction raw authorization",
+            "url": "https://api.hiro.so/extended/v1/tx/0xa40e4a5c61e6f14b8e618f61c653abf2f32ef37e442bbe72b064e473799c4409/raw"
           }
         ],
         "capDescription": "hq-v1 owner can register and activate a new minting contract with any cap (1,008 burn-block timelock) and can set-contract-active a protocol contract that calls minting-otc-v1-1.set-mint-limit, so the effective mint ceiling is owner-raiseable.",
-        "observedAt": "2026-10-01",
-        "observedBlock": 9101379
+        "observedAt": "2026-10-02",
+        "observedBlock": 9106999
       },
       {
         "label": "Minter whitelist (KYC/KYB gate)",

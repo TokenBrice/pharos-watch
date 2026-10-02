@@ -22,6 +22,7 @@ import { V9_WRAPPER_LOCAL_FACT_KEYS } from "../../types/safety-score-v9-wrapper"
 import { makeDeploymentControl } from "./safety-score-v9-fixtures.test-support";
 import { weightedQuorum } from "./safety-score-v9-control-scope.test-support";
 import supplyAttributionReviews from "../../data/safety-score-v9/supply-attribution-reviews-v1.json";
+import { ReviewedProviderRowExclusionSchema } from "../../types/safety-score-v9-supply-attribution";
 
 const DIGESTS = {
   policy: "a".repeat(64),
@@ -267,7 +268,7 @@ describe("Safety Score v9 public projection", () => {
     const baseline = JSON.stringify(projectSafetyScoreV9Card(input));
     input.providerRowExclusions = [];
     expect(JSON.stringify(projectSafetyScoreV9Card(input))).toBe(baseline);
-    const review = supplyAttributionReviews.providerRowExclusionReviews[0]!;
+    const review = ReviewedProviderRowExclusionSchema.parse(supplyAttributionReviews.providerRowExclusionReviews[0]!);
     input.providerRowExclusions = [{ review, deploymentRouteKey: "unmatched-chain:frax-frax:fraxtal", supplyShare: 0.097 }];
     const card = SafetyScoreV9CurrentCardSchema.parse(projectSafetyScoreV9Card(input));
     expect(card.scoreTrace.providerRowExclusions).toEqual([{

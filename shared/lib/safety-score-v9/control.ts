@@ -18,6 +18,7 @@ import {
   materialBridgeSeverity,
   provenNullShareDeploymentBound,
   unresolvedDeploymentCohort,
+  providerRowExclusionShares,
 } from "./control-bridge-join";
 import {
   applyMergedMintSignals,
@@ -263,7 +264,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
           const posture = deriveV9MintPosture(control, mint, false);
           return posture === "unknown" ||
             (control.status.evidenceRefIds.length > 0 &&
-              (posture === "unbounded-or-compromised" || posture === "unbounded-reconciliation-unknown"));
+              (posture === "unbounded-or-compromised" || posture === "unbounded-reconciliation-unknown" || posture === "unbounded-reconciled"));
         })
       : [];
   if (mint.status.applicability.state === "not-applicable") {
@@ -420,7 +421,12 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
         componentKey: "mint",
         kind: "mint",
         posture,
-        score: mergedMintScore,
+        score: !isKnownRequired(mint.status) ||
+          mintControl?.capSemantics.kind === "unknown" || mintControl?.claimImpairment === "unknown"
+          ? Math.min(mergedMintScore, applyMergedMintSignals(
+              policy.control.boundedUnknownQuality, mintControl, args.resolvedIncidentAgeMonths, policy.control,
+            ))
+          : mergedMintScore,
         binding: mintBinding,
         controlKeys: componentControlKeys,
         failureDomains: componentFailureDomains,
@@ -518,11 +524,24 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
   }
 
   const oracle = args.oracle;
+  const retainedOracleTier = oracle.status.applicability.state === "unresolved" &&
+    oracle.paths?.some((path) => path.applicability.state === "required" && path.observationState === "known")
+    ? oracle.knownPathTier ?? null
+    : null;
   if (oracle.status.applicability.state === "not-applicable") {
     // No price-sensitive oracle or internal valuation path exists to score.
     // Not-applicable is neutral rather than evidence of a strong control.
   } else if (oracle.status.applicability.state === "unresolved") {
     addReason("unresolved-oracle-branch-applicability", "local-component", "oracle");
+    if (retainedOracleTier !== null) {
+      // Keep sibling uncertainty binding independently of the reviewed paths.
+      // Components compete by minimum quality; they are not additive charges.
+      components.push({
+        componentKey: "oracle", kind: "oracle", posture: "opaque-or-unknown",
+        score: policy.control.boundedUnknownQuality, binding: true,
+        controlKeys: [], failureDomains: [],
+      });
+    }
   } else if (oracle.status.observationState !== "known") {
     const code =
       oracle.status.observationState === "missing"
@@ -531,7 +550,9 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
           ? "unreviewed-oracle-profile"
           : "incomplete-oracle-liquidation-branch";
     addReason(code, "local-component", "oracle");
-  } else {
+  }
+  if (isKnownRequired(oracle.status) || retainedOracleTier !== null) {
+    const oracleTier = retainedOracleTier ?? oracle.tier;
     const branchesByKind = new Map<V9OracleBranchKind, V9OracleBranchReview>();
     for (const branch of oracle.branches) {
       if (branchesByKind.has(branch.branch)) throw new Error(`Duplicate v9 oracle branch ${branch.branch}`);
@@ -579,29 +600,29 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
         }
       }
     }
-    if (oracle.tier === null) {
+    if (oracleTier === null) {
       addReason("missing-oracle-profile", "local-component", "oracle:tier");
     } else {
       const linkedControls = [...oracleControls.values()];
       const failureDomains = canonicalDomains(linkedControls.flatMap((control) => control.failureDomains));
       components.push({
-        componentKey: "oracle",
+        componentKey: retainedOracleTier === null ? "oracle" : "oracle:known-paths",
         kind: "oracle",
-        posture: oracle.tier,
-        score: policy.control.oracleTierQuality[oracle.tier],
+        posture: oracleTier,
+        score: policy.control.oracleTierQuality[oracleTier],
         binding: true,
         controlKeys: linkedControls.map((control) => control.controlKey).sort(compareText),
         failureDomains,
       });
       if (
-        oracle.tier === "single-source-or-laggy" ||
-        oracle.tier === "opaque-or-unknown"
+        oracleTier === "single-source-or-laggy" ||
+        oracleTier === "opaque-or-unknown"
       ) {
         addStructuralFailure({
           kind: "weak-oracle-branch",
-          severity: oracle.tier === "opaque-or-unknown" ? "critical" : "high",
+          severity: oracleTier === "opaque-or-unknown" ? "critical" : "high",
           binding: true,
-          reason: `Oracle control topology is ${oracle.tier}.`,
+          reason: `Oracle control topology is ${oracleTier}.`,
           materialSharePct: null,
           controlKeys: linkedControls.map((control) => control.controlKey),
           failureDomains,
@@ -636,8 +657,11 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
   // with an empty partition had null shares. "Partitioned but empty" is not a
   // reachable state, so treating null as zero would only ever license scoring an
   // inventory whose residual was never measured.
-  const unknownRouteSupplyShare = args.facts.supply.unknownRouteSupplyShare;
-  const unreviewedRouteSupplyShare = args.facts.supply.unreviewedRouteSupplyShare;
+  const excludedSupply = providerRowExclusionShares(args.facts.assetId, args.facts.supply);
+  const unknownRouteSupplyShare = args.facts.supply.unknownRouteSupplyShare === null ? null :
+    Math.max(0, args.facts.supply.unknownRouteSupplyShare - excludedSupply.unknown);
+  const unreviewedRouteSupplyShare = args.facts.supply.unreviewedRouteSupplyShare === null ? null :
+    Math.max(0, args.facts.supply.unreviewedRouteSupplyShare - excludedSupply.unreviewed);
   const unattributedBridgeShare =
     unknownRouteSupplyShare === null || unreviewedRouteSupplyShare === null
       ? null
@@ -733,7 +757,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
       }
       if (
         selectedSupplyRoute?.reviewState === "unmatched" &&
-        selectedSupplyRoute.supplyShare >= materialShareThreshold
+        Math.max(0, selectedSupplyRoute.supplyShare - (excludedSupply.byDeployment.get(selectedSupplyRoute.deploymentRouteKey) ?? 0)) >= materialShareThreshold
       ) {
         addReason("material-bridge-supply-unmatched", "deployment-control", "bridge:supply", route.controlKey);
       }

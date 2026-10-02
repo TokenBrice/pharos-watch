@@ -44,6 +44,8 @@ export interface EvmRpcOptions {
   gas?: string;
   /** Maximum number of calls per Multicall3 aggregate3 request. Defaults to one request for the full input. */
   multicallBatchSize?: number;
+  /** EIP-1898 identity for every state read; unsupported hash reads fail closed. */
+  stateBlockHash?: `0x${string}`;
   /** Enable direct-call fallback only for explicit Multicall3 absence at a numbered, hash-bound block. */
   multicallFallbackBlockHash?: `0x${string}`;
   /** Chain RPC config map (built via buildChainRpcs). Required for RPC URL resolution. */
@@ -621,6 +623,11 @@ export async function fetchJsonRpcHexAtUrl(
   return isHexResult(result ?? undefined) && result !== "0x" ? (result as `0x${string}`) : null;
 }
 
+function stateBlockSelector(blockNumberOrTag: number | "latest", options?: EvmRpcOptions) {
+  const blockHash = options?.stateBlockHash ?? options?.multicallFallbackBlockHash;
+  return blockHash ? { blockHash: blockHash.toLowerCase(), requireCanonical: true } : toBlockTag(blockNumberOrTag);
+}
+
 export async function fetchEvmCallHexAtBlock(
   chainId: string | undefined,
   to: string,
@@ -636,7 +643,7 @@ export async function fetchEvmCallHexAtBlock(
     const normalizedGas = normalizeJsonRpcQuantityHex(options.gas);
     if (normalizedGas) callObj.gas = normalizedGas;
   }
-  const blockTag = toBlockTag(blockNumberOrTag);
+  const blockTag = stateBlockSelector(blockNumberOrTag, options);
   const result = await fetchJsonRpcResult<string>(urls, "eth_call", [callObj, blockTag], options, {
     acceptResult: (value): value is `0x${string}` => isHexResult(value as string) && value !== "0x",
     rejectedReason: () => {
@@ -659,7 +666,7 @@ export async function fetchEvmCodeStatusAtBlock(
   const result = await fetchJsonRpcResult<string>(
     urls,
     "eth_getCode",
-    [address, toBlockTag(blockNumberOrTag)],
+    [address, stateBlockSelector(blockNumberOrTag, options)],
     options,
     {
       acceptResult: (value): value is `0x${string}` =>
@@ -700,7 +707,7 @@ export async function fetchEvmStorageAtBlock(
   const result = await fetchJsonRpcResult<string>(
     urls,
     "eth_getStorageAt",
-    [address, position, toBlockTag(blockNumberOrTag)],
+    [address, position, stateBlockSelector(blockNumberOrTag, options)],
     options,
     {
       acceptResult: (value): value is `0x${string}` => isHexResult(value as string) && value !== "0x",
@@ -727,7 +734,7 @@ export async function fetchEvmMulticall3Aggregate3AtBlock(
     if (code.status === "unavailable") return null;
     if (code.status === "absent") {
       const urls = requestRpcUrls(chainId, options, blockNumberOrTag);
-      const blockTag = toBlockTag(blockNumberOrTag);
+      const blockTag = stateBlockSelector(blockNumberOrTag, options);
       const gas = options.gas ? normalizeJsonRpcQuantityHex(options.gas) : null;
       const results: EvmMulticall3Result[] = [];
       for (const call of calls) {

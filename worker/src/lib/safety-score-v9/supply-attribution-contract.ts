@@ -9,9 +9,10 @@ import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import reviewedEconomicSupplyPlans from "@shared/data/safety-score-v9/supply-attribution-reviews-v1.json";
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import type { BridgeRouteRiskProfile, StablecoinMeta } from "@shared/types/core";
-import { ReviewedEconomicSupplyPlanFileSchema, ReviewedEconomicSupplyPlanSchema, ReviewedEconomicDeploymentPartitionSchema, type ReviewedEconomicSupplyPlan, type ReviewedEconomicDeploymentPartition, type EconomicSupplyObservation, type EconomicSupplyReference } from "@shared/types/safety-score-v9-supply-attribution";
+import { ReviewedEconomicSupplyPlanEnvelopeSchema, ReviewedEconomicSupplyPlanSchema, ReviewedEconomicDeploymentPartitionSchema, type ReviewedEconomicSupplyPlan, type ReviewedEconomicDeploymentPartition, type EconomicSupplyObservation, type EconomicSupplyReference } from "@shared/types/safety-score-v9-supply-attribution";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { normalizeDeploymentId } from "@shared/lib/deployment-id";
+import { createReviewedAssetRegistry, ReviewedRegistryEntryError } from "./extension-reviewed-registry";
 
 const REVIEWED_DEPLOYMENT_SUPPLY_MAX_AGE_SEC = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxAgeSec;
 const REVIEWED_DEPLOYMENT_SUPPLY_MAX_SKEW_SEC = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxSkewSec;
@@ -895,9 +896,26 @@ export function expectedCentrifugeDeploymentIdentity(
   return CENTRIFUGE_BURN_MINT_DEPLOYMENT_IDENTITIES[assetId]?.[routeId];
 }
 
-export const REVIEWED_ECONOMIC_SUPPLY_PLANS: ReadonlyMap<string, ReviewedEconomicSupplyPlan> = new Map(
-  ReviewedEconomicSupplyPlanFileSchema.parse(reviewedEconomicSupplyPlans).reviews.map(plan => [plan.assetId, plan]),
-);
+export function loadReviewedEconomicSupplyPlans(value: unknown) {
+  const envelope = ReviewedEconomicSupplyPlanEnvelopeSchema.parse(value);
+  const registry = createReviewedAssetRegistry({ rows: envelope.reviews, schema: ReviewedEconomicSupplyPlanSchema, path: "supplyAttribution.reviews" });
+  const plans = new Map<string, ReviewedEconomicSupplyPlan>();
+  const quarantines = new Map<string, ReviewedRegistryEntryError>();
+  for (const row of envelope.reviews) {
+    try {
+      const plan = registry.get(row.assetId);
+      if (plan) plans.set(row.assetId, plan);
+    } catch (error) {
+      if (!(error instanceof ReviewedRegistryEntryError)) throw error;
+      quarantines.set(row.assetId, error);
+    }
+  }
+  return { envelope, plans, quarantines };
+}
+const economicSupplyRegistry = loadReviewedEconomicSupplyPlans(reviewedEconomicSupplyPlans);
+export const REVIEWED_SUPPLY_ATTRIBUTION_ENVELOPE = economicSupplyRegistry.envelope;
+export const REVIEWED_ECONOMIC_SUPPLY_PLANS: ReadonlyMap<string, ReviewedEconomicSupplyPlan> = economicSupplyRegistry.plans;
+export const REVIEWED_ECONOMIC_SUPPLY_PLAN_QUARANTINES: ReadonlyMap<string, ReviewedRegistryEntryError> = economicSupplyRegistry.quarantines;
 
 /** A native liability can still expose bridge message acceptance or escrow control. */
 export function reviewedSupplyRouteKind(route: NonNullable<BridgeRouteRiskProfile["routes"]>[number], profile?: Pick<BridgeRouteRiskProfile, "controls">): "native" | "controlled" {
@@ -991,12 +1009,25 @@ export function deriveReviewedEconomicDeploymentPartition(input: {
   const units = new Map<string, EconomicFraction>();
   const rawBasis = input.plan.deployments.every(row => row.amountBasis === "circulating-usd");
   if (!rawBasis && input.plan.deployments.some(row => row.amountBasis === "circulating-usd")) return null;
+  const chainAnchors = new Map<string, string>();
+  const apiObservationIds = new Set([
+    ...input.plan.escrows.flatMap(escrow => escrow.receiptClaimSources.map(source => `receipt:${escrow.id}:${source.deploymentKey}`)),
+    ...input.plan.escrows.filter(escrow => escrow.inFlightSource !== null && !("kind" in escrow.inFlightSource)).map(escrow => `in-flight:${escrow.id}`),
+    ...(input.plan.liabilityInFlightSource === null ? [] : ["in-flight:liability"]),
+  ]);
   const convert = (key: string, observation: EconomicSupplyObservation): EconomicFraction | null => {
     const row = input.plan.deployments.find(row => row.deploymentKey === key);
     if (!row || observation.deploymentKey !== key || !current(observation.observedAtSec, policy.observationMaxAgeSec)) return null;
-    if (!observation.id.startsWith("in-flight:") && !observation.id.startsWith("receipt:")) {
-      if ((row.read.kind === "evm-total-supply" || row.read.kind === "evm-balance") &&
-        (!/^(0|[1-9][0-9]*)$/.test(observation.anchor) || !EVM_BLOCK_HASH_RE.test(observation.anchorHash))) return null;
+    if (!apiObservationIds.has(observation.id)) {
+      const evmState = row.read.kind === "evm-total-supply" || row.read.kind === "evm-balance" ||
+        (row.holdingKind === "native-gas" && observation.id !== row.deploymentKey);
+      if (evmState) {
+        if (!/^(0|[1-9][0-9]*)$/.test(observation.anchor) || !EVM_BLOCK_HASH_RE.test(observation.anchorHash)) return null;
+        const anchor = `${observation.anchor}:${observation.anchorHash}:${observation.observedAtSec}`;
+        const previous = chainAnchors.get(row.chainId);
+        if (previous !== undefined && previous !== anchor) return null;
+        chainAnchors.set(row.chainId, anchor);
+      }
       if (row.read.kind === "solana-mint" && !SOLANA_BLOCK_HASH_RE.test(observation.anchorHash)) return null;
       if (row.read.kind === "xrpl-issued-currency" && !SHA256_RE.test(observation.anchorHash)) return null;
     }
@@ -1104,6 +1135,37 @@ export function normalizeReviewedEconomicDeploymentAttribution(packet: ReviewedE
     conversions: [...packet.conversions].sort((a, b) => compareText(a.sourceId, b.sourceId)) };
 }
 
+/** Alias labels represent a single chain allocation, not competing observations. */
+export function canonicalEligibleProviderSupply(rows: Record<string, { current: number }>): Map<string, number> | null {
+  const totals = new Map<string, number>();
+  for (const [label, row] of Object.entries(rows)) {
+    if (!Number.isFinite(row.current) || row.current < 0) return null;
+    const chainId = resolveChainId(label) ?? label;
+    const total = (totals.get(chainId) ?? 0) + row.current;
+    if (!Number.isFinite(total)) return null;
+    totals.set(chainId, total);
+  }
+  return totals;
+}
+
+export function economicProviderSupplyContradictionChain(
+  packet: ReviewedEconomicDeploymentPartition, providerRows: Record<string, { current: number }>,
+): string | null {
+  const providers = canonicalEligibleProviderSupply(providerRows);
+  if (!providers) return "invalid-amount";
+  const policy = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution;
+  const tolerance = Math.max(policy.conservationAbsoluteToleranceUsd, packet.aggregate.supplyUsd * policy.conservationRelativeTolerance);
+  const attributed = new Map<string, number>();
+  for (const row of packet.deployments) attributed.set(row.chainId, (attributed.get(row.chainId) ?? 0) + row.currentSupplyUsd);
+  for (const [chainId, amount] of providers) {
+    const actual = attributed.get(chainId);
+    if (actual === undefined || !Number.isFinite(actual) || Math.abs(actual - amount) > tolerance) {
+      return Object.keys(providerRows).find(label => (resolveChainId(label) ?? label) === chainId) ?? chainId;
+    }
+  }
+  return null;
+}
+
 export function reviewedEconomicDeploymentAttributionValidationError(input: {
   assetId: string; attribution: ReviewedEconomicDeploymentPartition; aggregateSupplyUsd: number;
   registryFingerprint: string; clockSec: number; baseInputGenerationId?: string; sourceGeneration?: string;
@@ -1119,13 +1181,7 @@ export function reviewedEconomicDeploymentAttributionValidationError(input: {
     (input.aggregateObservedAtSec !== undefined && packet.aggregate.observedAtSec !== input.aggregateObservedAtSec) ||
     (plan.referencePriceSource === null && input.referencePrice !== undefined && (!input.referencePrice || packet.referencePrice.sourceId !== input.referencePrice.sourceId ||
       Number(packet.referencePrice.value) !== input.referencePrice.priceUsd || packet.referencePrice.observedAtSec !== input.referencePrice.observedAtSec))) return "Economic supply attribution identity/source binding mismatch";
-  const policy = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution;
-  const tolerance = Math.max(policy.conservationAbsoluteToleranceUsd, input.aggregateSupplyUsd * policy.conservationRelativeTolerance);
-  for (const [chain, provider] of Object.entries(input.chainRows ?? {})) {
-    const chainId = resolveChainId(chain) ?? chain;
-    const rows = packet.deployments.filter(row => row.chainId === chainId);
-    if (rows.length === 0 || Math.abs(rows.reduce((sum, row) => sum + row.currentSupplyUsd, 0) - provider.current) > tolerance) return "Economic supply attribution contradicts eligible provider chain";
-  }
+  if (economicProviderSupplyContradictionChain(packet, input.chainRows ?? {}) !== null) return "Economic supply attribution contradicts eligible provider chain";
   const recomputed = deriveReviewedEconomicDeploymentPartition({ plan, baseInputGenerationId: packet.baseInputGenerationId,
     sourceGeneration: packet.sourceGeneration, registryFingerprint: packet.registryFingerprint, clockSec: input.clockSec,
     aggregate: packet.aggregate, referencePrice: packet.referencePrice, conversions: packet.conversions,
@@ -1144,12 +1200,8 @@ export function hasCompleteEligibleProviderSupply(input: {
   const policy = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution;
   if (!meta || amount === null || amount <= 0 || aggregate?.observedAtSec == null ||
     aggregate.observedAtSec > input.clockSec || input.clockSec - aggregate.observedAtSec > policy.observationMaxAgeSec) return false;
-  const rows = new Map<string, number>();
-  for (const [chain, row] of Object.entries(input.chainCirculatingById[assetId] ?? {})) {
-    if (!Number.isFinite(row.current) || row.current < 0) return false;
-    const key = resolveChainId(chain) ?? chain;
-    rows.set(key, (rows.get(key) ?? 0) + row.current);
-  }
+  const rows = canonicalEligibleProviderSupply(input.chainCirculatingById[assetId] ?? {});
+  if (!rows) return false;
   const routes = meta.bridgeRouteRisk?.routes ?? [];
   if (routes.length === 0) return false;
   const plan = REVIEWED_ECONOMIC_SUPPLY_PLANS.get(assetId);

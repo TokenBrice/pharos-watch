@@ -8,7 +8,12 @@ import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
 import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
 import type { AssetExtension, SafetyScoreV9FactSetExtensionV2 } from "../safety-score-v9/fact-set-schema";
-import { makeV9RoleExtension, makeV9TwoAssetFixedInput, v9Status } from "../../test-helpers/v9-fixed-input";
+import { createAssetBuildContext } from "../safety-score-v9/fact-set-context";
+import { buildWrapperLocalFacts } from "../safety-score-v9/fact-set-wrapper";
+import type { V9ExitRouteFactV2 } from "@shared/types/safety-score-v9-facts";
+import { computeV9FactSetDigest } from "@shared/lib/safety-score-v9/facts";
+import { buildSafetyScoreV9RouteReviews } from "../safety-score-v9/extension-routes";
+import { makeV9RoleExtension, makeV9TwoAssetFixedInput, makeV9QueuedRedemptionFixedInput, v9Status } from "../../test-helpers/v9-fixed-input";
 import { alphaMeta, localControl, metaMap, rebuildFixed, type FixedInput } from "./safety-score-v9-fact-set.test-support";
 
 interface WrapperFixture {
@@ -41,9 +46,17 @@ function wrapperFixture(variantKind: "strategy-vault" | "risk-absorption" | "sav
   return { fixed, extension, wrapper };
 }
 
-function compile(fixture: WrapperFixture) {
-  const factSet = compileSafetyScoreV9FactSetFromFixedInput(fixture.fixed, fixture.extension);
+function compile(fixture: WrapperFixture, unwindRoute?: (route: V9ExitRouteFactV2) => V9ExitRouteFactV2 | V9ExitRouteFactV2[]) {
+  let factSet = structuredClone(compileSafetyScoreV9FactSetFromFixedInput(fixture.fixed, fixture.extension));
   const asset = factSet.assets.find((candidate) => candidate.assetId === "alpha")!;
+  if (unwindRoute) {
+    const route = unwindRoute(structuredClone(asset.exitRoutes[0]!));
+    asset.wrapperLocalFacts = buildWrapperLocalFacts(
+      createAssetBuildContext(fixture.fixed, fixture.extension, fixture.wrapper, "a".repeat(64)),
+      { ...asset, exitRoutes: Array.isArray(route) ? route : [route] },
+    );
+    factSet = { ...factSet, v9FactSetDigest: computeV9FactSetDigest(factSet) };
+  }
   if (asset.wrapperLocalFacts.applicability !== "wrapper") throw new Error("Expected wrapper facts");
   const evaluated = evaluateV9FactSet(factSet, V9_CANDIDATE_POLICY_V1);
   return { asset, facts: asset.wrapperLocalFacts, card: evaluated.assets.find((candidate) => candidate.assetId === "alpha")! };
@@ -124,6 +137,167 @@ describe("wrapper-local loss absorption and custody scope", () => {
     fixture.wrapper.controlReview = { state: "reviewed-controls", controls: [localControl({ controlKind: "bridge" })] };
     expect(compile(fixture).facts.facts.lossAbsorptionEmergencyControls).toMatchObject({ disposition: "integration-missing", assessment: null });
   });
+
+  it.each(["controller-owner", "inherited-domain"] as const)(
+    "does not double-charge a parent emergency control attributed by %s",
+    (attribution) => {
+      const fixture = wrapperFixture("strategy-vault");
+      const inherited = localControl({
+        controlKey: "parent:gateway",
+        controlKind: "mint",
+        capabilities: ["mint"],
+        claimImpairment: "unbounded",
+        economicLossScope: "global-claim",
+        ...(attribution === "controller-owner"
+          ? { controllerAssetId: "beta" }
+          : { failureDomains: [{ kind: "mint-control", key: "asset:beta" }] }),
+      });
+      fixture.wrapper.controlReview = { state: "reviewed-controls", controls: [inherited] };
+      const parentOnly = compile(fixture);
+      expect(parentOnly.facts.facts.lossAbsorptionEmergencyControls.assessment).toBeNull();
+      expect(parentOnly.card.trace.wrapperParentLimit?.adjustments).not.toContainEqual(
+        expect.objectContaining({ factKey: "lossAbsorptionEmergencyControls", discountPoints: 2.8 }),
+      );
+
+      fixture.wrapper.controlReview.controls.push(localControl({
+        controlKey: "wrapper:emergency",
+        controlKind: "governance",
+        claimImpairment: "unbounded",
+        economicLossScope: "global-claim",
+      }));
+      const local = compile(fixture);
+      expect(local.facts.facts.lossAbsorptionEmergencyControls).toMatchObject({
+        disposition: "reviewed", assessment: "high",
+      });
+      expect(local.facts.facts.lossAbsorptionEmergencyControls.signals).toContain("unbounded-claim-control:wrapper:emergency");
+      expect(local.facts.facts.lossAbsorptionEmergencyControls.signals).not.toContain("unbounded-claim-control:parent:gateway");
+      expect(local.card.trace.wrapperParentLimit?.adjustments).toContainEqual(
+        expect.objectContaining({ factKey: "lossAbsorptionEmergencyControls", discountPoints: 2.8 }),
+      );
+    },
+  );
+
+  it.each(["noneligible", "documented-model", "lower-bound"] as const)(
+    "keeps %s partial unwind capacity uncertain instead of measured adverse",
+    (observation) => {
+      const fixture = wrapperFixture("strategy-vault");
+      const { facts, card } = compile(fixture, (route) => ({
+        ...route,
+        ...(observation === "documented-model"
+          ? { lane: "redemption", routeFamily: "issuer-redemption", evidenceKind: "documented-terms" }
+          : {}),
+        scoreEligible: observation !== "noneligible",
+        coverageClass: observation === "lower-bound" ? "exact-lower-bound" : "exact-complete",
+        capacityCurve: route.capacityCurve.map((point) => ({
+          ...point, executableUsd: point.requestedNotionalUsd * 0.5228, completionRatio: 0.5228,
+        })),
+      }));
+      expect(facts.facts.measuredUnwind.assessment).toBeNull();
+      expect(facts.facts.measuredUnwind.disposition).not.toBe("reviewed");
+      expect(card.trace.wrapperParentLimit?.adjustments).not.toContainEqual(
+        expect.objectContaining({ factKey: "measuredUnwind", assessment: "moderate" }),
+      );
+    },
+  );
+
+  it("does not mistake a thin observed market for whole-wrapper exhaustion while another route is modeled", () => {
+    const fixture = wrapperFixture("strategy-vault");
+    const { facts } = compile(fixture, (route) => [
+      {
+        ...route, scoreEligible: true, coverageClass: "exact-complete",
+        capacityCurve: route.capacityCurve.map((point) => ({
+          ...point, executableUsd: point.requestedNotionalUsd * 0.1, completionRatio: 0.1,
+        })),
+      },
+      {
+        ...route, routeKey: "redemption:modeled", lane: "redemption",
+        routeFamily: "issuer-redemption", evidenceKind: "documented-terms",
+        scoreEligible: false, coverageClass: "modelled-terms-lower-bound",
+      },
+    ]);
+    expect(facts.facts.measuredUnwind).toMatchObject({
+      disposition: "integration-missing", assessment: null,
+    });
+  });
+
+  it("retains the charge for a genuinely observed exact-complete partial unwind", () => {
+    const fixture = wrapperFixture("strategy-vault");
+    const { facts, card } = compile(fixture, (route) => ({
+      ...route, scoreEligible: true, coverageClass: "exact-complete",
+      capacityCurve: route.capacityCurve.map((point) => ({
+        ...point, executableUsd: point.requestedNotionalUsd * 0.5228, completionRatio: 0.5228,
+      })),
+    }));
+    expect(facts.facts.measuredUnwind).toMatchObject({ disposition: "reviewed", assessment: "moderate" });
+    expect(card.trace.wrapperParentLimit?.adjustments).toContainEqual(
+      expect.objectContaining({ factKey: "measuredUnwind", assessment: "moderate", discountPoints: 1.75 }),
+    );
+  });
+
+  it("keeps a published but unquantified formula fee bounded, not issuer-undisclosed or cost-admitted", () => {
+    const fixture = wrapperFixture("strategy-vault");
+    const entry = structuredClone(makeV9QueuedRedemptionFixedInput().redemptionBackstopMap.alpha!);
+    entry.feeConfidence = "formula";
+    entry.feeModelKind = "formula";
+    entry.feeBps = null;
+    entry.feeDescription = "Early redemption fee declines linearly from 3.5% to 0.1%.";
+    const observation = entry.capacityProfile!.exitRouteObservations![0]!;
+    observation.feeEvidence = "undisclosed-reviewed";
+    observation.scoreEligible = false;
+    observation.observedAt = fixture.fixed.clockSec - 60;
+    entry.updatedAt = observation.observedAt;
+    fixture.fixed.redemptionBackstopMap.alpha = entry;
+    fixture.fixed.redemptionGenerationId = "redemption:fixture";
+    fixture.fixed.redemptionStale = false;
+    fixture.fixed.inputFreshness.redemptionBackstops = {
+      updatedAt: observation.observedAt, ageSeconds: 60, stale: false,
+    };
+    fixture.fixed = rebuildFixed(fixture.fixed);
+    fixture.wrapper.routeReviews = buildSafetyScoreV9RouteReviews(fixture.fixed, "alpha");
+    const { asset, facts, card } = compile(fixture);
+    const redemption = asset.exitRoutes.find((route) => route.lane === "redemption")!;
+    expect(redemption).toMatchObject({ feeEvidence: "disclosed-unquantified", scoreEligible: false });
+    expect(facts.facts.withdrawalTerms).toMatchObject({ disposition: "reviewed", assessment: "high" });
+    expect(card.exit.routes.find((route) => route.routeKey === redemption.routeKey)).toMatchObject({
+      included: true, exclusionReason: null, feeEvidence: "disclosed-unquantified",
+      components: { cost: V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedCostScore },
+    });
+    expect(card.trace.wrapperParentLimit?.adjustments).not.toContainEqual(
+      expect.objectContaining({ factKey: "withdrawalTerms", disposition: "issuer-undisclosed" }),
+    );
+  });
+
+  it.each(["discretionary", "queued"] as const)(
+    "keeps known %s withdrawal restrictions charged when only formula fee quantification is missing",
+    (restriction) => {
+      const fixture = wrapperFixture("savings-passthrough");
+      fixture.wrapper.variantKind = "pure-wrapper";
+      const routeWithTerms = (route: V9ExitRouteFactV2): V9ExitRouteFactV2 => ({
+        ...route,
+        lane: "redemption", routeFamily: "issuer-redemption",
+        evidenceKind: "documented-terms", scoreEligible: false,
+        holderAccess: restriction === "discretionary" ? "issuer-only" : "permissionless",
+        executionModel: restriction,
+        executionCertainty: restriction === "discretionary" ? "discretionary" : "bounded",
+        settlementModel: restriction === "queued" ? "queued" : "atomic",
+        settlementSlaSec: restriction === "queued" ? 14 * 86_400 : null,
+      });
+      const quantified = compile(fixture, routeWithTerms);
+      const unquantified = compile(fixture, (route) => ({
+        ...routeWithTerms(route), feeEvidence: "disclosed-unquantified",
+      }));
+      const assessment = restriction === "discretionary" ? "critical" : "high";
+      expect(unquantified.facts.facts.withdrawalTerms).toMatchObject({
+        disposition: "reviewed", assessment,
+      });
+      const before = quantified.card.trace.wrapperParentLimit!;
+      const after = unquantified.card.trace.wrapperParentLimit!;
+      expect(after.adjustments.find((adjustment) => adjustment.factKey === "withdrawalTerms"))
+        .toEqual(before.adjustments.find((adjustment) => adjustment.factKey === "withdrawalTerms"));
+      expect(after.appliedDiscount).toBe(before.appliedDiscount);
+      expect(after.limit).toBe(before.limit);
+    },
+  );
 
   it("keeps savings receipts outside local loss absorption", () => {
     const fixture = wrapperFixture("savings-passthrough");

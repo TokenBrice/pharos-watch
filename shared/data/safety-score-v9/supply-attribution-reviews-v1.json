@@ -18,7 +18,7 @@
         "https://docs.frax.com/frxusd/frxusd-contracts",
         "https://docs.frax.com/fraxtal/addresses/frax-tokens"
       ],
-      "rationale": "FIP419 upgrades the Fraxtal stablecoin predeploy in place to frxUSD; FIP430 separates frxUSD and Legacy FRAX liabilities. At block 42061479 the provider's fc...01 contract reports Frax USD / frxUSD and REMOTE_TOKEN Ethereum frxUSD. Exclude only this mislabelled provider row from unresolved deployment exposure, retaining the original aggregate, chain observations and all other materiality facts. Nonzero LFRAX at ff...1fd remains a separate legacy deployment/catalog question and is not excluded.",
+      "rationale": "FIP419 upgrades the Fraxtal stablecoin predeploy in place to frxUSD; FIP430 separates frxUSD and Legacy FRAX liabilities. At block 42061479 the provider's fc...01 contract reports Frax USD / frxUSD and REMOTE_TOKEN Ethereum frxUSD. Exclude only this mislabelled provider row from unresolved-deployment and unmatched/unreviewed bridge-share numerators, retaining the original aggregate, chain observations and all other materiality facts. Nonzero LFRAX at ff...1fd remains a separate legacy deployment/catalog question and is not excluded.",
       "provenance": {
         "provider": "defillama",
         "providerAssetId": "6",

@@ -568,6 +568,8 @@ export const V9ExitRouteFactBaseSchema = z
     // conservatively; current compilers still materialize the normalized value
     // in their output.
     modelConfidence: z.enum(["high", "medium", "low"]).default("low"),
+    /** Reviewed fee disclosure without a same-notional execution cost bound. */
+    feeEvidence: z.enum(["undisclosed-reviewed", "disclosed-unquantified"]).optional(),
     coverageClass: V9RouteCoverageClassSchema,
     capacityScoringHorizon: RedemptionCapacityScoringHorizonSchema.optional(),
     settlementModel: V9RouteSettlementModelSchema,
@@ -591,8 +593,6 @@ const V9ExitRouteFactV2Schema = V9ExitRouteFactBaseSchema
     executionModelId: CanonicalTextSchema.optional(),
     executionCertificate: ExitExecutionCertificateSchema.optional(),
     evidenceKind: ExitRouteEvidenceKindSchema,
-    /** Carried from the route observation: the reviewed fee is undisclosed, so the modeled capacity has no cost bound. */
-    feeEvidence: z.literal("undisclosed-reviewed").optional(),
     /**
      * Carried from the route observation: the route is open but no evidence
      * bounds settlement completion, so capacity is a bounded evidence gap
@@ -920,6 +920,9 @@ const V9OracleControlReviewV2Schema = z
   .object({
     status: V9FactStatusV2Schema,
     tier: z.enum(ORACLE_RISK_TIER_VALUES).nullable(),
+    // Current verified topology of positively applicable paths, independent of
+    // unresolved sibling inventory. It cannot describe an unreviewed sibling.
+    knownPathTier: z.enum(ORACLE_RISK_TIER_VALUES).optional(),
     liquidationBranchesApplicable: z.boolean().optional(),
     branches: canonicalArrayBy(V9OracleBranchReviewV2Schema, (branch) => branch.branch),
     paths: canonicalArrayBy(
@@ -942,6 +945,11 @@ const V9OracleControlReviewV2Schema = z
   })
   .strict()
   .superRefine((review, ctx) => {
+    if (review.knownPathTier !== undefined && !review.paths?.some((path) =>
+      path.applicability.state === "required" && path.observationState === "known",
+    )) {
+      ctx.addIssue({ code: "custom", path: ["knownPathTier"], message: "Known-path oracle tier requires a positively applicable reviewed path" });
+    }
     if (
       review.status.applicability.state === "not-applicable" &&
       (review.tier !== null || review.branches.length > 0)
@@ -2150,6 +2158,13 @@ export type CompiledV9FactSetV2 = z.infer<typeof CompiledV9FactSetV2Schema>;
 export const V9FactSetCoreV3Schema = V9FactSetCoreV3ObjectSchema.superRefine((value, ctx) =>
   validateFactSetCore(value, ctx),
 );
+
+/** Keep cohort/reference validation when a compiler has already admitted each asset. */
+export function createV9FactSetCoreV3Schema(assetSchema: z.ZodType<V9AssetFactsV3>) {
+  return z.object({ ...V9FactSetCoreV3Fields, assets: canonicalArrayBy(assetSchema, (asset) => asset.assetId) })
+    .strict()
+    .superRefine((value, ctx) => validateFactSetCore(value, ctx));
+}
 
 export const CompiledV9FactSetV3Schema = z
   .object({ ...V9FactSetCoreV3Fields, v9FactSetDigest: Sha256Schema })

@@ -28,12 +28,16 @@
       {
         "label": "Ripio local stablecoins",
         "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+      },
+      {
+        "label": "wCLP certification headed 2026-06-30; conflicting procedure date and currency",
+        "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/Aug%202026/Token%20wCLP%2006.30.2026%20Certification%20vf.pdf?hsLang=en"
       }
     ],
-    "rationale": "Re-opened 2026-08-29: Ripio's current wFIAT page identifies wCLP as a Chilean-peso local stablecoin and states that wFIAT tokens are minted 1:1 from local-currency deposits held in regulated liquid instruments. The same attestation archive currently publishes March 31, 2026 certifications for wARS, wBRL, wCOP, and wMXN, but no wCLP-specific certificate, reserve report, bank balance, or instrument split. Sibling-token attestations cannot be transferred to wCLP. The reserve therefore remains a single conservative Chilean-peso cash and liquid-instrument envelope.",
-    "compositionBasis": "Ripio wFIAT local-stablecoin disclosure for wCLP; no wCLP-specific dated reserve report",
+    "rationale": "The 2026-08-29 review retained a conservative Chilean-peso cash and liquid-instrument envelope. On 2026-10-02 the official attestation index was found to link a wCLP-specific certification headed 2026-06-30 and signed 2026-07-28. The liability procedure instead names 2026-03-31, and the reserve procedure and conclusion mix Chilean pesos with ARS and Argentine pesos. This proves publication of a token-specific report, not a reliable dated CLP balance or category split. The reserve envelope, its original review date and all unknown safeguards are retained pending issuer/accountant clarification; no current composition date or protective tier is inferred.",
+    "compositionBasis": "Ripio wFIAT local-stablecoin disclosure for wCLP; linked June 2026 certification has unresolved liability-date and reserve-currency inconsistencies",
     "scope": "full-composition",
-    "knownUnknownExposure": "The full 100% reserve envelope remains unclassified beyond Chilean-peso cash and local-currency liquid instruments; no wCLP-specific attestation, current category weights, reserve institutions, or reconciliation were found.",
+    "knownUnknownExposure": "The full 100% reserve envelope remains unclassified beyond Chilean-peso cash and local-currency liquid instruments. A wCLP-specific certification is published, but its internally inconsistent dates and currency do not establish reliable current category weights, named reserve institutions, or a matched CLP assets/liabilities denominator.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -41,7 +45,7 @@
         "reserveName": "Chilean-peso cash and local-currency liquid instruments",
         "pct": 100,
         "disposition": "insufficient-evidence",
-        "rationale": "Ripio identifies the wFIAT reserve family but does not publish wCLP-specific category weights, counterparties, or an assurance report."
+        "rationale": "Ripio identifies the wFIAT reserve family and publishes a wCLP-specific certification, but its liability-date and reserve-currency inconsistencies prevent reliable composition admission; named counterparties and category weights remain undisclosed."
       }
     ]
   },

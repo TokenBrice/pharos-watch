@@ -2,12 +2,12 @@
   "id": "usda-anzens",
   "name": "Anzens USDA",
   "symbol": "USDA",
-  "oneLiner": "USDA is Anzens' U.S.-MSB-registered dollar stablecoin on Cardano, redeemable 1:1 against USD cash and Treasuries custodied by BitGo Trust.",
+  "oneLiner": "USDA is Anzens' Cardano dollar stablecoin, with issuer redemption and historically examined cash and short-duration government-fund reserves.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized"
   },
-  "collateral": "USD and dollar-equivalent reserves including U.S. Treasuries, held in segregated accounts custodied by BitGo Trust (Qualified Custodian)",
+  "collateral": "USD reserve assets described in Anzens' terms. The January 31, 2026 accountant examination identifies fiat reserves custodied through BitGo Trust and Superstate Short Duration U.S. Government Securities Fund shares held directly by Anzens; current constituent weights are not disclosed.",
   "pegMechanism": "Direct 1:1 USD redemption through Anzens via KYC-verified bank transfers; minting and burning available to retail and institutional users in eligible U.S. states",
   "mechanismArchetype": "fiat-cash",
   "mechanismArchetypeReview": {

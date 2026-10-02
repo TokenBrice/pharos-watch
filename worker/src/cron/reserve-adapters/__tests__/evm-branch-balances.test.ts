@@ -1093,6 +1093,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
         params: {
           debtSelector: "0x18160ddd", // totalSupply() as example
           debtDecimals: 18,
+          census: { kind: "reviewed-roster", reviewedAt: "2023-11-13", sourceUrls: ["https://example.com/census"] },
         },
       }),
       {
@@ -1165,6 +1166,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
           debtSelector: "0x18160ddd",
           debtContract: "0xde17a000ba631c5d7c2bd9fb692efea52d90dee2",
           debtDecimals: 18,
+          census: { kind: "reviewed-roster", reviewedAt: "2023-11-13", sourceUrls: ["https://example.com/census"] },
         },
       }),
       {
@@ -1201,6 +1203,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
         params: {
           debtSelector: "0x18160ddd",
           debtDecimals: 18,
+          census: { kind: "reviewed-roster", reviewedAt: "2023-11-13", sourceUrls: ["https://example.com/census"] },
         },
       }),
       {
@@ -1225,6 +1228,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
         params: {
           debtSelector: "0x18160ddd",
           debtDecimals: 18,
+          census: { kind: "reviewed-roster", reviewedAt: "2023-11-13", sourceUrls: ["https://example.com/census"] },
         },
       }),
       {

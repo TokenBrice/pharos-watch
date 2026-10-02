@@ -719,14 +719,32 @@ describe("buildSafetyScoreV9MechanismReview", () => {
     ).toThrow(/sourceUrl must match an overlay source/);
   });
 
-  it("publishes complete unhealthy USDQ evidence as failed health rather than missing coverage", () => {
-    const review = buildSafetyScoreV9MechanismReview(fixedInputStub(), { id: "usdq-quill" } as MechanismMeta, "cdp");
-    if (review?.archetype !== "cdp") throw new Error("expected the curated USDQ CDP overlay");
-    expect(review.collateralizationRatio).toBe(0.676425);
-    expect(review.liquidationCapacityRatio).toBe(0.00383);
+  it("keeps complete unhealthy CDP evidence as failed health rather than missing coverage", () => {
+    const overlay = MechanismReviewOverlaySchema.parse({
+      assetId: "unhealthy-cdp-fixture", archetype: "cdp", reviewedAt: "2026-07-20",
+      sources: [{ label: "Pinned complete branch accounting", url: "https://example.com/cdp" }],
+      notes: "All branches observed; low collateral coverage and an unhealthy branch are verified facts.",
+      metrics: { collateralizationRatio: 0.676425, liquidationCapacityRatio: 0.00383 },
+      metricApplicability: { collateralizationRatio: { state: "measured" }, liquidationCapacityRatio: { state: "measured" } },
+      components: {
+        collateralizationParameters: { applicability: "measured", quality: "adequate" },
+        liquidationMechanics: { applicability: "measured", quality: "weak" },
+        backstop: { applicability: "measured", quality: "weak" },
+        branchIsolation: { applicability: "measured", quality: "adequate" },
+        shutdownAndBadDebt: { applicability: "measured", quality: "failed" },
+        structuralRedemption: { applicability: "measured", quality: "weak" },
+      },
+    });
+    const review = expandOverlayReview(overlay);
+    if (review.archetype !== "cdp") throw new Error("Expected CDP review");
     expect(review.metricApplicability.collateralizationRatio.state).toBe("measured");
     expect(review.shutdownAndBadDebt.status.observationState).toBe("known");
     expect(review.shutdownAndBadDebt.quality).toBe("failed");
+    const result = evaluateV9Backing(backingAsset([exposure({ key: "collateral", weight: 1 })]), review, V9_CANDIDATE_POLICY_V1);
+    expect(result.score).not.toBeNull();
+    expect(result.contributions.find(row => row.componentKey === "mechanism:shutdown-and-bad-debt")).toMatchObject({
+      observationState: "known", score: V9_CANDIDATE_POLICY_V1.policy.semantic.backing.componentQuality.failed,
+    });
   });
 
   it("publishes CHFm conversion inventory only as a structural analogue", () => {

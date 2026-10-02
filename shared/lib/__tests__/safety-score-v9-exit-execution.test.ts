@@ -27,7 +27,7 @@ describe("exact-request execution certificate admission", () => {
     const zero = makeExecutionCertificate();
     Object.assign(zero.points[0]!, { executedRawInput: "0", executableUsd: 0, certification: "exact-lower-bound", executionCostBps: 0, allInCostBps: 0, fees: [], reason: "observed-no-bids" });
     zero.points[0]!.outputs[0]!.rawUnits = "0";
-    expect(admission(zero)).toMatchObject({ state: "adverse", point: { executableUsd: 0 } });
+    expect(admission(zero)).toMatchObject({ state: "observed", point: { executableUsd: 0 } });
     expect(resolveExitExecutionRequestPoint(zero, { requestedNotionalUsd: 1_000_000, maxCostBps: 200 })).toBeNull();
     zero.points[0]!.requestedNotionalUsd = 10_000;
     zero.points[0]!.requestedRawInput = "10000000000";

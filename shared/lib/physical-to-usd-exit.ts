@@ -158,9 +158,10 @@ export function evaluatePhysicalToUsdExit(
   const bps = issuerBps + (fee.insuranceBps as number) + (fee.taxBps as number) + (fee.conversionBps as number) + spread;
   const netUsd = grossUsd - grossUsd * bps / 10000 - fixedUsd - lots * ((fee.deliveryUsdPerLot as number) + (fee.assayUsdPerLot as number));
   const costBps = grossUsd > 0 ? (grossUsd - netUsd) / grossUsd * 10000 : null;
-  return { ...base, lots, tokens, grossUsd, netUsd: grossUsd > 0 ? Math.max(0, netUsd) : 0,
+  // Preserve the full signed loss in costBps; non-positive proceeds are unavailable, not a zero statistic.
+  return { ...base, lots, tokens, grossUsd, netUsd: netUsd > 0 ? netUsd : null,
     costBps, minimumUsd: minimum * unitUsd, maximumSettlementSec,
     modelConfidence: branch === "best-effort-issuer-cash-out" || assumptions.length > 0 ? "low" : "medium",
     assumptions: [...new Set(assumptions)],
-    rejectionReason: grossUsd === 0 ? "physical-request-below-minimum" : costBps !== null && costBps > policy.maxCostBps + 1e-8 ? "physical-cost-ceiling-exceeded" : null };
+    rejectionReason: grossUsd === 0 ? "physical-request-below-minimum" : netUsd <= 0 ? "physical-net-usd-nonpositive" : costBps !== null && costBps > policy.maxCostBps + 1e-8 ? "physical-cost-ceiling-exceeded" : null };
 }

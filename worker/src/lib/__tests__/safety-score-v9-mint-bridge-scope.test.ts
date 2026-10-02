@@ -1107,6 +1107,31 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     expect(unresolved[0]!.scopedQuestionFresh).not.toBe(true);
   });
 
+  it.each(["reach", "activation", "economic-loss"] as const)("keeps partial unknown %s bounded without a redundant scoped question", (unknownField) => {
+    const metadata = scopedMintReachMeta();
+    const profile = metadata.mintAuthority!;
+    profile.controls = [profile.controls![0]!];
+    profile.economicCapSemantics = "bounded";
+    profile.upgradeability = { model: "immutable", canChangeMintLogic: false, sources: [] };
+    delete profile.review.scopedQuestions;
+    const path = profile.controls[0]!.executionScope!.paths[0]!;
+    path.reach = unknownField === "reach" ? "unknown" : "root";
+    path.activation = unknownField === "activation" ? "unknown" : "active";
+    path.economicLossScope = unknownField === "economic-loss" ? "unknown" : "global-claim";
+    path.affectedLiabilityIds = unknownField === "reach" ? [] : [metadata.id];
+    const { compiled } = compileFixture(metadata, { clockSec: SCOPE_CLOCK });
+    const asset = compiled.assets[0]!;
+    const control = asset.controls[0]!;
+    expect(control).toMatchObject({
+      status: { observationState: "bounded-unknown" }, economicLossScope: "unknown",
+      capSemantics: { kind: "bounded" }, claimImpairment: "bounded",
+    });
+    const result = evaluateV9EconomicControlAssetFacts(asset, { assetId: asset.assetId, ...asset.economicControlReview }, V9_CANDIDATE_POLICY_V1);
+    expect(result.components.find((component) => component.kind === "mint")?.posture).toBe("unknown");
+    expect(result.structuralFailures.some((failure) => failure.kind === "centralized-mint")).toBe(false);
+    expect(result.reasons.map((reason) => reason.code)).toContain("unresolved-mint-authority");
+  });
+
   it("keeps an investigated unknown mint reach bounded without erasing verified adverse mint power", () => {
     const { compiled } = compileFixture(scopedMintReachMeta(), { clockSec: SCOPE_CLOCK });
     const asset = compiled.assets[0]!;

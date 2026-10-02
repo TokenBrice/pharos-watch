@@ -25,37 +25,41 @@
     "reviewedAt": "2026-08-08"
   },
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "USDM is minted and redeemed 1:1 against USDC while Monetrix deploys backing into a delta-neutral Hyperliquid strategy; it has no user-owned collateral debt or token-level liquidation branch. The reviewed docs do not identify a public strategy price feed or failover path.",
+    "tier": "standard-external",
+    "summary": "USDM's live MonetrixAccountant values strategy spot and supplied positions through HyperCore's oracle-price precompile at 0x807. Hyperliquid documents three-second validator submissions and a stake-weighted median of submitted prices; each validator aggregates configured exchange prices. At HyperEVM block 47461225, the vault-linked accountant resolves to the exact verified implementation 0x5ce5e40522e8cb42d7a1ae2dadab808d31f1a8e2. Its PrecompileReader rejects failed, short or zero oracle responses. No independent fallback or separate delay is established, and Hyperliquid remains the common venue/oracle dependency.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "top-level-only",
-      "reviewedAt": "2026-08-24",
-      "reviewer": "OpenAI Codex W1b oracle applicability review",
-      "rationale": "USDM has no borrower-specific collateral or liquidation branches, but Monetrix's protocol-wide strategy buys an equivalent dollar amount of spot assets, opens equal short perpetual positions, and actively reallocates among yield sources. Those dollar-valued hedge construction and rebalancing decisions require a price-sensitive top-level authority, whose feed topology and failover remain unpublished.",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol final D/F review 2026-10-02 (DfReview15)",
+      "rationale": "USDM has no borrower-specific collateral or liquidation branches. Its current vault-linked accountant uses HyperCore oracle prices for protocol-wide backing valuation through spot and supplied-position readers. The live accounting path, verified implementation and native oracle documentation establish the top-level price authority; independent failover is not claimed.",
       "sources": [
         {
           "label": "Monetrix delta-neutral strategy documentation (last updated 2026-05-30)",
           "url": "https://doc.monetrix.xyz/how-it-works/delta-neutral-strategy"
+        },
+        {
+          "label": "Exact deployed MonetrixAccountant and PrecompileReader source, pinned HyperEVM block 47461225",
+          "url": "https://sourcify.dev/server/v2/contract/999/0x5ce5e40522e8cb42d7a1ae2dadab808d31f1a8e2?fields=sources,abi"
         }
       ]
     },
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex ORCL curation batch 24",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol final D/F review 2026-10-02 (DfReview15)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Monetrix mint USDM documentation",
-        "url": "https://doc.monetrix.xyz/guide/mint"
+        "label": "Exact deployed MonetrixAccountant and PrecompileReader source, pinned HyperEVM block 47461225",
+        "url": "https://sourcify.dev/server/v2/contract/999/0x5ce5e40522e8cb42d7a1ae2dadab808d31f1a8e2?fields=sources,abi"
       },
       {
-        "label": "Monetrix redeem USDM documentation",
-        "url": "https://doc.monetrix.xyz/guide/redeem"
+        "label": "Hyperliquid native oracle aggregation and three-second updates",
+        "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/hypercore/oracle.md"
       },
       {
-        "label": "Monetrix delta-neutral strategy documentation",
-        "url": "https://doc.monetrix.xyz/how-it-works/delta-neutral-strategy"
+        "label": "HyperCore read precompiles and block-state guarantees",
+        "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/hyperevm/interacting-with-hypercore.md"
       }
     ]
   }

@@ -457,7 +457,8 @@ function buildRoute(
     producerScoreEligible: args.observation.scoreEligible && executionAdmission?.state !== "unavailable",
     routeState,
     outputState: output.status.observationState,
-    coverageClass: args.review.coverageClass,
+    coverageClass: executionAdmission && executionAdmission.state !== "unavailable"
+      ? executionAdmission.point.certification : args.review.coverageClass,
     holderAccess: args.review.holderAccess,
     executionModel: args.review.executionModel,
     executionCertainty: args.review.executionCertainty,
@@ -481,11 +482,14 @@ function buildRoute(
     observationConfidence: args.observation.confidence,
     observationHistory: args.observation.observationHistory ?? null,
     evidenceKind: args.observation.evidenceKind,
-    ...(args.observation.feeEvidence ? { feeEvidence: args.observation.feeEvidence } : {}),
+    ...((args.review.feeEvidence ?? args.observation.feeEvidence)
+      ? { feeEvidence: args.review.feeEvidence ?? args.observation.feeEvidence } : {}),
     ...(args.observation.physicalToUsd ? { physicalToUsd: args.observation.physicalToUsd } : {}),
     ...(args.observation.executionModelId ? { executionModelId: args.observation.executionModelId } : {}),
     ...(certificate ? { executionCertificate: certificate } : {}),
-    coverageClass: executionAdmission?.state === "unavailable" ? "diagnostic" : args.review.coverageClass,
+    coverageClass: executionAdmission
+      ? executionAdmission.state === "unavailable" ? "diagnostic" : executionAdmission.point.certification
+      : args.review.coverageClass,
     capacityScoringHorizon: args.review.capacityScoringHorizon ?? "unknown",
     settlementModel: args.review.settlementModel,
     settlementSlaSec: args.review.settlementSlaSec,
@@ -693,17 +697,33 @@ export function buildRoutes(context: AssetBuildContext): {
     );
   }
   if (routes.length === 0) {
-    // A reviewed-complete DEX surface with zero retained pools and no
-    // redemption row is KNOWN negative evidence (score-defined zero exit),
-    // not missing evidence; missing is reserved for incomplete coverage
-    // (VER-006).
+    // Local 0/0 pool coverage proves global exhaustion only when the captured
+    // deployment census also accounts for every supply-bearing chain.
     const emptyCoverage = context.fixedInput.dexLiqMap[context.asset.assetId]?.exitRouteObservationCoverage;
-    const emptySurfaceComplete =
+    const locallyEmptySurface =
       emptyCoverage != null &&
       emptyCoverage.status === "populated" &&
       emptyCoverage.retainedPoolCount === 0 &&
       emptyCoverage.unsupportedPoolCount === 0;
-    if (emptySurfaceComplete) {
+    const chainSupply = context.fixedInput.chainCirculatingById[context.asset.assetId] ?? {};
+    let capturedChainSupplyUsd = 0;
+    for (const chain in chainSupply) capturedChainSupplyUsd += chainSupply[chain]!.current;
+    const supplyCoverage = context.fixedInput.dexDeploymentSupplyCoverageById[context.asset.assetId];
+    const supplyToleranceUsd = Math.max(0.000001, capturedChainSupplyUsd * 1e-12);
+    const fullSupplyVerifiedEmpty =
+      capturedChainSupplyUsd > 0 &&
+      supplyCoverage != null &&
+      supplyCoverage.unknownChains.length === 0 &&
+      supplyCoverage.unknownSupplyUsd === 0 &&
+      supplyCoverage.unknownSupplyRatio === 0 &&
+      supplyCoverage.providerInaccessibleSupplyUsd === 0 &&
+      supplyCoverage.providerInaccessibleSupplyRatio === 0 &&
+      supplyCoverage.observedSupplyUsd === 0 &&
+      supplyCoverage.observedSupplyRatio === 0 &&
+      supplyCoverage.verifiedNoPoolsSupplyRatio === 1 &&
+      Math.abs(supplyCoverage.totalSupplyUsd - capturedChainSupplyUsd) <= supplyToleranceUsd &&
+      Math.abs(supplyCoverage.verifiedNoPoolsSupplyUsd - capturedChainSupplyUsd) <= supplyToleranceUsd;
+    if (locallyEmptySurface) {
       // Known-empty negative evidence must carry the DEX producer's observation
       // time, not the scoring clock: a stale empty surface is not a current
       // "known" zero-exit fact but a bounded-unknown/stale one (VER2-007). Fresh
@@ -717,12 +737,32 @@ export function buildRoutes(context: AssetBuildContext): {
             sourceGenerationId: context.fixedInput.dexGenerationId,
             disposition: "observed",
             observedAtSec: context.fixedInput.dexLiqMap[context.asset.assetId]!.updatedAt,
-            contentSha256: domainDigest("safety-score-v9.exit-route-observation-coverage.v1", emptyCoverage),
+            contentSha256: domainDigest("safety-score-v9.exit-route-observation-coverage.v1", {
+              coverage: emptyCoverage,
+              supplyCoverage: supplyCoverage ?? null,
+              chainSupply,
+            }),
             maxAgeSec: context.extension.routeFreshness.dexMaxAgeSec,
           },
           context.fixedInput.clockSec,
         ),
       );
+      if (!fullSupplyVerifiedEmpty) {
+        return {
+          exitStatus: missingLocalFact(context, {
+            componentKey: "exit-routes",
+            reasonCode: "missing-runtime-route-evidence",
+            ownerDomain: "exit",
+            responsibility: "integration-missing",
+            policyRuleId: "v9.exit.same-notional-route",
+            observationState: "bounded-unknown",
+            evidenceRefIds: [coverageEvidenceId],
+            message:
+              "The locally empty DEX census does not verify an empty market footprint for every supply-bearing chain in the captured chain distribution.",
+          }).status,
+          exitRoutes: [],
+        };
+      }
       const coverageStale = context.evidence.get(coverageEvidenceId)!.freshness.state === "stale";
       const staleGapId = coverageStale
         ? addGap(

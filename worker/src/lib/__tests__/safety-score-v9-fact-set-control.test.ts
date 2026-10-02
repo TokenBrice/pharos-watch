@@ -195,21 +195,27 @@ describe("Safety Score v9 exact base fact-set adapter — control and wrapper di
       }
     });
 
-    it("grades queued redemption by settlement SLA and measured unwind availability", () => {
+    it("grades queued redemption by its known settlement SLA", () => {
       for (const [settlementSlaSec, assessment] of [[8 * 86_400, "high"], [2 * 86_400, "moderate"]] as const) {
         const fixed = queuedRedemptionFixedInput(86_400, true);
         expect(facts(withRedemptionRoute(fixed, { settlementModel: "queued", holderAccess: "permissionless", executionModel: "market-depth", executionCertainty: "bounded", settlementSlaSec }), fixed).withdrawalTerms).toMatchObject({ assessment });
       }
+    });
+
+    it("keeps incomparable and unavailable unwind evidence bounded instead of critical", () => {
       const draft = structuredClone(exactFixedInput());
       draft.dexLiqMap.alpha!.exitRouteObservations![0]!.maxCostBps = 300;
       draft.dexLiqMap.alpha!.exitRouteObservations![0]!.capacityCurve = draft.dexLiqMap.alpha!.exitRouteObservations![0]!.capacityCurve!.map((point) => ({ ...point, maxCostBps: 300 }));
       const reviewed = strategyVaultExtension();
       reviewed.assets[0]!.routeReviews = reviewed.assets[0]!.routeReviews.map((review) => ({ ...review, executionCosts: review.executionCosts.map((cost) => ({ ...cost, maxCostBps: 300 })) }));
-      expect(facts(reviewed, rebuildFixed(draft)).measuredUnwind).toMatchObject({ assessment: "critical", signals: ["wrapper-measured-unwind:no-score-eligible-capacity"] });
+      const incomparable = facts(reviewed, rebuildFixed(draft)).measuredUnwind;
+      expect(incomparable).toMatchObject({ disposition: "integration-missing", assessment: null });
       const unavailable = strategyVaultExtension();
       unavailable.assets[0]!.routeReviews = [];
       unavailable.assets[0]!.retainedRoutes = [];
-      expect(facts(unavailable).measuredUnwind).toMatchObject({ assessment: null, signals: ["wrapper-measured-unwind-unavailable"] });
+      const unobserved = facts(unavailable).measuredUnwind;
+      expect(unobserved.assessment).toBeNull();
+      expect(unobserved.disposition).not.toBe("reviewed");
     });
   });
 

@@ -16,7 +16,9 @@
         "kind": "integration-only",
         "integrationKey": "ethereum:0x33636d49fbefbe798e15e7f356e8dbef543cc708:balancer-v2-flash-loan"
       },
-      "posture": { "treatment": "informational-only" },
+      "posture": {
+        "treatment": "informational-only"
+      },
       "reviewedAt": "2026-10-01",
       "reviewer": "Safety Score V9 owner ruling D27",
       "primarySources": [
@@ -106,7 +108,9 @@
         "kind": "integration-only",
         "integrationKey": "reserve-usd3:easyauction-batch-auctions"
       },
-      "posture": { "treatment": "informational-only" },
+      "posture": {
+        "treatment": "informational-only"
+      },
       "reviewedAt": "2026-10-01",
       "reviewer": "Safety Score V9 owner ruling D27",
       "primarySources": [
@@ -146,7 +150,9 @@
         "deploymentKey": "ethereum:0x68749665ff8d2d112fa859aa293f07a622782f38",
         "componentKey": "transferfrom"
       },
-      "posture": { "treatment": "informational-only" },
+      "posture": {
+        "treatment": "informational-only"
+      },
       "reviewedAt": "2026-10-01",
       "reviewer": "Safety Score V9 owner ruling D27",
       "primarySources": [
@@ -258,6 +264,42 @@
             "publishedAt": "2026-03-13"
           }
         ]
+      }
+    },
+    {
+      "incidentId": "nusd-neutrl-2026-09-discounted-holder-exit",
+      "assetId": "nusd-neutrl",
+      "occurredAt": "2026-09-17",
+      "status": "active",
+      "scope": {
+        "kind": "holder-exit"
+      },
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol final D/F review 2026-10-02 (DfReview03)",
+      "primarySources": [
+        {
+          "label": "Neutrl September 17 separate fixed-rate USDC redemption program announcement",
+          "url": "https://x.com/Neutrl/status/2100614848241414280",
+          "publishedAt": "2026-09-17"
+        }
+      ],
+      "finding": "The separate September 17 recovery program redeems NUSD for fixed-rate USDC, not restored par redemption. Fresh exact NusdRedemption 0xb3f07d3392102fc23264a78e2a1a8b6421123828 state at Ethereum block26104271 has redemptionRate510000000000000000 and quoteRedeem(1e18)=510000 USDC base units, a49% discount to the1USD target. This is program payout, not a complete valuation of remaining illiquid reserves.",
+      "remediation": {
+        "state": "in-progress",
+        "lastVerifiedAt": "2026-10-02",
+        "summary": "A separate fixed-rate program is available subject to acknowledgement and terms; no dated primary evidence of restored ordinary par redemption was found.",
+        "sources": [
+          {
+            "label": "Neutrl September 17 separate fixed-rate USDC redemption program announcement",
+            "url": "https://x.com/Neutrl/status/2100614848241414280",
+            "publishedAt": "2026-09-17"
+          }
+        ]
+      },
+      "domain": "peg",
+      "kind": "holder-exit-impairment",
+      "posture": {
+        "treatment": "peg-multiplier-only"
       }
     }
   ]

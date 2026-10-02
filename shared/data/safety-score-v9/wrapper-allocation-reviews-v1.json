@@ -1813,6 +1813,47 @@
           "url": "https://sourcify.dev/server/v2/contract/56/0x8ba9da757d1d66c58b1ae7e2ed6c04087348a82d?fields=compilation,sources,proxyResolution"
         }
       ]
+    },
+    {
+      "scopeKind": "whole-allocation",
+      "assetId": "ctusd-citrea",
+      "reviewedAt": "2026-10-02",
+      "expiresAt": "2026-11-02",
+      "reviewer": "Sol final D/F review 2026-10-02 (DfReview13)",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "none",
+      "rationale": "Local ctUSD principal is held as M on Citrea. At block 13418584, the proxy resolves to the byte-for-byte verified MYieldToOneForcedTransfer implementation 0xf15e4de65adf1d0a5c057f0165a50072fd76804c. Its full inherited MExtension/MYieldToOne code transfers M in before equal-unit wrapping, burns extension balances before returning M to the fixed SwapFacility, and routes only accrued yield to yieldRecipient. There is no local lending, borrowing, strategy allocator, or arbitrary call/parent-approval surface in the reviewed implementation. M.balanceOf(ctUSD) exceeds totalSupply. This is a dated review of the local extension, not a guarantee against proxy upgrades or a favorable claim about the parent M reserve institutions, bridge, segregation or bankruptcy treatment. Pause, freeze and forced-transfer powers are retained.",
+      "observations": [
+        {
+          "chain": "citrea",
+          "address": "0x8d82c4e3c936c7b5724a382a9c5a4e6eb7ab6d5d",
+          "function": "EIP-1967 implementation / mToken() / swapFacility()",
+          "value": "0xf15e4de65adf1d0a5c057f0165a50072fd76804c / 0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b / 0xb6807116b3b1b321a390594e31ecd6e0076f6278",
+          "block": 13418584
+        },
+        {
+          "chain": "citrea",
+          "address": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
+          "function": "balanceOf(ctUSD) vs ctUSD.totalSupply()",
+          "value": "3655127370120 vs 3642538694184",
+          "block": 13418584
+        }
+      ],
+      "sources": [
+        {
+          "label": "Exact current ctUSD implementation and full inherited source",
+          "url": "https://explorer.mainnet.citrea.xyz/api/v2/smart-contracts/0xf15e4de65adf1d0a5c057f0165a50072fd76804c"
+        },
+        {
+          "label": "M0 extension wrap and unwrap semantics",
+          "url": "https://docs.m0.org/protocol/extensions"
+        },
+        {
+          "label": "Citrea RPC pinned observations",
+          "url": "https://rpc.mainnet.citrea.xyz"
+        }
+      ]
     }
   ]
 }

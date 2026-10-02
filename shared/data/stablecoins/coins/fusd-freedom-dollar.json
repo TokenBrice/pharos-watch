@@ -7,8 +7,8 @@
     "backing": "crypto-backed",
     "governance": "decentralized"
   },
-  "collateral": "FUSD is minted against ZANO reserves deposited into the Freedom Dollar DAO contract, with initial overcollateralization above 1000%. Reserves are staked on Zano and publicly visible on-chain.",
-  "pegMechanism": "Algorithmic Zano-backed mint/redemption design: users mint FUSD by depositing ZANO into the Freedom Dollar DAO, with very high initial overcollateralization and on-chain reserve visibility.",
+  "collateral": "The issuer's white paper describes fUSD backing as ZANO staked in a publicly observable reserve wallet. The reserve dashboard is self-reported; the native asset-owner key, rather than a collateral-enforcing DAO contract, controls issuance.",
+  "pegMechanism": "Independent market-making bots trade existing fUSD and ZANO near the dollar target on the Zano DEX. The issuer describes additional ZANO reserves as its policy for new issuance; this policy is separate from the native asset-owner key's issuance power.",
   "mechanismArchetype": "algorithmic",
   "detailProvider": "coingecko",
   "geckoId": "freedom-dollar",
@@ -29,7 +29,7 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://freedomdollar.com/",
-    "provider": "Freedom Dollar self-reported reserve dashboard; historical numerical observations are retained in reserveReview. On 2026-10-01 the rendered homepage displayed dashes for circulating tokens, minted tokens, public reserves and coverage ratio, so current reconciliation was not verified.",
+    "provider": "Freedom Dollar self-reported reserve dashboard. After displaying dashes on 2026-10-01, the homepage again displayed circulating and minted tokens, ZANO reserve value and coverage on 2026-10-02. These issuer-reported figures are not an independent reserve attestation or a verified whole-claim reconciliation.",
     "attestorTier": "self",
     "cadence": "ad-hoc"
   },

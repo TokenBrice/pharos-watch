@@ -23,7 +23,7 @@ import {
 import { buildSafetyScoreV9MechanismReview } from "../safety-score-v9/extension-mechanism";
 import { ReviewEvidenceBuilder } from "../safety-score-v9/extension-shared";
 import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
-import { makeV9TwoAssetFixedInput } from "../../test-helpers/v9-fixed-input";
+import { makeV9RoleExtension, makeV9TwoAssetFixedInput } from "../../test-helpers/v9-fixed-input";
 
 const CLOCK_SEC = Date.UTC(2026, 6, 14) / 1_000;
 const DEPENDENCY_CLOCK_SEC = Date.UTC(2026, 7, 20) / 1_000;
@@ -203,6 +203,61 @@ describe("reviewed curated reserve admission", () => {
     }
     return meta;
   }
+
+  it.each(["omitted", "unresolved"] as const)("does not bypass %s portfolio obligations through ordinary curated admission", (disposition) => {
+    const meta = residualMeta(0, true);
+    meta.reserveReview!.observations![0]!.obligations.push({ key: "missing-book", disposition, reason: "Unknown asset scope" });
+    expect(buildSafetyScoreV9ReviewedStandaloneReserveRows(meta, CLOCK_SEC)).toBeNull();
+    expect(buildSafetyScoreV9ReviewedCuratedFallbackReserveRows({ ...meta, liveReservesConfig: LIVE_RESERVES_CONFIG }, CLOCK_SEC)).toBeNull();
+  });
+
+  function attestedResidualMeta(residualPct: number, prudential: boolean): V9ExtensionRegistryMeta {
+    const meta = residualMeta(residualPct, false);
+    if (prudential) meta.mintAuthority = { supervision: "prudential" } as V9ExtensionRegistryMeta["mintAuthority"];
+    meta.proofOfReserves = { type: "independent-audit", url: "https://example.com/reports", provider: "Independent examiner", attestorTier: "niche",
+      latestReport: { periodEnd: "2026-07-12", publishedAt: "2026-07-13", assuranceMethod: "examination",
+        scope: "assets-and-liabilities", liabilityReconciliation: "full", confidence: "verified", reviewer: "fixture",
+        sources: [{ label: "Report", url: "https://example.com/reserves" }] } };
+    return meta;
+  }
+
+  it.each([false, true])("attested composition keeps the policy threshold tail charged unknown, prudential=%s", (prudential) => {
+    const residualPct = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.reserve.maxUnclassifiedCuratedResidualPct;
+    const meta = attestedResidualMeta(residualPct, prudential);
+    const fixed = makeV9TwoAssetFixedInput({ omitAlphaReserve: true, clockSec: CLOCK_SEC });
+    const admit = prudential ? buildSafetyScoreV9ReviewedStaticReserveRows : buildSafetyScoreV9ReviewedAuditedFallbackReserveRows;
+    const admitted = admit(meta, CLOCK_SEC)!;
+    expect(admitted.rows.reduce((sum, row) => sum + row.pct, 0)).toBeCloseTo(100 - residualPct, 12);
+    const extension = makeV9RoleExtension(fixed, {});
+    const reviewedAsset = extension.assets.find(row => row.assetId === "alpha")!;
+    reviewedAsset.reviewedStaticReserveRows = admitted;
+    reviewedAsset.reserveClassifications = buildSafetyScoreV9ReserveClassifications(admitted.rows);
+    const evidence = new ReviewEvidenceBuilder(meta.id, CLOCK_SEC);
+    addReviewedStaticReserveEvidence(meta, admitted, evidence, CLOCK_SEC);
+    Object.assign(reviewedAsset, evidence.finish());
+    const alpha = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets.find(row => row.assetId === "alpha")!;
+    const result = evaluateV9ReserveExposures({ ...alpha, resolvedUpstreamExposures: [] }, V9_CANDIDATE_POLICY_V1);
+    expect(result.contributions.find(row => row.componentKey === "reserve:unclassified-residual")).toMatchObject({
+      observationState: "bounded-unknown", score: V9_CANDIDATE_POLICY_V1.policy.semantic.backing.boundedUnknownQuality,
+    });
+    expect(result.contributions.find(row => row.componentKey === "reserve:unclassified-residual")!.normalizedWeight).toBeCloseTo(residualPct / 100, 12);
+  });
+
+  it.each([false, true])("attested composition rejects excessive or unbound residuals, prudential=%s", (prudential) => {
+    const threshold = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.reserve.maxUnclassifiedCuratedResidualPct;
+    const admit = prudential ? buildSafetyScoreV9ReviewedStaticReserveRows : buildSafetyScoreV9ReviewedAuditedFallbackReserveRows;
+    const above = attestedResidualMeta(threshold + 0.000001, prudential);
+    const missing = attestedResidualMeta(threshold, prudential);
+    missing.reserveReview!.nonLinkDispositions = [];
+    const mismatch = attestedResidualMeta(threshold, prudential);
+    mismatch.reserveReview!.nonLinkDispositions![0]!.pct = threshold / 2;
+    const zero = attestedResidualMeta(0, prudential);
+    zero.reserveReview!.nonLinkDispositions = [{ reserveIndex: 0, reserveName: "Cash", pct: 100, disposition: "insufficient-evidence", rationale: "Unresolved" }];
+    for (const meta of [above, missing, mismatch, zero]) expect(admit(meta, CLOCK_SEC)).toBeNull();
+    const older = attestedResidualMeta(threshold, prudential);
+    const olderClock = CLOCK_SEC + 90 * 86400;
+    expect(admit(older, olderClock)?.rows.reduce((sum, row) => sum + row.pct, 0)).toBeCloseTo(100 - threshold, 12);
+  });
 
   it.each([false, true])("admits the threshold residual and charges bounded unknown, portfolio=%s", (portfolio) => {
     const residualPct = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.reserve.maxUnclassifiedCuratedResidualPct;

@@ -5,13 +5,14 @@
       "sourceKey": "chainlink-por:feed:0x3f0543aa057bcaea152fe9462cb3ffab305a6f8d",
       "name": "Native KAG reserve claim with physical-silver look-through",
       "pct": 100,
-      "risk": "very-low",
-      "assetClass": "commodity-allocated",
-      "issuerOrObligor": "Kinesis Monetary System and Allocated Bullion Exchange",
+      "risk": "medium",
+      "assetClass": "other",
+      "issuerOrObligor": "KMS Labs S.A. (reserve administrator) and Kinesis Cayman (native KAG issuer)",
       "riskFactors": [
         "market",
         "custody",
         "liquidity",
+        "counterparty",
         "legal",
         "concentration"
       ],
@@ -34,13 +35,17 @@
       {
         "label": "KMS Labs binding ERC-20 terms: native-token reserve and holder rights",
         "url": "https://kmslabs.money/kms-labs-tcs/"
+      },
+      {
+        "label": "KMS Labs exact ERC-20 disclosure and native KAG reserve-wallet identity (independently fetched 2026-10-02; not an independent reserve reconciliation)",
+        "url": "https://kmslabs.money/"
       }
     ],
-    "rationale": "Bureau Veritas (Inspectorate International) April 2026 cycle (artefact read this pass): silver 3,688,827.985 ozt fine equivalent as at ledger date 20 April 2026 vs 3,683,448.057 KAG per the issuer cover letter (excess matches the five ~1000ozt reserve bars). The BV report reconciles physical holdings to vault records only; the token comparison is the issuer's own cover-letter assertion. Composition is a single downstream allocated-silver category. KMS Labs terms describe the Ethereum token's immediate reserve as native KAG; this label clarification does not refresh the historical composition or verify current wrapper reserve quantities.",
-    "compositionBasis": "Bureau Veritas April 2026 physical audit (ledger date 20 April 2026)",
+    "rationale": "Bureau Veritas (Inspectorate International) April 2026 cycle (artefact read this pass): silver 3,688,827.985 ozt fine equivalent as at ledger date 20 April 2026 vs 3,683,448.057 KAG per the issuer cover letter (excess matches the five ~1000ozt reserve bars). The BV report reconciles physical holdings to vault records only; the token comparison is the issuer's own cover-letter assertion. Rechecked the exact ERC-20 terms on 2026-10-02: section 8(a) identifies native KAG, not allocated bullion, as the immediate reserve; section 8(e) denies holder title to that reserve and section 3 denies obligations of the native issuer to ERC-20 holders. The immediate reserve is therefore an external native-token claim, classified consistently with KAU rather than as directly allocated silver. This adverse identity correction does not refresh the historical composition or verify current wrapper reserve quantities.",
+    "compositionBasis": "KMS Labs binding ERC-20 terms section 8 identifies native KAG as the immediate reserve; April 2026 physical audit is downstream bullion context only",
     "compositionAsOf": "2026-04-20",
     "scope": "full-composition",
-    "knownUnknownExposure": "KMS Labs terms describe the Ethereum token's immediate reserve as native KAG held in segregated issuer-maintained wallets. Physical silver is downstream look-through backing; the reviewed terms, whitepaper and April physical report do not disclose current wrapper reserve-wallet balances or an independent reconciliation against Ethereum KAG supply.",
+    "knownUnknownExposure": "KMS Labs terms describe the Ethereum token's immediate reserve as native KAG held in segregated issuer-maintained wallets. The issuer homepage identifies GAJ6XIVDKRHVMYF5ZUDDJCX755F25JXGIAWX4JO2OUHC4B2XHVTA6ERC as the KMS Labs native KAG reserve wallet; a live native-chain account read on 2026-10-02 returned 35,000.0990400 KAG. This balance is an observation, not an independently reconciled current reserve envelope or a refreshed composition. Physical silver remains downstream backing; the issuer says independent ERC-20 reserve verification will be disclosed separately.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
@@ -48,7 +53,7 @@
         "reserveName": "Native KAG reserve claim with physical-silver look-through",
         "pct": 100,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "The historical single slice describes downstream allocated silver; immediate backing is Kinesis Cayman-issued native KAG under the KMS Labs terms. This look-through commodity review does not create a separately tracked native-KAG dependency or verify the wrapper reserve."
+        "rationale": "Kinesis Cayman-issued native KAG is an external reserve token rather than a tracked stablecoin dependency; allocated physical silver is second-layer backing. ERC-20 holders have no reserve title or claim against the native issuer. The slice retains its stable chainlink-por feed sourceKey without treating that downstream physical feed as a wrapper reserve reconciliation."
       }
     ]
   },
@@ -91,8 +96,12 @@
       {
         "label": "Kinesis April 2026 audit page",
         "url": "https://kinesis.money/audit-april-2026/"
+      },
+      {
+        "label": "KMS Labs official native reserve-wallet disclosure (independently fetched 2026-10-02)",
+        "url": "https://kmslabs.money/"
       }
     ],
-    "uncertainty": "The Ethereum token's immediate reserve is native KAG held by KMS Labs in segregated wallets. Section 8(e) denies ERC-20 holders legal, equitable or beneficial title to these reserves and disclaims any trust or fiduciary relationship; bankruptcy remoteness and a rehypothecation prohibition are not established. ABX, Brinks and Loomis are downstream physical-bullion custody providers for native KAG; provider shares and the KMS Labs reserve-wallet addresses are undisclosed."
+    "uncertainty": "The Ethereum token's immediate reserve is native KAG held by KMS Labs in segregated wallets. Section 8(e) denies ERC-20 holders legal, equitable or beneficial title to these reserves and disclaims any trust or fiduciary relationship; bankruptcy remoteness and a rehypothecation prohibition are not established. ABX, Brinks and Loomis are downstream physical-bullion custody providers for native KAG; provider shares remain undisclosed. The issuer homepage identifies native reserve wallet GAJ6XIVDKRHVMYF5ZUDDJCX755F25JXGIAWX4JO2OUHC4B2XHVTA6ERC. Wallet identity does not establish a complete reserve census, independent wrapper-liability reconciliation or enforceable holder safeguards."
   }
 }

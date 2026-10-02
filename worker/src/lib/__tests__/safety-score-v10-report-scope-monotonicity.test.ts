@@ -7,10 +7,11 @@ import type { ProofOfReservesLatestReport } from "@shared/types/core";
 import type { ReviewedEconomicDeploymentPartition } from "@shared/types/safety-score-v9-supply-attribution";
 import { buildSafetyScoreV9MechanismReview } from "../safety-score-v9/extension-mechanism";
 import { resolveReviewedReserveRows, type V9ExtensionRegistryMeta } from "../safety-score-v9/extension";
-import { buildSafetyScoreV9ReviewedAuditedFallbackReserveRows, buildSafetyScoreV9ReviewedStaticReserveRows, buildSafetyScoreV10ScopedReserveAdmissions } from "../safety-score-v9/extension-reserves";
+import { addScopedReserveEvidence, buildSafetyScoreV9ReviewedAuditedFallbackReserveRows, buildSafetyScoreV9ReviewedStaticReserveRows, buildSafetyScoreV10ScopedReserveAdmissions } from "../safety-score-v9/extension-reserves";
 import type { SafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
 import type { ReserveObservationEnvelope } from "@shared/types/safety-score-v9-reserve-scope";
 import xdaiMetaSource from "@shared/data/stablecoins/coins/xdai-gnosis.json";
+import { ReviewEvidenceBuilder } from "../safety-score-v9/extension-shared";
 
 const clockSec = Date.parse("2026-10-02T12:00:00Z") / 1000;
 const asOfSec = Date.parse("2026-08-31T23:59:59Z") / 1000;
@@ -137,7 +138,8 @@ describe("diagnostic report scope monotonicity", () => {
       reviewedAtSec: clockSec - 30, observedAtSec: clockSec - 60, expiresAtSec: clockSec + 3600,
       sourceGeneration: "fixture", sourceSha256: "a".repeat(64), completeness: "partial",
       sources: [{ url: "https://example.com/rpc", accessedAtSec: clockSec - 30, sha256: "a".repeat(64) }],
-      obligations: [{ key: "pending-mints", disposition: "unresolved", reason: "Not a complete economic census" }],
+      obligations: ["pending-mints", "pending-burns", "fees", "interest"].map(key =>
+        ({ key, disposition: "unresolved" as const, reason: "Not a complete economic census" })),
       blocks: [{ chain: "ethereum", number: 1, hash: `0x${"a".repeat(64)}`, timestamp: clockSec - 60, finality: "safe" }],
       quantities: [{ key: "collateral", deploymentRef: foreignRef, selector: "balanceOf", rawAmount: "100", decimals: 18 }], ratio: null,
     };
@@ -146,9 +148,22 @@ describe("diagnostic report scope monotonicity", () => {
     source.reserveReview!.observations = [observation];
     const parsed = parseStablecoinMetaAssets([source], "observation-fixture")[0]!;
     expect(parsed.contracts!.map(row => `${row.chain}:${row.address}`)).toEqual([deploymentRef]);
-    expect(buildSafetyScoreV10ScopedReserveAdmissions(parsed, input())[0]).toMatchObject({
-      admitted: true, currentLiabilityShare: null, wholeAssetComposition: false,
+    const admissions = buildSafetyScoreV10ScopedReserveAdmissions(parsed, input());
+    expect(admissions[0]).toMatchObject({
+      admitted: true, rejectionCodes: [], currentLiabilityShare: null, wholeAssetComposition: false,
     });
+    const evidence = new ReviewEvidenceBuilder(parsed.id, clockSec);
+    addScopedReserveEvidence(parsed, admissions, undefined, evidence);
+    const bindings = evidence.finish();
+    expect(bindings.researchEvidence).toMatchObject([{
+      sourceId: "reserve-observation:onchain-observation", observedAtSec: clockSec - 60,
+      url: "https://example.com/rpc", confidence: "verified",
+    }]);
+    expect(bindings.componentEvidence).toEqual([{
+      componentKey: "reserve-scope:bridge-subset", evidenceKeys: admissions[0]!.evidenceRefIds,
+    }]);
+    expect(buildSafetyScoreV10ScopedReserveAdmissions(parsed, { ...input(), clockSec: observation.expiresAtSec + 1 })[0])
+      .toMatchObject({ admitted: false, wholeAssetComposition: false, rejectionCodes: ["expired"] });
     expect(buildSafetyScoreV9MechanismReview(input(), parsed, "fiat-cash")).toEqual(buildSafetyScoreV9MechanismReview(input(), meta(), "fiat-cash"));
     observation.deploymentRefs.push("ethereum:0x9999999999999999999999999999999999999999");
     expect(() => parseStablecoinMetaAssets([source], "unknown-observed-contract")).toThrow("Unresolved reserve deployment");

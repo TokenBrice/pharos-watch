@@ -30,14 +30,14 @@
   },
   "oracleRisk": {
     "tier": "standard-external",
-    "summary": "DePhaser mints JPYT using Chainlink USD/JPY exchange-rate data for USDT/USDC deposits, with no fallback or failure handling documented.",
+    "summary": "Optimism issuance reads Chainlink-style USDT/USD and JPY/USD feeds; Base issuance reads a Chainlink-style USDC/USD feed and Pyth USD/JPY. At Base block 52075154, pythValidTimePeriod() was 31,536,000 seconds. The managers reject non-positive deposit-token feed answers without checking their timestamps; no independent oracle fallback is implemented in the reviewed sources.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "top-level-only",
       "reviewedAt": "2026-08-24",
       "reviewer": "OpenAI Codex external-a oracle applicability review",
-      "rationale": "JPYT has no borrower-specific undercollateralized positions or liquidation branches. Its deposit manager nevertheless reads Chainlink USD prices for the deposit token and JPY to calculate the JPYT amount minted, while redemptions use the accumulated deposit-token/JPYT conversion rate; these are price-sensitive top-level issuance and redemption authorities.",
+      "rationale": "JPYT has no borrower-specific undercollateralized positions or liquidation branches. Its per-chain deposit managers calculate issuance from the deposit token and JPY exchange rate: the current Optimism implementation uses Chainlink-style aggregators, while the current Base implementation uses a Chainlink-style USDC/USD aggregator and Pyth USD/JPY. Redemptions use accumulated deposit-token/JPYT conversion rates. These are price-sensitive top-level issuance and redemption authorities; the Base Pyth path is not a redundant fallback.",
       "sources": [
         {
           "label": "DePhaser USDT DepositManager source (document commit 2024-10-10)",
@@ -60,6 +60,14 @@
       {
         "label": "DePhaser overview",
         "url": "https://docs.dephaser.com/concept/what-is-dephaser.md"
+      },
+      {
+        "label": "Current Base UsdcDepositManager verified implementation",
+        "url": "https://base.blockscout.com/api/v2/smart-contracts/0xf3b4eaaa9660143712fa3b3ebf5f460e3e8ea2cb"
+      },
+      {
+        "label": "Current Optimism UsdtDepositManager verified implementation",
+        "url": "https://optimism.blockscout.com/api/v2/smart-contracts/0xb46aaeeb63aa3c41728f348e06d8c4db7c5ee9f5"
       }
     ]
   },

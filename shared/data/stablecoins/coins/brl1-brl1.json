@@ -44,21 +44,21 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://brl1.io/en/como_funciona",
-    "provider": "BRL1 CONSORTIUM S.A. internally prepared and board-approved proof-of-reserves report; explicitly not independently audited. August 1, 2026 report remains publicly downloadable; the current how-it-works body links an older April 14, 2025 report.",
+    "provider": "BRL1 CONSORTIUM S.A. internally prepared and board-approved proof-of-reserves report; explicitly not independently audited. The current how-it-works footer links the October 1, 2026 report; the body still links an older April 14, 2025 report.",
     "attestorTier": "self",
     "cadence": "ad-hoc",
     "attestorJurisdiction": "Brazil",
     "latestReport": {
-      "periodEnd": "2026-08-01",
+      "periodEnd": "2026-10-01",
       "assuranceMethod": "self-verification",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "Sol curation pass 2026-10-01 (CurM15PHT)",
+      "reviewer": "Sol final D/F review 2026-10-02 (DfReview07)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "BRL1 issuer proof-of-reserves report - August 1, 2026 (publication date unestablished)",
-          "url": "https://drive.google.com/uc?export=download&id=1xIHWuHqRiuNJNaBO4s-9xXbiiEp_24AD"
+          "label": "BRL1 issuer proof-of-reserves report - October 1, 2026 (publication date unestablished)",
+          "url": "https://drive.google.com/uc?export=download&id=1BuRUC6u3UTzf17kOChhKby_L9hE5IU73"
         }
       ]
     }

@@ -399,8 +399,8 @@ const ExitRouteObservationBaseSchema = z.object({
   evidenceKind: ExitRouteEvidenceKindSchema,
   /** Exact measured-adapter identity when a DEX observation came from a reviewed runtime adapter. */
   adapterProfileId: z.string().min(1).optional(),
-  /** Set when the route's reviewed fee is the undisclosed-reviewed class: capacity is modeled but cost is unbounded. */
-  feeEvidence: z.literal("undisclosed-reviewed").optional(),
+  /** Reviewed fee disclosure without a same-notional execution cost bound. */
+  feeEvidence: z.enum(["undisclosed-reviewed", "disclosed-unquantified"]).optional(),
   /** Fee/slippage cost before valuing the received output asset. */
   executionCostBps: z.number().finite().nonnegative().optional(),
   /** Pinned USD unit value of the received output asset. */

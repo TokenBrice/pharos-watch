@@ -107,6 +107,34 @@ describe("reviewed per-path oracle applicability", { timeout: V9_EVALUATION_TEST
     expect(trace.caps).toContainEqual(expect.objectContaining({ kind: "reason:unresolved-oracle-branch-applicability", limit: 55 }));
   });
 
+  it.each([
+    { tier: "single-source-or-laggy" as const, lending: false },
+    { tier: "opaque-or-unknown" as const, lending: false },
+    { tier: "single-source-or-laggy" as const, lending: true },
+    { tier: "opaque-or-unknown" as const, lending: true },
+  ])("retains the verified $tier ceiling alongside an unresolved sibling (lending=$lending)", ({ tier, lending }) => {
+    const profile = lending ? lendingProfile() : internalPriceMeta().oracleRisk!;
+    profile.tier = tier;
+    if (lending) profile.branches![0]!.tier = tier;
+    profile.paths = [path("known", lending ? "branches-required" : "top-level-only", "0x4444444444444444444444444444444444444444")];
+    const before = evaluate(profile);
+    profile.paths.push({ id: "unknown", chain: "base", address: "0x5555555555555555555555555555555555555555", pricingAuthority: "unknown" });
+    const after = evaluate(profile);
+    const weakSignals = (result: V9EconomicControlResult) => result.structuralFailures.filter((signal) => signal.kind === "weak-oracle-branch");
+    expect(weakSignals(after.control)).toEqual(weakSignals(before.control));
+    expect(weakSignals(after.control)).toHaveLength(1);
+    expect(oracleReasons(after.control)).toContainEqual(expect.objectContaining({ code: "unresolved-oracle-branch-applicability" }));
+    expect(after.trace.caps.filter((cap) => cap.kind.startsWith("signal:weak-oracle-branch"))).toEqual(
+      before.trace.caps.filter((cap) => cap.kind.startsWith("signal:weak-oracle-branch")),
+    );
+    expect(after.control.score).toBeLessThanOrEqual(before.control.score!);
+    const unknownProfile = internalPriceMeta().oracleRisk!;
+    unknownProfile.tier = tier;
+    unknownProfile.paths = [profile.paths[1]!];
+    const unknownOnly = evaluate(unknownProfile);
+    expect(weakSignals(unknownOnly.control)).toEqual([]);
+  });
+
   it("keeps internal-price direct issuance applicable without borrower liquidation", () => {
     const profile = internalPriceMeta().oracleRisk!;
     profile.paths = [path("internal-direct-minter", "top-level-only", "0x4444444444444444444444444444444444444444"), allocationPath()];

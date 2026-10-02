@@ -47,5 +47,12 @@
   "collateralQuality": "exotic",
   "custodyModel": "cex",
   "governanceQuality": "single-entity",
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Discounted redemption program",
+      "message": "At Ethereum block 26104271 on October 2, 2026, Neutrl's separate redemption contract quoted 0.51 USDC per NUSD. This is a 49% discount to the $1 target, not restored par redemption or a measurement of the recovery value of remaining illiquid reserves. Redemption remains subject to the program terms and wallet acknowledgement."
+    }
+  ],
   "launchDate": "2025-11-10"
 }

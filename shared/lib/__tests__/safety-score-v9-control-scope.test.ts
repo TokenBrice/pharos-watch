@@ -7,7 +7,7 @@ import { V9ControlExecutionScopeSchema, V9WeightedQuorumSchema, type V9ControlEx
 import { V9_CANDIDATE_POLICY_V1, loadV9MethodologyPolicy } from "../safety-score-v9/policy";
 import { buildV9DependencyEvaluationPlan } from "../safety-score-v9/dependencies";
 import { minimalAsset } from "./safety-score-v9-facts.fixture-support";
-import { makeDeploymentControl, makeEconomicControlArgs, makeEconomicControlFacts, makeReviewedMintInput } from "./safety-score-v9-fixtures.test-support";
+import { boundedUnknown, makeDeploymentControl, makeEconomicControlArgs, makeEconomicControlFacts, makeReviewedMintInput } from "./safety-score-v9-fixtures.test-support";
 import { reviewedScope, weightedQuorum, SCOPE_CLOCK, SCOPE_CONTROLLER } from "./safety-score-v9-control-scope.test-support";
 const policy = V9_CANDIDATE_POLICY_V1.policy.semantic.control;
 const compile = (scope = reviewedScope(), controller = SCOPE_CONTROLLER, clock = SCOPE_CLOCK) => compileReviewedControlScope(scope, controller, "alpha", clock, 90 * 86400);
@@ -28,17 +28,19 @@ describe("V10 exact authority scope", () => {
     const scope = reviewedScope({ inventory: "partial", confidence: "partial" });
     const legacy = makeDeploymentControl("mint", "mint", { capSemantics: scope.paths[0]!.capSemantics, claimImpairment: "bounded", authority: { authorityKey: SCOPE_CONTROLLER, model: "contract", threshold: null } });
     const mint = makeReviewedMintInput(legacy.controlKey);
-    const partial = { ...legacy, executionScope: scope, executionScopeComplete: false, ...partialControlScopeSemantics(legacy, compile(scope).paths) };
+    const partial = { ...legacy, executionScope: scope, executionScopeComplete: false, ...partialControlScopeSemantics(legacy, compile(scope)) };
     const evaluate = (control: typeof legacy) => evaluateV9EconomicControl(makeEconomicControlArgs({ facts: makeEconomicControlFacts([control]), mint }));
     expect(evaluate(partial).score).toBe(evaluate(legacy).score);
     expect(evaluate(partial).reasons).toEqual(evaluate(legacy).reasons);
     scope.paths[0]!.capSemantics = { kind: "unbounded", bound: null };
     scope.paths[0]!.claimImpairment = "unbounded";
-    const adverse = { ...partial, ...partialControlScopeSemantics(legacy, compile(scope).paths) };
+    const adverse = { ...partial, ...partialControlScopeSemantics(legacy, compile(scope)) };
     expect(deriveV9MintPosture(adverse, mint, false)).toBe("unbounded-or-compromised");
     expect(evaluate(adverse).score).toBeLessThan(evaluate(legacy).score!);
     scope.paths[0]!.activation = "disabled-final";
-    expect(partialControlScopeSemantics(legacy, compile(scope).paths).claimImpairment).toBe("unbounded");
+    const disabledPartial = { ...partial, ...partialControlScopeSemantics(legacy, compile(scope)) };
+    expect(deriveV9MintPosture(disabledPartial, mint, false)).toBe("unbounded-or-compromised");
+    expect(evaluate(disabledPartial).score).toBe(evaluate(adverse).score);
     scope.inventory = "complete"; scope.confidence = "verified";
     expect(reviewedControlScopeSemantics(compile(scope).paths).claimImpairment).toBe("none");
   });
@@ -137,6 +139,60 @@ describe("V10 exact authority scope", () => {
     expect(compile(scope).moduleImpact).toBe("unresolved");
     scope.paths[0]!.reach = "root";
     expect(compile(scope).moduleImpact).toBe("relevant");
+  });
+
+  it("excludes another liability's deployment paths unless a proved reference reaches this liability", () => {
+    const scope = reviewedScope();
+    scope.paths[0]!.reach = "deployment";
+    scope.paths[0]!.affectedLiabilityIds = ["beta"];
+    scope.extensions!.entries = [{ deployment: SCOPE_CONTROLLER, runtimeIdentity: "module-runtime", kind: "module", pathRefs: ["issuance"], mutableReachClosed: true }];
+    const proof = compile(V9ControlExecutionScopeSchema.parse(scope));
+    const control = makeDeploymentControl("mint", "mint", { executionScope: scope, executionScopeComplete: proof.complete, modulesOrGuards: "present", moduleImpact: proof.moduleImpact });
+    expect(proof.paths).toEqual([]);
+    expect(proof.moduleImpact).toBe("verified-noninterfering");
+    expect(applyMergedMintSignals(85, control, undefined, policy)).toBe(85);
+    scope.paths.push({ ...scope.paths[0]!, id: "alpha-mint", reach: "root", affectedLiabilityIds: ["alpha"] });
+    scope.paths[0]!.upgradeRefs = ["alpha-mint"];
+    const linked = compile(V9ControlExecutionScopeSchema.parse(scope));
+    expect(linked.paths.map((path) => path.id)).toEqual(["issuance", "alpha-mint"]);
+    expect(linked.moduleImpact).toBe("relevant");
+    expect(applyMergedMintSignals(85, { ...control, moduleImpact: linked.moduleImpact }, undefined, policy)).toBeLessThan(85);
+  });
+
+  it.each(["cap", "claim"] as const)("retains independently proved unbounded %s beside adjacent uncertainty", (adverseField) => {
+    const known = makeDeploymentControl("mint", "mint", {
+      authority: { authorityKey: SCOPE_CONTROLLER, model: "contract", threshold: null },
+      capSemantics: { kind: "unbounded", bound: null }, claimImpairment: "unbounded",
+    });
+    const adjacentUnknown = { ...known, status: boundedUnknown(),
+      ...(adverseField === "cap" ? { claimImpairment: "unknown" as const } : { capSemantics: { kind: "unknown" as const, bound: null } }),
+    };
+    const mint = makeReviewedMintInput(known.controlKey);
+    const evaluate = (control: typeof known, review = mint) => evaluateV9EconomicControl(makeEconomicControlArgs({ facts: makeEconomicControlFacts([control]), mint: review }));
+    const baseline = evaluate(known);
+    for (const review of [mint, { ...mint, status: boundedUnknown() }]) {
+      const result = evaluate(adjacentUnknown, review);
+      expect(deriveV9MintPosture(adjacentUnknown, review, false)).toBe("unbounded-or-compromised");
+      expect(result.structuralFailures).toContainEqual(expect.objectContaining({ kind: "centralized-mint", severity: "high" }));
+      expect(result.score).toBe(baseline.score);
+      expect(result.reasons.map((reason) => reason.code)).toContain(adverseField === "cap" ? "unknown-control-mint-ability" : "unknown-control-cap-authority");
+    }
+    expect(deriveV9MintPosture({ ...adjacentUnknown, economicLossScope: "unknown" }, mint, false)).toBe("unknown");
+  });
+
+  it("retains reconciled but unsupervised adverse mint evidence without clearing aggregate uncertainty", () => {
+    const control = makeDeploymentControl("mint", "mint", {
+      capSemantics: { kind: "unbounded", bound: null }, claimImpairment: "unknown",
+      status: boundedUnknown(), authority: { authorityKey: SCOPE_CONTROLLER, model: "eoa", threshold: null },
+    });
+    const mint = { ...makeReviewedMintInput(control.controlKey), reconciliation: "continuous" as const, status: boundedUnknown() };
+    const result = evaluateV9EconomicControl(makeEconomicControlArgs({ facts: makeEconomicControlFacts([control]), mint }));
+    expect(result.structuralFailures).toContainEqual(expect.objectContaining({ kind: "centralized-mint", severity: "high" }));
+    expect(result.reasons.map((reason) => reason.code)).toContain("unknown-control-mint-ability");
+    expect(result.score).toBeLessThanOrEqual(policy.boundedUnknownQuality);
+    const unknownControl = { ...control, capSemantics: { kind: "unknown" as const, bound: null } };
+    const unknownResult = evaluateV9EconomicControl(makeEconomicControlArgs({ facts: makeEconomicControlFacts([unknownControl]), mint }));
+    expect(result.score).toBeLessThanOrEqual(unknownResult.score!);
   });
 
   it("does not let a friendly reviewed mint authority erase another unreviewed authority on the deployment", () => {

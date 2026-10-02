@@ -51,6 +51,21 @@ describe("V10 scoped report admission", () => {
     expect(admit(changed).currentLiabilityShare).toBeNull();
     expect(admit(report, { ...partition, sourceGeneration: "another-run" }).currentLiabilityShare).toBeNull();
   });
+  it.each([["review-boundary", clockSec - 1, true], ["after-review", clockSec, false], ["after-clock", clockSec + 1, false]] as const)(
+    "gates exclusion evidence at %s even with a complete current partition", (_, accessedAtSec, admitted) => {
+      const changed = structuredClone(report);
+      changed.coverage!.liabilityExclusions.push({ id: "treasury", identity: { deploymentRef: ref, bookKey: "issuer:trust", account: "issuer:treasury" }, kind: "treasury",
+        reason: "Not economically owed", amount: "5", currency: "USD", unitBasis: "token-units", asOfSec,
+        source: { url: "https://example.com/report", accessedAtSec, sha256: "a".repeat(64) }, economicallyOwed: false });
+      changed.coverage!.denominator.excluded.push("treasury");
+      changed.coverage!.currentBookPartition!.books[0].exclusions.push({ id: "treasury", currentAmountUsd: 5 });
+      const result = admit(changed);
+      expect(result.admitted).toBe(admitted);
+      expect(result.currentLiabilityShare).toBe(admitted ? 0.2 : null);
+      if (!admitted) expect(result.rejectionCodes).toContain(accessedAtSec > clockSec ? "future-evidence" : "checkpoint-mismatch");
+    },
+  );
+
   it("rejects all overlapping claims rather than selecting the favorable first one", () => {
     const first = admit();
     const result = resolveV10ReserveScopeWeights([first, { ...first, scopeId: "duplicate" }]);
@@ -73,11 +88,25 @@ const structure = ReserveObservationEnvelopeSchema.parse({ kind: "standing-struc
   reviewer: "fixture", confidence: "verified", sources: [{ url: "https://example.com/feeder", accessedAtSec: clockSec, sha256: "b".repeat(64) }],
   reviewedAtSec: clockSec, expiresAtSec: clockSec + policy.semantic.evidence.evidenceExpiry.standingStructureMaxAgeSec,
   observedAtSec: null, sourceGeneration: "review:1", sourceSha256: "b".repeat(64), completeness: "complete", obligations: [], wholeHolderClaim: true, instrumentKey: "feeder:lp" });
+if (structure.kind !== "standing-structure") throw new Error("Expected a standing-structure fixture");
 it("admits only a timely whole-holder standing identity without holdings or liability assurance", () => {
   const input = { observation: structure, deploymentRefs: [], clockSec: structure.expiresAtSec, policy };
   expect(admitV10ReserveObservation(input)).toMatchObject({ admitted: true, wholeAssetComposition: true, currentLiabilityShare: null, observedAtSec: null });
   expect(admitV10ReserveObservation({ ...input, clockSec: structure.expiresAtSec + 1 }).admitted).toBe(false);
-  expect(admitV10ReserveObservation({ ...input, observation: { ...structure, wholeHolderClaim: false } as typeof structure }).admitted).toBe(false);
+  expect(admitV10ReserveObservation({ ...input, observation: { ...structure, wholeHolderClaim: false } }).admitted).toBe(false);
+});
+it.each(["standing-structure", "portfolio-observation"] as const)("retains diagnostic %s envelopes but rejects composition with omitted or unresolved obligations", (kind) => {
+  for (const disposition of ["omitted", "unresolved"] as const) {
+    const base = { ...structure, obligations: [{ key: "undisclosed-reserves", disposition, reason: "No denominator evidence" }] };
+    const { wholeHolderClaim: _whole, instrumentKey: _instrument, ...common } = base;
+    const observation = kind === "standing-structure" ? base : {
+      ...common, kind, observedAtSec: clockSec,
+      wholeAssetDenominator: { amount: "100", asOfSec: clockSec, unitBasis: "USD", sourceSha256: "b".repeat(64) },
+    };
+    const parsed = ReserveObservationEnvelopeSchema.parse(observation);
+    expect(admitV10ReserveObservation({ observation: parsed, deploymentRefs: [], clockSec, policy }))
+      .toMatchObject({ admitted: false, wholeAssetComposition: false, rejectionCodes: ["denominator-incomplete"] });
+  }
 });
 it("retains malformed observation failure without letting it become admitted evidence", () => {
   const value = LiveReserveSnapshotProvenanceSchema.parse({ source: "xdai-bridge", fetchedAt: clockSec,

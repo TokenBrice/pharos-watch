@@ -235,6 +235,8 @@ describe("PlotMapHero section zoom", () => {
         peakMcap: 20_000_000,
         epitaph: "A fixture grave.",
         obituary: "A fixture record for section navigation.",
+        sourceUrl: "https://example.com/zoom-fixture",
+        sourceLabel: "Fixture source",
       })),
     );
     const zoomAsOf = "2026-01";

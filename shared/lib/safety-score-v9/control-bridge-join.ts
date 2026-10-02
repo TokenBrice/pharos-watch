@@ -95,6 +95,36 @@ export function materialBridgeSeverity(
   return materialSupplyShare >= highShareThreshold ? "high" : "moderate";
 }
 
+export interface ProviderRowExclusionShares {
+  unknown: number;
+  unreviewed: number;
+  byDeployment: ReadonlyMap<string, number>;
+}
+const NO_PROVIDER_ROW_EXCLUSIONS: ProviderRowExclusionShares = {
+  unknown: 0, unreviewed: 0, byDeployment: new Map<string, number>(),
+};
+
+/** Attribution-only numerators; original rows and reconciliation stay intact. */
+export function providerRowExclusionShares(
+  assetId: string,
+  supply: Pick<V9EconomicControlAssetFacts["supply"], "selectedBridgeRoutes" | "providerRowExclusions">,
+): ProviderRowExclusionShares {
+  if (!supply.providerRowExclusions?.length) return NO_PROVIDER_ROW_EXCLUSIONS;
+  const byDeployment = new Map<string, number>();
+  let unknown = 0, unreviewed = 0;
+  for (const exclusion of supply.providerRowExclusions) {
+    if (exclusion.review.assetId !== assetId || byDeployment.has(exclusion.deploymentRouteKey)) continue;
+    const row = supply.selectedBridgeRoutes.find(candidate => candidate.deploymentRouteKey === exclusion.deploymentRouteKey);
+    if (!row || row.reviewState === "selected-reviewed" || !bridgeSharesReconcile(row.supplyShare, exclusion.supplyShare)) continue;
+    // Subtract the original partition row exactly; the trace's share retains
+    // the aggregate denominator without turning conservation tails into residue.
+    byDeployment.set(row.deploymentRouteKey, row.supplyShare);
+    if (row.reviewState === "unmatched") unknown += row.supplyShare;
+    else unreviewed += row.supplyShare;
+  }
+  return { unknown, unreviewed, byDeployment };
+}
+
 /** Unresolved deployment exposure, including unattributed route residue. Bounds are join-only, never exact pricing. */
 export function unresolvedDeploymentCohort(
   facts: V9EconomicControlAssetFacts,
@@ -105,11 +135,7 @@ export function unresolvedDeploymentCohort(
   const rows = reconciledSupplyPartition(facts);
   if (rows === null) return { share: null, controlKeys };
   const sharesByDeployment = new Map<string, number>();
-  const exclusions = new Map((facts.supply.providerRowExclusions ?? []).filter(exclusion =>
-    exclusion.review.assetId === facts.assetId && rows.some(row =>
-      row.deploymentRouteKey === exclusion.deploymentRouteKey && row.reviewState === "unmatched" &&
-      bridgeSharesReconcile(row.supplyShare, exclusion.supplyShare)))
-    .map(exclusion => [exclusion.deploymentRouteKey, exclusion.supplyShare]));
+  const exclusions = providerRowExclusionShares(facts.assetId, facts.supply);
   let joinedUnreviewedShare = 0;
   for (const control of controls) {
     if (
@@ -129,18 +155,19 @@ export function unresolvedDeploymentCohort(
       (row !== undefined && !bridgeSharesReconcile(row.supplyShare, share))
     ) return { share: null, controlKeys: new Set<string>() };
     controlKeys.add(control.controlKey);
+    const effectiveRowShare = row === undefined ? 0 : Math.max(0, row.supplyShare - (exclusions.byDeployment.get(row.deploymentRouteKey) ?? 0));
     // Unmatched rows already belong to unknownRouteSupplyShare. Admitting
     // their controls must neither invalidate the cohort nor count them twice.
     if (row === undefined || row.reviewState === "unmatched") continue;
     if (!sharesByDeployment.has(control.deploymentKey) && row.reviewState === "selected-unresolved") {
-      joinedUnreviewedShare += row.supplyShare;
+      joinedUnreviewedShare += effectiveRowShare;
     }
-    sharesByDeployment.set(control.deploymentKey, row.supplyShare);
+    sharesByDeployment.set(control.deploymentKey, effectiveRowShare);
   }
   return {
     share: Math.min(1, [...sharesByDeployment.values()].reduce((sum, share) => sum + share, 0) +
-      Math.max(0, facts.supply.unknownRouteSupplyShare! - [...exclusions.values()].reduce((sum, share) => sum + share, 0)) +
-      Math.max(0, facts.supply.unreviewedRouteSupplyShare! - joinedUnreviewedShare)),
+      Math.max(0, facts.supply.unknownRouteSupplyShare! - exclusions.unknown) +
+      Math.max(0, facts.supply.unreviewedRouteSupplyShare! - exclusions.unreviewed - joinedUnreviewedShare)),
     controlKeys,
   };
 }
@@ -217,6 +244,7 @@ export function evaluateV9SubthresholdUnresolvedBridgeJoins(
 
   const rows = reconciledSupplyPartition(facts);
   if (rows === null) return incomplete("supply-partition-unreconciled");
+  const exclusions = providerRowExclusionShares(facts.assetId, facts.supply);
   const cohortShare = unresolvedDeploymentCohort(facts, controls, true).share;
   const canRelaxUnresolvedRows = cohortShare !== null && cohortShare < unresolvedFullCeilingShareThreshold;
 
@@ -247,6 +275,7 @@ export function evaluateV9SubthresholdUnresolvedBridgeJoins(
     return incomplete("duplicate-bridge-route-control", { controlKeys: duplicateControlKeys });
   }
   for (const route of rows) {
+    if (exclusions.byDeployment.has(route.deploymentRouteKey)) continue;
     const rowDetail = {
       deploymentRouteKey: route.deploymentRouteKey,
       reviewState: route.reviewState,

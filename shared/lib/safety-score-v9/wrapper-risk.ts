@@ -152,10 +152,15 @@ export function resolveV9WrapperParentLimit(input: V9WrapperParentLimitInput): V
     adjustments.reduce((sum, adjustment) => sum + adjustment.discountPoints, 0),
   );
   const factsComplete = missingFacts.length === 0;
-  const fallbackDiscount = factsComplete ? 0 : configuredFallbackDiscount;
-  const appliedDiscount = round4(
-    factsComplete ? localRiskDiscount : Math.max(localRiskDiscount, fallbackDiscount),
+  // Bounded execution-integration gaps are not evidence of local loss. Keep
+  // them visible and withhold risk-transfer credit, without a new haircut.
+  const fallbackRequired = missingFacts.some(
+    (fact) =>
+      fact.factClass !== "measuredUnwind" &&
+      (fact.factClass !== "withdrawalTerms" || fact.disposition === "issuer-undisclosed"),
   );
+  const fallbackDiscount = fallbackRequired ? configuredFallbackDiscount : 0;
+  const appliedDiscount = round4(Math.max(localRiskDiscount, fallbackDiscount));
 
   const requestedCredit =
     factsComplete &&
@@ -175,7 +180,7 @@ export function resolveV9WrapperParentLimit(input: V9WrapperParentLimitInput): V
     treatment:
       appliedCredit > 0
         ? "documented-risk-transfer"
-        : factsComplete
+        : fallbackDiscount === 0
           ? "local-facts"
           : "fallback-discount",
     localRiskDiscount,

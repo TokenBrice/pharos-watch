@@ -166,6 +166,44 @@ describe("dimension-scoped allocation consumer boundaries", () => {
     expect(result.asset.allocationScopeFacts).toContainEqual(expect.objectContaining({ claimKey: "required:leverage:contract", disposition: "integration-missing" }));
     expect(result.card.trace.wrapperParentLimit?.missingFacts).toContainEqual(expect.objectContaining({ factClass: "leverage" }));
   });
+  it.each(["implementation", "missing", "code-kind", "chain", "expired", "future", "source", "block"] as const)("rejects reachable manager %s without whole-dimension relief", (fault) => {
+    const input = fixture();
+    if (input.claim.target.kind !== "deployment") throw new Error("Expected deployment");
+    const root = input.claim.target.deployment;
+    const manager = { ...root, codeKind: "proxy" as const, address: "0x3333333333333333333333333333333333333333",
+      implementation: "0x4444444444444444444444444444444444444444" };
+    input.claim.target.reachableTargets.push(manager);
+    const current = { ...manager };
+    input.asset.allocationScopeIdentityReview!.registeredDeploymentKeys.push(`${manager.chain}:${manager.address}`);
+    if (fault !== "missing") input.asset.allocationScopeIdentityReview!.deployments.push(current);
+    if (fault === "implementation") current.implementation = "0x5555555555555555555555555555555555555555";
+    if (fault === "code-kind") input.asset.allocationScopeIdentityReview!.deployments[1] = {
+      codeKind: "immutable", chain: manager.chain, address: manager.address, observedAtSec: manager.observedAtSec, block: manager.block, sourceUrl: manager.sourceUrl,
+    };
+    if (fault === "chain") {
+      current.chain = "arbitrum";
+      input.asset.allocationScopeIdentityReview!.registeredDeploymentKeys[1] = `arbitrum:${manager.address}`;
+    }
+    if (fault === "expired") current.observedAtSec = input.fixed.clockSec - V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.reviewedResearchMaxAgeSec - 1;
+    if (fault === "future") current.observedAtSec = input.fixed.clockSec + 1;
+    if (fault === "source") current.sourceUrl = "https://example.com/unbound";
+    if (fault === "block") current.block++;
+    const result = compile(input);
+    expect(result.asset.allocationScopeFacts).toContainEqual(expect.objectContaining({ claimKey: input.claim.claimKey, admitted: false, assessment: null, rejectionReason: "identity-unmatched" }));
+    expect(wrapperFacts(result).facts.leverage.disposition).toBe("issuer-undisclosed");
+    expect(result.card.trace.wrapperParentLimit?.missingFacts).toContainEqual(expect.objectContaining({ factClass: "leverage" }));
+  });
+
+  it("admits an exactly matched root and manager reachable roster", () => {
+    const input = fixture();
+    if (input.claim.target.kind !== "deployment") throw new Error("Expected deployment");
+    const manager = { ...input.claim.target.deployment, address: "0x3333333333333333333333333333333333333333" };
+    input.claim.target.reachableTargets.push(manager);
+    input.asset.allocationScopeIdentityReview!.registeredDeploymentKeys.push(`${manager.chain}:${manager.address}`);
+    input.asset.allocationScopeIdentityReview!.deployments.push({ ...manager });
+    expect(wrapperFacts(compile(input)).facts.leverage).toMatchObject({ disposition: "reviewed", assessment: "none" });
+  });
+
   it("admits just before expiry and rejects overlapping whole-book proofs", () => {
     const input = fixture();
     input.claim.expiresAtSec = input.fixed.clockSec + 1;

@@ -187,7 +187,7 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
     ]);
   });
 
-  it("shares documented-redemption admission with native savings exit evaluation", () => {
+  it("credits documented redemption without treating native savings unwind as measured", () => {
     const { fixed, meta } = nativeSavingsFixedAndMeta();
     const baseline = buildSafetyScoreV9BaselineExtension(fixed, { metaById: meta });
     const asset = baseline.assets[0]!;
@@ -205,7 +205,14 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
     const evaluated = evaluateV9Exit({ circulatingUsd: compiledAlpha.supply.circulatingUsd, portfolioStatus: "reviewed-complete", routes: compiledAlpha.exitRoutes.map(projectV9ExitEvaluationRoute) }, V9_CANDIDATE_POLICY_V1);
     expect(evaluated.routes.find((route) => route.routeKey === documentedRoute.routeKey)).toMatchObject({ included: true });
     expect(compiledAlpha.peg).toMatchObject({ status: { observationState: "known" }, referenceKind: "nav" });
-    expect(compiledAlpha.wrapperLocalFacts).toMatchObject({ applicability: "wrapper", form: "native-staked", facts: { strategyComplexity: { assessment: "low" }, measuredUnwind: { assessment: "none" } } });
+    expect(compiledAlpha.wrapperLocalFacts).toMatchObject({
+      applicability: "wrapper",
+      form: "native-staked",
+      facts: {
+        strategyComplexity: { assessment: "low" },
+        measuredUnwind: { assessment: null, disposition: "integration-missing" },
+      },
+    });
   });
 
   it("admits only live-backed or explicitly eligible reserve compositions", () => {

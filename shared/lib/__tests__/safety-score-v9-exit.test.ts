@@ -250,7 +250,7 @@ describe("evaluateV9Exit", () => {
     });
   });
 
-  it("keeps a measured-zero queued route on the v9.44 no-viable-exit path", () => {
+  it("keeps a non-score-eligible queued zero as bounded uncertainty", () => {
     const zeroQueue = route({
       routeKey: "redemption:eearn-operator-queue",
       routeFamily: "protocol-redemption",
@@ -274,24 +274,16 @@ describe("evaluateV9Exit", () => {
       V9_CANDIDATE_POLICY_V1,
     );
 
-    expect(result.score).toBe(0);
-    expect(result.primaryRouteKey).toBe("redemption:eearn-operator-queue");
-    expect(result.horizons.queued).toEqual({ primaryRouteKey: "redemption:eearn-operator-queue", score: 0 });
-    expect(result.reasons).toContain("no-viable-exit-path");
+    expect(result.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
+    expect(result.primaryRouteKey).toBeNull();
+    expect(result.reasons).toContain("missing-same-notional-route");
+    expect(result.reasons).not.toContain("no-viable-exit-path");
     expect(result.routes[0]).toMatchObject({
-      included: true,
-      exclusionReason: null,
-      score: 0,
-      observationConfidence: "high",
-      modelConfidence: "high",
-      confidenceFactor: 1,
-      capacityPoint: { executableUsd: 0, completionRatio: 0 },
-      components: { capacity: 0 },
-      capsApplied: expect.arrayContaining(["zero-executable-capacity"]),
+      included: false, score: null, exclusionReason: "missing-same-notional-route",
     });
   });
 
-  it("retains an autoUSD-like immaterial live-reserve observation instead of calling the method unsupported", () => {
+  it("does not treat an autoUSD-like reserve lower bound as exhaustion", () => {
     const immaterialQueue = route({
       routeKey: "redemption:autousd-operator-queue",
       routeFamily: "protocol-redemption",
@@ -311,19 +303,12 @@ describe("evaluateV9Exit", () => {
       V9_CANDIDATE_POLICY_V1,
     );
 
-    expect(result.score).toBe(0);
-    expect(result.primaryRouteKey).toBe("redemption:autousd-operator-queue");
-    expect(result.reasons).toContain("no-viable-exit-path");
-    expect(result.reasons).not.toContain("unsupported-same-notional-route");
+    expect(result.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
+    expect(result.primaryRouteKey).toBeNull();
+    expect(result.reasons).toContain("missing-same-notional-route");
+    expect(result.reasons).not.toContain("no-viable-exit-path");
     expect(result.routes[0]).toMatchObject({
-      included: true,
-      exclusionReason: null,
-      score: 0,
-      observationConfidence: "high",
-      modelConfidence: "high",
-      confidenceFactor: 1,
-      capacityPoint: { executableUsd: 1_000, completionRatio: 0 },
-      capsApplied: expect.arrayContaining(["immaterial-executable-capacity"]),
+      included: false, score: null, exclusionReason: "missing-same-notional-route",
     });
   });
 
@@ -471,7 +456,7 @@ describe("evaluateV9Exit", () => {
     expect(lowerBound.score!).toBeGreaterThan(diagnostic.score!);
   });
 
-  it("scores a reviewed absence of viable routes poorly and bounds incomplete evidence", () => {
+  it("does not infer measured absence from a reviewed diagnostic inventory", () => {
     const diagnosticRoute = route({ coverageClass: "diagnostic" });
     const reviewed = evaluateV9Exit(
       {
@@ -490,22 +475,14 @@ describe("evaluateV9Exit", () => {
       V9_CANDIDATE_POLICY_V1,
     );
 
-    expect(reviewed.score).toBe(0);
-    expect(reviewed.reasons).toContain("no-viable-exit-path");
-    expect(incomplete.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
+    expect(reviewed.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
+    expect(reviewed.reasons).not.toContain("no-viable-exit-path");
+    expect(incomplete.score).toBe(reviewed.score);
     expect(incomplete.primaryRouteKey).toBeNull();
     expect(incomplete.reasons).toContain("unsupported-same-notional-route");
-    expect(incomplete.reasons).not.toContain("missing-same-notional-route");
-    expect(incomplete.score!).toBeGreaterThan(reviewed.score!);
+    expect(incomplete.reasons).toContain("missing-same-notional-route");
   });
 
-  // R4 scope verification (owner ruling 2026-07-29). The zero-evaluated-route
-  // return suppresses the default reason only when EVERY per-route diagnostic
-  // is `unsupported-same-notional-route`. Diagnostics come from route traces,
-  // so a portfolio with no routes at all has none to inspect and the default
-  // reason is emitted unconditionally. A fact-set gap carrying
-  // `unsupported-same-notional-route` never reaches this predicate, so
-  // reclassifying the zero-route branch does NOT self-suppress the echo.
   it("does not self-suppress the missing-route echo when there is no route to diagnose", () => {
     const withDiagnosticRoute = evaluateV9Exit(
       {
@@ -515,7 +492,7 @@ describe("evaluateV9Exit", () => {
       },
       V9_CANDIDATE_POLICY_V1,
     );
-    expect(withDiagnosticRoute.reasons).toEqual(["unsupported-same-notional-route"]);
+    expect(withDiagnosticRoute.reasons).toEqual(["missing-same-notional-route", "unsupported-same-notional-route"]);
 
     const withoutAnyRoute = evaluateV9Exit(
       { circulatingUsd: 20_000_000, portfolioStatus: "incomplete", routes: [] },
@@ -854,7 +831,7 @@ describe("reliable non-atomic redemption credit", () => {
     expect(days.score!).toBeGreaterThan(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
   });
 
-  it.each(["eventual-redemption", "issuer-redemption", "protocol-redemption"] as const)("keeps zero-clearing %s as measured adverse evidence", (routeFamily) => {
+  it.each(["eventual-redemption", "issuer-redemption", "protocol-redemption"] as const)("does not promote documented zero-clearing %s terms to measured adversity", (routeFamily) => {
     const zeroCost = redemptionRoute({
       routeFamily,
       capacityCurve: [
@@ -862,18 +839,13 @@ describe("reliable non-atomic redemption credit", () => {
       ],
     });
     const result = evaluateV9Exit({ circulatingUsd: 20_000_000, routes: [zeroCost] }, V9_CANDIDATE_POLICY_V1);
-    expect(result.score).toBe(0);
-    expect(result.primaryRouteKey).toBe("redemption:eventual");
+    expect(result.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
+    expect(result.primaryRouteKey).toBeNull();
     expect(result.routes[0].routeFamily).toBe(routeFamily);
-    expect(result.reasons).not.toContain("unsupported-same-notional-route");
-    expect(result.reasons).toContain("no-viable-exit-path");
+    expect(result.reasons).toContain("missing-same-notional-route");
+    expect(result.reasons).not.toContain("no-viable-exit-path");
     expect(result.routes[0]).toMatchObject({
-      included: true,
-      exclusionReason: null,
-      score: 0,
-      capacityPoint: { executableUsd: 0, completionRatio: 0 },
-      confidenceFactor: 1,
-      capsApplied: expect.arrayContaining(["zero-executable-capacity"]),
+      included: false, score: null, exclusionReason: "missing-same-notional-route",
     });
   });
 
@@ -885,7 +857,7 @@ describe("reliable non-atomic redemption credit", () => {
     expect(result.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
   });
 
-  it.each([0, 1_000])("requires a complete inventory before treating $%i capacity as adverse", (executableUsd) => {
+  it.each([0, 1_000])("does not let a complete inventory turn documented $%i capacity into an exhaustion measurement", (executableUsd) => {
     const candidate = redemptionRoute({
       capacityCurve: [{
         requestedNotionalUsd: 1_000_000, maxCostBps: 200, executableUsd,
@@ -900,15 +872,13 @@ describe("reliable non-atomic redemption credit", () => {
     }, V9_CANDIDATE_POLICY_V1);
     expect(incomplete.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
     expect(incomplete.primaryRouteKey).toBeNull();
-    expect(incomplete.routes[0]).toMatchObject({ included: false, score: null, exclusionReason: "unsupported-same-notional-route" });
+    expect(incomplete.routes[0]).toMatchObject({ included: false, score: null, exclusionReason: "missing-same-notional-route" });
     expect(incomplete.reasons).not.toContain("no-viable-exit-path");
-    expect(reviewed.score).toBe(0);
-    expect(reviewed.primaryRouteKey).toBe("redemption:eventual");
-    expect(reviewed.reasons).toContain("no-viable-exit-path");
+    expect(reviewed.score).toBe(incomplete.score);
+    expect(reviewed.primaryRouteKey).toBeNull();
+    expect(reviewed.reasons).not.toContain("no-viable-exit-path");
     expect(reviewed.routes[0]).toMatchObject({
-      included: true, score: 0, exclusionReason: null,
-      capacityPoint: { executableUsd },
-      capsApplied: expect.arrayContaining([executableUsd === 0 ? "zero-executable-capacity" : "immaterial-executable-capacity"]),
+      included: false, score: null, exclusionReason: "missing-same-notional-route",
     });
   });
 
@@ -1072,6 +1042,68 @@ describe("SIM-EXIT-L2 undisclosed-fee credit and danger-held exclusion", () => {
     );
     expect(held.routes.find((entry) => entry.routeKey === "redemption:documented")?.score).toEqual(baseTrace?.score);
   });
+
+  it.each([
+    { name: "hchf-like HBAR-denominated dynamic fee", settlement: "immediate" as const, delay: 300 },
+    { name: "usbd-like coreRate plus 75 bps fee", settlement: "atomic" as const, delay: 0 },
+  ])("never reduces conservative credit when $name becomes disclosed", ({ settlement, delay }) => {
+    const modeled = route({
+      scoreEligible: false, coverageClass: "modelled-terms-lower-bound",
+      evidenceKind: "documented-terms", settlement, settlementDelaySec: delay,
+      capacityCurve: route().capacityCurve.map((point) => ({ ...point, executionCostBps: 200 })),
+    });
+    const opaque = evaluateV9Exit({
+      circulatingUsd: 20_000_000, routes: [{ ...modeled, feeEvidence: "undisclosed-reviewed" }],
+    }, V9_CANDIDATE_POLICY_V1);
+    const disclosed = evaluateV9Exit({
+      circulatingUsd: 20_000_000, routes: [{ ...modeled, feeEvidence: "disclosed-unquantified" }],
+    }, V9_CANDIDATE_POLICY_V1);
+    expect(opaque.score).toBe(52);
+    expect(disclosed.score).toBe(opaque.score);
+    expect(disclosed.routes[0]).toMatchObject({
+      included: true, score: opaque.routes[0]!.score,
+      components: opaque.routes[0]!.components,
+    });
+  });
+
+  it.each([false, true])("keeps disclosed and opaque fee treatment equal with danger-held=%s", (preExitDangerHeld) => {
+    const evaluate = (feeEvidence: V9ExitEvaluationRoute["feeEvidence"]) => evaluateV9Exit({
+      circulatingUsd: 20_000_000, preExitDangerHeld,
+      routes: [
+        undisclosed({ feeEvidence }),
+        route({
+          routeKey: "dex:independent", lane: "dex", routeFamily: "dex-amm",
+          evidenceKind: "measured-executable-depth",
+          failureDomains: ["dex:independent"], physicalResourceKeys: ["pool:independent"],
+        }),
+      ],
+    }, V9_CANDIDATE_POLICY_V1);
+    const opaque = evaluate("undisclosed-reviewed");
+    const disclosed = evaluate("disclosed-unquantified");
+    expect(disclosed.score).toBe(opaque.score);
+    expect(disclosed.diversificationBonus).toBe(opaque.diversificationBonus);
+    const opaqueTrace = opaque.routes.find((entry) => entry.routeKey === "redemption:undisclosed")!;
+    const disclosedTrace = disclosed.routes.find((entry) => entry.routeKey === "redemption:undisclosed")!;
+    expect(disclosedTrace.included).toBe(opaqueTrace.included);
+    expect(disclosedTrace.exclusionReason).toBe(opaqueTrace.exclusionReason);
+  });
+
+  it("does not replace a measured over-budget execution cost with the uncertain-fee assumption", () => {
+    const measured = route({
+      feeEvidence: "disclosed-unquantified",
+      capacityCurve: [{
+        requestedNotionalUsd: 1_000_000, maxCostBps: 200,
+        executableUsd: 0, completionRatio: 0, executionCostBps: 250,
+      }],
+    });
+    const result = evaluateV9Exit({
+      circulatingUsd: 20_000_000, portfolioStatus: "reviewed-complete", routes: [measured],
+    }, V9_CANDIDATE_POLICY_V1);
+    expect(result.score).toBe(0);
+    expect(result.routes[0]).toMatchObject({
+      included: true, score: 0, capacityPoint: { executionCostBps: 250 },
+    });
+  });
 });
 
 describe("undisclosed-fee routes stay bounded at the portfolio level", () => {
@@ -1147,7 +1179,7 @@ describe("stale exit-route observations", () => {
     expect(stale.score!).toBeLessThan(current.score!);
   });
 
-  it("keeps a missing observation excluded so absent evidence still fails closed", () => {
+  it("keeps a missing observation excluded without inventing exhaustion", () => {
     const missing = evaluateV9Exit(
       {
         circulatingUsd: 20_000_000,
@@ -1159,7 +1191,8 @@ describe("stale exit-route observations", () => {
 
     expect(missing.primaryRouteKey).toBeNull();
     expect(missing.reasons).toContain("missing-runtime-route-evidence");
-    expect(missing.score).toBe(0);
+    expect(missing.reasons).not.toContain("no-viable-exit-path");
+    expect(missing.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
   });
 
   it("prices the stale derate off the reviewed policy lever", () => {

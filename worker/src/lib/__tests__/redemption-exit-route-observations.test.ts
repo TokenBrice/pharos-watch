@@ -374,6 +374,37 @@ describe("redemption same-notional route observations", () => {
     expect(build({ capacityProfile: undefined })).toBeNull();
     expect(build({ scoringCapacityUsd: null })).toBeNull();
   });
+
+  it("does not label a published formula as opaque or admit its unquantified execution cost", () => {
+    const observation = build({
+      config: {
+        ...config,
+        costModel: {
+          kind: "dynamic-or-unclear", confidence: "formula", feeModelKind: "formula",
+          feeDescription: "Early redemption fee declines linearly from 3.5% to 0.1%.",
+        },
+      },
+      resolvedFeeBps: null,
+    });
+    expect(observation).toMatchObject({ feeEvidence: "disclosed-unquantified", scoreEligible: false });
+    expect(observation).not.toHaveProperty("executionCostBps");
+  });
+
+  it("withholds executable capacity when a formula's resolved fee provably exceeds the cost budget", () => {
+    const observation = build({
+      config: {
+        ...config,
+        costModel: {
+          kind: "dynamic-or-unclear", confidence: "formula", feeModelKind: "formula",
+          feeDescription: "Observed coreRate plus 75 bps.",
+        },
+      },
+      resolvedFeeBps: 250,
+    });
+    expect(observation).toMatchObject({ executableUsd: 0, completionRatio: 0, scoreEligible: false });
+    expect(observation).not.toHaveProperty("feeEvidence");
+    expect(observation!.capacityCurve!.every((point) => point.executableUsd === 0)).toBe(true);
+  });
 });
 
 const supplyFullEntry: RedemptionBackstopEntry = makeSupplyFullRedemption();
@@ -406,7 +437,7 @@ describe("derived supply-model route observations", () => {
     }
   });
 
-  it("preserves reviewed capacity under the bounded-unknown fee ceiling", () => {
+  it("preserves reviewed capacity while distinguishing unquantified published fees", () => {
     const variable = deriveSupplyModelExitRouteObservation(
       { ...supplyFullEntry, feeModelKind: "documented-variable", feeBps: null },
       now,
@@ -417,6 +448,10 @@ describe("derived supply-model route observations", () => {
       completionRatio: 1,
       feeEvidence: "undisclosed-reviewed",
     });
+    const formula = deriveSupplyModelExitRouteObservation(
+      { ...supplyFullEntry, feeConfidence: "formula", feeModelKind: "formula", feeBps: null }, now,
+    );
+    expect(formula).toMatchObject({ feeEvidence: "disclosed-unquantified", scoreEligible: false });
     const overCost = deriveSupplyModelExitRouteObservation({ ...supplyFullEntry, feeBps: 250 }, now);
     expect(overCost).toMatchObject({ scoreEligible: false, executableUsd: 0 });
     expect(overCost).not.toHaveProperty("feeEvidence");

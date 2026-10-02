@@ -215,6 +215,7 @@ const SafetyScoreV9ExitBreakdownSchema = z
         key: z.string().min(1),
         label: z.string().min(1).max(160),
         routeFamily: ExitRouteFamilySchema,
+        feeEvidence: z.enum(["undisclosed-reviewed", "disclosed-unquantified"]).optional(),
         score: ScoreSchema,
         physicalToUsd: PhysicalToUsdTraceSchema.optional(),
         executionCertificate: ExitExecutionPublicCertificateSchema.optional(),

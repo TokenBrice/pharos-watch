@@ -73,11 +73,11 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
   },
   {
     sourcePath: "shared/lib/safety-score-v9/compile.ts",
-    stateNames: ["validatedCompiledFactSets"],
+    stateNames: ["validatedCompiledFactSets", "validatedAssetFacts"],
     owner: "Safety Score V9 fact compilation",
     kind: "cache",
-    resetOrTtl: "Weak object-identity marker; entries are garbage-collectable and disappear on isolate recycle.",
-    durableTruth: "Validated fact-set input and its digest are authoritative; the marker only proves local compilation.",
+    resetOrTtl: "Weak object-identity markers for frozen admitted assets and compiled sets; entries are garbage-collectable and disappear on isolate recycle.",
+    durableTruth: "Validated fact inputs and their digest are authoritative; markers only prove local admission/compilation and never bypass cohort/reference validation.",
   },
   {
     sourcePath: "shared/lib/safety-score-v9/policy.ts",

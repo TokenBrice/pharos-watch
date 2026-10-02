@@ -1,4 +1,4 @@
-import { compileV9FactSetV3 } from "@shared/lib/safety-score-v9/compile";
+import { compileV9FactSetV3, safeParseV9AssetFactsV3 } from "@shared/lib/safety-score-v9/compile";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import {
   createV9FactStatus,
@@ -501,7 +501,7 @@ function compileAssetOutcome(
       "fact-build",
     );
   }
-  const parsed = V9AssetFactsV3Schema.safeParse(facts);
+  const parsed = safeParseV9AssetFactsV3(facts);
   if (!parsed.success) {
     return quarantinedAssetOutcome(
       context,

@@ -293,12 +293,18 @@ function structuralSignalFromControl(
       return control.controlKind !== "bridge" &&
         control.status.applicability.state !== "not-applicable" &&
         control.status.evidenceRefIds.length > 0 &&
-        (posture === "unbounded-or-compromised" || posture === "unbounded-reconciliation-unknown");
+        (posture === "unbounded-or-compromised" || posture === "unbounded-reconciliation-unknown" || posture === "unbounded-reconciled");
     });
+  const knownOraclePathEvidence =
+    failure.kind === "weak-oracle-branch" &&
+    asset.economicControlReview.oracle.knownPathTier !== undefined &&
+    asset.economicControlReview.oracle.paths?.some((path) =>
+      path.applicability.state === "required" && path.observationState === "known",
+    );
   const responsibility: V9EvidenceResponsibility =
     failure.kind !== "unreviewed-upgrade" &&
     ((reviewStatus.applicability.state === "required" && reviewStatus.observationState === "known") ||
-      failure.kind === "centralized-mint" || failure.kind === "active-control-incident") &&
+      failure.kind === "centralized-mint" || failure.kind === "active-control-incident" || knownOraclePathEvidence) &&
     (controlsKnown || controlsCarryAdverseMintEvidence) &&
     economicLossScope !== undefined
       ? "measured-adverse"
@@ -490,13 +496,13 @@ function exitPillar(
   gapIndex: V9EvaluationGapIndex,
 ): V9PillarEvaluation {
   const mechanismExitFacts = asset.mechanismExitFacts ?? [];
-  const hasKnownRuntimeRoute = result.routes.some((trace) => {
+  const hasRetainedRuntimeRoute = result.routes.some((trace) => {
     if (!trace.included) return false;
     const route = asset.exitRoutes.find((candidate) => candidate.routeKey === trace.routeKey);
-    return route?.status.observationState === "known";
+    return route?.status.observationState === "known" || route?.status.observationState === "stale";
   });
   const profileExplainsMissingRuntime =
-    !hasKnownRuntimeRoute &&
+    !hasRetainedRuntimeRoute &&
     mechanismExitFacts.length > 0;
   const profileResponsibility: V9EvidenceResponsibility =
     mechanismExitFacts.some((fact) => fact.disposition === "supported")
@@ -533,8 +539,10 @@ function exitPillar(
     primary !== null &&
     primaryTrace?.included === true &&
     primaryTrace.capacityPoint !== null &&
-    primary.status.observationState === "known" &&
-    primary.coverageClass !== "diagnostic" &&
+    (primary.status.observationState === "known" || primary.status.observationState === "stale") &&
+    primary.scoreEligible &&
+    primary.coverageClass === "exact-complete" &&
+    primary.evidenceKind !== "documented-terms" &&
     capacityFloor !== undefined
       ? [{
           source: "pillar-score",
@@ -584,6 +592,7 @@ function exitPillar(
           code === "no-viable-exit-path" &&
           asset.exitStatus.applicability.state === "required" &&
           asset.exitStatus.observationState === "known" &&
+          asset.exitRoutes.length === 0 &&
           result.score === 0 &&
           result.primaryRouteKey === null &&
           causalGaps.length === 0 &&
@@ -592,7 +601,10 @@ function exitPillar(
           code === "no-viable-exit-path" &&
           primary !== null &&
           primaryTrace?.included === true &&
-          primary.status.observationState === "known" &&
+          (primary.status.observationState === "known" || primary.status.observationState === "stale") &&
+          primary.scoreEligible &&
+          primary.coverageClass === "exact-complete" &&
+          primary.evidenceKind !== "documented-terms" &&
           capacityFloor !== undefined &&
           causalGaps.length === 0 &&
           profileFactKeys.length === 0;

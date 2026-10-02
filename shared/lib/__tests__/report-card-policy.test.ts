@@ -17,9 +17,12 @@ describe("whole-book custody eligibility", () => {
     ["algorithmic", "centralized-dependent", "onchain"],
     ["algorithmic", "decentralized", "onchain"],
   ] as const)("defaults %s:%s to %s without inventing institutional coverage", (backing, governance, expected) => {
-    const custodyModel = resolveCustodyModel(makeStablecoinMeta({
+    const custodyModel = resolveCustodyModel({
+      ...makeStablecoinMeta(),
+      listingClass: "core-stablecoin",
+      hasAuthoredDependencyEvidence: false,
       flags: { ...makeStablecoinMeta().flags, backing, governance },
-    }));
+    });
     expect(custodyModel).toBe(expected);
     expect(applyInputDrivenExclusions(makeRow({ custodyModel }), makeInput({ custodyOk: "regulated-only" })))
       .toMatchObject({ reason: "custody-regulated-only-violation" });
@@ -34,10 +37,13 @@ describe("whole-book custody eligibility", () => {
   it.each(CUSTODY_MODEL_VALUES)("preserves the authored value %s over every class default", (custodyModel) => {
     for (const backing of BACKING_TYPE_VALUES) {
       for (const governance of GOVERNANCE_TYPE_VALUES) {
-        expect(resolveCustodyModel(makeStablecoinMeta({
+        expect(resolveCustodyModel({
+          ...makeStablecoinMeta(),
+          listingClass: "core-stablecoin",
+          hasAuthoredDependencyEvidence: false,
           custodyModel,
           flags: { ...makeStablecoinMeta().flags, backing, governance },
-        }))).toBe(custodyModel);
+        })).toBe(custodyModel);
       }
     }
   });

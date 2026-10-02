@@ -1045,14 +1045,6 @@ describe("Safety Score v9 economic control", () => {
       posture: string;
       score: number;
     }> = [
-      {
-        name: "unresolved cap semantics stays on the unknown floor (TUSD-shaped facts)",
-        mintControl: unboundedMint({ capSemantics: { kind: "unknown", bound: null } }),
-        supervision: "attestation-only",
-        reconciliation: "periodic",
-        posture: "unknown",
-        score: 45 - UNATTESTED_EOA_PENALTY,
-      },
       ...(["none", "not-applicable"] as const).flatMap((reconciliation) =>
         (["none", "unknown", "attestation-only"] as const).map((supervision) => ({
           name: `confirmed-absent reconciliation (${reconciliation}) under ${supervision} supervision stays on the adverse floor`,

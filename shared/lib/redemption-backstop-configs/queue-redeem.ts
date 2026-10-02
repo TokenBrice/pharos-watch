@@ -474,12 +474,41 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     ],
   }),
   "uty-xsy": defineQueueRedeemConfig({
-    unresolvedOutputDisposition: "issuer-undisclosed",
+    outputAssets: ["usdc-circle"],
     settlementModel: "days",
     capacityModel: { kind: "supply-ratio", ratio: 0.3, confidence: "heuristic", basis: "strategy-buffer" },
     costModel: undisclosedReviewedFee(),
-    reviewedAt: "2026-08-27",
+    reviewedAt: "2026-10-02",
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+      rationale:
+        "The Base UTY vault identifies USDC and a current 604800-second minimum unlock delay, not a guaranteed completion deadline. Claiming still requires a funded on-chain USDC buffer; the existing 30% capacity heuristic and undisclosed-reviewed fee do not establish executable same-notional capacity or an all-in cost bound.",
+      reviewedAt: "2026-10-02",
+      docs: [
+        sourceRef(
+          "YieldPoint UTY Base redemption",
+          "https://docs.yieldpoint.io/protocol/architecture/flows.md",
+          ["route", "settlement"],
+        ),
+        sourceRef(
+          "YieldPoint Base operations",
+          "https://docs.yieldpoint.io/protocol/integration/base-operations.md",
+          ["route", "settlement"],
+        ),
+      ],
+    },
     docs: [
+      sourceRef(
+        "YieldPoint UTY Base redemption",
+        "https://docs.yieldpoint.io/protocol/architecture/flows.md",
+        ["route", "settlement"],
+      ),
+      sourceRef(
+        "YieldPoint UTY deployed contracts",
+        "https://docs.yieldpoint.io/protocol/architecture/contracts.md",
+        ["route"],
+      ),
       sourceRef(
         "XSY UTY peg-arbitrage docs",
         "https://xsy-1.gitbook.io/xsy-main/open-market-peg-arbitrage.md",
@@ -489,8 +518,8 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       sourceRef("XSY Accountable dashboard", "https://accountable.xsy.fi/", ["capacity"]),
     ],
     notes: [
-      "Output re-reviewed 2026-08-27: current XSY docs say users can redeem UTY through the issuance smart contract for approximately $1 in value, but do not name a payout asset. The UTY overview also states that holders have no ownership rights over specific underlying assets, so outputAssets is intentionally unset.",
-      "Current public XSY materials do not establish a fixed holder fee, executable capacity, or settlement SLA for the issuance-contract route. The prior 7-day USDC assertion is not retained as current output evidence.",
+      "Output re-reviewed 2026-10-02: current YieldPoint documentation and the Base UTY vault's asset() identify Base USDC (0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913) as the payout asset. UTY-to-USDC redemption is Base-only; spoke holders must bridge UTY to Base before requesting redemption.",
+      "The current getBondingPeriod() is 604800 seconds (7 days), establishing the async request's minimum unlock delay, not a guaranteed completion SLA. redeemById pays from the on-chain USDC buffer; current executable capacity and a fixed holder fee remain unverified. The small-amount instant extension does not establish a same-notional stress exit.",
       "The 30% ratio is a reviewed heuristic reflecting delta-neutral AVAX hedge composition rather than a published instant-liquidity floor",
     ],
   }),
@@ -504,10 +533,26 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     docs: [
       sourceRef("Piku docs", "https://docs.piku.co/piku", ["route", "capacity", "access", "fees", "settlement"]),
       sourceRef("Piku website", "https://piku.co/", ["route"]),
+      sourceRef(
+        "Piku USP vault holder terms",
+        "https://piku.co/app/detail/USP",
+        ["route", "fees", "settlement"],
+      ),
     ],
+    v9RouteReviewTerms: {
+      settlementDelaySec: 172_800,
+      reviewedAt: "2026-10-02",
+      docs: [
+        sourceRef(
+          "Piku USP vault holder terms",
+          "https://piku.co/app/detail/USP",
+          ["route", "settlement"],
+        ),
+      ],
+    },
     notes: [
-      "Piku materials describe KYC-gated FIFO redemptions with settlement inside roughly 24 hours",
-      "The reviewed 10% bound matches the tracked USDC/USDT cash buffer rather than assuming the full strategy book is immediately redeemable",
+      "Piku's exact USP vault page describes FIFO redemptions processed within 48 hours, a 2-day redemption period, and a 0.20% redemption fee.",
+      "The existing 10% documented-bound capacity model is unchanged; the 2026-10-02 holder-terms review verifies the fee and 48-hour settlement disclosure, not a current 10% executable cash buffer.",
     ],
   }),
   "aznd-mu-digital": defineReviewedQueueRedeemConfig(REVIEWED_QUEUE_REDEMPTION_AT, {
@@ -673,30 +718,6 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     ],
     notes: [
       "Neutrl docs establish a dual-path redemption system with instant execution when AssetReserve liquidity is available and an onchain queued fallback when it is not; current model scores eventual redeemability rather than a separately measured live instant buffer",
-    ],
-  }),
-  "onyc-onre": defineQueueRedeemConfig({
-    outputAssets: ["usdc-circle", "usdg-paxos"],
-    capacityModel: { kind: "supply-ratio", ratio: 0.025, confidence: "documented-bound", basis: "strategy-buffer" },
-    accessModel: "issuer-api",
-    settlementModel: "days",
-    executionModel: "rules-based-nav",
-    outputAssetType: "stable-basket",
-    costModel: fixedFee(25, "OnRe docs list a 25 bps redemption fee"),
-    v9RouteReviewTerms: {
-      settlementModel: "queued",
-      reviewedAt: "2026-05-28",
-      docs: [
-        sourceRef("OnRe redemptions", "https://docs.onre.finance/for-capital-providers/redemptions", ["route"]),
-      ],
-    },
-    reviewedAt: REVIEWED_STABLECOIN_AUDIT_AT,
-    docs: [
-      sourceRefFull("OnRe redemptions", "https://docs.onre.finance/for-capital-providers/redemptions"),
-      sourceRef("OnRe transparency", "https://app.onre.finance/earn/transparency", ["capacity"]),
-    ],
-    notes: [
-      "OnRe currently targets monthly redemption capacity up to 2.5% of NAV, reserves up to 15% of underwriting capital for liquidity, and pays USDC or USDG to verified/accredited holders.",
     ],
   }),
   "apyusd-apyx": erc4626ReserveTelemetryQueueConfig({

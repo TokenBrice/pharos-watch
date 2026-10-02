@@ -18,9 +18,9 @@ import {
   safetyScoreV9ChainRows,
   safetyScoreV9SupplyAttributionExpectedAssetIds,
 } from "./supply-attribution";
-import { normalizeReviewedDeploymentAddress, reviewedSupplyRouteKind, reviewedEconomicDeploymentAttributionValidationError, hasCompleteEligibleProviderSupply, REVIEWED_ECONOMIC_SUPPLY_PLANS } from "./supply-attribution-contract";
+import { normalizeReviewedDeploymentAddress, reviewedSupplyRouteKind, reviewedEconomicDeploymentAttributionValidationError, hasCompleteEligibleProviderSupply, REVIEWED_ECONOMIC_SUPPLY_PLANS, REVIEWED_ECONOMIC_SUPPLY_PLAN_QUARANTINES, REVIEWED_SUPPLY_ATTRIBUTION_ENVELOPE } from "./supply-attribution-contract";
+import { ReviewedProviderRowExclusionSchema } from "@shared/types/safety-score-v9-supply-attribution";
 import supplyAttributionReviews from "@shared/data/safety-score-v9/supply-attribution-reviews-v1.json";
-import { ReviewedEconomicSupplyPlanFileSchema, ReviewedProviderRowExclusionSchema } from "@shared/types/safety-score-v9-supply-attribution";
 import {
   exactInputBoundTransferMaterialityPacket,
   type SafetyScoreV9TransferMaterialityGeneration,
@@ -34,7 +34,7 @@ type ExtensionAsset = SafetyScoreV9FactSetExtensionV2["assets"][number];
 type SupplyReview = NonNullable<ExtensionAsset["supplyReview"]>;
 const RAW_UNIT_SHARE_SCALE = 10n ** 18n;
 
-const SUPPLY_ATTRIBUTION_REVIEWS = ReviewedEconomicSupplyPlanFileSchema.parse(supplyAttributionReviews);
+const SUPPLY_ATTRIBUTION_REVIEWS = REVIEWED_SUPPLY_ATTRIBUTION_ENVELOPE;
 export const SAFETY_SCORE_V9_INDEPENDENT_LIABILITY_SUPPLY_ASSET_IDS = Object.freeze(
   SUPPLY_ATTRIBUTION_REVIEWS.independentLiabilityAssetIds.sort(compareText),
 );
@@ -551,6 +551,7 @@ function admittedProviderRowExclusions(
   fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   assetId: string,
   review: SupplyReview,
+  profile: BridgeRouteRiskProfile | undefined,
 ): SupplyReview["providerRowExclusions"] {
   const entries = supplyAttributionReviews.providerRowExclusionReviews ?? [];
   if (!entries.some(entry => entry.assetId === assetId)) return undefined;
@@ -558,9 +559,12 @@ function admittedProviderRowExclusions(
   const aggregate = getCirculatingRawOrNull(fixedInput.aggregateCirculatingById?.[assetId] ?? {});
   const total = Object.values(rows).reduce((sum, row) => sum + row.current, 0);
   const own = ACTIVE_META_BY_ID.get(assetId);
-  // Do not change the legacy share denominator. Admit only when it already
-  // equals the original published aggregate, rather than renormalising rows.
-  if (aggregate === null || aggregate <= 0 || total !== aggregate) return [];
+  // Keep original rows and aggregate; only the policy's conservation budget
+  // admits their floating-point tails. No corrected or renormalised total.
+  if (aggregate === null || aggregate <= 0) return [];
+  const policy = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution;
+  if (Math.abs(total - aggregate) > Math.max(policy.conservationAbsoluteToleranceUsd,
+    aggregate * policy.conservationRelativeTolerance)) return [];
   return entries.filter(entry => entry.assetId === assetId).flatMap(entry => {
     const parsed = ReviewedProviderRowExclusionSchema.safeParse(entry);
     if (!parsed.success) return [];
@@ -572,14 +576,21 @@ function admittedProviderRowExclusions(
       !target?.contracts?.some(contract => contract.chain === record.chainId && contract.address === record.contractAddress) ||
       !target.contracts.some(contract => contract.chain === record.provenance.remoteChainId && contract.address === record.provenance.remoteTokenAddress) ||
       own.contracts?.some(contract => contract.chain === record.chainId && contract.address === record.contractAddress)) return [];
-    // Exclude only an unmatched provider identity, never a catalogued liability
-    // route (including another legacy contract on the same chain).
+    // Only the proven foreign surface is eligible: unmatched provider identity
+    // or an unresolved exact foreign-contract route, never another own liability.
     const aliases = Object.keys(rows).filter(label => resolveChainId(label) === record.chainId);
+    const foreignDeploymentKey = `${record.chainId}:${record.contractAddress}`;
+    const foreignRoute = profile?.routes?.find(route => route.id === foreignDeploymentKey);
+    const exactForeignRoute = foreignRoute !== undefined && (foreignRoute.contractAddress === undefined ||
+      normalizeReviewedDeploymentAddress(record.chainId, foreignRoute.contractAddress) === record.contractAddress);
     const row = review.selectedBridgeRoutes.find(candidate =>
-      candidate.deploymentRouteKey === `${V9_UNMATCHED_CHAIN_ROUTE_PREFIX}${assetId}:${record.chainId}` &&
-      candidate.reviewState === "unmatched" && candidate.supplyUsd === rows[record.providerChainLabel]!.current);
-    if (aliases.length !== 1 || !row) return [];
-    return [{ review: record, deploymentRouteKey: row.deploymentRouteKey, supplyShare: row.supplyShare }];
+      candidate.supplyUsd === rows[record.providerChainLabel]!.current &&
+      ((candidate.reviewState === "unmatched" &&
+        candidate.deploymentRouteKey === `${V9_UNMATCHED_CHAIN_ROUTE_PREFIX}${assetId}:${record.chainId}`) ||
+        (candidate.reviewState === "selected-unresolved" && exactForeignRoute &&
+          candidate.deploymentRouteKey === foreignDeploymentKey)));
+    if (aliases.length !== 1 || !row || row.supplyUsd === null || row.supplyUsd > aggregate) return [];
+    return [{ review: record, deploymentRouteKey: row.deploymentRouteKey, supplyShare: row.supplyUsd / aggregate }];
   });
 }
 
@@ -594,6 +605,8 @@ export function buildSafetyScoreV9SupplyReview(
   profile: BridgeRouteRiskProfile | undefined,
   options: BuildSafetyScoreV9SupplyReviewOptions = {},
 ): SupplyReview | null {
+  const quarantine = REVIEWED_ECONOMIC_SUPPLY_PLAN_QUARANTINES.get(assetId);
+  if (quarantine) throw quarantine;
   const economicPacket = fixedInput.safetyScoreV9SupplyAttributionById?.[assetId];
   if (economicPacket?.model === "reviewed-economic-deployment-partition-v1") {
     return buildReviewedEconomicDeploymentSupplyReview(fixedInput, assetId, profile);
@@ -749,7 +762,7 @@ export function buildSafetyScoreV9SupplyReview(
     unreviewedRouteSupplyShare: unreviewedUsd / totalUsd,
     failureDomains,
   });
-  const exclusions = admittedProviderRowExclusions(fixedInput, assetId, review);
+  const exclusions = admittedProviderRowExclusions(fixedInput, assetId, review, profile);
   return exclusions?.length ? { ...review, providerRowExclusions: exclusions } : review;
 }
 

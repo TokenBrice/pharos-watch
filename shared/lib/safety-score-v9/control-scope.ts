@@ -29,16 +29,17 @@ export function controlPathIsReachable(path: V9ControlExecutionScope["paths"][nu
   return !complete || path.activation !== "disabled-final";
 }
 
-function controlPathAffectsLiability(path: V9ControlExecutionScope["paths"][number], scope: V9ControlExecutionScope, assetId: string, provenOnly = false): boolean {
+function controlPathAffectsLiability(path: V9ControlExecutionScope["paths"][number], scope: V9ControlExecutionScope, assetId: string, provenOnly = false, executionComplete = true): boolean {
   const pending = [path];
   const visited = new Set<string>();
   while (pending.length > 0) {
     const current = pending.pop()!;
     if (visited.has(current.id)) continue;
     visited.add(current.id);
-    if (!controlPathIsReachable(current, true)) continue;
+    if (!controlPathIsReachable(current, executionComplete)) continue;
     if (provenOnly && (current.reach === "unknown" || current.activation === "unknown")) continue;
-    if (current.reach !== "other-liability" || current.affectedLiabilityIds.includes(assetId)) return true;
+    if (current.affectedLiabilityIds.includes(assetId) ||
+        (current.reach !== "deployment" && current.reach !== "other-liability")) return true;
     for (const ref of [...current.controlRefs, ...current.reactivationRefs, ...current.permissionChangeRefs, ...current.upgradeRefs, ...current.bypassRefs]) {
       const target = scope.paths.find((candidate) => candidate.id === ref);
       if (!target) {
@@ -50,9 +51,17 @@ function controlPathAffectsLiability(path: V9ControlExecutionScope["paths"][numb
   }
   return false;
 }
-export function compileReviewedControlScope(scope: V9ControlExecutionScope | undefined, controllerDeployment: string, assetId: string, clockSec: number, maxAgeSec: number) {
+export interface V9ReviewedControlProjection {
+  complete: boolean;
+  reviewed: boolean;
+  paths: V9ControlExecutionScope["paths"];
+  provenPaths: V9ControlExecutionScope["paths"];
+  diagnostics: string[];
+  moduleImpact: V9ModuleImpact;
+}
+export function compileReviewedControlScope(scope: V9ControlExecutionScope | undefined, controllerDeployment: string, assetId: string, clockSec: number, maxAgeSec: number): V9ReviewedControlProjection {
   const diagnostics: string[] = [];
-  if (!scope) return { complete: false, reviewed: false, paths: [], diagnostics: ["execution-scope-unreviewed"], moduleImpact: "unresolved" as V9ModuleImpact };
+  if (!scope) return { complete: false, reviewed: false, paths: [], provenPaths: [], diagnostics: ["execution-scope-unreviewed"], moduleImpact: "unresolved" };
   if (scope.controllerDeployment !== normalizeDeploymentId(controllerDeployment)) diagnostics.push("execution-controller-mismatch");
   const reviewed = Date.parse(`${scope.reviewedAt}T00:00:00Z`) / 1000;
   const observed = Date.parse(`${scope.observedAt}T00:00:00Z`) / 1000;
@@ -64,7 +73,10 @@ export function compileReviewedControlScope(scope: V9ControlExecutionScope | und
   const complete = diagnostics.length === 0;
   const paths = scope.paths.filter((path) => controlPathIsReachable(path, complete) && (!complete || controlPathAffectsLiability(path, scope, assetId)));
   const reviewedScope = diagnostics.every((code) => code === "execution-inventory-incomplete");
-  return { complete, reviewed: reviewedScope, paths, diagnostics, moduleImpact: deriveReviewedModuleImpact(reviewedScope ? scope : undefined, assetId, complete) };
+  const provenPaths = reviewedScope && !complete && scope.confidence !== "unknown"
+    ? paths.filter((path) => path.economicLossScope !== "unknown" && controlPathAffectsLiability(path, scope, assetId, true, complete))
+    : [];
+  return { complete, reviewed: reviewedScope, paths, provenPaths, diagnostics, moduleImpact: deriveReviewedModuleImpact(reviewedScope ? scope : undefined, assetId, complete) };
 }
 export function deriveReviewedModuleImpact(scope: V9ControlExecutionScope | undefined, assetId: string, complete: boolean): V9ModuleImpact {
   const inventory = scope?.extensions;
@@ -115,11 +127,11 @@ export function reviewedControlScopeSemantics(paths: readonly V9ControlExecution
 /** Partial inventories can establish adverse reach, never absence or missing evidence. */
 export function partialControlScopeSemantics(
   legacy: Pick<V9DeploymentControlFactV2, "capSemantics" | "claimImpairment">,
-  paths: readonly V9ControlExecutionScope["paths"][number][],
+  projection: Pick<V9ReviewedControlProjection, "provenPaths">,
 ): Pick<V9DeploymentControlFactV2, "capSemantics" | "claimImpairment"> {
   let capSemantics = legacy.capSemantics;
   let claimImpairment = legacy.claimImpairment;
-  for (const path of paths) {
+  for (const path of projection.provenPaths) {
     if (path.claimImpairment === "unbounded" ||
         (path.claimImpairment === "bounded" && claimImpairment === "none")) {
       claimImpairment = path.claimImpairment;

@@ -137,9 +137,12 @@ export function SafetyScoresOverview() {
         executable capacity or waive route valuation, cost, access, or settlement evidence.
       </p>
       <p>
-        Reviewed curated compositions require verified, complete evidence. An unresolved reserve disposition or known
-        unknown exposure withholds the whole curated reserve envelope, not just the disputed link. That can change
-        backing scores and downstream parent limits even when the unresolved share is tiny.
+        Reviewed curated compositions require verified, complete, sourced, dated evidence under the existing chronology
+        and freshness gates. Methodology v10.0 admits an explicitly reconciled unclassified residual of at most 0.1%,
+        the policy-owned limit, only when that residual can still be charged as bounded-unknown. The unknown share
+        remains in the composition and is not normalized away. Unrecorded, above-threshold, or unchargeably small
+        positive tails, other unresolved reserve dispositions, and incomplete or unverified evidence still withhold
+        the whole curated reserve envelope, not just the disputed link.
       </p>
       <p>
         Responsibility follows causal provenance instead of the nearest processing stage. An explicit reason-level
@@ -161,8 +164,9 @@ export function SafetyScoresOverview() {
         while an issuer-undisclosed settlement asset stays issuer-undisclosed; neither becomes scoreable. Date-only
         dispositions enter replay only after their reviewed UTC day. Partial control reviews retain the controls that
         were actually reviewed while unresolved surfaces remain bounded and fail closed. Strategy-vault wrapper
-        loss-control facts can use those reviewed local controls as wrapper evidence, but risk-transfer credit remains
-        zero unless a separate enforceable parent-loss backstop is reviewed. Subthreshold unrecognized chain-label
+        loss-control facts can use those reviewed local controls as wrapper evidence. Methodology v10.0 grants no
+        parent first-loss or risk-transfer credit, even for documented backstops. Activating that credit requires a new
+        evidence lane, reviewed intake, a review window, and a methodology change. Subthreshold unrecognized chain-label
         supply pools are tolerated by the bridge-materiality proof and no longer surface as public
         evidence-responsibility facts; material unmatched bridge supply still fails closed. Coverage that no
         supported adapter can observe is unsupported methodology rather than producer failure: deployment census
@@ -310,11 +314,16 @@ export function SafetyScoresOverview() {
       </p>
       <p>
         Methodology v9.4 also makes control scope follow the liability a control can reach. A proved deployment-local
-        control contributes a proportional exposure adjustment only with a complete reconciled liability partition;
-        root-reaching, contradictory, or unresolved controls retain global hard-cap treatment. A control that still
-        binds Economic Control retains its causal attribution, and a scope correction alone cannot turn an unchanged
-        measured D or F into NR. Common-control thresholds count independent root liabilities, so wrappers and
-        derivatives do not manufacture another affected asset and same-issuer controllers remain diagnostic. Chain
+        control contributes a proportional exposure adjustment only with a complete reconciled liability partition.
+        Methodology v10.0 prices the full admitted unresolved deployment cohort, including unattributed remainder:
+        below 5% of supply, the bounded-unknown charge is proportional; from 5% to 15%, the control-unverified ceiling
+        blends smoothly; at 15% or more, or with an unknown share, the full ceiling applies. These thresholds are
+        policy-owned. An admitted known-share cohort below 15% carries no second Control evidence cliff. Out-of-cohort
+        uncertainty and proved adverse or root-reaching controls keep their charges; contradictory scope still fails
+        closed. A control that still binds Economic Control retains its causal attribution, and a scope correction
+        alone cannot turn an unchanged measured D or F into NR. Common-control thresholds count independent root
+        liabilities, so wrappers and derivatives do not manufacture another affected asset and same-issuer controllers
+        remain diagnostic. Chain
         maturity is a dated five-gate review requiring 36 months of continuous production history,
         a 365-day liveness record, permissionless participation or at least 21 independently operated block producers
         or finality members, no unilateral instant change path (with L2s at Stage 1 or later and at least a 7-day holder

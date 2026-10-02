@@ -31,7 +31,7 @@ function score(physical: PhysicalToUsdTrace) {
 
 describe("physical-to-USD exit", () => {
   it("enforces minimum and integer lot boundaries without borrowing tokens", () => {
-    expect(evaluatePhysicalToUsdExit(terms(), reference, 99_999, clock)).toMatchObject({ grossUsd: 0, lots: 0, rejectionReason: "physical-request-below-minimum" });
+    expect(evaluatePhysicalToUsdExit(terms(), reference, 99_999, clock)).toMatchObject({ grossUsd: 0, netUsd: null, lots: 0, rejectionReason: "physical-request-below-minimum" });
     expect(evaluatePhysicalToUsdExit(terms(), reference, 100_000, clock)).toMatchObject({ grossUsd: 100_000, lots: 1, rejectionReason: null });
     expect(evaluatePhysicalToUsdExit(terms(), reference, 199_999, clock)).toMatchObject({ grossUsd: 100_000, lots: 1 });
     expect(evaluatePhysicalToUsdExit(terms(), reference, 200_000, clock)).toMatchObject({ grossUsd: 200_000, lots: 2 });
@@ -97,6 +97,25 @@ describe("physical-to-USD exit", () => {
     const rejected = evaluatePhysicalToUsdExit(config, reference, 1_000_000, clock);
     expect(rejected).toMatchObject({ costBps: 501, rejectionReason: "physical-cost-ceiling-exceeded" });
     expect(score(rejected).routes[0]).toMatchObject({ included: false, score: null, exclusionReason: "missing-same-notional-route" });
+  });
+  it("withholds loss-making net USD without clamping the full execution cost or granting route credit", () => {
+    const config = terms();
+    delete config.throughput;
+    config.lot = { minimumTokens: 430, incrementTokens: null, bars: [{ barId: "good-delivery", fineTroyOunces: 350, maximumFineTroyOunces: 430 }] };
+    config.fees.issuerFeeBps = 100;
+    config.fees.issuerFixedUsd = 100;
+    const rejected = evaluatePhysicalToUsdExit(config, { ...reference, usdPerTroyOunce: 0.01 }, 1_000_000, clock);
+    expect(rejected).toMatchObject({ grossUsd: 3.5, netUsd: null, rejectionReason: "physical-net-usd-nonpositive" });
+    expect(rejected.costBps).toBeCloseTo((3.5 - (-96.57)) / 3.5 * 10_000);
+    expect(score(rejected).routes[0]).toMatchObject({ included: false, score: null, exclusionReason: "missing-same-notional-route" });
+  });
+  it("withholds exactly break-even net USD rather than publishing a zero statistic", () => {
+    const config = terms();
+    delete config.throughput;
+    config.fees.issuerFixedUsd = 99_000;
+    const rejected = evaluatePhysicalToUsdExit(config, reference, 1_000_000, clock);
+    expect(rejected).toMatchObject({ grossUsd: 100_000, netUsd: null, costBps: 10_000, rejectionReason: "physical-net-usd-nonpositive" });
+    expect(score(rejected).routes[0]).toMatchObject({ included: false, score: null });
   });
   it("withholds unknown lots, unstated timing and explicitly unbounded charges", () => {
     const config = terms();

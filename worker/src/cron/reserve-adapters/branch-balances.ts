@@ -383,14 +383,10 @@ export function adaptBranchBalanceReserves(input: AdaptBranchBalanceInput): Adap
   const partial = unavailableBranches.length > 0 || unclassifiedBranches.length > 0;
   const denominator = liabilityUsd != null && Number.isFinite(liabilityUsd) && liabilityUsd > 0
     ? liabilityUsd : null;
-  // A complete, fully valued census can have uncovered liabilities without
-  // unknown reserve assets. Keep that solvency deficit in the coverage ratio.
-  const residualUsd = denominator != null
-    ? input.censusComplete === true && !partial ? 0 : Math.max(0, denominator - totalValue)
-    : null;
-  // A partial book without a positive residual bound cannot be normalized into
-  // independent backing weights. Preserve observations, not invented shares.
-  const residualUnavailable = partial && (denominator == null || residualUsd === 0);
+  // Liabilities are not a bound on unreadable collateral. A partial book
+  // retains measured amounts as diagnostics, never invented reserve shares.
+  const residualUsd = input.censusComplete === true && !partial ? 0 : null;
+  const residualUnavailable = partial;
   if (values.length === 0 && !partial && denominator == null) {
     throw new Error(`${adapterKey} adapter found no non-zero balances`);
   }
@@ -402,9 +398,6 @@ export function adaptBranchBalanceReserves(input: AdaptBranchBalanceInput): Adap
         ...unclassifiedBranches.map((name) => `${name} (self-referential)`),
       ].join(", ")}`,
     ));
-  }
-  if (residualUsd != null && residualUsd > 0) {
-    values.push({ name: "Unclassified or unavailable reserve residual", value: residualUsd, risk: "high", sourceKey: `${adapterKey}:unclassified-residual` });
   }
   // The normal one-decimal display precision would drop a real sub-0.05%
   // branch to 0.0%, which can erase a reviewed dependency edge. Preserve such
@@ -434,11 +427,9 @@ export function adaptBranchBalanceReserves(input: AdaptBranchBalanceInput): Adap
       valuationComplete: !partial,
       ...(residualUnavailable
         ? { unknownExposurePct: 100, unknownExposureUnavailableReason: "partial-book-without-residual-bound" }
-        : denominator != null && (residualUsd! > 0 || input.censusComplete === true)
-          ? { unknownExposurePct: (residualUsd! / Math.max(denominator, totalValue)) * 100 }
-          : input.censusComplete === true
-            ? { unknownExposurePct: 0 }
-            : { unknownExposureUnavailableReason: "configured-branches-not-certified-census" }),
+        : input.censusComplete === true
+          ? { unknownExposurePct: 0 }
+          : { unknownExposureUnavailableReason: "configured-branches-not-certified-census" }),
       details: {
         proofKind: "onchain-branch-balances",
         ...(metadata?.details as Record<string, unknown> | undefined),

@@ -67,9 +67,13 @@
       {
         "label": "Hermetica August 2026 custodian attestation",
         "url": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-august-2026"
+      },
+      {
+        "label": "Hermetica September 2026 report; newer holdings differ from this retained August composition",
+        "url": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026"
       }
     ],
-    "rationale": "Reviewed 2026-09-04 against Hermetica's August 2026 custodian attestation, published 2026-08-26: at 14:00 UTC on 2026-08-20, total backing was $2,110,315.15, including $2,002,130.54 Ethereum Settlement Wallet, $8,036.50 Stacks Redeeming Reserve, and $100,148.12 Reserve Fund USDC. The report itemizes 20,750 STRCx worth $1,984,945 within the settlement wallet; normalized slices are STRCx 94.059174%, other unitemized Ethereum Settlement Wallet assets 0.814359%, Stacks Redeeming Reserve 0.380820%, and Reserve Fund USDC 4.745648%. Copper, Ceffu, Mint Wallet, and Reserve Fund USDh were $0.",
+    "rationale": "Reviewed 2026-09-04 against Hermetica's August 2026 custodian attestation, published 2026-08-26: at 14:00 UTC on 2026-08-20, total backing was $2,110,315.15, including $2,002,130.54 Ethereum Settlement Wallet, $8,036.50 Stacks Redeeming Reserve, and $100,148.12 Reserve Fund USDC. The report itemizes 20,750 STRCx worth $1,984,945 within the settlement wallet; normalized slices are STRCx 94.059174%, other unitemized Ethereum Settlement Wallet assets 0.814359%, Stacks Redeeming Reserve 0.380820%, and Reserve Fund USDC 4.745648%. Copper, Ceffu, Mint Wallet, and Reserve Fund USDh were $0. These remain historical August weights, not current holdings: independent verification on 2026-10-02 located the September 30 report, published October 1, disclosing $472,573.22 at Copper, $1,396,969.74 STRCx, and a changed settlement wallet. No composition date or percentages are refreshed from that partially itemized report; the dated August composition remains subject to its original freshness gate.",
     "compositionBasis": "Hermetica August 2026 custodian attestation (2026-08-20 14:00 UTC snapshot) with disclosed STRCx split and venue weights normalized to total reported backing",
     "compositionAsOf": "2026-08-20",
     "scope": "full-composition",
@@ -95,35 +99,39 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "Hermetica Ethereum Settlement Wallet ($2,002,130.54, including 20,750 STRCx worth $1,984,945.00 at 2026-08-20)",
+        "name": "Hermetica Ethereum Settlement Wallet 0x1046a6AD45B60264c83A4b93F6D2c6078C73c1d5 ($1,501,041.77, including 14,070.30 STRCx worth $1,396,969.74 at 2026-09-30)",
         "role": "other"
       },
       {
-        "name": "Hermetica Stacks Redeeming Reserve ($8,036.50 at 2026-08-20)",
+        "name": "Hermetica Stacks Redeeming Reserve ($8,036.50 at 2026-09-30)",
         "role": "other"
       },
       {
-        "name": "Hermetica Reserve Fund (USDC $100,148.12; USDh $0.00 at 2026-08-20)",
+        "name": "Hermetica Reserve Fund (USDC $100,148.12; USDh $0.00 at 2026-09-30)",
+        "role": "other"
+      },
+      {
+        "name": "Copper Markets (Switzerland) AG ($472,573.22 of BTC, USDT and USDC at 2026-09-30)",
         "role": "other"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-09-04",
-    "reviewer": "Pharos reserve research",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Sol final D/F independent verification 2026-10-02 (VDf1)",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Hermetica August 2026 custodian attestation",
-        "url": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-august-2026"
+        "label": "Hermetica September 2026 report with scoped Copper custody attestation",
+        "url": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026"
       },
       {
         "label": "Hermetica USDh backing design",
         "url": "https://docs.hermetica.fi/usdh/how-it-works/backing"
       }
     ],
-    "uncertainty": "The August 2026 attestation identifies no funds within Copper or Ceffu and reports backing in the Ethereum Settlement Wallet, Stacks Redeeming Reserve, and Reserve Fund; Mint Wallet and Reserve Fund USDh were $0.00. It does not publish wallet key control, account-level segregation, insolvency terms, or rehypothecation terms. The report itemizes 20,750 STRCx worth $1,984,945 in the settlement wallet, but leaves the remaining wallet assets and Stacks Redeeming Reserve contents unitemized.",
+    "uncertainty": "The September 30, 2026 report identifies $472,573.22 at Copper and $0.00 at Ceffu, plus the Ethereum Settlement Wallet 0x1046a6AD45B60264c83A4b93F6D2c6078C73c1d5, Stacks Redeeming Reserve and Reserve Fund. Copper Markets (Switzerland) AG signs a scoped off-exchange custody balance attestation covering aggregate BTC, USDT and USDC, not whole-protocol liabilities or legal holder safeguards. The settlement wallet contains $1,396,969.74 of STRCx, but its remaining assets, the Copper asset split and Stacks Redeeming Reserve contents are unitemized. Wallet key control, account-level segregation, insolvency terms and rehypothecation protections remain unknown. Current location evidence does not refresh the separate August reserve-composition weights.",
     "knownUnknownExposurePct": 100
   }
 }

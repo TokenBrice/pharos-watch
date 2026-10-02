@@ -27,6 +27,29 @@ export function resolveAllocationParentBoundary(claim: V9ScopedAllocationClaim, 
       (edge.economicRole === "serial-claim" || edge.economicRole === "basket-exposure"));
 }
 
+function matchesAllocationIdentity(
+  deployment: V9AllocationScopeIdentityReview["deployments"][number],
+  identities: ReadonlyMap<string, V9AllocationScopeIdentityReview["deployments"][number]>,
+  claim: V9ScopedAllocationClaim,
+  clock: number,
+  maxAgeSec: number,
+): boolean {
+  const identity = identities.get(`${deployment.chain}:${deployment.address}`);
+  if (!identity || identity.codeKind !== deployment.codeKind ||
+    identity.observedAtSec > clock || clock - identity.observedAtSec > maxAgeSec ||
+    deployment.observedAtSec > clock || clock - deployment.observedAtSec > maxAgeSec ||
+    identity.observedAtSec !== deployment.observedAtSec || identity.block !== deployment.block ||
+    identity.sourceUrl !== deployment.sourceUrl ||
+    (identity.codeKind === "proxy" && deployment.codeKind === "proxy" && identity.implementation !== deployment.implementation)) return false;
+  let sourceBound = false;
+  for (const source of claim.sources) if (source.url === identity.sourceUrl) { sourceBound = true; break; }
+  if (!sourceBound) return false;
+  for (const observation of claim.observations) {
+    if (observation.sourceUrl === identity.sourceUrl && observation.observedAtSec === identity.observedAtSec) return true;
+  }
+  return false;
+}
+
 export function buildAllocationScopeFacts(
   context: AssetBuildContext,
   input: { dependencies: V9EffectiveDependenciesV3; reserveStatus: V9FactStatusV2; reserveExposures: readonly V9ReserveExposureFactV2[] },
@@ -71,10 +94,13 @@ export function buildAllocationScopeFacts(
     else if (clock >= claim.expiresAtSec || clock - Math.min(reviewSec, claim.observedAtSec) > maxAgeSec) rejectionReason = "expired";
     else if (claim.target.kind === "deployment") {
       const target = claim.target.deployment;
-      const identity = identities.get(`${target.chain}:${target.address}`);
-      if (!identity || identity.codeKind !== target.codeKind || identity.observedAtSec > clock || clock - identity.observedAtSec > maxAgeSec ||
-        (identity.codeKind === "proxy" && target.codeKind === "proxy" && identity.implementation !== target.implementation) ||
-        !claim.target.reachableSetComplete) rejectionReason = "identity-unmatched";
+      if (!claim.target.reachableSetComplete || !matchesAllocationIdentity(target, identities, claim, clock, maxAgeSec)) rejectionReason = "identity-unmatched";
+      for (const deployment of claim.target.reachableTargets) {
+        if (!matchesAllocationIdentity(deployment, identities, claim, clock, maxAgeSec)) {
+          rejectionReason = "identity-unmatched";
+          break;
+        }
+      }
       const idleProof = claim.target.idleCustodyProof;
       if (rejectionReason === null && idleProof &&
         !(input.dependencies.diagnostics.graphState === "valid" && input.dependencies.status.observationState === "known" &&

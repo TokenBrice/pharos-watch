@@ -226,6 +226,13 @@ describe("reviewed economic supply observation", () => {
     f.fixedInput.chainCirculatingById.alpha![label]!.current = 90;
     expect(await f.run()).toEqual({ status: "rejected", rejectionCode: "packet-reconciliation-failed", failedRouteId: `provider:${label}` });
   });
+  it("sums provider aliases before comparing their conserved economic allocation", async () => {
+    const f = fixture(), template = { current: 60, circulatingPrevDay: 0, circulatingPrevWeek: 0, circulatingPrevMonth: 0 };
+    f.fixedInput.chainCirculatingById = { alpha: { Ethereum: template, ethereum: { ...template, current: 40 } } };
+    expect(await f.run()).toMatchObject({ status: "accepted", attribution: { deployments: [expect.objectContaining({ currentSupplyUsd: 100 })] } });
+    f.fixedInput.chainCirculatingById.alpha!.ethereum!.current = 30;
+    expect(await f.run()).toMatchObject({ status: "rejected", rejectionCode: "packet-reconciliation-failed" });
+  });
 
   it("propagates cancellation instead of manufacturing a rejection packet", async () => {
     const f = fixture(); const controller = new AbortController(); controller.abort();
@@ -235,21 +242,24 @@ describe("reviewed economic supply observation", () => {
 
 describe("finalized Solana mint observations", () => {
   function mockSolana(overrides: Record<string, unknown> = {}) {
-    const results: Record<string, unknown> = { getAccountInfo: account(), getBlocks: [40, 98, 99, 101], getBlock: { blockTime: CLOCK - 60, blockhash: "a".repeat(44) }, ...overrides };
+    const results: Record<string, unknown> = { getAccountInfo: account(), getBlocks: [100], getBlock: { blockTime: CLOCK - 60, blockhash: "a".repeat(44) }, ...overrides };
     vi.mocked(fetch).mockImplementation(async (_url, options) => {
       const method = JSON.parse(String(options?.body)).method as string;
       return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: results[method] }));
     });
   }
-  it("returns finalized supply anchored to the latest produced block and preserves mint identity", async () => {
-    mockSolana();
-    expect(await observeEconomicSolanaMint({ address: MINT, decimals: 6, programOwner: OWNER, clockSec: CLOCK })).toEqual({ amount: "100000000", slot: "100:99", blockHash: "a".repeat(44), observedAtSec: CLOCK - 60, responseSha256: expect.stringMatching(/^[a-f0-9]{64}$/) });
+  it("rejects an earlier produced block that does not certify the account context slot", async () => {
+    mockSolana({ getBlocks: [99], getBlock: { blockTime: CLOCK - 1, blockhash: "a".repeat(44) } });
+    expect(await observeEconomicSolanaMint({ address: MINT, decimals: 6, clockSec: CLOCK, requireExactContextSlot: true })).toBeNull();
+    const f = fixture(), row = f.plan.deployments[0]!;
+    Object.assign(row, { deploymentKey: `solana:${MINT}`, chainId: "solana", address: MINT, read: { kind: "solana-mint", programOwner: OWNER } });
+    expect(await f.run()).toMatchObject({ status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: row.deploymentKey });
   });
   it("includes the Solana read in the conserved reviewed partition", async () => {
     const f = fixture(); const row = f.plan.deployments[0]!;
     Object.assign(row, { deploymentKey: `solana:${MINT}`, chainId: "solana", address: MINT, read: { kind: "solana-mint", programOwner: OWNER } });
     mockSolana();
-    expect(await f.run()).toMatchObject({ status: "accepted", attribution: { observations: [expect.objectContaining({ amount: "100000000", anchor: "100:99" })], deployments: [expect.objectContaining({ currentSupplyUsd: 100 })] } });
+    expect(await f.run()).toMatchObject({ status: "accepted", attribution: { observations: [expect.objectContaining({ amount: "100000000", anchor: "100:100" })], deployments: [expect.objectContaining({ currentSupplyUsd: 100 })] } });
   });
   it.each(["01", "1.5", "-1"])("rejects noncanonical mint supply %s", async supply => {
     mockSolana({ getAccountInfo: account(supply) });

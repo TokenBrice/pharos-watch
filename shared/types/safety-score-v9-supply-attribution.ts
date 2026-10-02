@@ -90,6 +90,9 @@ export const ReviewedEconomicSupplyPlanSchema = z.strictObject({
   const ids = [...plan.exclusions, ...plan.escrows].map(row => row.id);
   const receipts = plan.escrows.flatMap(row => row.receiptDeploymentKeys);
   if (new Set(keys).size !== keys.length || new Set(ids).size !== ids.length || new Set(receipts).size !== receipts.length || new Set(plan.escrows.map(row => `${row.canonicalDeploymentKey}:${row.account}`)).size !== plan.escrows.length) ctx.addIssue({ code: "custom", message: "Duplicate census, balance rule or escrow receipt" });
+  const balances = [...plan.exclusions.map(row => `${row.deploymentKey}:${row.account.toLowerCase()}`),
+    ...plan.escrows.map(row => `${row.canonicalDeploymentKey}:${row.account.toLowerCase()}`)];
+  if (new Set(balances).size !== balances.length) ctx.addIssue({ code: "custom", message: "Exclusions and escrows must use distinct economic balance identities" });
   if ((plan.accountingFamily === "independent-liability" && plan.escrows.length > 0) ||
     (plan.accountingFamily !== "independent-liability" && plan.escrows.length === 0)) ctx.addIssue({ code: "custom", message: "Accounting family must match its reviewed escrow rules" });
   if (plan.referencePriceSource !== null && plan.referencePriceSource.sourceId !== plan.sourceId) ctx.addIssue({ code: "custom", message: "Reference source identity differs from reviewed source binding" });
@@ -154,6 +157,10 @@ export const ReviewedEconomicSupplyPlanFileSchema = uniqueKeyedCollectionSchema(
     const keys = rows.map(row => `${row.assetId}:${String(row.providerChainLabel)}`);
     if (new Set(keys).size !== keys.length) ctx.addIssue({ code: "custom", message: "Duplicate provider-row exclusion review" });
   }).optional(),
+});
+/** Global attribution is strict; score-bearing plan evidence is asset-local (R8). */
+export const ReviewedEconomicSupplyPlanEnvelopeSchema = ReviewedEconomicSupplyPlanFileSchema.omit({ reviews: true }).extend({
+  reviews: z.array(z.object({ assetId: CanonicalTextSchema }).passthrough()),
 });
 export type ReviewedEconomicSupplyPlan = z.infer<typeof ReviewedEconomicSupplyPlanSchema>;
 export const EconomicSupplyObservationSchema = z.strictObject({

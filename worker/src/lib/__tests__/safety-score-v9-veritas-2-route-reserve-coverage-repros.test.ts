@@ -68,6 +68,20 @@ describe("VERITAS-II finding stale known-empty DEX coverage is treated as curren
       unsupportedReasons: {},
     };
     delete draft.redemptionBackstopMap[ASSET_ID];
+    const chainSupplyUsd = Object.values(draft.chainCirculatingById[ASSET_ID]!)
+      .reduce((total, row) => total + row.current, 0);
+    draft.dexDeploymentSupplyCoverageById[ASSET_ID] = {
+      totalSupplyUsd: chainSupplyUsd,
+      observedSupplyUsd: 0,
+      verifiedNoPoolsSupplyUsd: chainSupplyUsd,
+      providerInaccessibleSupplyUsd: 0,
+      unknownSupplyUsd: 0,
+      observedSupplyRatio: 0,
+      verifiedNoPoolsSupplyRatio: 1,
+      providerInaccessibleSupplyRatio: 0,
+      unknownSupplyRatio: 0,
+      unknownChains: [],
+    };
 
     const { asset, evaluated } = compileAsset(draft);
     const evidence = asset.evidence.find((reference) =>
@@ -104,8 +118,8 @@ describe("VERITAS-II finding a diagnostic redemption route completes unknown DEX
     expect(asset.exitRoutes[0]!.scoreEligible).toBe(false);
     expect(asset.exitStatus.observationState).toBe("bounded-unknown");
     expect(evaluated.exit.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
-    expect(evaluated.exit.reasons).toContain("unsupported-same-notional-route");
-    expect(evaluated.exit.reasons).not.toContain("missing-same-notional-route");
+    expect(evaluated.exit.reasons).toContain("missing-same-notional-route");
+    expect(evaluated.scoreInput.pillars.exit.adverseAttribution).toEqual([]);
     expect(evaluated.exit.reasons).not.toContain("no-viable-exit-path");
   });
 });

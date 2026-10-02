@@ -358,6 +358,7 @@ function projectExitBreakdown(
             key: completePrimary.routeKey,
             label: routeLabel(input, completePrimary),
             routeFamily: completePrimary.routeFamily,
+            ...(completePrimary.feeEvidence ? { feeEvidence: completePrimary.feeEvidence } : {}),
             score: completePrimary.score!,
             ...(completePrimary.physicalToUsd ? { physicalToUsd: completePrimary.physicalToUsd } : {}),
             ...(completePrimary.executionCertificate ? { executionCertificate: projectExitExecutionCertificate(completePrimary.executionCertificate) } : {}),

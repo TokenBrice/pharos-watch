@@ -12,7 +12,7 @@
         "0x433d5b175148da32ffe1e1a37a939e1b7e79be4d"
       ],
       "implementationAddresses": [
-        "0xdd596250f838af8862d30e9c78a143356894a18d"
+        "0x67f839a44e8b6d2cd403d9cb14f3862f2b85e9f8"
       ],
       "adminAddresses": [
         "0x9438904abc7d8944a6e2a89671fef51c629af351"
@@ -20,8 +20,8 @@
       "canChangeMintLogic": true,
       "delaySec": 86400,
       "controlRef": "Idle Finance 24-hour upgrade timelock",
-      "observedAt": "2026-07-13",
-      "observedBlock": 25526837,
+      "observedAt": "2026-10-02",
+      "observedBlock": 26104268,
       "sources": [
         {
           "label": "Ethereum IdleCDO transparent proxy",
@@ -55,7 +55,7 @@
         "sources": [
           {
             "label": "Current verified IdleCDOEpochVariant implementation",
-            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdd596250f838af8862d30e9c78a143356894a18d"
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x67f839a44e8b6d2cd403d9cb14f3862f2b85e9f8"
           },
           {
             "label": "Ethereum Blockscout - IdleCDOTranche",
@@ -164,7 +164,7 @@
         },
         {
           "label": "Verified CDO minted-interest and fee-share accounting",
-          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdd596250f838af8862d30e9c78a143356894a18d"
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x67f839a44e8b6d2cd403d9cb14f3862f2b85e9f8"
         },
         {
           "label": "Verified strategy owner-adjustable APR ceiling and receivable minting",

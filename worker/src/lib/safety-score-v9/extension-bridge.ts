@@ -7,6 +7,7 @@ import { normalizeDeploymentId } from "@shared/lib/deployment-id";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC, V9_SCOPED_QUESTION_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { providerRowExclusionShares } from "@shared/lib/safety-score-v9/control-bridge-join";
 import { compileReviewedControlScope, effectiveAuthoritySignatureRequirement, partialControlScopeSemantics, reviewedControlScopeSemantics, weightedReviewIsCurrent } from "@shared/lib/safety-score-v9/control-scope";
 import { REVIEWED_ECONOMIC_SUPPLY_PLANS, reviewedSupplyRouteKind } from "./supply-attribution-contract";
 import type {
@@ -401,12 +402,12 @@ function structuredBridgeControl(
   const coarseCapabilities = bridgeControlCapabilities(control);
   const capabilities = control.executionScope && projection.complete
     ? [...new Set(projection.paths.flatMap((path) => path.capabilities))].sort(compareText)
-    : [...new Set([...coarseCapabilities, ...(projection.reviewed ? projection.paths.flatMap((path) => path.capabilities) : [])])].sort(compareText);
+    : [...new Set([...coarseCapabilities, ...projection.provenPaths.flatMap((path) => path.capabilities)])].sort(compareText);
   const legacyCap = bridgeCapSemantics(control, capabilities);
   const legacySemantics = { capSemantics: legacyCap, claimImpairment: bridgeClaimImpairment(capabilities, legacyCap) };
   const { capSemantics, claimImpairment } = projection.complete
     ? reviewedControlScopeSemantics(projection.paths)
-    : projection.reviewed ? partialControlScopeSemantics(legacySemantics, projection.paths) : legacySemantics;
+    : projection.reviewed ? partialControlScopeSemantics(legacySemantics, projection) : legacySemantics;
   const incidentState: ControlOverlay["incidentState"] =
     reviewEvidenceCurrent && route.reviewDisposition === "reviewed" ? "none" : "unknown";
   return {
@@ -537,12 +538,14 @@ function canonicalRouteChain(routeId: string): string | null {
  * the exception and arrive as one conservative pooled row.
  */
 function hasCompleteSubthresholdBridgeInventory(
+  assetId: string,
   profileRoutes: readonly BridgeRouteDeployment[],
   controls: readonly ControlOverlay[],
   supplyReview: ExtensionAsset["supplyReview"],
 ): boolean {
   if (supplyReview === null || supplyReview.selectedBridgeRoutes.length === 0) return false;
   const rows = supplyReview.selectedBridgeRoutes;
+  const exclusions = providerRowExclusionShares(assetId, supplyReview);
   const totalRowShare = rows.reduce((sum, row) => sum + row.supplyShare, 0);
   const aggregateShare =
     supplyReview.selectedRouteSupplyShare +
@@ -606,7 +609,7 @@ function hasCompleteSubthresholdBridgeInventory(
     if (row.reviewState === "selected-reviewed") continue;
     // Sub-threshold unmatched rows are accepted supply evidence rather than
     // unknown-identity controls; material rows keep the fail-closed join below.
-    if (classifyBridgeSupplyRow(row) !== "control-required") continue;
+    if (exclusions.byDeployment.has(row.deploymentRouteKey) || classifyBridgeSupplyRow(row) !== "control-required") continue;
     const joinedControls = controlsByDeployment.get(row.deploymentRouteKey) ?? [];
     const control = joinedControls.length === 1 ? joinedControls[0] : undefined;
     if (
@@ -671,10 +674,12 @@ function bridgeJoinSharesReconcile(left: number, right: number): boolean {
  * evaluator remains the sole authority on the verdict.
  */
 function buildUnprovenRouteJoins(
+  assetId: string,
   supplyReview: ExtensionAsset["supplyReview"],
   bridgeControls: readonly ControlOverlay[],
   controlSemanticsResolved: (control: ControlOverlay) => boolean,
 ): V9BridgeSupplyRouteJoinV1[] {
+  const exclusions = supplyReview === null ? null : providerRowExclusionShares(assetId, supplyReview);
   const controlsByDeployment = new Map<string, ControlOverlay[]>();
   for (const control of bridgeControls) {
     if (control.controlKind !== "bridge") continue;
@@ -695,10 +700,11 @@ function buildUnprovenRouteJoins(
       supplyReview.selectedBridgeRoutes.reduce((sum, row) => sum +
         (row.reviewState === "selected-reviewed" && reviewedUnresolvedDeploymentKeys.has(row.deploymentRouteKey)
           ? row.supplyShare : 0), 0);
-  const excludedShare = (supplyReview?.providerRowExclusions ?? []).reduce((sum, exclusion) => sum + exclusion.supplyShare, 0);
+  const excludedShare = (exclusions?.unknown ?? 0) + (exclusions?.unreviewed ?? 0);
   const canRelaxUnresolvedRows = cohortShare !== null && Math.max(0, cohortShare - excludedShare) < fullCeilingShare;
   const unproven: V9BridgeSupplyRouteJoinV1[] = [];
   for (const row of supplyReview?.selectedBridgeRoutes ?? []) {
+    if (exclusions?.byDeployment.has(row.deploymentRouteKey)) continue;
     // Accepted bounded rows are not join failures.
     if (canRelaxUnresolvedRows && classifyBridgeSupplyRow(row) !== "control-required") continue;
     const joined = controlsByDeployment.get(row.deploymentRouteKey) ?? [];
@@ -1090,7 +1096,7 @@ export function adaptBridgeReview(
   // compiled for it. `routes` drops a representation route whose control did not
   // resolve, so control emptiness alone cannot prove the absence of a bridge.
   const hasReviewedRepresentationRoute = reviewedRoutes.some((route) => isBridgeRepresentationRoute(route, profile, meta.id));
-  const allMaterialRoutesReviewed = hasCompleteSubthresholdBridgeInventory(profileRoutes, controls, supplyReview);
+  const allMaterialRoutesReviewed = hasCompleteSubthresholdBridgeInventory(meta.id, profileRoutes, controls, supplyReview);
   const hasToleratedUnmatchedRow = (supplyReview?.selectedBridgeRoutes ?? []).some(
     (route) =>
       route.reviewState === "unmatched" &&
@@ -1149,7 +1155,7 @@ export function adaptBridgeReview(
         supplyReview,
         bridgeClaimControls,
         "applicable",
-        buildUnprovenRouteJoins(supplyReview, controls, overlayFullyResolved),
+        buildUnprovenRouteJoins(meta.id, supplyReview, controls, overlayFullyResolved),
       ),
     },
     controls,

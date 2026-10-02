@@ -119,6 +119,42 @@ const RESERVOIR_REDEEM_CONFIGS = defineConfigFamily(
 );
 
 const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
+  "onyc-onre": defineStablecoinRedeemConfig({
+    outputAssets: ["usdg-paxos"],
+    capacityModel: { kind: "fixed-usd", amountUsd: 0, confidence: "dynamic" },
+    accessModel: "whitelisted-onchain",
+    settlementModel: "atomic",
+    executionModel: "deterministic-onchain",
+    outputAssetType: "stable-single",
+    costModel: {
+      ...documentedVariableFee(
+        "OnRe charges a 25 bps service fee plus a state-dependent convex liquidity haircut; quote_swap_sell gives the executable USDG output",
+        "formula",
+      ),
+      feeBpsMin: 25,
+    },
+    v9RouteReviewTerms: {
+      settlementModel: "atomic",
+      settlementDelaySec: 0,
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "cost"],
+      rationale: "The current primary channel settles atomically to USDG, but neither its available vault balance nor the same-notional liquidity haircut is measured by this reviewed documentation. The 15% management liquidity target is not executable capacity.",
+      reviewedAt: "2026-10-02",
+      docs: [
+        sourceRef("OnRe current redemption and liquidity mechanics", "https://docs.onre.finance/technical-resources/redemptions-and-onchain-liquidity", ["route", "access", "settlement", "fees"]),
+      ],
+    },
+    reviewedAt: "2026-10-02",
+    docs: [
+      sourceRef("OnRe current redemption and liquidity mechanics", "https://docs.onre.finance/technical-resources/redemptions-and-onchain-liquidity", ["route", "access", "settlement", "fees"]),
+    ],
+    notes: [
+      "Observed 2026-10-02: OnRe states that the current deployment processes redemptions entirely onchain without a backend queue. Verified holders receive a USDG quote and a single atomic burn-and-payout transaction with a minimum-output constraint.",
+      "The prior monthly 2.5%-of-NAV capacity and 30-day queue terms are not the current primary channel. The approximately 15% capital liquidity reserve is a changeable management target, not an executable capacity bound.",
+      "Current quotes depend on vault balance, pressure-adjusted liquidity and demand. Global kill switch, offer/pair enablement and sufficient vault liquidity must be checked; no favorable capacity or all-in cost is inferred without that read.",
+      "Zero modeled capacity is a conservative lower bound while executable USDG liquidity is unmeasured, not an observed empty vault; the OnRe holdings adapter has no redeemable-capacity telemetry.",
+    ],
+  }),
   "usd3-3jane": erc4626InstantConfig({
     symbol: "USDC",
     fallback: { basis: "live-direct-telemetry" },

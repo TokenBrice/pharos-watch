@@ -1,4 +1,5 @@
 import { pinnedBlockPlan } from "./evm-observation-plan";
+import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { createAdapterIoLimiter } from "./concurrency";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import type { StablecoinMeta } from "@shared/types/core";
@@ -578,6 +579,19 @@ export async function fetchEvmBranchBalancesReserves(
   )) {
     throw new Error(`${ADAPTER_KEY}: pinned price oracle requires same-chain branches without fixed prices`);
   }
+  const reviewedCensusStartSec = params.census?.kind === "reviewed-roster"
+    ? Date.parse(`${params.census.reviewedAt}T00:00:00Z`) / 1000 : null;
+  let censusComplete = false;
+  if (params.census?.kind === "reviewed-roster") {
+    const reviewStartSec = reviewedCensusStartSec!;
+    const clockSec = attemptCtx.nowSec ?? Math.floor(Date.now() / 1000);
+    const maxAgeSec = V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.reviewedResearchMaxAgeSec;
+    // Date-only reviews must have elapsed before both the attempt and its
+    // pinned observation, and freshness conservatively starts at midnight.
+    censusComplete = Number.isFinite(reviewStartSec) &&
+      reviewStartSec + 86400 <= Math.min(clockSec, plan.observedBlock.timestamp) &&
+      clockSec - reviewStartSec <= maxAgeSec;
+  }
   if (params.census?.kind === "onchain-registry") {
     const census = params.census;
     if (params.branches.length > census.maxAssets ||
@@ -594,11 +608,13 @@ export async function fetchEvmBranchBalancesReserves(
       params.branches.length,
       "reserve registry",
     ).map((address) => addressFromWord(address, "reserve registry asset").toLowerCase());
-    const configured = new Set(params.branches.map((branch) => branch.token.address.toLowerCase()));
+    const configured = new Set(params.branches.map((branch) =>
+      (census.identity === "holder" ? branch.holder : branch.token.address).toLowerCase()));
     if (configured.size !== params.branches.length || new Set(assets).size !== assets.length ||
         assets.some((address) => !configured.has(address))) {
       throw new Error(`${ADAPTER_KEY}: reserve registry drift; reviewed constituents no longer match`);
     }
+    censusComplete = true;
   }
   const chainPlans = new Map([[input.chain, plan]]);
   for (const branch of params.branches) {
@@ -607,6 +623,14 @@ export async function fetchEvmBranchBalancesReserves(
       chainPlans.set(chain, await pinnedBlockPlan({
         chain, signal, ctx: { ...attemptCtx, observedBlock: undefined },
       }));
+    }
+  }
+  if (censusComplete && reviewedCensusStartSec !== null) {
+    for (const chainPlan of chainPlans.values()) {
+      if (reviewedCensusStartSec + 86400 > chainPlan.observedBlock.timestamp) {
+        censusComplete = false;
+        break;
+      }
     }
   }
   const balanceGroups = [...chainPlans].map(([chain, chainPlan]) => {
@@ -716,13 +740,13 @@ export async function fetchEvmBranchBalancesReserves(
     adapterKey: ADAPTER_KEY,
     balances,
     priceMap,
-    censusComplete: params.census != null,
+    censusComplete,
     liabilityUsd: totalDebtUsd,
     details: observationDetails,
     metadata: { ...baseMetadata, ...(totalDebtUsd != null ? { totalDebtUsd } : {}) },
   });
   // Unknown or circular claims cannot become a full collateralization numerator.
-  if (totalDebtUsd != null && totalDebtUsd > 0 && result.metadata?.valuationComplete === true) {
+  if (totalDebtUsd != null && totalDebtUsd > 0 && censusComplete && result.metadata?.valuationComplete === true) {
     const details = result.metadata.details as { knownReserveValueUsd: number };
     const ratio = details.knownReserveValueUsd / totalDebtUsd;
     result.metadata.collateralizationRatio = ratio;

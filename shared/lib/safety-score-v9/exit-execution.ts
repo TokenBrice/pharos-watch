@@ -95,7 +95,7 @@ export function admitExitExecutionCertificate(args: {
   }
   if (certificate.gates.some((gate) => gate.verdict === "unavailable" || gate.verdict === "unsupported" || (gate.verdict === "closed" && point.executableUsd > 0))) return unavailable("execution-gate-unproven");
   if (certificate.settlement.maximumCompletionSec === null) return unavailable("execution-settlement-unproven");
-  return { state: point.executableUsd === 0 ? "adverse" : "observed", point, certificate };
+  return { state: point.executableUsd === 0 && point.certification === "exact-complete" ? "adverse" : "observed", point, certificate };
 }
 
 /** Public projection deliberately has no account identifiers, calldata or private source URLs. */

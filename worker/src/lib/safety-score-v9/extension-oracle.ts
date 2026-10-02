@@ -196,7 +196,10 @@ export function adaptOracleReview(
         path.branchId === branch.id && path.applicability.state === "required" && path.observationState === "known",
       )) ?? []
     : profile.branches ?? [];
-  const lendingPaths = profile.paths?.filter((path) => path.applicability?.disposition === "branches-required");
+  const lendingPaths = profile.paths?.filter((path) =>
+    path.applicability?.disposition === "branches-required" &&
+    paths?.some((compiled) => compiled.id === path.id && compiled.applicability.state === "required" && compiled.observationState === "known"),
+  );
   const missingPathBranch = lendingPaths?.some((path) =>
     !path.branchId || !applicableBranches.some((branch) => branch.id === path.branchId),
   );
@@ -210,7 +213,9 @@ export function adaptOracleReview(
     ? (lendingPaths?.length ?? 0) > 0
     : profile.branchApplicability?.disposition === "branches-required" && !!profile.branches?.length;
   const materiality = branchesRequired && topState !== "missing" &&
-    !profile.paths?.some((path) => path.applicability?.disposition === "top-level-only")
+    !profile.paths?.some((path) => path.applicability?.disposition === "top-level-only" &&
+      paths?.some((compiled) => compiled.id === path.id && compiled.applicability.state === "required" && compiled.observationState === "known"),
+    )
     ? deriveOracleBranchMateriality(applicableBranches, profile.tier)
     : { tier: profile.tier };
   const branches = branchesRequired
@@ -254,6 +259,10 @@ export function adaptOracleReview(
           topState === "known" || topState === "bounded-unknown" ? evidenceKeys : [],
         ),
     tier: topState === "missing" ? null : materiality.tier,
+    ...(unresolvedPaths && reviewedObservationState(confidence) === "known" &&
+        paths?.some((path) => path.applicability.state === "required" && path.observationState === "known")
+      ? { knownPathTier: materiality.tier }
+      : {}),
     liquidationBranchesApplicable: paths ? branchesRequired : profile.branchApplicability?.disposition !== "top-level-only",
     ...(materiality.subMaterialWeakBand !== undefined
       ? { subMaterialWeakBand: materiality.subMaterialWeakBand }

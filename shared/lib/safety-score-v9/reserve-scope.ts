@@ -32,6 +32,8 @@ export function admitV10ReserveReportScope(input: {
   const published = report.publishedAt == null ? null : Date.parse(`${report.publishedAt}T00:00:00Z`) / 1000 + 86400 - 1;
   if (report.confidence !== "verified" || coverage.confidence !== "verified") codes.push("unverified");
   if (coverage.reviewedAtSec > clockSec || published === null || published >= clockSec || period === null || period > clockSec) codes.push("future-evidence");
+  if (coverage.liabilityExclusions.some(row => row.source.accessedAtSec > clockSec)) codes.push("future-evidence");
+  if (coverage.liabilityExclusions.some(row => row.source.accessedAtSec > coverage.reviewedAtSec)) codes.push("checkpoint-mismatch");
   if (period !== null && clockSec - period > policy.semantic.evidence.evidenceExpiry.assuranceReportMaxAgeSec) codes.push("expired");
   if (coverage.deploymentRefs.some(ref => !input.deploymentRefs.includes(ref) && !(admitsNativeIdentity && ref === nativeRef)) ||
     (nativeRef != null && !coverage.deploymentRefs.includes(nativeRef))) codes.push("identity-mismatch");
@@ -123,6 +125,8 @@ export function admitV10ReserveObservation(input: { observation: ReserveObservat
   if (date > row.reviewedAtSec || row.sources.some(source => source.accessedAtSec > row.reviewedAtSec)) codes.push("checkpoint-mismatch");
   if (row.expiresAtSec <= row.reviewedAtSec || clockSec > row.expiresAtSec || clockSec - date > budget) codes.push("expired");
   if (row.deploymentRefs.some(ref => !input.deploymentRefs.includes(ref))) codes.push("identity-mismatch");
+  if ((row.kind === "standing-structure" || row.kind === "portfolio-observation") &&
+    row.obligations.some(obligation => obligation.disposition !== "included")) codes.push("denominator-incomplete");
   if (row.kind === "standing-structure" && (!row.wholeHolderClaim || row.completeness !== "complete")) codes.push("structure-not-whole-claim");
   if (row.kind === "onchain-observation") {
     const timestamps = row.blocks.map(block => block.timestamp);

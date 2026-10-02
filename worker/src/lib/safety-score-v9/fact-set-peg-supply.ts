@@ -671,7 +671,7 @@ export function buildSupply(context: AssetBuildContext): V9AssetFactsV2["supply"
   const exclusionEvidenceIds = (review?.providerRowExclusions ?? []).flatMap(exclusion =>
     exclusion.review.evidenceUrls.map((url, index) => addEvidence(context, createV9EvidenceReference({
       evidenceId: `${context.asset.assetId}:provider-row-exclusion:${exclusion.review.providerChainLabel}:${index}`,
-      sourceId: `reviewed-provider-row-exclusion:${exclusion.review.providerChainLabel}:belongs-to:${exclusion.review.belongsToAssetId}:unresolved-numerator-only`,
+      sourceId: `reviewed-provider-row-exclusion:${exclusion.review.providerChainLabel}:belongs-to:${exclusion.review.belongsToAssetId}:deployment-and-bridge-numerators-only`,
       sourceGenerationId: source.generationId, disposition: "published",
       observedAtSec: exclusion.review.provenance.observedAtSec, publishedAtSec: exclusion.review.reviewedAtSec,
       url, contentSha256: domainDigest("safety-score-v9.provider-row-exclusion.v1", exclusion),

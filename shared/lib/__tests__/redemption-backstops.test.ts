@@ -36,6 +36,18 @@ describe("getRedemptionBackstopConfig", () => {
     });
   });
 
+  it("keeps UTY's verified Base USDC payout separate from unbounded redemption terms", () => {
+    const config = getRedemptionBackstopConfig("uty-xsy");
+
+    expect(config?.outputAssetType).toBe("stable-single");
+    expect(config?.outputAssets).toEqual(["usdc-circle"]);
+    expect(config?.unresolvedOutputAssetKeys).toBeUndefined();
+    expect(config?.v9RouteReviewTerms).toMatchObject({
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+    });
+  });
+
 
   it("excludes USDA from Indigo's current complete PSM payout set", () => {
     expect(getRedemptionBackstopConfig("iusd-indigo-protocol")?.outputAssets).toEqual([
@@ -56,7 +68,6 @@ describe("getRedemptionBackstopConfig", () => {
   });
 
   it.each([
-    "uty-xsy",
     "hyusd-hylo",
     "dusd-dtrinity",
     "u-united-stables",

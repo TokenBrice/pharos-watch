@@ -2,13 +2,13 @@
   "id": "msusd-metronome",
   "name": "Metronome Synth USD",
   "symbol": "msUSD",
-  "oneLiner": "msUSD is Metronome's crypto-backed synth with no direct collateral redemption; July 2026's swap-module post-mortem disclosed ~4.57m msUSD underbacking.",
+  "oneLiner": "msUSD is Metronome's crypto-backed synth; its July 2026 shortfall was reported resolved in September, while the synth swap remains closed.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
   },
   "collateral": "USDC, DAI, ETH, WBTC, sfrxETH, and Vesper Finance yield-bearing tokens (vaUSDC, vaETH, vaSTETH, vaRETH, vaCBETH); FRAX and vaFRAX accepted but currently inactive; collateral factors range 75 to 85%",
-  "pegMechanism": "Overcollateralized CDP: users deposit crypto collateral (CF 75 to 85%) to mint msUSD at a fixed 1% annual fee; no direct redemption: only debt repayment to reclaim collateral. Peg maintained by zero-slippage intra-protocol synth swaps (Synth Marketplace) that arbitrageurs exploit when msUSD trades below par, plus collateral-provider buybacks of discounted msUSD",
+  "pegMechanism": "Collateralized CDP: users deposit crypto collateral to mint msUSD and repay debt to reclaim collateral, with no direct holder redemption of collateral. Metronome's September 16, 2026 recovery update reports that treasury-funded buybacks and an $8 million USDC loan closed the July underbacking. The synth swap remains closed indefinitely; treasury buybacks and MetBasis liquidity support peg recovery.",
   "mechanismArchetype": "cdp",
   "llamaId": "326",
   "detailProvider": "defillama",

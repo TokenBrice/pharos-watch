@@ -165,13 +165,7 @@ export function deriveV9MintPosture(
 ): V9MintPosture {
   if (control?.incidentState === "active") return "unbounded-or-compromised";
   if (!control) return immutableMechanism ? "none-resolved" : "unknown";
-  if (
-    control.capSemantics.kind === "unknown" ||
-    control.claimImpairment === "unknown" ||
-    control.economicLossScope === "unknown"
-  ) {
-    return "unknown";
-  }
+  if (control.economicLossScope === "unknown") return "unknown";
   if (control.capSemantics.kind === "unbounded" || control.claimImpairment === "unbounded") {
     if (
       mint.reconciliation === "continuous" ||
@@ -185,6 +179,7 @@ export function deriveV9MintPosture(
     }
     return "unbounded-or-compromised";
   }
+  if (control.capSemantics.kind === "unknown" || control.claimImpairment === "unknown") return "unknown";
   if (control.claimImpairment === "none") return "none-resolved";
   if (control.capSemantics.kind === "collateral-gated") return "collateral-gated";
   if (control.capSemantics.kind === "raiseable" || mint.reconciliation === "periodic") {

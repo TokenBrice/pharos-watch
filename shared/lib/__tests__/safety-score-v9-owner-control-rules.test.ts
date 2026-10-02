@@ -21,7 +21,8 @@ describe("owner Control rules", () => {
       posture: "privileged-internal-pricing", score: 45, binding: true,
     });
     const signals = result.structuralFailures.map((failure) => ({
-      ...failure, responsibility: "measured-adverse" as const, evidence: [],
+      ...failure, materialSharePct: failure.materialSharePct ?? undefined,
+      responsibility: "measured-adverse" as const, evidence: [],
       failureDomainKeys: ["oracle:shared-pricing"],
     }));
     expect(resolveV9StructuralCaps(signals, policy)).toEqual([]);
@@ -44,7 +45,8 @@ describe("owner Control rules", () => {
         status: requiredKnown("oracle"), tier, liquidationBranchesApplicable: false, branches: [],
       } }));
       const signals = result.structuralFailures.map((failure) => ({
-        ...failure, responsibility: "measured-adverse" as const, evidence: [],
+        ...failure, materialSharePct: failure.materialSharePct ?? undefined,
+        responsibility: "measured-adverse" as const, evidence: [],
         failureDomainKeys: ["oracle:shared-feed"],
       }));
       const independentBranchSignals = signals.map((signal) => ({
@@ -96,12 +98,11 @@ describe("owner Control rules", () => {
   it("applies disclosed issuer ledger processes to native siblings without removing single-key risk", () => {
     const evm = control("mint:evm", "mint", {
       capSemantics: { kind: "unbounded", bound: null }, claimImpairment: "unbounded",
-      authority: { authorityKey: "authority:evm", model: "multisig", threshold: 3 },
-      signerCount: 5, delaySec: null,
+      authority: { authorityKey: "authority:evm", model: "multisig", threshold: { required: 3, total: 5 } },
+      delaySec: null,
     });
     const backend = { ...evm, controlKey: "mint:algorand",
       authority: { authorityKey: "authority:algorand", model: "issuer-backend" as const, threshold: null },
-      signerCount: null,
     };
     const singleKey = { ...backend, controlKey: "mint:xrpl",
       authority: { authorityKey: "authority:xrpl", model: "eoa" as const, threshold: null },
@@ -153,7 +154,7 @@ describe("owner Control rules", () => {
     });
     const status = requiredKnown("mint");
     status.applicability = {
-      state: "unresolved", policyRuleId: "mint", rationale: null, gapId: "gap:mint-applicability",
+      state: "unresolved", policyRuleId: "mint", rationale: "Mint applicability has not been reviewed.", gapId: "gap:mint-applicability",
     };
     const result = evaluateV9EconomicControl(args({ facts: facts([mintControl]),
       mint: makeReviewedMintInput(mintControl.controlKey, { status }), trackRecordMonths: 61,

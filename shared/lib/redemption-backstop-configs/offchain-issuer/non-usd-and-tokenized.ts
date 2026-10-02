@@ -31,7 +31,7 @@ const vnxGitbookBase: RedemptionBackstopConfig = {
   ],
 };
 
-/** eurau-allunity and chfau-allunity are byte-identical (same base, cost, docs). */
+/** Historical AllUnity issuer-redemption shape; CHFAU has a separately reviewed fee policy below. */
 const allunityBase: RedemptionBackstopConfig = {
   ...issuerBase,
   ...reviewedDirectRedemptionSupplyFull,
@@ -198,7 +198,27 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       sourceRef("Schuman reserve audits", "https://schuman.io/reserve-attestations/", ["capacity"]),
     ],
   },
-  ...expandIds(["eurau-allunity", "chfau-allunity"], allunityBase),
+  ...expandIds(["eurau-allunity"], allunityBase),
+  "chfau-allunity": {
+    ...allunityBase,
+    reviewedAt: "2026-10-02",
+    costModel: fixedFee(
+      0,
+      "AllUnity Redemption Policy section 3.5: the issuer does not charge administrative, processing, or redemption fees; holders pay third-party blockchain gas.",
+    ),
+    docs: [
+      sourceRefRouteCapacity("AllUnity whitepaper", "https://allunity.com/whitepaper/"),
+      sourceRef("AllUnity trust center", "https://allunity.com/trust-center/", ["capacity"]),
+      sourceRef(
+        "AllUnity Redemption Policy, section 3.5",
+        "https://framerusercontent.com/assets/keEVPCLx5HJ504alVRJUCVRjBz0.pdf",
+        ["fees"],
+      ),
+    ],
+    notes: [
+      "AllUnity Redemption Policy section 4.3 aims to complete the process within five business days after documentation is fully received and verified; this is a target, not a guaranteed bank-credit deadline. Retain the platform's reviewed direct-redemption treatment pending a platform-wide owner ruling on settlement aims.",
+    ],
+  },
   "usda-anzens": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,

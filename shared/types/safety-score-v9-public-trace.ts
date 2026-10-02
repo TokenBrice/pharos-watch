@@ -450,13 +450,13 @@ const SafetyScoreV9WrapperParentLimitSchema = z
       });
     }
     if (
-      (limit.treatment === "fallback-discount") !== !limit.factsComplete ||
+      (limit.treatment === "fallback-discount") !== (!limit.factsComplete && limit.fallbackDiscount > 0) ||
       (limit.treatment === "documented-risk-transfer") !== (limit.riskTransfer.appliedCredit > 0)
     ) {
       ctx.addIssue({
         code: "custom",
         path: ["treatment"],
-        message: "V9 wrapper treatment does not match completeness and risk-transfer credit",
+        message: "V9 wrapper treatment must match applied fallback eligibility and risk-transfer credit",
       });
     }
   });

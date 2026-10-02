@@ -4,7 +4,7 @@ import type { BridgeRouteRiskProfile, StablecoinMeta } from "@shared/types/core"
 import { ReviewedEconomicSupplyPlanFileSchema, ReviewedEconomicSupplyPlanSchema, type ReviewedEconomicSupplyPlan, type EconomicSupplyObservation } from "@shared/types/safety-score-v9-supply-attribution";
 import type { SafetyScoreV9ReviewedTransferFact } from "@shared/types/safety-score-v9-transfer-overlays";
 import reviewRegistry from "@shared/data/safety-score-v9/supply-attribution-reviews-v1.json";
-import { deriveReviewedEconomicDeploymentPartition, buildReviewedEconomicDeploymentInventory, hasCompleteEligibleProviderSupply, REVIEWED_ECONOMIC_SUPPLY_PLANS, reviewedSupplyRouteKind } from "../safety-score-v9/supply-attribution-contract";
+import { deriveReviewedEconomicDeploymentPartition, buildReviewedEconomicDeploymentInventory, hasCompleteEligibleProviderSupply, loadReviewedEconomicSupplyPlans, REVIEWED_ECONOMIC_SUPPLY_PLANS, REVIEWED_ECONOMIC_SUPPLY_PLAN_QUARANTINES, reviewedEconomicDeploymentAttributionValidationError, reviewedSupplyRouteKind } from "../safety-score-v9/supply-attribution-contract";
 import { buildSafetyScoreV9SupplyReview } from "../safety-score-v9/extension-supply";
 import { transferMaterialScopeFromEconomicDeploymentPartition } from "../safety-score-v9/transfer-materiality";
 import { resolveSafetyScoreV9ReviewedTransferFact } from "../safety-score-v9/extension-transfer";
@@ -88,6 +88,79 @@ describe("reviewed economic supply accounting", () => {
     input.observations[2]!.amount = "15000000";
     expect(deriveReviewedEconomicDeploymentPartition(input)).toBeNull();
   });
+  it.each(["duplicate", "escrow overlap"])("rejects %s balance deduction identities", failure => {
+    const input = fixture();
+    const escrow = input.plan.escrows[0]!;
+    const rule = { id: "treasury-a", deploymentKey: failure === "duplicate" ? REMOTE : CANONICAL,
+      account: failure === "duplicate" ? `0x${"4".repeat(40)}` : escrow.account };
+    input.plan.exclusions = [rule, ...(failure === "duplicate" ? [{ ...rule, id: "treasury-b" }] : [])];
+    input.observations.push(...input.plan.exclusions.map(row => ({ ...input.observations[failure === "duplicate" ? 1 : 0]!, id: row.id, amount: "0" })));
+    expect(ReviewedEconomicSupplyPlanSchema.safeParse(input.plan).success).toBe(false);
+    expect(deriveReviewedEconomicDeploymentPartition(input)).toBeNull();
+  });
+  it.each(["number", "hash", "time"])("rejects API-pending escrow from a different EVM snapshot %s", mismatch => {
+    const input = fixture(), escrow = input.observations[2]!;
+    if (mismatch === "number") escrow.anchor = "99";
+    if (mismatch === "hash") escrow.anchorHash = `0x${"f".repeat(64)}`;
+    if (mismatch === "time") escrow.observedAtSec--;
+    expect(deriveReviewedEconomicDeploymentPartition(input)).toBeNull();
+  });
+  it("joins excluded holders to the deployment's exact EVM snapshot", () => {
+    const input = fixture();
+    input.plan.exclusions = [{ id: "treasury", deploymentKey: CANONICAL, account: `0x${"4".repeat(40)}` }];
+    const balance = { ...input.observations[0]!, id: "treasury", amount: "1000000" };
+    input.observations.push(balance);
+    expect(deriveReviewedEconomicDeploymentPartition(input)!.deployments[0]!.currentSupplyUsd).toBeCloseTo(100 * 79 / 99);
+    balance.anchor = "99";
+    expect(deriveReviewedEconomicDeploymentPartition(input)).toBeNull();
+  });
+  it("joins native-gas exclusions and escrows at one chain-state anchor without confusing the aggregate for state", () => {
+    const input = fixture(), native = input.plan.deployments[0]!;
+    const nativeKey = "ethereum:native:ether";
+    Object.assign(native, { deploymentKey: nativeKey, address: "ether", routeId: null, holdingKind: "native-gas", amountBasis: "native-ledger", decimals: null, read: { kind: "native-from-aggregate", safeBlockLag: 2 } });
+    input.meta.contracts!.shift();
+    input.plan.escrows[0]!.canonicalDeploymentKey = nativeKey;
+    Object.assign(input.observations[0]!, { id: nativeKey, deploymentKey: nativeKey, amount: "100", anchor: "attributed:source", anchorHash: "a".repeat(64) });
+    Object.assign(input.observations[2]!, { deploymentKey: nativeKey, amount: "20" });
+    input.inFlight[0]!.deploymentKey = nativeKey;
+    input.plan.exclusions = [{ id: "native-treasury", deploymentKey: nativeKey, account: `0x${"4".repeat(40)}` }];
+    const balance = { ...input.observations[2]!, id: "native-treasury", amount: "1" };
+    input.observations.push(balance);
+    expect(deriveReviewedEconomicDeploymentPartition(input)!.deployments[0]!.currentSupplyUsd).toBeCloseTo(100 * 79 / 99);
+    balance.anchorHash = `0x${"f".repeat(64)}`;
+    expect(deriveReviewedEconomicDeploymentPartition(input)).toBeNull();
+  });
+  it("quarantines malformed plan evidence without blocking unrelated attribution", () => {
+    const input = fixture(), bad = structuredClone(input.plan);
+    bad.assetId = "beta";
+    bad.deployments[0]!.decimals = null;
+    const authored = { ...reviewRegistry, reviews: [input.plan, bad] };
+    expect(ReviewedEconomicSupplyPlanFileSchema.safeParse(authored).success).toBe(false);
+    const loaded = loadReviewedEconomicSupplyPlans(authored);
+    expect([...loaded.plans.keys()]).toEqual(["alpha"]);
+    expect(loaded.quarantines.get("beta")).toMatchObject({ name: "ReviewedRegistryEntryError", path: "supplyAttribution.reviews.1.deployments.0" });
+    vi.spyOn(REVIEWED_ECONOMIC_SUPPLY_PLAN_QUARANTINES, "get").mockImplementation(id => loaded.quarantines.get(id));
+    const fixed = makeV9FixedInput({ assetId: "alpha", clockSec: CLOCK });
+    expect(() => buildSafetyScoreV9SupplyReview(fixed, "beta", input.meta.bridgeRouteRisk)).toThrow("Only fixed token units have fixed decimals");
+    expect(deriveReviewedEconomicDeploymentPartition(input)!.deployments.map(row => row.currentSupplyUsd)).toEqual([80, 20]);
+  });
+  it("quarantines duplicate asset plans without suppressing another admitted asset", () => {
+    const plan = fixture().plan;
+    const loaded = loadReviewedEconomicSupplyPlans({ ...reviewRegistry, reviews: [plan, structuredClone(plan), { ...plan, assetId: "beta" }] });
+    expect([...loaded.plans.keys()]).toEqual(["beta"]);
+    expect(loaded.quarantines.get("alpha")).toMatchObject({ name: "ReviewedRegistryEntryError" });
+  });
+  it("validates provider alias totals rather than individual label fragments", () => {
+    const input = fixture(), attribution = deriveReviewedEconomicDeploymentPartition(input)!;
+    vi.spyOn(REVIEWED_ECONOMIC_SUPPLY_PLANS, "get").mockReturnValue(input.plan);
+    vi.spyOn(ACTIVE_META_BY_ID, "get").mockReturnValue(input.meta as StablecoinMeta);
+    const validate = (chainRows: Record<string, { current: number }>) => reviewedEconomicDeploymentAttributionValidationError({
+      assetId: "alpha", attribution, aggregateSupplyUsd: 100, registryFingerprint: input.registryFingerprint, clockSec: CLOCK, chainRows,
+    });
+    expect(validate({ Ethereum: { current: 60 }, ethereum: { current: 20 }, Base: { current: 20 } })).toBeNull();
+    expect(validate({ Ethereum: { current: 60 }, ethereum: { current: 10 }, Base: { current: 20 } })).toBe("Economic supply attribution contradicts eligible provider chain");
+    for (const current of [NaN, Infinity, -1]) expect(validate({ ethereum: { current } })).toBe("Economic supply attribution contradicts eligible provider chain");
+  });
   it.each(["number", "hash", "time"])("rejects on-chain pending with a different canonical generation %s", mismatch => {
     const input = fixture();
     input.plan.escrows[0]!.inFlightSource = { kind: "evm-pending-state", sourceId: "pending", chainId: "ethereum",
@@ -113,7 +186,7 @@ describe("reviewed economic supply accounting", () => {
     expect(deriveReviewedEconomicDeploymentPartition(input) === null).toBe(age > 1800);
   });
   it.each([120, 121])("enforces the %s-second cross-observation skew boundary", skew => {
-    const input = fixture(); input.observations[0]!.observedAtSec -= skew;
+    const input = fixture(); input.observations[1]!.observedAtSec -= skew;
     expect(deriveReviewedEconomicDeploymentPartition(input) === null).toBe(skew > 120);
   });
   it("rejects stale price, forged block hash and catalog expansion outside the plan", () => {

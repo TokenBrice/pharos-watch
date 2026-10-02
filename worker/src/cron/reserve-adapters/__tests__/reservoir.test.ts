@@ -412,9 +412,8 @@ describe("adaptReservoirReserves", () => {
   });
 
   it("leaves the route cost-unbounded and score-ineligible when redeemFee() is unreadable", async () => {
-    // Control for the assertion above: with an unreadable fee the config has no
-    // other cost term, so resolveCostBps returns null and V9 sees the same
-    // undisclosed-fee route it saw before this adapter published a live fee.
+    // An unreadable current fee leaves the published formula unquantified at
+    // this notional. It is an integration gap, not issuer non-disclosure.
     const now = 1_800_000_000;
     const { result } = await runReservoir("wsrusd-reservoir", SAMPLE_RESPONSE, {
       balance: 4_000000n,
@@ -434,8 +433,8 @@ describe("adaptReservoirReserves", () => {
 
     const observation = entry.capacityProfile?.exitRouteObservations?.[0];
     expect(observation?.scoreEligible).toBe(false);
-    expect(observation?.feeEvidence).toBe("undisclosed-reviewed");
-    // Capacity is still admitted at the bounded-unknown ceiling.
+    expect(observation?.feeEvidence).toBe("disclosed-unquantified");
+    // Capacity remains diagnostic; no <=200 bps execution cost is proved.
     expect(entry.immediateCapacityUsd).toBe(4);
   });
 
