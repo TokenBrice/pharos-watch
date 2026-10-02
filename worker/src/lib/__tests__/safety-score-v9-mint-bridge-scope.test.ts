@@ -12,7 +12,7 @@ import { v9RepresentationGroupRouteKey } from "@shared/lib/safety-score-v9/facts
 import { evaluateV9EconomicControlAssetFacts } from "@shared/lib/safety-score-v9/control";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
-import { reviewedScope, SCOPE_CLOCK } from "@shared/lib/__tests__/safety-score-v9-control-scope.test-support";
+import { reviewedScope, SCOPE_CLOCK, weightedQuorum } from "@shared/lib/__tests__/safety-score-v9-control-scope.test-support";
 import { describe, expect, it } from "vitest";
 import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9/fact-set";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
@@ -732,6 +732,63 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
       threshold: null,
     });
   });
+
+  it("selects the weaker effective signature requirement when a weighted bridge quorum joins a uniform multisig", () => {
+    const weighted = overlayEntry("weighted", { kind: "not-applicable", bound: null });
+    weighted.overlay.authority = {
+      authorityKey: "weighted-controller", model: "multisig", threshold: null,
+      weightedQuorum: weightedQuorum([1, 1, 1], 2),
+    };
+    const uniform = overlayEntry("uniform", { kind: "not-applicable", bound: null });
+    uniform.overlay.authority = {
+      authorityKey: "uniform-controller", model: "multisig", threshold: { required: 3, total: 5 },
+    };
+    expect(mergedBridgeAuthority([weighted, uniform], BASE_ROUTE)).toEqual(weighted.overlay.authority);
+    expect(mergedBridgeAuthority([uniform, weighted], BASE_ROUTE)).toEqual(weighted.overlay.authority);
+  });
+
+  it("uses complete bridge execution paths instead of coarse upgrade claims and preserves the unavoidable delay", () => {
+    const scope = reviewedScope();
+    Object.assign(scope.paths[0]!, {
+      capabilities: ["bridge-mint"], economicLossScope: "deployment", reach: "deployment",
+      affectedDeployments: [BASE_ROUTE], unavoidableDelaySec: 3_600,
+    });
+    const metadata = meta("alpha", {
+      bridgeRouteRisk: bridgeProfile([representationRoute(BASE_ROUTE)], {
+        reviewedAt: "2026-10-01",
+        controls: [bridgeControl({
+          controllerChain: "ethereum", controllerAddress: ETHEREUM_ROUTE.split(":")[1],
+          capabilities: ["bridge-mint", "upgrade"], executionScope: scope, timelockDelaySec: 0,
+        })],
+      }),
+    });
+    const adapted = adaptBridgeFixture(metadata, null, undefined, SCOPE_CLOCK);
+    expect(adapted.controls).toEqual([expect.objectContaining({
+      deploymentKey: BASE_ROUTE,
+      capabilities: ["bridge-mint"],
+      capSemantics: { kind: "bounded", bound: { amount: 1, unit: "supply-fraction" } },
+      claimImpairment: "bounded",
+      delaySec: 3_600,
+      executionScopeComplete: true,
+    })]);
+  });
+
+  it.each(["missing", "stale"] as const)(
+    "does not certify a multichain bridge inventory with %s review evidence",
+    (state) => {
+      const metadata = meta("alpha", state === "missing" ? {} : {
+        bridgeRouteRisk: bridgeProfile([representationRoute(BASE_ROUTE)], { controls: [] }),
+      });
+      const adapted = adaptBridgeFixture(
+        metadata, null, { ethereum: { current: 80 }, base: { current: 20 } }, SCOPE_CLOCK,
+      );
+      expect(adapted.review.status).toMatchObject({
+        applicability: { state: "required" }, observationState: state,
+      });
+      expect(adapted.review.routes).toEqual([]);
+      expect(adapted.controls).toEqual([]);
+    },
+  );
 
   describe("AUTHORITY-LADDER 9.46: the external validator-quorum rung", () => {
     const dvnControl = (routeRefs: readonly string[]) =>

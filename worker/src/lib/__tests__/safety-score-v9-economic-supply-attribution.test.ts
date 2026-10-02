@@ -9,6 +9,9 @@ import { buildSafetyScoreV9SupplyReview } from "../safety-score-v9/extension-sup
 import { transferMaterialScopeFromEconomicDeploymentPartition } from "../safety-score-v9/transfer-materiality";
 import { resolveSafetyScoreV9ReviewedTransferFact } from "../safety-score-v9/extension-transfer";
 import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
+import type * as SupplyAttributionContract from "../safety-score-v9/supply-attribution-contract";
+import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { chainRpcs } from "./safety-score-v9-supply-observation.test-support";
 
 const CLOCK = 1790850000;
 const CANONICAL = `ethereum:0x${"1".repeat(40)}`;
@@ -239,6 +242,90 @@ describe("reviewed economic supply accounting", () => {
 });
 
 describe("economic materiality consumers", () => {
+  it.each(["unresolved", "missing"] as const)(
+    "keeps an %s economic route and in-flight liability out of reviewed supply",
+    (disposition) => {
+      const input = fixture();
+      input.observations[1]!.amount = "19000000000000000000";
+      input.inFlight[0]!.amount = "1000000";
+      const packet = deriveReviewedEconomicDeploymentPartition(input)!;
+      vi.spyOn(REVIEWED_ECONOMIC_SUPPLY_PLANS, "get").mockReturnValue(input.plan);
+      vi.spyOn(ACTIVE_META_BY_ID, "get").mockReturnValue(input.meta as StablecoinMeta);
+      const fixed = makeV9FixedInput({ assetId: "alpha", clockSec: CLOCK });
+      Object.assign(fixed, {
+        baseInputGenerationId: input.baseInputGenerationId,
+        sourceGeneration: input.sourceGeneration,
+        registryFingerprint: input.registryFingerprint,
+        aggregateCirculatingById: { alpha: { circulating: { peggedUSD: 100 }, observedAtSec: CLOCK - 60 } },
+        chainCirculatingById: {},
+        navPriceById: { alpha: { sourceId: "reference", priceUsd: 1, observedAtSec: CLOCK - 60, confidence: "high" } },
+        safetyScoreV9SupplyAttributionById: { alpha: packet },
+      });
+      const profile = structuredClone(input.meta.bridgeRouteRisk!);
+      if (disposition === "missing") profile.routes!.pop();
+      else profile.routes![1]!.reviewDisposition = "unresolved";
+      const review = buildSafetyScoreV9SupplyReview(fixed, "alpha", profile)!;
+      expect(review.selectedRouteSupplyShare).toBe(0.8);
+      expect(review.unreviewedRouteSupplyShare).toBe(disposition === "missing" ? 0 : 0.19);
+      expect(review.unknownRouteSupplyShare).toBe(disposition === "missing" ? 0.2 : 0.01);
+      expect(review.selectedBridgeRoutes).toEqual(expect.arrayContaining([
+        { deploymentRouteKey: disposition === "missing" ? `unmatched-economic:alpha:${REMOTE}` : REMOTE,
+          supplyUsd: 19, supplyShare: 0.19, reviewState: disposition === "missing" ? "unmatched" : "selected-unresolved" },
+        { deploymentRouteKey: "unmatched-economic:alpha:in-flight", supplyUsd: 1, supplyShare: 0.01, reviewState: "unmatched" },
+      ]));
+      expect(review.failureDomains).toContainEqual({ kind: "bridge-route", key: "unmatched-economic:alpha:in-flight" });
+    },
+  );
+
+  it("captures reviewed economic liabilities with an auditable journal and a bounded freshness window", async () => {
+    const input = fixture();
+    input.observations[1]!.amount = "19000000000000000000";
+    input.inFlight[0]!.amount = "1000000";
+    const packet = deriveReviewedEconomicDeploymentPartition(input)!;
+    const fixed = makeV9FixedInput({ assetId: "alpha", clockSec: CLOCK });
+    Object.assign(fixed, {
+      baseInputGenerationId: input.baseInputGenerationId,
+      sourceGeneration: input.sourceGeneration,
+      registryFingerprint: input.registryFingerprint,
+      aggregateCirculatingById: { alpha: { circulating: { peggedUSD: 100 }, observedAtSec: CLOCK - 60 } },
+      chainCirculatingById: {},
+    });
+    // Descriptors and source membership snapshot the reviewed registry at module initialization.
+    vi.resetModules();
+    vi.doMock("../safety-score-v9/supply-attribution-contract", async (importOriginal) => ({
+      ...await importOriginal<typeof SupplyAttributionContract>(),
+      REVIEWED_ECONOMIC_SUPPLY_PLANS: new Map([[input.plan.assetId, input.plan]]),
+    }));
+    vi.doMock("../safety-score-v9/economic-supply-observer", () => ({
+      observeReviewedEconomicDeploymentPartitionAttempt: async () => ({ status: "accepted", attribution: packet }),
+    }));
+    try {
+      const { captureSafetyScoreV9SupplyAttribution, safetyScoreV9ChainRows, safetyScoreV9ChainSupplyMaxAgeSec } =
+        await import("../safety-score-v9/supply-attribution");
+      const capture = await captureSafetyScoreV9SupplyAttribution(fixed, chainRpcs());
+      expect(capture.expectedAssetIds).toEqual(["alpha"]);
+      expect(capture.journalRecords).toEqual([expect.objectContaining({
+        assetId: "alpha", sourceOriginClass: "issuer-disclosure-plus-onchain",
+        admissionCode: "supply-attribution.admission.accepted",
+        fallbackCode: "supply-attribution.fallback.not-used",
+        routeInventoryDigest: packet.routeInventoryDigest,
+        sourceObservedAtSec: CLOCK - 60,
+        contentSha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+      })]);
+      const captured = { ...fixed, safetyScoreV9SupplyAttributionById: capture.attributionById };
+      expect(safetyScoreV9ChainRows(captured, "alpha")).toEqual({
+        ethereum: { current: 80 }, base: { current: 19 }, "unmatched-economic:alpha": { current: 1 },
+      });
+      expect(safetyScoreV9ChainSupplyMaxAgeSec(captured, "alpha", null)).toBe(
+        V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxAgeSec,
+      );
+    } finally {
+      vi.doUnmock("../safety-score-v9/supply-attribution-contract");
+      vi.doUnmock("../safety-score-v9/economic-supply-observer");
+      vi.resetModules();
+    }
+  });
+
   it("grants exact below-threshold transfer scope and fails closed on a changed binding", () => {
     const input = fixture(); input.observations[1]!.amount = "5000000000000000000"; input.observations[2]!.amount = "5000000";
     const packet = deriveReviewedEconomicDeploymentPartition(input)!;

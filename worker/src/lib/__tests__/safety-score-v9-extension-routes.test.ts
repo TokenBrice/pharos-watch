@@ -8,7 +8,7 @@ import {
   resolveReviewedRedemptionSettlement,
   type RedemptionBackstopConfig,
 } from "@shared/lib/redemption-backstops";
-import type { ExitRouteObservation } from "@shared/types/exit-route";
+import type { ExitExecutionCertificate, ExitRouteObservation } from "@shared/types/exit-route";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
@@ -110,6 +110,115 @@ function dexPegFixture({
   setPegData(fixedInput, pegDataById);
   return { fixedInput, route };
 }
+
+function certifiedDexFixture() {
+  const { fixedInput, route } = dexPegFixture({
+    assetId: "alpha",
+    routeOverrides: {
+      routeId: "dex:alpha:certified-basket",
+      maxCostBps: 500,
+      output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdc-circle", "usdt-tether"] },
+    },
+  });
+  const outputLeg = {
+    assetKey: "usdc-circle", deployment: "ethereum:usdc", rawUnits: "300000000000",
+    decimals: 6, unitValueUsd: 0.9, expectedUnitValueUsd: 1, sourceId: "fixture:price",
+    sourceGenerationId: "fixture:price:1", observedAtSec: NOW - 5,
+  };
+  const certificate: ExitExecutionCertificate = {
+    modelId: "stable-basket-withdraw", reviewDigest: "a".repeat(64),
+    identity: {
+      assetId: "alpha", deployment: "ethereum:alpha", endpoint: "withdraw",
+      outputAssetKeys: ["usdc-circle", "usdt-tether"], implementationIdentity: "fixture:implementation",
+    },
+    inputGenerationId: "fixture:input:1", observationGenerationId: "fixture:execution:1",
+    observedAtSec: NOW, sourceMaxAgeSec: 300, priceMaxAgeSec: 300,
+    source: { kind: "block", number: 100, hash: "fixture:block", timestamp: NOW, complete: true, truncated: false },
+    holder: "any-holder", prerequisites: [],
+    gates: [{ gateId: "execution", verdict: "passed", evidenceId: "fixture:execution", observedAtSec: NOW, reason: null }],
+    inputReference: { ...outputLeg, assetKey: "alpha", deployment: "ethereum:alpha", unitValueUsd: 1 },
+    feeReferences: [],
+    points: [{
+      requestedNotionalUsd: route.requestedNotionalUsd, maxCostBps: route.maxCostBps,
+      requestedRawInput: "1000000000000", executedRawInput: "900000000000",
+      executableUsd: 900_000, executionCostBps: 20, allInCostBps: 400, fees: [],
+      outputs: [
+        outputLeg,
+        { ...outputLeg, assetKey: "usdt-tether", deployment: "ethereum:usdt",
+          rawUnits: "300000000000000000000000", decimals: 18,
+          unitValueUsd: 2, expectedUnitValueUsd: 2, observedAtSec: NOW - 10 },
+      ],
+      certification: "exact-lower-bound", reason: null,
+    }],
+    capacityBasis: "transaction-simulation",
+    settlement: { endpoint: "withdraw", maximumCompletionSec: 0, evidenceId: "fixture:settlement" },
+    resourceKeys: ["pool:ethereum:certified-basket"], failureDomainKeys: ["protocol:fixture"],
+  };
+  route.executionCertificate = certificate;
+  return { fixedInput, route, certificate };
+}
+
+describe("certified execution route outputs", () => {
+  it("values raw output quantities across decimals and weights the basket by expected USD, not token units", () => {
+    const { fixedInput } = certifiedDexFixture();
+    const review = buildSafetyScoreV9RouteReviews(fixedInput, "alpha")[0]!;
+    expect(review).toMatchObject({
+      coverageClass: "exact-lower-bound", holderAccess: "permissionless",
+      capacityScoringHorizon: "immediate", settlementModel: "atomic",
+      output: {
+        kind: "basket", assetKeys: ["usdc-circle", "usdt-tether"],
+        basketWeights: [
+          { assetKey: "usdc-circle", weight: 1 / 3 },
+          { assetKey: "usdt-tether", weight: 2 / 3 },
+        ],
+        valuation: {
+          expectedUnitValueUsd: 1, observedAtSec: NOW - 10,
+          sourceGenerationId: "fixture:execution:1", maxAgeSec: 300,
+        },
+      },
+    });
+    expect(review.output!.valuation!.unitValueUsd).toBeCloseTo(29 / 30);
+  });
+
+  it.each(["different-notional", "different-cost", "diagnostic", "no-outputs", "zero-basket"] as const)(
+    "does not invent an output valuation for %s execution proof",
+    (fault) => {
+      const { fixedInput, certificate } = certifiedDexFixture();
+      const point = certificate.points[0]!;
+      if (fault === "different-notional") {
+        point.requestedNotionalUsd *= 2;
+        point.requestedRawInput = (BigInt(point.requestedRawInput) * 2n).toString();
+      }
+      if (fault === "different-cost") point.maxCostBps++;
+      if (fault === "diagnostic") { point.certification = "diagnostic"; point.reason = "execution-unavailable"; }
+      if (fault === "no-outputs") point.outputs = [];
+      if (fault === "no-outputs" || fault === "zero-basket") {
+        point.executableUsd = 0;
+        point.executedRawInput = "0";
+        for (const leg of point.outputs) leg.rawUnits = "0";
+      }
+      const review = buildSafetyScoreV9RouteReviews(fixedInput, "alpha")[0]!;
+      expect(review.output).toBeNull();
+      if (fault === "different-notional" || fault === "different-cost" || fault === "diagnostic") {
+        expect(review.coverageClass).toBe("diagnostic");
+      }
+    },
+  );
+
+  it("retains observed single-output downside even when executable capacity is zero", () => {
+    const { fixedInput, certificate } = certifiedDexFixture();
+    const point = certificate.points[0]!;
+    point.outputs = [{ ...point.outputs[1]!, rawUnits: "0", unitValueUsd: 1.9 }];
+    point.executedRawInput = "0";
+    point.executableUsd = 0;
+    certificate.identity.outputAssetKeys = ["usdt-tether"];
+    const review = buildSafetyScoreV9RouteReviews(fixedInput, "alpha")[0]!;
+    expect(review.output).toMatchObject({
+      kind: "tracked-stablecoin", assetKeys: ["usdt-tether"], basketWeights: [],
+      valuation: { unitValueUsd: 0.95, expectedUnitValueUsd: 1 },
+    });
+  });
+});
 
 describe("buildSafetyScoreV9RouteReviews physical-commodity outputs", () => {
   it("admits physical verified customers without an institutional discount but labels terms capacity as modelled", () => {

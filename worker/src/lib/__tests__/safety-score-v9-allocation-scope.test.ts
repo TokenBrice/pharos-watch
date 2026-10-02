@@ -194,6 +194,24 @@ describe("dimension-scoped allocation consumer boundaries", () => {
     expect(result.card.trace.wrapperParentLimit?.missingFacts).toContainEqual(expect.objectContaining({ factClass: "leverage" }));
   });
 
+  it.each(["source", "timestamp"] as const)("requires an observation binding the exact deployment %s", (fault) => {
+    const input = fixture();
+    if (fault === "source") {
+      input.claim.observations[0]!.sourceUrl = "https://example.com/other-code";
+      input.claim.sources.push({ label: "Other deployment code", url: "https://example.com/other-code" });
+    }
+    else input.claim.observations[0]!.observedAtSec--;
+    const result = compile(input);
+    expect(result.asset.allocationScopeFacts).toContainEqual(expect.objectContaining({
+      claimKey: input.claim.claimKey, admitted: false, assessment: null,
+      rejectionReason: "identity-unmatched", evidenceRefIds: [],
+    }));
+    expect(wrapperFacts(result).facts.leverage.disposition).toBe("issuer-undisclosed");
+    expect(result.asset.allocationScopeFacts).toContainEqual(expect.objectContaining({
+      claimKey: "required:leverage:contract", rejectionReason: "required-scope-unresolved",
+    }));
+  });
+
   it("admits an exactly matched root and manager reachable roster", () => {
     const input = fixture();
     if (input.claim.target.kind !== "deployment") throw new Error("Expected deployment");
