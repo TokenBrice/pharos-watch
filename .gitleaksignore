@@ -265,3 +265,12 @@ ba51b8fcc37671cedf1a6099021a3dc988653910:worker/src/handlers/scheduled/__tests__
 40b1fe85d3f374d2d0ba37c9ee18ecc60a20cb00:worker/src/cron/reserve-adapters/erc4626-single-asset.ts:generic-api-key:739
 40b1fe85d3f374d2d0ba37c9ee18ecc60a20cb00:worker/src/cron/reserve-adapters/erc4626-single-asset.ts:generic-api-key:741
 5ad00d4d3a432a96ee3de0df7c271c8cc3142d52:worker/src/__tests__/index.fetch.test.ts:generic-api-key:11
+
+# Exact July 2026 mTBILL Final Terms PDF findings. The document is anonymously
+# readable and independently reviewed, but the issuer page is Cloudflare-blocked
+# and an exact public href could not be verified on 2026-10-02. Do not grant this
+# capability a recurring allowlist without that publication evidence.
+d6bd68c5df28675e38964015efb3dce968ac7d5e:shared/lib/redemption-backstop-configs/offchain-issuer/non-usd-and-tokenized.ts:generic-api-key:339
+d6bd68c5df28675e38964015efb3dce968ac7d5e:shared/lib/redemption-backstop-configs/offchain-issuer/non-usd-and-tokenized.ts:generic-api-key:350
+73fdf6acfd45e53f7c6bf360bccd125a40fee2d0:shared/data/stablecoins/domains/compliance/mtbill-midas.json:generic-api-key:51
+73fdf6acfd45e53f7c6bf360bccd125a40fee2d0:shared/data/stablecoins/domains/reserves/mtbill-midas.json:generic-api-key:122
