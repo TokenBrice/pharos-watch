@@ -5,8 +5,8 @@
 
 /*
  * The section and every record anchor clear the sticky chrome: the 3px status
- * strip, plus the 3.5rem nav from md, plus the 46px tape from lg. Below md the
- * root `scroll-padding-top` (`--table-header-top`) already covers the nav.
+ * strip, plus the 3.5rem nav from md. Below md the root `scroll-padding-top`
+ * (`--table-header-top`) already covers the nav.
  */
 .register,
 .register tr[id] {
@@ -17,13 +17,6 @@
   .register,
   .register tr[id] {
     scroll-margin-top: calc(3px + 3.5rem + 0.75rem);
-  }
-}
-
-@media (min-width: 1024px) {
-  .register,
-  .register tr[id] {
-    scroll-margin-top: calc(3px + 3.5rem + 46px + 0.75rem);
   }
 }
 

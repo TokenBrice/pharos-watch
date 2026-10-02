@@ -6,8 +6,9 @@ import { useIsMobile } from "@/hooks/use-is-mobile";
 import { isChromelessPath } from "@/lib/chromeless-routes";
 
 // The horizontal core-nav pills were retired with the top-nav redesign. This
-// sticky strip keeps just the live events tape beneath the nav: desktop-wide,
-// but homepage-only on mobile so interior routes keep their first viewport.
+// strip keeps just the live events tape beneath the nav, scrolling away with
+// the page while only the nav stays pinned: desktop-wide, but homepage-only on
+// mobile so interior routes keep their first viewport.
 export function CoreTopRail() {
   const pathname = usePathname();
   // Treat the server snapshot as mobile so static interior HTML reserves the
@@ -19,10 +20,11 @@ export function CoreTopRail() {
     return <div data-testid="core-top-rail-placeholder" aria-hidden="true" className="hidden min-h-[46px] lg:block" />;
   }
   const mobileDisplayClass = pathname === "/" ? "contents" : "hidden";
-  const topOffsetClass = pathname === "/" ? "lg:top-14" : "lg:top-[calc(3px+3.5rem)]";
 
+  // `relative z-40` keeps the tape's own z-50 inside this stacking context so
+  // the top nav's z-50 menus still paint over it.
   return (
-    <div className={`${mobileDisplayClass} lg:sticky lg:z-40 lg:block ${topOffsetClass}`}>
+    <div className={`${mobileDisplayClass} lg:relative lg:z-40 lg:block`}>
       <HomepageTape placement="top" />
     </div>
   );

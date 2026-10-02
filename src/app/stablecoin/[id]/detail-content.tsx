@@ -123,7 +123,7 @@ function DetailNavigation({
       navAriaLabel="Stablecoin detail section navigation"
       emphasis="pill-tabs"
       onActiveChange={onActiveChange}
-      className="mt-4 lg:top-[calc(env(safe-area-inset-top)+3px+3.5rem+46px)] lg:w-full lg:max-w-none lg:[&>div]:justify-center lg:[&_nav]:flex-none"
+      className="mt-4 lg:top-[calc(env(safe-area-inset-top)+3px+3.5rem)] lg:w-full lg:max-w-none lg:[&>div]:justify-center lg:[&_nav]:flex-none"
       rightSlot={(
         <div className="hidden items-center gap-2 text-xs sm:flex lg:hidden">
           <Link
