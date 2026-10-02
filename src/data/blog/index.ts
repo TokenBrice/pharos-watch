@@ -28,6 +28,13 @@ export interface BlogPost {
 
 export const BLOG_POSTS: readonly BlogPost[] = [
   {
+    slug: "safety-score-v10",
+    title: "Safety Score V10: Same Pillars, Sharper Measurements",
+    description:
+      "V10 keeps Backing, Control and Exit and sharpens what feeds them: the weakest mint route, issuer-set prices, shared reserves, and gold redeemed into dollars.",
+    datePublished: "2026-10-02",
+  },
+  {
     slug: "api-access-free-grades-supporter-keys",
     title: "API Access: Free Grades, Supporter Keys",
     description:
