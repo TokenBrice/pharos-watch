@@ -43,8 +43,8 @@ export interface CurrentPegObservation {
   pegReferenceUnavailable: boolean;
   currentPriceUnavailable: boolean;
   /**
-   * The asset (or its current supply buckets) is absent, so the live-event supply floor cannot be
-   * assessed. The deviation is withheld like a sub-floor coin, but this is NOT a below-floor claim.
+   * The asset (or its current supply buckets) is absent, so the live-event supply floor
+   * cannot be assessed. This does not withhold an otherwise observed deviation.
    */
   currentSupplyUnavailable: boolean;
 }
@@ -72,13 +72,7 @@ export function deriveCurrentPegObservationMap(options: {
     let pegReferenceUnavailable = false;
     let pegReference: PegSummaryCoin["pegReference"] = null;
 
-    if (
-      !meta.flags.navToken &&
-      asset &&
-      hasUsableCurrentPrice(asset) &&
-      supply !== null &&
-      supply >= DEPEG_EVENT_MIN_SUPPLY_USD
-    ) {
+    if (!meta.flags.navToken && asset && hasUsableCurrentPrice(asset)) {
       const pegType = normalizePegType(asset.pegType);
       if (
         !isAuthoritativeDepegPegReference({
@@ -204,7 +198,7 @@ export async function derivePegAnalyticsSnapshot(
     : "";
   const eventsResult = await db.prepare(
     `SELECT /* pharos:peg-analytics:recent-depeg-events */
-       * FROM depeg_events_with_provenance WHERE started_at > ?${activeIncidentCondition} ORDER BY started_at DESC`,
+       * FROM depeg_events_with_provenance WHERE (ended_at IS NULL OR ended_at > ?)${activeIncidentCondition} ORDER BY started_at DESC`,
   )
     .bind(fourYearsAgoSec)
     .all<DepegRow>();
@@ -286,6 +280,7 @@ export async function derivePegAnalyticsSnapshot(
       ...(currentPegObservation.currentSupplyUnavailable ? { currentSupplyUnavailable: true } : {}),
       depegEventCoverageLimited,
       pegScore: scoreResult.pegScore,
+      unknownCoverageSeconds: scoreResult.unknownCoverageSeconds,
       pegPct: scoreResult.pegPct,
       severityScore: scoreResult.severityScore,
       spreadPenalty: scoreResult.spreadPenalty,

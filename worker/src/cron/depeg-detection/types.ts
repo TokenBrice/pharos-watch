@@ -1,6 +1,6 @@
 import type { PegRateSource } from "@shared/lib/peg-rates";
 import type { PegAssetBase, StablecoinMeta } from "@shared/types/core";
-import type { DepegEventCloseReason } from "@shared/types/market";
+import type { DepegEventCloseReason, DepegPriceCoverage } from "@shared/types/market";
 import type {
   DepegRow,
   DexPoolSource,
@@ -66,6 +66,7 @@ export type DepegPersistenceCommand =
       closeReason: DepegEventCloseReason;
     }
   | { type: "update-peak"; id: number; peakDeviationBps: number; peakPrice: number | null }
+  | { type: "record-price-coverage"; id: number; coverage: DepegPriceCoverage }
   | { type: "begin-recovery"; id: number; firstSeenAt: number; lastSeenAt: number }
   | { type: "continue-recovery"; id: number; lastSeenAt: number }
   | { type: "clear-recovery"; id: number }
@@ -74,6 +75,7 @@ export type DepegPersistenceCommand =
 export interface DepegAssetDecision {
   trackedCoinId?: string;
   seenEventIds: number[];
+  priceCoverage?: DepegPriceCoverage;
   commands: DepegPersistenceCommand[];
   diagnostics: DepegDiagnostic[];
 }

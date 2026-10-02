@@ -285,11 +285,20 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
     expect(possibleAsset.accessReview.freeze.status.observationState).toBe(inheritedAsset.accessReview.freeze.status.observationState);
   });
 
-  it("distinguishes measured, stale, and producer-failed supply-floor peg gaps", () => {
-    const pegGaps = (fixed: ReturnType<typeof exactFixedInput>) => compileSafetyScoreV9FactSetFromFixedInput(fixed, extension()).assets[0]!.gaps.filter((gap) => gap.reasonCode === "peg-supply-floor-withheld" || gap.reasonCode === "missing-peg-input");
-    expect(pegGaps(exactFixedInput({ currentDeviationBps: null, depegEventCoverageLimited: true }))).toMatchObject([{ reasonCode: "peg-supply-floor-withheld", responsibility: "measured-adverse" }]);
-    expect(pegGaps(exactFixedInput({ currentDeviationBps: null, depegEventCoverageLimited: true, pegObservedAtSec: AS_OF_SEC - 1_000 }))).toMatchObject([{ reasonCode: "missing-peg-input", observationState: "stale" }]);
-    expect(pegGaps(exactFixedInput({ currentDeviationBps: null }))).toMatchObject([{ reasonCode: "missing-peg-input", responsibility: "producer-failed" }]);
+  it("admits an observed sub-floor deviation without inventing a missing-peg gap", () => {
+    const observed = compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput({
+      currentDeviationBps: -125, depegEventCoverageLimited: true, pegScore: 77,
+    }), extension()).assets[0]!;
+    expect(observed.peg).toMatchObject({
+      status: { observationState: "known" }, currentDeviationBps: 125,
+    });
+    expect(observed.gaps.filter((gap) => gap.path.kind === "local-component" && gap.path.componentKey === "peg")).toEqual([]);
+    const unobserved = compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput({
+      currentDeviationBps: null, depegEventCoverageLimited: true,
+    }), extension()).assets[0]!;
+    expect(unobserved.gaps).toContainEqual(expect.objectContaining({
+      reasonCode: "missing-peg-input", responsibility: "producer-failed",
+    }));
   });
 
   it("keeps active depeg evidence bounded when the peak is unavailable", () => {

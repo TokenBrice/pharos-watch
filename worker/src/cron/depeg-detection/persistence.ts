@@ -17,6 +17,10 @@ function buildDepegPersistenceStatement(
       return db
         .prepare("UPDATE depeg_events SET peak_deviation_bps = ?, peak_price = ? WHERE id = ?")
         .bind(command.peakDeviationBps, command.peakPrice, command.id);
+    case "record-price-coverage":
+      return db.prepare(
+        "UPDATE depeg_events SET price_coverage_json = ?, last_trusted_price_at = ?, price_coverage_gap_started_at = ? WHERE id = ?",
+      ).bind(JSON.stringify(command.coverage.intervals), command.coverage.lastTrustedObservationAt, command.coverage.gapStartedAt, command.id);
     case "begin-recovery":
       return db
         .prepare("UPDATE depeg_events SET recovery_first_seen_at = ?, recovery_last_seen_at = ? WHERE id = ?")

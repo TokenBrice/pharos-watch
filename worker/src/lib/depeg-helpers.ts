@@ -4,6 +4,7 @@ import { DEX_PROTOCOL_SOURCE_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import { DepegAuditVerdictSchema } from "@shared/types/depeg-audit";
 import {
   DEPEG_EVENT_CLOSE_REASON_VALUES,
+  DepegPriceCoverageSchema,
   type DepegEvent,
   type DepegEventCloseReason,
 } from "@shared/types/market";
@@ -42,6 +43,9 @@ export interface DepegRow {
   confirmation_sources: string | null;
   pending_reason: string | null;
   provenance_json?: string | null;
+  price_coverage_json?: string | null;
+  last_trusted_price_at?: number | null;
+  price_coverage_gap_started_at?: number | null;
   provenance_confidence_tier?: string | null;
   provenance_audit_verdict?: string | null;
   provenance_replay_run_id?: string | null;
@@ -50,7 +54,7 @@ export interface DepegRow {
 
 /** Column list for the detector's depeg_events SELECT shape. */
 export const DEPEG_EVENTS_DEPEGROW_COLUMNS =
-  "id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source, recovery_first_seen_at";
+  "id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source, recovery_first_seen_at, price_coverage_json, last_trusted_price_at, price_coverage_gap_started_at";
 
 const OPEN_DEPEG_LIMIT_MESSAGES = {
   detection: "Skipped depeg detection because the open-event query reached its limit",
@@ -375,8 +379,8 @@ export function buildInsertDepegEventStmt(
 ): D1PreparedStatement {
   return db
     .prepare(
-      `INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peak_price, peg_reference, source, confirmation_sources, pending_reason)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'live', ?, ?)`,
+      `INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peak_price, peg_reference, source, confirmation_sources, pending_reason, price_coverage_json, last_trusted_price_at, price_coverage_gap_started_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'live', ?, ?, ?, ?, ?)`,
     )
     .bind(
       event.stablecoinId,
@@ -390,6 +394,9 @@ export function buildInsertDepegEventStmt(
       event.pegReference,
       event.confirmationSources ?? null,
       event.pendingReason ?? null,
+      event.priceCoverage ? JSON.stringify(event.priceCoverage.intervals) : null,
+      event.priceCoverage?.lastTrustedObservationAt ?? null,
+      event.priceCoverage?.gapStartedAt ?? null,
     );
 }
 
@@ -410,6 +417,15 @@ function parseDepegCloseReason(row: DepegRow): DepegEventCloseReason | null {
   throw new Error(`[depeg-helpers] Invalid close_reason "${row.close_reason}" for event ${row.id}`);
 }
 
+
+export function rowPriceCoverage(row: DepegRow): DepegEvent["priceCoverage"] {
+  if (row.price_coverage_json == null) return null;
+  return DepegPriceCoverageSchema.parse({
+    intervals: JSON.parse(row.price_coverage_json),
+    lastTrustedObservationAt: row.last_trusted_price_at ?? null,
+    gapStartedAt: row.price_coverage_gap_started_at ?? null,
+  });
+}
 /** Convert a snake_case D1 row to a camelCase DepegEvent */
 export function rowToDepegEvent(row: DepegRow): DepegEvent {
   const direction = parseDepegDirection(row);
@@ -460,6 +476,7 @@ export function rowToDepegEvent(row: DepegRow): DepegEvent {
     confirmationSources: row.confirmation_sources ?? null,
     pendingReason: row.pending_reason ?? null,
     closeReason,
+    priceCoverage: rowPriceCoverage(row),
     provenance,
   };
 }

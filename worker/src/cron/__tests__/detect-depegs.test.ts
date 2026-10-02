@@ -108,6 +108,26 @@ describe("detectDepegEvents", () => {
     vi.restoreAllMocks();
   });
 
+  it("records a sticky coverage gap for an omitted asset without closing its incident", async () => {
+    const { sqlite, db } = sqliteFixtures.open();
+    const now = Math.floor(Date.now() / 1000);
+    const intervals = JSON.stringify([[now - 900, now]]);
+    seedOpenEvent(sqlite, {
+      price_coverage_json: intervals,
+      last_trusted_price_at: now,
+    });
+    vi.setSystemTime((now + 900) * 1000);
+    await detectDepegEvents(db, []);
+    vi.setSystemTime((now + 3600) * 1000);
+    await detectDepegEvents(db, []);
+    expect(sqlite.prepare("SELECT ended_at, price_coverage_json, last_trusted_price_at, price_coverage_gap_started_at FROM depeg_events WHERE id = 1").get()).toEqual({
+      ended_at: null,
+      price_coverage_json: intervals,
+      last_trusted_price_at: now,
+      price_coverage_gap_started_at: now + 900,
+    });
+  });
+
   it("rejects pre-aborted detection before hydration or writes", async () => {
     const { db } = sqliteFixtures.open();
     const prepare = vi.spyOn(db, "prepare");

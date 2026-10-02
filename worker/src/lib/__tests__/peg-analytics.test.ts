@@ -260,7 +260,7 @@ describe("derivePegAnalyticsSnapshot", () => {
     );
   });
 
-  it("flags low-cap coins as coverage-limited while keeping current deviation null", async () => {
+  it("admits sub-floor current deviation while marking event coverage limited", async () => {
     const snapshot = await derivePegAnalyticsSnapshot(db, {
       peggedAssets: [
         {
@@ -275,9 +275,8 @@ describe("derivePegAnalyticsSnapshot", () => {
       methodologyAsOf: 1_700_000_000,
     });
 
-    expect(snapshot.pegDataById.get("usdt-tether")?.currentDeviationBps).toBeNull();
+    expect(snapshot.pegDataById.get("usdt-tether")?.currentDeviationBps).toBe(-1000);
     expect(snapshot.pegDataById.get("usdt-tether")?.depegEventCoverageLimited).toBe(true);
-    // A withheld deviation is not an unobserved one: the price itself was usable.
     expect(snapshot.pegDataById.get("usdt-tether")?.currentPriceUnavailable).toBeUndefined();
   });
 
@@ -294,7 +293,7 @@ describe("derivePegAnalyticsSnapshot", () => {
       const coin = (await snapshotFor(circulating)).pegDataById.get("usdt-tether");
       expect(coin?.currentSupplyUnavailable).toBe(true);
       expect(coin?.depegEventCoverageLimited).toBe(false);
-      expect(coin?.currentDeviationBps).toBeNull();
+      expect(coin?.currentDeviationBps).toBe(-1000);
     }
 
     // Observed supply (sub-floor or above-floor) is never marked unavailable.

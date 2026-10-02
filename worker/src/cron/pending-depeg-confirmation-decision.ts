@@ -101,6 +101,8 @@ export function evaluatePromotionDecision(args: PromotionDecisionInput): D1Prepa
       pendingReason: pendingState.reason,
       closeReason: null,
       provenance: null,
+      // The confirmation run observes this endpoint, not every instant of pending history.
+      priceCoverage: { intervals: [[now, now]], lastTrustedObservationAt: now, gapStartedAt: null },
     };
 
     logWorkerEventArgs("handler", "info",

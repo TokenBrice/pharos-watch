@@ -55,7 +55,7 @@ export function PegScoreDewsOverview() {
             How an incident closed is decided by its recorded closure reason, not by whether a recovery price happens to be stored. An explicit recovered-primary, recovered-dex, or recovered-native reason means recovered even where quote-domain policy stores no recovery price, so a genuinely recovered non-USD event is no longer misfiled as orphan-closed and excluded from duration training. Conversely, direction supersession, coverage loss, orphan cleanup, and unknown explicit closures cannot be read as recovered just because a stray recovery price is present, so they stay out of the recovered duration corpus and out of Resolver Reviewer outcomes. Legacy rows that predate recorded closure reasons keep the older price-based reading, so historical recovered labels are preserved rather than rewritten.
           </p>
           <p>
-            Live depeg events still require at least $1M of current circulating supply. Historical replay applies the same floor from historical supply snapshots, or from current stablecoins-cache supply when historical supply is absent; if neither supply source exists, backfill preserves existing rows. Below that floor, the detail page may still show the current price deviation from peg, but it labels live event coverage as limited instead of implying the coin held peg. Only an observed supply below the floor (an explicit zero included) closes an open event as coverage loss; when the current supply reading is unavailable, the open event stays open and unchanged and no new event opens until supply is observed again.
+            Live depeg events still require at least $1M of current circulating supply. Historical replay applies the same floor from historical supply snapshots, or from current stablecoins-cache supply when historical supply is absent; if neither supply source exists, backfill preserves existing rows. Current observed deviation and its authoritative reference do not depend on that event floor: sub-floor assets, and priced assets with unknown supply, still receive a measured deviation in peg and Safety Score facts. Below the floor, live event coverage remains explicitly limited. Only an observed sub-floor supply (an explicit zero included) closes an open event as coverage loss; unavailable supply preserves the lifecycle without extending trusted off-peg time.
           </p>
           <p>
             Replay never re-persists an episode that has already been accounted for. A recomputed episode is skipped
@@ -68,6 +68,16 @@ export function PegScoreDewsOverview() {
           </p>
           <p>
             PegScore begins at a reviewed replay-coverage anchor when one is curated for the asset; otherwise it uses the documented age and first-observation fallbacks. Detail and tracker surfaces distinguish projected incidents from their constituent threshold crossings and publish a recent 90-day peg view whose denominator contains only observed coverage.
+          </p>
+          <p>
+            Since peg methodology 6.31, off-peg time stops at the last recorded trusted observation.
+            Missing price/reference coverage or a missed producer run cannot extend a depeg interval;
+            resumption starts a new interval rather than bridging the blind span. Unrecorded history inside
+            legacy open events is unknown, not off peg or verified stability. Those spans are removed from
+            the occupancy denominator and duration severity, including the recent 90-day view; occupancy
+            is unavailable when no known time remains, and PegScore requires seven known days.
+            Recorded historical peaks remain adverse evidence, but a stale open lifecycle alone cannot
+            activate the current-depeg penalty.
           </p>
           <p>
             PegScore excludes false-positive and disputed audit verdicts, but retains events with no audit data.

@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const DEPEG_DEWS_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.31",
+    title: "Trusted-price coverage bounds depeg time; thin-supply deviations are observed",
+    date: "2026-10-03",
+    effectiveAt: 1790985600,
+    summary: "Open incidents accrue off-peg time only between recorded continuous trusted observations. Blind and unrecorded legacy-open spans are unknown, not off peg or verified stability; observed current deviations no longer depend on the $1M event-creation floor.",
+    impact: [
+      "Additive migration 0255 preserves old-Worker queries and records trusted off-peg intervals, the last observation, and coverage-gap clocks going forward without a historical backfill",
+      "A missed observation, explicit price/reference gap, or gap over 1200 seconds stops duration accrual; resumed observations begin a new interval",
+      "PegScore and its recent 90-day companion exclude unknown event spans from the time denominator and duration severity; historical measured peaks remain evidence, but stale open lifecycle alone no longer activates a current-depeg penalty",
+      "Uninstrumented open events have unknown duration until new trusted observations arrive; closed legacy/replay events retain recorded durations",
+      "Sub-$1M assets with observed prices receive currentDeviationBps and pegReference; event creation still requires $1M supply and all existing trust/confirmation gates",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.30",
     title: "Unknown audit verdicts cannot become scoreable evidence",
     date: "2026-09-28",

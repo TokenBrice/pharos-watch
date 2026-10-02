@@ -54,7 +54,7 @@ describe("computePegScore", () => {
 
     expect(result).toMatchObject({
       pegScore: null,
-      pegPct: 100,
+      pegPct: null,
       severityScore: 100,
       spreadPenalty: 0,
       eventCount: 0,
@@ -87,7 +87,10 @@ describe("computePegScore", () => {
 
   it("penalizes active depeg events", () => {
     const start = NOW - 90 * DAY;
-    const events = [makeEvent({ startedAt: NOW - DAY, endedAt: null, peakDeviationBps: 500 })];
+    const events = [{
+      ...makeEvent({ startedAt: NOW - DAY, endedAt: null, peakDeviationBps: 500 }),
+      priceCoverage: { intervals: [[NOW - DAY, NOW]], lastTrustedObservationAt: NOW, gapStartedAt: null },
+    }];
     const result = computePegScore(events as never, start, NOW);
     expect(result.pegScore).toBeLessThan(100);
     expect(result.activeDepeg).toBe(true);
@@ -304,7 +307,10 @@ describe("active depeg penalty thresholds", () => {
 
   it.each(cases)("$name", ({ peakDeviationBps, expected }) => {
     const result = computePegScore(
-      [makeEvent({ startedAt: now - DAY, peakDeviationBps })] as never,
+      [{
+        ...makeEvent({ startedAt: now - DAY, peakDeviationBps }),
+        priceCoverage: { intervals: [[now - DAY, now]], lastTrustedObservationAt: now, gapStartedAt: null },
+      }] as never,
       trackingStart,
       now,
     );
@@ -314,8 +320,10 @@ describe("active depeg penalty thresholds", () => {
 
   it("uses the worst concurrent active penalty rather than summing penalties", () => {
     const result = computePegScore([
-      makeEvent({ startedAt: now - DAY, peakDeviationBps: -100 }),
-      makeEvent({ startedAt: now - DAY, peakDeviationBps: -500 }),
+      ...[-100, -500].map((peakDeviationBps) => ({
+        ...makeEvent({ startedAt: now - DAY, peakDeviationBps }),
+        priceCoverage: { intervals: [[now - DAY, now]], lastTrustedObservationAt: now, gapStartedAt: null },
+      })),
     ] as never, trackingStart, now);
     // 49.863 time half + 49.850 severity half - 10 active - 3 spread = 86.713.
     expect(result.pegScore).toBe(87);

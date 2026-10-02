@@ -1,6 +1,6 @@
 import type { DepegEvent } from "../types";
 import { isPegScoreExcludedAuditVerdict } from "./depeg-audit";
-import { mergeDepegSeconds, worstDeviation } from "./peg-utils";
+import { mergeDepegSeconds, mergeUnknownDepegSeconds, hasCurrentTrustedDepegObservation, worstDeviation } from "./peg-utils";
 import { DAY_SECONDS } from "./time-constants";
 
 export const PEG_SCORE_LOOKBACK_SEC = Math.ceil(4 * 365.25 * DAY_SECONDS);
@@ -63,7 +63,7 @@ export interface PegScoreResult {
   /** Composite score 0-100, or null if insufficient data (<7 days tracking) */
   pegScore: number | null;
   /** Time-at-peg percentage (0-100) */
-  pegPct: number;
+  pegPct: number | null;
   /** Severity component (0-100) */
   severityScore: number;
   /** Deviation spread penalty (0-15) — stddev of severity-weighted peak deviations across events */
@@ -86,13 +86,15 @@ export interface PegScoreResult {
   lastEventAt: number | null;
   /** Tracking span in days */
   trackingSpanDays: number;
+  /** Unknown coverage is neither off peg nor verified at peg. */
+  unknownCoverageSeconds?: number;
 }
 
 export interface RecentPegStats {
   windowDays: typeof RECENT_PEG_WINDOW_DAYS;
   observedDays: number;
   coverageLimited: boolean;
-  pegPct: number;
+  pegPct: number | null;
   incidentCount: number;
   thresholdCrossingCount: number;
   worstDeviationBps: number | null;
@@ -100,7 +102,7 @@ export interface RecentPegStats {
 
 export const NULL_PEG_SCORE_RESULT: PegScoreResult = {
   pegScore: null,
-  pegPct: 100,
+  pegPct: null,
   severityScore: 100,
   spreadPenalty: 0,
   eventCount: 0,
@@ -112,6 +114,7 @@ export const NULL_PEG_SCORE_RESULT: PegScoreResult = {
   activeDepeg: false,
   lastEventAt: null,
   trackingSpanDays: 0,
+  unknownCoverageSeconds: 0,
 };
 
 
@@ -141,12 +144,14 @@ export function computeRecentPegStats(
     return event.startedAt <= nowSec && eventEndSec > observedStartSec;
   });
   const depegSec = mergeDepegSeconds(recentEvents, observedStartSec, nowSec);
+  const unknownSec = mergeUnknownDepegSeconds(recentEvents, observedStartSec, nowSec);
+  const knownSpanSec = Math.max(0, observedSpanSec - unknownSec);
 
   return {
     windowDays: RECENT_PEG_WINDOW_DAYS,
-    observedDays: observedSpanSec / DAY_SECONDS,
-    coverageLimited: observedStartSec > nominalStartSec,
-    pegPct: Math.max(0, (1 - depegSec / observedSpanSec) * 100),
+    observedDays: knownSpanSec / DAY_SECONDS,
+    coverageLimited: observedStartSec > nominalStartSec || unknownSec > 0,
+    pegPct: knownSpanSec > 0 ? Math.max(0, (1 - depegSec / knownSpanSec) * 100) : null,
     incidentCount: recentEvents.length,
     thresholdCrossingCount: recentEvents.reduce((sum, event) => sum + Math.max(1, event.constituentEventCount ?? 1), 0),
     worstDeviationBps: worstDeviation(recentEvents),
@@ -181,7 +186,6 @@ export function computePegScore(
 
   const spanSec = Math.max(now - startSec, 1);
   const spanDays = spanSec / DAY_SECONDS;
-  const insufficientData = spanDays < 7;
   const coverageEvents = events.filter((event) => {
     const eventEndSec = event.endedAt ?? now;
     return event.startedAt <= now && eventEndSec > startSec;
@@ -191,9 +195,12 @@ export function computePegScore(
   const lowConfidenceEventCount = scoringEvents.filter((event) => eventSeverityWeight(event) < 1).length;
   const qualityAdjusted = excludedEventCount > 0 || lowConfidenceEventCount > 0;
 
+  const unknownCoverageSeconds = mergeUnknownDepegSeconds(scoringEvents, startSec, now);
+  const knownSpanSec = Math.max(0, spanSec - unknownCoverageSeconds);
+  const insufficientData = knownSpanSec < 7 * DAY_SECONDS;
   // --- Time score (pegPct) ---
   const totalDepegSec = mergeDepegSeconds(scoringEvents, startSec, now);
-  const pegPct = Math.max(0, (1 - totalDepegSec / spanSec) * 100);
+  const pegPct = knownSpanSec > 0 ? Math.max(0, (1 - totalDepegSec / knownSpanSec) * 100) : null;
 
   // --- Severity score ---
   // Each event's penalty = max(durationPenalty, magnitudeFloor).
@@ -206,8 +213,7 @@ export function computePegScore(
     const rawBps = Math.abs(e.peakDeviationBps);
     const peakBps = Number.isFinite(rawBps) ? rawBps : 0;
     const observedStartSec = Math.max(e.startedAt, startSec);
-    const endSec = Math.min(e.endedAt ?? now, now);
-    const durationDays = Math.max(0, Math.min((endSec - observedStartSec) / DAY_SECONDS, 90));
+    const durationDays = Math.min(mergeDepegSeconds([e], startSec, now) / DAY_SECONDS, 90);
     const yearsAgo = (now - observedStartSec) / (365.25 * DAY_SECONDS);
     const recencyWeight = 1 / (1 + yearsAgo);
 
@@ -239,7 +245,7 @@ export function computePegScore(
   // A coin at -7800 bps shouldn't score 51 just because old events decayed.
   let activeDepegPenalty = 0;
   for (const e of scoringEvents) {
-    if (e.endedAt === null) {
+    if (hasCurrentTrustedDepegObservation(e, now)) {
       // Scale: floor 5 below 250 bps, 2500+ bps = 50 penalty (hard cap).
       // Use worst active event when multiple concurrent depegs exist.
       const rawAbsBps = Math.abs(e.peakDeviationBps);
@@ -252,8 +258,8 @@ export function computePegScore(
   }
 
   // --- Composite ---
-  const raw = PEG_COMPOSITE_WEIGHT * pegPct + PEG_COMPOSITE_WEIGHT * severityScore - activeDepegPenalty - spreadPenalty;
-  const pegScore = insufficientData ? null : Math.max(0, Math.min(100, Math.round(raw)));
+  const raw = pegPct == null ? null : PEG_COMPOSITE_WEIGHT * pegPct + PEG_COMPOSITE_WEIGHT * severityScore - activeDepegPenalty - spreadPenalty;
+  const pegScore = insufficientData || raw == null ? null : Math.max(0, Math.min(100, Math.round(raw)));
 
   // --- Worst deviation ---
   const worstDeviationBps = worstDeviation(scoringEvents);
@@ -272,5 +278,6 @@ export function computePegScore(
     activeDepeg: scoringEvents.some((e) => e.endedAt === null),
     lastEventAt: scoringEvents.length > 0 ? scoringEvents.reduce((m, e) => Math.max(m, e.startedAt), -Infinity) : null,
     trackingSpanDays: Math.floor(spanDays),
+    unknownCoverageSeconds,
   };
 }

@@ -497,6 +497,8 @@ Returns aggregate blacklist counts and exposure totals.
 
 Returns detected depeg incidents with filters for asset, state, and review status. The response exposes pagination totals through `total` and optional `totalExact`; it no longer includes an aggregate `counts` field. Clients that need threshold-crossing totals should sum each event&rsquo;s `constituentEventCount` after loading all pages. Since 2026-09-28 `auditVerdict` accepts only confirmed, repaired, false_positive, disputed, no_data, or null; unknown archived verdicts are rejected rather than converted into scoreable evidence.
 
+Since peg methodology 6.31, optional `events[].priceCoverage` carries `{ intervals: [startSec, endSec][], lastTrustedObservationAt: number | null, gapStartedAt: number | null }`. Intervals bound trusted off-peg duration; their complement within the event is unknown. A null/absent object on an open legacy event means unrecorded coverage, not uninterrupted off-peg time. Closed legacy/replay durations retain their recorded interpretation.
+
 - **Operation ID:** `depegEvents`
 - **Path:** `/api/depeg-events`
 - **Parameters:** `stablecoin` (query, optional, string); `limit` (query, optional, integer); `offset` (query, optional, integer); `cursor` (query, optional, string); `active` (query, optional, boolean); `includeTotal` (query, optional, boolean); `includePending` (query, optional, boolean)
@@ -507,7 +509,7 @@ Returns detected depeg incidents with filters for asset, state, and review statu
 
 ```json
 {
-  "currentVersion": "6.30"
+  "currentVersion": "6.31"
 }
 ```
 
@@ -535,6 +537,8 @@ Returns the reviewer-oriented projection of depeg-duration decisions.
 
 Returns the current cross-market peg-monitoring summary.
 
+Since peg methodology 6.31, `coins[].unknownCoverageSeconds` optionally reports merged unknown event time excluded from both duration penalties and the occupancy denominator. `coins[].pegPct` and `coins[].recent90d.pegPct` are `number | null`: null means no known time remains, never 0% or 100% occupancy. `recent90d.observedDays` excludes those blind spans and `coverageLimited` flags them. Observed `currentDeviationBps` and `pegReference` are admitted independently of supply; the $1M floor still governs new depeg events, with `depegEventCoverageLimited` retained.
+
 - **Operation ID:** `pegSummary`
 - **Path:** `/api/peg-summary`
 - **Parameters:** None.
@@ -545,7 +549,7 @@ Returns the current cross-market peg-monitoring summary.
 
 ```json
 {
-  "currentVersion": "6.30"
+  "currentVersion": "6.31"
 }
 ```
 
@@ -961,8 +965,8 @@ Freshness threshold: 1800 s.
 
 ```json
 {
-  "currentVersion": "6.30",
-  "methodologyVersion": "6.30"
+  "currentVersion": "6.31",
+  "methodologyVersion": "6.31"
 }
 ```
 

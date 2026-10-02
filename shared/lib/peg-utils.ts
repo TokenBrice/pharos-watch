@@ -1,5 +1,50 @@
 import type { DepegEvent } from "../types";
 import { median } from "./stats";
+import { DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC } from "./depeg-closure";
+
+/**
+ * Closed legacy/replay rows retain their recorded duration. An uninstrumented
+ * open row has no defensible duration: its whole span is unknown.
+ */
+function depegObservedIntervals(event: DepegEvent): Array<[number, number]> {
+  if (event.priceCoverage != null) return event.priceCoverage.intervals;
+  return event.endedAt == null ? [] : [[event.startedAt, event.endedAt]];
+}
+
+export function hasCurrentTrustedDepegObservation(event: DepegEvent, now: number): boolean {
+  const coverage = event.priceCoverage;
+  return event.endedAt == null && coverage != null && coverage.gapStartedAt == null &&
+    coverage.lastTrustedObservationAt != null &&
+    now >= coverage.lastTrustedObservationAt &&
+    now - coverage.lastTrustedObservationAt <= DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC;
+}
+
+/** Merge unknown complements too, so overlapping incidents do not double-count blind time. */
+export function mergeUnknownDepegSeconds(events: DepegEvent[], windowStart: number, now: number): number {
+  const intervals: Array<[number, number]> = [];
+  for (const event of events) {
+    const end = Math.min(event.endedAt ?? now, now);
+    let cursor = Math.max(event.startedAt, windowStart);
+    for (const [start, observedEnd] of depegObservedIntervals(event)) {
+      if (start > cursor) intervals.push([cursor, Math.min(start, end)]);
+      cursor = Math.max(cursor, Math.min(observedEnd, end));
+    }
+    if (end > cursor) intervals.push([cursor, end]);
+  }
+  const unknown = mergeDepegIntervals(intervals);
+  const trusted = mergeDepegIntervals(events.flatMap((event) => depegObservedIntervals(event).map(
+    ([start, end]) => [Math.max(start, windowStart), Math.min(end, now)] as [number, number],
+  )));
+  let coveredUnknown = 0;
+  let i = 0;
+  let j = 0;
+  while (i < unknown.length && j < trusted.length) {
+    coveredUnknown += Math.max(0, Math.min(unknown[i][1], trusted[j][1]) - Math.max(unknown[i][0], trusted[j][0]));
+    if (unknown[i][1] <= trusted[j][1]) i++;
+    else j++;
+  }
+  return unknown.reduce((sum, [start, end]) => sum + end - start, 0) - coveredUnknown;
+}
 
 /**
  * Merge overlapping depeg intervals and return total depeg seconds.
@@ -10,23 +55,25 @@ export function mergeDepegSeconds(
   windowStart: number,
   now: number,
 ): number {
-  const intervals = events
-    .map((e) => [Math.max(e.startedAt, windowStart), Math.min(e.endedAt ?? now, now)] as [number, number])
-    .filter(([s, e]) => e > s)
-    .sort((a, b) => a[0] - b[0]);
+  const intervals = events.flatMap((event) => depegObservedIntervals(event).map(
+    ([start, end]) => [Math.max(start, windowStart), Math.min(end, now)] as [number, number],
+  ));
+  return mergeIntervalsSeconds(intervals);
+}
 
-  let total = 0;
-  let i = 0;
-  while (i < intervals.length) {
-    const mergedStart = intervals[i][0]; let mergedEnd = intervals[i][1];
-    while (i + 1 < intervals.length && intervals[i + 1][0] <= mergedEnd) {
-      i++;
-      mergedEnd = Math.max(mergedEnd, intervals[i][1]);
-    }
-    total += mergedEnd - mergedStart;
-    i++;
+export function mergeDepegIntervals(input: Array<[number, number]>): Array<[number, number]> {
+  const intervals = input.filter(([start, end]) => end >= start).sort((a, b) => a[0] - b[0]);
+  const merged: Array<[number, number]> = [];
+  for (const [start, end] of intervals) {
+    const last = merged[merged.length - 1];
+    if (last && start <= last[1]) last[1] = Math.max(last[1], end);
+    else merged.push([start, end]);
   }
-  return total;
+  return merged;
+}
+
+function mergeIntervalsSeconds(input: Array<[number, number]>): number {
+  return mergeDepegIntervals(input).reduce((sum, [start, end]) => sum + end - start, 0);
 }
 
 /**

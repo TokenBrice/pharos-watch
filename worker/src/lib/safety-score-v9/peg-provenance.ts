@@ -7,6 +7,7 @@ import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitive
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import {
   DEPEG_EVENT_CLOSE_REASON_VALUES,
+  DepegPriceCoverageSchema,
   refineDepegEventChronology,
   type DepegEvent,
   type PegSummaryCoin,
@@ -113,6 +114,7 @@ const PegProvenanceEventSchema = z
       .optional()
       .default(null),
     provenance: PegEventProvenanceSchema.nullable().optional().default(null),
+    priceCoverage: DepegPriceCoverageSchema.nullable().optional(),
   })
   .strict()
   .superRefine((event, ctx) => {
@@ -125,7 +127,7 @@ const PegProvenanceEventSchema = z
 const PegScoreProjectionSchema = z
   .object({
     pegScore: z.number().int().min(0).max(100).nullable(),
-    pegPct: FiniteNumberSchema.min(0).max(100),
+    pegPct: FiniteNumberSchema.min(0).max(100).nullable(),
     severityScore: FiniteNumberSchema.min(0).max(100),
     spreadPenalty: FiniteNumberSchema.min(0).max(15),
     eventCount: z.number().int().nonnegative(),
@@ -138,7 +140,7 @@ const PegScoreProjectionSchema = z
 
 export interface SafetyScoreV9PegScoreProjection {
   pegScore: number | null;
-  pegPct: number;
+  pegPct: number | null;
   severityScore: number;
   spreadPenalty: number;
   eventCount: number;
@@ -188,7 +190,7 @@ const PegEvidenceClassesSchema = z
 const PegScoreResultSchema: z.ZodType<PegScoreResult> = z
   .object({
     pegScore: z.number().int().min(0).max(100).nullable(),
-    pegPct: FiniteNumberSchema.min(0).max(100),
+    pegPct: FiniteNumberSchema.min(0).max(100).nullable(),
     severityScore: FiniteNumberSchema.min(0).max(100),
     spreadPenalty: FiniteNumberSchema.min(0).max(15),
     eventCount: z.number().int().nonnegative(),
@@ -200,6 +202,7 @@ const PegScoreResultSchema: z.ZodType<PegScoreResult> = z
     activeDepeg: z.boolean(),
     lastEventAt: SafeTimestampSchema.nullable(),
     trackingSpanDays: z.number().int().nonnegative(),
+    unknownCoverageSeconds: FiniteNumberSchema.nonnegative().optional(),
   })
   .strict();
 

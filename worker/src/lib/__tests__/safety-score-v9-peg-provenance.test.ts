@@ -275,7 +275,7 @@ describe("Safety Score V9 peg provenance", () => {
     const expected = expectedFor(events);
 
     expect(() => build(events, {
-      expected: { ...expected, pegPct: expected.pegPct - 0.01 },
+      expected: { ...expected, pegPct: expected.pegPct! - 0.01 },
     })).toThrow(/Legacy-inclusive peg summary mismatch.*pegPct/);
   });
 

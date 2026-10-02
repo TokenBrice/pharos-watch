@@ -58,7 +58,7 @@ export function buildPegScoreDisplay(
   if (pegScoreResult?.pegScore != null) {
     return {
       value: String(pegScoreResult.pegScore),
-      sub: pegScoreEventLine ?? `${pegScoreResult.pegPct.toFixed(1)}% at peg`,
+      sub: pegScoreEventLine ?? (pegScoreResult.pegPct == null ? "Peg coverage unavailable" : `${pegScoreResult.pegPct.toFixed(1)}% at peg`),
       color: pegScoreColor(pegScoreResult.pegScore),
     };
   }

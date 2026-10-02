@@ -1,6 +1,7 @@
 import { DEPEG_CONFIRMATION_SUPPLY_THRESHOLD, DEPEG_DEX_PROTOCOL_CORROBORATION_MIN, DEPEG_EVENT_MIN_SUPPLY_USD, DEPEG_EXTREME_MOVE_BPS, DEPEG_PENDING_MIN_AGE_SEC } from "@shared/lib/depeg-config";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC } from "@shared/lib/depeg-closure";
+import { advanceDepegPriceCoverage } from "@shared/lib/depeg-price-coverage";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { weightedMedian } from "@shared/lib/stats";
@@ -10,6 +11,7 @@ import {
   countDexProtocolCorroborations,
   dexPoolIndependentGroupKey,
   markNativeOriginPending,
+  rowPriceCoverage,
   type DepegRow,
   type DexPriceRow,
   type PendingDepegReason,
@@ -802,21 +804,39 @@ function decideRecoveryDeadband(existing: DepegDetectionRow): Omit<DepegAssetDec
   };
 }
 
+function withPriceCoverage(
+  decision: DepegAssetDecision,
+  input: DepegAssetDecisionInput,
+  ctx?: DecisionContext,
+): DepegAssetDecision {
+  if (!input.existing) return decision;
+  const native = isNativePegEvent(input.existing);
+  const signal = native ? ctx?.nativeSignal : ctx?.primarySignal;
+  const trustedOffPeg = ctx != null && signal != null &&
+    signal.direction === input.existing.direction &&
+    !signalIsWithinThreshold(signal, ctx.recoveryThreshold) &&
+    (native || ctx.primarySupportsRecovery || ctx.dexSupportsExistingDirection) &&
+    // A native quote that contradicts the USD reading cannot sustain that reading.
+    (ctx.nativeSignal == null || !signalIsWithinThreshold(ctx.nativeSignal, ctx.recoveryThreshold));
+  decision.priceCoverage = advanceDepegPriceCoverage(rowPriceCoverage(input.existing), input.now, trustedOffPeg);
+  return decision;
+}
+
 export function decideDepegAsset(input: DepegAssetDecisionInput): DepegAssetDecision {
   const derived = deriveDecisionContext(input);
-  if (derived.kind === "skip") return derived.decision;
+  if (derived.kind === "skip") return withPriceCoverage(derived.decision, input);
 
   const { ctx } = derived;
   if (input.existing && isNativePegEvent(input.existing) && ctx.nativeSignal == null) {
-    return {
+    return withPriceCoverage({
       trackedCoinId: ctx.trackedCoinId,
       seenEventIds: [input.existing.id],
       commands: [],
       diagnostics: [],
-    };
+    }, input);
   }
   const nativeVeto = applyNativeQuoteVeto(ctx, input.existing);
-  if (nativeVeto) return nativeVeto;
+  if (nativeVeto) return withPriceCoverage(nativeVeto, input, ctx);
 
   const nativeOpening = input.existing ? null : decideNewNativePegDepeg(ctx);
   const existingSignal = input.existing && isNativePegEvent(input.existing)
@@ -838,12 +858,12 @@ export function decideDepegAsset(input: DepegAssetDecisionInput): DepegAssetDeci
       ? decideNewDepeg(ctx)
       : emptyDecision();
 
-  return {
+  return withPriceCoverage({
     trackedCoinId: ctx.trackedCoinId,
     seenEventIds: decision.seenEventIds,
     commands: decision.commands,
     diagnostics: decision.diagnostics,
-  };
+  }, input, ctx);
 }
 
 export function emitDepegDiagnostics(diagnostics: DepegDiagnostic[]): void {

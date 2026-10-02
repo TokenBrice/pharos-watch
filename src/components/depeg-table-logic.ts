@@ -24,7 +24,7 @@ export function rowAccentClass(row: DepegTrackerRow): string {
 
 type DepegFieldKey = Exclude<DepegTableSortKey, "__attention">;
 
-const fieldExtractors: Record<DepegFieldKey, (r: DepegTrackerRow) => number> = {
+const fieldExtractors: Record<DepegFieldKey, (r: DepegTrackerRow) => number | null> = {
   pegScore: (r) => r.coin.pegScore ?? -1,
   dewsScore: (r) => r.dews?.score ?? -1,
   currentDeviationBps: (r) => Math.abs(r.coin.currentDeviationBps ?? 0),

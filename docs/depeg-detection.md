@@ -6,7 +6,7 @@ Two-stage depeg detection pipeline for stablecoins. Stage 1 (detection) runs eve
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.30`<!-- GENERATED-END: methodology-version-depeg-detection -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.31`<!-- GENERATED-END: methodology-version-depeg-detection -->
 - **Runtime/version source:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog route:** `/methodology/depeg-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/depeg-dews/`
@@ -25,7 +25,7 @@ Confirmed `depeg_events` are the trigger for the Depeg Duration Resolver (DDR), 
 | `DEPEG_CONFIRMATION_SOFT_SUPPLY_THRESHOLD` | $750,000,000 | Adds the large-cap flag when source depth is below 2 or severity is at least 2x the peg threshold |
 | `DEPEG_CONFIRMATION_WEAK_SEVERE_SUPPLY_THRESHOLD` | $500,000,000 | Adds the large-cap flag when both source depth is below 2 and severity is at least 2x the peg threshold |
 | `DEPEG_PENDING_MIN_AGE_SEC` | <!-- GENERATED-START: depeg-pending-min-age -->900 (15 min)<!-- GENERATED-END: depeg-pending-min-age --> | Minimum continuous onset or recovery confirmation window |
-| `DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC` | 1200 (20 min) | Largest gap allowed between consecutive qualifying onset or recovery observations. Set above measured `sync-stablecoins` start jitter (sampled gaps 868/907/932/932s) so ordinary scheduler drift is not read as a coverage break, and below two producer intervals so a fully missed run still resets the episode |
+| `DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC` | 1200 (20 min) | Largest gap between consecutive qualifying onset/recovery observations or trusted off-peg duration endpoints. Wider than ordinary 900-second producer jitter, below two intervals; a missed run starts a new observation interval |
 | `DEPEG_PENDING_EXPIRY_SEC` | <!-- GENERATED-START: depeg-pending-expiry -->2700 (45 min)<!-- GENERATED-END: depeg-pending-expiry --> | Base time before a pending record can expire |
 | `DEPEG_PENDING_EXTENDED_EXPIRY_SEC` | 8100 (135 min) | Extended limit when primary evidence still points same-direction or confirmation sources are unavailable/circuit-open |
 | `DEPEG_PENDING_SEVERE_EXPIRY_SEC` | 10800 (180 min) | Severe/extreme-move limit; expiry records `unconfirmed-severe` |
@@ -64,7 +64,10 @@ CREATE TABLE IF NOT EXISTS depeg_events (
   pending_reason TEXT,                  -- reason flags carried from depeg_pending
   close_reason TEXT,                    -- why the row closed, NULL for open/legacy rows
   recovery_first_seen_at INTEGER,       -- first qualifying recovery observation, NULL outside recovery confirmation
-  recovery_last_seen_at INTEGER         -- most recent consecutive qualifying recovery observation
+  recovery_last_seen_at INTEGER,        -- most recent consecutive qualifying recovery observation
+  price_coverage_json TEXT,             -- recorded trusted off-peg [start,end] intervals; NULL = uninstrumented legacy
+  last_trusted_price_at INTEGER,        -- latest trusted off-peg endpoint, never a guessed history boundary
+  price_coverage_gap_started_at INTEGER -- first run observing loss of coverage, NULL outside a current gap
 );
 
 CREATE INDEX idx_depeg_stablecoin ON depeg_events(stablecoin_id);
@@ -88,6 +91,8 @@ CREATE INDEX idx_depeg_open ON depeg_events(stablecoin_id) WHERE ended_at IS NUL
 For live non-USD events opened from a CoinGecko native-fiat quote, `peg_reference = 1` and all populated event prices remain in that native quote domain. Later USD-primary or USD-DEX observations may close the row when policy permits, but they leave `recovery_price = NULL` unless a same-domain native recovery quote is available.
 
 Pending upserts preserve an onset only when direction, observation continuity, and quote domain agree. Switching between USD-primary and `native-origin` observations resets the candidate's onset time, reference, and price fields, so confirmation cannot combine a native price with a retained USD reference (or vice versa). Other reason-flag changes within one quote domain preserve continuity.
+
+Current deviation and reference are independent of circulating supply: any observed non-NAV price with an authoritative reference can populate `currentDeviationBps` and `pegReference`, including below $1M or when supply is unknown. The supply floor remains an event-creation/coverage gate, not a price-observation gate. Nominal par and unavailable prices remain unobserved; `depegEventCoverageLimited` still warns that no new events are created for a positive sub-floor supply.
 
 ### depeg_pending
 
@@ -595,13 +600,14 @@ Cache: producer-backed profile (`s-maxage=300`, `max-age=60`, `stale-while-reval
 Used in report cards. Formula:
 
 ```
-pegPct = (1 - totalDepegSec / spanSec) * 100
+knownSpanSec = spanSec - unknownCoverageSeconds
+pegPct = knownSpanSec > 0 ? (1 - totalObservedDepegSec / knownSpanSec) * 100 : null
 severityScore = 100 - sum of per-event penalties
   per-event penalty = max(durationPenalty, magnitudeFloor)
     durationPenalty = (peakBps/100) * (durationDays/30) * recencyWeight   (durationDays capped at 90)
     magnitudeFloor  = (peakBps/2000) * recencyWeight
 spreadPenalty = min(15, (stddev of (|peakBps| × eventSeverityWeight) / 1000) * 15)
-activeDepegPenalty = if ongoing: min(50, max(5, |peakBps| / 50))
+activeDepegPenalty = if current trusted off-peg observation: min(50, max(5, |peakBps| / 50))
 
 pegScore = max(0, min(100, round(0.5*pegPct + 0.5*severityScore - activeDepegPenalty - spreadPenalty)))
 ```
@@ -614,7 +620,7 @@ earliest first-seen anchor from `getFirstSeenDates()`, which merges the coin's e
 with its first durable Pharos valid-price observation and keeps whichever is earlier. This gives priced assets
 without supply-history coverage a real age anchor instead of leaving
 them unrated indefinitely without claiming that unverified pre-observation time was incident-free. PegScore still
-requires at least 7 days of tracking. If none of those anchors exists, a coin with depeg events falls back to the
+requires at least 7 days after excluding unknown event spans. If none of those anchors exists, a coin with depeg events falls back to the
 earliest event; a coin with no anchor and no events returns `pegScore = null`.
 
 The API also computes a coverage-aware 90-day companion window. Its denominator starts at the later of 90 days ago
@@ -626,9 +632,9 @@ to its peak deviation, regardless of how brief. This prevents hundreds of short
 high-magnitude depegs from being scored as nearly free.
 
 **Active depeg penalty**: Floor of 5, scales at `|peakBps| / 50`, capped at 50.
-A 500 bps ongoing depeg costs 10 points; 2500+ bps hits the cap.
+A 500 bps currently observed depeg costs 10 points; 2500+ bps hits the cap. An open lifecycle alone cannot activate this penalty: a recorded trusted off-peg observation must have no explicit gap and be no older than 1200 seconds. Historical peaks still contribute the magnitude floor and spread even when current coverage is unavailable.
 
-Returns `null` if < 7 days tracking. The 7–30 day "Early score" label described on /methodology and /depeg is not currently rendered anywhere: the detail hero shows `NR` with an `<N>d tracked` subline below 7 days, and a plain score at or above 7 days (`buildPegScoreDisplay` in `src/lib/stablecoin-detail-hero-metrics.ts`).
+Returns `null` if fewer than 7 known days remain after subtracting unknown event spans; occupancy is also `null` if no known time remains. The legacy tracking-age field still reports the full anchor span. The 7–30 day "Early score" label described on /methodology and /depeg is not currently rendered.
 
 ## Edge Cases & Guardrails
 
@@ -644,6 +650,12 @@ Returns `null` if < 7 days tracking. The 7–30 day "Early score" label describe
 | Orphaned events | Closed with `close_reason = 'orphan-tracking-removed'` and `recovery_price = NULL` when coin drops off tracking |
 | Non-USD threshold | 150bps accounts for FX noise and thin liquidity |
 
-### Known limitation: missing trusted-price coverage
+### Trusted-price coverage and unresolved legacy spans (6.31)
 
-Open depeg events without a current trusted price still accrue off-peg time: trusted off-peg observation and coverage-gap timestamps are not persisted. The owner deferred the migration-backed correction, planned as peg methodology 6.31, to a separate release; current 6.30 behavior is unchanged.
+Migration `0255_depeg_trusted_price_coverage.sql` adds nullable columns only; it records no historical observations. Detection persists ordered trusted off-peg intervals, the last trusted observation clock, and the first run reporting a current coverage gap. Missing/unusable primary prices, unavailable supply/reference context, omitted assets, and unresolved recovery observations stop accrual without declaring recovery. A gap over 1200 seconds also stops continuity even if no failed run was persisted. Resumption starts a new zero-length endpoint; only a subsequent continuous trusted observation extends that interval. Pending promotion starts its duration evidence at the confirmation endpoint, not at an invented boundary inside its pending history.
+
+For pre-migration **open** events, the entire uninstrumented span is explicitly unknown. The first post-migration trusted observation does not backfill the preceding span. Closed legacy and historical replay rows retain their recorded episode durations; their internal price-gap boundaries remain unreconstructable. Instrumented rows retain coverage intervals when closed. Recovery-confirmation time not bounded by trusted off-peg endpoints is conservatively unknown rather than automatically off peg.
+
+The single `mergeDepegSeconds` authority counts only recorded intervals. Their complement inside each scored event is `unknownCoverageSeconds`; overlapping unknown spans merge and trusted intervals from another row take precedence. Unknown time is excluded from both off-peg time and the occupancy denominator, including recent 90-day statistics, and from duration severity. It is neither zero deviation nor verified at-peg time. `pegPct` is nullable when the known denominator is empty; `pegScore` is NR when fewer than seven known days remain. Public event `priceCoverage` and summary `unknownCoverageSeconds` expose this distinction, and exact Safety Score peg provenance retains it.
+
+**First production run:** retain the pre-window Time Travel bookmark, migration ledger, and deployed Worker version. Require the exact `0000_baseline.sql` ledger membership and only the intended tail migration pending; run the migration and SQL-safety checks before the normal migration-before-Worker deploy. After verifying sole-version activation, observe the first two `sync-stablecoins` runs: a trusted open event receives a first endpoint then at most the continuous interval between those runs, while USDA (Avalon), if its current price remains unavailable, keeps its lifecycle open, has a persisted gap, and accrues no observed off-peg seconds. Inspect its three new columns with read-only SELECTs. Then observe the next `prepare-safety-score-v9-input` job publishing `peg-analytics` and the subsequent Safety Score publication: methodology 6.31, explicit unknown coverage, nullable occupancy where fully blind, admitted sub-floor deviations where prices exist, and no `peg-supply-floor-withheld` reason for those observed facts. Frozen pre-cutover Safety Score captures cannot prove a producer change without explicitly projected recomputation; compare the first newly produced generation, not just deployment status. A Worker-only rollback leaves the additive schema/evidence intact but pauses the new producer; reactivation must start a new interval after a long gap. D1 restore is reserved for unexpected schema/data mutation and requires the retained bookmark.
