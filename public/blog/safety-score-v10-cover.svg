@@ -1,161 +1,72 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" fill="none">
   <defs>
     <style>
-      @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&amp;family=Inter:wght@400;500;600&amp;display=swap');
+      @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&amp;family=JetBrains+Mono:wght@400..700&amp;display=swap');
+      .display { font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-variation-settings: 'opsz' 14; }
+      .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums slashed-zero; }
+      .label { font-size: 14px; font-weight: 500; letter-spacing: 0.16em; }
     </style>
-    <radialGradient id="bgGradient" cx="26%" cy="46%" r="72%">
-      <stop offset="0%" stop-color="#0d1f3c"/>
-      <stop offset="100%" stop-color="#050a14"/>
+    <radialGradient id="ground" gradientUnits="userSpaceOnUse" cx="872" cy="315" r="900">
+      <stop offset="0" stop-color="#111820"/>
+      <stop offset="1" stop-color="#06080B"/>
     </radialGradient>
-    <radialGradient id="markAmbient" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#E8DCC4" stop-opacity="0.22"/>
-      <stop offset="40%" stop-color="#E8DCC4" stop-opacity="0.07"/>
-      <stop offset="100%" stop-color="#E8DCC4" stop-opacity="0"/>
+    <radialGradient id="halo" gradientUnits="userSpaceOnUse" cx="872" cy="315" r="360">
+      <stop offset="0" stop-color="#DDF4FA" stop-opacity="0.09"/>
+      <stop offset="0.5" stop-color="#DDF4FA" stop-opacity="0.03"/>
+      <stop offset="1" stop-color="#DDF4FA" stop-opacity="0"/>
     </radialGradient>
-    <radialGradient id="goldGlow" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#F3D27A" stop-opacity="0.5"/>
-      <stop offset="45%" stop-color="#E2B656" stop-opacity="0.14"/>
-      <stop offset="100%" stop-color="#E2B656" stop-opacity="0"/>
-    </radialGradient>
-    <!-- Beacon light gathered by the lens -->
-    <linearGradient id="intake" x1="0" y1="0" x2="1" y2="0" gradientUnits="objectBoundingBox">
-      <stop offset="0%" stop-color="#F5EFDD" stop-opacity="0.5"/>
-      <stop offset="100%" stop-color="#E8DCC4" stop-opacity="0.26"/>
+    <!-- Range rings fade out before they reach the headline -->
+    <linearGradient id="ring-fade" gradientUnits="userSpaceOnUse" x1="470" y1="0" x2="700" y2="0">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0"/>
+      <stop offset="1" stop-color="#FFFFFF"/>
     </linearGradient>
-    <linearGradient id="focus" x1="0" y1="0" x2="1" y2="0" gradientUnits="objectBoundingBox">
-      <stop offset="0%" stop-color="#F5EFDD" stop-opacity="0.32"/>
-      <stop offset="100%" stop-color="#FFF8E8" stop-opacity="0.7"/>
-    </linearGradient>
-    <!-- Three sharper beams out of the focal point: the same three pillars -->
-    <linearGradient id="sharp" x1="0" y1="0" x2="1" y2="0" gradientUnits="objectBoundingBox">
-      <stop offset="0%" stop-color="#FFF8E8" stop-opacity="0.5"/>
-      <stop offset="40%" stop-color="#E8DCC4" stop-opacity="0.16"/>
-      <stop offset="100%" stop-color="#E8DCC4" stop-opacity="0"/>
-    </linearGradient>
-    <linearGradient id="lensFill" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#E8DCC4" stop-opacity="0.08"/>
-      <stop offset="50%" stop-color="#F5EFDD" stop-opacity="0.32"/>
-      <stop offset="100%" stop-color="#E8DCC4" stop-opacity="0.08"/>
-    </linearGradient>
-    <linearGradient id="goldFace" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#F8DD8C"/>
-      <stop offset="100%" stop-color="#C9962F"/>
-    </linearGradient>
-    <linearGradient id="goldTop" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#FBE7A6"/>
-      <stop offset="100%" stop-color="#E8C266"/>
-    </linearGradient>
-    <filter id="beamBlur" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur in="SourceGraphic" stdDeviation="9"/>
-    </filter>
-    <filter id="crispBlur" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur in="SourceGraphic" stdDeviation="3.5"/>
-    </filter>
-    <filter id="softGlow" x="-60%" y="-60%" width="220%" height="220%">
-      <feGaussianBlur in="SourceGraphic" stdDeviation="6"/>
-    </filter>
+    <!-- Bezel label baselines -->
+    <path id="label-backing" d="M670.16 441.12A238 238 0 0 1 945.55 88.65"/>
+    <path id="label-control" d="M798.45 88.65A238 238 0 0 1 1073.84 441.12"/>
+    <path id="label-exit" d="M638.88 399.85A248.08 248.08 0 0 0 1105.12 399.85"/>
     <!-- Current Pharos mark, on-dark variant (public/pharos-mark-on-dark.svg) -->
     <clipPath id="pharos-mark-disc-inverse">
       <rect width="400" height="400" rx="200" fill="white"/>
     </clipPath>
   </defs>
 
-  <!-- Background -->
-  <rect width="1200" height="630" fill="url(#bgGradient)"/>
+  <!-- Ground: deep ink with a faint lift around the beacon -->
+  <rect width="1200" height="630" fill="url(#ground)"/>
+  <circle cx="872" cy="315" r="360" fill="url(#halo)"/>
 
-  <!-- Ambient glow behind the mark -->
-  <circle cx="275" cy="300" r="270" fill="url(#markAmbient)"/>
-
-  <!-- Beacon light leaving the mark and gathered into the lens -->
-  <g filter="url(#beamBlur)">
-    <polygon points="275,309 450,247 450,371" fill="url(#intake)"/>
-  </g>
-  <!-- Converging from the lens to the focal point -->
-  <g filter="url(#crispBlur)">
-    <polygon points="463,251 515,305 515,313 463,367" fill="url(#focus)"/>
+  <!-- Range rings -->
+  <g stroke="url(#ring-fade)">
+    <circle cx="872" cy="315" r="300" stroke-opacity="0.11"/>
+    <circle cx="872" cy="315" r="384" stroke-opacity="0.08"/>
+    <circle cx="872" cy="315" r="476" stroke-opacity="0.06"/>
+    <circle cx="872" cy="315" r="576" stroke-opacity="0.045"/>
   </g>
 
-  <!-- Three sharper beams from the focal point, one toward each pillar word -->
-  <g filter="url(#crispBlur)">
-    <polygon points="515,309 1240,99 1240,151" fill="url(#sharp)"/>
-    <polygon points="515,309 1240,357 1240,409" fill="url(#sharp)" opacity="0.8"/>
-    <polygon points="515,309 1240,614 1240,666" fill="url(#sharp)" opacity="0.6"/>
-  </g>
+  <!-- Bezel: hairline rim, 2-degree ticks (sharper measurement), long dividers where pillars meet -->
+  <circle cx="872" cy="315" r="196" stroke="#FFFFFF" stroke-opacity="0.22"/>
+  <path stroke="#FFFFFF" stroke-opacity="0.24" d="M865.16 510.88L865.33 505.88M858.33 510.52L858.68 505.53M851.51 509.93L852.04 504.95M844.72 509.09L845.42 504.14M831.25 506.72L832.29 501.83M824.58 505.18L825.79 500.33M817.98 503.41L819.35 498.6M811.43 501.41L812.98 496.65M798.58 496.73L800.45 492.09M792.28 494.05L794.31 489.49M786.08 491.16L788.27 486.67M779.98 488.06L782.33 483.64M768.14 481.22L770.79 476.98M762.4 477.49L765.19 473.35M756.79 473.57L759.73 469.52M751.33 469.45L754.41 465.51M740.85 460.66L744.2 456.94M735.85 455.99L739.32 452.39M731.01 451.15L734.61 447.68M726.34 446.15L730.06 442.8M717.55 435.67L721.49 432.59M713.43 430.21L717.48 427.27M709.51 424.6L713.65 421.81M705.78 418.86L710.02 416.21M692.95 394.72L697.51 392.69M690.27 388.42L694.91 386.55M685.59 375.57L690.35 374.02M683.59 369.02L688.4 367.65M681.82 362.42L686.67 361.21M680.28 355.75L685.17 354.71M677.91 342.28L682.86 341.58M677.07 335.49L682.05 334.96M676.48 328.67L681.47 328.32M676.12 321.84L681.12 321.67M676.12 308.16L681.12 308.33M676.48 301.33L681.47 301.68M677.07 294.51L682.05 295.04M677.91 287.72L682.86 288.42M680.28 274.25L685.17 275.29M681.82 267.58L686.67 268.79M683.59 260.98L688.4 262.35M685.59 254.43L690.35 255.98M690.27 241.58L694.91 243.45M692.95 235.28L697.51 237.31M695.84 229.08L700.33 231.27M698.94 222.98L703.36 225.33M705.78 211.14L710.02 213.79M709.51 205.4L713.65 208.19M713.43 199.79L717.48 202.73M717.55 194.33L721.49 197.41M726.34 183.85L730.06 187.2M731.01 178.85L734.61 182.32M735.85 174.01L739.32 177.61M740.85 169.34L744.2 173.06M751.33 160.55L754.41 164.49M756.79 156.43L759.73 160.48M762.4 152.51L765.19 156.65M768.14 148.78L770.79 153.02M779.98 141.94L782.33 146.36M786.08 138.84L788.27 143.33M792.28 135.95L794.31 140.51M798.58 133.27L800.45 137.91M811.43 128.59L812.98 133.35M817.98 126.59L819.35 131.4M824.58 124.82L825.79 129.67M831.25 123.28L832.29 128.17M844.72 120.91L845.42 125.86M851.51 120.07L852.04 125.05M858.33 119.48L858.68 124.47M865.16 119.12L865.33 124.12M878.84 119.12L878.67 124.12M885.67 119.48L885.32 124.47M892.49 120.07L891.96 125.05M899.28 120.91L898.58 125.86M912.75 123.28L911.71 128.17M919.42 124.82L918.21 129.67M926.02 126.59L924.65 131.4M932.57 128.59L931.02 133.35M945.42 133.27L943.55 137.91M951.72 135.95L949.69 140.51M964.02 141.94L961.67 146.36M975.86 148.78L973.21 153.02M981.6 152.51L978.81 156.65M987.21 156.43L984.27 160.48M992.67 160.55L989.59 164.49M1003.15 169.34L999.8 173.06M1008.15 174.01L1004.68 177.61M1012.99 178.85L1009.39 182.32M1017.66 183.85L1013.94 187.2M1026.45 194.33L1022.51 197.41M1030.57 199.79L1026.52 202.73M1034.49 205.4L1030.35 208.19M1038.22 211.14L1033.98 213.79M1045.06 222.98L1040.64 225.33M1048.16 229.08L1043.67 231.27M1051.05 235.28L1046.49 237.31M1053.73 241.58L1049.09 243.45M1058.41 254.43L1053.65 255.98M1060.41 260.98L1055.6 262.35M1062.18 267.58L1057.33 268.79M1063.72 274.25L1058.83 275.29M1066.09 287.72L1061.14 288.42M1066.93 294.51L1061.95 295.04M1067.52 301.33L1062.53 301.68M1067.88 308.16L1062.88 308.33M1067.88 321.84L1062.88 321.67M1067.52 328.67L1062.53 328.32M1066.93 335.49L1061.95 334.96M1066.09 342.28L1061.14 341.58M1063.72 355.75L1058.83 354.71M1062.18 362.42L1057.33 361.21M1060.41 369.02L1055.6 367.65M1058.41 375.57L1053.65 374.02M1053.73 388.42L1049.09 386.55M1051.05 394.72L1046.49 392.69M1038.22 418.86L1033.98 416.21M1034.49 424.6L1030.35 421.81M1030.57 430.21L1026.52 427.27M1026.45 435.67L1022.51 432.59M1017.66 446.15L1013.94 442.8M1012.99 451.15L1009.39 447.68M1008.15 455.99L1004.68 452.39M1003.15 460.66L999.8 456.94M992.67 469.45L989.59 465.51M987.21 473.57L984.27 469.52M981.6 477.49L978.81 473.35M975.86 481.22L973.21 476.98M964.02 488.06L961.67 483.64M957.92 491.16L955.73 486.67M951.72 494.05L949.69 489.49M945.42 496.73L943.55 492.09M932.57 501.41L931.02 496.65M926.02 503.41L924.65 498.6M919.42 505.18L918.21 500.33M912.75 506.72L911.71 501.83M899.28 509.09L898.58 504.14M892.49 509.93L891.96 504.95M885.67 510.52L885.32 505.53M878.84 510.88L878.67 505.88"/>
+  <path stroke="#FFFFFF" stroke-opacity="0.45" d="M872 511L872 502M837.96 508.02L839.53 499.16M804.96 499.18L808.04 490.72M774 484.74L778.5 476.95M746.01 465.14L751.8 458.25M721.86 440.99L728.75 435.2M702.26 413L710.05 408.5M687.82 382.04L696.28 378.96M678.98 349.04L687.84 347.47M676 315L685 315M678.98 280.96L687.84 282.53M687.82 247.96L696.28 251.04M702.26 217L710.05 221.5M721.86 189.01L728.75 194.8M746.01 164.86L751.8 171.75M774 145.26L778.5 153.05M804.96 130.82L808.04 139.28M837.96 121.98L839.53 130.84M872 119L872 128M906.04 121.98L904.47 130.84M939.04 130.82L935.96 139.28M970 145.26L965.5 153.05M997.99 164.86L992.2 171.75M1022.14 189.01L1015.25 194.8M1041.74 217L1033.95 221.5M1056.18 247.96L1047.72 251.04M1065.02 280.96L1056.16 282.53M1068 315L1059 315M1065.02 349.04L1056.16 347.47M1056.18 382.04L1047.72 378.96M1041.74 413L1033.95 408.5M1022.14 440.99L1015.25 435.2M997.99 465.14L992.2 458.25M970 484.74L965.5 476.95M939.04 499.18L935.96 490.72M906.04 508.02L904.47 499.16"/>
+  <path stroke="#FFFFFF" stroke-opacity="0.8" stroke-width="1.5" d="M663.78 421.78L710.05 398.05M973.29 104.06L950.78 150.94M1080.22 421.78L1033.95 398.05"/>
 
-  <!-- Background stars -->
-  <circle cx="75" cy="60" r="1.2" fill="#E8DCC4" opacity="0.25"/>
-  <circle cx="190" cy="125" r="0.8" fill="#E8DCC4" opacity="0.15"/>
-  <circle cx="460" cy="48" r="1" fill="#E8DCC4" opacity="0.2"/>
-  <circle cx="680" cy="72" r="1.2" fill="#E8DCC4" opacity="0.18"/>
-  <circle cx="870" cy="118" r="0.9" fill="#E8DCC4" opacity="0.22"/>
-  <circle cx="1020" cy="58" r="1.1" fill="#E8DCC4" opacity="0.15"/>
-  <circle cx="1130" cy="165" r="0.8" fill="#E8DCC4" opacity="0.2"/>
-  <circle cx="130" cy="495" r="0.9" fill="#E8DCC4" opacity="0.12"/>
-  <circle cx="890" cy="580" r="1" fill="#E8DCC4" opacity="0.14"/>
-  <circle cx="1090" cy="465" r="0.8" fill="#E8DCC4" opacity="0.1"/>
-  <circle cx="1155" cy="300" r="0.9" fill="#E8DCC4" opacity="0.16"/>
-  <circle cx="52" cy="335" r="1" fill="#E8DCC4" opacity="0.12"/>
-  <circle cx="1040" cy="245" r="0.7" fill="#E8DCC4" opacity="0.13"/>
-  <circle cx="620" cy="120" r="0.8" fill="#E8DCC4" opacity="0.14"/>
-  <circle cx="400" cy="560" r="0.7" fill="#E8DCC4" opacity="0.12"/>
+  <!-- The same three pillars: arcs sized by the weights (Backing 40, Exit 35, Control 25); Exit lit, under the beam -->
+  <path d="M667.61 406.64A224 224 0 0 1 958.26 108.28" stroke="#E8E9EB" stroke-opacity="0.62" stroke-width="3"/>
+  <path d="M979.4 118.43A224 224 0 0 1 1076.39 406.64" stroke="#E8E9EB" stroke-opacity="0.62" stroke-width="3"/>
+  <path d="M1065.7 427.51A224 224 0 0 1 678.3 427.51" stroke="#4BC4DE" stroke-width="3"/>
+  <text class="mono label" fill="#C9CBCE"><textPath href="#label-backing" startOffset="50%" text-anchor="middle">BACKING 40%</textPath></text>
+  <text class="mono label" fill="#C9CBCE"><textPath href="#label-control" startOffset="50%" text-anchor="middle">CONTROL 25%</textPath></text>
+  <text class="mono label" fill="#4BC4DE"><textPath href="#label-exit" startOffset="50%" text-anchor="middle">EXIT 35% · GOLD → USD</textPath></text>
 
-  <!-- Pharos mark, on-dark variant: exact paths and colours, scaled 0.6 and centred at (275, 300) -->
-  <g transform="translate(155, 180) scale(0.6)">
+  <!-- Pharos mark, on-dark variant: exact paths and colours, uniform scale 0.75 (300px), centred at (872, 315) -->
+  <g transform="translate(722 165) scale(0.75)">
     <g clip-path="url(#pharos-mark-disc-inverse)">
       <rect x="0.074707" y="-0.0454102" width="400" height="400" rx="200" fill="#0A0A0A"/>
       <path d="M199.744 -0.0454102C310.305 -0.0454102 399.932 89.5817 399.932 200.142C399.932 282.445 350.263 353.143 279.267 383.908L199.804 225.049L120.332 383.956C49.2768 353.216 -0.443273 282.487 -0.443359 200.142C-0.443359 89.5817 89.1838 -0.0453935 199.744 -0.0454102ZM199.811 49.9878C196.924 72.8227 194.083 95.6587 191.197 118.494C191.038 121.28 189.037 151.411 171.312 157.546C161.789 160.833 151.698 155.837 139.812 148.496C121.881 137.451 96.1096 118.778 68.5654 87.7476C83.5191 108.325 96.5872 126.909 107.609 142.972C123.245 165.719 129.654 175.889 126.063 185.925C123.382 193.376 116.131 197.979 97.0645 205.277C79.8151 211.895 55.4739 219.718 24.5889 225.043H159.76C159.762 202.926 177.693 184.997 199.811 184.997C221.928 184.997 239.859 202.926 239.861 225.043H375.01C344.147 219.718 319.784 211.895 302.534 205.277C283.467 197.979 276.24 193.376 273.559 185.925C269.946 175.889 276.377 165.719 291.989 142.972C303.034 126.909 316.08 108.325 331.033 87.7476C303.489 118.779 277.717 137.451 259.786 148.496C247.9 155.837 237.809 160.833 228.287 157.546C210.562 151.41 208.561 121.28 208.401 118.494C205.538 95.6587 202.674 72.8227 199.811 49.9878Z" fill="#EEEEEE"/>
     </g>
   </g>
 
-  <!-- Lens: a biconvex glass that focuses the beacon light -->
-  <path d="M455,237 Q481,309 455,381 Q429,309 455,237 Z" fill="url(#lensFill)" stroke="#E8DCC4" stroke-width="2.4" opacity="0.88" stroke-linejoin="round"/>
-  <path d="M448,260 Q439,290 442,314" stroke="#FFF8E8" stroke-width="2" opacity="0.35" stroke-linecap="round"/>
-
-  <!-- Gold bar at the focal point -->
-  <circle cx="515" cy="309" r="44" fill="url(#goldGlow)"/>
-  <g transform="translate(515, 310) scale(1.15)">
-    <path d="M-15,-8 L15,-8 L20,8 L-20,8 Z" fill="url(#goldFace)"/>
-    <path d="M-15,-8 L15,-8 L12,-12 L-12,-12 Z" fill="url(#goldTop)"/>
-    <line x1="-12" y1="-4.5" x2="12" y2="-4.5" stroke="#FFF3C8" stroke-width="1.2" opacity="0.55"/>
-  </g>
-
-  <!-- Eyebrow -->
-  <text x="572" y="190"
-        font-family="'Inter', Arial, sans-serif"
-        font-size="24" font-weight="600"
-        fill="#4bc4de"
-        letter-spacing="0.26em">SAFETY SCORE V10</text>
-
-  <!-- Headline: the same three pillars -->
-  <text x="569" y="282"
-        font-family="'Cormorant Garamond', Georgia, serif"
-        font-size="86" font-weight="600"
-        fill="#F5F0E6"
-        letter-spacing="0.01em"
-        filter="url(#softGlow)" opacity="0.55">Backing.</text>
-  <text x="572" y="282"
-        font-family="'Cormorant Garamond', Georgia, serif"
-        font-size="86" font-weight="600"
-        fill="#F5F0E6"
-        letter-spacing="0.01em">Backing.</text>
-  <text x="572" y="368"
-        font-family="'Cormorant Garamond', Georgia, serif"
-        font-size="86" font-weight="600"
-        fill="#EFE7D6"
-        letter-spacing="0.01em">Control.</text>
-  <text x="572" y="454"
-        font-family="'Cormorant Garamond', Georgia, serif"
-        font-size="86" font-weight="600"
-        fill="#E8DCC4"
-        letter-spacing="0.01em">Exit.</text>
-
-  <!-- Separator -->
-  <line x1="575" y1="500" x2="1120" y2="500" stroke="#E8DCC4" stroke-width="1.2" opacity="0.16"/>
-
-  <!-- Footer -->
-  <text x="575" y="538"
-        font-family="'Inter', Arial, sans-serif"
-        font-size="19" font-weight="400"
-        fill="#E8DCC4" opacity="0.55"
-        letter-spacing="0.03em">Same Pillars · Sharper Measurements</text>
+  <!-- Headline (x offsets put every line's ink edge at x≈64.5) -->
+  <text class="display" x="62" y="200" font-size="72" font-weight="800" fill="#F4F5F6" letter-spacing="-0.025em">Safety Score</text>
+  <text class="display" x="62" y="352" font-size="176" font-weight="800" fill="#F4F5F6" letter-spacing="-0.04em">V10</text>
+  <text class="display" x="63" y="422" font-size="34" font-weight="500" fill="#C4C7CB" letter-spacing="-0.01em">Same pillars.</text>
+  <text class="display" x="63" y="466" font-size="34" font-weight="500" fill="#C4C7CB" letter-spacing="-0.01em">Sharper measurements.</text>
 </svg>

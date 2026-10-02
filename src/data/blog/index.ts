@@ -35,7 +35,7 @@ export const BLOG_POSTS: readonly BlogPost[] = [
     datePublished: "2026-10-02",
     coverImage: "/blog/safety-score-v10-cover.png",
     coverAlt:
-      "The circular Pharos mark on a dark navy background, its beacon light passing through a lens onto a small gold bar and splitting into three sharp beams toward “Backing. Control. Exit.” beneath the label “Safety Score V10”.",
+      "The circular Pharos mark at the centre of a finely ticked dial on a dark background, ringed by three arcs sized to the pillar weights, “Backing 40%”, “Exit 35%” and “Control 25%”, with the Exit arc lit in frost blue and marked “Gold → USD”, beside the headline “Safety Score V10” and “Same pillars. Sharper measurements.”",
   },
   {
     slug: "api-access-free-grades-supporter-keys",
