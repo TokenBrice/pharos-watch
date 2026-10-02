@@ -170,7 +170,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/offchain-issuer/major-issuers.ts",
-      "sha256": "4899b1483846c10c094947a84b169797f948976e1e2ed8c24e91b3ecf8428524"
+      "sha256": "53743bac6d4d7d1c09fae6f47214cadbe3dd6b60f1e468dc28ca3a3ff9f0d55d"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/offchain-issuer/non-usd-and-tokenized.ts",
@@ -807,19 +807,19 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
   ],
   "captures": [
     {
-      "sha256": "01d829b2b9397f5c250a1ba464bc910c22c16504ab822ce6c54ff941556e9915",
-      "r2Key": "captures/bd-basedollar/2026-09-29-block-51942878-shock-coverage.json.gz"
+      "sha256": "358705d8866f3e9e1385634ae0bb4bdd1635ff1c0b47ef3cd9136653df6a67aa",
+      "r2Key": "captures/bd-basedollar/2026-10-01-block-52029872-shock-coverage.json.gz"
     },
     {
-      "sha256": "979679720be257db36ec50dbe31b1764c3d55faa936fb6aa3b58f37c6746b5ea",
-      "r2Key": "captures/bold-liquity/2026-09-29-block-26082345-shock-coverage.json.gz"
+      "sha256": "4446653f7596a2d8cf12d5dae2942ee7f38640c724d3caf76df07b7e2a1ed7fd",
+      "r2Key": "captures/bold-liquity/2026-10-01-block-26096787-shock-coverage.json.gz"
     },
     {
-      "sha256": "4a6d230e3744b8cbec56a1354853c78bcc4c8862eb7f3848387a9f5f0e070e5b",
-      "r2Key": "captures/lusd-liquity/2026-09-29-block-26082345-shock-coverage.json.gz"
+      "sha256": "7e5280e133e514a682257a2d5328ea7eaf0a814941680f5a90d91cfb6528b6f8",
+      "r2Key": "captures/lusd-liquity/2026-10-01-block-26096787-shock-coverage.json.gz"
     }
   ],
-  "digest": "1eaf7c3acd1ed7f2f1fc6b29e95c16d79964fc3dad8ab1dfe951b135be4de7ac"
+  "digest": "b689085c7973ec3512bfe4151cabc7b331b027d16e1ee972222633a3f2be29f5"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

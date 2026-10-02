@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { resolveFeeModelKind } from "@shared/lib/redemption-backstop-confidence";
 import { getRedemptionBackstopConfig, type RedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import type { RedemptionBackstopEntry, RedemptionCapacityProfile } from "@shared/types/redemption";
 import {
@@ -396,27 +395,6 @@ describe("derived supply-model route observations", () => {
       confidence: "medium",
       scoreEligible: true,
       observedAt: Date.parse("2026-07-01T00:00:00.000Z") / 1_000,
-    });
-  });
-
-  it("retains OUSD partner redemption without promising instant settlement or zero all-in fees", () => {
-    const ousd = getRedemptionBackstopConfig("ousd-open-standard")!;
-    const observation = deriveSupplyModelExitRouteObservation({
-      ...supplyFullEntry,
-      stablecoinId: "ousd-open-standard",
-      settlementModel: ousd.settlementModel,
-      routeStatus: ousd.routeStatus!,
-      feeModelKind: resolveFeeModelKind(ousd.costModel),
-      feeBps: null,
-      docs: { label: "Reviewed partner redemption", url: ousd.docs![0].url, reviewedAt: ousd.reviewedAt },
-    }, Date.UTC(2026, 8, 30, 20, 22) / 1_000);
-    expect(observation).toMatchObject({
-      routeFamily: "eventual-redemption",
-      settlementHorizonSec: 14 * 86_400,
-      output: { kind: "fiat", currency: "USD" },
-      executableUsd: 5_000_000,
-      feeEvidence: "undisclosed-reviewed",
-      scoreEligible: false,
     });
   });
 

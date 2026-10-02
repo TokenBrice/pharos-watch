@@ -9,7 +9,7 @@ import { logosById } from "@/lib/logos";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { CollateralUsageSection, type PublishedCollateralUsageEntry } from "./collateral-usage-section";
-import { buildDetailDependencyContext } from "./dependency-context-model";
+import { buildDetailDependencyContext, hasDependencyContextRows } from "./dependency-context-model";
 import { DependencyContextDetails } from "./dependency-context-details";
 import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
 import {
@@ -84,6 +84,8 @@ export function ContagionSnapshot({
     () => buildDetailDependencyContext(stablecoinId, rc?.cards ?? [], rc?.dependencyGraph.edges ?? [], mcapMap, marketCapAsOf),
     [stablecoinId, rc?.cards, rc?.dependencyGraph.edges, mcapMap, marketCapAsOf],
   );
+  // Disclosures with no published row would render four "none" lines and nothing else.
+  const detailCard = focusCard && hasDependencyContextRows(focusCard, dependencyContext) ? focusCard : undefined;
   const collateralUsageEntries = useMemo<PublishedCollateralUsageEntry[]>(
     () => edges.filter((edge) => edge.from === stablecoinId).map((edge) => {
       const meta = CLIENT_TRACKED_META_BY_ID.get(edge.to);
@@ -107,7 +109,7 @@ export function ContagionSnapshot({
   );
   const sourceDataUpdatedAt = sourceUpdatedTimes.length > 0 ? Math.min(...sourceUpdatedTimes) : 0;
 
-  if (!focusCard && !hasContagion && !hasRightColumn && !sourceError) {
+  if (!detailCard && !hasContagion && !hasRightColumn && !sourceError) {
     return null;
   }
 
@@ -155,7 +157,7 @@ export function ContagionSnapshot({
             }}
           />
         ) : null}
-        {focusCard ? <DependencyContextDetails card={focusCard} context={dependencyContext} marketCapAsOf={marketCapAsOf} /> : null}
+        {detailCard ? <DependencyContextDetails card={detailCard} context={dependencyContext} marketCapAsOf={marketCapAsOf} /> : null}
         <div className={layoutClass}>
           {hasContagion ? (
             <LazySection placeholder={<DependencyGraphPlaceholder />}>

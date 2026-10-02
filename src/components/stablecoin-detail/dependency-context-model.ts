@@ -9,6 +9,14 @@ export interface DetailDependencyContext {
   upstreams: PublishedCollateralUsageEntry[];
 }
 
+/** True when at least one disclosure has a published row; absent and empty lists both count as no row. */
+export function hasDependencyContextRows(card: SafetyScoreV9CurrentCard, context: DetailDependencyContext): boolean {
+  return (context.exposure?.dependentCount ?? 0) > 0
+    || context.upstreams.length > 0
+    || (card.dependencies.roles?.length ?? 0) > 0
+    || (card.dependencyCoverage?.length ?? 0) > 0;
+}
+
 export function buildDetailDependencyContext(
   stablecoinId: string,
   cards: readonly SafetyScoreV9CurrentCard[],

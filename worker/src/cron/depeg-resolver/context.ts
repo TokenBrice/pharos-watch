@@ -11,7 +11,7 @@ import {
   type DdrV9ExitContext,
 } from "@shared/lib/depeg-resolver";
 import { DDR_V2_EFFECTIVE_AT } from "@shared/lib/methodology-versions/depeg-resolver";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { isTerminalStablecoinStatus } from "@shared/lib/stablecoin-lifecycle";
 import { chunkArray } from "../../lib/collections";
 import { buildInClause } from "../../lib/d1-primitives";

@@ -254,7 +254,27 @@ describe("ContagionSnapshot", () => {
     expect(screen.queryByRole("link", { name: "untracked-coin" })).toBeNull();
   });
 
-  it("keeps publication coverage visible even when the scored graph has no links", () => {
+  it.each([
+    ["published empty", () => makeV9Card({ id: "usde-ethena" })],
+    ["unpublished", () => {
+      const card = makeV9Card({ id: "usde-ethena" });
+      delete card.dependencyCoverage;
+      delete card.dependencies.roles;
+      return card;
+    }],
+  ])("omits the module when no disclosure has a row and role/coverage lists are %s", (_state, makeCard) => {
+    useReportCardsV9Mock.mockReturnValue({
+      data: makeReportCardsV9Response({ cards: [makeCard(), makeV9Card({ id: "usdc-circle" })] }),
+      error: null,
+      dataUpdatedAt: 1,
+      refetch: vi.fn(),
+    });
+
+    const { container } = render(<ContagionSnapshot stablecoinId="usde-ethena" />);
+    expect(container.firstChild).toBeNull();
+  });
+
+  it("keeps the variant card without empty disclosures", () => {
     useReportCardsV9Mock.mockReturnValue({
       data: makeReportCardsV9Response({ cards: [makeV9Card({ id: "usde-ethena" })] }),
       error: null,
@@ -262,10 +282,31 @@ describe("ContagionSnapshot", () => {
       refetch: vi.fn(),
     });
 
+    render(
+      <ContagionSnapshot
+        stablecoinId="usde-ethena"
+        variantRelationshipCard={<div data-testid="variant-card">VARIANT</div>}
+      />,
+    );
+    expect(screen.getByTestId("variant-card")).toBeTruthy();
+    expect(screen.queryByRole("region", { name: "What depends on me" })).toBeNull();
+  });
+
+  it("shows a coverage-only context without a drawn neighborhood", () => {
+    useReportCardsV9Mock.mockReturnValue({
+      data: makeReportCardsV9Response({ cards: [makeV9Card({ id: "usde-ethena", dependencyCoverage: [
+        { upstreamLabel: "USDC", upstreamAssetId: "usdc-circle", share: 0.12,
+          reason: "stale-evidence", sourceAsOf: "2026-08-31", identityVerified: true },
+      ] })] }),
+      error: null,
+      dataUpdatedAt: 1,
+      refetch: vi.fn(),
+    });
+
     render(<ContagionSnapshot stablecoinId="usde-ethena" />);
     expect(screen.queryByTestId("contagion-graph")).toBeNull();
-    expect(screen.getByRole("region", { name: "Known, not in the scored graph" }).textContent)
-      .toContain("No known relationships outside the scored graph published");
+    expect(screen.getByRole("region", { name: "Known, not in the scored graph" }).textContent).toContain("stale-evidence");
+    expect(screen.getByRole("region", { name: "What I depend on" }).textContent).toContain("No upstream links");
   });
 
   it("renders an unavailable notice instead of falling back to V8", () => {

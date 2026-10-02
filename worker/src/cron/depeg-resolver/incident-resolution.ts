@@ -6,7 +6,7 @@ import {
 } from "@shared/lib/depeg-resolver";
 import { unwrapStressSignalsEnvelope } from "@shared/lib/stress-signals-envelope";
 import { isRecord } from "@shared/lib/type-guards";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type { DdrRow } from "@shared/types/depeg-resolver";
 import {
   DEWS_MAX_AGE_SEC,

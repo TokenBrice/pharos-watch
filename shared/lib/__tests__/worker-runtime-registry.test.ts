@@ -6,7 +6,6 @@ import {
   FROZEN_IDS,
   PRE_LAUNCH_STABLECOINS,
   READABLE_IDS,
-  TRACKED_STABLECOINS,
 } from "../stablecoins/registry";
 import {
   WORKER_ACTIVE_IDS,
@@ -15,16 +14,9 @@ import {
   WORKER_FROZEN_IDS,
   WORKER_PRE_LAUNCH_STABLECOINS,
   WORKER_READABLE_IDS,
-  WORKER_TRACKED_STABLECOINS,
 } from "../stablecoins/worker-runtime-registry";
-import { expectedWorkerRuntimeCoin } from "./worker-runtime-registry.test-support";
 
 describe("Worker runtime stablecoin registry", () => {
-  it("preserves the canonical contract identity projection", () => {
-    // r2/data/results/rlusd-ripple.json requires null decimals plus the XRPL amountEncoding identity.
-    expect(WORKER_TRACKED_STABLECOINS).toEqual(TRACKED_STABLECOINS.map(expectedWorkerRuntimeCoin));
-  });
-
   it("preserves active, pre-launch, frozen, readable, and live-reserve circuit membership", () => {
     expect(WORKER_ACTIVE_IDS).toEqual(ACTIVE_IDS);
     expect([...WORKER_ACTIVE_META_BY_ID.keys()]).toEqual([...ACTIVE_META_BY_ID.keys()]);

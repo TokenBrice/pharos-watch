@@ -809,6 +809,11 @@ export function projectWorkerRuntimeCoin(coin, index) {
     name: coin.name,
     pegCurrency: coin.flags.pegCurrency,
     governance: coin.flags.governance,
+    flags: {
+      pegCurrency: coin.flags.pegCurrency,
+      governance: coin.flags.governance,
+      ...(coin.flags.navToken == null ? {} : { navToken: coin.flags.navToken }),
+    },
   };
   if (typeof coin.geckoId === "string" && coin.geckoId.length > 0) {
     projected.geckoId = coin.geckoId;
@@ -838,6 +843,28 @@ export function projectWorkerRuntimeCoin(coin, index) {
       ...(amountEncoding != null ? { amountEncoding } : {}),
     }));
   }
+  // Retain only the fields DDR's structural and terminal-evidence readers use.
+  // Evidence prose, URLs, controls, and other catalog trees stay out of the heap.
+  for (const key of ["mechanismArchetype", "windDownAnnouncedAt", "collateralQuality", "custodyModel", "frozenAt"]) {
+    if (Object.prototype.hasOwnProperty.call(coin, key)) projected[key] = coin[key];
+  }
+  if (coin.mintAuthority) {
+    projected.mintAuthority = {
+      mintPath: coin.mintAuthority.mintPath,
+      authorityPosture: coin.mintAuthority.authorityPosture,
+      ...(coin.mintAuthority.mintIncidents == null ? {} : {
+        mintIncidents: coin.mintAuthority.mintIncidents.map(({ date, status, resolvedAt }) => ({
+          date, status, ...(resolvedAt == null ? {} : { resolvedAt }),
+        })),
+      }),
+    };
+  }
+  if (coin.reserves) projected.reserves = coin.reserves.map(({ risk, pct }) => ({ risk, pct }));
+  if (coin.blacklistabilityReview) {
+    projected.blacklistabilityReview = { reviewedStatus: coin.blacklistabilityReview.reviewedStatus };
+  }
+  if (coin.dependencies) projected.dependencies = coin.dependencies.map(({ id, weight }) => ({ id, weight }));
+  if (coin.obituary) projected.obituary = { deathDate: coin.obituary.deathDate };
   if (
     (coin.status == null || coin.status === "active")
     && isPlainObject(coin.liveReservesConfig)

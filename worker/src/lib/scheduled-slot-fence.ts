@@ -52,7 +52,7 @@ interface ScheduledSlotFenceMetadata {
 // the fence starts a replacement attempt (the write is an idempotent CAS), so
 // only a genuinely unreachable D1 or a dead isolate can let the row go stale.
 const SLOT_EXECUTION_RUNNING_STALE_SEC = 5 * 60;
-const SLOT_EXECUTION_HEARTBEAT_SEC = 60;
+export const SLOT_EXECUTION_HEARTBEAT_SEC = 60;
 // A Cloudflare scheduled invocation cannot outlive the 15-minute event wall
 // clock, so a running row older than that plus a minute of skew is provably
 // dead regardless of what its heartbeat column claims.

@@ -18,6 +18,16 @@ The blacklist ingestion pipeline has unresolved gaps. The missing-amount share o
 4. **Circuit-open skips:** inspect recent `sync-blacklist` `cron_runs.metadata` for `apiErrorConfigs`, `apiErrorClasses`, budget exhaustion, or circuit-open source skips before resetting cursors.
 5. **Upstream RPC health:** if a specific config is stuck, check the relevant provider lane for that chain/config (dRPC/chain RPC/Etherscan/TronGrid).
 
+### Cron lane unavailable or abandoned
+
+`sync-blacklist` runs at `00:03`, `06:03`, `12:03`, and `18:03` UTC. Cron Lanes labels a latest `error` run **Unavailable**; a reconciled stale-child run is additionally labeled **Abandoned**. One missed run therefore remains visible until the next successful execution six hours later, even if the previous public snapshot is still within its freshness budget. The row's `errors 1` is the consecutive latest error streak, not the number of daily failures. Do not loosen freshness thresholds or reset a cursor based on those labels.
+
+Compare `cron_runs` with `cron_slot_executions` and `worker_producer_history`: run rows retain seven days, slot rows provide a longer retained execution trail, and regular producer history retains 30 days of per-job outcomes, errors, versions, and `metadata_json`. Use the latter for a monthly pattern rather than assuming the short Cron Lanes display window is the full incident history. Global `status_transitions` keeps longer history but its aggregate cron causes do not name individual jobs; direct operator freshness alerts retain only their latest state/cooldown in `cache`, not an append-only Telegram delivery history.
+
+For a D1 internal/overload error, cursor reads, claims, finalization, event batches, and the final retained-decode diagnostic read already use the shared bounded retry helper. A terminal ordinary exception has no producer metadata, so a null `cron_runs.metadata` alone cannot identify its failing statement or prove that retries were absent. If the exception recurs, correlate its reference with Worker logs before expanding retry scope.
+
+For an abandonment, inspect `metadata.progressStage`, `progressUpdatedAt`, `progressSnapshot`, and Worker activation timing using the [Cron Slot Abandonment runbook](./cron-slot-abandonment.md). A scan-stage snapshot precedes maintenance; it is not evidence that a historical repair tail exhausted the invocation. The blacklist lane has one serial producer and one declared live provider connection. A death before the first slot-heartbeat tick can leave the initial slot timestamp unchanged without proving a broken heartbeat loop.
+
 ## Remediation
 
 ### Frozen Night Watch reconciliation
