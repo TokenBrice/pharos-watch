@@ -96,7 +96,7 @@ export const LEGACY_CHANGELOG_ROUTE_FIXTURES = [
     breadcrumbName: "Scoring Changelog",
     pageTitle: "Safety Scores Changelog",
     datePublished: "2026-02-25",
-    dateModified: "2026-10-01",
+    dateModified: "2026-10-02",
     citationUrn: "urn:pharos:methodology:safety-score@v10.0",
   },
   {

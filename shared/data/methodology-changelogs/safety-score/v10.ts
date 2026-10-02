@@ -4,8 +4,8 @@ export const SAFETY_SCORE_V10: readonly MethodologyChangelogEntry[] = [
   {
     version: "10.0",
     title: "V10: curation, owner rulings, and physical-to-USD Exit",
-    date: "2026-10-01",
-    effectiveAt: 1790812800,
+    date: "2026-10-02",
+    effectiveAt: 1790960400,
     summary:
       "V10 is a major release consolidating the 2026-10-01 curation pass, owner rulings, and physical-to-USD Exit. It brings known-supply Exit sizing, whole-book custody and report-date discipline, measured collateralization, deployment-local control pricing, adverse mint evidence continuity, wrapper and inheritance corrections, and reviewed physical-metal redemption composed with conservative USD sales. Missing evidence never grants credit.",
     impact: [
