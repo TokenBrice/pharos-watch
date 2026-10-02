@@ -54,6 +54,24 @@ export const DEPENDENCY_TARGET_DISPOSITIONS: readonly DependencyTargetDispositio
 /** Exact adapters observed producing mapped live dependency sets in the P1b replay. */
 export const DEPENDENCY_ADAPTER_MAPPING_REVIEWS: readonly DependencyAdapterMappingReview[] = [
   adapterReview("sky-makercore", "worker/src/cron/reserve-adapters/sky-makercore.ts", "Verifies LitePSM gem() and pocket() against canonical Ethereum USDC and measures the pocket balance in the same adapter run. Maps only the reconciled USDC constituent to usdc-circle with collateral depType; residual and reconciliation-failed PSM groups remain unlinked. The 0.25 percentage-point timing/rounding band is recorded as excess metadata, and the shared DAI/USDS book carries one measured holding.", "2026-09-30"),
+  {
+    adapter: "leverup-lvusd",
+    reviewer: "Sol final review 2026-10-02 (AdapterMappingReviews)",
+    reviewedAt: "2026-10-02",
+    sourceFiles: [
+      "worker/src/cron/reserve-adapters/leverup-lvusd.ts",
+      "worker/src/cron/reserve-adapters/evm-branch-balances.ts",
+      "worker/src/cron/reserve-adapters/branch-balances.ts",
+    ],
+    rationale: "Maps only the measured Monad USDC balance at designated vault 0xc69d584b3118e94b3443cc6c67076281242fa704 to usdc-circle with collateral depType and sourceKey evm-branch-balances:monad:0x754704bc059f8c67012fed69bc8a327a5aafb603. At one pinned block, verifies the tracked LVUSD contract, owner-to-issuer-to-transparency chain, exact getAllVaults() holder census, vault reserveToken() and reserve/liability decimals before shared branch accounting market-values the balance. Registry or identity drift and unreadable liabilities fail closed; unavailable reserve balances, decimals or prices produce only an unlinked residual. LVMON, MON staking, incidental vault tokens and the reserve-versus-supply shortfall create no reserve links. A complete one-asset composition is 100% USDC regardless of coverage; the actual undercollateralization warning is retained and no redemption capacity is inferred.",
+  },
+  {
+    adapter: "solomon-chancery",
+    reviewer: "Sol final review 2026-10-02 (AdapterMappingReviews)",
+    reviewedAt: "2026-10-02",
+    sourceFiles: ["worker/src/cron/reserve-adapters/solomon-chancery.ts"],
+    rationale: "Maps positive balances only from the four exact Solana mint/symbol/reserve-account tuples for replacement USDv mint USDvUSpnhCr9yBgj3UyVrD239HRUv4RsHwH2FxsWuMk and Chancery reserve authority 8anxfyoftY9hPwxdvReet2beFS2HXjcXraPEamo4nGyB: USDC to usdc-circle, USDG to usdg-paxos, PYUSD to pyusd-paypal and USDT to usdt-tether, all with collateral depType and chancery:reserve:<lowercase-symbol> source keys. Zero balances, including PYUSD and USDT in the captured response, emit no slices or links. Inventory, duplicate, mint, vault, symbol, timestamp, positive-balance decimals, raw-unit or nominal-par valuation mismatches and an unreconciled total fail closed; no unknown constituent is resolved by symbol alone. Weights use the reconciled selected-account total at nominal USD 1, never USDv supply. Off-account assets, liabilities, encumbrances and legacy USDv remain outside the mapping; the selected-reserve-scope warning and financialAssurance=false are retained without whole-book coverage or redemption claims.",
+  },
   adapterReview("theo-thusd-redemption", "worker/src/cron/reserve-adapters/theo-thusd-redemption.ts", "Republishes thusd-theo's full reviewed curated reserves array unchanged: thBILL maps to thbill-theo, USDC redemption liquidity to usdc-circle and USDT redemption liquidity to usdt-tether, all with collateral depType and no authored sourceKey. The aggregate delta-neutral gold carry row remains unlinked exogenous strategy exposure under its reviewed non-link disposition. The adapter resolves no label, address or symbol into reserve links and introduces no source keys; its pinned same-block Cash Wallet balance/allowance probe emits nested redemption telemetry only, never replacement reserve weights or new dependency claims. Missing or invalid full curated composition fails closed.", "2026-09-30"),
   adapterReview("ondo-ousg", "worker/src/cron/reserve-adapters/ondo-ousg.ts", "Maps only the exact reviewed Sanity IDs and matching names/symbols for BUIDL, BENJI and USDC. Other fund, bank and residual rows stay unlinked; quarantined BENJI remains unavailable for upstream scoring.", "2026-09-14"),
   adapterReview("midas-mtbill", "worker/src/cron/reserve-adapters/midas-mtbill.ts", "Maps only the exact reviewed unleveraged USTB/BUIDL position tuples. The entire residual stays unclassified and unlinked, with source totals and scope required to reconcile.", "2026-09-14"),

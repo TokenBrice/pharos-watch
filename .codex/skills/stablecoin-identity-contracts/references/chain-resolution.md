@@ -2,7 +2,7 @@
 
 Live registries win over this reference:
 
-- `shared/lib/chains/index.ts` owns `CHAIN_META`, DefiLlama display-name/alias resolution through `resolveChainId`, EVM chain identifiers, and provider maps including `CG_CHAIN_MAP`.
+- `shared/types/chain-identity.ts` owns `CHAIN_META`, DefiLlama display-name/alias resolution through `resolveChainId`, and EVM chain identifiers. `shared/lib/chains/index.ts` derives provider maps including `CG_CHAIN_MAP`, active chain lists, and resilience tiers.
 - `worker/src/lib/chain-registry.ts` consumes and re-exports the provider chain maps used by runtime CoinGecko resolution.
 - CoinGecko `/api/v3/asset_platforms` is the live resolver for `detail_platforms` keys; for EVM platforms, join its `chain_identifier` to `CHAIN_META.evmChainId` rather than maintaining a platform-name snapshot.
 

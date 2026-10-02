@@ -8,7 +8,7 @@ import { getLogoSrc, logosById } from "@/lib/logos";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { collapseForHomepageStrip, eventClassSlug, type CollapsedTapeEntry } from "@/lib/tape-collapse";
 import { formatRelativeTimeMs } from "@shared/lib/relative-time";
-import { CHAIN_META } from "@shared/lib/chains";
+import { CHAIN_META } from "@shared/types/chain-identity";
 import {
   ACTIVE_PEG_CURRENCY_COUNT,
   ACTIVE_VARIANT_STABLECOIN_COUNT,

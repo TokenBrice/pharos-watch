@@ -5,7 +5,7 @@ import type {
   StablecoinMeta,
 } from "../../types";
 import { criticalControllerKey } from "../control-identities";
-import { isWellFormedDeploymentId, normalizeDeploymentId } from "../deployment-id";
+import { isWellFormedDeploymentId, normalizeDeploymentId } from "../../types/deployment-id";
 import { isActiveStablecoinMeta } from "./status";
 
 export type MintBridgeOwnershipMeta = Pick<

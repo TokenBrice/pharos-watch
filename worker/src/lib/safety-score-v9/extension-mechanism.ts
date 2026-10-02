@@ -8,7 +8,7 @@ import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { admitV10ReserveReportScope, resolveV10ScopedAssuranceFragments, shouldApplyV10ReserveReportScope } from "@shared/lib/safety-score-v9/reserve-scope";
-import { normalizeDeploymentId } from "@shared/lib/deployment-id";
+import { normalizeDeploymentId } from "@shared/types/deployment-id";
 import type { ProofOfReservesLatestReport, StablecoinMeta } from "@shared/types/core";
 import {
   V9MechanismRiskReviewSchema,

@@ -10,8 +10,8 @@ import {
   type ExitRouteObservationCoverage,
   type LiquidityPoolSourceFamily,
 } from "@shared/types/market";
-import { CHAIN_META } from "@shared/lib/chains";
-import { canonicalExitRouteChain } from "@shared/lib/exit-route-identity";
+import { CHAIN_META } from "@shared/types/chain-identity";
+import { canonicalExitRouteChain } from "@shared/types/exit-route-identity";
 import { toErrorMessage } from "@shared/lib/error-utils";
 
 const TREND_BASELINE_CONFIDENCE_MIN = 0.5;

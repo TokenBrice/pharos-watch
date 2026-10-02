@@ -1,5 +1,5 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { CHAIN_META, normalizeChainId } from "@shared/lib/chains";
+import { CHAIN_META, normalizeChainId } from "@shared/types/chain-identity";
 import type { StablecoinMeta } from "@shared/types/core";
 import { normalizeDexSymbol } from "../../lib/dex-cron-constants";
 import { buildChainAddressKey, normalizeTokenAddress } from "../dex-liquidity/token-resolution";

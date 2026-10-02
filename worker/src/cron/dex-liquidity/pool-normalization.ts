@@ -1,5 +1,5 @@
 import { GT_DEX_QUALITY, QUALITY_MULTIPLIERS } from "../../lib/dex-cron-constants";
-import { canonicalExitRouteChain, canonicalExitRouteScopedId } from "@shared/lib/exit-route-identity";
+import { canonicalExitRouteChain, canonicalExitRouteScopedId } from "@shared/types/exit-route-identity";
 
 /** Resolve quality multiplier for a GeckoTerminal pool based on DEX ID. */
 export function getGtDexQuality(dexId: string): number {

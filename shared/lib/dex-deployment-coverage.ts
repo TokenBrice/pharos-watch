@@ -1,5 +1,5 @@
 import { CG_CHAIN_MAP, DS_CHAIN_MAP, GT_CHAIN_MAP } from "./chains";
-import { canonicalExitRouteScopedId } from "./exit-route-identity";
+import { canonicalExitRouteScopedId } from "../types/exit-route-identity";
 import { getAddress } from "viem/utils";
 
 export type DexDeploymentOutcome = "observed_pools" | "verified_no_pools" | "provider_inaccessible";

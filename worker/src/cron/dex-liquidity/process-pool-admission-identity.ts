@@ -1,7 +1,7 @@
 import {
   canonicalExitRouteAssetKey,
   canonicalExitRouteChain,
-} from "@shared/lib/exit-route-identity";
+} from "@shared/types/exit-route-identity";
 import { isBlockedDexId } from "../../lib/dex-cron-constants";
 import { DEX_LIQUIDITY_POOL_MIN_TVL_USD } from "./constants";
 import {

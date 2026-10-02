@@ -1,5 +1,5 @@
 import transferReviewOverlays from "@shared/data/safety-score-v9/transfer-review-overlays-v1.json";
-import { CHAIN_META } from "@shared/lib/chains";
+import { CHAIN_META } from "@shared/types/chain-identity";
 import { titleCaseSlug } from "@/lib/title-case-slug";
 
 /**

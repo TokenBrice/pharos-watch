@@ -1,4 +1,4 @@
-import { resolveChainId } from "@shared/lib/chains";
+import { resolveChainId } from "@shared/types/chain-identity";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { isV9RepresentationGroupRoute } from "@shared/lib/safety-score-v9/facts";
 import { deriveV9WindowedPegScore } from "@shared/lib/safety-score-v9/formula";

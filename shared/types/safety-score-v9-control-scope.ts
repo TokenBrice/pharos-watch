@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { normalizeDeploymentId } from "../lib/deployment-id";
-import { CHAIN_META } from "../lib/chains";
+import { normalizeDeploymentId } from "./deployment-id";
+import { CHAIN_META } from "./chain-identity";
 import { V9ControlCapabilitySchema, V9ControlCapSemanticsSchema, V9ClaimImpairmentSchema, V9EconomicLossScopeSchema } from "./safety-score-v9-fact-input-primitives";
 
 const Text = z.string().trim().min(1);

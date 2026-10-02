@@ -15,7 +15,7 @@ import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import type { V9PublishedEvidenceAttribution } from "@shared/lib/safety-score-v9/evidence";
 import { compareText } from "@shared/lib/safety-score-v9/primitives";
-import { normalizeDeploymentId } from "@shared/lib/deployment-id";
+import { normalizeDeploymentId } from "@shared/types/deployment-id";
 import type { V9WeightedQuorum } from "@shared/types/safety-score-v9-control-scope";
 import type { MintAuthorityControl, StablecoinLink, StablecoinMeta } from "@shared/types/core";
 import type { V9FactStatusV2 } from "@shared/types/safety-score-v9-facts";
@@ -57,7 +57,7 @@ export type ControlOverlay = NonNullable<
 >["controls"][number];
 export type ReserveClassification = ExtensionAsset["reserveClassifications"][number];
 
-export function authorityModelForType(
+function authorityModelForType(
   authorityType: MintAuthorityControl["authorityType"],
 ): NonNullable<ControlOverlay["authority"]>["model"] {
   if (authorityType === "safe" || authorityType === "multisig") return "multisig";

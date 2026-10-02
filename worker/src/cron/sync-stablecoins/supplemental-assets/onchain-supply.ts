@@ -2,7 +2,7 @@ import { fetchEearnSuiSupply } from "./sui-vault-supply";
 import { logWorkerEventArgs } from "../../../lib/structured-log";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveInput } from "@shared/types/live-reserves";
-import { CHAIN_META } from "@shared/lib/chains";
+import { CHAIN_META } from "@shared/types/chain-identity";
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import {
   CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS,

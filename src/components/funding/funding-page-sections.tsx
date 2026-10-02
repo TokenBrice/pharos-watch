@@ -8,7 +8,7 @@ import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } fr
 import { buildExplorerUrl } from "@shared/lib/explorer";
 import { formatAddress, formatDecimal, formatEventDate } from "@shared/lib/format";
 import { clampScore } from "@shared/lib/math";
-import { CHAIN_META } from "@shared/lib/chains";
+import { CHAIN_META } from "@shared/types/chain-identity";
 import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import type { CostLineItem, Donation, FundingChain } from "@shared/lib/funding/schema";
 import type { DonationSummary, MonthlyCommunityCoverage } from "@shared/lib/funding/helpers";

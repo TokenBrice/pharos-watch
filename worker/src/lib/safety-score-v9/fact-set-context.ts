@@ -1,4 +1,4 @@
-import { resolveChainId } from "@shared/lib/chains";
+import { resolveChainId } from "@shared/types/chain-identity";
 import {
   createV9EvidenceReference,
   createV9FactStatus,

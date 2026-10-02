@@ -1,5 +1,5 @@
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { canonicalExitRouteScopedId } from "@shared/lib/exit-route-identity";
+import { canonicalExitRouteScopedId } from "@shared/types/exit-route-identity";
 import { parseEpochSeconds } from "@shared/lib/epoch";
 import { isRecord } from "@shared/lib/type-guards";
 import { MIN_LENDING_POOL_TVL_USD } from "../../lib/constants";

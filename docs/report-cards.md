@@ -10,7 +10,7 @@ Safety Score V10 is the sole active stablecoin safety model. It publishes eviden
 - **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v10.0`<!-- GENERATED-END: methodology-version-safety-score -->
 - Public response schema: report v6 with score trace v3; report v5 publications remain readable
 - Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`, parsed and digested by `shared/lib/safety-score-v9/policy.ts`
-- **Evaluation build:** `677a7e5dc9f3cd9c8584e51c2cd2b7367e8b2088aa6b88d8d970205a2790f37c` (`SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST`), generated from the evaluator and fact-producer source manifest. The manifest's evaluator closure includes the policy's reviewed chain-maturity registry, so score-bearing source edits rotate the identity used by replay and publication comparability.
+- **Evaluation build:** `1e000baa39c7e0b8fa00623b98bc2e7dd145592497106a67569fa8ee4297663c` (`SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST`), generated from the evaluator and fact-producer source manifest. The manifest's evaluator closure includes the policy's reviewed chain-maturity registry, so score-bearing source edits rotate the identity used by replay and publication comparability.
 - Implementation: `shared/lib/safety-score-v9/`
 - Structured changelog: `shared/data/methodology-changelogs/safety-score/`
 - Public methodology: `/methodology/#safety-scores-methodology`
@@ -138,7 +138,7 @@ Under 9.92, aggregate-only intake is `supply-review.unpartitioned-aggregate`: ci
 
 Report assurance expires 100 days from conservative UTC `periodEnd`, retaining dated evidence in the stale trace. An exact printed signed/as-of date may stand in for missing publication date (`publishedAtBasis: "signed-date-standin"`, displayed as "signed"), without refreshing the period or bypassing chronology, age or lockstep gates. Newer unreviewed reports still block independent-assurance discovery; see [report metadata](./stablecoin-data.md#registry-editing-entry).
 
-Chain-maturity admission resolves at the capture clock with quarterly expiry; replay retains that clock and admitted set. The gates and registry ownership are specified below; rollout history lives in the [structured changelog](../shared/data/methodology-changelogs/safety-score/).
+Chain-maturity admission resolves at the capture clock with quarterly expiry; replay retains that clock and admitted set. The gates and registry ownership are specified below; rollout history lives in the [structured changelog](../shared/data/methodology-changelogs/safety-score/v10.ts).
 
 Physical `physical-commodity-delivery` remains diagnostic: captured unscaled USD/troy ounce × deliverable ounces, net of published fees, output tier 65 (55 for unbounded delivery), and `sameNotionalEligible: false`. Reviewed redemption may compose with a modelled metal sale ending in USD without treating delivery as cash or changing its standalone score. Physical-to-USD retains the 500-bps admission gate but scores cost against the common request denominator, with neutral verified-customer eligibility and explicitly modelled coverage. Capacity is capped by documented throughput over the complete settlement window, otherwise one conservative minimum lot; best-effort cash-outs retain the applicable policy sale spread. See [physical-to-USD policy](./redemption-backstops.md#physical-to-usd-exit-capability).
 
@@ -184,7 +184,7 @@ Rateable report-v5 cards include complete Backing, Exit, and Economic Control br
 
 The policy-declared `market-anchor-longevity` premium applies only to `usdt-tether` when its eligibility gates are met: market rank 1, at least 120 months of history, base score at least 75, exit score at least 70, strong evidence, a clean peg, and the `stress-redemption` plus `reserve-reconciliation` operational components. It adds 12 points, raises the `signal:centralized-mint:low` cap from 83 to 87, and limits the public score to 87, the A+ threshold.
 
-Premium eligibility is re-evaluated every capture; admitting a previously pending chain can restore it without a policy change. The 9.9 replay and 2026-09-23 TRON re-review did not satisfy all gates, so neither granted the premium. Capture-specific scores and review history belong in the [structured changelog](../shared/data/methodology-changelogs/safety-score/); current chain admission and rationale remain in `CHAIN_MATURITY_REVIEWS_V1`, not a copied roster here.
+Premium eligibility is re-evaluated every capture; admitting a previously pending chain can restore it without a policy change. The 9.9 replay and 2026-09-23 TRON re-review did not satisfy all gates, so neither granted the premium. Capture-specific scores and review history belong in the [structured changelog](../shared/data/methodology-changelogs/safety-score/v10.ts); current chain admission and rationale remain in `CHAIN_MATURITY_REVIEWS_V1`, not a copied roster here.
 
 The public premium is intentionally not inherited. `applyV9AssetPremium` does not reassign `inheritableScore`, and `projectV9DependencyScore` returns that pre-premium value. Therefore USDT's public card can show 87 while children such as `steakusdt-steakhouse` and `susdt-spark` correctly inherit 83. A child snapshot carrying 83 is not stale and must not be resynchronized to the parent's premium-adjusted public score.
 

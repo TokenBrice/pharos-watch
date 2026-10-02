@@ -16,7 +16,7 @@ import { buildContractDeploymentParts } from "@/lib/contract-deployment-summary"
 import { trackEvent } from "@/lib/analytics";
 import { copyText } from "@/lib/clipboard";
 import { cn } from "@/lib/utils";
-import { CHAIN_META } from "@shared/lib/chains";
+import { CHAIN_META } from "@shared/types/chain-identity";
 import { buildExplorerUrl } from "@shared/lib/explorer";
 import { formatAddress } from "@shared/lib/format";
 import type { StablecoinMeta } from "@shared/types";

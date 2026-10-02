@@ -1,7 +1,5 @@
 import { registryRpcUrls, type ChainRpcConfig } from "../../lib/chain-registry";
 
-export { normalizeChainId as resolveCanonicalChain } from "@shared/lib/chains";
-
 /**
  * Build a deduped list of RPC URLs from a ChainRpcConfig's registry endpoints.
  * Supplemental endpoints (Dwellir) are never part of these lists: the evm-rpc

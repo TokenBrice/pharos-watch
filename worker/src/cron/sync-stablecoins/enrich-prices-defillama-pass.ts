@@ -1,7 +1,7 @@
 import { LEGACY_SOLOMON_USDV_ID } from "../../lib/solomon-usdv-identity";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { CHAIN_META, resolveChainId } from "@shared/lib/chains";
+import { CHAIN_META, resolveChainId } from "@shared/types/chain-identity";
 import { CIRCUIT_SOURCE, DEFILLAMA_COINS } from "../../lib/constants";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { throwIfAborted } from "../../lib/abort";

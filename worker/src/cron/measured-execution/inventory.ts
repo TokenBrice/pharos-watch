@@ -1,4 +1,4 @@
-import { canonicalExitRouteAssetKey, canonicalExitRouteChain } from "@shared/lib/exit-route-identity";
+import { canonicalExitRouteAssetKey, canonicalExitRouteChain } from "@shared/types/exit-route-identity";
 import {
   DEX_MEASURED_MAX_FAVORABLE_OUTPUT_RATIO,
   DEX_MEASURED_TARGET_SCHEMA_VERSION,

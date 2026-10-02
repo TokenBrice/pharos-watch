@@ -3,7 +3,7 @@ import { Sha256Schema } from "@shared/types/safety-schema-primitives";
 import { PegSummaryCoinSchema } from "@shared/types/market";
 import { RedemptionBackstopMapSchema } from "@shared/types/redemption";
 import { ReserveSliceSchema } from "@shared/types/reserves";
-import { LiveReserveSnapshotProvenanceSchema } from "@shared/types/safety-score-v9-reserve-scope";
+import { LiveReserveSnapshotProvenanceSchema } from "@shared/lib/safety-score-v9/reserve-provenance";
 import { sortedRecord } from "@shared/lib/compare";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";

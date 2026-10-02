@@ -1,6 +1,6 @@
 import { isBlockedDexId } from "../../lib/dex-cron-constants";
 import { logWorkerEventArgs } from "../../lib/structured-log";
-import { canonicalExitRouteScopedId, canonicalExitRouteScopedKey } from "@shared/lib/exit-route-identity";
+import { canonicalExitRouteScopedId, canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
 import { throwIfAborted } from "../../lib/abort";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { DS_CHAIN_MAP } from "../../lib/chain-registry";

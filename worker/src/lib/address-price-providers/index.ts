@@ -1,7 +1,5 @@
-import {
-  CG_CHAIN_MAP,
-  resolveChainId,
-} from "@shared/lib/chains";
+import { CG_CHAIN_MAP } from "@shared/lib/chains";
+import { resolveChainId } from "@shared/types/chain-identity";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";

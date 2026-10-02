@@ -1,4 +1,4 @@
-import { canonicalExitRouteScopedKey } from "@shared/lib/exit-route-identity";
+import { canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
 import {
   isKavaSwapDiscoveryDeployment,
   KAVA_SWAP_USDX_DISCOVERY_ADDRESS,

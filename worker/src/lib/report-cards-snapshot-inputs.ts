@@ -17,7 +17,7 @@ import {
 } from "./stablecoins-cache";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { DEX_LIQUIDITY_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/cron-cadences";
-import { CHAIN_META, resolveChainId } from "@shared/lib/chains";
+import { CHAIN_META, resolveChainId } from "@shared/types/chain-identity";
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { DexDeploymentSupplyCoverage } from "./report-cards-fixed-input";

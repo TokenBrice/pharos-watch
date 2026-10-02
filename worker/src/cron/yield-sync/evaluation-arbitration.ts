@@ -2,7 +2,7 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { YieldType } from "@shared/types/core";
 import type { YieldCalculationMode, YieldEvidenceClass } from "@shared/types/yield";
 import { LENDING_PROTOCOL_LABELS } from "../../lib/yield-config/yield-config";
-import { normalizeChainId } from "@shared/lib/chains";
+import { normalizeChainId } from "@shared/types/chain-identity";
 import { normalizeDexSymbol } from "../../lib/dex-cron-constants";
 import { getTrackedContractAddresses } from "./identity";
 import type { ConfidenceTier, EvaluatedYieldSource } from "./evaluation-types";

@@ -20,7 +20,7 @@ import { useDexLiquidity } from "@/hooks/api-hooks";
 import { hasMeaningfulDexData } from "@/components/dex-liquidity-card";
 import { canonicalizeChainCirculating } from "@shared/lib/chains/circulating";
 import { formatCurrency } from "@shared/lib/format";
-import { CHAIN_META } from "@shared/lib/chains";
+import { CHAIN_META } from "@shared/types/chain-identity";
 import { CHART_PALETTE, CHART_SLATE } from "@/lib/chart-colors";
 import { CHAIN_HEX, PROTOCOL_HEX, normalizeChain, prettifyProtocol, protocolLogo } from "@/lib/dex-display-constants";
 import { cn } from "@/lib/utils";

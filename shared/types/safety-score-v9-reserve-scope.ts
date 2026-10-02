@@ -1,13 +1,11 @@
 import { z } from "zod";
 import candidatePolicy from "../data/safety-score-v9/methodology-policy-candidate-v1.json";
-import { isWellFormedDeploymentId } from "../lib/deployment-id";
-import { sha256Hex } from "../lib/sha256";
-import { stableJsonStringifyV1 } from "../lib/stable-json";
+import { isWellFormedDeploymentId } from "./deployment-id";
 import { CanonicalTextSchema, FractionSchema, NonNegativeFiniteSchema, Sha256Schema, StrictIsoDateSchema, UnixSecondsSchema, BaseInputGenerationIdSchema } from "./safety-schema-primitives";
 
 const vocabulary = candidatePolicy.semantic.backing.reserveScope;
 const policyEnum = (values: string[]) => z.enum(values as [string, ...string[]]);
-export const ReserveScopeRejectionSchema = policyEnum(vocabulary.admissionRejectionCodes);
+const ReserveScopeRejectionSchema = policyEnum(vocabulary.admissionRejectionCodes);
 export const ReserveScopePolicySchema = z.strictObject({
   crossChainObservationMaxSkewSec: UnixSecondsSchema, maxFutureSkewSec: z.literal(0),
   financialMethodQuality: z.record(z.string(), z.enum(["strong", "adequate"])),
@@ -16,20 +14,20 @@ export const ReserveScopePolicySchema = z.strictObject({
   admissionRejectionCodes: z.array(ReserveScopeRejectionSchema),
   standingEvidenceClass: z.literal("static-validated"), unknownResidualTreatment: z.literal("bounded-unknown"),
 });
-export const ReserveDeploymentRefSchema = CanonicalTextSchema.refine(isWellFormedDeploymentId, "Expected normalized economic deployment key");
+const ReserveDeploymentRefSchema = CanonicalTextSchema.refine(isWellFormedDeploymentId, "Expected normalized economic deployment key");
 // B4 economic deployment identity is also the authority for native-gas keys.
-export const ReserveNativeLiabilityRefSchema = ReserveDeploymentRefSchema.refine(value => value.includes(":native:"), "Expected B4 native economic deployment key");
+const ReserveNativeLiabilityRefSchema = ReserveDeploymentRefSchema.refine(value => value.includes(":native:"), "Expected B4 native economic deployment key");
 // eslint-disable-next-line security/detect-unsafe-regex -- capped anchored unsigned decimal.
-export const ReserveExactDecimalSchema = z.string().max(128).regex(/^(0|[1-9][0-9]*)(\.[0-9]*[1-9])?$/);
+const ReserveExactDecimalSchema = z.string().max(128).regex(/^(0|[1-9][0-9]*)(\.[0-9]*[1-9])?$/);
 const SourceSchema = z.strictObject({ url: z.string().url(), accessedAtSec: UnixSecondsSchema, sha256: Sha256Schema });
 const IdentitySchema = z.strictObject({ deploymentRef: ReserveDeploymentRefSchema, bookKey: CanonicalTextSchema, account: CanonicalTextSchema.nullable() });
-export const ReserveLiabilityExclusionSchema = z.strictObject({
+const ReserveLiabilityExclusionSchema = z.strictObject({
   id: CanonicalTextSchema, identity: IdentitySchema, kind: policyEnum(vocabulary.liabilityExclusionKinds),
   reason: CanonicalTextSchema, amount: ReserveExactDecimalSchema.nullable(), currency: CanonicalTextSchema,
   unitBasis: CanonicalTextSchema, asOfSec: UnixSecondsSchema, source: SourceSchema, economicallyOwed: z.boolean().nullable(),
 });
 const DenominatorRowSchema = z.strictObject({ identity: IdentitySchema, amount: ReserveExactDecimalSchema, evidenceRefIds: z.array(CanonicalTextSchema).min(1) });
-export const ReserveLiabilityDenominatorSchema = z.strictObject({
+const ReserveLiabilityDenominatorSchema = z.strictObject({
   periodEnd: StrictIsoDateSchema, asOfSec: UnixSecondsSchema, currency: CanonicalTextSchema,
   unitBasis: CanonicalTextSchema, decimals: z.number().int().min(0).max(36).nullable(),
   totalCoveredLiabilities: ReserveExactDecimalSchema, included: z.array(DenominatorRowSchema).min(1),
@@ -86,14 +84,7 @@ export const ReserveScopedAdmissionSchema = z.strictObject({
 export const ReserveBoundedFactsGenerationSchema = z.strictObject({
   sourceGenerationId: CanonicalTextSchema, observedAtSec: UnixSecondsSchema, maxAgeSec: z.number().int().positive(),
 });
-export const LiveReserveSnapshotProvenanceSchema = z.preprocess((value) => {
-  if (value == null || typeof value !== "object" || !("reserveObservation" in value) || value.reserveObservation === undefined) return value;
-  if (ReserveObservationEnvelopeSchema.safeParse(value.reserveObservation).success) return value;
-  return { ...value, reserveObservation: undefined, reserveObservationFailure: {
-    code: "producer-failed", reason: "malformed-reserve-observation",
-    sourceSha256: sha256Hex(stableJsonStringifyV1(value.reserveObservation)),
-  } };
-}, z.strictObject({
+export const LiveReserveSnapshotProvenanceShapeSchema = z.strictObject({
   source: CanonicalTextSchema, fetchedAt: UnixSecondsSchema, balanceSheetScope: z.literal("shared-sky-maker").optional(),
   sharedBookAssetIds: z.array(CanonicalTextSchema).optional(), sharedBookMeasuredHoldings: z.record(z.string(), NonNegativeFiniteSchema).optional(),
   reserveObservation: ReserveObservationEnvelopeSchema.optional(),
@@ -101,8 +92,7 @@ export const LiveReserveSnapshotProvenanceSchema = z.preprocess((value) => {
   reserveObservationFailure: z.strictObject({
     code: z.literal("producer-failed"), reason: z.literal("malformed-reserve-observation"), sourceSha256: Sha256Schema,
   }).optional(),
-}));
-export type ReserveReportCoverage = z.output<typeof ReserveReportCoverageSchema>;
+});
 export type ReserveObservationEnvelope = z.output<typeof ReserveObservationEnvelopeSchema>;
 export type ReserveScopedAdmission = z.output<typeof ReserveScopedAdmissionSchema>;
-export type LiveReserveSnapshotProvenance = z.output<typeof LiveReserveSnapshotProvenanceSchema>;
+export type LiveReserveSnapshotProvenance = z.output<typeof LiveReserveSnapshotProvenanceShapeSchema>;

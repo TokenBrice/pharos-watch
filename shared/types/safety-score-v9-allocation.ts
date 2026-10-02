@@ -6,15 +6,15 @@ import { V9WrapperLocalFactKeySchema } from "./safety-score-v9-wrapper";
 
 const SourceSchema = z.object({ label: CanonicalTextSchema, url: z.string().url() }).strict();
 const DateSchema = StrictIsoDateSchema;
-export const V9AllocationLeverageSchema = z.enum(["no-borrowing-surface", "bounded-up-to-1.1x", "bounded-up-to-1.5x", "bounded-up-to-2x", "unbounded-or-above-2x"]);
-export const V9AllocationReuseSchema = z.enum(["none", "bluechip-overcollateralized-lending", "mixed-overcollateralized-lending", "long-tail-overcollateralized-lending", "multi-strategy-reuse", "liquidation-loss-absorption", "single-borrower-risk-capital"]);
+const V9AllocationLeverageSchema = z.enum(["no-borrowing-surface", "bounded-up-to-1.1x", "bounded-up-to-1.5x", "bounded-up-to-2x", "unbounded-or-above-2x"]);
+const V9AllocationReuseSchema = z.enum(["none", "bluechip-overcollateralized-lending", "mixed-overcollateralized-lending", "long-tail-overcollateralized-lending", "multi-strategy-reuse", "liquidation-loss-absorption", "single-borrower-risk-capital"]);
 export const V9AllocationScoredDimensionSchema = V9WrapperLocalFactKeySchema.extract(["custodyEscrow", "leverage", "rehypothecationCorrelation"]);
 export type V9AllocationScoredDimension = z.output<typeof V9AllocationScoredDimensionSchema>;
-export const V9AllocationDimensionSchema = z.enum([...V9AllocationScoredDimensionSchema.options, "providerIdentity", "holderClaim", "segregation", "bankruptcyRemoteness", "supervision"]);
-export const V9AllocationLayerSchema = z.enum(["contract", "immediate-custodian", "borrower-spv", "lender-of-record", "holder-claim", "parent"]);
-export const V9AllocationCustodyStatementSchema = z.enum(["idle-token-custody-absent", "segregated-structured", "unsegregated"]);
-export const V9AllocationLegalStatementSchema = z.enum(["provider-identified", "holder-rights-excluded", "participation-transfer-permitted", "conditional-segregation", "conditional-bankruptcy-remoteness", "supervision-context", "legal-scope-undisclosed", "parent-risk-carried"]);
-export const WrapperAllocationObservationSchema = z.object({ chain: CanonicalTextSchema, address: CanonicalTextSchema, function: CanonicalTextSchema, value: CanonicalTextSchema, block: z.number().int().nonnegative() }).strict();
+const V9AllocationDimensionSchema = z.enum([...V9AllocationScoredDimensionSchema.options, "providerIdentity", "holderClaim", "segregation", "bankruptcyRemoteness", "supervision"]);
+const V9AllocationLayerSchema = z.enum(["contract", "immediate-custodian", "borrower-spv", "lender-of-record", "holder-claim", "parent"]);
+const V9AllocationCustodyStatementSchema = z.enum(["idle-token-custody-absent", "segregated-structured", "unsegregated"]);
+const V9AllocationLegalStatementSchema = z.enum(["provider-identified", "holder-rights-excluded", "participation-transfer-permitted", "conditional-segregation", "conditional-bankruptcy-remoteness", "supervision-context", "legal-scope-undisclosed", "parent-risk-carried"]);
+const WrapperAllocationObservationSchema = z.object({ chain: CanonicalTextSchema, address: CanonicalTextSchema, function: CanonicalTextSchema, value: CanonicalTextSchema, block: z.number().int().nonnegative() }).strict();
 const LEGAL_STATEMENTS: Partial<Record<z.output<typeof V9AllocationDimensionSchema>, readonly string[]>> = {
   providerIdentity: ["provider-identified"], holderClaim: ["holder-rights-excluded", "participation-transfer-permitted"],
   segregation: ["conditional-segregation"], bankruptcyRemoteness: ["conditional-bankruptcy-remoteness"],
@@ -22,7 +22,7 @@ const LEGAL_STATEMENTS: Partial<Record<z.output<typeof V9AllocationDimensionSche
 };
 
 // Legacy whole-book reviews intentionally keep their original date semantics.
-export const V9WholeAllocationReviewSchema = z.object({
+const V9WholeAllocationReviewSchema = z.object({
   scopeKind: z.literal("whole-allocation"), assetId: CanonicalTextSchema, reviewedAt: DateSchema, expiresAt: DateSchema,
   reviewer: CanonicalTextSchema, custody: z.literal("fully-onchain-no-offchain-custodian"),
   localLeverage: V9AllocationLeverageSchema, capitalReuse: V9AllocationReuseSchema, rationale: CanonicalTextSchema,
@@ -31,7 +31,7 @@ export const V9WholeAllocationReviewSchema = z.object({
   if (review.expiresAt <= review.reviewedAt) ctx.addIssue({ code: "custom", path: ["expiresAt"], message: "Review must expire after review date" });
 });
 
-export const V9AllocationDeploymentIdentitySchema = z.discriminatedUnion("codeKind", [
+const V9AllocationDeploymentIdentitySchema = z.discriminatedUnion("codeKind", [
   z.object({ codeKind: z.literal("immutable"), chain: CanonicalChainIdSchema, address: CanonicalTextSchema, observedAtSec: UnixSecondsSchema, block: z.number().int().nonnegative(), sourceUrl: z.string().url() }).strict(),
   z.object({ codeKind: z.literal("proxy"), chain: CanonicalChainIdSchema, address: CanonicalTextSchema, implementation: CanonicalTextSchema, observedAtSec: UnixSecondsSchema, block: z.number().int().nonnegative(), sourceUrl: z.string().url() }).strict(),
 ]);
@@ -44,14 +44,14 @@ export const V9AllocationScopeIdentityReviewSchema = z.object({ assetId: Canonic
     keys.add(key);
   }
 });
-export const V9AllocationTargetSchema = z.discriminatedUnion("kind", [
+const V9AllocationTargetSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("deployment"), deployment: V9AllocationDeploymentIdentitySchema, reachableTargets: z.array(V9AllocationDeploymentIdentitySchema).min(1), reachableSetComplete: z.literal(true),
     idleCustodyProof: z.object({ mechanism: z.literal("burn-parent-mint-parent"), upstreamAssetId: CanonicalTextSchema, parentTokenAddress: CanonicalTextSchema, burnSourceUrl: z.string().url(), mintSourceUrl: z.string().url() }).strict().optional(),
   }).strict(),
   z.object({ kind: z.literal("reserve-leg"), sourceKey: CanonicalTextSchema.nullable(), providerOrEntity: CanonicalTextSchema.nullable(), applicability: z.enum(["conditional", "whole-book"]), conditions: CanonicalTextSchema }).strict(),
   z.object({ kind: z.literal("parent-claim"), upstreamAssetId: CanonicalTextSchema, edgeKey: CanonicalTextSchema, inheritedRisk: CanonicalTextSchema }).strict(),
 ]);
-export const V9AllocationCoverageSchema = z.discriminatedUnion("kind", [
+const V9AllocationCoverageSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("conditional"), condition: CanonicalTextSchema, shareFraction: FractionSchema.nullable() }).strict(),
   z.object({ kind: z.literal("scope-only"), shareFraction: z.null() }).strict(),
   z.object({ kind: z.literal("whole-dimension"), denominator: z.literal("accepted-reserve-envelope"), reserveSourceKeys: z.array(CanonicalTextSchema).min(1), shareFraction: z.literal(1) }).strict(),
@@ -106,7 +106,7 @@ export const V9ScopedAllocationClaimSchema = z.object(ClaimFields).strict().supe
   if (claim.target.kind === "reserve-leg" && claim.target.applicability === "conditional" && claim.coverage.kind !== "conditional") fail(["coverage"], "Conditional legal legs cannot assert whole-book coverage");
   if (claim.target.kind === "reserve-leg" && claim.target.applicability === "whole-book" && (claim.target.providerOrEntity === null || claim.coverage.kind !== "whole-dimension")) fail(["coverage"], "Whole-book legal proof requires named entity and complete reserve denominator");
 });
-export const V9ScopedAllocationReviewSchema = z.object({ scopeKind: z.literal("per-dimension"), assetId: CanonicalTextSchema, reviewer: CanonicalTextSchema, rationale: CanonicalTextSchema, claims: z.array(V9ScopedAllocationClaimSchema).min(1) }).strict().superRefine((review, ctx) => {
+const V9ScopedAllocationReviewSchema = z.object({ scopeKind: z.literal("per-dimension"), assetId: CanonicalTextSchema, reviewer: CanonicalTextSchema, rationale: CanonicalTextSchema, claims: z.array(V9ScopedAllocationClaimSchema).min(1) }).strict().superRefine((review, ctx) => {
   const keys = new Set<string>();
   for (const claim of review.claims) {
     if (keys.has(claim.claimKey)) ctx.addIssue({ code: "custom", path: ["claims"], message: `Duplicate claim: ${claim.claimKey}` });
@@ -114,13 +114,6 @@ export const V9ScopedAllocationReviewSchema = z.object({ scopeKind: z.literal("p
   }
 });
 export const SafetyScoreV9WrapperAllocationReviewSchema = z.discriminatedUnion("scopeKind", [V9WholeAllocationReviewSchema, V9ScopedAllocationReviewSchema]);
-export const SafetyScoreV9WrapperAllocationReviewFileSchema = z.object({ schemaVersion: z.literal(1), reviews: z.array(SafetyScoreV9WrapperAllocationReviewSchema) }).strict().superRefine((file, ctx) => {
-  const ids = new Set<string>();
-  for (const review of file.reviews) {
-    if (ids.has(review.assetId)) ctx.addIssue({ code: "custom", path: ["reviews"], message: `Duplicate allocation asset: ${review.assetId}` });
-    ids.add(review.assetId);
-  }
-});
 export type SafetyScoreV9WrapperAllocationReview = z.output<typeof SafetyScoreV9WrapperAllocationReviewSchema>;
 export type V9ScopedAllocationClaim = z.output<typeof V9ScopedAllocationClaimSchema>;
 export type V9AllocationScopeIdentityReview = z.output<typeof V9AllocationScopeIdentityReviewSchema>;

@@ -2,7 +2,7 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
 import { StablecoinListResponseSchema } from "@shared/types/market";
 import type { PriceSourceHealth } from "@shared/types/status";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { CHAIN_META } from "@shared/lib/chains";
+import { CHAIN_META } from "@shared/types/chain-identity";
 import { CURATED_AGGREGATE_ESCROW_RESIDUALS, selectCuratedAggregateOnchainSupplyProbeContracts, selectSupplementalOnchainSupplyProbeContract } from "@shared/lib/onchain-supply-probe";
 import { getCirculatingRaw, getCirculatingRawOrNull } from "@shared/lib/supply";
 import { setCacheIfNewer, getCache, getPriceCache, type PriceCacheEntry } from "../../lib/db-cache";

@@ -1,10 +1,10 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { ContractDeployment } from "@shared/types/core";
 import { getGeckoTerminalDiscoveryNetwork } from "@shared/lib/dex-deployment-coverage";
-import { canonicalExitRouteScopedId, canonicalExitRouteScopedKey } from "@shared/lib/exit-route-identity";
+import { canonicalExitRouteScopedId, canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
 import { sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
-import { CHAIN_META } from "@shared/lib/chains";
+import { CHAIN_META } from "@shared/types/chain-identity";
 import { CG_CHAIN_MAP, DS_CHAIN_MAP } from "../../lib/chain-registry";
 import { isBlockedDexId } from "../../lib/dex-cron-constants";
 import { CIRCUIT_SOURCE, DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";

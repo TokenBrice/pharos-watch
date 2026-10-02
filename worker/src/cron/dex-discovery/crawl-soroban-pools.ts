@@ -1,4 +1,4 @@
-import { canonicalExitRouteScopedKey } from "@shared/lib/exit-route-identity";
+import { canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
 import { isAquariusSorobanDeployment } from "@shared/lib/dex-deployment-coverage";
 import type { ContractDeployment } from "@shared/types/core";
 import { USER_AGENT } from "../../lib/constants";

@@ -1,9 +1,9 @@
 import { buildSafetyScoreV9ReserveBoundFacts, SAFETY_SCORE_V9_RESERVE_BOUND_FACTS_DIGEST } from "./extension-reserve-bounds";
 import { buildSafetyScoreV10ScopedReserveAdmissions, addScopedReserveEvidence } from "./extension-reserves";
 import { resolveMechanismArchetype } from "@shared/lib/classification/resolve-mechanism-archetype";
-import { resolveChainId } from "@shared/lib/chains";
-import { normalizeDeploymentId } from "@shared/lib/deployment-id";
-import { canonicalExitRouteScopedId, canonicalExitRouteScopedKey } from "@shared/lib/exit-route-identity";
+import { resolveChainId } from "@shared/types/chain-identity";
+import { normalizeDeploymentId } from "@shared/types/deployment-id";
+import { canonicalExitRouteScopedId, canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
 import { deriveEffectiveDependencySet } from "@shared/lib/dependency-derivation";
 import { diagnoseDependencyGraph, type DependencyGraphEdge } from "@shared/lib/dependency-graph";
 import { V9_EVIDENCE_PRODUCER_INTERVAL_SEC } from "@shared/lib/cron-cadences";

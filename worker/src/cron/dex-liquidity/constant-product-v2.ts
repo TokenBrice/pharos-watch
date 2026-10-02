@@ -2,7 +2,7 @@ import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import {
   canonicalExitRouteAssetKey,
   canonicalExitRouteChain,
-} from "@shared/lib/exit-route-identity";
+} from "@shared/types/exit-route-identity";
 import type { DexAmmExecutionModel, DexExecutionCapabilityGate } from "@shared/types/market";
 import { decodeAbiParameters, keccak256 } from "viem/utils";
 

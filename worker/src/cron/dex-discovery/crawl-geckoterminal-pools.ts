@@ -1,5 +1,5 @@
 import type { ContractDeployment } from "@shared/types/core";
-import { canonicalExitRouteScopedKey } from "@shared/lib/exit-route-identity";
+import { canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
 import { getGeckoTerminalDiscoveryTarget } from "@shared/lib/dex-deployment-coverage";
 import { sleepWithSignal } from "../../lib/abort";
 import { RATE_LIMITS } from "../../lib/rate-limit";

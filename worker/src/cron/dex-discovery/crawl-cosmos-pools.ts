@@ -1,4 +1,4 @@
-import { canonicalExitRouteScopedKey } from "@shared/lib/exit-route-identity";
+import { canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
 import {
   isNobleSwapDiscoveryDeployment,
   isOsmosisSqsDiscoveryDeployment,

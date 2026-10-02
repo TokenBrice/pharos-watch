@@ -8,9 +8,5 @@ export const XrplIssuedCurrencyAmountSchema = z.object({
   currency: z.string().regex(/^(?:[A-Za-z0-9?!@#$%^&*<>(){}\[\]|]{3}|[A-Fa-f0-9]{40})$/).refine((value) => value !== "XRP" && !/^0{40}$/.test(value), "Not an issued currency"),
   issuer: z.string().regex(/^r[1-9A-HJ-NP-Za-km-z]{24,34}$/),
 }).strict();
-export const ExactIssuedCurrencyAmountSchema = XrplIssuedCurrencyAmountSchema.extend({
-  coefficient: z.string().regex(/^-?\d+$/), exponent: z.number().int(),
-}).strict();
 export type DeploymentAmountEncoding = z.output<typeof DeploymentAmountEncodingSchema>;
-export type XrplIssuedCurrencyAmount = z.output<typeof XrplIssuedCurrencyAmountSchema>;
-export type ExactIssuedCurrencyAmount = z.output<typeof ExactIssuedCurrencyAmountSchema>;
+export type ExactIssuedCurrencyAmount = z.output<typeof XrplIssuedCurrencyAmountSchema> & { coefficient: string; exponent: number };

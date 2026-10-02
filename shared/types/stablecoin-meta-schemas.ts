@@ -56,12 +56,12 @@ export const PositiveIntegerSchema = z.number().finite().int().positive();
 
 export const ReviewDateSchema = StrictIsoDateSchema;
 
-// Shape only. `shared/types` must not import `shared/lib`, so the canonical-form
-// check stays with the single normalizer: `validateMintBridgeOwnership()` raises
+// Shape only; canonical-form admission uses the single normalizer in
+// `shared/types/deployment-id.ts`. `validateMintBridgeOwnership()` raises
 // `non-normalized-deployment-ref` for an id that parses but is not already
 // normalized, and it runs in the merged catalog schema, `check:stablecoin-data`,
-// and the V9 compiler defence. Duplicating `normalizeDeploymentId` here would
-// create a second normalization authority, which the authoring contract forbids.
+// and the V9 compiler defence. Keep these admission checks rather than adding
+// a second normalization authority here.
 export const DeploymentIdSchema = z
   .string()
   .regex(/^[a-z0-9][a-z0-9-]*:\S+$/, "Expected a chain:contractAddress deployment ID");
@@ -221,8 +221,6 @@ export const ProofOfReservesSchema = z
       .optional(),
   })
   .strict();
-
-export const ProofOfReservesLatestReportSchema = ProofOfReservesSchema.shape.latestReport.unwrap();
 
 export type StablecoinFlags = z.infer<typeof StablecoinFlagsSchema>;
 export type StablecoinLink = z.infer<typeof StablecoinLinkSchema>;

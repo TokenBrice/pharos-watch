@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { admitV10ReserveObservation, admitV10ReserveReportScope, resolveV10ReserveScopeWeights } from "../safety-score-v9/reserve-scope";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
-import { LiveReserveSnapshotProvenanceSchema, ReserveObservationEnvelopeSchema } from "../../types/safety-score-v9-reserve-scope";
+import { ReserveObservationEnvelopeSchema } from "../../types/safety-score-v9-reserve-scope";
+import { LiveReserveSnapshotProvenanceSchema } from "../safety-score-v9/reserve-provenance";
 import type { ProofOfReservesLatestReport } from "../../types/stablecoin-meta-schemas";
 import type { ReviewedEconomicDeploymentPartition } from "../../types/safety-score-v9-supply-attribution";
 

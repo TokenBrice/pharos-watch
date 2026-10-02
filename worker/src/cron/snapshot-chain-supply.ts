@@ -1,7 +1,7 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { executeAtomicBatch, prepareMultiRowInsertStatements } from "../lib/db";
 import { prepareCacheUpsert } from "../lib/db-cache";
-import { CHAIN_META } from "@shared/lib/chains";
+import { CHAIN_META } from "@shared/types/chain-identity";
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";
 import { createCronResult } from "../lib/cron-result";
 import { canonicalizeChainCirculating } from "@shared/lib/chains/circulating";

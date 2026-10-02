@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { onchainSupplyProbeFamily } from "@shared/lib/onchain-supply-probe";
 import { getDexDiscoveryProviders } from "@shared/lib/dex-deployment-coverage";
-import { resolveChainId } from "@shared/lib/chains";
+import { resolveChainId } from "../../types/chain-identity";
 import { buildExplorerUrl } from "@shared/lib/explorer";
 
 describe("Zilliqa Scilla deployment boundaries", () => {

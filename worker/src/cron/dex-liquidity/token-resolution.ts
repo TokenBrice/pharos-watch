@@ -2,7 +2,7 @@ import {
   canonicalExitRouteAssetKey,
   canonicalExitRouteChain,
   canonicalExitRouteScopedId,
-} from "@shared/lib/exit-route-identity";
+} from "@shared/types/exit-route-identity";
 import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import { normalizeDexSymbol } from "../../lib/dex-cron-constants";
 import type { DexApiPoolToken } from "../../lib/dex-api-types";

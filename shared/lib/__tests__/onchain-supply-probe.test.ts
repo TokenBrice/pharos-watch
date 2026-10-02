@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { resolveChainId } from "@shared/lib/chains";
+import { resolveChainId } from "../../types/chain-identity";
 import {
   CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS,
   CURATED_AGGREGATE_ESCROW_RESIDUALS,

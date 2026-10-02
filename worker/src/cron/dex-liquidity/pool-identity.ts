@@ -3,7 +3,7 @@ import {
   canonicalExitRouteChain,
   canonicalExitRouteScopedId,
   canonicalExitRouteScopedKey,
-} from "@shared/lib/exit-route-identity";
+} from "@shared/types/exit-route-identity";
 import { normalizeProtocol } from "./pool-helpers";
 
 export type PoolIdentitySource = "address" | "native-id" | "token-shape-heuristic" | "none";

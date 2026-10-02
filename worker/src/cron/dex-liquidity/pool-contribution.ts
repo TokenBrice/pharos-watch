@@ -1,4 +1,4 @@
-import { canonicalExitRouteAssetKey, canonicalExitRouteChain } from "@shared/lib/exit-route-identity";
+import { canonicalExitRouteAssetKey, canonicalExitRouteChain } from "@shared/types/exit-route-identity";
 import type { LiquidityFallbackCounters, LiquidityMetrics, PoolEntry, PoolMeasurementFlags, GtNewPool, CgNewPool } from "./types";
 import {
   computePoolPairQuality,

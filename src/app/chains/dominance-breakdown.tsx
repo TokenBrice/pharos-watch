@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { CHART_PALETTE, CHART_SLATE, CHART_SLATE_STRONG } from "@/lib/chart-colors";
 import { cn } from "@/lib/utils";
-import { CHAIN_META } from "@shared/lib/chains";
+import { CHAIN_META } from "@shared/types/chain-identity";
 import type { ChainSummary } from "@shared/types/chains";
 
 /** Shared series colors for the dominance breakdown bar — CHART_PALETTE minus

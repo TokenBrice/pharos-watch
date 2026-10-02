@@ -1,4 +1,4 @@
-import { canonicalExitRouteScopedId } from "@shared/lib/exit-route-identity";
+import { canonicalExitRouteScopedId } from "@shared/types/exit-route-identity";
 import { USER_AGENT } from "../../lib/constants";
 import { GT_API_BASE } from "../../lib/dex-cron-constants";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";

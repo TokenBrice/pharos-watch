@@ -12,7 +12,7 @@ import type {
   DexAmmExecutionToken,
   DexExecutionCapabilityGate,
 } from "@shared/types/market";
-import { canonicalExitRouteScopedId, canonicalExitRouteAssetKey } from "@shared/lib/exit-route-identity";
+import { canonicalExitRouteScopedId, canonicalExitRouteAssetKey } from "@shared/types/exit-route-identity";
 import type { DexApiFetchResult, DexApiPool, DexApiPoolToken } from "./dex-api-types";
 import {
   derivePoolVolume24hUsd,

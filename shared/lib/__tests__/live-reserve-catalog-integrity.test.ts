@@ -5,7 +5,7 @@ import {
   LIVE_RESERVE_ADAPTER_DEFINITIONS,
   LiveReservesConfigSchema,
 } from "@shared/lib/live-reserve-adapters";
-import { CHAIN_META } from "@shared/lib/chains";
+import { CHAIN_META } from "../../types/chain-identity";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { LiabilityScope } from "@shared/types/live-reserve-adapter-declarations";
 

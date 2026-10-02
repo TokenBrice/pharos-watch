@@ -1,6 +1,6 @@
 import type { BridgeRouteRiskProfile } from "@shared/types/core";
 import { safetyScoreV9TransferDeploymentKey } from "@shared/types/safety-score-v9-transfer-overlays";
-import { resolveChainId } from "@shared/lib/chains";
+import { resolveChainId } from "@shared/types/chain-identity";
 import {
   V9_AMBIGUOUS_CHAIN_ROUTE_PREFIX,
   V9_REPRESENTATION_GROUP_ROUTE_PREFIX,
@@ -773,7 +773,7 @@ export function safetyScoreV9RouteSupplyShare(review: SupplyReview | null, deplo
   return route?.supplyShare ?? null;
 }
 
-export function buildReviewedEconomicDeploymentSupplyReview(
+function buildReviewedEconomicDeploymentSupplyReview(
   fixedInput: Readonly<SafetyScoreV9CompilerInput>, assetId: string, profile: BridgeRouteRiskProfile | undefined,
 ): SupplyReview | null {
   const packet = fixedInput.safetyScoreV9SupplyAttributionById?.[assetId];

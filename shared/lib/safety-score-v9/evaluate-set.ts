@@ -12,7 +12,7 @@ import type {
   V9StructuralSignal,
   V9ValidatedPolicyEnvelope,
 } from "../../types/safety-score-v9";
-import { resolveChainId } from "../chains";
+import { resolveChainId } from "../../types/chain-identity";
 import { clampShare } from "../math";
 import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";

@@ -1,4 +1,4 @@
-import { CHAIN_META, normalizeChainId, resolveChainId } from "./chains";
+import { CHAIN_META, normalizeChainId, resolveChainId } from "./chain-identity";
 
 export function canonicalExitRouteChain(chain: string): string {
   return normalizeChainId(chain) ?? "";

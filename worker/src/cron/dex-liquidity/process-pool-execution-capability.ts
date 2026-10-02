@@ -3,7 +3,7 @@ import { buildUniswapV4RegisteredExecutionTarget } from "./execution-targets/uni
 import {
   canonicalExitRouteAssetKey,
   canonicalExitRouteChain,
-} from "@shared/lib/exit-route-identity";
+} from "@shared/types/exit-route-identity";
 import type { DexApiPool } from "../../lib/dex-api-common";
 import type {
   CurvePoolEntry,

@@ -3,7 +3,7 @@ import type { ContractDeployment, ReserveSlice, StablecoinMeta } from "@shared/t
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import type { LiabilityScope } from "@shared/types/live-reserve-adapter-declarations";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { resolveChainId } from "@shared/lib/chains";
+import { resolveChainId } from "@shared/types/chain-identity";
 import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import { DECIMALS_SELECTOR, LATEST_ROUND_DATA_SELECTOR, TOTAL_SUPPLY_SELECTOR, encodeBalanceOfCallData } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";

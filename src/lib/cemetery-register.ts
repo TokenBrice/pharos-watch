@@ -12,7 +12,7 @@ import type { CauseOfDeath } from "@shared/lib/cause-of-death";
 import { MECHANISM_ARCHETYPE_SHORT_LABELS } from "@shared/lib/classification";
 import { parseCemeteryDeathDate, sortCemeteryCoins } from "@shared/lib/cemetery";
 import { resolveCemeteryLogoUrl, type CemeteryEntry } from "@shared/lib/cemetery-merged";
-import { CHAIN_META } from "@shared/lib/chains";
+import { CHAIN_META } from "@shared/types/chain-identity";
 import { buildExplorerUrl } from "@shared/lib/explorer";
 import type { PegCurrency } from "@shared/types/core";
 import type { MechanismArchetype } from "@shared/types/stablecoin-taxonomy";

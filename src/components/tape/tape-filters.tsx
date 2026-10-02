@@ -5,7 +5,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { FilterSearchInput } from "@/components/filter-search-input";
 import { FilterCombobox } from "@/components/filter-combobox";
 import { PEG_FILTER_OPTIONS } from "@shared/lib/classification";
-import { CHAIN_META } from "@shared/lib/chains";
+import { CHAIN_META } from "@shared/types/chain-identity";
 
 import { TAPE_FILTER_SEVERITY_VALUES } from "@/hooks/use-events";
 import {

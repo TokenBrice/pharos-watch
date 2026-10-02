@@ -1,4 +1,4 @@
-import { canonicalExitRouteAssetKey } from "@shared/lib/exit-route-identity";
+import { canonicalExitRouteAssetKey } from "@shared/types/exit-route-identity";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { DEX_LIQUIDITY_POOL_MIN_TVL_USD } from "./constants";
 import type { LiquidityMetrics } from "./types";

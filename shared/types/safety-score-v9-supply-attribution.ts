@@ -4,11 +4,11 @@ import { BaseInputGenerationIdSchema, CanonicalChainIdSchema, CanonicalTextSchem
 
 const vocabulary = candidatePolicy.semantic.supplyAttribution;
 function vocabularySchema(values: string[]) { return z.enum(values as [string, ...string[]]); }
-export const EconomicSupplyAmountBasisSchema = vocabularySchema(vocabulary.amountBases);
-export const EconomicSupplyHoldingKindSchema = vocabularySchema(vocabulary.holdingKinds);
-export const EconomicSupplyAccountingFamilySchema = vocabularySchema(vocabulary.accountingFamilies);
+const EconomicSupplyAmountBasisSchema = vocabularySchema(vocabulary.amountBases);
+const EconomicSupplyHoldingKindSchema = vocabularySchema(vocabulary.holdingKinds);
+const EconomicSupplyAccountingFamilySchema = vocabularySchema(vocabulary.accountingFamilies);
 const EconomicSupplyInFlightTreatmentSchema = vocabularySchema(vocabulary.inFlightTreatments);
-export const REVIEWED_ECONOMIC_SUPPLY_MODEL = "reviewed-economic-deployment-partition-v1" as const;
+const REVIEWED_ECONOMIC_SUPPLY_MODEL = "reviewed-economic-deployment-partition-v1" as const;
 export const V9SupplyAttributionPolicySchema = z.strictObject({
   amountBases: z.array(EconomicSupplyAmountBasisSchema).min(1),
   accountingFamilies: z.array(EconomicSupplyAccountingFamilySchema).min(1),
@@ -163,12 +163,12 @@ export const ReviewedEconomicSupplyPlanEnvelopeSchema = ReviewedEconomicSupplyPl
   reviews: z.array(z.object({ assetId: CanonicalTextSchema }).passthrough()),
 });
 export type ReviewedEconomicSupplyPlan = z.infer<typeof ReviewedEconomicSupplyPlanSchema>;
-export const EconomicSupplyObservationSchema = z.strictObject({
+const EconomicSupplyObservationSchema = z.strictObject({
   id: CanonicalTextSchema, deploymentKey: CanonicalTextSchema, amount: DecimalSchema,
   observedAtSec: UnixSecondsSchema, anchor: CanonicalTextSchema, anchorHash: CanonicalTextSchema, responseSha256: Sha256Schema,
 });
 // eslint-disable-next-line security/detect-unsafe-regex -- anchored linear unsigned-decimal shape; groups cannot overlap.
-export const EconomicSupplyReferenceSchema = z.strictObject({ sourceId: CanonicalTextSchema, sourceGeneration: CanonicalTextSchema, observedAtSec: UnixSecondsSchema, value: z.string().regex(/^[0-9]+(\.[0-9]+)?$/).refine(value => Number(value) > 0 && Number.isFinite(Number(value))), responseSha256: Sha256Schema });
+const EconomicSupplyReferenceSchema = z.strictObject({ sourceId: CanonicalTextSchema, sourceGeneration: CanonicalTextSchema, observedAtSec: UnixSecondsSchema, value: z.string().regex(/^[0-9]+(\.[0-9]+)?$/).refine(value => Number(value) > 0 && Number.isFinite(Number(value))), responseSha256: Sha256Schema });
 export const ReviewedEconomicDeploymentPartitionSchema = z.strictObject({
   model: z.literal(REVIEWED_ECONOMIC_SUPPLY_MODEL), assetId: CanonicalTextSchema,
   baseInputGenerationId: BaseInputGenerationIdSchema, sourceGeneration: CanonicalTextSchema, registryFingerprint: Sha256Schema,

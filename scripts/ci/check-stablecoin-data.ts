@@ -2,7 +2,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
-import { CHAIN_META } from "@shared/lib/chains";
+import { CHAIN_META } from "@shared/types/chain-identity";
 import { COMMODITY_PEG_CURRENCIES, isCommodityPeg } from "@shared/lib/filter-tags";
 import { DEDICATED_SINGLE_TOKEN_GOLD_PROTOCOL_SLUGS, isDedicatedSingleTokenGoldProtocolSlug } from "@shared/lib/commodity-protocols";
 import { CanonicalOrderAssetSchema } from "@shared/lib/stablecoins/schema";

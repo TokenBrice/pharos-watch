@@ -1,5 +1,5 @@
 import { canonicalEvmAddress } from "@shared/lib/evm-address";
-import { canonicalExitRouteScopedId } from "@shared/lib/exit-route-identity";
+import { canonicalExitRouteScopedId } from "@shared/types/exit-route-identity";
 import { decodeAbiParameters } from "viem/utils";
 
 import {

@@ -9,7 +9,7 @@ import type {
 import {
   canonicalExitRouteAssetKey,
   canonicalExitRouteScopedId,
-} from "./exit-route-identity";
+} from "../types/exit-route-identity";
 import { buildCapacityPoint } from "./p4-exit-route-capability-policy";
 
 const AMM_EXECUTION_COST_TOLERANCE_BPS = 0.02;

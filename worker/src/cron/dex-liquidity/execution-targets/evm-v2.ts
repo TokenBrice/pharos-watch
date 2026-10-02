@@ -5,7 +5,7 @@ import {
   DEX_MEASURED_TARGET_SCHEMA_VERSION,
   type DexMeasuredExecutionTarget,
 } from "@shared/types/measured-execution";
-import { canonicalExitRouteAssetKey } from "@shared/lib/exit-route-identity";
+import { canonicalExitRouteAssetKey } from "@shared/types/exit-route-identity";
 
 const EVM_V2_PROFILE_ID = "evm-v2-constant-product-v1";
 

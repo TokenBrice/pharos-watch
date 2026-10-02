@@ -17,7 +17,7 @@ import { computeSafetyScoreV9ReserveExposureKey } from "./fact-set-schema";
 type AllocationPolicy = typeof V9_CANDIDATE_POLICY_V1;
 const RISK_ORDER = Object.fromEntries(V9WrapperRiskAssessmentSchema.options.map((value, index) => [value, index])) as Record<V9WrapperRiskAssessment, number>;
 
-export function resolveAllocationParentBoundary(claim: V9ScopedAllocationClaim, dependencies: V9EffectiveDependenciesV3): boolean {
+function resolveAllocationParentBoundary(claim: V9ScopedAllocationClaim, dependencies: V9EffectiveDependenciesV3): boolean {
   const target = claim.target;
   if (target.kind !== "parent-claim") return false;
   // This only admits explanatory risk attribution. It never marks a local

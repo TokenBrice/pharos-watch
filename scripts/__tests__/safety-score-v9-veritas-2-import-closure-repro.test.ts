@@ -9,7 +9,7 @@ import {
 
 const SCORE_BEARING_PATHS = [
   "shared/lib/redemption-backstop-scoring.ts",
-  "shared/lib/exit-route-identity.ts",
+  "shared/types/exit-route-identity.ts",
   "shared/lib/exit-route-output.ts",
   "shared/lib/safety-score-v9/gap-index.ts",
   "shared/lib/safety-score-v9/operational-market-depth.ts",

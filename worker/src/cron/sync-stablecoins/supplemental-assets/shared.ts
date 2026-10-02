@@ -1,5 +1,5 @@
 import { logWorkerEventArgs } from "../../../lib/structured-log";
-import { CHAIN_META } from "@shared/lib/chains";
+import { CHAIN_META } from "@shared/types/chain-identity";
 import { selectSupplementalOnchainSupplyProbeContract } from "@shared/lib/onchain-supply-probe";
 import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import type { PriceObservedAtMode, StablecoinMeta } from "@shared/types/core";

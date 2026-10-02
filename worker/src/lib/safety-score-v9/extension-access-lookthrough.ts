@@ -18,7 +18,7 @@ const overlay = canonicalizeReviewedRegistryDigest(envelope, {
   },
 }) as typeof envelope;
 const reviews = createReviewedAssetRegistry({ rows: envelope.reviews, schema: V9AccessClaimGraphReviewSchema, path: "accessLookthrough.reviews" });
-export function getSafetyScoreV9AccessClaimGraphReview(assetId: string): V9AccessClaimGraphReview | undefined {
+function getSafetyScoreV9AccessClaimGraphReview(assetId: string): V9AccessClaimGraphReview | undefined {
   return reviews.get(assetId);
 }
 export function computeSafetyScoreV9AccessClaimGraphReviewsDigest(overrides?: Iterable<V9AccessClaimGraphReview>): string {

@@ -19,6 +19,7 @@ Contract for the public chain analytics surfaces:
 - **Primary API:** `GET /api/chains`
 - **Methodology version source:** `shared/lib/methodology-versions/registry.ts`
 - **Scoring implementation:** `shared/lib/chains/health.ts`, `shared/lib/chains/aggregator.ts`, `shared/lib/chains/index.ts`
+- **Chain registry and identity:** `shared/types/chain-identity.ts` owns `CHAIN_META`, chain types, and display-name/alias normalization; `shared/lib/chains/index.ts` owns derived provider maps and resilience tiers.
 - **Shared chain UI helpers:** `src/lib/chain-ui.ts` (formatting + health band color maps)
 - **Active chain derivation:** `getActiveChainIds()` in `shared/lib/chains/index.ts`
 

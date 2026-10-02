@@ -1,4 +1,4 @@
-import { canonicalExitRouteScopedKey } from "@shared/lib/exit-route-identity";
+import { canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
 import { EXIT_ROUTE_SCORING_TABLES } from "@shared/lib/exit-route-scoring";
 import type { P4DexRouteObservationResult } from "@shared/lib/p4-exit-route-capacity";
 import { MAX_DEX_EXIT_ROUTE_OBSERVATIONS, type ExitRouteObservation } from "@shared/types/market";

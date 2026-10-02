@@ -1,6 +1,6 @@
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
-import { CHAIN_META } from "@shared/lib/chains";
-import { canonicalExitRouteScopedId, canonicalExitRouteScopedKey } from "@shared/lib/exit-route-identity";
+import { CHAIN_META } from "@shared/types/chain-identity";
+import { canonicalExitRouteScopedId, canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
 import type { ContractDeployment } from "@shared/types/core";
 import { rethrowIfAborted, sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import { CG_CHAIN_MAP } from "../../lib/chain-registry";

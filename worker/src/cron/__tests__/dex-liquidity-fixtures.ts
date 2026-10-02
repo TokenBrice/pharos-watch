@@ -1,4 +1,4 @@
-import { canonicalExitRouteAssetKey, canonicalExitRouteChain } from "@shared/lib/exit-route-identity";
+import { canonicalExitRouteAssetKey, canonicalExitRouteChain } from "@shared/types/exit-route-identity";
 
 export function buildChainAddressToId(addressToId: Map<string, string>, chains: string[]): Map<string, string> {
   const result = new Map<string, string>();

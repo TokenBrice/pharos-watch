@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CHAIN_META } from "@shared/lib/chains";
+import { CHAIN_META } from "@shared/types/chain-identity";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { selectCuratedAggregateOnchainSupplyProbeContracts } from "@shared/lib/onchain-supply-probe";
 import { getPublicFallbackRpcUrls } from "../public-rpc-registry";

@@ -1,4 +1,4 @@
-import { CHAIN_META, resolveChainId } from "@shared/lib/chains";
+import { CHAIN_META, resolveChainId } from "@shared/types/chain-identity";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { rethrowIfAborted, throwIfAborted } from "../abort";
 import { hasRegistryRpc, type ChainRpcConfig, type RpcEndpoint } from "../chain-registry";

@@ -11,7 +11,7 @@ const text = z.string().trim().min(1);
 const fraction = FractionSchema;
 const seconds = UnixSecondsSchema;
 const term = z.object({ value: z.number().int().nonnegative(), unit: ReserveBoundedTermUnitSchema }).strict();
-export const ReserveBoundedFactScopeSchema = z.discriminatedUnion("kind", [
+const ReserveBoundedFactScopeSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("reserve-envelope") }).strict(),
   z.object({ kind: z.literal("exposure"), exposureKey: text }).strict(),
   z.object({ kind: z.literal("sub-instrument"), exposureKey: text, instrumentId: text, coveredShare: fraction.nullable(), coverageAsOfSec: seconds }).strict(),
@@ -65,7 +65,6 @@ export const ReserveBoundedFactSchema = z.discriminatedUnion("kind", [
   return { ...fact, sourceUrls };
 });
 export type ReserveBoundedFact = z.output<typeof ReserveBoundedFactSchema>;
-export const ReserveBoundedFactOverlayRegistrySchema = z.object({ schemaVersion: z.literal(1), assets: z.record(z.string(), z.array(ReserveBoundedFactSchema)) }).strict();
 export const V9ReserveBoundedFactSchema = z.object({ fact: ReserveBoundedFactSchema, status: V9FactStatusV2Schema, sourceGenerationId: text, freshnessMaxAgeSec: z.number().int().positive(), rejectionReason: text.nullable() }).strict().superRefine((value, ctx) => {
   if (value.status.observationState === "known" && (value.status.evidenceRefIds.length === 0 || value.rejectionReason !== null)) ctx.addIssue({ code: "custom", message: "Admitted bounds require evidence and no rejection" });
   if (value.status.observationState !== "known" && value.rejectionReason === null) ctx.addIssue({ code: "custom", message: "Unavailable bounds require a reason" });

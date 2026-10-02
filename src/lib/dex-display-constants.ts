@@ -4,7 +4,7 @@
  * All protocol/chain names, colors, and formatting helpers live here.
  * Tailwind classes are static string literals for purge safety.
  */
-import { CHAIN_META } from "@shared/lib/chains";
+import { CHAIN_META } from "@shared/types/chain-identity";
 
 const PROTOCOL_NAMES: Record<string, string> = {
   curve: "Curve",

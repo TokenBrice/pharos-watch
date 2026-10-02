@@ -1,4 +1,4 @@
-import { normalizeDeploymentId } from "../deployment-id";
+import { normalizeDeploymentId } from "../../types/deployment-id";
 import type { V9ControlExecutionScope, V9WeightedQuorum, V9ModuleImpact } from "../../types/safety-score-v9-control-scope";
 import type { V9DeploymentControlFactV2 } from "../../types/safety-score-v9-facts";
 
@@ -25,7 +25,7 @@ export function effectiveAuthoritySignatureRequirement(authority: V9DeploymentCo
   }
   return minimumWeightedSignatures(weighted);
 }
-export function controlPathIsReachable(path: V9ControlExecutionScope["paths"][number], complete: boolean): boolean {
+function controlPathIsReachable(path: V9ControlExecutionScope["paths"][number], complete: boolean): boolean {
   return !complete || path.activation !== "disabled-final";
 }
 
@@ -78,7 +78,7 @@ export function compileReviewedControlScope(scope: V9ControlExecutionScope | und
     : [];
   return { complete, reviewed: reviewedScope, paths, provenPaths, diagnostics, moduleImpact: deriveReviewedModuleImpact(reviewedScope ? scope : undefined, assetId, complete) };
 }
-export function deriveReviewedModuleImpact(scope: V9ControlExecutionScope | undefined, assetId: string, complete: boolean): V9ModuleImpact {
+function deriveReviewedModuleImpact(scope: V9ControlExecutionScope | undefined, assetId: string, complete: boolean): V9ModuleImpact {
   const inventory = scope?.extensions;
   if (!scope || !inventory) return "unresolved";
   // A dated, runtime-bound path proves presence independently of inventory closure.

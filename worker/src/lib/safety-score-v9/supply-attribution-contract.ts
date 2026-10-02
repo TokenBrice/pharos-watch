@@ -1,4 +1,4 @@
-import { CHAIN_META, resolveChainId } from "@shared/lib/chains";
+import { CHAIN_META, resolveChainId } from "@shared/types/chain-identity";
 import { SUPPLY_ATTRIBUTION_RPC_URLS } from "@shared/lib/chain-rpc-registry";
 import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import { WM_SUPPLY_ATTRIBUTION_MAX_POST_CLOCK_SEC } from "@shared/lib/safety-score-v9-supply-attribution-journal";
@@ -11,7 +11,7 @@ import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import type { BridgeRouteRiskProfile, StablecoinMeta } from "@shared/types/core";
 import { ReviewedEconomicSupplyPlanEnvelopeSchema, ReviewedEconomicSupplyPlanSchema, ReviewedEconomicDeploymentPartitionSchema, type ReviewedEconomicSupplyPlan, type ReviewedEconomicDeploymentPartition, type EconomicSupplyObservation, type EconomicSupplyReference } from "@shared/types/safety-score-v9-supply-attribution";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
-import { normalizeDeploymentId } from "@shared/lib/deployment-id";
+import { normalizeDeploymentId } from "@shared/types/deployment-id";
 import { createReviewedAssetRegistry, ReviewedRegistryEntryError } from "./extension-reviewed-registry";
 
 const REVIEWED_DEPLOYMENT_SUPPLY_MAX_AGE_SEC = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxAgeSec;
@@ -1136,7 +1136,7 @@ export function normalizeReviewedEconomicDeploymentAttribution(packet: ReviewedE
 }
 
 /** Alias labels represent a single chain allocation, not competing observations. */
-export function canonicalEligibleProviderSupply(rows: Record<string, { current: number }>): Map<string, number> | null {
+function canonicalEligibleProviderSupply(rows: Record<string, { current: number }>): Map<string, number> | null {
   const totals = new Map<string, number>();
   for (const [label, row] of Object.entries(rows)) {
     if (!Number.isFinite(row.current) || row.current < 0) return null;

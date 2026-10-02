@@ -2,8 +2,8 @@
  * Safety Score v9 bridge-review adapter. Extracted verbatim from
  * `safety-score-v9-extension.ts`; no behaviour change.
  */
-import { resolveChainId } from "@shared/lib/chains";
-import { normalizeDeploymentId } from "@shared/lib/deployment-id";
+import { resolveChainId } from "@shared/types/chain-identity";
+import { normalizeDeploymentId } from "@shared/types/deployment-id";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC, V9_SCOPED_QUESTION_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";

@@ -1,4 +1,4 @@
-import { CHAIN_META } from "./chains";
+import { CHAIN_META } from "../types/chain-identity";
 import type { StablecoinMeta } from "../types";
 import { SUPPLY_RPC_DEFAULTS } from "./chain-rpc-registry";
 

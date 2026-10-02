@@ -26,7 +26,7 @@ export {
   PYS_MAX_SOURCE_RISK_PENALTY,
   resolvePysSourceRiskPenalty,
 } from "@shared/lib/yield-scoring";
-import { normalizeChainId } from "@shared/lib/chains";
+import { normalizeChainId } from "@shared/types/chain-identity";
 import type { YieldWarningSignalKey } from "@shared/types/yield";
 import { normalizeDexSymbol } from "../lib/dex-cron-constants";
 import { normalizeTokenAddress } from "./dex-liquidity/token-resolution";

@@ -5,7 +5,7 @@ import {
 } from "../../types/dependency-types";
 import { compareText } from "./primitives";
 import type { V9FailureDomainRef, V9DeploymentControlFactV2 } from "../../types/safety-score-v9-facts";
-import { resolveChainId } from "../chains";
+import { resolveChainId } from "../../types/chain-identity";
 import { orderDependencyGraphNodes, type DependencyGraphEdge } from "../dependency-graph";
 import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";

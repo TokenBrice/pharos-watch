@@ -3,7 +3,7 @@ import {
   canonicalExitRouteAssetKey,
   canonicalExitRouteChain,
   canonicalExitRouteScopedKey,
-} from "./exit-route-identity";
+} from "../types/exit-route-identity";
 import {
   type DexMeasuredExecutionPublicProfile,
   DexMeasuredExecutionPublicProfileSchema,

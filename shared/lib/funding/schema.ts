@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CHAIN_META } from "../chains";
+import { CHAIN_META } from "../../types/chain-identity";
 
 const FUNDING_CHAIN_VALUES = [
   "ethereum",

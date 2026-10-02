@@ -1,6 +1,6 @@
 import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
-import { CHAIN_META } from "@shared/lib/chains";
+import { CHAIN_META } from "@shared/types/chain-identity";
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import type { ContractDeployment, ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";

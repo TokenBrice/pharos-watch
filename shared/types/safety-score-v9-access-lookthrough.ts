@@ -5,17 +5,17 @@ import { canonicalArrayBy, canonicalTextArray, V9EvidenceResponsibilitySchema, V
 import { CanonicalFailureDomainsSchema } from "./safety-score-v9-fact-input-primitives";
 
 const vocabulary = policy.semantic.accessLookthrough;
-export const V9AccessEdgeKindSchema = z.enum(vocabulary.edgeKinds as [string, ...string[]]);
-export const V9AccessCoverageStateSchema = z.enum(vocabulary.coverageStates as [string, ...string[]]);
-export const V9AccessAuthorityCapabilitySchema = z.enum(vocabulary.authorityCapabilities as [string, ...string[]]);
-export const V9AccessUnresolvedReasonSchema = z.enum(vocabulary.unresolvedReasons as [string, ...string[]]);
+const V9AccessEdgeKindSchema = z.enum(vocabulary.edgeKinds as [string, ...string[]]);
+const V9AccessCoverageStateSchema = z.enum(vocabulary.coverageStates as [string, ...string[]]);
+const V9AccessAuthorityCapabilitySchema = z.enum(vocabulary.authorityCapabilities as [string, ...string[]]);
+const V9AccessUnresolvedReasonSchema = z.enum(vocabulary.unresolvedReasons as [string, ...string[]]);
 export const V9AccessLookthroughPolicySchema = z.object({
   edgeKinds: z.array(V9AccessEdgeKindSchema), coverageStates: z.array(V9AccessCoverageStateSchema),
   authorityCapabilities: z.array(V9AccessAuthorityCapabilitySchema), unresolvedReasons: z.array(V9AccessUnresolvedReasonSchema),
   scopeBasis: z.literal("admitted-current-claim-graph"), aggregation: z.literal("disjoint-position-union"),
   transferInheritance: z.literal("never"), unpricedShares: z.literal("null"), cycleTreatment: z.literal("unknown-affected-component"),
 }).strict();
-export const V9AccessClaimIdentitySchema = z.object({ chainId: CanonicalChainIdSchema, claimAddress: CanonicalTextSchema }).strict();
+const V9AccessClaimIdentitySchema = z.object({ chainId: CanonicalChainIdSchema, claimAddress: CanonicalTextSchema }).strict();
 const ReviewSchema = z.object({ reviewedAt: z.string().datetime(), sources: z.array(z.string().url()).min(1), responsibility: V9EvidenceResponsibilitySchema }).strict();
 const NodeShape = {
   nodeKey: CanonicalTextSchema, identity: V9AccessClaimIdentitySchema, assetId: CanonicalTextSchema.nullable(),
@@ -96,13 +96,6 @@ export const V9AccessLookthroughSummarySchema = z.object({
 export type V9AccessClaimGraph = z.output<typeof V9AccessClaimGraphSchema>;
 export type V9AccessClaimGraphReview = z.output<typeof V9AccessClaimGraphReviewSchema>;
 export type V9AccessLookthroughSummary = z.output<typeof V9AccessLookthroughSummarySchema>;
-export type V9AccessLookthroughOverlay = z.output<typeof V9AccessLookthroughOverlaySchema>;
-export type V9AccessClaimNode = V9AccessClaimGraph["nodes"][number];
-export type V9AccessClaimEdge = V9AccessClaimGraph["edges"][number];
-export type V9AccessOriginatingAuthority = V9AccessClaimGraph["authorities"][number];
-export type V9AccessClaimPartition = V9AccessClaimGraph["partitions"][number];
-export type V9AccessUnresolvedBranch = V9AccessClaimGraph["unresolved"][number];
-export type V9AccessUnresolvedReason = z.output<typeof V9AccessUnresolvedReasonSchema>;
 export function v9AccessClaimGraphStatuses(graph: V9AccessClaimGraph | null | undefined) {
   if (!graph) return [];
   return [...graph.nodes.map((n) => ({ label: `access:graph:node:${n.nodeKey}`, status: n.status })),

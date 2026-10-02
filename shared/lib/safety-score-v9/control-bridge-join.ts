@@ -1,6 +1,6 @@
 import type { V9DeploymentControlFactV2 } from "../../types/safety-score-v9-facts";
 import type { V9Severity } from "../../types/safety-score-v9";
-import { resolveChainId } from "../chains";
+import { resolveChainId } from "../../types/chain-identity";
 import { isV9UncanonicalizedChainPoolRoute, V9_AMBIGUOUS_CHAIN_ROUTE_PREFIX } from "./facts";
 import { uniqueSorted } from "./primitives";
 import {

@@ -5,7 +5,7 @@ import { FeaturePageShell } from "@/components/feature-page-shell";
 import { getCurrentDonorKeyQualifyingCoins } from "@/lib/donor-key-qualifying-coins";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { API_PATHS } from "@shared/lib/api-endpoints";
-import { CHAIN_META } from "@shared/lib/chains";
+import { CHAIN_META } from "@shared/types/chain-identity";
 import donationsData from "@shared/data/funding/donations.json";
 import { formatIsoDate } from "@shared/lib/format";
 import { summarizeDonations } from "@shared/lib/funding/helpers";

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { V9ControlExecutionScopeSchema, V9WeightedQuorumSchema } from "./safety-score-v9-control-scope";
-import { normalizeDeploymentId } from "../lib/deployment-id";
+import { normalizeDeploymentId } from "./deployment-id";
 import {
   BRIDGE_ROUTE_CLASS_VALUES,
   BRIDGE_ROUTE_CONTROL_CAPABILITY_VALUES,

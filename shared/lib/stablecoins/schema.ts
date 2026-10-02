@@ -12,7 +12,7 @@ import { FullAuthoredReserveCompositionSchema } from "../../types/reserves";
 import { defaultV9DependencyEconomicRole } from "../../types/dependency-types";
 import { validateMintBridgeOwnership } from "./mint-bridge-ownership";
 import { hasIndependentLiveCompositionDates, hasIndependentReserveObservationDates } from "../report-card-policy";
-import { normalizeDeploymentId } from "../deployment-id";
+import { normalizeDeploymentId } from "../../types/deployment-id";
 import { resolveV10ReserveObservationDeploymentRefs } from "../safety-score-v9/reserve-scope";
 import {
   CoinNoticeSchema,

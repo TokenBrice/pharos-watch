@@ -65,7 +65,7 @@ Filter state is read from URL search params via `useUrlFilters` and decoded in `
 | `severity` | `info`, `notice`, `warning`, `severe`, `critical`                                     | `notice` | `info` drops the floor entirely; default keeps routine info-tier events out of view    |
 | `coin`     | canonical ticker-issuer id                                                            | empty    | Forwarded to `/api/events?coin=`                                                       |
 | `peg`      | `all` or one of the entries in `PEG_FILTER_OPTIONS` from `@shared/lib/classification` | `all`    | Forwarded to `/api/events?pegCurrency=` and filtered server-side (mirrors the `pegCurrency` API param)  |
-| `chain`    | `all` or any id present in `CHAIN_META` from `@shared/lib/chains`                     | `all`    | Forwarded to `/api/events?chain=`                                                      |
+| `chain`    | `all` or any id present in `CHAIN_META` from `@shared/types/chain-identity`                     | `all`    | Forwarded to `/api/events?chain=`                                                      |
 | `window`   | `24h`, `7d`, `30d`, `90d`, `alltime`                                                   | `7d`     | Converted to `since=<epoch_ms>` by `tapeWindowSince(...)`; parser also accepts legacy `all`, but the UI emits `alltime` |
 | `q`        | free-text                                                                             | empty    | Debounced 200 ms in the client, then forwarded to `/api/events?q=` for server-side search |
 | `event`    | event id (`${ts_ms}-${type}-${hash8}`)                                                | empty    | Permalink target; resolved through a 200-row latest-events buffer when out of view     |

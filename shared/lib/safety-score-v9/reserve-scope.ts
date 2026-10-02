@@ -2,7 +2,7 @@ import type { ProofOfReservesLatestReport } from "../../types/stablecoin-meta-sc
 import type { ReserveObservationEnvelope, ReserveScopedAdmission } from "../../types/safety-score-v9-reserve-scope";
 import type { ReviewedEconomicDeploymentPartition } from "../../types/safety-score-v9-supply-attribution";
 import type { V9MethodologyPolicy } from "../../types/safety-score-v9";
-import { normalizeDeploymentId } from "../deployment-id";
+import { normalizeDeploymentId } from "../../types/deployment-id";
 
 function exactDecimal(value: string): [bigint, number] {
   const [whole, fraction = ""] = value.split(".");

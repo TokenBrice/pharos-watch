@@ -1,5 +1,5 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { canonicalExitRouteAssetKey } from "@shared/lib/exit-route-identity";
+import { canonicalExitRouteAssetKey } from "@shared/types/exit-route-identity";
 import { QUALITY_MULTIPLIERS } from "../../lib/dex-cron-constants";
 import {
   getQualityMultiplier,

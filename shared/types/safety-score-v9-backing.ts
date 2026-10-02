@@ -152,7 +152,7 @@ const V9RequiredFamilyMechanismFactSchema = V9MechanismFactV1Schema.refine(
   { message: "Native family mechanism components cannot be not-applicable" },
 );
 
-export const V9UcitsTrsFundMechanismRiskReviewSchema = z
+const V9UcitsTrsFundMechanismRiskReviewSchema = z
   .object({
     archetype: z.literal("ucits-trs-fund"),
     ...COLLATERALIZATION_MEASUREMENT_FIELDS,
@@ -164,9 +164,8 @@ export const V9UcitsTrsFundMechanismRiskReviewSchema = z
     defaultRecovery: V9RequiredFamilyMechanismFactSchema,
   })
   .strict();
-export type V9UcitsTrsFundMechanismRiskReview = z.infer<typeof V9UcitsTrsFundMechanismRiskReviewSchema>;
 
-export const V9SharedReserveMechanismRiskReviewSchema = z
+const V9SharedReserveMechanismRiskReviewSchema = z
   .object({
     archetype: z.literal("shared-reserve"),
     ...COLLATERALIZATION_MEASUREMENT_FIELDS,
@@ -177,9 +176,8 @@ export const V9SharedReserveMechanismRiskReviewSchema = z
     defaultRecovery: V9RequiredFamilyMechanismFactSchema,
   })
   .strict();
-export type V9SharedReserveMechanismRiskReview = z.infer<typeof V9SharedReserveMechanismRiskReviewSchema>;
 
-export const V9ProtocolPositionMechanismRiskReviewSchema = z
+const V9ProtocolPositionMechanismRiskReviewSchema = z
   .object({
     archetype: z.literal("protocol-position"),
     ...COLLATERALIZATION_MEASUREMENT_FIELDS,
@@ -190,7 +188,6 @@ export const V9ProtocolPositionMechanismRiskReviewSchema = z
     defaultRecovery: V9RequiredFamilyMechanismFactSchema,
   })
   .strict();
-export type V9ProtocolPositionMechanismRiskReview = z.infer<typeof V9ProtocolPositionMechanismRiskReviewSchema>;
 
 const V9CdpMetricApplicabilitySchema = z.discriminatedUnion("state", [
   z.object({ state: z.literal("measured") }).strict(),

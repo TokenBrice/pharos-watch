@@ -5,7 +5,7 @@ import {
   isDexExecutionProfileAdmittedForScoring,
 } from "@shared/lib/p4-exit-route-capability-policy";
 import { DexExitRouteObservationsSchema, type DexExitRouteObservation } from "@shared/types/market";
-import { canonicalExitRouteAssetKey, canonicalExitRouteChain, canonicalExitRouteScopedKey } from "@shared/lib/exit-route-identity";
+import { canonicalExitRouteAssetKey, canonicalExitRouteChain, canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
 import { parseJsonObject } from "../../lib/json-parse";

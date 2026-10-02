@@ -1,4 +1,4 @@
-import { normalizeChainId } from "./chains";
+import { normalizeChainId } from "../types/chain-identity";
 import type { StablecoinMeta } from "../types/core";
 
 export interface CriticalControlIdentityOccurrence {

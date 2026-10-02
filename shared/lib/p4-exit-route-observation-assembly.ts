@@ -7,7 +7,7 @@ import {
   canonicalExitRouteScopedKey,
   encodeExitRouteIdentityPart,
   normalizeExitRouteCorrelationKey,
-} from "./exit-route-identity";
+} from "../types/exit-route-identity";
 import {
   getDexMeasuredExecutionFreshnessMaxSec,
   isDexMeasuredExecutionObservationHistoryMature,

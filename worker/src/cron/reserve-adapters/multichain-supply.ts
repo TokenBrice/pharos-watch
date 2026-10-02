@@ -1,6 +1,6 @@
 import type { ContractDeployment, StablecoinMeta } from "@shared/types/core";
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
-import { CHAIN_META } from "@shared/lib/chains";
+import { CHAIN_META } from "@shared/types/chain-identity";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import {
   DEFAULT_MAX_RESERVE_SUPPLY_SKEW_SEC,
