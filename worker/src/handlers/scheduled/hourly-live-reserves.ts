@@ -14,6 +14,7 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
  * never lost.
  *
  * Reserve adapters run sequentially; backstops are DB-only.
+ * Recovery serializes Kinesis behind the head to retain its separate 2/6 budget.
  * Connection budget: 3/6 peak (2 + 1) while both chains are in flight
  */
 import { syncLiveReserves } from "../../cron/sync-live-reserves";
@@ -218,10 +219,14 @@ export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeCont
   // re-publish the previous generation before this slot's rows were written.
   // An abandoned head delays the watchdog rather than losing it: the
   // five-minute reserve-recovery lane replays the checkpoint in chain order.
+  const main = syncTask
+    ? runScheduledSlotGroups(runtime, SLOT_LABEL, [{ ...reserveAdapterGroup, tasks: [syncTask] }])
+    : Promise.resolve(buildScheduledSlotSummary([]));
+  // The independent five-minute lane declares 2/6, unlike the regular 3/6
+  // producer slot. Keep the independent child, but never overlap its fetch.
+  if (runtime.recoveryCheckpoint) await main;
   const [mainSummary, kinesisSummary] = await Promise.all([
-    syncTask
-      ? runScheduledSlotGroups(runtime, SLOT_LABEL, [{ ...reserveAdapterGroup, tasks: [syncTask] }])
-      : buildScheduledSlotSummary([]),
+    main,
     kinesisTasks.length > 0 && kinesisGroup
       ? runScheduledSlotGroups(runtime, SLOT_LABEL, [kinesisGroup])
       : buildScheduledSlotSummary([]),

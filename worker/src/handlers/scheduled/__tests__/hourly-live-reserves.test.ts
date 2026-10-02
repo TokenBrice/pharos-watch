@@ -126,6 +126,41 @@ describe("runFourHourlyReserveSyncSlot", () => {
     });
   }
 
+  it("keeps recovery's two-connection head separate from independent Kinesis I/O", async () => {
+    // The Worker TS target lacks Promise.withResolvers; use the suite's gates.
+    let releaseHead!: () => void;
+    let headStarted!: () => void;
+    const gate = new Promise<void>((resolve) => { releaseHead = resolve; });
+    const started = new Promise<void>((resolve) => { headStarted = resolve; });
+    let active = 0;
+    let peak = 0;
+    vi.mocked(syncLiveReserves).mockImplementation(async () => {
+      active += 2;
+      peak = Math.max(peak, active);
+      headStarted();
+      await gate;
+      active -= 2;
+      return { status: "ok" };
+    });
+    vi.mocked(syncKinesisSupply).mockImplementation(async () => {
+      active++;
+      peak = Math.max(peak, active);
+      await Promise.resolve();
+      active--;
+      return { status: "ok" };
+    });
+    const pending = runFourHourlyReserveSyncSlot(buildRuntime(recoveryCheckpoint()));
+    try {
+      await started;
+      expect(syncKinesisSupply).not.toHaveBeenCalled();
+    } finally {
+      releaseHead();
+      await pending;
+    }
+    expect(peak).toBe(2);
+    expect(syncKinesisSupply).toHaveBeenCalledTimes(1);
+  });
+
   it("blocks reserve-dependent sidecars and still runs the independent chain after a reserve failure", async () => {
     vi.mocked(syncLiveReserves).mockRejectedValue(new Error("sync blew up"));
     vi.mocked(loadLiveReserveCheckpoint).mockResolvedValue({

@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   sweep: vi.fn(),
   runReserveSlot: vi.fn(),
   createRuntime: vi.fn(),
+  configRecovery: vi.fn(),
 }));
 
 vi.mock("../../../lib/scheduled-recovery-checkpoint", () => ({
@@ -25,6 +26,9 @@ vi.mock("../hourly-live-reserves", () => ({
 }));
 vi.mock("../context", () => ({
   createScheduledRuntimeContext: mocks.createRuntime,
+}));
+vi.mock("../../../cron/reserve-recovery-config", () => ({
+  recoverLiveReserveConfigChanges: mocks.configRecovery,
 }));
 
 import { runFiveMinuteReserveRecoverySlot } from "../reserve-recovery";
@@ -65,6 +69,7 @@ describe("reserve recovery mode", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     latestLeasedResult = undefined;
+    mocks.configRecovery.mockResolvedValue({ attempted: [], healed: [], failed: [] });
     mocks.sweep.mockResolvedValue({ slotsReconciled: 0 });
     mocks.prepare.mockResolvedValue({ inspection: EMPTY_INSPECTION, prepared: [] });
     mocks.retire.mockResolvedValue(0);
@@ -84,6 +89,7 @@ describe("reserve recovery mode", () => {
     expect(mocks.sweep.mock.calls[0]![1]).not.toHaveProperty("slotKey");
     expect(mocks.prepare).not.toHaveBeenCalled();
     expect(mocks.claim).not.toHaveBeenCalled();
+    expect(mocks.configRecovery).not.toHaveBeenCalled();
   });
 
   it("treats removed rollout modes as disabled", async () => {
@@ -168,6 +174,34 @@ describe("reserve recovery mode", () => {
         outcome: "degraded",
         status: "degraded",
       })],
+    });
+  });
+
+  it("preserves checkpoint replay when targeted config recovery fails", async () => {
+    mocks.configRecovery.mockResolvedValue({ disposition: "config-recovery-checked", attempted: ["usdt-tether"], healed: [], failed: ["usdt-tether"], deferredCount: 0 });
+    mocks.claim.mockResolvedValue({
+      scheduleKey: "fourHourlyReserveSync", slotStartedAt: 800,
+      attemptNo: 2, executionGeneration: 2, sourceAttemptNo: 1, childDispositions: {},
+    });
+    const result = await runFiveMinuteReserveRecoverySlot(runtime("recover"));
+    expect(result.jobsDegraded).toBe(1);
+    expect(mocks.runReserveSlot).toHaveBeenCalledTimes(1);
+    expect(JSON.parse((latestLeasedResult as CronResult).metadata ?? "{}")).toMatchObject({
+      disposition: "recovery-executed", checkpointsClaimed: 1,
+      configRecovery: { failed: ["usdt-tether"], healed: [] },
+    });
+  });
+
+  it("reports capacity deferral but not producer-lease contention as degraded", async () => {
+    mocks.configRecovery.mockResolvedValue({ attempted: [], healed: [], failed: [], deferredCount: 2 });
+    expect((await runFiveMinuteReserveRecoverySlot(runtime("recover"))).jobsDegraded).toBe(1);
+    mocks.configRecovery.mockResolvedValue({
+      disposition: "config-recovery-skipped", reason: "sync-live-reserves-lease-held",
+      attempted: [], healed: [], failed: [],
+    });
+    expect((await runFiveMinuteReserveRecoverySlot(runtime("recover"))).jobsDegraded).toBe(0);
+    expect(JSON.parse((latestLeasedResult as CronResult).metadata ?? "{}")).toMatchObject({
+      configRecovery: { disposition: "config-recovery-skipped", reason: "sync-live-reserves-lease-held" },
     });
   });
 });

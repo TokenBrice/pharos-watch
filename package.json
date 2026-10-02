@@ -41,6 +41,7 @@
     "audit:bridge-route-coverage": "tsx scripts/maintenance/generate-bridge-route-coverage-audit.ts",
     "audit:coverage": "node --import tsx scripts/maintenance/run-coverage-audit.ts",
     "audit:dependency-reconcile": "node --import tsx scripts/maintenance/reconcile-dependency-graph.ts",
+    "audit:live-reserve-config-changes": "node --import tsx worker/scripts/report-live-reserve-config-changes.ts",
     "dependency-scenarios:compute": "node --expose-gc --import tsx worker/scripts/compute-dependency-scenarios.ts --mode compute",
     "audit:mint-burn-conservation-admission": "node --import tsx worker/scripts/audit-mint-burn-conservation-admission.ts",
     "test": "vitest run",
