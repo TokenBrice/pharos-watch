@@ -41,6 +41,8 @@ export const SAFETY_SCORE_V10: readonly MethodologyChangelogEntry[] = [
       "Verified data wave B adds scoped reports for USDtb, QCAD and VCHF; bounded observations for xDAI and LVUSD; HLSCOPE standing feeder identity; CASH, STAC and OUSD maturity/liquidity facts; and Nexus NUSD, NXUSD, yzUSD and syzUSD access graphs. Unjoined scopes remain monotonic and diagnostic.",
       "Positively proven, runtime-bound Safe-module reach is recognised even in a partial control inventory, exposing verified adverse paths such as OUSD's signature-free vault withdrawals; only exhaustive closure grants a noninterference waiver, and partial inventories still add no charge for unsearched closure.",
       "Verified data wave C resolves unknowns that had lowered scores: Zilliqa is registered so XSGD's issuer-native deployment joins its reviewed controls; frxUSD satellite deployments, stkGHO role holders, yzUSD collateral-funded minting, USDU internal pricing, sUSDD/sDOLA on-chain custody, scrvUSD satellites and OUSD's Safe modules are authored from pinned reads. Facts that remain unknown after exhaustive research keep their charges.",
+      "Disclosed issuer internal mint-ledger reconciliation (Quantoz EURQ and USDQ) resolves only the issuer-backend Control process question, without cadence, financial-assurance or key-custody credit; independent reserve assurance stays charged in Backing.",
+      "Centrifuge deployment attribution keeps reviewed sibling deployments when an unresolved route has positively observed zero raw supply in the same generation; nonzero or unobserved unresolved routes still reject, and the unresolved route's controls stay charged.",
     ],
     commits: [],
     reconstructed: false,

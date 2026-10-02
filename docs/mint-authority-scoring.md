@@ -98,11 +98,14 @@ The reconciliation vocabulary records what the reviewer established, not interch
 | --- | --- |
 | `continuous` | Supply and backing are reconciled continuously. |
 | `periodic` | Reconciliation occurs on a reviewed recurring cadence. |
+| `internal-ledger` | The issuer discloses an internal mint/ledger reconciliation process, without establishing a continuous or periodic supply-to-reserve reconciliation cadence or independent financial assurance. |
 | `none` | The reviewer positively established that no reconciliation regime exists. |
 | `not-applicable` | The reviewer established that reconciliation cadence does not apply to this mechanism; it is not an unknown answer. |
 | `unknown` | The review did not establish whether a reconciliation regime exists. |
 
 For an unbounded path, `unknown` therefore receives the intermediate 35 rung, below the unreviewed-control quality of 45 but above the confirmed 25 floor. `none` and `not-applicable` take the confirmed floor unless prudential supervision independently qualifies the path as reconciled.
+
+V10 keeps disclosed internal mint reconciliation separate from independent reserve-to-total-liability assurance. `internal-ledger` clears only the issuer-backend `mint-control-question` for reconciliation, across the native mint paths covered by that issuer-level review; it grants neither the 80/70 reconciled grading nor seasoned reconciliation credit. Without prudential supervision an unbounded path retains the 35 reconciliation-unverified rung; with supervision it retains the existing base 55 rung. Active compromise and signer/custody risks remain independently charged, and Backing retains financial-assurance non-disclosure. Quantoz EURQ and USDQ use this value for the NEXUS process disclosed in their 30 April 2026 whitepapers, not an inferred cadence or ISAE 3402 reserve attestation.
 
 The curated authoring field is `mintAuthority.economicCapSemantics`, whose vocabulary is `unbounded`, `collateral-gated`, `raiseable`, `bounded`, and `unknown`; the compiled control fact the derivation reads, `capSemantics.kind`, adds `not-applicable` for a control with no mint capability, which is the fall-through graded as concentrated administration. `collateral-gated` is curator-asserted with sources: every live mint path must require collateral by construction, no privileged party may mint arbitrarily, and every minter-authorization or mint-logic replacement or upgrade path must be absent, renounced, or behind a timelock of at least 86400 seconds. Anything weaker remains `unbounded`. `raiseable` records a numeric bound an administrator can change; `bounded` records a bound that cannot be raised through a live privileged path; `unknown` records an unresolved cap fact.
 

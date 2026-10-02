@@ -177,7 +177,11 @@ export function deriveV9MintPosture(
       mint.reconciliation === "periodic" ||
       mint.supervision === "prudential"
     ) return "unbounded-reconciled";
-    if (mint.reconciliation === "unknown") return "unbounded-reconciliation-unknown";
+    // An internal ledger process resolves the mint-process question, not
+    // reserve reconciliation: retain the unverified rung without supervision.
+    if (mint.reconciliation === "unknown" || mint.reconciliation === "internal-ledger") {
+      return "unbounded-reconciliation-unknown";
+    }
     return "unbounded-or-compromised";
   }
   if (control.claimImpairment === "none") return "none-resolved";

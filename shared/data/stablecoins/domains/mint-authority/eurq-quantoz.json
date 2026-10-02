@@ -146,7 +146,7 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "unknown",
+    "reconciliation": "internal-ledger",
     "supervision": "prudential",
     "review": {
       "sources": [
@@ -169,9 +169,13 @@
         {
           "label": "ESMA MiCA registers",
           "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+        },
+        {
+          "label": "Quantoz EURQ whitepaper v1.4 (30 April 2026), NEXUS ledger processes",
+          "url": "https://www.quantoz.com/documents/eurq-wp-1.4-30-4-2026.pdf"
         }
       ],
-      "evidence": "Ethereum (2026-05-25): owner 0x284Df7B9 3/5 HadronMultisig, proxy admin 0xa6724f79 3/5; Polygon block 88323602: owner 0x84e8d731 3/5, proxy admin 0x2f875fa2 3/5. XRPL issuer account confirmed (no signer list, master key enabled). Algorand ASA 2768422954 manager/freeze confirmed as issuer-operated accounts. All addressable mint-capable surfaces confirmed; XRPL and Algorand issuer-backend corroborated by Quantoz EMI issuance model. Mint-tier review (2026-07-15): No public dated independent EURQ reserve-to-liability report was located; Quantoz provides a live issuer dashboard and generic periodic-audit claims without a named attestor, cadence, or latest artifact. The DNB public register exactly matches Quantoz Payments B.V. as an electronic-money institution and EURQ EMT issuer, providing prudential supervision. Economic-posture fields reviewed 2026-08-15: issuer multisigs and single-key accounts mint without a firm cap, DNB supervises Quantoz Payments, and the ad-hoc self-reported snapshot is not a recurring whole-supply attestation.",
+      "evidence": "Ethereum (2026-05-25): owner 0x284Df7B9 3/5 HadronMultisig, proxy admin 0xa6724f79 3/5; Polygon block 88323602: owner 0x84e8d731 3/5, proxy admin 0x2f875fa2 3/5. XRPL issuer account confirmed (no signer list, master key enabled). Algorand ASA 2768422954 manager/freeze confirmed as issuer-operated accounts. All addressable mint-capable surfaces confirmed; XRPL and Algorand issuer-backend corroborated by Quantoz EMI issuance model. Mint-tier review (2026-07-15): No public dated independent EURQ reserve-to-liability report was located; Quantoz provides a live issuer dashboard and generic periodic-audit claims without a named attestor, cadence, or latest artifact. The DNB public register exactly matches Quantoz Payments B.V. as an electronic-money institution and EURQ EMT issuer, providing prudential supervision. Economic-posture fields reviewed 2026-08-15: issuer multisigs and single-key accounts mint without a firm cap, DNB supervises Quantoz Payments, and the ad-hoc self-reported snapshot is not a recurring whole-supply attestation. Reconciliation-only review 2026-10-02: EURQ whitepaper v1.4 section A.15 discloses NEXUS ledger reconciliation and mint/burn execution for the issuer platform. This resolves the internal mint-ledger process across native issuer paths, without establishing its cadence or independent reserve-to-total-liability assurance. The verified XRPL single-master-key authorization surface and unknown off-chain key custody remain unchanged.",
       "reviewer": "Codex SOL-V mint-tier research; Sol economic-posture batch 2026-08-15",
       "reviewedAt": "2026-08-15"
     },

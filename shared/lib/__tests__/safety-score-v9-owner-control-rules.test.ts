@@ -59,6 +59,70 @@ describe("owner Control rules", () => {
     },
   );
 
+  it.each(["prudential", "none"] as const)(
+    "separates a disclosed internal mint ledger from reserve assurance under %s supervision", (supervision) => {
+      const mintControl = control("mint:issuer", "mint", {
+        capSemantics: { kind: "unbounded", bound: null }, claimImpairment: "unbounded",
+        authority: { authorityKey: "authority:issuer", model: "issuer-backend", threshold: null },
+        delaySec: null,
+      });
+      const before = evaluateV9EconomicControl(args({ facts: facts([mintControl]),
+        mint: makeReviewedMintInput(mintControl.controlKey, { reconciliation: "unknown", supervision }),
+      }));
+      const after = evaluateV9EconomicControl(args({ facts: facts([mintControl]),
+        mint: makeReviewedMintInput(mintControl.controlKey, { reconciliation: "internal-ledger", supervision }),
+      }));
+      expect(before.reasons).toContainEqual(expect.objectContaining({
+        code: "mint-control-question", path: "mint:reconciliation",
+      }));
+      expect(after.reasons.some((row) => row.code === "mint-control-question")).toBe(false);
+      expect(after.score).toBe(before.score);
+      expect(after.components.find((row) => row.kind === "mint")).toMatchObject({
+        posture: supervision === "prudential" ? "unbounded-reconciled" : "unbounded-reconciliation-unknown",
+        score: supervision === "prudential" ? 55 : 35,
+      });
+      const compromised = evaluateV9EconomicControl(args({ facts: facts([{ ...mintControl, incidentState: "active" }]),
+        mint: makeReviewedMintInput(mintControl.controlKey, { reconciliation: "internal-ledger", supervision }),
+      }));
+      expect(compromised.components.find((row) => row.kind === "mint")).toMatchObject({
+        posture: "unbounded-or-compromised", score: 25,
+      });
+      expect(compromised.structuralFailures).toContainEqual(expect.objectContaining({
+        kind: "centralized-mint", severity: "critical",
+      }));
+    },
+  );
+
+  it("applies disclosed issuer ledger processes to native siblings without removing single-key risk", () => {
+    const evm = control("mint:evm", "mint", {
+      capSemantics: { kind: "unbounded", bound: null }, claimImpairment: "unbounded",
+      authority: { authorityKey: "authority:evm", model: "multisig", threshold: 3 },
+      signerCount: 5, delaySec: null,
+    });
+    const backend = { ...evm, controlKey: "mint:algorand",
+      authority: { authorityKey: "authority:algorand", model: "issuer-backend" as const, threshold: null },
+      signerCount: null,
+    };
+    const singleKey = { ...backend, controlKey: "mint:xrpl",
+      authority: { authorityKey: "authority:xrpl", model: "eoa" as const, threshold: null },
+    };
+    const controls = facts([evm, backend, singleKey]);
+    const before = evaluateV9EconomicControl(args({ facts: controls,
+      mint: makeReviewedMintInput(evm.controlKey, { reconciliation: "unknown", supervision: "prudential" }),
+    }));
+    expect(before.reasons).toContainEqual(expect.objectContaining({
+      code: "mint-control-question", controlKey: backend.controlKey,
+    }));
+    const after = evaluateV9EconomicControl(args({ facts: controls,
+      mint: makeReviewedMintInput(evm.controlKey, { reconciliation: "internal-ledger", supervision: "prudential" }),
+    }));
+    expect(after.reasons.some((row) => row.code === "mint-control-question")).toBe(false);
+    expect(after.score).toBe(52);
+    expect(after.score).toBe(before.score);
+    expect(after.components.find((row) => row.kind === "mint" && row.controlKeys.includes(singleKey.controlKey)))
+      .toMatchObject({ posture: "unbounded-reconciled", score: 52, binding: true });
+  });
+
   it.each(["not-applicable", "unknown"] as const)(
     "retains recorded adverse mint facts with unresolved review and %s reconciliation", (reconciliation) => {
       const mintControl = control("mint:adverse", "mint", {

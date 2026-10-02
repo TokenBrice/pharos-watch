@@ -451,6 +451,7 @@ function expectedReviewedDeploymentIdentity(
 function reviewedDeploymentInventoryValidationError(
   assetId: string,
   inventory: ReviewedDeploymentRouteInventory,
+  observations: readonly ReviewedDeploymentSupplyObservation[],
 ): string | null {
   if (assetId === "wm-m0") return null;
   const identities = CENTRIFUGE_BURN_MINT_DEPLOYMENT_IDENTITIES[assetId];
@@ -469,6 +470,15 @@ function reviewedDeploymentInventoryValidationError(
     return `reviewed deployment identity inventory mismatch for ${assetId}`;
   }
   for (const route of routes) {
+    // Positive zero evidence removes this deployment's accounting ambiguity,
+    // not its unresolved control posture. The full packet still has to pass
+    // the route, runtime identity and same-generation timing gates below.
+    if (
+      route.reviewDisposition !== "reviewed" &&
+      observations.some((row) => row.routeId === route.id && row.rawSupply === "0")
+    ) {
+      continue;
+    }
     if (
       route.reviewDisposition !== "reviewed" ||
       (route.semantics !== "native-mint" && route.semantics !== "burn-mint") ||
@@ -686,6 +696,7 @@ export function reviewedDeploymentAttributionValidationError(input: {
   const inventoryError = reviewedDeploymentInventoryValidationError(
     assetId,
     inventory,
+    attribution.deployments,
   );
   if (inventoryError) return inventoryError;
   if (attribution.deployments.length !== inventory.routes.length) {
@@ -760,7 +771,7 @@ export function deriveReviewedDeploymentUnitPartition(input: {
   const inventory = buildReviewedDeploymentRouteInventory(input.assetId);
   if (
     !inventory ||
-    reviewedDeploymentInventoryValidationError(input.assetId, inventory)
+    reviewedDeploymentInventoryValidationError(input.assetId, inventory, input.observations)
   ) {
     return null;
   }

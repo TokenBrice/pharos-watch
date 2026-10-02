@@ -189,7 +189,7 @@ async function observe(
 }
 
 describe("Centrifuge reviewed deployment observer", () => {
-  it("rejects the current unresolved Solana route even when every deployment observation succeeds", async () => {
+  it.each(["0", "1", null])("keeps unresolved Solana attribution only for observed zero (rawSupply=%s)", async (rawSupply) => {
     const metaById = ACTIVE_META_BY_ID as Map<string, StablecoinMeta>;
     const reviewed = metaById.get(ASSET_ID)!;
     metaById.set(ASSET_ID, {
@@ -197,18 +197,31 @@ describe("Centrifuge reviewed deployment observer", () => {
       bridgeRouteRisk: currentJtrsyRisk.bridgeRouteRisk,
     } as unknown as StablecoinMeta);
     try {
+      const deps = dependencies();
+      deps.fetchSolanaObservation.mockResolvedValue(
+        rawSupply === null ? null : { ...solanaObservation(), rawSupply },
+      );
       const attempt = await observeCentrifugeReviewedDeploymentUnitPartitionAttempt({
         assetId: ASSET_ID,
         aggregateSupplyUsd: AGGREGATE_SUPPLY_USD,
         registryFingerprint: REGISTRY_FINGERPRINT,
         scoringClockSec: CLOCK_SEC,
         chainRpcs: chainRpcs(),
-      }, dependencies());
-      expect(attempt).toEqual({
-        status: "rejected",
-        rejectionCode: "packet-reconciliation-failed",
-        failedRouteId: null,
-      });
+      }, deps);
+      if (rawSupply === "0") {
+        expect(attempt.status).toBe("accepted");
+        if (attempt.status !== "accepted") throw new Error("Expected admitted zero observation");
+        expect(attempt.attribution.deployments.find((row) => row.chainId === "solana"))
+          .toMatchObject({ rawSupply: "0", currentSupplyUsd: 0 });
+        expect(attempt.attribution.deployments.reduce((sum, row) => sum + row.currentSupplyUsd, 0))
+          .toBe(AGGREGATE_SUPPLY_USD);
+      } else {
+        expect(attempt).toEqual({
+          status: "rejected",
+          rejectionCode: rawSupply === null ? "deployment-state-unavailable" : "packet-reconciliation-failed",
+          failedRouteId: rawSupply === null ? routeForChain("solana").routeId : null,
+        });
+      }
     } finally {
       metaById.set(ASSET_ID, reviewed);
     }
@@ -232,14 +245,6 @@ describe("Centrifuge reviewed deployment observer", () => {
       expect.objectContaining({ chainId: "base", currentSupplyUsd: 0 }),
       expect.objectContaining({ chainId: "solana", currentSupplyUsd: 0 }),
     ]);
-    expect(deps.fetchSolanaObservation).toHaveBeenCalledWith(
-      ASSET_ID,
-      expect.any(String),
-      expect.any(String),
-      undefined,
-      undefined,
-      expect.any(Map),
-    );
   });
 
   it("rejects the whole packet when Spoke authorization or Solana is unavailable", async () => {

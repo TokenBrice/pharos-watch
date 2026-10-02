@@ -858,7 +858,7 @@ const V9MintMechanismReviewV2Schema = z
     controlKey: CanonicalTextSchema.nullable(),
     // MINT-LADDER 9.32 (2026-08-21): `none` records a reviewer-confirmed
     // absence of any reconciliation regime, distinct from unverified `unknown`.
-    reconciliation: z.enum(["continuous", "periodic", "none", "not-applicable", "unknown"]),
+    reconciliation: z.enum(["continuous", "periodic", "internal-ledger", "none", "not-applicable", "unknown"]),
     // Prudential supervision is a reviewed fact, never inferred. Under R3 a
     // reconciled unbounded mint emits no centralized-mint cap only when a
     // per-coin review establishes a prudential supervisory regime; unknown

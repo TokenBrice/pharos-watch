@@ -302,6 +302,8 @@ export type MintAuthorityEconomicCapSemantics = (typeof MINT_AUTHORITY_ECONOMIC_
 export const MINT_AUTHORITY_RECONCILIATION_VALUES = [
   "continuous",
   "periodic",
+  // Disclosed issuer ledger process; no reserve-assurance or cadence credit.
+  "internal-ledger",
   "none",
   "not-applicable",
   "unknown",
