@@ -27,7 +27,7 @@
         "liquidity",
         "custody"
       ],
-      "liquidityHorizon": "unknown",
+      "liquidityHorizon": "one-day",
       "maturityDaysMax": 1
     },
     {
@@ -163,12 +163,12 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-27",
-    "reviewer": "OpenAI Codex DEC-18 primary-facts research",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Safety Score v10.01 BDO primary-source classification and horizon review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "BDO ISAE 3000R assurance report on Tether International financial figures and reserves as of 2026-06-30 (signed Milan, 2026-07-31)",
+        "label": "BDO ISAE 3000R report at 2026-06-30, signed 2026-07-31; report page 4 / PDF page 9, footnotes 3-13 reverified 2026-10-02 UTC",
         "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf"
       },
       {
@@ -180,7 +180,7 @@
         "url": "https://app.tether.to/transparency.json"
       }
     ],
-    "rationale": "The eleven categories reproduce the dollar amounts in the June 30, 2026 report, signed July 31, 2026. Percentages are derived from the report's total assets and rounded to six decimals. Both authored composition arrays use this same dated allocation. The live transparency endpoint supplies a separate balance-sheet observation and does not refresh composition. The issuer webpage displays assets of USD 187751825408, liabilities of USD 183642296213 and equity of USD 4109529195; the signed PDF gives USD 187751426411, USD 183641897215 and USD 4109529196, respectively. The USD 398997 asset discrepancy has no verified explanation or issuer reconciliation in the inspected sources; this composition uses the internally reconciling signed PDF denominator. The report covers fiat-denominated Tether tokens, not an independently allocated USDT-only balance sheet. Verified confidence covers the sourced amounts and date, not unresolved look-through identities. The new non-US sovereign and corporate legacy risk tiers are conservative editorial classifications, not attested ratings. Weighted-average maturities do not establish hard maturity maxima; only the expressly stated overnight repo maturity retains a one-day maximum.",
+    "rationale": "The eleven categories reproduce the dollar amounts in the June 30, 2026 report, signed July 31, 2026. Percentages are derived from the report's total assets and rounded to six decimals. Both authored composition arrays use this same dated allocation. The live transparency endpoint supplies a separate balance-sheet observation and does not refresh composition. The prior 2026-09-27 webpage inspection recorded assets of USD 187751825408, liabilities of USD 183642296213 and equity of USD 4109529195; the signed PDF gives USD 187751426411, USD 183641897215 and USD 4109529196, respectively. The USD 398997 asset discrepancy has no verified explanation or issuer reconciliation in those inspected sources; this composition uses the internally reconciling signed PDF denominator. The report covers fiat-denominated Tether tokens, not an independently allocated USDT-only balance sheet. Verified confidence covers the sourced amounts, dates and explicit category descriptions, not unresolved look-through identities. The non-US sovereign and corporate legacy risk tiers are conservative editorial classifications, not attested ratings. Primary-source re-verification was completed at 2026-10-02T22:41:38Z; the fetched PDF byte SHA256 is aa7322474c671beb4d02e2052dce36f4c0dc4482851021f782bf44ab7aba5ea1. This UTC verification pin establishes reviewedAt, without changing the June 30 portfolio date. Report page 4 (PDF page 9), footnote 9 states that Precious Metals comprises 'LBMA standard physical gold bars owned by the Company'. This establishes directly owned physical gold, but the D2 commodity peg-match rule reserves commodity-allocated for tokens pegged to the vaulted metal (GOLD or SILVER). USDT is USD-pegged, so its gold retains USD gold-price exposure and cannot receive that class's quality-90 and maturity-N/A treatment. The current reserve asset-class vocabulary has no separate physical-commodity class for USD-pegged reserves; retain other with market, custody and liquidity risk factors. No custodian identity, bar-level segregation, bankruptcy priority or liquidity term is inferred. Footnote 4 states Overnight Reverse-Repurchase Agreements have 'a maturity of 1 day' and are fully collateralized by US Treasuries: restore only this category's one-day contractual horizon and retain maturityDaysMax=1. This is the stated contractual term, not guaranteed stressed settlement. Footnotes 3, 5 and 6 give weighted/residual average maturities for US bills, term repo and non-US bills; footnote 8 gives corporate bonds' residual average above 360 days. None establishes a category-wide maximum or realization deadline. Footnote 7 identifies deposits without an access term; footnotes 9-13 identify physical gold, on-chain bitcoin, actively traded equities, other investments and secured loans without a category-wide liquidity term. All other liquidity horizons remain unknown after this researched disclosure review. No averages are converted to maxima; compositionAsOf stays 2026-06-30. The liveReservesConfig.params.slices classifications mirror these reviewed fields and change its fingerprint; existing mismatched snapshots remain inadmissible until recovery produces a compatible snapshot.",
     "compositionBasis": "BDO-assured Tether International reserves for fiat-denominated tokens at 2026-06-30 23:59 UTC; eleven reported USD asset categories divided by total assets of USD 187751426411.",
     "compositionAsOf": "2026-06-30",
     "scope": "full-composition",
@@ -234,7 +234,7 @@
         "reserveName": "Precious metals",
         "pct": 10.033669,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "Physical precious-metal inventory is external reserve backing rather than a tracked stablecoin dependency."
+        "rationale": "Report page 4 / PDF page 9, footnote 9 identifies LBMA standard physical gold bars owned by the Company. These directly owned commodity holdings are external reserve backing rather than a tracked stablecoin dependency; custody safeguards and liquidation timing are not established."
       },
       {
         "reserveIndex": 7,

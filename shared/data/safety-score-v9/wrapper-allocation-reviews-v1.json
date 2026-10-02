@@ -45,33 +45,96 @@
     {
       "assetId": "ybold-yearn",
       "scopeKind": "whole-allocation",
-      "reviewedAt": "2026-08-23",
-      "expiresAt": "2026-09-23",
-      "reviewer": "Safety Score V9 tranche 2 wrapper allocation review",
+      "reviewedAt": "2026-10-02",
+      "expiresAt": "2026-11-02",
+      "reviewer": "Safety Score v10.01 primary-source whole-allocation renewal",
       "custody": "fully-onchain-no-offchain-custodian",
       "localLeverage": "no-borrowing-surface",
       "capitalReuse": "liquidation-loss-absorption",
-      "rationale": "Yearn records no local vault borrowing, while its entire BOLD debt allocation is split among the WETH, wstETH, and rETH Liquity Stability Pool strategies. The capital is directly exposed to liquidation absorption.",
+      "rationale": "Ethereum block 26107640 (0x7d2c1c6a253d860b843691c64c3acd2e09530ff4f9db6f08351efeb6d8f60f2a), timestamp 1790980283 / 2026-10-02T22:31:23Z, pins the evidence date. The three current queue strategies' recorded current_debt sums exactly to vault totalDebt, establishing coverage of all recorded funded allocation; totalIdle is zero, with 120 wei of unaccounted BOLD dust at the vault. The vault owns each strategy's entire current share supply; each strategy deploys BOLD to its exact WETH, wstETH or rETH Liquity Stability Pool. Current compounded deposits exceed recorded debts; they are observations, not substituted vault accounting. The deployed vault implementation, all three verified strategy sources, their immutable TokenizedStrategy delegate and pool offset/withdrawal code establish on-chain custody and no local borrowing surface. Vault debt denotes assets allocated to strategies, not borrowed liabilities. Strategies deposit via provideToSP and withdraw via withdrawFromSP; pool offset burns deposited BOLD to absorb liquidated borrower debt in exchange for collateral. Retain liquidation-loss-absorption as correlated capital reuse across the common Liquity protocol and ETH-linked collateral branches, not zero reuse. Yearn's yBOLD docs corroborate that allocation and warn principal can be affected by Stability Pool losses and collateral-sale execution. On-chain availableWithdrawLimit/maxWithdraw readings establish native BOLD view limits only; this review obtains no exact-complete same-notional holder-to-USD execution, bounded USD fees or stressed settlement, so measured unwind remains unknown and earns no new credit. Pool withdrawals must leave MIN_BOLD_IN_SP, and documentation's no-wait/no-fee statement is not proof of stressed realization. This review grants no off-chain legal segregation, bankruptcy priority, or guarantee against future strategy reallocations.",
       "observations": [
         {
           "chain": "ethereum",
           "address": "0x9f4330700a36b29952869fac9b33f45eedd8a3d8",
           "function": "get_default_queue()",
           "value": "[0xc5e7d3f76a03006540f17668a0267c668ffb5b75,0x3589b93cadb464b6e1974cc9fc0c9be698ee49a5,0x6ed566b76838a08d04cbd6323231b08a2ec69005]",
-          "block": 25819441
+          "block": 26107640
         },
         {
           "chain": "ethereum",
           "address": "0x9f4330700a36b29952869fac9b33f45eedd8a3d8",
           "function": "strategies(address).current_debt for get_default_queue()",
-          "value": "[625592053080262599195236,4355606628781192743266276,713460009028459110786042]; totalDebt()=5694658690889914453247554; totalIdle()=0",
-          "block": 25819441
+          "value": "[2446607475208892592085032,2516350214829007559774112,1803902003102834421171405]; sum=totalDebt()=totalAssets()=6766859693140734573030549; totalIdle()=0; BOLD.balanceOf(vault)=120; asset()=0x6440f144b7e50d6a8439336510312d2f54beb01d; pricePerShare()=1000000000000000000",
+          "block": 26107640
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xc5e7d3f76a03006540f17668a0267c668ffb5b75,0x3589b93cadb464b6e1974cc9fc0c9be698ee49a5,0x6ed566b76838a08d04cbd6323231b08a2ec69005",
+          "function": "SP(); COLL(); AUCTION(); tokenizedStrategyAddress(); balanceOf(vault); totalSupply()",
+          "value": "SP=[0x5721cbbd64fc7ae3ef44a0a3f9a790a9264cf9bf,0x9502b7c397e9aa22fe9db7ef7daf21cd2aebe56b,0xd442e41019b7f5c4dd78f50dc03726c446148695]; COLL=[0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2,0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0,0xae78736cd615f374d3085123a210448e74fc6393]; AUCTION=[0x61c9e1113661c991fb6377b3610804476dcd9381,0x64e8050d33bb296d48fe8eb08d09f00633e45cca,0x3793405fbce404f351e76fa115209488ac0e8091]; immutable tokenizedStrategyAddress=0xd377919fa87120584b21279a491f82d5265a139c for all; vault strategy shares equal each strategy totalSupply=[2422762207490106781153593,2448123029120961874649993,1790397239852243017045963]",
+          "block": 26107640
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xc5e7d3f76a03006540f17668a0267c668ffb5b75,0x3589b93cadb464b6e1974cc9fc0c9be698ee49a5,0x6ed566b76838a08d04cbd6323231b08a2ec69005",
+          "function": "SP.getCompoundedBoldDeposit(strategy); BOLD.balanceOf(strategy); estimatedTotalAssets(); availableWithdrawLimit(vault); maxWithdraw(vault)",
+          "value": "Compounded deposits=[2447587635206309535039434,2517558550159715215267492,1804511506657744194141280]; idle BOLD=[0,0,0]; estimatedTotalAssets, availableWithdrawLimit and maxWithdraw each equal corresponding compounded deposit. Native BOLD view limits are not measured same-notional USD unwind or stressed settlement.",
+          "block": 26107640
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x9f4330700a36b29952869fac9b33f45eedd8a3d8",
+          "function": "eth_getCode; verified deployed implementation/source inspection",
+          "value": "Vault EIP-1167 implementation=0xd8063123bba3b480569244ae66bfe72b6c84b00d; vault runtime keccak256=0x9cbbbf6a1173fae2d7728e88b6e98819cdb39903e9df82fef7b439675b52d86a; implementation runtime keccak256=0xcf95c532cb05bdfdbcfcb5ade8957e84b69091d0260b667ebc5627ca9efbfd65; verified VaultV3.vy SHA256=ed081bf1b1dad10ef25d3e92a5f6f7d8fe92139438869affa2a720b5255c2e22. Asset transfers allocate and redeem strategy shares; no vault borrowing entrypoint.",
+          "block": 26107640
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xc5e7d3f76a03006540f17668a0267c668ffb5b75,0x3589b93cadb464b6e1974cc9fc0c9be698ee49a5,0x6ed566b76838a08d04cbd6323231b08a2ec69005",
+          "function": "eth_getCode; verified Strategy.sol, BaseStrategy.sol and TokenizedStrategy.sol inspection",
+          "value": "Strategy runtime keccak256 in queue order=[0x9138fc597ea3ab122112e2872181ea51fce83e10e4c0699ca5aa22595eea6e6b,0x57ebfb6b00d0aeb0111f96a43e446719f3750d7565a600aa13fe69c9718776b2,0x75a7bc99140fd70c40e4a56f9869f064e01ea2d9c1733ef48f5c4e572c3a91f3]; identical verified Strategy.sol SHA256=912bb484e6d545aa4674fda1f72d6bd61c527b4d2dea024ba259cef6f9211d87. BaseStrategy fixes its delegate implementation; TokenizedStrategy runtime keccak256=0x15b3018d50c4988a5e21fdc9e87e7f9ace4789a4514a6235c93ff8657b952239 and source SHA256=af2cce2ece0a80c52fa431fce193cf6557fa7533bce0486cf6c13d0f9d46a403. No borrowing surface in strategy or delegate; deploy/free callbacks are onlySelf. _deployFunds calls SP.provideToSP; _freeFunds calls SP.withdrawFromSP. Collateral rewards are held on-chain or sent to the strategy's on-chain auction.",
+          "block": 26107640
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x5721cbbd64fc7ae3ef44a0a3f9a790a9264cf9bf,0x9502b7c397e9aa22fe9db7ef7daf21cd2aebe56b,0xd442e41019b7f5c4dd78f50dc03726c446148695",
+          "function": "eth_getCode; verified StabilityPool.offset / _moveOffsetCollAndDebt / withdrawFromSP",
+          "value": "Nonproxy pool runtime keccak256 in queue order=[0x777b794d22f95d7db3d801c825afc8b57af074a9ab7c7af5876625e120ddaa39,0xa7fc5531b7aa2f97ccff086ba951172a4deb6547c7427ff352ada086137dcbbf,0x524c5be28739d527168541b5444ea2fed9352a6c9ae2dbae0259833ea9444ced]; identical verified StabilityPool.sol SHA256=34df40db73e9197f2dd4ab7a01373e72b4c08a3de7f8970bd05441ae04971fa2. offset burns pool BOLD against liquidated debt and receives collateral; withdrawFromSP pays native BOLD and collateral gains but requires remaining totalBoldDeposits >= MIN_BOLD_IN_SP.",
+          "block": 26107640
         }
       ],
       "sources": [
         {
-          "label": "Yearn V3 Vault source",
-          "url": "https://github.com/yearn/yearn-vaults-v3/blob/master/contracts/VaultV3.vy"
+          "label": "Exact deployed yBOLD vault implementation, verified VaultV3.vy (runtime/source hashes and block pinned in observations)",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd8063123bba3b480569244ae66bfe72b6c84b00d"
+        },
+        {
+          "label": "Current WETH strategy verified Strategy.sol and inherited BaseStrategy (block/code pins in observations)",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc5e7d3f76a03006540f17668a0267c668ffb5b75"
+        },
+        {
+          "label": "Current wstETH strategy verified Strategy.sol and inherited BaseStrategy (block/code pins in observations)",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3589b93cadb464b6e1974cc9fc0c9be698ee49a5"
+        },
+        {
+          "label": "Current rETH strategy verified Strategy.sol and inherited BaseStrategy (block/code pins in observations)",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6ed566b76838a08d04cbd6323231b08a2ec69005"
+        },
+        {
+          "label": "Immutable strategy delegate verified TokenizedStrategy.sol (block/code pins in observations)",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd377919fa87120584b21279a491f82d5265a139c"
+        },
+        {
+          "label": "WETH Stability Pool verified liquidation and withdrawal code (block/code pins in observations)",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5721cbbd64fc7ae3ef44a0a3f9a790a9264cf9bf"
+        },
+        {
+          "label": "wstETH Stability Pool verified liquidation and withdrawal code (block/code pins in observations)",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9502b7c397e9aa22fe9db7ef7daf21cd2aebe56b"
+        },
+        {
+          "label": "rETH Stability Pool verified liquidation and withdrawal code (block/code pins in observations)",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd442e41019b7f5c4dd78f50dc03726c446148695"
         },
         {
           "label": "Yearn yBOLD documentation",

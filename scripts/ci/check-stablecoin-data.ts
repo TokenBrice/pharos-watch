@@ -18,7 +18,7 @@ import { MANIFEST_SOURCES } from "@shared/data/live-reserves/independent-assuran
 import { REVIEWED_ORACLE_RISK_BRANCH_DISPOSITIONS } from "@shared/data/coverage-dispositions/oracle-risk-branch-dispositions";
 import listingDecisionsAsset from "@shared/data/stablecoins/listing-decisions.json";
 import { RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT, validateReserveCompositionTotal } from "@shared/types/reserves";
-import { StablecoinFlagsSchema } from "@shared/types/stablecoin-meta-schemas";
+import { MechanismArchetypeReviewSchema, StablecoinFlagsSchema } from "@shared/types/stablecoin-meta-schemas";
 import { DependencyTypeSchema, defaultV9DependencyEconomicRole } from "@shared/types/dependency-types";
 import { findBlacklistabilityReviewIssues } from "../lib/blacklistability-review";
 import { analyzeOracleRiskCoverage, isBlockingOracleRiskCoverageFinding } from "../lib/oracle-risk-coverage";
@@ -516,9 +516,12 @@ function isTrackedRuntimeCoin(coin: StablecoinMeta): boolean {
   return isReadableStablecoinMeta(coin);
 }
 
-function getListingGovernanceIssues(coins: readonly StablecoinMeta[]): string[] {
+export function getListingGovernanceIssues(
+  coins: readonly StablecoinMeta[],
+  listingDecisions: unknown = listingDecisionsAsset,
+): string[] {
   const issues: string[] = [];
-  const decisionsResult = ListingDecisionRegistrySchema.safeParse(listingDecisionsAsset);
+  const decisionsResult = ListingDecisionRegistrySchema.safeParse(listingDecisions);
   if (!decisionsResult.success) {
     return decisionsResult.error.issues.map((issue) =>
       `listing-decisions.json[${issue.path.join(".")}]: ${issue.message}`
@@ -543,15 +546,22 @@ function getListingGovernanceIssues(coins: readonly StablecoinMeta[]): string[] 
       continue;
     }
 
+    // Withdrawing an unsupported archetype must not promote the asset into
+    // monetary aggregates while its exact identity/mechanism is under review.
+    const holdListingClass = coin.mechanismArchetype == null
+      && coin.mechanismArchetypeReview?.disposition === "unresolved"
+      && MechanismArchetypeReviewSchema.safeParse(coin.mechanismArchetypeReview).success;
     const expectedListingClass = coin.status === "delisted"
       ? "excluded"
-      : coin.variantOf
-        ? "stablecoin-variant"
-        : coin.mechanismArchetype === "rwa-credit-fund"
-          ? "stable-value-investment"
-          : coin.flags.navToken === true || coin.mechanismArchetype === "tbill"
-            ? "cash-equivalent"
-            : "core-stablecoin";
+      : holdListingClass
+        ? listingClass
+        : coin.variantOf
+          ? "stablecoin-variant"
+          : coin.mechanismArchetype === "rwa-credit-fund"
+            ? "stable-value-investment"
+            : coin.flags.navToken === true || coin.mechanismArchetype === "tbill"
+              ? "cash-equivalent"
+              : "core-stablecoin";
     if (listingClass !== expectedListingClass) {
       issues.push(
         `listing-decisions.json class for "${coin.id}" is ${listingClass}; expected ${expectedListingClass}`,

@@ -2,67 +2,66 @@
   "id": "vcred-vcred",
   "reserves": [
     {
-      "name": "Hemi credit and crypto collateral",
+      "name": "Unverified VCRED backing",
       "pct": 100,
       "risk": "high",
       "assetClass": "other",
-      "issuerOrObligor": "vCRED protocol vaults on Hemi",
-      "riskFactors": [
-        "credit",
-        "market",
-        "liquidity",
-        "smart-contract",
-        "concentration"
-      ],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-4 (lead usdf-falcon)",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol night-run exact-token identity review",
     "confidence": "manual-review",
     "sources": [
+      {
+        "label": "Fully verified exact Hemi VCRED source",
+        "url": "https://explorer.hemi.xyz/api/v2/smart-contracts/0x71881974e96152643c74a8e0214b877cfb2a0aa1"
+      },
       {
         "label": "vCRED official site",
         "url": "https://vcred.trade/"
       }
     ],
-    "rationale": "vCRED's public materials describe programmable vaults on Hemi with single-sided staking and protocol-managed strategies, but publish no verifiable reserve composition, attestation, or per-position breakdown. The envelope is therefore one aggregate classified basket with an explicit insufficient-evidence disposition rather than invented weights.",
-    "compositionBasis": "vCRED public site; no verifiable reserve composition or attestation is published",
-    "compositionAsOf": "2026-07-20",
+    "rationale": "The exact Hemi token source declares USD-peg intent but contains no collateral or redemption payout. The linked website describes AI/perp vaults and portfolio access without establishing that the Hemi token is a claim on those assets. The prior credit/crypto basket and Hemi vault obligor were unsupported. This 100% insufficient-evidence row represents wholly unverified backing, not an observed portfolio or proof of zero assets.",
+    "compositionBasis": "Exact-token verified source and linked product site do not establish backing assets or a token-to-vault claim",
     "scope": "full-composition",
-    "knownUnknownExposure": "The credit-versus-crypto split, constituent assets, obligors, and weights inside the vCRED vaults are undisclosed.",
+    "knownUnknownExposure": "The reserve existence, asset classes, constituent assets, obligors, custody and weights for the exact Hemi token are unverified.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Hemi credit and crypto collateral",
+        "reserveName": "Unverified VCRED backing",
         "pct": 100,
         "disposition": "insufficient-evidence",
-        "rationale": "No primary source publishes the vault composition, so the basket cannot be split or linked to tracked assets."
+        "rationale": "Neither the exact token source nor the linked product site establishes reserve assets for this deployment; no asset classes, obligors, weights or dependency links are inferred."
       }
     ]
   },
   "custodyProfile": {
     "providers": [
       {
-        "name": "vCRED programmable vault contracts (Hemi)",
+        "name": "Unidentified VCRED custody arrangements",
         "role": "other"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-4 (lead usdf-falcon)",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol night-run exact-token identity review",
     "confidence": "manual-review",
     "sources": [
+      {
+        "label": "Fully verified exact Hemi VCRED source",
+        "url": "https://explorer.hemi.xyz/api/v2/smart-contracts/0x71881974e96152643c74a8e0214b877cfb2a0aa1"
+      },
       {
         "label": "vCRED official site",
         "url": "https://vcred.trade/"
       }
     ],
-    "uncertainty": "vCRED describes smart-contract vaults with automated agents on Hemi; the reviewed sources do not establish who controls the vaults, any legal segregation or insolvency treatment, or whether deposited assets are redeployed beyond the described strategies.",
+    "uncertainty": "The exact ERC-20 contains no asset custody or redemption implementation. The website's programmable market-making vaults are not joined to this deployment or established as its backing. Custodians, onchain versus offchain custody, legal segregation, insolvency treatment and reuse remain unverified; the provider row is an explicit unknown placeholder, not a named custodian.",
     "knownUnknownExposurePct": 100
   }
 }

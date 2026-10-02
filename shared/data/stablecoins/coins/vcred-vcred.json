@@ -2,13 +2,13 @@
   "id": "vcred-vcred",
   "name": "VCRED",
   "symbol": "VCRED",
-  "oneLiner": "vCRED is a Hemi-based credit-token dollar backed by protocol-managed crypto and credit collateral, with admin-controlled mint authority on a young chain.",
+  "oneLiner": "VCRED's Hemi source declares a USD peg, but backing and redemption are unverified; its linked website describes an AI/perp-vault access product.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
   },
-  "collateral": "Hemi-based credit and crypto collateral backing vCRED",
-  "pegMechanism": "Credit-token stable asset with protocol-managed collateral and redemption/liquidity controls on Hemi",
+  "collateral": "Unverified for the exact Hemi token. Neither the verified token source nor the linked product site establishes reserve assets, a credit portfolio, or a token-holder claim on the advertised AI/perp vaults.",
+  "pegMechanism": "The verified source declares a U.S. dollar peg but implements only owner-controlled minting and standard ERC-20 holder/allowance burns. Burns do not pay collateral or dollars, and no exact-token redemption terms or peg-maintenance mechanism were established.",
   "detailProvider": "coingecko",
   "geckoId": "vcred",
   "links": [
@@ -29,7 +29,7 @@
     }
   ],
   "collateralQuality": "exotic",
-  "custodyModel": "onchain",
+  "custodyModel": "unknown",
   "governanceQuality": "multisig",
   "liveReservesConfig": {
     "adapter": "curated-validated",
@@ -51,14 +51,17 @@
       "rpcUrl": "https://rpc.hemi.network/rpc"
     }
   },
-  "mechanismArchetype": "rwa-credit-fund",
   "implementationLaunchDate": "2025-05-19",
   "mechanismArchetypeReview": {
-    "disposition": "resolved",
-    "reviewedAt": "2026-07-21",
-    "reviewer": "Codex V9 curation",
-    "rationale": "Hemi transaction 0x8fb15ea8eb517f7503e73ddf4c3e7d28facb54d8cbac30ee64c3566314030be2 created the exact tracked vCRED contract at block 1,813,663 on May 19, 2025. vCRED presents the token as a managed credit and crypto-collateral vault asset, supporting the rwa-credit-fund archetype.",
+    "disposition": "unresolved",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol night-run exact-token identity review",
+    "rationale": "At Hemi block 5426142, the tracked contract's runtime bytecode exactly matched the explorer's fully verified VCRED source; the explorer reports no proxy or implementation. Its notice expressly declares a stablecoin pegged to the US Dollar. The constructor mints one billion six-decimal units to the owner, mint(address,uint256) is unrestricted onlyOwner issuance, and inherited burn/burnFrom destroy tokens without any payout. There is no collateral, NAV, oracle or redemption implementation. The linked vcred.trade site instead advertises AI/perp market-making vaults and staking VCRED for portfolio access, without binding that product to the exact Hemi address or publishing token-specific mint/redeem terms. Withdraw the unsupported rwa-credit-fund archetype and prior collateral/custody claims; retain the declared USD target, existing non-core listing class and lifecycle pending a binding issuer identity and economic-mechanism disclosure. Neither a replacement archetype nor a definitive non-stablecoin finding is supported by the inspected primary evidence.",
     "sources": [
+      {
+        "label": "Fully verified exact Hemi VCRED source and runtime bytecode",
+        "url": "https://explorer.hemi.xyz/api/v2/smart-contracts/0x71881974e96152643c74a8e0214b877cfb2a0aa1"
+      },
       {
         "label": "Hemi vCRED creation transaction",
         "url": "https://explorer.hemi.xyz/tx/0x8fb15ea8eb517f7503e73ddf4c3e7d28facb54d8cbac30ee64c3566314030be2"
@@ -68,5 +71,12 @@
         "url": "https://vcred.trade/"
       }
     ]
-  }
+  },
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Identity and stablecoin mechanism unresolved",
+      "message": "Reviewed 2026-10-02 UTC: the exact Hemi contract source declares a USD peg but contains no redemption payout or collateral mechanism. The linked website describes a portfolio-access token and AI/perp vaults without an exact-contract identity join. The credit-fund archetype and onchain-custody claim have been withdrawn; this is not a delisting decision."
+    }
+  ]
 }

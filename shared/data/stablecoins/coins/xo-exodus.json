@@ -65,5 +65,12 @@
       }
     }
   },
-  "launchDate": "2026-05-08"
+  "launchDate": "2026-05-08",
+  "notices": [
+    {
+      "type": "info",
+      "title": "Pure-wrapper verification unresolved",
+      "message": "Reviewed 2026-10-02 UTC, finalized Solana slot 452745510: XO supply was 6,651,265.548654; the vault held 6,651,635.885527 indexed M units. State decoded as NoYield and XO had no scaled-UI mint extension. Extension mexteGyWXgUR65XepNKtLJ2H66MmyLWrDSeA1bqzZ4C remains upgradeable; executable SHA-256 is d372c0d2640d6bb8336febf670d27e32e929ed67d184e6de9e262418263caa5d. https://verify.osec.io/status/mexteGyWXgUR65XepNKtLJ2H66MmyLWrDSeA1bqzZ4C reports 'On chain program not verified'. Funded custody and NoYield state do not prove source/executable equivalence or exclude other mint/strategy paths. No pure-wrapper classification is applied until a matching reproducible build proves the complete fixed-unit M claim. RPC read: https://solana-mainnet.g.alchemy.com . Published-source intent, not deployed equivalence: https://github.com/m0-foundation/solana-m-extensions/tree/b69d1f8d8be34f34aaac4d1060cec37f81dba0af/programs/m_ext/src/instructions (wrap.rs transfers M before minting; unwrap.rs burns before releasing M, both permissioned)."
+    }
+  ]
 }

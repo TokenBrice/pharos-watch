@@ -22,14 +22,14 @@
   },
   "oracleRisk": {
     "tier": "opaque-or-unknown",
-    "summary": "vCRED is a staking and access token for a market-making and perpetual-vault platform; public product docs do not describe borrower-owned collateral positions or a token-level liquidation oracle.",
+    "summary": "The exact Hemi VCRED source declares a USD peg but has no price-sensitive mint, burn or redemption input. The linked website's staking/access-token and AI/perp-vault descriptions have not been joined to this exact deployment.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",
-      "reviewedAt": "2026-08-24",
-      "reviewer": "OpenAI Codex W1b oracle applicability review",
-      "rationale": "The exact tracked vCRED deployment is a plain owner-mintable and holder-burnable ERC-20 with no oracle, NAV, exchange-rate, redemption, or rebalance input. vCRED's separately described market-making vaults consume market data, but the primary product materials describe the tracked token itself as a staking and access token rather than a priced vault receipt. No price-sensitive authority for vCRED minting, redemption, valuation, or rebalancing is therefore established.",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol night-run exact-token identity review",
+      "rationale": "At Hemi block 5426142, the tracked deployment's runtime bytecode exactly matched the explorer's verified non-proxy ERC-20 source. It has owner minting and standard holder/allowance burns, with no oracle, NAV, exchange-rate, redemption payout or rebalance input. The separately advertised AI/perp vaults consume market data but have no established identity or holder-claim join to this Hemi token. This not-applicable oracle verdict is scoped to the inspected exact token implementation and grants no reserve, stablecoin-eligibility or vault-receipt claim.",
       "sources": [
         {
           "label": "Hemi explorer verified vCRED implementation (deployment dated 2025-05-19)",
@@ -40,8 +40,8 @@
           "url": "https://explorer.hemi.xyz/tx/0x8fb15ea8eb517f7503e73ddf4c3e7d28facb54d8cbac30ee64c3566314030be2"
         },
         {
-          "label": "vCRED AI-powered smart Market Maker article (2023-05-16)",
-          "url": "https://medium.com/@vcred/ai-powered-smart-market-maker-d4517404484a"
+          "label": "vCRED official product site (access-token and AI/perp-vault descriptions)",
+          "url": "https://vcred.trade/"
         }
       ]
     },
