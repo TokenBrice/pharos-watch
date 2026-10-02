@@ -35,7 +35,7 @@ export const BLOG_POSTS: readonly BlogPost[] = [
     datePublished: "2026-10-02",
     coverImage: "/blog/safety-score-v10-cover.png",
     coverAlt:
-      "The Pharos lighthouse beam passing through a lens onto a small gold bar, then splitting into three sharp beams toward the words “Backing. Control. Exit.” beneath the label “Safety Score V10”.",
+      "The circular Pharos mark on a dark navy background, its beacon light passing through a lens onto a small gold bar and splitting into three sharp beams toward “Backing. Control. Exit.” beneath the label “Safety Score V10”.",
   },
   {
     slug: "api-access-free-grades-supporter-keys",
