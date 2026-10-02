@@ -210,6 +210,7 @@
     "worker/src/lib/safety-score-v9/extension-oracle.ts": 100,
     "worker/src/lib/safety-score-v9/extension-reserve-bounds.ts": 67.6,
     "worker/src/lib/safety-score-v9/extension-reserves.ts": 97,
+    "worker/src/lib/safety-score-v9/extension-reviewed-registry.ts": 100,
     "worker/src/lib/safety-score-v9/extension-routes.ts": 89.1,
     "worker/src/lib/safety-score-v9/extension-shared.ts": 98.2,
     "worker/src/lib/safety-score-v9/extension-shock.ts": 91.9,

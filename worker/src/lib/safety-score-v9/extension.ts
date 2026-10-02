@@ -43,7 +43,10 @@ import {
 } from "./fact-set";
 import { quarantinedSafetyScoreV9ExtensionAsset } from "./fact-set-schema";
 import { toErrorMessage } from "@shared/lib/error-utils";
+import { createReviewedAssetRegistry, ReviewedRegistryEntryError } from "./extension-reviewed-registry";
+import { SafetyScoreV9ReviewedTransferFactSchema } from "@shared/types/safety-score-v9-transfer-overlays";
 import { controlCanCarryKnownStatus } from "./fact-set-control";
+import { validateSafetyScoreV9ShockRegistryAsset } from "./extension-shock";
 import {
   buildSafetyScoreV9MechanismReview,
   getSafetyScoreV9MechanismExitFacts,
@@ -69,7 +72,7 @@ import { allocationReviewClockSec, type V9AllocationScopeIdentityReview, type Sa
 import {
   computeSafetyScoreV9ReviewedTransferFactsDigest,
   resolveSafetyScoreV9ReviewedTransferFact,
-  SAFETY_SCORE_V9_REVIEWED_TRANSFER_FACTS,
+  getSafetyScoreV9ReviewedTransferFact,
   safetyScoreV9TransferDeploymentKey,
   type SafetyScoreV9ReviewedTransferFact,
   type SafetyScoreV9TransferMaterialScope,
@@ -1599,7 +1602,11 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
   options: BuildSafetyScoreV9BaselineExtensionOptions = {},
 ): SafetyScoreV9FactSetExtensionV2 {
   const metaById = options.metaById ?? ACTIVE_META_BY_ID;
-  const reviewedTransferFacts = options.reviewedTransferFacts ?? SAFETY_SCORE_V9_REVIEWED_TRANSFER_FACTS;
+  const reviewedTransferFacts = options.reviewedTransferFacts && createReviewedAssetRegistry({
+    rows: [...options.reviewedTransferFacts.values()],
+    schema: SafetyScoreV9ReviewedTransferFactSchema,
+    path: "transferReviews.reviews",
+  });
   const localRegistryFingerprint = options.registryFingerprint ?? computeReportCardsRegistryFingerprint();
   const allowRegistryMismatch = options.allowRegistryMismatch === true;
   if (!allowRegistryMismatch && localRegistryFingerprint !== fixedInput.registryFingerprint) {
@@ -1667,7 +1674,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
     operationalResilienceOverlaysDigest: SAFETY_SCORE_V9_OPERATIONAL_RESILIENCE_OVERLAYS_DIGEST,
     wrapperAllocationReviewsDigest: SAFETY_SCORE_V9_WRAPPER_ALLOCATION_REVIEWS_DIGEST,
     reserveBoundFactsDigest: SAFETY_SCORE_V9_RESERVE_BOUND_FACTS_DIGEST,
-    reviewedTransferFactsDigest: computeSafetyScoreV9ReviewedTransferFactsDigest(reviewedTransferFacts.values()),
+    reviewedTransferFactsDigest: computeSafetyScoreV9ReviewedTransferFactsDigest(options.reviewedTransferFacts?.values()),
     accessClaimGraphReviewsDigest: computeSafetyScoreV9AccessClaimGraphReviewsDigest(options.accessClaimGraphReviews?.values()),
   });
   const sources = {
@@ -1748,6 +1755,8 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
           ? resolvedArchetype
           : "unresolved";
         admitted.archetype = archetype;
+        admissionPath = "cdpStressCoverage";
+        validateSafetyScoreV9ShockRegistryAsset(assetId);
         admissionPath = "pegReference";
         const pegReference = buildPegReference(meta, metaById);
         admitted.pegReference = pegReference;
@@ -1912,18 +1921,21 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
           compareText(left.controlKey, right.controlKey),
         );
         admissionPath = "accessReview";
+        const reviewedTransferFact = reviewedTransferFacts
+          ? reviewedTransferFacts.get(assetId)
+          : getSafetyScoreV9ReviewedTransferFact(assetId);
         const accessReview = adaptAccessReview(
           meta,
           metaById,
           activeIds,
           reviewEvidence,
-          reviewedTransferFacts.get(assetId),
+          reviewedTransferFact,
           transferMaterialScope(
             fixedInput,
             assetId,
             meta,
             options.transferMaterialityGeneration ?? null,
-            reviewedTransferFacts.get(assetId),
+            reviewedTransferFact,
           ),
           clockSec,
           buildSafetyScoreV9AccessClaimGraph({ assetId, clockSec, generationId: fixedInput.baseInputGenerationId, evidence: reviewEvidence, review: options.accessClaimGraphReviews?.get(assetId) }),
@@ -2020,7 +2032,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
       } catch (error) {
         return quarantinedSafetyScoreV9ExtensionAsset(admitted, assetId, {
           code: "fact-build-failed",
-          path: admissionPath,
+          path: error instanceof ReviewedRegistryEntryError ? error.path : admissionPath,
           message: toErrorMessage(error),
         });
       }

@@ -1,5 +1,8 @@
 import { z } from "zod";
 import { resolvedExitRouteOutputAssetKeys } from "@shared/lib/exit-route-output";
+import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
+import { resolveReviewedRouteSuspension } from "@shared/lib/redemption-backstop-configs/schema";
+import type { RedemptionRouteSuspension } from "@shared/types/redemption";
 import { isDexExitRouteCoverageWithinRouteBudget } from "@shared/lib/p4-exit-route-capacity";
 import { isDexExitRouteScoreEligible } from "@shared/lib/p4-exit-route-capability-policy";
 import { canonicalV9RouteKey } from "@shared/lib/safety-score-v9/facts";
@@ -180,6 +183,40 @@ function routeGap(
   );
 }
 
+function buildSuspendedRoute(context: AssetBuildContext, suspension: RedemptionRouteSuspension): V9ExitRouteFactV2 {
+  const generationId = context.fixedInput.redemptionGenerationId;
+  const routeKey = canonicalV9RouteKey("redemption", generationId, suspension.routeId);
+  const evidenceId = addEvidence(context, createV9EvidenceReference({
+    evidenceId: `${context.asset.assetId}:route-suspension:${suspension.routeId}`,
+    sourceId: "reviewed-redemption-channel-suspension",
+    sourceGenerationId: context.extension.sources.researchOverlays.generationId,
+    disposition: "observed",
+    observedAtSec: Date.parse(`${suspension.reviewedAt}T00:00:00Z`) / 1_000,
+    contentSha256: domainDigest("safety-score-v10.route-suspension.v1", suspension),
+    url: suspension.sources[0]!.url,
+  }, context.fixedInput.clockSec));
+  const gapId = routeGap(context, routeKey, "suspended", "bounded-unknown",
+    "missing-same-notional-route", "integration-missing",
+    `${suspension.channel}: ${suspension.reason} This establishes no total-exit measurement.`, [evidenceId]);
+  const status = createV9FactStatus({
+    applicability: requiredV9Applicability("v9.exit.same-notional-route"),
+    observationState: "bounded-unknown", evidenceRefIds: [evidenceId], gapIds: [gapId],
+  });
+  return {
+    routeKey, routeId: suspension.routeId, routeSuspension: suspension, lane: "redemption",
+    sourceGenerationId: generationId,
+    routeFamily: getRedemptionBackstopConfig(context.asset.assetId)?.routeFamily === "offchain-issuer" ? "issuer-redemption" : "protocol-redemption",
+    holderAccess: "unknown", executionModel: "unknown", executionCertainty: "unknown",
+    modelConfidence: "low", observationConfidence: "unknown", observationHistory: null,
+    evidenceKind: "documented-terms", coverageClass: "diagnostic", capacityScoringHorizon: "unknown",
+    settlementModel: "unknown", settlementSlaSec: null,
+    queueDepthUsd: null, dailyLimitUsd: null, minRedeemUsd: null, settlementEvidenceRefIds: [],
+    physicalResourceKeys: [], status, scoreEligible: false, request: null, capacityCurve: [],
+    output: { status, kind: "unknown", assetKeys: [], basketWeights: [], valuation: null },
+    failureDomains: [{ kind: "redemption-rail", key: suspension.channel }],
+  };
+}
+
 function buildRoute(
   context: AssetBuildContext,
   args: {
@@ -191,6 +228,10 @@ function buildRoute(
     retained: boolean;
   },
 ): V9ExitRouteFactV2 {
+  const suspension = args.lane === "redemption" ? resolveReviewedRouteSuspension(
+    getRedemptionBackstopConfig(context.asset.assetId), args.observation.routeId, context.fixedInput.clockSec,
+  ) : undefined;
+  if (suspension) return buildSuspendedRoute(context, suspension);
   const generationId =
     args.lane === "dex" ? context.fixedInput.dexGenerationId : context.fixedInput.redemptionGenerationId;
   const routeKey = canonicalV9RouteKey(args.lane, generationId, args.observation.routeId);
@@ -597,6 +638,12 @@ export function buildRoutes(context: AssetBuildContext): {
   // Preserve the producer gap so a small observed DEX route cannot turn an
   // unavailable redemption measurement into known-negative exit evidence.
   const redemption = context.fixedInput.redemptionBackstopMap[context.asset.assetId];
+  const config = getRedemptionBackstopConfig(context.asset.assetId);
+  const suspension = resolveReviewedRouteSuspension(config,
+    `redemption:${context.asset.assetId}:${config?.routeFamily}`, context.fixedInput.clockSec);
+  if (suspension && !routes.some((route) => route.routeId === suspension.routeId && route.lane === "redemption")) {
+    routes.push(buildSuspendedRoute(context, suspension));
+  }
   if (
     redemption?.provider === "reserve-sync-metadata" &&
     redemption.resolutionState === "missing-capacity" &&
@@ -766,9 +813,10 @@ export function buildRoutes(context: AssetBuildContext): {
       exitRoutes: [],
     };
   }
-  const statuses = routes.flatMap((route) => [route.status, route.output.status]);
+  // A withdrawn channel does not make the observation of independent channels incomplete.
+  const statuses = routes.filter((route) => !route.routeSuspension).flatMap((route) => [route.status, route.output.status]);
   const gapIds = [...new Set(statuses.flatMap((status) => status.gapIds))];
-  const evidenceRefIds = [...new Set(statuses.flatMap((status) => status.evidenceRefIds))];
+  const evidenceRefIds = [...new Set(routes.flatMap((route) => [route.status, route.output.status]).flatMap((status) => status.evidenceRefIds))];
   // "known" asserts the whole exit surface is observed (it upgrades evidence
   // level and arms the reviewed-complete zero-score path), so it additionally
   // requires every budget-admitted score-eligible DEX capability pool to carry

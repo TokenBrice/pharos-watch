@@ -3,7 +3,7 @@ import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { sha256Hex } from "@shared/lib/sha256";
 import {
   resolveSafetyScoreV9ReviewedTransferFact,
-  SAFETY_SCORE_V9_REVIEWED_TRANSFER_FACTS,
+  getSafetyScoreV9ReviewedTransferFact,
   type SafetyScoreV9TransferMaterialScope,
 } from "../safety-score-v9/extension-transfer";
 import { safetyScoreV9ChainSupplySourcePayload } from "../safety-score-v9/supply-attribution";
@@ -35,7 +35,7 @@ const BASE_SCOPE: SafetyScoreV9TransferMaterialScope = {
 
 describe("single-deployment transfer attribution", () => {
   function fixture() {
-    const review = structuredClone(SAFETY_SCORE_V9_REVIEWED_TRANSFER_FACTS.get(ASSET_ID)!);
+    const review = structuredClone(getSafetyScoreV9ReviewedTransferFact(ASSET_ID)!);
     review.transferScopeAttestation = {
       kind: "single-deployment-attribution", version: 1,
       reviewedAt: "2026-07-31", expiresAt: "2027-07-31",
@@ -136,7 +136,7 @@ function resolve(rows = [observation()], capturedAtSec = CLOCK_SEC - 60) {
     clockSec: CLOCK_SEC,
   });
   return resolveSafetyScoreV9ReviewedTransferFact(
-    SAFETY_SCORE_V9_REVIEWED_TRANSFER_FACTS.get(ASSET_ID)!,
+    getSafetyScoreV9ReviewedTransferFact(ASSET_ID)!,
     CLOCK_SEC,
     scope,
   );
@@ -189,7 +189,7 @@ describe("Safety Score V9 transfer deployment materiality", () => {
       clockSec: CLOCK_SEC,
     });
     expect(resolveSafetyScoreV9ReviewedTransferFact(
-      SAFETY_SCORE_V9_REVIEWED_TRANSFER_FACTS.get(ASSET_ID)!,
+      getSafetyScoreV9ReviewedTransferFact(ASSET_ID)!,
       CLOCK_SEC,
       scope,
     )).toEqual({ observationState: "bounded-unknown", posture: null });

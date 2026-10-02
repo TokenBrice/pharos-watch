@@ -276,3 +276,8 @@ export const V9ReviewedIncidentRegistrySchema = z
     incidents: canonicalArrayBy(V9ReviewedIncidentSchema, (incident) => incident.incidentId),
   })
   .strict();
+
+export const V9ReviewedIncidentRegistryEnvelopeSchema = z.object({
+  schemaVersion: z.literal(1),
+  incidents: z.array(z.object({ assetId: CanonicalTextSchema }).passthrough()),
+}).strict();

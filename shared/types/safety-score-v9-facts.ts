@@ -1,6 +1,8 @@
 import { z } from "zod";
+import { RedemptionRouteSuspensionSchema } from "./redemption";
 import { V9ReserveBoundedFactSchema } from "./reserve-bounded-facts";
 import { ReserveScopedAdmissionSchema } from "./safety-score-v9-reserve-scope";
+import { AdmittedProviderRowExclusionSchema } from "./safety-score-v9-supply-attribution";
 import { V9AccessClaimGraphSchema, v9AccessClaimGraphStatuses } from "./safety-score-v9-access-lookthrough";
 import { V9ControlExecutionScopeSchema, V9ExactControlPolicySchema, V9WeightedQuorumSchema } from "./safety-score-v9-control-scope";
 import { ReserveIntermediarySchema } from "./reserves";
@@ -558,6 +560,7 @@ export const V9ExitRouteFactBaseSchema = z
   .object({
     routeId: CanonicalTextSchema,
     lane: V9RouteLaneSchema,
+    routeSuspension: RedemptionRouteSuspensionSchema.optional(),
     holderAccess: V9RouteHolderAccessSchema,
     executionModel: V9RouteExecutionModelSchema,
     executionCertainty: V9RouteExecutionCertaintySchema,
@@ -605,6 +608,13 @@ const V9ExitRouteFactV2Schema = V9ExitRouteFactBaseSchema
   })
   .strict()
   .superRefine((route, ctx) => {
+    if (route.routeSuspension && (
+      route.lane !== "redemption" || route.routeSuspension.routeId !== route.routeId ||
+      route.scoreEligible || route.coverageClass !== "diagnostic" ||
+      route.request !== null || route.capacityCurve.length !== 0
+    )) {
+      ctx.addIssue({ code: "custom", path: ["routeSuspension"], message: "A suspension is exact-route diagnostic evidence, never executable capacity" });
+    }
     if (route.executionModelId && route.scoreEligible && !route.executionCertificate) {
       ctx.addIssue({ code: "custom", message: "Execution model lacks certificate" });
     }
@@ -1256,6 +1266,7 @@ const V9SupplyFactV2Schema = z
     unknownRouteSupplyShare: FractionSchema.nullable(),
     unreviewedRouteSupplyShare: FractionSchema.nullable(),
     failureDomains: CanonicalFailureDomainsSchema,
+    providerRowExclusions: z.array(AdmittedProviderRowExclusionSchema).optional(),
   })
   .strict()
   .superRefine((supply, ctx) => {

@@ -33,7 +33,97 @@ const evaluate = (
   return { facts: digested.assets[0]!, result: evaluateV9FactSet(digested, V9_CANDIDATE_POLICY_V1).assets[0]! };
 };
 
+// Keep the fixture's reviewed bridge resolved so only the newly inventoried
+// deployment, not an unrelated reviewed authority question, sizes the cohort.
+const evaluateCapturedInventory = (share: number | null, mutate?: (asset: V9AssetFactsV3) => void) =>
+  evaluate(share, (asset) => {
+    const reviewedBridge = asset.controls.find((control) => control.deploymentKey.startsWith("base:"))!;
+    const oldGapIds = new Set(reviewedBridge.status.gapIds);
+    asset.gaps = asset.gaps.filter((gap) => !oldGapIds.has(gap.gapId));
+    reviewedBridge.authority = { authorityKey: "base:reviewed-bridge", model: "contract", threshold: null };
+    reviewedBridge.status = { ...reviewedBridge.status, observationState: "known", gapIds: [] };
+    mutate?.(asset);
+  });
+
 describe("unresolved deployment share pricing", () => {
+  it.each([0, 0.04, 0.1, 0.16, null])(
+    "prices the compiled unresolved inventory by its captured share %s",
+    (share) => {
+      const { facts, result } = evaluateCapturedInventory(share);
+      const unresolved = facts.controls.find((control) => control.deploymentKey.startsWith("polygon:"))!;
+      if (share === null) expect(unresolved.materialSupplyShare).toBeNull();
+      else expect(unresolved.materialSupplyShare).toBeCloseTo(share);
+      expect(unresolved.status.observationState).toBe("bounded-unknown");
+      expect(facts.gaps).toContainEqual(expect.objectContaining({
+        gapId: unresolved.status.gapIds[0], reasonCode: "unresolved-control-identity",
+      }));
+      if (share === null || share >= fullCeiling) {
+        expect(result.scoreInput.pillars.control.evidenceLevel).toBe("limited");
+        expect(result.trace.caps).toContainEqual(expect.objectContaining({
+          kind: "reason:unresolved-control-identity", limit: 55,
+        }));
+        return;
+      }
+      expect(result.scoreInput.pillars.control.evidenceLevel).toBe("strong");
+      expect(result.scoreInput.pillars.control.score).toBeCloseTo(
+        result.control.score! -
+          Math.max(0, result.control.score! - V9_CANDIDATE_POLICY_V1.policy.semantic.control.boundedUnknownQuality) * share,
+      );
+      expect(result.trace.caps.map((cap) => cap.kind)).not.toContain("reason:unresolved-control-identity");
+      if (share === 0) expect(result.control.unresolvedDeploymentAdjustment).toBeUndefined();
+      if (share === 0.1) {
+        const scale = 10 ** V9_CANDIDATE_POLICY_V1.policy.semantic.formula.scoreDecimals;
+        const blend = (share - blendStart) / (fullCeiling - blendStart);
+        const limit = Math.floor(
+          (result.trace.preCapScore! - Math.max(0, result.trace.preCapScore! - 55) * blend) * scale,
+        ) / scale;
+        expect(result.trace.caps).toContainEqual(expect.objectContaining({
+          kind: "unresolved-deployment-share-band", limit,
+        }));
+      }
+    },
+  );
+
+  it("keeps the aggregate demotion when an unresolved control lies outside the admitted cohort", () => {
+    const { result } = evaluateCapturedInventory(0.1, (asset) => {
+      const template = asset.controls.find((control) => control.deploymentKey.startsWith("polygon:"))!;
+      asset.controls.push({
+        ...template, controlKey: "unknown:root", scope: "global", economicLossScope: "unknown",
+        materialSupplyShare: null,
+      });
+    });
+    expect(result.scoreInput.pillars.control.evidenceLevel).toBe("limited");
+    expect(result.control.reasons).toContainEqual(expect.objectContaining({
+      code: "unresolved-control-identity", controlKey: null, path: "controls",
+    }));
+    expect(result.trace.caps).toContainEqual(expect.objectContaining({
+      kind: "reason:unresolved-control-identity", limit: 55,
+    }));
+  });
+
+  it("retains a verified adverse minter on the same unresolved deployment", () => {
+    const scenario = (incidentState: "active" | "none") => evaluateCapturedInventory(0.1, (asset) => {
+      const template = asset.controls.find((control) => control.deploymentKey.startsWith("polygon:"))!;
+      asset.controls.push({
+        ...template, controlKey: "mint:adverse-satellite", controlKind: "mint", capabilities: ["mint"],
+        status: { ...template.status, observationState: "known", gapIds: [] },
+        authority: { authorityKey: "mint:adverse-satellite", model: "multisig", threshold: { required: 2, total: 3 } },
+        capSemantics: { kind: "unbounded", bound: null }, claimImpairment: "unbounded",
+        incidentState, failureDomains: [{ kind: "mint-control", key: "mint:adverse-satellite" }],
+      });
+    }).result;
+    const healthy = scenario("none");
+    const adverse = scenario("active");
+    expect(adverse.trace.structuralSignals).toContainEqual(expect.objectContaining({
+      kind: "active-control-incident", materialSharePct: 10, economicLossScope: "deployment",
+      failureDomainKeys: ["mint-control:mint:adverse-satellite"],
+    }));
+    expect(adverse.trace.deploymentAdjustments).toContainEqual(expect.objectContaining({
+      exposureShare: 0.1,
+    }));
+    expect(adverse.trace.deploymentAdjustedScore).toBeLessThan(healthy.trace.deploymentAdjustedScore!);
+  });
+
   it("retains unresolved evidence and prices a measured subthreshold deployment proportionally", () => {
     const zero = evaluate(0);
     const share = threshold / 4;

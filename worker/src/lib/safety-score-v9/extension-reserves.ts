@@ -1,6 +1,7 @@
 import type { DependencyRejectionReason } from "@shared/lib/dependency-derivation";
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { SCORE_EPSILON } from "@shared/lib/safety-score-v9/backing-primitives";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { hasIndependentLiveCompositionDates, hasIndependentReserveObservationDates } from "@shared/lib/report-card-policy";
 import { admitV10ReserveReportScope, admitV10ReserveObservation, shouldApplyV10ReserveReportScope, resolveV10ReserveObservationDeploymentRefs } from "@shared/lib/safety-score-v9/reserve-scope";
@@ -471,6 +472,55 @@ export function buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(
 }
 
 /**
+ * An explicitly unidentified tail stays outside classified exposures so the
+ * evaluator charges its existing bounded-unknown residual, not `other` credit.
+ * Normalize only the identified subtotal, keeping the authored unknown share.
+ */
+function curatedCompositionRows(meta: V9ExtensionRegistryMeta, clockSec: number): ReserveSlice[] | null {
+  const rows = meta.reserves ?? [];
+  const review = meta.reserveReview;
+  const residualPct = review?.knownUnknownExposurePct;
+  if (residualPct === 0) return rows;
+  if (residualPct == null || !Number.isFinite(residualPct) || residualPct / 100 <= SCORE_EPSILON ||
+    residualPct > V9_CANDIDATE_POLICY_V1.policy.semantic.backing.reserve.maxUnclassifiedCuratedResidualPct ||
+    !review || review.confidence !== "verified" || review.scope !== "full-composition" ||
+    review.sources.length === 0 || !validateReserveCompositionTotal(rows, "full")) return null;
+  const reviewedAtSec = conservativeDateEndSec(review.reviewedAt, clockSec);
+  const compositionAtSec = conservativeDateEndSec(review.compositionAsOf, clockSec);
+  if (reviewedAtSec === null || compositionAtSec === null || reviewedAtSec < compositionAtSec ||
+    clockSec - compositionAtSec > REVIEWED_RESERVE_COMPOSITION_ADMISSION_MAX_AGE_SEC) return null;
+
+  const residualIndexes = new Set<number>();
+  let recordedResidualPct = 0;
+  for (const disposition of review.nonLinkDispositions ?? []) {
+    if (!UNRESOLVED_CURATED_RESERVE_DISPOSITIONS.has(disposition.disposition)) continue;
+    const row = rows[disposition.reserveIndex];
+    if (disposition.disposition !== "insufficient-evidence" || !row ||
+      residualIndexes.has(disposition.reserveIndex) || row.pct <= 0 ||
+      row.name !== disposition.reserveName || row.pct !== disposition.pct ||
+      (row.assetClass != null && row.assetClass !== "other") || row.coinId != null || row.depType != null) return null;
+    residualIndexes.add(disposition.reserveIndex);
+    recordedResidualPct += row.pct;
+  }
+  if (residualIndexes.size === 0 || Math.abs(recordedResidualPct - residualPct) > 1e-9) return null;
+  const identifiedRows = rows.filter((_, index) => !residualIndexes.has(index)).sort(
+    (left, right) => compareText(computeSafetyScoreV9ReserveExposureKey(left), computeSafetyScoreV9ReserveExposureKey(right)) ||
+      compareText(stableJsonStringifyV1(left), stableJsonStringifyV1(right)),
+  );
+  const identifiedPct = identifiedRows.reduce((sum, row) => sum + row.pct, 0);
+  if (identifiedPct <= 0) return null;
+  const targetPct = 100 - residualPct;
+  let normalizedPct = 0;
+  const admittedRows = identifiedRows.map((row, index) => {
+    const pct = index === identifiedRows.length - 1 ? targetPct - normalizedPct : row.pct * targetPct / identifiedPct;
+    normalizedPct += pct;
+    return { ...row, pct };
+  });
+  // The evaluator's actual floating-point residual must also remain chargeable.
+  return 1 - admittedRows.reduce((sum, row) => sum + row.pct / 100, 0) > SCORE_EPSILON ? admittedRows : null;
+}
+
+/**
  * Validate a reviewed registry composition shared by the fallback and
  * standalone admission paths. This is weaker than direct assurance and
  * therefore retains the policy's static-evidence confidence discount.
@@ -483,6 +533,7 @@ function buildSafetyScoreV9ReviewedCuratedReserveRows(
 ): ReviewedStaticReserveRows | null {
   const rows = meta.reserves ?? [];
   const review = meta.reserveReview;
+  const curatedRows = curatedCompositionRows(meta, clockSec);
   const observationRefs = review?.observations?.length ? resolveV10ReserveObservationDeploymentRefs(meta) : [];
   const separate = review?.observations?.find(row =>
     row.kind === "standing-structure" && admitV10ReserveObservation({
@@ -502,8 +553,8 @@ function buildSafetyScoreV9ReviewedCuratedReserveRows(
     admitV10ReserveObservation({ observation: row, deploymentRefs: observationRefs,
       clockSec, policy: V9_CANDIDATE_POLICY_V1.policy }).wholeAssetComposition);
   if (portfolio && review?.confidence === "verified" && review.scope === "full-composition" &&
-    review.knownUnknownExposurePct === 0 && rows.length > 0 && validateReserveCompositionTotal(rows, "full")) {
-    return { rows: [...rows], evidenceClass: "static-validated", provenance, sourceKind: "portfolio-observation", scopeId: portfolio.scopeId };
+    curatedRows !== null && rows.length > 0 && validateReserveCompositionTotal(rows, "full")) {
+    return { rows: [...curatedRows], evidenceClass: "static-validated", provenance, sourceKind: "portfolio-observation", scopeId: portfolio.scopeId };
   }
   if (reportScopeApplies(meta, clockSec, fixedInput)) return null;
   const reviewedAtSec = conservativeDateEndSec(review?.reviewedAt, clockSec);
@@ -515,10 +566,10 @@ function buildSafetyScoreV9ReviewedCuratedReserveRows(
     rows.length === 0 ||
     review?.scope !== "full-composition" ||
     review.confidence !== "verified" ||
-    review.knownUnknownExposurePct !== 0 ||
-    review.nonLinkDispositions?.some((disposition) =>
+    curatedRows === null ||
+    (review.knownUnknownExposurePct === 0 && review.nonLinkDispositions?.some((disposition) =>
       UNRESOLVED_CURATED_RESERVE_DISPOSITIONS.has(disposition.disposition),
-    ) === true ||
+    ) === true) ||
     review.sources.length === 0 ||
     reviewedAtSec === null ||
     compositionAtSec === null ||
@@ -534,7 +585,7 @@ function buildSafetyScoreV9ReviewedCuratedReserveRows(
     return null;
   }
   return {
-    rows: normalizeReviewedStaticReserveRows(rows),
+    rows: review.knownUnknownExposurePct === 0 ? normalizeReviewedStaticReserveRows(rows) : curatedRows,
     evidenceClass: "static-validated",
     provenance,
   };

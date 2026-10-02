@@ -12,6 +12,7 @@ import {
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { LiveReserveAdapterKey } from "@shared/types/live-reserves";
 import {
+  AUDM_INDEPENDENT_ASSURANCE_PROFILE,
   EUROP_INDEPENDENT_ASSURANCE_PROFILE,
   fetchIndependentAssuranceAdapter,
   fetchIndependentAssuranceReserves,
@@ -651,6 +652,37 @@ describe("independent-assurance manifest framework", () => {
         reportedAssetTotalTolerance: { absolute: "0.4", relativePpm: 1 },
       }),
     ).toThrow(/reported asset total differs/);
+  });
+
+  it.each([
+    ["261001 Catena Reserve Verification Report as at 30th Sept 2026.pdf", "", "2026-09-30"],
+    ["261001 Catena Reserve Verification Report.pdf", "Verification of AUDM Reserves as at 30th September 2026", "2026-09-30"],
+    ["260901 Catena Reserve Verification Report as at 1st September 2026.pdf", "", "2026-09-01"],
+    ["261001 Catena Reserve Verification Report as at 30th Sept 2026.pdf", "as at 1st October 2026", null],
+    ["261001 Catena Reserve Verification Report as at 31st Sept 2026.pdf", "", null],
+    ["Reserve Verification Report.pdf", "", null],
+    ["261001 Catena Reserve Verification Report as at September 2026.pdf", "", null],
+  ])("uses an unambiguous AUDM reserve period for %s", (fileName, text, expected) => {
+    expect(AUDM_INDEPENDENT_ASSURANCE_PROFILE.reportDateFromCandidate(
+      `https://cdn.prod.website-files.com/${encodeURIComponent(fileName)}`, text,
+    )).toBe(expected);
+  });
+
+  it.each([
+    ["ambiguous", "Reserve Verification Report as at 30th Sept 2026.pdf", "as at 1st October 2026"],
+    ["mixed ISO", "Reserve Verification Report as at 30th Sept 2026.pdf", "as at 2026-10-01"],
+    ["mixed malformed", "Reserve Verification Report as at 30th Sept 2026.pdf", "as at 1st Octember 2026"],
+    ["mixed incomplete", "Reserve Verification Report as at 30th Sept 2026.pdf", "as at September 2026"],
+    ["missing", "Reserve Verification Report.pdf", "Monthly report"],
+  ])("rejects an AUDM index with a %s reserve date", async (_label, fileName, text) => {
+    const reviewed = getIndependentAssuranceManifest("AUDM");
+    const candidate = `https://cdn.prod.website-files.com/${encodeURIComponent(fileName)}`;
+    await expect(verifyFixtureIndex(
+      "AUDM",
+      AUDM_INDEPENDENT_ASSURANCE_PROFILE,
+      "",
+      `<a href="${reviewed.reportUrl}">Reviewed report</a><a href="${candidate}">${text}</a>`,
+    )).rejects.toThrow("ambiguous report date");
   });
 
   it.each(["brlv-crown", "audm-macropod"] as const)(

@@ -132,6 +132,76 @@ describe("reviewed economic supply observation", () => {
     expect(result.attribution.inFlight[0]).toMatchObject({ id: "in-flight:liability", amount: "1000000" });
   });
 
+  function pendingFixture(pendingAmount = 1000000n, escrowAmount = 20000000n) {
+    const f = fixture(), canonical = f.plan.deployments[0]!;
+    const receipt = { ...canonical, deploymentKey: `base:0x${"2".repeat(40)}`, chainId: "base", address: `0x${"2".repeat(40)}` };
+    f.plan.deployments.push(receipt);
+    f.plan.accountingFamily = "lock-mint";
+    const messageId = `0x${"f".repeat(64)}`;
+    f.plan.escrows = [{ id: "bridge", canonicalDeploymentKey: canonical.deploymentKey, account: `0x${"3".repeat(40)}`,
+      receiptDeploymentKeys: [receipt.deploymentKey], receiptClaimSources: [], independentReceiptLiability: false,
+      inFlightSource: { kind: "evm-pending-state", sourceId: "pending", chainId: "ethereum", bridgeAddress: `0x${"3".repeat(40)}`,
+        bridgeRuntimeCodeSha256: sha256Hex("0x6000"), finality: "finalized", messageCountSelector: "0x11111111",
+        messageIdSelector: "0x22222222", pendingAmountSelector: "0x33333333", messageIds: [messageId] } }];
+    vi.mocked(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).mockImplementation(async (_chain, calls) =>
+      calls.map(call => ({ label: call.label, success: true, returnData: word(call.label.endsWith(":decimals") ? 6n :
+        call.label === "bridge" ? escrowAmount : call.label === receipt.deploymentKey ? 19000000n : 100000000n) })));
+    vi.mocked(evmRpc.fetchEvmRpcBatch).mockImplementation(async (_chain, calls) =>
+      calls[0]!.method === "eth_getCode" ? ["0x6000", word(1n)] : [messageId, word(pendingAmount)]);
+    return f;
+  }
+
+  it("conserves independently observed finalized pending messages without counting them as free float", async () => {
+    const result = await pendingFixture().run();
+    expect(result.status).toBe("accepted");
+    if (result.status !== "accepted") throw new Error("Expected accepted partition");
+    expect(result.attribution.deployments.map(row => row.currentSupplyUsd)).toEqual([80, 19]);
+    expect(result.attribution.unattributedSupplyUsd).toBe(1);
+    expect(result.attribution.inFlight[0]).toMatchObject({ amount: "1000000", anchor: "100", anchorHash: HASH });
+  });
+
+  it.each(["missing", "identity", "count", "code", "not finalized"])("rejects an unavailable or unauthenticated pending %s read", async failure => {
+    const f = pendingFixture();
+    if (failure === "not finalized") vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) =>
+      ({ number: number === "finalized" ? 99 : number, timestamp: CLOCK - 60, hash: HASH }));
+    else vi.mocked(evmRpc.fetchEvmRpcBatch).mockImplementation(async (_chain, calls) =>
+      failure === "missing" ? null : calls[0]!.method === "eth_getCode" ?
+        [failure === "code" ? "0x6001" : "0x6000", word(failure === "count" ? 2n : 1n)] :
+        [word(0n), word(1000000n)]);
+    expect(await f.run()).toMatchObject({ status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: "bridge" });
+  });
+
+  it("admits an empty pending queue only after a successful authenticated zero-count read", async () => {
+    const f = pendingFixture(0n, 19000000n);
+    const source = f.plan.escrows[0]!.inFlightSource!;
+    if (!("kind" in source)) throw new Error("Expected on-chain pending source");
+    source.messageIds = [];
+    vi.mocked(evmRpc.fetchEvmRpcBatch).mockResolvedValue(["0x6000", word(0n)]);
+    const result = await f.run();
+    expect(result.status).toBe("accepted");
+    if (result.status !== "accepted") throw new Error("Expected accepted partition");
+    expect(result.attribution.unattributedSupplyUsd).toBe(0);
+    expect(result.attribution.inFlight[0]!.amount).toBe("0");
+    vi.mocked(evmRpc.fetchEvmRpcBatch).mockResolvedValue(null);
+    expect(await f.run()).toMatchObject({ status: "rejected", rejectionCode: "deployment-state-unavailable" });
+  });
+
+  it("does not turn escrow surplus into pending supply", async () => {
+    expect(await pendingFixture(0n).run()).toMatchObject({ status: "rejected", rejectionCode: "packet-reconciliation-failed" });
+  });
+
+  it.each(["number", "hash"])("rejects pending generations whose escrow block %s changed", async failure => {
+    const f = pendingFixture();
+    vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) => ({
+      number: number === "finalized" ? 100 : number, timestamp: CLOCK - 60, hash: HASH,
+    })).mockResolvedValueOnce({ number: 100, timestamp: CLOCK - 60, hash: HASH })
+      .mockResolvedValueOnce({ number: 100, timestamp: CLOCK - 60, hash: HASH })
+      .mockResolvedValueOnce({ number: 100, timestamp: CLOCK - 60, hash: HASH })
+      .mockResolvedValueOnce({ number: failure === "number" ? 101 : 100, timestamp: CLOCK - 60,
+        hash: failure === "hash" ? `0x${"b".repeat(64)}` : HASH });
+    expect(await f.run()).toMatchObject({ status: "rejected", rejectionCode: "deployment-state-invalid" });
+  });
+
   it("reconciles provider-chain observations against the admitted aggregate", async () => {
     const f = fixture(); const row = f.plan.deployments[0]!;
     row.read = { kind: "provider-chain", sourceChain: "ethereum" }; row.amountBasis = "circulating-usd"; row.decimals = null;
@@ -141,6 +211,20 @@ describe("reviewed economic supply observation", () => {
     expect(await f.run()).toMatchObject({ status: "accepted", attribution: { unattributedSupplyUsd: 20 } });
     f.fixedInput.chainCirculatingById.alpha!.base = { ...f.fixedInput.chainCirculatingById.alpha!.ethereum!, current: 1 };
     expect(await f.run()).toEqual({ status: "rejected", rejectionCode: "packet-reconciliation-failed", failedRouteId: "provider:base" });
+  });
+
+  it.each([["Ethereum", "ethereum"], ["Fraxtal", "fraxtal"]])("reconciles the provider label %s with canonical deployment identity", async (label, chainId) => {
+    const f = fixture(), row = f.plan.deployments[0]!;
+    row.chainId = chainId;
+    row.deploymentKey = `${chainId}:${row.address}`;
+    f.fixedInput.chainCirculatingById = { alpha: { [label]: {
+      current: 100, circulatingPrevDay: 100, circulatingPrevWeek: 100, circulatingPrevMonth: 100,
+    } } };
+    expect(await f.run()).toMatchObject({ status: "accepted", attribution: {
+      deployments: [expect.objectContaining({ chainId, currentSupplyUsd: 100 })],
+    } });
+    f.fixedInput.chainCirculatingById.alpha![label]!.current = 90;
+    expect(await f.run()).toEqual({ status: "rejected", rejectionCode: "packet-reconciliation-failed", failedRouteId: `provider:${label}` });
   });
 
   it("propagates cancellation instead of manufacturing a rejection packet", async () => {

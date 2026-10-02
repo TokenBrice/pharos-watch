@@ -56,3 +56,16 @@ export function uniqueKeyedCollectionSchema<
 
   return z.object(shape).strict();
 }
+
+/** Attribute authored rows without admitting their asset-local evidence. */
+export function reviewedAssetCollectionEnvelopeSchema<CollectionKey extends string, NoteSchema extends z.ZodType>(
+  collectionKey: CollectionKey,
+  noteSchema: NoteSchema,
+) {
+  const rows = z.array(z.object({ assetId: CanonicalTextSchema }).passthrough());
+  return z.object({
+    schemaVersion: z.literal(1),
+    note: noteSchema,
+    [collectionKey]: rows,
+  } as { schemaVersion: z.ZodLiteral<1>; note: NoteSchema } & Record<CollectionKey, typeof rows>).strict();
+}

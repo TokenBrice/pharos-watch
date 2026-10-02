@@ -1,6 +1,6 @@
 import { z } from "zod";
 import policy from "../data/safety-score-v9/methodology-policy-candidate-v1.json";
-import { CanonicalChainIdSchema, CanonicalTextSchema, FractionSchema, UnixSecondsSchema, uniqueKeyedCollectionSchema } from "./safety-schema-primitives";
+import { CanonicalChainIdSchema, CanonicalTextSchema, FractionSchema, UnixSecondsSchema, uniqueKeyedCollectionSchema, reviewedAssetCollectionEnvelopeSchema } from "./safety-schema-primitives";
 import { canonicalArrayBy, canonicalTextArray, V9EvidenceResponsibilitySchema, V9FactStatusV2Schema } from "./safety-score-v9-fact-primitives";
 import { CanonicalFailureDomainsSchema } from "./safety-score-v9-fact-input-primitives";
 
@@ -47,6 +47,7 @@ export const V9AccessClaimGraphReviewSchema = z.object({
   unresolved: canonicalArrayBy(z.object({ ...UnresolvedShape, review: ReviewSchema }).strict(), (v) => v.branchKey),
 }).strict();
 export const V9AccessLookthroughOverlaySchema = uniqueKeyedCollectionSchema({ itemSchema: V9AccessClaimGraphReviewSchema, collectionKey: "reviews", duplicateMessage: "Duplicate access graph asset", noteSchema: CanonicalTextSchema });
+export const V9AccessLookthroughOverlayEnvelopeSchema = reviewedAssetCollectionEnvelopeSchema("reviews", CanonicalTextSchema);
 export const V9AccessClaimGraphSchema = z.object({
   assetId: CanonicalTextSchema, graphKey: CanonicalTextSchema, rootNodeKey: CanonicalTextSchema,
   clockSec: UnixSecondsSchema, generationId: CanonicalTextSchema,

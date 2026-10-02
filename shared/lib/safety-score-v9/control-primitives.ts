@@ -68,6 +68,7 @@ export interface V9EconomicControlAssetFacts {
     | "selectedRouteSupplyShare"
     | "unknownRouteSupplyShare"
     | "unreviewedRouteSupplyShare"
+    | "providerRowExclusions"
   >;
 }
 

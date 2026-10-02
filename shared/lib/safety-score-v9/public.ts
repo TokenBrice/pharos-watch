@@ -40,6 +40,7 @@ export interface V9PublicCardProjectionInput {
   /** Exact fact-set provenance; absent only in compatibility/test callers. */
   backingFromLiveReserves?: boolean;
   supply?: SafetyScoreV9CurrentCard["supply"];
+  providerRowExclusions?: SafetyScoreV9CurrentCard["scoreTrace"]["providerRowExclusions"];
   sharedBookId?: string | null;
   dependencyCoverage?: SafetyScoreV9CurrentCard["dependencyCoverage"];
   dependencyProvenance?: ReadonlyMap<string, NonNullable<SafetyScoreV9CurrentCard["dependencies"]["serial"][number]["provenance"]>>;
@@ -334,6 +335,7 @@ function projectExitBreakdown(
       capacityScoringHorizon: route.capacityScoringHorizon,
       settlementDelaySec: route.settlementDelaySec,
       ...(route.physicalToUsd ? { physicalToUsd: route.physicalToUsd } : {}),
+      ...(route.routeSuspension ? { routeSuspension: route.routeSuspension } : {}),
       ...(route.executionCertificate ? { executionCertificate: projectExitExecutionCertificate(route.executionCertificate) } : {}),
     }));
   const publishedScore = input.scoreInput.pillars.exit.score!;
@@ -712,6 +714,7 @@ function projectScoreTrace(input: V9PublicCardProjectionInput): SafetyScoreV9Cur
 
   return {
     schemaVersion: 3,
+    ...(input.providerRowExclusions?.length ? { providerRowExclusions: input.providerRowExclusions } : {}),
     legacyAliases: {
       qualityScore: "weighted-pillar-mean",
       pegAdjustedScore: "post-deployment-pre-cap-score",

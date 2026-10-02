@@ -23,6 +23,7 @@ import {
   type RedemptionBackstopConfig,
 } from "@shared/lib/redemption-backstops";
 import { resolveDefaultHolderEligibility } from "@shared/lib/redemption-backstop-configs/shared";
+import { resolveReviewedRouteSuspension } from "@shared/lib/redemption-backstop-configs/schema";
 import { REDEMPTION_BACKSTOP_PROVIDER_IDS } from "@shared/lib/redemption-backstop-providers";
 import { REDEMPTION_BACKSTOP_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import type { StablecoinData } from "@shared/types/market";
@@ -233,14 +234,16 @@ export async function buildRedemptionBackstopEntry(
     accessModel: config.accessModel,
     settlementModel,
   });
+  const routeSuspension = resolveReviewedRouteSuspension(config, `redemption:${stablecoinId}:${config.routeFamily}`, now);
   const staticRouteStatus: RedemptionRouteStatusEvidence = {
-    routeStatus:
+    routeStatus: routeSuspension ? "suspended" :
       capacity.routeStatus === "unknown" && !capacity.routeStatusSource
         ? "unknown"
         : resolutionState === "resolved"
-          ? (config.routeStatus ?? "open")
+          ? (config.routeStatus === "suspended" ? "unknown" : config.routeStatus ?? "open")
           : "unknown",
-    routeStatusSource: "static-config",
+    routeStatusSource: routeSuspension ? "operator-notice" : "static-config",
+    ...(routeSuspension ? { routeStatusReason: routeSuspension.reason, routeStatusReviewedAt: routeSuspension.reviewedAt } : {}),
   };
   const liveRouteStatus: RedemptionRouteStatusEvidence | null =
     capacity.routeStatus && capacity.routeStatusSource
@@ -253,8 +256,8 @@ export async function buildRedemptionBackstopEntry(
       : null;
   const mergedRouteStatus = mergeRedemptionRouteStatus({
     staticEvidence: staticRouteStatus,
-    liveEvidence: liveRouteStatus,
-    severeMarketImplied: options.routeAvailability ?? null,
+    liveEvidence: routeSuspension ? null : liveRouteStatus,
+    severeMarketImplied: routeSuspension ? null : options.routeAvailability ?? null,
     allowSevereMarketOpenException: hasStrongLiveDirectRoute && liveRouteStatus?.routeStatus === "open",
   });
   const routeStatus = mergedRouteStatus.routeStatus;
@@ -396,6 +399,24 @@ export async function buildRedemptionBackstopEntry(
     notes,
     capsApplied,
   };
+  if (routeSuspension) {
+    // Unavailable on this rail, not measured zero; separately produced channels remain independent.
+    entry.score = null;
+    entry.capacityScore = null;
+    entry.eventualRedeemabilityScore = null;
+    entry.immediateCapacityUsd = null;
+    entry.immediateCapacityRatio = null;
+    entry.resolutionState = "impaired";
+    if (entry.capacityProfile) {
+      entry.capacityProfile = {
+        scoringHorizon: "unknown",
+        capacityProfileConfidence: entry.capacityProfile.capacityProfileConfidence,
+        immediateUsd: null, dailyLimitUsd: null, queuedUsd: null, eventualUsd: null, scoringUsd: null,
+        ...(modeledExitSizeUsd != null ? { modeledExitSizeUsd } : {}),
+      };
+    }
+    entry.capsApplied = ["reviewed-route-suspension"];
+  }
   let finalizedEntry = entry;
   if (entry.capacityProfile && !entry.capacityProfile.exitRouteObservations) {
     const derived = deriveSupplyModelExitRouteObservation(entry, now);

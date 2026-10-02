@@ -21,6 +21,7 @@ import {
 import { V9_WRAPPER_LOCAL_FACT_KEYS } from "../../types/safety-score-v9-wrapper";
 import { makeDeploymentControl } from "./safety-score-v9-fixtures.test-support";
 import { weightedQuorum } from "./safety-score-v9-control-scope.test-support";
+import supplyAttributionReviews from "../../data/safety-score-v9/supply-attribution-reviews-v1.json";
 
 const DIGESTS = {
   policy: "a".repeat(64),
@@ -261,6 +262,25 @@ function cap(args: Pick<V9CapTrace, "kind" | "limit" | "source" | "reason" | "bi
 }
 
 describe("Safety Score v9 public projection", () => {
+  it("discloses provider-row identity proof and numerator-only scope, omitting absent or empty records byte-for-byte", () => {
+    const input = fixture("frax-frax", { score: 70, grade: "B" });
+    const baseline = JSON.stringify(projectSafetyScoreV9Card(input));
+    input.providerRowExclusions = [];
+    expect(JSON.stringify(projectSafetyScoreV9Card(input))).toBe(baseline);
+    const review = supplyAttributionReviews.providerRowExclusionReviews[0]!;
+    input.providerRowExclusions = [{ review, deploymentRouteKey: "unmatched-chain:frax-frax:fraxtal", supplyShare: 0.097 }];
+    const card = SafetyScoreV9CurrentCardSchema.parse(projectSafetyScoreV9Card(input));
+    expect(card.scoreTrace.providerRowExclusions).toEqual([{
+      review, deploymentRouteKey: "unmatched-chain:frax-frax:fraxtal", supplyShare: 0.097,
+    }]);
+    expect(card.score).toBe(70);
+    expect(card.supply).toEqual(JSON.parse(baseline).supply);
+    expect(card.scoreTrace.providerRowExclusions![0]!.review).toMatchObject({
+      belongsToAssetId: "frxusd-frax", providerChainLabel: "Fraxtal",
+      contractAddress: "0xfc00000000000000000000000000000000000001",
+      provenance: { blockNumber: 42061479 },
+    });
+  });
   it("publishes effective weighted signatures without turning unknown key bypasses into quorum credit", () => {
     const input = fixture("alpha", { score: 70, grade: "B" });
     const weighted = weightedQuorum([...Array<number>(8).fill(24), ...Array<number>(18).fill(1)], 25);

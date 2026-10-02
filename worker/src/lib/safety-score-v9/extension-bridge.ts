@@ -695,7 +695,8 @@ function buildUnprovenRouteJoins(
       supplyReview.selectedBridgeRoutes.reduce((sum, row) => sum +
         (row.reviewState === "selected-reviewed" && reviewedUnresolvedDeploymentKeys.has(row.deploymentRouteKey)
           ? row.supplyShare : 0), 0);
-  const canRelaxUnresolvedRows = cohortShare !== null && cohortShare < fullCeilingShare;
+  const excludedShare = (supplyReview?.providerRowExclusions ?? []).reduce((sum, exclusion) => sum + exclusion.supplyShare, 0);
+  const canRelaxUnresolvedRows = cohortShare !== null && Math.max(0, cohortShare - excludedShare) < fullCeilingShare;
   const unproven: V9BridgeSupplyRouteJoinV1[] = [];
   for (const row of supplyReview?.selectedBridgeRoutes ?? []) {
     // Accepted bounded rows are not join failures.

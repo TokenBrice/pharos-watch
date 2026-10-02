@@ -57,9 +57,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "opaque-or-unknown",
-    "summary": "The Ethereum savings vault and nine issuer-documented satellites are inventoried: Optimism, Base, Fraxtal, Fantom, BSC, Avalanche, XDC, Sonic and Etherlink. Pinned receipt and escrow observations establish successful zero supplies on Fantom, BSC and Avalanche, not absent bridge liabilities. Complete economic attribution and control reach remain unresolved; no immateriality or local-loss exclusion is asserted.",
+    "summary": "Ethereum and nine issuer-documented satellites remain inventoried. Independent 2026-10-02 hash-pinned reads confirm zero BSC receipts at finalized block 125273587, zero Avalanche receipts at finalized block 96594468, zero Fantom receipts at latest block 123522611, and nonzero Fraxtal receipts at finalized block 42061750. Fantom's finalized tag remains unsupported; the public Fraxtal RPC succeeds despite the authored observer run lacking a configured endpoint. Zero receipts do not prove zero pending liabilities. Curve documents Delayed/Issued transfers and retry; the verified Avalanche bridge ABI exposes delayed(nonce) as a bytes32 commitment, not an enumerable pending-amount queue. Complete authenticated pending coverage for every satellite is unresolved, so no economic attribution plan, immateriality or local-loss exclusion is asserted.",
     "reviewedAt": "2026-10-02",
-    "reviewer": "Sol curation pass 2026-10-02 (DataCScrvusd)",
+    "reviewer": "Sol curation pass 2026-10-02 (BuildPendingObserver)",
     "confidence": "unknown",
     "sources": [
       {
@@ -77,6 +77,10 @@
       {
         "label": "Curve crosschain share-price oracle; separate from token bridge mint authority",
         "url": "https://docs.curve.finance/developer/scrvusd/crosschain/oracle-v0.md"
+      },
+      {
+        "label": "Verified Ethereum Avalanche escrow bridge ABI; delayed nonce commitment and issuance events",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x26E91B1f142b9bF0bB37e82959bA79D2Aa6b99b8?fields=sources,abi"
       }
     ],
     "routes": [

@@ -740,6 +740,7 @@ function buildSafetyScoreV9CandidatePipeline(
     commonModeGroups: evaluatedSet.dependencyPlan.commonModeGroups,
     results: evaluatedSet.assets.map((asset) => ({
       trace: asset.trace,
+      ...(asset.providerRowExclusions?.length ? { providerRowExclusions: asset.providerRowExclusions } : {}),
       backingFromLiveReserves: scoreGradeLiveReserveIds.has(asset.assetId),
       ...dependencyMetadataByAssetId.get(asset.assetId),
       scoreInput: asset.scoreInput,

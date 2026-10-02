@@ -26,7 +26,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
-      "sha256": "5daa8d15ed0c7aeb45d387d507a0dd887f4d55cef496cdb8c9dd360adf19aa19"
+      "sha256": "6037fe88dea4dc59edca5262b0d6ae60c5a86f46dc08beb53415dad54f0ce29b"
     },
     {
       "path": "shared/data/safety-score-v9/operational-resilience-overlays-v1.json",
@@ -38,7 +38,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/supply-attribution-reviews-v1.json",
-      "sha256": "64eb756acc7e9eb085cded95c4b786093f66964e3008a0a35b3e22c2859dd93c"
+      "sha256": "1bf14e0b98721db7e6765ccc9ed9a068c683b6c30df618094995ea861416a3bb"
     },
     {
       "path": "shared/data/safety-score-v9/wrapper-allocation-reviews-v1.json",
@@ -142,7 +142,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/factory.ts",
-      "sha256": "1f8c53866593fb91d01c4a8d16dcff09a5e9ad039a844511f216dad3b329d9ad"
+      "sha256": "c5e8b19933cc5d6bbb33ce83bf879cea32e00aa738e38189ad974aa9ec9097ba"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/index.ts",
@@ -158,7 +158,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/offchain-issuer/commodity.ts",
-      "sha256": "b00d3758516adabc56c311e7136ca9f6c3cc2cc896f924b9a81102ed2234881a"
+      "sha256": "0d49899da4e0516479bf5227d386bfe500062849c7b39b3425c1e9fc23735303"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/offchain-issuer/coverage-and-stablecoin-audit.ts",
@@ -202,7 +202,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/schema.ts",
-      "sha256": "8448bdaff28ee77f8d1747be4f3378f400f272368d9cef73b136b0684735a84a"
+      "sha256": "dc65ab61142b8cef793a8478da85186c04ab5e3c44332a6e5ce9d56964e24f3d"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/shared.ts",
@@ -302,7 +302,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/safety-score-v9/control-bridge-join.ts",
-      "sha256": "2875b7f95afd02b3ef5bc41c985bee6a62d000691a89a132b3108bac04ac7834"
+      "sha256": "928afa0a57e909a82b6489e409c947b8eb025b900257b73d47439a2254ec4a82"
     },
     {
       "path": "shared/lib/safety-score-v9/control-mint-grade.ts",
@@ -310,7 +310,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/safety-score-v9/control-primitives.ts",
-      "sha256": "d2935ed49bde9f593f91424c3ff4b8a9fd51d0fc12a8dfed2b44c927a08546f4"
+      "sha256": "bcfe4e76a8e8d11e10ee7523a4427237cc38f00dea3bd17c3d1729b0c9a93de8"
     },
     {
       "path": "shared/lib/safety-score-v9/control-scope.ts",
@@ -318,7 +318,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/safety-score-v9/control.ts",
-      "sha256": "d6d51170f84b434b93cc86f8647feaa69227a2b9331d2010eb95dca2519b8d7d"
+      "sha256": "220f5d26eb1309f1caa16de78f41c486d42c4cdf8b9d2d7fb63270c22cb8ebd7"
     },
     {
       "path": "shared/lib/safety-score-v9/dependencies.ts",
@@ -326,7 +326,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/safety-score-v9/evaluate-asset.ts",
-      "sha256": "b0202e704acb82fd408b2419a02dc5ad3d037d3a08c5c41c788c536330b7f229"
+      "sha256": "424f0c4efe3545b8d27e8ced5e04d802b9ad7b6e79a8dd39434afb54f5908fea"
     },
     {
       "path": "shared/lib/safety-score-v9/evaluate-set.ts",
@@ -346,7 +346,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/safety-score-v9/exit.ts",
-      "sha256": "f2bdf28ed92592a4df4e75d37fec715182128ee6419f3fe15c2de4ef6642931b"
+      "sha256": "ab52b25de2797abbb5a71bc9022f913c1635625eb8ffd5a14251b973d22d441f"
     },
     {
       "path": "shared/lib/safety-score-v9/facts.ts",
@@ -458,7 +458,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/redemption.ts",
-      "sha256": "4841c20950d444110ffd595cf11e9f8713c4d747c2ae6b4cc0db4ca6cb6c2fdd"
+      "sha256": "750c69db5f3fc29d0f1bad66748ddd8b5bc39b861997b3b23d7b35e542cd7fbb"
     },
     {
       "path": "shared/types/report-card-grade.ts",
@@ -478,7 +478,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/safety-schema-primitives.ts",
-      "sha256": "a7160a6d1c3cc9ed87f0707e2161aa526d935f3ac2cf7578c3cc3333ad68b0a1"
+      "sha256": "a7de551472009f4a4ffe0b309970d52ce803f5133c54043eec13f78cb4be23e4"
     },
     {
       "path": "shared/types/safety-score-history.ts",
@@ -486,7 +486,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/safety-score-v9-access-lookthrough.ts",
-      "sha256": "d61fe02aeb79d800e49d32e2eb4c038c44d9c55c2a499757b35591ad470eb554"
+      "sha256": "f6d1a6a3e876c8cdbd719fa0ac79537b36277eed41e1fd6b68dcd614e225068f"
     },
     {
       "path": "shared/types/safety-score-v9-allocation.ts",
@@ -506,15 +506,15 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/safety-score-v9-facts.ts",
-      "sha256": "326ce78b6c6a01cfc9b389fe25b40bfdb58d0ab1abe5006cf4ed2da7c61c06f6"
+      "sha256": "8198c314f3dab5779c4fcc2c077bab3aff0a9a6963262288c1f3d8f18e0ef23b"
     },
     {
       "path": "shared/types/safety-score-v9-incidents.ts",
-      "sha256": "3eab9ac97f3729d3b5c4f500644b3489fb5ac19344df3252d93f83720ccaf622"
+      "sha256": "b8f2b0433e20b29472b5d082586295e1a0f07a85c4c27c8def8c5cc1d23d4d4b"
     },
     {
       "path": "shared/types/safety-score-v9-mechanism-overlays.ts",
-      "sha256": "1ffef5a930958e574904de480d5960c260e7e858dfd3c68227d891408e111c66"
+      "sha256": "85df3f2c1e86b5191d8e182636babd4fb63a8cadd8ba77faa4eb7ef967819178"
     },
     {
       "path": "shared/types/safety-score-v9-mechanism-profile.ts",
@@ -522,7 +522,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/safety-score-v9-operational-resilience-overlays.ts",
-      "sha256": "9618a88069b4656d4b7a7bda1099a515a08b964505bb9425d0d32aeb35b581cd"
+      "sha256": "052ccd096890462d689757dd7dffb024c0c52aac547df331f5a4ffa588d65d5a"
     },
     {
       "path": "shared/types/safety-score-v9-operational-resilience.ts",
@@ -546,11 +546,11 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/safety-score-v9-supply-attribution.ts",
-      "sha256": "f67c04cc8796cbc2d2d5b75164b0527c1469c59a9715458035d3c27bd3f2c619"
+      "sha256": "c9fed9af657a4f5e576d40a8ba6ad4dbd8b7287ebeef99edf775e334d1600b15"
     },
     {
       "path": "shared/types/safety-score-v9-transfer-overlays.ts",
-      "sha256": "0010bf8401196f40c48fb0b3e4687fc9018742d295a5c01e6e4bc651f1e23cc8"
+      "sha256": "71e063856bfbcf56104b9c72b9e743f465847ea73af4a39930eb5e942ce82cf4"
     },
     {
       "path": "shared/types/safety-score-v9-wrapper.ts",
@@ -558,7 +558,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/safety-score-v9.ts",
-      "sha256": "99b67aa6b5abedc53e3f95fbe75ed8d7c8d34a1ca03f9ca83f932bd2615ad34a"
+      "sha256": "3554b6b8936db6e66946931ec74213d4c0978159e4367a40ed04955fd26df403"
     },
     {
       "path": "shared/types/stablecoin-taxonomy.ts",
@@ -638,7 +638,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/redemption-backstop/sources.ts",
-      "sha256": "f06a15f7745094008f362f419aba90f3614d81adbf5f842bb37872a448ce708a"
+      "sha256": "df58103dfd8a8806bfa06f939fdcaab1b243765148008990c4d7c9ae394eec48"
     },
     {
       "path": "worker/src/lib/redemption-exit-route-observations.ts",
@@ -662,27 +662,27 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/economic-supply-observer.ts",
-      "sha256": "60f967fbfa1e534558a493626ab94d5b9f93aa71ad67ed5ad6a912db8ce27e3b"
+      "sha256": "688b1db64af918ba29f5a6399641de2237c2f038b6a78b60242e31cc6e21bbe4"
     },
     {
       "path": "worker/src/lib/safety-score-v9/extension-access-lookthrough.ts",
-      "sha256": "432eac2b6ed8f490d3750307d4706387b4f19326020418a9c789ff9d55c6bd88"
+      "sha256": "a60984c3b97c5c8df28ed0deddeb82ab11468f10bbbc99e0dafeb3de588bd3b5"
     },
     {
       "path": "worker/src/lib/safety-score-v9/extension-bridge.ts",
-      "sha256": "2d2c6dceff2accdf04499150c46171a32ba070a6f6902fa1530edf03f07b49bb"
+      "sha256": "082b7ce909f6d37d518cebb3d09ed930567d8fe2b5e4b91495ff7d02d7460748"
     },
     {
       "path": "worker/src/lib/safety-score-v9/extension-incidents.ts",
-      "sha256": "fd56fb2fc3ff67e99211b341174daf91a8ef3c36df2067b54d79631548d48898"
+      "sha256": "7fd5bc6954b64f626f041d8436266e37830e5b8c5ce115006c49e3546b841b75"
     },
     {
       "path": "worker/src/lib/safety-score-v9/extension-mechanism.ts",
-      "sha256": "fef386f5d93fae1402873a4635d2d3b2546c313038e1349f992aa6dae9080811"
+      "sha256": "7fc9e4fad4abdea7a7e83d247b981dcf5520cc780a4025b6181b3be88a088fb6"
     },
     {
       "path": "worker/src/lib/safety-score-v9/extension-operational-resilience.ts",
-      "sha256": "9bb872f920328478599abeb05a44d5018be092e587ab4ea517a2b9b0a3b6181a"
+      "sha256": "b0782abe14827e8987f9eb88674efc0037b62b102bd03b3be74bcb31fd256f04"
     },
     {
       "path": "worker/src/lib/safety-score-v9/extension-oracle.ts",
@@ -694,11 +694,11 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/extension-reserves.ts",
-      "sha256": "4b4a9305be01eabcb09f72fd1e3e14e3cfdc22487a47b710cb8be9c4e9bf1f37"
+      "sha256": "94dd2118046870c595404029cc4c837f345023fc3a2c703f6892c61b4b488537"
     },
     {
       "path": "worker/src/lib/safety-score-v9/extension-routes.ts",
-      "sha256": "d87639a470fcef4f2f55db4ea117bac503dd472f350f202b15da1cb159e3dc03"
+      "sha256": "1c25bd19a7b88e44848c1e5948f104e4eafc52b62bf3d87a5323c563efd0ddae"
     },
     {
       "path": "worker/src/lib/safety-score-v9/extension-shared.ts",
@@ -706,15 +706,15 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/extension-shock.ts",
-      "sha256": "2fdefa26c21e55c0f71dde92fcb4e181dc66d67373fe0bbca63195b123dab4e1"
+      "sha256": "83e54f8cc995daaa7069a3ffb5ae52624171a853b88daf4cc582ba90abfc0e37"
     },
     {
       "path": "worker/src/lib/safety-score-v9/extension-supply.ts",
-      "sha256": "9144c9f928b4359d230054855981e53120f5220bc077e8f4c003618408174b5c"
+      "sha256": "e8fe698336ac1957ea776bf4a8fa295c3a576798fa9e0e0ba503e7b3802c005d"
     },
     {
       "path": "worker/src/lib/safety-score-v9/extension-transfer.ts",
-      "sha256": "218afd8c1b156bf73fd1a267f933f85e45994b9a6c810cfc805443155a048ac5"
+      "sha256": "3f96e41755aa8d7812a7a44178496bc27acb69bcef99028aeea048d69f8e7dca"
     },
     {
       "path": "worker/src/lib/safety-score-v9/extension-wrapper-allocation.ts",
@@ -722,7 +722,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/extension.ts",
-      "sha256": "a170fdcbcd488b21e58553eb702a4457bfbcfdf19931cdec4c524c5379b9ee7a"
+      "sha256": "0c9ef811fad8f7f87f1e37f438f11f3e25b707cdddc0068876e48dd33211031b"
     },
     {
       "path": "worker/src/lib/safety-score-v9/fact-set-backing.ts",
@@ -742,7 +742,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/fact-set-exit.ts",
-      "sha256": "28401ec98da87d4dd07966e860b575f2041ed2b624b5d7e4d1506779c7a4c38b"
+      "sha256": "663a28117b2f89e0faa576eaca3b9a70d2c67ecf2fa105d6a6c2ad711040f303"
     },
     {
       "path": "worker/src/lib/safety-score-v9/fact-set-operational-resilience.ts",
@@ -750,11 +750,11 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/fact-set-peg-supply.ts",
-      "sha256": "b75e8db3a44a5dffca45ce89145b266a94fbc604e80836dba1221819819fb467"
+      "sha256": "1c328be0b774537078610a0a4569c1d2a0e6945fcd6e453b1378f0c4030796f3"
     },
     {
       "path": "worker/src/lib/safety-score-v9/fact-set-schema.ts",
-      "sha256": "8a3cf518fd5d8f10d42f02f6aa5f8df8f71b44ccdc6d8ea3b71d10fd11ccb546"
+      "sha256": "8e1b8955049a45b4a5b8270821d71f988012aebeffcb2b2abf1f7f64dafdc802"
     },
     {
       "path": "worker/src/lib/safety-score-v9/fact-set-wrapper.ts",
@@ -766,7 +766,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/supply-attribution-contract.ts",
-      "sha256": "bbe641af36bcd53e85c6442f7b7938a3dc42d37964a669a1190581ab3d550c80"
+      "sha256": "3a14cea66f1a4558fb33664abe3003b9d67aafa31d09c686d29efae6dcd96b18"
     },
     {
       "path": "worker/src/lib/safety-score-v9/supply-attribution-generation.ts",
@@ -819,7 +819,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-01-block-26096787-shock-coverage.json.gz"
     }
   ],
-  "digest": "e6e1cc1b9b95b09e6a14721fce9907d8df91a3bd08eb447843e8e64153b7db78"
+  "digest": "a7bb771c11cd9b2cc9f879366bd40bb719b1874e7f599e960913262d7024e723"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

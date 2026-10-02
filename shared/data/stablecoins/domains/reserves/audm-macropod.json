@@ -18,22 +18,22 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-29",
-    "reviewer": "Claude curation campaign 2026-09-21 (Resv25); issue-sweep pre-expiry re-check 2026-09-29 (no newer report than 1 September 2026)",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol decision wave 2026-10-02 (DwAudm)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Macropod AUDM Reserve Verification Report as at 1 September 2026",
-        "url": "https://cdn.prod.website-files.com/69df87da28d300c1b443a0d6/6a9929b8226f390a1fcddc38_260901%20Catena%20Digital%20Pty%20Ltd%20Reserve%20Verification%20Report%20as%20at%201st%20September%202026.pdf"
+        "label": "Macropod AUDM Reserve Verification Report as at 30 September 2026",
+        "url": "https://cdn.prod.website-files.com/69df87da28d300c1b443a0d6/6abf4aae214c978251192bb2_261001%20Catena%20Digital%20Pty%20Ltd%20Reserve%20Verification%20Report%20as%20at%2030th%20Sept%202026.pdf"
       },
       {
         "label": "Macropod transparency",
         "url": "https://www.macropod.com/transparency"
       }
     ],
-    "rationale": "Macropod's issuer self-verification report under paragraph 12 of ASIC Corporations (Stablecoin and Wrapped Token Relief) Instrument 2025/867 covers the full reserve at 1 September 2026. It identifies AUD 2,899,657.78 of cash at Westpac Banking Corporation in the named 'AUDM Trust Class A Reserve' account held by Macropod as trustee for the AUDM Trust. The report reconciles that balance against AUD 2,898,943.78 of AUDM across Ethereum, Redbelly, Solana and Base, leaving AUD 714.00 of excess reserves. The issuer states that it reviewed bank statements, transaction and withdrawal records, blockchain transactions, contract addresses, and transfers between the reserve account and the blockchains. The report is issuer-signed self-verification rather than an independent audit. Pre-expiry re-check 2026-09-29: the live transparency index still lists this 1 September 2026 report as the newest dated reserve report, the Hall Chadwick agreed-upon-procedures series is last represented by the June 2026 report, and no interim report exists, so the composition remains as at 2026-09-01. The next monthly report (as at 1 October 2026) is expected in the first days of October 2026. No live adapter snapshot landed this cycle; the index anchor and the pinned report PDF (re-downloaded 2026-09-29, 95,518 bytes, byte-identical to the reviewed manifest) are unchanged, so the adapter silence is not attributable to the issuer source.",
-    "compositionBasis": "Macropod issuer self-verification report as at 1 September 2026",
-    "compositionAsOf": "2026-09-01",
+    "rationale": "Macropod's issuer self-verification report under paragraph 12 of ASIC Corporations (Stablecoin and Wrapped Token Relief) Instrument 2025/867 covers the full reserve at 30 September 2026. It identifies AUD 3,322,783.88 of cash at Westpac Banking Corporation in the named 'AUDM Trust Class A Reserve' account held by Macropod as trustee for the AUDM Trust. The report reconciles that balance against AUD 3,322,070.88 of AUDM across Ethereum, Redbelly, Solana and Base, leaving AUD 713.00 of excess reserves. The issuer states that it reviewed bank statements, transaction and withdrawal records, blockchain transactions, contract addresses, and transfers between the reserve account and the blockchains. The report is issuer-signed self-verification rather than an independent audit. The transparency index links this report as the current monthly report; the separate quarterly reconciliation remains the June 2026 Hall Chadwick agreed-upon-procedures report. The new PDF's filename creation-date prefix is not evidence of its publication date.",
+    "compositionBasis": "Macropod issuer self-verification report as at 30 September 2026",
+    "compositionAsOf": "2026-09-30",
     "scope": "full-composition",
     "knownUnknownExposure": "The report classifies the entire reserve as cash, identifies Westpac and the named trust reserve account, and reconciles the full reserve balance to supply on all four supported networks. The account number remains masked, and the report does not disclose whether reserve cash may be rehypothecated.",
     "knownUnknownExposurePct": 0,
@@ -59,19 +59,19 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "structured",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Resv25)",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol decision wave 2026-10-02 (DwAudm)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Macropod AUDM Reserve Verification Report as at 1 September 2026",
-        "url": "https://cdn.prod.website-files.com/69df87da28d300c1b443a0d6/6a9929b8226f390a1fcddc38_260901%20Catena%20Digital%20Pty%20Ltd%20Reserve%20Verification%20Report%20as%20at%201st%20September%202026.pdf"
+        "label": "Macropod AUDM Reserve Verification Report as at 30 September 2026",
+        "url": "https://cdn.prod.website-files.com/69df87da28d300c1b443a0d6/6abf4aae214c978251192bb2_261001%20Catena%20Digital%20Pty%20Ltd%20Reserve%20Verification%20Report%20as%20at%2030th%20Sept%202026.pdf"
       },
       {
         "label": "Macropod AUDM transparency and trust disclosures",
         "url": "https://www.macropod.com/transparency"
       }
     ],
-    "uncertainty": "The 1 September 2026 report identifies Westpac, the exact reserve balance, and the named account held by Macropod as trustee for the AUDM Trust. The account number is masked. The issuer verification does not state whether reserve cash may be rehypothecated."
+    "uncertainty": "The 30 September 2026 report identifies Westpac, the exact reserve balance, and the named account held by Macropod as trustee for the AUDM Trust. The account number is masked. The issuer verification does not state whether reserve cash may be rehypothecated."
   }
 }

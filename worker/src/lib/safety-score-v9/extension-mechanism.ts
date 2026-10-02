@@ -21,13 +21,14 @@ import {
 } from "@shared/types/safety-score-v9-backing";
 import type { V9FactStatusV2 } from "@shared/types/safety-score-v9-facts";
 import {
-  SafetyScoreV9MechanismReviewOverlayFileSchema,
+  SafetyScoreV9MechanismReviewOverlayEnvelopeSchema,
   SafetyScoreV9MechanismReviewOverlaySchema,
   type SafetyScoreV9MechanismReviewOverlay,
 } from "@shared/types/safety-score-v9-mechanism-overlays";
 import { MechanismArchetypeReviewSchema } from "@shared/types/stablecoin-meta-schemas";
 import { isoDateStartSec } from "./extension-shared";
 import type { SafetyScoreV9CompilerInput } from "./native-input";
+import { canonicalizeReviewedRegistryDigest, createReviewedAssetRegistry } from "./extension-reviewed-registry";
 
 type MechanismMeta = Pick<
   StablecoinMeta,
@@ -442,9 +443,13 @@ export function expandOverlayReview(
   return V9MechanismRiskReviewSchema.parse(review);
 }
 
-const MECHANISM_REVIEW_OVERLAY_FILE = SafetyScoreV9MechanismReviewOverlayFileSchema.parse(
-  mechanismReviewOverlaysAsset,
-);
+const mechanismEnvelope = SafetyScoreV9MechanismReviewOverlayEnvelopeSchema.parse(mechanismReviewOverlaysAsset);
+const MECHANISM_REVIEW_OVERLAY_FILE = canonicalizeReviewedRegistryDigest(mechanismEnvelope, {}, {
+  "overlays.*.venueShares.*.failureDomains": [],
+}, [
+  "overlays.*.collateralizationMeasurement.measurementId",
+  "overlays.*.collateralizationMeasurement.rationale",
+]);
 
 export const SAFETY_SCORE_V9_MECHANISM_REVIEW_OVERLAYS_DIGEST = sha256Hex(
   stableJsonStringifyV1({
@@ -453,9 +458,9 @@ export const SAFETY_SCORE_V9_MECHANISM_REVIEW_OVERLAYS_DIGEST = sha256Hex(
   }),
 );
 
-const MECHANISM_REVIEW_OVERLAYS: ReadonlyMap<string, MechanismReviewOverlay> = new Map(
-  MECHANISM_REVIEW_OVERLAY_FILE.overlays.map((overlay) => [overlay.assetId, overlay]),
-);
+const MECHANISM_REVIEW_OVERLAYS = createReviewedAssetRegistry({
+  rows: mechanismEnvelope.overlays, schema: SafetyScoreV9MechanismReviewOverlaySchema, path: "mechanismReviews.overlays",
+});
 
 // The approved D1 fiat/tbill overlay standard re-bounds curated claims after
 // twelve months. Date-only reviews become score-bearing after their UTC day has

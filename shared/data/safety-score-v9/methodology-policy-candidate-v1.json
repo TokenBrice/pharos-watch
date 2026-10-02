@@ -399,6 +399,7 @@
         "minMonths": 60
       },
       "reserve": {
+        "maxUnclassifiedCuratedResidualPct": 0.1,
         "boundedFacts": {
           "factKinds": ["contractual-maturity-maximum", "observed-portfolio-maturity", "eligibility-envelope", "currently-liquid-fraction", "maturity-applicability", "stressed-realization-bound"],
           "scopeKinds": ["reserve-envelope", "exposure", "sub-instrument"],

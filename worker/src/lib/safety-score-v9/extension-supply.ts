@@ -9,6 +9,7 @@ import {
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import { getCirculatingRaw, getCirculatingRawOrNull } from "@shared/lib/supply";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { CURATED_NATIVE_SINGLE_ROUTE_SUPPLY_ATTRIBUTION } from "./curated-single-route-supply";
 import type { SafetyScoreV9FactSetExtensionV2 } from "./fact-set-schema";
 import type { V9ExtensionRegistryMeta } from "./extension-shared";
@@ -19,7 +20,7 @@ import {
 } from "./supply-attribution";
 import { normalizeReviewedDeploymentAddress, reviewedSupplyRouteKind, reviewedEconomicDeploymentAttributionValidationError, hasCompleteEligibleProviderSupply, REVIEWED_ECONOMIC_SUPPLY_PLANS } from "./supply-attribution-contract";
 import supplyAttributionReviews from "@shared/data/safety-score-v9/supply-attribution-reviews-v1.json";
-import { ReviewedEconomicSupplyPlanFileSchema } from "@shared/types/safety-score-v9-supply-attribution";
+import { ReviewedEconomicSupplyPlanFileSchema, ReviewedProviderRowExclusionSchema } from "@shared/types/safety-score-v9-supply-attribution";
 import {
   exactInputBoundTransferMaterialityPacket,
   type SafetyScoreV9TransferMaterialityGeneration,
@@ -33,8 +34,9 @@ type ExtensionAsset = SafetyScoreV9FactSetExtensionV2["assets"][number];
 type SupplyReview = NonNullable<ExtensionAsset["supplyReview"]>;
 const RAW_UNIT_SHARE_SCALE = 10n ** 18n;
 
+const SUPPLY_ATTRIBUTION_REVIEWS = ReviewedEconomicSupplyPlanFileSchema.parse(supplyAttributionReviews);
 export const SAFETY_SCORE_V9_INDEPENDENT_LIABILITY_SUPPLY_ASSET_IDS = Object.freeze(
-  ReviewedEconomicSupplyPlanFileSchema.parse(supplyAttributionReviews).independentLiabilityAssetIds.sort(compareText),
+  SUPPLY_ATTRIBUTION_REVIEWS.independentLiabilityAssetIds.sort(compareText),
 );
 const INDEPENDENT_LIABILITY_SUPPLY_ASSET_ID_SET = new Set(
   SAFETY_SCORE_V9_INDEPENDENT_LIABILITY_SUPPLY_ASSET_IDS,
@@ -545,6 +547,42 @@ function buildCuratedNativeSingleRouteSupplyReview(
   });
 }
 
+function admittedProviderRowExclusions(
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
+  assetId: string,
+  review: SupplyReview,
+): SupplyReview["providerRowExclusions"] {
+  const entries = supplyAttributionReviews.providerRowExclusionReviews ?? [];
+  if (!entries.some(entry => entry.assetId === assetId)) return undefined;
+  const rows = safetyScoreV9ChainRows(fixedInput, assetId);
+  const aggregate = getCirculatingRawOrNull(fixedInput.aggregateCirculatingById?.[assetId] ?? {});
+  const total = Object.values(rows).reduce((sum, row) => sum + row.current, 0);
+  const own = ACTIVE_META_BY_ID.get(assetId);
+  // Do not change the legacy share denominator. Admit only when it already
+  // equals the original published aggregate, rather than renormalising rows.
+  if (aggregate === null || aggregate <= 0 || total !== aggregate) return [];
+  return entries.filter(entry => entry.assetId === assetId).flatMap(entry => {
+    const parsed = ReviewedProviderRowExclusionSchema.safeParse(entry);
+    if (!parsed.success) return [];
+    const record = parsed.data;
+    const target = ACTIVE_META_BY_ID.get(record.belongsToAssetId);
+    if (record.reviewedAtSec > fixedInput.clockSec || record.expiresAtSec <= fixedInput.clockSec ||
+      record.provenance.providerAssetId !== own?.llamaId || own?.detailProvider !== "defillama" ||
+      !Object.prototype.hasOwnProperty.call(rows, record.providerChainLabel) || resolveChainId(record.providerChainLabel) !== record.chainId ||
+      !target?.contracts?.some(contract => contract.chain === record.chainId && contract.address === record.contractAddress) ||
+      !target.contracts.some(contract => contract.chain === record.provenance.remoteChainId && contract.address === record.provenance.remoteTokenAddress) ||
+      own.contracts?.some(contract => contract.chain === record.chainId && contract.address === record.contractAddress)) return [];
+    // Exclude only an unmatched provider identity, never a catalogued liability
+    // route (including another legacy contract on the same chain).
+    const aliases = Object.keys(rows).filter(label => resolveChainId(label) === record.chainId);
+    const row = review.selectedBridgeRoutes.find(candidate =>
+      candidate.deploymentRouteKey === `${V9_UNMATCHED_CHAIN_ROUTE_PREFIX}${assetId}:${record.chainId}` &&
+      candidate.reviewState === "unmatched" && candidate.supplyUsd === rows[record.providerChainLabel]!.current);
+    if (aliases.length !== 1 || !row) return [];
+    return [{ review: record, deploymentRouteKey: row.deploymentRouteKey, supplyShare: row.supplyShare }];
+  });
+}
+
 /**
  * Reconciles the exact captured per-chain circulating supply against the
  * reviewed bridge-route rows. Chains without a unique reviewed route row stay
@@ -704,13 +742,15 @@ export function buildSafetyScoreV9SupplyReview(
     (sum, route) => sum + (route.reviewState === "selected-reviewed" ? route.supplyUsd : 0),
     0,
   );
-  return finalizeSupplyReview({
+  const review = finalizeSupplyReview({
     selectedBridgeRoutes,
     selectedRouteSupplyShare: reviewedSelectedUsd / totalUsd,
     unknownRouteSupplyShare: unknownUsd / totalUsd,
     unreviewedRouteSupplyShare: unreviewedUsd / totalUsd,
     failureDomains,
   });
+  const exclusions = admittedProviderRowExclusions(fixedInput, assetId, review);
+  return exclusions?.length ? { ...review, providerRowExclusions: exclusions } : review;
 }
 
 /** Supply share reconciled to one reviewed route row, for control materiality. */

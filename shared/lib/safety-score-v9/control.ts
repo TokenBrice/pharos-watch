@@ -79,6 +79,7 @@ export function projectV9EconomicControlEvaluation(
         selectedRouteSupplyShare: asset.supply.selectedRouteSupplyShare,
         unknownRouteSupplyShare: asset.supply.unknownRouteSupplyShare,
         unreviewedRouteSupplyShare: asset.supply.unreviewedRouteSupplyShare,
+        ...(asset.supply.providerRowExclusions === undefined ? {} : { providerRowExclusions: asset.supply.providerRowExclusions }),
       },
     },
     mint: {
@@ -173,8 +174,21 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
         control.status.applicability.state !== "not-applicable" &&
         !isKnownRequired(control.status),
     );
+    // A measured unresolved deployment cohort owns its smooth exposure charge.
+    // Its still-bounded inventory is evidence, not a second whole-coin ceiling.
+    // Any unresolved control outside that exact cohort keeps the aggregate gap.
+    const inventoryPricedByDeployment =
+      unresolvedCohort.share !== null &&
+      unresolvedCohort.share < unresolvedFullCeilingShareThreshold &&
+      unresolvedControls.length > 0 &&
+      controls.every((control) =>
+        control.status.applicability.state === "not-applicable" ||
+        isKnownRequired(control.status) ||
+        unresolvedCohort.controlKeys.has(control.controlKey));
     const allScoped = unresolvedControls.length > 0 && unresolvedControls.every(hasFreshScopedQuestion);
-    addReason(allScoped ? "scoped-control-question" : "unresolved-control-identity", "local-component", "controls");
+    if (!inventoryPricedByDeployment) {
+      addReason(allScoped ? "scoped-control-question" : "unresolved-control-identity", "local-component", "controls");
+    }
   }
 
   for (const control of controls) {

@@ -11,6 +11,7 @@ import {
   type RedemptionBackstopConfig,
 } from "@shared/lib/redemption-backstops";
 import { isRedemptionSettlementFaster } from "@shared/lib/redemption-backstop-configs/settlement";
+import { resolveReviewedRouteSuspension } from "@shared/lib/redemption-backstop-configs/schema";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import type { ExitRouteObservation } from "@shared/types/exit-route";
@@ -820,8 +821,9 @@ function buildRedemptionRouteReview(
   entry: RedemptionBackstopEntry,
   observation: ExitRouteObservation,
 ): RouteReview {
-  if (observation.executionCertificate) return buildCertifiedRouteReview(fixedInput, entry.stablecoinId, observation);
   const staticConfig = getRedemptionBackstopConfig(entry.stablecoinId);
+  const routeSuspension = resolveReviewedRouteSuspension(staticConfig, observation.routeId, fixedInput.clockSec);
+  if (observation.executionCertificate && !routeSuspension) return buildCertifiedRouteReview(fixedInput, entry.stablecoinId, observation);
   const unresolvedOutputDispositionReviewedAtSec = staticConfig?.reviewedAt
     ? Date.parse(`${staticConfig.reviewedAt}T00:00:00.000Z`) / 1_000
     : Number.NaN;
@@ -853,11 +855,12 @@ function buildRedemptionRouteReview(
   return {
     lane: "redemption",
     routeId: observation.routeId,
+    ...(routeSuspension ? { routeSuspension } : {}),
     holderAccess: redemptionHolderAccess(entry),
     executionModel: redemptionExecutionModel(entry),
     executionCertainty: redemptionExecutionCertainty(entry, modelConfidence),
     modelConfidence,
-    coverageClass: redemptionCoverageClass(entry, observation),
+    coverageClass: routeSuspension ? "diagnostic" : redemptionCoverageClass(entry, observation),
     capacityScoringHorizon: entry.capacityProfile?.scoringHorizon ?? "unknown",
     ...redemptionSettlement(reviewedTerms.settlementModel, reviewedTerms.settlementDelaySec),
     settlementHorizonSec: reviewedTerms.overridesCapturedSettlementHorizon
@@ -867,7 +870,7 @@ function buildRedemptionRouteReview(
     dailyLimitUsd: entry.dailyLimitUsd ?? null,
     minRedeemUsd: reviewedTerms.minRedeemUsd,
     executionCosts: redemptionExecutionCosts(entry, observation),
-    physicalResourceKeys,
+    physicalResourceKeys: routeSuspension ? [] : physicalResourceKeys,
     output: outputReview,
     ...(unresolvedOutputResponsibility === null ? {} : { unresolvedOutputResponsibility }),
     failureDomains: [],
@@ -957,7 +960,9 @@ export function buildSafetyScoreV9RetainedRedemptionRoutes(
       assetId, config, clockSec: fixedInput.clockSec,
       supplyUsd: getCirculatingRawOrNull(fixedInput.aggregateCirculatingById?.[assetId] ?? {}),
       reference: { usdPerTroyOunce: metal?.usdPerTroyOunce ?? NaN, observedAtSec: metal?.asOf ?? 0 },
-      routeOpen: redemption?.routeStatus === "open",
+      // The separately reviewed physical channel is not the suspended legacy exchange.
+      routeOpen: redemption?.routeStatus === "open" || (redemption?.routeStatus === "suspended" &&
+        resolveReviewedRouteSuspension(config, `redemption:${assetId}:${config.routeFamily}`, fixedInput.clockSec) !== undefined),
     });
     if (observation) retained.push({ lane: "redemption", observation, disposition: "observed", rejection: null });
   }

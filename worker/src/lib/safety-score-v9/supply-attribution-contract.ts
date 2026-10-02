@@ -1031,6 +1031,15 @@ export function deriveReviewedEconomicDeploymentPartition(input: {
       const observation = observations.get(escrow.id);
       const backing = observation && convert(escrow.canonicalDeploymentKey, observation);
       const pendingObservation = observations.get(`in-flight:${escrow.id}`);
+      if (escrow.inFlightSource !== null && "kind" in escrow.inFlightSource) {
+        const canonical = observations.get(escrow.canonicalDeploymentKey);
+        if (!pendingObservation || !canonical || !observation ||
+          !/^(0|[1-9][0-9]*)$/.test(pendingObservation.anchor) || !EVM_BLOCK_HASH_RE.test(pendingObservation.anchorHash) ||
+          pendingObservation.anchor !== canonical.anchor || pendingObservation.anchorHash !== canonical.anchorHash ||
+          pendingObservation.observedAtSec !== canonical.observedAtSec ||
+          pendingObservation.anchor !== observation.anchor || pendingObservation.anchorHash !== observation.anchorHash ||
+          pendingObservation.observedAtSec !== observation.observedAtSec) return null;
+      }
       const pending: EconomicFraction | null | undefined = escrow.inFlightSource === null && input.plan.inFlightTreatment === "atomic-native-wrapper"
         ? { n: 0n, d: 1n } : pendingObservation && convert(escrow.canonicalDeploymentKey, pendingObservation);
       if (!backing || !pending) return null;
@@ -1038,9 +1047,12 @@ export function deriveReviewedEconomicDeploymentPartition(input: {
       for (const key of escrow.receiptDeploymentKeys) {
         const subset = escrow.receiptClaimSources.find(source => source.deploymentKey === key);
         const claimObservation = subset && observations.get(`receipt:${escrow.id}:${key}`);
-        const claim = subset ? claimObservation && convert(key, claimObservation) : units.get(key);
-        const holding = units.get(key)!;
-        if (!claim || claim.n * holding.d > holding.n * claim.d) return null;
+        // Excluded receipt holders remain escrow-backed. Exclusions reduce
+        // circulating deployment units, never the bridge's gross liabilities.
+        const holdingObservation = observations.get(key);
+        const holding = holdingObservation && convert(key, holdingObservation);
+        const claim = subset ? claimObservation && convert(key, claimObservation) : holding;
+        if (!claim || !holding || claim.n * holding.d > holding.n * claim.d) return null;
         represented = addEconomicUnits(represented, claim);
       }
       if (represented.n * backing.d !== backing.n * represented.d) return null;

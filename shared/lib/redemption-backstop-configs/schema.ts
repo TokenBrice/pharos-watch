@@ -19,6 +19,7 @@ import type { RedemptionDocSource } from "../../types";
 import { isValidIsoDateOnly } from "../../types/date-primitives";
 import { formatUtcDateOnly } from "../format";
 import { isRedemptionSettlementFaster } from "./settlement";
+import { RedemptionRouteSuspensionSchema } from "../../types/redemption";
 
 const MAX_REDEMPTION_OUTPUT_ASSETS = 16;
 const RatioSchema = z.number().finite().gt(0).lte(1);
@@ -256,7 +257,8 @@ export const RedemptionBackstopConfigSchema = z
      */
     v9ComposedDexExit: RedemptionV9ComposedDexExitSchema.optional(),
     holderEligibility: RedemptionHolderEligibilitySchema.optional(),
-    routeStatus: z.enum(["open", "unknown"]).optional(),
+    routeStatus: z.enum(["open", "unknown", "suspended"]).optional(),
+    routeSuspension: RedemptionRouteSuspensionSchema.optional(),
     routeExitCorrelation: RedemptionRouteExitCorrelationSchema.optional(),
     /**
      * Per-config escape hatch for routes whose documented rail composes with a
@@ -300,6 +302,12 @@ export const RedemptionBackstopConfigSchema = z
     notes: z.array(z.string()).optional(),
   })
   .superRefine((config, ctx) => {
+    if ((config.routeStatus === "suspended") !== (config.routeSuspension !== undefined)) {
+      ctx.addIssue({ code: "custom", path: ["routeSuspension"], message: "Suspended status requires an exact-channel reviewed suspension, and only suspended status may carry it" });
+    }
+    if (config.routeSuspension && config.routeSuspension.reviewedAt > currentUtcDate()) {
+      ctx.addIssue({ code: "custom", path: ["routeSuspension", "reviewedAt"], message: "Suspension review cannot be future-dated" });
+    }
     if ((config.outputAssetType === "physical-commodity-delivery") !== (config.physicalCommodityDelivery !== undefined)) {
       ctx.addIssue({ code: "custom", path: ["physicalCommodityDelivery"], message: "Physical delivery requires explicit commodity, quantity, minimum and published fees" });
     }
@@ -564,6 +572,14 @@ export const RedemptionBackstopConfigSchema = z
   });
 
 export type RedemptionBackstopConfig = z.infer<typeof RedemptionBackstopConfigSchema>;
+
+/** Capture-time, exact-route admission; other issuer channels and DEX routes are untouched. */
+export function resolveReviewedRouteSuspension(config: RedemptionBackstopConfig | null | undefined, routeId: string, clockSec: number) {
+  const suspension = config?.routeStatus === "suspended" ? config.routeSuspension : undefined;
+  if (!suspension || suspension.routeId !== routeId) return undefined;
+  const reviewedAtSec = Date.parse(`${suspension.reviewedAt}T00:00:00Z`) / 1_000;
+  return reviewedAtSec <= clockSec ? suspension : undefined;
+}
 
 export function currentUtcDate(): string {
   return formatUtcDateOnly(new Date());

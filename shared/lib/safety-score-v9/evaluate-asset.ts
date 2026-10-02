@@ -104,6 +104,7 @@ export interface V9EvaluatedAsset {
   stressState: V9RetainedStressState;
   operationalResilience: V9OperationalResilienceResult | null;
   liquidationCapacitySelection?: V9CdpLiquidationCapacitySelection;
+  providerRowExclusions?: V9AssetFactsV3["supply"]["providerRowExclusions"];
 }
 
 type V9EvaluationGapIndex = V9GapIndex<V9AssetFactsV3["gaps"][number]>;
@@ -1541,6 +1542,7 @@ export function evaluateV9Asset({
       compactTrace: projectCompactV9ScoreTrace(trace),
       stressState,
       operationalResilience,
+      ...(asset.supply.providerRowExclusions?.length ? { providerRowExclusions: asset.supply.providerRowExclusions } : {}),
       ...(liquidationCapacitySelection === undefined ? {} : { liquidationCapacitySelection }),
     },
     unavailabilityRoots,

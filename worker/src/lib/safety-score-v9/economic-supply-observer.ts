@@ -1,4 +1,4 @@
-import { CHAIN_META } from "@shared/lib/chains";
+import { CHAIN_META, resolveChainId } from "@shared/lib/chains";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
@@ -112,6 +112,45 @@ export async function observeReviewedEconomicDeploymentPartitionAttempt(input: {
       if (value == null || decimals == null || decimals !== BigInt(row.decimals)) return null;
       return { id, deploymentKey: row.deploymentKey, amount: value.toString(), observedAtSec: header.timestamp, anchor: String(header.number), anchorHash: header.hash, responseSha256: sha256Hex(stableJsonStringifyV1({ calls, results, header })) };
     };
+    const readPendingState = async (
+      source: Extract<NonNullable<ReviewedEconomicSupplyPlan["escrows"][number]["inFlightSource"]>, { kind: "evm-pending-state" }>,
+      escrow: ReviewedEconomicSupplyPlan["escrows"][number],
+    ): Promise<EconomicSupplyObservation | null> => {
+      const header = headers.get(source.chainId);
+      if (!header) return null;
+      const options = { chainRpcs: input.chainRpcs, signal: input.signal };
+      const finalized = await fetchEvmBlockHeader(source.chainId, "finalized", options);
+      if (!finalized || finalized.number < header.number) return null;
+      // EIP-1898 binds every state read to the exact already-observed escrow
+      // block hash. Unsupported hash-pinned reads reject; no latest fallback.
+      const block = { blockHash: header.hash, requireCanonical: true };
+      const state = await fetchEvmRpcBatch(source.chainId, [
+        { method: "eth_getCode", params: [source.bridgeAddress, block] },
+        { method: "eth_call", params: [{ to: source.bridgeAddress, data: source.messageCountSelector }, block] },
+      ], options);
+      if (!state || state.length !== 2 || typeof state[0] !== "string" ||
+        !/^0x[0-9a-f]+$/i.test(state[0]) || state[0].length % 2 !== 0 ||
+        sha256Hex(state[0].toLowerCase()) !== source.bridgeRuntimeCodeSha256 ||
+        typeof state[1] !== "string" || !/^0x[0-9a-f]{64}$/i.test(state[1]) ||
+        BigInt(state[1]) !== BigInt(source.messageIds.length)) return null;
+      const calls = source.messageIds.flatMap((messageId, index) => [
+        { method: "eth_call", params: [{ to: source.bridgeAddress, data: source.messageIdSelector + index.toString(16).padStart(64, "0") }, block] },
+        { method: "eth_call", params: [{ to: source.bridgeAddress, data: source.pendingAmountSelector + messageId.slice(2) }, block] },
+      ]);
+      const messages = calls.length === 0 ? [] : await fetchEvmRpcBatch(source.chainId, calls, options);
+      if (!messages || messages.length !== calls.length) return null;
+      let amount = 0n;
+      for (let index = 0; index < source.messageIds.length; index++) {
+        const identity = messages[index * 2], value = messages[index * 2 + 1];
+        if (typeof identity !== "string" || identity.toLowerCase() !== source.messageIds[index] ||
+          typeof value !== "string" || !/^0x[0-9a-f]{64}$/i.test(value)) return null;
+        amount += BigInt(value);
+      }
+      return { id: `in-flight:${escrow.id}`, deploymentKey: escrow.canonicalDeploymentKey,
+        amount: amount.toString(), observedAtSec: header.timestamp, anchor: String(header.number), anchorHash: header.hash,
+        responseSha256: sha256Hex(stableJsonStringifyV1({ source, state, calls, messages, header,
+          sourceGeneration: input.fixedInput.sourceGeneration, baseInputGenerationId: input.fixedInput.baseInputGenerationId })) };
+    };
     for (const row of plan.deployments) {
       throwIfAborted(input.signal); failedRouteId = row.routeId ?? row.deploymentKey;
       let observation: EconomicSupplyObservation | null = null;
@@ -172,9 +211,16 @@ export async function observeReviewedEconomicDeploymentPartitionAttempt(input: {
           amount: claim.value, observedAtSec: claim.observedAtSec, anchor: claim.sourceGeneration, anchorHash: claim.responseSha256, responseSha256: claim.responseSha256 });
       }
       if (escrow.inFlightSource === null) continue;
-      const pending = await readReviewedApiAmount(escrow.inFlightSource, input.signal);
-      if (!pending) return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: escrow.id };
-      inFlight.push({ id: `in-flight:${escrow.id}`, deploymentKey: escrow.canonicalDeploymentKey, amount: pending.value, observedAtSec: pending.observedAtSec, anchor: pending.sourceGeneration, anchorHash: pending.responseSha256, responseSha256: pending.responseSha256 });
+      failedRouteId = escrow.id;
+      if ("kind" in escrow.inFlightSource) {
+        const pending = await readPendingState(escrow.inFlightSource, escrow);
+        if (!pending) return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: escrow.id };
+        inFlight.push(pending);
+      } else {
+        const pending = await readReviewedApiAmount(escrow.inFlightSource, input.signal);
+        if (!pending) return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: escrow.id };
+        inFlight.push({ id: `in-flight:${escrow.id}`, deploymentKey: escrow.canonicalDeploymentKey, amount: pending.value, observedAtSec: pending.observedAtSec, anchor: pending.sourceGeneration, anchorHash: pending.responseSha256, responseSha256: pending.responseSha256 });
+      }
     }
     if (plan.liabilityInFlightSource !== null) {
       const pending = await readReviewedApiAmount(plan.liabilityInFlightSource, input.signal);
@@ -184,7 +230,7 @@ export async function observeReviewedEconomicDeploymentPartitionAttempt(input: {
     }
     for (const [chainId, header] of headers) {
       const rechecked = await fetchEvmBlockHeader(chainId, header.number, { chainRpcs: input.chainRpcs, signal: input.signal });
-      if (!rechecked || rechecked.hash !== header.hash || rechecked.timestamp !== header.timestamp) {
+      if (!rechecked || rechecked.number !== header.number || rechecked.hash !== header.hash || rechecked.timestamp !== header.timestamp) {
         return { status: "rejected", rejectionCode: "deployment-state-invalid", failedRouteId: `anchor:${chainId}` };
       }
     }
@@ -193,7 +239,8 @@ export async function observeReviewedEconomicDeploymentPartitionAttempt(input: {
       const tolerance = Math.max(V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.conservationAbsoluteToleranceUsd,
         aggregateUsd * V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.conservationRelativeTolerance);
       for (const [chain, provider] of Object.entries(input.fixedInput.chainCirculatingById[input.assetId] ?? {})) {
-        const rows = attribution.deployments.filter(row => row.chainId === chain);
+        const chainId = resolveChainId(chain) ?? chain;
+        const rows = attribution.deployments.filter(row => row.chainId === chainId);
         if (rows.length === 0 || Math.abs(rows.reduce((sum, row) => sum + row.currentSupplyUsd, 0) - provider.current) > tolerance) {
           return { status: "rejected", rejectionCode: "packet-reconciliation-failed", failedRouteId: `provider:${chain}` };
         }

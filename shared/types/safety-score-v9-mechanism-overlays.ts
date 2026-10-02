@@ -5,7 +5,7 @@ import {
   safetyScoreV9MechanismProfileArchetype,
 } from "./safety-score-v9-mechanism-profile";
 import { MECHANISM_ARCHETYPE_VALUES } from "./stablecoin-taxonomy";
-import { StrictIsoDateSchema, uniqueKeyedCollectionSchema } from "./safety-schema-primitives";
+import { StrictIsoDateSchema, uniqueKeyedCollectionSchema, reviewedAssetCollectionEnvelopeSchema } from "./safety-schema-primitives";
 
 const SafetyScoreV9MechanismArchetypeSchema = z.enum(MECHANISM_ARCHETYPE_VALUES);
 
@@ -164,6 +164,7 @@ export const SafetyScoreV9MechanismReviewOverlayFileSchema = uniqueKeyedCollecti
   duplicateMessage: "Duplicate overlay assetId",
   noteSchema: z.string(),
 });
+export const SafetyScoreV9MechanismReviewOverlayEnvelopeSchema = reviewedAssetCollectionEnvelopeSchema("overlays", z.string());
 
 export type SafetyScoreV9MechanismReviewOverlay = z.infer<
   typeof SafetyScoreV9MechanismReviewOverlaySchema

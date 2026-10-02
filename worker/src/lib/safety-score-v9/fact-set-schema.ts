@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { ReserveBoundedFactSchema } from "@shared/types/reserve-bounded-facts";
 import { ReserveScopedAdmissionSchema } from "@shared/types/safety-score-v9-reserve-scope";
+import { AdmittedProviderRowExclusionSchema } from "@shared/types/safety-score-v9-supply-attribution";
 import { compareCodeUnits } from "@shared/lib/compare";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { isRecord } from "@shared/lib/type-guards";
@@ -332,6 +333,7 @@ const SupplyReviewSchema = z
     unknownRouteSupplyShare: FractionSchema,
     unreviewedRouteSupplyShare: FractionSchema,
     failureDomains: CanonicalFailureDomainsSchema,
+    providerRowExclusions: z.array(AdmittedProviderRowExclusionSchema).optional(),
   })
   .strict();
 

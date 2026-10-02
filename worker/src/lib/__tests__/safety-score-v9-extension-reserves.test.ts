@@ -3,6 +3,8 @@ import type { ReserveSlice } from "@shared/types/reserves";
 import { deriveEffectiveDependencySet } from "@shared/lib/dependency-derivation";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { evaluateV9ReserveExposures } from "@shared/lib/safety-score-v9/backing";
+import { SCORE_EPSILON } from "@shared/lib/safety-score-v9/backing-primitives";
 import {
   buildSafetyScoreV9BaselineExtension,
   buildReviewedReserveClassifications,
@@ -169,6 +171,99 @@ describe("reviewed curated reserve admission", () => {
       evidenceClass: "static-validated",
       provenance: "curated",
       rows,
+    });
+  });
+
+  function residualMeta(residualPct: number, portfolio: boolean): V9ExtensionRegistryMeta {
+    const meta = reviewedMeta([
+      { name: "Cash", pct: 100 - residualPct, risk: "very-low", assetClass: "cash",
+        issuerOrObligor: "issuer:alpha", liquidityHorizon: "immediate", maturityDaysMax: 0 },
+      { name: "Unclassified residual", pct: residualPct, risk: "high", assetClass: "other",
+        issuerOrObligor: "Unidentified assets", liquidityHorizon: "unknown" },
+    ], {
+      reviewedAt: "2026-07-13", compositionAsOf: "2026-07-12",
+      knownUnknownExposurePct: residualPct,
+      knownUnknownExposure: "An explicitly unidentified residual.",
+      nonLinkDispositions: residualPct === 0 ? [] : [{
+        reserveIndex: 1, reserveName: "Unclassified residual", pct: residualPct,
+        disposition: "insufficient-evidence", rationale: "Unidentified positions and rounding.",
+      }],
+    });
+    if (portfolio) {
+      const observedAtSec = Date.UTC(2026, 6, 12) / 1_000;
+      const reviewedAtSec = Date.UTC(2026, 6, 13) / 1_000;
+      meta.reserveReview!.observations = [{
+        kind: "portfolio-observation", scopeId: "fixture-portfolio", liabilityBookKey: "fixture-book",
+        deploymentRefs: [], reviewer: "fixture", confidence: "verified",
+        sources: [{ url: "https://example.com/reserves", accessedAtSec: reviewedAtSec, sha256: "a".repeat(64) }],
+        reviewedAtSec, observedAtSec, expiresAtSec: CLOCK_SEC + 86400,
+        sourceGeneration: "fixture-source", sourceSha256: "a".repeat(64), completeness: "complete", obligations: [],
+        wholeAssetDenominator: { amount: "100", asOfSec: observedAtSec, unitBasis: "USD", sourceSha256: "a".repeat(64) },
+      }];
+    }
+    return meta;
+  }
+
+  it.each([false, true])("admits the threshold residual and charges bounded unknown, portfolio=%s", (portfolio) => {
+    const residualPct = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.reserve.maxUnclassifiedCuratedResidualPct;
+    const meta = residualMeta(residualPct, portfolio);
+    const fixed = makeV9TwoAssetFixedInput({ omitAlphaReserve: true, clockSec: CLOCK_SEC });
+    const extension = buildSafetyScoreV9BaselineExtension(fixed, { metaById: new Map([
+      ["alpha", { ...meta, mechanismArchetype: "fiat-cash", launchDate: "2020-01-01" }],
+      ["beta", { id: "beta", mechanismArchetype: "fiat-cash", launchDate: "2020-01-01" }],
+    ]) });
+    const admitted = extension.assets.find(row => row.assetId === "alpha")!.reviewedStaticReserveRows;
+    expect(admitted).toMatchObject({ evidenceClass: "static-validated", provenance: "curated",
+      ...(portfolio ? { sourceKind: "portfolio-observation" } : {}) });
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension);
+    const alpha = compiled.assets.find(row => row.assetId === "alpha")!;
+    const result = evaluateV9ReserveExposures({ ...alpha, resolvedUpstreamExposures: [] }, V9_CANDIDATE_POLICY_V1);
+    const residual = result.contributions.find(row => row.componentKey === "reserve:unclassified-residual")!;
+    expect(residual.observationState).toBe("bounded-unknown");
+    expect(residual.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.backing.boundedUnknownQuality);
+    expect(residual.normalizedWeight).toBeCloseTo(residualPct / 100, 12);
+    expect(residual.weightedScore).toBeCloseTo(residualPct / 100 * residual.score, 12);
+    expect(result.unresolved).toContainEqual(expect.objectContaining({
+      code: "bounded-unknown-reserve-exposure", pathKey: "reserve:unclassified-residual", treatment: "pillar",
+    }));
+    expect(buildSafetyScoreV9ReviewedCuratedFallbackReserveRows({
+      ...meta, liveReservesConfig: LIVE_RESERVES_CONFIG,
+    }, CLOCK_SEC)).toMatchObject({ evidenceClass: "static-validated", provenance: "curated-fallback" });
+  });
+
+  it.each([false, true])("rejects above-threshold or unrecorded residuals, portfolio=%s", (portfolio) => {
+    const threshold = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.reserve.maxUnclassifiedCuratedResidualPct;
+    const above = residualMeta(threshold + 0.000001, portfolio);
+    const missing = residualMeta(threshold, portfolio);
+    missing.reserveReview!.nonLinkDispositions = [];
+    const mismatched = residualMeta(threshold, portfolio);
+    mismatched.reserveReview!.nonLinkDispositions![0]!.pct = threshold / 2;
+    const classified = residualMeta(threshold, portfolio);
+    classified.reserves![1]!.assetClass = "cash";
+    const undated = residualMeta(threshold, portfolio);
+    undated.reserveReview!.reviewedAt = "2026-07-11";
+    for (const meta of [above, missing, mismatched, classified, undated]) {
+      expect(buildSafetyScoreV9ReviewedStandaloneReserveRows(meta, CLOCK_SEC)).toBeNull();
+      expect(buildSafetyScoreV9ReviewedCuratedFallbackReserveRows({
+        ...meta, liveReservesConfig: LIVE_RESERVES_CONFIG,
+      }, CLOCK_SEC)).toBeNull();
+    }
+  });
+
+  it.each([false, true])("rejects positive residuals at or below scoring precision, portfolio=%s", (portfolio) => {
+    for (const residualPct of [SCORE_EPSILON * 50, SCORE_EPSILON * 100]) {
+      const meta = residualMeta(residualPct, portfolio);
+      expect(buildSafetyScoreV9ReviewedStandaloneReserveRows(meta, CLOCK_SEC)).toBeNull();
+      expect(buildSafetyScoreV9ReviewedCuratedFallbackReserveRows({
+        ...meta, liveReservesConfig: LIVE_RESERVES_CONFIG,
+      }, CLOCK_SEC)).toBeNull();
+    }
+  });
+
+  it.each([false, true])("keeps zero-residual admission and weights unchanged, portfolio=%s", (portfolio) => {
+    const meta = residualMeta(0, portfolio);
+    expect(buildSafetyScoreV9ReviewedStandaloneReserveRows(meta, CLOCK_SEC)).toMatchObject({
+      rows: expect.arrayContaining(meta.reserves!), evidenceClass: "static-validated", provenance: "curated",
     });
   });
 

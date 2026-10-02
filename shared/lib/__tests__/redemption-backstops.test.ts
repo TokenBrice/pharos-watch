@@ -36,12 +36,6 @@ describe("getRedemptionBackstopConfig", () => {
     });
   });
 
-  it("does not treat suspended VNXAU exchange terms as a currently open issuer route", () => {
-    const config = getRedemptionBackstopConfig("vnxau-vnx");
-
-    expect(config?.routeStatus).toBe("unknown");
-    expect(config?.outputAssets).toBeUndefined();
-  });
 
   it("excludes USDA from Indigo's current complete PSM payout set", () => {
     expect(getRedemptionBackstopConfig("iusd-indigo-protocol")?.outputAssets).toEqual([

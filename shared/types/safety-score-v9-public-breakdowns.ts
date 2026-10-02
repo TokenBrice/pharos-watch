@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { ExitExecutionPublicCertificateSchema, ExitRouteFamilySchema, PhysicalToUsdTraceSchema } from "./exit-route";
-import { RedemptionCapacityScoringHorizonSchema } from "./redemption";
+import { RedemptionCapacityScoringHorizonSchema, RedemptionRouteSuspensionSchema } from "./redemption";
 import { V9ReasonCodeSchema } from "./safety-score-v9";
 import { V9DeploymentControlFactBaseSchema } from "./safety-score-v9-facts";
 import { V9ControlExecutionScopeSchema, V9ExactControlPolicySchema } from "./safety-score-v9-control-scope";
@@ -271,6 +271,7 @@ const SafetyScoreV9ExitBreakdownSchema = z
           included: z.boolean(),
           exclusionReason: V9ReasonCodeSchema.nullable(),
           physicalToUsd: PhysicalToUsdTraceSchema.optional(),
+          routeSuspension: RedemptionRouteSuspensionSchema.optional(),
           executionCertificate: ExitExecutionPublicCertificateSchema.optional(),
           confidenceFactor: z.number().finite().min(0).max(1).nullable().optional(),
           capacityScoringHorizon: RedemptionCapacityScoringHorizonSchema.optional(),

@@ -171,7 +171,8 @@ Each configured coin declares:
 - `costModel`
 - optional `costModel.feeDescription`
 - optional `holderEligibility`
-- optional `routeStatus` (`open` or `unknown`)
+- optional `routeStatus` (`open`, `unknown`, or reviewed `suspended`)
+- required `routeSuspension` when suspended: exact `routeId`, named `channel`, `suspendedAt`, reason, `reviewer`, `reviewedAt`, and primary-source URL/quote pairs
 - optional `routeExitCorrelation`
 - optional `totalScoreCap`
 - optional `outputAssets`
@@ -189,6 +190,15 @@ For `offchain-issuer` routes, a non-empty explicit `outputAssets` list with `sta
 The September 30, 2026 bounded payout review curates thBILL and MXNB's modeled Juno conversion rail as USDC/USDT, pathUSD, USYC Teller, pUSD and USDO as USDC, and StandX DUSD as USDC/USDT; HLUSD was already explicit. USDN is unchanged because current Noble material does not confirm the former Express USDC payout. Entry sources and dated notes own the evidence. Multiple listed outputs retain conservative `stable-basket` quality **80** and weakest-price semantics: they are not invented equal-weight portfolios or independently scored holder-choice branches. A single tracked payout has quality **100** at par, like fiat, but still requires captured price evidence; a missing price remains unresolved.
 
 The September 30 OUSD promotion adds a Bridge verified-customer USD redemption route with documented eventual full-supply capacity. The October 1 review records Bridge's zero OUSD issuer fee as fixed `0` bps; settlement stays `days` with no reviewed completion SLA, because Bridge's two-business-day term bounds only post-compliance processing. Account and compliance restrictions, bank/partner/network charges, and unbounded final bank receipt remain disclosed. Its self-reported reserve mix cannot establish immediate executable capacity without an independent reserve report. The public Bridge redemption portal did not list OUSD at review, so retail portal access and chain-specific intake rails remain unverified. Tempo DEX swaps remain secondary-market liquidity rather than a second redemption backstop; a DEX alternative requires supported discovery and admitted exact same-notional execution evidence, as described in [DEX liquidity](./dex-liquidity.md#known-uncovered-venues).
+
+### Reviewed channel suspension (local V10)
+
+`routeStatus: "suspended"` requires a dated, sourced `routeSuspension` review naming the exact configured `redemption:<asset-id>:<family>` route. The registry rejects a different asset/family identity; capture-time admission rejects a later review. A suspended channel has null standalone immediate/eventual/scoring capacity and scores, and compiles into a diagnostic route with no executable request or curve. Public standalone status reasons, Safety Exit reasons and alternative-route diagnostics disclose the channel and reason. This is unavailable channel evidence, not a measured zero.
+
+DEX observations, separately identified issuer routes and execution certificates keep their own scoring evidence. If there is no scored alternative, or the best measured alternative scores zero, a suspended channel cannot certify total exit failure: the portfolio retains the existing `missing-same-notional-route` bounded-unknown floor, without `no-viable-exit-path` or measured-adverse total-exit attribution. The other routes' own traces remain unchanged. This record never changes lifecycle, wind-down, holder rights or reserve evidence.
+
+**VNXAU, reviewed October 2, 2026.** The [June 19 primary notice](https://vnx.li/blog) suspended the legacy **vnx.li** platform exchange from **June 30 at 18:00 CET** and ended its remaining-balance withdrawal window **July 31 at 18:00 CET**. Only that legacy channel is reviewed suspended. [VNX Global terms §6](https://prod-global-terms.s3.sa-east-1.amazonaws.com/VNX-Global-Terms.pdf) separately describe discretionary, resource-dependent commodity-token exchange at **my.vnx.io**, including VNXAU for fiat or other digital assets. That channel has no admitted capacity, complete payout set or settlement maximum and earns no credit; it is not treated as suspended by the legacy notice. The Metals.io market diagnostic remains separate. No currently bounded physical-release timing or current reserve composition is established, and the production-capture smoke still publishes VNXAU **NR**, not F.
+
 
 ### Output-key identity contract
 

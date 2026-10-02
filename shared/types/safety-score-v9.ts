@@ -818,6 +818,7 @@ const V9BackingPolicySchema = z
             maturity: z.number().finite().min(0).max(1),
           })
           .strict(),
+        maxUnclassifiedCuratedResidualPct: z.number().finite().min(0).max(100),
         issuerAttestedConfidenceMultiplier: z.number().finite().positive().max(1),
         concentrationWeight: z.number().finite().min(0).max(1),
         concentrationBands: z

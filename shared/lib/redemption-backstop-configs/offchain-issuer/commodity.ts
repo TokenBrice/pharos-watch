@@ -265,7 +265,20 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
     ...commodityIssuerBase,
     ...documentedBoundSupplyFull(REVIEWED_COVERAGE_EXPANSION_AT),
     reviewedAt: "2026-10-02",
-    routeStatus: "unknown",
+    routeStatus: "suspended",
+    routeSuspension: {
+      routeId: "redemption:vnxau-vnx:offchain-issuer",
+      channel: "VNX legacy vnx.li issuer-platform exchange",
+      suspendedAt: "2026-06-30",
+      reviewedAt: "2026-10-02",
+      reviewer: "BuildRailSuspension",
+      reason: "VNX's June 19 notice suspended exchange operations on the legacy vnx.li platform from June 30, 2026 at 18:00 CET; the remaining-balance withdrawal window ended July 31 at 18:00 CET. This removes only that channel's credit, not VNXAU holder rights or other market and issuer channels.",
+      sources: [
+        { url: "https://vnx.li/blog", quote: "Please be informed that exchange operations on the VNX platform, available at vnx.li, will be suspended as of June 30, 2026, at 18:00 CET." },
+        { url: "https://vnx.li/blog", quote: "After the suspension of exchange operations, clients will still be able to withdraw their remaining balances to their whitelisted wallets or bank accounts until July 31, at 18:00 CET." },
+        { url: "https://vnx.li/vnxau", quote: "VNX Commodities AG does not offer VNXAU to the public and does not provide purchase, sale, exchange, custody or trading services in relation to VNXAU." },
+      ],
+    },
     unresolvedOutputDisposition: "issuer-undisclosed",
     costModel: documentedVariableFee(
       "The historical VNX platform offered sell/redemption and physical collection or delivery from one-kilogram gold bars; current VNXAU-specific payout terms and a fixed redemption fee are not established after the platform suspension",
@@ -316,7 +329,7 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
     ],
     notes: [
       "The historical VNX platform route offered fiat or supported cryptocurrency sale proceeds and physical bars starting at 1 kg; this is not a fixed complete payout basket or an atomic stablecoin redemption.",
-      "Re-reviewed 2026-10-02: VNX's current primary notice suspends platform exchange operations from June 30, 2026 and ends the remaining-balance withdrawal window on July 31. The current VNXAU page states that purchase, sale, exchange, custody and trading services are not provided, while existing holder rights remain governed by contractual arrangements. Route status remains unknown because the config has no suspended state; no maintained physical-release or fully specified issuer cash-out route is established for admission here.",
+      "Re-reviewed 2026-10-02: the June 19 primary notice suspends the legacy vnx.li issuer-platform exchange from June 30, 2026 at 18:00 CET and ends the remaining-balance withdrawal window July 31 at 18:00 CET. The exact legacy rail is reviewed suspended and receives no capacity or credit. The current VNXAU page states that purchase, sale, exchange, custody and trading services are not provided by VNX Commodities AG while holder rights remain governed by contractual arrangements. This does not establish whole-token exit failure or wind-down.",
       "Historical physical collection/delivery starts at 1 kg in kilogram multiples. The historical one-business-day statement applies to purchase/sale transactions, not bullion release or delivery, so it cannot supply a physicalToUsd settlement leg. Unpriced cross-border logistics remain unavailable. No physicalToUsd block is admitted from these suspended-platform disclosures.",
       "The current transparency page still links only the December 31, 2025 AREVA AUP. Its historical 13,100 gross grams and non-assured holder-rights notes do not establish current bar inventory, release throughput, purity-adjusted weight or currently available holder service.",
       "VNX Global's current terms separately permit proprietary exchange of Commodity Tokens, including VNXAU, for fiat or other digital assets. Section 6 makes that service resource-dependent, discretionary and not guaranteed. This successor venue is not a physical redemption obligation and does not establish a complete payout set, current same-notional execution capacity or settlement maximum. The old issuer-platform suspension is not evidence that all VNXAU market exits have ceased.",

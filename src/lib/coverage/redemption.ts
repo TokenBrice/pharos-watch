@@ -107,6 +107,7 @@ function resolveRedemption(entry: RedemptionBackstopEntry | null | undefined, da
     entry.resolutionState === "impaired" ||
     routeStatus === "degraded" ||
     routeStatus === "paused" ||
+    routeStatus === "suspended" ||
     routeStatus === "cohort-limited"
   ) {
     const impaired = createPresetStatus(REDEMPTION_STATE_STATUS_PRESETS.impaired);

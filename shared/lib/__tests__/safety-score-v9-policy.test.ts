@@ -55,7 +55,7 @@ describe("Safety Score v9 methodology policy", () => {
     // Rotate only with reviewed semantic changes; release history lives in
     // shared/data/methodology-changelogs/safety-score/.
     expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toBe(
-      "700d2a04ccba09bbbb5844a2ffe93ede3ed55bfa14f57a0467fbb9adf51ce72e",
+      "4248ce52ba789ef86cea00e357ac741965a218adaaaca708ca4f0de564449e38",
     );
     expect(V9_CANDIDATE_POLICY_V1.policy.semantic.formula.withhold).toEqual({
       maxScoreExclusive: 55,
@@ -94,6 +94,16 @@ describe("Safety Score v9 methodology policy", () => {
     const valid = candidateClone();
     valid.semantic.exit.unboundedDeliveryCap = 54;
     expect(loadV9MethodologyPolicy(valid).policy.semantic.exit.unboundedDeliveryCap).toBe(54);
+  });
+  it("validates and digests the curated residual admission threshold", () => {
+    const changed = candidateClone();
+    changed.semantic.backing.reserve.maxUnclassifiedCuratedResidualPct /= 2;
+    expect(loadV9MethodologyPolicy(changed).semanticDigest).not.toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
+    for (const invalid of [-0.001, 100.001, Number.NaN, Number.POSITIVE_INFINITY]) {
+      const policy = candidateClone();
+      policy.semantic.backing.reserve.maxUnclassifiedCuratedResidualPct = invalid;
+      expect(() => loadV9MethodologyPolicy(policy)).toThrow();
+    }
   });
   it("pins public validation mirrors to parsed policy values", () => {
     const policy = V9_CANDIDATE_POLICY_V1.policy.semantic.formula;

@@ -78,6 +78,27 @@ describe("reviewed economic supply accounting", () => {
     expect(packet.deployments.map(row => row.currentSupplyUsd)).toEqual([80, 19]);
     expect(packet.unattributedSupplyUsd).toBe(1);
   });
+  it("keeps excluded receipts in escrow conservation while removing them from circulating allocation", () => {
+    const input = fixture();
+    input.plan.exclusions = [{ id: "receipt-treasury", deploymentKey: REMOTE, account: `0x${"4".repeat(40)}` }];
+    input.observations.push({ ...input.observations[1]!, id: "receipt-treasury", amount: "5000000000000000000" });
+    const packet = deriveReviewedEconomicDeploymentPartition(input)!;
+    expect(packet.deployments[0]!.currentSupplyUsd).toBeCloseTo(100 * 80 / 95);
+    expect(packet.deployments[1]!.currentSupplyUsd).toBeCloseTo(100 * 15 / 95);
+    input.observations[2]!.amount = "15000000";
+    expect(deriveReviewedEconomicDeploymentPartition(input)).toBeNull();
+  });
+  it.each(["number", "hash", "time"])("rejects on-chain pending with a different canonical generation %s", mismatch => {
+    const input = fixture();
+    input.plan.escrows[0]!.inFlightSource = { kind: "evm-pending-state", sourceId: "pending", chainId: "ethereum",
+      bridgeAddress: `0x${"3".repeat(40)}`, bridgeRuntimeCodeSha256: "f".repeat(64), finality: "finalized",
+      messageCountSelector: "0x11111111", messageIdSelector: "0x22222222", pendingAmountSelector: "0x33333333", messageIds: [] };
+    expect(deriveReviewedEconomicDeploymentPartition(input)).not.toBeNull();
+    if (mismatch === "number") input.inFlight[0]!.anchor = "101";
+    if (mismatch === "hash") input.inFlight[0]!.anchorHash = `0x${"f".repeat(64)}`;
+    if (mismatch === "time") input.inFlight[0]!.observedAtSec--;
+    expect(deriveReviewedEconomicDeploymentPartition(input)).toBeNull();
+  });
   it("preserves tiny nonzero receipts and distinguishes an observed zero from an absent row", () => {
     const input = fixture(); input.plan.escrows = []; input.plan.accountingFamily = "independent-liability"; input.observations.pop(); input.inFlight = [];
     input.observations[1]!.amount = "101";

@@ -5,20 +5,22 @@ import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import {
-  SafetyScoreV9ReviewedTransferFileSchema,
+  SafetyScoreV9ReviewedTransferEnvelopeSchema,
+  SafetyScoreV9ReviewedTransferFactSchema,
   safetyScoreV9TransferDeploymentKey,
   type SafetyScoreV9ReviewedTransferFact,
 } from "@shared/types/safety-score-v9-transfer-overlays";
+import { createReviewedAssetRegistry } from "./extension-reviewed-registry";
 
 export { safetyScoreV9TransferDeploymentKey };
 export type { SafetyScoreV9ReviewedTransferFact };
 
-const REVIEWED_TRANSFER_FILE = SafetyScoreV9ReviewedTransferFileSchema.parse(transferReviewOverlaysAsset);
+const REVIEWED_TRANSFER_FILE = SafetyScoreV9ReviewedTransferEnvelopeSchema.parse(transferReviewOverlaysAsset);
 
 export function computeSafetyScoreV9ReviewedTransferFactsDigest(
-  reviews: Iterable<SafetyScoreV9ReviewedTransferFact>,
+  reviews?: Iterable<SafetyScoreV9ReviewedTransferFact>,
 ): string {
-  const canonicalReviews = [...reviews].sort((left, right) => compareText(left.assetId, right.assetId));
+  const canonicalReviews = [...(reviews ?? REVIEWED_TRANSFER_FILE.reviews)].sort((left, right) => compareText(left.assetId, right.assetId));
   return sha256Hex(
     stableJsonStringifyV1({
       domain: "safety-score-v9.reviewed-transfer-overlays.v1",
@@ -28,9 +30,13 @@ export function computeSafetyScoreV9ReviewedTransferFactsDigest(
   );
 }
 
-export const SAFETY_SCORE_V9_REVIEWED_TRANSFER_FACTS: ReadonlyMap<string, SafetyScoreV9ReviewedTransferFact> = new Map(
-  REVIEWED_TRANSFER_FILE.reviews.map((review) => [review.assetId, review]),
-);
+const reviewedTransfers = createReviewedAssetRegistry({
+  rows: REVIEWED_TRANSFER_FILE.reviews, schema: SafetyScoreV9ReviewedTransferFactSchema, path: "transferReviews.reviews",
+});
+
+export function getSafetyScoreV9ReviewedTransferFact(assetId: string): SafetyScoreV9ReviewedTransferFact | undefined {
+  return reviewedTransfers.get(assetId);
+}
 
 /**
  * Whether the asset has any surface the contract-addressed scope machinery can

@@ -7,6 +7,7 @@ import type {
   RedemptionOutputAssetType,
   RedemptionSettlementModel,
 } from "../../types/redemption";
+import type { RedemptionRouteSuspension } from "../../types/redemption";
 import {
   blendExitCapacityComponent,
   composeExitComponentScore,
@@ -53,6 +54,7 @@ export interface V9ExitCapacityPoint {
 }
 
 export interface V9ExitEvaluationRoute {
+  routeSuspension?: RedemptionRouteSuspension;
   routeKey: string;
   lane: "dex" | "redemption";
   routeFamily: "dex-amm" | "dex-orderbook" | "issuer-redemption" | "protocol-redemption" | "eventual-redemption";
@@ -90,6 +92,7 @@ export interface V9ExitEvaluationRoute {
 }
 
 export interface V9ExitRouteTrace {
+  routeSuspension?: RedemptionRouteSuspension;
   routeKey: string;
   routeFamily: V9ExitEvaluationRoute["routeFamily"];
   observationConfidence: V9ExitEvaluationRoute["observationConfidence"];
@@ -392,6 +395,8 @@ function isCreditableNonAtomicRedemption(
 }
 
 function routeExclusionReason(route: V9ExitEvaluationRoute, envelope: V9ValidatedPolicyEnvelope): V9ReasonCode | null {
+  // Exact-channel cessation is neither a measured zero nor evidence about any other rail.
+  if (route.routeSuspension) return null;
   if (route.applicability === "not-applicable") return null;
   if (route.applicability === "unresolved") return "missing-same-notional-route";
   if (route.executionModelId && (!route.executionCertificate || !route.scoreEligible || route.observationState !== "known")) {
@@ -448,6 +453,7 @@ function resolveIncludedRouteCapacity(
   | { state: "excluded"; exclusionReason: V9ReasonCode | null }
   | { state: "incomparable" }
   | { state: "unsupported" } {
+  if (route.routeSuspension) return { state: "excluded", exclusionReason: null };
   const exclusionReason = routeExclusionReason(route, envelope);
   if (exclusionReason !== null || route.applicability === "not-applicable") {
     return { state: "excluded", exclusionReason };
@@ -564,6 +570,7 @@ function evaluateRoute(
     observationConfidence: route.observationConfidence,
     modelConfidence: route.modelConfidence,
     observationHistory: route.observationHistory ?? null,
+    ...(route.routeSuspension ? { routeSuspension: route.routeSuspension } : {}),
     ...(route.physicalToUsd ? { physicalToUsd: route.physicalToUsd } : {}),
     ...(route.executionCertificate ? { executionCertificate: route.executionCertificate } : {}),
     horizon,
@@ -879,6 +886,7 @@ export function projectV9ExitEvaluationRoute(route: V9ExitRouteFactV2): V9ExitEv
     observationConfidence: route.observationConfidence,
     modelConfidence: route.modelConfidence,
     observationHistory: route.observationHistory ?? null,
+    ...(route.routeSuspension ? { routeSuspension: route.routeSuspension } : {}),
     ...(route.physicalToUsd ? { physicalToUsd: route.physicalToUsd } : {}),
     ...(route.executionModelId ? { executionModelId: route.executionModelId } : {}),
     ...(route.executionCertificate ? { executionCertificate: route.executionCertificate } : {}),
@@ -1045,7 +1053,8 @@ export function evaluateV9Exit(
   ) as Record<V9ExitHorizon, V9ExitHorizonTrace>;
   if (evaluated.length === 0) {
     const portfolioReviewed = args.portfolioStatus === "reviewed-complete";
-    const hasBoundedMissingRoute = diagnosticReasons.includes("missing-same-notional-route");
+    const hasBoundedMissingRoute = diagnosticReasons.includes("missing-same-notional-route") ||
+      routes.some((route) => route.routeSuspension !== undefined);
     const hasUnprovenSettlementBound = diagnosticReasons.includes("unproven-settlement-bound");
     const onlyUnsupportedDiagnostics =
       diagnosticReasons.length > 0 &&
@@ -1116,7 +1125,8 @@ export function evaluateV9Exit(
       : 0;
   const hasOtherIncludedRoute = evaluated.length > 1;
   const boundedGapReason =
-    boundedFloor !== null && diagnosticReasons.includes("missing-same-notional-route")
+    boundedFloor !== null && (diagnosticReasons.includes("missing-same-notional-route") ||
+      (primary.score === 0 && routes.some((route) => route.routeSuspension !== undefined)))
       ? "missing-same-notional-route"
       : unprovenSettlementBoundedFloor !== null && diagnosticReasons.includes("unproven-settlement-bound")
         ? "unproven-settlement-bound"

@@ -105,6 +105,11 @@ export function unresolvedDeploymentCohort(
   const rows = reconciledSupplyPartition(facts);
   if (rows === null) return { share: null, controlKeys };
   const sharesByDeployment = new Map<string, number>();
+  const exclusions = new Map((facts.supply.providerRowExclusions ?? []).filter(exclusion =>
+    exclusion.review.assetId === facts.assetId && rows.some(row =>
+      row.deploymentRouteKey === exclusion.deploymentRouteKey && row.reviewState === "unmatched" &&
+      bridgeSharesReconcile(row.supplyShare, exclusion.supplyShare)))
+    .map(exclusion => [exclusion.deploymentRouteKey, exclusion.supplyShare]));
   let joinedUnreviewedShare = 0;
   for (const control of controls) {
     if (
@@ -134,7 +139,7 @@ export function unresolvedDeploymentCohort(
   }
   return {
     share: Math.min(1, [...sharesByDeployment.values()].reduce((sum, share) => sum + share, 0) +
-      facts.supply.unknownRouteSupplyShare! +
+      Math.max(0, facts.supply.unknownRouteSupplyShare! - [...exclusions.values()].reduce((sum, share) => sum + share, 0)) +
       Math.max(0, facts.supply.unreviewedRouteSupplyShare! - joinedUnreviewedShare)),
     controlKeys,
   };

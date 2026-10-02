@@ -668,6 +668,15 @@ export function buildSupply(context: AssetBuildContext): V9AssetFactsV2["supply"
   }
   const evidence = context.evidence.get(evidenceId)!;
   const review = context.asset.supplyReview;
+  const exclusionEvidenceIds = (review?.providerRowExclusions ?? []).flatMap(exclusion =>
+    exclusion.review.evidenceUrls.map((url, index) => addEvidence(context, createV9EvidenceReference({
+      evidenceId: `${context.asset.assetId}:provider-row-exclusion:${exclusion.review.providerChainLabel}:${index}`,
+      sourceId: `reviewed-provider-row-exclusion:${exclusion.review.providerChainLabel}:belongs-to:${exclusion.review.belongsToAssetId}:unresolved-numerator-only`,
+      sourceGenerationId: source.generationId, disposition: "published",
+      observedAtSec: exclusion.review.provenance.observedAtSec, publishedAtSec: exclusion.review.reviewedAtSec,
+      url, contentSha256: domainDigest("safety-score-v9.provider-row-exclusion.v1", exclusion),
+      maxAgeSec: exclusion.review.expiresAtSec - exclusion.review.provenance.observedAtSec,
+    }, context.fixedInput.clockSec))));
   const supplyReviewOutcome = review === null
     ? nullSupplyReviewOutcome(context, evidence.freshness.state === "stale")
     : null;
@@ -725,7 +734,7 @@ export function buildSupply(context: AssetBuildContext): V9AssetFactsV2["supply"
     status = createV9FactStatus({
       applicability: requiredV9Applicability("v9.supply.current"),
       observationState: "known",
-      evidenceRefIds: [evidenceId, ...referenceEvidenceIds],
+      evidenceRefIds: [evidenceId, ...referenceEvidenceIds, ...exclusionEvidenceIds],
     });
   } else {
     status = createV9FactStatus({
@@ -746,6 +755,7 @@ export function buildSupply(context: AssetBuildContext): V9AssetFactsV2["supply"
     selectedRouteSupplyShare: review?.selectedRouteSupplyShare ?? null,
     unknownRouteSupplyShare: review?.unknownRouteSupplyShare ?? null,
     unreviewedRouteSupplyShare: review?.unreviewedRouteSupplyShare ?? null,
+    ...(review?.providerRowExclusions === undefined ? {} : { providerRowExclusions: review.providerRowExclusions }),
     failureDomains: stableFailureDomains([
       ...chains.flatMap((chain) =>
         isV9RepresentationGroupRoute(chain)

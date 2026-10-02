@@ -1,11 +1,23 @@
 import overlayJson from "@shared/data/safety-score-v9/access-lookthrough-reviews-v1.json";
-import { V9AccessClaimGraphSchema, V9AccessClaimGraphReviewSchema, V9AccessLookthroughOverlaySchema, type V9AccessClaimGraph, type V9AccessClaimGraphReview } from "@shared/types/safety-score-v9-access-lookthrough";
+import { V9AccessClaimGraphSchema, V9AccessClaimGraphReviewSchema, V9AccessLookthroughOverlayEnvelopeSchema, type V9AccessClaimGraph, type V9AccessClaimGraphReview } from "@shared/types/safety-score-v9-access-lookthrough";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { requiredStatus, type ReviewEvidenceBuilder } from "./extension-shared";
+import { canonicalizeReviewedRegistryDigest, createReviewedAssetRegistry, reviewedRegistryDigestKey } from "./extension-reviewed-registry";
 
-const overlay = V9AccessLookthroughOverlaySchema.parse(overlayJson);
-const reviews = new Map(overlay.reviews.map((review) => [review.assetId, review]));
+const envelope = V9AccessLookthroughOverlayEnvelopeSchema.parse(overlayJson);
+const overlay = canonicalizeReviewedRegistryDigest(envelope, {
+  "reviews.*.nodes": reviewedRegistryDigestKey("nodeKey"),
+  "reviews.*.edges": reviewedRegistryDigestKey("edgeKey"),
+  "reviews.*.authorities": reviewedRegistryDigestKey("authorityKey"),
+  "reviews.*.partitions": reviewedRegistryDigestKey("partitionKey"),
+  "reviews.*.unresolved": reviewedRegistryDigestKey("branchKey"),
+  "reviews.*.authorities.*.failureDomains": (value) => {
+    const row = value as { kind?: unknown; key?: unknown };
+    return `${row?.kind}:${row?.key}`;
+  },
+}) as typeof envelope;
+const reviews = createReviewedAssetRegistry({ rows: envelope.reviews, schema: V9AccessClaimGraphReviewSchema, path: "accessLookthrough.reviews" });
 export function getSafetyScoreV9AccessClaimGraphReview(assetId: string): V9AccessClaimGraphReview | undefined {
   return reviews.get(assetId);
 }
@@ -18,9 +30,10 @@ export function buildSafetyScoreV9AccessClaimGraph(args: {
   assetId: string; clockSec: number; generationId: string; evidence: ReviewEvidenceBuilder;
   review?: V9AccessClaimGraphReview;
 }): V9AccessClaimGraph | undefined {
-  const candidate = args.review ?? getSafetyScoreV9AccessClaimGraphReview(args.assetId);
-  if (!candidate) return undefined;
-  const review = V9AccessClaimGraphReviewSchema.parse(candidate);
+  const review = args.review
+    ? createReviewedAssetRegistry({ rows: [args.review], schema: V9AccessClaimGraphReviewSchema, path: "accessLookthrough.reviews" }).get(args.review.assetId)
+    : getSafetyScoreV9AccessClaimGraphReview(args.assetId);
+  if (!review) return undefined;
   if (review.assetId !== args.assetId) throw new Error("Access claim graph receiving identity mismatch");
   const maxAge = V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.accessReviewMaxAgeSec;
   const unresolved: V9AccessClaimGraph["unresolved"] = [];

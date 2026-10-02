@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { AdmittedProviderRowExclusionSchema } from "./safety-score-v9-supply-attribution";
 import {
   V9AssetPremiumKindSchema,
   V9QualityPillarSchema,
@@ -693,6 +694,7 @@ export const SafetyScoreV9ScoreTraceSchema =
       schemaVersion: z.literal(3),
       boundedUncertaintyAttribution:
         SafetyScoreV9BoundedUncertaintyAttributionTraceSchema,
+      providerRowExclusions: z.array(AdmittedProviderRowExclusionSchema).min(1).optional(),
     })
     .strict()
     .superRefine((trace, ctx) => {

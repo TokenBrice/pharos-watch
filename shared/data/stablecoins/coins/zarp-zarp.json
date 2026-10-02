@@ -24,16 +24,21 @@
     "attestorLicense": "IRBA-registered auditors",
     "latestReport": {
       "periodEnd": "2026-08-31",
-      "publishedAt": "2026-09-01",
+      "publishedAt": "2026-09-21",
+      "publishedAtBasis": "explicit",
       "assuranceMethod": "agreed-upon-procedures",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "partial",
-      "reviewer": "Pharos live-reserve sync repair 2026-09-24",
+      "reviewer": "Sol decision-wave verification 2026-10-02 (VDwZarp)",
       "confidence": "verified",
       "sources": [
         {
           "label": "Kempen ZARP agreed-upon procedures report - September 1, 2026 (published with the site filename suffix for a signed draft)",
           "url": "https://kempengroup.co.za/wp-content/uploads/2026/09/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-09-01-signed-draft.pdf"
+        },
+        {
+          "label": "Kempen ZARP September 2026 report publication page (published September 21, 2026; links this exact report)",
+          "url": "https://kempengroup.co.za/zarp-stablecoin-digital-report-september-2026/"
         },
         {
           "label": "ZARP transparency page (report index)",

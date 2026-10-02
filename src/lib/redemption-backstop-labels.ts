@@ -90,6 +90,7 @@ const REDEMPTION_ROUTE_STATUS_LABELS = {
   open: "open",
   degraded: "degraded",
   paused: "paused",
+  suspended: "suspended",
   "cohort-limited": "cohort limited",
   unknown: "status unknown",
 } as const satisfies Record<RedemptionRouteStatus, string>;

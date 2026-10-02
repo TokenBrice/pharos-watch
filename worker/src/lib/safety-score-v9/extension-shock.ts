@@ -3,6 +3,8 @@ import { V9CdpStressCoverageFactSchema, type V9CdpStressCoverageFact } from "@sh
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { isRecord } from "@shared/lib/type-guards";
 import { z } from "zod";
+import { CanonicalTextSchema } from "@shared/types/safety-schema-primitives";
+import { createReviewedAssetRegistry } from "./extension-reviewed-registry";
 
 const RegistryEntrySchema = z
   .object({
@@ -89,28 +91,32 @@ const RegistryEntrySchema = z
   })
   .strict();
 
-const RegistrySchema = z
-  .object({
-    schemaVersion: z.literal(1),
-    kind: z.literal("safety-score-v9-shock-coverage-registry"),
-    measurements: z.array(RegistryEntrySchema),
-  })
-  .strict()
-  .superRefine((registry, ctx) => {
-    const keys = registry.measurements.map(
-      (measurement) => `${measurement.assetId}:${measurement.block.timestampUnix}`,
-    );
-    if (new Set(keys).size !== keys.length) {
-      ctx.addIssue({ code: "custom", path: ["measurements"], message: "Measurement clocks must be unique per asset" });
-    }
-  });
-
-const SHOCK_COVERAGE_REGISTRY = RegistrySchema.parse(shockCoverageRegistryAsset);
+const RegistryEnvelopeSchema = z.object({
+  schemaVersion: z.literal(1),
+  kind: z.literal("safety-score-v9-shock-coverage-registry"),
+  measurements: z.array(z.object({ assetId: CanonicalTextSchema }).passthrough()),
+}).strict();
+const SHOCK_COVERAGE_REGISTRY = RegistryEnvelopeSchema.parse(shockCoverageRegistryAsset);
+const measurements = createReviewedAssetRegistry({
+  rows: SHOCK_COVERAGE_REGISTRY.measurements,
+  schema: RegistryEntrySchema,
+  path: "shockCoverage.measurements",
+  keyOf: (row) => {
+    const block = row.block;
+    return isRecord(block) && typeof block.timestampUnix === "number" ? `${row.assetId}:${block.timestampUnix}` : undefined;
+  },
+  keyPath: "block.timestampUnix",
+});
 type RegistryEntry = z.infer<typeof RegistryEntrySchema>;
 
+/** Admit every authored measurement before chronology selection can hide a bad row. */
+export function validateSafetyScoreV9ShockRegistryAsset(assetId: string): void {
+  measurements.getAll(assetId);
+}
+
 function latestMeasurement(assetId: string, asOfSec: number): RegistryEntry | null {
-  const eligible = SHOCK_COVERAGE_REGISTRY.measurements
-    .filter((measurement) => measurement.assetId === assetId && measurement.block.timestampUnix <= asOfSec)
+  const eligible = measurements.getAll(assetId)
+    .filter((measurement) => measurement.block.timestampUnix <= asOfSec)
     .sort(
       (left, right) =>
         left.block.timestampUnix - right.block.timestampUnix ||
@@ -122,13 +128,10 @@ function latestMeasurement(assetId: string, asOfSec: number): RegistryEntry | nu
 }
 
 /**
- * Projects a registry row into the fact shape. The registry is parsed once at
- * module load (`SHOCK_COVERAGE_REGISTRY`) against a schema that is strictly
- * narrower than `V9CdpStressCoverageFactSchema` field-for-field, so the
- * projection is typed rather than re-parsed: every downstream consumer receives
- * a `V9CdpStressCoverageFact` that has already been validated at the registry
- * boundary. Supplied (replay-pinned) facts are a different lane and are still
- * parsed — see `validatePinnedMeasurement`.
+ * Projects a registry row admitted lazily inside its asset's isolation boundary.
+ * The entry schema is narrower than `V9CdpStressCoverageFactSchema`, so the
+ * projection does not re-parse. Supplied replay-pinned facts remain untrusted
+ * input and are separately parsed in `validatePinnedMeasurement`.
  */
 function projectMeasurement(measurement: RegistryEntry): V9CdpStressCoverageFact {
   const measured = measurement.measuredFacts;
@@ -164,9 +167,8 @@ function validatePinnedMeasurement(assetId: string, value: unknown, asOfSec: num
   if (source === null || source.block.timestampUnix > asOfSec) {
     throw new Error(`Replay-pinned shock coverage for ${assetId} lacks chronology-valid journal provenance`);
   }
-  const registered = SHOCK_COVERAGE_REGISTRY.measurements.find(
+  const registered = measurements.getAll(assetId).find(
     (measurement) =>
-      measurement.assetId === assetId &&
       measurement.journalPath === source.journalPath &&
       measurement.journalSha256 === source.journalSha256,
   );
