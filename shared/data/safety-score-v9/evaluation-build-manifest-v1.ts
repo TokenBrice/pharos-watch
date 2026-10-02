@@ -698,11 +698,11 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/extension-reserve-bounds.ts",
-      "sha256": "07825fb1c515b5b9ca4fa916e26f1daace1908d1362f4bca8717f105a19791dc"
+      "sha256": "8779dc973c7f43cdb0ec7a41dd73ec7790e56e3367e5580a5fb98244d772f7df"
     },
     {
       "path": "worker/src/lib/safety-score-v9/extension-reserves.ts",
-      "sha256": "284b2b9a8d1fc6a7ec05abab9c51e281067074832f806df38e814f8d278fa3b0"
+      "sha256": "9505beee9b3e356614105bd3f89efb48597014a5bf904838020885eb28be0c8e"
     },
     {
       "path": "worker/src/lib/safety-score-v9/extension-routes.ts",
@@ -730,7 +730,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/extension.ts",
-      "sha256": "fb7889c54e962253639775abffb4ba8d17e5e77ec4091f45bc476040a43f8bc7"
+      "sha256": "6849e18968ccc82612f9ad14261d10242f98e66de5d7985f08e6af77a56604fd"
     },
     {
       "path": "worker/src/lib/safety-score-v9/fact-set-backing.ts",
@@ -827,7 +827,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-01-block-26096787-shock-coverage.json.gz"
     }
   ],
-  "digest": "beba28cdf72aad551ffe008cd09d5a2702647c08689fe9402649d4feae3c9f97"
+  "digest": "d001cbfabf8802215a8e0357ff5f297546ce8d8a02cc1880edaac25ad3b113a2"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

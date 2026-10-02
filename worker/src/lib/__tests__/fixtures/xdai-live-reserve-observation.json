@@ -1,0 +1,137 @@
+{
+  "scopeId": "xdai-bridge-accounting",
+  "liabilityBookKey": "gnosis-native-bridge-issued",
+  "deploymentRefs": [
+    "ethereum:0x4aa42145aa6ebf72e164c9bbc74fbd3788045016",
+    "gnosis:0x7301cfa0e1756b71869e93d4e4dca5c7d0eb0aa6",
+    "ethereum:0xdc035d45d973e3ec169d2276ddab16f1e407384f",
+    "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+    "gnosis:0x481c034c6d9441db23ea48de68bcae812c5d39ba"
+  ],
+  "reviewer": "xdai-bridge-producer",
+  "confidence": "verified",
+  "sources": [
+    {
+      "url": "https://etherscan.io/address/0x4aa42145aa6ebf72e164c9bbc74fbd3788045016",
+      "accessedAtSec": 1790972024,
+      "sha256": "168bcab395b89321a01385c61af37c0390baf77cc8d5fa6b2350ea1575289d95"
+    },
+    {
+      "url": "https://gnosisscan.io/address/0x7301cfa0e1756b71869e93d4e4dca5c7d0eb0aa6",
+      "accessedAtSec": 1790972024,
+      "sha256": "168bcab395b89321a01385c61af37c0390baf77cc8d5fa6b2350ea1575289d95"
+    },
+    {
+      "url": "https://etherscan.io/address/0xdc035d45d973e3ec169d2276ddab16f1e407384f",
+      "accessedAtSec": 1790972024,
+      "sha256": "168bcab395b89321a01385c61af37c0390baf77cc8d5fa6b2350ea1575289d95"
+    },
+    {
+      "url": "https://etherscan.io/address/0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+      "accessedAtSec": 1790972024,
+      "sha256": "168bcab395b89321a01385c61af37c0390baf77cc8d5fa6b2350ea1575289d95"
+    },
+    {
+      "url": "https://gnosisscan.io/address/0x481c034c6d9441db23ea48de68bcae812c5d39ba",
+      "accessedAtSec": 1790972024,
+      "sha256": "168bcab395b89321a01385c61af37c0390baf77cc8d5fa6b2350ea1575289d95"
+    }
+  ],
+  "reviewedAtSec": 1790972024,
+  "expiresAtSec": 1790989304,
+  "sourceGeneration": "xdai-bridge:0xf0c6536c6af708ca23d89f0bc90b1a094666737676fe6a99e2ac5ffb631f59a0:0x9e25f7c59005150b93fa0b70f521efb5866bac83e84b964857c9ae2cd75b05bc",
+  "sourceSha256": "168bcab395b89321a01385c61af37c0390baf77cc8d5fa6b2350ea1575289d95",
+  "completeness": "partial",
+  "obligations": [
+    {
+      "key": "bridge-minted-minus-burnt",
+      "disposition": "included",
+      "reason": "Pinned Home Bridge counters"
+    },
+    {
+      "key": "pending-burns",
+      "disposition": "unresolved",
+      "reason": "Not a complete economic liability census"
+    },
+    {
+      "key": "pending-mints",
+      "disposition": "unresolved",
+      "reason": "Not a complete economic liability census"
+    },
+    {
+      "key": "non-bridge-native-issuance",
+      "disposition": "unresolved",
+      "reason": "Not a complete economic liability census"
+    },
+    {
+      "key": "fees",
+      "disposition": "unresolved",
+      "reason": "Not a complete economic liability census"
+    },
+    {
+      "key": "interest",
+      "disposition": "unresolved",
+      "reason": "Not a complete economic liability census"
+    }
+  ],
+  "kind": "onchain-observation",
+  "observedAtSec": 1790971600,
+  "blocks": [
+    {
+      "chain": "ethereum",
+      "number": 26106919,
+      "hash": "0xf0c6536c6af708ca23d89f0bc90b1a094666737676fe6a99e2ac5ffb631f59a0",
+      "timestamp": 1790971607,
+      "finality": "safe"
+    },
+    {
+      "chain": "gnosis",
+      "number": 48555551,
+      "hash": "0x9e25f7c59005150b93fa0b70f521efb5866bac83e84b964857c9ae2cd75b05bc",
+      "timestamp": 1790971600,
+      "finality": "safe"
+    }
+  ],
+  "quantities": [
+    {
+      "key": "liquid-usds",
+      "deploymentRef": "ethereum:0xdc035d45d973e3ec169d2276ddab16f1e407384f",
+      "selector": "0x70a082310000000000000000000000004aa42145aa6ebf72e164c9bbc74fbd3788045016",
+      "rawAmount": "998715222641082257648085",
+      "decimals": 18
+    },
+    {
+      "key": "susds-shares",
+      "deploymentRef": "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+      "selector": "0x70a082310000000000000000000000004aa42145aa6ebf72e164c9bbc74fbd3788045016",
+      "rawAmount": "46715638618476851812211471",
+      "decimals": 18
+    },
+    {
+      "key": "susds-assets",
+      "deploymentRef": "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+      "selector": "0x07a2d13a00000000000000000000000000000000000000000026a46bd80dc37e60299b0f",
+      "rawAmount": "51923592181649178392569645",
+      "decimals": 18
+    },
+    {
+      "key": "bridge-minted",
+      "deploymentRef": "gnosis:0x481c034c6d9441db23ea48de68bcae812c5d39ba",
+      "selector": "0xb4a523e80000000000000000000000007301cfa0e1756b71869e93d4e4dca5c7d0eb0aa6",
+      "rawAmount": "1338042283695855635614118360",
+      "decimals": 18
+    },
+    {
+      "key": "bridge-burnt",
+      "deploymentRef": "gnosis:0x7301cfa0e1756b71869e93d4e4dca5c7d0eb0aa6",
+      "selector": "0x0e8162ba",
+      "rawAmount": "1285543894422981990051077959",
+      "decimals": 18
+    }
+  ],
+  "ratio": {
+    "numerator": "52922307404290260650217730",
+    "denominator": "52498389272873645563040401",
+    "unitBasis": "raw-18-decimal-bridge-token-units"
+  }
+}

@@ -54,6 +54,16 @@ Without that current partition and book join, exact coverage is diagnostic and p
 
 Portfolio, on-chain and standing-structure envelopes have independent clocks and never grant financial assurance, reconciliation or seasoning; a code-security audit is not a financial engagement. Standing feeder identity establishes only a conservative whole-holder instrument, not current holdings, NAV or legal priority. Bounded on-chain observations may identify exact reviewed reserve/escrow contracts and native technical subjects such as `gnosis:native:xdai`, independently of holder `contracts[]` and financial-coverage liability refs. These identities grant no financial, supply or assurance credit; reserve contracts cannot be reused as financial liabilities.
 
+Authored and live observations of the same scope are revisions, not additional
+reserves. A fresh admissible live revision supersedes authored evidence with the
+same scope ID, kind, liability book and exact deployment set; otherwise admissible
+authored evidence remains authoritative. Expired observations do not participate.
+Each scope emits one admission and only the selected revision's provenance.
+Duplicate scope identities within a source and conflicting identities across
+non-expired sources still fail closed; financial-report overlaps retain their
+existing double-count protections. A rejected non-expired observation is diagnostic
+only when no admissible revision is available, and grants no evidence or credit.
+
 Full independent and operational financial assurance require complete applicable scope; overlays cannot bypass that gate. Exact authoring and producer contracts live in [Stablecoin Data](../stablecoin-data.md#registry-editing-entry) and [Live Reserves](../live-reserves.md#snapshot-metadata-and-warning-effects).
 
 

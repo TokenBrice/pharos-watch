@@ -14,7 +14,50 @@ export const SAFETY_SCORE_V9_RESERVE_BOUND_FACTS_DIGEST = domainDigest("safety-s
 // Validate rows per asset in the baseline builder; one malformed entry never rejects the cohort.
 const registry = rawRegistry as { schemaVersion: number; assets: Record<string, unknown[]> };
 if (registry.schemaVersion !== 1 || !registry.assets || Array.isArray(registry.assets)) throw new Error("Invalid bounded reserve registry envelope");
-export function buildSafetyScoreV9ReserveBoundFacts(assetId: string, rows: readonly ReserveSlice[]): ReserveBoundedFact[] {
+interface ReserveBoundAdmissionContext {
+  clockSec: number;
+  liveProvenance?: AssetBuildContext["fixedInput"]["liveReserveProvenanceMap"][string];
+  liveMaxAgeSec?: AssetBuildContext["extension"]["sources"]["liveReserves"]["maxAgeSec"];
+}
+
+/** Selection and compilation share the same generation, identity and freshness gates. */
+function admitReserveBound(payload: ReserveBoundedFact, rows: readonly ReserveSlice[], context: ReserveBoundAdmissionContext) {
+  const clock = context.clockSec;
+  const expiry = V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry;
+  let fact = payload;
+  let rejectionReason: string | null = null;
+  let maxAge = payload.kind === "currently-liquid-fraction" ? V9_CANDIDATE_POLICY_V1.policy.semantic.backing.reserve.boundedFacts.currentLiquidFractionMaxAgeSec : payload.kind === "observed-portfolio-maturity" ? expiry.reviewedReserveCompositionMaxAgeSec + expiry.reviewedReserveCompositionGraceSec : expiry.reviewedReserveClassificationMaxAgeSec;
+  if (payload.provenance.kind === "producer-observation") {
+    maxAge = Math.min(maxAge, payload.provenance.maxAgeSec);
+    // Null means the source has no additional freshness cap. The fact's policy,
+    // producer and matching retained-run budgets still bound admission.
+    if (context.liveMaxAgeSec !== null && context.liveMaxAgeSec !== undefined) maxAge = Math.min(maxAge, context.liveMaxAgeSec);
+    const run = context.liveProvenance?.boundedFactsGeneration;
+    if (!run || run.sourceGenerationId !== payload.provenance.sourceGenerationId || run.observedAtSec !== payload.asOfSec) rejectionReason = "producer-generation-mismatch";
+    else maxAge = Math.min(maxAge, run.maxAgeSec);
+  }
+  if (fact.scope.kind !== "reserve-envelope") {
+    const exposureKey = fact.scope.exposureKey;
+    const row = rows.find((entry) => entry.sourceKey === exposureKey) ?? rows.find((entry) => computeSafetyScoreV9ReserveExposureKey(entry) === exposureKey);
+    if (!row) rejectionReason = "scope-unmatched";
+    else fact = { ...fact, scope: { ...fact.scope, exposureKey: computeSafetyScoreV9ReserveExposureKey(row) } };
+    if (fact.kind === "currently-liquid-fraction") {
+      if (row?.coinId && row.coinId !== fact.assetId) rejectionReason = "native-asset-identity-mismatch";
+      if (payload.provenance.kind === "producer-observation" && !payload.provenance.sourceGenerationId.startsWith(`${fact.chain}:`)) rejectionReason = "chain-generation-mismatch";
+    }
+  }
+  if (payload.provenance.confidence === "low") rejectionReason = "confidence-insufficient";
+  if (payload.asOfSec > clock) rejectionReason = "snapshot-future";
+  if (payload.provenance.kind === "reviewed-research") {
+    const reviewSec = Date.parse(`${payload.provenance.reviewedAt}T00:00:00Z`) / 1000 + 86400;
+    if (reviewSec > clock) rejectionReason = "review-day-not-elapsed";
+    else if (clock - reviewSec > expiry.reviewedReserveClassificationMaxAgeSec) rejectionReason = "review-stale";
+  }
+  if (clock - payload.asOfSec > maxAge) rejectionReason = "snapshot-stale";
+  return { fact, maxAge, rejectionReason };
+}
+
+export function buildSafetyScoreV9ReserveBoundFacts(assetId: string, rows: readonly ReserveSlice[], context: ReserveBoundAdmissionContext): ReserveBoundedFact[] {
   const authored = (registry.assets[assetId] ?? []).map((row) => ReserveBoundedFactSchema.parse(row));
   const live = rows.flatMap((row) => (row.boundedFacts ?? []).map((fact) => {
     const parsed = ReserveBoundedFactSchema.parse(fact);
@@ -22,44 +65,43 @@ export function buildSafetyScoreV9ReserveBoundFacts(assetId: string, rows: reado
     if (!row.sourceKey || parsed.scope.kind === "reserve-envelope" || parsed.scope.exposureKey !== row.sourceKey) throw new Error("Live bound must match its exact source key");
     return parsed;
   }));
-  return [...authored, ...live].sort((a, b) => a.factKey.localeCompare(b.factKey));
+  const byKey = new Map<string, { authored?: ReserveBoundedFact; live?: ReserveBoundedFact }>();
+  for (const [lane, facts] of [["authored", authored], ["live", live]] as const) {
+    for (const fact of facts) {
+      const candidates = byKey.get(fact.factKey) ?? {};
+      if (candidates[lane]) throw new Error(`Duplicate canonical key: ${fact.factKey}`);
+      candidates[lane] = fact;
+      byKey.set(fact.factKey, candidates);
+    }
+  }
+  return [...byKey.values()].flatMap(({ authored: research, live: observation }) => {
+    const candidates = [observation, research].filter((fact): fact is ReserveBoundedFact => fact !== undefined).map((payload) => ({ payload, ...admitReserveBound(payload, rows, context) })).filter((candidate) => candidate.rejectionReason !== "snapshot-stale" && candidate.rejectionReason !== "review-stale");
+    if (candidates.length === 2) {
+      const [first, second] = candidates;
+      if (first!.fact.kind !== second!.fact.kind || reserveBoundScopeKey(first!.fact.scope) !== reserveBoundScopeKey(second!.fact.scope) ||
+        (first!.fact.kind === "currently-liquid-fraction" && second!.fact.kind === "currently-liquid-fraction" && (first!.fact.assetId !== second!.fact.assetId || first!.fact.chain !== second!.fact.chain || first!.fact.unit !== second!.fact.unit))) {
+        throw new Error(`Conflicting bounded reserve identity at ${first!.payload.factKey}`);
+      }
+    }
+    // Live takes precedence only after admission. Keep at most one rejected,
+    // non-expired candidate for diagnostics when neither source is admissible.
+    const selected = candidates.find((candidate) => candidate.rejectionReason === null) ?? candidates[0];
+    return selected ? [selected.payload] : [];
+  }).sort((a, b) => a.factKey.localeCompare(b.factKey));
 }
 export function compileSafetyScoreV9ReserveBoundFacts(context: AssetBuildContext): V9ReserveBoundedFact[] {
   const clock = context.fixedInput.clockSec;
   const expiry = V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry;
   const rows = context.fixedInput.liveReserveMap[context.asset.assetId]?.length ? context.fixedInput.liveReserveMap[context.asset.assetId]! : context.asset.reviewedStaticReserveRows?.rows ?? [];
   const bySource = new Map(rows.filter((row) => row.sourceKey).map((row) => [row.sourceKey!, computeSafetyScoreV9ReserveExposureKey(row)]));
-  const exposureKeys = new Set(rows.map((row) => computeSafetyScoreV9ReserveExposureKey(row)));
   return (context.asset.reserveBoundFacts ?? []).map((payload) => {
-    let fact = payload;
-    let rejectionReason: string | null = null;
+    const admission = admitReserveBound(payload, rows, { clockSec: clock, liveProvenance: context.fixedInput.liveReserveProvenanceMap[context.asset.assetId], liveMaxAgeSec: context.extension.sources.liveReserves.maxAgeSec });
+    const { fact, maxAge } = admission;
+    let rejectionReason = admission.rejectionReason;
     const producer = payload.provenance.kind === "producer-observation";
     const source = producer ? context.extension.sources.liveReserves : context.extension.sources.researchOverlays;
-    let maxAge = payload.kind === "currently-liquid-fraction" ? V9_CANDIDATE_POLICY_V1.policy.semantic.backing.reserve.boundedFacts.currentLiquidFractionMaxAgeSec : payload.kind === "observed-portfolio-maturity" ? expiry.reviewedReserveCompositionMaxAgeSec + expiry.reviewedReserveCompositionGraceSec : expiry.reviewedReserveClassificationMaxAgeSec;
-    if (payload.provenance.kind === "producer-observation") maxAge = Math.min(maxAge, payload.provenance.maxAgeSec, source.maxAgeSec ?? maxAge);
-    if (payload.provenance.kind === "producer-observation") {
-      const run = context.fixedInput.liveReserveProvenanceMap[context.asset.assetId]?.boundedFactsGeneration;
-      if (!run || run.sourceGenerationId !== payload.provenance.sourceGenerationId || run.observedAtSec !== payload.asOfSec) rejectionReason = "producer-generation-mismatch";
-      else maxAge = Math.min(maxAge, run.maxAgeSec);
-    }
-    if (fact.scope.kind !== "reserve-envelope") {
-      const matched = bySource.get(fact.scope.exposureKey) ?? (exposureKeys.has(fact.scope.exposureKey) ? fact.scope.exposureKey : null);
-      if (matched === null) rejectionReason = "scope-unmatched";
-      else fact = { ...fact, scope: { ...fact.scope, exposureKey: matched } };
-      if (fact.kind === "currently-liquid-fraction") {
-        const row = rows.find((entry) => computeSafetyScoreV9ReserveExposureKey(entry) === matched);
-        if (row?.coinId && row.coinId !== fact.assetId) rejectionReason = "native-asset-identity-mismatch";
-        if (payload.provenance.kind === "producer-observation" && !payload.provenance.sourceGenerationId.startsWith(`${fact.chain}:`)) rejectionReason = "chain-generation-mismatch";
-      }
-    }
-    if (payload.provenance.confidence === "low") rejectionReason = "confidence-insufficient";
-    if (payload.asOfSec > clock) rejectionReason = "snapshot-future";
-    if (payload.provenance.kind === "reviewed-research") {
-      const reviewSec = Date.parse(`${payload.provenance.reviewedAt}T00:00:00Z`) / 1000 + 86400;
-      if (reviewSec > clock) rejectionReason = "review-day-not-elapsed";
-      else if (clock - reviewSec > expiry.reviewedReserveClassificationMaxAgeSec) rejectionReason = "review-stale";
-    }
-    if (clock - payload.asOfSec > maxAge) rejectionReason = "snapshot-stale";
+    // The builder selects canonical revisions before extension validation;
+    // compilation rechecks admission for authored/custom extension callers.
     const sameScope = (context.asset.reserveBoundFacts ?? []).filter((other) => {
       const scope = other.scope.kind === "reserve-envelope" ? other.scope : { ...other.scope, exposureKey: bySource.get(other.scope.exposureKey) ?? other.scope.exposureKey };
       return reserveBoundScopeKey(scope) === reserveBoundScopeKey(fact.scope);

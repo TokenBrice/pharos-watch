@@ -11,6 +11,9 @@ import { addScopedReserveEvidence, buildSafetyScoreV9ReviewedAuditedFallbackRese
 import type { SafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
 import type { ReserveObservationEnvelope } from "@shared/types/safety-score-v9-reserve-scope";
 import xdaiMetaSource from "@shared/data/stablecoins/coins/xdai-gnosis.json";
+import xdaiReserveSource from "@shared/data/stablecoins/domains/reserves/xdai-gnosis.json";
+import xdaiLiveObservation from "./fixtures/xdai-live-reserve-observation.json";
+import { ReserveObservationEnvelopeSchema } from "@shared/types/safety-score-v9-reserve-scope";
 import { ReviewEvidenceBuilder } from "../safety-score-v9/extension-shared";
 
 const clockSec = Date.parse("2026-10-02T12:00:00Z") / 1000;
@@ -153,7 +156,7 @@ describe("diagnostic report scope monotonicity", () => {
       admitted: true, rejectionCodes: [], currentLiabilityShare: null, wholeAssetComposition: false,
     });
     const evidence = new ReviewEvidenceBuilder(parsed.id, clockSec);
-    addScopedReserveEvidence(parsed, admissions, undefined, evidence);
+    addScopedReserveEvidence(parsed, admissions, input(), evidence);
     const bindings = evidence.finish();
     expect(bindings.researchEvidence).toMatchObject([{
       sourceId: "reserve-observation:onchain-observation", observedAtSec: clockSec - 60,
@@ -162,8 +165,8 @@ describe("diagnostic report scope monotonicity", () => {
     expect(bindings.componentEvidence).toEqual([{
       componentKey: "reserve-scope:bridge-subset", evidenceKeys: admissions[0]!.evidenceRefIds,
     }]);
-    expect(buildSafetyScoreV10ScopedReserveAdmissions(parsed, { ...input(), clockSec: observation.expiresAtSec + 1 })[0])
-      .toMatchObject({ admitted: false, wholeAssetComposition: false, rejectionCodes: ["expired"] });
+    expect(buildSafetyScoreV10ScopedReserveAdmissions(parsed, { ...input(), clockSec: observation.expiresAtSec + 1 }))
+      .toEqual([]);
     expect(buildSafetyScoreV9MechanismReview(input(), parsed, "fiat-cash")).toEqual(buildSafetyScoreV9MechanismReview(input(), meta(), "fiat-cash"));
     observation.deploymentRefs.push("ethereum:0x9999999999999999999999999999999999999999");
     expect(() => parseStablecoinMetaAssets([source], "unknown-observed-contract")).toThrow("Unresolved reserve deployment");
@@ -172,5 +175,71 @@ describe("diagnostic report scope monotonicity", () => {
     source.proofOfReserves!.latestReport!.coverage!.deploymentRefs = [foreignRef];
     source.proofOfReserves!.latestReport!.coverage!.denominator.included[0].identity.deploymentRef = foreignRef;
     expect(() => parseStablecoinMetaAssets([source], "reserve-contract-is-not-liability")).toThrow("Unresolved reserve deployment");
+  });
+  it("compiles the production xDAI scope once and binds only the live revision's evidence", () => {
+    const parsed = parseStablecoinMetaAssets([{ ...xdaiMetaSource, ...xdaiReserveSource }], "xdai-production")[0]!;
+    const live = ReserveObservationEnvelopeSchema.parse(xdaiLiveObservation);
+    const productionClock = 1790972280; // 20:18Z scoring clock of the accepted 20:22Z publication.
+    const fixedInput = { ...input(), clockSec: productionClock,
+      liveReserveProvenanceMap: { [parsed.id]: { source: "xdai-bridge", fetchedAt: 1790972022, reserveObservation: live } } };
+    const admissions = buildSafetyScoreV10ScopedReserveAdmissions(parsed, fixedInput);
+    expect(admissions).toMatchObject([{
+      scopeId: "xdai-bridge-accounting", admitted: true, observedAtSec: 1790971600,
+      currentLiabilityShare: null, wholeAssetComposition: false, rejectionCodes: [],
+    }]);
+    const evidence = new ReviewEvidenceBuilder(parsed.id, productionClock);
+    addScopedReserveEvidence(parsed, admissions, fixedInput, evidence);
+    const records = evidence.finish().researchEvidence;
+    expect(records.map(row => row.observedAtSec)).toEqual(live.sources.map(() => live.observedAtSec));
+    expect(records.map(row => row.url).sort()).toEqual(live.sources.map(row => row.url).sort());
+    expect(records.some(row => row.url?.includes("dwellir"))).toBe(false);
+  });
+  it("selects live before admissible authored evidence and falls back only when live is rejected", () => {
+    const live = ReserveObservationEnvelopeSchema.parse(xdaiLiveObservation);
+    const authored = structuredClone(live);
+    authored.observedAtSec = live.observedAtSec! - 1;
+    if (authored.kind === "onchain-observation") authored.blocks[1].timestamp--;
+    authored.sourceSha256 = "b".repeat(64);
+    authored.sources = [{ url: "https://example.com/reviewed-rpc", accessedAtSec: authored.reviewedAtSec, sha256: authored.sourceSha256 }];
+    const parsed = parseStablecoinMetaAssets([{ ...xdaiMetaSource, ...xdaiReserveSource,
+      reserveReview: { ...xdaiReserveSource.reserveReview, observations: [authored] } }], "xdai-fallback")[0]!;
+    const liveInput = { ...input(), clockSec: 1790972280,
+      liveReserveProvenanceMap: { [parsed.id]: { source: "xdai-bridge", fetchedAt: 1790972022, reserveObservation: live } } };
+    const liveAdmissions = buildSafetyScoreV10ScopedReserveAdmissions(parsed, liveInput);
+    expect(liveAdmissions).toMatchObject([{ admitted: true, observedAtSec: live.observedAtSec }]);
+    const liveEvidence = new ReviewEvidenceBuilder(parsed.id, 1790972280);
+    addScopedReserveEvidence(parsed, liveAdmissions, liveInput, liveEvidence);
+    expect(liveEvidence.finish().researchEvidence.map(row => row.url).sort()).toEqual(live.sources.map(row => row.url).sort());
+    for (const condition of ["expired", "unverified"] as const) {
+      const rejected = structuredClone(live);
+      if (condition === "expired") rejected.expiresAtSec = 1790972279;
+      else rejected.confidence = "unknown";
+      const rejectedInput = { ...input(), clockSec: 1790972280,
+        liveReserveProvenanceMap: { [parsed.id]: { source: "xdai-bridge", fetchedAt: 1790972022, reserveObservation: rejected } } };
+      const admissions = buildSafetyScoreV10ScopedReserveAdmissions(parsed, rejectedInput);
+      expect(admissions).toMatchObject([{ admitted: true, observedAtSec: authored.observedAtSec }]);
+      const evidence = new ReviewEvidenceBuilder(parsed.id, 1790972280);
+      addScopedReserveEvidence(parsed, admissions, rejectedInput, evidence);
+      expect(evidence.finish().researchEvidence.map(row => row.url)).toEqual(["https://example.com/reviewed-rpc"]);
+    }
+    authored.expiresAtSec = 1790972279;
+    parsed.reserveReview!.observations = [authored];
+    const expiredLive = { ...live, expiresAtSec: 1790972279 };
+    expect(buildSafetyScoreV10ScopedReserveAdmissions(parsed, { ...input(), clockSec: 1790972280,
+      liveReserveProvenanceMap: { [parsed.id]: { source: "xdai-bridge", fetchedAt: 1790972022, reserveObservation: expiredLive } } }))
+      .toEqual([]);
+  });
+  it("rejects genuine same-source scope collisions and cross-source identity conflicts", () => {
+    const live = ReserveObservationEnvelopeSchema.parse(xdaiLiveObservation);
+    const parsed = parseStablecoinMetaAssets([{ ...xdaiMetaSource, ...xdaiReserveSource,
+      reserveReview: { ...xdaiReserveSource.reserveReview, observations: [live] } }], "xdai-collision")[0]!;
+    parsed.reserveReview!.observations!.push(structuredClone(live));
+    expect(() => buildSafetyScoreV10ScopedReserveAdmissions(parsed, { ...input(), clockSec: 1790972280 }))
+      .toThrow("overlapping-reserve-scope-identities");
+    parsed.reserveReview!.observations!.pop();
+    const conflicting = { ...live, liabilityBookKey: "another-book" };
+    expect(() => buildSafetyScoreV10ScopedReserveAdmissions(parsed, { ...input(), clockSec: 1790972280,
+      liveReserveProvenanceMap: { [parsed.id]: { source: "xdai-bridge", fetchedAt: 1790972022, reserveObservation: conflicting } } }))
+      .toThrow("overlapping-reserve-scope-identities");
   });
 });

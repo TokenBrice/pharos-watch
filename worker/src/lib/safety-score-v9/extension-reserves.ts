@@ -799,6 +799,36 @@ export function addReserveClassificationEvidence(
   });
 }
 
+function selectScopedReserveObservations(meta: V9ExtensionRegistryMeta, fixedInput: Readonly<SafetyScoreV9CompilerInput>) {
+  const live = fixedInput.liveReserveProvenanceMap[meta.id]?.reserveObservation;
+  const observations = meta.reserveReview?.observations ?? [];
+  const observationRefs = observations.length || live ? resolveV10ReserveObservationDeploymentRefs(meta) : [];
+  const observedScopes = new Map<string, { observation: ReserveObservationEnvelope; admission: ReserveScopedAdmission }>();
+  for (const observation of observations) {
+    const admission = admitV10ReserveObservation({ observation, deploymentRefs: observationRefs,
+      clockSec: fixedInput.clockSec, policy: V9_CANDIDATE_POLICY_V1.policy });
+    if (admission.rejectionCodes.includes("expired")) continue;
+    if (observedScopes.has(admission.scopeId)) throw new Error(`${meta.id}: overlapping-reserve-scope-identities`);
+    observedScopes.set(admission.scopeId, { observation, admission });
+  }
+  if (live) {
+    const admission = admitV10ReserveObservation({ observation: live, deploymentRefs: observationRefs,
+      clockSec: fixedInput.clockSec, policy: V9_CANDIDATE_POLICY_V1.policy });
+    if (!admission.rejectionCodes.includes("expired")) {
+      const authored = observedScopes.get(admission.scopeId)?.admission;
+      if (authored && (authored.kind !== admission.kind || authored.liabilityBookKey !== admission.liabilityBookKey ||
+        authored.deploymentRefs.length !== admission.deploymentRefs.length ||
+        authored.deploymentRefs.some(ref => !admission.deploymentRefs.includes(ref)))) {
+        throw new Error(`${meta.id}: overlapping-reserve-scope-identities`);
+      }
+      // A producer refresh is one scope's new revision, never another reserve.
+      // Failed live evidence cannot replace admissible authored evidence.
+      if (admission.admitted || !authored?.admitted) observedScopes.set(admission.scopeId, { observation: live, admission });
+    }
+  }
+  return observedScopes;
+}
+
 export function buildSafetyScoreV10ScopedReserveAdmissions(meta: V9ExtensionRegistryMeta, fixedInput: Readonly<SafetyScoreV9CompilerInput>): ReserveScopedAdmission[] {
   if (fixedInput.liveReserveProvenanceMap[meta.id]?.reserveObservationFailure != null) {
     throw new Error(`${meta.id}: malformed-reserve-observation (producer-failed)`);
@@ -813,23 +843,18 @@ export function buildSafetyScoreV10ScopedReserveAdmissions(meta: V9ExtensionRegi
       baseInputGenerationId: fixedInput.baseInputGenerationId });
     if (scope) admissions.push(scope);
   }
-  const live = fixedInput.liveReserveProvenanceMap[meta.id]?.reserveObservation;
-  const observations = [...(meta.reserveReview?.observations ?? []), ...(live ? [live] : [])];
-  const observationRefs = observations.length ? resolveV10ReserveObservationDeploymentRefs(meta) : [];
-  for (const observation of observations) {
-    admissions.push(admitV10ReserveObservation({ observation, deploymentRefs: observationRefs,
-      clockSec: fixedInput.clockSec, policy: V9_CANDIDATE_POLICY_V1.policy }));
-  }
+  for (const { admission } of selectScopedReserveObservations(meta, fixedInput).values()) admissions.push(admission);
   if (new Set(admissions.map(row => row.scopeId)).size !== admissions.length) {
     throw new Error(`${meta.id}: overlapping-reserve-scope-identities`);
   }
   return admissions.sort((a, b) => compareText(a.scopeId, b.scopeId));
 }
 
-export function addScopedReserveEvidence(meta: V9ExtensionRegistryMeta, admissions: ReserveScopedAdmission[], live: ReserveObservationEnvelope | undefined, evidence: ReviewEvidenceBuilder): void {
+export function addScopedReserveEvidence(meta: V9ExtensionRegistryMeta, admissions: ReserveScopedAdmission[], fixedInput: Readonly<SafetyScoreV9CompilerInput>, evidence: ReviewEvidenceBuilder): void {
+  const observations = selectScopedReserveObservations(meta, fixedInput);
   for (const admission of admissions) {
     if (!admission.admitted) { admission.evidenceRefIds = []; continue; }
-    const observation = [...(meta.reserveReview?.observations ?? []), ...(live ? [live] : [])].find(row => row.scopeId === admission.scopeId);
+    const observation = observations.get(admission.scopeId)?.observation;
     const report = meta.proofOfReserves?.latestReport;
     if (observation) {
       admission.evidenceRefIds = evidence.add({ componentKeys: [`reserve-scope:${admission.scopeId}`], sourceId: `reserve-observation:${observation.kind}`,
