@@ -81,7 +81,7 @@ describe("Exit exhaustion requires an exhaustive measurement", () => {
         capacityCurve: [point(100_000)] })],
     }, policy);
     expect(result.score).toBe(policy.policy.semantic.exit.boundedUnknownScore);
-    expect(result.reasons).toContain("missing-same-notional-route");
+    expect(result.reasons).not.toContain("missing-same-notional-route");
     expect(result.reasons).not.toContain("no-viable-exit-path");
     expect(result.routes[0]).toMatchObject({ included: true, capacityPoint: { executableUsd: 100_000 } });
   });

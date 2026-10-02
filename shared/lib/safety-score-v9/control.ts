@@ -24,6 +24,7 @@ import {
   applyMergedMintSignals,
   gradeVerifiedControlAuthority,
   isStaticallyVerifiedControl,
+  mintQualityLadder,
 } from "./control-mint-grade";
 import {
   bindingByMateriality,
@@ -390,12 +391,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
         ) {
           return gradedPostureScore;
         }
-        const ladder = [
-          ...Object.values(policy.control.mintPostureQuality),
-          grading.prudentialReconciled,
-          grading.attestationOnlyReconciled,
-        ].sort((left, right) => left - right);
-        const nextRung = ladder.find((value) => value > gradedPostureScore);
+        const nextRung = mintQualityLadder(policy.control).find((value) => value > gradedPostureScore);
         // Strictly below the next rung: a seasoned credit rewards longevity but can
         // never make a lower posture class read identical to the class above it
         // (adversarial-review finding on the credit widening to 10).

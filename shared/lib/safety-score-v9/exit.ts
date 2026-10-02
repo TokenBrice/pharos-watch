@@ -1138,6 +1138,11 @@ export function evaluateV9Exit(
         : null;
   const boundedGapFloorApplies =
     boundedGapFloor !== null && primary.score + diversificationBonus < boundedGapFloor;
+  // Positive lower-bound capacity is a usable route, not a missing route.
+  // Its floor eligibility does not create a missing-evidence ceiling.
+  // An excluded alternative stays diagnostic while a positive route carries
+  // the claim; non-exhaustive zeros remain evidence gaps at any floor.
+  const evidenceGapReason = primary.score === 0 ? boundedGapReason : null;
   return {
     score: boundedGapFloorApplies
       ? boundedGapFloor
@@ -1147,12 +1152,12 @@ export function evaluateV9Exit(
     diversificationRouteKey: boundedGapFloorApplies ? null : independent?.route.routeKey ?? null,
     diversificationBonus: boundedGapFloorApplies ? 0 : roundTo(diversificationBonus, 2),
     horizons,
-    // Excluded optional routes stay visible on their per-route traces; a weak
-    // or unreviewed alternative cannot impose a critical reason once a
-    // score-eligible route carries the exit claim.
+    // Missing-evidence reasons follow the route evidence, not the numerical
+    // floor comparison: raising an unknown rung must not activate a new cap.
+    // Optional exclusions remain visible on their per-route traces.
     reasons: uniqueSorted([
-      ...(boundedGapFloorApplies && boundedGapReason ? [boundedGapReason] : []),
-      ...(!boundedGapFloorApplies && primary.score === 0 ? ["no-viable-exit-path"] : []),
+      ...(evidenceGapReason ? [evidenceGapReason] : []),
+      ...(!evidenceGapReason && primary.score === 0 ? ["no-viable-exit-path"] : []),
       ...(hasOtherIncludedRoute && !independent ? ["correlated-exit-routes"] : []),
     ]) as V9ReasonCode[],
     routes: traces,

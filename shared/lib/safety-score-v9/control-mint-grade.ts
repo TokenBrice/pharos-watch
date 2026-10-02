@@ -20,21 +20,21 @@ export function isStaticallyVerifiedControl(control: V9DeploymentControlFactV2):
 }
 
 /**
- * Ascending, de-duplicated ladder of every mint-component quality value the
- * policy can produce. Bounded credits use it so a credit can lift a score
- * towards the next rung but never make a lower posture class read as the class
- * above it (the discipline the seasoned credit already follows).
+ * Ascending, de-duplicated ladder of known mint-component qualities.
+ * Unknown rungs price uncertainty; they must not change the headroom granted
+ * to an unchanged known posture by seasoned or merged-signal credits.
  */
-function mintQualityLadder(controlPolicy: V9ControlPolicy): readonly number[] {
-  return [
-    ...new Set([
-      ...Object.values(controlPolicy.mintPostureQuality),
-      controlPolicy.mintPostureGrading.prudentialReconciled,
-      controlPolicy.mintPostureGrading.attestationOnlyReconciled,
-      controlPolicy.boundedUnknownQuality,
-      controlPolicy.mintMergedSignals.attestedKeyCustodyQuality,
-    ]),
-  ].sort((left, right) => left - right);
+export function mintQualityLadder(controlPolicy: V9ControlPolicy): readonly number[] {
+  const values = new Set<number>();
+  for (const posture in controlPolicy.mintPostureQuality) {
+    if (posture !== "unknown") {
+      values.add(controlPolicy.mintPostureQuality[posture as keyof V9ControlPolicy["mintPostureQuality"]]);
+    }
+  }
+  values.add(controlPolicy.mintPostureGrading.prudentialReconciled);
+  values.add(controlPolicy.mintPostureGrading.attestationOnlyReconciled);
+  values.add(controlPolicy.mintMergedSignals.attestedKeyCustodyQuality);
+  return [...values].sort((left, right) => left - right);
 }
 
 /**
