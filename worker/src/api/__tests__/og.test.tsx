@@ -11,7 +11,7 @@ import satori from "satori";
 import satoriStandalone, { init as initSatoriStandalone } from "satori/standalone";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
-import * as activeSafetyScoreSource from "../../lib/safety-score-active-source";
+import * as activeSafetyScoreSource from "../../lib/safety-score-index";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../../lib/safety-score-v9/consumer-freshness";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer";
@@ -343,7 +343,7 @@ describe("stablecoin OG card data", () => {
     });
 
     it("renders the complete active V9 publication with explicit model provenance", async () => {
-      vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource")
+      vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex")
         .mockResolvedValue(activeV9());
       const db = makeOgDb([makeAsset({ id: "usdt-tether", symbol: "USDT" })]);
 
@@ -363,7 +363,7 @@ describe("stablecoin OG card data", () => {
     });
 
     it("degrades a structurally valid active V9 publication after two producer cadences", async () => {
-      vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource")
+      vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex")
         .mockResolvedValue(activeV9(nowSec - SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC - 1));
       const db = makeOgDb([makeAsset({ id: "usdt-tether", symbol: "USDT" })]);
 

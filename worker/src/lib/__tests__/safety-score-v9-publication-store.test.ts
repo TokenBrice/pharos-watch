@@ -303,6 +303,14 @@ describe("Safety Score V9 publication store", () => {
           publication.publicationGenerationId,
       },
     );
+    expect(
+      sqlite.prepare("SELECT key FROM cache ORDER BY key").all().map((row) => row.key),
+    ).toEqual([
+      SAFETY_SCORE_V9_CACHE_KEYS.publication,
+      SAFETY_SCORE_V9_CACHE_KEYS.publicationAttempt,
+      SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth,
+      SAFETY_SCORE_V9_CACHE_KEYS.scoreIndex,
+    ].sort());
 
     await persistSafetyScoreV9Publication(db, {
       publicationHealth: {
@@ -334,13 +342,6 @@ describe("Safety Score V9 publication store", () => {
           publication.publicationGenerationId,
       },
     );
-    expect(
-      sqlite.prepare("SELECT key FROM cache ORDER BY key").all(),
-    ).toEqual([
-      { key: SAFETY_SCORE_V9_CACHE_KEYS.publication },
-      { key: SAFETY_SCORE_V9_CACHE_KEYS.publicationAttempt },
-      { key: SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth },
-    ]);
   });
 
   it("reads the publication identity from the storage envelope without the body", async () => {

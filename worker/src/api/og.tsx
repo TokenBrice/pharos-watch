@@ -35,7 +35,7 @@ import {
 } from "../lib/mint-burn-hourly-valuation";
 import { getVariantDisplay } from "@shared/lib/variant-display";
 import type { BackingType } from "@shared/types";
-import { loadActiveSafetyScoreSource } from "../lib/safety-score-active-source";
+import { loadActiveSafetyScoreIndex } from "../lib/safety-score-index";
 import { isSafetyScoreV9SnapshotFresh } from "../lib/safety-score-v9/consumer-freshness";
 
 // ---------------------------------------------------------------------------
@@ -134,7 +134,7 @@ type OgSafetyScoreSource =
     };
 
 async function loadOgSafetyScoreSource(db: D1Database): Promise<OgSafetyScoreSource> {
-  const active = await loadActiveSafetyScoreSource(db);
+  const active = await loadActiveSafetyScoreIndex(db);
   if (active.kind === "error") {
     return {
       kind: "error",

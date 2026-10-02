@@ -44,7 +44,7 @@ export function buildSafetyScoreV9PublicationIdentity(
  * match the stored publication is downgraded to `held` rather than trusted.
  */
 export function resolveSafetyScoreV9EffectivePublicationHealth(
-  publication: SafetyScoreV9CurrentResponse,
+  publication: Pick<SafetyScoreV9CurrentResponse, "publicationGenerationId" | "publishedAtSec">,
   publicationHealth: V9PublicationHealth,
 ): V9PublicationHealth {
   const healthMatchesPublication =

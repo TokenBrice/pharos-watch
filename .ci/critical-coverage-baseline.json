@@ -196,6 +196,7 @@
     "worker/src/lib/publication-contract.ts": 97.3,
     "worker/src/lib/safety-score-active-source.ts": 100,
     "worker/src/lib/safety-score-history-v2.ts": 84,
+    "worker/src/lib/safety-score-index.ts": 96,
     "worker/src/lib/safety-score-v9/candidate.ts": 86.6,
     "worker/src/lib/safety-score-v9/capture.ts": 84,
     "worker/src/lib/safety-score-v9/centrifuge-supply-observer.ts": 88.4,

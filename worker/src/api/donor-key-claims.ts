@@ -29,7 +29,7 @@ import {
 import { parseRequestJsonWithSchema } from "../lib/api-json-body";
 import { jsonResponse } from "../lib/api-response";
 import { logWorkerEvent } from "../lib/structured-log";
-import { loadActiveSafetyScoreSource } from "../lib/safety-score-active-source";
+import { loadActiveSafetyScoreIndex } from "../lib/safety-score-index";
 
 const ROUTE = "donor-key-claims";
 const CLAIM_BODY_MAX_BYTES = 4096;
@@ -199,7 +199,7 @@ export async function handleDonorKeyClaim(
     return existingClaimResponse(existing);
   }
 
-  const activeScores = await loadActiveSafetyScoreSource(db);
+  const activeScores = await loadActiveSafetyScoreIndex(db);
   if (activeScores.kind !== "v9") {
     return claimError(503, UNAVAILABLE_MESSAGE, "safety_scores_unavailable");
   }

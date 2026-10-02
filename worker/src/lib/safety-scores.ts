@@ -1,5 +1,5 @@
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
-import { loadActiveSafetyScoreSource } from "./safety-score-active-source";
+import { loadActiveSafetyScoreIndex } from "./safety-score-index";
 
 interface SafetyResult {
   score: number;
@@ -55,7 +55,7 @@ function result(
 export async function computeSafetyScoresSnapshot(
   db: D1Database,
 ): Promise<PublishedSafetyScoresResultMap> {
-  const active = await loadActiveSafetyScoreSource(db);
+  const active = await loadActiveSafetyScoreIndex(db);
   if (active.kind === "error") {
     return result({
       kind: "degraded",

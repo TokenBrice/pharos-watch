@@ -10,7 +10,7 @@ Safety Score V10 is the sole active stablecoin safety model. It publishes eviden
 - **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v10.0`<!-- GENERATED-END: methodology-version-safety-score -->
 - Public response schema: report v6 with score trace v3; report v5 publications remain readable
 - Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`, parsed and digested by `shared/lib/safety-score-v9/policy.ts`
-- **Evaluation build:** `beba28cdf72aad551ffe008cd09d5a2702647c08689fe9402649d4feae3c9f97` (`SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST`), generated from the evaluator and fact-producer source manifest. The manifest's evaluator closure includes the policy's reviewed chain-maturity registry, so score-bearing source edits rotate the identity used by replay and publication comparability.
+- **Evaluation build:** `d001cbfabf8802215a8e0357ff5f297546ce8d8a02cc1880edaac25ad3b113a2` (`SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST`), generated from the evaluator and fact-producer source manifest. The manifest's evaluator closure includes the policy's reviewed chain-maturity registry, so score-bearing source edits rotate the identity used by replay and publication comparability.
 - Implementation: `shared/lib/safety-score-v9/`
 - Structured changelog: `shared/data/methodology-changelogs/safety-score/`
 - Public methodology: `/methodology/#safety-scores-methodology`
@@ -296,9 +296,10 @@ A missing input-bound attribution generation is diagnosed separately from an RPC
 Canonical accepted state is stored in:
 
 - `report-cards:v9`
+- `report-cards:v9:score-index`
 - `report-cards:v9:publication-health`
 
-Both rows carry matching model, schema, methodology, policy, evaluation-build, base-input, and publication identities. The canonical writer accepts only newer publications and commits an accepted publication with its current health atomically.
+The publication envelope and compact score index bind the same publication generation, result digest and full Safety Score identity. Health names the accepted generation and timestamp. The canonical writer commits all three rows in one atomic, newer-publication-fenced batch; held attempts retain both accepted data rows. The index includes NR/null entries, evidence/publication clocks and expected card count, so score-only readers need no decompression or dependency graph. See [request memory and rollout](./worker-and-api-limits.md#safety-score-production-budgets).
 
 Canonical arrays and digest inputs use the same locale-independent code-unit comparator throughout compilation and publication assessment. Replaying identical facts therefore cannot select a different equal-scoring route, reorder a dependency path, or hash a different reviewed-transfer sequence solely because the runtime locale changed.
 

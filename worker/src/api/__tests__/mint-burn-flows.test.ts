@@ -1,6 +1,6 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import * as activeSafetyScoreSource from "../../lib/safety-score-active-source";
+import * as activeSafetyScoreSource from "../../lib/safety-score-index";
 import * as flightToQualityClassification from "../../lib/flight-to-quality-classification";
 import {
   makeWorkerReportCardsV9Response,
@@ -500,7 +500,7 @@ describe("handleMintBurnFlows contract tests", () => {
 
   it("serves a fresh aggregate with FTQ unavailable when the report-card cache read fails", async () => {
     const now = Math.floor(Date.now() / 1000);
-    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource")
+    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex")
       .mockRejectedValueOnce(new Error("canonical V9 read failed"));
     const db = mintBurnScenario({
       nowSec: now,
@@ -595,7 +595,7 @@ describe("handleMintBurnFlows contract tests", () => {
       },
       cards: [makeWorkerV9Card({ id: "usdc-circle", score: 80, grade: "A" })],
     });
-    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource")
+    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex")
       .mockResolvedValueOnce({
         kind: "v9",
         snapshot: activeSnapshot,
@@ -702,7 +702,7 @@ describe("handleMintBurnFlows contract tests", () => {
       baseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`,
       publicationGenerationId: `report-cards:v9:${now}`,
     };
-    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource")
+    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex")
       .mockRejectedValueOnce(new Error("canonical V9 read failed"));
     const cachedBody = makeValidCachedAggregateFixture(now, identity);
     const db = mintBurnScenario({
@@ -763,7 +763,7 @@ describe("handleMintBurnFlows contract tests", () => {
       safetyScoreIdentity: identity,
       cards: [makeWorkerV9Card({ id: "usdc-circle", score: 80, grade: "A" })],
     });
-    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource")
+    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex")
       .mockResolvedValueOnce({
         kind: "held",
         reason: "v9-publication-held",
@@ -822,6 +822,9 @@ describe("handleMintBurnFlows contract tests", () => {
     const now = Math.floor(Date.now() / 1000);
     const tenDaysAgoHour = Math.floor((now - 10 * 86400) / 3600) * 3600;
     const tenDaysAgoDay = Math.floor(tenDaysAgoHour / 86400) * 86400;
+    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex").mockResolvedValueOnce({
+      kind: "error", reason: "safety-score-index-missing", detail: "missing index", snapshot: null,
+    });
     const stablecoinsCache = JSON.stringify({
       peggedAssets: [{ id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 100_000_000_000 } }],
     });
@@ -859,7 +862,7 @@ describe("handleMintBurnFlows contract tests", () => {
     const body = MintBurnFlowsResponseSchema.parse(await readJsonResponse(res, 200));
     expect(body.gauge.classificationSource).toBe("unavailable");
     expect(body.gauge.safetyScoreIdentity).toBeNull();
-    expect(body.sync?.classificationWarning).toContain("v9-snapshot-unavailable");
+    expect(body.sync?.classificationWarning).toContain("safety-score-index-missing");
     expect(body.gauge.flightToQuality).toBe(false);
     expect(body.gauge.flightIntensity).toBe(0);
   });

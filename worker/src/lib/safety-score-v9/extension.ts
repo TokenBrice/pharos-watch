@@ -1776,11 +1776,11 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         });
         const reserveRows = reviewedStaticReserveRows?.rows ?? liveReserves;
         admissionPath = "reserveBoundFacts";
-        const reserveBoundFacts = buildSafetyScoreV9ReserveBoundFacts(assetId, reserveRows);
+        const reserveBoundFacts = buildSafetyScoreV9ReserveBoundFacts(assetId, reserveRows, { clockSec, liveProvenance: fixedInput.liveReserveProvenanceMap[assetId], liveMaxAgeSec: sources.liveReserves.maxAgeSec });
         const reviewEvidence = new ReviewEvidenceBuilder(assetId, clockSec);
         admissionPath = "reserveScopeAdmissions";
         const reserveScopeAdmissions = buildSafetyScoreV10ScopedReserveAdmissions(meta, fixedInput);
-        addScopedReserveEvidence(meta, reserveScopeAdmissions, fixedInput.liveReserveProvenanceMap[assetId]?.reserveObservation, reviewEvidence);
+        addScopedReserveEvidence(meta, reserveScopeAdmissions, fixedInput, reviewEvidence);
         admissionPath = "reviewedIncidents";
         const reviewedIncidents = getSafetyScoreV9ReviewedIncidents(assetId, clockSec);
         addSafetyScoreV9IncidentEvidence(reviewEvidence, reviewedIncidents);

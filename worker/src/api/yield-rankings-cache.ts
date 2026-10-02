@@ -764,7 +764,8 @@ function buildDegradedYieldRankingsResponse(
   // /api/health rates it healthy (`yield-safety-publish-time-fallback:*`) and the
   // body carries `yield-safety-hydration-stale`. Only blanked NR safety earns the
   // HTTP Warning that clients render as a data-quality degradation.
-  const servePublishTime = canServePublishTimeSafety(payload, cached);
+  const servePublishTime = !source.degradationReasons.some(reason => reason.startsWith("safety-score-index-"))
+    && canServePublishTimeSafety(payload, cached);
   const reassessed = hydrateYieldRankingsWithLiveSafety(payload, new Map(), source, true).payload;
   const fallbackPayload = servePublishTime
     ? markYieldRankingsSafetyStale(reassessed, reason, source)

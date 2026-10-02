@@ -12,9 +12,9 @@ import { getCache } from "../lib/db-cache";
 import { handleYieldRankings } from "./cache-handlers";
 import { safeJsonParse } from "../lib/api-cache-read";
 import {
-  loadActiveSafetyScoreSource,
-  type ActiveSafetyScoreSource,
-} from "../lib/safety-score-active-source";
+  loadActiveSafetyScoreIndex,
+  type ActiveSafetyScoreIndex,
+} from "../lib/safety-score-index";
 import { loadStressSignalCurrentRowForCoin } from "../lib/stress-signals-current-rows";
 
 import { TELEGRAM_FLOW_CONTEXT_MAX_AGE_SEC } from "@shared/lib/api-freshness";
@@ -83,7 +83,7 @@ export interface StatusForCoin {
 
 interface TelegramSafetyState {
   unavailableReason: string | null;
-  source: Extract<ActiveSafetyScoreSource, { kind: "v9" }> | null;
+  source: Extract<ActiveSafetyScoreIndex, { kind: "v9" }> | null;
 }
 
 async function loadTelegramPysState(
@@ -111,7 +111,7 @@ async function loadTelegramPysState(
 async function loadTelegramSafetyState(db: D1Database): Promise<TelegramSafetyState> {
   let activeSource;
   try {
-    activeSource = await loadActiveSafetyScoreSource(db);
+    activeSource = await loadActiveSafetyScoreIndex(db);
   } catch {
     return {
       unavailableReason: "active-source-unavailable",

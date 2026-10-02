@@ -20,9 +20,11 @@ import {
   serializeSafetyScoreV9Publication,
 } from "./publication-codec";
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
+import { SafetyScoreIndexSchema } from "@shared/types/safety-score-index";
 
 export const SAFETY_SCORE_V9_CACHE_KEYS = {
   publication: "report-cards:v9",
+  scoreIndex: "report-cards:v9:score-index",
   publicationHealth: "report-cards:v9:publication-health",
   publicationAttempt: "report-cards:v9:last-attempt",
   failedPublicationAttempt: "report-cards:v9:last-failed-attempt",
@@ -444,6 +446,7 @@ export async function persistSafetyScoreV9Publication(
   }
 
   let publicationValue: string | null = null;
+  let scoreIndexValue: string | null = null;
   if (health.status === "current") {
     if (input.publication === undefined) {
       throw new Error(
@@ -469,6 +472,26 @@ export async function persistSafetyScoreV9Publication(
       publication,
       input.signal,
     );
+    scoreIndexValue = stableJsonStringifyV1(SafetyScoreIndexSchema.parse({
+      schemaVersion: 1,
+      safetyScoreIdentity: {
+        model: "v9",
+        schemaVersion: 1,
+        methodologyVersion: publication.policyVersion,
+        evaluationBuildDigest: publication.evaluationBuildDigest,
+        baseInputGenerationId: publication.baseInputGenerationId,
+        publicationGenerationId: publication.publicationGenerationId,
+        policyId: publication.policy.id,
+        policyDigest: publication.policy.semanticDigest,
+      },
+      publicationResultDigest: publication.resultDigest,
+      asOfSec: publication.asOfSec,
+      publishedAtSec: publication.publishedAtSec,
+      expectedCount: publication.completeness.expectedCount,
+      scores: Object.fromEntries(publication.cards.map(card => [
+        card.id, { score: card.score, grade: card.grade },
+      ])),
+    }));
   } else if (input.publication !== undefined) {
     throw new Error(
       "Held Safety Score v9 health must retain the existing publication",
@@ -547,6 +570,11 @@ export async function persistSafetyScoreV9Publication(
         input.publicationClockSec,
       ),
     );
+    statements.push(cacheStatement.bind(
+      SAFETY_SCORE_V9_CACHE_KEYS.scoreIndex,
+      scoreIndexValue,
+      input.publicationClockSec,
+    ));
     if (input.publicationReplayCaptureValue !== undefined) {
       statements.push(cacheStatement.bind(
         SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY,

@@ -9,9 +9,9 @@ import { errorResponse, jsonResponseWithHeaders } from "../lib/api-response";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import {
-  loadActiveSafetyScoreSource,
-  type ActiveSafetyScoreSource,
-} from "../lib/safety-score-active-source";
+  loadActiveSafetyScoreIndex,
+  type ActiveSafetyScoreIndex,
+} from "../lib/safety-score-index";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../lib/safety-score-v9/consumer-freshness";
 import { addFreshnessHeaders, buildFreshnessMeta } from "../lib/api-freshness";
 import type { ChainsFreshnessMeta } from "@shared/types/chains";
@@ -26,7 +26,7 @@ function getDependencyAgeSeconds(updatedAt: number | null | undefined, nowSec: n
 }
 
 function buildV9ExpectedDependencyMeta(
-  activeSource: ActiveSafetyScoreSource,
+  activeSource: ActiveSafetyScoreIndex,
   nowSec: number,
 ): ChainsDependencyMeta {
   if (activeSource.kind === "error") {
@@ -149,7 +149,7 @@ export const handleChains = async (db: D1Database, url?: URL): Promise<Response>
   // Derive peg rates for non-USD peg stability calculation
   const { rates: pegRates } = derivePegRates(activePeggedAssets, TRACKED_META_BY_ID, fxFallbackRates);
 
-  const activeSource = await loadActiveSafetyScoreSource(db);
+  const activeSource = await loadActiveSafetyScoreIndex(db);
   const safetyScores: Record<string, number> = {};
   const reportCards = buildV9ExpectedDependencyMeta(activeSource, Math.floor(Date.now() / 1000));
   const safetyScoreIdentity =
