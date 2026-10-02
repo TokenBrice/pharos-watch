@@ -765,6 +765,13 @@ function buildBridgeJoinDiagnostics(
 
   const canonicalSupplyChains = new Set<string>();
   const unmatchedRowIdentities = new Set<string>();
+  const selectedRows = supplyReview?.selectedBridgeRoutes ?? [];
+  const reviewedNativeRows = selectedRows.filter(
+    (row) => row.reviewState === "selected-reviewed" && row.reviewedRouteKind === "native",
+  );
+  const reviewedNativeChains = new Set(
+    reviewedNativeRows.map((row) => canonicalRouteChain(row.deploymentRouteKey)),
+  );
   for (const rawChain of Object.keys(chainRows ?? {}).sort(compareText)) {
     const chain = resolveChainId(rawChain);
     if (chain === null) {
@@ -772,10 +779,11 @@ function buildBridgeJoinDiagnostics(
       continue;
     }
     canonicalSupplyChains.add(chain);
-    if ((routeCountByChain.get(chain) ?? 0) !== 1) unmatchedRowIdentities.add(rawChain);
+    if ((routeCountByChain.get(chain) ?? 0) !== 1 && !reviewedNativeChains.has(chain)) {
+      unmatchedRowIdentities.add(rawChain);
+    }
   }
 
-  const selectedRows = supplyReview?.selectedBridgeRoutes ?? [];
   const fallbackCanonicalSupplyRows = new Set(
     selectedRows
       .filter((row) => row.reviewState === "selected-reviewed")
@@ -784,9 +792,6 @@ function buildBridgeJoinDiagnostics(
   );
   const canonicalSupplyRowCount =
     chainRows === undefined ? fallbackCanonicalSupplyRows.size : canonicalSupplyChains.size;
-  const reviewedNativeRows = selectedRows.filter(
-    (row) => row.reviewState === "selected-reviewed" && row.reviewedRouteKind === "native",
-  );
   const reviewedNativeSupplyShare = Math.min(
     1,
     reviewedNativeRows.reduce((sum, row) => sum + row.supplyShare, 0),

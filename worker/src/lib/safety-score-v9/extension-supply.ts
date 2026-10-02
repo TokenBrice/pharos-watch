@@ -600,8 +600,8 @@ function admittedProviderRowExclusions(
 
 /**
  * Reconciles the exact captured per-chain circulating supply against the
- * reviewed bridge-route rows. Chains without a unique reviewed route row stay
- * in the unknown share instead of being attributed to any route.
+ * reviewed bridge-route rows. A reviewed native-only chain can be attributed
+ * without a within-chain share-class split; other non-unique joins stay unknown.
  */
 export function buildSafetyScoreV9SupplyReview(
   fixedInput: Readonly<SafetyScoreV9CompilerInput>,
@@ -689,6 +689,18 @@ export function buildSafetyScoreV9SupplyReview(
     });
   }
 
+  const meta = options.meta ?? ACTIVE_META_BY_ID.get(assetId);
+  const nativeProfileChain =
+    profile?.tier === "single-chain-or-native" &&
+    routes.length === 0 &&
+    (profile.controls?.length ?? 0) === 0 &&
+    supplyByChain.size === 1 &&
+    meta?.id === assetId &&
+    (meta.contracts?.length ?? 0) > 0 &&
+    meta.contracts!.every((contract) => resolveChainId(contract.chain) === resolveChainId(meta.contracts![0]!.chain))
+      ? resolveChainId(meta.contracts![0]!.chain)
+      : null;
+
   const selectedBridgeRoutes: SupplyReview["selectedBridgeRoutes"][number][] = [];
   let unknownUsd = 0;
   let uncanonicalizedUsd = 0;
@@ -707,6 +719,30 @@ export function buildSafetyScoreV9SupplyReview(
     }
     const chainRoutes = routesByChain.get(chain) ?? [];
     if (chainRoutes.length !== 1) {
+      const reviewedNativeChain =
+        (chainRoutes.length === 0 && chain === nativeProfileChain) ||
+        (chainRoutes.length > 1 && chainRoutes.every((route) =>
+          route.reviewDisposition === "reviewed" &&
+          route.issuanceModel === "native-issuance" &&
+          reviewedSupplyRouteKind(route, profile) === "native"));
+      if (reviewedNativeChain) {
+        // This is a chain aggregate, not an invented split between contracts.
+        // Every candidate must be native and uncontrolled; one bridge or
+        // unreviewed candidate keeps the ordinary fail-closed row below.
+        selectedBridgeRoutes.push({
+          deploymentRouteKey: `${chain}:native-supply:${assetId}`,
+          supplyUsd,
+          supplyShare: supplyUsd / totalUsd,
+          reviewState: "selected-reviewed",
+          reviewedRouteKind: "native",
+        });
+        for (const route of chainRoutes) {
+          for (const key of route.failureDomainKeys?.length ? route.failureDomainKeys : [route.id]) {
+            failureDomains.push({ kind: "bridge-route", key });
+          }
+        }
+        continue;
+      }
       // Preserve each canonical exact deployment instead of collapsing
       // independent chains into one unknown remainder. Ambiguous profile
       // matches retain a separate fail-closed disposition.
