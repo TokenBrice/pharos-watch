@@ -56,7 +56,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "avUSD is Avalanche-native (AvantMintingV2) and reaches Ethereum, Base, Linea, Berachain, and Monad via Chainlink CCIP BurnMintTokenPool 1.5.1 contracts (per-chain pool reads 2026-07-19); the token and pools are administered by the Avant MPC-custodied admin EOA.",
+    "summary": "avUSD is Avalanche-native and has five documented CCIP BurnMintTokenPool 1.5.1 representations verified at pinned 2026-10-01 blocks. The Avant admin directly holds mint/burn roles on Ethereum and Linea representations; Base, Berachain and Monad currently enumerate only their documented pool. Pool versions do not establish every authorized ramp or verifier configuration, and issuer CCIP/LayerZero wording does not identify an avUSD OFT deployment.",
     "reviewedAt": "2026-07-20",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-2 (lead usdc-circle)",
     "confidence": "verified",
@@ -111,7 +111,8 @@
         "reviewDisposition": "reviewed",
         "reviewNote": "Canonical home deployment: avUSD is issued on Avalanche through AvantMintingV2 (verified mint-authority review 2026-07-14); cross-chain movement runs via Chainlink CCIP with a LockRelease pool 0xD4fe4186c4A7b089eb849d57b43C5F6a3d3BcCbe on the Avalanche side.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-01",
+        "observedBlock": 96511144,
         "sources": [
           {
             "label": "Avant docs: contract addresses (CCIP pools)",
@@ -136,7 +137,8 @@
         "reviewDisposition": "reviewed",
         "reviewNote": "Chainlink CCIP burn-mint representation of Avalanche-native avUSD; the ethereum token's CCIP pool 0x81B72171642FaB457aa815C0B8412A22B63A6aF8 reports typeAndVersion 'BurnMintTokenPool 1.5.1' (read 2026-07-19). Token owner/CCIP admin is the Avant admin EOA 0xd4d23209aae8630bf386b7393763a5b7865e57cb (MPC-custodied per Avant secure-asset-management docs); message validation is the Chainlink DON plus Risk Management Network.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095795,
         "sourceChain": "avalanche",
         "controllerChain": "ethereum",
         "controllerAddress": "0x81B72171642FaB457aa815C0B8412A22B63A6aF8",
@@ -168,7 +170,8 @@
         "reviewDisposition": "reviewed",
         "reviewNote": "Chainlink CCIP burn-mint representation of Avalanche-native avUSD; the linea token's CCIP pool 0x9F299fbDbB581E55217c15b8439588e16b95018f reports typeAndVersion 'BurnMintTokenPool 1.5.1' (read 2026-07-19). Token owner/CCIP admin is the Avant admin EOA 0xd4d23209aae8630bf386b7393763a5b7865e57cb (MPC-custodied per Avant secure-asset-management docs); message validation is the Chainlink DON plus Risk Management Network.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-01",
+        "observedBlock": 32198398,
         "sourceChain": "avalanche",
         "controllerChain": "linea",
         "controllerAddress": "0x9F299fbDbB581E55217c15b8439588e16b95018f",
@@ -200,7 +203,8 @@
         "reviewDisposition": "reviewed",
         "reviewNote": "Chainlink CCIP burn-mint representation of Avalanche-native avUSD; the berachain token's CCIP pool 0xC4093E0f61FF1507C1A58f4DDA4B5b56E5603817 reports typeAndVersion 'BurnMintTokenPool 1.5.1' (read 2026-07-19). Token owner/CCIP admin is the Avant admin EOA 0xd4d23209aae8630bf386b7393763a5b7865e57cb (MPC-custodied per Avant secure-asset-management docs); message validation is the Chainlink DON plus Risk Management Network.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26911414,
         "sourceChain": "avalanche",
         "controllerChain": "berachain",
         "controllerAddress": "0xC4093E0f61FF1507C1A58f4DDA4B5b56E5603817",
@@ -232,7 +236,8 @@
         "reviewDisposition": "reviewed",
         "reviewNote": "Chainlink CCIP burn-mint representation of Avalanche-native avUSD; the base token's CCIP pool 0xABEcc2FAF4AdFA8f1d5307122D7Df29c444c1a3A reports typeAndVersion 'BurnMintTokenPool 1.5.1' (read 2026-07-19). Token owner/CCIP admin is the Avant admin EOA 0xd4d23209aae8630bf386b7393763a5b7865e57cb (MPC-custodied per Avant secure-asset-management docs); message validation is the Chainlink DON plus Risk Management Network.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-01",
+        "observedBlock": 52024100,
         "sourceChain": "avalanche",
         "controllerChain": "base",
         "controllerAddress": "0xABEcc2FAF4AdFA8f1d5307122D7Df29c444c1a3A",
@@ -264,7 +269,8 @@
         "reviewDisposition": "reviewed",
         "reviewNote": "Chainlink CCIP burn-mint representation of Avalanche-native avUSD; the monad token's CCIP pool 0x4235afa8073d6cd8abddd23a080c1ed29978eb76 reports typeAndVersion 'BurnMintTokenPool 1.5.1' (read 2026-07-19). Token owner/CCIP admin is the Avant admin EOA 0xd4d23209aae8630bf386b7393763a5b7865e57cb (MPC-custodied per Avant secure-asset-management docs); message validation is the Chainlink DON plus Risk Management Network.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-01",
+        "observedBlock": 109541313,
         "sourceChain": "avalanche",
         "controllerChain": "monad",
         "controllerAddress": "0x4235afa8073d6cd8abddd23a080c1ed29978eb76",
@@ -280,6 +286,173 @@
           {
             "label": "avUSD monad CCIP BurnMintTokenPool (typeAndVersion BurnMintTokenPool 1.5.1, read 2026-07-19)",
             "url": "https://monadscan.com/address/0x4235afa8073d6cd8abddd23a080c1ed29978eb76"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "ethereum-avant-admin-bridge-minter",
+        "routeRefs": [
+          "ethereum:0xf4c13d631450de6b12a19829e37c8e2826891dc4"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xd4d23209aae8630bf386b7393763a5b7865e57cb",
+        "label": "Avant Ethereum avUSD admin direct bridge minter and burner",
+        "authorityType": "eoa",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095795,
+        "evidence": "At Ethereum block 26095795, getMinters() and getBurners() on avUSD both returned the Avant admin address and the documented CCIP pool. The admin therefore has direct mint and burn roles on this representation, separate from CCIP pool messaging. owner() and getCCIPAdmin() return the same admin address.",
+        "sources": [
+          {
+            "label": "Avant avUSD deployment and CCIP pool addresses",
+            "url": "https://docs.avantprotocol.com/security/contract-addresses"
+          },
+          {
+            "label": "Ethereum FactoryBurnMintERC20 verified source and ABI",
+            "url": "https://api.routescan.io/v2/network/mainnet/evm/1/etherscan/api?module=contract&action=getsourcecode&address=0xf4c13d631450de6b12a19829e37c8e2826891dc4"
+          }
+        ]
+      },
+      {
+        "id": "linea-avant-admin-bridge-minter",
+        "routeRefs": [
+          "linea:0x37c44fc08e403efc0946c0623cb1164a52ce1576"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "linea",
+        "controllerAddress": "0xd4d23209aae8630bf386b7393763a5b7865e57cb",
+        "label": "Avant Linea avUSD admin direct bridge minter and burner",
+        "authorityType": "eoa",
+        "observedAt": "2026-10-01",
+        "observedBlock": 32198398,
+        "evidence": "At Linea block 32198398, getMinters() and getBurners() on avUSD both returned the Avant admin address and the documented CCIP pool. The admin therefore has direct mint and burn roles on this representation, separate from CCIP pool messaging. owner() and getCCIPAdmin() return the same admin address.",
+        "sources": [
+          {
+            "label": "Avant avUSD deployment and CCIP pool addresses",
+            "url": "https://docs.avantprotocol.com/security/contract-addresses"
+          }
+        ]
+      },
+      {
+        "id": "ethereum-ccip-pool",
+        "routeRefs": [
+          "ethereum:0xf4c13d631450de6b12a19829e37c8e2826891dc4"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x81b72171642fab457aa815c0b8412a22b63a6af8",
+        "label": "Ethereum avUSD CCIP BurnMintTokenPool",
+        "authorityType": "contract",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095795,
+        "evidence": "Pinned reads confirm BurnMintTokenPool 1.5.1, the exact avUSD token, and Avant admin ownership. The token's getMinters() and getBurners() include this pool and the Avant admin.",
+        "sources": [
+          {
+            "label": "Avant CCIP deployment addresses",
+            "url": "https://docs.avantprotocol.com/security/contract-addresses"
+          }
+        ]
+      },
+      {
+        "id": "linea-ccip-pool",
+        "routeRefs": [
+          "linea:0x37c44fc08e403efc0946c0623cb1164a52ce1576"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "linea",
+        "controllerAddress": "0x9f299fbdbb581e55217c15b8439588e16b95018f",
+        "label": "Linea avUSD CCIP BurnMintTokenPool",
+        "authorityType": "contract",
+        "observedAt": "2026-10-01",
+        "observedBlock": 32198398,
+        "evidence": "Pinned reads confirm BurnMintTokenPool 1.5.1, the exact avUSD token, and Avant admin ownership. The token's getMinters() and getBurners() include this pool and the Avant admin.",
+        "sources": [
+          {
+            "label": "Avant CCIP deployment addresses",
+            "url": "https://docs.avantprotocol.com/security/contract-addresses"
+          }
+        ]
+      },
+      {
+        "id": "berachain-ccip-pool",
+        "routeRefs": [
+          "berachain:0xbca138ded469f5063589bfdfdd4bc68eb1c3f252"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "berachain",
+        "controllerAddress": "0xc4093e0f61ff1507c1a58f4dda4b5b56e5603817",
+        "label": "Berachain avUSD CCIP BurnMintTokenPool",
+        "authorityType": "contract",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26911414,
+        "evidence": "Pinned reads confirm BurnMintTokenPool 1.5.1, the exact avUSD token, and Avant admin ownership. The token's getMinters() and getBurners() return this pool as the sole current entry.",
+        "sources": [
+          {
+            "label": "Avant CCIP deployment addresses",
+            "url": "https://docs.avantprotocol.com/security/contract-addresses"
+          }
+        ]
+      },
+      {
+        "id": "base-ccip-pool",
+        "routeRefs": [
+          "base:0x3af90fda10fc6509df55e959548b1ed3bc3cfa00"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0xabecc2faf4adfa8f1d5307122d7df29c444c1a3a",
+        "label": "Base avUSD CCIP BurnMintTokenPool",
+        "authorityType": "contract",
+        "observedAt": "2026-10-01",
+        "observedBlock": 52024100,
+        "evidence": "Pinned reads confirm BurnMintTokenPool 1.5.1, the exact avUSD token, and Avant admin ownership. The token's getMinters() and getBurners() return this pool as the sole current entry.",
+        "sources": [
+          {
+            "label": "Avant CCIP deployment addresses",
+            "url": "https://docs.avantprotocol.com/security/contract-addresses"
+          }
+        ]
+      },
+      {
+        "id": "monad-ccip-pool",
+        "routeRefs": [
+          "monad:0x0d9d741fe423cd5419e4bcb6cb2ffa87afa93ba4"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "monad",
+        "controllerAddress": "0x4235afa8073d6cd8abddd23a080c1ed29978eb76",
+        "label": "Monad avUSD CCIP BurnMintTokenPool",
+        "authorityType": "contract",
+        "observedAt": "2026-10-01",
+        "observedBlock": 109541313,
+        "evidence": "Pinned reads confirm BurnMintTokenPool 1.5.1, the exact avUSD token, and Avant admin ownership. The token's getMinters() and getBurners() return this pool as the sole current entry.",
+        "sources": [
+          {
+            "label": "Avant CCIP deployment addresses",
+            "url": "https://docs.avantprotocol.com/security/contract-addresses"
           }
         ]
       }

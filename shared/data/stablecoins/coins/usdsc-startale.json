@@ -93,7 +93,7 @@
       },
       "sourceUrls": [
         "https://usd.startale.com/",
-        "https://docs.m0.org/get-started/resources/addresses/"
+        "https://docs.m0.org/resources/addresses/m0-platform"
       ],
       "rpcUrl": "https://rpc.soneium.org",
       "fallbackRpcUrl": "https://soneium.drpc.org"

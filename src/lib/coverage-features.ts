@@ -144,7 +144,7 @@ export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
     label: "Mint Authority",
     shortLabel: "Mint Auth",
     description:
-      "Curated mint-authority review breadth by mint path plus published V9 mint-component posture bands. V9 is the sole mint score.",
+      "Curated mint-authority review breadth by mint path plus published V10 mint-component posture bands. V10 is the sole mint score.",
     headlineCountLabel: "Reviewed authority",
     headlineCoverageLabel: (coveragePct) => `${coveragePct.toFixed(0)}% with reviewed mint authority`,
     headlineShareLabel: "Reviewed mint-authority market-cap reach",

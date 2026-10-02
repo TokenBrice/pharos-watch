@@ -3,7 +3,7 @@ import { parseEnumParam, parseOptionalEnumParam } from "../lib/api-params";
 import { buildMethodologyEnvelope } from "../lib/api-methodology";
 import { buildPaginatedEventResponse } from "../lib/api-pagination";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
-import { CHAIN_META } from "@shared/lib/chains";
+import { CHAIN_META } from "@shared/types/chain-identity";
 import {
   BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
   BLACKLIST_TRACKER_METHODOLOGY_VERSION,

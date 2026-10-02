@@ -40,6 +40,49 @@
     "reviewer": "TERRA-ULTRA access review",
     "reviewedAt": "2026-07-15"
   },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "summary": "USDB rebasing depends on yield reported by the Ethereum USDYieldManager through the authenticated L1-to-L2 reporter path. This is internal exchange-rate accounting under Blast administration, not an external collateral-price oracle.",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WNrFiatA)",
+      "rationale": "At Blast block 41031710, REPORTER() on USDB returned Ethereum USDYieldManager 0xa230285d5683c74935ad14c446e137c8c8828438 and bridge() returned L2BlastBridge. Verified USDB inherits SharesBase: addValue authenticates the L1 reporter alias and increases price using pending yield divided by shares. The verified USDYieldManager sends the yield report to USDB, while inherited commitYieldReport is onlyAdmin and provider changes are onlyOwner. At Ethereum block 26098754, the manager still held DAI through its sole DSR provider and its owner was the reviewed 3-of-5 Safe. USDB holders do not open borrower collateral positions or USDB liquidation branches; DAI's own collateral-price and liquidation risks remain upstream dependency exposure.",
+      "sources": [
+        {
+          "label": "USDB verified source",
+          "url": "https://raw.githubusercontent.com/blast-io/blast/b82105486bfe33c8b12986e7cd42388fbab7d1d2/blast-optimism/packages/contracts-bedrock/src/L2/USDB.sol"
+        },
+        {
+          "label": "SharesBase authenticated internal rate accounting",
+          "url": "https://raw.githubusercontent.com/blast-io/blast/b82105486bfe33c8b12986e7cd42388fbab7d1d2/blast-optimism/packages/contracts-bedrock/src/L2/Shares.sol"
+        },
+        {
+          "label": "Verified USDYieldManager and inherited YieldManager",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xecddf748a60e23609c07af6ca3856744b139b911"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (R2WNrFiatA)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "USDB verified source",
+        "url": "https://raw.githubusercontent.com/blast-io/blast/b82105486bfe33c8b12986e7cd42388fbab7d1d2/blast-optimism/packages/contracts-bedrock/src/L2/USDB.sol"
+      },
+      {
+        "label": "SharesBase authenticated internal rate accounting",
+        "url": "https://raw.githubusercontent.com/blast-io/blast/b82105486bfe33c8b12986e7cd42388fbab7d1d2/blast-optimism/packages/contracts-bedrock/src/L2/Shares.sol"
+      },
+      {
+        "label": "Verified USDYieldManager and inherited YieldManager",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xecddf748a60e23609c07af6ca3856744b139b911"
+      }
+    ]
+  },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "USDB's sole authored Blast deployment is a bridge representation whose supply tracks stablecoins escrowed in the Ethereum USDYieldManager and is minted through Blast's dedicated L1BlastBridge/L2BlastBridge pair. Bridge mint/burn, escrow/accounting, administration, and proxy upgrades are route-scoped here and are not native Mint Authority.",

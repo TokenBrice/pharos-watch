@@ -21,7 +21,10 @@ describe("weekly curation coverage", () => {
     const attestor = analyzeAttestorTier(coins);
     const oneLiner = analyzeOneLiner(coins);
     const archetype = analyzeArchetype(coins, baseline);
-    expect(attestor.missing).toEqual([]);
+    // Reviewed OUSG abstention: the Form ADV identifies BPM LLP as auditor,
+    // but the unfetched audit report does not establish an attestor tier.
+    // Keep this gap visible in the digest; every other audit remains covered.
+    expect(attestor.missing).toEqual(["ousg-ondo-finance"]);
     expect(oneLiner.missing).toEqual([]);
     expect(archetype.missing).toEqual([]);
     expect(archetype.unknown).toEqual([]);

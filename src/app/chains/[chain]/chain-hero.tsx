@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight, Minus, TrendingDown, TrendingUp } from "lucide-react";
-import type { ChainMeta } from "@shared/lib/chains";
+import type { ChainMeta } from "@shared/types/chain-identity";
 import {
   BACKING_DIVERSITY_WEIGHT,
   CHAIN_ENVIRONMENT_WEIGHT,

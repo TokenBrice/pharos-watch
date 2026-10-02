@@ -4,13 +4,13 @@
     "reviewedStatus": true,
     "sources": [
       {
-        "label": "Website",
-        "url": "https://kast.xyz/"
+        "label": "Solana mainnet RPC (finalized slot 452218719)",
+        "url": "https://api.mainnet-beta.solana.com"
       }
     ],
-    "evidence": "Explicit Yes retained: centralized governance metadata indicates issuer or admin control; registry links were reviewed for direct freeze, blacklist, pause, burn, or upgrade authority.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "At finalized Solana slot 452218719, USDK Token-2022 mint usdkbee86pkLyRmxfFCdkyySpxRb5ndCxVsK2BkRXwX retained freezeAuthority 7Ahg145ZRP5LASPjAphRcHoR1UgvLjbZR5MP1j3dPpFr. This directly establishes holder-level account-freeze capability. The transfer-hook programId was null, so this observation does not claim an active transfer-hook restriction.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurM02USDK)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",

@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "mTBILL has independently issuer-native deployments on Ethereum, Base, Rootstock, Plume, and Etherlink. Five deposit vaults, two shared EOAs, and two chain-specific Safes currently hold M_TBILL_MINT_OPERATOR_ROLE. Each chain's 1-of-3 DEFAULT_ADMIN_ROLE Safe and the shared admin EOA can change those grants immediately, while proxy upgrades pass through a two-day chain-local timelock. No production bridge representation is included in Mint Authority.",
+    "summary": "mTBILL has issuer-native deployments on Ethereum, Base, Rootstock, Plume, and Etherlink. October 1 pinned reads confirm the four listed deposit-vault minters on Ethereum, Base, Rootstock and Etherlink, and EOA 0x7ef55ff58dc56ef387bb73a3b63abe9fc47359dd on Rootstock and Etherlink. The listed Plume vault does not hold M_TBILL_MINT_OPERATOR_ROLE at Plume block 96620582. Previously recorded Base/Rootstock EOA and Rootstock/Etherlink Safe mint grants are no longer active; the remaining EOA's Plume grant is also absent. Chain-local 1-of-3 admin Safes and the shared admin EOA retain immediate grant authority; chain-local timelocks retain a two-day delay. Role enumeration is unavailable through the queried ABI, so this is not an exhaustive holder census.",
     "upgradeability": {
       "model": "transparent-proxy",
       "deploymentRefs": [
@@ -58,7 +58,7 @@
       "sources": [
         {
           "label": "Midas smart contract addresses",
-          "url": "https://docs.midas.app/resources/smart-contracts-addresses"
+          "url": "https://midas-docs.gitbook.io/midas-docs/resources/smart-contracts-addresses.md"
         },
         {
           "label": "Ethereum mTBILL token proxy",
@@ -93,85 +93,52 @@
           "ethereum:0xdd629e5241cbc5919847783e6c96b2de4754e438",
           "base:0xdd629e5241cbc5919847783e6c96b2de4754e438",
           "rootstock:0xdd629e5241cbc5919847783e6c96b2de4754e438",
-          "plume:0xe85f2b707ec5ae8e07238f99562264f304e30109",
           "etherlink:0xdd629e5241cbc5919847783e6c96b2de4754e438"
         ],
         "canRaiseCap": false,
-        "capDescription": "No on-chain supply cap was identified; each chain-local vault holds M_TBILL_MINT_OPERATOR_ROLE.",
+        "capDescription": "No on-chain supply cap was identified; the listed Ethereum, Base, Rootstock and Etherlink vaults hold M_TBILL_MINT_OPERATOR_ROLE. The listed Plume vault does not hold that role at Plume block 96620582.",
         "address": "0x99361435420711723af805f08187c9e6bf796683",
         "modulesOrGuardsStatus": "none-detected",
         "failureDomainKeys": [
           "ethereum:0x99361435420711723af805f08187c9e6bf796683",
           "base:0x8978e327fe7c72fa4eaf4649c23147e279ae1470",
           "rootstock:0xf454a52da2157686ef99702c0c19c0e8d66bc03c",
-          "plume:0xb05f6aa8c2ea9ab8537cf09a9b765a21de249224",
           "etherlink:0xd65bfeb71271a4408ff335e59ecf6c5b21a33a70"
         ],
-        "observedAt": "2026-07-13",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095802,
         "sources": [
           {
             "label": "Midas smart contract addresses",
-            "url": "https://docs.midas.app/resources/smart-contracts-addresses"
+            "url": "https://midas-docs.gitbook.io/midas-docs/resources/smart-contracts-addresses.md"
           },
           {
             "label": "Ethereum mTBILL issuance vault",
             "url": "https://etherscan.io/address/0x99361435420711723af805f08187c9e6bf796683"
           }
         ],
-        "evidence": "Pinned hasRole state retained deposit-vault proxies 0x99361435420711723af805f08187c9e6bf796683 on Ethereum, 0x8978e327fe7c72fa4eaf4649c23147e279ae1470 on Base, 0xf454a52da2157686ef99702c0c19c0e8d66bc03c on Rootstock, 0xb05f6aa8c2ea9ab8537cf09a9b765a21de249224 on Plume, and 0xd65bfeb71271a4408ff335e59ecf6c5b21a33a70 on Etherlink as M_TBILL_MINT_OPERATOR_ROLE holders."
-      },
-      {
-        "chain": "base",
-        "label": "mTBILL Base and Rootstock direct-minter EOA",
-        "role": "direct-minter",
-        "authorityType": "eoa",
-        "directMintAbility": "direct",
-        "deploymentRefs": [
-          "base:0xdd629e5241cbc5919847783e6c96b2de4754e438",
-          "rootstock:0xdd629e5241cbc5919847783e6c96b2de4754e438"
-        ],
-        "canRaiseCap": false,
-        "capDescription": "No on-chain supply cap was identified; this EOA holds M_TBILL_MINT_OPERATOR_ROLE directly on both chains.",
-        "address": "0x875c06a295c41c27840b9c9dfda7f3d819d8bc6a",
-        "modulesOrGuardsStatus": "not-applicable",
-        "failureDomainKeys": [
-          "base:0x875c06a295c41c27840b9c9dfda7f3d819d8bc6a",
-          "rootstock:0x875c06a295c41c27840b9c9dfda7f3d819d8bc6a"
-        ],
-        "observedAt": "2026-07-13",
-        "sources": [
-          {
-            "label": "Base MidasAccessControl",
-            "url": "https://basescan.org/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
-          },
-          {
-            "label": "Rootstock MidasAccessControl",
-            "url": "https://rootstock.blockscout.com/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
-          }
-        ],
-        "evidence": "At Base block 48598894 and Rootstock block 9049318, MidasAccessControl retained EOA 0x875c06a295c41c27840b9c9dfda7f3d819d8bc6a as a direct M_TBILL_MINT_OPERATOR_ROLE holder; exact-block eth_getCode returned no bytecode on either chain."
+        "evidence": "October 1 pinned hasRole reads confirmed the listed Ethereum, Base, Rootstock and Etherlink deposit-vault proxies as M_TBILL_MINT_OPERATOR_ROLE holders at blocks 26095802, 52024146, 9286812 and 54657576 respectively. The issuer-listed Plume vault 0xb05f6aa8c2ea9ab8537cf09a9b765a21de249224 did not hold that role at Plume block 96620582. These observations are not an exhaustive minter census."
       },
       {
         "chain": "rootstock",
-        "label": "mTBILL Rootstock, Plume, and Etherlink direct-minter EOA",
+        "label": "mTBILL Rootstock and Etherlink direct-minter EOA",
         "role": "direct-minter",
         "authorityType": "eoa",
         "directMintAbility": "direct",
         "deploymentRefs": [
           "rootstock:0xdd629e5241cbc5919847783e6c96b2de4754e438",
-          "plume:0xe85f2b707ec5ae8e07238f99562264f304e30109",
           "etherlink:0xdd629e5241cbc5919847783e6c96b2de4754e438"
         ],
         "canRaiseCap": false,
-        "capDescription": "No on-chain supply cap was identified; this EOA holds M_TBILL_MINT_OPERATOR_ROLE directly on all three chains.",
+        "capDescription": "No on-chain supply cap was identified; this EOA retains M_TBILL_MINT_OPERATOR_ROLE on Rootstock and Etherlink, but not Plume.",
         "address": "0x7ef55ff58dc56ef387bb73a3b63abe9fc47359dd",
         "modulesOrGuardsStatus": "not-applicable",
         "failureDomainKeys": [
           "rootstock:0x7ef55ff58dc56ef387bb73a3b63abe9fc47359dd",
-          "plume:0x7ef55ff58dc56ef387bb73a3b63abe9fc47359dd",
           "etherlink:0x7ef55ff58dc56ef387bb73a3b63abe9fc47359dd"
         ],
-        "observedAt": "2026-07-13",
+        "observedAt": "2026-10-01",
+        "observedBlock": 9286812,
         "sources": [
           {
             "label": "Rootstock MidasAccessControl",
@@ -186,95 +153,7 @@
             "url": "https://explorer.etherlink.com/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
           }
         ],
-        "evidence": "At Rootstock block 9049318, Plume block 80928370, and Etherlink block 48212139, MidasAccessControl retained EOA 0x7ef55ff58dc56ef387bb73a3b63abe9fc47359dd as a direct M_TBILL_MINT_OPERATOR_ROLE holder; exact-block eth_getCode returned no bytecode on each chain."
-      },
-      {
-        "chain": "rootstock",
-        "label": "mTBILL Rootstock 3/7 direct-minter Safe",
-        "role": "direct-minter",
-        "authorityType": "safe",
-        "directMintAbility": "direct",
-        "deploymentRefs": [
-          "rootstock:0xdd629e5241cbc5919847783e6c96b2de4754e438"
-        ],
-        "canRaiseCap": false,
-        "capDescription": "No on-chain supply cap was identified; this Safe holds M_TBILL_MINT_OPERATOR_ROLE directly.",
-        "address": "0x5b087db30433bcf5781f385312b1114e8c4819cc",
-        "threshold": 3,
-        "signerCount": 7,
-        "modulesOrGuardsStatus": "none-detected",
-        "failureDomainKeys": [
-          "rootstock:0x5b087db30433bcf5781f385312b1114e8c4819cc"
-        ],
-        "safe": {
-          "owners": [
-            "0x8003544d32ee074aa8a1fb72129fa8ef7fe02e5f",
-            "0xc50bd8430545c80a681c7cb33e6560fb0bd86880",
-            "0x20e3523f006ab8d7107b47ef65cd26abf8b0418a",
-            "0x733348e054e2acff936f4df61d7578c01cfcb497",
-            "0x64559a12dcd3754d1e04b1f78bbcc0365f6a3066",
-            "0x1d824a6654e643b6cd4a87b9b06ae765c23005d6",
-            "0xf651032419e3a19a3f8b1a350427b94356c86bf4"
-          ],
-          "threshold": 3,
-          "enabledModules": [],
-          "guard": "0x0000000000000000000000000000000000000000",
-          "observedBlock": 9049318,
-          "observedAt": "2026-07-13",
-          "source": "onchain"
-        },
-        "observedAt": "2026-07-13",
-        "observedBlock": 9049318,
-        "sources": [
-          {
-            "label": "Rootstock direct-minter Safe",
-            "url": "https://rootstock.blockscout.com/address/0x5b087db30433bcf5781f385312b1114e8c4819cc"
-          }
-        ],
-        "evidence": "At Rootstock block 9049318, this Safe retained M_TBILL_MINT_OPERATOR_ROLE. Current Safe reads returned threshold 3, the seven listed EOA owners, no enabled modules, and a zero guard."
-      },
-      {
-        "chain": "etherlink",
-        "label": "mTBILL Etherlink 2/5 direct-minter Safe",
-        "role": "direct-minter",
-        "authorityType": "safe",
-        "directMintAbility": "direct",
-        "deploymentRefs": [
-          "etherlink:0xdd629e5241cbc5919847783e6c96b2de4754e438"
-        ],
-        "canRaiseCap": false,
-        "capDescription": "No on-chain supply cap was identified; this Safe holds M_TBILL_MINT_OPERATOR_ROLE directly.",
-        "address": "0xbb065d6c7f08e783fd3d2d9593c4e363fee5cdd5",
-        "threshold": 2,
-        "signerCount": 5,
-        "modulesOrGuardsStatus": "none-detected",
-        "failureDomainKeys": [
-          "etherlink:0xbb065d6c7f08e783fd3d2d9593c4e363fee5cdd5"
-        ],
-        "safe": {
-          "owners": [
-            "0x733348e054e2acff936f4df61d7578c01cfcb497",
-            "0xaf272dfe6478bb80bafcf6c15b3b0bc3b9f9acb0",
-            "0x64559a12dcd3754d1e04b1f78bbcc0365f6a3066",
-            "0x1d824a6654e643b6cd4a87b9b06ae765c23005d6",
-            "0xf651032419e3a19a3f8b1a350427b94356c86bf4"
-          ],
-          "threshold": 2,
-          "enabledModules": [],
-          "guard": "0x0000000000000000000000000000000000000000",
-          "observedBlock": 48212139,
-          "observedAt": "2026-07-13",
-          "source": "onchain"
-        },
-        "observedAt": "2026-07-13",
-        "observedBlock": 48212139,
-        "sources": [
-          {
-            "label": "Etherlink direct-minter Safe",
-            "url": "https://explorer.etherlink.com/address/0xbb065d6c7f08e783fd3d2d9593c4e363fee5cdd5"
-          }
-        ],
-        "evidence": "At Etherlink block 48212139, this Safe retained M_TBILL_MINT_OPERATOR_ROLE. Current Safe reads returned threshold 2, the five listed EOA owners, no enabled modules, and a zero guard."
+        "evidence": "At Rootstock block 9286812 and Etherlink block 54657576, hasRole(M_TBILL_MINT_OPERATOR_ROLE,0x7ef55ff58dc56ef387bb73a3b63abe9fc47359dd) returned true and eth_getCode returned 0x. At Plume block 96620582 the same role query returned false. Historical July 13 grants on all three chains are retained in the review history, but Plume is no longer a current deployment reference."
       },
       {
         "chain": "ethereum",
@@ -305,7 +184,8 @@
           "plume:0xb28078046efa2f0f6637f67ba5d7f36b30dc8b2b",
           "etherlink:0xdc208d4a8583663575fa548bf6de224bb5ffc26d"
         ],
-        "observedAt": "2026-07-13",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095802,
         "sources": [
           {
             "label": "Ethereum Midas admin Safe",
@@ -324,7 +204,7 @@
             "url": "https://explorer.etherlink.com/address/0xdc208d4a8583663575fa548bf6de224bb5ffc26d"
           }
         ],
-        "evidence": "At the pinned chain blocks, DEFAULT_ADMIN_ROLE was held by chain-local 1-of-3 Safes: 0xb60842e9dabcd1c52e354ac30e82a97661cb7e89 on Ethereum and Base, 0x77f186c27277b80660a942839bd38e0a05b5702d on Rootstock, 0xb28078046efa2f0f6637f67ba5d7f36b30dc8b2b on Plume, and 0xdc208d4a8583663575fa548bf6de224bb5ffc26d on Etherlink. Their owner sets differ by chain; each had three EOA owners, no enabled modules, and a zero guard. The role can change minter grants immediately."
+        "evidence": "October 1 pinned reads at Ethereum 26095802, Base 52024146, Rootstock 9286812, Plume 96620582, and Etherlink 54657576 confirmed DEFAULT_ADMIN_ROLE for the listed chain-local Safes. Each getThreshold() returned 1 and getOwners() returned three owners; getModulesPaginated() returned no modules and the Safe guard slot was zero. Owner sets differ by chain. The role can change minter grants immediately."
       },
       {
         "chain": "ethereum",
@@ -350,7 +230,8 @@
           "plume:0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227",
           "etherlink:0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227"
         ],
-        "observedAt": "2026-07-13",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095802,
         "sources": [
           {
             "label": "Ethereum MidasAccessControl",
@@ -361,7 +242,7 @@
             "url": "https://explorer.plume.org/address/0xefed40d1eb1577d1073e9c4f277463486d39b084"
           }
         ],
-        "evidence": "DEFAULT_ADMIN_ROLE event histories and pinned hasRole state retained EOA 0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227 on all five MidasAccessControl deployments. This authority can immediately grant or revoke M_TBILL_MINT_OPERATOR_ROLE independently on each chain."
+        "evidence": "October 1 pinned hasRole(DEFAULT_ADMIN_ROLE,0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227) returned true on all five MidasAccessControl deployments at Ethereum 26095802, Base 52024146, Rootstock 9286812, Plume 96620582, and Etherlink 54657576. eth_getCode returned 0x on every chain. This authority can immediately grant or revoke M_TBILL_MINT_OPERATOR_ROLE independently on each chain."
       },
       {
         "chain": "ethereum",
@@ -429,7 +310,7 @@
       "sources": [
         {
           "label": "Midas smart contract addresses",
-          "url": "https://docs.midas.app/resources/smart-contracts-addresses"
+          "url": "https://midas-docs.gitbook.io/midas-docs/resources/smart-contracts-addresses.md"
         },
         {
           "label": "Sherlock Midas audit (DepositVault/RedemptionVault/MidasAccessControl roles)",
@@ -457,11 +338,11 @@
         },
         {
           "label": "Midas mTBILL independent reporting",
-          "url": "https://docs.midas.app/tokens/mtbill/independent-reporting"
+          "url": "https://midas-docs.gitbook.io/midas-docs/tokens/mtbill/independent-reporting.md"
         },
         {
           "label": "Midas mTBILL product documentation",
-          "url": "https://docs.midas.app/tokens/mtbill"
+          "url": "https://midas-docs.gitbook.io/midas-docs/tokens/mtbill.md"
         },
         {
           "label": "Midas price oracle verification",

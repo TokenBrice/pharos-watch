@@ -27,7 +27,7 @@ Q2 2026 attestation: $187.75B total assets vs $183.64B liabilities; about $140.6
 
 ## Peg Mechanism
 
-Direct 1:1 redemption through Tether. Supply figures include USDT0 (omnichain variant via LayerZero lock-and-mint) deployed on 20+ additional chains
+Direct redemption through Tether for verified customers at $1 less applicable fees, subject to Tether's terms. Supply figures include USDT0 (omnichain variant via LayerZero lock-and-mint) deployed on 20+ additional chains
 
 ## Jurisdiction
 

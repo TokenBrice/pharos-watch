@@ -7,7 +7,7 @@ import {
   POR_BADGE_STYLES,
   getProfilePegLabel,
 } from "@shared/lib/classification";
-import { CHAIN_META } from "@shared/lib/chains";
+import { CHAIN_META } from "@shared/types/chain-identity";
 import { getInfrastructureLabel } from "@shared/lib/infrastructure";
 import { TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";

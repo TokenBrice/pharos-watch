@@ -63,6 +63,30 @@ describe("formatOraclePct", () => {
 });
 
 describe("projectOracleRiskClientSummary", () => {
+  it("uses explicit pricing paths rather than an aggregate no-oracle disposition to identify borrower risk", () => {
+    const summary = projectOracleRiskClientSummary(coinWith({
+      ...BOLD_LIKE_PROFILE,
+      branchModel: "single-path",
+      branches: undefined,
+      branchApplicability: {
+        disposition: "not-applicable", reviewedAt: "2026-10-01", reviewer: "test",
+        rationale: "Aggregate disposition must not override explicit pricing paths.",
+        sources: [{ label: "Docs", url: "https://example.com/docs" }],
+      },
+      paths: [{
+        id: "market", chain: "ethereum", address: "0x1111111111111111111111111111111111111111",
+        pricingAuthority: "external-price", branchId: "weth",
+        applicability: {
+          disposition: "branches-required", reviewedAt: "2026-10-01", reviewer: "test", confidence: "verified",
+          rationale: "This exact market consumes borrower collateral prices.",
+          sources: [{ label: "Market source", url: "https://example.com/market" }],
+        },
+      }],
+    }));
+    expect(summary!.role).toBe("collateral-pricing");
+    expect(summary!.sources).toContainEqual({ label: "Market source", url: "https://example.com/market" });
+  });
+
   it("returns null without an oracle risk profile", () => {
     expect(projectOracleRiskClientSummary(coinWith(undefined))).toBeNull();
   });

@@ -19,8 +19,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-29",
-    "reviewer": "GLM issue-sweep 2026-09-29 (ResvSolsticeTron)",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (FixInv9)",
     "confidence": "verified",
     "sources": [
       {
@@ -44,8 +44,8 @@
         "url": "https://solstice.finance/usx"
       }
     ],
-    "rationale": "Re-reviewed 2026-09-29 against the newest dated disclosure. The Solstice attestation API's latest reserve timeline point is dated 2026-09-23 and reports total reserves of $219,157,088.72 against total supply of $217,959,749.69 (approximately 100.5493 percent collateralization), with verifiability 100, delta-neutral true, and overcollateralized true. Same-day proof artifacts (Merkle root 2026-09-23T12:16:16Z, snapshot, SEV, and ZKP material) were inspected: the decoded ZKP archives carry opaque proof bytes with no asset-level balances, category keys, or current split. The May 2026 whitepaper states that reserve composition is reported continuously through the Accountable Proof of Solvency dashboards and that off-chain reserves sit at regulated custodians under segregated account structures, but the dashboard API publishes only aggregate reserves and supply with cryptographic proofs. Product and user documentation name audited cash, tokenized Treasuries, and delta-neutral hedged positions without category weights. The reserve therefore remains one aggregate slice; no category percentages are inferred from the aggregate solvency proof.",
-    "compositionBasis": "Current Solstice collateral disclosure and 2026-09-23 aggregate reserve-versus-supply attestation",
+    "rationale": "The 2026-10-01 lockstep review retained the 2026-09-23 composition basis matching the existing proofOfReserves.latestReport: the API still reports reserves $219,157,088.72 and outstanding USX $217,959,749.69 for that date. A newer aggregate timeline point dated 2026-09-30 reports reserves $216,282,891 and outstanding USX $214,763,054.53, but publishes no category or instrument weights and does not identify a report period end or publication date. The live Solstice attestation adapter owns the aggregate reserve row. The newer snapshot is retained as review context only; the unresolved 100% basket and all adverse uncertainty remain unchanged.",
+    "compositionBasis": "Solstice collateral disclosure and retained 2026-09-23 aggregate reserve-versus-supply attestation; newer 2026-09-30 aggregate snapshot noted separately without a composition refresh",
     "compositionAsOf": "2026-09-23",
     "scope": "full-composition",
     "knownUnknownExposure": "The current split among audited cash, tokenized Treasuries, and delta-neutral hedged positions is not published; underlying instruments, custodian shares, execution venues, and hedge counterparties are also undisclosed.",

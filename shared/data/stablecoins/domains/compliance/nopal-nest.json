@@ -1,22 +1,5 @@
 {
   "id": "nopal-nest",
-  "mica": {
-    "status": "out-of-scope",
-    "references": [
-      {
-        "label": "Nest nOPAL disclosure: yield-bearing vault token representing exposure to BlackOpal LiquidStone II",
-        "url": "https://docs.nest.credit/about/available-vaults/"
-      },
-      {
-        "label": "Nest terms: vault tokens accrue yield based on baskets of digital and real-world assets",
-        "url": "https://docs.nest.credit/security-and-compliance/terms-and-conditions/"
-      },
-      {
-        "label": "ESMA MiCA Article 2 scope: funds and financial instruments are excluded from MiCA",
-        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
-      }
-    ]
-  },
   "genius": {
     "applicability": "non-payment-token",
     "applicabilityBasis": {
@@ -43,8 +26,9 @@
     "foreignExceptionStatus": "not-applicable",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-applicable",
-    "reserveDisclosurePresent": false,
-    "redemptionPolicyPresent": true,
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://api.nest.credit/v1/vaults/nest-opal-vault/positions",
+    "redemptionPolicyPresent": false,
     "monthlyAttestationPresent": false,
     "notes": "Explicitly recorded as outside the GENIUS payment-stablecoin authorization posture because nOPAL is a yield-bearing vault share with NAV/yield exposure, not a payment stablecoin. The underlying and vault-token legal classification should be rechecked if Nest changes the product structure or begins U.S. payment-token marketing.",
     "references": [
@@ -61,11 +45,11 @@
         "accessedAt": "2026-08-14"
       },
       {
-        "label": "GENIUS Act text",
-        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+        "label": "GENIUS Act enacted text: Public Law 119-27",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
         "sourceKind": "statute",
         "sourceDate": "2025-07-18",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-01"
       }
     ],
     "reviewer": "Pharos compliance research",

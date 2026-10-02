@@ -179,6 +179,208 @@ export const MAX_EXIT_ROUTE_COMMON_MODE_KEYS = 16;
  */
 export const MAX_DEX_EXIT_ROUTE_OBSERVATIONS = 24;
 
+export const PhysicalToUsdTraceSchema = z.object({
+  endpoint: z.literal("USD"),
+  holderScope: z.literal("verified-customer"),
+  branch: z.enum(["modelled-metal-sale", "best-effort-issuer-cash-out"]),
+  requestedNotionalUsd: z.number().finite().positive(),
+  lots: z.number().int().nonnegative().nullable(),
+  tokens: z.number().finite().nonnegative().nullable(),
+  grossUsd: z.number().finite().nonnegative().nullable(),
+  netUsd: z.number().finite().nonnegative().nullable(),
+  costBps: z.number().finite().nonnegative().nullable(),
+  minimumUsd: z.number().finite().positive().nullable(),
+  maximumSettlementSec: z.number().int().nonnegative().nullable(),
+  modelConfidence: z.enum(["medium", "low"]),
+  assumptions: z.array(z.enum(["fee-policy-assumed", "settlement-maximum-policy-assumed"])),
+  reviewedAt: z.string(),
+  reviewExpiresAt: z.string(),
+  termsMaxAgeSec: z.number().int().positive(),
+  metalPriceMaxAgeSec: z.number().int().positive(),
+  metalPriceObservedAtSec: z.number().int().nonnegative(),
+  rejectionReason: z.string().min(1).nullable(),
+}).strict();
+export type PhysicalToUsdTrace = z.infer<typeof PhysicalToUsdTraceSchema>;
+
+const ExitRawUnitsSchema = z.string().regex(/^(0|[1-9][0-9]*)$/);
+export const ExitExecutionIdentitySchema = z.object({
+  assetId: z.string().min(1),
+  deployment: z.string().min(1),
+  endpoint: z.string().min(1),
+  outputAssetKeys: z.array(z.string().min(1)).min(1).max(16),
+  implementationIdentity: z.string().min(1),
+}).strict();
+export const ExitExecutionGateSchema = z.object({
+  gateId: z.string().min(1),
+  verdict: z.enum(["passed", "closed", "unsupported", "unavailable"]),
+  evidenceId: z.string().min(1),
+  observedAtSec: z.number().int().nonnegative(),
+  reason: z.string().min(1).nullable(),
+}).strict().superRefine((gate, ctx) => {
+  if (gate.verdict !== "passed" && gate.reason === null) {
+    ctx.addIssue({ code: "custom", path: ["reason"], message: "Non-success gate requires a machine reason" });
+  }
+});
+export const ExitExecutionOutputLegSchema = z.object({
+  assetKey: z.string().min(1),
+  deployment: z.string().min(1),
+  rawUnits: ExitRawUnitsSchema,
+  decimals: z.number().int().min(0).max(36),
+  unitValueUsd: z.number().finite().positive(),
+  expectedUnitValueUsd: z.number().finite().positive(),
+  sourceId: z.string().min(1),
+  sourceGenerationId: z.string().min(1),
+  observedAtSec: z.number().int().nonnegative(),
+}).strict();
+export const ExitExecutionRequestPointSchema = z.object({
+  requestedNotionalUsd: z.number().finite().positive(),
+  maxCostBps: z.number().finite().nonnegative(),
+  requestedRawInput: ExitRawUnitsSchema,
+  executedRawInput: ExitRawUnitsSchema,
+  executableUsd: z.number().finite().nonnegative(),
+  executionCostBps: z.number().finite().nonnegative(),
+  allInCostBps: z.number().finite().nonnegative(),
+  fees: z.array(z.object({ kind: z.string().min(1), rawUnits: ExitRawUnitsSchema, assetKey: z.string().min(1) }).strict()).max(16),
+  outputs: z.array(ExitExecutionOutputLegSchema).max(16),
+  certification: z.enum(["exact-complete", "exact-lower-bound", "diagnostic"]),
+  reason: z.string().min(1).nullable(),
+}).strict().superRefine((point, ctx) => {
+  // Zod refinements also run after regex failures; never parse rejected units.
+  const rawUnits = [point.requestedRawInput, point.executedRawInput,
+    ...point.outputs.map((leg) => leg.rawUnits), ...point.fees.map((fee) => fee.rawUnits)];
+  if (rawUnits.some((value) => !/^(0|[1-9][0-9]*)$/.test(value))) return;
+  const requested = BigInt(point.requestedRawInput);
+  const executed = BigInt(point.executedRawInput);
+  if (requested === 0n || executed > requested ||
+      point.executableUsd > point.requestedNotionalUsd ||
+      (executed === 0n) !== (point.executableUsd === 0) ||
+      (point.certification === "exact-complete" && executed !== requested) ||
+      (point.certification !== "diagnostic" && executed > 0n &&
+        (point.outputs.length === 0 || point.allInCostBps > point.maxCostBps)) ||
+      (point.certification !== "diagnostic" && executed === 0n &&
+        (point.outputs.some((leg) => BigInt(leg.rawUnits) !== 0n) || point.fees.some((fee) => BigInt(fee.rawUnits) !== 0n))) ||
+      (point.certification === "diagnostic" && point.reason === null)) {
+    ctx.addIssue({ code: "custom", message: "Invalid exact-request execution proof" });
+  }
+  if (requested === 0n) return;
+  const expectedCapacity = Number(executed * 1_000_000_000n / requested) / 1_000_000_000 * point.requestedNotionalUsd;
+  if (Math.abs(point.executableUsd - expectedCapacity) > 0.01) {
+    ctx.addIssue({ code: "custom", path: ["executableUsd"], message: "Capacity must represent executed input, not retained output" });
+  }
+});
+export const ExitExecutionCertificateSchema = z.object({
+  modelId: z.string().min(1),
+  reviewDigest: z.string().regex(/^[a-f0-9]{64}$/),
+  identity: ExitExecutionIdentitySchema,
+  inputGenerationId: z.string().min(1),
+  observationGenerationId: z.string().min(1),
+  observedAtSec: z.number().int().nonnegative(),
+  sourceMaxAgeSec: z.number().int().positive(),
+  priceMaxAgeSec: z.number().int().positive(),
+  source: z.discriminatedUnion("kind", [
+    z.object({ kind: z.literal("block"), number: z.number().int().nonnegative(), hash: z.string().min(1), timestamp: z.number().int().nonnegative(), complete: z.boolean(), truncated: z.boolean() }).strict(),
+    z.object({ kind: z.literal("venue"), timestamp: z.number().int().nonnegative(), sequence: z.string().min(1), complete: z.boolean(), truncated: z.boolean() }).strict(),
+  ]),
+  holder: z.enum(["any-holder", "verified-customer", "whitelisted-primary"]),
+  prerequisites: z.array(z.string().min(1)).max(16),
+  gates: z.array(ExitExecutionGateSchema).min(1).max(32),
+  inputReference: ExitExecutionOutputLegSchema,
+  feeReferences: z.array(ExitExecutionOutputLegSchema).max(16),
+  points: z.array(ExitExecutionRequestPointSchema).min(1).max(16),
+  capacityBasis: z.enum(["transaction-simulation", "exhaustive-book-walk", "observed-prefix-book-walk", "funded-claim", "documented-only"]),
+  settlement: z.object({
+    endpoint: z.string().min(1),
+    maximumCompletionSec: z.number().int().nonnegative().nullable(),
+    evidenceId: z.string().min(1),
+  }).strict(),
+  resourceKeys: z.array(z.string().min(1)).min(1).max(16),
+  failureDomainKeys: z.array(z.string().min(1)).min(1).max(16),
+}).strict().superRefine((certificate, ctx) => {
+  const pointKeys = new Set<string>();
+  const gateKeys = new Set<string>();
+  for (const gate of certificate.gates) {
+    if (gateKeys.has(gate.gateId)) ctx.addIssue({ code: "custom", message: "Duplicate execution gate" });
+    gateKeys.add(gate.gateId);
+  }
+  for (const point of certificate.points) {
+    const key = `${point.requestedNotionalUsd}:${point.maxCostBps}`;
+    if (pointKeys.has(key)) ctx.addIssue({ code: "custom", message: "Duplicate exact-request point" });
+    pointKeys.add(key);
+    if (point.outputs.some((leg) => !certificate.identity.outputAssetKeys.includes(leg.assetKey)) ||
+        (point.certification !== "diagnostic" && point.executableUsd > 0 &&
+          (new Set(point.outputs.map((leg) => leg.assetKey)).size !== point.outputs.length ||
+            certificate.identity.outputAssetKeys.some((assetKey) => !point.outputs.some((leg) => leg.assetKey === assetKey))))) {
+      ctx.addIssue({ code: "custom", message: "Execution output does not match reviewed identity" });
+    }
+    if (point.certification === "exact-complete" && (!certificate.source.complete || certificate.source.truncated)) {
+      ctx.addIssue({ code: "custom", message: "Incomplete source cannot certify exhaustive capacity" });
+    }
+  }
+});
+export type ExitExecutionCertificate = z.output<typeof ExitExecutionCertificateSchema>;
+export type ExitExecutionRequestPoint = z.output<typeof ExitExecutionRequestPointSchema>;
+export const ExitExecutionModelPolicySchema = z.object({
+  admission: z.enum(["enabled", "research-only"]),
+  requiredGates: z.array(z.string().min(1)).min(1),
+  exactRequestRequired: z.literal(true),
+  sourceMaxAgeSec: z.number().int().positive(),
+  priceMaxAgeSec: z.number().int().positive(),
+  futureSkewSec: z.number().int().nonnegative(),
+  permittedBases: z.array(ExitExecutionCertificateSchema.shape.capacityBasis).min(1),
+  maximumCertification: z.enum(["exact-complete", "exact-lower-bound", "diagnostic"]),
+}).strict();
+export const ExitExecutionModelReviewSchema = z.object({
+  modelId: z.string().min(1),
+  identity: ExitExecutionIdentitySchema,
+  holder: ExitExecutionCertificateSchema.shape.holder,
+  reviewedAt: z.string().datetime(),
+  expiresAt: z.string().datetime(),
+  evidenceIds: z.array(z.string().min(1)).min(1),
+  sourceUrls: z.array(z.string().url()).min(1),
+  producer: z.discriminatedUnion("kind", [
+    z.object({
+      kind: z.literal("kraken"), market: z.string().min(1), base: z.string().min(1), quote: z.string().min(1),
+      inputDecimals: z.number().int().min(0).max(18), outputDecimals: z.number().int().min(0).max(18),
+      outputDeployment: z.string().min(1), settlementEndpoint: z.string().min(1),
+      feeSchedule: z.object({
+        url: z.string().url(), contentSha256: z.string().regex(/^[a-f0-9]{64}$/),
+        applicableTakerFeeBps: z.number().finite().nonnegative().lt(10_000),
+      }).strict().optional(),
+    }).strict(),
+    z.object({
+      kind: z.literal("securitize-offramp"), chain: z.string().min(1),
+      contract: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
+      implementation: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
+      provider: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
+      inputToken: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
+      outputToken: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
+      inputDecimals: z.number().int().min(0).max(18), outputDecimals: z.number().int().min(0).max(18),
+      codeSha256: z.string().regex(/^[a-f0-9]{64}$/),
+      implementationCodeSha256: z.string().regex(/^[a-f0-9]{64}$/),
+      dependencyCodeIdentities: z.array(z.object({
+        address: z.string().regex(/^0x[0-9a-fA-F]{40}$/), codeSha256: z.string().regex(/^[a-f0-9]{64}$/),
+        implementationAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/).optional(),
+      }).strict()).min(5).max(16),
+    }).strict(),
+  ]),
+}).strict();
+export type ExitExecutionModelReview = z.output<typeof ExitExecutionModelReviewSchema>;
+
+export const ExitExecutionPublicCertificateSchema = z.object(ExitExecutionCertificateSchema.shape).pick({
+  modelId: true, observationGenerationId: true, observedAtSec: true, sourceMaxAgeSec: true,
+  priceMaxAgeSec: true, holder: true, capacityBasis: true, source: true,
+}).extend({
+  settlement: ExitExecutionCertificateSchema.shape.settlement.pick({ endpoint: true, maximumCompletionSec: true }),
+  gates: z.array(z.object(ExitExecutionGateSchema.shape).pick({ gateId: true, verdict: true, reason: true, observedAtSec: true })),
+  points: z.array(z.object(ExitExecutionRequestPointSchema.shape).pick({
+    requestedNotionalUsd: true, requestedRawInput: true, executedRawInput: true, executableUsd: true,
+    executionCostBps: true, allInCostBps: true, certification: true, reason: true, fees: true,
+  }).extend({ outputs: z.array(ExitExecutionOutputLegSchema.pick({
+    assetKey: true, rawUnits: true, decimals: true, unitValueUsd: true, expectedUnitValueUsd: true,
+    observedAtSec: true, sourceId: true, sourceGenerationId: true,
+  })) })),
+});
+
 const ExitRouteObservationBaseSchema = z.object({
   routeId: z.string().min(1),
   routeFamily: ExitRouteFamilySchema,
@@ -197,8 +399,8 @@ const ExitRouteObservationBaseSchema = z.object({
   evidenceKind: ExitRouteEvidenceKindSchema,
   /** Exact measured-adapter identity when a DEX observation came from a reviewed runtime adapter. */
   adapterProfileId: z.string().min(1).optional(),
-  /** Set when the route's reviewed fee is the undisclosed-reviewed class: capacity is modeled but cost is unbounded. */
-  feeEvidence: z.literal("undisclosed-reviewed").optional(),
+  /** Reviewed fee disclosure without a same-notional execution cost bound. */
+  feeEvidence: z.enum(["undisclosed-reviewed", "disclosed-unquantified"]).optional(),
   /** Fee/slippage cost before valuing the received output asset. */
   executionCostBps: z.number().finite().nonnegative().optional(),
   /** Pinned USD unit value of the received output asset. */
@@ -220,6 +422,9 @@ const ExitRouteObservationBaseSchema = z.object({
   commonModeKeys: z.array(z.string().min(1)).max(MAX_EXIT_ROUTE_COMMON_MODE_KEYS),
   capacityCurve: z.array(ExitRouteCapacityPointSchema).min(1).max(16).optional(),
   observationHistory: ExitRouteObservationHistorySchema.optional(),
+  physicalToUsd: PhysicalToUsdTraceSchema.optional(),
+  executionModelId: z.string().min(1).optional(),
+  executionCertificate: ExitExecutionCertificateSchema.optional(),
 });
 
 const DEX_EXIT_ROUTE_FAMILIES = new Set<ExitRouteFamily>(["dex-amm", "dex-orderbook"]);
@@ -232,6 +437,27 @@ const DEX_EXIT_EVIDENCE_KINDS = new Set<string>(DexExitEvidenceKindSchema.option
 const REDEMPTION_EXIT_EVIDENCE_KINDS = new Set<string>(RedemptionExitEvidenceKindSchema.options);
 
 type ExitRouteIssueContext = Pick<z.RefinementCtx, "addIssue">;
+
+function enforceExecutionCertificate(observation: z.infer<typeof ExitRouteObservationBaseSchema>, ctx: ExitRouteIssueContext) {
+  const certificate = observation.executionCertificate;
+  if (!certificate) {
+    if (observation.executionModelId && observation.scoreEligible) {
+      ctx.addIssue({ code: "custom", message: "New execution models require a certificate" });
+    }
+    return;
+  }
+  const point = certificate.points.find((entry) =>
+    entry.requestedNotionalUsd === observation.requestedNotionalUsd && entry.maxCostBps === observation.maxCostBps);
+  if (observation.executionModelId !== certificate.modelId || !point ||
+      point.executableUsd !== observation.executableUsd ||
+      Math.abs(observation.completionRatio - observation.executableUsd / observation.requestedNotionalUsd) > 0.00001 ||
+      certificate.observedAtSec !== observation.observedAt ||
+      (observation.scoreEligible && (point.certification === "diagnostic" ||
+        certificate.settlement.maximumCompletionSec === null ||
+        certificate.gates.some((gate) => gate.verdict !== "passed" && !(gate.verdict === "closed" && point.executableUsd === 0))))) {
+    ctx.addIssue({ code: "custom", message: "Observation envelope does not match execution certificate" });
+  }
+}
 
 function enforceDexExitRouteLane(
   observation: z.infer<typeof ExitRouteObservationBaseSchema>,
@@ -383,14 +609,17 @@ function enforceRedemptionExitRouteLane(
 
 export const DexExitRouteObservationSchema = ExitRouteObservationBaseSchema.superRefine((observation, ctx) => {
   enforceDexExitRouteLane(observation, ctx);
+  enforceExecutionCertificate(observation, ctx);
 });
 export type DexExitRouteObservation = z.infer<typeof DexExitRouteObservationSchema>;
 
 export const RedemptionExitRouteObservationSchema = ExitRouteObservationBaseSchema.superRefine((observation, ctx) => {
   enforceRedemptionExitRouteLane(observation, ctx);
+  enforceExecutionCertificate(observation, ctx);
 });
 
 export const ExitRouteObservationSchema = ExitRouteObservationBaseSchema.superRefine((observation, ctx) => {
+  enforceExecutionCertificate(observation, ctx);
   if (DEX_EXIT_ROUTE_FAMILIES.has(observation.routeFamily)) enforceDexExitRouteLane(observation, ctx);
   else enforceRedemptionExitRouteLane(observation, ctx);
 });

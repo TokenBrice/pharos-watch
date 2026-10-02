@@ -31,6 +31,12 @@ const DESCRIPTION_BY_ARCHETYPE: Record<MechanismArchetype, string> = {
     "Tokenized credit funds wrap private credit and CLO portfolios in an on-chain fund share. Learn the NAV mechanics, redemption gates, and credit risks.",
   "commodity-claim":
     "Gold and silver tokens are title claims on specific vaulted bars, not on dollars. Learn how allocation, vault custody, bar-list audits, and physical redemption work.",
+  "ucits-trs-fund":
+    "UCITS fund tokens combine physical securities and total-return swaps. Learn how proportional fund claims, NAV reconciliation, collateral and default recovery differ from cash.",
+  "shared-reserve":
+    "Shared reserve stablecoins issue several liabilities against one pool. Learn why exchange access does not prove exclusive backing, liability coverage or legal priority.",
+  "protocol-position":
+    "Protocol position dollars rely on bridge, vault or module claims. Learn how local custody, circular exposures and recovery remain distinct from underlying stablecoin reserves.",
 };
 
 function renderArchetypeExplainer(slug: MechanismArchetype) {

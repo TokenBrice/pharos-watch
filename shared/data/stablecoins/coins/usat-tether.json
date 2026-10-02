@@ -8,7 +8,7 @@
     "governance": "centralized"
   },
   "collateral": "Cash and reverse repurchase agreements collateralized by U.S. Treasuries, held for USAT reserves under Anchorage Digital Bank issuance.",
-  "pegMechanism": "Direct 1:1 redemption through Tether/Anchorage Digital Bank",
+  "pegMechanism": "1:1 USD redemption by onboarded Anchorage Digital Bank clients, net of fees and subject to the bank's redemption terms",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "343",
   "detailProvider": "defillama",
@@ -36,6 +36,11 @@
     {
       "chain": "ethereum",
       "address": "0x07041776f5007aca2a54844f50503a18a72a8b68",
+      "decimals": 6
+    },
+    {
+      "chain": "celo",
+      "address": "0xd2ab3c9a02dbbab236bfec45d1d755df4267f771",
       "decimals": 6
     }
   ],
@@ -73,6 +78,7 @@
     "latestReport": {
       "periodEnd": "2026-08-31",
       "publishedAt": "2026-09-28",
+      "publishedAtBasis": "signed-date-standin",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",

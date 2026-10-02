@@ -1,8 +1,13 @@
 import { describe, expect, it } from "vitest";
+import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
+import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import lorenzoMeta from "@shared/data/stablecoins/coins/susd1plus-lorenzo.json";
+import { ParentBackingInheritanceSchema } from "@shared/types/stablecoin-meta-schemas";
 import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
 import { createAssetBuildContext } from "../safety-score-v9/fact-set-context";
 import { buildWrapperLocalFacts } from "../safety-score-v9/fact-set-wrapper";
 import {
+  makeV9CohortFixedInput,
   makeV9RoleExtension,
   makeV9TwoAssetFixedInput,
   type V9ExtensionDependencyEdge,
@@ -53,6 +58,55 @@ function wrapperFacts(
 }
 
 describe("Safety Score V9 wrapper fact dispositions", () => {
+  it("withholds reviewed mixed-book backing for any asset ID while preserving other wrappers' inheritance, caps, peg and supply", () => {
+    const fixed = makeV9CohortFixedInput(["susd1plus-lorenzo"]);
+    const edge: V9ExtensionDependencyEdge = {
+      upstreamAssetId: "alpha",
+      dependencyType: "wrapper",
+      weight: 1,
+      economicRole: "serial-claim",
+      failureDomains: [],
+    };
+    const extension = makeV9RoleExtension(fixed, {
+      beta: [edge],
+      "susd1plus-lorenzo": [edge],
+    });
+    for (const asset of extension.assets.filter((asset) => asset.assetId !== "alpha")) {
+      asset.variantKind = "strategy-vault";
+      asset.dependencies!.source = "variant";
+      const review = asset.mechanismRiskReview;
+      if (review?.archetype !== "fiat-cash") throw new Error("Expected fiat review fixture");
+      review.claimAndSegregation.quality = "weak";
+      review.custodyContinuity.quality = "weak";
+      review.assuranceAndReconciliation.quality = "weak";
+    }
+    // Deliberately attach the review to a different ID: the former exception
+    // asset inherits normally when no withholding review is authored.
+    extension.assets.find((asset) => asset.assetId === "beta")!.parentBackingInheritance =
+      ParentBackingInheritanceSchema.parse(lorenzoMeta.parentBackingInheritance);
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension);
+    const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1);
+    const strategy = evaluated.assets.find((asset) => asset.assetId === "beta")!;
+    const wrapper = evaluated.assets.find((asset) => asset.assetId === "susd1plus-lorenzo")!;
+    const parent = evaluated.assets.find((asset) => asset.assetId === "alpha")!;
+    expect(wrapper.backing.contributions).toContainEqual(expect.objectContaining({
+      componentKey: "reserve:inherited-backing:alpha",
+    }));
+    expect(strategy.backing.contributions.some((entry) => entry.componentKey.startsWith("reserve:inherited-backing:")))
+      .toBe(false);
+    expect(strategy.backing.score!).toBeLessThan(wrapper.backing.score!);
+    expect(strategy.trace.wrapperParentLimit?.parentScore).toBe(parent.trace.inheritableScore);
+    const strategyFacts = compiled.assets.find((asset) => asset.assetId === strategy.assetId)!;
+    const wrapperFacts = compiled.assets.find((asset) => asset.assetId === wrapper.assetId)!;
+    expect(strategyFacts.dependencies.edges[0]).toMatchObject({
+      upstreamAssetId: "alpha", economicRole: "serial-claim", weight: 1,
+    });
+    expect(strategyFacts.peg.pegScore).toBe(wrapperFacts.peg.pegScore);
+    expect(strategyFacts.peg.activeDepegBps).toBe(wrapperFacts.peg.activeDepegBps);
+    expect(strategyFacts.supply?.circulatingUsd).toBe(wrapperFacts.supply?.circulatingUsd);
+    expect(strategyFacts.variantKind).toBe("strategy-vault");
+  });
+
   it("marks an unprofiled direct serial wrapper's local custody classes not-applicable", () => {
     for (const variantKind of ["pure-wrapper", "savings-passthrough"] as const) {
       const { facts } = wrapperFacts(variantKind);
@@ -68,6 +122,86 @@ describe("Safety Score V9 wrapper fact dispositions", () => {
     }
   });
 
+  it.each(["pure-wrapper", "savings-passthrough"] as const)(
+    "keeps an uncorroborated onchain %s custody profile conservative",
+    (variantKind) => {
+      const fixed = fixedInputWithTrackedParent();
+      const extension = wrapperExtension(fixed, variantKind);
+      extension.assets.find((asset) => asset.assetId === "alpha")!.wrapperCustodyReview = {
+        custodyModel: "onchain",
+        providers: [{ providerKey: "wrapper-contract", role: "custodian", shareFraction: null }],
+        segregation: "unknown",
+        bankruptcyRemoteness: "unknown",
+        rehypothecation: "unknown",
+        knownUnknownExposureShare: 1,
+      };
+
+      const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension);
+      const asset = compiled.assets.find((asset) => asset.assetId === "alpha")!;
+      if (asset.wrapperLocalFacts?.applicability !== "wrapper") throw new Error("Expected wrapper-local facts");
+      expect(asset.wrapperLocalFacts.facts).toMatchObject({
+        custodyEscrow: { disposition: "issuer-undisclosed", assessment: null },
+        rehypothecationCorrelation: { disposition: "issuer-undisclosed", assessment: null },
+      });
+    },
+  );
+
+  it.each([
+    "cex",
+    "institutional-top",
+    "institutional-regulated",
+    "institutional-unregulated",
+    "institutional-sanctioned",
+    "mixed",
+    "unknown",
+  ] as const)(
+    "keeps an incomplete %s custody profile issuer-undisclosed for a direct wrapper",
+    (custodyModel) => {
+      const fixed = fixedInputWithTrackedParent();
+      const extension = wrapperExtension(fixed, "savings-passthrough");
+      extension.assets.find((asset) => asset.assetId === "alpha")!.wrapperCustodyReview = {
+        custodyModel,
+        providers: [{ providerKey: "custody-provider", role: "custodian", shareFraction: null }],
+        segregation: "unknown",
+        bankruptcyRemoteness: "unknown",
+        rehypothecation: "unknown",
+        knownUnknownExposureShare: null,
+      };
+
+      const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension);
+      const asset = compiled.assets.find((asset) => asset.assetId === "alpha")!;
+      if (asset.wrapperLocalFacts?.applicability !== "wrapper") throw new Error("Expected wrapper-local facts");
+      expect(asset.wrapperLocalFacts.facts).toMatchObject({
+        custodyEscrow: { disposition: "issuer-undisclosed", assessment: null },
+        rehypothecationCorrelation: { disposition: "issuer-undisclosed", assessment: null },
+      });
+    },
+  );
+
+  it.each([
+    ["strategy-vault", true],
+    ["savings-passthrough", false],
+  ] as const)("does not waive custody for onchain %s with a tracked parent edge of %s", (variantKind, includeParentEdge) => {
+    const fixed = fixedInputWithTrackedParent();
+    const extension = wrapperExtension(fixed, variantKind, includeParentEdge);
+    extension.assets.find((asset) => asset.assetId === "alpha")!.wrapperCustodyReview = {
+      custodyModel: "onchain",
+      providers: [{ providerKey: "wrapper-contract", role: "other", shareFraction: null }],
+      segregation: "unknown",
+      bankruptcyRemoteness: "unknown",
+      rehypothecation: "unknown",
+      knownUnknownExposureShare: null,
+    };
+
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension);
+    const asset = compiled.assets.find((asset) => asset.assetId === "alpha")!;
+    if (asset.wrapperLocalFacts?.applicability !== "wrapper") throw new Error("Expected wrapper-local facts");
+    expect(asset.wrapperLocalFacts.facts).toMatchObject({
+      custodyEscrow: { disposition: "issuer-undisclosed", assessment: null },
+      rehypothecationCorrelation: { disposition: "issuer-undisclosed", assessment: null },
+    });
+  });
+
   it("keeps an applicable strategy-vault custody review issuer-undisclosed when no profile is published", () => {
     const { facts } = wrapperFacts("strategy-vault");
 
@@ -75,6 +209,27 @@ describe("Safety Score V9 wrapper fact dispositions", () => {
       disposition: "issuer-undisclosed",
       assessment: null,
     });
+  });
+
+  it.each([
+    ["opaque-or-unknown", "issuer-undisclosed", null],
+    ["single-source-or-laggy", "reviewed", "high"],
+    ["privileged-internal-pricing", "reviewed", "high"],
+  ] as const)("attributes %s NAV pricing without mistaking non-disclosure for measured weakness", (tier, disposition, assessment) => {
+    const { fixed, extension, asset } = wrapperFacts("strategy-vault");
+    const context = createAssetBuildContext(
+      fixed, extension, extension.assets.find((candidate) => candidate.assetId === "alpha")!, "a".repeat(64),
+    );
+    const facts = buildWrapperLocalFacts(context, {
+      ...asset,
+      peg: { ...asset.peg, referenceKind: "nav" },
+      economicControlReview: {
+        ...asset.economicControlReview,
+        oracle: { ...asset.economicControlReview.oracle, tier },
+      },
+    });
+    if (facts.applicability !== "wrapper") throw new Error("Expected wrapper-local facts");
+    expect(facts.facts.shareAccountingNavOracle).toMatchObject({ disposition, assessment });
   });
 
   it("deduplicates repeated leverage findings across distinct reserve slices", () => {
@@ -119,6 +274,7 @@ describe("Safety Score V9 wrapper fact dispositions", () => {
     const extension = wrapperExtension(fixed, "savings-passthrough");
     const asset = extension.assets.find((candidate) => candidate.assetId === "alpha")!;
     asset.wrapperCustodyReview = {
+      custodyModel: "unknown",
       providers: [{ providerKey: "reviewed-provider", role: "other", shareFraction: 1 }],
       segregation: "segregated",
       bankruptcyRemoteness: "structured",
@@ -131,6 +287,7 @@ describe("Safety Score V9 wrapper fact dispositions", () => {
       expiresAt: "2026-09-23",
       reviewer: "test-fixture",
       custody: "fully-onchain-no-offchain-custodian",
+      scopeKind: "whole-allocation",
       localLeverage: "no-borrowing-surface",
       capitalReuse: "none",
       rationale: "Fixture allocation would resolve an unavailable fact to none.",

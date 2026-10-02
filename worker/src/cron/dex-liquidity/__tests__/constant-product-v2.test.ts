@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { canonicalExitRouteAssetKey } from "@shared/lib/exit-route-identity";
+import { canonicalExitRouteAssetKey } from "@shared/types/exit-route-identity";
 import {
   buildAmmCapacityCurve,
   validateAmmExecutionModel,

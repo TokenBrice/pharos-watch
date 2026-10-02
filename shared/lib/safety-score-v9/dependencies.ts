@@ -4,8 +4,8 @@ import {
   type V9DependencyEconomicRole,
 } from "../../types/dependency-types";
 import { compareText } from "./primitives";
-import type { V9FailureDomainRef } from "../../types/safety-score-v9-facts";
-import { resolveChainId } from "../chains";
+import type { V9FailureDomainRef, V9DeploymentControlFactV2 } from "../../types/safety-score-v9-facts";
+import { resolveChainId } from "../../types/chain-identity";
 import { orderDependencyGraphNodes, type DependencyGraphEdge } from "../dependency-graph";
 import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
@@ -41,7 +41,7 @@ export interface V9DependencyPlanningAsset {
   dependencies: { edges: readonly V9DependencyPlanningEdge[] };
   reserveExposures: readonly ({ exposureKey: string } & FailureDomainCarrier)[];
   exitRoutes: readonly ({ routeKey: string } & FailureDomainCarrier)[];
-  controls: readonly ({ controlKey: string } & FailureDomainCarrier)[];
+  controls: readonly ({ controlKey: string } & FailureDomainCarrier & Partial<Pick<V9DeploymentControlFactV2, "executionScope" | "executionScopeContributors" | "executionScopeComplete" | "capabilities" | "claimImpairment">>)[];
   peg: FailureDomainCarrier;
   supply: FailureDomainCarrier;
 }
@@ -426,6 +426,7 @@ function collectCommonModes(
       }
     }
     for (const control of asset.controls) {
+      if ((control.executionScope || control.executionScopeContributors) && control.executionScopeComplete === true && control.capabilities?.length === 0 && control.claimImpairment === "none") continue;
       for (const domain of control.failureDomains) {
         add(domain, { assetId: asset.assetId, owner: "control", pathKey: control.controlKey });
       }

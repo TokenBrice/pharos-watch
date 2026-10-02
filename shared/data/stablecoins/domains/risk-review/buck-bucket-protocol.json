@@ -16,17 +16,17 @@
         "url": "https://docs.bucketprotocol.io/resources/terms-of-service"
       },
       {
-        "label": "Bucket Protocol Peg Stability Module",
+        "label": "Bucket USDB Peg (V2 terms; not a current BUCK reserve disclosure)",
         "url": "https://docs.bucketprotocol.io/mechanism/usdb-peg"
       }
     ],
-    "evidence": "Re-reviewed 2026-08-08 using Sui checkpoints 304909276-304911372. BUCK remains an unregulated Sui currency with no RegulatedCoinMetadata, DenyCapV2, legacy DenyCap, holder blacklist, or token-transfer pause. Bucket's official terms describe interface-level restrictions rather than an on-chain power over holder coins. The Peg Stability Module holds Circle USDC and Tether USDT for direct BUCK conversions; those issuers can freeze PSM-held balances and impair redemption liquidity, but cannot restrict transfers of already-held BUCK coin objects. Direct holder freeze is therefore false, with the PSM exposure recorded separately as upstream risk.",
+    "evidence": "Re-reviewed 2026-08-08 using Sui checkpoints 304909276-304911372. BUCK remains an unregulated Sui currency with no RegulatedCoinMetadata, DenyCapV2, legacy DenyCap, holder blacklist, or token-transfer pause. Bucket's official terms describe interface-level restrictions rather than an on-chain power over holder coins. The Peg Stability Module holds Circle USDC and Tether USDT for direct BUCK conversions; those issuers can freeze PSM-held balances and impair redemption liquidity, but cannot restrict transfers of already-held BUCK coin objects. Direct holder freeze is therefore false, with the PSM exposure recorded separately as upstream risk. Source-scope recheck 2026-10-01: the linked USDB Peg page describes V2 USDB conversions, not current BUCK reserves. The migration guide separately permits BUCK-to-USDB conversion 1:1. Current checkpoint 328957880 reads confirm legacy BUCK Reservoir objects and ordinary BUCK CoinMetadata, but a complete current deny-cap census and freeze look-through were not completed; the historical direct-freeze analysis and adverse inherited status are retained without a favorable refresh.",
     "reviewer": "OpenAI Codex unfreezable-cohort audit",
     "reviewedAt": "2026-08-08"
   },
   "oracleRisk": {
     "tier": "opaque-or-unknown",
-    "summary": "Bucket v1 has 40 registered Sui collateral branches. Thirty-eight have currently refreshable threshold-one Supra or whitelisted derivative-rule SingleOracles that fail closed after ten seconds; two debt-bearing StakedHouse branches remain registered but their stale, unconfigured oracles make price-dependent actions unavailable.",
+    "summary": "At finalized Sui checkpoint 328957880 (2026-10-01), all 40 reviewed legacy V1 CDP Bucket mint ceilings are zero and all 40 stored SingleOracle prices exceed the reviewed ten-second freshness limit. Thirty-nine SingleOracles have threshold 1; AF_LP has threshold 4. Historical liquidation-code and update-route assessments remain dated 2026-07-14; this snapshot does not prove successful price refresh or executable exit liquidity.",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
@@ -71,7 +71,7 @@
         "id": "bucket-01-wal",
         "label": "WAL Bucket",
         "tier": "single-source-or-laggy",
-        "summary": "WAL remains a registered callable v1 Bucket with 50584022907858 raw debt (50584.022907858 BUCK) across 1 position(s); its threshold-1 SingleOracle accepts independent Supra pair 534 collector and whitelisted Navi-rule updates through 0x1c2740b75e06bf7bcee49d6df216f8a069c00e86173a021da712c37de2eb84af::navi_rule::Rule.",
+        "summary": "At finalized Sui checkpoint 328957880 (2026-10-01), WAL Bucket retains 50584022907858 raw BUCK debt across 1 position(s), with max_mint_amount 0. Its stored SingleOracle has threshold 1, 30000ms collector tolerance and latest_update_ms 1780154620417 (2026-05-30T15:23:40.417Z); the stored value is outside the reviewed ten-second price-read limit. Prior update-route and liquidation-code assessment remains dated 2026-07-14.",
         "collateralAssets": [
           "0x356a26eb9e012a68958082340d4c4116e7f55615cf27affcff209cf0ae544f59::wal::WAL"
         ],
@@ -106,7 +106,7 @@
           {
             "asset": "0x356a26eb9e012a68958082340d4c4116e7f55615cf27affcff209cf0ae544f59::wal::WAL",
             "minimumCollateralRatioPct": 130,
-            "note": "Bucket 0xac7dc2939bb11fe7efb64d79f8e4e7d406e5c7f339242184f1e21a0c46f3bb7e; Tank 0x23a4655a16bcd4cd39449724d6a5b87231285f22bb2cea0739dc7ac239b4d28d; 50584022907858 raw debt (50584.022907858 BUCK); 130000000000000 raw ceiling (130000 BUCK); recovery threshold 130%; 1 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+            "note": "Bucket 0xac7dc2939bb11fe7efb64d79f8e4e7d406e5c7f339242184f1e21a0c46f3bb7e; Tank 0x23a4655a16bcd4cd39449724d6a5b87231285f22bb2cea0739dc7ac239b4d28d; 50584022907858 raw BUCK debt; 0 raw mint ceiling; minimum collateral ratio 130%; recovery threshold 130%; 1 position(s), observed at finalized checkpoint 328957880 on 2026-10-01. Zero ceilings do not remove AdminCap or UpgradeCap authority."
           }
         ],
         "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
@@ -143,7 +143,7 @@
         "id": "bucket-02-scallop-sui",
         "label": "SCALLOP_SUI Bucket",
         "tier": "single-source-or-laggy",
-        "summary": "SCALLOP_SUI remains a registered callable v1 Bucket with 46074664609529 raw debt (46074.664609529 BUCK) across 2 position(s); its threshold-1 SingleOracle uses whitelisted rule 0xe8e2e65d77e92fee59b9027ad0e29da5d932c6a5fb46c9d4eecbcc747e33d38a::scoin_rule::Rule.",
+        "summary": "At finalized Sui checkpoint 328957880 (2026-10-01), SCALLOP_SUI Bucket retains 46074664609529 raw BUCK debt across 2 position(s), with max_mint_amount 0. Its stored SingleOracle has threshold 1, 30000ms collector tolerance and latest_update_ms 1769870290636 (2026-01-31T14:38:10.636Z); the stored value is outside the reviewed ten-second price-read limit. Prior update-route and liquidation-code assessment remains dated 2026-07-14.",
         "collateralAssets": [
           "0xaafc4f740de0dd0dde642a31148fb94517087052f19afb0f7bed1dc41a50c77b::scallop_sui::SCALLOP_SUI"
         ],
@@ -177,7 +177,7 @@
           {
             "asset": "0xaafc4f740de0dd0dde642a31148fb94517087052f19afb0f7bed1dc41a50c77b::scallop_sui::SCALLOP_SUI",
             "minimumCollateralRatioPct": 150,
-            "note": "Bucket 0x807880e7a64e680ec92ead9159c5f7c4f90724d02d25835c91a4b1b80c1bea78; Tank 0x0a49cebe7853d1e53684c8d56dd43763f01cbe5211a6be33b75016909eb77c79; 46074664609529 raw debt (46074.664609529 BUCK); 50000000000000 raw ceiling (50000 BUCK); recovery threshold 150%; 2 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+            "note": "Bucket 0x807880e7a64e680ec92ead9159c5f7c4f90724d02d25835c91a4b1b80c1bea78; Tank 0x0a49cebe7853d1e53684c8d56dd43763f01cbe5211a6be33b75016909eb77c79; 46074664609529 raw BUCK debt; 0 raw mint ceiling; minimum collateral ratio 150%; recovery threshold 150%; 2 position(s), observed at finalized checkpoint 328957880 on 2026-10-01. Zero ceilings do not remove AdminCap or UpgradeCap authority."
           }
         ],
         "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
@@ -213,7 +213,7 @@
         "id": "bucket-03-tlp",
         "label": "TLP Bucket",
         "tier": "opaque-or-unknown",
-        "summary": "TLP remains a registered callable v1 Bucket with 12494869472018 raw debt (12494.869472018 BUCK) across 1 position(s); its SingleOracle accepts a deployed whitelisted rule whose upstream implementation is absent from the pinned source.",
+        "summary": "At finalized Sui checkpoint 328957880 (2026-10-01), TLP Bucket retains 12494869472018 raw BUCK debt across 1 position(s), with max_mint_amount 0. Its stored SingleOracle has threshold 1, 30000ms collector tolerance and latest_update_ms 1757910753637 (2025-09-15T04:32:33.637Z); the stored value is outside the reviewed ten-second price-read limit. Prior update-route and liquidation-code assessment remains dated 2026-07-14.",
         "collateralAssets": [
           "0xe27969a70f93034de9ce16e6ad661b480324574e68d15a64b513fd90eb2423e5::tlp::TLP"
         ],
@@ -246,7 +246,7 @@
           {
             "asset": "0xe27969a70f93034de9ce16e6ad661b480324574e68d15a64b513fd90eb2423e5::tlp::TLP",
             "minimumCollateralRatioPct": 130,
-            "note": "Bucket 0xd01f281c50824d568f16ed08ca8b610672c043bdcb187708587b03ab16e6ecec; Tank 0x9724d024a919c5e48857c8ab572ca5b82ed801b7c26f696e02e58ebc6477f000; 12494869472018 raw debt (12494.869472018 BUCK); 15000000000000 raw ceiling (15000 BUCK); recovery threshold 130%; 1 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+            "note": "Bucket 0xd01f281c50824d568f16ed08ca8b610672c043bdcb187708587b03ab16e6ecec; Tank 0x9724d024a919c5e48857c8ab572ca5b82ed801b7c26f696e02e58ebc6477f000; 12494869472018 raw BUCK debt; 0 raw mint ceiling; minimum collateral ratio 130%; recovery threshold 130%; 1 position(s), observed at finalized checkpoint 328957880 on 2026-10-01. Zero ceilings do not remove AdminCap or UpgradeCap authority."
           }
         ],
         "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
@@ -281,7 +281,7 @@
         "id": "bucket-04-cert",
         "label": "CERT Bucket",
         "tier": "single-source-or-laggy",
-        "summary": "CERT remains a registered callable v1 Bucket with 10784652371709 raw debt (10784.652371709 BUCK) across 15 position(s); its threshold-1 SingleOracle uses whitelisted rule 0xc952f454a2cc83ad1102ebd84306f4e7ebb3d6fcb44d2feb94911010d64e1237::vsui_rule::Rule.",
+        "summary": "At finalized Sui checkpoint 328957880 (2026-10-01), CERT Bucket retains 10784652371709 raw BUCK debt across 15 position(s), with max_mint_amount 0. Its stored SingleOracle has threshold 1, 30000ms collector tolerance and latest_update_ms 1770322549464 (2026-02-05T20:15:49.464Z); the stored value is outside the reviewed ten-second price-read limit. Prior update-route and liquidation-code assessment remains dated 2026-07-14.",
         "collateralAssets": [
           "0x549e8b69270defbfafd4f94e17ec44cdbdd99820b33bda2278dea3b9a32d3f55::cert::CERT"
         ],
@@ -315,7 +315,7 @@
           {
             "asset": "0x549e8b69270defbfafd4f94e17ec44cdbdd99820b33bda2278dea3b9a32d3f55::cert::CERT",
             "minimumCollateralRatioPct": 110,
-            "note": "Bucket 0xf8cdc2b3f4a7129f784c280f1025fd874764380d81b6a6f3709dfb63e84d9d90; Tank 0x29ffc55ce1d9d20a69ed82474758276a972720b9586e6fa099dccbbc04cf16f5; 10784652371709 raw debt (10784.652371709 BUCK); 12000000000000 raw ceiling (12000 BUCK); recovery threshold 150%; 15 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+            "note": "Bucket 0xf8cdc2b3f4a7129f784c280f1025fd874764380d81b6a6f3709dfb63e84d9d90; Tank 0x29ffc55ce1d9d20a69ed82474758276a972720b9586e6fa099dccbbc04cf16f5; 10784652371709 raw BUCK debt; 0 raw mint ceiling; minimum collateral ratio 110%; recovery threshold 150%; 15 position(s), observed at finalized checkpoint 328957880 on 2026-10-01. Zero ceilings do not remove AdminCap or UpgradeCap authority."
           }
         ],
         "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
@@ -351,7 +351,7 @@
         "id": "bucket-05-sui",
         "label": "SUI Bucket",
         "tier": "single-source-or-laggy",
-        "summary": "SUI remains a registered callable v1 Bucket with 9837611422697 raw debt (9837.611422697 BUCK) across 148 position(s); its threshold-1 SingleOracle uses Supra pair 90.",
+        "summary": "At finalized Sui checkpoint 328957880 (2026-10-01), SUI Bucket retains 9837611422697 raw BUCK debt across 148 position(s), with max_mint_amount 0. Its stored SingleOracle has threshold 1, 30000ms collector tolerance and latest_update_ms 1788008297182 (2026-08-29T12:58:17.182Z); the stored value is outside the reviewed ten-second price-read limit. Prior update-route and liquidation-code assessment remains dated 2026-07-14.",
         "collateralAssets": [
           "0x2::sui::SUI"
         ],
@@ -382,7 +382,7 @@
           {
             "asset": "0x2::sui::SUI",
             "minimumCollateralRatioPct": 110,
-            "note": "Bucket 0xca4f4781342cfd66ff8e3d52862c1c82c7c1dd641c142e368939ca0e0efbb3d2; Tank 0xa0938650873cc169ffcaa54bfa63523c5239628b3a86b5e893c0caeb6e8c1de1; 9837611422697 raw debt (9837.611422697 BUCK); 20000000000000 raw ceiling (20000 BUCK); recovery threshold 150%; 148 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+            "note": "Bucket 0xca4f4781342cfd66ff8e3d52862c1c82c7c1dd641c142e368939ca0e0efbb3d2; Tank 0xa0938650873cc169ffcaa54bfa63523c5239628b3a86b5e893c0caeb6e8c1de1; 9837611422697 raw BUCK debt; 0 raw mint ceiling; minimum collateral ratio 110%; recovery threshold 150%; 148 position(s), observed at finalized checkpoint 328957880 on 2026-10-01. Zero ceilings do not remove AdminCap or UpgradeCap authority."
           }
         ],
         "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
@@ -415,7 +415,7 @@
         "id": "bucket-06-scallop-usdc",
         "label": "SCALLOP_USDC Bucket",
         "tier": "single-source-or-laggy",
-        "summary": "SCALLOP_USDC remains a registered callable v1 Bucket with 7016485263093 raw debt (7016.485263093 BUCK) across 48 position(s); its threshold-1 SingleOracle uses whitelisted rule 0xe8e2e65d77e92fee59b9027ad0e29da5d932c6a5fb46c9d4eecbcc747e33d38a::scoin_rule::Rule.",
+        "summary": "At finalized Sui checkpoint 328957880 (2026-10-01), SCALLOP_USDC Bucket retains 7016485263093 raw BUCK debt across 48 position(s), with max_mint_amount 0. Its stored SingleOracle has threshold 1, 30000ms collector tolerance and latest_update_ms 1770561452644 (2026-02-08T14:37:32.644Z); the stored value is outside the reviewed ten-second price-read limit. Prior update-route and liquidation-code assessment remains dated 2026-07-14.",
         "collateralAssets": [
           "0x854950aa624b1df59fe64e630b2ba7c550642e9342267a33061d59fb31582da5::scallop_usdc::SCALLOP_USDC"
         ],
@@ -449,7 +449,7 @@
           {
             "asset": "0x854950aa624b1df59fe64e630b2ba7c550642e9342267a33061d59fb31582da5::scallop_usdc::SCALLOP_USDC",
             "minimumCollateralRatioPct": 130,
-            "note": "Bucket 0xbc69a3b2730356073994d893e88085c1eb0b1b1a47cf77fcfaa6cd277bd6824a; Tank 0x0ab497a0e2f7cced013d1b9185b41d510ccabf8efd7bfdcc2f83a6f07255826f; 7016485263093 raw debt (7016.485263093 BUCK); 8500000000000 raw ceiling (8500 BUCK); recovery threshold 130%; 48 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+            "note": "Bucket 0xbc69a3b2730356073994d893e88085c1eb0b1b1a47cf77fcfaa6cd277bd6824a; Tank 0x0ab497a0e2f7cced013d1b9185b41d510ccabf8efd7bfdcc2f83a6f07255826f; 7016485263093 raw BUCK debt; 0 raw mint ceiling; minimum collateral ratio 130%; recovery threshold 130%; 48 position(s), observed at finalized checkpoint 328957880 on 2026-10-01. Zero ceilings do not remove AdminCap or UpgradeCap authority."
           }
         ],
         "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
@@ -485,7 +485,7 @@
         "id": "bucket-07-afsui",
         "label": "AFSUI Bucket",
         "tier": "single-source-or-laggy",
-        "summary": "AFSUI remains a registered callable v1 Bucket with 3286798258951 raw debt (3286.798258951 BUCK) across 12 position(s); its threshold-1 SingleOracle uses whitelisted rule 0x2480d9a3ff2c821061df22c4365316f894c6fa686fbd03ba828fe7c5bef9ad22::afsui_rule::Rule.",
+        "summary": "At finalized Sui checkpoint 328957880 (2026-10-01), AFSUI Bucket retains 3284372008415 raw BUCK debt across 12 position(s), with max_mint_amount 0. Its stored SingleOracle has threshold 1, 30000ms collector tolerance and latest_update_ms 1788008297182 (2026-08-29T12:58:17.182Z); the stored value is outside the reviewed ten-second price-read limit. Prior update-route and liquidation-code assessment remains dated 2026-07-14.",
         "collateralAssets": [
           "0xf325ce1300e8dac124071d3152c5c5ee6174914f8bc2161e88329cf579246efc::afsui::AFSUI"
         ],
@@ -519,7 +519,7 @@
           {
             "asset": "0xf325ce1300e8dac124071d3152c5c5ee6174914f8bc2161e88329cf579246efc::afsui::AFSUI",
             "minimumCollateralRatioPct": 110,
-            "note": "Bucket 0x7bae099fba3b32b5052ef98a53e3193c3497881c05a4ce13b603084a3dd10679; Tank 0xf2c6b68854ff0b2b81cdd2ebe6402be4bbe4a95ef14f1d0b732fd0a7ae0074f9; 3286798258951 raw debt (3286.798258951 BUCK); 6000000000000 raw ceiling (6000 BUCK); recovery threshold 150%; 12 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+            "note": "Bucket 0x7bae099fba3b32b5052ef98a53e3193c3497881c05a4ce13b603084a3dd10679; Tank 0xf2c6b68854ff0b2b81cdd2ebe6402be4bbe4a95ef14f1d0b732fd0a7ae0074f9; 3284372008415 raw BUCK debt; 0 raw mint ceiling; minimum collateral ratio 110%; recovery threshold 150%; 12 position(s), observed at finalized checkpoint 328957880 on 2026-10-01. Zero ceilings do not remove AdminCap or UpgradeCap authority."
           }
         ],
         "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
@@ -555,7 +555,7 @@
         "id": "bucket-08-stakedhouse-sui",
         "label": "StakedHouse SUI Bucket",
         "tier": "opaque-or-unknown",
-        "summary": "StakedHouse SUI remains a registered, debt-bearing v1 Bucket with 3017794346294 raw debt (3017.794346294 BUCK), but its SingleOracle has no configured external provider or whitelisted rule and its last observation is stale, so current price-dependent borrowing and liquidation hard-revert.",
+        "summary": "At finalized Sui checkpoint 328957880 (2026-10-01), StakedHouse SUI Bucket retains 3017794346294 raw BUCK debt across 1 position(s), with max_mint_amount 0. Its stored SingleOracle has threshold 1, 30000ms collector tolerance and latest_update_ms 1757191127666 (2025-09-06T20:38:47.666Z); the stored value is outside the reviewed ten-second price-read limit. Prior update-route and liquidation-code assessment remains dated 2026-07-14.",
         "collateralAssets": [
           "0x2f2226a22ebeb7a0e63ea39551829b238589d981d1c6dd454f01fcc513035593::house::StakedHouseCoin<0x2::sui::SUI>"
         ],
@@ -586,7 +586,7 @@
           {
             "asset": "0x2f2226a22ebeb7a0e63ea39551829b238589d981d1c6dd454f01fcc513035593::house::StakedHouseCoin<0x2::sui::SUI>",
             "minimumCollateralRatioPct": 140,
-            "note": "Bucket 0xf86fa9413102a9025ff44be31f41e376db66846f781281a717c6a965c078ce88; Tank 0x75176542b37f6a9a9398799a5a207bcb74a1b951e5157b43b3b5acc21706ec72; 3017794346294 raw debt (3017.794346294 BUCK); 4000000000000 raw ceiling (4000 BUCK); recovery threshold 140%; 1 observed position(s). The branch remains registered with a positive ceiling, but the stale unconfigured oracle currently prevents price-dependent borrowing and liquidation."
+            "note": "Bucket 0xf86fa9413102a9025ff44be31f41e376db66846f781281a717c6a965c078ce88; Tank 0x75176542b37f6a9a9398799a5a207bcb74a1b951e5157b43b3b5acc21706ec72; 3017794346294 raw BUCK debt; 0 raw mint ceiling; minimum collateral ratio 140%; recovery threshold 140%; 1 position(s), observed at finalized checkpoint 328957880 on 2026-10-01. Zero ceilings do not remove AdminCap or UpgradeCap authority."
           }
         ],
         "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
@@ -619,7 +619,7 @@
         "id": "bucket-09-sca",
         "label": "SCA Bucket",
         "tier": "single-source-or-laggy",
-        "summary": "SCA remains a registered callable v1 Bucket with 1865037219788 raw debt (1865.037219788 BUCK) across 1 position(s); its threshold-1 SingleOracle uses Supra pair 476.",
+        "summary": "At finalized Sui checkpoint 328957880 (2026-10-01), SCA Bucket retains 1865037219788 raw BUCK debt across 1 position(s), with max_mint_amount 0. Its stored SingleOracle has threshold 1, 30000ms collector tolerance and latest_update_ms 1769333516685 (2026-01-25T09:31:56.685Z); the stored value is outside the reviewed ten-second price-read limit. Prior update-route and liquidation-code assessment remains dated 2026-07-14.",
         "collateralAssets": [
           "0x7016aae72cfc67f2fadf55769c0a7dd54291a583b63051a5ed71081cce836ac6::sca::SCA"
         ],
@@ -650,7 +650,7 @@
           {
             "asset": "0x7016aae72cfc67f2fadf55769c0a7dd54291a583b63051a5ed71081cce836ac6::sca::SCA",
             "minimumCollateralRatioPct": 150,
-            "note": "Bucket 0x0e15f217ddcb5019c47881bd6df573a652dda8c612c52f74a09f8ae75b92e774; Tank 0x9b0abd35112c1e4da777dedd36cbfcb25a85df46dcc9e9decdd60df524a726a1; 1865037219788 raw debt (1865.037219788 BUCK); 3000000000000 raw ceiling (3000 BUCK); recovery threshold 150%; 1 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+            "note": "Bucket 0x0e15f217ddcb5019c47881bd6df573a652dda8c612c52f74a09f8ae75b92e774; Tank 0x9b0abd35112c1e4da777dedd36cbfcb25a85df46dcc9e9decdd60df524a726a1; 1865037219788 raw BUCK debt; 0 raw mint ceiling; minimum collateral ratio 150%; recovery threshold 150%; 1 position(s), observed at finalized checkpoint 328957880 on 2026-10-01. Zero ceilings do not remove AdminCap or UpgradeCap authority."
           }
         ],
         "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
@@ -683,7 +683,7 @@
         "id": "bucket-10-lp-token-828b452d",
         "label": "LP_TOKEN 828b452d Bucket",
         "tier": "opaque-or-unknown",
-        "summary": "LP_TOKEN 828b452d remains a registered callable v1 Bucket with 1487982953506 raw debt (1487.982953506 BUCK) across 4 position(s); its SingleOracle accepts a deployed whitelisted rule whose upstream implementation is absent from the pinned source.",
+        "summary": "At finalized Sui checkpoint 328957880 (2026-10-01), LP_TOKEN 828b452d Bucket retains 1487982953506 raw BUCK debt across 4 position(s), with max_mint_amount 0. Its stored SingleOracle has threshold 1, 30000ms collector tolerance and latest_update_ms 1760170638929 (2025-10-11T08:17:18.929Z); the stored value is outside the reviewed ten-second price-read limit. Prior update-route and liquidation-code assessment remains dated 2026-07-14.",
         "collateralAssets": [
           "0x828b452d2aa239d48e4120c24f4a59f451b8cd8ac76706129f4ac3bd78ac8809::lp_token::LP_TOKEN"
         ],
@@ -716,7 +716,7 @@
           {
             "asset": "0x828b452d2aa239d48e4120c24f4a59f451b8cd8ac76706129f4ac3bd78ac8809::lp_token::LP_TOKEN",
             "minimumCollateralRatioPct": 150,
-            "note": "Bucket 0xb33f59265c4f3af215e6c3727acbeb98764d8d4453efc4486cbf554b5f49f632; Tank 0x1cfc88aaf573ab52886f7c9d0cadc10908676470b4cfb6044442c64b465a0df1; 1487982953506 raw debt (1487.982953506 BUCK); 1500000000000 raw ceiling (1500 BUCK); recovery threshold 150%; 4 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+            "note": "Bucket 0xb33f59265c4f3af215e6c3727acbeb98764d8d4453efc4486cbf554b5f49f632; Tank 0x1cfc88aaf573ab52886f7c9d0cadc10908676470b4cfb6044442c64b465a0df1; 1487982953506 raw BUCK debt; 0 raw mint ceiling; minimum collateral ratio 150%; recovery threshold 150%; 4 position(s), observed at finalized checkpoint 328957880 on 2026-10-01. Zero ceilings do not remove AdminCap or UpgradeCap authority."
           }
         ],
         "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
@@ -751,7 +751,7 @@
         "id": "bucket-11-scallop-deep",
         "label": "SCALLOP_DEEP Bucket",
         "tier": "single-source-or-laggy",
-        "summary": "SCALLOP_DEEP remains a registered callable v1 Bucket with 1357181489418 raw debt (1357.181489418 BUCK) across 1 position(s); its threshold-1 SingleOracle uses whitelisted rule 0xe8e2e65d77e92fee59b9027ad0e29da5d932c6a5fb46c9d4eecbcc747e33d38a::scoin_rule::Rule.",
+        "summary": "At finalized Sui checkpoint 328957880 (2026-10-01), SCALLOP_DEEP Bucket retains 25 raw BUCK debt across 0 position(s), with max_mint_amount 0. Its stored SingleOracle has threshold 1, 30000ms collector tolerance and latest_update_ms 1762286974088 (2025-11-04T20:09:34.088Z); the stored value is outside the reviewed ten-second price-read limit. Prior update-route and liquidation-code assessment remains dated 2026-07-14.",
         "collateralAssets": [
           "0xeb7a05a3224837c5e5503575aed0be73c091d1ce5e43aa3c3e716e0ae614608f::scallop_deep::SCALLOP_DEEP"
         ],
@@ -785,7 +785,7 @@
           {
             "asset": "0xeb7a05a3224837c5e5503575aed0be73c091d1ce5e43aa3c3e716e0ae614608f::scallop_deep::SCALLOP_DEEP",
             "minimumCollateralRatioPct": 150,
-            "note": "Bucket 0x1d6f971c6b6ec5493777cbe19bca4ab79a1bc639354be600247ebd2bc2627b7e; Tank 0x81f97f440af86983e105193b48c5a94d0f261464e96a65a105be26f1394b4693; 1357181489418 raw debt (1357.181489418 BUCK); 1500000000000 raw ceiling (1500 BUCK); recovery threshold 150%; 1 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+            "note": "Bucket 0x1d6f971c6b6ec5493777cbe19bca4ab79a1bc639354be600247ebd2bc2627b7e; Tank 0x81f97f440af86983e105193b48c5a94d0f261464e96a65a105be26f1394b4693; 25 raw BUCK debt; 0 raw mint ceiling; minimum collateral ratio 150%; recovery threshold 150%; 0 position(s), observed at finalized checkpoint 328957880 on 2026-10-01. Zero ceilings do not remove AdminCap or UpgradeCap authority."
           }
         ],
         "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
@@ -821,7 +821,7 @@
         "id": "bucket-12-scallop-wormhole-usdt",
         "label": "SCALLOP_WORMHOLE_USDT Bucket",
         "tier": "single-source-or-laggy",
-        "summary": "SCALLOP_WORMHOLE_USDT remains a registered callable v1 Bucket with 934531226139 raw debt (934.531226139 BUCK) across 8 position(s); its threshold-1 SingleOracle uses whitelisted rule 0xe8e2e65d77e92fee59b9027ad0e29da5d932c6a5fb46c9d4eecbcc747e33d38a::scoin_rule::Rule.",
+        "summary": "At finalized Sui checkpoint 328957880 (2026-10-01), SCALLOP_WORMHOLE_USDT Bucket retains 934531226139 raw BUCK debt across 8 position(s), with max_mint_amount 0. Its stored SingleOracle has threshold 1, 30000ms collector tolerance and latest_update_ms 1756622740116 (2025-08-31T06:45:40.116Z); the stored value is outside the reviewed ten-second price-read limit. Prior update-route and liquidation-code assessment remains dated 2026-07-14.",
         "collateralAssets": [
           "0xe6e5a012ec20a49a3d1d57bd2b67140b96cd4d3400b9d79e541f7bdbab661f95::scallop_wormhole_usdt::SCALLOP_WORMHOLE_USDT"
         ],
@@ -855,7 +855,7 @@
           {
             "asset": "0xe6e5a012ec20a49a3d1d57bd2b67140b96cd4d3400b9d79e541f7bdbab661f95::scallop_wormhole_usdt::SCALLOP_WORMHOLE_USDT",
             "minimumCollateralRatioPct": 130,
-            "note": "Bucket 0xe7e1e08ec7139eb9f8eed96a868f140c993ce4a237a8c6ca006376345c8ac8ed; Tank 0x6e4558bde9e4f3ef69945046555701327dc8aa402d8d5586b76e5639394a1340; 934531226139 raw debt (934.531226139 BUCK); 1200000000000 raw ceiling (1200 BUCK); recovery threshold 130%; 8 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+            "note": "Bucket 0xe7e1e08ec7139eb9f8eed96a868f140c993ce4a237a8c6ca006376345c8ac8ed; Tank 0x6e4558bde9e4f3ef69945046555701327dc8aa402d8d5586b76e5639394a1340; 934531226139 raw BUCK debt; 0 raw mint ceiling; minimum collateral ratio 130%; recovery threshold 130%; 8 position(s), observed at finalized checkpoint 328957880 on 2026-10-01. Zero ceilings do not remove AdminCap or UpgradeCap authority."
           }
         ],
         "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
@@ -891,7 +891,7 @@
         "id": "bucket-13-hasui",
         "label": "HASUI Bucket",
         "tier": "single-source-or-laggy",
-        "summary": "HASUI remains a registered callable v1 Bucket with 905906536148 raw debt (905.906536148 BUCK) across 45 position(s); its threshold-1 SingleOracle uses whitelisted rule 0x4433ab096a71cbcdf70183f465e613955526f321039d9a76be0bd98c5da75382::hasui_rule::Rule.",
+        "summary": "At finalized Sui checkpoint 328957880 (2026-10-01), HASUI Bucket retains 905906536148 raw BUCK debt across 45 position(s), with max_mint_amount 0. Its stored SingleOracle has threshold 1, 30000ms collector tolerance and latest_update_ms 1770322547327 (2026-02-05T20:15:47.327Z); the stored value is outside the reviewed ten-second price-read limit. Prior update-route and liquidation-code assessment remains dated 2026-07-14.",
         "collateralAssets": [
           "0xbde4ba4c2e274a60ce15c1cfff9e5c42e41654ac8b6d906a57efa4bd3c29f47d::hasui::HASUI"
         ],
@@ -925,7 +925,7 @@
           {
             "asset": "0xbde4ba4c2e274a60ce15c1cfff9e5c42e41654ac8b6d906a57efa4bd3c29f47d::hasui::HASUI",
             "minimumCollateralRatioPct": 110,
-            "note": "Bucket 0x29919d2f47e27a075f6ddb099d03f6455a5595b5bcf7e30d3b30cd539b5c16f1; Tank 0x59e598ca4a38e7af2ae6388ea96d52cdc432efddfe0eda31175f6c7a1dd3d1bf; 905906536148 raw debt (905.906536148 BUCK); 20000000000000 raw ceiling (20000 BUCK); recovery threshold 150%; 45 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+            "note": "Bucket 0x29919d2f47e27a075f6ddb099d03f6455a5595b5bcf7e30d3b30cd539b5c16f1; Tank 0x59e598ca4a38e7af2ae6388ea96d52cdc432efddfe0eda31175f6c7a1dd3d1bf; 905906536148 raw BUCK debt; 0 raw mint ceiling; minimum collateral ratio 110%; recovery threshold 150%; 45 position(s), observed at finalized checkpoint 328957880 on 2026-10-01. Zero ceilings do not remove AdminCap or UpgradeCap authority."
           }
         ],
         "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
@@ -961,7 +961,7 @@
         "id": "bucket-14-usdy",
         "label": "USDY Bucket",
         "tier": "single-source-or-laggy",
-        "summary": "USDY remains a registered callable v1 Bucket with 548142669960 raw debt (548.14266996 BUCK) across 9 position(s); its threshold-1 SingleOracle uses Supra pair 185.",
+        "summary": "At finalized Sui checkpoint 328957880 (2026-10-01), USDY Bucket retains 548142669960 raw BUCK debt across 9 position(s), with max_mint_amount 0. Its stored SingleOracle has threshold 1, 30000ms collector tolerance and latest_update_ms 1764688981492 (2025-12-02T15:23:01.492Z); the stored value is outside the reviewed ten-second price-read limit. Prior update-route and liquidation-code assessment remains dated 2026-07-14.",
         "collateralAssets": [
           "0x960b531667636f39e85867775f52f6b1f220a058c4de786905bdf761e06a56bb::usdy::USDY"
         ],
@@ -992,7 +992,7 @@
           {
             "asset": "0x960b531667636f39e85867775f52f6b1f220a058c4de786905bdf761e06a56bb::usdy::USDY",
             "minimumCollateralRatioPct": 105,
-            "note": "Bucket 0x1de3c4f89ad80a33d4e02efe2965bfb3b35543a52b2588048f5b3fcbf702136f; Tank 0x518a74158b31365876b413ad51f5fdd42db4d4559d9db3f91d44a2e948fc2a49; 548142669960 raw debt (548.14266996 BUCK); 800000000000 raw ceiling (800 BUCK); recovery threshold 110%; 9 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+            "note": "Bucket 0x1de3c4f89ad80a33d4e02efe2965bfb3b35543a52b2588048f5b3fcbf702136f; Tank 0x518a74158b31365876b413ad51f5fdd42db4d4559d9db3f91d44a2e948fc2a49; 548142669960 raw BUCK debt; 0 raw mint ceiling; minimum collateral ratio 105%; recovery threshold 110%; 9 position(s), observed at finalized checkpoint 328957880 on 2026-10-01. Zero ceilings do not remove AdminCap or UpgradeCap authority."
           }
         ],
         "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
@@ -1025,7 +1025,7 @@
         "id": "bucket-15-scallop-wormhole-usdc",
         "label": "SCALLOP_WORMHOLE_USDC Bucket",
         "tier": "single-source-or-laggy",
-        "summary": "SCALLOP_WORMHOLE_USDC remains a registered callable v1 Bucket with 433909154048 raw debt (433.909154048 BUCK) across 1 position(s); its threshold-1 SingleOracle uses whitelisted rule 0xe8e2e65d77e92fee59b9027ad0e29da5d932c6a5fb46c9d4eecbcc747e33d38a::scoin_rule::Rule.",
+        "summary": "At finalized Sui checkpoint 328957880 (2026-10-01), SCALLOP_WORMHOLE_USDC Bucket retains 433909154048 raw BUCK debt across 1 position(s), with max_mint_amount 0. Its stored SingleOracle has threshold 1, 30000ms collector tolerance and latest_update_ms 1765097099860 (2025-12-07T08:44:59.860Z); the stored value is outside the reviewed ten-second price-read limit. Prior update-route and liquidation-code assessment remains dated 2026-07-14.",
         "collateralAssets": [
           "0xad4d71551d31092230db1fd482008ea42867dbf27b286e9c70a79d2a6191d58d::scallop_wormhole_usdc::SCALLOP_WORMHOLE_USDC"
         ],
@@ -1059,7 +1059,7 @@
           {
             "asset": "0xad4d71551d31092230db1fd482008ea42867dbf27b286e9c70a79d2a6191d58d::scallop_wormhole_usdc::SCALLOP_WORMHOLE_USDC",
             "minimumCollateralRatioPct": 130,
-            "note": "Bucket 0xc83914293187893e0377b333633d6a5e7636697e240ca815f47dcfff176d60f5; Tank 0x32fb360e0c6a3c051f18eb39122baa8816cbe2692e45cd5ce5d9b75bcb3b852f; 433909154048 raw debt (433.909154048 BUCK); 600000000000 raw ceiling (600 BUCK); recovery threshold 130%; 1 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+            "note": "Bucket 0xc83914293187893e0377b333633d6a5e7636697e240ca815f47dcfff176d60f5; Tank 0x32fb360e0c6a3c051f18eb39122baa8816cbe2692e45cd5ce5d9b75bcb3b852f; 433909154048 raw BUCK debt; 0 raw mint ceiling; minimum collateral ratio 130%; recovery threshold 130%; 1 position(s), observed at finalized checkpoint 328957880 on 2026-10-01. Zero ceilings do not remove AdminCap or UpgradeCap authority."
           }
         ],
         "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
@@ -1095,7 +1095,7 @@
         "id": "bucket-16-lbtc",
         "label": "LBTC Bucket",
         "tier": "single-source-or-laggy",
-        "summary": "LBTC remains a registered callable v1 Bucket with 427603076987 raw debt (427.603076987 BUCK) across 4 position(s); its threshold-1 SingleOracle uses Supra pair 18.",
+        "summary": "At finalized Sui checkpoint 328957880 (2026-10-01), LBTC Bucket retains 427603076987 raw BUCK debt across 4 position(s), with max_mint_amount 0. Its stored SingleOracle has threshold 1, 30000ms collector tolerance and latest_update_ms 1770221360870 (2026-02-04T16:09:20.870Z); the stored value is outside the reviewed ten-second price-read limit. Prior update-route and liquidation-code assessment remains dated 2026-07-14.",
         "collateralAssets": [
           "0x3e8e9423d80e1774a7ca128fccd8bf5f1f7753be658c5e645929037f7c819040::lbtc::LBTC"
         ],
@@ -1126,7 +1126,7 @@
           {
             "asset": "0x3e8e9423d80e1774a7ca128fccd8bf5f1f7753be658c5e645929037f7c819040::lbtc::LBTC",
             "minimumCollateralRatioPct": 110,
-            "note": "Bucket 0x8d33d84650f489c794849a9e80e58bab91f39be29a661fc9a7c25154eade3a9c; Tank 0xae606e4a43d50f9d497dbb1b93a8f08b77f5e41cfe9b8653b808806496ea3d36; 427603076987 raw debt (427.603076987 BUCK); 600000000000 raw ceiling (600 BUCK); recovery threshold 130%; 4 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+            "note": "Bucket 0x8d33d84650f489c794849a9e80e58bab91f39be29a661fc9a7c25154eade3a9c; Tank 0xae606e4a43d50f9d497dbb1b93a8f08b77f5e41cfe9b8653b808806496ea3d36; 427603076987 raw BUCK debt; 0 raw mint ceiling; minimum collateral ratio 110%; recovery threshold 130%; 4 position(s), observed at finalized checkpoint 328957880 on 2026-10-01. Zero ceilings do not remove AdminCap or UpgradeCap authority."
           }
         ],
         "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
@@ -1159,7 +1159,7 @@
         "id": "bucket-17-scallop-sb-usdt",
         "label": "SCALLOP_SB_USDT Bucket",
         "tier": "single-source-or-laggy",
-        "summary": "SCALLOP_SB_USDT remains a registered callable v1 Bucket with 351752143974 raw debt (351.752143974 BUCK) across 4 position(s); its threshold-1 SingleOracle uses whitelisted rule 0xe8e2e65d77e92fee59b9027ad0e29da5d932c6a5fb46c9d4eecbcc747e33d38a::scoin_rule::Rule.",
+        "summary": "At finalized Sui checkpoint 328957880 (2026-10-01), SCALLOP_SB_USDT Bucket retains 351752143974 raw BUCK debt across 4 position(s), with max_mint_amount 0. Its stored SingleOracle has threshold 1, 30000ms collector tolerance and latest_update_ms 1761444433856 (2025-10-26T02:07:13.856Z); the stored value is outside the reviewed ten-second price-read limit. Prior update-route and liquidation-code assessment remains dated 2026-07-14.",
         "collateralAssets": [
           "0xb1d7df34829d1513b73ba17cb7ad90c88d1e104bb65ab8f62f13e0cc103783d3::scallop_sb_usdt::SCALLOP_SB_USDT"
         ],
@@ -1193,7 +1193,7 @@
           {
             "asset": "0xb1d7df34829d1513b73ba17cb7ad90c88d1e104bb65ab8f62f13e0cc103783d3::scallop_sb_usdt::SCALLOP_SB_USDT",
             "minimumCollateralRatioPct": 130,
-            "note": "Bucket 0xc13be9b96a87c70608d06715345bfb00ab22a2a44081462e816507e03067a7c3; Tank 0xc96adf8e14650a5f91bb4e8456d89502124ef9c007f9ee3511ccf4a00b3e8ae6; 351752143974 raw debt (351.752143974 BUCK); 750000000000 raw ceiling (750 BUCK); recovery threshold 130%; 4 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+            "note": "Bucket 0xc13be9b96a87c70608d06715345bfb00ab22a2a44081462e816507e03067a7c3; Tank 0xc96adf8e14650a5f91bb4e8456d89502124ef9c007f9ee3511ccf4a00b3e8ae6; 351752143974 raw BUCK debt; 0 raw mint ceiling; minimum collateral ratio 130%; recovery threshold 130%; 4 position(s), observed at finalized checkpoint 328957880 on 2026-10-01. Zero ceilings do not remove AdminCap or UpgradeCap authority."
           }
         ],
         "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
@@ -1229,7 +1229,7 @@
         "id": "bucket-18-coin-af8cd5ed",
         "label": "COIN af8cd5ed Bucket",
         "tier": "single-source-or-laggy",
-        "summary": "COIN af8cd5ed remains a registered callable v1 Bucket with 313208336622 raw debt (313.208336622 BUCK) across 1 position(s); its threshold-1 SingleOracle uses Supra pair 19.",
+        "summary": "At finalized Sui checkpoint 328957880 (2026-10-01), COIN af8cd5ed Bucket retains 313208336622 raw BUCK debt across 1 position(s), with max_mint_amount 0. Its stored SingleOracle has threshold 1, 30000ms collector tolerance and latest_update_ms 1762999765244 (2025-11-13T02:09:25.244Z); the stored value is outside the reviewed ten-second price-read limit. Prior update-route and liquidation-code assessment remains dated 2026-07-14.",
         "collateralAssets": [
           "0xaf8cd5edc19c4512f4259f0bee101a40d41ebed738ade5874359610ef8eeced5::coin::COIN"
         ],
@@ -1260,7 +1260,7 @@
           {
             "asset": "0xaf8cd5edc19c4512f4259f0bee101a40d41ebed738ade5874359610ef8eeced5::coin::COIN",
             "minimumCollateralRatioPct": 110,
-            "note": "Bucket 0x15b017368a2f0f848b24a6925f99ce94a3a8dccda09c62f54813d137e5ebc5eb; Tank 0x334185acea7d6cef173fe506abaa0b4babc949a89862db78b00e610bfe129517; 313208336622 raw debt (313.208336622 BUCK); 400000000000 raw ceiling (400 BUCK); recovery threshold 150%; 1 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+            "note": "Bucket 0x15b017368a2f0f848b24a6925f99ce94a3a8dccda09c62f54813d137e5ebc5eb; Tank 0x334185acea7d6cef173fe506abaa0b4babc949a89862db78b00e610bfe129517; 313208336622 raw BUCK debt; 0 raw mint ceiling; minimum collateral ratio 110%; recovery threshold 150%; 1 position(s), observed at finalized checkpoint 328957880 on 2026-10-01. Zero ceilings do not remove AdminCap or UpgradeCap authority."
           }
         ],
         "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
@@ -1293,7 +1293,7 @@
         "id": "bucket-19-tbtc",
         "label": "TBTC Bucket",
         "tier": "single-source-or-laggy",
-        "summary": "TBTC remains a registered callable v1 Bucket with 287956825780 raw debt (287.95682578 BUCK) across 5 position(s); its threshold-1 SingleOracle uses Supra pair 18.",
+        "summary": "At finalized Sui checkpoint 328957880 (2026-10-01), TBTC Bucket retains 287956825780 raw BUCK debt across 5 position(s), with max_mint_amount 0. Its stored SingleOracle has threshold 1, 30000ms collector tolerance and latest_update_ms 1763900090031 (2025-11-23T12:14:50.031Z); the stored value is outside the reviewed ten-second price-read limit. Prior update-route and liquidation-code assessment remains dated 2026-07-14.",
         "collateralAssets": [
           "0x77045f1b9f811a7a8fb9ebd085b5b0c55c5cb0d1520ff55f7037f89b5da9f5f1::TBTC::TBTC"
         ],
@@ -1324,7 +1324,7 @@
           {
             "asset": "0x77045f1b9f811a7a8fb9ebd085b5b0c55c5cb0d1520ff55f7037f89b5da9f5f1::TBTC::TBTC",
             "minimumCollateralRatioPct": 110,
-            "note": "Bucket 0x3a3545739027335834e930175942fb11a9d5ca4aea2ebad46770a1cc77d340b3; Tank 0x64d97e92b121d0994b4c532eb4e1ec56e4ef087aabe8723d03381090e80e60d2; 287956825780 raw debt (287.95682578 BUCK); 300000000000 raw ceiling (300 BUCK); recovery threshold 130%; 5 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+            "note": "Bucket 0x3a3545739027335834e930175942fb11a9d5ca4aea2ebad46770a1cc77d340b3; Tank 0x64d97e92b121d0994b4c532eb4e1ec56e4ef087aabe8723d03381090e80e60d2; 287956825780 raw BUCK debt; 0 raw mint ceiling; minimum collateral ratio 110%; recovery threshold 130%; 5 position(s), observed at finalized checkpoint 328957880 on 2026-10-01. Zero ceilings do not remove AdminCap or UpgradeCap authority."
           }
         ],
         "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
@@ -1357,7 +1357,7 @@
         "id": "bucket-20-scallop-sca",
         "label": "SCALLOP_SCA Bucket",
         "tier": "single-source-or-laggy",
-        "summary": "SCALLOP_SCA remains a registered callable v1 Bucket with 161471204678 raw debt (161.471204678 BUCK) across 2 position(s); its threshold-1 SingleOracle uses whitelisted rule 0xe8e2e65d77e92fee59b9027ad0e29da5d932c6a5fb46c9d4eecbcc747e33d38a::scoin_rule::Rule.",
+        "summary": "At finalized Sui checkpoint 328957880 (2026-10-01), SCALLOP_SCA Bucket retains 161471204678 raw BUCK debt across 2 position(s), with max_mint_amount 0. Its stored SingleOracle has threshold 1, 30000ms collector tolerance and latest_update_ms 1768822439249 (2026-01-19T11:33:59.249Z); the stored value is outside the reviewed ten-second price-read limit. Prior update-route and liquidation-code assessment remains dated 2026-07-14.",
         "collateralAssets": [
           "0x5ca17430c1d046fae9edeaa8fd76c7b4193a00d764a0ecfa9418d733ad27bc1e::scallop_sca::SCALLOP_SCA"
         ],
@@ -1391,7 +1391,7 @@
           {
             "asset": "0x5ca17430c1d046fae9edeaa8fd76c7b4193a00d764a0ecfa9418d733ad27bc1e::scallop_sca::SCALLOP_SCA",
             "minimumCollateralRatioPct": 150,
-            "note": "Bucket 0x841941866cf228b19df57e7bf1a85a03b955a2f06d787a617ac20a5054a83460; Tank 0x8958c3986c18b525a7cf7a63c749e5be9142167113a8634543b7f857e75920b3; 161471204678 raw debt (161.471204678 BUCK); 300000000000 raw ceiling (300 BUCK); recovery threshold 150%; 2 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+            "note": "Bucket 0x841941866cf228b19df57e7bf1a85a03b955a2f06d787a617ac20a5054a83460; Tank 0x8958c3986c18b525a7cf7a63c749e5be9142167113a8634543b7f857e75920b3; 161471204678 raw BUCK debt; 0 raw mint ceiling; minimum collateral ratio 150%; recovery threshold 150%; 2 position(s), observed at finalized checkpoint 328957880 on 2026-10-01. Zero ceilings do not remove AdminCap or UpgradeCap authority."
           }
         ],
         "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
@@ -1427,7 +1427,7 @@
         "id": "bucket-21-navx",
         "label": "NAVX Bucket",
         "tier": "single-source-or-laggy",
-        "summary": "NAVX remains a registered callable v1 Bucket with 52870769635 raw debt (52.870769635 BUCK) across 1 position(s); its threshold-1 SingleOracle uses Supra pair 408.",
+        "summary": "At finalized Sui checkpoint 328957880 (2026-10-01), NAVX Bucket retains 52870769635 raw BUCK debt across 1 position(s), with max_mint_amount 0. Its stored SingleOracle has threshold 1, 30000ms collector tolerance and latest_update_ms 1763624191518 (2025-11-20T07:36:31.518Z); the stored value is outside the reviewed ten-second price-read limit. Prior update-route and liquidation-code assessment remains dated 2026-07-14.",
         "collateralAssets": [
           "0xa99b8952d4f7d947ea77fe0ecdcc9e5fc0bcab2841d6e2a5aa00c3044e5544b5::navx::NAVX"
         ],
@@ -1458,7 +1458,7 @@
           {
             "asset": "0xa99b8952d4f7d947ea77fe0ecdcc9e5fc0bcab2841d6e2a5aa00c3044e5544b5::navx::NAVX",
             "minimumCollateralRatioPct": 150,
-            "note": "Bucket 0x7b613c12b423aa7085f47dc4aa9f5b85546f21cbf1fe2861f3834c08d288b670; Tank 0xc4cf6d81db62d266d377d4e2315ea0b3ef417c49a76af5ad9803318938262887; 52870769635 raw debt (52.870769635 BUCK); 100000000000 raw ceiling (100 BUCK); recovery threshold 150%; 1 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+            "note": "Bucket 0x7b613c12b423aa7085f47dc4aa9f5b85546f21cbf1fe2861f3834c08d288b670; Tank 0xc4cf6d81db62d266d377d4e2315ea0b3ef417c49a76af5ad9803318938262887; 52870769635 raw BUCK debt; 0 raw mint ceiling; minimum collateral ratio 150%; recovery threshold 150%; 1 position(s), observed at finalized checkpoint 328957880 on 2026-10-01. Zero ceilings do not remove AdminCap or UpgradeCap authority."
           }
         ],
         "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
@@ -1491,7 +1491,7 @@
         "id": "bucket-22-spring-sui",
         "label": "SPRING_SUI Bucket",
         "tier": "opaque-or-unknown",
-        "summary": "SPRING_SUI remains a registered callable v1 Bucket with 52128022742 raw debt (52.128022742 BUCK) across 1 position(s); its SingleOracle accepts a deployed whitelisted rule whose upstream implementation is absent from the pinned source.",
+        "summary": "At finalized Sui checkpoint 328957880 (2026-10-01), SPRING_SUI Bucket retains 52128022742 raw BUCK debt across 1 position(s), with max_mint_amount 0. Its stored SingleOracle has threshold 1, 30000ms collector tolerance and latest_update_ms 1763403971632 (2025-11-17T18:26:11.632Z); the stored value is outside the reviewed ten-second price-read limit. Prior update-route and liquidation-code assessment remains dated 2026-07-14.",
         "collateralAssets": [
           "0x83556891f4a0f233ce7b05cfe7f957d4020492a34f5405b2cb9377d060bef4bf::spring_sui::SPRING_SUI"
         ],
@@ -1524,7 +1524,7 @@
           {
             "asset": "0x83556891f4a0f233ce7b05cfe7f957d4020492a34f5405b2cb9377d060bef4bf::spring_sui::SPRING_SUI",
             "minimumCollateralRatioPct": 110,
-            "note": "Bucket 0x422aaf58e7398a15a60fb298b6a2367b981674c8ab368a54bf1f861ba99cf59b; Tank 0x4b8f8f6b8d5b36701d9c47e3c088c56d9df0af6d617c131a723994a919a41860; 52128022742 raw debt (52.128022742 BUCK); 100000000000 raw ceiling (100 BUCK); recovery threshold 150%; 1 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+            "note": "Bucket 0x422aaf58e7398a15a60fb298b6a2367b981674c8ab368a54bf1f861ba99cf59b; Tank 0x4b8f8f6b8d5b36701d9c47e3c088c56d9df0af6d617c131a723994a919a41860; 52128022742 raw BUCK debt; 0 raw mint ceiling; minimum collateral ratio 110%; recovery threshold 150%; 1 position(s), observed at finalized checkpoint 328957880 on 2026-10-01. Zero ceilings do not remove AdminCap or UpgradeCap authority."
           }
         ],
         "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
@@ -1559,7 +1559,7 @@
         "id": "bucket-23-haedal",
         "label": "HAEDAL Bucket",
         "tier": "single-source-or-laggy",
-        "summary": "HAEDAL remains a registered callable v1 Bucket with 50493491719 raw debt (50.493491719 BUCK) across 1 position(s); its threshold-1 SingleOracle uses Supra pair 540.",
+        "summary": "At finalized Sui checkpoint 328957880 (2026-10-01), HAEDAL Bucket retains 50493491719 raw BUCK debt across 1 position(s), with max_mint_amount 0. Its stored SingleOracle has threshold 1, 30000ms collector tolerance and latest_update_ms 1764603387335 (2025-12-01T15:36:27.335Z); the stored value is outside the reviewed ten-second price-read limit. Prior update-route and liquidation-code assessment remains dated 2026-07-14.",
         "collateralAssets": [
           "0x3a304c7feba2d819ea57c3542d68439ca2c386ba02159c740f7b406e592c62ea::haedal::HAEDAL"
         ],
@@ -1590,7 +1590,7 @@
           {
             "asset": "0x3a304c7feba2d819ea57c3542d68439ca2c386ba02159c740f7b406e592c62ea::haedal::HAEDAL",
             "minimumCollateralRatioPct": 150,
-            "note": "Bucket 0x4916b9e3378db0d3f4758709b508bd23e2670fcaa3a8ff076af8923dfb70ce67; Tank 0x88af925da59793c0c9ae188c2e248ae18b575feada45b198429f45b247a51a1b; 50493491719 raw debt (50.493491719 BUCK); 100000000000 raw ceiling (100 BUCK); recovery threshold 150%; 1 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+            "note": "Bucket 0x4916b9e3378db0d3f4758709b508bd23e2670fcaa3a8ff076af8923dfb70ce67; Tank 0x88af925da59793c0c9ae188c2e248ae18b575feada45b198429f45b247a51a1b; 50493491719 raw BUCK debt; 0 raw mint ceiling; minimum collateral ratio 150%; recovery threshold 150%; 1 position(s), observed at finalized checkpoint 328957880 on 2026-10-01. Zero ceilings do not remove AdminCap or UpgradeCap authority."
           }
         ],
         "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
@@ -1623,7 +1623,7 @@
         "id": "bucket-24-musd",
         "label": "MUSD Bucket",
         "tier": "opaque-or-unknown",
-        "summary": "MUSD remains a registered callable v1 Bucket with 50480380224 raw debt (50.480380224 BUCK) across 1 position(s); its SingleOracle accepts a deployed whitelisted rule whose upstream implementation is absent from the pinned source.",
+        "summary": "At finalized Sui checkpoint 328957880 (2026-10-01), MUSD Bucket retains 50480380224 raw BUCK debt across 1 position(s), with max_mint_amount 0. Its stored SingleOracle has threshold 1, 30000ms collector tolerance and latest_update_ms 1757924481609 (2025-09-15T08:21:21.609Z); the stored value is outside the reviewed ten-second price-read limit. Prior update-route and liquidation-code assessment remains dated 2026-07-14.",
         "collateralAssets": [
           "0xe44df51c0b21a27ab915fa1fe2ca610cd3eaa6d9666fe5e62b988bf7f0bd8722::musd::MUSD"
         ],
@@ -1657,7 +1657,7 @@
           {
             "asset": "0xe44df51c0b21a27ab915fa1fe2ca610cd3eaa6d9666fe5e62b988bf7f0bd8722::musd::MUSD",
             "minimumCollateralRatioPct": 105,
-            "note": "Bucket 0x90c5ee9f76be5f5a5fca9a197d9756f1b4418ffa69affa276e58671a376b70b3; Tank 0xcd437a2a1deca9a4c658ac96bfd2c631924a0f28cad1d490c2e27ee60a53645a; 50480380224 raw debt (50.480380224 BUCK); 100000000000 raw ceiling (100 BUCK); recovery threshold 110%; 1 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+            "note": "Bucket 0x90c5ee9f76be5f5a5fca9a197d9756f1b4418ffa69affa276e58671a376b70b3; Tank 0xcd437a2a1deca9a4c658ac96bfd2c631924a0f28cad1d490c2e27ee60a53645a; 50480380224 raw BUCK debt; 0 raw mint ceiling; minimum collateral ratio 105%; recovery threshold 110%; 1 position(s), observed at finalized checkpoint 328957880 on 2026-10-01. Zero ceilings do not remove AdminCap or UpgradeCap authority."
           }
         ],
         "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
@@ -1693,7 +1693,7 @@
         "id": "bucket-25-stsui",
         "label": "STSUI Bucket",
         "tier": "opaque-or-unknown",
-        "summary": "STSUI remains a registered callable v1 Bucket with 36308843496 raw debt (36.308843496 BUCK) across 1 position(s); its SingleOracle accepts a deployed whitelisted rule whose upstream implementation is absent from the pinned source.",
+        "summary": "At finalized Sui checkpoint 328957880 (2026-10-01), STSUI Bucket retains 36308843496 raw BUCK debt across 1 position(s), with max_mint_amount 0. Its stored SingleOracle has threshold 1, 30000ms collector tolerance and latest_update_ms 1769869513666 (2026-01-31T14:25:13.666Z); the stored value is outside the reviewed ten-second price-read limit. Prior update-route and liquidation-code assessment remains dated 2026-07-14.",
         "collateralAssets": [
           "0xd1b72982e40348d069bb1ff701e634c117bb5f741f44dff91e472d3b01461e55::stsui::STSUI"
         ],
@@ -1726,7 +1726,7 @@
           {
             "asset": "0xd1b72982e40348d069bb1ff701e634c117bb5f741f44dff91e472d3b01461e55::stsui::STSUI",
             "minimumCollateralRatioPct": 110,
-            "note": "Bucket 0x7aa059e7b38634f001eaac0fd2583d1d265caebaeca6bdbb6bb8659fc8e37859; Tank 0x90558901a83b7e62ff6e9275116ebe26c59eee00f8b192ac8cbd4cff39acf194; 36308843496 raw debt (36.308843496 BUCK); 100000000000 raw ceiling (100 BUCK); recovery threshold 150%; 1 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+            "note": "Bucket 0x7aa059e7b38634f001eaac0fd2583d1d265caebaeca6bdbb6bb8659fc8e37859; Tank 0x90558901a83b7e62ff6e9275116ebe26c59eee00f8b192ac8cbd4cff39acf194; 36308843496 raw BUCK debt; 0 raw mint ceiling; minimum collateral ratio 110%; recovery threshold 150%; 1 position(s), observed at finalized checkpoint 328957880 on 2026-10-01. Zero ceilings do not remove AdminCap or UpgradeCap authority."
           }
         ],
         "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
@@ -1761,7 +1761,7 @@
         "id": "bucket-26-coin-5d4b3025",
         "label": "COIN 5d4b3025 Bucket",
         "tier": "single-source-or-laggy",
-        "summary": "COIN 5d4b3025 remains a registered callable v1 Bucket with 11591830138 raw debt (11.591830138 BUCK) across 0 position(s); its threshold-1 SingleOracle uses Supra pair 89.",
+        "summary": "At finalized Sui checkpoint 328957880 (2026-10-01), COIN 5d4b3025 Bucket retains 11591830138 raw BUCK debt across 0 position(s), with max_mint_amount 0. Its stored SingleOracle has threshold 1, 30000ms collector tolerance and latest_update_ms 1765097099860 (2025-12-07T08:44:59.860Z); the stored value is outside the reviewed ten-second price-read limit. Prior update-route and liquidation-code assessment remains dated 2026-07-14.",
         "collateralAssets": [
           "0x5d4b302506645c37ff133b98c4b50a5ae14841659738d6d733d59d0d217a93bf::coin::COIN"
         ],
@@ -1792,7 +1792,7 @@
           {
             "asset": "0x5d4b302506645c37ff133b98c4b50a5ae14841659738d6d733d59d0d217a93bf::coin::COIN",
             "minimumCollateralRatioPct": 105,
-            "note": "Bucket 0x563d1d07eee89a33263f76b8b4c19d7aee06eb8d35161e2892885bf7f295a8a8; Tank 0x9115c70471c2d755eb91e3c15c9c9aaca721f8542b6d4bf0f1fa234d10c24097; 11591830138 raw debt (11.591830138 BUCK); 4000000000000000 raw ceiling (4000000 BUCK); recovery threshold 110%; 0 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+            "note": "Bucket 0x563d1d07eee89a33263f76b8b4c19d7aee06eb8d35161e2892885bf7f295a8a8; Tank 0x9115c70471c2d755eb91e3c15c9c9aaca721f8542b6d4bf0f1fa234d10c24097; 11591830138 raw BUCK debt; 0 raw mint ceiling; minimum collateral ratio 105%; recovery threshold 110%; 0 position(s), observed at finalized checkpoint 328957880 on 2026-10-01. Zero ceilings do not remove AdminCap or UpgradeCap authority."
           }
         ],
         "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
@@ -1825,7 +1825,7 @@
         "id": "bucket-27-cetus",
         "label": "CETUS Bucket",
         "tier": "single-source-or-laggy",
-        "summary": "CETUS remains a registered callable v1 Bucket with 9818140909 raw debt (9.818140909 BUCK) across 1 position(s); its threshold-1 SingleOracle uses Supra pair 93.",
+        "summary": "At finalized Sui checkpoint 328957880 (2026-10-01), CETUS Bucket retains 9818140909 raw BUCK debt across 1 position(s), with max_mint_amount 0. Its stored SingleOracle has threshold 1, 30000ms collector tolerance and latest_update_ms 1760140240699 (2025-10-10T23:50:40.699Z); the stored value is outside the reviewed ten-second price-read limit. Prior update-route and liquidation-code assessment remains dated 2026-07-14.",
         "collateralAssets": [
           "0x06864a6f921804860930db6ddbe2e16acdf8504495ea7481637a1c8b9a8fe54b::cetus::CETUS"
         ],
@@ -1856,7 +1856,7 @@
           {
             "asset": "0x06864a6f921804860930db6ddbe2e16acdf8504495ea7481637a1c8b9a8fe54b::cetus::CETUS",
             "minimumCollateralRatioPct": 150,
-            "note": "Bucket 0x10e30ddaa454b9041378c84f6330075ee356b80e459e375898d348c1649fa1af; Tank 0xcca986a2c141959168c53898078e9f30c8cfd51457926f1645f2569e0d6a71f6; 9818140909 raw debt (9.818140909 BUCK); 100000000000 raw ceiling (100 BUCK); recovery threshold 150%; 1 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+            "note": "Bucket 0x10e30ddaa454b9041378c84f6330075ee356b80e459e375898d348c1649fa1af; Tank 0xcca986a2c141959168c53898078e9f30c8cfd51457926f1645f2569e0d6a71f6; 9818140909 raw BUCK debt; 0 raw mint ceiling; minimum collateral ratio 150%; recovery threshold 150%; 1 position(s), observed at finalized checkpoint 328957880 on 2026-10-01. Zero ceilings do not remove AdminCap or UpgradeCap authority."
           }
         ],
         "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
@@ -1889,7 +1889,7 @@
         "id": "bucket-28-deep",
         "label": "DEEP Bucket",
         "tier": "single-source-or-laggy",
-        "summary": "DEEP remains a registered callable v1 Bucket with 10 raw debt (1e-8 BUCK) across 0 position(s); its threshold-1 SingleOracle uses Supra pair 491.",
+        "summary": "At finalized Sui checkpoint 328957880 (2026-10-01), DEEP Bucket retains 10 raw BUCK debt across 0 position(s), with max_mint_amount 0. Its stored SingleOracle has threshold 1, 30000ms collector tolerance and latest_update_ms 1762286974088 (2025-11-04T20:09:34.088Z); the stored value is outside the reviewed ten-second price-read limit. Prior update-route and liquidation-code assessment remains dated 2026-07-14.",
         "collateralAssets": [
           "0xdeeb7a4662eec9f2f3def03fb937a663dddaa2e215b8078a284d026b7946c270::deep::DEEP"
         ],
@@ -1920,7 +1920,7 @@
           {
             "asset": "0xdeeb7a4662eec9f2f3def03fb937a663dddaa2e215b8078a284d026b7946c270::deep::DEEP",
             "minimumCollateralRatioPct": 150,
-            "note": "Bucket 0xc56f025e654a8426ba69a8e17002a5ccb5d9f940ec196f239b88f0ae8d499044; Tank 0x165e84a8086a925cad61ea796403bf3d77abbd061b661432ee4cf0f85edf1ca3; 10 raw debt (1e-8 BUCK); 100000000000 raw ceiling (100 BUCK); recovery threshold 150%; 0 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+            "note": "Bucket 0xc56f025e654a8426ba69a8e17002a5ccb5d9f940ec196f239b88f0ae8d499044; Tank 0x165e84a8086a925cad61ea796403bf3d77abbd061b661432ee4cf0f85edf1ca3; 10 raw BUCK debt; 0 raw mint ceiling; minimum collateral ratio 150%; recovery threshold 150%; 0 position(s), observed at finalized checkpoint 328957880 on 2026-10-01. Zero ceilings do not remove AdminCap or UpgradeCap authority."
           }
         ],
         "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
@@ -1953,7 +1953,7 @@
         "id": "bucket-29-btc",
         "label": "BTC Bucket",
         "tier": "single-source-or-laggy",
-        "summary": "BTC remains a registered callable v1 Bucket with 9 raw debt (9e-9 BUCK) across 0 position(s); its threshold-1 SingleOracle uses Supra pair 18.",
+        "summary": "At finalized Sui checkpoint 328957880 (2026-10-01), BTC Bucket retains 9 raw BUCK debt across 0 position(s), with max_mint_amount 0. Its stored SingleOracle has threshold 1, 30000ms collector tolerance and latest_update_ms 1759756007542 (2025-10-06T13:06:47.542Z); the stored value is outside the reviewed ten-second price-read limit. Prior update-route and liquidation-code assessment remains dated 2026-07-14.",
         "collateralAssets": [
           "0xaafb102dd0902f5055cadecd687fb5b71ca82ef0e0285d90afde828ec58ca96b::btc::BTC"
         ],
@@ -1984,7 +1984,7 @@
           {
             "asset": "0xaafb102dd0902f5055cadecd687fb5b71ca82ef0e0285d90afde828ec58ca96b::btc::BTC",
             "minimumCollateralRatioPct": 110,
-            "note": "Bucket 0x0160ca59fb59bf53dee686b5bb4b954816f0d9f96f079e55d5e0c71f6ab2fd57; Tank 0xf61d81dd62875f3822c60918c1420e70be2f4eb5834983d157c242dbf3928228; 9 raw debt (9e-9 BUCK); 100000000000 raw ceiling (100 BUCK); recovery threshold 130%; 0 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+            "note": "Bucket 0x0160ca59fb59bf53dee686b5bb4b954816f0d9f96f079e55d5e0c71f6ab2fd57; Tank 0xf61d81dd62875f3822c60918c1420e70be2f4eb5834983d157c242dbf3928228; 9 raw BUCK debt; 0 raw mint ceiling; minimum collateral ratio 110%; recovery threshold 130%; 0 position(s), observed at finalized checkpoint 328957880 on 2026-10-01. Zero ceilings do not remove AdminCap or UpgradeCap authority."
           }
         ],
         "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
@@ -2017,7 +2017,7 @@
         "id": "bucket-30-alphafi-stsui-sui-lp",
         "label": "ALPHAFI_STSUI_SUI_LP Bucket",
         "tier": "opaque-or-unknown",
-        "summary": "ALPHAFI_STSUI_SUI_LP remains a registered callable v1 Bucket with 6 raw debt (6e-9 BUCK) across 0 position(s); its SingleOracle accepts a deployed whitelisted rule whose upstream implementation is absent from the pinned source.",
+        "summary": "At finalized Sui checkpoint 328957880 (2026-10-01), ALPHAFI_STSUI_SUI_LP Bucket retains 6 raw BUCK debt across 0 position(s), with max_mint_amount 0. Its stored SingleOracle has threshold 1, 30000ms collector tolerance and latest_update_ms 1763712909091 (2025-11-21T08:15:09.091Z); the stored value is outside the reviewed ten-second price-read limit. Prior update-route and liquidation-code assessment remains dated 2026-07-14.",
         "collateralAssets": [
           "0x96eb2012a75798ce4410392baeab9dd888bc704799b7daa468c36856c83174f3::ALPHAFI_STSUI_SUI_LP::ALPHAFI_STSUI_SUI_LP"
         ],
@@ -2050,7 +2050,7 @@
           {
             "asset": "0x96eb2012a75798ce4410392baeab9dd888bc704799b7daa468c36856c83174f3::ALPHAFI_STSUI_SUI_LP::ALPHAFI_STSUI_SUI_LP",
             "minimumCollateralRatioPct": 150,
-            "note": "Bucket 0xacb3a3cd71d354828a098d426014e495651e5957a5f32e7311cab7145144af27; Tank 0xb313e8e2e7f1bb1d4de63dfd9b542cb07570768c4f9bb03c21f64d3a2a4be14e; 6 raw debt (6e-9 BUCK); 100000000000 raw ceiling (100 BUCK); recovery threshold 150%; 0 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+            "note": "Bucket 0xacb3a3cd71d354828a098d426014e495651e5957a5f32e7311cab7145144af27; Tank 0xb313e8e2e7f1bb1d4de63dfd9b542cb07570768c4f9bb03c21f64d3a2a4be14e; 6 raw BUCK debt; 0 raw mint ceiling; minimum collateral ratio 150%; recovery threshold 150%; 0 position(s), observed at finalized checkpoint 328957880 on 2026-10-01. Zero ceilings do not remove AdminCap or UpgradeCap authority."
           }
         ],
         "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
@@ -2085,7 +2085,7 @@
         "id": "bucket-31-coin-c0600061",
         "label": "COIN c0600061 Bucket",
         "tier": "single-source-or-laggy",
-        "summary": "COIN c0600061 remains a registered callable v1 Bucket with 3 raw debt (3e-9 BUCK) across 0 position(s); its threshold-1 SingleOracle uses Supra pair 48.",
+        "summary": "At finalized Sui checkpoint 328957880 (2026-10-01), COIN c0600061 Bucket retains 3 raw BUCK debt across 0 position(s), with max_mint_amount 0. Its stored SingleOracle has threshold 1, 30000ms collector tolerance and latest_update_ms 1756622740116 (2025-08-31T06:45:40.116Z); the stored value is outside the reviewed ten-second price-read limit. Prior update-route and liquidation-code assessment remains dated 2026-07-14.",
         "collateralAssets": [
           "0xc060006111016b8a020ad5b33834984a437aaa7d3c74c18e09a95d48aceab08c::coin::COIN"
         ],
@@ -2116,7 +2116,7 @@
           {
             "asset": "0xc060006111016b8a020ad5b33834984a437aaa7d3c74c18e09a95d48aceab08c::coin::COIN",
             "minimumCollateralRatioPct": 105,
-            "note": "Bucket 0xba71f630e9b51e25e17bda03a13dd675cb58d8193a6a6424087165b78c9841e6; Tank 0x93c38674a753b42ad4e860457fe9590abb40fe05075b0c4362c474cf95be0109; 3 raw debt (3e-9 BUCK); 4000000000000000 raw ceiling (4000000 BUCK); recovery threshold 110%; 0 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+            "note": "Bucket 0xba71f630e9b51e25e17bda03a13dd675cb58d8193a6a6424087165b78c9841e6; Tank 0x93c38674a753b42ad4e860457fe9590abb40fe05075b0c4362c474cf95be0109; 3 raw BUCK debt; 0 raw mint ceiling; minimum collateral ratio 105%; recovery threshold 110%; 0 position(s), observed at finalized checkpoint 328957880 on 2026-10-01. Zero ceilings do not remove AdminCap or UpgradeCap authority."
           }
         ],
         "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
@@ -2149,7 +2149,7 @@
         "id": "bucket-32-stakedhouse-up-usd",
         "label": "StakedHouse UP_USD Bucket",
         "tier": "opaque-or-unknown",
-        "summary": "StakedHouse UP_USD remains a registered, debt-bearing v1 Bucket with 2 raw debt (2e-9 BUCK), but its SingleOracle has no configured external provider or whitelisted rule and its last observation is stale, so current price-dependent borrowing and liquidation hard-revert.",
+        "summary": "At finalized Sui checkpoint 328957880 (2026-10-01), StakedHouse UP_USD Bucket retains 2 raw BUCK debt across 0 position(s), with max_mint_amount 0. Its stored SingleOracle has threshold 1, 30000ms collector tolerance and latest_update_ms 1756714933125 (2025-09-01T08:22:13.125Z); the stored value is outside the reviewed ten-second price-read limit. Prior update-route and liquidation-code assessment remains dated 2026-07-14.",
         "collateralAssets": [
           "0x2f2226a22ebeb7a0e63ea39551829b238589d981d1c6dd454f01fcc513035593::house::StakedHouseCoin<0x5de877a152233bdd59c7269e2b710376ca271671e9dd11076b1ff261b2fd113c::up_usd::UP_USD>"
         ],
@@ -2180,7 +2180,7 @@
           {
             "asset": "0x2f2226a22ebeb7a0e63ea39551829b238589d981d1c6dd454f01fcc513035593::house::StakedHouseCoin<0x5de877a152233bdd59c7269e2b710376ca271671e9dd11076b1ff261b2fd113c::up_usd::UP_USD>",
             "minimumCollateralRatioPct": 110,
-            "note": "Bucket 0x1a34ced67102fb332bda3394fe274736a0528ee000598a3447a117173a870256; Tank 0x82ef9e1378c0bdc6d3129bf809622b128f684a5d420f89a474193c89dcfc0408; 2 raw debt (2e-9 BUCK); 100000000000 raw ceiling (100 BUCK); recovery threshold 110%; 0 observed position(s). The branch remains registered with a positive ceiling, but the stale unconfigured oracle currently prevents price-dependent borrowing and liquidation."
+            "note": "Bucket 0x1a34ced67102fb332bda3394fe274736a0528ee000598a3447a117173a870256; Tank 0x82ef9e1378c0bdc6d3129bf809622b128f684a5d420f89a474193c89dcfc0408; 2 raw BUCK debt; 0 raw mint ceiling; minimum collateral ratio 110%; recovery threshold 110%; 0 position(s), observed at finalized checkpoint 328957880 on 2026-10-01. Zero ceilings do not remove AdminCap or UpgradeCap authority."
           }
         ],
         "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
@@ -2213,7 +2213,7 @@
         "id": "bucket-33-hawal",
         "label": "HAWAL Bucket",
         "tier": "opaque-or-unknown",
-        "summary": "HAWAL remains a registered callable v1 Bucket with 2 raw debt (2e-9 BUCK) across 0 position(s); its SingleOracle accepts a deployed whitelisted rule whose upstream implementation is absent from the pinned source.",
+        "summary": "At finalized Sui checkpoint 328957880 (2026-10-01), HAWAL Bucket retains 2 raw BUCK debt across 0 position(s), with max_mint_amount 0. Its stored SingleOracle has threshold 1, 30000ms collector tolerance and latest_update_ms 1763722530481 (2025-11-21T10:55:30.481Z); the stored value is outside the reviewed ten-second price-read limit. Prior update-route and liquidation-code assessment remains dated 2026-07-14.",
         "collateralAssets": [
           "0x8b4d553839b219c3fd47608a0cc3d5fcc572cb25d41b7df3833208586a8d2470::hawal::HAWAL"
         ],
@@ -2246,7 +2246,7 @@
           {
             "asset": "0x8b4d553839b219c3fd47608a0cc3d5fcc572cb25d41b7df3833208586a8d2470::hawal::HAWAL",
             "minimumCollateralRatioPct": 150,
-            "note": "Bucket 0xc76382ebb99c9a6eb6a7d0e11a2751a57923dc71dfb3a792e422b653c9296f9d; Tank 0xb589351baf0b96835c75e33abeaf13fb9f30f6084ac7a71b82db184e391379e2; 2 raw debt (2e-9 BUCK); 100000000000 raw ceiling (100 BUCK); recovery threshold 150%; 0 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+            "note": "Bucket 0xc76382ebb99c9a6eb6a7d0e11a2751a57923dc71dfb3a792e422b653c9296f9d; Tank 0xb589351baf0b96835c75e33abeaf13fb9f30f6084ac7a71b82db184e391379e2; 2 raw BUCK debt; 0 raw mint ceiling; minimum collateral ratio 150%; recovery threshold 150%; 0 position(s), observed at finalized checkpoint 328957880 on 2026-10-01. Zero ceilings do not remove AdminCap or UpgradeCap authority."
           }
         ],
         "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
@@ -2281,7 +2281,7 @@
         "id": "bucket-34-xbtc",
         "label": "XBTC Bucket",
         "tier": "single-source-or-laggy",
-        "summary": "XBTC remains a registered callable v1 Bucket with 2 raw debt (2e-9 BUCK) across 0 position(s); its threshold-1 SingleOracle uses Supra pair 18.",
+        "summary": "At finalized Sui checkpoint 328957880 (2026-10-01), XBTC Bucket retains 2 raw BUCK debt across 0 position(s), with max_mint_amount 0. Its stored SingleOracle has threshold 1, 30000ms collector tolerance and latest_update_ms 1763315047696 (2025-11-16T17:44:07.696Z); the stored value is outside the reviewed ten-second price-read limit. Prior update-route and liquidation-code assessment remains dated 2026-07-14.",
         "collateralAssets": [
           "0x876a4b7bce8aeaef60464c11f4026903e9afacab79b9b142686158aa86560b50::xbtc::XBTC"
         ],
@@ -2312,7 +2312,7 @@
           {
             "asset": "0x876a4b7bce8aeaef60464c11f4026903e9afacab79b9b142686158aa86560b50::xbtc::XBTC",
             "minimumCollateralRatioPct": 110,
-            "note": "Bucket 0xabf78f6aa14854fb2775900717bb23506f581af80bc7de1ffb66826c3bdc1f13; Tank 0xa4b85842a3b24e679d088599f87d0bd2db88ce7562c8181d4b465763ae02254a; 2 raw debt (2e-9 BUCK); 100000000000 raw ceiling (100 BUCK); recovery threshold 130%; 0 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+            "note": "Bucket 0xabf78f6aa14854fb2775900717bb23506f581af80bc7de1ffb66826c3bdc1f13; Tank 0xa4b85842a3b24e679d088599f87d0bd2db88ce7562c8181d4b465763ae02254a; 2 raw BUCK debt; 0 raw mint ceiling; minimum collateral ratio 110%; recovery threshold 130%; 0 position(s), observed at finalized checkpoint 328957880 on 2026-10-01. Zero ceilings do not remove AdminCap or UpgradeCap authority."
           }
         ],
         "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
@@ -2345,7 +2345,7 @@
         "id": "bucket-35-wwal",
         "label": "WWAL Bucket",
         "tier": "opaque-or-unknown",
-        "summary": "WWAL remains a registered callable v1 Bucket with 2 raw debt (2e-9 BUCK) across 0 position(s); its SingleOracle accepts a deployed whitelisted rule whose upstream implementation is absent from the pinned source.",
+        "summary": "At finalized Sui checkpoint 328957880 (2026-10-01), WWAL Bucket retains 2 raw BUCK debt across 0 position(s), with max_mint_amount 0. Its stored SingleOracle has threshold 1, 30000ms collector tolerance and latest_update_ms 1761822904936 (2025-10-30T11:15:04.936Z); the stored value is outside the reviewed ten-second price-read limit. Prior update-route and liquidation-code assessment remains dated 2026-07-14.",
         "collateralAssets": [
           "0xb1b0650a8862e30e3f604fd6c5838bc25464b8d3d827fbd58af7cb9685b832bf::wwal::WWAL"
         ],
@@ -2378,7 +2378,7 @@
           {
             "asset": "0xb1b0650a8862e30e3f604fd6c5838bc25464b8d3d827fbd58af7cb9685b832bf::wwal::WWAL",
             "minimumCollateralRatioPct": 150,
-            "note": "Bucket 0x58537f99e78af65296aeef85ed099ccf337602aa961b0111b87c20647966aaf2; Tank 0xdbfce464a83764940aa491671f06c19e0f44f974bc1151626c23a952539c1f19; 2 raw debt (2e-9 BUCK); 100000000000 raw ceiling (100 BUCK); recovery threshold 150%; 0 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+            "note": "Bucket 0x58537f99e78af65296aeef85ed099ccf337602aa961b0111b87c20647966aaf2; Tank 0xdbfce464a83764940aa491671f06c19e0f44f974bc1151626c23a952539c1f19; 2 raw BUCK debt; 0 raw mint ceiling; minimum collateral ratio 150%; recovery threshold 150%; 0 position(s), observed at finalized checkpoint 328957880 on 2026-10-01. Zero ceilings do not remove AdminCap or UpgradeCap authority."
           }
         ],
         "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
@@ -2413,7 +2413,7 @@
         "id": "bucket-36-af-lp",
         "label": "AF_LP Bucket",
         "tier": "single-source-or-laggy",
-        "summary": "AF_LP remains a registered callable v1 Bucket with zero observed debt across 0 position(s); its threshold-4 SingleOracle uses whitelisted rule 0x928ff0be132d9bad7926008780d2a5adfefa1a24559a567dafbfd267d1b1b294::af_lp_rule::Rule.",
+        "summary": "At finalized Sui checkpoint 328957880 (2026-10-01), AF_LP Bucket retains 9929700000000 raw BUCK debt across 1 position(s), with max_mint_amount 0. Its stored SingleOracle has threshold 4, 30000ms collector tolerance and latest_update_ms 1788008297182 (2026-08-29T12:58:17.182Z); the stored value is outside the reviewed ten-second price-read limit. Prior update-route and liquidation-code assessment remains dated 2026-07-14.",
         "collateralAssets": [
           "0x42d0b3476bc10d18732141a471d7ad3aa588a6fb4ba8e1a6608a4a7b78e171bf::af_lp::AF_LP"
         ],
@@ -2447,7 +2447,7 @@
           {
             "asset": "0x42d0b3476bc10d18732141a471d7ad3aa588a6fb4ba8e1a6608a4a7b78e171bf::af_lp::AF_LP",
             "minimumCollateralRatioPct": 120,
-            "note": "Bucket 0x1e88892e746708ec69784a56c6aba301a97e87e5b77aaef0eec16c3e472e8653; Tank 0x14c3673ce65f0dbd9df7e4b265ccf4d9ac1124ece755ebf3dd4d5abab8826729; zero observed debt; 10000000000000 raw ceiling (10000 BUCK); recovery threshold 140%; 0 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+            "note": "Bucket 0x1e88892e746708ec69784a56c6aba301a97e87e5b77aaef0eec16c3e472e8653; Tank 0x14c3673ce65f0dbd9df7e4b265ccf4d9ac1124ece755ebf3dd4d5abab8826729; 9929700000000 raw BUCK debt; 0 raw mint ceiling; minimum collateral ratio 120%; recovery threshold 140%; 1 position(s), observed at finalized checkpoint 328957880 on 2026-10-01. Zero ceilings do not remove AdminCap or UpgradeCap authority."
           }
         ],
         "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
@@ -2483,7 +2483,7 @@
         "id": "bucket-37-msui",
         "label": "MSUI Bucket",
         "tier": "opaque-or-unknown",
-        "summary": "MSUI remains a registered callable v1 Bucket with zero observed debt across 0 position(s); its SingleOracle accepts a deployed whitelisted rule whose upstream implementation is absent from the pinned source.",
+        "summary": "At finalized Sui checkpoint 328957880 (2026-10-01), MSUI Bucket retains 0 raw BUCK debt across 0 position(s), with max_mint_amount 0. Its stored SingleOracle has threshold 1, 30000ms collector tolerance and latest_update_ms 1763714835760 (2025-11-21T08:47:15.760Z); the stored value is outside the reviewed ten-second price-read limit. Prior update-route and liquidation-code assessment remains dated 2026-07-14.",
         "collateralAssets": [
           "0x922d15d7f55c13fd790f6e54397470ec592caa2b508df292a2e8553f3d3b274f::msui::MSUI"
         ],
@@ -2516,7 +2516,7 @@
           {
             "asset": "0x922d15d7f55c13fd790f6e54397470ec592caa2b508df292a2e8553f3d3b274f::msui::MSUI",
             "minimumCollateralRatioPct": 110,
-            "note": "Bucket 0x203de71248d9987effceb2844fdc2455d6d543ccbd9e2f04a96e4190e5e487f6; Tank 0xc43263ac2a738a6db782a279b4e917a8a0b2ace82e2324793ad0a48b5eacd170; zero observed debt; 100000000000 raw ceiling (100 BUCK); recovery threshold 150%; 0 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+            "note": "Bucket 0x203de71248d9987effceb2844fdc2455d6d543ccbd9e2f04a96e4190e5e487f6; Tank 0xc43263ac2a738a6db782a279b4e917a8a0b2ace82e2324793ad0a48b5eacd170; 0 raw BUCK debt; 0 raw mint ceiling; minimum collateral ratio 110%; recovery threshold 150%; 0 position(s), observed at finalized checkpoint 328957880 on 2026-10-01. Zero ceilings do not remove AdminCap or UpgradeCap authority."
           }
         ],
         "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
@@ -2551,7 +2551,7 @@
         "id": "bucket-38-eth",
         "label": "ETH Bucket",
         "tier": "single-source-or-laggy",
-        "summary": "ETH remains a registered callable v1 Bucket with zero observed debt across 0 position(s); its threshold-1 SingleOracle uses Supra pair 19.",
+        "summary": "At finalized Sui checkpoint 328957880 (2026-10-01), ETH Bucket retains 0 raw BUCK debt across 0 position(s), with max_mint_amount 0. Its stored SingleOracle has threshold 1, 30000ms collector tolerance and latest_update_ms 1758587216055 (2025-09-23T00:26:56.055Z); the stored value is outside the reviewed ten-second price-read limit. Prior update-route and liquidation-code assessment remains dated 2026-07-14.",
         "collateralAssets": [
           "0xd0e89b2af5e4910726fbcd8b8dd37bb79b29e5f83f7491bca830e94f7f226d29::eth::ETH"
         ],
@@ -2582,7 +2582,7 @@
           {
             "asset": "0xd0e89b2af5e4910726fbcd8b8dd37bb79b29e5f83f7491bca830e94f7f226d29::eth::ETH",
             "minimumCollateralRatioPct": 110,
-            "note": "Bucket 0x99a390a8dd96f0d9abce40e78cff03189331b1957e4db27ab4bc5d11bc0769c7; Tank 0x85ba60c87e25fb931bd2d278efdb74f98e15dda0e7847c1164e8723ae0074b37; zero observed debt; 100000000000 raw ceiling (100 BUCK); recovery threshold 150%; 0 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+            "note": "Bucket 0x99a390a8dd96f0d9abce40e78cff03189331b1957e4db27ab4bc5d11bc0769c7; Tank 0x85ba60c87e25fb931bd2d278efdb74f98e15dda0e7847c1164e8723ae0074b37; 0 raw BUCK debt; 0 raw mint ceiling; minimum collateral ratio 110%; recovery threshold 150%; 0 position(s), observed at finalized checkpoint 328957880 on 2026-10-01. Zero ceilings do not remove AdminCap or UpgradeCap authority."
           }
         ],
         "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
@@ -2615,7 +2615,7 @@
         "id": "bucket-39-scallop-sb-eth",
         "label": "SCALLOP_SB_ETH Bucket",
         "tier": "single-source-or-laggy",
-        "summary": "SCALLOP_SB_ETH remains a registered callable v1 Bucket with zero observed debt across 0 position(s); its threshold-1 SingleOracle uses whitelisted rule 0xe8e2e65d77e92fee59b9027ad0e29da5d932c6a5fb46c9d4eecbcc747e33d38a::scoin_rule::Rule.",
+        "summary": "At finalized Sui checkpoint 328957880 (2026-10-01), SCALLOP_SB_ETH Bucket retains 0 raw BUCK debt across 0 position(s), with max_mint_amount 0. Its stored SingleOracle has threshold 1, 30000ms collector tolerance and latest_update_ms 1762999765244 (2025-11-13T02:09:25.244Z); the stored value is outside the reviewed ten-second price-read limit. Prior update-route and liquidation-code assessment remains dated 2026-07-14.",
         "collateralAssets": [
           "0xb14f82d8506d139eacef109688d1b71e7236bcce9b2c0ad526abcd6aa5be7de0::scallop_sb_eth::SCALLOP_SB_ETH"
         ],
@@ -2649,7 +2649,7 @@
           {
             "asset": "0xb14f82d8506d139eacef109688d1b71e7236bcce9b2c0ad526abcd6aa5be7de0::scallop_sb_eth::SCALLOP_SB_ETH",
             "minimumCollateralRatioPct": 150,
-            "note": "Bucket 0xc2fcacbc7eb7c9706541db58f5dbffc55aac7c70e045318b267ee89a676ee100; Tank 0x055f07a3f3a52032463702747d146b94fa0d5bf2d72016ab6001d0fe70b034dc; zero observed debt; 100000000000 raw ceiling (100 BUCK); recovery threshold 150%; 0 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+            "note": "Bucket 0xc2fcacbc7eb7c9706541db58f5dbffc55aac7c70e045318b267ee89a676ee100; Tank 0x055f07a3f3a52032463702747d146b94fa0d5bf2d72016ab6001d0fe70b034dc; 0 raw BUCK debt; 0 raw mint ceiling; minimum collateral ratio 150%; recovery threshold 150%; 0 position(s), observed at finalized checkpoint 328957880 on 2026-10-01. Zero ceilings do not remove AdminCap or UpgradeCap authority."
           }
         ],
         "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
@@ -2685,7 +2685,7 @@
         "id": "bucket-40-scallop-wal",
         "label": "SCALLOP_WAL Bucket",
         "tier": "single-source-or-laggy",
-        "summary": "SCALLOP_WAL remains a registered callable v1 Bucket with zero observed debt across 0 position(s); its threshold-1 SingleOracle uses whitelisted rule 0xe8e2e65d77e92fee59b9027ad0e29da5d932c6a5fb46c9d4eecbcc747e33d38a::scoin_rule::Rule.",
+        "summary": "At finalized Sui checkpoint 328957880 (2026-10-01), SCALLOP_WAL Bucket retains 0 raw BUCK debt across 0 position(s), with max_mint_amount 0. Its stored SingleOracle has threshold 1, 30000ms collector tolerance and latest_update_ms 1769990560217 (2026-02-02T00:02:40.217Z); the stored value is outside the reviewed ten-second price-read limit. Prior update-route and liquidation-code assessment remains dated 2026-07-14.",
         "collateralAssets": [
           "0x622345b3f80ea5947567760eec7b9639d0582adcfd6ab9fccb85437aeda7c0d0::scallop_wal::SCALLOP_WAL"
         ],
@@ -2719,7 +2719,7 @@
           {
             "asset": "0x622345b3f80ea5947567760eec7b9639d0582adcfd6ab9fccb85437aeda7c0d0::scallop_wal::SCALLOP_WAL",
             "minimumCollateralRatioPct": 130,
-            "note": "Bucket 0x98ad78b15479297e9f1cfbe18ce214a687ce06448aa1cf45b0e09e3164c3596c; Tank 0xc386dddc91ec6b7d7077f51f40e51558661f92ba55c1ca4ac1b27e0635ae894d; zero observed debt; 6000000000000 raw ceiling (6000 BUCK); recovery threshold 130%; 0 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+            "note": "Bucket 0x98ad78b15479297e9f1cfbe18ce214a687ce06448aa1cf45b0e09e3164c3596c; Tank 0xc386dddc91ec6b7d7077f51f40e51558661f92ba55c1ca4ac1b27e0635ae894d; 0 raw BUCK debt; 0 raw mint ceiling; minimum collateral ratio 130%; recovery threshold 130%; 0 position(s), observed at finalized checkpoint 328957880 on 2026-10-01. Zero ceilings do not remove AdminCap or UpgradeCap authority."
           }
         ],
         "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",

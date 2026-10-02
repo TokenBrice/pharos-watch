@@ -105,7 +105,7 @@ export function CompareRadarV9({
         style={{ height: size }}
         role="alert"
       >
-        V9 safety comparison unavailable.
+        V10 safety comparison unavailable.
       </div>
     );
   }
@@ -120,7 +120,7 @@ export function CompareRadarV9({
       className="w-full"
       style={{ height: size }}
       role="figure"
-      aria-label="V9 safety score pillar comparison"
+      aria-label="V10 safety score pillar comparison"
     >
       {ready ? (
         <RechartsRadarChart

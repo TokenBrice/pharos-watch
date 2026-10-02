@@ -1,22 +1,5 @@
 {
   "id": "trusd-tori",
-  "mica": {
-    "status": "out-of-scope",
-    "references": [
-      {
-        "label": "Tori trUSD terms: discretionary repurchase only, no stable-value or repurchase guarantee",
-        "url": "https://docs.tori.finance/legal/trusd-terms"
-      },
-      {
-        "label": "Tori trUSD product disclosure: synthetic dollar backed by trading positions",
-        "url": "https://docs.tori.finance/products/trusd"
-      },
-      {
-        "label": "ESMA MiCA Article 2 scope",
-        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
-      }
-    ]
-  },
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {

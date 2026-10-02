@@ -4,7 +4,7 @@
     {
       "sourceKey": "ethena-whitelabel:usde",
       "name": "USDe (Ethena synthetic dollar)",
-      "pct": 90.565,
+      "pct": 90.102,
       "risk": "high",
       "coinId": "usde-ethena",
       "depType": "collateral",
@@ -21,7 +21,7 @@
     {
       "sourceKey": "ethena-whitelabel:usdc",
       "name": "USDC cash-equivalent reserves",
-      "pct": 9.413,
+      "pct": 9.891,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -36,7 +36,7 @@
     {
       "sourceKey": "ethena-whitelabel:off-chain",
       "name": "Coinbase Prime custody (off-chain)",
-      "pct": 0.022,
+      "pct": 0.007,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -51,8 +51,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Slice7)",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC07)",
     "confidence": "verified",
     "sources": [
       {
@@ -68,11 +68,11 @@
         "url": "https://blog.sui.io/esui-dollar-suiusde-deepbook-margin/"
       }
     ],
-    "rationale": "Ethena Whitelabel's suiUSDe transparency API reported $13,119,710.160318 of backing on 2026-09-21. The API identified $11,881,911.860536 of USDe, $1,234,896.936595 of on-chain USDC, and $2,901.362187 of USDC held through Coinbase Prime. The live adapter preserves the off-chain Coinbase Prime balance as a separate custody row; the listed balances reconcile to within $0.001 of totalBacking.",
+    "rationale": "Ethena Whitelabel suiUSDe API timestamp 1790812827242 (2026-10-01T00:00:27.242Z) reports totalBacking USD 12,392,233.449979. Complete disclosed rows are USDe 11,165,640.265470; on-chain USDC 440, 1,902.052319, 965,446.324661 and 257,903.444342; and Coinbase Prime USDC 901.362187. On-chain USDC sums to 1,225,691.821322. Independently dividing each group by totalBacking and rounding to three decimals gives 90.102%, 9.891% and 0.007%. The disclosed rows are USD 0.001 below totalBacking; no residual asset is invented and all existing category and custody classifications are retained.",
     "compositionBasis": "Ethena Whitelabel issuer transparency API, with backing grouped by token and the Coinbase Prime off-chain custody balance retained separately.",
-    "compositionAsOf": "2026-09-21",
+    "compositionAsOf": "2026-10-01",
     "scope": "full-composition",
-    "knownUnknownExposure": "The issuer transparency API identifies the backing token, custodian, network, and amount for every row; its listed balances are $0.001 below totalBacking because of endpoint reconciliation.",
+    "knownUnknownExposure": "The API identifies backing token, custodian, network and amount for every disclosed row; listed balances are USD 0.001 below totalBacking. Legal segregation, insolvency treatment and rehypothecation remain undisclosed.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {

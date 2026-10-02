@@ -1,0 +1,36 @@
+{
+  "id": "aa-falconx-mev-capital",
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Pareto Ethereum FalconX Credit Vault (IdleCDO 0x433d5b175148da32ffe1e1a37a939e1b7e79be4d)",
+        "role": "other"
+      },
+      {
+        "name": "FalconX (credit-vault borrower)",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA30sUSDai)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Pareto credit vault flow of funds",
+        "url": "https://docs.pareto.credit/product/credit-vaults"
+      },
+      {
+        "label": "Pareto Ethereum FalconX facility, strategy, and LP token addresses",
+        "url": "https://docs.pareto.credit/developers/addresses/product/credit-vaults"
+      },
+      {
+        "label": "Ethereum pinned facility token() and AATranche(), block 26095798",
+        "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+      }
+    ],
+    "uncertainty": "The exact Ethereum tranche and facility are identified by Pareto's address table and pinned token()/AATranche()/minter() reads. Pareto states that deposited assets are sent directly to borrower wallets. The on-chain facility records a FalconX credit claim; it does not establish that all backing remains in an on-chain custody contract. FalconX is named as borrower, not classified as a custodian or prime broker for this product. The reviewed sources do not establish product-specific asset segregation, insolvency remoteness, reuse restrictions, custodian allocations, or the exact FalconX legal obligor. No provider shares are estimated."
+  }
+}

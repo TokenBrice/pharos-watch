@@ -43,7 +43,7 @@
     "reserveDisclosureUrl": "https://portal.charli3.io/dev/feeds/usdm-reserves?network=Mainnet",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "USDM has dual U.S./EEA issuer structure: Moneta Digital LLC (FinCEN MSB) for USA issuance, NBX (Finanstilsynet EMI) for EEA issuance. Norway enacted MiCA via kryptoeiendelsloven effective 1 Jul 2025; NBX whitepaper filed Sep 2024. ESMA EMTWP.csv re-checked Jun 2026: no NBX/USDM row present. GENIUS pathway remains unresolved; no PPSI approval exists for any issuer under the still-pending Act.",
+    "notes": "USDM has dual U.S./EEA issuer structure: Moneta Digital LLC (FinCEN MSB) for USA issuance, NBX (Finanstilsynet EMI) for EEA issuance. Norway enacted MiCA via kryptoeiendelsloven effective 1 Jul 2025; NBX whitepaper filed Sep 2024. ESMA EMTWP.csv re-checked Jun 2026: no NBX/USDM row present. GENIUS pathway remains unresolved. The GENIUS Act was enacted on July 18, 2025; OCC Bulletin 2026-3 describes implementing regulations as a proposed rule, not the Act itself as pending. The existing June 2026 authorization review is historical and does not establish current issuer approval.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",

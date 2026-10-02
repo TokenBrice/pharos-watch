@@ -83,7 +83,7 @@ export function buildControlPostureView(
     shortLabel: style.shortLabel,
     badgeClassName: style.badgeClassName,
     scope,
-    summary: `${coin.symbol} control posture: ${style.label}. This classification is descriptive; V9 Economic Control is scored through mint, oracle, and bridge evidence.`,
+    summary: `${coin.symbol} control posture: ${style.label}. This classification is descriptive; V10 Economic Control is scored through mint, oracle, and bridge evidence.`,
     facts: [
       { key: "posture", label: "Posture", value: style.label },
       { key: "taxonomy", label: "Taxonomy", value: taxonomy },
@@ -93,7 +93,7 @@ export function buildControlPostureView(
     details: [
       POSTURE_EXPLANATIONS[key],
       `The ${taxonomy} taxonomy is the broader protocol classification from flags.governance. Control posture is the finer description of where operational authority sits.`,
-      "Control posture is not a Safety Score input. Mint Authority and the applicable oracle and bridge evidence provide the reviewed facts used by V9 Economic Control.",
+      "Control posture is not a Safety Score input. Mint Authority and the applicable oracle and bridge evidence provide the reviewed facts used by V10 Economic Control.",
       ...(variantDetail ? [variantDetail] : []),
     ],
   };

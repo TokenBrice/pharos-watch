@@ -1,5 +1,5 @@
 import { TEZOS_POOL_IDENTITY_REVIEW_VERSION } from "./types";
-import { canonicalExitRouteScopedKey } from "@shared/lib/exit-route-identity";
+import { canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
 import {
   isTezosDiscoveryDeployment,
 } from "@shared/lib/dex-deployment-coverage";

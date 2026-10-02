@@ -2,10 +2,19 @@
   "id": "apxusd-apyx",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: apxUSD resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Apyx native token source: deny listing and pausability",
+        "url": "https://github.com/apyx-labs/evm-contracts/blob/main/src/ApxUSD.sol"
+      },
+      {
+        "label": "Solana apxUSD mint and freeze authority",
+        "url": "https://explorer.solana.com/address/HAYQtfJEQ9DbDbaHEhxfGsWbSZ3ywthdsVB3PuB72DYe"
+      }
+    ],
+    "evidence": "The native Ethereum token source includes ERC20DenyListUpgradable, AccessManager-gated setDenyList(), and pause/unpause controls; October 1 RPC confirmed the recorded native implementation and authority. At finalized Solana slot 452227433, the apxUSD SPL mint retained freezeAuthority 5CcTTUPtSxF1iB5d2fGR7gYHbUBHL1orwzbuZdQGJ1CG. These are deployment-specific controls rather than a governance-category inference.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA40apxUSD)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",

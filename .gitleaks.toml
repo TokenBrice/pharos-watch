@@ -36,7 +36,7 @@ targetRules = ["generic-api-key"]
 condition = "AND"
 regexTarget = "match"
 regexes = ['''^(?:[a-z0-9]+(?:-[a-z0-9]+)*:)+[1-9A-HJ-NP-Za-km-z]{32,44}"$''']
-paths = ['''(?:^|/)shared/data/stablecoins/domains/risk-review/[^/]+\.json$''']
+paths = ['''(?:^|/)shared/data/stablecoins/domains/(?:risk-review|mint-authority)/[^/]+\.json$''']
 
 # Repo-relative source paths are not credentials. CI gates that enumerate route roots
 # (`src/app/api`, `src/app/funding`, ...) otherwise trip the generic-api-key rule on
@@ -103,6 +103,57 @@ paths = [
   '''(?:^|/)data/ai-summaries\.json$''',
   '''(?:^|/)\.github/workflows/artifacts/safety-score-missing-data-reviewed-ledger\.json$''',
 ]
+
+# Reviewed 2026-10-02 against the issuers' public documentation hrefs. These
+# Firebase-backed GitBook capabilities grant access to the linked public PDFs.
+# Pin each issuer's exact UUIDs to only the source files that cite them.
+[[allowlists]]
+description = "Midas publicly linked 2026 base-prospectus download token"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^d80ceabb-07a6-4dc4-9020-70ec86b4f42f$''']
+paths = [
+  '''(?:^|/)shared/data/stablecoins/coins/mhyper-midas\.json$''',
+  '''(?:^|/)shared/data/stablecoins/domains/compliance/mtbill-midas\.json$''',
+  '''(?:^|/)shared/lib/redemption-backstop-configs/offchain-issuer/non-usd-and-tokenized\.ts$''',
+  '''(?:^|/)\.github/workflows/artifacts/safety-score-missing-data-reviewed-ledger\.json$''',
+]
+
+[[allowlists]]
+description = "Apyx publicly linked August 2026 attestation download token"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^0386fd1d-2316-4320-b799-96ec6c4e827e$''']
+paths = ['''(?:^|/)shared/data/stablecoins/domains/reserves/apyusd-apyx\.json$''']
+
+[[allowlists]]
+description = "Matrixdock publicly linked terms, silver whitepaper and July 2026 audit download tokens"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^(?:3cad87ae-7846-4bfe-ba2e-411fbf166f60|cad709b6-47f1-427d-ad14-443fa5cd76e1|d5a97752-ca3b-46d3-9077-16ac2bc11ee8)$''']
+paths = ['''(?:^|/)shared/lib/redemption-backstop-configs/offchain-issuer/commodity\.ts$''']
+
+# The default GitLab deploy-token rule matches only this prefix of the full
+# `gldt-reverse-swap-to-specific-gld-nft` settlement-leg label.
+[[allowlists]]
+description = "GLDT reverse-swap settlement-leg label is not a GitLab deploy token"
+targetRules = ["gitlab-deploy-token"]
+condition = "AND"
+regexTarget = "match"
+regexes = ['''^gldt-reverse-swap-to-spec$''']
+paths = ['''(?:^|/)shared/lib/redemption-backstop-configs/offchain-issuer/commodity\.ts$''']
+
+# Exact concatenated UNI/XAUT Ethereum token identities in the pool RPC evidence.
+[[allowlists]]
+description = "Reviewed UNI/XAUT public token pair in missing-data ledger evidence"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^UNI0x1f9840a85d5af5bf1d1762f925bdaddc4201f984/XAUT0x68749665ff8d2d112fa859aa293f07a622782f38$''']
+paths = ['''(?:^|/)\.github/workflows/artifacts/safety-score-missing-data-reviewed-ledger\.json$''']
 
 # The recorded Orca Whirlpool and Raydium CLMM quote fixtures pin the pool and
 # token-mint pubkeys read at slot 449058549. Solana base58 account keys are

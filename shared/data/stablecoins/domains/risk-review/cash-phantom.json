@@ -2,10 +2,19 @@
   "id": "cash-phantom",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: CASH resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Bridge Building Inc Stablecoin Terms: freezing and burning",
+        "url": "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc"
+      },
+      {
+        "label": "Solana finalized CASH Token-2022 mint read",
+        "url": "https://api.mainnet-beta.solana.com"
+      }
+    ],
+    "evidence": "BBI Stablecoin Terms sections 5.4.1 and 5.4.3 expressly permit address blacklisting and burning tokens in a holder wallet. At finalized Solana slot 452212680, the canonical CASH Token-2022 mint had non-null freeze authority AyCP3oW19DHZKvx8oU6mvseW2qn7XfmQ5STrXPa6prY5. This replaces the prior governance-only inference with direct issuer terms and current mint state without changing the adverse reviewedStatus.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA24GHO)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
@@ -278,15 +287,15 @@
           "upgrade"
         ],
         "controllerChain": "solana",
-        "controllerAddress": "5hYBtyUNcNi1muvUnXfsv9BcVdVATvYnUtEioBMXhax",
+        "controllerAddress": "4WcHbcWDb65Fr9odQnCJYLKKQsPz2dHCG2CEcuGqzBeR",
         "failureDomainKeys": [
-          "solana:5hYBtyUNcNi1muvUnXfsv9BcVdVATvYnUtEioBMXhax",
+          "solana:4WcHbcWDb65Fr9odQnCJYLKKQsPz2dHCG2CEcuGqzBeR",
           "program:solana:layerzero-oapp"
         ],
         "authorityType": "eoa",
         "timelockDelaySec": 0,
-        "observedAt": "2026-08-16",
-        "observedBlock": 439714386,
+        "observedAt": "2026-10-01",
+        "observedBlock": 452212680,
         "sources": [
           {
             "label": "Current Solana finalized RPC ProgramData reads",
@@ -297,7 +306,7 @@
             "url": "https://github.com/LayerZero-Labs/LayerZero-v2"
           }
         ],
-        "evidence": "At finalized Solana slots 439714386 to 439714402, OApp program 2UvSehbvxnufkbY9VYmDpKFriXVbb5rQ5unrcCqDqB1G used ProgramData CYVLd3XvpowaKGG4Q521uu261Jhcao2WSGiYb889UXoL and named 5hYBtyUNcNi1muvUnXfsv9BcVdVATvYnUtEioBMXhax as current upgrade authority. This no-delay authority can rewrite receive logic and use the OFTStore signer; Bridge allowance and per-call checks remain separate failure domains."
+        "evidence": "At finalized Solana slot 452212680, OApp program 2UvSehbvxnufkbY9VYmDpKFriXVbb5rQ5unrcCqDqB1G referenced ProgramData CYVLd3XvpowaKGG4Q521uu261Jhcao2WSGiYb889UXoL, whose current upgrade authority decoded from bytes 13 through 44 is 4WcHbcWDb65Fr9odQnCJYLKKQsPz2dHCG2CEcuGqzBeR. The prior 5hYBty... value is exactly the invalid bytes-12-through-43 decode including the Option tag, not a former controller. At slot 452213270 the corrected authority was a funded, non-executable system account with no account data. This no-delay upgrade path can rewrite OApp receive logic; Bridge allowances remain a separate failure domain."
       },
       {
         "id": "cash-layerzero-endpoint-validator",

@@ -40,7 +40,7 @@
         "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/about/transparency"
       }
     ],
-    "evidence": "Re-reviewed 2026-08-08. Verified sources and ABIs for Ethereum, Base, Optimism, Arbitrum, and Berachain expose no local holder blacklist, freeze, pause, seizure, or transfer-stop method. sDOLA is nevertheless a tracked 100% DOLA savings-passthrough variant, and its parent DOLA has a confirmed direct holder-control posture. Variant inheritance therefore resolves sDOLA as Upstream; the prior explicit false override incorrectly suppressed the parent relationship.",
+    "evidence": "Re-reviewed 2026-08-08. Verified sources and ABIs for Ethereum, Base, Optimism, Arbitrum, and Berachain expose no local holder blacklist, freeze, pause, seizure, or transfer-stop method. sDOLA is nevertheless a tracked 100% DOLA savings-passthrough variant, and its parent DOLA has a confirmed direct holder-control posture. Variant inheritance therefore resolves sDOLA as Upstream; the prior explicit false override incorrectly suppressed the parent relationship. Rechecked parent identity at Ethereum block 26098749 on 2026-10-01: canonical asset() returns DOLA 0x865377367054516e17014ccded1e7d814edc9ce4. At BSC block 125135317, the tracked parent DOLA representation permits burn(address(1),0) from its enabled minter 0x58892974758a4013377a45fad698d2ff1f08d98e and rejects an unrelated caller. The inherited verdict is retained on current parent-control evidence; this does not assert local holder controls on sDOLA.",
     "reviewer": "OpenAI Codex unfreezable-cohort audit",
     "reviewedAt": "2026-08-08"
   },
@@ -81,7 +81,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "sDOLA is native on Ethereum (ERC-4626 wrapper, locked by the CCIP LockReleaseTokenPool on transfer). Base, Optimism, Arbitrum, and Berachain deployments are burn-mint representations minted solely by the Chainlink CCIP BurnMintTokenPool on each chain (mint simulation verified on-chain).",
+    "summary": "sDOLA minting, unwrapping, and yield accrual operate on Ethereum. Inverse reports that governance mill 396 shut down all sDOLA Chainlink CCIP lanes on 2026-08-11. At pinned blocks read 2026-10-01, the Ethereum, Base, Optimism, Arbitrum, and Berachain pools each returned an empty supported-chain list. Peripheral token contracts remain historical burn-mint representations; they are not live CCIP destinations.",
     "reviewedAt": "2026-07-20",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
     "confidence": "verified",
@@ -124,7 +124,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "sDOLA is native on Ethereum (immutable ERC-4626 wrapper over DOLA). The Chainlink CCIP LockReleaseTokenPool 0x05eEe76f456C51Be0459EC1c0a78bf177B2c877C (registered in the CCIP TokenAdminRegistry, read on-chain) locks sDOLA for cross-chain transfer.",
+        "reviewNote": "sDOLA is native on Ethereum. The historical CCIP LockReleaseTokenPool 0x05eEe76f456C51Be0459EC1c0a78bf177B2c877C returned no supported chains at Ethereum block 26095807. Inverse reports that mill 396 closed the sDOLA CCIP lanes on 2026-08-11; the prior lock-release route is no longer available.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -134,7 +134,7 @@
           },
           {
             "label": "Inverse Finance Docs",
-            "url": "https://docs.inverse.finance/"
+            "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola"
           }
         ]
       },
@@ -153,7 +153,7 @@
         "controllerChain": "base",
         "controllerAddress": "0xd84e1b7e1a7a8d49167884855c3985ef4bca45ab",
         "reviewDisposition": "reviewed",
-        "reviewNote": "eth_call mint() simulation succeeds from the CCIP BurnMintTokenPool 0xd84e1B7e1a7A8D49167884855c3985ef4bCa45aB and reverts from other senders on base at 2026-07-20; pool registered in the Chainlink CCIP token directory (BurnMintTokenPool 1.5.1). Token owner is Inverse's GovernanceProxy (verified CCIP receiver).",
+        "reviewNote": "Historical sDOLA burn-mint representation. The prior 2026-07-20 review simulated minting from the CCIP pool. Inverse reports that mill 396 closed all sDOLA CCIP lanes on 2026-08-11. Rechecked Base block 52041917 on 2026-10-01: the pool returns no supported chains, and mint(address,uint256) of 1e18 from the pool reverts msg.sender not minter. Both token and pool owner() return governance proxy 0x1c064265e053d23d120c518fdbb542e6537f82d1; setMinter(address,bool) from that owner succeeds in eth_call. The proxy's allowedSender() is Ethereum GovernanceSender 0x4e521fe7a9084067096d45a312b8feee39d5f1f3 and allowedSourceChain() is 5009297550715157269. The token pool has no separate rate-limit admin. Current CCIP transfer and pool mint permissions are disabled, but owner re-authorization remains; no zero-risk or zero-supply conclusion is implied.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -163,7 +163,7 @@
           },
           {
             "label": "Inverse Finance Docs",
-            "url": "https://docs.inverse.finance/"
+            "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola"
           }
         ],
         "failureDomainKeys": [
@@ -186,7 +186,7 @@
         "controllerChain": "optimism",
         "controllerAddress": "0x8404024d8f74ad2d20e82c184816b64d4184a018",
         "reviewDisposition": "reviewed",
-        "reviewNote": "eth_call mint() simulation succeeds from the CCIP BurnMintTokenPool 0x8404024d8F74Ad2D20E82c184816B64D4184A018 and reverts from other senders on optimism at 2026-07-20; pool registered in the Chainlink CCIP token directory (BurnMintTokenPool 1.5.1). Token owner is Inverse's GovernanceProxy (verified CCIP receiver).",
+        "reviewNote": "Historical sDOLA burn-mint representation. The prior 2026-07-20 review simulated minting from the CCIP pool. Inverse reports that mill 396 closed all sDOLA CCIP lanes on 2026-08-11. Rechecked Optimism block 157637202 on 2026-10-01: the pool returns no supported chains, and mint(address,uint256) of 1e18 from the pool reverts msg.sender not minter. Both token and pool owner() return governance proxy 0xaf956837af704d825c1fcbe2651d5c3c37ad5289; setMinter(address,bool) from that owner succeeds in eth_call. The proxy's allowedSender() is Ethereum GovernanceSender 0x4e521fe7a9084067096d45a312b8feee39d5f1f3 and allowedSourceChain() is 5009297550715157269. The token pool has no separate rate-limit admin. Current CCIP transfer and pool mint permissions are disabled, but owner re-authorization remains; no zero-risk or zero-supply conclusion is implied.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -196,7 +196,7 @@
           },
           {
             "label": "Inverse Finance Docs",
-            "url": "https://docs.inverse.finance/"
+            "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola"
           }
         ],
         "failureDomainKeys": [
@@ -219,7 +219,7 @@
         "controllerChain": "arbitrum",
         "controllerAddress": "0xbbc28db61df26b76d5f7d5eed17ed4d6c278460e",
         "reviewDisposition": "reviewed",
-        "reviewNote": "eth_call mint() simulation succeeds from the CCIP BurnMintTokenPool 0xbbc28DB61DF26B76D5F7D5Eed17eD4D6C278460e and reverts from other senders on arbitrum at 2026-07-20; pool registered in the Chainlink CCIP token directory (BurnMintTokenPool 1.5.1). Token owner is Inverse's GovernanceProxy (verified CCIP receiver).",
+        "reviewNote": "Historical sDOLA burn-mint representation. The prior 2026-07-20 review simulated minting from the CCIP pool. Inverse reports that mill 396 closed all sDOLA CCIP lanes on 2026-08-11. Rechecked Arbitrum block 510719353 on 2026-10-01: the pool returns no supported chains, and mint(address,uint256) of 1e18 from the pool reverts msg.sender not minter. Both token and pool owner() return governance proxy 0x607bcd974bb69c78ecdbf0b68748b791bba24d94; setMinter(address,bool) from that owner succeeds in eth_call. The proxy's allowedSender() is Ethereum GovernanceSender 0x4e521fe7a9084067096d45a312b8feee39d5f1f3 and allowedSourceChain() is 5009297550715157269. The token pool has no separate rate-limit admin. Current CCIP transfer and pool mint permissions are disabled, but owner re-authorization remains; no zero-risk or zero-supply conclusion is implied.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -229,7 +229,7 @@
           },
           {
             "label": "Inverse Finance Docs",
-            "url": "https://docs.inverse.finance/"
+            "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola"
           }
         ],
         "failureDomainKeys": [
@@ -252,7 +252,7 @@
         "controllerChain": "berachain",
         "controllerAddress": "0x8bbd036d018657e454f679e7c4726f7a8ece2773",
         "reviewDisposition": "reviewed",
-        "reviewNote": "eth_call mint() simulation succeeds from the CCIP BurnMintTokenPool 0x8Bbd036d018657E454F679E7C4726F7a8ECE2773 and reverts from other senders on berachain at 2026-07-20; pool registered in the Chainlink CCIP token directory (BurnMintTokenPool 1.5.1). Token owner is Inverse's GovernanceProxy (verified CCIP receiver).",
+        "reviewNote": "Historical sDOLA burn-mint representation. The prior 2026-07-20 review simulated minting from the CCIP pool. Inverse reports that mill 396 closed all sDOLA CCIP lanes on 2026-08-11. Rechecked Berachain block 26929232 on 2026-10-01: the pool returns no supported chains, and mint(address,uint256) of 1e18 from the pool reverts msg.sender not minter. Both token and pool owner() return governance proxy 0x1992af61fbf8ee38741bcc57d636caa22a1a7702; setMinter(address,bool) from that owner succeeds in eth_call. The proxy's allowedSender() is Ethereum GovernanceSender 0x4e521fe7a9084067096d45a312b8feee39d5f1f3 and allowedSourceChain() is 5009297550715157269. The token pool has no separate rate-limit admin. Current CCIP transfer and pool mint permissions are disabled, but owner re-authorization remains; no zero-risk or zero-supply conclusion is implied.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -262,13 +262,1163 @@
           },
           {
             "label": "Inverse Finance Docs",
-            "url": "https://docs.inverse.finance/"
+            "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola"
           }
         ],
         "failureDomainKeys": [
           "protocol:chainlink-ccip",
           "contract:berachain:0x8bbd036d018657e454f679e7c4726f7a8ece2773"
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "base-sdola-former-ccip-pool",
+        "routeRefs": [
+          "base:0xca78ee4544ec5a33af86f1e786efc7d3652bf005"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0xd84e1b7e1a7a8d49167884855c3985ef4bca45ab",
+        "label": "Former sDOLA CCIP pool mint permission",
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 52048981,
+        "sources": [
+          {
+            "label": "Issuer sDOLA shutdown documentation",
+            "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola"
+          },
+          {
+            "label": "Pinned base RPC control observations",
+            "url": "https://api-base-mainnet-archive.n.dwellir.com"
+          }
+        ],
+        "capDescription": "Former pool mint is revoked; owner can grant mint permission again. No complete cap, caller, upgrade or economic-loss exclusion certificate.",
+        "canRaiseCap": "unknown",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:base:0xd84e1b7e1a7a8d49167884855c3985ef4bca45ab"
+        ],
+        "evidence": "Pinned read confirms empty pool supported-chain list, rejected former-pool mint and successful owner setMinter simulation. Receipt totalSupply remains nonzero. Ordinary ERC20 transfers are not disabled. Governance proxy accepts the Ethereum GovernanceSender; complete upstream caller/minter/upgrade census remains unresolved.",
+        "executionScope": {
+          "controllerDeployment": "base:0xd84e1b7e1a7a8d49167884855c3985ef4bca45ab",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-09-30",
+          "reviewer": "Sol curation pass 2026-10-01 (DataInverse)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Issuer sDOLA shutdown documentation",
+              "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola"
+            },
+            {
+              "label": "Pinned base RPC control observations",
+              "url": "https://api-base-mainnet-archive.n.dwellir.com"
+            }
+          ],
+          "pin": {
+            "position": "52048981",
+            "hash": "0x1a541fea1d0d466b444665520abdb28910068ea92345ce0fd0e13c1908da736a",
+            "runtimeIdentity": "sha256:518a8b376fccd7545790d55ee5d20313620a67634e3487461d138d8aebed3196",
+            "signerIdentity": "owner:base:0x1c064265e053d23d120c518fdbb542e6537f82d1"
+          },
+          "observedState": {
+            "position": "52048981",
+            "hash": "0x1a541fea1d0d466b444665520abdb28910068ea92345ce0fd0e13c1908da736a",
+            "runtimeIdentity": "sha256:518a8b376fccd7545790d55ee5d20313620a67634e3487461d138d8aebed3196",
+            "signerIdentity": "owner:base:0x1c064265e053d23d120c518fdbb542e6537f82d1"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "targetDeployment": "base:0xca78ee4544ec5a33af86f1e786efc7d3652bf005",
+              "entrypointKind": "evm-selector",
+              "callMode": "call",
+              "capSemantics": {
+                "kind": "unknown",
+                "bound": null
+              },
+              "claimImpairment": "unknown",
+              "economicLossScope": "unknown",
+              "unavoidableDelaySec": null,
+              "affectedLiabilityIds": [
+                "sdola-inverse-finance"
+              ],
+              "affectedDeployments": [
+                "base:0xca78ee4544ec5a33af86f1e786efc7d3652bf005"
+              ],
+              "reach": "unknown",
+              "controlRefs": [],
+              "reactivationRefs": [
+                "governance-owner-set-minter"
+              ],
+              "permissionChangeRefs": [
+                "governance-owner-set-minter"
+              ],
+              "upgradeRefs": [],
+              "bypassRefs": [],
+              "id": "former-pool-mint",
+              "entrypoints": [
+                "0x40c10f19"
+              ],
+              "capabilities": [
+                "bridge-mint"
+              ],
+              "activation": "disabled-reactivatable"
+            },
+            {
+              "targetDeployment": "base:0xca78ee4544ec5a33af86f1e786efc7d3652bf005",
+              "entrypointKind": "evm-selector",
+              "callMode": "call",
+              "capSemantics": {
+                "kind": "unknown",
+                "bound": null
+              },
+              "claimImpairment": "unknown",
+              "economicLossScope": "unknown",
+              "unavoidableDelaySec": null,
+              "affectedLiabilityIds": [
+                "sdola-inverse-finance"
+              ],
+              "affectedDeployments": [
+                "base:0xca78ee4544ec5a33af86f1e786efc7d3652bf005"
+              ],
+              "reach": "unknown",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": [],
+              "id": "governance-owner-set-minter",
+              "entrypoints": [
+                "0xcf456ae7"
+              ],
+              "capabilities": [
+                "parameter-change"
+              ],
+              "activation": "active"
+            }
+          ]
+        }
+      },
+      {
+        "id": "base-sdola-governance-proxy",
+        "routeRefs": [
+          "base:0xca78ee4544ec5a33af86f1e786efc7d3652bf005"
+        ],
+        "capabilities": [
+          "admin",
+          "bridge-mint"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0x1c064265e053d23d120c518fdbb542e6537f82d1",
+        "label": "sDOLA representation owner / governance receiver",
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 52048981,
+        "sources": [
+          {
+            "label": "Issuer sDOLA shutdown documentation",
+            "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola"
+          },
+          {
+            "label": "Pinned base RPC control observations",
+            "url": "https://api-base-mainnet-archive.n.dwellir.com"
+          }
+        ],
+        "capDescription": "Former pool mint is revoked; owner can grant mint permission again. No complete cap, caller, upgrade or economic-loss exclusion certificate.",
+        "canRaiseCap": true,
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:base:0x1c064265e053d23d120c518fdbb542e6537f82d1"
+        ],
+        "evidence": "Pinned read confirms empty pool supported-chain list, rejected former-pool mint and successful owner setMinter simulation. Receipt totalSupply remains nonzero. Ordinary ERC20 transfers are not disabled. Governance proxy accepts the Ethereum GovernanceSender; complete upstream caller/minter/upgrade census remains unresolved.",
+        "executionScope": {
+          "controllerDeployment": "base:0x1c064265e053d23d120c518fdbb542e6537f82d1",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-09-30",
+          "reviewer": "Sol curation pass 2026-10-01 (DataInverse)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Issuer sDOLA shutdown documentation",
+              "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola"
+            },
+            {
+              "label": "Pinned base RPC control observations",
+              "url": "https://api-base-mainnet-archive.n.dwellir.com"
+            }
+          ],
+          "pin": {
+            "position": "52048981",
+            "hash": "0x1a541fea1d0d466b444665520abdb28910068ea92345ce0fd0e13c1908da736a",
+            "runtimeIdentity": "sha256:5d7dd52432851c167b9df469eead63d1c47e6f400faa0a85a4ee6ceb743b4f09",
+            "signerIdentity": "allowedSender:ethereum:0x4e521fe7a9084067096d45a312b8feee39d5f1f3"
+          },
+          "observedState": {
+            "position": "52048981",
+            "hash": "0x1a541fea1d0d466b444665520abdb28910068ea92345ce0fd0e13c1908da736a",
+            "runtimeIdentity": "sha256:5d7dd52432851c167b9df469eead63d1c47e6f400faa0a85a4ee6ceb743b4f09",
+            "signerIdentity": "allowedSender:ethereum:0x4e521fe7a9084067096d45a312b8feee39d5f1f3"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "targetDeployment": "base:0xca78ee4544ec5a33af86f1e786efc7d3652bf005",
+              "entrypointKind": "evm-selector",
+              "callMode": "call",
+              "capSemantics": {
+                "kind": "unknown",
+                "bound": null
+              },
+              "claimImpairment": "unknown",
+              "economicLossScope": "unknown",
+              "unavoidableDelaySec": null,
+              "affectedLiabilityIds": [
+                "sdola-inverse-finance"
+              ],
+              "affectedDeployments": [
+                "base:0xca78ee4544ec5a33af86f1e786efc7d3652bf005"
+              ],
+              "reach": "unknown",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": [],
+              "id": "governance-owner-set-minter",
+              "entrypoints": [
+                "0xcf456ae7"
+              ],
+              "capabilities": [
+                "parameter-change"
+              ],
+              "activation": "active"
+            },
+            {
+              "targetDeployment": "base:0xca78ee4544ec5a33af86f1e786efc7d3652bf005",
+              "entrypointKind": "evm-selector",
+              "callMode": "call",
+              "capSemantics": {
+                "kind": "unknown",
+                "bound": null
+              },
+              "claimImpairment": "unknown",
+              "economicLossScope": "unknown",
+              "unavoidableDelaySec": null,
+              "affectedLiabilityIds": [
+                "sdola-inverse-finance"
+              ],
+              "affectedDeployments": [
+                "base:0xca78ee4544ec5a33af86f1e786efc7d3652bf005"
+              ],
+              "reach": "unknown",
+              "controlRefs": [],
+              "reactivationRefs": [
+                "governance-owner-set-minter"
+              ],
+              "permissionChangeRefs": [
+                "governance-owner-set-minter"
+              ],
+              "upgradeRefs": [],
+              "bypassRefs": [],
+              "id": "former-pool-mint",
+              "entrypoints": [
+                "0x40c10f19"
+              ],
+              "capabilities": [
+                "bridge-mint"
+              ],
+              "activation": "disabled-reactivatable"
+            }
+          ]
+        }
+      },
+      {
+        "id": "optimism-sdola-former-ccip-pool",
+        "routeRefs": [
+          "optimism:0xfc63c9c8ba44ae89c01265453ed4f427c80cbd4e"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "optimism",
+        "controllerAddress": "0x8404024d8f74ad2d20e82c184816b64d4184a018",
+        "label": "Former sDOLA CCIP pool mint permission",
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 157644266,
+        "sources": [
+          {
+            "label": "Issuer sDOLA shutdown documentation",
+            "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola"
+          },
+          {
+            "label": "Pinned optimism RPC control observations",
+            "url": "https://api-optimism-mainnet-archive.n.dwellir.com"
+          }
+        ],
+        "capDescription": "Former pool mint is revoked; owner can grant mint permission again. No complete cap, caller, upgrade or economic-loss exclusion certificate.",
+        "canRaiseCap": "unknown",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:optimism:0x8404024d8f74ad2d20e82c184816b64d4184a018"
+        ],
+        "evidence": "Pinned read confirms empty pool supported-chain list, rejected former-pool mint and successful owner setMinter simulation. Receipt totalSupply remains nonzero. Ordinary ERC20 transfers are not disabled. Governance proxy accepts the Ethereum GovernanceSender; complete upstream caller/minter/upgrade census remains unresolved.",
+        "executionScope": {
+          "controllerDeployment": "optimism:0x8404024d8f74ad2d20e82c184816b64d4184a018",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-09-30",
+          "reviewer": "Sol curation pass 2026-10-01 (DataInverse)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Issuer sDOLA shutdown documentation",
+              "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola"
+            },
+            {
+              "label": "Pinned optimism RPC control observations",
+              "url": "https://api-optimism-mainnet-archive.n.dwellir.com"
+            }
+          ],
+          "pin": {
+            "position": "157644266",
+            "hash": "0xb86ee33c80defee3e99aeb87e9d002d87c791f618c63c0e96d4f73e918b5490e",
+            "runtimeIdentity": "sha256:caab14af83214a8dfd1068719539f3e4a1f304e01d60e0209f25d5c46dacdea5",
+            "signerIdentity": "owner:optimism:0xaf956837af704d825c1fcbe2651d5c3c37ad5289"
+          },
+          "observedState": {
+            "position": "157644266",
+            "hash": "0xb86ee33c80defee3e99aeb87e9d002d87c791f618c63c0e96d4f73e918b5490e",
+            "runtimeIdentity": "sha256:caab14af83214a8dfd1068719539f3e4a1f304e01d60e0209f25d5c46dacdea5",
+            "signerIdentity": "owner:optimism:0xaf956837af704d825c1fcbe2651d5c3c37ad5289"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "targetDeployment": "optimism:0xfc63c9c8ba44ae89c01265453ed4f427c80cbd4e",
+              "entrypointKind": "evm-selector",
+              "callMode": "call",
+              "capSemantics": {
+                "kind": "unknown",
+                "bound": null
+              },
+              "claimImpairment": "unknown",
+              "economicLossScope": "unknown",
+              "unavoidableDelaySec": null,
+              "affectedLiabilityIds": [
+                "sdola-inverse-finance"
+              ],
+              "affectedDeployments": [
+                "optimism:0xfc63c9c8ba44ae89c01265453ed4f427c80cbd4e"
+              ],
+              "reach": "unknown",
+              "controlRefs": [],
+              "reactivationRefs": [
+                "governance-owner-set-minter"
+              ],
+              "permissionChangeRefs": [
+                "governance-owner-set-minter"
+              ],
+              "upgradeRefs": [],
+              "bypassRefs": [],
+              "id": "former-pool-mint",
+              "entrypoints": [
+                "0x40c10f19"
+              ],
+              "capabilities": [
+                "bridge-mint"
+              ],
+              "activation": "disabled-reactivatable"
+            },
+            {
+              "targetDeployment": "optimism:0xfc63c9c8ba44ae89c01265453ed4f427c80cbd4e",
+              "entrypointKind": "evm-selector",
+              "callMode": "call",
+              "capSemantics": {
+                "kind": "unknown",
+                "bound": null
+              },
+              "claimImpairment": "unknown",
+              "economicLossScope": "unknown",
+              "unavoidableDelaySec": null,
+              "affectedLiabilityIds": [
+                "sdola-inverse-finance"
+              ],
+              "affectedDeployments": [
+                "optimism:0xfc63c9c8ba44ae89c01265453ed4f427c80cbd4e"
+              ],
+              "reach": "unknown",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": [],
+              "id": "governance-owner-set-minter",
+              "entrypoints": [
+                "0xcf456ae7"
+              ],
+              "capabilities": [
+                "parameter-change"
+              ],
+              "activation": "active"
+            }
+          ]
+        }
+      },
+      {
+        "id": "optimism-sdola-governance-proxy",
+        "routeRefs": [
+          "optimism:0xfc63c9c8ba44ae89c01265453ed4f427c80cbd4e"
+        ],
+        "capabilities": [
+          "admin",
+          "bridge-mint"
+        ],
+        "controllerChain": "optimism",
+        "controllerAddress": "0xaf956837af704d825c1fcbe2651d5c3c37ad5289",
+        "label": "sDOLA representation owner / governance receiver",
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 157644266,
+        "sources": [
+          {
+            "label": "Issuer sDOLA shutdown documentation",
+            "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola"
+          },
+          {
+            "label": "Pinned optimism RPC control observations",
+            "url": "https://api-optimism-mainnet-archive.n.dwellir.com"
+          }
+        ],
+        "capDescription": "Former pool mint is revoked; owner can grant mint permission again. No complete cap, caller, upgrade or economic-loss exclusion certificate.",
+        "canRaiseCap": true,
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:optimism:0xaf956837af704d825c1fcbe2651d5c3c37ad5289"
+        ],
+        "evidence": "Pinned read confirms empty pool supported-chain list, rejected former-pool mint and successful owner setMinter simulation. Receipt totalSupply remains nonzero. Ordinary ERC20 transfers are not disabled. Governance proxy accepts the Ethereum GovernanceSender; complete upstream caller/minter/upgrade census remains unresolved.",
+        "executionScope": {
+          "controllerDeployment": "optimism:0xaf956837af704d825c1fcbe2651d5c3c37ad5289",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-09-30",
+          "reviewer": "Sol curation pass 2026-10-01 (DataInverse)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Issuer sDOLA shutdown documentation",
+              "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola"
+            },
+            {
+              "label": "Pinned optimism RPC control observations",
+              "url": "https://api-optimism-mainnet-archive.n.dwellir.com"
+            }
+          ],
+          "pin": {
+            "position": "157644266",
+            "hash": "0xb86ee33c80defee3e99aeb87e9d002d87c791f618c63c0e96d4f73e918b5490e",
+            "runtimeIdentity": "sha256:8a6337708382888e4572976e6ef8f27207c3e47b8a493e832226a0eca7491925",
+            "signerIdentity": "allowedSender:ethereum:0x4e521fe7a9084067096d45a312b8feee39d5f1f3"
+          },
+          "observedState": {
+            "position": "157644266",
+            "hash": "0xb86ee33c80defee3e99aeb87e9d002d87c791f618c63c0e96d4f73e918b5490e",
+            "runtimeIdentity": "sha256:8a6337708382888e4572976e6ef8f27207c3e47b8a493e832226a0eca7491925",
+            "signerIdentity": "allowedSender:ethereum:0x4e521fe7a9084067096d45a312b8feee39d5f1f3"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "targetDeployment": "optimism:0xfc63c9c8ba44ae89c01265453ed4f427c80cbd4e",
+              "entrypointKind": "evm-selector",
+              "callMode": "call",
+              "capSemantics": {
+                "kind": "unknown",
+                "bound": null
+              },
+              "claimImpairment": "unknown",
+              "economicLossScope": "unknown",
+              "unavoidableDelaySec": null,
+              "affectedLiabilityIds": [
+                "sdola-inverse-finance"
+              ],
+              "affectedDeployments": [
+                "optimism:0xfc63c9c8ba44ae89c01265453ed4f427c80cbd4e"
+              ],
+              "reach": "unknown",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": [],
+              "id": "governance-owner-set-minter",
+              "entrypoints": [
+                "0xcf456ae7"
+              ],
+              "capabilities": [
+                "parameter-change"
+              ],
+              "activation": "active"
+            },
+            {
+              "targetDeployment": "optimism:0xfc63c9c8ba44ae89c01265453ed4f427c80cbd4e",
+              "entrypointKind": "evm-selector",
+              "callMode": "call",
+              "capSemantics": {
+                "kind": "unknown",
+                "bound": null
+              },
+              "claimImpairment": "unknown",
+              "economicLossScope": "unknown",
+              "unavoidableDelaySec": null,
+              "affectedLiabilityIds": [
+                "sdola-inverse-finance"
+              ],
+              "affectedDeployments": [
+                "optimism:0xfc63c9c8ba44ae89c01265453ed4f427c80cbd4e"
+              ],
+              "reach": "unknown",
+              "controlRefs": [],
+              "reactivationRefs": [
+                "governance-owner-set-minter"
+              ],
+              "permissionChangeRefs": [
+                "governance-owner-set-minter"
+              ],
+              "upgradeRefs": [],
+              "bypassRefs": [],
+              "id": "former-pool-mint",
+              "entrypoints": [
+                "0x40c10f19"
+              ],
+              "capabilities": [
+                "bridge-mint"
+              ],
+              "activation": "disabled-reactivatable"
+            }
+          ]
+        }
+      },
+      {
+        "id": "arbitrum-sdola-former-ccip-pool",
+        "routeRefs": [
+          "arbitrum:0x7a1e123e41458aabab8068bfed6010d8f9480898"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0xbbc28db61df26b76d5f7d5eed17ed4d6c278460e",
+        "label": "Former sDOLA CCIP pool mint permission",
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 510773779,
+        "sources": [
+          {
+            "label": "Issuer sDOLA shutdown documentation",
+            "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola"
+          },
+          {
+            "label": "Pinned arbitrum RPC control observations",
+            "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
+          }
+        ],
+        "capDescription": "Former pool mint is revoked; owner can grant mint permission again. No complete cap, caller, upgrade or economic-loss exclusion certificate.",
+        "canRaiseCap": "unknown",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:arbitrum:0xbbc28db61df26b76d5f7d5eed17ed4d6c278460e"
+        ],
+        "evidence": "Pinned read confirms empty pool supported-chain list, rejected former-pool mint and successful owner setMinter simulation. Receipt totalSupply remains nonzero. Ordinary ERC20 transfers are not disabled. Governance proxy accepts the Ethereum GovernanceSender; complete upstream caller/minter/upgrade census remains unresolved.",
+        "executionScope": {
+          "controllerDeployment": "arbitrum:0xbbc28db61df26b76d5f7d5eed17ed4d6c278460e",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-09-30",
+          "reviewer": "Sol curation pass 2026-10-01 (DataInverse)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Issuer sDOLA shutdown documentation",
+              "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola"
+            },
+            {
+              "label": "Pinned arbitrum RPC control observations",
+              "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
+            }
+          ],
+          "pin": {
+            "position": "510773779",
+            "hash": "0x1985e13ef45e0268fe0813987305a06df4961897355daf2cf02381e7cc1b994b",
+            "runtimeIdentity": "sha256:eb20de0aa0cd09155b96b852296acca1c40e4791320a9bdb03f706bf68c71d22",
+            "signerIdentity": "owner:arbitrum:0x607bcd974bb69c78ecdbf0b68748b791bba24d94"
+          },
+          "observedState": {
+            "position": "510773779",
+            "hash": "0x1985e13ef45e0268fe0813987305a06df4961897355daf2cf02381e7cc1b994b",
+            "runtimeIdentity": "sha256:eb20de0aa0cd09155b96b852296acca1c40e4791320a9bdb03f706bf68c71d22",
+            "signerIdentity": "owner:arbitrum:0x607bcd974bb69c78ecdbf0b68748b791bba24d94"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "targetDeployment": "arbitrum:0x7a1e123e41458aabab8068bfed6010d8f9480898",
+              "entrypointKind": "evm-selector",
+              "callMode": "call",
+              "capSemantics": {
+                "kind": "unknown",
+                "bound": null
+              },
+              "claimImpairment": "unknown",
+              "economicLossScope": "unknown",
+              "unavoidableDelaySec": null,
+              "affectedLiabilityIds": [
+                "sdola-inverse-finance"
+              ],
+              "affectedDeployments": [
+                "arbitrum:0x7a1e123e41458aabab8068bfed6010d8f9480898"
+              ],
+              "reach": "unknown",
+              "controlRefs": [],
+              "reactivationRefs": [
+                "governance-owner-set-minter"
+              ],
+              "permissionChangeRefs": [
+                "governance-owner-set-minter"
+              ],
+              "upgradeRefs": [],
+              "bypassRefs": [],
+              "id": "former-pool-mint",
+              "entrypoints": [
+                "0x40c10f19"
+              ],
+              "capabilities": [
+                "bridge-mint"
+              ],
+              "activation": "disabled-reactivatable"
+            },
+            {
+              "targetDeployment": "arbitrum:0x7a1e123e41458aabab8068bfed6010d8f9480898",
+              "entrypointKind": "evm-selector",
+              "callMode": "call",
+              "capSemantics": {
+                "kind": "unknown",
+                "bound": null
+              },
+              "claimImpairment": "unknown",
+              "economicLossScope": "unknown",
+              "unavoidableDelaySec": null,
+              "affectedLiabilityIds": [
+                "sdola-inverse-finance"
+              ],
+              "affectedDeployments": [
+                "arbitrum:0x7a1e123e41458aabab8068bfed6010d8f9480898"
+              ],
+              "reach": "unknown",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": [],
+              "id": "governance-owner-set-minter",
+              "entrypoints": [
+                "0xcf456ae7"
+              ],
+              "capabilities": [
+                "parameter-change"
+              ],
+              "activation": "active"
+            }
+          ]
+        }
+      },
+      {
+        "id": "arbitrum-sdola-governance-proxy",
+        "routeRefs": [
+          "arbitrum:0x7a1e123e41458aabab8068bfed6010d8f9480898"
+        ],
+        "capabilities": [
+          "admin",
+          "bridge-mint"
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x607bcd974bb69c78ecdbf0b68748b791bba24d94",
+        "label": "sDOLA representation owner / governance receiver",
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 510773779,
+        "sources": [
+          {
+            "label": "Issuer sDOLA shutdown documentation",
+            "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola"
+          },
+          {
+            "label": "Pinned arbitrum RPC control observations",
+            "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
+          }
+        ],
+        "capDescription": "Former pool mint is revoked; owner can grant mint permission again. No complete cap, caller, upgrade or economic-loss exclusion certificate.",
+        "canRaiseCap": true,
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:arbitrum:0x607bcd974bb69c78ecdbf0b68748b791bba24d94"
+        ],
+        "evidence": "Pinned read confirms empty pool supported-chain list, rejected former-pool mint and successful owner setMinter simulation. Receipt totalSupply remains nonzero. Ordinary ERC20 transfers are not disabled. Governance proxy accepts the Ethereum GovernanceSender; complete upstream caller/minter/upgrade census remains unresolved.",
+        "executionScope": {
+          "controllerDeployment": "arbitrum:0x607bcd974bb69c78ecdbf0b68748b791bba24d94",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-09-30",
+          "reviewer": "Sol curation pass 2026-10-01 (DataInverse)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Issuer sDOLA shutdown documentation",
+              "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola"
+            },
+            {
+              "label": "Pinned arbitrum RPC control observations",
+              "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
+            }
+          ],
+          "pin": {
+            "position": "510773779",
+            "hash": "0x1985e13ef45e0268fe0813987305a06df4961897355daf2cf02381e7cc1b994b",
+            "runtimeIdentity": "sha256:4b68f06f7b74e8324570992b215e47545f945c8b364b1f563616f7e649d9d388",
+            "signerIdentity": "allowedSender:ethereum:0x4e521fe7a9084067096d45a312b8feee39d5f1f3"
+          },
+          "observedState": {
+            "position": "510773779",
+            "hash": "0x1985e13ef45e0268fe0813987305a06df4961897355daf2cf02381e7cc1b994b",
+            "runtimeIdentity": "sha256:4b68f06f7b74e8324570992b215e47545f945c8b364b1f563616f7e649d9d388",
+            "signerIdentity": "allowedSender:ethereum:0x4e521fe7a9084067096d45a312b8feee39d5f1f3"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "targetDeployment": "arbitrum:0x7a1e123e41458aabab8068bfed6010d8f9480898",
+              "entrypointKind": "evm-selector",
+              "callMode": "call",
+              "capSemantics": {
+                "kind": "unknown",
+                "bound": null
+              },
+              "claimImpairment": "unknown",
+              "economicLossScope": "unknown",
+              "unavoidableDelaySec": null,
+              "affectedLiabilityIds": [
+                "sdola-inverse-finance"
+              ],
+              "affectedDeployments": [
+                "arbitrum:0x7a1e123e41458aabab8068bfed6010d8f9480898"
+              ],
+              "reach": "unknown",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": [],
+              "id": "governance-owner-set-minter",
+              "entrypoints": [
+                "0xcf456ae7"
+              ],
+              "capabilities": [
+                "parameter-change"
+              ],
+              "activation": "active"
+            },
+            {
+              "targetDeployment": "arbitrum:0x7a1e123e41458aabab8068bfed6010d8f9480898",
+              "entrypointKind": "evm-selector",
+              "callMode": "call",
+              "capSemantics": {
+                "kind": "unknown",
+                "bound": null
+              },
+              "claimImpairment": "unknown",
+              "economicLossScope": "unknown",
+              "unavoidableDelaySec": null,
+              "affectedLiabilityIds": [
+                "sdola-inverse-finance"
+              ],
+              "affectedDeployments": [
+                "arbitrum:0x7a1e123e41458aabab8068bfed6010d8f9480898"
+              ],
+              "reach": "unknown",
+              "controlRefs": [],
+              "reactivationRefs": [
+                "governance-owner-set-minter"
+              ],
+              "permissionChangeRefs": [
+                "governance-owner-set-minter"
+              ],
+              "upgradeRefs": [],
+              "bypassRefs": [],
+              "id": "former-pool-mint",
+              "entrypoints": [
+                "0x40c10f19"
+              ],
+              "capabilities": [
+                "bridge-mint"
+              ],
+              "activation": "disabled-reactivatable"
+            }
+          ]
+        }
+      },
+      {
+        "id": "berachain-sdola-former-ccip-pool",
+        "routeRefs": [
+          "berachain:0x02eaa69646183c069fc2b64f15923f27b9cf3b03"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "berachain",
+        "controllerAddress": "0x8bbd036d018657e454f679e7c4726f7a8ece2773",
+        "label": "Former sDOLA CCIP pool mint permission",
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26936295,
+        "sources": [
+          {
+            "label": "Issuer sDOLA shutdown documentation",
+            "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola"
+          },
+          {
+            "label": "Pinned berachain RPC control observations",
+            "url": "https://api-berachain-mainnet.n.dwellir.com"
+          }
+        ],
+        "capDescription": "Former pool mint is revoked; owner can grant mint permission again. No complete cap, caller, upgrade or economic-loss exclusion certificate.",
+        "canRaiseCap": "unknown",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:berachain:0x8bbd036d018657e454f679e7c4726f7a8ece2773"
+        ],
+        "evidence": "Pinned read confirms empty pool supported-chain list, rejected former-pool mint and successful owner setMinter simulation. Receipt totalSupply remains nonzero. Ordinary ERC20 transfers are not disabled. Governance proxy accepts the Ethereum GovernanceSender; complete upstream caller/minter/upgrade census remains unresolved.",
+        "executionScope": {
+          "controllerDeployment": "berachain:0x8bbd036d018657e454f679e7c4726f7a8ece2773",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-09-30",
+          "reviewer": "Sol curation pass 2026-10-01 (DataInverse)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Issuer sDOLA shutdown documentation",
+              "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola"
+            },
+            {
+              "label": "Pinned berachain RPC control observations",
+              "url": "https://api-berachain-mainnet.n.dwellir.com"
+            }
+          ],
+          "pin": {
+            "position": "26936295",
+            "hash": "0xaa20bf46a86c1700ee990bf35ce65a02be856a97c39029a4d67718475bfda2dd",
+            "runtimeIdentity": "sha256:fc1130855ceaecb4d10b43f5106841f586f5fb411afc3c63c824ea123977748f",
+            "signerIdentity": "owner:berachain:0x1992af61fbf8ee38741bcc57d636caa22a1a7702"
+          },
+          "observedState": {
+            "position": "26936295",
+            "hash": "0xaa20bf46a86c1700ee990bf35ce65a02be856a97c39029a4d67718475bfda2dd",
+            "runtimeIdentity": "sha256:fc1130855ceaecb4d10b43f5106841f586f5fb411afc3c63c824ea123977748f",
+            "signerIdentity": "owner:berachain:0x1992af61fbf8ee38741bcc57d636caa22a1a7702"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "targetDeployment": "berachain:0x02eaa69646183c069fc2b64f15923f27b9cf3b03",
+              "entrypointKind": "evm-selector",
+              "callMode": "call",
+              "capSemantics": {
+                "kind": "unknown",
+                "bound": null
+              },
+              "claimImpairment": "unknown",
+              "economicLossScope": "unknown",
+              "unavoidableDelaySec": null,
+              "affectedLiabilityIds": [
+                "sdola-inverse-finance"
+              ],
+              "affectedDeployments": [
+                "berachain:0x02eaa69646183c069fc2b64f15923f27b9cf3b03"
+              ],
+              "reach": "unknown",
+              "controlRefs": [],
+              "reactivationRefs": [
+                "governance-owner-set-minter"
+              ],
+              "permissionChangeRefs": [
+                "governance-owner-set-minter"
+              ],
+              "upgradeRefs": [],
+              "bypassRefs": [],
+              "id": "former-pool-mint",
+              "entrypoints": [
+                "0x40c10f19"
+              ],
+              "capabilities": [
+                "bridge-mint"
+              ],
+              "activation": "disabled-reactivatable"
+            },
+            {
+              "targetDeployment": "berachain:0x02eaa69646183c069fc2b64f15923f27b9cf3b03",
+              "entrypointKind": "evm-selector",
+              "callMode": "call",
+              "capSemantics": {
+                "kind": "unknown",
+                "bound": null
+              },
+              "claimImpairment": "unknown",
+              "economicLossScope": "unknown",
+              "unavoidableDelaySec": null,
+              "affectedLiabilityIds": [
+                "sdola-inverse-finance"
+              ],
+              "affectedDeployments": [
+                "berachain:0x02eaa69646183c069fc2b64f15923f27b9cf3b03"
+              ],
+              "reach": "unknown",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": [],
+              "id": "governance-owner-set-minter",
+              "entrypoints": [
+                "0xcf456ae7"
+              ],
+              "capabilities": [
+                "parameter-change"
+              ],
+              "activation": "active"
+            }
+          ]
+        }
+      },
+      {
+        "id": "berachain-sdola-governance-proxy",
+        "routeRefs": [
+          "berachain:0x02eaa69646183c069fc2b64f15923f27b9cf3b03"
+        ],
+        "capabilities": [
+          "admin",
+          "bridge-mint"
+        ],
+        "controllerChain": "berachain",
+        "controllerAddress": "0x1992af61fbf8ee38741bcc57d636caa22a1a7702",
+        "label": "sDOLA representation owner / governance receiver",
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26936295,
+        "sources": [
+          {
+            "label": "Issuer sDOLA shutdown documentation",
+            "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola"
+          },
+          {
+            "label": "Pinned berachain RPC control observations",
+            "url": "https://api-berachain-mainnet.n.dwellir.com"
+          }
+        ],
+        "capDescription": "Former pool mint is revoked; owner can grant mint permission again. No complete cap, caller, upgrade or economic-loss exclusion certificate.",
+        "canRaiseCap": true,
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:berachain:0x1992af61fbf8ee38741bcc57d636caa22a1a7702"
+        ],
+        "evidence": "Pinned read confirms empty pool supported-chain list, rejected former-pool mint and successful owner setMinter simulation. Receipt totalSupply remains nonzero. Ordinary ERC20 transfers are not disabled. Governance proxy accepts the Ethereum GovernanceSender; complete upstream caller/minter/upgrade census remains unresolved.",
+        "executionScope": {
+          "controllerDeployment": "berachain:0x1992af61fbf8ee38741bcc57d636caa22a1a7702",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-09-30",
+          "reviewer": "Sol curation pass 2026-10-01 (DataInverse)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Issuer sDOLA shutdown documentation",
+              "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola"
+            },
+            {
+              "label": "Pinned berachain RPC control observations",
+              "url": "https://api-berachain-mainnet.n.dwellir.com"
+            }
+          ],
+          "pin": {
+            "position": "26936295",
+            "hash": "0xaa20bf46a86c1700ee990bf35ce65a02be856a97c39029a4d67718475bfda2dd",
+            "runtimeIdentity": "sha256:6b8e29d969482f06a02135d0ae8fe2a0b25ff5634f1f3b6e71025e44a4bd9f88",
+            "signerIdentity": "allowedSender:ethereum:0x4e521fe7a9084067096d45a312b8feee39d5f1f3"
+          },
+          "observedState": {
+            "position": "26936295",
+            "hash": "0xaa20bf46a86c1700ee990bf35ce65a02be856a97c39029a4d67718475bfda2dd",
+            "runtimeIdentity": "sha256:6b8e29d969482f06a02135d0ae8fe2a0b25ff5634f1f3b6e71025e44a4bd9f88",
+            "signerIdentity": "allowedSender:ethereum:0x4e521fe7a9084067096d45a312b8feee39d5f1f3"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "targetDeployment": "berachain:0x02eaa69646183c069fc2b64f15923f27b9cf3b03",
+              "entrypointKind": "evm-selector",
+              "callMode": "call",
+              "capSemantics": {
+                "kind": "unknown",
+                "bound": null
+              },
+              "claimImpairment": "unknown",
+              "economicLossScope": "unknown",
+              "unavoidableDelaySec": null,
+              "affectedLiabilityIds": [
+                "sdola-inverse-finance"
+              ],
+              "affectedDeployments": [
+                "berachain:0x02eaa69646183c069fc2b64f15923f27b9cf3b03"
+              ],
+              "reach": "unknown",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": [],
+              "id": "governance-owner-set-minter",
+              "entrypoints": [
+                "0xcf456ae7"
+              ],
+              "capabilities": [
+                "parameter-change"
+              ],
+              "activation": "active"
+            },
+            {
+              "targetDeployment": "berachain:0x02eaa69646183c069fc2b64f15923f27b9cf3b03",
+              "entrypointKind": "evm-selector",
+              "callMode": "call",
+              "capSemantics": {
+                "kind": "unknown",
+                "bound": null
+              },
+              "claimImpairment": "unknown",
+              "economicLossScope": "unknown",
+              "unavoidableDelaySec": null,
+              "affectedLiabilityIds": [
+                "sdola-inverse-finance"
+              ],
+              "affectedDeployments": [
+                "berachain:0x02eaa69646183c069fc2b64f15923f27b9cf3b03"
+              ],
+              "reach": "unknown",
+              "controlRefs": [],
+              "reactivationRefs": [
+                "governance-owner-set-minter"
+              ],
+              "permissionChangeRefs": [
+                "governance-owner-set-minter"
+              ],
+              "upgradeRefs": [],
+              "bypassRefs": [],
+              "id": "former-pool-mint",
+              "entrypoints": [
+                "0x40c10f19"
+              ],
+              "capabilities": [
+                "bridge-mint"
+              ],
+              "activation": "disabled-reactivatable"
+            }
+          ]
+        }
       }
     ]
   }

@@ -4,7 +4,7 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "iUSD is minted on Cardano by opening overcollateralized CDPs in Indigo Protocol against approved Cardano-native collateral; INDY token holders govern collateral onboarding, parameters, and stability mechanisms.",
+    "summary": "iUSD is minted on Cardano through Indigo's overcollateralized CDPs and its documented 1:1 Peg Stabilization Module swaps against approved stable collateral. INDY token holders govern collateral onboarding, parameters and PSM pairs, including enabling or disabling minting and redemption directions.",
     "controls": [
       {
         "chain": "cardano",
@@ -14,8 +14,8 @@
         "directMintAbility": "cap-limited",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "iUSD (an iAsset) is minted only against overcollateralized Indigo CDP vaults of approved Cardano collateral; supply expands and contracts with collateralized positions and liquidations, not an issuer minter.",
-        "evidence": "Koios script_info re-verified 2026-07-20: the iUSD minting policy f66d78b4a3cb3d37afa0ec36461e51ecbde00f26c8f0a68f94b69880 is a plutusV2 script (1189 bytes, creation tx 99329591f444f68ed4a33ed664c146fbf278cf9202067974cfa1a26d09a34107, deployed Nov 2022). Cardano minting policies are immutable: the policy hash is the asset identity and its mint rules (overcollateralized CDP validation) cannot be replaced or upgraded for the existing iUSD asset. Indigo docs describe iUSD minted only against overcollateralized CDPs with Stability Pool liquidations.",
+        "capDescription": "The CDP issuance path is collateralized by approved Cardano assets. It is not the only documented iUSD mint path: Indigo V3 also documents USDCx-to-iUSD PSM minting at 1:1 less any configured fee, with DAO-controlled pair availability and parameters.",
+        "evidence": "Historical 2026-07-20 Koios review identified immutable PlutusV2 policy f66d78b4a3cb3d37afa0ec36461e51ecbde00f26c8f0a68f94b69880 and CDP collateral validation. The current V3 documentation fetched 2026-10-01 additionally describes unlimited USDCx-to-iUSD PSM swaps and DAO controls to enable or disable minting/redemption per pair. Policy-hash immutability alone does not establish the completeness of the previously described CDP-only issuance perimeter.",
         "address": "f66d78b4a3cb3d37afa0ec36461e51ecbde00f26c8f0a68f94b69880",
         "failureDomainKeys": [
           "protocol:indigo-protocol",

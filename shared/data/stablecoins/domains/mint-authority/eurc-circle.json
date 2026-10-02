@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "EURC has seven independently mintable native deployments. Ethereum, Base, Avalanche, World Chain, and Cronos use Circle FiatTokenV2_2 custom proxies with chain-local MasterMinter, token-owner, and proxy-admin controls. Solana and Stellar each use a 2-of-4 issuer multisig. Every EVM mint or upgrade path has zero on-chain delay and a code-empty single-account authority; off-chain custody behind those accounts is unknown. Polygon, Sonic, Tempo, and Cardano are bridge representations and are excluded from Mint Authority; Cronos remains native on-chain despite its omission from Circle's current public EURC contract list.",
+    "summary": "EURC has nine native issuer deployments in Circle's current address registry and August 2026 examination, including Arc, Plasma, and Cronos. Seven EVM deployments expose chain-local MasterMinter and token-owner controls; Solana and Stellar retain 2-of-4 issuer multisigs. The previously reviewed five EVM proxy-admin paths have no on-chain delay. Arc and Plasma native role identities and custom proxy slots are now observed, while full proxy-admin execution and off-chain key-custody reviews remain incomplete. Polygon, Sonic, Tempo, and Cardano are bridge representations and remain outside Mint Authority.",
     "controls": [
       {
         "chain": "ethereum",
@@ -473,6 +473,98 @@
           }
         ],
         "evidence": "At the exact cutoff, custom implementation/admin slots were Ethereum 0x43506849d7c04f9138d1a2050bbf3a0c054402dd / 0x9ed85723c5c55b746eb2c4b7e2a359b2091b8fe7, Base 0x2ce6311ddae708829bc0784c967b7d77d19fd779 / 0x4fa3c7461ba47ff34d4033ebaa30525c939991e1, Avalanche 0x30dfe0469803bce76f8f62ac24b18d33d3d6ffe6 / 0x625c3d1e1cd9f515f90c3b472653f28d32765c22, World Chain 0x8378ae07072d24fc8f572fbce35700352d0aae6a / 0xf40086691722eec331624cd15f82c89b87b65e36, and Cronos 0x007f588ca3ffe53f20cb03553ca38bb13542ff89 / 0xbd13d015904514a5da1e2ee493a6fe15d0260785. EIP-1967 implementation, admin, and beacon slots were zero on all five. Every custom admin was code-empty and could upgrade with one signature and no delay."
+      },
+      {
+        "chain": "arc",
+        "address": "0x75f7e0800bb98ab6a965b0d9cb0ff5c27355bb57",
+        "deploymentRefs": [
+          "arc:0xbef5f6d51cb62b58e6a8f77868681825c6fe21c1"
+        ],
+        "label": "Arc EURC MasterMinter",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "observedAt": "2026-10-01",
+        "observedBlock": 23669562,
+        "failureDomainKeys": ["issuer:circle"],
+        "sources": [
+          {
+            "label": "Circle current EURC contract addresses",
+            "url": "https://developers.circle.com/stablecoins/eurc-contract-addresses"
+          },
+          {
+            "label": "Circle MasterMinter design",
+            "url": "https://github.com/circlefin/stablecoin-evm/blob/master/doc/masterminter.md"
+          }
+        ],
+        "evidence": "At Arc block 23669562, the native EURC token's masterMinter() returned this nonempty-code contract and its owner() returned 0xb7850efbca3594e50977bd11a05833f18095e021. Circle's MasterMinter design delegates minter management to controllers appointed by its owner. Off-chain custody of the owner is unknown."
+      },
+      {
+        "chain": "arc",
+        "address": "0x1b127715bb61d1561227748cabeaef51a745f371",
+        "deploymentRefs": [
+          "arc:0xbef5f6d51cb62b58e6a8f77868681825c6fe21c1"
+        ],
+        "label": "Arc EURC token owner",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "observedAt": "2026-10-01",
+        "observedBlock": 23669562,
+        "failureDomainKeys": ["issuer:circle", "eoa:0x1b127715bb61d1561227748cabeaef51a745f371"],
+        "sources": [
+          {
+            "label": "Circle MasterMinter design and token-owner role",
+            "url": "https://github.com/circlefin/stablecoin-evm/blob/master/doc/masterminter.md"
+          }
+        ],
+        "evidence": "At Arc block 23669562, native EURC owner() returned this code-empty account. Circle's documented FiatToken owner can set masterMinter. This identifies the native role, not MPC/HSM custody or a key-custody attestation."
+      },
+      {
+        "chain": "plasma",
+        "address": "0xb847eabce1017f5d6ea266ffe79cd33b8b027fe4",
+        "deploymentRefs": [
+          "plasma:0x3ee196e78d4d4248b849b8e1c7f44c5457fafd2c"
+        ],
+        "label": "Plasma EURC MasterMinter",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "observedAt": "2026-10-01",
+        "observedBlock": 33896735,
+        "failureDomainKeys": ["issuer:circle"],
+        "sources": [
+          {
+            "label": "Circle current EURC contract addresses",
+            "url": "https://developers.circle.com/stablecoins/eurc-contract-addresses"
+          },
+          {
+            "label": "Circle MasterMinter design",
+            "url": "https://github.com/circlefin/stablecoin-evm/blob/master/doc/masterminter.md"
+          }
+        ],
+        "evidence": "At Plasma block 33896735, native EURC masterMinter() returned this nonempty-code contract and its owner() returned 0x52f3e54d50afdc7f64db1dfcaad78af72bc000e3. Circle's MasterMinter design delegates minter management to controllers appointed by its owner. Off-chain custody of the owner is unknown."
+      },
+      {
+        "chain": "plasma",
+        "address": "0xdffa58b33369be9c4b807aa8644ff5fe22c54c03",
+        "deploymentRefs": [
+          "plasma:0x3ee196e78d4d4248b849b8e1c7f44c5457fafd2c"
+        ],
+        "label": "Plasma EURC token owner",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "observedAt": "2026-10-01",
+        "observedBlock": 33896735,
+        "failureDomainKeys": ["issuer:circle", "eoa:0xdffa58b33369be9c4b807aa8644ff5fe22c54c03"],
+        "sources": [
+          {
+            "label": "Circle MasterMinter design and token-owner role",
+            "url": "https://github.com/circlefin/stablecoin-evm/blob/master/doc/masterminter.md"
+          }
+        ],
+        "evidence": "At Plasma block 33896735, native EURC owner() returned this code-empty account. Circle's documented FiatToken owner can set masterMinter. This identifies the native role, not MPC/HSM custody or a key-custody attestation."
       }
     ],
     "economicCapSemantics": "unbounded",

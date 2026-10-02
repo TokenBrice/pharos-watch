@@ -196,5 +196,39 @@
         "rationale": "The source does not bind the Base token representation or Morpho vault to a verified tracked claim."
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Tori (BVI) Limited",
+        "role": "other",
+        "jurisdiction": "British Virgin Islands"
+      },
+      {
+        "name": "Undisclosed off-chain reserve custodians",
+        "role": "custodian"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA61wM)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Tori trUSD reserve ownership and holder-rights terms",
+        "url": "https://docs.tori.finance/legal/trusd-terms.md"
+      },
+      {
+        "label": "Tori reserve-custodian nondisclosure",
+        "url": "https://docs.tori.finance/faq/security.md"
+      },
+      {
+        "label": "Accountable reserve structure and MPC policy attestation",
+        "url": "https://cache.accountable.capital/dashboard/tori"
+      }
+    ],
+    "uncertainty": "Legal terms make reserves Tori BVI property rather than segregated client assets and deny purchasers a continuing claim in transferred collateral. Operational segregated-account marketing does not establish bankruptcy remoteness for trUSD holders. Reserve-custodian legal entities, asset-specific provider allocations, segregation agreements, rehypothecation rights, and exchange-vs-bank custody allocations are not publicly resolved. The historical cex custodyModel is retained pending reconciliation of chain tracing with current issuer/Accountable disclosures; Anchorage/BitGo/Cactus token-custody availability is not reserve custody."
   }
 }

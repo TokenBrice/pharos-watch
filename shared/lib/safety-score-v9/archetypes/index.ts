@@ -1,4 +1,8 @@
-import { createUnknownArchetypeV9BackingResult, evaluateV9ArchetypeBacking } from "./evaluation";
+import {
+  applyV9MeasuredCollateralization,
+  createUnknownArchetypeV9BackingResult,
+  evaluateV9ArchetypeBacking,
+} from "./evaluation";
 import {
   type V9BackingAssetInput,
   type V9BackingEvaluationPolicy,
@@ -29,10 +33,12 @@ export interface V9UnknownMechanismRiskReview {
  */
 const SUPPORTED_MECHANISM_ARCHETYPES: ReadonlySet<string> = new Set(MECHANISM_ARCHETYPE_VALUES);
 
-type V9SimpleArchetype = "fiat-cash" | "commodity-claim" | "tbill";
+type V9SimpleArchetype =
+  | "fiat-cash" | "commodity-claim" | "tbill"
+  | "ucits-trs-fund" | "shared-reserve" | "protocol-position";
 type V9SimpleReview = Extract<V9MechanismRiskReview, { archetype: V9SimpleArchetype }>;
 type V9MechanismFactKey<T> = {
-  [K in keyof T]: T[K] extends V9MechanismFactV1 ? K : never;
+  [K in keyof T]-?: T[K] extends V9MechanismFactV1 ? K : never;
 }[keyof T];
 type V9SimpleArchetypeDescriptor<A extends V9SimpleArchetype> = readonly [
   componentKey: string,
@@ -58,6 +64,28 @@ const V9_SIMPLE_ARCHETYPE_DESCRIPTORS: {
     ["nav-valuation", "navValuation"],
     ["duration-and-liquidity", "durationAndLiquidity"],
     ["loss-recovery-design", "lossRecoveryDesign"],
+  ],
+  "ucits-trs-fund": [
+    ["fund-claim-and-segregation", "fundClaimAndSegregation"],
+    ["nav-and-reconciliation", "navAndReconciliation"],
+    ["portfolio-hedge", "portfolioHedge"],
+    ["counterparty-and-collateral", "counterpartyAndCollateral"],
+    ["custody-continuity", "custodyContinuity"],
+    ["default-recovery", "defaultRecovery"],
+  ],
+  "shared-reserve": [
+    ["holder-claim", "holderClaim"],
+    ["liability-conservation", "liabilityConservation"],
+    ["reserve-custody", "reserveCustody"],
+    ["encumbrance-and-allocation", "encumbranceAndAllocation"],
+    ["default-recovery", "defaultRecovery"],
+  ],
+  "protocol-position": [
+    ["holder-claim", "holderClaim"],
+    ["liability-conservation", "liabilityConservation"],
+    ["position-custody", "positionCustody"],
+    ["encumbrance-and-allocation", "encumbranceAndAllocation"],
+    ["default-recovery", "defaultRecovery"],
   ],
 };
 
@@ -100,10 +128,26 @@ export function evaluateV9Backing(
   }
   // No re-parse: the review reached here through the compiled fact set, whose
   // `V9MechanismRiskReviewFactV2Schema.review` field is this exact schema.
+  return applyV9MeasuredCollateralization(
+    evaluateReviewedBacking(asset, review, policy),
+    review.collateralizationMeasurement,
+    policy,
+    asset.asOfSec,
+  );
+}
+
+function evaluateReviewedBacking(
+  asset: V9BackingAssetInput,
+  review: V9MechanismRiskReview,
+  policy: V9BackingEvaluationPolicy,
+): V9BackingResult {
   switch (review.archetype) {
     case "fiat-cash":
     case "commodity-claim":
     case "tbill":
+    case "ucits-trs-fund":
+    case "shared-reserve":
+    case "protocol-position":
       return evaluateV9SimpleArchetypeBacking(asset, review, policy);
     case "cdp":
       return evaluateV9CdpBacking(asset, review, policy);

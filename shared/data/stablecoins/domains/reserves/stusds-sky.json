@@ -4,7 +4,7 @@
     {
       "sourceKey": "erc4626-single-asset:ethereum:0xdc035d45d973e3ec169d2276ddab16f1e407384f",
       "name": "Staked USDS idle underlying",
-      "pct": 99.999029050975,
+      "pct": 99.99900071050182,
       "risk": "high",
       "coinId": "usds-sky",
       "depType": "collateral",
@@ -20,7 +20,7 @@
     {
       "sourceKey": "erc4626-single-asset:ethereum:0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9:deployed",
       "name": "Sky staked-vault deployed strategy positions",
-      "pct": 0.0009709490250031649,
+      "pct": 0.00099928949818,
       "risk": "high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Sky stUSDS module and Sky Protocol Vat/Vow accounting (LSEV2-SKY-A risk-capital branch)",
@@ -36,8 +36,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Slice1Finish)",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC17)",
     "confidence": "verified",
     "sources": [
       {
@@ -55,11 +55,19 @@
       {
         "label": "stUSDS Ethereum contract",
         "url": "https://etherscan.io/address/0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9#readContract"
+      },
+      {
+        "label": "Deployed stUSDS implementation verified source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7a61b7adcfd493f7cf0f86dfcecb94b72c227f22"
+      },
+      {
+        "label": "Pinned Ethereum accounting at block 26097121",
+        "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
       }
     ],
     "rationale": "The live ERC-4626 split identifies direct USDS held by the stUSDS vault separately from the tiny totalAssets accounting remainder. The pinned stUSDS implementation shows that the remainder reflects projected rate accrual and Sky Vat/Vow accounting inside the LSEV2-SKY-A risk-capital module, not a separately held tracked stablecoin or external strategy token.",
-    "compositionBasis": "Exact live ERC-4626 idle-underlying and deployed-accounting rows, pinned stUSDS design, and deployed contract",
-    "compositionAsOf": "2026-09-21",
+    "compositionBasis": "Ethereum block 26097121, 2026-10-01T11:18:47Z: direct USDS 194051931765034414663896490 / totalAssets 194053870924987379512889883, both 18-decimal USDS units; identified protocol-accounting amount 1939159952964848993393. Percentages independently divided and rounded to 14 decimal places. Projected accrual reproduces totalAssets exactly; the accounting amount is accrued value less 5263 raw units already held above stored share accounting. Existing source keys, asset categories and risk factors are unchanged.",
+    "compositionAsOf": "2026-10-01",
     "scope": "full-composition",
     "knownUnknownExposure": "The two live rows cover direct USDS custody and the identified Sky protocol-accounting remainder; dynamic borrower debt and auction state remain risk factors rather than unclassified reserve slices.",
     "knownUnknownExposurePct": 0,
@@ -67,10 +75,35 @@
       {
         "reserveIndex": 1,
         "reserveName": "Sky staked-vault deployed strategy positions",
-        "pct": 0.0009709490250031649,
+        "pct": 0.00099928949818,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The ERC-4626 remainder is stUSDS totalAssets accounting above the vault's direct USDS balance. The pinned contract identifies this as projected rate accrual and Sky protocol accounting, not a separately held tracked stablecoin or standalone token reserve."
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Sky stUSDS Ethereum vault 0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9",
+        "role": "custodian"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA43KAG)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Sky stUSDS token and vault documentation",
+        "url": "https://developers.skyeco.com/protocol/tokens/stusds/"
+      },
+      {
+        "label": "Pinned stUSDS share accounting and governance trust assumptions",
+        "url": "https://github.com/sky-ecosystem/stusds/blob/486bfe342c01afab7387a920dfcd7eeaaf91f4b7/README.md"
+      }
+    ],
+    "uncertainty": "At Ethereum block 26095796, asset() identified USDS and USDS.balanceOf(stUSDS) was 194097404844859467400127197 raw units. Assets are held and accounted for by an upgradeable on-chain vault; governance can change implementation and slash via cut(). The product funds SKY-backed borrowing and withdrawals are limited by unused liquidity. No legal segregation, bankruptcy-remoteness arrangement or rehypothecation prohibition is established."
   }
 }

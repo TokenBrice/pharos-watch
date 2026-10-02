@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CHAIN_META, getActiveChainIds, type ChainMeta } from "@shared/lib/chains";
+import { getActiveChainIds } from "@shared/lib/chains";
+import { CHAIN_META, type ChainMeta } from "@shared/types/chain-identity";
 import { formatProseList } from "@shared/lib/format";
 import { buildApiOgImageUrl, buildPageMetadata, trimTextAtWordBoundary } from "@/lib/page-metadata";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";

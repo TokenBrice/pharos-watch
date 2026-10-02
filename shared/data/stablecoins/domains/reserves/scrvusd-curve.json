@@ -20,8 +20,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
-    "reviewer": "SOL-III Safety Score V9 reserve review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB43scrvUSD)",
     "confidence": "verified",
     "sources": [
       {
@@ -37,9 +37,9 @@
         "url": "https://docs.curve.finance/developer/crvusd/overview"
       }
     ],
-    "rationale": "scrvUSD is a vault-share claim on crvUSD managed by Curve's savings vault. The exact direct reserve is one protocol position; the parent crvUSD collateral and controller risks remain inherited through the tracked wrapper dependency.",
-    "compositionBasis": "Exact live ERC-4626 single-asset row and Curve's pinned savings-vault implementation",
-    "compositionAsOf": "2026-07-15",
+    "rationale": "scrvUSD is a vault-share claim on crvUSD. At Ethereum block 26095892, asset() identifies the tracked crvUSD parent, totalDebt() is zero, the default strategy queue is empty, and totalIdle() equals totalAssets(). Curve's savings-vault documentation confirms deposited crvUSD sits idle and is not rehypothecated. The parent collateral and controller risks remain inherited through the tracked wrapper dependency.",
+    "compositionBasis": "Canonical Ethereum ERC-4626 vault accounting pinned at block 26095892 and Curve savings-vault documentation; direct single-asset wrapper structure",
+    "compositionAsOf": "2026-10-01",
     "scope": "full-composition",
     "knownUnknownExposure": "No additional direct scrvUSD reserve slice is identified; liquidity and upstream crvUSD backing remain structured risks of the classified position.",
     "knownUnknownExposurePct": 0

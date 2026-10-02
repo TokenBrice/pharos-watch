@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "note": "Reviewed exhaustive economic-deployment accounting plans only. No static supply numbers or incomplete plans; per-asset authoring follows verified current circulation, escrow and in-flight research.",
+  "reviews": [],
+  "providerRowExclusionReviews": [
+    {
+      "assetId": "frax-frax",
+      "providerChainLabel": "Fraxtal",
+      "belongsToAssetId": "frxusd-frax",
+      "chainId": "fraxtal",
+      "contractAddress": "0xfc00000000000000000000000000000000000001",
+      "reviewer": "DwFrax",
+      "reviewedAtSec": 1790933944,
+      "expiresAtSec": 1793525944,
+      "evidenceUrls": [
+        "https://gov.frax.finance/t/fip-419-launch-frax-usd-provide-upgrade-path-to-frax-stablecoin/3543",
+        "https://gov.frax.finance/t/fip-430-preparation-for-frxusd-payment-stablecoin-charter-compliance/3698",
+        "https://docs.frax.com/frxusd/frxusd-contracts",
+        "https://docs.frax.com/fraxtal/addresses/frax-tokens"
+      ],
+      "rationale": "FIP419 upgrades the Fraxtal stablecoin predeploy in place to frxUSD; FIP430 separates frxUSD and Legacy FRAX liabilities. At block 42061479 the provider's fc...01 contract reports Frax USD / frxUSD and REMOTE_TOKEN Ethereum frxUSD. Exclude only this mislabelled provider row from unresolved-deployment and unmatched/unreviewed bridge-share numerators, retaining the original aggregate, chain observations and all other materiality facts. Nonzero LFRAX at ff...1fd remains a separate legacy deployment/catalog question and is not excluded.",
+      "provenance": {
+        "provider": "defillama",
+        "providerAssetId": "6",
+        "adapterSourceUrl": "https://raw.githubusercontent.com/DefiLlama/peggedassets-server/43ea0e28655f7391e57ac687f84377c0bcf8a39a/src/adapters/peggedAssets/frax/index.ts",
+        "blockNumber": 42061479,
+        "blockHash": "0x0dee77bee99aa05b5a7f4af548ce258962d3082ca62cab9e0ad5b2990e2e9496",
+        "observedAtSec": 1790933669,
+        "rpcUrl": "https://rpc.frax.com",
+        "remoteChainId": "ethereum",
+        "remoteTokenAddress": "0xcacd6fd266af91b8aed52accc382b4e165586e29"
+      }
+    }
+  ],
+  "independentLiabilityAssetIds": ["sfrxusd-frax", "wsrusd-reservoir"],
+  "nativeSingleRouteReviews": [
+    {
+      "assetId": "xdai-gnosis",
+      "routeId": "gnosis:0xe91d153e0b41518a2ce8dd3d7944fa863463a97d",
+      "reviewer": "TokenBrice",
+      "reviewedAt": "2026-08-18",
+      "rationale": "xDAI is Gnosis Chain's native gas token: 100% of the published aggregate supply is native xDAI on Gnosis, minted and burned solely through the canonical xDAI bridge that the single reviewed route represents. The route's WXDAI deployment row (gnosis:0xe91d153e0b41518a2ce8dd3d7944fa863463a97d) is a same-chain wrapper and strict subset of the native supply, so no per-chain contract observation can equal the aggregate upstream. Attributing the published aggregate to this one reviewed route restates the reviewed bridge profile without asserting any new supply number."
+    }
+  ]
+}

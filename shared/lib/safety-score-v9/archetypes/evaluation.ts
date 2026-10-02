@@ -1,5 +1,6 @@
 import type { V9AssetFactsBase } from "../../../types/safety-score-v9-facts";
 import type { V9ReasonCode } from "../../../types/safety-score-v9";
+import type { V9MechanismRiskReview } from "../../../types/safety-score-v9-backing";
 import { clampScore } from "../../math";
 import { sha256Hex } from "../../sha256";
 import { stableJsonStringifyV1 } from "../../stable-json";
@@ -72,13 +73,100 @@ function finalizeBackingResult(result: Omit<V9BackingResult, "traceDigest">): V9
       compareText(`${left.kind}:${left.severity}:${left.pathKey}`, `${right.kind}:${right.severity}:${right.pathKey}`),
     ),
     unresolved,
-    evidenceRefIds: uniqueSorted(result.evidenceRefIds),
+    evidenceRefIds: uniqueSorted([
+      ...result.evidenceRefIds,
+      ...(result.collateralizationApplications ?? []).flatMap((application) => application.evidenceRefIds),
+    ]),
     failureDomains: canonicalDomains(result.failureDomains),
   };
   return {
     ...canonical,
     traceDigest: sha256Hex(stableJsonStringifyV1({ domain: "safety-score-v9.backing-trace.v1", trace: canonical })),
   };
+}
+
+/**
+ * Reserve composition identifies the assets, not how much liability they cover.
+ * Price the measured uncovered share at zero after either local evaluation or
+ * parent-quality inheritance; existing reserve/mechanism quality stays visible.
+ */
+export function applyV9MeasuredCollateralization(
+  result: V9BackingResult,
+  measurement: V9MechanismRiskReview["collateralizationMeasurement"],
+  policy: V9BackingEvaluationPolicy,
+  asOfSec?: number,
+): V9BackingResult {
+  if (
+    measurement == null ||
+    measurement.ratio >= 1 ||
+    result.score === null ||
+    measurement.status.observationState !== "known" ||
+    measurement.status.applicability.state !== "required" ||
+    measurement.status.evidenceRefIds.length === 0 ||
+    measurement.measuredAt == null ||
+    asOfSec === undefined ||
+    !Number.isFinite(asOfSec)
+  ) return result;
+  const measuredAtSec = Date.parse(`${measurement.measuredAt}T00:00:00.000Z`) / 1_000;
+  const maxAgeSec = policy.policy.semantic.evidence.evidenceExpiry.mechanismOverlayMaxAgeSec;
+  if (
+    !Number.isFinite(measuredAtSec) ||
+    measuredAtSec + 86_400 > asOfSec ||
+    measuredAtSec + maxAgeSec <= asOfSec ||
+    result.collateralizationApplications?.some(
+      (application) => application.measurementId === measurement.measurementId,
+    )
+  ) return result;
+  const ratio = measurement.ratio;
+  const score = result.score * ratio;
+  const evidenceRefIds = measurement.status.evidenceRefIds;
+  const { traceDigest: _traceDigest, ...trace } = result;
+  return finalizeBackingResult({
+    ...trace,
+    score,
+    pillarCeiling: Math.min(result.pillarCeiling ?? score, score),
+    collateralizationApplications: [
+      ...(result.collateralizationApplications ?? []),
+      {
+        measurementId: measurement.measurementId,
+        measuredAt: measurement.measuredAt,
+        ratio,
+        evidenceRefIds,
+        appliedByAssetId: result.assetId,
+        inheritedFromAssetId: null,
+      },
+    ],
+    contributions: [
+      ...result.contributions.map((row) => ({ ...row, effectiveWeight: row.effectiveWeight * ratio })),
+      {
+        componentKey: "mechanism:uncovered-liability",
+        source: "mechanism",
+        score: 0,
+        normalizedWeight: 1,
+        weightedScore: 0,
+        effectiveWeight: 1 - ratio,
+        observationState: "known",
+        provenance: null,
+        evidenceRefIds,
+        failureDomains: [],
+        upstreamAssetId: null,
+      },
+    ],
+    structuralReasons: [
+      ...result.structuralReasons,
+      {
+        kind: "unsafe-backing",
+        severity: "critical",
+        responsibility: "measured-adverse",
+        pathKey: "mechanism:collateralization-ratio",
+        materialShare: 1 - ratio,
+        ceiling: score,
+        evidenceRefIds,
+        failureDomains: [],
+      },
+    ],
+    evidenceRefIds: [...result.evidenceRefIds, ...evidenceRefIds],
+  });
 }
 
 // Only the whole-review fallback may price missing serial components locally;
@@ -105,11 +193,24 @@ function evaluateV9ArchetypeBackingInternal(
       : input.asset,
     policy,
   );
+  // Carry only applications actually embedded in inherited reserve quality,
+  // not a parent measurement attached to an unused inheritance candidate.
+  const inherited = input.asset.inheritedStablecoinBacking;
+  const inheritedApplications =
+    inherited !== undefined && reserve.contributions.some(
+      (contribution) => contribution.componentKey === `reserve:inherited-backing:${inherited.parentAssetId}`,
+    )
+      ? inherited.collateralizationApplications?.map((application) => ({
+          ...application,
+          inheritedFromAssetId: inherited.parentAssetId,
+        }))
+      : undefined;
   const verifiedLiveInheritance =
     input.asset.inheritedStablecoinBacking === undefined
       ? undefined
       : verifiedLiveInheritedExposure(input.asset, input.asset.inheritedStablecoinBacking);
   if (
+    archetypePolicy.allowCompleteLiveParentMechanismBypass &&
     verifiedLiveInheritance !== undefined &&
     reserve.contributions.some(
       (contribution) =>
@@ -124,6 +225,7 @@ function evaluateV9ArchetypeBackingInternal(
       policySemanticDigest: policy.semanticDigest,
       rateability: reserve.rateability,
       score: reserve.score,
+      ...(inheritedApplications === undefined ? {} : { collateralizationApplications: inheritedApplications }),
       pillarCeiling:
         reserve.structuralReasons.length === 0
           ? null
@@ -190,6 +292,30 @@ function evaluateV9ArchetypeBackingInternal(
               () => (state === "stale" ? "ceiling" : "pillar"),
             )),
       );
+    }
+    if (component.fact.scopedAssessments != null) {
+      if (component.componentKey !== "assurance-and-reconciliation" ||
+        (input.archetype !== "fiat-cash" && input.archetype !== "commodity-claim")) {
+        throw new Error("Scoped financial assurance is not applicable to this component");
+      }
+      const componentWeight = applicableComponentPolicyWeight > 0
+        ? archetypePolicy.componentWeights[component.componentKey] / applicableComponentPolicyWeight : 0;
+      const fullyAssured = component.fact.scopedAssessments.every(fragment => fragment.quality !== null && fragment.status.observationState === "known");
+      for (const fragment of component.fact.scopedAssessments) {
+        const tier = fragment.quality === null ? backing.boundedUnknownQuality : backing.componentQuality[fragment.quality];
+        const fragmentScore = fullyAssured && (fragment.quality === "strong" || fragment.quality === "adequate") &&
+          input.asset.trackRecordMonths !== undefined && input.asset.trackRecordMonths >= backing.assuranceSeasonedCredit.minMonths
+          ? Math.min(tier + backing.assuranceSeasonedCredit.points, backing.componentQuality.strong) : tier;
+        const weight = componentWeight * fragment.share;
+        mechanismWeightedScore += fragmentScore * weight;
+        contributions.push({
+          componentKey: `${pathKey}:scope:${fragment.scopeId}`, source: "mechanism", score: fragmentScore,
+          normalizedWeight: weight, weightedScore: fragmentScore * weight, observationState: fragment.status.observationState,
+          provenance: null, evidenceRefIds: uniqueSorted(fragment.status.evidenceRefIds),
+          failureDomains: canonicalDomains(component.fact.failureDomains), upstreamAssetId: null,
+        });
+      }
+      continue;
     }
     const tierScore =
       component.fact.quality === null
@@ -265,6 +391,7 @@ function evaluateV9ArchetypeBackingInternal(
     policySemanticDigest: policy.semanticDigest,
     rateability,
     score,
+    ...(inheritedApplications === undefined ? {} : { collateralizationApplications: inheritedApplications }),
     pillarCeiling,
     contributions: effectiveBackingContributions(
       contributions,

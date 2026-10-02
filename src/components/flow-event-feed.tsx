@@ -19,7 +19,7 @@ import {
   timeAgo,
   formatEventDate,
 } from "@shared/lib/format";
-import { CHAIN_META } from "@shared/lib/chains";
+import { CHAIN_META } from "@shared/types/chain-identity";
 import type { MintBurnEvent } from "@shared/types";
 
 // ---------------------------------------------------------------------------

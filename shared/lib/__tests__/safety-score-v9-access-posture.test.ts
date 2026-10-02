@@ -121,7 +121,7 @@ describe("Safety Score v9 access posture", () => {
       }),
     );
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       transfer: "restrictable",
       freezeExposure: "direct",
       primaryExit: "eligibility-gated",

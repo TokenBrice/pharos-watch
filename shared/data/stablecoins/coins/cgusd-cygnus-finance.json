@@ -9,8 +9,8 @@
     "yieldBearing": true,
     "rwa": true
   },
-  "collateral": "Short-term U.S. Treasury bills held off-chain, supplemented by on-chain stablecoins (USDC/USDT); supply rebases daily on New York banking days to match portfolio net asset value including accrued interest",
-  "pegMechanism": "Daily rebase on New York banking days aligns supply with portfolio NAV; 1:1 USDC redemption uses Cygnus's Request + Claim withdrawal flow, normally taking 5–7 days. Remove the unsupported Transmuter and Elixir AMO clauses.",
+  "collateral": "Off-chain U.S. Treasury exposure and on-chain stablecoins, with actual holdings and weights undisclosed in the reviewed issuer pages; supply rebases on New York banking days to portfolio NAV including interest. Native Base minting deposits USDC.",
+  "pegMechanism": "Daily rebase on New York banking days aligns supply with portfolio NAV; USDC redemption uses Cygnus's Request + Claim withdrawal flow, normally taking 5-7 days. The withdrawal FAQ quotes a 35-basis-point fee and warns that Treasury price fluctuations can reduce the claimable amount.",
   "mechanismArchetype": "tbill",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
@@ -46,7 +46,7 @@
     }
   ],
   "jurisdiction": {
-    "country": "Hong Kong"
+    "country": "British Virgin Islands"
   },
   "contracts": [
     {

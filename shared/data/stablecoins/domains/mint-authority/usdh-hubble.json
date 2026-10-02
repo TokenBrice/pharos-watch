@@ -50,7 +50,7 @@
         "address": "AkzcmXAWWmGnVmyEfW5eeaHdUUrE9yxGaS2GmtV5UEMq",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "present",
-        "capDescription": "Current program logic bounds minting by overcollateralized CDP vaults at a 150% minimum collateral ratio against whitelisted Solana assets; Hubble DAO governance can replace that program logic.",
+        "capDescription": "Current documentation describes collateral-dependent LTV limits, from 97% for kTokens to 80% or lower for volatile assets; exact deployed branch limits require same-slot verification. Hubble DAO governance can replace the program logic.",
         "observedAt": "2026-07-13",
         "observedBlock": 432742753,
         "sources": [

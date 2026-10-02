@@ -9,6 +9,9 @@ export const MECHANISM_ARCHETYPE_VALUES = [
   "algorithmic",
   "rwa-credit-fund",
   "commodity-claim",
+  "ucits-trs-fund",
+  "shared-reserve",
+  "protocol-position",
 ] as const;
 export type MechanismArchetype = (typeof MECHANISM_ARCHETYPE_VALUES)[number];
 

@@ -11,9 +11,12 @@
   "infrastructures": [
     "m0"
   ],
-  "collateral": "Short-term U.S. Treasury bills and cash, held for the benefit of token holders via M0 Protocol's bankruptcy-remote SPV structure; issued by MoonPay under U.S. Money Transmitter Licenses across 49 states (excl. New York)",
+  "collateral": "The direct onchain backing is M held by the ctUSD extension on Citrea. Citrea describes the underlying reserves as cash and short-term U.S. Treasury bills; MoonPay's stablecoin terms provide for reserve assets held for token holders in segregated accounts apart from corporate funds. These sources do not establish a ctUSD-specific SPV or a token-specific GENIUS authorization.",
   "pegMechanism": "1:1 fiat-backed mint and redemption via MoonPay using M0 Protocol infrastructure; reserves cryptographically attested on-chain by independent M0 Validators before minting; fiat on/off ramp via Visa, Mastercard, Apple Pay, Google Pay, and PayPal through MoonPay's 30M+ verified user base",
-  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetype": "tbill",
+  "variantOf": "m-m0",
+  "variantKind": "pure-wrapper",
+  "pegReferenceId": "m-m0",
   "llamaId": "350",
   "detailProvider": "defillama",
   "geckoId": "citrea-usd",

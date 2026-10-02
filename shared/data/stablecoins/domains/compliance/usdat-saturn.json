@@ -1,26 +1,5 @@
 {
   "id": "usdat-saturn",
-  "mica": {
-    "status": "out-of-scope",
-    "references": [
-      {
-        "label": "ESMA MiCA register and scope page",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
-      },
-      {
-        "label": "ESMA MiCA Article 2 scope",
-        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
-      },
-      {
-        "label": "Saturn USDat overview",
-        "url": "https://saturncredit.gitbook.io/saturn-docs/solution/usdat-overview"
-      },
-      {
-        "label": "Saturn documentation: USDat payment and settlement stablecoin",
-        "url": "https://saturncredit.gitbook.io/saturn-docs"
-      }
-    ]
-  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "authorizationStatus": "no-public-authorization-found",
@@ -34,7 +13,7 @@
     "reserveDisclosureUrl": "https://app.saturn.credit/insights/saturn-protocol",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "Saturn's current documentation describes USDat as a permissioned, fully collateralized stablecoin for liquidity and settlement, with minting and redemption through USDC. No public GENIUS issuer approval, state-qualified approval, official application, or registered foreign-issuer exception was located for Saturn or USDat; no legal issuer entity or GENIUS pathway was resolved.",
+    "notes": "USDat's current implementation wraps and unwraps PYUSDx through a compliance-whitelisted SwapFacility; the older USDC/M reserve descriptions do not identify its current backing. Terms updated 2026-08-31 identify Saturn Global Capital Investments Ltd., a British Virgin Islands limited company, as the interface/services counterparty, prohibit US users and require KYC for primary-market minting. They explicitly distinguish the interface from the protocol and do not establish the legal issuer of USDat. The prior negative GENIUS authorization review remains dated 2026-08-14; no approval or pathway is inferred from the newly identified interface entity.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -66,6 +45,20 @@
         "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/transparency-and-audits",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Saturn Terms of Service: interface counterparty and eligibility",
+        "url": "https://saturn.credit/legal/terms-conditions",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-08-31",
+        "accessedAt": "2026-10-01"
+      },
+      {
+        "label": "Saturn pinned PYUSDx migration runbook",
+        "url": "https://github.com/saturn-organization/saturn-dollar/blob/67a27eba1e7dcd944415d28b21bf107f119d47ee/plans/usdat-pyusdx-migration-runbook.md",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-08-20",
+        "accessedAt": "2026-10-01"
       }
     ],
     "negativeEvidenceReview": {

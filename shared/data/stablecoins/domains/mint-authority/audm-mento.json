@@ -1,10 +1,10 @@
 {
   "id": "audm-mento",
   "mintAuthority": {
-    "mintPath": "user-collateralized-governed",
+    "mintPath": "permissioned-minter",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "AUDm is minted via the Mento Broker (0x777A...) which is the sole authorized minter (broker() getter confirmed). The Broker's proxy admin and the AUDm token owner and proxy admin all resolve to the Mento Timelock (0x890DB...) with a 2-day delay.",
+    "summary": "At Celo block 78972424, AUDm issuance uses the V2 Broker and legacy BiPoolManager. The two-day Mento Timelock owns the token and Broker and can raise trading limits. The BiPoolManager pricing/configuration owner is a separate 4-of-6 migration Safe. Validators is token-authorized, but its current mint function targets registry USDm and only registry EpochManager can invoke it. Celo Governance owns both the Validators proxy and Registry: upgrades or registry reassignment can enable a latent AUDm mint path. No Mento Timelock protection is attributed to Celo Governance.",
     "upgradeability": {
       "model": "transparent-proxy",
       "proxyAddresses": [
@@ -21,8 +21,8 @@
       "canChangeMintLogic": true,
       "delaySec": 172800,
       "controlRef": "Mento Timelock — AUDm token owner and proxy admin",
-      "observedAt": "2026-07-13",
-      "observedBlock": 72084007,
+      "observedAt": "2026-10-01",
+      "observedBlock": 78936863,
       "sources": [
         {
           "label": "Mento V3 stablecoin docs",
@@ -50,15 +50,21 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 78972424,
         "sources": [
           {
-            "label": "AUDm token broker() on-chain read",
-            "url": "https://celo.blockscout.com/address/0x7175504c455076f15c04a2f90a8e352281f492f9"
+            "label": "StableTokenV2 verified implementation",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x434563b0604be100f04b7ae485bcafe3c9d8850e"
+          },
+          {
+            "label": "Broker verified implementation",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x1b78f6acd05e7bcb00f74863bfd8a7c264143e37"
           }
         ],
-        "evidence": "At Celo block 69287341, broker() on AUDm (0x7175504c455076f15c04a2f90a8e352281f492f9) returned 0x777A8255cA72412f0d706dc03C9D1987306B4CaD (Mento BrokerProxy). The Broker's EIP-1967 proxy admin slot returned 0x890DB8A597940165901372Dd7DB61C9f246e2147 (Mento Timelock)."
+        "evidence": "At Celo block 78972424, token broker() is the V2 Broker and token/Broker owner and proxy admin are Mento Timelock; getMinDelay() is 172800 seconds. Verified Broker configureTradingLimit is onlyOwner: this resolves cap configuration to the Timelock, not the public swap path."
       },
       {
         "chain": "celo",
@@ -68,19 +74,108 @@
         "authorityType": "timelock",
         "directMintAbility": "can-authorize",
         "timelockDelaySec": 172800,
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 78972424,
         "sources": [
           {
-            "label": "Mento V3 stablecoin docs",
-            "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+            "label": "StableTokenV2 verified implementation",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x434563b0604be100f04b7ae485bcafe3c9d8850e"
           },
           {
-            "label": "AUDm token on Celo Blockscout",
-            "url": "https://celo.blockscout.com/address/0x7175504c455076f15c04a2f90a8e352281f492f9"
+            "label": "Broker verified implementation",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x1b78f6acd05e7bcb00f74863bfd8a7c264143e37"
           }
         ],
-        "evidence": "At Celo block 69287341, owner() on AUDm returned 0x890DB8A597940165901372Dd7DB61C9f246e2147; EIP-1967 proxy admin slot returned the same address. getMinDelay() on the Timelock returned 0x2a300 = 172800 seconds (48 hours)."
+        "evidence": "At Celo block 78972424, token broker() is the V2 Broker and token/Broker owner and proxy admin are Mento Timelock; getMinDelay() is 172800 seconds. Verified Broker configureTradingLimit is onlyOwner: this resolves cap configuration to the Timelock, not the public swap path."
+      },
+      {
+        "chain": "celo",
+        "address": "0xaeb865bca93ddc8f47b8e29f40c5399ce34d0c58",
+        "label": "Celo ValidatorsProxy - authorized AUDm minter slot",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 78972424,
+        "sources": [
+          {
+            "label": "StableTokenV2 verified implementation",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x434563b0604be100f04b7ae485bcafe3c9d8850e"
+          },
+          {
+            "label": "Validators verified implementation and UsingRegistry",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x13b0b89f3242f815c1fc6c9cf56e1ab5aea4dc58"
+          }
+        ],
+        "evidence": "At Celo block 78972424, AUDm validators() points here; current implementation is 0x13b0b89f3242f815c1fc6c9cf56e1ab5aea4dc58. Its sole mint call is onlyRegisteredContract(EpochManager) and targets Registry StableToken, currently USDm 0x765de816845861e75a25fca122bb6898b8b1282a. There is no AUDm-targeting or generic call in the current implementation; mutable Registry and proxy controls are recorded separately."
+      },
+      {
+        "chain": "celo",
+        "address": "0xd533ca259b330c7a88f74e000a3faea2d63b7972",
+        "label": "Celo GovernanceProxy - Validators and Registry authority",
+        "role": "minter-admin",
+        "authorityType": "dao-governor",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 78972424,
+        "sources": [
+          {
+            "label": "Validators verified implementation and UsingRegistry",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x13b0b89f3242f815c1fc6c9cf56e1ab5aea4dc58"
+          },
+          {
+            "label": "Registry verified implementation",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x203fdf86a00999107df531fa00b4ba81d674cb66"
+          }
+        ],
+        "evidence": "At Celo block 78972424, ValidatorsProxy _getOwner(), Registry owner(), and Registry proxy _getOwner() resolve to Celo Governance. Validators currently mints only Registry USDm to registered EpochManager. Registry setAddressFor is onlyOwner and can replace StableToken and EpochManager; the Validators implementation is separately replaceable by this owner. These mutable target/caller and upgrade paths can authorize AUDm issuance without attributing the Mento Timelock delay to Celo Governance."
+      },
+      {
+        "chain": "celo",
+        "address": "0x58099b74f4acd642da77b4b7966b4138ec5ba458",
+        "label": "Mento migration Safe - legacy FX pool configuration",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 4,
+        "signerCount": 6,
+        "safe": {
+          "owners": [
+            "0xb1074d0f9e54763e073c7fdb25b622b4326327cb",
+            "0x95be2b73d313768d3b2dfeeca3213ed0a6434060",
+            "0x66b94446f5ff3f0d8673c1f502a298b50ba2f0ce",
+            "0x6dec25d7be9bf6c6fc302977629f2e801e98611c",
+            "0x7a678c8f9e8a7ac08c8c6f34d38126f3219958f2",
+            "0x628ffa32ab958c5b9ce74d8b81d73f335c3776b0"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": null,
+          "observedBlock": 78972424,
+          "observedAt": "2026-10-01",
+          "source": "onchain"
+        },
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-01",
+        "observedBlock": 78972424,
+        "sources": [
+          {
+            "label": "BiPoolManager verified implementation",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0xc016174b60519bdc24433d4ed2cff6c1efac7881"
+          },
+          {
+            "label": "MGP-18 legacy FX governance",
+            "url": "https://forum.mento.org/t/mgp-18-mento-v2-deprecation/137"
+          }
+        ],
+        "evidence": "At Celo block 78972424, BiPoolManager owner() is this 4-of-6 Safe; getModulesPaginated returns no enabled modules and the guard slot is zero. Verified BiPoolManager source permits owner-only pricing-module, oracle, spread and exchange configuration that determines Broker issuance quotes. It cannot call Broker configureTradingLimit, which is restricted to the separate Broker owner. BiPoolManager proxy administration remains the Mento Timelock."
       }
     ],
     "economicCapSemantics": "raiseable",
@@ -97,9 +192,9 @@
           "url": "https://celo.blockscout.com/address/0x7175504c455076f15c04a2f90a8e352281f492f9"
         }
       ],
-      "evidence": "At Celo block 69287341: owner() = Timelock 0x890DB8A597940165901372Dd7DB61C9f246e2147 (confirmed); EIP-1967 proxy admin slot = same Timelock; getMinDelay() = 172800s (48h); broker() = 0x777A8255cA72412f0d706dc03C9D1987306B4CaD (Mento BrokerProxy, confirmed as sole authorized minter); Broker EIP-1967 proxy admin = same Timelock. Celo Registry confirms Broker = 0x777A... (keccak256('Broker') lookup). All mint-capable surfaces resolved. Economically, Broker issuance is the collateral-exchange path; changing that path or authorizing different mint logic requires the independently enforced 48-hour Mento Timelock, so the encoding-derived unbounded cap is superseded by raiseable semantics. Re-verified at Celo block 72664674 on 2026-07-20: AUDm 0x7175504C455076F15c04A2F90a8e352281f492F9 still returns owner() = Mento Timelock 0x890DB8A597940165901372Dd7DB61C9f246e2147 and broker() = 0x777A8255cA72412f0d706dc03C9D1987306B4CaD, and that Timelock still returns getMinDelay() = 172800 seconds. Mento publishes a live reserve dashboard rather than a periodic report, so reconciliation cadence is continuous (the self attestor tier is already recorded separately under proofOfReserves), and no financial regulator supervises Mento. Economic-posture fields reviewed 2026-08-15: the two-day governance timelock bounds mint-path changes, the token-scoped live Mento adapter covers the full upstream reserve mix continuously, and no named prudential regulator or independent attestor applies.",
-      "reviewer": "Claude Phase 0c continuation; SOL-V mint-tier review; Claude V9 Phase 3 curation lane cur-14 (economic-control fields, 2026-07-20); Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "At Celo block 78972424, AUDm issuance uses the V2 Broker and legacy BiPoolManager. The two-day Mento Timelock owns the token and Broker and can raise trading limits. The BiPoolManager pricing/configuration owner is a separate 4-of-6 migration Safe. Validators is token-authorized, but its current mint function targets registry USDm and only registry EpochManager can invoke it. Celo Governance owns both the Validators proxy and Registry: upgrades or registry reassignment can enable a latent AUDm mint path. No Mento Timelock protection is attributed to Celo Governance. The current Validators target is verified; no current AUDm-targeting call is established. Registry reassignment and proxy upgrade remain governed latent paths.",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMento)",
+      "reviewedAt": "2026-10-01",
       "disposition": "scoreable"
     }
   }

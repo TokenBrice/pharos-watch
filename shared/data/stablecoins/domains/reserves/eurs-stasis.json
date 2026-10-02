@@ -46,19 +46,23 @@
         "jurisdiction": "Lithuania"
       }
     ],
-    "segregation": "unknown",
-    "bankruptcyRemoteness": "unknown",
-    "rehypothecation": "unknown",
-    "reviewedAt": "2026-08-08",
-    "reviewer": "Kimi Code R08 reserve research",
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "contractual-only",
+    "rehypothecation": "prohibited",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (R2WMisc05)",
     "confidence": "probable",
     "sources": [
       {
         "label": "STASIS EURS transparency page",
         "url": "https://stasis.net/transparency"
+      },
+      {
+        "label": "STASIS Terms of Business, sections 3 and 8: separate safeguarded accounts, insolvency protection promise and prohibition on lending or other use",
+        "url": "https://stasis.net/terms"
       }
     ],
-    "uncertainty": "The live page names NexPay UAB as the route to the Lithuanian Central Bank account and states reserves are held in central-bank accounts, but it does not publish the account agreement, statutory segregation, insolvency remoteness, or rehypothecation terms.",
+    "uncertainty": "The live page names NexPay UAB as the route to the Lithuanian Central Bank account. STSS's Terms of Business define Safeguarded Accounts as separate from its office accounts, promise protection at an EEA-authorised financial institution if STSS becomes insolvent, prohibit use of customer funds for any other purpose, and state that STSS cannot and will not lend them. These are contractual issuer commitments. The account agreement, statutory insolvency treatment and independent legal opinion remain unavailable, so structured bankruptcy remoteness is not established. The terms exclude deposit-guarantee and investor-compensation coverage.",
     "knownUnknownExposurePct": 0
   }
 }

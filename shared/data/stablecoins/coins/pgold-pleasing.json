@@ -60,13 +60,14 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/reserve-report",
-    "provider": "VISTO CPA LIMITED (independent limited assurance; partial physical observation and Arbitrum-only liability scope)",
+    "provider": "VISTO CPA LIMITED (HKSAE 3000 reasonable assurance; partial physical observation and Arbitrum-only liability scope)",
     "attestorTier": "niche",
     "cadence": "ad-hoc",
     "latestReport": {
       "periodEnd": "2026-06-25",
       "publishedAt": "2026-06-25",
-      "assuranceMethod": "review",
+      "publishedAtBasis": "signed-date-standin",
+      "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "partial",
       "reviewer": "Pharos reserve research (Kimi P0 re-verification)",

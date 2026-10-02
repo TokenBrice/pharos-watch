@@ -87,6 +87,8 @@
         ],
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095808,
         "evidence": "Current RPC reads on 2026-08-16 returned this EOA from owner() on Ethereum block 25771292, Base block 50069042, BSC block 116370461, Polygon block 92148275, Avalanche block 92987083, Arbitrum block 495314108, and Gnosis block 47763307. All seven deployments are transparent proxies. ProxyAdmin 0x666b8f67969a22a4015d6d523d8671ee714b114f is owned by this EOA on Ethereum, Base, BSC, Polygon, and Arbitrum; Gnosis uses ProxyAdmin 0xe7dc79cd19c604ed5846cbae6ed4401ed92a23d4, also owned by this EOA. Avalanche's ProxyAdmin instead returns itself as owner, leaving that chain's implementation replacement path inaccessible through an external owner. The direct owner-only mint/burn path remains present on all seven EVM deployments.",
         "sources": [
           {
@@ -129,6 +131,8 @@
         "signerCount": 2,
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 452213538,
         "sources": [
           {
             "label": "Solana tGBP mint",

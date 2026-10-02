@@ -33,7 +33,7 @@
     "reviewedAt": "2026-08-08"
   },
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
+    "tier": "single-source-or-laggy",
     "summary": "Five debt-bearing Ethereum ilks were retained. Three divide a Chainlink stablecoin/USD numerator by an owner-set APACX PHP/USD denominator without contract-enforced freshness, while two zero-ceiling legacy ilks with outstanding debt use owner-set APACX feeds directly; liquidation is immediate through independent Dutch auctions.",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
@@ -110,7 +110,7 @@
       {
         "id": "pht-usdt-a",
         "label": "USDT-A",
-        "tier": "opaque-or-unknown",
+        "tier": "single-source-or-laggy",
         "summary": "Debt-bearing USDT branch dividing a Chainlink USDT/USD numerator by an owner-set APACX PHP/USD denominator; neither the ratio feed nor Pip enforces source freshness.",
         "collateralAssets": [
           "USDT"
@@ -183,7 +183,7 @@
       {
         "id": "pht-cphp-a",
         "label": "cPHP-A",
-        "tier": "opaque-or-unknown",
+        "tier": "single-source-or-laggy",
         "summary": "Debt-bearing zero-ceiling cPHP legacy branch using an owner-set APACX data feed with no external source, freshness check, or fallback.",
         "collateralAssets": [
           "cPHP"
@@ -244,7 +244,7 @@
       {
         "id": "pht-apcxusdt-a",
         "label": "ApcxUSDT-A",
-        "tier": "opaque-or-unknown",
+        "tier": "single-source-or-laggy",
         "summary": "Debt-bearing apcxUSDT branch dividing a Chainlink USDT/USD numerator by an owner-set APACX PHP/USD denominator; neither the ratio feed nor Pip enforces source freshness.",
         "collateralAssets": [
           "apcxUSDT"
@@ -317,7 +317,7 @@
       {
         "id": "pht-demousdt-a",
         "label": "demoUSDT-A",
-        "tier": "opaque-or-unknown",
+        "tier": "single-source-or-laggy",
         "summary": "Debt-bearing zero-ceiling demoUSDT legacy branch using an owner-set APACX data feed with no external source, freshness check, or fallback.",
         "collateralAssets": [
           "demoUSDT"
@@ -378,7 +378,7 @@
       {
         "id": "pht-usdc-a",
         "label": "USDC-A",
-        "tier": "opaque-or-unknown",
+        "tier": "single-source-or-laggy",
         "summary": "Debt-bearing USDC branch dividing a Chainlink USDC/USD numerator by an owner-set APACX PHP/USD denominator; neither the ratio feed nor Pip enforces source freshness.",
         "collateralAssets": [
           "USDC"
@@ -452,7 +452,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "opaque-or-unknown",
-    "summary": "PHT's canonical Ethereum CDP issuance is separated from its LayerZero bridge machinery. The Ethereum MyOFTAdapter wraps the canonical PHT token and is controlled by the same EOA that owns the Polygon UUPS OFT; Polygon is a verified LayerZero representation with no resolved timelock or multisig for implementation replacement. APACX identifies Tron as a bridged PhtOFT, but its runtime, endpoint, peer, delegate, and mint/burn semantics remain unverified. Polygon and Ethereum peer configuration is asymmetric, so no single conserved route is proven and the aggregate bridge tier remains opaque-or-unknown.",
+    "summary": "PHT's canonical Ethereum CDP issuance is separated from its LayerZero bridge machinery. The Ethereum MyOFTAdapter wraps the canonical PHT token and is controlled by the same EOA that owns the Polygon UUPS OFT. At the 2026-10-01 pinned reads, Ethereum and Polygon configured each other as peers, superseding the prior asymmetric configuration. Peer identity alone does not prove a conserved executable route. Owner-controlled UUPS replacement and the unresolved Tron runtime and remote configuration keep the aggregate bridge tier opaque-or-unknown.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao); FIX2-17 boundary migration",
     "confidence": "manual-review",
@@ -520,9 +520,9 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "APACX identifies Polygon as a PHT bridge representation. At Polygon block 92141033, the proxy resolved to exact implementation 0x98210a4b34eafd668838108c99ad13a2b4340618 with LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c; owner 0xc6f1cfa1b5840e5afe56f7b7ef3c52c3bcda06c5 can replace the OFT logic through UUPS without a resolved timelock or multisig. Polygon points to the Ethereum adapter, but the adapter's Polygon EID peer is zero, so a currently usable bilateral route is not fully proven.",
+        "reviewNote": "At Polygon block 94756020 on 2026-10-01, the proxy retained implementation 0x98210a4b34eafd668838108c99ad13a2b4340618, LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c, and owner 0xc6f1cfa1b5840e5afe56f7b7ef3c52c3bcda06c5. Polygon peers(30101) points to Ethereum adapter 0x567a173bb4baf009d13222759330c1a84b667bd2; at Ethereum block 26095930, that adapter's peers(30109) points back to Polygon PHT. This supersedes the earlier zero peer, but is not an execution or supply-conservation proof. Owner-controlled UUPS replacement remains without a resolved timelock or multisig.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-08-16",
+        "observedAt": "2026-10-01",
         "sourceChain": "ethereum",
         "canonicalChain": "ethereum",
         "failureDomainKeys": [
@@ -602,11 +602,11 @@
         "modulesOrGuardsStatus": "not-applicable",
         "routeChecks": {
           "lockboxOrEscrow": "MyOFTAdapter inherits LayerZero OFTAdapter and returns the canonical PHT token; its source-side debit and destination credit are bridge accounting, not a second native PHT issuer.",
-          "trustedPeerOrRemote": "At Ethereum block 25770390, peers(30420) returned 0xed9206f7c98d4e0c947dd339b8d1ff188c40c3fe and peers(30109) returned zero. Polygon currently points to this adapter at EID 30101, so the Ethereum/Polygon peer state is asymmetric; the owner can change peers and the LayerZero delegate.",
+          "trustedPeerOrRemote": "At Ethereum block 26095930 on 2026-10-01, peers(30420) returned Tron PHT 0xed9206f7c98d4e0c947dd339b8d1ff188c40c3fe and peers(30109) returned Polygon PHT 0xe75220cb014dfb2d354bb59be26d7458bb8d0706. At Polygon block 94756020, peers(30101) points back to this adapter. The prior block 25770390 Polygon peer was zero; current bilateral peer identity does not prove route execution, delegate configuration, or supply conservation.",
           "pausersAdminsUpgraders": "The adapter endpoint is LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c and owner() is 0xc6f1cfa1b5840e5afe56f7b7ef3c52c3bcda06c5. Owner-controlled peer/delegate and route-configuration powers are bridge administration; no adapter implementation-upgrade authority was separately evidenced."
         },
-        "observedAt": "2026-08-16",
-        "observedBlock": 25770390,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095930,
         "sources": [
           {
             "label": "Ethereum PHT OFT adapter Blockscout",
@@ -621,7 +621,7 @@
             "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "evidence": "At Ethereum block 25770390, MyOFTAdapter 0x567a173bb4baf009d13222759330c1a84b667bd2 returned the canonical PHT token and LayerZero EndpointV2, owner() returned 0xc6f1cfa1b5840e5afe56f7b7ef3c52c3bcda06c5, peers(30420) returned 0xed9206f7c98d4e0c947dd339b8d1ff188c40c3fe, and peers(30109) returned zero. The owner therefore controls the canonical-side bridge mesh, while the route's current bilateral authentication remains unresolved."
+        "evidence": "At Ethereum block 26095930 on 2026-10-01, MyOFTAdapter 0x567a173bb4baf009d13222759330c1a84b667bd2 returned canonical PHT and LayerZero EndpointV2; owner() returned 0xc6f1cfa1b5840e5afe56f7b7ef3c52c3bcda06c5, peers(30420) returned Tron PHT, and peers(30109) returned Polygon PHT 0xe75220cb014dfb2d354bb59be26d7458bb8d0706. The prior zero Polygon peer is superseded. Owner controls and aggregate opaque tier are retained."
       },
       {
         "id": "pht-polygon-oft-owner",
@@ -647,12 +647,12 @@
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
         "routeChecks": {
-          "trustedPeerOrRemote": "At Polygon block 92141033, peers(30101) pointed to Ethereum adapter 0x567a173bb4baf009d13222759330c1a84b667bd2, peers(30420) pointed to 0xed9206f7c98d4e0c947dd339b8d1ff188c40c3fe, and peers(30109) was zero. The owner controls peer and LayerZero delegate configuration; the Ethereum adapter's Polygon EID peer was also zero at the reviewed read.",
+          "trustedPeerOrRemote": "At Polygon block 94756020 on 2026-10-01, peers(30101) returned Ethereum adapter 0x567a173bb4baf009d13222759330c1a84b667bd2, peers(30420) returned Tron PHT 0xed9206f7c98d4e0c947dd339b8d1ff188c40c3fe, and peers(30109) returned zero. At Ethereum block 26095930, the adapter's Polygon EID 30109 peer now points to this Polygon proxy. Current bilateral peer identity supersedes the former asymmetric state but does not establish executable route conservation.",
           "pausersAdminsUpgraders": "The proxy resolved to implementation 0x98210a4b34eafd668838108c99ad13a2b4340618 with admin slot zero. The implementation exposes UUPS upgradeToAndCall, and owner() is 0xc6f1cfa1b5840e5afe56f7b7ef3c52c3bcda06c5; no timelock or multisig was resolved.",
-          "unsupportedReason": "The deployment is strongly identified as an OFT representation, but the asymmetric Ethereum/Polygon peer state prevents treating the currently usable route as fully verified."
+          "unsupportedReason": "The deployment is identified as an OFT representation and bilateral Ethereum/Polygon peers are configured, but authenticated execution, messaging-security settings, delegate configuration, and whole-supply conservation remain unproven."
         },
-        "observedAt": "2026-08-16",
-        "observedBlock": 92141033,
+        "observedAt": "2026-10-01",
+        "observedBlock": 94756020,
         "sources": [
           {
             "label": "Polygon PHT proxy Blockscout",
@@ -667,7 +667,7 @@
             "url": "https://polygon-bor-rpc.publicnode.com"
           }
         ],
-        "evidence": "At Polygon block 92141033, PHT proxy 0xe75220cb014dfb2d354bb59be26d7458bb8d0706 returned owner 0xc6f1cfa1b5840e5afe56f7b7ef3c52c3bcda06c5, implementation 0x98210a4b34eafd668838108c99ad13a2b4340618, token() equal to the proxy, and LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c. The owner can replace the bridge representation logic without a resolved delay or multisig and can alter peer/delegate configuration."
+        "evidence": "At Polygon block 94756020 on 2026-10-01, PHT proxy retained owner 0xc6f1cfa1b5840e5afe56f7b7ef3c52c3bcda06c5, implementation 0x98210a4b34eafd668838108c99ad13a2b4340618, zero EIP-1967 admin and beacon slots, token() equal to the proxy, and LayerZero EndpointV2. peers(30101) points to the Ethereum adapter, which now points back at its Polygon EID. The prior owner-controlled UUPS replacement risk remains unchanged."
       },
       {
         "id": "pht-tron-oft-owner",

@@ -1,5 +1,5 @@
 import { CURVE_NATIVE_DISCOVERY_CHAINS } from "@shared/lib/dex-deployment-coverage";
-import { canonicalExitRouteScopedId } from "@shared/lib/exit-route-identity";
+import { canonicalExitRouteScopedId } from "@shared/types/exit-route-identity";
 import type { ContractDeployment } from "@shared/types/core";
 import { USER_AGENT } from "../../lib/constants";
 import { mapWithConcurrency } from "../../lib/concurrency";

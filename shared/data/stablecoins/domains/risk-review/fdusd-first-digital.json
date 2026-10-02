@@ -2,10 +2,15 @@
   "id": "fdusd-first-digital",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: FDUSD resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Solana finalized FDUSD mint account, slot 452212654",
+        "url": "https://api.mainnet-beta.solana.com"
+      }
+    ],
+    "evidence": "A finalized getMultipleAccounts read at Solana slot 452212654 on 2026-10-01 returned freezeAuthority 83HyrPyXfzUoVFHrxBNPQzUKEarBa6HkAtL8z3bYj4QF for FDUSD mint 9zNQRsGLjNKwCUU5Gq5LR8beUCPzQMVMqKAi3SSZh54u. This directly verifies holder-freeze capability on an issuer-listed deployment, replacing the prior inference from centralized governance.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA03USDS)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

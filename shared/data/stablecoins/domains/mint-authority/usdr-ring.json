@@ -4,7 +4,7 @@
     "mintPath": "permissioned-minter",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
-    "summary": "Ring USD (USDR) is a Fei-fork ERC20Burnable whose MINTER_ROLE holders can mint to any address uncapped; roles are managed by Ring Protocol's Core access-control contract (0xb2799…). At block 25295203: MINTER_ROLE has 4 holders (3 EOAs + RingLaunchpad contract); GOVERN_ROLE has 3 holders (Core itself + 2 EOAs); no revocations recorded.",
+    "summary": "At Ethereum block 26103180, Ring USD's Core enumerates four MINTER_ROLE holders: three EOAs and RingLaunchpad. AssetToken permits an authorized minter to mint any amount to any address without a collateral or cap check. GOVERN_ROLE contains Core and two EOAs; PCV_CONTROLLER_ROLE and BURNER_ROLE have no current members.",
     "controls": [
       {
         "label": "USDR Minter role (Core-gated) — 3 EOA minters",
@@ -15,7 +15,9 @@
         "chain": "ethereum",
         "address": "0x9336d0c82299da0ab178271792954adfd6f10fd7",
         "capDescription": "Uncapped mint to any address for any MINTER_ROLE holder. Current EOA minters: 0x9336d0c…, 0x4f0aa59…, 0xf079c35…",
-        "evidence": "At Ethereum block 25295203, getRoleMember(MINTER_ROLE, 0/1/3) on Core (0xb2799ed) returned 0x9336d0c…, 0x4f0aa59…, 0xf079c35…; eth_getCode on all three returned 0x (EOA confirmed).",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26103180,
+        "evidence": "At Ethereum block 26103180, getRoleMember(MINTER_ROLE, 0/1/3) on Core returned 0x9336d0c82299da0ab178271792954adfd6f10fd7, 0x4f0aa5900b8292273b2f9a178d5468f8048bb9a9 and 0xf079c35f3a490148d5a65919121071d64c727142. eth_getCode returned 0x for each. Verified AssetToken.mint calls _mint under onlyMinter with no collateral or cap check.",
         "sources": [
           {
             "label": "USDR token (Blockscout)",
@@ -36,7 +38,9 @@
         "chain": "ethereum",
         "address": "0x8814a2aa2384d65672c7dc0650454e56f62fba8b",
         "capDescription": "Contract holds MINTER_ROLE; minting constrained by launchpad logic.",
-        "evidence": "At block 25295203, getRoleMember(MINTER_ROLE, 2) on Core returned 0x8814a2a…; Blockscout shows ContractName: RingLaunchpad.",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26103180,
+        "evidence": "At Ethereum block 26103180, getRoleMember(MINTER_ROLE, 2) on Core returned 0x8814a2aa2384d65672c7dc0650454e56f62fba8b. Its verified RingLaunchpad source mints immutable wrappedWETH 0xa250cc729bb3323e7933022a67b52200fe354767 to seed newly deployed generic-token pools; that path does not establish reserve-backed minting of origin USDR.",
         "sources": [
           {
             "label": "RingLaunchpad (Blockscout)",
@@ -53,7 +57,9 @@
         "chain": "ethereum",
         "address": "0xb2799ed78490ea642d2ecb23cb2ce9b8acc087d4",
         "capDescription": "GOVERN_ROLE holders can grant/revoke MINTER_ROLE at will. Current GOVERN_ROLE: Core itself (0xb2799…) + 2 EOAs (0xff790875…, 0x9336d0c…). No revocations recorded.",
-        "evidence": "At block 25295203, getRoleMemberCount(GOVERN_ROLE) on Core = 3; getRoleMember returned 0xb2799…, 0xff790875…, 0x9336d0c…; eth_getCode on 0xff790875… returned 0x (EOA). Core source confirmed as Fei-fork Permissions/AccessControl on Blockscout.",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26103180,
+        "evidence": "At Ethereum block 26103180, GOVERN_ROLE has three members: Core itself, 0xff790875de1f44d4ddc1f905a2b9cf0c11116859 and 0x9336d0c82299da0ab178271792954adfd6f10fd7. Both external addresses have eth_getCode=0x. Verified Permissions source makes GOVERN_ROLE the minter-role administrator. The explorer's role-event census through this block returned seven grants and no revocations; current enumerable roles independently match the census.",
         "sources": [
           {
             "label": "Ring Protocol Core (Blockscout)",
@@ -66,9 +72,9 @@
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "At Ethereum block 25295203: USDR token (AssetToken / CoreRef) verified on Blockscout. Core contract (0xb2799ed) enumerated via getRoleMember: MINTER_ROLE has 4 holders (3 EOAs + RingLaunchpad contract); GOVERN_ROLE has 3 holders (Core itself + 2 EOAs). No RoleRevoked events recorded. Token has no proxy (EIP-1967 slots zero). Minting is uncapped for any MINTER_ROLE holder; GOVERN_ROLE can add new minters freely.. Economic-posture fields reviewed 2026-08-15: three EOAs mint uncapped and GOVERN_ROLE can add minters freely, while no reproducible whole-supply reserve ledger, prudential supervisor, or independent attestor is evidenced. Wave 2 external research reviewed 2026-08-15: Ring documentation, website materials, explorer records, and targeted reserve-report searches disclose circular-liquidity mechanics but no reproducible reserve inventory, live feed, or recurring attestation reconciling backing to the complete USDR supply. Codex reconciliation wave 1 research: Ring's current official docs cover Ring Swap, FewToken, and v4 tooling but publish no USDR-specific reserve inventory, dated attestation, or live supply-to-reserve feed; no recurring whole-supply reconciliation or prudential supervisor is evidenced, so reconciliation remains unknown.",
-      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15; Sol Wave 2 external research 2026-08-15; Codex reconciliation wave 1 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "Pinned Ethereum block 26103180 confirms three EOA minters, RingLaunchpad, Core plus two EOA governors, zero PCV controllers and zero burners. Verified AssetToken/CoreRef retain uncapped onlyMinter issuance, privileged burnFrom and governor-changeable Core. The indexed Minting/Burning history from deployment through the pinned block returned one launch mint of 100400000 USDR and no burn; a fresh call trace of that mint contains only Core.isMinter and no collateral transfer. This does not rule out separately funded reserves. Current issuer documentation, production client source map and recovered USDR Mint draft provide no current mainnet whole-supply reconciliation: the draft minter and Fixed Yield configuration are Sepolia-only. The mainnet fwUSDR wrapper's USDR balance equals its wrapper supply at this block, but that observation concerns a claim on origin USDR, not origin USDR's external backing. Reconciliation remains unknown; no reserve percentage, financial assurance or holder repayment right is inferred.",
+      "reviewer": "Sol NR wave 2026-10-02 (NrUsdr)",
+      "reviewedAt": "2026-10-02",
       "sources": [
         {
           "label": "USDR token (Blockscout)",
@@ -79,12 +85,16 @@
           "url": "https://eth.blockscout.com/address/0xb2799ed78490ea642d2ecb23cb2ce9b8acc087d4"
         },
         {
-          "label": "Ring stablecoin docs",
-          "url": "https://web.archive.org/web/20231130063224/https://docs.ring.exchange/protocol-core/ring-stablecoin"
+          "label": "Current Ring documentation index",
+          "url": "https://docs.ring.exchange/llms.txt"
         },
         {
-          "label": "Ring Protocol current documentation",
-          "url": "https://docs.ring.exchange/"
+          "label": "Production Ring Interface source map",
+          "url": "https://app.ring.exchange/static/js/main.facb7bb4.js.map"
+        },
+        {
+          "label": "Issuer USDR Mint draft at a7061d4 (deployment scope unestablished)",
+          "url": "https://raw.githubusercontent.com/RingProtocol/docs/a7061d4fd0b539fca55db53871d193a386e086ad/docs/concepts/usdr-mint.md"
         }
       ]
     },
@@ -95,8 +105,8 @@
       ],
       "canChangeMintLogic": true,
       "controlRef": "Ring Protocol Core / GOVERN_ROLE (minter-admin)",
-      "observedAt": "2026-07-14",
-      "observedBlock": 25530907,
+      "observedAt": "2026-10-02",
+      "observedBlock": 26103180,
       "sources": [
         {
           "label": "USDR AssetToken verified source (Blockscout)",

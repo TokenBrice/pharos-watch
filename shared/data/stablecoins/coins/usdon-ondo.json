@@ -33,8 +33,12 @@
       "url": "https://docs.ondo.finance/addresses"
     },
     {
-      "label": "Proof of Reserve",
+      "label": "Shared platform reporting",
       "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency"
+    },
+    {
+      "label": "Shared Ondo Stocks/USDon/USDY report (no USDon-specific backing allocation)",
+      "url": "https://www.dropbox.com/scl/fo/jzkrw308mrhsasauqrjqq/AJxJak0F90kcwkADSN3DCD4?rlkey=nik1v5slekrzx5fbi0zan5sk3&st=t5vbvab8&dl=0"
     }
   ],
   "jurisdiction": {

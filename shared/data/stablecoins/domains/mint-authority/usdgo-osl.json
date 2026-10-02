@@ -7,6 +7,7 @@
     "summary": "USDGO is a Solana Token-2022 issuer token. C2QJ... is the externally signable mint and permanent-delegate authority; a finalized mint transaction confirms it as the sole on-chain signer. Separate configuration, pause, freeze, and fee-withdrawal EOAs cannot mint. The shared Token-2022 program remains upgradeable through a 4/6 Squads V3 multisig with no enforced delay.",
     "upgradeability": {
       "model": "custom",
+      "deploymentRefs": ["solana:72puLt71H93Z9CzHuBRTwFpL4TG3WZUhnoCC7p8gxigu"],
       "proxyAddresses": [
         "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
       ],
@@ -19,8 +20,8 @@
       "canChangeMintLogic": true,
       "delaySec": 0,
       "controlRef": "Solana Token-2022 shared-program upgrade authority",
-      "observedAt": "2026-07-13",
-      "observedBlock": 432729217,
+      "observedAt": "2026-10-01",
+      "observedBlock": 452212365,
       "sources": [
         {
           "label": "Solana RPC",
@@ -41,13 +42,14 @@
         "chain": "solana",
         "address": "C2QJ4HKLWzWRNprAmKoyd6YqXouVHFZuLKujdqtF4ZDt",
         "label": "USDGO Token-2022 mint and permanent-delegate authority",
+        "deploymentRefs": ["solana:72puLt71H93Z9CzHuBRTwFpL4TG3WZUhnoCC7p8gxigu"],
         "role": "direct-minter",
         "authorityType": "eoa",
         "directMintAbility": "direct",
         "capDescription": "No configured per-mint supply cap; the authority can mint up to Token-2022 integer bounds.",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-13",
-        "observedBlock": 432729217,
+        "observedAt": "2026-10-01",
+        "observedBlock": 452212365,
         "failureDomainKeys": [
           "issuer:anchorage-digital-bank"
         ],
@@ -61,12 +63,13 @@
             "url": "https://explorer.solana.com/tx/2scWvDhJrCU3PbMii4sqhEiyP2pvLDfBLsLW4sYYzYj3rpBLms2xtYUfKo91nU4pBxMEgJzdbfwL4YJP19Ucavy"
           }
         ],
-        "evidence": "At finalized slot 432729217 this system-owned, on-curve address was both mintAuthority and permanentDelegate. A successful mintToChecked at slot 432714040 had this address as the transaction's only signer. No address-bound public evidence establishes whether the off-chain key uses MPC or HSM."
+        "evidence": "At finalized slot 452212365, getMultipleAccounts reconfirmed this system-owned address as USDGO mintAuthority and permanentDelegate. The prior successful mintToChecked at slot 432714040 remains historical signer evidence. No address-bound public evidence establishes whether the off-chain key uses MPC or HSM."
       },
       {
         "chain": "solana",
         "address": "AeLmXCbPaQHGWRLr2saFsEVfmMNuKnxRAbWCT9P5twgz",
         "label": "Solana Token-2022 shared-program upgrade authority",
+        "deploymentRefs": ["solana:72puLt71H93Z9CzHuBRTwFpL4TG3WZUhnoCC7p8gxigu"],
         "role": "other",
         "authorityType": "multisig",
         "directMintAbility": "upgrade-only",
@@ -75,8 +78,8 @@
         "timelockDelaySec": 0,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-13",
-        "observedBlock": 432729191,
+        "observedAt": "2026-10-01",
+        "observedBlock": 452212365,
         "failureDomainKeys": [
           "platform:solana-token-2022-program"
         ],
@@ -94,19 +97,20 @@
             "url": "https://explorer.solana.com/tx/2cM3S25AJnHyy4shW7zsoqz5W8JPXPvXiUxk545n5ANf6BET9VvBRfsnSNYi9MqogjVWNBxNfaZpE9QBJX4XCbfn"
           }
         ],
-        "evidence": "Token-2022 ProgramData DoU57... named AeLm... as upgrade authority. AeLm... is authority index 1 of Squads V3 multisig BnD53519LK7QM4ERBGvLedZDe1VoTPgtiBkGPWAACiMZ, whose current account data reports threshold 4 and six members. The latest upgrade executed with four recorded approvals. Squads V3 itself is immutable and enforces no timelock."
+        "evidence": "At finalized slot 452212365, Token-2022 ProgramData DoU57... still named AeLm... as upgrade authority. Squads V3 multisig BnD53519LK7QM4ERBGvLedZDe1VoTPgtiBkGPWAACiMZ was owned by SMPLecH534NA9acpos4G6x7uf3LWbCAwZQE9e8ZekMu; decoding its published IDL returned threshold 4 and six keys. Historical review established the authority-index-1 mapping and no enforced timelock; these transaction-level claims were not re-dated."
       },
       {
         "chain": "solana",
         "address": "8N2NFYQ5VMaoDGMAcUbfzdeJqvok6LQs2E9BxDK6mMAE",
         "label": "USDGO Token-2022 configuration authority",
+        "deploymentRefs": ["solana:72puLt71H93Z9CzHuBRTwFpL4TG3WZUhnoCC7p8gxigu"],
         "role": "other",
         "authorityType": "eoa",
         "directMintAbility": "parameter-only",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-13",
-        "observedBlock": 432729217,
+        "observedAt": "2026-10-01",
+        "observedBlock": 452212365,
         "failureDomainKeys": [
           "issuer:anchorage-digital-bank"
         ],
@@ -122,13 +126,14 @@
         "chain": "solana",
         "address": "fEnXbNWPAkmhVK1nL1H2sQVdkF3y4eh8CuqnCsnDXqx",
         "label": "USDGO pause authority",
+        "deploymentRefs": ["solana:72puLt71H93Z9CzHuBRTwFpL4TG3WZUhnoCC7p8gxigu"],
         "role": "other",
         "authorityType": "eoa",
         "directMintAbility": "parameter-only",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-13",
-        "observedBlock": 432729217,
+        "observedAt": "2026-10-01",
+        "observedBlock": 452212365,
         "failureDomainKeys": [
           "issuer:anchorage-digital-bank"
         ],
@@ -144,13 +149,14 @@
         "chain": "solana",
         "address": "FiV6goxf5fYfw9y7XwuG8bVAG6bqTb1sR1rrLomjkXa3",
         "label": "USDGO freeze authority",
+        "deploymentRefs": ["solana:72puLt71H93Z9CzHuBRTwFpL4TG3WZUhnoCC7p8gxigu"],
         "role": "other",
         "authorityType": "eoa",
         "directMintAbility": "parameter-only",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-13",
-        "observedBlock": 432729217,
+        "observedAt": "2026-10-01",
+        "observedBlock": 452212365,
         "failureDomainKeys": [
           "issuer:anchorage-digital-bank"
         ],
@@ -166,13 +172,14 @@
         "chain": "solana",
         "address": "3WNoR4qjdBehtB6aa6fgz6qX2eceo5UiioV2niFfw26w",
         "label": "USDGO transfer-fee withdrawal authority",
+        "deploymentRefs": ["solana:72puLt71H93Z9CzHuBRTwFpL4TG3WZUhnoCC7p8gxigu"],
         "role": "other",
         "authorityType": "eoa",
         "directMintAbility": "parameter-only",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-13",
-        "observedBlock": 432729217,
+        "observedAt": "2026-10-01",
+        "observedBlock": 452212365,
         "failureDomainKeys": [
           "issuer:anchorage-digital-bank"
         ],

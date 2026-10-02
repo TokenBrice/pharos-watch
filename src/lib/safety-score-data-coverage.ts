@@ -74,6 +74,7 @@ const REASON_CODE_LABELS = {
   "nonmaterial-bridge-supply-unmatched": "A trace of supply is not mapped to a bridge route",
   "nonmaterial-dependency-unavailable": "A minor dependency could not be scored",
   "no-viable-exit-path": "No viable exit path found",
+  "oracle-topology-undisclosed": "The issuer has not disclosed the oracle topology",
   "parent-cycle": "Circular dependency between assets",
   // Neutral on cause: most carriers are wrappers whose inherited parent
   // exposure has no live verification, not reviews someone left unfinished;

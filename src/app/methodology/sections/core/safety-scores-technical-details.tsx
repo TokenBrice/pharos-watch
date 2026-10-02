@@ -20,7 +20,7 @@ export function SafetyScoresTechnicalDetails() {
 
   return (
     <>
-      <MethodologyDetails summary="Current V9 technical contract" primary>
+      <MethodologyDetails summary="Current V10 technical contract" primary>
         <p>
           The checked policy uses Backing {formula.pillarWeights.backing * 100}%, Exit{" "}
           {formula.pillarWeights.exit * 100}%, and Economic Control {formula.pillarWeights.control * 100}%. It first

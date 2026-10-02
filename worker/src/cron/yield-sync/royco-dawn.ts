@@ -11,7 +11,8 @@ import { logWorkerEvent } from "../../lib/structured-log";
 import { buildChainAddressKey, normalizeTokenAddress } from "../dex-liquidity/token-resolution";
 import { YIELD_VARIANT_MAP } from "../../lib/yield-config/yield-config-variants";
 import { OPTIONAL_PROTOCOL_API_BUDGET_MS, OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS } from "./optional-source-runtime";
-import { createOptionalSourceBudget, resolveCanonicalChain } from "./sources-helpers";
+import { createOptionalSourceBudget } from "./sources-helpers";
+import { normalizeChainId } from "@shared/types/chain-identity";
 import type { ResolvedYieldCandidate } from "./types";
 
 const ROYCO_DAWN_EXPLORE_URL = "https://dawn.royco.org/api/v1/ecosystem/explore";
@@ -84,7 +85,7 @@ function buildTrackedAssetByChainAddress(): Map<string, RoycoTrackedAsset> {
 
   for (const meta of ACTIVE_STABLECOINS) {
     for (const contract of stablecoinContracts(meta)) {
-      const chain = resolveCanonicalChain(contract.chain);
+      const chain = normalizeChainId(contract.chain);
       const address = contract.address.trim();
       if (!chain || !address) continue;
       byChainAddress.set(buildChainAddressKey(chain, address), {
@@ -96,7 +97,7 @@ function buildTrackedAssetByChainAddress(): Map<string, RoycoTrackedAsset> {
 
   for (const [stablecoinId, variant] of Object.entries(YIELD_VARIANT_MAP)) {
     if (!variant.variantAddress || !variant.variantChain) continue;
-    const chain = resolveCanonicalChain(variant.variantChain);
+    const chain = normalizeChainId(variant.variantChain);
     const address = variant.variantAddress.trim();
     const meta = ACTIVE_STABLECOINS.find((entry) => entry.id === stablecoinId);
     if (!chain || !address || !meta) continue;
@@ -296,7 +297,7 @@ export async function fetchRoycoDawnSources(signal?: AbortSignal): Promise<Royco
 
       const detailTargets: Array<{ discovery: RoycoMarket; chain: string; marketId: string }> = [];
       for (const discovery of markets) {
-        const chain = resolveCanonicalChain(discovery.chainId);
+        const chain = normalizeChainId(discovery.chainId);
         if (!chain || discovery.majorType !== "marketv2" || discovery.listingType !== "verified") continue;
         const marketId = discovery.marketId;
         if (!marketId?.trim()) return { candidates: results, degraded: true };

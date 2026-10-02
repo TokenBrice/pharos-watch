@@ -61,7 +61,7 @@
             "url": "https://eth.blockscout.com/address/0x6d57b2e05f26c26b549231c866bdd39779e4a488"
           }
         ],
-        "reviewNote": "Native VNXAU issuance on ethereum (home chain): the VNXDGR proxy resolves to implementation 0x1c17d67706423735b8bbf5b234d63b872bd584c4 with owner() = 0xcdb3867935247049e87c38ea270edd305d84c9ae (VNXManager, issuer role-0 RBAC) at block 25571159 (verified on-chain 2026-07-20); no bridge representation."
+        "reviewNote": "Historical Ethereum block 25571159 used implementation 0x1c17d67706423735b8bbf5b234d63b872bd584c4. At pinned block 26095945 the implementation is 0x6b456a9bdc0f6849c0e54306acc56b67a2957a56 and owner() remains 0xcdb3867935247049e87c38ea270edd305d84c9ae. The new implementation's complete role and holder-control source review remains open; native issuer issuance attribution is retained."
       },
       {
         "id": "polygon:0xc8bb8eda94931ca2f20ef43ea7dbd58e68400400",

@@ -13,7 +13,7 @@
       },
       {
         "label": "Polygon PUSD verified implementation source",
-        "url": "https://polygon.blockscout.com/api/v2/smart-contracts/0x6bbcef9f7ef3b6c592c99e0f206a0de94ad0925f"
+        "url": "https://polygon.blockscout.com/api/v2/smart-contracts/0xce84e053301a82937f90ee2c2c1889cab1db25de"
       },
       {
         "label": "Polygon CollateralOnramp verified source",
@@ -24,9 +24,9 @@
         "url": "https://www.circle.com/legal/usdc-terms"
       }
     ],
-    "evidence": "Re-verified 2026-08-08 at Polygon block 91673086. The pUSD proxy implementation remained 0x6bbcef9f7ef3b6c592c99e0f206a0de94ad0925f and owner() remained Timelock 0x47ebfac3353314c788b96cdcbf41daadfe03629c. The verified CollateralToken implementation defines wrap, unwrap, allowance-gated burn, role administration, and UUPS authorization but no blacklist, holder freeze, seizure, arbitrary-holder burn, pause, or transfer-hook restriction. The immutable CollateralOnramp can pause new wrapping per collateral but cannot freeze existing pUSD balances. Circle can restrict reserve USDC, and the Timelock can replace pUSD logic; those are reserve and future-upgrade risks captured separately, not a current direct holder-blacklist mechanism.",
-    "reviewer": "OpenAI Codex C02 control review",
-    "reviewedAt": "2026-08-08"
+    "evidence": "Re-verified at Polygon block 94755001 on 2026-10-01: the proxy now points to CollateralToken 0xce84e053301a82937f90ee2c2c1889cab1db25de and owner() remains Timelock 0x47ebfac3353314c788b96cdcbf41daadfe03629c. Current verified source defines collateral wrapping/unwrapping, minter-role burn of msg.sender balances, owner rescue of assets held by the token contract, role administration, and UUPS authorization. It and its inherited ERC20 source contain no direct holder blacklist, freeze, seizure, or arbitrary-holder burn mechanism. Collateral ramps can pause their wrap/unwrap paths; that does not freeze existing pUSD transfers. Circle's USDC blocklisting and owner-controlled future upgrades remain adverse upstream/control exposure. The inherited review is retained.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA12RLUSD)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "opaque-or-unknown",

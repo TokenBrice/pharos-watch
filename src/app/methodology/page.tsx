@@ -18,7 +18,7 @@ import { METHODOLOGY_READING_STEPS, METHODOLOGY_SECTIONS, READER_GUIDE_COPY } fr
 export const metadata: Metadata = buildPageMetadata({
   title: "Methodology: How Pharos Grades Stablecoins",
   description:
-    "Full methodology behind Pharos V9 safety grades and mint-control evidence, peg scores, liquidity scores, and dependency analysis.",
+    "Full methodology behind Pharos V10 safety grades and mint-control evidence, peg scores, liquidity scores, and dependency analysis.",
   canonical: "/methodology/",
   ogImage: `${SITE_URL}/og-editorial-methodology.png`,
 });
@@ -27,7 +27,7 @@ const METHODOLOGY_FAQ_ITEMS = [
   {
     question: "How does Pharos grade stablecoins?",
     answer:
-      "Safety Score V9 evaluates Backing (40%), Exit (35%), and Economic Control (25%). Exit capacity is route-specific: a route below both the first positive 1% coverage and $100K absolute-capacity breakpoints receives no route credit, while a route that reaches $100K but still completes less than 1% is capped at 50. Bounded aggregation then limits how far strong pillars can lift a weak material path, while peg behavior, structural caps, dependencies, wrappers, evidence quality, and track record can constrain the result. Missing required evidence returns NR unless a reviewed bounded policy explicitly keeps the asset rateable. Grades range from A+ (87+) to F (0–39), with NR for insufficient data.",
+      "Safety Score V10 evaluates Backing (40%), Exit (35%), and Economic Control (25%). Exit capacity is route-specific: a route below both the first positive 1% coverage and $100K absolute-capacity breakpoints receives no route credit, while a route that reaches $100K but still completes less than 1% is capped at 50. Bounded aggregation then limits how far strong pillars can lift a weak material path, while peg behavior, structural caps, dependencies, wrappers, evidence quality, and track record can constrain the result. Missing required evidence returns NR unless a reviewed bounded policy explicitly keeps the asset rateable. Grades range from A+ (87+) to F (0–39), with NR for insufficient data.",
   },
   {
     question: "How is the Pharos peg score calculated?",
@@ -76,14 +76,14 @@ export default function MethodologyPage() {
               additionalType: "https://schema.org/TechArticle",
               headline: "Methodology: How Pharos Grades Stablecoins",
               description:
-                "Full methodology behind Pharos V9 safety grades and mint-control evidence, peg scores, liquidity scores, and dependency analysis.",
+                "Full methodology behind Pharos V10 safety grades and mint-control evidence, peg scores, liquidity scores, and dependency analysis.",
               author: "person",
               image: `${SITE_URL}/og-editorial-methodology.png`,
               mainEntityOfPage: `${SITE_URL}/methodology/`,
               keywords: [
                 "stablecoin methodology",
                 "safety score",
-                "V9 mint-control component",
+                "V10 mint-control component",
                 "PegScore",
                 "DEWS",
                 "PSI",
@@ -100,7 +100,7 @@ export default function MethodologyPage() {
             <div className="space-y-2">
               <h1 className="pharos-page-title">Methodology</h1>
               <p className="pharos-page-lead max-w-3xl">
-                How Pharos grades stablecoins: transparent scoring across safety, peg stability, V9 mint control,
+                How Pharos grades stablecoins: transparent scoring across safety, peg stability, V10 mint control,
                 liquidity, yield, and dependency risk.
               </p>
               <p className="pharos-lead max-w-3xl">
@@ -190,13 +190,13 @@ export default function MethodologyPage() {
         <div className="mt-6 space-y-5 text-[0.97rem] leading-7 text-foreground/88 sm:text-base sm:leading-8">
           <p>
             Every safety grade Pharos publishes is the answer to one question: if this stablecoin started bleeding
-            tomorrow, how much of the loss would the holder eat before the system stopped it? V9 answers through three
+            tomorrow, how much of the loss would the holder eat before the system stopped it? V10 answers through three
             material pillars. Backing (40%) measures the assets and loss-absorption structure behind the claim. Exit
             (35%) measures whether holders can leave through executable market or redemption routes. Economic Control
             (25%) measures who can change, freeze, mint, or otherwise impair that claim.
           </p>
           <p>
-            V9 does not let a strong unrelated pillar average away a weak material path. Its bounded aggregation grants
+            V10 does not let a strong unrelated pillar average away a weak material path. Its bounded aggregation grants
             limited headroom above the weakest pillar, then peg behavior, evidence sufficiency, track record, structural
             caps, dependencies, and wrapper-local risks can only constrain the published result. A missing required fact
             returns NR unless a reviewed bounded policy states exactly why the remaining uncertainty is rateable.

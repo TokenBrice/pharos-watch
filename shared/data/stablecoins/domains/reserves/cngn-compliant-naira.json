@@ -32,9 +32,13 @@
       {
         "label": "Africa Stablecoin Consortium FAQ (partner-bank reserve and audit disclosures; retrieved 2026-09-04; no dated composition report)",
         "url": "https://asc.africa/faqs"
+      },
+      {
+        "label": "Historical December 2025 reserve report only; management e-signed January 13, 2026; accountant opinion undated",
+        "url": "https://drive.google.com/file/d/1iyrdoJPs0EyBK-yZRNdjJDWiOKSB_GtD/view?usp=drive_link"
       }
     ],
-    "rationale": "Negative search 2026-09-04: the cNGN transparency page rendered metrics as of August 31, 2026, but those dated metrics cover trading and on-chain activity only; it provides no itemized reserve instruments, allocation weights, reserve balance total, or dated reserve examination. The page's aggregate 1:1 Naira/licensed-custodian-bank claim, WrappedCBDC's 1:1 Naira-deposit terms, and the ASC FAQ's partner-bank reserve description support the single 100% Naira bank-deposit category but do not establish a dated composition as of 2026-08-31. No dated reserve-attestation artifact or custodian-bank names were retrievable. The structured envelope therefore remains 100% Naira deposits with confidence probable and compositionAsOf 2026-07-31; it remains open rather than treating the August 31 activity date as a reserve-composition date.",
+    "rationale": "The retained July 31, 2026 probable reserve envelope is an issuer category description, not a verified current allocation. The September 4 negative search found no current itemized reserve report and the August 31 page metrics cover activity, not reserve composition. Historical metadata only, independently re-fetched October 2: the report as of December 31, 2025 at 21:45 WAT reports Table 2's rounded 43% CardinalStone Money Market Fund (NGN570,689,338 recorded at cost) and 57% bank deposits (NGN768,071,047.79), total NGN1,338,760,385.79. Table 4 separately discloses MMF current value NGN581,844,399.49. Management e-signed January 13, 2026 at 13:11 UTC; the Bala Isah Garba and Company accountant opinion is undated, so January 13 is not asserted as its report publication or independent review date. The schema has no history-only composition field: this historical mix is recorded solely in rationale and source provenance, not reserves, compositionAsOf, reviewedAt, confidence or latestReport. No current allocation, bank identities, eight-chain reconciliation or freshness is inferred; the current missing-reserve charge must remain.",
     "compositionBasis": "Current cNGN issuer transparency disclosure",
     "compositionAsOf": "2026-07-31",
     "scope": "full-composition",

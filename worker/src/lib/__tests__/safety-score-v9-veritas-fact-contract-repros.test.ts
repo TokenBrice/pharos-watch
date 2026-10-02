@@ -42,6 +42,7 @@ import {
   V9_FIXTURE_CLOCK_SEC as AS_OF_SEC,
 } from "../../test-helpers/v9-fixed-input";
 import { parseReserveCompositionRow } from "../live-reserves/store-row-decoding";
+import { rebuildFixed } from "./safety-score-v9-fact-set.test-support";
 
 const DEFAULT_RESERVES: readonly ReserveSlice[] = [
   {
@@ -69,7 +70,7 @@ function notApplicableStatus(rule: string): V9FactStatusV2 {
 
 /** The shared zero-route VERITAS capture: a reviewed-complete empty DEX surface. */
 function exactFixedInput(reserves: readonly ReserveSlice[] = DEFAULT_RESERVES) {
-  return makeV9FixedInput({
+  const fixed = makeV9FixedInput({
     sourceGeneration: `report-cards:veritas:${AS_OF_SEC}`,
     registryRevision: "registry:veritas",
     pegMethodologyVersion: "peg:veritas-v1",
@@ -98,6 +99,19 @@ function exactFixedInput(reserves: readonly ReserveSlice[] = DEFAULT_RESERVES) {
       },
     },
   });
+  fixed.dexDeploymentSupplyCoverageById.alpha = {
+    totalSupplyUsd: 10_000_000,
+    observedSupplyUsd: 0,
+    verifiedNoPoolsSupplyUsd: 10_000_000,
+    providerInaccessibleSupplyUsd: 0,
+    unknownSupplyUsd: 0,
+    observedSupplyRatio: 0,
+    verifiedNoPoolsSupplyRatio: 1,
+    providerInaccessibleSupplyRatio: 0,
+    unknownSupplyRatio: 0,
+    unknownChains: [],
+  };
+  return rebuildFixed(fixed);
 }
 
 function baselineExtension(fixedInput: ReturnType<typeof exactFixedInput>) {
@@ -162,6 +176,51 @@ describe("VERITAS finding VER-006: zero-route completeness is compiled as missin
       }),
     );
   });
+
+  it.each(["uncatalogued-chain", "unsupported-chain", "missing-proof", "partial-denominator"] as const)(
+    "cannot promote a locally empty census with %s supply into global exhaustion",
+    (remainder) => {
+      const draft = exactFixedInput();
+      const point = {
+        current: 1_000_000,
+        circulatingPrevDay: 1_000_000,
+        circulatingPrevWeek: 1_000_000,
+        circulatingPrevMonth: 1_000_000,
+      };
+      draft.chainCirculatingById.alpha = {
+        ethereum: { ...point, current: 9_000_000 },
+        "non-census-chain": point,
+      };
+      const proof = draft.dexDeploymentSupplyCoverageById.alpha!;
+      proof.verifiedNoPoolsSupplyUsd = 9_000_000;
+      proof.verifiedNoPoolsSupplyRatio = 0.9;
+      if (remainder === "uncatalogued-chain") {
+        proof.unknownSupplyUsd = 1_000_000;
+        proof.unknownSupplyRatio = 0.1;
+        proof.unknownChains = ["non-census-chain"];
+      } else if (remainder === "unsupported-chain") {
+        proof.providerInaccessibleSupplyUsd = 1_000_000;
+        proof.providerInaccessibleSupplyRatio = 0.1;
+      } else if (remainder === "missing-proof") {
+        delete draft.dexDeploymentSupplyCoverageById.alpha;
+      } else {
+        proof.totalSupplyUsd = 9_000_000;
+        proof.verifiedNoPoolsSupplyRatio = 1;
+      }
+      const fixed = rebuildFixed(draft);
+      const pipeline = buildSafetyScoreV9Candidate({
+        fixedInput: fixed,
+        extension: baselineExtension(fixed),
+        publishedAtSec: AS_OF_SEC,
+      });
+      const evaluated = pipeline.evaluatedSet.assets[0]!;
+      expect(pipeline.compiledFacts.assets[0]!.exitStatus.observationState).toBe("bounded-unknown");
+      expect(evaluated.exit.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
+      expect(evaluated.exit.reasons).not.toContain("no-viable-exit-path");
+      expect(evaluated.scoreInput.pillars.exit.reasons.every((reason) =>
+        reason.responsibility !== "measured-adverse")).toBe(true);
+    },
+  );
 });
 
 // VER-007: a non-null review currently makes positive circulating supply known even
@@ -412,6 +471,7 @@ describe("VERITAS-II finding: mechanism overlays do not expire after twelve mont
     const fixedInput = {
       clockSec: Date.UTC(2027, 6, 16) / 1_000,
       liveReserveMap: { "usdc-circle": [{ pct: 100 }] },
+      liveReserveProvenanceMap: {},
     } as unknown as ReportCardsFixedInput;
     const meta = { id: "usdc-circle" } as MechanismMeta;
 

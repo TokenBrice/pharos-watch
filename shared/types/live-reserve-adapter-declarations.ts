@@ -1058,6 +1058,9 @@ const erc4626SingleAssetParamsSchema = z
   .object({
     slice: reserveSliceDescriptorSchema,
     deployedExposure: erc4626DeployedExposureSchema.optional(),
+    // Whole-token pooled claim, not an allocation to its accounting asset.
+    // Underlying observations remain contextual and look-through stays unknown.
+    pooledClaim: erc4626DeployedExposureSchema.optional(),
     redemptionRoute: z.literal("async-request").optional(),
     redemptionLock: z.array(z.object({
       selector: z.union([EvmSelectorSchema, z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*\(\)$/)]),
@@ -1075,7 +1078,16 @@ const erc4626SingleAssetParamsSchema = z
       .optional(),
     ...OptionalEvmRpcFields,
   })
-  .strict();
+  .strict()
+  .superRefine((params, ctx) => {
+    if (params.pooledClaim && (params.deployedExposure || params.slice.coinId || params.slice.depType)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["pooledClaim"],
+        message: "Opaque pooled claims cannot carry token dependencies or a deployed-exposure allocation",
+      });
+    }
+  });
 
 const escrowBalanceIdentityCheckSchema = z
   .object({
@@ -1365,6 +1377,8 @@ const evmBranchBalanceBranchSchema = z
     priceToken: priceTokenRefSchema.optional(),
     ...TrackedExposureFields,
     priceUsd: z.number().positive().optional(),
+    /** Own-liability lending claims are observed, never credited as independent backing. */
+    unclassifiedSelfReferential: z.literal(true).optional(),
   })
   .strict();
 
@@ -1372,6 +1386,27 @@ const evmBranchBalancesParamsSchema = z
   .object({
     ...OptionalEvmRpcFields,
     branches: z.array(evmBranchBalanceBranchSchema).min(1),
+    census: z.discriminatedUnion("kind", [
+      z.object({
+        kind: z.literal("reviewed-roster"),
+        reviewedAt: StrictIsoDateSchema,
+        ...RequiredSourceUrlsFields,
+      }).strict(),
+      z.object({
+        kind: z.literal("onchain-registry"),
+        contract: EvmAddressSchema,
+        selector: EvmSelectorSchema,
+        maxAssets: z.number().int().positive().max(128),
+        /** Registry entries identify reserve tokens unless it enumerates holders/vaults. */
+        identity: z.enum(["token", "holder"]).optional(),
+      }).strict(),
+    ]).optional(),
+    /** Token-address price getter, read at the balance observation's pinned block. */
+    priceOracle: z.object({
+      contract: EvmAddressSchema,
+      selector: EvmSelectorSchema,
+      decimals: z.number().int().nonnegative().max(36),
+    }).strict().optional(),
     ...OptionalSourceUrlsFields,
     redemptionRateProbe: redemptionRateProbeSchema.optional(),
     /**
@@ -1979,6 +2014,22 @@ const afiProofParamsSchema = z
   .strict();
 
 export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
+  "leverup-lvusd": {
+    primaryInputKinds: ["onchain-evm"],
+    paramsSchema: noParamsSchema,
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sourceOriginClass: "onchain-observation",
+    preferredFreshnessMode: "not-applicable",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: LATEST_STATE_VALIDATION,
+    provenance: {
+      status: "active",
+      rationale: "Bound to lvusd-leverup: reviewed LVUSD-only Monad vault census and pinned supply reconciliation exclude LVMON and MON staking, fail closed on registry or identity drift, and retain measured undercollateralization without allowlisting the deficit or inferring redemption capacity.",
+    },
+  },
   "hylo-solana": {
     primaryInputKinds: ["onchain-solana"],
     paramsSchema: hyloSolanaParamsSchema,
@@ -2074,6 +2125,21 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     configValidation: CONFIG_ATTESTATION_V1,
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: MONTHLY_VERIFIED_VALIDATION,
+  },
+  "blox-attestation-index": {
+    primaryInputKinds: ["http-json"],
+    paramsSchema: noParamsSchema,
+    sourceModel: "validated-static",
+    evidenceClass: "static-validated",
+    sourceOriginClass: "issuer-attested",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_ATTESTATION_V1,
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: MONTHLY_VERIFIED_VALIDATION,
+    provenance: {
+      status: "active",
+      rationale: "Bound to myrc-blox: the issuer JSON index validates the unique reviewed August 2026 period, report URL and MYR breakdown total before publishing static-validated 66.68% bank cash and 33.32% Halogen fund slices. Freshness uses the examined August 31 balances under the 33-day monthly cap, not upload time; newer reports require composition review. The MYR 0.03 assertion/breakdown discrepancy is retained, with no inferred USD total or coverage ratio.",
+    },
   },
   "audd-independent-assurance": declareAdapter(
     auddAssuranceParamsSchema,
@@ -2848,6 +2914,20 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     redemptionTelemetry: { capacity: "direct", fee: "none" },
     validation: DASHBOARD_WITH_UNKNOWN_CAP_VALIDATION,
   },
+  "solomon-chancery": {
+    primaryInputKinds: ["http-json"],
+    paramsSchema: noParamsSchema,
+    sourceModel: "dynamic-mix",
+    evidenceClass: "weak-live-probe",
+    sourceOriginClass: "issuer-attested",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: {
+      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
+      allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
+    },
+  },
   "solomon-protocol": {
     primaryInputKinds: ["http-json"],
     paramsSchema: noParamsSchema,
@@ -3160,9 +3240,8 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     primaryInputKinds: ["http-json"],
     paramsSchema: noParamsSchema,
     sourceModel: "dynamic-mix",
-    // Gross long legs of a leveraged book are not a reconciled holder-exitable
-    // allocation; issuer-attested weak probe until provenance/completeness is
-    // resolved. Debt is published as separate totals, never netted.
+    // Whole-token composition remains opaque. Gross longs, financing debts and
+    // selected source observations are contextual only, never backing weights.
     evidenceClass: "weak-live-probe",
     sourceOriginClass: "issuer-attested",
     preferredFreshnessMode: "verified",

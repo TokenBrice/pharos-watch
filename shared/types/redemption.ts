@@ -3,6 +3,7 @@ import { RedemptionExitRouteObservationsSchema } from "./exit-route";
 import { MethodologyEnvelopeSchema } from "./methodology-envelope";
 import { ScoreSchema } from "./safety-schema-primitives";
 import { HttpUrlSchema, NonNegativeNumberSchema, PositiveNumberSchema } from "./validators";
+import { isValidIsoDateOnly } from "./date-primitives";
 
 export const RedemptionRouteFamilySchema = z.enum([
   "stablecoin-redeem",
@@ -55,8 +56,23 @@ export const RedemptionResolutionStateSchema = z.enum([
 ]);
 export type RedemptionResolutionState = z.infer<typeof RedemptionResolutionStateSchema>;
 
-export const RedemptionRouteStatusSchema = z.enum(["open", "degraded", "paused", "cohort-limited", "unknown"]);
+export const RedemptionRouteStatusSchema = z.enum(["open", "degraded", "paused", "suspended", "cohort-limited", "unknown"]);
 export type RedemptionRouteStatus = z.infer<typeof RedemptionRouteStatusSchema>;
+
+const SuspensionDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(isValidIsoDateOnly);
+/** Reviewed cessation of exactly one named channel, never a whole-token lifecycle assertion. */
+export const RedemptionRouteSuspensionSchema = z.strictObject({
+  routeId: z.string().trim().min(1),
+  channel: z.string().trim().min(1),
+  suspendedAt: SuspensionDateSchema,
+  reason: z.string().trim().min(1),
+  reviewer: z.string().trim().min(1),
+  reviewedAt: SuspensionDateSchema,
+  sources: z.array(z.strictObject({ url: HttpUrlSchema, quote: z.string().trim().min(1) })).min(1),
+}).refine((value) => value.suspendedAt <= value.reviewedAt, {
+  message: "A suspension review cannot precede the effective suspension",
+});
+export type RedemptionRouteSuspension = z.infer<typeof RedemptionRouteSuspensionSchema>;
 
 export const RedemptionRouteStatusSourceSchema = z.enum([
   "static-config",

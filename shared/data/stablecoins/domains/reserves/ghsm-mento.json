@@ -284,16 +284,32 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "Mento Reserve smart contract (Celo)",
+        "name": "Mento Reserve Safes (issuer API wallet labels)",
+        "role": "other"
+      },
+      {
+        "name": "Mento V2 Liquidity Reserve",
+        "role": "other"
+      },
+      {
+        "name": "Mento V3 Liquidity Reserve",
+        "role": "other"
+      },
+      {
+        "name": "Mento Operations Safe, Operations Account and Rebalancer Bot",
+        "role": "other"
+      },
+      {
+        "name": "Aave, Mento FPMM and Uniswap V3 positions reported by the issuer API",
         "role": "other"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-7 (lead tusd-trueusd)",
-    "confidence": "probable",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB01USDU)",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Mento Reserve dashboard",
@@ -302,9 +318,13 @@
       {
         "label": "Mento protocol documentation",
         "url": "https://docs.mento.org/"
+      },
+      {
+        "label": "Mento issuer reserve API (wallet and position source labels, retrieved 2026-10-01)",
+        "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
       }
     ],
-    "uncertainty": "Reserve assets are held in the on-chain Mento Reserve contract under Mento governance rather than with a legal custodian, so legal segregation, insolvency treatment, and reuse restrictions are not established by the reviewed sources; constituent-level custody (e.g. Circle, Tether, Lido) sits with each issuer.",
+    "uncertainty": "The issuer API reports reserve assets across Reserve Safes, V2/V3 liquidity reserve contracts, operations wallets, a rebalancer, and Aave/FPMM/Uniswap positions rather than one Celo reserve contract. These source labels establish reported holding locations, not independent custody assurance or a legal custodian. Provider shares, legal segregation, insolvency treatment, and reuse restrictions remain unestablished; underlying stablecoin issuers and bridge representations retain their separate custody risks.",
     "knownUnknownExposurePct": 100
   }
 }

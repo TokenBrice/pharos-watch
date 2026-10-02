@@ -2,7 +2,7 @@
   "id": "gbpsafo-spiko",
   "name": "Spiko Amundi Overnight Swap Fund (GBP)",
   "symbol": "GBPSAFO",
-  "oneLiner": "GBPSAFO is the GBP share of Spiko's UCITS Amundi Smart Cash fund, a regulated overnight-swap money-market vehicle authorized by the AMF.",
+  "oneLiner": "GBPSAFO is the GBP share class of Spiko's Amundi-managed UCITS overnight-swap fund, authorized by France's AMF.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "GBP",
@@ -11,19 +11,11 @@
     "rwa": true,
     "navToken": true
   },
-  "collateral": "GBP share class of Spiko's Amundi-managed Smart Cash UCITS fund. Returns come from a fully collateralized total-return swap under which counterparty BNP Paribas pays SONIA + 0.27% daily; the swap is backed by a basket of listed equities marked to market daily, with CACEIS (Credit Agricole) acting as depositary.",
-  "pegMechanism": "GBP-denominated NAV-accreting share class; subscriptions and redemptions are KYC-gated through Spiko fund-transfer rails at the published fund NAV.",
+  "collateral": "GBP share class of the Spiko Amundi Overnight Swap Fund. The September 2026 prospectus permits bonds, equities and money-market instruments hedged through total-return swaps with one or more counterparties. Its GBP objective is SONIA + 0.50% before share-class fees; BNP Paribas is identified as the initial counterparty. CACEIS Bank is the depositary.",
+  "pegMechanism": "GBP-denominated NAV-accreting UCITS share class with KYC-gated subscriptions and redemptions through Spiko. Orders are centralized by 3 p.m. Paris time; the management company may cap redemptions when net requests reach 25% of sub-fund assets, for up to 20 valuation days over three months.",
   "mechanismArchetype": "rwa-credit-fund",
   "detailProvider": "coingecko",
   "geckoId": "spiko-amundi-overnight-swap-fund-gbp",
-  "proofOfReserves": {
-    "type": "independent-audit",
-    "url": "https://cdn.spiko.finance/legal_docs/EN/SAFO_Letter_EN.pdf",
-    "provider": "PricewaterhouseCoopers Audit, statutory auditor (SAFO, the Spiko Amundi Overnight Swap Fund, was authorised by the AMF on 2026-02-23 and its first financial year has not closed, so no PwC certification exists yet; the spiko.io fund pages are unlaunched placeholders with dummy data and the 'four audits annually' claim is template marketing text)",
-    "attestorTier": "big4",
-    "cadence": "annual",
-    "attestorJurisdiction": "France"
-  },
   "links": [
     {
       "label": "Website",

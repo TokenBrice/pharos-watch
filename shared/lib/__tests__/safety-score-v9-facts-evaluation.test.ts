@@ -1034,7 +1034,12 @@ describe("Safety Score v9 fact evaluation", () => {
     expect(diagnosticEvaluated.scoreInput.pillars.exit.evidenceLevel).toBe("adequate");
     expect(diagnosticEvaluated.trace.caps.map((cap) => cap.kind)).not.toContain("evidence:limited");
   });
-  it("attributes an immaterial score-bearing lower-bound exit instead of withholding its F score", () => {
+  it.each([
+    ["exact-complete", "known"],
+    ["exact-complete", "stale"],
+    ["exact-lower-bound", "known"],
+    ["exact-lower-bound", "stale"],
+  ] as const)("requires exhaustive coverage to attribute immaterial %s capacity, retaining %s observations", (coverageClass, observationState) => {
     const input = coreFixture();
     const alpha = input.assets.find((asset) => asset.assetId === "alpha")! as unknown as V9AssetFactsV2;
     const beta = input.assets.find((asset) => asset.assetId === "beta")! as unknown as V9AssetFactsV2;
@@ -1042,7 +1047,33 @@ describe("Safety Score v9 fact evaluation", () => {
     const measuredRoute = structuredClone(
       alpha.exitRoutes.find((route) => route.routeId === "amm-main")!,
     );
-    measuredRoute.coverageClass = "exact-lower-bound";
+    measuredRoute.coverageClass = coverageClass;
+    measuredRoute.status = { ...measuredRoute.status, observationState };
+    if (observationState === "stale") {
+      const staleEvidence = createV9EvidenceReference({
+        evidenceId: "evidence:retained-stale-exit",
+        sourceId: routeEvidence.sourceId,
+        sourceGenerationId: routeEvidence.sourceGenerationId,
+        disposition: "published",
+        observedAtSec: 600,
+        publishedAtSec: 610,
+        maxAgeSec: 100,
+      }, AS_OF_SEC);
+      beta.evidence.push(staleEvidence);
+      measuredRoute.status = { ...measuredRoute.status, evidenceRefIds: [staleEvidence.evidenceId] };
+      const gap = createV9FactGap({
+        gapId: "gap:retained-stale-exit",
+        reasonCode: "missing-runtime-route-evidence",
+        ownerDomain: "exit",
+        policyRuleId: "exit.route.freshness",
+        observationState: "stale",
+        path: { kind: "optional-exit", routeKey: measuredRoute.routeKey },
+        message: "The exhaustive measurement is retained beyond its freshness window.",
+        evidenceRefIds: measuredRoute.status.evidenceRefIds,
+      });
+      beta.gaps.push(gap);
+      measuredRoute.status = { ...measuredRoute.status, gapIds: [gap.gapId] };
+    }
     measuredRoute.capacityCurve = measuredRoute.capacityCurve.map((point) => ({
       ...point,
       executableUsd: 1,
@@ -1057,6 +1088,15 @@ describe("Safety Score v9 fact evaluation", () => {
       compileNativeV3FactSet(input),
       V9_CANDIDATE_POLICY_V1,
     ).assets.find((asset) => asset.assetId === "beta")!;
+    if (coverageClass === "exact-lower-bound") {
+      expect(evaluated.exit.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
+      expect(evaluated.exit.reasons).toContain("missing-same-notional-route");
+      expect(evaluated.exit.reasons).not.toContain("no-viable-exit-path");
+      expect(evaluated.scoreInput.pillars.exit.adverseAttribution).toEqual([]);
+      expect(evaluated.trace.adverseAttribution).toEqual([]);
+      expect(evaluated.trace.finalGrade).not.toBe("F");
+      return;
+    }
     const primaryRoute = evaluated.exit.routes.find(
       (route) => route.routeKey === evaluated.exit.primaryRouteKey,
     )!;
@@ -1084,7 +1124,7 @@ describe("Safety Score v9 fact evaluation", () => {
       }),
     );
   });
-  it("attributes a measured-zero discounted redemption instead of relabeling it as unsupported", () => {
+  it.each(["exact-complete", "exact-lower-bound"] as const)("does not attribute non-score-eligible %s redemption zero as measured exhaustion", (coverageClass) => {
     const input = coreFixture();
     const alpha = input.assets.find((asset) => asset.assetId === "alpha")! as unknown as V9AssetFactsV2;
     const beta = input.assets.find((asset) => asset.assetId === "beta")! as unknown as V9AssetFactsV2;
@@ -1095,7 +1135,7 @@ describe("Safety Score v9 fact evaluation", () => {
     redemptionRoute.routeFamily = "protocol-redemption";
     redemptionRoute.scoreEligible = false;
     redemptionRoute.evidenceKind = "live-reserve-state";
-    redemptionRoute.coverageClass = "exact-lower-bound";
+    redemptionRoute.coverageClass = coverageClass;
     redemptionRoute.settlementModel = "queued";
     redemptionRoute.settlementSlaSec = 86_400;
     redemptionRoute.capacityCurve = redemptionRoute.capacityCurve.map((point) => ({
@@ -1111,29 +1151,12 @@ describe("Safety Score v9 fact evaluation", () => {
       compileNativeV3FactSet(input),
       V9_CANDIDATE_POLICY_V1,
     ).assets.find((asset) => asset.assetId === "beta")!;
-    const primaryRoute = evaluated.exit.routes.find(
-      (route) => route.routeKey === evaluated.exit.primaryRouteKey,
-    )!;
-
-    expect(primaryRoute).toMatchObject({
-      included: true,
-      score: 0,
-      capsApplied: expect.arrayContaining(["zero-executable-capacity"]),
-    });
-    expect(evaluated.exit.reasons).toContain("no-viable-exit-path");
-    expect(evaluated.scoreInput.pillars.exit).toMatchObject({
-      score: 0,
-      reasons: [expect.objectContaining({ responsibility: "measured-adverse" })],
-      adverseAttribution: [
-        expect.objectContaining({
-          source: "pillar-score",
-          path: `pillar:exit:route:${redemptionRoute.routeKey}:capacity`,
-          responsibility: "measured-adverse",
-        }),
-      ],
-    });
-    expect(evaluated.trace.finalGrade).toBe("F");
-    expect(evaluated.trace.finalScore).not.toBeNull();
+    expect(evaluated.exit.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
+    expect(evaluated.exit.reasons).toContain("missing-same-notional-route");
+    expect(evaluated.exit.reasons).not.toContain("no-viable-exit-path");
+    expect(evaluated.scoreInput.pillars.exit.adverseAttribution).toEqual([]);
+    expect(evaluated.trace.adverseAttribution).toEqual([]);
+    expect(evaluated.trace.finalGrade).not.toBe("F");
   });
   it("honours each ceiling reason's declared level and keeps NR conditions insufficient", () => {
     const ceilingInput = coreFixture();

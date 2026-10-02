@@ -172,6 +172,41 @@ describe("resolveSafetyScoreV9ReviewedTransferFact — non-contract-native appli
     }
   });
 
+  it.each([
+    ["contract-addressable", true],
+    ["non-contract-native", true],
+    ["mixed-economic", false],
+  ] as const)("rejects native identities for %s scope with attestation=%s", (deploymentModel, attested) => {
+    const current = review([{ chainId: "ethereum", contractOrTokenId: "native:alpha", posture: "permissionless" }]);
+    const key = safetyScoreV9TransferDeploymentKey("ethereum", "native:alpha");
+    expect(resolveSafetyScoreV9ReviewedTransferFact(current, CLOCK_SEC, scope({
+      deploymentModel,
+      authoritativeDeploymentKeys: [key],
+      materialDeploymentKeys: [key],
+      materialDeploymentScopeComplete: true,
+      reviewedNativeDeploymentKeys: attested ? [key] : [],
+    }))).toEqual({ observationState: "bounded-unknown", posture: null });
+  });
+
+  it("admits a mixed economic native identity only with its exact reviewed deployment key", () => {
+    const current = review([{ chainId: "ethereum", contractOrTokenId: "native:alpha", posture: "restrictable" }]);
+    const key = safetyScoreV9TransferDeploymentKey("ethereum", "native:alpha");
+    const materialScope = scope({
+      deploymentModel: "mixed-economic",
+      authoritativeDeploymentKeys: [key],
+      materialDeploymentKeys: [key],
+      materialDeploymentScopeComplete: true,
+      reviewedNativeDeploymentKeys: [safetyScoreV9TransferDeploymentKey("ethereum", "native:beta")],
+    });
+    expect(resolveSafetyScoreV9ReviewedTransferFact(current, CLOCK_SEC, materialScope)).toEqual({
+      observationState: "bounded-unknown", posture: null,
+    });
+    materialScope.reviewedNativeDeploymentKeys = [key];
+    expect(resolveSafetyScoreV9ReviewedTransferFact(current, CLOCK_SEC, materialScope)).toEqual({
+      observationState: "known", posture: "restrictable",
+    });
+  });
+
   it("admits the exact review-age limit but rejects stale and future reviews", () => {
     const current = review([{ chainId: "zano", contractOrTokenId: "native", posture: "permissionless" }]);
     const reviewedAt = Date.parse("2026-08-08T00:00:00Z") / 1_000;

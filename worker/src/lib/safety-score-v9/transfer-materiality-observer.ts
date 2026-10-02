@@ -1,4 +1,4 @@
-import { CHAIN_META, resolveChainId } from "@shared/lib/chains";
+import { CHAIN_META, resolveChainId } from "@shared/types/chain-identity";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { rethrowIfAborted, throwIfAborted } from "../abort";
 import { hasRegistryRpc, type ChainRpcConfig, type RpcEndpoint } from "../chain-registry";
@@ -8,17 +8,21 @@ import { getPublicRpcUrl, getSecondaryFallbackRpcUrl } from "../public-rpc-regis
 import { normalizeReviewedDeploymentAddress, reviewedDeploymentIdentityValidationError, reviewedDeploymentObservationTimingIssue, type ReviewedDeploymentSupplyObservation } from "./supply-attribution-contract";
 import { decodeEvmUint256 } from "./supply-observation-primitives";
 import { SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS, createSafetyScoreV9TransferMaterialityGeneration, type SafetyScoreV9TransferMaterialityGeneration, type SafetyScoreV9TransferMaterialityObservation } from "./transfer-materiality";
+import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
+import { observeEconomicSolanaMint } from "./economic-supply-observer";
 
 interface ObserverDependencies {
   fetchEvmBlockHeader: typeof fetchEvmBlockHeader;
   fetchEvmMulticall3Aggregate3AtBlock: typeof fetchEvmMulticall3Aggregate3AtBlock;
   resolveClosestBlockAtOrBeforeTimestamp: typeof resolveClosestBlockAtOrBeforeTimestamp;
+  observeEconomicSolanaMint: typeof observeEconomicSolanaMint;
 }
 
 const DEFAULT_DEPENDENCIES: ObserverDependencies = {
   fetchEvmBlockHeader,
   fetchEvmMulticall3Aggregate3AtBlock,
   resolveClosestBlockAtOrBeforeTimestamp,
+  observeEconomicSolanaMint,
 };
 
 function rejected(deploymentKey: string): SafetyScoreV9TransferMaterialityObservation {
@@ -98,6 +102,21 @@ async function observeChainDeployments(
   signal?: AbortSignal,
 ): Promise<Map<string, SafetyScoreV9TransferMaterialityObservation>> {
   const rejectedRows = () => new Map(targets.map((target) => [target.deploymentKey, rejected(target.deploymentKey)]));
+  if (chainId === "solana") {
+    const rows = rejectedRows();
+    for (const target of targets) {
+      try {
+        const mint = await dependencies.observeEconomicSolanaMint({
+          address: target.address, decimals: target.expectedDecimals, clockSec: scoringClockSec, chainRpcs, signal,
+        });
+        if (mint) rows.set(target.deploymentKey, {
+          deploymentKey: target.deploymentKey, rawTokenUnits: mint.amount, decimals: target.expectedDecimals,
+          blockNumber: mint.slot.split(":")[0]!, observedAtSec: mint.observedAtSec, status: "accepted",
+        });
+      } catch (error) { rethrowIfAborted(error, signal); }
+    }
+    return rows;
+  }
   const resolvedRpcs = rpcConfig(chainId, chainRpcs);
   if (!resolvedRpcs) return rejectedRows();
   try {
@@ -180,8 +199,9 @@ export async function observeSafetyScoreV9TransferMaterialityGeneration(input: {
     const rows: SafetyScoreV9TransferMaterialityObservation[] = [];
     for (const deployment of meta?.contracts ?? []) {
       const chainId = resolveChainId(deployment.chain);
-      if (chainId === null || CHAIN_META[chainId]?.type !== "evm") {
-        rows.push(rejected(`${deployment.chain}:${deployment.address.toLowerCase()}`));
+      if (chainId === null || !isFixedDecimalDeployment(deployment) ||
+        (CHAIN_META[chainId]?.type !== "evm" && chainId !== "solana")) {
+        rows.push(rejected(`${deployment.chain}:${normalizeReviewedDeploymentAddress(chainId ?? deployment.chain, deployment.address)}`));
         continue;
       }
       const deploymentKey = `${chainId}:${normalizeReviewedDeploymentAddress(chainId, deployment.address)}`;

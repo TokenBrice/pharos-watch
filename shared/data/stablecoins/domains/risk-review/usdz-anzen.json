@@ -2,10 +2,42 @@
   "id": "usdz-anzen",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: USDz resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Verified Ethereum USDz source: POOL_MANAGER_ROLE blacklist and transfer checks",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa469b7ee9ee773642b3e93e842e5d9b5baa10067"
+      }
+    ],
+    "evidence": "The verified USDz source exposes addToBlacklist and removeFromBlacklist under POOL_MANAGER_ROLE. Its _update hook rejects both blacklisted senders and recipients, and deposit and redeem also reject blacklisted callers. The native contract identity and DEFAULT_ADMIN Safe were verified at Ethereum block 26095801.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB10IUSD)",
+    "reviewedAt": "2026-10-01"
+  },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "summary": "Native Ethereum USDz gates deposits and redemptions on oracle.getPrice() through checkCollateralRate. At block 26097120 the configured oracle was 0x900fff3bbf47ded50fd4940d055e1324f38b0d4f and returned 1e18. POOL_MANAGER_ROLE can replace that oracle, and the Anzen admin Safe retained DEFAULT_ADMIN_ROLE managing this permission. This is discretionary authority over a price-relevant eligibility input under D11, despite the current constant price; no redundant external feed, automatic balance-derived share conversion, or borrower liquidation engine is inferred.",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (RuleC18)",
+      "rationale": "The native USDz source applies the replaceable SPCT price oracle to the collateral-rate gate for mint and redemption eligibility. It does not price borrower-specific collateral positions or expose a local liquidation engine. The authority is top-level coin issuance/redemption pricing.",
+      "sources": [
+        {
+          "label": "Verified native USDz source: collateral-rate gate and role-controlled oracle replacement",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa469b7ee9ee773642b3e93e842e5d9b5baa10067"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC18)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Verified native USDz source: collateral-rate gate and role-controlled oracle replacement",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa469b7ee9ee773642b3e93e842e5d9b5baa10067"
+      }
+    ]
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",

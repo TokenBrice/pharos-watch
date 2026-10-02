@@ -13,7 +13,7 @@
   "variantKind": "savings-passthrough",
   "pegReferenceId": "crvusd-curve",
   "collateral": "crvUSD deposited into Curve's savings vault; the wrapper remains fully backed by crvUSD while a share of borrower interest and protocol revenue compounds through the vault exchange rate",
-  "pegMechanism": "Deposit crvUSD to mint scrvUSD and redeem scrvUSD for the current convertToAssets amount of crvUSD; the share price rises as Curve redirects part of crvUSD borrowing revenue to scrvUSD depositors",
+  "pegMechanism": "On Ethereum, deposit crvUSD into the ERC-4626 vault to mint scrvUSD shares and redeem those shares for the vault's current convertToAssets amount of crvUSD. The share price grows through allocated crvUSD interest revenue. Curve also documents bridged scrvUSD representations on other chains, whose transfer and upgrade controls require separate review.",
   "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "geckoId": "savings-crvusd",
@@ -39,6 +39,51 @@
     {
       "chain": "ethereum",
       "address": "0x0655977feb2f289a4ab78af67bab0d17aab84367",
+      "decimals": 18
+    },
+    {
+      "chain": "optimism",
+      "address": "0x289f635106d5b822a505b39ac237a0ae9189335b",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x646a737b9b6024e49f5908762b3ff73e65b5160c",
+      "decimals": 18
+    },
+    {
+      "chain": "fraxtal",
+      "address": "0xaB94C721040b33aA8b0b4D159Da9878e2a836Ed0",
+      "decimals": 18
+    },
+    {
+      "chain": "fantom",
+      "address": "0x5191946500e75f0A74476F146dF7d386e52961d9",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x0094Ad026643994c8fB2136ec912D508B15fe0E5",
+      "decimals": 18
+    },
+    {
+      "chain": "avalanche",
+      "address": "0xA3ea433509F7941df3e33857D9c9f212Ad4A4e64",
+      "decimals": 18
+    },
+    {
+      "chain": "xdc",
+      "address": "0x3d8eadb739d1ef95dd53d718e4810721837c69c1",
+      "decimals": 18
+    },
+    {
+      "chain": "sonic",
+      "address": "0x8fb3ec8f2d1dc089e70cd61f1e49496d443b2124",
+      "decimals": 18
+    },
+    {
+      "chain": "etherlink",
+      "address": "0xe35a879e5efb4f1bb7f70dcf3250f2e19f096bd8",
       "decimals": 18
     }
   ],

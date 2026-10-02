@@ -1,13 +1,19 @@
+import { buildSafetyScoreV9ReserveBoundFacts, SAFETY_SCORE_V9_RESERVE_BOUND_FACTS_DIGEST } from "./extension-reserve-bounds";
+import { buildSafetyScoreV10ScopedReserveAdmissions, addScopedReserveEvidence } from "./extension-reserves";
 import { resolveMechanismArchetype } from "@shared/lib/classification/resolve-mechanism-archetype";
-import { resolveChainId } from "@shared/lib/chains";
-import { normalizeDeploymentId } from "@shared/lib/deployment-id";
+import { resolveChainId } from "@shared/types/chain-identity";
+import { normalizeDeploymentId } from "@shared/types/deployment-id";
+import { canonicalExitRouteScopedId, canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
 import { deriveEffectiveDependencySet } from "@shared/lib/dependency-derivation";
 import { diagnoseDependencyGraph, type DependencyGraphEdge } from "@shared/lib/dependency-graph";
 import { V9_EVIDENCE_PRODUCER_INTERVAL_SEC } from "@shared/lib/cron-cadences";
 import { computeReportCardsRegistryFingerprint } from "@shared/lib/report-cards-fixed-input-identity";
 import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";
+import type { V9AccessClaimGraph, V9AccessClaimGraphReview } from "@shared/types/safety-score-v9-access-lookthrough";
+import { buildSafetyScoreV9AccessClaimGraph, computeSafetyScoreV9AccessClaimGraphReviewsDigest } from "./extension-access-lookthrough";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC, V9_SCOPED_QUESTION_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { compileReviewedControlScope, partialControlScopeSemantics, weightedReviewIsCurrent } from "@shared/lib/safety-score-v9/control-scope";
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -37,13 +43,17 @@ import {
 } from "./fact-set";
 import { quarantinedSafetyScoreV9ExtensionAsset } from "./fact-set-schema";
 import { toErrorMessage } from "@shared/lib/error-utils";
+import { createReviewedAssetRegistry, ReviewedRegistryEntryError } from "./extension-reviewed-registry";
+import { SafetyScoreV9ReviewedTransferFactSchema } from "@shared/types/safety-score-v9-transfer-overlays";
 import { controlCanCarryKnownStatus } from "./fact-set-control";
+import { validateSafetyScoreV9ShockRegistryAsset } from "./extension-shock";
 import {
   buildSafetyScoreV9MechanismReview,
   getSafetyScoreV9MechanismExitFacts,
   getSafetyScoreV9MechanismOverlayEvidence,
   getSafetyScoreV9MechanismReviewGapDisposition,
   getSafetyScoreV9MechanismReviewedUnavailableComponents,
+  hasAdmittedSafetyScoreV9NativeFamily,
   SAFETY_SCORE_V9_MECHANISM_REVIEW_OVERLAYS_DIGEST,
 } from "./extension-mechanism";
 import {
@@ -57,11 +67,12 @@ import {
   routeSafetyScoreV9OperationalIncidents,
   SAFETY_SCORE_V9_INCIDENT_REVIEWS_DIGEST,
 } from "./extension-incidents";
-import { getSafetyScoreV9WrapperAllocationReview } from "./extension-wrapper-allocation";
+import { getSafetyScoreV9WrapperAllocationReview, SAFETY_SCORE_V9_WRAPPER_ALLOCATION_REVIEWS_DIGEST } from "./extension-wrapper-allocation";
+import { allocationReviewClockSec, type V9AllocationScopeIdentityReview, type SafetyScoreV9WrapperAllocationReview } from "@shared/types/safety-score-v9-allocation";
 import {
   computeSafetyScoreV9ReviewedTransferFactsDigest,
   resolveSafetyScoreV9ReviewedTransferFact,
-  SAFETY_SCORE_V9_REVIEWED_TRANSFER_FACTS,
+  getSafetyScoreV9ReviewedTransferFact,
   safetyScoreV9TransferDeploymentKey,
   type SafetyScoreV9ReviewedTransferFact,
   type SafetyScoreV9TransferMaterialScope,
@@ -70,8 +81,10 @@ import { SAME_NOTIONAL_EXIT_OBSERVATION_FRESHNESS_POLICY } from "@shared/lib/red
 import {
   transferMaterialScopeFromOnchainGeneration,
   transferMaterialScopeFromSingleDeploymentAttribution,
+  transferMaterialScopeFromEconomicDeploymentPartition,
   type SafetyScoreV9TransferMaterialityGeneration,
 } from "./transfer-materiality";
+import { hasCompleteEligibleProviderSupply, REVIEWED_ECONOMIC_SUPPLY_PLANS } from "./supply-attribution-contract";
 import {
   buildSafetyScoreV9RetainedRoutes,
   buildSafetyScoreV9RouteReviews,
@@ -103,7 +116,7 @@ import { collateralExposureMappingIssues } from "./fact-set-context";
 import {
   ReviewEvidenceBuilder,
   accessEvidenceObservationState,
-  authorityModelForType,
+  projectControlAuthority,
   boundedObservedAt,
   confidenceForResearch,
   conservativeDateEndSec,
@@ -142,16 +155,17 @@ export function resolveReviewedReserveRows(input: {
   clockSec: number;
   liveReserveRows: readonly ReserveSlice[];
   liveFallbackAllowed: boolean;
+  fixedInput?: Readonly<SafetyScoreV9CompilerInput>;
 }): ReviewedReserveRows {
   if (input.liveReserveRows.length > 0) return null;
   return (
-    buildSafetyScoreV9ReviewedStaticReserveRows(input.meta, input.clockSec) ??
+    buildSafetyScoreV9ReviewedStaticReserveRows(input.meta, input.clockSec, input.fixedInput) ??
     (input.meta.liveReservesConfig != null
       ? input.liveFallbackAllowed
-        ? buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(input.meta, input.clockSec) ??
-          buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(input.meta, input.clockSec)
+        ? buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(input.meta, input.clockSec, input.fixedInput) ??
+          buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(input.meta, input.clockSec, input.fixedInput)
         : null
-      : buildSafetyScoreV9ReviewedStandaloneReserveRows(input.meta, input.clockSec))
+      : buildSafetyScoreV9ReviewedStandaloneReserveRows(input.meta, input.clockSec, input.fixedInput))
   );
 }
 
@@ -159,6 +173,7 @@ export interface BuildSafetyScoreV9BaselineExtensionOptions {
   metaById?: ReadonlyMap<string, V9ExtensionRegistryMeta>;
   registryFingerprint?: string;
   reviewedTransferFacts?: ReadonlyMap<string, SafetyScoreV9ReviewedTransferFact>;
+  accessClaimGraphReviews?: ReadonlyMap<string, V9AccessClaimGraphReview>;
   transferMaterialityGeneration?: SafetyScoreV9TransferMaterialityGeneration | null;
   /**
    * Replay-only operator override. The registry fingerprint check exists so a
@@ -289,16 +304,7 @@ function issuerAuthorityKey(assetId: string, control: MintAuthorityControl): str
 }
 
 function canonicalAuthorityType(assetId: string, control: MintAuthorityControl): ControlOverlay["authority"] {
-  const authorityKey = control.address
-    ? `${control.chain ?? "chain-unresolved"}:${control.address.toLowerCase()}`
-    : (control.failureDomainKeys?.[0] ?? issuerAuthorityKey(assetId, control));
-  if (authorityKey === null) return null;
-  const model = authorityModelForType(control.authorityType);
-  const threshold =
-    model === "multisig" && control.threshold != null && control.signerCount != null
-      ? { required: control.threshold, total: control.signerCount }
-      : null;
-  return { authorityKey, model, threshold };
+  return projectControlAuthority({ ...control, fallbackKey: control.failureDomainKeys?.[0] ?? issuerAuthorityKey(assetId, control) });
 }
 
 function mintControlKind(control: MintAuthorityControl): ControlOverlay["controlKind"] {
@@ -326,7 +332,9 @@ function controlFailureDomains(
   const exactKeys = control.failureDomainKeys?.length
     ? control.failureDomainKeys
     : control.address
-      ? [`${control.chain ?? "chain-unresolved"}:${control.address.toLowerCase()}`]
+      ? [control.executionScope || control.weightedQuorum
+        ? normalizeDeploymentId(`${control.chain ?? "chain-unresolved"}:${control.address}`)
+        : `${control.chain ?? "chain-unresolved"}:${control.address.toLowerCase()}`]
       : issuerKey
         ? [issuerKey]
         : [];
@@ -341,15 +349,15 @@ interface MintControlDeploymentScope {
 }
 
 /**
- * Resolve a reviewed mint/upgrade authority onto the already-compiled bridge
- * materiality partition. The control remains global unless the partition is
- * complete, every authored deployment ref joins exactly once, and at least one
- * other liability deployment sits outside the authority's reach.
+ * Resolve a reviewed deployment-local authority onto a complete liability
+ * partition. Durable native issuance reaches the root claim, not just the
+ * supply currently residing on the minter's chain.
  */
 function resolveMintControlDeploymentScopes(
-  control: Pick<MintAuthorityControl, "deploymentRefs">,
+  control: MintAuthorityControl,
   supplyReview: ExtensionAsset["supplyReview"],
   reviewComplete: boolean,
+  rootIssuance: boolean,
 ): MintControlDeploymentScope[] | null {
   const deploymentRefs = [...new Set((control.deploymentRefs ?? []).map(normalizeDeploymentId))].sort(compareText);
   if (!reviewComplete || deploymentRefs.length === 0 || deploymentRefs.some((ref) => ref.length === 0)) return null;
@@ -374,6 +382,7 @@ function resolveMintControlDeploymentScopes(
   const rowByDeployment = new Map(rows.map((row) => [row.deploymentRouteKey, row]));
   const matched = deploymentRefs.map((deploymentKey) => rowByDeployment.get(deploymentKey));
   if (matched.some((row) => row === undefined)) return null;
+  if (rootIssuance && matched.some((row) => row?.reviewedRouteKind === "native")) return null;
   // Reaching every reconciled deployment is economically asset-wide even when
   // the review happens to enumerate those deployments one by one.
   if (deploymentRefs.length === rows.length) return null;
@@ -394,9 +403,14 @@ function adaptMintControl(
   reviewedEconomicCapSemantics: MintAuthorityEconomicCapSemantics | undefined,
   scopedQuestionFresh: boolean,
   supplyReview: ExtensionAsset["supplyReview"],
+  clockSec: number,
 ): ControlOverlay[] {
   const controlKind = mintControlKind(control);
-  const capabilities = mintCapabilities(control, upgradeCapable);
+  const projection = compileReviewedControlScope(control.executionScope, `${control.chain ?? "chain-unresolved"}:${control.address ?? ""}`, assetId, clockSec, V9_REVIEW_EVIDENCE_MAX_AGE_SEC);
+  const coarseCapabilities = mintCapabilities(control, upgradeCapable);
+  const capabilities = control.executionScope && projection.complete
+    ? [...new Set(projection.paths.flatMap((path) => path.capabilities))].sort(compareText)
+    : [...new Set([...coarseCapabilities, ...projection.provenPaths.flatMap((path) => path.capabilities)])].sort(compareText);
   const hasMint = capabilities.includes("mint");
   const capped = control.directMintAbility === "cap-limited" || control.canRaiseCap === true;
   // A reviewed economic cap supersedes the contract-encoding cap for a
@@ -446,12 +460,32 @@ function adaptMintControl(
     if (capabilities.includes("parameter-change")) return "bounded";
     return "none";
   })();
-  const deploymentScopes = resolveMintControlDeploymentScopes(control, supplyReview, reviewComplete);
+  const economicSemantics = projection.reviewed && !projection.complete
+    ? partialControlScopeSemantics({ capSemantics, claimImpairment }, projection)
+    : { capSemantics, claimImpairment };
+  // Unknown execution reach stays bounded without a redundant question record.
+  // Independently established legacy adverse economics remain binding unless
+  // the scoped review explicitly questions that economic reach.
+  const scopedMintReachUnresolved =
+    (scopedQuestionFresh || (capSemantics.kind !== "unbounded" && claimImpairment !== "unbounded")) &&
+    projection.reviewed &&
+    !projection.complete &&
+    projection.paths.some((path) =>
+      path.activation !== "disabled-final" &&
+      path.capabilities.includes("mint") &&
+      (path.activation === "unknown" || path.reach === "unknown" || path.economicLossScope === "unknown"),
+    ) &&
+    !projection.provenPaths.some((path) =>
+      path.capabilities.includes("mint") &&
+      path.economicLossScope === "global-claim" &&
+      (path.capSemantics.kind === "unbounded" || path.claimImpairment === "unbounded"),
+    );
+  const deploymentScopes = resolveMintControlDeploymentScopes(control, supplyReview, reviewComplete && !scopedMintReachUnresolved, hasMint);
   const incidentState: ControlOverlay["incidentState"] = incidents?.some((incident) => incident.status === "active")
     ? "active"
     : incidents?.some((incident) => incident.status === "resolved")
       ? "resolved"
-      : reviewComplete
+      : reviewComplete && !scopedMintReachUnresolved
         ? "none"
         : "unknown";
   const controlKey = `mint-meta:${assetId}:${domainDigest("safety-score-v9.mint-control-key.v1", {
@@ -472,18 +506,51 @@ function adaptMintControl(
     controlKind,
     scope: "global",
     capabilities,
-    capSemantics,
-    claimImpairment,
-    economicLossScope: claimImpairment === "none" ? "access-only" : "global-claim",
+    ...economicSemantics,
+    economicLossScope: scopedMintReachUnresolved ? "unknown" : economicSemantics.claimImpairment === "none" ? "access-only" : "global-claim",
     authority: canonicalAuthorityType(assetId, control),
     delaySec: control.timelockDelaySec ?? null,
     materialSupplyShare: null,
     ...(scopedQuestionFresh ? { scopedQuestionFresh: true } : {}),
     keyCustody: control.keyCustodyAttestation?.kind ?? "unknown",
     modulesOrGuards: control.modulesOrGuardsStatus ?? "unknown",
+    ...(control.executionScope ? {
+      executionScope: control.executionScope,
+      executionScopeComplete: projection.complete,
+      scopeDiagnostics: projection.diagnostics.sort(compareText),
+      moduleImpact: projection.moduleImpact,
+    } : {}),
     incidentState,
     failureDomains: controlFailureDomains(assetId, control, controlKind),
+    ...(control.weightedQuorum && !weightedReviewIsCurrent(control.weightedQuorum, clockSec, V9_REVIEW_EVIDENCE_MAX_AGE_SEC)
+      ? { authority: { ...canonicalAuthorityType(assetId, control)!, weightedQuorum: { ...control.weightedQuorum, status: "unknown" as const } } }
+      : {}),
   };
+  if (control.executionScope && projection.complete) {
+    if (projection.paths.length === 0) return [{ ...globalControl, capabilities: [], capSemantics: { kind: "not-applicable", bound: null }, claimImpairment: "none", economicLossScope: "access-only" }];
+    return projection.paths.flatMap((path) => {
+      const localScopes = path.reach === "deployment" && path.economicLossScope === "deployment"
+        ? resolveMintControlDeploymentScopes({ ...control, deploymentRefs: path.affectedDeployments }, supplyReview, true, path.capabilities.includes("mint"))
+        : null;
+      const row: ControlOverlay = {
+        ...globalControl,
+        controlKey: `${controlKey}:path:${path.id}`,
+        capabilities: [...new Set(path.capabilities)].sort(compareText),
+        capSemantics: path.capSemantics,
+        claimImpairment: path.claimImpairment,
+        economicLossScope: path.claimImpairment === "none" ? "access-only" : "global-claim",
+        delaySec: path.unavoidableDelaySec,
+      };
+      if (localScopes === null) return [row];
+      return localScopes.map((deployment) => ({
+        ...row,
+        controlKey: `${row.controlKey}:deployment:${deployment.deploymentKey}`,
+        deploymentKey: deployment.deploymentKey, scope: "deployment" as const,
+        economicLossScope: path.claimImpairment === "none" ? "access-only" as const : "deployment" as const,
+        materialSupplyShare: deployment.materialSupplyShare,
+      }));
+    });
+  }
   if (deploymentScopes === null) return [globalControl];
   return deploymentScopes.map((deployment, index) => ({
     ...globalControl,
@@ -496,7 +563,7 @@ function adaptMintControl(
           ).slice(0, 12)}`,
     deploymentKey: deployment.deploymentKey,
     scope: "deployment",
-    economicLossScope: claimImpairment === "none" ? "access-only" : "deployment",
+    economicLossScope: economicSemantics.claimImpairment === "none" ? "access-only" : "deployment",
     materialSupplyShare: deployment.materialSupplyShare,
   }));
 }
@@ -534,11 +601,12 @@ function dependencyFailureDomains(
 function hasAdmissibleCuratedReserveComposition(
   meta: V9ExtensionRegistryMeta,
   clockSec: number,
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
 ): boolean {
-  if (buildSafetyScoreV9ReviewedStaticReserveRows(meta, clockSec) !== null) return true;
+  if (buildSafetyScoreV9ReviewedStaticReserveRows(meta, clockSec, fixedInput) !== null) return true;
   return meta.liveReservesConfig !== undefined
-    ? buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(meta, clockSec) !== null
-    : buildSafetyScoreV9ReviewedStandaloneReserveRows(meta, clockSec) !== null;
+    ? buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(meta, clockSec, fixedInput) !== null
+    : buildSafetyScoreV9ReviewedStandaloneReserveRows(meta, clockSec, fixedInput) !== null;
 }
 
 function prepareDependency(
@@ -546,6 +614,7 @@ function prepareDependency(
   liveReserveSlices: readonly ReserveSlice[] | undefined,
   activeIds: ReadonlySet<string>,
   clockSec: number,
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
 ): PreparedDependency {
   const liveDependencyMapping = liveReserveSlices
     ? dependencyReserveSlices(liveReserveSlices, meta, clockSec)
@@ -564,7 +633,7 @@ function prepareDependency(
     derived.dependencies.some(
       (dependency) => (dependency.type ?? "collateral") === "collateral",
     ) &&
-    !hasAdmissibleCuratedReserveComposition(meta, clockSec);
+    !hasAdmissibleCuratedReserveComposition(meta, clockSec, fixedInput);
   const issueCodes: string[] = [];
   issueCodes.push(...derived.rejectionReasons
     .filter((rejection) => rejection.reason === "coinId-without-depType" || rejection.reason === "reviewed-dependency-type-conflict" || rejection.reason === "reviewed-dependency-identity-conflict" || rejection.reason === "manual-collateral-not-in-reserves")
@@ -775,10 +844,32 @@ function addWrapperCustodyEvidence(meta: V9ExtensionRegistryMeta, evidence: Revi
 }
 
 function addWrapperAllocationEvidence(
-  review: ReturnType<typeof getSafetyScoreV9WrapperAllocationReview>,
+  review: SafetyScoreV9WrapperAllocationReview | null,
   evidence: ReviewEvidenceBuilder,
+  clockSec: number,
 ): void {
   if (!review) return;
+  if (review.scopeKind === "per-dimension") {
+    const maxAgeSec = V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.reviewedResearchMaxAgeSec;
+    for (const claim of review.claims) {
+      if (allocationReviewClockSec(claim.reviewedAt) > clockSec || claim.observedAtSec > clockSec ||
+        clockSec >= claim.expiresAtSec || clockSec - claim.observedAtSec > maxAgeSec) continue;
+      const keys: string[] = [];
+      for (const source of claim.sources) {
+        const contentSha256 = domainDigest("safety-score-v9.scoped-allocation-claim.v1", { claim, source });
+        const evidenceKey = `allocation-scope:${claim.claimKey}:${contentSha256.slice(0, 16)}`;
+        evidence.evidence.set(evidenceKey, {
+          evidenceKey, sourceId: "safety-score-v9.scoped-allocation-review",
+          observedAtSec: claim.observedAtSec, publishedAtSec: null, publishedBy: "unknown",
+          url: source.url, contentSha256, confidence: "verified",
+          maxAgeSec: Math.min(maxAgeSec, claim.expiresAtSec - claim.observedAtSec),
+        });
+        keys.push(evidenceKey);
+      }
+      evidence.bindings.set(`allocation-scope:${claim.claimKey}`, new Set(keys));
+    }
+    return;
+  }
   evidence.add({
     componentKeys: [
       "wrapper-local:custodyEscrow",
@@ -797,6 +888,36 @@ function addWrapperAllocationEvidence(
   });
 }
 
+function buildAllocationScopeIdentityReview(meta: V9ExtensionRegistryMeta): V9AllocationScopeIdentityReview {
+  const deployments: V9AllocationScopeIdentityReview["deployments"] = [];
+  const registeredDeploymentKeys = (meta.contracts ?? []).flatMap((contract) => {
+    const chain = resolveChainId(contract.chain);
+    return chain === null ? [] : [canonicalExitRouteScopedKey(chain, contract.address)];
+  }).sort(compareText);
+  const upgrade = meta.mintAuthority?.upgradeability;
+  if (!upgrade?.observedAt || upgrade.observedBlock === undefined || upgrade.sources.length === 0) return { assetId: meta.id, registeredDeploymentKeys, deployments };
+  const observedAtSec = allocationReviewClockSec(upgrade.observedAt);
+  const sourceUrl = upgrade.sources[0]!.url;
+  for (const contract of meta.contracts ?? []) {
+    const chain = resolveChainId(contract.chain);
+    if (chain === null) continue;
+    const address = canonicalExitRouteScopedId(chain, contract.address);
+    const deploymentKey = `${chain}:${address}`;
+    // Unscoped addresses never identify a deployment across multiple chains.
+    const scoped = upgrade.deploymentRefs?.some((ref) => normalizeDeploymentId(ref) === deploymentKey) ||
+      (meta.contracts?.length === 1);
+    if (!scoped) continue;
+    if (upgrade.model === "immutable") {
+      deployments.push({ codeKind: "immutable", chain, address, observedAtSec, block: upgrade.observedBlock, sourceUrl });
+    } else if (upgrade.proxyAddresses?.some((proxy) => canonicalExitRouteScopedId(chain, proxy) === address) &&
+      upgrade.implementationAddresses?.length === 1) {
+      deployments.push({ codeKind: "proxy", chain, address, implementation: canonicalExitRouteScopedId(chain, upgrade.implementationAddresses[0]!),
+        observedAtSec, block: upgrade.observedBlock, sourceUrl });
+    }
+  }
+  return { assetId: meta.id, registeredDeploymentKeys, deployments };
+}
+
 
 function transferMaterialScope(
   fixedInput: Readonly<SafetyScoreV9CompilerInput>,
@@ -806,7 +927,10 @@ function transferMaterialScope(
   review: SafetyScoreV9ReviewedTransferFact | undefined,
 ): SafetyScoreV9TransferMaterialScope {
   const rows = safetyScoreV9ChainRows(fixedInput, assetId);
-  const totalSupplyUsd = Object.values(rows).reduce((sum, row) => sum + row.current, 0);
+  const totalSupplyUsd = !REVIEWED_ECONOMIC_SUPPLY_PLANS.has(assetId) ||
+    fixedInput.safetyScoreV9SupplyAttributionById?.[assetId] ||
+    hasCompleteEligibleProviderSupply(fixedInput, assetId, { contracts: meta.contracts, bridgeRouteRisk: meta.bridgeRouteRisk })
+    ? Object.values(rows).reduce((sum, row) => sum + row.current, 0) : 0;
   const authoritativeDeployments = (meta.contracts ?? []).flatMap((deployment) => {
     const chainId = resolveChainId(deployment.chain);
     return chainId === null ? [] : [{ chainId, key: safetyScoreV9TransferDeploymentKey(chainId, deployment.address) }];
@@ -818,6 +942,14 @@ function transferMaterialScope(
   const unresolvedDeclaredDeploymentKeys = (meta.contracts ?? [])
     .filter((deployment) => resolveChainId(deployment.chain) === null)
     .map((deployment) => safetyScoreV9TransferDeploymentKey(deployment.chain.trim().toLowerCase(), deployment.address));
+  if (fixedInput.safetyScoreV9SupplyAttributionById?.[assetId]?.model === "reviewed-economic-deployment-partition-v1" ||
+    (REVIEWED_ECONOMIC_SUPPLY_PLANS.has(assetId) &&
+      !hasCompleteEligibleProviderSupply(fixedInput, assetId, { contracts: meta.contracts, bridgeRouteRisk: meta.bridgeRouteRisk }))) {
+    return transferMaterialScopeFromEconomicDeploymentPartition({ assetId, fixedInput, baseScope: {
+      authoritativeDeploymentKeys, materialDeploymentKeys: [], materialDeploymentScopeComplete: false,
+      deploymentModel: "contract-addressable",
+    } });
+  }
   if (totalSupplyUsd <= 0) {
     const baseScope: SafetyScoreV9TransferMaterialScope = {
       authoritativeDeploymentKeys,
@@ -897,11 +1029,9 @@ function transferMaterialScope(
   };
 }
 
-// A reviewed inherited verdict may have no parent declaration. The V9 branch
-// still needs a named upstream to attribute a failure domain, so it checks
-// explicit reserve `coinId` edges. The id must resolve to an active tracked
-// asset whose own review confirms a direct holder freeze; an upstream that is
-// itself inherited does not establish the chain this branch needs to verify.
+// Preserve the reviewed inherited disposition when no claim graph is available.
+// This names a directly freeze-capable active reserve upstream; it does not
+// establish transitive reach or price the reserve exposure.
 function resolveReserveSliceUpstreamAssetId(
   meta: V9ExtensionRegistryMeta,
   metaById: ReadonlyMap<string, V9ExtensionRegistryMeta>,
@@ -911,21 +1041,15 @@ function resolveReserveSliceUpstreamAssetId(
   for (const slice of meta.reserves ?? []) {
     const upstreamId = slice.coinId;
     if (upstreamId === undefined || upstreamId === meta.id) continue;
-    // `upstreamAssetId` is validated against the compiled fact set's active
-    // asset set, so a tracked-but-unscored id would make the whole fact set
-    // unparseable. Registry membership alone is not enough.
+    // Fact-set references must resolve to an active scored asset.
     if (!activeAssetIds.has(upstreamId)) continue;
     const upstream = metaById.get(upstreamId);
     if (upstream === undefined) continue;
-    // Mirrors the report card's blacklistable SEED set: an explicit `true`
-    // review, or centralized governance when the asset carries no review at all.
     const directlyFreezeCapable =
       upstream.blacklistabilityReview?.reviewedStatus === true ||
       (upstream.blacklistabilityReview === undefined && upstream.flags?.governance === "centralized");
     if (!directlyFreezeCapable) continue;
-    // Deterministic pick: largest reserve share, then lexicographic id. The
-    // fact set is replayed byte-for-byte, so ties must never resolve on
-    // iteration order.
+    // Largest share, then lexicographic id: independent of registry order.
     if (best === null || slice.pct > best.pct || (slice.pct === best.pct && upstreamId < best.assetId)) {
       best = { assetId: upstreamId, pct: slice.pct };
     }
@@ -941,9 +1065,10 @@ function adaptAccessReview(
   transferReview: SafetyScoreV9ReviewedTransferFact | undefined,
   materialScope: SafetyScoreV9TransferMaterialScope,
   clockSec: number,
+  claimGraph?: V9AccessClaimGraph,
 ): ExtensionAsset["accessReview"] {
   const review: BlacklistabilityReview | undefined = meta.blacklistabilityReview;
-  if (!review && !transferReview) return null;
+  if (!review && !transferReview && !claimGraph) return null;
 
   const transferResolution = transferReview
     ? resolveSafetyScoreV9ReviewedTransferFact(transferReview, clockSec, materialScope)
@@ -995,12 +1120,11 @@ function adaptAccessReview(
   const status = review?.reviewedStatus;
   const declaredInheritedFrom = meta.mintAuthority?.inheritedFrom ?? meta.variantOf ?? null;
   const declaredResolvable = declaredInheritedFrom !== null && activeAssetIds.has(declaredInheritedFrom);
-  // A declared parent wins: it is the tighter claim (the whole token inherits
-  // its parent's freeze surface). The reserve-slice edge is the fallback for an
-  // honest "inherited" verdict that has no parent, which is the ordinary shape
-  // for a collateralized asset holding a freezable stablecoin in reserve.
+  // A declared active parent wins over reserve attribution. A reviewed graph
+  // owns reserve look-through when present, including its unknown branches:
+  // never fill those gaps with the legacy raw-registry reserve fallback.
   const reserveInheritedFrom =
-    declaredResolvable || status !== "inherited"
+    claimGraph || declaredResolvable || status !== "inherited"
       ? null
       : resolveReserveSliceUpstreamAssetId(meta, metaById, activeAssetIds);
   const inheritedFrom = declaredResolvable ? declaredInheritedFrom : (reserveInheritedFrom ?? declaredInheritedFrom);
@@ -1050,11 +1174,6 @@ function adaptAccessReview(
               namedUpstream && inheritedFrom
                 ? [
                     {
-                      // A declared parent transmits freeze reach through the
-                      // upstream's mint/control surface; a reserve-slice
-                      // upstream transmits it through the reserve holding it
-                      // can freeze. Different domains, so they never merge in
-                      // common-mode analysis.
                       kind: reserveInheritedFrom !== null ? ("reserve-issuer" as const) : ("mint-control" as const),
                       key: `asset:${inheritedFrom}`,
                     },
@@ -1088,13 +1207,11 @@ function adaptAccessReview(
         review ? blacklistEvidenceKeys : [],
       ),
       reviews: freezeReview,
+      ...(claimGraph ? { claimGraph } : {}),
       // Owner ruling 2026-07-27: a current review whose honest verdict is
       // "inherited from a named tracked upstream" is a measured structural
       // fact, not missing data. The freeze facts stay bounded-unknown for
       // scoring; the disposition only suppresses the missing-data gap.
-      // The upstream may be named by a declared parent OR by a curated reserve
-      // slice (see `resolveReserveSliceUpstreamAssetId`) — both are named
-      // tracked assets, which is the whole requirement.
       // Owner ruling 2026-08-10: when the same current review names no tracked
       // upstream, the honest fact is still structural — inherited exposure with
       // an untracked counterparty — so it is measured as such rather than
@@ -1222,6 +1339,8 @@ function latestResolvedMintIncidentAtSec(
 export function hasPublishedReserveReconciliationEvidence(
   proof: StablecoinMeta["proofOfReserves"] | undefined,
 ): boolean {
+  // A scoped appendix is not whole-token operational/mint reconciliation.
+  if (proof?.latestReport?.coverage != null) return false;
   if (proof?.latestReport) return true;
   const cadence = proof?.cadence;
   return cadence != null && cadence !== "none" && cadence !== "undisclosed";
@@ -1265,20 +1384,8 @@ function adaptMintReview(
     payload: profile,
     maxAgeSec: V9_REVIEW_EVIDENCE_MAX_AGE_SEC,
   });
-  if (reviewStale) {
-    return {
-      review: {
-        status: requiredStatus("v9.control.mint-review", "stale", `mint:${meta.id}`, evidenceKeys),
-        controlKey: null,
-        reconciliation: "unknown",
-        supervision: "unknown",
-        latestResolvedIncidentAtSec: null,
-        upgrade: { state: "unknown", controlKey: null },
-      },
-      controls: [],
-    };
-  }
   const reviewComplete =
+    !reviewStale &&
     profile.review.disposition !== "unresolved" &&
     (profile.review.unresolvedQuestions?.length ?? 0) === 0 &&
     reviewedObservationState(confidence) === "known";
@@ -1315,6 +1422,7 @@ function adaptMintReview(
         freshScopedQuestionRefs.has(`${control.chain ?? ""}:${control.address.toLowerCase()}`)) ||
         freshScopedQuestionRefs.has(control.label.toLowerCase()),
       supplyReview,
+      clockSec,
     ),
   );
   const directMintControl =
@@ -1334,29 +1442,39 @@ function adaptMintReview(
           (domain) => domain.kind === "mint-control" && domain.key === `asset:${inheritedFrom}`,
         ),
     );
-  const inheritedShareControlIndex = hasExactInheritedWrapperDependency
-    ? (profile.controls ?? []).findIndex(
+  const inheritedShareAuthority = hasExactInheritedWrapperDependency
+    ? (profile.controls ?? []).find(
         (control) =>
           control.role === "wrapper" &&
           control.directMintAbility === "none" &&
           control.canRaiseCap === false,
       )
-    : -1;
+    : undefined;
   // An exact serial wrapper does not create durable parent supply. Its reviewed
   // share-accounting control therefore represents the local mint component when
   // no explicit durable-mint control exists. The parent mint domain remains on
   // the serial dependency, while every local upgrade control stays in this
   // asset's control inventory and continues to constrain the wrapper layer.
   const inheritedShareControl =
-    directMintControl === null && inheritedShareControlIndex >= 0
-      ? (controls[inheritedShareControlIndex] ?? null)
+    directMintControl === null && inheritedShareAuthority
+      ? (controls.find(
+          (control) =>
+            control.authority?.authorityKey === canonicalAuthorityType(meta.id, inheritedShareAuthority)?.authorityKey &&
+            !control.capabilities.includes("mint"),
+        ) ?? null)
       : null;
   const mintControl = directMintControl ?? inheritedShareControl;
-  const referencedUpgradeIndex =
+  const referencedUpgradeAuthority =
     upgradeability?.controlRef == null
-      ? -1
-      : (profile.controls ?? []).findIndex((control) => control.label === upgradeability.controlRef);
-  const referencedUpgrade = referencedUpgradeIndex >= 0 ? (controls[referencedUpgradeIndex] ?? null) : null;
+      ? undefined
+      : (profile.controls ?? []).find((control) => control.label === upgradeability.controlRef);
+  const referencedUpgrade = referencedUpgradeAuthority
+    ? (controls.find(
+        (control) =>
+          control.authority?.authorityKey === canonicalAuthorityType(meta.id, referencedUpgradeAuthority)?.authorityKey &&
+          control.capabilities.includes("upgrade"),
+      ) ?? null)
+    : null;
   const reviewedUpgradeControl =
     referencedUpgrade?.capabilities.includes("upgrade") === true
       ? referencedUpgrade
@@ -1406,6 +1524,7 @@ function adaptMintReview(
   // the section required so no reviewed upgrade authority is dropped from the grade.
   const reviewedNoLocalIssuance =
     controls.length === 0 &&
+    !reviewStale &&
     hasReviewedNoLocalIssuanceException(meta) &&
     (profile.review.noLocalIssuance?.kind === "external-only-representation" ||
       hasExactInheritedWrapperDependency);
@@ -1428,7 +1547,9 @@ function adaptMintReview(
       controls,
     };
   }
-  const state = !reviewComplete
+  const state = reviewStale
+    ? "stale"
+    : !reviewComplete
     ? profile.review.disposition === "unresolved" && evidenceKeys.length > 0
       ? "bounded-unknown"
       : reviewedObservationState(confidence) === "missing"
@@ -1443,13 +1564,13 @@ function adaptMintReview(
         "v9.control.mint-review",
         state,
         `mint:${meta.id}`,
-        state === "known" || state === "bounded-unknown" ? evidenceKeys : [],
+        state === "known" || state === "bounded-unknown" || state === "stale" ? evidenceKeys : [],
       ),
       controlKey: mintControl?.controlKey ?? null,
-      reconciliation,
+      reconciliation: reviewStale ? "unknown" : reconciliation,
       // A reviewed prudential-supervision fact graduates the reconciled mint
       // rung; absent or "unknown" stays fail-closed at "unknown".
-      supervision: profile.supervision && profile.supervision !== "unknown" ? profile.supervision : "unknown",
+      supervision: !reviewStale && profile.supervision && profile.supervision !== "unknown" ? profile.supervision : "unknown",
       latestResolvedIncidentAtSec: latestResolvedMintIncidentAtSec(profile.mintIncidents, clockSec),
       upgrade,
     },
@@ -1479,7 +1600,11 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
   options: BuildSafetyScoreV9BaselineExtensionOptions = {},
 ): SafetyScoreV9FactSetExtensionV2 {
   const metaById = options.metaById ?? ACTIVE_META_BY_ID;
-  const reviewedTransferFacts = options.reviewedTransferFacts ?? SAFETY_SCORE_V9_REVIEWED_TRANSFER_FACTS;
+  const reviewedTransferFacts = options.reviewedTransferFacts && createReviewedAssetRegistry({
+    rows: [...options.reviewedTransferFacts.values()],
+    schema: SafetyScoreV9ReviewedTransferFactSchema,
+    path: "transferReviews.reviews",
+  });
   const localRegistryFingerprint = options.registryFingerprint ?? computeReportCardsRegistryFingerprint();
   const allowRegistryMismatch = options.allowRegistryMismatch === true;
   if (!allowRegistryMismatch && localRegistryFingerprint !== fixedInput.registryFingerprint) {
@@ -1500,7 +1625,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
   for (const assetId of fixedInput.activeAssetIds) {
     const meta = metaById.get(assetId);
     if (!meta) throw new Error(`Safety Score v9 baseline extension has no registry metadata for ${assetId}`);
-    preparedById.set(assetId, prepareDependency(meta, fixedInput.liveReserveMap[assetId], activeIds, clockSec));
+    preparedById.set(assetId, prepareDependency(meta, fixedInput.liveReserveMap[assetId], activeIds, clockSec, fixedInput));
   }
   const graph = diagnoseDependencyGraph(
     [...preparedById.values()]
@@ -1545,7 +1670,10 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
     incidentReviewsDigest: SAFETY_SCORE_V9_INCIDENT_REVIEWS_DIGEST,
     mechanismReviewOverlaysDigest: SAFETY_SCORE_V9_MECHANISM_REVIEW_OVERLAYS_DIGEST,
     operationalResilienceOverlaysDigest: SAFETY_SCORE_V9_OPERATIONAL_RESILIENCE_OVERLAYS_DIGEST,
-    reviewedTransferFactsDigest: computeSafetyScoreV9ReviewedTransferFactsDigest(reviewedTransferFacts.values()),
+    wrapperAllocationReviewsDigest: SAFETY_SCORE_V9_WRAPPER_ALLOCATION_REVIEWS_DIGEST,
+    reserveBoundFactsDigest: SAFETY_SCORE_V9_RESERVE_BOUND_FACTS_DIGEST,
+    reviewedTransferFactsDigest: computeSafetyScoreV9ReviewedTransferFactsDigest(options.reviewedTransferFacts?.values()),
+    accessClaimGraphReviewsDigest: computeSafetyScoreV9AccessClaimGraphReviewsDigest(options.accessClaimGraphReviews?.values()),
   });
   const sources = {
     registryObservedAtSec,
@@ -1620,8 +1748,13 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         const assetIssuerKey = resolveSafetyScoreV9AssetIssuerKey(assetId, metaById);
         admitted.assetIssuerKey = assetIssuerKey;
         admissionPath = "archetype";
-        const archetype = resolveMechanismArchetype(meta, metaById) ?? "unresolved";
+        const resolvedArchetype = resolveMechanismArchetype(meta, metaById) ?? "unresolved";
+        const archetype = hasAdmittedSafetyScoreV9NativeFamily(meta, resolvedArchetype, clockSec)
+          ? resolvedArchetype
+          : "unresolved";
         admitted.archetype = archetype;
+        admissionPath = "cdpStressCoverage";
+        validateSafetyScoreV9ShockRegistryAsset(assetId);
         admissionPath = "pegReference";
         const pegReference = buildPegReference(meta, metaById);
         admitted.pegReference = pegReference;
@@ -1637,11 +1770,17 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         const reviewedStaticReserveRows = resolveReviewedReserveRows({
           meta,
           clockSec,
+          fixedInput,
           liveReserveRows: liveReserves,
           liveFallbackAllowed: liveToFallbackAssetIds.has(assetId),
         });
         const reserveRows = reviewedStaticReserveRows?.rows ?? liveReserves;
+        admissionPath = "reserveBoundFacts";
+        const reserveBoundFacts = buildSafetyScoreV9ReserveBoundFacts(assetId, reserveRows);
         const reviewEvidence = new ReviewEvidenceBuilder(assetId, clockSec);
+        admissionPath = "reserveScopeAdmissions";
+        const reserveScopeAdmissions = buildSafetyScoreV10ScopedReserveAdmissions(meta, fixedInput);
+        addScopedReserveEvidence(meta, reserveScopeAdmissions, fixedInput.liveReserveProvenanceMap[assetId]?.reserveObservation, reviewEvidence);
         admissionPath = "reviewedIncidents";
         const reviewedIncidents = getSafetyScoreV9ReviewedIncidents(assetId, clockSec);
         addSafetyScoreV9IncidentEvidence(reviewEvidence, reviewedIncidents);
@@ -1670,6 +1809,21 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
             sources: mechanismOverlayEvidence.sources,
             payload: mechanismOverlayEvidence.payload,
             maxAgeSec: mechanismOverlayEvidence.maxAgeSec,
+          });
+        } else if (
+          mechanismRiskReview &&
+          (archetype === "ucits-trs-fund" || archetype === "shared-reserve" || archetype === "protocol-position") &&
+          meta.mechanismArchetypeReview
+        ) {
+          reviewEvidence.add({
+            componentKeys: ["mechanism-risk-review"],
+            sourceId: "stablecoin.mechanismArchetypeReview",
+            reviewedAt: meta.mechanismArchetypeReview.reviewedAt,
+            publishedBy: "unknown",
+            confidence: "manual-review",
+            sources: meta.mechanismArchetypeReview.sources,
+            payload: meta.mechanismArchetypeReview,
+            maxAgeSec: V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.mechanismOverlayMaxAgeSec,
           });
         }
         const assuranceReport = meta.proofOfReserves?.latestReport;
@@ -1717,7 +1871,19 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         admissionPath = "componentEvidence.wrapper-custody";
         addWrapperCustodyEvidence(meta, reviewEvidence);
         admissionPath = "componentEvidence.wrapper-allocation";
-        addWrapperAllocationEvidence(wrapperAllocationReview, reviewEvidence);
+        addWrapperAllocationEvidence(wrapperAllocationReview, reviewEvidence, clockSec);
+        if (meta.parentBackingInheritance) {
+          admissionPath = "componentEvidence.parent-backing-inheritance";
+          reviewEvidence.add({
+            componentKeys: ["wrapper-local:parentBackingInheritance"],
+            sourceId: "stablecoin-meta.parent-backing-inheritance",
+            reviewedAt: meta.parentBackingInheritance.reviewedAt,
+            publishedBy: "unknown",
+            confidence: "verified",
+            sources: meta.parentBackingInheritance.sources,
+            payload: meta.parentBackingInheritance,
+          });
+        }
         admissionPath = "supplyReview";
         const supplyReview = buildSafetyScoreV9SupplyReview(
           fixedInput,
@@ -1753,20 +1919,24 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
           compareText(left.controlKey, right.controlKey),
         );
         admissionPath = "accessReview";
+        const reviewedTransferFact = reviewedTransferFacts
+          ? reviewedTransferFacts.get(assetId)
+          : getSafetyScoreV9ReviewedTransferFact(assetId);
         const accessReview = adaptAccessReview(
           meta,
           metaById,
           activeIds,
           reviewEvidence,
-          reviewedTransferFacts.get(assetId),
+          reviewedTransferFact,
           transferMaterialScope(
             fixedInput,
             assetId,
             meta,
             options.transferMaterialityGeneration ?? null,
-            reviewedTransferFacts.get(assetId),
+            reviewedTransferFact,
           ),
           clockSec,
+          buildSafetyScoreV9AccessClaimGraph({ assetId, clockSec, generationId: fixedInput.baseInputGenerationId, evidence: reviewEvidence, review: options.accessClaimGraphReviews?.get(assetId) }),
         );
         admissionPath = "researchEvidence";
         const reviewedEvidence = reviewEvidence.finish();
@@ -1793,6 +1963,9 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
           archetype,
           variantKind: meta.variantKind ?? null,
           ...(meta.wrapperOperator === undefined ? {} : { wrapperOperator: meta.wrapperOperator }),
+          ...(meta.parentBackingInheritance === undefined
+            ? {}
+            : { parentBackingInheritance: meta.parentBackingInheritance }),
           launchedAtSec,
           mechanismRiskReview,
           ...(mechanismReviewGapDisposition ? { mechanismReviewGapDisposition } : {}),
@@ -1801,7 +1974,9 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
           dependencies,
           reserveApplicability: { state: "required" },
           reserveClassifications,
+          ...(reserveBoundFacts.length > 0 ? { reserveBoundFacts } : {}),
           reviewedStaticReserveRows,
+          ...(reserveScopeAdmissions.length > 0 ? { reserveScopeAdmissions } : {}),
           routeReviews,
           retainedRoutes,
           controlReview:
@@ -1828,12 +2003,14 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
           supplyReview,
           operationalResilience,
           wrapperAllocationReview,
+          allocationScopeIdentityReview: buildAllocationScopeIdentityReview(meta),
           wrapperCustodyReview:
             (meta.variantKind === "savings-passthrough" ||
               meta.variantKind === "risk-absorption" ||
               meta.variantKind === "strategy-vault") &&
             meta.custodyProfile
             ? {
+                custodyModel: meta.custodyModel ?? "unknown",
                 providers: meta.custodyProfile.providers.map((provider) => ({
                   providerKey: provider.name,
                   role: provider.role,
@@ -1853,7 +2030,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
       } catch (error) {
         return quarantinedSafetyScoreV9ExtensionAsset(admitted, assetId, {
           code: "fact-build-failed",
-          path: admissionPath,
+          path: error instanceof ReviewedRegistryEntryError ? error.path : admissionPath,
           message: toErrorMessage(error),
         });
       }

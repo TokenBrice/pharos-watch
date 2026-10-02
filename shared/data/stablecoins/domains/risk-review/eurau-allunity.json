@@ -2,10 +2,19 @@
   "id": "eurau-allunity",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: EURAU resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "EURAU whitepaper v1.3, transfer restrictions and blocking rights",
+        "url": "https://framerusercontent.com/assets/OfesVRYgYGUO0B0k1xr7EqFHeOQ.pdf"
+      },
+      {
+        "label": "Verified AllUnity implementation: blacklist transfer checks",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x56c19aea2192ff0ac5f6b252776480db601a1482"
+      }
+    ],
+    "evidence": "Whitepaper clauses 3 and 4 prohibit blacklisted-address transfers and permit the issuer to block transfers to or from blacklisted addresses. The implementation active on all six reviewed EVM chains checks BLACKLISTED_ROLE in _update and supports role-gated burning from blacklisted addresses; Solana finalized slot 452227640 retains a freeze authority and permanent delegate. At Ethereum block 26096138, the token's separate blacklist contract is 0xeafba0d16d6a0ff3c6c5d0a46ca7b8fbff21a9d3 and the recorded EVM admin holds its DEFAULT_ADMIN_ROLE.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurM16cNGN)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

@@ -12,9 +12,9 @@
         "url": "https://api.mainnet-beta.solana.com"
       }
     ],
-    "evidence": "At Solana slot 425778638, the tracked Token-2022 DUSD mint reported H4Mp7WL282pdbY9V9N7AJnsQwB5yyrU1E7svfsH2Ur5h as both mintAuthority and freezeAuthority. That authority is a PDA owned by the immutable StandX program STANDKqqZERMKosYH2PAtNtnt6mig4CRPycsRwjuVhB, so the program can directly freeze individual DUSD token accounts and block their transfers. The separate BSC deployment remains governed through the StandX Gateway role system.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "At finalized Solana slot 452230743 on 2026-10-01, the tracked Token-2022 DUSD mint still had mintAuthority and freezeAuthority H4Mp7WL282pdbY9V9N7AJnsQwB5yyrU1E7svfsH2Ur5h, owned by StandX Settler program STANDKqqZERMKosYH2PAtNtnt6mig4CRPycsRwjuVhB. The program is upgradeable: program data 4XNF9sPKbX3SAor8mm8HDbWycw7qGC642NJs6mePqXQe reported authority 8BRbk69F5dnPrxvnnWMhmWVyqECWnGcYDfMT8G96JzBh. The prior immutable-program statement was incorrect. The freeze authority remains present, so centralized freeze exposure is retained.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA62sUSD1)",
+    "reviewedAt": "2026-10-01"
   },
   "oracleRisk": {
     "tier": "redundant-with-failover",
@@ -420,7 +420,7 @@
         },
         "modulesOrGuardsStatus": "unknown",
         "routeChecks": {
-          "lockboxOrEscrow": "StandX wallet-operation documentation identifies BSC Vault 0x11b660397382AE3A83c4Ad80e2F791189b39e433 as the target-chain custody endpoint. The Safe proxy has threshold 2 with four owners; sampled balances were 5,855,893.842393 DUSD in Highway and 19,957,181.359251 DUSD in the vault.",
+          "lockboxOrEscrow": "StandX wallet-operation documentation identifies BSC Vault 0x11b660397382AE3A83c4Ad80e2F791189b39e433 as the target-chain custody endpoint. At BSC block 125055810 on 2026-10-01, getOwners() returned three owners and getThreshold() returned 2. Historical balances sampled on 2026-08-16 were 5,855,893.842393 DUSD in Highway and 19,957,181.359251 DUSD in the vault; those are not current liquidity measurements.",
           "onchainAmountBounds": "Vault and Highway balances are route-liquidity observations, not a whole-supply reconciliation. The vault shares owners 0x222542...e415 and 0x649b82...6310 with the DUSD admin Safe/Highway administrator, so custody is a common-mode dependency."
         },
         "capDescription": "The BSC Vault Safe is the issuer-controlled DUSD lockbox/custody endpoint for Highway settlement; its signer quorum and shared owners are material to route liquidity and recovery.",
@@ -440,7 +440,7 @@
             "url": "https://bsc-dataseed.binance.org"
           }
         ],
-        "evidence": "The documented BSC Highway Vault is a Safe proxy with threshold 2 and four owners. At the latest sampled BSC state, Highway held 5,855,893.842393 DUSD and the vault held 19,957,181.359251 DUSD. The vault shares owners with the DUSD admin Safe, including Highway administrator 0x649b82c8de192e92f8dc9c88f63038016ce56310, coupling custody and mint/settlement administration."
+        "evidence": "On 2026-10-01 at BSC block 125055810, the documented Highway Vault Safe returned threshold 2 and owners 0x222542fac5d6f5c2562312f907d202be807ee415, 0x649b82c8de192e92f8dc9c88f63038016ce56310, and 0x3ebde8089557d767d804bc45473a31bbf3f17066. The prior prose stating four owners contradicted the structured signerCount of three and the current pinned read. The shared owners with the DUSD admin Safe and Highway administrator continue to couple custody and mint/settlement administration. Historical 2026-08-16 Highway and vault balances are retained in routeChecks and were not refreshed."
       },
       {
         "id": "dusd-solana-highway-controller",
@@ -461,7 +461,7 @@
         "modulesOrGuardsStatus": "not-applicable",
         "routeChecks": {
           "lockboxOrEscrow": "At finalized slot 439739800, this enabled Highway controller state included the DUSD mint. The official SVM audit says successful remote-call acknowledgement transfers from the Highway ATA after checking the DUSD mint.",
-          "unsupportedReason": "Current public IDL/source evidence was not available to map every raw controller field to validator, vault, and signer semantics; the exact Solana vault address also remains unresolved."
+          "unsupportedReason": "Current public IDL/source evidence does not map every controller field to validator, vault, and signer semantics. Official wallet docs list Solana Highway Vault 2pBsToyWZjp4Kpkb2LxbYNhHSvKcAwxXeJyHneNhnxmi, but the finalized RPC read at slot 452230743 on 2026-10-01 returned null; its current custody/settlement role remains unresolved."
         },
         "capDescription": "The Solana Highway controller is an issuer-operated custody/settlement state for the native DUSD route; its exact validator, signer, and vault configuration is not fully decoded.",
         "canRaiseCap": "unknown",

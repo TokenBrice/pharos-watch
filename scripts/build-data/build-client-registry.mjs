@@ -828,13 +828,19 @@ export function projectWorkerRuntimeCoin(coin, index) {
     projected.status = coin.status;
   }
   if (Array.isArray(coin.contracts)) {
-    projected.contracts = coin.contracts.map(({ chain, address, decimals }) => ({ chain, address, decimals }));
-  }
-  if (Array.isArray(coin.tradedContracts)) {
-    projected.tradedContracts = coin.tradedContracts.map(({ chain, address, decimals }) => ({
+    projected.contracts = coin.contracts.map(({ chain, address, decimals, amountEncoding }) => ({
       chain,
       address,
       decimals,
+      ...(amountEncoding != null ? { amountEncoding } : {}),
+    }));
+  }
+  if (Array.isArray(coin.tradedContracts)) {
+    projected.tradedContracts = coin.tradedContracts.map(({ chain, address, decimals, amountEncoding }) => ({
+      chain,
+      address,
+      decimals,
+      ...(amountEncoding != null ? { amountEncoding } : {}),
     }));
   }
   // Retain only the fields DDR's structural and terminal-evidence readers use.

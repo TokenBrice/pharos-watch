@@ -1,6 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { REVIEWED_DEPLOYMENT_CATALOG } from "../../test-helpers/reviewed-deployment-catalog.test-support";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { deriveReportCardsBaseInputGenerationId } from "@shared/lib/report-cards-base-input-identity";
 import { createSupplyAttributionJournalV1 } from "@shared/lib/safety-score-v9-supply-attribution-journal";
+import { evaluateV9ExitAssetFacts } from "@shared/lib/safety-score-v9/exit";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import {
   V9_CANDIDATE_POLICY_V1,
@@ -11,6 +13,7 @@ import {
 } from "../safety-score-v9/fact-set";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
+import { REVIEWED_ECONOMIC_SUPPLY_PLANS } from "../safety-score-v9/supply-attribution-contract";
 import {
   deriveXautRepresentationGroupSupplyAttribution,
   XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC,
@@ -34,6 +37,8 @@ import {
   xautFactSetFixedInput,
   xautFactSetMeta,
 } from "./safety-score-v9-fact-set.test-support";
+
+afterEach(() => vi.restoreAllMocks());
 
 function nullSupplyReviewExtension(options: {
   bridge?: "not-applicable" | "missing" | "required";
@@ -90,16 +95,18 @@ function rejectedWmAttributionRecord(
 
 const XAUT_NON_BRIDGE_CONTROL_CASES = [
   {
-    controlKind: "mint", scope: "deployment", capabilities: ["mint"],
-    deploymentKey: "ethereum:0x68749665ff8d2d112fa859aa293f07a622782f38",
+    controlKind: "mint", scope: "global", capabilities: ["mint"],
+    deploymentKey: "asset:xaut-tether",
+    economicLossScope: "global-claim", materialSupplyShare: null,
     authority: {
       authorityKey: "ethereum:0x68749665ff8d2d112fa859aa293f07a622782f38",
       model: "contract", threshold: null,
     },
   },
   {
-    controlKind: "upgrade", scope: "deployment", capabilities: ["mint", "upgrade"],
-    deploymentKey: "ethereum:0x68749665ff8d2d112fa859aa293f07a622782f38",
+    controlKind: "upgrade", scope: "global", capabilities: ["mint", "upgrade"],
+    deploymentKey: "asset:xaut-tether",
+    economicLossScope: "global-claim", materialSupplyShare: null,
     authority: {
       authorityKey: "ethereum:0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828",
       model: "multisig", threshold: { required: 3, total: 6 },
@@ -158,7 +165,7 @@ function wmFixedInput() {
 
 function compileWm(fixed: ReportCardsFixedInput) {
   const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
-    metaById: new Map([["wm-m0", wmFactSetMeta()]]),
+    metaById: new Map([["wm-m0", { ...wmFactSetMeta(), ...structuredClone(REVIEWED_DEPLOYMENT_CATALOG["wm-m0"]) }]]),
   });
   const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
   return { baseline, compiled, wm: compiled.assets[0]! };
@@ -270,7 +277,12 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
     });
     expect(bridgeControls).toHaveLength(1);
     expect(bridgeControls[0]).toMatchObject({
-      status: { applicability: { state: "required" }, observationState: "known", gapIds: [] },
+      // Unresolved authority stays bounded-unknown; the sub-threshold share is priced proportionally.
+      status: {
+        applicability: { state: "required" },
+        observationState: "bounded-unknown",
+        gapIds: ["xaut-tether:gap:deployment-control:bridge-group:xaut-tether:bebc8ec91244873497e0"],
+      },
       deploymentKey: "representation-group:xaut-tether:xaut0-omnichain",
       capSemantics: { kind: "unbounded" },
       claimImpairment: "unbounded",
@@ -288,6 +300,9 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
     expect(xaut.economicControlReview.bridge.status.observationState).toBe("known");
     expect(bridgeControls.some((control) =>
       attribution!.representationGroup.routeIds.includes(control.deploymentKey))).toBe(false);
+    // Both the onlyOwner minter and its mint-capable upgrade authority reach
+    // the root XAUt claim, including gold locked for XAUt0 representations.
+    // Their loss scope must not shrink to the Ethereum-resident supply share.
     expect(
       xaut.controls
         .filter((control) => control.controlKind !== "bridge")
@@ -296,6 +311,8 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
           scope: control.scope,
           capabilities: control.capabilities,
           deploymentKey: control.deploymentKey,
+          economicLossScope: control.economicLossScope,
+          materialSupplyShare: control.materialSupplyShare,
           authority: control.authority,
         }))
         .sort((left, right) =>
@@ -349,6 +366,7 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
       liveReserveMap: alphaInput.liveReserveMap,
       liveReserveProvenanceMap: alphaInput.liveReserveProvenanceMap,
       chainCirculatingById: { ...xautInput.chainCirculatingById, ...alphaInput.chainCirculatingById },
+      aggregateCirculatingById: { ...xautInput.aggregateCirculatingById, ...alphaInput.aggregateCirculatingById },
     });
     // Accepted under XAUT's one-hour window but older than the generic chain-supply window.
     fixed.safetyScoreV9SupplyAttributionById = {
@@ -378,7 +396,6 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
 
     expect(baseline.sources.chainSupply.maxAgeSec).toBeLessThan(2_800);
     expect(chainSupply("alpha")).toMatchObject({
-      state: "known",
       evidence: { observedAtSec: clockSec, freshness: { state: "current" } },
     });
     expect(chainSupply("xaut-tether")).toMatchObject({
@@ -436,7 +453,7 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
     );
   });
 
-  it("fails closed when the circulating-liability denominator pushes XAUt0 above materiality", () => {
+  it("fails closed when the circulating denominator makes an unresolved-scope XAUt0 control material", () => {
     const clockSec = XAUT_FACT_SET_CLOCK_SEC;
     const aggregateSupplyUsd = 2_480_000_000;
     const fixed = xautFactSetFixedInput({
@@ -483,16 +500,16 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
       compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline),
       V9_CANDIDATE_POLICY_V1,
     ).assets[0]!;
+    // Measured exposure alone does not establish deployment-local loss scope.
+    // This group still has unknown economic semantics, so the smooth band
+    // cannot discharge the material bridge-supply ceiling.
     expect(evaluated.scoreInput.pillars.control.reasons.map(
       (reason) => reason.code,
-    )).toContain("runtime-bridge-materiality-unavailable");
-    expect(evaluated.trace.caps).toContainEqual(expect.objectContaining({
-      kind: "reason:runtime-bridge-materiality-unavailable",
-      limit: 55, source: "evidence", binding: true,
-    }));
+    )).toContain("material-bridge-supply-unmatched");
     expect(evaluated.trace.bindingCap).toMatchObject({
-      kind: "reason:runtime-bridge-materiality-unavailable", limit: 55, source: "evidence",
+      kind: "reason:material-bridge-supply-unmatched", limit: 55, source: "evidence",
     });
+    expect(evaluated.trace.finalScore).toBeLessThanOrEqual(55);
   });
 
   it("restores the bridge-materiality cap when the wM packet is absent", () => {
@@ -559,10 +576,7 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
       `supply-review-outcome:v1:${outcomeEvidence.contentSha256}`,
     );
     const outcomeDigest = () => {
-      const current = buildSafetyScoreV9BaselineExtension(fixed, {
-        metaById: new Map([["wm-m0", wmFactSetMeta()]]),
-      });
-      return compileSafetyScoreV9FactSetFromFixedInput(fixed, current).assets[0]!.evidence.find(
+      return compileWm(fixed).wm.evidence.find(
         (evidence) => evidence.evidenceId === "wm-m0:supply-review-outcome",
       )!.contentSha256;
     };
@@ -659,7 +673,7 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
     ).not.toContain("missing-same-notional-route");
 
     // A producer that owed a measured partition and did not deliver one still
-    // fails closed, because its aggregate was never meant to stand alone.
+    // bounds materiality; methodology 9.99 uses only the current amount for Exit.
     const { wm } = compileWm(wmFixedInput());
     expect(wm.supply.status.observationState).toBe("bounded-unknown");
     expect(wm.gaps).toContainEqual(expect.objectContaining({
@@ -698,21 +712,29 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
     );
   });
 
-  it("keeps supply missing when neither per-chain rows nor a positive aggregate bucket exist", () => {
+  it("keeps supply missing when no aggregate was observed instead of inferring zero", () => {
     const absent = compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput({ chainSupplyByChain: {} }), extension())
       .assets[0]!.supply;
     expect(absent.status.observationState).not.toBe("known");
     expect(absent.circulatingUsd).toBeNull();
     expect(absent.sourceKind).toBe("usd-denominated-circulating");
     expect(absent.chainDistribution).toBeNull();
+  });
 
-    const zero = compileSafetyScoreV9FactSetFromFixedInput(
+  it("preserves an explicitly observed zero aggregate without granting route-materiality relief", () => {
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(
       exactFixedInput({ chainSupplyByChain: {}, aggregateCirculating: { peggedUSD: 0 } }),
       extension(),
-    ).assets[0]!.supply;
-    expect(zero.status.observationState).not.toBe("known");
-    expect(zero.circulatingUsd).toBeNull();
-    expect(zero.sourceKind).toBe("usd-denominated-circulating");
+    );
+    const zero = compiled.assets[0]!.supply;
+    expect(zero.status.observationState).toBe("known");
+    expect(zero.circulatingUsd).toBe(0);
+    expect(zero.sourceKind).toBe("aggregate-circulating");
+    expect(zero.chainDistribution).toBeNull();
+    expect(zero.selectedRouteSupplyShare).toBeNull();
+    expect(zero.unknownRouteSupplyShare).toBeNull();
+    expect(zero.unreviewedRouteSupplyShare).toBeNull();
+    expect(evaluateV9ExitAssetFacts(compiled.assets[0]!, V9_CANDIDATE_POLICY_V1).stressRequest).toBeNull();
   });
 
   it("ages aggregate supply against the supplemental carry-forward ceiling, not the chain-supply cron window", () => {
@@ -732,22 +754,97 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
     expect(alpha.supply.status.observationState).toBe("known");
   });
 
-  it("leaves chain-attributed supply untouched when per-chain rows are present", () => {
-    const withoutAggregate = compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput(), extension()).assets[0]!
-      .supply;
-    const withAggregate = compileSafetyScoreV9FactSetFromFixedInput(
-      exactFixedInput({ aggregateCirculating: { peggedUSD: 999_000_000 } }),
-      extension(),
-    ).assets[0]!.supply;
-
-    expect(withoutAggregate.sourceKind).toBe("usd-denominated-circulating");
-    expect(withoutAggregate.circulatingUsd).toBe(10_000_000);
-    expect(withoutAggregate.chainDistribution).toEqual({
-      chains: [{ chainId: "ethereum", supplyUsd: 10_000_000, supplyShare: 1 }],
-      unattributedSupplyUsd: 0,
-      unattributedSupplyShare: 0,
+  it("sizes Exit from a current aggregate without clearing the bridge-materiality gap", () => {
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(
+      exactFixedInput({ chainSupplyByChain: {}, aggregateCirculating: { peggedUSD: 100_000_000 } }),
+      nullSupplyReviewExtension({ bridge: "missing" }),
+    );
+    const asset = compiled.assets[0]!;
+    expect(asset.supply.status.observationState).toBe("bounded-unknown");
+    expect(asset.supply.chainDistribution).toBeNull();
+    expect(asset.supply.selectedRouteSupplyShare).toBeNull();
+    expect(asset.gaps).toContainEqual(expect.objectContaining({
+      reasonCode: "runtime-bridge-materiality-unavailable",
+      ownerDomain: "control",
+    }));
+    const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!;
+    expect(evaluated.exit.stressRequest).toMatchObject({
+      rawSupplyRequestUsd: 5_000_000,
+      requestedNotionalUsd: 10_000_000,
     });
-    expect(withAggregate).toEqual(withoutAggregate);
+    expect(evaluated.stressState.exitPortfolio?.circulatingUsd).toBe(100_000_000);
+    expect(evaluateV9ExitAssetFacts(asset, V9_CANDIDATE_POLICY_V1).stressRequest).toEqual(evaluated.exit.stressRequest);
+    expect(evaluated.scoreInput.pillars.control.reasons.map((reason) => reason.code))
+      .toContain("missing-bridge-routes");
+  });
+
+  it.each([
+    { name: "unavailable", aggregateCirculating: undefined, clockSec: AS_OF_SEC },
+    { name: "stale", aggregateCirculating: { peggedUSD: 4_000_000 }, clockSec: AS_OF_SEC + 7 * 86400 + 1 },
+  ])("refuses an Exit stress request when aggregate supply is $name", ({ aggregateCirculating, clockSec }) => {
+    const reviewExtension = nullSupplyReviewExtension({ bridge: "required" });
+    reviewExtension.compiledAtSec = clockSec;
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(
+      exactFixedInput({ chainSupplyByChain: {}, aggregateCirculating, supplyObservedAtSec: AS_OF_SEC, clockSec }),
+      reviewExtension,
+    );
+    const asset = compiled.assets[0]!;
+    expect(evaluateV9ExitAssetFacts(asset, V9_CANDIDATE_POLICY_V1).stressRequest).toBeNull();
+    expect(evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!.exit.stressRequest).toBeNull();
+  });
+  it.each<Record<string, number>>([{}, { peggedUSD: 20 }, { peggedUSD: 120 }])(
+    "preserves captured chain quantities without a reviewed economic plan (%j)",
+    aggregateCirculating => {
+      const template = exactFixedInput().chainCirculatingById.alpha!.ethereum!;
+      const compiled = compileSafetyScoreV9FactSetFromFixedInput(
+        exactFixedInput({
+          aggregateCirculating,
+          chainSupplyByChain: { ethereum: { ...template, current: 100 } },
+        }),
+        nullSupplyReviewExtension({ bridge: "not-applicable" }),
+      );
+      expect(compiled.assets[0]!.supply.circulatingUsd).toBe(100);
+      expect(compiled.assets[0]!.supply.chainDistribution).toEqual({
+        chains: [{ chainId: "ethereum", supplyUsd: 100, supplyShare: 1 }],
+        unattributedSupplyUsd: 0,
+        unattributedSupplyShare: 0,
+      });
+    },
+  );
+
+
+  it("retains the admitted aggregate rather than replacing it with a partial provider subtotal", () => {
+    vi.spyOn(REVIEWED_ECONOMIC_SUPPLY_PLANS, "has").mockImplementation(assetId => assetId === "alpha");
+    const template = exactFixedInput().chainCirculatingById.alpha!.ethereum!;
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(
+      exactFixedInput({
+        aggregateCirculating: { peggedUSD: 100 },
+        chainSupplyByChain: { ethereum: { ...template, current: 20 } },
+      }),
+      nullSupplyReviewExtension({ bridge: "required" }),
+    );
+    const supply = compiled.assets[0]!.supply;
+    expect(supply.circulatingUsd).toBe(100);
+    expect(supply.chainDistribution).toEqual({
+      chains: [{ chainId: "ethereum", supplyUsd: 20, supplyShare: 0.2 }],
+      unattributedSupplyUsd: 80, unattributedSupplyShare: 0.8,
+    });
+    expect(supply.selectedRouteSupplyShare).toBeNull();
+  });
+
+  it("rejects an over-accounted provider partition without discarding the admitted aggregate", () => {
+    vi.spyOn(REVIEWED_ECONOMIC_SUPPLY_PLANS, "has").mockImplementation(assetId => assetId === "alpha");
+    const template = exactFixedInput().chainCirculatingById.alpha!.ethereum!;
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(
+      exactFixedInput({
+        aggregateCirculating: { peggedUSD: 100 },
+        chainSupplyByChain: { ethereum: { ...template, current: 101 } },
+      }),
+      nullSupplyReviewExtension({ bridge: "required" }),
+    );
+    expect(compiled.assets[0]!.supply.circulatingUsd).toBe(100);
+    expect(compiled.assets[0]!.supply.chainDistribution).toBeNull();
+    expect(compiled.assets[0]!.supply.selectedRouteSupplyShare).toBeNull();
   });
 
 });

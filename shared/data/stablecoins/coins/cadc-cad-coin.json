@@ -17,10 +17,24 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://loon.finance/transparency/",
-    "provider": "Monthly scanned ATB Financial bank-confirmation forms for PayTrie AB Inc, requested by HDCPA Professional Corporation (no accountant's report, opinion, or signature; no CADC circulation figure appears, so liabilities are not reconciled)",
+    "provider": "Monthly scanned ATB Financial bank-confirmation forms for PayTrie AB Inc (the August 2026 form names no requesting accountant, supplies no accountant's opinion, and contains no CADC circulation or liability reconciliation)",
     "attestorTier": "none",
     "cadence": "monthly",
-    "attestorJurisdiction": "Canada"
+    "attestorJurisdiction": "Canada",
+    "latestReport": {
+      "periodEnd": "2026-08-31",
+      "assuranceMethod": "unknown",
+      "scope": "assets-only",
+      "liabilityReconciliation": "none",
+      "reviewer": "Sol curation pass 2026-10-01 (CurM02USDK); bank confirmation visually reviewed; publication date not stated",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Loon attestation archive: CADC_Bank_Attestation_Aug_2026.pdf",
+          "url": "https://loon.finance/api/attestations"
+        }
+      ]
+    }
   },
   "links": [
     {

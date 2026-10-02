@@ -2,7 +2,7 @@
   "id": "iusd-initia",
   "name": "Initia iUSD",
   "symbol": "iUSD",
-  "oneLiner": "iUSD is a single-chain Initia wrapper of bridged Agora AUSD; reserve yield is redirected to ecosystem incentives and redemption routes through AUSD.",
+  "oneLiner": "iUSD is an Initia wrapper backed 1:1 by bridged Agora AUSD; holders receive no reserve yield, and the Initia Bridge converts withdrawals through AUSD into USDC.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized-dependent"
@@ -39,8 +39,8 @@
       }
     ]
   },
-  "collateral": "1:1 reserve in Agora AUSD bridged to Initia via LayerZero; AUSD itself is backed by short-dated U.S. Treasury bills, overnight reverse repos, and cash held in a bankruptcy-remote Delaware Statutory Trust managed by VanEck and custodied by State Street",
-  "pegMechanism": "iUSD is a single-chain wrapper of bridged Agora AUSD on Initia. Each iUSD is minted against an equal amount of AUSD locked at the Initia LayerZero bridge endpoint; reserve yield from the underlying AUSD is redirected by Initia into ecosystem incentives (Echelon lending, liquidity programs, Cabal vaults) rather than to holders. Holder redemption ultimately depends on the AUSD bridge and Agora's direct USD redemption.",
+  "collateral": "1:1 backing in Agora AUSD bridged to Initia via LayerZero. Agora's August 2026 reserve report identifies Agora Bermuda Limited as the AUSD issuer and Agora Reserve Fund LP as its reserve-asset structure.",
+  "pegMechanism": "iUSD expands when users deposit and contracts when they withdraw, with protocol smart contracts designed for 1 iUSD : 1 AUSD convertibility. Initia's Bridge converts withdrawn iUSD into AUSD, bridges it through LayerZero to Ethereum, and swaps it into USDC. Reserve-related revenue may support ecosystem incentives, development, grants, and other programs; holding iUSD does not entitle holders to reserve yield. Agora retains administrative freeze controls over underlying AUSD.",
   "mechanismArchetype": "fiat-cash",
   "implementationLaunchDate": "2026-01-19",
   "mechanismArchetypeReview": {
@@ -88,7 +88,7 @@
     }
   ],
   "collateralQuality": "rwa",
-  "custodyModel": "institutional-top",
+  "custodyModel": "onchain",
   "governanceQuality": "single-entity",
   "liveReservesConfig": {
     "adapter": "initia-wrapper-vault",

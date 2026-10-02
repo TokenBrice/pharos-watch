@@ -20,8 +20,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-29",
-    "reviewer": "Pharos reserve curation review 2026-08-29",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB21YUSD)",
     "confidence": "verified",
     "sources": [
       {
@@ -37,7 +37,7 @@
         "url": "https://www.hamiltonlane.com/getContentAsset/106530b1-f11a-4ad0-b56d-b19b3861b165/dfc3d011-8f63-43f6-9ed8-4b444333a1d0/SCOPE-Global-Monthly-Report-June-2026.pdf?language=en-US"
       },
       {
-        "label": "Hamilton Lane SCOPE strategy page (monthly valuation cadence)",
+        "label": "Hamilton Lane SCOPE strategy page (monthly valuation cadence; newer Share Class Performance dated 31/08/2026 observed 2026-10-01, not a feeder composition report)",
         "url": "https://www.hamiltonlane.com/en-us/strategies/evergreen/global/senior-credit-opportunities-fund"
       },
       {
@@ -49,10 +49,47 @@
         "url": "https://securitize.io/primary-market/hl-scope"
       }
     ],
-    "rationale": "The current Hamilton Lane SCOPE strategy page displays Share Class Performance dated 31/07/2026 and states that valuations are calculated monthly by Hamilton Lane's valuation team and reviewed and approved by its valuation committee. The SEC Form D/A identifies Hamilton Lane SCOPE Securitize Tokenized Feeder, LP, while the December 2025 SCOPE PPM and Hamilton Lane's monthly report describe the underlying Luxembourg SCOPE fund and its NAV-based private-credit strategy. Together with the Securitize distribution page, these sources support representing HLSCOPE's reserve envelope as one 100% tokenized feeder LP interest. No underlying loan-level composition is asserted: the master-fund portfolio is risk context for that fund-interest slice, not additional HLSCOPE reserve slices. The July 31 page is the latest dated valuation disclosure located; it is manager-published and does not constitute an independent reserve audit.",
-    "compositionBasis": "SEC Form D/A feeder identity; December 2025 SCOPE PPM and Hamilton Lane/Securitize structure disclosures; Hamilton Lane SCOPE strategy page showing monthly valuation/performance dated 2026-07-31",
+    "rationale": "Re-reviewed on 2026-10-01 as a standing-structure composition: Hamilton Lane's issuer disclosure and Securitize's primary-market page continue to identify HLSCOPE as the tokenized feeder interest in SCOPE. The single reserve row remains conservatively high risk, with its previously curated 2026-07-31 composition date retained. The current manager strategy page separately shows Share Class Performance dated 31/08/2026 and confirms monthly manager valuation; this newer NAV observation supplies no dated feeder holdings composition, so the period-matched July performance observation is retained in proofOfReserves.latestReport. The issuer's public monthly-report archive still lists June 2026 as its newest report. The June report and December 2025 PPM remain historical Main Fund risk context. No new underlying loan weights, cash sleeve, composition date or protective custody terms are inferred, and the SEC filing was not newly re-verified because its archive endpoint was inaccessible.",
+    "compositionBasis": "Retained 2026-07-31 curated feeder-interest composition; tokenized-feeder structure re-verified from Hamilton Lane issuer disclosure and Securitize primary-market page on 2026-10-01; August manager performance is a separate NAV observation, not a composition refresh",
     "compositionAsOf": "2026-07-31",
     "scope": "full-composition",
+    "observations": [
+      {
+        "kind": "standing-structure",
+        "scopeId": "hlscope:whole-feeder-lp-standing-identity:1790896833",
+        "liabilityBookKey": "hlscope:tokenized-feeder-lp-interests",
+        "deploymentRefs": [],
+        "reviewer": "DataBBMisc04",
+        "confidence": "verified",
+        "sources": [
+          {
+            "url": "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize",
+            "accessedAtSec": 1790896833,
+            "sha256": "18b789471b114c886e834eefcb8d7ae0ee5ac8f59ce2a3598a09d687f8a62b36"
+          }
+        ],
+        "reviewedAtSec": 1790896833,
+        "expiresAtSec": 1798672833,
+        "sourceGeneration": "datab:hlscope:standing-identity:1790896833",
+        "sourceSha256": "18b789471b114c886e834eefcb8d7ae0ee5ac8f59ce2a3598a09d687f8a62b36",
+        "completeness": "complete",
+        "obligations": [
+          {
+            "key": "feeder-current-holdings-nav-and-liabilities",
+            "disposition": "unresolved",
+            "reason": "Complete standing instrument identity only; no current feeder NAV, holdings or liability denominator was obtained."
+          },
+          {
+            "key": "executed-feeder-lp-agreement-and-holder-priority",
+            "disposition": "unresolved",
+            "reason": "The issuer distinguishes the feeder offering from SCOPE; Main Fund rights do not establish token-holder pass-through or recovery priority."
+          }
+        ],
+        "observedAtSec": null,
+        "wholeHolderClaim": true,
+        "instrumentKey": "Hamilton Lane SCOPE Securitize Tokenized Feeder, LP (Delaware) investing into Hamilton Lane Senior Credit Opportunities Fund S.A. SICAV-RAIF (Luxembourg); underlying private-credit borrowers"
+      }
+    ],
     "knownUnknownExposure": "No residual unknown exposure within the reserve composition: the entire reserve is the tokenized feeder LP interest. The underlying Main Fund loan-level weights and cash sleeve are look-through risk details, not reserve slices.",
     "knownUnknownExposurePct": 0
   },
@@ -80,10 +117,10 @@
       }
     ],
     "segregation": "unknown",
-    "bankruptcyRemoteness": "structured",
+    "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-08-29",
-    "reviewer": "Pharos reserve curation review 2026-08-29",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC14); legal-protection boundary review only",
     "confidence": "manual-review",
     "sources": [
       {
@@ -99,7 +136,7 @@
         "url": "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize"
       }
     ],
-    "uncertainty": "Main Fund assets are held under an AIFMD depositary appointment to Brown Brothers Harriman (Luxembourg) S.C.A. with safekeeping and cash-flow monitoring duties, supporting structural bankruptcy remoteness of the Luxembourg SICAV-RAIF from Securitize's tokenization stack. Private-credit loans that cannot be held in custody are subject to depositary ownership verification rather than traditional safekeeping. The Delaware feeder's custodian of Main Fund shares, feeder-level account segregation, and reuse/rehypothecation terms are not published in the reviewed public materials.",
+    "uncertainty": "The December 2025 Main Fund PPM names Brown Brothers Harriman (Luxembourg) S.C.A. as AIFMD depositary and distinguishes registered Main Fund shareholder rights from rights exercised through an intermediary. Hamilton Lane's feeder disclosure expressly states that its offering is separate and distinct from SCOPE. Neither source establishes enforceable insolvency-protection or pass-through rights for holders of the tokenized Delaware feeder. The 2026-08-29 structured label, inferred from the Main Fund depositary appointment and separation from Securitize's tokenization stack, was withdrawn on 2026-10-01 under D09. The appointment and technical tokenization remain recorded, but feeder custody, segregation, bankruptcy remoteness and reuse terms remain unknown. This narrow legal-boundary review does not newly verify the SEC filing or re-date other provider claims.",
     "knownUnknownExposurePct": 100
   }
 }

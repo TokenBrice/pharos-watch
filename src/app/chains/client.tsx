@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 import { trendColor } from "@/lib/chain-ui";
 import { formatCompactUsd, formatSignedPercent, getNetColor } from "@shared/lib/format";
 import { ChainTypeBadge } from "@/components/chain-type-badge";
-import { CHAIN_META } from "@shared/lib/chains";
+import { CHAIN_META } from "@shared/types/chain-identity";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { getLogoSrc, logosById } from "@/lib/logos";
 import { NauticalChart } from "./nautical-chart";

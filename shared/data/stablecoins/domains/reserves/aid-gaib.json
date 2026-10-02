@@ -97,13 +97,21 @@
       {
         "label": "GAIB AID and sAID contract addresses",
         "url": "https://docs.gaib.ai/products/gaib-products/aid-and-said-contracts"
+      },
+      {
+        "label": "GAIB current transparency module, refreshed facility principals (accessed 2026-10-01)",
+        "url": "https://aid.gaib.ai/assets/Transparency-THDQWk7j.js"
+      },
+      {
+        "label": "GAIB current deployed contract and asset registry (accessed 2026-10-01)",
+        "url": "https://aid.gaib.ai/assets/migration-config-Ho_mxDXP.js"
       }
     ],
-    "rationale": "GAIB's deployed transparency module accessed 2026-09-30 still discloses facility principal allocations of $5.4 million, $10.5 million and $2.8 million. These are the existing principal-allocation denominator convention, not audited current fair values or the separately displayed remainingPrincipal. Exact registry-qualified balanceOf reads found 214,915.429119 USDC across Ethereum redeemer 0x52323f33551188f170d8de14fe8d8423a839629d, minter 0xe2e1424687eb676b3807693cbb439362b8ea908e and sAID reserve 0xdaed70e64aaea8efff8fe150ee7762210aed2e9b at block 26088275, Arbitrum minter 0x04dfa27c7d1ade09ddfccfa233fb3c8490ca2b18 at block 510256611, and Base minter 0x81c1fba2c7df54ac76de5ebe373e89bcad3b8632 at block 51978808. BSC block 124854510 returned 5.536064300516316 Binance-Peg USDT at minter 0x66f9383271af3cb719b17ad07a2389185a3f580a from token 0x55d398326f99059ff775485246999027b3197955. The measured liquid balances plus disclosed principals total $18,914,920.965183303 and are normalized to 100%; cross-chain observations are not atomic. The USDT issuer edge is withheld because these balances establish a BSC representation, not verified canonical escrow coverage.",
+    "rationale": "The historical 2026-09-30 composition uses facility principal allocations of $5.4 million, $10.5 million and $2.8 million. These are the existing principal-allocation denominator convention, not audited current fair values or the separately displayed remainingPrincipal. Exact registry-qualified balanceOf reads found 214,915.429119 USDC across Ethereum redeemer 0x52323f33551188f170d8de14fe8d8423a839629d, minter 0xe2e1424687eb676b3807693cbb439362b8ea908e and sAID reserve 0xdaed70e64aaea8efff8fe150ee7762210aed2e9b at block 26088275, Arbitrum minter 0x04dfa27c7d1ade09ddfccfa233fb3c8490ca2b18 at block 510256611, and Base minter 0x81c1fba2c7df54ac76de5ebe373e89bcad3b8632 at block 51978808. BSC block 124854510 returned 5.536064300516316 Binance-Peg USDT at minter 0x66f9383271af3cb719b17ad07a2389185a3f580a from token 0x55d398326f99059ff775485246999027b3197955. The measured liquid balances plus disclosed principals total $18,914,920.965183303 and are normalized to 100%; cross-chain observations are not atomic. The USDT issuer edge is withheld because these balances establish a BSC representation, not verified canonical escrow coverage. Validation 2026-10-01: the currently loaded transparency module discloses principalAmount values of $5.4 million, $10.5 million and $0.9 million; the GPU Refinancing figure therefore differs from the historical $2.8 million used above. Current module figures do not establish an AID-only reserve-to-liability denominator. Historical percentages, composition date and dispositions are retained pending a complete allocation reconciliation.",
     "compositionBasis": "Issuer-disclosed facility principal allocations plus exact multichain liquid token balances observed 2026-09-30; not a fair-value attestation",
     "compositionAsOf": "2026-09-30",
     "scope": "full-composition",
-    "knownUnknownExposure": "Facility principal allocations are issuer disclosure rather than independently verified current NAV. Binance-Peg USDT canonical escrow coverage remains unverified.",
+    "knownUnknownExposure": "Historical mixed-protocol facility allocation does not establish current AID-only reserve composition. The current issuer app attributes GPU financing and the sAID reserve to staked AID, and uses redeemer plus minter liquid balances for circulating AID. Treasury/stable-asset split and full AID liabilities reconciliation remain unverified. Binance-Peg USDT canonical escrow coverage remains unverified.",
     "knownUnknownExposurePct": 0.00002927,
     "nonLinkDispositions": [
       {"reserveIndex": 1, "reserveName": "USDT held by the BNB Chain AID minter contract", "pct": 0.00002927, "disposition": "insufficient-evidence", "rationale": "BSC block 124854510 confirms Binance-Peg USDT holdings, but canonical Tether escrow coverage was not verified. Symbol and local balance alone do not establish the issuer edge."},

@@ -4,7 +4,7 @@
     {
       "sourceKey": "midas-mtbill:ustb",
       "name": "Superstate Short Duration US Government Securities Fund (USTB)",
-      "pct": 93.69915148717834,
+      "pct": 93.70106946343778,
       "risk": "low",
       "coinId": "ustb-superstate",
       "depType": "collateral",
@@ -23,7 +23,7 @@
     {
       "sourceKey": "midas-mtbill:buidl",
       "name": "BlackRock USD Institutional Digital Liquidity Fund (BUIDL)",
-      "pct": 6.298067468250501,
+      "pct": 6.293999640666441,
       "risk": "low",
       "coinId": "buidl-blackrock",
       "depType": "collateral",
@@ -42,7 +42,7 @@
     {
       "sourceKey": "midas-mtbill:unclassified-residual",
       "name": "Unclassified portfolio residual and position rounding",
-      "pct": 0.002781044571167425,
+      "pct": 0.004930895895793434,
       "risk": "high",
       "assetClass": "other",
       "issuerOrObligor": "Unidentified mTBILL portfolio assets and counterparties",
@@ -56,21 +56,21 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-30",
-    "reviewer": "Pharos Dependency Map WS1.D issuer-portfolio review",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol NR wave 2026-10-02 (VNrMtbill)",
     "confidence": "verified",
     "sources": [
       {
         "label": "Midas mTBILL product disclosure",
-        "url": "https://docs.midas.app/tokens/mtbill"
+        "url": "https://midas-docs.gitbook.io/midas-docs/tokens/mtbill.md"
       },
       {
         "label": "Midas mTBILL bankruptcy remoteness",
-        "url": "https://docs.midas.app/tokens/mtbill/bankruptcy-remoteness"
+        "url": "https://midas-docs.gitbook.io/midas-docs/tokens/mtbill/bankruptcy-remoteness.md"
       },
       {
         "label": "Midas mTBILL independent reporting",
-        "url": "https://docs.midas.app/tokens/mtbill/independent-reporting"
+        "url": "https://midas-docs.gitbook.io/midas-docs/tokens/mtbill/independent-reporting.md"
       },
       {
         "label": "Midas mTBILL transparency dashboard",
@@ -79,19 +79,39 @@
       {
         "label": "Midas mTBILL issuer portfolio API (accessed 2026-09-30; source updatedAt 2026-09-18T12:06:10.121Z)",
         "url": "https://api-prod.midas.app/api/transparency?token=mTBILL"
+      },
+      {
+        "label": "Midas SAVE checkpoint created October 1, 2026: self-reported aggregate NAV",
+        "url": "https://gateway.pinata.cloud/ipfs/QmUSSdWVKkCDh4sGGm2PBT6tmrPNen36F2S7YjFj376h67"
+      },
+      {
+        "label": "Midas historical portfolio endpoint at the SAVE-attested October 1, 2026 10:00 checkpoint",
+        "url": "https://api-prod.midas.app/api/transparency/by-timestamp?token=mTBILL&timestamp=2026-10-01T10:00"
+      },
+      {
+        "label": "Midas token registry: exact mTBILL proof ID and Ethereum token identity",
+        "url": "https://raw.githubusercontent.com/midas-apps/midas-por-v2/bb7308eb5e3bdd4f882b039db580279c098c011f/tokens.json"
+      },
+      {
+        "label": "SAVE publication transaction: October 1, 2026 13:49:47 UTC, independently reproduced",
+        "url": "https://etherscan.io/tx/0x86aae3d4316002a8ab25a22744c35d2eef657a74a7e9f89d1f3bf52e8b7a9a88"
+      },
+      {
+        "label": "Midas canonical payload and ECDSA signing implementation",
+        "url": "https://github.com/midas-apps/midas-por-v2/blob/bb7308eb5e3bdd4f882b039db580279c098c011f/packages/save-core/src/attestation/builder.ts"
       }
     ],
-    "rationale": "Accessed 2026-09-30: the API still reports source updatedAt 2026-09-18T12:06:10.121Z, not the access time. Named USTB and BUIDL positions are $71.501 million and $4.806 million; total equity is $76.3091221907 million. Weights use named values divided by total equity and retain the $2,122.1907 residual, rather than renormalizing rounded positions. These are issuer-reported fund holdings, not independent examination. NC-113 remains blocked on source freshness: both exact keyed fund identities already exist, and the September 18 source is outside the dashboard admission window. Next evidence: a newly dated reconciled portfolio disclosure or independent same-checkpoint holdings and fund NAV capture. Neither a new review timestamp nor a duplicate manual dependency makes the live source current.",
-    "compositionBasis": "Midas mTBILL transparency API updatedAt 2026-09-18T12:06:10.121Z; USD-million position values divided by total equity with explicit residual",
-    "compositionAsOf": "2026-09-18",
+    "rationale": "Independently verified 2026-10-02: the dated mTBILL historical issuer API reports USTB $71.638 million, BUIDL $4.812 million and total equity $76.4537698558 million. The exact total and October 1 portfolio checkpoint match the signed SAVE payload; its IPFS root matches the issuer-authorized registry publication at 2026-10-01T13:49:47Z. Canonical payload hash and ECDSA signature were reproduced. Composition is admitted as an official dated issuer disclosure, separately from financial assurance. Weights divide rounded named positions by the exact reported total and retain the entire unidentified residual without renormalization. Base and Ethereum exposure, provider mapping, all-root liabilities and pending-redemption reconciliation remain unresolved; the self-signed report grants no independent financial assurance. The latest dashboard endpoint remains September 18 and is not date-bumped.",
+    "compositionBasis": "Midas SAVE-linked historical mTBILL portfolio checkpoint 2026-10-01T10:00; rounded USD-million positions divided by exact reported equity 76.4537698558, with explicit unclassified residual",
+    "compositionAsOf": "2026-10-01",
     "scope": "full-composition",
-    "knownUnknownExposure": "The $2,122.1907 difference between total equity and rounded USTB/BUIDL positions is 0.002781044571167425% of source equity. Its instruments and custody identities remain unresolved. Source freshness prevents this disclosure being treated as a current live portfolio.",
-    "knownUnknownExposurePct": 0.002781044571167425,
+    "knownUnknownExposure": "The $3,769.8558 difference between exact reported equity and rounded USTB/BUIDL positions remains unclassified (0.004930895895793434%). It includes any unidentified smaller positions and rounding differences. This issuer-reported portfolio does not establish complete custody mapping, all-root liability coverage or pending-redemption reconciliation.",
+    "knownUnknownExposurePct": 0.004930895895793434,
     "nonLinkDispositions": [
       {
         "reserveIndex": 2,
         "reserveName": "Unclassified portfolio residual and position rounding",
-        "pct": 0.002781044571167425,
+        "pct": 0.004930895895793434,
         "disposition": "insufficient-evidence",
         "rationale": "Smaller positions and display rounding are not assigned a token, bank or custodian identity."
       }
@@ -100,8 +120,9 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "Undisclosed mTBILL collateral-account custodian",
-        "role": "custodian"
+        "name": "Maerki Baumann & Co. AG",
+        "role": "custodian",
+        "jurisdiction": "Switzerland"
       },
       {
         "name": "Ankura Trust Company LLC",
@@ -112,20 +133,16 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "structured",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA40apxUSD)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Midas mTBILL bankruptcy remoteness",
-        "url": "https://docs.midas.app/tokens/mtbill/bankruptcy-remoteness"
-      },
-      {
-        "label": "Midas mTBILL independent reporting",
-        "url": "https://docs.midas.app/tokens/mtbill/independent-reporting"
+        "label": "Midas mTBILL final terms dated July 17, 2026: custodian and security agent",
+        "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FUDquVH8yRhSxnVqxp0X4%2F20260714_mTBILL_FT_signed_final.pdf?alt=media&token=bf215cdc-f549-474d-8ca9-5a1810fabeb8"
       }
     ],
-    "uncertainty": "Midas describes bankruptcy-remote collateral accounts, secured tokenholder claims, and Ankura's daily monitoring and enforcement role. It does not name the current account custodian, disclose provider shares, or publish rehypothecation terms.",
+    "uncertainty": "The July 17, 2026 mTBILL final terms name Maerki Baumann & Co. AG as custodian and Ankura Trust Company LLC as security agent, with custody and collateral accounts and agreements applicable. Provider shares, the custody mapping of the issuer-reported USTB/BUIDL wallets, and rehypothecation terms remain unresolved. The inherited segregated status is not newly confirmed by those terms; the custody and collateral agreements themselves are needed to renew that claim. Security arrangements do not confer direct ownership of underlying assets; the 2026 prospectus retains qualified subordination, limited recourse, and enforcement-risk warnings.",
     "knownUnknownExposurePct": 100
   }
 }

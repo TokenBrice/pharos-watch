@@ -1,7 +1,17 @@
 {
   "id": "bold-liquity",
   "mica": {
-    "status": "out-of-scope"
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Liquity governance and immutable decentralized protocol design",
+        "url": "https://docs.liquity.org/v2-faq/general"
+      },
+      {
+        "label": "ESMA offering scope requires case-by-case assessment",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2404"
+      }
+    ]
   },
   "genius": {
     "applicability": "unclear",

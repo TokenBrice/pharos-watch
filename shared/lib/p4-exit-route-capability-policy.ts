@@ -21,6 +21,7 @@ import {
   type DexMeasuredExecutionPublicProfile,
 } from "../types/measured-execution";
 import { UNISWAP_V4_DEPLOYMENT } from "./measured-execution-deployment-policies";
+import type { ExitExecutionAdmission } from "./safety-score-v9/exit-execution";
 
 export const DEX_ROUTE_CAPABILITY_MATRIX_VERSION = "p4a.9";
 export const REFERENCE_NOTIONAL_USD = EXIT_ROUTE_SCORING_TABLES.request.referenceNotionalUsd;
@@ -236,10 +237,13 @@ export interface DexExitRouteScoreEligibilityInput {
   settlementModel: string;
   settlementSlaSec: number | null;
   physicalResourceKeys: readonly string[];
+  executionModelId?: string;
+  executionAdmission?: ExitExecutionAdmission | null;
 }
 
 /** Final V9 route-semantics gate; producer admission alone is insufficient. */
 export function isDexExitRouteScoreEligible(route: DexExitRouteScoreEligibilityInput): boolean {
+  if (route.executionModelId && (!route.executionAdmission || route.executionAdmission.state === "unavailable")) return false;
   const reviewedSemanticsAreScoreable =
     route.holderAccess !== "unknown" &&
     route.executionModel !== "unknown" &&

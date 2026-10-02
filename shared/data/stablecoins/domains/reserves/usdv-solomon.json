@@ -91,7 +91,7 @@
     "confidence": "probable",
     "sources": [
       {
-        "label": "Solomon current protocol-data API (updated 2026-08-29; data valid for 2026-08-28)",
+        "label": "Solomon protocol-data API (historical composition valid for 2026-08-28; endpoint no longer reconciles legacy reserves)",
         "url": "https://data.solomonlabs.io/api/solomon-protocol/protocol-data"
       },
       {
@@ -109,13 +109,17 @@
       {
         "label": "Solomon reserves and peg stability",
         "url": "https://docs.solomonlabs.org/usdv/peg-stability-and-reserves"
+      },
+      {
+        "label": "Solomon distinguishes legacy and replacement reserve models",
+        "url": "https://blog.solomonlabs.org/p/winding-down-the-original-usdv"
       }
     ],
-    "rationale": "Re-checked 2026-08-29: the current Solomon protocol-data API is updated 2026-08-29 and marked valid for 2026-08-28. It reports protocolTvl $1,514,736.25, Ceffu custody of BTC $362,439.43 and SOL $2,602.41, on-chain vault USDC $83,957.34 and USDT $17,521.46, and no yield-distributor or reserve-fund balance. The identified physical reserve components total $466,520.64, or 30.7988% of protocolTvl; the remaining 69.2012% has no issuer-explained allocation. Binance inverse-perpetual notionals are hedge positions, not additive reserve assets, so they are not counted as backing. The latest public Ceffu attestation remains dated 2026-04-01 and does not provide a current itemized reconciliation.",
-    "compositionBasis": "Solomon current protocol-data API reserve components measured against protocolTvl $1,514,736.25 at the 2026-08-28 validity point; Ceffu custody and hedge fields retained without double-counting hedge notionals",
+    "rationale": "Historical snapshot reviewed 2026-08-29 and valid for 2026-08-28: protocolTvl was $1,514,736.25, with Ceffu BTC $362,439.43 and SOL $2,602.41, vault USDC $83,957.34 and USDT $17,521.46, and no yield-distributor or reserve-fund balance. Identified physical components totaled $466,520.64 (30.7988%); 69.2012% was unexplained. This composition is retained as historical evidence, not a current allocation. Reopened 2026-10-01: the API now reports protocolTvl $7,234,390.481688, custodyNotionalUsd $74.15, vaultNotionalUsd $0, and reserveFundNotionalUsd $0; it cannot establish current legacy backing. The issuer's 2026-08-28 wind-down announcement expressly distinguishes legacy and replacement reserve models. Hedge notionals are not additive reserve assets.",
+    "compositionBasis": "Historical issuer API reserve components against protocolTvl $1,514,736.25 at the 2026-08-28 validity point; no current legacy-mint reconciliation is available",
     "compositionAsOf": "2026-08-28",
     "scope": "full-composition",
-    "knownUnknownExposure": "About 69.2% of protocolTvl has no issuer-explained backing allocation in the current API. The API does not reconcile reserve components to protocolTvl; the location and segregation of margin supporting Binance hedge positions is undisclosed. The latest public Ceffu attestation remains dated 2026-04-01 and is aggregate rather than a current independent audit.",
+    "knownUnknownExposure": "At the historical 2026-08-28 observation, 69.2012% of protocolTvl had no issuer-explained backing allocation. Current legacy composition is unverified: the reopened API does not reconcile to the legacy mint and replacement reserve documentation cannot be attributed to it. The retained April 2026 Ceffu report is an aggregate custody attestation, not a current independent supply-to-reserve audit.",
     "knownUnknownExposurePct": 69.2012,
     "nonLinkDispositions": [
       {
@@ -178,7 +182,7 @@
         "url": "https://docs.solomonlabs.org/usdv/usdv-and-susdv/minting-usdv"
       }
     ],
-    "uncertainty": "The current API reports Ceffu custody of BTC and SOL and Binance inverse-perpetual hedge notionals, but does not disclose account segregation, insolvency remoteness, or provider shares. The April 2026 Ceffu first-party attestation remains aggregate and is not a current independent audit; the unidentified reserve residual is 69.2012% of current protocolTvl.",
+    "uncertainty": "Provider identities are supported by the April 2026 Ceffu report and the issuer's legacy wind-down disclosure. The retained 69.2012% unknown exposure is a historical 2026-08-28 snapshot, not a current measured provider allocation. The current API and replacement documentation do not establish legacy balances, account segregation, insolvency remoteness, or provider shares. The April 2026 first-party aggregate custody attestation is not an independent supply-to-reserve audit. The retained permitted rehypothecation label is not independently established by the aggregate Ceffu report or the off-exchange mirroring description; no contrary primary evidence supports removing that adverse fact.",
     "knownUnknownExposurePct": 69.2012
   }
 }

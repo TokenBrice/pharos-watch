@@ -4,13 +4,13 @@
     "reviewedStatus": true,
     "sources": [
       {
-        "label": "Website",
-        "url": "https://www.usdkg.com/"
+        "label": "ConsenSys Diligence USDKG audit: owner pause and compliance blacklist/burn authority",
+        "url": "https://diligence.security/audits/2025/01/usdkg/"
       }
     ],
-    "evidence": "Explicit Yes retained: centralized governance metadata indicates issuer or admin control; registry links were reviewed for direct freeze, blacklist, pause, burn, or upgrade authority.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "The ConsenSys Diligence USDKG audit directly identifies owner pause authority and a separate compliance team that can blacklist users and destroy their balances through destroyBlackFunds. These are direct holder-transfer and balance controls, not an inference from centralized governance. The January 2025 audit was reopened on 2026-10-01; current Ethereum ownership was separately observed at block 26095805.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB03USDKG)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",

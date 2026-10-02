@@ -89,14 +89,13 @@
         "authorityType": "eoa",
         "address": "0xc9d8603bcf23d148a56980e6a7e3e0d375ea3e28",
         "deploymentRefs": [
-          "conflux:0x47a365e29697c700c75d58936b3d93a8a20a43c9",
           "ethereum:0xd687759f35bb747a29246a4b9495c8f52c49e00c",
           "polygon:0xd687759f35bb747a29246a4b9495c8f52c49e00c",
           "xdc:0xd687759f35bb747a29246a4b9495c8f52c49e00c"
         ],
         "directMintAbility": "direct",
         "canRaiseCap": true,
-        "evidence": "At Ethereum block 25295029, hasRole(DEFAULT_ADMIN_ROLE, 0xc9d8...) and hasRole(MINTER_ROLE=0x9f2df0..., 0xc9d8...) both returned true on the AUDX ERC1967 proxy (impl: AussieDollarToken). Same confirmed on Polygon at block 88323844. XDC (rpc.xinfin.network, block 0x62dbc1a): hasRole(DEFAULT_ADMIN, 0xc9d8...) = true, hasRole(MINTER_ROLE, 0xc9d8...) = true on the same contract address 0xd687...e00c. eth_getCode returns no bytecode → EOA. Confirmed via RoleGranted events in creation tx (0x8dfc8be2...): all roles (DEFAULT_ADMIN, PAUSER, MINTER, BLACKLISTER, SALVAGER, UPGRADER) granted to this deployer address.",
+        "evidence": "Historical role grants remain recorded in the prior review. Pinned 2026-10-01 reads at Ethereum 26095997, Polygon 94756557, and XDC 107873731 confirm this address holds DEFAULT_ADMIN_ROLE, MINTER_ROLE, and UPGRADER_ROLE on those deployments, but none of those three roles on Conflux at block 158033031. Fresh MINTER_ROLE reads at Ethereum 26098746, Polygon 94778655, and XDC 107888005 remain true. Ethereum and Polygon runtime code is EIP-7702 delegation designator 0xef01000000fb7702036ff9f76044a501ac1aa74cbab16b; XDC returns 0x. The delegate is Fireblocks UniversalGaslessDelegate: verified source authorizes execution by the EOA itself or one ECDSA signature recovering that EOA, not an on-chain multisig. This identifies the delegate implementation without proving the issuer's off-chain MPC, HSM, quorum, or key-custody policy. No protective-control upgrade is inferred.",
         "sources": [
           {
             "label": "Ethereum Blockscout AUDX contract",
@@ -105,6 +104,10 @@
           {
             "label": "Polygon Blockscout AUDX contract",
             "url": "https://polygon.blockscout.com/address/0xd687759f35bb747a29246a4b9495c8f52c49e00c"
+          },
+          {
+            "label": "Verified Fireblocks UniversalGaslessDelegate source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0000fb7702036ff9f76044a501ac1aa74cbab16b"
           }
         ]
       },
@@ -114,14 +117,14 @@
         "authorityType": "eoa",
         "address": "0x1274d87337eb9091e22b9686ae34ad54c989c883",
         "deploymentRefs": [
-          "conflux:0x47a365e29697c700c75d58936b3d93a8a20a43c9",
-          "ethereum:0xd687759f35bb747a29246a4b9495c8f52c49e00c",
-          "polygon:0xd687759f35bb747a29246a4b9495c8f52c49e00c",
-          "xdc:0xd687759f35bb747a29246a4b9495c8f52c49e00c"
+          "conflux:0x47a365e29697c700c75d58936b3d93a8a20a43c9"
         ],
         "directMintAbility": "direct",
         "canRaiseCap": true,
-        "evidence": "Conflux eSpace (evm.confluxrpc.com, block 0x8eb4a2f / 149,717,551): RoleGranted events for DEFAULT_ADMIN_ROLE and MINTER_ROLE on AUDX proxy 0x47a365e29697c700c75d58936b3d93a8a20a43c9 all grant to 0x1274d87337eb9091e22b9686ae34ad54c989c883 in deployment tx 0xa4be8387... No RoleRevoked events. hasRole(DEFAULT_ADMIN, 0x1274...) = true, hasRole(MINTER_ROLE, 0x1274...) = true confirmed via eth_call. Note: this is a different EOA from the Ethereum/Polygon/XDC deployer, consistent with per-chain key management.",
+        "chain": "conflux",
+        "observedAt": "2026-10-01",
+        "observedBlock": 158033031,
+        "evidence": "At Conflux eSpace block 158033031 on 2026-10-01, hasRole(DEFAULT_ADMIN_ROLE), hasRole(MINTER_ROLE), and hasRole(UPGRADER_ROLE) all returned true for 0x1274d87337eb9091e22b9686ae34ad54c989c883 and false for 0xc9d8603bcf23d148a56980e6a7e3e0d375ea3e28. The controller returned empty runtime code. Prior deployment-event evidence remains historical; current role membership confirms this different controller without inferring independent key custody.",
         "sources": [
           {
             "label": "Conflux eSpace RPC",

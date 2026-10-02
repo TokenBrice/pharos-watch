@@ -1,4 +1,4 @@
-import { CHAIN_META } from "@shared/lib/chains";
+import { CHAIN_META } from "@shared/types/chain-identity";
 import { parseRetryAfterSeconds } from "@shared/lib/retry-after";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { isRecord } from "@shared/lib/type-guards";
@@ -8,7 +8,8 @@ import { DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES, fetchJsonWithRetry, fetchWithRe
 import { cancelResponseBodyQuietly, readResponseJsonWithinLimitWithSignal } from "../../lib/response-body";
 import { USER_AGENT } from "../../lib/constants";
 import { buildChainAddressKey } from "../dex-liquidity/token-resolution";
-import { createOptionalSourceBudget, resolveCanonicalChain } from "./sources-helpers";
+import { createOptionalSourceBudget } from "./sources-helpers";
+import { normalizeChainId } from "@shared/types/chain-identity";
 import { OPTIONAL_PROTOCOL_API_BUDGET_MS, OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS } from "./optional-source-runtime";
 import type { ResolvedYieldCandidate } from "./types";
 import { PENDLE_SUPPLEMENTAL_FETCH_CADENCE_SEC } from "../../lib/yield-ranking-helpers";
@@ -124,7 +125,7 @@ function isNonEmptyString(value: unknown): value is string {
 function resolveBeefyCanonicalChain(chain: string | null | undefined): string | null {
   if (!isNonEmptyString(chain)) return null;
   const alias = BEEFY_CHAIN_ALIASES[chain.toLowerCase()];
-  return resolveCanonicalChain(alias ?? chain);
+  return normalizeChainId(alias ?? chain);
 }
 
 function resolveBeefyTvl(tvlMap: BeefyTvlPayload, chain: string, vaultId: string): number | null {
@@ -159,7 +160,7 @@ function buildMorphoFilters(): TrackedMorphoFilters {
     symbols.add(meta.symbol);
 
     for (const contract of [...(meta.contracts ?? []), ...(meta.tradedContracts ?? [])]) {
-      const chain = resolveCanonicalChain(contract.chain);
+      const chain = normalizeChainId(contract.chain);
       const address = contract.address?.trim() ?? "";
       if (!chain || !address) continue;
       assetsByChainAddress.set(buildChainAddressKey(chain, address), {
@@ -253,7 +254,7 @@ export async function fetchMorphoVaultSources(signal?: AbortSignal): Promise<Sup
           const tvl = vault.state?.totalAssetsUsd;
           if (typeof tvl !== "number" || tvl < MORPHO_MIN_TVL_USD) continue;
           if (!isNonEmptyString(vault.address) || !isNonEmptyString(vault.asset?.symbol)) continue;
-          const chain = resolveCanonicalChain(vault.chain?.id);
+          const chain = normalizeChainId(vault.chain?.id);
           if (!chain) continue;
           const trackedAsset = resolveMorphoTrackedAsset(filters, chain, vault.asset);
           if (!trackedAsset) continue;
@@ -379,7 +380,7 @@ export async function fetchPendleMarketSources(signal?: AbortSignal): Promise<Su
             ) {
               continue;
             }
-            const chain = resolveCanonicalChain(market.chainId);
+            const chain = normalizeChainId(market.chainId);
             if (!chain) continue;
 
             results.push({
@@ -503,7 +504,7 @@ export async function fetchYearnKongSources(signal?: AbortSignal): Promise<Suppl
           if (typeof tvl !== "number" || tvl < KONG_MIN_TVL_USD) continue;
 
           seenAddresses.add(vault.address.toLowerCase());
-          const chain = resolveCanonicalChain(chainId);
+          const chain = normalizeChainId(chainId);
           if (!chain) continue;
           const normalizedAssetAddress = vault.asset.address?.toLowerCase() ?? null;
           const isK3Sbold =

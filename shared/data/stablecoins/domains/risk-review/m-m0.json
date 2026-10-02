@@ -9,20 +9,20 @@
       },
       {
         "label": "M0 deployments",
-        "url": "https://docs.m0.org/get-started/resources/addresses/"
+        "url": "https://docs.m0.org/resources/addresses/m0-platform"
       },
       {
         "label": "MToken technical specification",
         "url": "https://docs.m0.org/protocol/m-token"
       }
     ],
-    "evidence": "M0's Ethereum MToken mint and burn paths route through MinterGateway, and the Solana Token-2022 M deployment is documented as frozen-by-default with thawing limited to approved earners. That Solana holder-account control is direct FreezeWatch exposure for M.",
-    "reviewer": "Codex FreezeWatch audit",
-    "reviewedAt": "2026-05-25"
+    "evidence": "M0's current Solana documentation names mint mzerokyEX9TNDoK4o2YZQBDmMzjokAeN6M2g2S3pLJo and describes frozen-by-default accounts with approved-earner thawing. The finalized RPC observation at slot 452226596 on 2026-10-01 instead reports freezeAuthority=null and no defaultAccountState extension for that exact mint. The documentation and deployed mint state conflict, so the existing reviewedStatus=true is retained conservatively pending resolution; the stated direct Solana freeze control is not confirmed by the current mint read. Ethereum MToken still routes native mint and burn through MinterGateway.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA45M)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "M0 has one native issuer on Ethereum; all other authored deployments, including Solana, are bridge representations. M Portals use Ethereum hub lock/release and spoke mint/burn through Wormhole NTT or Hyperlane. The Solana 1-of-2 inbound mint multisig and Portal program upgrade EOA are route-scoped Bridge Risk controls, not native M mint authority; the remaining EVM route machinery stays represented by the reviewed route inventory.",
+    "summary": "M0 has one native issuer on Ethereum; all other authored deployments, including Solana, are bridge representations. M Portals use Ethereum hub lock/release and spoke mint/burn; current Portal V2 documentation lists Wormhole, Hyperlane, and LayerZero bridge adapters, while the Solana Portal uses Wormhole NTT. The Solana 1-of-2 inbound mint multisig and Portal program upgrade EOA are route-scoped Bridge Risk controls, not native M mint authority; the remaining EVM route machinery stays represented by the reviewed route inventory.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Codex mint-bridge-boundary migration",
     "confidence": "verified",
@@ -570,12 +570,12 @@
         },
         "capDescription": "Solana M is a spoke deployment bridged from Ethereum M through the M0 portal/transceiver design; base supply remains governed by the Ethereum MinterGateway. The SPL Token-2022 mintAuthority is a 1-of-2 SPL multisig (ms2SCrTYioPuumF6oBvReXoVRizEW5qYkiVuUEak7Th) whose two signers are off-curve PDAs controlled by M0 Portal and allied programs; all programs share upgrade authority 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW.",
         "canRaiseCap": false,
-        "observedAt": "2026-08-16",
-        "observedBlock": 439805516,
+        "observedAt": "2026-10-01",
+        "observedBlock": 452226596,
         "sources": [
           {
             "label": "M0 deployments",
-            "url": "https://docs.m0.org/get-started/resources/addresses/"
+            "url": "https://docs.m0.org/resources/addresses/m0-platform"
           },
           {
             "label": "Solana M mint on Solscan",
@@ -586,7 +586,7 @@
             "url": "https://api.mainnet-beta.solana.com"
           }
         ],
-        "evidence": "At finalized Solana slot 439805516, the M Token-2022 mint reported this 1-of-2 SPL multisig as mintAuthority, with numRequiredSigners = 1 and numValidSigners = 2; its signers were 9vSE2CHNE54enDAVG3r8dkthXNVWtEyZdXXEFnVN1a8H and BQdqsDuByTYYeDp92ar7guMFD1P4FTWXJPP1WMq2rUXm. The mint had null freezeAuthority and metadata linking it to Ethereum M 0x866A2BF4E572CbcF37D5071A7a58503Bfb36be1b. Its signers are program-derived authorities in the Portal route, so this multisig is cap-limited by current bridge execution and cannot itself raise that route limit; the shared program upgrade authority is modeled separately."
+        "evidence": "At finalized Solana slot 452226596 on 2026-10-01, the M Token-2022 mint reported this 1-of-2 SPL multisig as mintAuthority, with numRequiredSigners = 1 and numValidSigners = 2; its signers were 9vSE2CHNE54ENdAVG3r8dkthXNVWtEyZdXXEFnVN1a8H and BQdqsDuByTYYeDp92ar7guMFD1P4FTWXJPP1WMq2rUXm. The first signer corrects a case-sensitive transcription in the earlier evidence text. The mint had null freezeAuthority and metadata linking it to Ethereum M 0x866A2BF4E572CbcF37D5071A7a58503Bfb36be1b. Historical route analysis treats these signers as program-derived authorities constrained by Portal execution; that cap interpretation is retained without claiming a newly measured limit. The separately observed Portal ProgramData upgrade authority remains 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW."
       },
       {
         "id": "m0-solana-portal-upgrade-authority",

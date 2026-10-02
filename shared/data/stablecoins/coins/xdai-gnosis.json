@@ -32,12 +32,11 @@
     "provider": "Gnosis xDAI TokenBridge contracts",
     "cadence": "real-time",
     "latestReport": {
-      "periodEnd": "2026-07-22",
-      "publishedAt": "2026-07-22",
+      "periodEnd": "2026-10-01",
       "assuranceMethod": "onchain-proof",
       "scope": "assets-only",
       "liabilityReconciliation": "none",
-      "reviewer": "OpenAI Codex Safety Score V9 backing review",
+      "reviewer": "Sol curation pass 2026-10-01 (CurB04FIDD)",
       "confidence": "verified",
       "sources": [
         {
@@ -53,28 +52,28 @@
           "url": "https://developers.skyeco.com/protocol/tokens/susds/"
         },
         {
-          "label": "Ethereum xDAI Foreign Bridge asset and principal reads at block 25584913",
+          "label": "Ethereum xDAI Foreign Bridge collateral-token reads at block 26095806",
           "url": "https://etherscan.io/address/0x4aa42145Aa6Ebf72e164C9bBC74fbD3788045016#readProxyContract"
         },
         {
-          "label": "Ethereum sUSDS balance and max-withdraw reads at block 25584913",
+          "label": "Ethereum sUSDS balance and max-withdraw reads at block 26095806",
           "url": "https://etherscan.io/address/0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD#readProxyContract"
         },
         {
-          "label": "Gnosis xDAI Home Bridge burnt-coin read at block 47325357",
+          "label": "Gnosis xDAI Home Bridge burnt-coin read at block 48529298",
           "url": "https://gnosis.blockscout.com/address/0x7301CFA0e1756B71869E93d4e4Dca5c7d0eb0AA6?tab=read_proxy"
         },
         {
-          "label": "Gnosis BlockReward bridge-mint read at block 47325357",
+          "label": "Gnosis BlockReward bridge-mint read at block 48529298",
           "url": "https://gnosis.blockscout.com/address/0x481c034c6d9441db23Ea48De68BCAe812C5d39bA?tab=read_contract"
         },
         {
-          "label": "Ethereum block 25584913",
-          "url": "https://etherscan.io/block/25584913"
+          "label": "Ethereum block 26095806 (2026-10-01T06:54:35Z)",
+          "url": "https://etherscan.io/block/26095806"
         },
         {
-          "label": "Gnosis block 47325357",
-          "url": "https://gnosis.blockscout.com/block/47325357"
+          "label": "Gnosis block 48529298 (2026-10-01T06:54:40Z)",
+          "url": "https://gnosis.blockscout.com/block/48529298"
         }
       ]
     }

@@ -7,6 +7,8 @@
     "summary": "IAUon has issuer-controlled native issuance on Ethereum, BSC, and Solana. Ethereum and BSC native GMTokenManager paths are administered by two-hour beacon-owner timelocks; Solana issuance is controlled by the Ondo GM program PDA whose upgrade authority is a bare system account with unverifiable off-chain custody. Ethereum and BSC OndoOFT overlays, the HyperEVM representation, LayerZero validation, route administration, rate limiting, and representation upgrades are assessed separately in bridgeRouteRisk rather than as native Mint Authority.",
     "controls": [
       {
+        "chain": "ethereum",
+        "address": "0x2c158bc456e027b2affccadf1bdbd9f5fc4c5c8c",
         "label": "GMTokenManager (Ethereum) — primary minter",
         "role": "direct-minter",
         "authorityType": "issuer-backend",
@@ -15,7 +17,9 @@
           "ethereum:0x4f0ca3df1c2e6b943cf82e649d576ffe7b2fabcf"
         ],
         "canRaiseCap": false,
-        "evidence": "At Ethereum block 25295025, getRoleMember(MINTER_ROLE, 0) = 0x2c158bc456e027b2affccadf1bdbd9f5fc4c5c8c; Blockscout source: GMTokenManager. This contract handles issuer subscription/redemption minting for Ondo Global Markets.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095805,
+        "evidence": "At Ethereum block 26095805 on 2026-10-01, IAUon getRoleMemberCount(MINTER_ROLE) returned two and getRoleMember(MINTER_ROLE,0) returned GMTokenManager 0x2c158bc456e027b2affccadf1bdbd9f5fc4c5c8c. The second member is OndoOFT 0x8ffe0da486a4075e7bbb5763fad4732d41f9667c, which remains in Bridge Risk.",
         "sources": [
           {
             "label": "IAUon Ethereum token (Etherscan)",
@@ -74,9 +78,9 @@
           "bsc:0xcb2a0f46f67dc4c58a316f1c008edef5c2311795"
         ],
         "canRaiseCap": false,
-        "observedAt": "2026-07-27",
-        "observedBlock": 112486221,
-        "evidence": "At BSC block 112486221, getRoleMember(MINTER_ROLE, 0) on the BSC IAUon token returned this contract; its sole DEFAULT_ADMIN_ROLE member is the BSC 2-hour timelock 0x8860bbfc7a83e4788a981f4e9f30878331413b26. This contract handles issuer subscription/redemption minting for Ondo Global Markets on BSC.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 125057090,
+        "evidence": "At BSC block 125057090 on 2026-10-01, IAUon MINTER_ROLE count was two: GMTokenManager 0x91f8aff3738825e8eb16fc6f6b1a7a4647bdb299 and bridge OndoOFT 0xeb8ceb319463fdc97f7860211042e2e1abc81f88. Its sole DEFAULT_ADMIN_ROLE member remained the two-hour timelock 0x8860bbfc7a83e4788a981f4e9f30878331413b26; getMinDelay() returned 7200. The bridge member remains owned by Bridge Risk.",
         "sources": [
           {
             "label": "IAUon BSC token",
@@ -99,12 +103,12 @@
           "solana:M77ZvkZ8zW5udRbuJCbuwSwavRa7bGAZYMTwru8ondo"
         ],
         "canRaiseCap": false,
-        "observedAt": "2026-07-27",
-        "observedBlock": 435577237,
+        "observedAt": "2026-10-01",
+        "observedBlock": 452214196,
         "failureDomainKeys": [
           "contract:solana:9foMHsSDq7nMg4WPusSz9eY7tyxyukqborA8GyU5cUxD"
         ],
-        "evidence": "At finalized Solana slot 435577237, the IAUon Token-2022 mint M77ZvkZ8zW5udRbuJCbuwSwavRa7bGAZYMTwru8ondo reports mint authority 9foMHsSDq7nMg4WPusSz9eY7tyxyukqborA8GyU5cUxD, a program-derived address with no keypair (no SOL account). Recent mint transactions invoke the Ondo GM Solana program XzTT4XB8m7sLD2xi6snefSasaswsKCxx5Tifjondogm, which signs through this PDA; the mint's freeze authority is Ondo's 51QVCuHfL1FeNjd8BDeffCKhCcAYoULnVB3yjNhShiuK (a bare system account).",
+        "evidence": "At finalized Solana slot 452214196 on 2026-10-01, getMultipleAccounts(jsonParsed) returned IAUon mint authority 9foMHsSDq7nMg4WPusSz9eY7tyxyukqborA8GyU5cUxD, freeze authority 51QVCuHfL1FeNjd8BDeffCKhCcAYoULnVB3yjNhShiuK, decimals nine, and paused=false. The Ondo GM program remained linked to program-data account F4F1ZdqwmT4KfCfCnXrqLp9R6Liq4vEqJcs64xVKTKeU. This refresh does not attest off-chain authority custody.",
         "sources": [
           {
             "label": "IAUon Solana mint",
@@ -127,12 +131,12 @@
           "solana:M77ZvkZ8zW5udRbuJCbuwSwavRa7bGAZYMTwru8ondo"
         ],
         "canRaiseCap": true,
-        "observedAt": "2026-07-27",
-        "observedBlock": 435577237,
+        "observedAt": "2026-10-01",
+        "observedBlock": 452214196,
         "failureDomainKeys": [
           "contract:solana:9ECeczLtFZDYE3NX6G7uNw5BUGjoJAu1kFyEihA5hMaM"
         ],
-        "evidence": "At finalized Solana slot 435577237, the Ondo GM program XzTT4XB8m7sLD2xi6snefSasaswsKCxx5Tifjondogm is a BPFUpgradeableLoader program whose program-data account F4F1ZdqwmT4KfCfCnXrqLp9R6Liq4vEqJcs64xVKTKeU records upgrade authority 9ECeczLtFZDYE3NX6G7uNw5BUGjoJAu1kFyEihA5hMaM (program last deployed at slot 429073863). That authority is a bare system account (~13.19 SOL, no program), i.e. a single-key-class authority whose off-chain custody (single key, HSM, or MPC) is not verifiable on-chain. It can replace the program that controls the mint-authority PDA.",
+        "evidence": "At finalized Solana slot 452214196 on 2026-10-01, program-data account F4F1ZdqwmT4KfCfCnXrqLp9R6Liq4vEqJcs64xVKTKeU recorded upgrade authority 9ECeczLtFZDYE3NX6G7uNw5BUGjoJAu1kFyEihA5hMaM and last deployment slot 429073863. The authority account was non-executable, system-program-owned, had zero data space, and held 13188309921 lamports. This is a bare system-account authority; single-key, HSM, or MPC custody remains unverifiable on-chain.",
         "sources": [
           {
             "label": "Ondo GM Solana program",

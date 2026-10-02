@@ -1,4 +1,5 @@
-import { DS_CHAIN_MAP, resolveChainId } from "@shared/lib/chains";
+import { DS_CHAIN_MAP } from "@shared/lib/chains";
+import { resolveChainId } from "@shared/types/chain-identity";
 import { median } from "@shared/lib/stats";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";

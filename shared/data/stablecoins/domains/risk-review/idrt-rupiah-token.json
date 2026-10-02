@@ -2,10 +2,15 @@
   "id": "idrt-rupiah-token",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: IDRT resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "IDRT August 31, 2026 independent accountant AUP",
+        "url": "https://s3.ap-southeast-1.amazonaws.com/content.rupiahtoken.com/AUP_PT_Rupiah_Token_Indonesia_FPE_Aug_31_2026_70d8e0d4cf.pdf?updated_at=2026-09-29T09:04:00.517Z"
+      }
+    ],
+    "evidence": "The August 31, 2026 management schedule reproduced in the independent accountant's AUP reports 17,487,175,338 blacklisted IDRT. Its note C explicitly states that blacklisted tokens are excluded from IDRT in circulation. This is primary evidence of implemented token blacklisting, replacing the earlier inference from centralized governance without changing the Yes verdict.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB23EURE)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

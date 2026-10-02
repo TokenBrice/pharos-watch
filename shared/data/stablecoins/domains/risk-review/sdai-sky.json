@@ -242,6 +242,74 @@
           }
         ]
       }
+    ],
+    "controls": [
+      {
+        "id": "base-standard-bridge",
+        "routeRefs": [
+          "base:0x99ac4484e8a1dbd6a185380b3a811913ac884d87"
+        ],
+        "capabilities": ["bridge-mint", "bridge-burn", "upgrade", "admin"],
+        "controllerChain": "base",
+        "controllerAddress": "0x4200000000000000000000000000000000000010",
+        "label": "Base sDAI Standard Bridge",
+        "authorityType": "contract",
+        "capDescription": "The representation's mint and burn methods are restricted to BRIDGE and contain no token-level numeric issuance cap. This is representation authority, not native DAI or Ethereum sDAI mint authority.",
+        "failureDomainKeys": [
+          "protocol:base-canonical-messaging",
+          "contract:base:0x4200000000000000000000000000000000000010"
+        ],
+        "routeChecks": {
+          "trustedPeerOrRemote": "REMOTE_TOKEN() = Ethereum sDAI 0x83f20f44975d03b1b09e64809b757c47f942beea",
+          "pausersAdminsUpgraders": "L2StandardBridge EIP-1967 implementation = 0xc0d3c0d3c0d3c0d3c0d3c0d3c0d3c0d3c0d30010; corrected admin slot = ProxyAdmin 0x4200000000000000000000000000000000000018, whose owner() = 0x8cc51c3008b3f03fe483b28b8db90e19cf076a6d. Ultimate owner controls and bridge pause state were not established."
+        },
+        "observedAt": "2026-10-01",
+        "observedBlock": 52024123,
+        "sources": [
+          {
+            "label": "Base sDAI matched source",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0x99ac4484e8a1dbd6a185380b3a811913ac884d87?fields=sources"
+          },
+          {
+            "label": "Base Standard Bridge specification",
+            "url": "https://docs.base.org/base-chain/specs/protocol/bridging/bridges"
+          }
+        ],
+        "evidence": "Pinned Base block 52024123: token BRIDGE() is the L2StandardBridge predeploy and REMOTE_TOKEN() is Ethereum sDAI. The token's EIP-1967 implementation, corrected admin, and beacon slots are zero, while its bridge is an upgradeable proxy. Matched OptimismMintableERC20 source restricts mint/burn to BRIDGE. No Safe threshold, key custody, timelock, or pause protection is asserted."
+      },
+      {
+        "id": "optimism-standard-bridge",
+        "routeRefs": [
+          "optimism:0x2218a117083f5b482b0bb821d27056ba9c04b1d3"
+        ],
+        "capabilities": ["bridge-mint", "bridge-burn", "upgrade", "admin"],
+        "controllerChain": "optimism",
+        "controllerAddress": "0x4200000000000000000000000000000000000010",
+        "label": "OP Mainnet sDAI Standard Bridge",
+        "authorityType": "contract",
+        "capDescription": "The representation's mint and burn methods are restricted to BRIDGE and contain no token-level numeric issuance cap. This is representation authority, not native DAI or Ethereum sDAI mint authority.",
+        "failureDomainKeys": [
+          "protocol:optimism-canonical-messaging",
+          "contract:optimism:0x4200000000000000000000000000000000000010"
+        ],
+        "routeChecks": {
+          "trustedPeerOrRemote": "REMOTE_TOKEN() = Ethereum sDAI 0x83f20f44975d03b1b09e64809b757c47f942beea",
+          "pausersAdminsUpgraders": "L2StandardBridge EIP-1967 implementation = 0xae9ed42f43a3ee45c3a9def8ae6b48cbb58ed1a1; corrected admin slot = ProxyAdmin 0x4200000000000000000000000000000000000018, whose owner() = 0x6b1bae59d09fccbddb6c6cceb07b7279367c4e3b. paused() returned false. Ultimate owner controls were not established."
+        },
+        "observedAt": "2026-10-01",
+        "observedBlock": 157619408,
+        "sources": [
+          {
+            "label": "OP Mainnet sDAI matched source",
+            "url": "https://sourcify.dev/server/v2/contract/10/0x2218a117083f5b482b0bb821d27056ba9c04b1d3?fields=sources"
+          },
+          {
+            "label": "Optimism Standard Bridge documentation",
+            "url": "https://docs.optimism.io/app-developers/guides/bridging/standard-bridge"
+          }
+        ],
+        "evidence": "Pinned OP Mainnet block 157619408: token BRIDGE() is the L2StandardBridge predeploy and REMOTE_TOKEN() is Ethereum sDAI. The token's EIP-1967 implementation, corrected admin, and beacon slots are zero, while its bridge is an upgradeable proxy. Matched OptimismMintableERC20 source restricts mint/burn to BRIDGE. No Safe threshold, key custody, or timelock protection is asserted."
+      }
     ]
   }
 }

@@ -18,6 +18,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095946,
         "sources": [
           {
             "label": "AID Ethereum token",
@@ -35,11 +37,13 @@
         "label": "AID default-admin Safe",
         "role": "minter-admin",
         "authorityType": "safe",
-        "directMintAbility": "can-authorize",
+        "directMintAbility": "direct",
         "threshold": 3,
         "signerCount": 5,
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095946,
         "safe": {
           "threshold": 3,
           "owners": [
@@ -60,9 +64,13 @@
           {
             "label": "AID default-admin Safe API",
             "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x32793F6B11820Fa9C7039dFa640B751f491A027d/"
+          },
+          {
+            "label": "AID current implementation verified source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2db74834f556e1f19ed397e5f935a983e4c2f38b"
           }
         ],
-        "evidence": "At Ethereum block 25294761, hasRole(DEFAULT_ADMIN_ROLE, 0x32793F…) = true on the canonical Ethereum deployment. Safe API: threshold 3, 5 owners, no enabled modules, zero guard, masterCopy 0x41675C…. The same Safe address on representation routes is Bridge Risk evidence and is not used to expand this native control."
+        "evidence": "At Ethereum block 25294761, hasRole(DEFAULT_ADMIN_ROLE, 0x32793F…) = true on the canonical Ethereum deployment. Safe API: threshold 3, 5 owners, no enabled modules, zero guard, masterCopy 0x41675C…. The same Safe address on representation routes is Bridge Risk evidence and is not used to expand this native control. At block 26095946 this Safe still held DEFAULT_ADMIN_ROLE; the current verified AID implementation exposes adminMint(address,uint256) directly to that role."
       },
       {
         "chain": "ethereum",
@@ -73,16 +81,22 @@
         "label": "AID additional default-admin EOA",
         "role": "minter-admin",
         "authorityType": "eoa",
-        "directMintAbility": "can-authorize",
+        "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26098749,
         "sources": [
           {
             "label": "AID Ethereum token",
             "url": "https://etherscan.io/address/0x18f52b3fb465118731d9e0d276d4eb3599d57596#readContract"
+          },
+          {
+            "label": "AID current implementation verified source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2db74834f556e1f19ed397e5f935a983e4c2f38b"
           }
         ],
-        "evidence": "At Ethereum block 25294761, hasRole(DEFAULT_ADMIN_ROLE, 0x3885be…) = true; eth_getCode returned no bytecode (EOA confirmed). This EOA also owns MINTER_ROLE contract 0x410C19… (owner() confirmed). Its representation-route role parity is retained in Bridge Risk rather than compiled as native Ethereum authority."
+        "evidence": "At Ethereum block 25294761, hasRole(DEFAULT_ADMIN_ROLE, 0x3885be…) = true; eth_getCode returned no bytecode (EOA confirmed). This EOA also owns MINTER_ROLE contract 0x410C19… (owner() confirmed). Its representation-route role parity is retained in Bridge Risk rather than compiled as native Ethereum authority. At block 26095946 this EOA still held DEFAULT_ADMIN_ROLE; the current verified AID implementation exposes adminMint(address,uint256) directly to that role."
       }
     ],
     "economicCapSemantics": "unbounded",

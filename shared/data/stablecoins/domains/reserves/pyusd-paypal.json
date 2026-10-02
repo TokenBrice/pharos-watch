@@ -4,7 +4,7 @@
     {
       "sourceKey": "paxos-independent-assurance:pyusd:cash",
       "name": "Cash held for authorized token holders",
-      "pct": 3.52,
+      "pct": 3.84,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Commercial banks; individual institutions not disclosed",
@@ -14,43 +14,41 @@
     {
       "sourceKey": "paxos-independent-assurance:pyusd:reverse-repo",
       "name": "Overnight reverse repurchase agreements collateralized by U.S. Treasury obligations",
-      "pct": 81.68,
+      "pct": 83.23,
       "risk": "very-low",
       "assetClass": "repo",
       "issuerOrObligor": "Selected commercial banks and broker-dealers; Treasury obligations as collateral",
       "riskFactors": ["counterparty", "liquidity", "custody"],
-      "liquidityHorizon": "one-day",
-      "maturityDaysMax": 3
+      "liquidityHorizon": "one-day"
     },
     {
       "sourceKey": "paxos-independent-assurance:pyusd:treasury-bills",
       "name": "U.S. Treasury bills",
-      "pct": 14.8,
+      "pct": 12.92,
       "risk": "very-low",
       "assetClass": "treasury-bill",
       "issuerOrObligor": "United States Treasury",
       "riskFactors": ["duration", "market", "custody"],
-      "liquidityHorizon": "over-seven-days",
-      "maturityDaysMax": 48
+      "liquidityHorizon": "over-seven-days"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-23",
-    "reviewer": "Pharos safety-score curation 2026-09-23",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC14)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "KPMG PYUSD Redemption Assets Report - July 2026 (examination dated August 25, 2026)",
-        "url": "https://framerusercontent.com/assets/AzDCU1EG16dVKso3JV6W7I5Bk.pdf"
+        "label": "KPMG August 2026 PYUSD examination dated September 24, 2026",
+        "url": "https://framerusercontent.com/assets/VdMoM8qevL5j7tgTTmLhkemRdY.pdf"
       },
       {
         "label": "PayPal Cryptocurrency Terms - PYUSD reserves",
         "url": "https://www.paypal.com/us/legalhub/paypal/cryptocurrencies-tnc?locale.x=en_US%5C"
       }
     ],
-    "rationale": "Exhibit B of the KPMG-examined PYUSD report at July 31, 2026 records $94,699,538 cash, $2,200,625,000 Treasury-collateralized reverse repos and $398,747,625 Treasury bills, totaling $2,694,072,163. Rounded weights are 3.52%, 81.68% and 14.80%. The repos mature August 3, three calendar days after the Friday observation, despite being described as overnight; collateral may not be sold or repledged. The three Treasury bills mature August 18, August 27 and September 17, a maximum of 48 days after period end. No government money-market funds were held.",
-    "compositionBasis": "KPMG examination of the PYUSD Redemption Assets Report, Exhibit B as of July 31, 2026",
-    "compositionAsOf": "2026-07-31",
+    "rationale": "Exhibit B records $111,173,415 cash, $2,408,763,000 Treasury-collateralized reverse repos and $373,999,462 Treasury bills, totaling $2,893,935,877 at August 31, 2026, 5:00 PM Eastern Time. Independently reproduced amount / total * 100 yields 3.841599113635%, 83.234843561808% and 12.923557324556%; ordinary two-decimal rounding gives 3.84%, 83.23% and 12.92% (99.99%, with no residual assigned). D01 admits this complete dated report arithmetic at high confidence. No government money-market funds were held. All repos mature September 1, one day after the observation; the latest Treasury bill maturity is October 1, 31 days after period end. Individual counterparties remain anonymized; existing risk categories and liquidity horizons are unchanged.",
+    "compositionBasis": "KPMG examination of PYUSD Redemption Assets Report, Exhibit B as of August 31, 2026 at 5:00 PM Eastern Time; disclosed USD amounts independently divided by disclosed total redemption assets",
+    "compositionAsOf": "2026-08-31",
     "scope": "full-composition",
     "knownUnknownExposure": "The report identifies the complete asset-type composition. Individual commercial-bank and broker-dealer counterparties are anonymized, but no reserve asset class is unclassified.",
     "knownUnknownExposurePct": 0

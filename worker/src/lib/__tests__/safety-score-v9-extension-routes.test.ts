@@ -1,16 +1,21 @@
 import { describe, expect, it } from "vitest";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { DEX_MEASURED_ADAPTER_PROFILE_IDS } from "@shared/types/measured-execution";
+import { evaluateV9Exit, projectV9ExitEvaluationRoute } from "@shared/lib/safety-score-v9/exit";
+import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import {
   getRedemptionBackstopConfig,
   resolveReviewedRedemptionSettlement,
   type RedemptionBackstopConfig,
 } from "@shared/lib/redemption-backstops";
-import type { ExitRouteObservation } from "@shared/types/exit-route";
+import type { ExitExecutionCertificate, ExitRouteObservation } from "@shared/types/exit-route";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
 import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "../safety-score-v9/extension";
+import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
+import { makeV9FixedInput, makeV9Extension } from "../../test-helpers/v9-fixed-input";
+import { rebuildFixed } from "./safety-score-v9-fact-set.test-support";
 import {
   buildSafetyScoreV9RetainedRedemptionRoutes,
   buildSafetyScoreV9RetainedRoutes,
@@ -106,7 +111,137 @@ function dexPegFixture({
   return { fixedInput, route };
 }
 
+function certifiedDexFixture() {
+  const { fixedInput, route } = dexPegFixture({
+    assetId: "alpha",
+    routeOverrides: {
+      routeId: "dex:alpha:certified-basket",
+      maxCostBps: 500,
+      output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdc-circle", "usdt-tether"] },
+    },
+  });
+  const outputLeg = {
+    assetKey: "usdc-circle", deployment: "ethereum:usdc", rawUnits: "300000000000",
+    decimals: 6, unitValueUsd: 0.9, expectedUnitValueUsd: 1, sourceId: "fixture:price",
+    sourceGenerationId: "fixture:price:1", observedAtSec: NOW - 5,
+  };
+  const certificate: ExitExecutionCertificate = {
+    modelId: "stable-basket-withdraw", reviewDigest: "a".repeat(64),
+    identity: {
+      assetId: "alpha", deployment: "ethereum:alpha", endpoint: "withdraw",
+      outputAssetKeys: ["usdc-circle", "usdt-tether"], implementationIdentity: "fixture:implementation",
+    },
+    inputGenerationId: "fixture:input:1", observationGenerationId: "fixture:execution:1",
+    observedAtSec: NOW, sourceMaxAgeSec: 300, priceMaxAgeSec: 300,
+    source: { kind: "block", number: 100, hash: "fixture:block", timestamp: NOW, complete: true, truncated: false },
+    holder: "any-holder", prerequisites: [],
+    gates: [{ gateId: "execution", verdict: "passed", evidenceId: "fixture:execution", observedAtSec: NOW, reason: null }],
+    inputReference: { ...outputLeg, assetKey: "alpha", deployment: "ethereum:alpha", unitValueUsd: 1 },
+    feeReferences: [],
+    points: [{
+      requestedNotionalUsd: route.requestedNotionalUsd, maxCostBps: route.maxCostBps,
+      requestedRawInput: "1000000000000", executedRawInput: "900000000000",
+      executableUsd: 900_000, executionCostBps: 20, allInCostBps: 400, fees: [],
+      outputs: [
+        outputLeg,
+        { ...outputLeg, assetKey: "usdt-tether", deployment: "ethereum:usdt",
+          rawUnits: "300000000000000000000000", decimals: 18,
+          unitValueUsd: 2, expectedUnitValueUsd: 2, observedAtSec: NOW - 10 },
+      ],
+      certification: "exact-lower-bound", reason: null,
+    }],
+    capacityBasis: "transaction-simulation",
+    settlement: { endpoint: "withdraw", maximumCompletionSec: 0, evidenceId: "fixture:settlement" },
+    resourceKeys: ["pool:ethereum:certified-basket"], failureDomainKeys: ["protocol:fixture"],
+  };
+  route.executionCertificate = certificate;
+  return { fixedInput, route, certificate };
+}
+
+describe("certified execution route outputs", () => {
+  it("values raw output quantities across decimals and weights the basket by expected USD, not token units", () => {
+    const { fixedInput } = certifiedDexFixture();
+    const review = buildSafetyScoreV9RouteReviews(fixedInput, "alpha")[0]!;
+    expect(review).toMatchObject({
+      coverageClass: "exact-lower-bound", holderAccess: "permissionless",
+      capacityScoringHorizon: "immediate", settlementModel: "atomic",
+      output: {
+        kind: "basket", assetKeys: ["usdc-circle", "usdt-tether"],
+        basketWeights: [
+          { assetKey: "usdc-circle", weight: 1 / 3 },
+          { assetKey: "usdt-tether", weight: 2 / 3 },
+        ],
+        valuation: {
+          expectedUnitValueUsd: 1, observedAtSec: NOW - 10,
+          sourceGenerationId: "fixture:execution:1", maxAgeSec: 300,
+        },
+      },
+    });
+    expect(review.output!.valuation!.unitValueUsd).toBeCloseTo(29 / 30);
+  });
+
+  it.each(["different-notional", "different-cost", "diagnostic", "no-outputs", "zero-basket"] as const)(
+    "does not invent an output valuation for %s execution proof",
+    (fault) => {
+      const { fixedInput, certificate } = certifiedDexFixture();
+      const point = certificate.points[0]!;
+      if (fault === "different-notional") {
+        point.requestedNotionalUsd *= 2;
+        point.requestedRawInput = (BigInt(point.requestedRawInput) * 2n).toString();
+      }
+      if (fault === "different-cost") point.maxCostBps++;
+      if (fault === "diagnostic") { point.certification = "diagnostic"; point.reason = "execution-unavailable"; }
+      if (fault === "no-outputs") point.outputs = [];
+      if (fault === "no-outputs" || fault === "zero-basket") {
+        point.executableUsd = 0;
+        point.executedRawInput = "0";
+        for (const leg of point.outputs) leg.rawUnits = "0";
+      }
+      const review = buildSafetyScoreV9RouteReviews(fixedInput, "alpha")[0]!;
+      expect(review.output).toBeNull();
+      if (fault === "different-notional" || fault === "different-cost" || fault === "diagnostic") {
+        expect(review.coverageClass).toBe("diagnostic");
+      }
+    },
+  );
+
+  it("retains observed single-output downside even when executable capacity is zero", () => {
+    const { fixedInput, certificate } = certifiedDexFixture();
+    const point = certificate.points[0]!;
+    point.outputs = [{ ...point.outputs[1]!, rawUnits: "0", unitValueUsd: 1.9 }];
+    point.executedRawInput = "0";
+    point.executableUsd = 0;
+    certificate.identity.outputAssetKeys = ["usdt-tether"];
+    const review = buildSafetyScoreV9RouteReviews(fixedInput, "alpha")[0]!;
+    expect(review.output).toMatchObject({
+      kind: "tracked-stablecoin", assetKeys: ["usdt-tether"], basketWeights: [],
+      valuation: { unitValueUsd: 0.95, expectedUnitValueUsd: 1 },
+    });
+  });
+});
+
 describe("buildSafetyScoreV9RouteReviews physical-commodity outputs", () => {
+  it("admits physical verified customers without an institutional discount but labels terms capacity as modelled", () => {
+    const id = "paxg-paxos";
+    const clockSec = Date.UTC(2026, 9, 1, 12) / 1000;
+    const row = makeSupplyFullRedemption({ stablecoinId: id, routeFamily: "offchain-issuer", routeStatus: "open", holderEligibility: "verified-customer" });
+    const fixed = fixedInputStub(row, clockSec);
+    Object.assign(fixed, { aggregateCirculatingById: { [id]: { circulating: { peggedUSD: 20_000_000 } } } });
+    fixed.pegDataById[id] = {
+      pegCurrency: "GOLD",
+      pegReference: { valueUsd: 1000, usdPerTroyOunce: 1000, source: "median", contributorCount: 4, asOf: clockSec },
+    } as ReportCardsFixedInput["pegDataById"][string];
+    const physicalToUsd = structuredClone(getRedemptionBackstopConfig(id)!.physicalToUsd!);
+    physicalToUsd.fees = { issuerFeeBps: 0, issuerFixedUsd: 0, deliveryUsdPerLot: 0, insuranceBps: 0, assayUsdPerLot: 0, taxBps: 0, conversionBps: 0 };
+    physicalToUsd.settlementLegs = [{ leg: "issuer-release", maximumBusinessDays: 1 }];
+    withRedemptionBackstopConfig(id, { physicalToUsd }, () => {
+      expect(buildSafetyScoreV9RouteReviews(fixed, id).find((route) => route.routeId === `physical-to-usd:${id}`))
+        .toMatchObject({ holderAccess: "verified-customer-neutral", coverageClass: "modelled-terms-lower-bound", modelConfidence: "medium" });
+      row.routeStatus = "paused";
+      expect(buildSafetyScoreV9RouteReviews(fixed, id).find((route) => route.routeId === `physical-to-usd:${id}`))
+        .toMatchObject({ coverageClass: "diagnostic", output: null });
+    });
+  });
   it("values reviewed physical outputs without token-price or fiat substitution", () => {
     const id = "dgld-gold-token-sa";
     const row = makeSupplyFullRedemption({ stablecoinId: id, routeFamily: "offchain-issuer", settlementModel: "days", outputAssetType: "bluechip-collateral" });
@@ -532,6 +667,41 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
       coverageClass: "diagnostic",
       modelConfidence: "high",
     });
+  });
+
+  it("does not turn positive unscored redemption capacity into measured exit failure when open status is unknown", () => {
+    const row = liveDirectRow("static-config");
+    row.routeStatus = "unknown";
+    row.capacityProfile!.exitRouteObservations![0]!.scoreEligible = false;
+    row.capacityProfile!.exitRouteObservations![0]!.observedAt = NOW;
+    row.capacityProfile!.exitRouteObservations![0]!.freshnessSeconds = 0;
+    const fixed = makeV9FixedInput({ assetId: row.stablecoinId, clockSec: NOW });
+    fixed.redemptionBackstopMap = { [row.stablecoinId]: row };
+    fixed.redemptionGenerationId = "redemption:unscored-positive-capacity";
+    fixed.redemptionStale = false;
+    fixed.inputFreshness.redemptionBackstops = { updatedAt: NOW, ageSeconds: 0, stale: false };
+    const coverage = fixed.dexLiqMap[row.stablecoinId]!.exitRouteObservationCoverage!;
+    fixed.dexLiqMap[row.stablecoinId]!.exitRouteObservations = [];
+    coverage.retainedPoolCount = 0;
+    coverage.observationCount = 0;
+    coverage.scoreEligibleObservationCount = 0;
+    coverage.scoreEligiblePoolCount = 0;
+    coverage.scoreEligibleCapabilityPoolCount = 0;
+    const rebuilt = rebuildFixed(fixed);
+    const reviewed = makeV9Extension({ assetId: row.stablecoinId, clockSec: NOW, registryFingerprint: rebuilt.registryFingerprint });
+    reviewed.assets[0]!.routeReviews = buildSafetyScoreV9RouteReviews(rebuilt, row.stablecoinId);
+    reviewed.assets[0]!.retainedRoutes = buildSafetyScoreV9RetainedRedemptionRoutes(rebuilt, row.stablecoinId);
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(rebuilt, reviewed).assets[0]!;
+    const result = evaluateV9Exit({
+      circulatingUsd: compiled.supply.circulatingUsd,
+      portfolioStatus: "reviewed-complete",
+      routes: compiled.exitRoutes.map(projectV9ExitEvaluationRoute),
+    }, V9_CANDIDATE_POLICY_V1);
+
+    expect(compiled.exitRoutes[0]!.scoreEligible).toBe(false);
+    expect(result.routes[0]).toMatchObject({ included: true, exclusionReason: null });
+    expect(result.score).toBeGreaterThan(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
+    expect(result.reasons).not.toContain("no-viable-exit-path");
   });
 
   it.each([

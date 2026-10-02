@@ -5,7 +5,8 @@ import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import type { V9EconomicControlReviewV2 } from "@shared/types/safety-score-v9-facts";
 import {
-  V9ReviewedIncidentRegistrySchema,
+  V9ReviewedIncidentRegistryEnvelopeSchema,
+  V9ReviewedIncidentSchema,
   type V9ControlIncident,
   type V9OperationalIncident,
   type V9ReviewedIncident,
@@ -25,8 +26,15 @@ import {
   ReviewEvidenceBuilder,
   type ControlOverlay,
 } from "./extension-shared";
+import { canonicalizeReviewedRegistryDigest, createReviewedAssetRegistry, reviewedRegistryDigestKey } from "./extension-reviewed-registry";
 
-const INCIDENT_REVIEW_REGISTRY = V9ReviewedIncidentRegistrySchema.parse(incidentReviewsAsset);
+const incidentEnvelope = V9ReviewedIncidentRegistryEnvelopeSchema.parse(incidentReviewsAsset);
+const INCIDENT_REVIEW_REGISTRY = canonicalizeReviewedRegistryDigest(incidentEnvelope, {
+  incidents: reviewedRegistryDigestKey("incidentId"),
+  "incidents.*.primarySources": reviewedRegistryDigestKey("url"),
+  "incidents.*.remediation.sources": reviewedRegistryDigestKey("url"),
+  "incidents.*.posture.controlKinds": (value) => typeof value === "string" ? value : "",
+});
 
 export const SAFETY_SCORE_V9_INCIDENT_REVIEWS_DIGEST = sha256Hex(
   stableJsonStringifyV1({
@@ -35,15 +43,13 @@ export const SAFETY_SCORE_V9_INCIDENT_REVIEWS_DIGEST = sha256Hex(
   }),
 );
 
-const INCIDENTS_BY_ASSET_ID = new Map<string, V9ReviewedIncident[]>();
-for (const incident of INCIDENT_REVIEW_REGISTRY.incidents) {
-  const incidents = INCIDENTS_BY_ASSET_ID.get(incident.assetId) ?? [];
-  incidents.push(incident);
-  INCIDENTS_BY_ASSET_ID.set(
-    incident.assetId,
-    incidents.sort((left, right) => compareText(left.incidentId, right.incidentId)),
-  );
-}
+const INCIDENTS_BY_ASSET_ID = createReviewedAssetRegistry({
+  rows: incidentEnvelope.incidents,
+  schema: V9ReviewedIncidentSchema,
+  path: "incidentReviews.incidents",
+  keyOf: (row) => typeof row.incidentId === "string" ? row.incidentId : undefined,
+  keyPath: "incidentId",
+});
 
 function isoDateSec(value: string): number {
   return Math.floor(Date.parse(`${value}T00:00:00.000Z`) / 1_000);
@@ -56,7 +62,7 @@ export function getSafetyScoreV9ReviewedIncidents(
   if (!Number.isFinite(clockSec) || clockSec < 0) {
     throw new Error("Safety Score v9 incident-review clock must be finite and non-negative");
   }
-  return (INCIDENTS_BY_ASSET_ID.get(assetId) ?? []).filter(
+  return [...INCIDENTS_BY_ASSET_ID.getAll(assetId)].sort((a, b) => compareText(a.incidentId, b.incidentId)).filter(
     (incident) =>
       isoDateSec(incident.occurredAt) <= clockSec &&
       isoDateSec(incident.reviewedAt) <= clockSec,
@@ -72,6 +78,7 @@ function incidentComponentKeys(incident: V9ReviewedIncident): readonly string[] 
     ];
   }
   if (incident.domain === "operational") return ["operational-resilience:incident-review"];
+  if (incident.domain === "security-history") return ["security-history"];
   return ["peg"];
 }
 
@@ -97,7 +104,9 @@ export function addSafetyScoreV9IncidentEvidence(
         componentKeys,
         sourceId: `safety-score-v9.incident-review.${incident.incidentId}`,
         reviewedAt: incident.reviewedAt,
-        observedAt: incident.reviewedAt,
+        ...(incident.domain === "security-history"
+          ? { observedAt: source.publishedAt, publishedAt: source.publishedAt }
+          : { observedAt: incident.reviewedAt }),
         confidence: "manual-review",
         sources: [{ label: source.label, url: source.url }],
         payload: incident,

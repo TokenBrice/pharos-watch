@@ -1,5 +1,6 @@
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import type { LiveReserveAdapterKey } from "@shared/types/live-reserves";
+import { fetchLeverupLvusdReserves } from "./leverup-lvusd";
 import { fetchThreeJaneUsd3Reserves } from "./3jane-usd3";
 import { fetchHyloSolanaReserves } from "./hylo-solana";
 import { fetchAbracadabraReserves } from "./abracadabra";
@@ -14,6 +15,7 @@ import { fetchCaddIndependentAssuranceReserves } from "./cadd-independent-assura
 import { fetchPaxosIndependentAssuranceReserves } from "./paxos-independent-assurance";
 import { fetchIndependentAssuranceAdapter } from "./independent-assurance";
 import { fetchBlastUsdbYieldManagerReserves } from "./blast-usdb-yield-manager";
+import { fetchBloxAttestationIndexReserves } from "./blox-attestation-index";
 import { fetchBridgeTransparencyReserves } from "./bridge-transparency";
 import { fetchBtcfiReserves } from "./btcfi";
 import { fetchCapVaultReserves } from "./cap-vault";
@@ -84,6 +86,7 @@ import { fetchSgForgeCoinvertibleReserves } from "./sgforge-coinvertible";
 import { fetchSingleAssetReserves } from "./single-asset";
 import { fetchSkyMakercoreReserves } from "./sky-makercore";
 import { fetchSolomonProtocolReserves } from "./solomon-protocol";
+import { fetchSolomonChanceryReserves } from "./solomon-chancery";
 
 import { fetchSolsticeAttestationReserves } from "./solstice-attestation";
 import { fetchSpikoApiReserves } from "./spiko-api";
@@ -116,6 +119,7 @@ export type { AdapterContext, AdapterResult, AdapterFn, ReserveAdapterDefinition
 // makes a declaration key with no fetcher a compile error here, so the
 // declaration table stays the single source of adapter identity.
 export const LIVE_RESERVE_ADAPTER_FETCHERS: Record<LiveReserveAdapterKey, AdapterFn> = {
+  "leverup-lvusd": fetchLeverupLvusdReserves,
   "hylo-solana": fetchHyloSolanaReserves,
   "usdy-holdings-report": fetchUsdyHoldingsReserves,
   "3jane-usd3": fetchThreeJaneUsd3Reserves,
@@ -129,6 +133,7 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS: Record<LiveReserveAdapterKey, Adapte
   "audd-independent-assurance": fetchAuddIndependentAssuranceReserves,
   "audx-independent-assurance": fetchIndependentAssuranceAdapter,
   "blast-usdb-yield-manager": fetchBlastUsdbYieldManagerReserves,
+  "blox-attestation-index": fetchBloxAttestationIndexReserves,
   "brla-independent-assurance": fetchBrlaIndependentAssuranceReserves,
   "bridge-transparency": fetchBridgeTransparencyReserves,
   btcfi: fetchBtcfiReserves,
@@ -203,6 +208,7 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS: Record<LiveReserveAdapterKey, Adapte
   "single-asset": fetchSingleAssetReserves,
   "sky-makercore": fetchSkyMakercoreReserves,
   "solomon-protocol": fetchSolomonProtocolReserves,
+  "solomon-chancery": fetchSolomonChanceryReserves,
 
   "spiko-api": fetchSpikoApiReserves,
   "stoneyield-router-pool": fetchStoneyieldRouterPoolReserves,

@@ -1,4 +1,4 @@
-import { canonicalExitRouteAssetKey } from "@shared/lib/exit-route-identity";
+import { canonicalExitRouteAssetKey } from "@shared/types/exit-route-identity";
 import { makeChainRpcConfig } from "../../../test-helpers/chain-rpc-fixtures.test-support";
 import type { EvmV2ReplayCase } from "./fixtures/evm-v2-fixtures";
 

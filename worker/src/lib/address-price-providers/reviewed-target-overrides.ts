@@ -1,4 +1,4 @@
-import { resolveChainId } from "@shared/lib/chains";
+import { resolveChainId } from "@shared/types/chain-identity";
 import { normalizeAddressForKey } from "./shared";
 import type { AddressPriceProviderKey } from "./types";
 

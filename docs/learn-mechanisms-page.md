@@ -18,9 +18,9 @@ Each configured `mechanismArchetype` gets a dedicated educational page covering 
 - **Page-level shell (editorial display + breadcrumb):** `src/app/learn/_shared/learn-page-shell.tsx` (`LearnPageShell`)
 - **Body section renderer:** `src/app/learn/mechanisms/explainer-shell.tsx` (`ArchetypeExplainerBody`)
 - **Content registry:** `src/lib/mechanism-explainers/index.ts` (`ARCHETYPE_CONTENT`)
-- **Per-archetype content modules:** `src/lib/mechanism-explainers/{fiat-cash,tbill,cdp,synthetic-delta-neutral,algorithmic,rwa-credit-fund,commodity-claim}.ts`
+- **Per-archetype content modules:** `src/lib/mechanism-explainers/{fiat-cash,tbill,cdp,synthetic-delta-neutral,algorithmic,rwa-credit-fund,commodity-claim,ucits-trs-fund,shared-reserve,protocol-position}.ts`
 - **Content schema:** `src/lib/mechanism-explainers/types.ts` (`ArchetypeContent` interface)
-- **Slug helpers (single source of truth):** `shared/lib/classification/mechanism-archetypes.ts`
+- **Slug helpers and labels (single source of truth):** `shared/lib/classification.ts`
   - `MECHANISM_ARCHETYPE_LABELS`, `MECHANISM_ARCHETYPE_ONE_LINERS`
   - `getMechanismArchetypeLabel(archetype)`
   - `getMechanismExplainerPath(archetype)` returns `/learn/mechanisms/<slug>/`
@@ -28,6 +28,14 @@ Each configured `mechanismArchetype` gets a dedicated educational page covering 
 - **Diagram reuse:** `mechanismDiagramFor(archetype, "STBL")` from `src/components/stablecoin-detail/mechanism-diagrams/index.tsx`. Three-step configs are read through `resolveThreeStepConfig(archetype, navToken)`, not directly off `THREE_STEP_ARCHETYPE_CONFIG`: the `tbill` archetype carries two variants and the coin's `flags.navToken` selects between them. The `/learn` call passes no `navToken`, so the explainer keeps the archetype default (NAV-accreting for `tbill`); only an explicit `false` switches to the par-redemption variant.
 
 The hub is a static route with no client-only state. The archetype route is static-exported via `generateStaticParams()` driven by `MECHANISM_ARCHETYPE_VALUES`.
+
+Native V10 family explainers distinguish proportional UCITS/TRS fund shares from shared-pool
+operational liabilities and bridge/vault/module position claims. All use accessible desktop
+and mobile three-step diagrams with actual local stress paths; none silently falls back to
+cash or Treasury backing. The hub's distribution reuses the existing non-frost chart palette
+modulo its length, so taxonomy growth never produces an undefined segment color. The owning
+[evidence standard](./process/mechanism-overlay-evidence-standard.md#native-family-admission-and-grading)
+defines admission and charged unknowns; Learn content does not duplicate numeric calibration.
 
 ---
 
@@ -104,7 +112,7 @@ No footer entry. The hub is the only entry in the header/mobile nav rail; per-ar
 ## How to Add a New Archetype
 
 1. Add the slug to `MECHANISM_ARCHETYPE_VALUES` in `shared/types/stablecoin-taxonomy.ts` (re-exported through `shared/types/core.ts`, which is what route modules import).
-2. Add entries to `MECHANISM_ARCHETYPE_LABELS`, `MECHANISM_ARCHETYPE_SHORT_LABELS`, `MECHANISM_ARCHETYPE_CTA_NOUNS`, and `MECHANISM_ARCHETYPE_ONE_LINERS` in `shared/lib/classification/mechanism-archetypes.ts`. The typechecker enforces exhaustiveness.
+2. Add a descriptor to `MECHANISM_ARCHETYPE_DESCRIPTORS` in `shared/lib/classification.ts`; labels, short labels, CTA nouns and one-liners derive from it. The typechecker enforces exhaustiveness.
 3. Author a new content module under `src/lib/mechanism-explainers/<slug>.ts` and register it in `src/lib/mechanism-explainers/index.ts`.
 4. Add a `MECHANISM_EXPLAINER_TITLES` entry in `src/lib/mechanism-explainer-registry.ts` (which also drives the OG-image roster) and a `DESCRIPTION_BY_ARCHETYPE` entry in `src/app/learn/mechanisms/[archetype]/page.tsx`.
 5. For a flow that fits the three-step pattern, add a `THREE_STEP_ARCHETYPE_CONFIG` entry and a branch in `renderArchetype` in `src/components/stablecoin-detail/mechanism-diagrams/` (reuse `ThreeStepArchetypeDiagram`). Only build a dedicated `<slug>-diagram.tsx` component if the flow needs a custom layout (as `synthetic-delta-neutral` does). A variant that differs by a coin-level flag rather than by archetype adds a second config beside the first and a case in `resolveThreeStepConfig` — never a per-coin entry in `coin-overrides.ts`, which is sized for a handful of flagship coins.

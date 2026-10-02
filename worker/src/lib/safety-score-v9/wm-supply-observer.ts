@@ -30,12 +30,26 @@ const M_TOKEN_SELECTOR = "0xc3b6f939";
 const MINTER_GATEWAY_SELECTOR = "0x48545a3c";
 const PORTAL_SELECTOR = "0x6425666b";
 const PLUME_RPC_URL = "https://rpc.plume.org";
+const WM_EVM_EXTRA_RPC_URLS_BY_CHAIN: Readonly<Record<string, readonly string[]>> = {
+  plume: [PLUME_RPC_URL],
+  linea: ["https://rpc.linea.build"],
+  hyperevm: ["https://rpc.hyperliquid.xyz/evm"],
+  soneium: ["https://rpc.soneium.org"],
+  citrea: ["https://rpc.mainnet.citrea.xyz"],
+};
 
 export const WM_EVM_SAFE_BLOCK_LAG_BY_CHAIN: Readonly<Record<string, number>> = {
   ethereum: 2,
   arbitrum: 96,
   base: 12,
   plume: 24,
+  linea: 12,
+  bsc: 30,
+  hyperevm: 10,
+  soneium: 12,
+  plasma: 12,
+  citrea: 12,
+  monad: 10,
 };
 
 export type WmReviewedDeploymentRejectionCode = ReviewedDeploymentObservationRejectionCode;
@@ -85,7 +99,7 @@ async function observeWmEvmDeployment(
     safeBlockLag: (_identity, deploymentChainId) =>
       WM_EVM_SAFE_BLOCK_LAG_BY_CHAIN[deploymentChainId],
     extraRpcUrls: (_identity, deploymentChainId) =>
-      deploymentChainId === "plume" ? [PLUME_RPC_URL] : undefined,
+      WM_EVM_EXTRA_RPC_URLS_BY_CHAIN[deploymentChainId],
     protocolCalls: (identity) => [
       {
         label: "m-token", target: contractAddress,

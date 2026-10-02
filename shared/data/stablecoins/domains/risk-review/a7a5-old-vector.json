@@ -2,10 +2,15 @@
   "id": "a7a5-old-vector",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: A7A5 resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "A7A5 Ethereum verified source and ABI",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9"
+      }
+    ],
+    "evidence": "At Ethereum block 26095800 (2026-10-01), compliance() returned 0x760e226fe0767c5db016ef0e55a4ac677ae869c0. The verified native token source gates addBlackList(address), removeBlackList(address), and destroyBlackFunds(address) with onlyCompliance. This establishes an addressed blacklist and seizure capability directly, replacing the earlier centralized-governance inference without changing the Yes verdict.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA27A7A5)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

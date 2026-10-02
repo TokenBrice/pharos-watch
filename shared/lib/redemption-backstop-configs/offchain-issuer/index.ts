@@ -50,7 +50,7 @@ const FINALIZED_OFFCHAIN_ISSUER_BACKSTOP_REGISTRY = finalizeBackstopRegistry(
     {
       stablecoinIds: [
         "audx-aussie-dollar-token", "brl1-brl1", "cngn-compliant-naira", "kgst-kyrgyz-som",
-        "reur-royal-euro", "wars-argentine-peso", "eusd-telcoin", "jpyc-jpyc-v1", "rusd-royal-dollar",
+        "reur-royal-euro", "wars-argentine-peso", "eusd-telcoin", "rusd-royal-dollar",
       ],
       reviewedAt: REVIEWED_NON_USD_BATCH_AT,
     },

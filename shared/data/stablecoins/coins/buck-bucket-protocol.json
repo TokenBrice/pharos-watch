@@ -8,7 +8,7 @@
     "governance": "centralized-dependent"
   },
   "collateral": "SUI, BTC, ETH, and LSTs via CDPs; USDC/USDT via Peg Stability Module",
-  "pegMechanism": "Overcollateralized CDPs with per-asset minimum collateral ratios (e.g. 110% for SUI); hard peg via direct BUCK redemption for collateral with dynamic redemption fee; soft peg via PSM enabling 1:1 swaps with USDC/USDT; liquidations via Tank module",
+  "pegMechanism": "Legacy BUCK used overcollateralized CDPs, collateral redemption, a USDC/USDT Peg Stability Module, and Tank liquidations. Bucket now offers fee-free 1:1 BUCK-to-USDB migration; its documented phase 2 is exit-only with BUCK minting disabled.",
   "mechanismArchetype": "cdp",
   "llamaId": "154",
   "detailProvider": "defillama",

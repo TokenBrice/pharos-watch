@@ -4,7 +4,7 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "hyUSD is minted only by depositing Solana LSTs into the Hylo exchange program (HYEXCHt...), which CPI-signs SPL mintTo with its own PDA CfuSViq... (seeds [\"mint_auth\", hyUSD mint]). Freeze authority is null and the on-chain Anchor IDL exposes no supply cap and no admin mint instruction, so supply is bounded by deposited collateral. The Hylo config admin (fees, oracle, stability thresholds, LST registry) is a Squads v4 multisig vault with a 1-of-4 voting threshold. The BPF upgrade authority for both Hylo programs is a separate Squads v4 vault with a 3-of-4 voting threshold and no timelock; it can redeploy the program and rewrite mint logic.",
+    "summary": "The tracked hyUSD SPL mint has mint authority CfuSViqf6wvUKEprLhtuCsSanvfAsMbDmkAW92FP95qe and no freeze authority. Hylo V2 documentation describes independent SOL-LST, cbBTC, HYPE, and USDC collateral pools, including direct USDC minting and redemption. At finalized Solana slot 452213587, the config admin remains Squads vault 12DAP8y5XemtK1pJFNMVVnQugt3PUAbZZr9SmyVvy4Ce, with 3-of-5 voters and a 7,200-second timelock. Both tracked programs name GzyhwK4y7EKPEevAMc2TEpgi1Y3znwj14FUzkHmCMiNP as upgrade authority. Its current Squads account has 3-of-4 voters and a 21,600-second timelock; upgrades can replace the program's mint logic.",
     "upgradeability": {
       "model": "custom",
       "implementationAddresses": [
@@ -15,8 +15,8 @@
       ],
       "canChangeMintLogic": true,
       "controlRef": "Hylo program upgrade authority (Squads v4 multisig vault)",
-      "observedAt": "2026-07-14",
-      "observedBlock": 432851514,
+      "observedAt": "2026-10-01",
+      "observedBlock": 452213587,
       "sources": [
         {
           "label": "Hylo on-chain addresses",
@@ -38,7 +38,7 @@
         "directMintAbility": "cap-limited",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "No protocol supply cap exists: the on-chain IDL has no cap field for hyUSD and no admin mint instruction. Minting happens only through mint_stablecoin against LST collateral deposited under Hylo's collateral invariant, so the bound is collateral, not a raiseable numeric cap.",
+        "capDescription": "The SPL mint authority remains the exchange-program PDA. Published Hylo V2 issuance includes SOL-LST, cbBTC, HYPE, and direct USDC pools; the USDC pool is documented as one-for-one conversion subject to a Pyth USDC/USD tolerance. The earlier LST-only mint-path description was a V1 observation. This review does not certify an exhaustive current instruction inventory or replace the existing economic-cap annotation.",
         "observedAt": "2026-07-14",
         "observedBlock": 432851514,
         "sources": [
@@ -56,7 +56,7 @@
       {
         "chain": "solana",
         "address": "12DAP8y5XemtK1pJFNMVVnQugt3PUAbZZr9SmyVvy4Ce",
-        "label": "Hylo protocol parameter admin (Squads v4 multisig vault, 1-of-4)",
+        "label": "Hylo protocol parameter admin (Squads v4 multisig vault, 3-of-5)",
         "role": "governor",
         "authorityType": "multisig",
         "directMintAbility": "parameter-only",
@@ -66,8 +66,8 @@
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "The admin can change fees, the SOL/USD oracle, oracle confidence tolerance, stability thresholds, treasury, the LST registry and the admin key itself, but the IDL exposes no mint-cap instruction and no admin mint path, so it cannot mint hyUSD or raise a cap.",
-        "observedAt": "2026-07-14",
-        "observedBlock": 432851514,
+        "observedAt": "2026-10-01",
+        "observedBlock": 452213587,
         "sources": [
           {
             "label": "Hylo admin Squads multisig",
@@ -78,7 +78,7 @@
             "url": "https://explorer.solana.com/address/HYEXCHtHkBagdStcJCp3xbbb9B7sdMdWXFNj6mdsG4hn"
           }
         ],
-        "evidence": "The Hylo config PDA (seed \"hylo\") 9cd2sAfbBvKs4SX9YKo4dcjwP3TgTVQ8dT5koshGcDND, read via getAccountInfo at slot 432851473, carries admin = 12DAP8y5XemtK1pJFNMVVnQugt3PUAbZZr9SmyVvy4Ce. That address is off-curve and derives exactly as Squads v4 vault index 0 of multisig 8CRxGZ3vJLsogg61tF7VHfpyMMaz4YVXX7qwxNDKciRt (program SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf); its transactions execute through that program. Decoded multisig account: threshold 1, time_lock 0, config_authority none (autonomous), 7 members of which 4 hold the Vote permission (mask 7), so approvals are effectively 1-of-4."
+        "evidence": "At finalized Solana slot 452213587, Hylo config 9cd2sAfbBvKs4SX9YKo4dcjwP3TgTVQ8dT5koshGcDND still names admin 12DAP8y5XemtK1pJFNMVVnQugt3PUAbZZr9SmyVvy4Ce. Squads v4 account 8CRxGZ3vJLsogg61tF7VHfpyMMaz4YVXX7qwxNDKciRt decodes to threshold 3, time_lock 7200, zero config_authority, and eight members, five with Vote permission. The earlier July observation was 1-of-4 with no timelock; it no longer describes the current quorum."
       },
       {
         "chain": "solana",
@@ -92,29 +92,29 @@
         "timelockDelaySec": 21600,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "Redeploying the exchange program can rewrite mint logic and lift the collateral invariant that currently bounds hyUSD supply, so this authority can raise any effective bound. Upgrades are not timelocked and the upgrade authority is not renounced.",
-        "observedAt": "2026-07-14",
-        "observedBlock": 432851514,
+        "capDescription": "Redeploying the exchange program can rewrite mint logic and lift the collateral invariant that bounds the documented issuance paths. The current Squads upgrade authority has a 21,600-second timelock and is not renounced.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 452214410,
         "sources": [
           {
             "label": "Hylo upgrade-authority Squads multisig",
-            "url": "https://explorer.solana.com/address/2z3t2eBz7VL39Q3vEvaemd5mhT9XLoFofEH2cXvwCJvb"
+            "url": "https://explorer.solana.com/address/14Ajz35nKp4KUkHaLxucKfwCEKUeXaRCCuDYXqzK5NJm"
           },
           {
             "label": "Hylo exchange ProgramData account",
             "url": "https://explorer.solana.com/address/BA5b6FzvZ77m7MZbsMEVSCFW1x86f7jM98wjcecVwzYN"
           }
         ],
-        "evidence": "getMultipleAccounts (jsonParsed) at slot 432850965 on the ProgramData accounts of both Hylo programs - exchange HYEXCHt... (BA5b6FzvZ77m7MZbsMEVSCFW1x86f7jM98wjcecVwzYN) and router hyRouTRD... (GCsBXReXttZUUfG1JVxiXMvWPHbWikS3FVdZPy1hjXjM) - returned upgrade authority DLkcqeNNX8nRQgD87DN7LjHkcLQd9K2wuqaCbhkERJxL on both, i.e. not immutable; last deployed at slots 432688395 and 432688695. DLkcqeN... is off-curve, so it cannot be an EOA keypair: it derives exactly as Squads v4 vault index 0 of multisig 2z3t2eBz7VL39Q3vEvaemd5mhT9XLoFofEH2cXvwCJvb and its transactions execute through program SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf. Decoded multisig account: threshold 3, time_lock 0, config_authority none (autonomous), 10 members of which 4 hold the Vote permission (mask 7), so approvals are effectively 3-of-4. The IDL's update_admin instruction additionally requires this upgrade authority as a signer."
+        "evidence": "At finalized Solana slot 452213587, exchange ProgramData BA5b6FzvZ77m7MZbsMEVSCFW1x86f7jM98wjcecVwzYN and router ProgramData GCsBXReXttZUUfG1JVxiXMvWPHbWikS3FVdZPy1hjXjM both name upgrade authority GzyhwK4y7EKPEevAMc2TEpgi1Y3znwj14FUzkHmCMiNP; their last deployment slots are 447625876 and 439863765. Transaction 2HPScPw3pcKxgFmUC9qkWWXYtgtayWRjB9ts1BHJyJURkTwczxGSSDooKXUyZx3aWwvBwGMNmo475VwwR3kGQNvd at slot 450122381 links that vault to Squads account 14Ajz35nKp4KUkHaLxucKfwCEKUeXaRCCuDYXqzK5NJm. At finalized slot 452214410 that account decodes to threshold 3, time_lock 21600, eight members and four Vote-permission holders. July's separate DLkcqeNNX8nRQgD87DN7LjHkcLQd9K2wuqaCbhkERJxL authority and untimelocked quorum are historical."
       }
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
-      "evidence": "Primary Solana mainnet RPC reads on 2026-07-14 (slots 432850547-432851514): mint 5YMkXAYccHSGnHn9nob9xEvv6Pvka9DZWH7nTbotTu9E has mintAuthority CfuSViqf6wvUKEprLhtuCsSanvfAsMbDmkAW92FP95qe and freezeAuthority null; that PDA reproduces as findProgramAddress([\"mint_auth\", mint], HYEXCHt...) and signs mintTo only via CPI from the exchange program; the on-chain Anchor IDL for HYEXCHt... lists no hyUSD supply cap and no admin mint instruction (user mint_stablecoin plus parameter/admin instructions only); the Hylo config admin is Squads vault 12DAP8y5XemtK1pJFNMVVnQugt3PUAbZZr9SmyVvy4Ce (1-of-4 voters, no timelock); and both Hylo programs' BPF upgrade authority is Squads vault DLkcqeNNX8nRQgD87DN7LjHkcLQd9K2wuqaCbhkERJxL (3-of-4 voters, no timelock, not renounced). The prior review's claim that the upgrade authority is a single EOA keypair is incorrect: the address is off-curve and is a Squads v4 vault PDA. Economic-posture fields reviewed 2026-08-15: collateral gates current minting, but the untimelocked 3-of-4 upgrade vault can rewrite mint logic; reserves are wholly on-chain and no prudential supervisor applies.",
-      "reviewer": "Claude CTRL Solana review; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "Current control facts were rechecked on 2026-10-01 at finalized Solana slots 452213587 and 452214410. The parameter-admin quorum is 3-of-5 with a two-hour Squads timelock; the current upgrade vault is GzyhwK4y7EKPEevAMc2TEpgi1Y3znwj14FUzkHmCMiNP, with 3-of-4 voters and a six-hour timelock. July's 1-of-4 parameter admin and untimelocked DLkcqeN upgrade vault are retained as historical observations in the controls. The mint remains a legacy SPL mint with the same mint-authority PDA and null freeze authority. Published V2 documentation includes SOL-LST, cbBTC, HYPE, and USDC pools. Existing economic-posture annotations are not reclassified from these control observations alone.",
+      "reviewer": "Sol curation pass 2026-10-01 (CurB30hyUSD)",
+      "reviewedAt": "2026-10-01",
       "sources": [
         {
           "label": "Hylo on-chain addresses",

@@ -1,11 +1,24 @@
 import { describe, expect, it } from "vitest";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { jsonResponse } from "@shared/test-utils/mock-fetch";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { deriveEffectiveDependencySet } from "@shared/lib/dependency-derivation";
 import {
   installErc4626Network,
   runTrackedVault,
-  withoutDeployedExposure,
 } from "./erc4626-single-asset.test-support";
+
+// Generic underlying-token fixture; not Maple's reviewed pooled claim.
+function asUnderlyingFixture(config: LiveReservesConfig): LiveReservesConfig {
+  const cloned = structuredClone(config);
+  delete cloned.params!.pooledClaim;
+  cloned.params!.slice = {
+    ...(cloned.params!.slice as object),
+    coinId: "usdc-circle",
+    depType: "wrapper",
+  };
+  return cloned;
+}
 
 function uint256Result(value: bigint | number): string {
   return `0x${BigInt(value).toString(16).padStart(64, "0")}`;
@@ -40,8 +53,7 @@ function cloneConfigWithoutExpectedAsset(config: LiveReservesConfig): LiveReserv
   return cloned;
 }
 
-// syrupUSDC carries a reviewed deployed-exposure attestation whose info warning
-// is not what these redemption-mechanics cases assert on.
+// Opaque pooled-claim disclosure is independent of redemption mechanics.
 function nonInfoWarnings(warnings: readonly LiveReserveWarning[] | undefined): readonly LiveReserveWarning[] {
   return (warnings ?? []).filter((warning) => warning.effect !== "info");
 }
@@ -116,6 +128,28 @@ function mockYearnV3Rpc(isShutdownRaw?: bigint | number, pausedRaw?: bigint | nu
 
 describe("fetchErc4626SingleAssetReserves", () => {
 
+  it.each([0n, 25_000_000n, 100_000_000n, null])(
+    "keeps Maple's pooled claim opaque regardless of observed idle cash %s",
+    async (idleBalance) => {
+      installErc4626Network({ idleBalance });
+      const result = await runTrackedVault("syrupusdc-maple");
+      expect(result.slices).toEqual([{
+        sourceKey: "erc4626-single-asset:ethereum:0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b:pooled-claim",
+        name: "Maple syrupUSDC pooled loans and strategy claim",
+        pct: 100,
+        risk: "medium",
+        assetClass: "protocol-position",
+      }]);
+      expect(result.metadata?.unknownExposurePct).toBe(100);
+      const coin = TRACKED_META_BY_ID.get("syrupusdc-maple")!;
+      const dependencies = deriveEffectiveDependencySet(coin, { liveReserveSlices: result.slices });
+      expect(dependencies.mappedLiveReserveWeight).toBe(0);
+      expect(dependencies.baseSource).toBe("live-unmapped");
+      expect(result.metadata).not.toHaveProperty("deployedExposureBasis");
+    },
+  );
+
+
   it("separates held collateral from deployed strategy exposure without a reviewed attestation", async () => {
     const balanceOfCalls: Array<{ to?: string; data: string }> = [];
     installErc4626Network({ extraHandlers: [({ call }) => {
@@ -123,7 +157,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
       return undefined;
     }] });
 
-    const result = await runTrackedVault("syrupusdc-maple", withoutDeployedExposure);
+    const result = await runTrackedVault("syrupusdc-maple", asUnderlyingFixture);
 
     expect(result.slices).toEqual([
       {
@@ -170,47 +204,27 @@ describe("fetchErc4626SingleAssetReserves", () => {
     expect(balanceOfCalls[0]?.data).toContain("80ac24aa929eaf5013f6436cda2a7ba190f5cc0b");
   });
 
-  it("attributes the deployed remainder to the reviewed slice when deployedExposure is attested", async () => {
-    const balanceOfCalls: Array<{ to?: string; data: string }> = [];
-    installErc4626Network({ extraHandlers: [({ call }) => {
-      if (call?.data.startsWith("0x70a08231")) balanceOfCalls.push(call);
-      return undefined;
-    }] });
-
-    const result = await runTrackedVault("syrupusdc-maple");
-
-    expect(result.slices).toEqual([
-      {
-        sourceKey: "erc4626-single-asset:ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-        name: "USDC-denominated loan receivables",
-        pct: 100,
-        risk: "medium",
-        coinId: "usdc-circle",
-        depType: "wrapper",
-      },
-    ]);
-    expect(result.metadata).toMatchObject({
-      idleUnderlyingBalanceRaw: "25000000",
-      unknownExposurePct: 0,
-      deployedPct: 75,
-      deployedExposureBasis:
-        "Maple documents an ERC-4626 claim on a segregated USDC-denominated pool; deployed USDC is that pool's loans and strategies",
-      redemption: {
-        capacityUsd: 25,
-        capacityKind: "live-direct",
-        routeStatus: "unknown",
-      },
-    });
-    expect(result.warnings).toEqual([
-      expect.objectContaining({
-        code: "erc4626-deployed-exposure-reviewed",
-        severity: "info",
-        effect: "info",
-        message: expect.stringContaining("75.00%"),
-      }),
-    ]);
-    expect(balanceOfCalls).toHaveLength(1);
-  });
+  it.each(["coinId", "depType", "deployedExposure"])(
+    "rejects a pooled claim coupled to a token allocation via %s",
+    async (field) => {
+      installErc4626Network();
+      await expect(runTrackedVault("syrupusdc-maple", (config) => {
+        const cloned = structuredClone(config);
+        if (field === "deployedExposure") {
+          cloned.params!.deployedExposure = {
+            basis: "Invalid allocation of a pooled claim to its denomination",
+            reviewedAt: "2026-10-01",
+          };
+        } else {
+          cloned.params!.slice = {
+            ...(cloned.params!.slice as object),
+            [field]: field === "coinId" ? "usdc-circle" : "wrapper",
+          };
+        }
+        return cloned;
+      })).rejects.toThrow("Opaque pooled claims");
+    },
+  );
 
   it("preserves BigInt precision when the NAV divergence is just above 1%", async () => {
     const totalAssetsRaw = 10n ** 30n;
@@ -776,7 +790,7 @@ describe("ERC-4626 held versus deployed exposure", () => {
 
   it("attributes only measured idle USDC while retaining the deployed remainder", async () => {
     installErc4626Network({ idleBalance: 25_000_000n });
-    const result = await runTrackedVault("syrupusdc-maple", withoutDeployedExposure);
+    const result = await runTrackedVault("syrupusdc-maple", asUnderlyingFixture);
     expect(result.slices).toEqual([
       expect.objectContaining({ pct: 25, coinId: "usdc-circle" }),
       expect.objectContaining({ pct: 75, risk: "high" }),
@@ -789,7 +803,7 @@ describe("ERC-4626 held versus deployed exposure", () => {
 
   it.each([100_000_000n, 120_000_000n])("keeps a single underlying slice when holdings cover totalAssets (%s)", async (idleBalance) => {
     installErc4626Network({ idleBalance });
-    const result = await runTrackedVault("syrupusdc-maple", withoutDeployedExposure);
+    const result = await runTrackedVault("syrupusdc-maple", asUnderlyingFixture);
     expect(result.slices).toEqual([expect.objectContaining({ pct: 100, coinId: "usdc-circle", risk: "medium" })]);
     expect(result.metadata?.unknownExposurePct).toBe(0);
   });
@@ -797,7 +811,7 @@ describe("ERC-4626 held versus deployed exposure", () => {
   it("does not invent an idle holding when the balance probe is unreadable", async () => {
     installErc4626Network({ idleBalance: null });
     const result = await runTrackedVault("syrupusdc-maple");
-    expect(result.slices).toEqual([expect.objectContaining({ pct: 100, risk: "high" })]);
+    expect(result.slices).toEqual([expect.objectContaining({ pct: 100, assetClass: "protocol-position" })]);
     expect(result.slices[0]).not.toHaveProperty("coinId");
     expect(result.metadata?.unknownExposurePct).toBe(100);
     expect(result.metadata).not.toHaveProperty("deployedPct");

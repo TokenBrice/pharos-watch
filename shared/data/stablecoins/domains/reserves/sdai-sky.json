@@ -39,5 +39,36 @@
     "scope": "full-composition",
     "knownUnknownExposure": "The wrapper review does not independently re-review the underlying DAI reserve and liquidation system.",
     "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Ethereum SavingsDai wrapper 0x83f20f44975d03b1b09e64809b757c47f942beea",
+        "role": "other",
+        "jurisdiction": "Ethereum"
+      },
+      {
+        "name": "Sky Dai Savings Rate Pot 0x197e90f9fad81970ba7976f33cbd77088e5d7cf7 and DaiJoin 0x9759a6ac90977b93b58547b4a71c78317f391a28",
+        "role": "other",
+        "jurisdiction": "Ethereum"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA49sDAI)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Spark sDAI token documentation",
+        "url": "https://docs.spark.fi/dev/savings/sdai-token"
+      },
+      {
+        "label": "Sky pinned SavingsDai source",
+        "url": "https://github.com/sky-ecosystem/sdai/blob/2b7acb95289a9eb3a8844206d5712eabfa206efc/src/SavingsDai.sol"
+      }
+    ],
+    "uncertainty": "The direct wrapper uses on-chain DaiJoin and Pot accounting, confirmed at Ethereum block 26095798 on 2026-10-01. No off-chain custodian is named for the wrapper itself in the reviewed source and documentation. The existing institutional-top custodyModel summary does not establish direct wrapper institutional custody. This profile does not establish legal segregation, bankruptcy remoteness, rehypothecation terms, parent custodian shares, or custody of peripheral bridge escrows."
   }
 }

@@ -2,7 +2,7 @@
   "id": "ybold-yearn",
   "name": "Yearn BOLD",
   "symbol": "yBOLD",
-  "oneLiner": "yBOLD is Yearn's ERC-4626 vault deploying BOLD into Liquity V2 Stability Pools, accruing liquidation fees and protocol interest over Liquity's CDP dollar.",
+  "oneLiner": "yBOLD is Yearn's tokenized BOLD Stability Pool position, redeemable 1:1 for BOLD; yield accrues only when staked in the separate ysyBOLD auto-compounder.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "decentralized",

@@ -4,22 +4,22 @@
     "status": "out-of-scope"
   },
   "genius": {
-    "applicability": "non-payment-token",
+    "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "USDN is a rebasing yield-bearing stablecoin that accrues T-bill yield directly to holder balances every 30 seconds via M0's rebase mechanism. The GENIUS Act defines a payment stablecoin as one the issuer is obligated to redeem at a fixed monetary value; USDN balances grow over time rather than redeeming at a fixed amount. The Act also explicitly prohibits payment stablecoin issuers from paying any yield to holders: USDN's entire design is yield distribution. These structural features place USDN outside the GENIUS payment stablecoin definition."
+      "summary": "USDN represents M locked on Ethereum; Noble holders manually claim accrued rewards and the current redemption app offers Ethereum wM. Under owner ruling D17, crypto payout and increasing token quantities do not establish a payment-stablecoin exclusion. Qualified token-specific legal analysis of the repayment obligation and any securities or deposit exclusion remains necessary."
     },
-    "authorizationStatus": "not-applicable",
-    "issuerPathway": "not-applicable",
+    "authorizationStatus": "unknown",
+    "issuerPathway": "unknown",
     "issuerEntity": "NASD Inc (Noble)",
     "issuerDomicile": "United States",
     "foreignExceptionStatus": "not-applicable",
     "enforcementStatus": "no-public-action-found",
-    "daspOfferSaleStatus": "not-applicable",
+    "daspOfferSaleStatus": "unknown",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://dashboard.m0.org/",
     "redemptionPolicyPresent": false,
     "monthlyAttestationPresent": false,
-    "notes": "USDN is a rebasing yield-bearing T-bill wrapper built on M0 infrastructure; it falls outside the GENIUS Act payment stablecoin definition because (1) it does not redeem at a fixed monetary value (balances rebase upward as yield accrues), and (2) its core design distributes yield directly to holders, which the Act prohibits for in-scope payment stablecoins. Noble's legal entity is NASD Inc (US-based); M0 provides infrastructure but is not the issuer. Noble announced migration from Cosmos appchain to EVM L1 in January 2026; USDN remains the flagship asset on the new chain.",
+    "notes": "Reviewed 2026-10-01 under D17: Noble's current documentation requires manual rewards claims; the redemption app offers transfer to Ethereum as wM. Neither fact establishes GENIUS applicability or authorization. The prior 2026-06-18 assessment's automatic-rebase and categorical yield-exclusion rationale is withdrawn and preserved in the curation history. Existing issuer identity metadata is retained, but the legally obligated redeeming issuer and holder contracts require product-specific review.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -50,9 +50,27 @@
         "url": "https://dashboard.m0.org/",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "Enacted GENIUS Act: payment stablecoin definition",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-01"
+      },
+      {
+        "label": "Noble USDN overview: M backing and manual rewards claims",
+        "url": "https://docs.noble.xyz/learn/usdn/overview/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-01"
+      },
+      {
+        "label": "Noble Dollar app: Ethereum wM redemption",
+        "url": "https://dollar.noble.xyz/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-01"
       }
     ],
-    "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC24)",
+    "reviewedAt": "2026-10-01"
   }
 }

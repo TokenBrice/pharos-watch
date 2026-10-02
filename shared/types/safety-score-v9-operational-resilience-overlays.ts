@@ -5,6 +5,7 @@ import {
   NonNegativeFiniteSchema,
   StrictIsoDateSchema,
   uniqueKeyedCollectionSchema,
+  reviewedAssetCollectionEnvelopeSchema,
 } from "./safety-schema-primitives";
 import {
   V9OperationalResilienceIncidentSchema,
@@ -428,6 +429,7 @@ export const SafetyScoreV9OperationalResilienceOverlayFileSchema = uniqueKeyedCo
   duplicateMessage: "Duplicate operational-resilience overlay assetId",
   noteSchema: CanonicalTextSchema,
 });
+export const SafetyScoreV9OperationalResilienceOverlayEnvelopeSchema = reviewedAssetCollectionEnvelopeSchema("overlays", CanonicalTextSchema);
 
 export type SafetyScoreV9OperationalResilienceOverlay = z.infer<
   typeof SafetyScoreV9OperationalResilienceOverlaySchema

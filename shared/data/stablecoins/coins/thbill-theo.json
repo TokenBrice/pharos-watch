@@ -11,7 +11,7 @@
     "navToken": true
   },
   "collateral": "Tokenized units of a diversified fund basket comprising Wellington/Libeara ULTRA and Fidelity International FILQ, with allocation managed by Theo and weights undisclosed; FILQ may hold government securities and asset-backed commercial paper",
-  "pegMechanism": "NAV-accreting token (not pegged to $1); price launched at ~$1.00 and appreciates as T-bill yield accrues; KYC-gated mint/redemption processed instantly in USDC, underlying collateral settled within T+4 business days; restricted to institutional and non-U.S. accredited investors",
+  "pegMechanism": "NAV-accreting token (not pegged to $1); price launched at ~$1.00 and appreciates as underlying fund yield accrues; KYC/KYB-gated minting is instant per issuer documentation; detailed issuer docs specify T+1 redemption in USDC or USDT, while the issuer product page markets T+0 mint/redeem settlement, leaving settlement timing conflicting across issuer sources; underlying collateral settled within T+4 business days; restricted to institutional and non-U.S. accredited investors",
   "mechanismArchetype": "tbill",
   "mechanismArchetypeReview": {
     "disposition": "resolved",

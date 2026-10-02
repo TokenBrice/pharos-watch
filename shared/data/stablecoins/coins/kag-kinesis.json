@@ -2,7 +2,8 @@
   "id": "kag-kinesis",
   "name": "Kinesis Silver",
   "symbol": "KAG",
-  "oneLiner": "KAG is Kinesis Silver, a tokenized claim on one troy ounce of investment-grade silver bullion with direct physical redemption and transaction-fee yield sharing.",
+  "oneLiner": "Ethereum KAG is KMS Labs' silver-linked token, backed by native Kinesis KAG; physical redemption requires conversion, and reserve income stays with the issuer.",
+  "custodyModel": "unknown",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "SILVER",
@@ -16,7 +17,7 @@
   "detailProvider": "commodity",
   "geckoId": "kinesis-silver",
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "agreed-upon-procedures",
     "url": "https://kinesis.money/trust-security/",
     "provider": "Bureau Veritas Commodities UK Ltd (Inspectorate International; commodity vault inspection under agreed procedures with no opinion - the token-vs-metal comparison exists only in the issuer cover letter, whose signatory heads both Kinesis and the vault operator ABX)",
     "attestorTier": "niche",
@@ -65,7 +66,6 @@
       "decimals": 18
     }
   ],
-  "custodyModel": "institutional-regulated",
   "governanceQuality": "single-entity",
   "liveReservesConfig": {
     "adapter": "chainlink-por",
@@ -91,15 +91,26 @@
     }
   },
   "launchDate": "2025-09-11",
+  "notices": [
+    {
+      "type": "warning",
+      "title": "MiCA assessment withdrawn pending token-specific legal evidence",
+      "message": "On 2026-10-01 Pharos withdrew the prior non-compliant ART assessment, whose references included an ESMA ART-register search dated 2026-08-14. Register absence, KMS Labs' token terms and Kinesis platform currency support do not establish a token-specific regulator or competent legal determination. KAG is now not assessed under MiCA; this does not assert EU authorization or erase the prior assessment. The original source record is preserved in the dated curation findings."
+    }
+  ],
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-08-09",
-    "reviewer": "Claude v9.14 commodity-claim phase-2 migration",
-    "rationale": "KAG is a direct allocated-commodity claim on silver: Kinesis discloses that holders legally own fully allocated bullion outside the Kinesis balance sheet, identifies ABX as custodian, and publishes a recurring Bureau Veritas physical audit program. Migrated to commodity-claim under methodology v9.14; the owner ruling scopes the archetype to all direct commodity claims, silver included.",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA43KAG)",
+    "rationale": "The Ethereum KAG deployment is a KMS Labs representation backed 1:1 by native Kinesis KAG, which is backed by allocated silver. KMS Labs terms expressly deny ERC-20 holders legal, equitable or beneficial title to its reserves and make redemption into native KAG discretionary. The existing commodity-claim archetype is retained; direct bullion title and physical redemption apply to the native parent rather than this Ethereum claim.",
     "sources": [
       {
         "label": "Kinesis trust and security disclosure (legal title, off-balance-sheet allocation, ABX custody)",
         "url": "https://kinesis.money/trust-security/"
+      },
+      {
+        "label": "KMS Labs ERC-20 terms, reserve ownership and redemption",
+        "url": "https://kmslabs.money/kms-labs-tcs/"
       }
     ]
   }

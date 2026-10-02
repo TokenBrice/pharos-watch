@@ -18,7 +18,7 @@ import {
   type TapeEventSeverity,
 } from "@shared/types/tape-event";
 import { PEG_CURRENCY_VALUES } from "@shared/types/core";
-import { resolveChainId } from "@shared/lib/chains";
+import { resolveChainId } from "@shared/types/chain-identity";
 
 const DEFAULT_LIMIT = 50;
 const MIN_LIMIT = 1;

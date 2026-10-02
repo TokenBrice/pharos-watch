@@ -66,7 +66,7 @@
     "compositionBasis": "AOGB limited-assurance attestation and management reserve schedule as of 2026-08-31 at 9:00 PM Eastern Time",
     "compositionAsOf": "2026-08-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "The report fully classifies reserve assets and lists each Treasury bill by CUSIP and maturity. It does not identify the financial institutions or their shares within the cash and fixed-deposit categories.",
+    "knownUnknownExposure": "The report fully classifies reserve assets and lists each Treasury bill by CUSIP and maturity. It does not identify the financial institutions or their shares within the cash and fixed-deposit categories. The issuer transparency dashboard retrieved 2026-10-01 displays Cash 20.42% and tokens issued 336.636M, which conflict with the signed August report. The report schedule remains the composition authority; no dashboard-derived reserve weight is inferred.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {

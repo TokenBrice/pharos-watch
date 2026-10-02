@@ -8,7 +8,7 @@
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
   },
-  "collateral": "Liquid Cash strategy basket (81.1% of the issuer collateral API's September 29, 2026 backing): stablecoins, DeFi lending, tokenized funds and institutional lending, with constituent balances undisclosed; remaining adapter categories are delta-hedged BTC (9.9%), ETH and liquid-staking collateral (7.6%), and other crypto (1.4%)",
+  "collateral": "Liquid Cash strategy basket (81.3% of the issuer collateral API's October 1, 2026 backing): stablecoins, DeFi lending, tokenized funds and institutional lending, with constituent balances undisclosed; remaining adapter categories are BTC (9.8%), ETH and liquid-staking collateral (7.6%), and other collateral including SOL, XRP, BNB and Gold (1.3%). The complete backing-assets API denominator is separate from the monthly custodian report and category breakdown.",
   "pegMechanism": "Delta-neutral hedging: spot collateral custodied off-exchange (Copper, Ceffu, Anchorage Digital, Kraken) with equal short perpetual positions on CEXes (Binance, Bybit, OKX)",
   "llamaId": "146",
   "detailProvider": "defillama",
@@ -16,9 +16,24 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://app.ethena.fi/dashboards/transparency",
-    "provider": "Chaos Labs / Chainlink / Harris & Trotter / LlamaRisk (docs-listed custodian attestations top out at May 2026 as of 2026-08-08, ~3 months behind the monthly claim; the live oracle/dashboard layer remains current)",
+    "provider": "Chaos Labs / Chainlink / Harris & Trotter / LlamaRisk (monthly custodian report published 2026-09-03 covers the 2026-08-26 snapshot; real-time dashboard and monthly custodian reporting are separate evidence layers)",
     "attestorTier": "niche",
-    "cadence": "real-time"
+    "cadence": "real-time",
+    "latestReport": {
+      "periodEnd": "2026-08-26",
+      "publishedAt": "2026-09-03",
+      "assuranceMethod": "unknown",
+      "scope": "assets-only",
+      "liabilityReconciliation": "unknown",
+      "reviewer": "Sol curation pass 2026-10-01 (CurA04USDe)",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Ethena August custodian report (2026-08-26 snapshot, published 2026-09-03)",
+          "url": "https://ethena.fi/blog/custodian-attestations-of-assets-backing-usde-august-3"
+        }
+      ]
+    }
   },
   "links": [
     {
@@ -195,8 +210,8 @@
     },
     {
       "chain": "tempo",
-      "address": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
-      "decimals": 18
+      "address": "0x20c0000000000000000000002f52d5cc21a3207b",
+      "decimals": 6
     }
   ],
   "collateralQuality": "exotic",

@@ -1,4 +1,4 @@
-import { normalizeChainId } from "@shared/lib/chains";
+import { normalizeChainId } from "@shared/types/chain-identity";
 import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
 import {
   findStaleVenueRiskScores,

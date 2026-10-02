@@ -508,6 +508,9 @@ describe("Safety Score v9 evidence-gap queue", () => {
     const core = deploymentControlFactSetCore(deploymentKey, 0.00002);
     const asset = core.assets[0]!;
     const controlKey = `bridge-supply:${asset.assetId}`;
+    // A sub-threshold bounded-unknown control with a reconciled share now proves
+    // its row; a share that does not reconcile with the row keeps the proof open.
+    asset.controls.find((control) => control.controlKey === controlKey)!.materialSupplyShare = 0.00005;
     const diagnostics = {
       profileRouteCount: 2,
       canonicalSupplyRowCount: 2,

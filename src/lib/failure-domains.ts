@@ -1,4 +1,4 @@
-import { CHAIN_META } from "@shared/lib/chains";
+import { CHAIN_META } from "@shared/types/chain-identity";
 import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 import { titleCaseSlug } from "@/lib/title-case-slug";
 

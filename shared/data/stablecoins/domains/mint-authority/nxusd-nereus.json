@@ -80,7 +80,7 @@
         "sources": [
           {
             "label": "NXUSD source on Sourcify",
-            "url": "https://repo.sourcify.dev/contracts/full_match/43114/0xf14f4ce569cb3679e99d5059909e23b07bd2f387/sources/contracts/NXUSD.sol"
+            "url": "https://sourcify.dev/server/v2/contract/43114/0xf14f4ce569cb3679e99d5059909e23b07bd2f387?fields=abi,sources"
           }
         ]
       },
@@ -147,7 +147,7 @@
       "sources": [
         {
           "label": "NXUSD source on Sourcify",
-          "url": "https://repo.sourcify.dev/contracts/full_match/43114/0xf14f4ce569cb3679e99d5059909e23b07bd2f387/sources/contracts/NXUSD.sol"
+          "url": "https://sourcify.dev/server/v2/contract/43114/0xf14f4ce569cb3679e99d5059909e23b07bd2f387?fields=abi,sources"
         },
         {
           "label": "Nereus governance docs",

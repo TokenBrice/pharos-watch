@@ -4,7 +4,7 @@
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "apyUSD is an ERC-4626-style strategy wrapper over apxUSD. The canonical Ethereum wrapper mints shares only through deposit/mint flows against apxUSD, while its UUPS mint-logic path is controlled by the Apyx AccessManager and 4/7 Safe. Durable apxUSD issuance is inherited from the reviewed apxUSD issuer authority; recurring TID monitoring reconciles the Ethereum wrapper and inherited backing path.",
+    "summary": "apyUSD is an ERC-4626-style strategy wrapper over apxUSD. The canonical Ethereum wrapper mints shares only through deposit/mint flows against apxUSD, while its UUPS mint-logic path is controlled by the Apyx AccessManager and 4/7 Safe. Durable apxUSD issuance is inherited from the reviewed apxUSD issuer authority. Accountable documents continuous parent-asset balance verification and apxUSD supply visibility; exact apyUSD reserve-to-liability reconciliation is not established.",
     "inheritedFrom": "apxusd-apyx",
     "controls": [
       {
@@ -56,7 +56,9 @@
             "url": "https://apyx-labs.github.io/evm-contracts/"
           }
         ],
-        "evidence": "apyUSD inherits the reviewed apxUSD mint-authority profile; Apyx contract documentation describes apxUSD minting through MinterV0 EIP-712 signed orders and AccessManager permissions. The inherited MinterV0 path cannot raise the apxUSD supply cap."
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095809,
+        "evidence": "apyUSD inherits the reviewed apxUSD mint-authority profile; Apyx contract documentation describes apxUSD minting through MinterV0 EIP-712 signed orders and AccessManager permissions. The inherited MinterV0 path cannot raise the apxUSD supply cap. At Ethereum block 26095809, apyUSD asset() returned this apxUSD contract and apxUSD authority() returned 0xe167330e2eac88666de253e9607c6d9ae0ca2824; this observation confirms the parent-token and AccessManager identity, not a new enumeration of backend signers."
       },
       {
         "chain": "ethereum",
@@ -129,7 +131,7 @@
       ]
     },
     "economicCapSemantics": "raiseable",
-    "reconciliation": "continuous",
+    "reconciliation": "unknown",
     "supervision": "attestation-only",
     "review": {
       "sources": [
@@ -166,7 +168,7 @@
           "url": "https://tidresearch.com/reports/apyusd/"
         }
       ],
-      "evidence": "At Ethereum block 25905191, apyUSD is a UUPS proxy with implementation 0xfd616567ecc1607f61073951a1e822f7315bb112 and AccessManager authority 0xe167330e2eac88666de253e9607c6d9ae0ca2824. The Apyx source defines apyUSD as an ERC-4626 wrapper over apxUSD: local shares mint against deposited apxUSD, while durable apxUSD issuance remains inherited from the reviewed parent profile. The Ethereum AccessManager role 24 controls upgradeToAndCall and resolves to the same 4/7 Safe with a 259200-second delay; the Safe added owner 0x6c927e5B7B895E7f41fBE8B35328Ad2d5E324e79 and raised its threshold from 3 to 4 in transaction 0xd7692f068fd795bae4418b828087e0e86c3cc85ad102af25a2717176f87f5aae at block 25877561. TID Research's apyUSD dashboard monitors Ethereum backing and reconciliation hourly, and Wolf & Company's recurring examinations establish attestation-only supervision. Base, BNB, and Solana bridge representations and their unresolved administrative surfaces are retained under Bridge Risk rather than Mint Authority.",
+      "evidence": "At Ethereum block 25905191, apyUSD is a UUPS proxy with implementation 0xfd616567ecc1607f61073951a1e822f7315bb112 and AccessManager authority 0xe167330e2eac88666de253e9607c6d9ae0ca2824. The Apyx source defines apyUSD as an ERC-4626 wrapper over apxUSD: local shares mint against deposited apxUSD, while durable apxUSD issuance remains inherited from the reviewed parent profile. The Ethereum AccessManager role 24 controls upgradeToAndCall and resolves to the same 4/7 Safe with a 259200-second delay; the Safe added owner 0x6c927e5B7B895E7f41fBE8B35328Ad2d5E324e79 and raised its threshold from 3 to 4 in transaction 0xd7692f068fd795bae4418b828087e0e86c3cc85ad102af25a2717176f87f5aae at block 25877561. The prior 2026-08-16 review credited hourly TID wrapper/backing monitoring as continuous reconciliation. On 2026-10-01, D22 review distinguishes those live totals from exact-token reserve-to-liability procedures: issuer Accountable documentation verifies parent asset balances and apxUSD supply, while the August Wolf examination covers securities at two dates. No apyUSD liability reconciliation procedure was established, so reconciliation is unknown; no cessation of internal monitoring is asserted. Wolf & Company's recurring examinations remain attestation-only supervision. Base, BNB, and Solana bridge representations and their unresolved administrative surfaces are retained under Bridge Risk rather than Mint Authority.",
       "reviewer": "Codex mint/bridge boundary migration; Sol economic-posture batch 2026-08-15",
       "reviewedAt": "2026-08-16",
       "disposition": "scoreable"

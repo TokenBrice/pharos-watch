@@ -1,5 +1,5 @@
 import { getCronJobMeta } from "@shared/lib/cron-jobs";
-import { CHAIN_META } from "@shared/lib/chains";
+import { CHAIN_META } from "@shared/types/chain-identity";
 import { getChainRpc, type ChainRpcConfig } from "../../lib/chain-registry";
 import { finiteDecimalNumberFromBigInt } from "../../lib/bigint";
 import {

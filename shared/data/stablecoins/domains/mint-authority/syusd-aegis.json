@@ -169,13 +169,15 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095940,
         "sources": [
           {
             "label": "AegisMinting Sourcify source",
             "url": "https://sourcify.dev/server/v2/contract/1/0xc4df68e592245ca5202fe8b7c438d2b799820fc2?fields=sources"
           }
         ],
-        "evidence": "Inherited from reviewed yusd-aegis mintAuthority. Ethereum sYUSD's durable YUSD exposure follows the Ethereum AegisMinting path at 0xC4Df68e592245cA5202fE8b7C438d2b799820fc2; the separate BSC AegisMinting path is authored below."
+        "evidence": "Inherited from reviewed yusd-aegis mintAuthority. At Ethereum block 26095940 on 2026-10-01, owner() on the Ethereum AegisMinting contract 0xc4df68e592245ca5202fe8b7c438d2b799820fc2 returned Safe 0x4fe78ef65bd8edded480efab030ba680646503c8; the Safe has the five recorded owners and threshold 3. Ethereum sYUSD's durable YUSD exposure follows this inherited issuance path."
       },
       {
         "chain": "bsc",

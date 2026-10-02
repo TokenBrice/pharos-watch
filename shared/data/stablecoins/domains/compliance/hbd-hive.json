@@ -1,8 +1,5 @@
 {
   "id": "hbd-hive",
-  "mica": {
-    "status": "out-of-scope"
-  },
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {

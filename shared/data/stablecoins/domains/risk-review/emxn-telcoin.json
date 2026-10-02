@@ -2,9 +2,14 @@
   "id": "emxn-telcoin",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: eMXN resolves to Yes because the asset is centrally issued by Telcoin and no manual override narrows that status.",
-    "reviewer": "Codex Worker B metadata pass",
-    "reviewedAt": "2026-05-14"
+    "sources": [
+      {
+        "label": "eMXN verified Polygon Stablecoin implementation",
+        "url": "https://sourcify.dev/server/v2/contract/137/0x486b5d5760e8e98df2c9fc24f09b2d76893aa1de?fields=sources"
+      }
+    ],
+    "evidence": "The implementation identified in the correct EIP-1967 implementation slot at Polygon block 94755057 inherits Blacklist. Its _update rejects transfers from or to blacklisted addresses, and _onceBlacklisted transfers the blacklisted account's balance to the caller. Direct blacklist and seizure functionality is confirmed in verified source.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB27ZeUSD)",
+    "reviewedAt": "2026-10-01"
   }
 }

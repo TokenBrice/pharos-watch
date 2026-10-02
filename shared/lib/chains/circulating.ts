@@ -1,4 +1,4 @@
-import { resolveChainId } from "./index";
+import { resolveChainId } from "../../types/chain-identity";
 import { admitSupplyBuckets } from "../supply";
 
 export interface ChainCirculatingNormalizationDiagnostics {

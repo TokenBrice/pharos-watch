@@ -10,14 +10,14 @@
     "rwa": true
   },
   "collateral": "Tokenized U.S. Treasury bills and money-market funds, including Taikang Kaitai U.S. Dollar Money Market Fund, ChinaAMC USD Digital Money Market Fund (Tokenized Unlisted Class), and BNY Mellon U.S. Dollar Liquidity Fund",
-  "pegMechanism": "Eligible customers mint and redeem through FinChain; FUSD targets a fixed $1 token value while balances rebase daily to distribute reserve yield from the underlying tokenized Treasury and money-market fund portfolio",
+  "pegMechanism": "Eligible customers mint through FinChain and redeem FUSD for USDT, not fiat USD; universal redemption is documented as taking up to three business days (UTC+8), while instant redemption is conditional on liquidity and processing capacity. FUSD targets a fixed $1 token value while balances rebase daily to distribute reserve yield from the underlying tokenized Treasury and money-market fund portfolio",
   "mechanismArchetype": "tbill",
   "llamaId": "390",
   "detailProvider": "defillama",
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://fusd.finchain.global/#reserves",
-    "provider": "FinChain reserve dashboard (reserve section captioned 'as of August 2026'; figures do not render in the static page response). Keep cadence and assurance classification subject to separate verification of the advertised Chainlink PoR feed.",
+    "provider": "FinChain reserve dashboard and issuer-operated reserve/NAV accounting. At Ethereum block 26098753 on 2026-10-01, the mapped SimpleBundleAggregator published itemized NAV marks in a dated PRICE_ROLE update (report timestamp 2026-10-01T13:02:19Z), while all three PoR values were zero. Its report forwarder and author/workflow guards were unset; a read-only onReport simulation from an unrelated sender succeeded. This is not independently authenticated reserve assurance. The API's April 21 timestamp matches the on-chain reserve-configuration updateAt and does not date the newly observed NAV publication. The linked DocSend fund report required email access, so its report date, assurance scope and reconciliation remain unverified. No independent attestation or automated PoR assurance upgrade is inferred.",
     "attestorTier": "self",
     "cadence": "ad-hoc",
     "attestorJurisdiction": "Bermuda"

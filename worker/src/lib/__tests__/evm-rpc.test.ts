@@ -458,6 +458,53 @@ describe("evm-rpc helpers", () => {
     });
   });
 
+  it("preserves successful empty direct returns and the default allowed failure", async () => {
+    const hash = `0x${"a".repeat(64)}` as `0x${string}`;
+    fetchWithRetryMock
+      .mockResolvedValueOnce(rpcResponse({ result: "0x" }))
+      .mockResolvedValueOnce(rpcResponse({ result: "0x" }))
+      .mockResolvedValueOnce(rpcResponse({ error: { code: 3, message: "execution reverted" } }))
+      .mockResolvedValueOnce(rpcResponse({ result: { number: "0x10", timestamp: "0x64", hash } }));
+
+    expect(await fetchEvmMulticall3Aggregate3AtBlock("ethereum", [
+      { label: "empty-success", target: "0x1111111111111111111111111111111111111111",
+        callData: "0x11111111", allowFailure: false },
+      { label: "optional-revert", target: "0x1111111111111111111111111111111111111111",
+        callData: "0x22222222" },
+    ], 16, {
+      extraRpcUrls: ["https://rpc.example"], multicallFallbackBlockHash: hash,
+    })).toEqual([
+      { label: "empty-success", success: true, returnData: "0x" },
+      { label: "optional-revert", success: false, returnData: "0x" },
+    ]);
+  });
+  it("rejects another RPC fork when the primary lacks fallback call state", async () => {
+    const hash = `0x${"a".repeat(64)}` as `0x${string}`;
+    fetchWithRetryMock.mockImplementation(async (url, init) => {
+      const body = JSON.parse(String(init?.body));
+      if (body.method === "eth_getCode") return rpcResponse({ result: "0x" });
+      if (body.method === "eth_getBlockByNumber") return rpcResponse({ result: { number: "0x10", timestamp: "0x64", hash } });
+      if (String(url).includes("primary") || body.params[1]?.blockHash === hash) return rpcResponse({ error: { code: -32000, message: "canonical snapshot unavailable" } });
+      return rpcResponse({ result: `0x${"f".repeat(64)}` });
+    });
+    expect(await fetchEvmMulticall3Aggregate3AtBlock("ethereum", [{
+      label: "supply", target: `0x${"1".repeat(40)}`, callData: "0x18160ddd", allowFailure: false,
+    }], 16, { extraRpcUrls: ["https://primary.example", "https://secondary.example"], multicallFallbackBlockHash: hash })).toBeNull();
+  });
+  it.each(["code", "storage"])("rejects unbound %s from a fallback fork", async kind => {
+    const hash = `0x${"a".repeat(64)}` as `0x${string}`;
+    fetchWithRetryMock.mockImplementation(async (url, init) => {
+      const request = JSON.parse(String(init?.body)), block = request.params.at(-1);
+      return String(url).includes("primary") || block?.blockHash === hash
+        ? rpcResponse({ error: { code: -32000, message: "snapshot unavailable" } })
+        : rpcResponse({ result: `0x${"f".repeat(64)}` });
+    });
+    const options = { extraRpcUrls: ["https://primary.example", "https://secondary.example"], stateBlockHash: hash };
+    const address = `0x${"1".repeat(40)}`;
+    expect(await (kind === "code" ? fetchEvmCodeAtBlock("ethereum", address, 16, options) :
+      fetchEvmStorageAtBlock("ethereum", address, `0x${"0".repeat(64)}`, 16, options))).toBeNull();
+  });
+
   it("fetches raw hex call results from RPC URLs", async () => {
     fetchWithRetryMock.mockResolvedValue(rpcResponse({ result: "0x2a" }));
 

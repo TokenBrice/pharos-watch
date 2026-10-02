@@ -16,14 +16,13 @@
         "smart-contract",
         "market",
         "concentration"
-      ],
-      "liquidityHorizon": "seven-days"
+      ]
     }
   ],
   "reserveReview": {
     "reviewedAt": "2026-09-29",
     "reviewer": "GLM issue-sweep 2026-09-29 (ResvAvantTheo)",
-    "confidence": "verified",
+    "confidence": "probable",
     "sources": [
       {
         "label": "Etherscan thBILL token contract token balances (tULTRA 35,645,094.648 held at block 26083836, 2026-09-29T14:50:35Z)",
@@ -52,21 +51,65 @@
       {
         "label": "Theo docs: Fidelity FILQ fact sheet",
         "url": "https://docs.theo.xyz/products/thbill/fidelity-filq.md"
+      },
+      {
+        "label": "Theo official thBILL historical API (October 2, 2026 partial wrapper accounting observation)",
+        "url": "https://theo-api.theo.xyz/v1/public/thbill/historical/7"
       }
     ],
-    "rationale": "Refreshed 2026-09-29 after the prior composition (as of 2026-06-30) crossed the v9 freshness bound. Theo's disclosures identify thBILL as a diversified basket of Wellington/Libeara ULTRA and Fidelity International FILQ, and a pinned Ethereum mainnet read at block 26083836 (2026-09-29T14:50:35Z) confirms the ULTRA leg live on-chain today: the thBILL token contract 0x5FA487BCa6158c64046B2813623e20755091DA0b holds 35,645,094.648 tULTRA (token 0x82b840b6edf77f90c92a70b99f0b5d50e7967330), equal to that token's entire totalSupply. A full-list ERC-20 balance scan of the thBILL token contract, the thBILL minter (0x8a2c307D1462Ff4fA98c9c119D3A3457AD505Eb1), and the thBILL Backing Wallet (0xAECCa546baFB16735b273702632C8Cbb83509d8F) at blocks 26083833-26083836 found no FILQ token, consistent with the FILQ allocation being held through Sygnum's institutional rails rather than Theo's Ethereum contracts, as the June 30, 2026 announcement describes. Observed thBILL supply at the same blocks spans Ethereum 36,252,237.55, Arbitrum 348,419.09, Base 215.96, HyperEVM 1,297,264.23, and Stable 31.93. Current allocation weights between ULTRA and FILQ remain undisclosed, so the full basket is treated as an opaque fund-share exposure rather than all Treasury bills; FILQ's mandate includes asset-backed commercial paper, which carries credit exposure beyond Treasury-only funds. Redemption is documented at T+1 with underlying collateral settled within T+4 business days, bounding the liquidity horizon at seven days.",
-    "compositionBasis": "Pinned Ethereum mainnet RPC reads at blocks 26083833-26083836 (2026-09-29T14:50:35Z) of the thBILL token contract, minter, and backing wallet, cross-referenced with Theo documentation re-verified onchain September 1, 2026 and the issuer's current product and fact-sheet pages",
-    "compositionAsOf": "2026-09-29",
-    "scope": "full-composition",
-    "knownUnknownExposure": "The basket structure is identified and confirmed current by direct on-chain observation of the ULTRA leg and issuer documentation of the FILQ leg; the unknown is limited to the allocation split between Wellington ULTRA and Fidelity International FILQ, which is expressed by the opaque fund-share slice rather than by an unresolved composition.",
-    "knownUnknownExposurePct": 0,
+    "rationale": "The September 29 review used a partial on-chain observation and issuer descriptions of the ULTRA/FILQ basket. Re-fetched at Ethereum block 26083836 on 2026-10-01, the thBILL vault's tULTRA balance is 35,645,094.648059 while tULTRA totalSupply is 35,645,094.648069; the prior claim that the balance equaled the entire supply was inaccurate. Theo's current documentation identifies Wellington ULTRA and Fidelity FILQ, states that Theo manages a variable allocation between them, and discloses FILQ's asset-backed commercial paper exposure. Current product documentation says minting is instant and redemption is T+1 in USDC or USDT, with no holder claim on underlying fund units or securities. The reviewed pages do not give current complete basket weights or a dated thBILL assets-to-liabilities reconciliation; observing tULTRA alone does not supply those missing facts.",
+    "compositionBasis": "Issuer descriptions establish an ULTRA/FILQ strategy basket; pinned tULTRA reads observe a wrapper position only and do not establish complete assets, current allocation weights, or matching liabilities.",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "The official thBILL historical API reports a 2026-10-02T07:00:32Z wrapper accounting checkpoint: 36,081,868.999985 TVL, 34,752,237.545115 tokens, 36,079,775.50261039 pending tUltra, 2,092.441441 USDC and 1.055945 ULTRA in its composition categories. The token count matches Ethereum totalSupply at block 26103217. The exact source bytes are retained in a partial portfolio observation with a null whole-asset denominator. These issuer accounting categories do not reconcile pending tUltra to independently verified underlying fund units, off-chain receivables or fund liabilities. Current ULTRA/FILQ allocation and full look-through backing remain unresolved; the 100% opaque modeled slice is not a measured 100% allocation to fully reconciled fund units.",
+    "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Wellington ULTRA and Fidelity International FILQ (allocation undisclosed)",
         "pct": 100,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "The ULTRA and FILQ basket is a tokenized fund-share exposure (neither fund is a tracked stablecoin) with an undisclosed allocation split; the ULTRA leg is observed on-chain via the tULTRA wrapper and the FILQ leg is held through Sygnum rails, so no tracked-stablecoin dependency link applies."
+        "disposition": "basket-needs-split",
+        "rationale": "Issuer descriptions identify ULTRA and FILQ but do not disclose current whole-token allocation, cash or in-flight balances, wrapper-to-fund backing, or matching liabilities. D24 prohibits treating the selected tULTRA observation as a reconciled full composition."
+      }
+    ],
+    "observations": [
+      {
+        "scopeId": "theo:thbill:issuer-wrapper-accounting:1790924432",
+        "liabilityBookKey": "theo:thbill:issuer-wrapper-accounting",
+        "deploymentRefs": [],
+        "reviewer": "Sol NR wave 2026-10-02 (NrThbill)",
+        "confidence": "verified",
+        "sources": [
+          {
+            "url": "https://theo-api.theo.xyz/v1/public/thbill/historical/7",
+            "accessedAtSec": 1790926441,
+            "sha256": "9ff59f53f821e0229e8ca5c6cb7afa7212639e12ce236dc47b1bb6c012d0debb"
+          }
+        ],
+        "reviewedAtSec": 1790926441,
+        "expiresAtSec": 1793602832,
+        "sourceGeneration": "theo:thbill:historical:1790924432:9ff59f53f821e0229e8ca5c6cb7afa7212639e12ce236dc47b1bb6c012d0debb",
+        "sourceSha256": "9ff59f53f821e0229e8ca5c6cb7afa7212639e12ce236dc47b1bb6c012d0debb",
+        "completeness": "partial",
+        "obligations": [
+          {
+            "key": "pending-tUltra",
+            "disposition": "unresolved",
+            "reason": "Issuer API pending tUltra value 36079775.50261039 is not independently joined to settled underlying fund units, receivables or liabilities."
+          },
+          {
+            "key": "underlying-fund-liabilities",
+            "disposition": "unresolved",
+            "reason": "API categories do not enumerate underlying fund liabilities, encumbrances or complete fund look-through."
+          },
+          {
+            "key": "all-deployment-liability-book",
+            "disposition": "unresolved",
+            "reason": "API total_supply is issuer wrapper accounting, not an admitted B4 partition or independently verified complete cross-deployment economic liability book; deploymentRefs remains empty rather than inferred."
+          }
+        ],
+        "kind": "portfolio-observation",
+        "observedAtSec": 1790924432,
+        "wholeAssetDenominator": null
       }
     ]
   },
@@ -106,7 +149,7 @@
         "url": "https://theo.xyz/thbill"
       }
     ],
-    "uncertainty": "ULTRA is custodied by Standard Chartered Bank per the Wellington ULTRA fact sheet; FILQ's custodian and fund administrator is J.P. Morgan per the FILQ fact sheet, with tokenization by Sygnum (Desygnate). Provider share percentages between ULTRA and FILQ, segregation, rehypothecation, and thBILL holders' direct legal claim against the underlying fund assets are not published in the reviewed sources.",
+    "uncertainty": "Theo's fund fact sheets identify Standard Chartered Bank as ULTRA custodian and J.P. Morgan as FILQ custodian and administrator, with Sygnum providing FILQ tokenization. Provider allocation shares, thBILL-level segregation, bankruptcy remoteness, and rehypothecation safeguards are not established by those fact sheets. Theo's current mint-and-redeem documentation explicitly states that thBILL holders have no claim on underlying fund units or securities.",
     "knownUnknownExposurePct": 100
   }
 }

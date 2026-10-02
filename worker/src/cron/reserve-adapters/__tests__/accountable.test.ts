@@ -5,7 +5,6 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { getReserveAdapter } from "../index";
 import { validateAdapterOutput } from "../validate";
 import apxusd from "@shared/data/stablecoins/coins/apxusd-apyx.json";
-import apxusdReserves from "@shared/data/stablecoins/domains/reserves/apxusd-apyx.json";
 import usdu from "@shared/data/stablecoins/coins/usdu-unitas.json";
 import yusd from "@shared/data/stablecoins/coins/yusd-aegis.json";
 import yzusd from "@shared/data/stablecoins/coins/yzusd-yuzu.json";
@@ -259,7 +258,23 @@ describe("adaptAccountableDashboard", () => {
       },
     });
     expect(result.warnings ?? []).toEqual([]);
-    expect(result.slices).toEqual(apxusdReserves.reserves.map(({ sourceKey, name, pct, risk }) => ({ sourceKey, name, pct, risk })));
+    // This September payload is independent of the refreshed catalog composition.
+    // The adapter publishes one-decimal slices; its sub-rounding Other balance
+    // does not change the external-reserves or redeemable-claims denominators.
+    expect(result.slices).toEqual([
+      {
+        sourceKey: "accountable:apyx:deployment:strc",
+        name: "STRC / STRCx (Strategy preferred-equity exposure)",
+        pct: 86.7,
+        risk: "high",
+      },
+      {
+        sourceKey: "accountable:apyx:deployment:cash-equivalents",
+        name: "Cash & Equivalents (cash, stablecoins, bills and DeFi positions)",
+        pct: 13.3,
+        risk: "medium",
+      },
+    ]);
     expect(result.metadata?.collateralizationBasis).toBe("net-of-protocol-owned");
     expect(result.metadata?.collateralizationReconciliation).toMatchObject({ basis: "net-of-protocol-owned", grossRatio: expect.any(Number), netRatio: expect.any(Number) });
     expect(result.metadata?.selfIssuedAccounting).toMatchObject({

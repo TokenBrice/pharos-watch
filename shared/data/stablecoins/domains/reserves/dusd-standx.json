@@ -76,7 +76,7 @@
       }
     ],
     "segregation": "unknown",
-    "bankruptcyRemoteness": "unknown",
+    "bankruptcyRemoteness": "none",
     "rehypothecation": "unknown",
     "reviewedAt": "2026-07-20",
     "reviewer": "Kimi P2 reserve cohort rc-6 (lead usx-solstice)",
@@ -89,9 +89,13 @@
       {
         "label": "StandX DUSD architecture",
         "url": "https://docs.standx.com/docs/dusd-solutions"
+      },
+      {
+        "label": "StandX user terms: no trust or insolvency recourse to issuer assets",
+        "url": "https://docs.standx.com/docs/resources/user-terms-conditions"
       }
     ],
-    "uncertainty": "StandX documents multi-signature custody solutions, exchange-diversified hedging, and custodial insurance coverage, and issuer materials reference Ceffu custody, but the reviewed sources do not publish provider shares, account segregation, insolvency treatment, or rehypothecation terms.",
+    "uncertainty": "StandX documents multi-signature custody solutions, exchange-diversified hedging, and custodial insurance coverage. The existing Ceffu attribution was not corroborated in the sources reopened on 2026-10-01; provider shares, account segregation, and rehypothecation terms remain undisclosed. The issuer terms expressly deny any trustee relationship, assets held on trust, and tokenholder recourse to issuer or group assets on insolvency. The bankruptcy-remoteness field was corrected from unknown to none on that basis; other custody claims retain their prior review date.",
     "knownUnknownExposurePct": 100
   }
 }

@@ -243,7 +243,7 @@ function PillarBreakdownDetails({
                   ) : null}
                 </span>
                 <span className="shrink-0 text-right font-mono text-[10px] text-muted-foreground">
-                  {route.score === null ? "Not scored" : `V9 route ${route.score.toFixed(0)} / 100`}
+                  {route.score === null ? "Not scored" : `V10 route ${route.score.toFixed(0)} / 100`}
                   {route.redundancyCredit !== null
                     ? ` · backup +${route.redundancyCredit.toFixed(1)}`
                     : route.included
@@ -339,7 +339,7 @@ export function SafetyScoreV9PillarRow({
             {pillar.breakdown?.exitHighlight ? (
               <>
                 <span className="mt-1 block font-mono text-[10px] text-foreground/85">
-                  Primary V9 route: {pillar.breakdown.exitHighlight.primaryRouteLabel}{" "}
+                  Primary V10 route: {pillar.breakdown.exitHighlight.primaryRouteLabel}{" "}
                   {pillar.breakdown.exitHighlight.primaryRouteScore.toFixed(1)}
                   {pillar.breakdown.exitHighlight.redundancyCredit > 0
                     ? ` · backup +${pillar.breakdown.exitHighlight.redundancyCredit.toFixed(1)}`

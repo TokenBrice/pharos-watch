@@ -63,15 +63,23 @@
         "role": "other",
         "sharePct": 100,
         "jurisdiction": "British Virgin Islands"
+      },
+      {
+        "name": "Percent (issuer-named underwriting and custody partner)",
+        "role": "custodian"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "none",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB10IUSD)",
     "confidence": "verified",
     "sources": [
+      {
+        "label": "Anzen RWA Partner: Percent selected for underwriting and custody",
+        "url": "https://docs.anzen.finance/welcome-to-anzen/rwa-partner.md"
+      },
       {
         "label": "Anzen USDz collateral documentation (holder-claim disclaimer)",
         "url": "https://docs.anzen.finance/usdz-101/backing-assets-collateral"
@@ -89,6 +97,6 @@
         "url": "https://eth.blockscout.com/address/0xf30a29f1c540724fd8c5c4be1af604a6c6800d29"
       }
     ],
-    "uncertainty": "SPCT is a permissioned token (KYC/KYB-whitelisted holders) whose pool contract on Ethereum (0xf30a29f1c540724fd8c5c4be1af604a6c6800d29) anchors the on-chain reserve; the off-chain custody chain for the underlying U.S. private-credit ABS notes, custodian, trustee, servicer, and account segregation, is not disclosed in Anzen docs reviewed 2026-07-20. Anzen's collateral documentation explicitly disclaims any holder claim: information about the collateral 'does not create any relationship between USDz and the collateral or claims for USDz holders to the collateral assets', so no bankruptcy-remoteness structure for USDz holders is documented (marked none rather than unknown on that explicit disclaimer). Anzen Group Ltd (BVI) states in its Terms of Service that it is not registered with any regulatory body in any jurisdiction. Whether SPCT or the underlying collateral is rehypothecated or re-deployed is not addressed in issuer documentation (marked unknown). Loan-level composition, obligor identities, and weightings are not published; the legacy transparency host rwa.anzen.finance did not resolve during this review, while app.anzen.finance/transparency remains the live dashboard referenced by the proof-of-reserves record."
+    "uncertainty": "Anzen's RWA Partner page names Percent for underwriting and custody. No custody allocation, account segregation terms, trustee identity, or complete off-chain custody chain for the private-credit ABS notes is disclosed in the pages reviewed on 2026-10-01. The existing 100% protocol-contract row describes the direct on-chain SPCT reserve, not a measured allocation to Percent. Anzen's collateral documentation expressly states that disclosure does not create a claim for USDz holders to collateral assets; the adverse bankruptcy-remoteness disposition is retained. Rehypothecation and loan-level weights remain unknown. The issuer-linked rwa.anzen.finance transparency host could not be fetched this session, so no dashboard freshness or loan-level composition was established."
   }
 }

@@ -10,16 +10,16 @@
     "rwa": true
   },
   "collateral": "LBMA Good Delivery gold bars held in Swiss vaults by an undisclosed Swiss custodian; each token represents one fine troy ounce",
-  "pegMechanism": "Direct 1:1 redemption for physical gold through TG Commodities, S.A. de C.V.; minimum 430 XAUt for a full bar; physical delivery to Switzerland only. Supply figures include XAUt0 (omnichain variant via LayerZero lock-and-mint) deployed on TON, Solana, Arbitrum, and other chains",
+  "pegMechanism": "Direct 1:1 redemption for physical gold through TG Commodities, S.A. de C.V.; redemption requires a whole gold bar, with a possible 430 XAUt deposit adjusted to the bar's actual fine-gold content; physical delivery to Switzerland only. Supply figures include XAUt0 (omnichain variant via LayerZero lock-and-mint) deployed on TON, Solana, Arbitrum, and other chains",
   "mechanismArchetype": "commodity-claim",
   "commodityOunces": 1,
   "detailProvider": "commodity",
   "geckoId": "tether-gold",
   "protocolSlug": "tether-gold",
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "attestation",
     "url": "https://gold.tether.to/reports",
-    "provider": "BDO Italia",
+    "provider": "BDO Advisory Services S.r.l.",
     "attestorTier": "regional",
     "cadence": "quarterly",
     "attestorJurisdiction": "Italy",
@@ -144,7 +144,7 @@
       "decimals": 6
     }
   ],
-  "custodyModel": "institutional-regulated",
+  "custodyModel": "unknown",
   "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
     "adapter": "tether-transparency",

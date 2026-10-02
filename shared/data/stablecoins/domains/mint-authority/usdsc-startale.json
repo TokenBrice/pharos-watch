@@ -4,7 +4,7 @@
     "mintPath": "m0-permissioned-minter",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
-    "summary": "USDSC's canonical Mint Authority is the live Ethereum M0 hub-side wrapper: M0 MinterGateway creates the backing M, Ethereum SwapFacility transfers that M into the USDSC extension, and the extension mints USDSC 1:1. The Soneium wrapper and its representation/bridge machinery are assessed separately under Bridge Risk. The current M-backed path is continuously reconciled and raiseable through M0 governance, but the canonical Ethereum SwapFacility has an immediate EOA-controlled mint-logic upgrade path.",
+    "summary": "USDSC's canonical Mint Authority is the Ethereum M0 hub-side wrapper: M0 MinterGateway creates backing M, SwapFacility transfers M into the extension, and the extension mints USDSC 1:1. Soneium representation controls are assessed under Bridge Risk. At Ethereum block 26095804, the SwapFacility ProxyAdmin owner is a TimelockController with a 259200-second minimum delay. The USDSC token's separate 3-of-5 ProxyAdmin owner Safe remains an immediate mint-logic upgrade path.",
     "upgradeability": {
       "model": "transparent-proxy",
       "deploymentRefs": [
@@ -24,9 +24,9 @@
       ],
       "canChangeMintLogic": true,
       "delaySec": 0,
-      "controlRef": "Ethereum SwapFacility ProxyAdmin owner EOA",
-      "observedAt": "2026-08-16",
-      "observedBlock": 25771218,
+      "controlRef": "Ethereum USDSC ProxyAdmin owner Safe",
+      "observedAt": "2026-10-01",
+      "observedBlock": 26095804,
       "sources": [
         {
           "label": "Ethereum USDSC proxy on Blockscout",
@@ -61,6 +61,8 @@
         "capDescription": "Base M issuance backing USDSC depends on approved minters, validator attestations, mint-delay review, and M0 collateral/debt checks. Per-Minter capacity can be changed by M0 TTG governance, so the bound is protocol-governed rather than immutable.",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095804,
         "sources": [
           {
             "label": "M0 deployments",
@@ -101,8 +103,8 @@
             "url": "https://eth.blockscout.com/address/0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a"
           },
           {
-            "label": "Startale USDSC extension source",
-            "url": "https://github.com/StartaleGroup/usdsc-extension"
+            "label": "Verified Ethereum USDSC implementation source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x090de327f3ea32c7215afdc7cdd77d864d7c3db2"
           },
           {
             "label": "M0 extension architecture",
@@ -189,36 +191,37 @@
       },
       {
         "chain": "ethereum",
-        "address": "0x8c645e201dd944677864479357f8255ea943b18b",
+        "address": "0x23ca665c8a73292fc7ac2cc4493d2ce883bba468",
         "deploymentRefs": [
           "ethereum:0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a"
         ],
-        "label": "Ethereum SwapFacility ProxyAdmin owner EOA",
+        "label": "Ethereum SwapFacility ProxyAdmin owner TimelockController",
         "role": "proxy-admin",
-        "authorityType": "eoa",
+        "authorityType": "timelock",
         "directMintAbility": "upgrade-only",
+        "timelockDelaySec": 259200,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-16",
-        "observedBlock": 25771218,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095804,
         "failureDomainKeys": [
           "proxy-admin:ethereum:0x0f38d8a5583f9316084e9c40737244870c565924",
-          "eoa:ethereum:0x8c645e201dd944677864479357f8255ea943b18b"
+          "timelock:ethereum:0x23ca665c8a73292fc7ac2cc4493d2ce883bba468"
         ],
         "bypassSurfaces": [
-          "ProxyAdmin 0x0f38d8a5583f9316084e9c40737244870c565924 is owned directly by this code-free EOA; no observed timelock or multisig wrapper delays canonical SwapFacility mint-logic upgrades."
+          "The separate USDSC token ProxyAdmin remains owned by the 3-of-5 Safe 0x3c27038d9906caa5d68355b1800625eacacd93da without an observed timelock. Timelock proposer, executor, and canceller membership was not enumerated in this review."
         ],
         "sources": [
           {
-            "label": "Ethereum SwapFacility on Blockscout",
-            "url": "https://eth.blockscout.com/address/0xB6807116b3B1B321a390594e31ECD6e0076f6278"
-          },
-          {
             "label": "Ethereum SwapFacility ProxyAdmin",
             "url": "https://eth.blockscout.com/address/0x0f38d8a5583f9316084e9c40737244870c565924"
+          },
+          {
+            "label": "Verified SwapFacility TimelockController source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x23ca665c8a73292fc7ac2cc4493d2ce883bba468"
           }
         ],
-        "evidence": "At Ethereum block 25771218, the SwapFacility proxy admin slot returned ProxyAdmin 0x0f38d8a5583f9316084e9c40737244870c565924, owner() returned 0x8c645e201dd944677864479357f8255ea943b18b, and eth_getCode for the owner was empty. No timelock or multisig wrapper was observed, so this EOA can immediately replace canonical SwapFacility mint-critical logic."
+        "evidence": "Historical observation at Ethereum block 25771218: SwapFacility ProxyAdmin was owned by the code-free EOA 0x8c645e201dd944677864479357f8255ea943b18b. At block 26095804, the unchanged ProxyAdmin 0x0f38d8a5583f9316084e9c40737244870c565924 returned owner() 0x23ca665c8a73292fc7ac2cc4493d2ce883bba468. The new owner has verified OpenZeppelin TimelockController code, zero EIP-1967 implementation/admin/beacon slots, and getMinDelay() = 259200 seconds. Its source gates execution on ready operations and permits delay changes only through self-calls. This corrects the facility's former immediate-EOA description without removing the separate immediate token-proxy Safe path."
       }
     ],
     "economicCapSemantics": "raiseable",
@@ -243,17 +246,17 @@
           "url": "https://eth.blockscout.com/address/0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a"
         },
         {
-          "label": "Startale USDSC extension source",
-          "url": "https://github.com/StartaleGroup/usdsc-extension"
+          "label": "Verified Ethereum USDSC implementation source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x090de327f3ea32c7215afdc7cdd77d864d7c3db2"
         },
         {
           "label": "Ethereum SwapFacility",
           "url": "https://eth.blockscout.com/address/0xB6807116b3B1B321a390594e31ECD6e0076f6278"
         }
       ],
-      "evidence": "Canonical Mint Authority is scoped to Ethereum: M0 MinterGateway supplies the backing M, the Ethereum SwapFacility transfers M into the approved USDSC extension, and verified MExtension logic mints USDSC only after that transfer and burns it on unwrap. At Ethereum block 25771196, USDSC supply was 5.051550 USDSC and the live wrapper was bound to M 0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b and SwapFacility 0xb6807116b3b1b321a390594e31ecd6e0076f6278. At block 25771218, the canonical SwapFacility implementation was 0x45bf08d042a8958f01f8e8319b791e4584550da8 behind ProxyAdmin 0x0f38d8a5583f9316084e9c40737244870c565924, whose owner is the code-free EOA 0x8c645e201dd944677864479357f8255ea943b18b with no observed delay or multisig. The current economic path remains M-backed, continuously reconciled, and raiseable through M0 governance; the immediate EOA upgrade path is therefore reflected in the adverse canonical posture. Soneium USDSC, its SwapFacility, SpokePortal, M representation, and Hyperlane route controls are excluded from Mint Authority and preserved in bridgeRouteRisk.",
-      "reviewer": "Codex mint-bridge boundary migration; verified finding 2026-08-16",
-      "reviewedAt": "2026-08-16",
+      "evidence": "Canonical Mint Authority is scoped to Ethereum. M0 MinterGateway supplies backing M, SwapFacility transfers M into the approved extension, and verified MExtension logic mints USDSC after that transfer and burns it on unwrap. At Ethereum block 26095804, the wrapper's M and SwapFacility bindings and both proxy implementations/admins match the recorded identities. The USDSC ProxyAdmin owner is the recorded 3-of-5 Safe. The SwapFacility ProxyAdmin owner has changed from the EOA recorded at block 25771218 to verified TimelockController 0x23ca665c8a73292fc7ac2cc4493d2ce883bba468 with getMinDelay() = 259200 seconds. The facility's former EOA bypass is historical; the token's separate immediate Safe upgrade path remains current. Timelock role membership and issuer key custody remain unverified. Soneium representation and Portal/Hyperlane controls remain in Bridge Risk.",
+      "reviewer": "Sol curation pass 2026-10-01 (CurB24sfrxUSD)",
+      "reviewedAt": "2026-10-01",
       "disposition": "scoreable"
     }
   }

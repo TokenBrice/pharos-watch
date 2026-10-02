@@ -2,17 +2,17 @@
   "id": "aa-falconx-mev-capital",
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-reconciliation-unknown",
     "confidence": "verified",
     "inheritedFrom": "usdc-circle",
-    "summary": "AA_FalconXUSDC is a native Ethereum IdleCDOTranche token whose shares are minted exclusively by IdleCDO 0x433d5b17... against USDC deposits. The IdleCDO mint logic is a transparent proxy controlled by an 86,400-second timelock; the tranche has no independent proxy or privileged mint key. Base USDC supply is inherited from Circle, and no bridge representation or bridge-only administrator is identified for this product.",
+    "summary": "AA_FalconXUSDC is a native Ethereum IdleCDOTranche token minted exclusively by IdleCDO 0x433d5b17.... Ordinary user issuance transfers USDC, but the owner can enable minted-interest accounting: stopEpoch can create strategy receivables and durable AA fee shares without receiving the corresponding interest in USDC. The strategy APR ceiling is owner-adjustable and was zero (disabled) at Ethereum block 26097122. This least-constrained live accounting path is unbounded under D14; strategy claims are not posted collateral. Mint-logic upgrades remain behind an 86,400-second timelock. No complete reserve-to-liability reconciliation procedure is established for this path.",
     "upgradeability": {
       "model": "transparent-proxy",
       "proxyAddresses": [
         "0x433d5b175148da32ffe1e1a37a939e1b7e79be4d"
       ],
       "implementationAddresses": [
-        "0xdd596250f838af8862d30e9c78a143356894a18d"
+        "0x67f839a44e8b6d2cd403d9cb14f3862f2b85e9f8"
       ],
       "adminAddresses": [
         "0x9438904abc7d8944a6e2a89671fef51c629af351"
@@ -20,8 +20,8 @@
       "canChangeMintLogic": true,
       "delaySec": 86400,
       "controlRef": "Idle Finance 24-hour upgrade timelock",
-      "observedAt": "2026-07-13",
-      "observedBlock": 25526837,
+      "observedAt": "2026-10-02",
+      "observedBlock": 26104268,
       "sources": [
         {
           "label": "Ethereum IdleCDO transparent proxy",
@@ -45,26 +45,26 @@
       {
         "chain": "ethereum",
         "address": "0xc26a6fa2c37b38e549a4a1807543801db684f99c",
-        "label": "AA_FalconXUSDC IdleCDOTranche token (deposit-only mint)",
+        "label": "AA_FalconXUSDC IdleCDOTranche token (CDO-controlled mint)",
         "role": "wrapper",
         "authorityType": "contract",
         "directMintAbility": "none",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "Tranche shares minted only by the IdleCDO contract (0x433d5b175148da32ffe1e1a37a939e1b7e79be4d) upon USDC deposit; no privileged mint role outside deposit.",
+        "capDescription": "Only IdleCDO 0x433d5b175148da32ffe1e1a37a939e1b7e79be4d can mint tranche shares. User deposits transfer USDC; owner-enabled minted-interest accounting can also mint durable AA fee shares after minting strategy receivables rather than receiving USDC interest. At Ethereum block 26097122, isInterestMinted() was false and strategy maxApr() was zero (no APR ceiling). Both the mode and APR ceiling can be changed without posting additional USDC; the single-minter restriction is not a collateral bound.",
         "sources": [
           {
-            "label": "Pareto docs - credit vaults",
-            "url": "https://docs.pareto.credit/product/credit-vaults/live-vaults"
+            "label": "Current verified IdleCDOEpochVariant implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x67f839a44e8b6d2cd403d9cb14f3862f2b85e9f8"
           },
           {
             "label": "Ethereum Blockscout - IdleCDOTranche",
             "url": "https://eth.blockscout.com/address/0xc26a6fa2c37b38e549a4a1807543801db684f99c"
           }
         ],
-        "observedAt": "2026-07-13",
-        "observedBlock": 25526837,
-        "evidence": "At Ethereum block 25526837, minter() returned IdleCDO 0x433d5b175148da32ffe1e1a37a939e1b7e79be4d. The tranche's EIP-1967 implementation, admin, and beacon slots were all zero, so the tracked token itself has no proxy upgrade path."
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095798,
+        "evidence": "At Ethereum block 26095798, minter() returned IdleCDO 0x433d5b175148da32ffe1e1a37a939e1b7e79be4d. The July observation that the tranche's EIP-1967 implementation, admin, and beacon slots were zero is preserved as historical evidence. The current verified CDO implementation includes owner-only setIsInterestMinted and conditional _mintSharesAtCurrPrice fee issuance in stopEpoch; the current isInterestMinted() flag was false. No reassessment of the encoded mint posture is made from this observation alone."
       },
       {
         "chain": "ethereum",
@@ -75,7 +75,7 @@
         "directMintAbility": "direct",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "The IdleCDO proxy mints/burns tranche tokens on deposit/redemption. Upgradeable via ProxyAdmin (0x9438904abc7d8944a6e2a89671fef51c629af351) controlled by 24h OZ Timelock (0xda86e15d0cda3a05db930b248d7a2f775e575a44). CDO owner = Idle Finance Safe 8/3 (0xfb3bd022d5dacf95ee28a6b07825d4ff9c5b3814).",
+        "capDescription": "The IdleCDO proxy mints/burns tranche tokens on deposit/redemption. Upgradeable via ProxyAdmin (0x9438904abc7d8944a6e2a89671fef51c629af351) controlled by the 86400-second timelock (0xda86e15d0cda3a05db930b248d7a2f775e575a44). At Ethereum block 26095798 on 2026-10-01, CDO owner = Idle Finance Safe 3-of-6 (0xfb3bd022d5dacf95ee28a6b07825d4ff9c5b3814).",
         "sources": [
           {
             "label": "Ethereum Blockscout - IdleCDO",
@@ -86,9 +86,9 @@
             "url": "https://etherscan.io/address/0x9438904abc7d8944a6e2a89671fef51c629af351#code"
           }
         ],
-        "observedAt": "2026-07-13",
-        "observedBlock": 25526837,
-        "evidence": "At Ethereum block 25526837, the IdleCDO implementation slot resolved to 0xdd596250f838af8862d30e9c78a143356894a18d and the proxy-admin slot to ProxyAdmin 0x9438904a.... IdleCDO owner() returned the Idle Finance 3/8 Safe 0xfb3bd022...."
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095798,
+        "evidence": "At Ethereum block 26095798 on 2026-10-01, IdleCDO retained implementation 0xdd596250f838af8862d30e9c78a143356894a18d, ProxyAdmin 0x9438904abc7d8944a6e2a89671fef51c629af351, and owner Safe 0xfb3bd022d5dacf95ee28a6b07825d4ff9c5b3814. The Safe now has six owners and threshold 3, superseding the July 3-of-8 observation. One enabled module, 0xcfbfac74c26f8647cbdb8c5caf80bb5b32e43134, was returned by getModulesPaginated."
       },
       {
         "chain": "ethereum",
@@ -100,8 +100,8 @@
         "timelockDelaySec": 86400,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-13",
-        "observedBlock": 25526837,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095798,
         "failureDomainKeys": [
           "ethereum:0xfb3bd022d5dacf95ee28a6b07825d4ff9c5b3814"
         ],
@@ -119,7 +119,7 @@
             "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "evidence": "At Ethereum block 25526837, ProxyAdmin owner() returned this timelock and getMinDelay() returned 86,400 seconds. Current role reads showed the 3/8 Idle Finance Safe as proposer, canceller, and executor, while the original deployer's proposer role was revoked. Native timelock checks preserved from the former routeChecks block: the sole current proposer is Idle Finance Safe 0xfb3bd022..., threshold 3 of 8; the original deployer no longer holds PROPOSER_ROLE. getMinDelay() returned 86,400 seconds. ProxyAdmin ownership points directly to this timelock, so implementation changes must traverse that queue. The Safe remains proposer, canceller, executor, and timelock admin; one Safe module is enabled, but execution of a scheduled upgrade remains subject to the timelock's minimum delay."
+        "evidence": "At Ethereum block 26095798 on 2026-10-01, ProxyAdmin.owner() returned this timelock and getMinDelay() returned 86400 seconds. The Idle Finance Safe 0xfb3bd022d5dacf95ee28a6b07825d4ff9c5b3814 held PROPOSER_ROLE, CANCELLER_ROLE, and EXECUTOR_ROLE. Safe reads returned threshold 3, six owners, and one enabled module; the 3-of-8 description from block 25526837 is historical. These reads confirm the current owner and delay path without asserting an exhaustive role-member census or independently attested signer custody."
       },
       {
         "label": "Inherited USDC (Circle) issuer mint path",
@@ -137,13 +137,13 @@
         "evidence": "Underlying USDC supply is issuer-minted by Circle; this wrapper holds USDC and inherits that base mint authority."
       }
     ],
-    "economicCapSemantics": "raiseable",
-    "reconciliation": "continuous",
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "Mint/bridge boundary review completed 2026-08-16: AA_FalconXUSDC has one verified native Ethereum tranche deployment and no bridge/OFT/endpoint/peer machinery, so its native issuance controls remain exclusively in Mint Authority and no Bridge Risk route is fabricated. At Ethereum block 25526837, AA_FalconXUSDC minter() still returned IdleCDO 0x433d5b175.... The direct tranche had zero EIP-1967 implementation, admin, and beacon slots. IdleCDO's transparent proxy had implementation 0xdd596250..., ProxyAdmin 0x9438904a..., and ProxyAdmin owner timelock 0xda86e15d... with an 86,400-second minimum delay. Economic-cap review completed 2026-07-15: tranche shares are minted only by the IdleCDO against deposited USDC. Changing that deposit-bound mint logic requires the independently enforced 86,400-second upgrade timelock, so the economic cap is raiseable rather than unbounded. No exact product-level prudential supervisor was identified. M-2 evidence binding 2026-08-08: reconciliation continuous is the deposit-bound mint itself - fixed-block simulations (Ethereum 25526837) prove tranche shares are minted only by the IdleCDO against deposited USDC, so supply reconciles against vault collateral by construction; changing that binding requires the sourced 86,400-second timelock.",
-      "reviewer": "Codex Safety Score V9 registry pass",
-      "reviewedAt": "2026-08-16",
+      "evidence": "D14 accounting-path review 2026-10-01 at Ethereum block 26097122: CDO implementation remains 0xdd596250f838af8862d30e9c78a143356894a18d; strategy 0x17e9ab2992dfecbe779a06a92a6cdb9fe6aeeef3 resolves to implementation 0x62568889198f1bab603e26da7b6c1808838fe489. Both contracts are owned by Safe 0xfb3bd022d5dacf95ee28a6b07825d4ff9c5b3814. isInterestMinted and isProgrammableBorrower were false, and maxApr was zero. Verified source permits owner-only setIsInterestMinted and setMaxApr; zero maxApr disables the strategy ceiling. In minted mode stopEpoch pulls no epoch-interest USDC, mints strategy receivables for gross interest, and mints durable AA shares for accrued fees. Ordinary deposits remain USDC-gated and withdrawal cash is separately required, but neither accounting receivables nor an adjustable ceiling establish posted collateral for every issuance path. No complete reserve-to-liability procedure was established for minted-interest issuance, so reconciliation is unknown rather than the former deposit-only continuous claim. Historical 2026-07-15 economic-cap and 2026-08-08 reconciliation reviews had assumed deposit-only issuance; those observations are preserved as history and superseded by this full-path review. The one-native-deployment boundary and previously verified 86,400-second upgrade timelock remain unchanged.",
+      "reviewer": "Sol curation pass 2026-10-01 (RuleC07); prior Codex Safety Score V9 registry pass",
+      "reviewedAt": "2026-10-01",
       "disposition": "scoreable",
       "sources": [
         {
@@ -161,6 +161,14 @@
         {
           "label": "Idle Finance upgrade timelock",
           "url": "https://etherscan.io/address/0xda86e15d0cda3a05db930b248d7a2f775e575a44#code"
+        },
+        {
+          "label": "Verified CDO minted-interest and fee-share accounting",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x67f839a44e8b6d2cd403d9cb14f3862f2b85e9f8"
+        },
+        {
+          "label": "Verified strategy owner-adjustable APR ceiling and receivable minting",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x62568889198f1bab603e26da7b6c1808838fe489"
         }
       ]
     }

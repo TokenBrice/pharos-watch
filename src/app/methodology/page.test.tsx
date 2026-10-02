@@ -24,8 +24,6 @@ describe("MethodologyPage", () => {
     expect(html).toContain("Pricing Pipeline");
     expect(html).toContain("Safety Scores");
     expect(html).toContain("Mint Authority Score");
-    expect(html).toContain("Safety Score V9 Economic Control pillar, mint component");
-    expect(html).toContain("Current V9 technical contract");
     expect(html).toContain("Backing 40% · Exit 35% · Economic Control 25%");
     for (const cap of V9_CANDIDATE_POLICY_V1.policy.semantic.formula.activeDepegCaps) {
       expect(html).toContain(`≥${cap.minimumBps / 100}% → ${cap.limit}`);

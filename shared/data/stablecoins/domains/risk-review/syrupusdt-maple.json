@@ -9,9 +9,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "syrupUSDT's canonical home is Ethereum, where the immutable non-proxy ERC-4626 vault token 0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d is issued natively against USDT deposits. Plasma, BNB Chain, Mantle and Ink carry Chainlink CCIP Cross-Chain Token (CCT) representations, but the route is asymmetric: the Ethereum leg is a LockReleaseTokenPool 1.5.1 lockbox at 0xDE76A096C5eadDdf97Af3fE15ee49d32AEDa9822 that held 272,587,979.695601 syrupUSDT, 78.04% of the vault's 349,308,558.995465 total supply, while each remote leg is a BurnMintTokenPool over a Chainlink BurnMintERC20. Remote units are therefore lock-mint claims on Ethereum-locked shares, not issuer-native burn-mint supply, and the third-party lockbox is the concentrating failure surface.",
-    "reviewedAt": "2026-07-22",
-    "reviewer": "GPT SOL-BIND wave6",
+    "summary": "syrupUSDT is minted and redeemed on Ethereum; Plasma, BNB Chain, Mantle and Ink carry CCIP lock-mint representations. At Ethereum block 26095800 on 2026-10-01, TokenAdminRegistry still resolves to LockReleaseTokenPool 1.5.1 at 0xde76a096c5eadddf97af3fe15ee49d32aeda9822, holding 60,582,051.552172 syrupUSDT against 220,891,134.621320 total vault shares. Its four remote token/pool pairs match the authored deployments; remote pools report BurnMintTokenPool 1.5.1, or 1.6.1 on Ink. These remain claims on locked Ethereum shares. Maple announced a chain-by-chain CCIP 2.0 pool migration beginning 2026-09-29 through Q4; token addresses remain unchanged and future native mint/redeem is not yet live. Pinned reads still identify the existing pools, so no completed migration is assumed. July quantities in individual route notes are historical observations.",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA42syrupUSDT)",
     "confidence": "verified",
     "protocols": [
       {
@@ -63,6 +63,14 @@
       {
         "label": "syrupUSDT contract on Ink Explorer",
         "url": "https://explorer.inkonchain.com/address/0x8a76fe7fa6da27f85a626c5c53730b38d13603d7"
+      },
+      {
+        "label": "Maple syrupUSD CCIP 2.0 pool-migration announcement",
+        "url": "https://maple.finance/insights/syrupusd-assets-are-upgrading-to-chainlink-ccip-2-0"
+      },
+      {
+        "label": "Maple crosschain token and pool addresses",
+        "url": "https://docs.maple.finance/integrate/crosschain/syrupusd-crosschain"
       }
     ],
     "routes": [
@@ -80,8 +88,8 @@
         "reviewDisposition": "reviewed",
         "reviewNote": "Canonical home chain. Existing mint-authority evidence (Ethereum block 25295160): EIP-1967 impl and admin slots zero, 11,660-byte non-proxy bytecode, owner()/admin() calls revert, the ERC-4626 vault is immutable and mints shares only against USDT deposits. Re-measured at pinned Ethereum block 25575599 (2026-07-20T18:04:59Z): name() 'Syrup USDT', symbol() 'syrupUSDT', decimals() 6, asset() = USDT 0xdAC17F958D2ee523a2206206994597C13D831ec7, totalSupply() 349,308,558.995465 shares, totalAssets() 396,690,439.777205 USDT, convertToAssets(1e6) 1.135644; getCCIPAdmin() still reverts on the home vault, so issuance here is native rather than bridged. Note that 272,587,979.695601 of this supply, 78.04%, is not freely circulating on Ethereum but sits locked in the CCIP LockReleaseTokenPool that collateralises the four remote representations.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "observedBlock": 25575599,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095800,
         "sources": [
           {
             "label": "syrupUSDT contract on Etherscan",
@@ -119,8 +127,8 @@
           "lockbox:ethereum:0xde76a096c5eadddf97af3fe15ee49d32aeda9822",
           "timelock:bsc:0x950350b073956bd1d22bb1c18c4d45263b5aa3a5"
         ],
-        "observedAt": "2026-07-20",
-        "observedBlock": 111138167,
+        "observedAt": "2026-10-01",
+        "observedBlock": 125055872,
         "sources": [
           {
             "label": "Ethereum CCIP LockReleaseTokenPool 1.5.1 for syrupUSDT",
@@ -158,8 +166,8 @@
           "lockbox:ethereum:0xde76a096c5eadddf97af3fe15ee49d32aeda9822",
           "timelock:plasma:0x3ec62564f66874f619640cbb7fd42a157f21a442"
         ],
-        "observedAt": "2026-07-20",
-        "observedBlock": 27631320,
+        "observedAt": "2026-10-01",
+        "observedBlock": 33896627,
         "sources": [
           {
             "label": "Ethereum CCIP LockReleaseTokenPool 1.5.1 for syrupUSDT",
@@ -197,8 +205,8 @@
           "lockbox:ethereum:0xde76a096c5eadddf97af3fe15ee49d32aeda9822",
           "timelock:mantle:0x618699516a02f25ad4a90511dad36cb9f272ac20"
         ],
-        "observedAt": "2026-07-20",
-        "observedBlock": 98219976,
+        "observedAt": "2026-10-01",
+        "observedBlock": 101353650,
         "sources": [
           {
             "label": "Ethereum CCIP LockReleaseTokenPool 1.5.1 for syrupUSDT",
@@ -232,8 +240,8 @@
           "lockbox:ethereum:0xde76a096c5eadddf97af3fe15ee49d32aeda9822",
           "timelock:ink:0x13ac97663d19ff20fe467bfa580748505e664beb"
         ],
-        "observedAt": "2026-07-20",
-        "observedBlock": 51069538,
+        "observedAt": "2026-10-01",
+        "observedBlock": 57339204,
         "sources": [
           {
             "label": "Ethereum CCIP LockReleaseTokenPool 1.5.1 for syrupUSDT",

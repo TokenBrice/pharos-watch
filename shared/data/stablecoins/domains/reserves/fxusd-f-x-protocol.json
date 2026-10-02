@@ -7,7 +7,7 @@
       "risk": "medium",
       "blacklistable": true,
       "assetClass": "cryptoasset",
-      "issuerOrObligor": "BitGo/Coinbase WBTC custodians",
+      "issuerOrObligor": "WBTC custodial backing; current provider split not established",
       "riskFactors": [
         "market",
         "custody",
@@ -15,7 +15,7 @@
         "liquidity",
         "smart-contract"
       ],
-      "liquidityHorizon": "seven-days",
+      "liquidityHorizon": "unknown",
       "sourceKey": "fx:wbtc"
     },
     {
@@ -31,7 +31,7 @@
         "smart-contract",
         "basis"
       ],
-      "liquidityHorizon": "seven-days",
+      "liquidityHorizon": "unknown",
       "sourceKey": "fx:wsteth"
     }
   ],

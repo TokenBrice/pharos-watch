@@ -28,6 +28,283 @@
     "reviewer": "Grok T55 access review",
     "reviewedAt": "2026-07-30"
   },
+  "oracleRisk": {
+    "tier": "single-source-or-laggy",
+    "summary": "At Celo block 78986505, USDm uses 7 registered Celo V3 FPMMs and 10 remaining Broker/BiPoolManager FX exchanges. Every reviewed rateFeedID has one authorized ChainlinkRelayerV1 reporter and one current getRates entry: SortedOracles is a sorted-list median, not redundant live price failover. Effective report expiry is 360 seconds (global default 300). USDC/axlUSDC pools use feed 0xa1a8003936862e7a15092a91898d69fa8bce290c and relayer 0xef5d3917a9801a75224974dae67839729d624a1d; USDT uses 0xe06c10c63377cd098b589c0b90314bfb55751558 and relayer 0x564dd5fec58e7103c2a6041b7dd1bb3074a4616b. Both have ValueDeltaBreaker 0.15%, reference 1e24 and one-second reset cooldown, with MedianDelta disabled. Each of these stable-collateral FPMMs charges LP/protocol fees of 1/1 basis points; USDm/GBPm, USDm/CHFm and USDm/JPYm charge 20/10, and USDm/EURm charges 15/10 basis points. Remaining FX pairs use MedianDelta 4%/900 seconds and no ValueDelta breaker. FPMMs read OracleAdapter.getFXRateIfValid on quotes/swaps. Stable collateral pools use adapter 0xeb23e1339b2119c0f4a0097cb294e990c1fa6423 with always-open market-hours configuration; FX pools use 0xa472fbbf4b890a54381977ac392bdf82eec4383a with FX hours. Both reject stale medians or non-bidirectional BreakerBox modes and have no alternative live feed. Breaker cooldowns are reset waits, not price observation or liquidation delays. All pinned rates were recent and returned nonzero quotes. The tier follows the existing Mento single-source-or-laggy convention, not the former unsupported failover claim.",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol V10 MentoOracle primary-evidence review",
+      "rationale": "USDm is explicitly reserve-backed in the pinned issuer configuration, not one of the GBPm/CHFm/JPYm CDP assets. The enumerated pinned FPMM swap/rebalancing paths has external price authority but no borrower-specific liquidation engine. Score this authority as coin-price-feed/top-level-only; branch rows and liquidationDelaySec are not applicable. A 900-second breaker reset cooldown or 360-second report expiry is not a liquidation delay. This review covers canonical Celo exchange pricing and does not classify separate bridge control or remote-chain liquidity.",
+      "sources": [
+        {
+          "label": "Celo block 78986505: 2026-10-01T20:41:03Z",
+          "url": "https://celo.blockscout.com/block/78986505"
+        },
+        {
+          "label": "Verified BiPoolManager implementation; pinned runtime exact match",
+          "url": "https://celo.blockscout.com/api/v2/smart-contracts/0xc016174b60519bdc24433d4ed2cff6c1efac7881"
+        },
+        {
+          "label": "Mento explicit reserve/CDP backing configuration",
+          "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/stablecoin-backing.config.ts"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol V10 MentoOracle primary-evidence review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Celo block 78986505: 2026-10-01T20:41:03Z",
+        "url": "https://celo.blockscout.com/block/78986505"
+      },
+      {
+        "label": "Verified SortedOracles implementation; pinned runtime exact match",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x93da60dcdda3229246769cce307076c181f41f72"
+      },
+      {
+        "label": "Verified BiPoolManager implementation; pinned runtime exact match",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0xc016174b60519bdc24433d4ed2cff6c1efac7881"
+      },
+      {
+        "label": "Mento explicit reserve/CDP backing configuration",
+        "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/stablecoin-backing.config.ts"
+      },
+      {
+        "label": "Verified OracleAdapter implementation; pinned runtime exact match",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0xc1b767756f582d124e76bb3e246f31e6ab256059"
+      },
+      {
+        "label": "Verified FPMM implementation; pinned runtime exact match",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x8cb0518a0510ab62450f79f3cd9ee0cbddb77f30"
+      },
+      {
+        "label": "Mento OracleAdapter recency and market-hours documentation",
+        "url": "https://docs.mento.org/mento-v3/build/smart-contracts/oracleadapter"
+      }
+    ],
+    "paths": [
+      {
+        "id": "celo-mento-broker",
+        "chain": "celo",
+        "address": "0x777a8255ca72412f0d706dc03c9d1987306b4cad",
+        "pricingAuthority": "external-price",
+        "applicability": {
+          "disposition": "top-level-only",
+          "reviewedAt": "2026-10-01",
+          "reviewer": "Sol V10 MentoOracle verified per-path applicability",
+          "confidence": "verified",
+          "rationale": "At Celo block 78986505, Broker 0x777a8255ca72412f0d706dc03c9d1987306b4cad lists BiPoolManager 0x22d9db95e6ae61c104a7b6f6c78d7993b94ec901 as its exchange provider and exposes 10 reviewed ConstantSum mint/burn conversion path(s) involving USDm. These paths use external SortedOracles rates and reserve inventory, not borrower collateral positions or borrower liquidation. The pinned issuer configuration explicitly classifies this asset as reserve-backed. This exact local Broker pricing path is therefore top-level-only; no collateral-liquidation branch or liquidationDelaySec applies.",
+          "sources": [
+            {
+              "label": "Celo block 78986505: 2026-10-01T20:41:03Z",
+              "url": "https://celo.blockscout.com/block/78986505"
+            },
+            {
+              "label": "Verified BiPoolManager implementation; pinned runtime exact match",
+              "url": "https://celo.blockscout.com/api/v2/smart-contracts/0xc016174b60519bdc24433d4ed2cff6c1efac7881"
+            },
+            {
+              "label": "Mento explicit reserve/CDP backing configuration",
+              "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/stablecoin-backing.config.ts"
+            }
+          ]
+        }
+      },
+      {
+        "id": "celo-fpmm-8c0014af",
+        "chain": "celo",
+        "address": "0x8c0014afe032e4574481d8934504100bf23fcb56",
+        "pricingAuthority": "external-price",
+        "applicability": {
+          "disposition": "top-level-only",
+          "reviewedAt": "2026-10-01",
+          "reviewer": "Sol V10 MentoOracle verified per-path applicability",
+          "confidence": "verified",
+          "rationale": "At Celo block 78986505, registered FPMM 0x8c0014afe032e4574481d8934504100bf23fcb56 pairs 0x765de816845861e75a25fca122bb6898b8b1282a with 0xccf663b1ff11028f0b19058d0f7b674004a40746 and reads external rateFeedID 0xf590b62f9cfcc6409075b1ecac8176fe25744b88 through OracleAdapter 0xa472fbbf4b890a54381977ac392bdf82eec4383a. Its deployed quote/swap implementation calls getFXRateIfValid and applies pool fees; it is a spot pool and reserve-liquidity pricing authority, not a borrower liquidation engine for USDm. The pinned issuer configuration explicitly identifies USDm as reserve-backed. This exact FPMM pricing path is top-level-only; pairing with a CDP-backed token does not create a local borrower branch for this reserve-backed asset.",
+          "sources": [
+            {
+              "label": "Celo block 78986505: 2026-10-01T20:41:03Z",
+              "url": "https://celo.blockscout.com/block/78986505"
+            },
+            {
+              "label": "Verified FPMM implementation; runtime matched at Celo block 78986505",
+              "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x8cb0518a0510ab62450f79f3cd9ee0cbddb77f30"
+            },
+            {
+              "label": "Mento explicit reserve/CDP backing configuration",
+              "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/stablecoin-backing.config.ts"
+            }
+          ]
+        }
+      },
+      {
+        "id": "celo-fpmm-b285d4c7",
+        "chain": "celo",
+        "address": "0xb285d4c7133d6f27bfb29224fb0d22e7ec3ddd2d",
+        "pricingAuthority": "external-price",
+        "applicability": {
+          "disposition": "top-level-only",
+          "reviewedAt": "2026-10-01",
+          "reviewer": "Sol V10 MentoOracle verified per-path applicability",
+          "confidence": "verified",
+          "rationale": "At Celo block 78986505, registered FPMM 0xb285d4c7133d6f27bfb29224fb0d22e7ec3ddd2d pairs 0x765de816845861e75a25fca122bb6898b8b1282a with 0xeb466342c4d449bc9f53a865d5cb90586f405215 and reads external rateFeedID 0xa1a8003936862e7a15092a91898d69fa8bce290c through OracleAdapter 0xeb23e1339b2119c0f4a0097cb294e990c1fa6423. Its deployed quote/swap implementation calls getFXRateIfValid and applies pool fees; it is a spot pool and reserve-liquidity pricing authority, not a borrower liquidation engine for USDm. The pinned issuer configuration explicitly identifies USDm as reserve-backed. This exact FPMM pricing path is top-level-only; pairing with a CDP-backed token does not create a local borrower branch for this reserve-backed asset.",
+          "sources": [
+            {
+              "label": "Celo block 78986505: 2026-10-01T20:41:03Z",
+              "url": "https://celo.blockscout.com/block/78986505"
+            },
+            {
+              "label": "Verified FPMM implementation; runtime matched at Celo block 78986505",
+              "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x8cb0518a0510ab62450f79f3cd9ee0cbddb77f30"
+            },
+            {
+              "label": "Mento explicit reserve/CDP backing configuration",
+              "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/stablecoin-backing.config.ts"
+            }
+          ]
+        }
+      },
+      {
+        "id": "celo-fpmm-462fe04b",
+        "chain": "celo",
+        "address": "0x462fe04b4fd719cbd04c0310365d421d02aaa19e",
+        "pricingAuthority": "external-price",
+        "applicability": {
+          "disposition": "top-level-only",
+          "reviewedAt": "2026-10-01",
+          "reviewer": "Sol V10 MentoOracle verified per-path applicability",
+          "confidence": "verified",
+          "rationale": "At Celo block 78986505, registered FPMM 0x462fe04b4fd719cbd04c0310365d421d02aaa19e pairs 0x765de816845861e75a25fca122bb6898b8b1282a with 0xceba9300f2b948710d2653dd7b07f33a8b32118c and reads external rateFeedID 0xa1a8003936862e7a15092a91898d69fa8bce290c through OracleAdapter 0xeb23e1339b2119c0f4a0097cb294e990c1fa6423. Its deployed quote/swap implementation calls getFXRateIfValid and applies pool fees; it is a spot pool and reserve-liquidity pricing authority, not a borrower liquidation engine for USDm. The pinned issuer configuration explicitly identifies USDm as reserve-backed. This exact FPMM pricing path is top-level-only; pairing with a CDP-backed token does not create a local borrower branch for this reserve-backed asset.",
+          "sources": [
+            {
+              "label": "Celo block 78986505: 2026-10-01T20:41:03Z",
+              "url": "https://celo.blockscout.com/block/78986505"
+            },
+            {
+              "label": "Verified FPMM implementation; runtime matched at Celo block 78986505",
+              "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x8cb0518a0510ab62450f79f3cd9ee0cbddb77f30"
+            },
+            {
+              "label": "Mento explicit reserve/CDP backing configuration",
+              "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/stablecoin-backing.config.ts"
+            }
+          ]
+        }
+      },
+      {
+        "id": "celo-fpmm-0feba760",
+        "chain": "celo",
+        "address": "0x0feba760d93423d127de1b6abecdb60e5253228d",
+        "pricingAuthority": "external-price",
+        "applicability": {
+          "disposition": "top-level-only",
+          "reviewedAt": "2026-10-01",
+          "reviewer": "Sol V10 MentoOracle verified per-path applicability",
+          "confidence": "verified",
+          "rationale": "At Celo block 78986505, registered FPMM 0x0feba760d93423d127de1b6abecdb60e5253228d pairs 0x48065fbbe25f71c9282ddf5e1cd6d6a887483d5e with 0x765de816845861e75a25fca122bb6898b8b1282a and reads external rateFeedID 0xe06c10c63377cd098b589c0b90314bfb55751558 through OracleAdapter 0xeb23e1339b2119c0f4a0097cb294e990c1fa6423. Its deployed quote/swap implementation calls getFXRateIfValid and applies pool fees; it is a spot pool and reserve-liquidity pricing authority, not a borrower liquidation engine for USDm. The pinned issuer configuration explicitly identifies USDm as reserve-backed. This exact FPMM pricing path is top-level-only; pairing with a CDP-backed token does not create a local borrower branch for this reserve-backed asset.",
+          "sources": [
+            {
+              "label": "Celo block 78986505: 2026-10-01T20:41:03Z",
+              "url": "https://celo.blockscout.com/block/78986505"
+            },
+            {
+              "label": "Verified FPMM implementation; runtime matched at Celo block 78986505",
+              "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x8cb0518a0510ab62450f79f3cd9ee0cbddb77f30"
+            },
+            {
+              "label": "Mento explicit reserve/CDP backing configuration",
+              "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/stablecoin-backing.config.ts"
+            }
+          ]
+        }
+      },
+      {
+        "id": "celo-fpmm-1ad2ea06",
+        "chain": "celo",
+        "address": "0x1ad2ea06502919f935d9c09028df73a462979e29",
+        "pricingAuthority": "external-price",
+        "applicability": {
+          "disposition": "top-level-only",
+          "reviewedAt": "2026-10-01",
+          "reviewer": "Sol V10 MentoOracle verified per-path applicability",
+          "confidence": "verified",
+          "rationale": "At Celo block 78986505, registered FPMM 0x1ad2ea06502919f935d9c09028df73a462979e29 pairs 0x765de816845861e75a25fca122bb6898b8b1282a with 0xd8763cba276a3738e6de85b4b3bf5fded6d6ca73 and reads external rateFeedID 0xf4f9bbda9cd6841fcb9b1510f9269e2db42a6e3a through OracleAdapter 0xa472fbbf4b890a54381977ac392bdf82eec4383a. Its deployed quote/swap implementation calls getFXRateIfValid and applies pool fees; it is a spot pool and reserve-liquidity pricing authority, not a borrower liquidation engine for USDm. The pinned issuer configuration explicitly identifies USDm as reserve-backed. This exact FPMM pricing path is top-level-only; pairing with a CDP-backed token does not create a local borrower branch for this reserve-backed asset.",
+          "sources": [
+            {
+              "label": "Celo block 78986505: 2026-10-01T20:41:03Z",
+              "url": "https://celo.blockscout.com/block/78986505"
+            },
+            {
+              "label": "Verified FPMM implementation; runtime matched at Celo block 78986505",
+              "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x8cb0518a0510ab62450f79f3cd9ee0cbddb77f30"
+            },
+            {
+              "label": "Mento explicit reserve/CDP backing configuration",
+              "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/stablecoin-backing.config.ts"
+            }
+          ]
+        }
+      },
+      {
+        "id": "celo-fpmm-9861f6d2",
+        "chain": "celo",
+        "address": "0x9861f6d2fe392b934c86ec89d2886ceb772b2b41",
+        "pricingAuthority": "external-price",
+        "applicability": {
+          "disposition": "top-level-only",
+          "reviewedAt": "2026-10-01",
+          "reviewer": "Sol V10 MentoOracle verified per-path applicability",
+          "confidence": "verified",
+          "rationale": "At Celo block 78986505, registered FPMM 0x9861f6d2fe392b934c86ec89d2886ceb772b2b41 pairs 0x765de816845861e75a25fca122bb6898b8b1282a with 0xc45ecf20f3cd864b32d9794d6f76814ae8892e20 and reads external rateFeedID 0xfde35b45cbd2504fb5dc514f007bc2de27034274 through OracleAdapter 0xa472fbbf4b890a54381977ac392bdf82eec4383a. Its deployed quote/swap implementation calls getFXRateIfValid and applies pool fees; it is a spot pool and reserve-liquidity pricing authority, not a borrower liquidation engine for USDm. The pinned issuer configuration explicitly identifies USDm as reserve-backed. This exact FPMM pricing path is top-level-only; pairing with a CDP-backed token does not create a local borrower branch for this reserve-backed asset.",
+          "sources": [
+            {
+              "label": "Celo block 78986505: 2026-10-01T20:41:03Z",
+              "url": "https://celo.blockscout.com/block/78986505"
+            },
+            {
+              "label": "Verified FPMM implementation; runtime matched at Celo block 78986505",
+              "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x8cb0518a0510ab62450f79f3cd9ee0cbddb77f30"
+            },
+            {
+              "label": "Mento explicit reserve/CDP backing configuration",
+              "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/stablecoin-backing.config.ts"
+            }
+          ]
+        }
+      },
+      {
+        "id": "celo-fpmm-dc81135f",
+        "chain": "celo",
+        "address": "0xdc81135fd82f02cae736e261fb676b716663e8b8",
+        "pricingAuthority": "external-price",
+        "applicability": {
+          "disposition": "top-level-only",
+          "reviewedAt": "2026-10-01",
+          "reviewer": "Sol V10 MentoOracle verified per-path applicability",
+          "confidence": "verified",
+          "rationale": "At Celo block 78986505, registered FPMM 0xdc81135fd82f02cae736e261fb676b716663e8b8 pairs 0x765de816845861e75a25fca122bb6898b8b1282a with 0xb55a79f398e759e43c95b979163f30ec87ee131d and reads external rateFeedID 0x0f61ba9c30ef7caee7e5cc1f96bffcb0f52ccd64 through OracleAdapter 0xa472fbbf4b890a54381977ac392bdf82eec4383a. Its deployed quote/swap implementation calls getFXRateIfValid and applies pool fees; it is a spot pool and reserve-liquidity pricing authority, not a borrower liquidation engine for USDm. The pinned issuer configuration explicitly identifies USDm as reserve-backed. This exact FPMM pricing path is top-level-only; pairing with a CDP-backed token does not create a local borrower branch for this reserve-backed asset.",
+          "sources": [
+            {
+              "label": "Celo block 78986505: 2026-10-01T20:41:03Z",
+              "url": "https://celo.blockscout.com/block/78986505"
+            },
+            {
+              "label": "Verified FPMM implementation; runtime matched at Celo block 78986505",
+              "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x8cb0518a0510ab62450f79f3cd9ee0cbddb77f30"
+            },
+            {
+              "label": "Mento explicit reserve/CDP backing configuration",
+              "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/stablecoin-backing.config.ts"
+            }
+          ]
+        }
+      }
+    ]
+  },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "USDm has one canonical native issuance route on Celo. The Celo-to-Monad Wormhole NTT route is an external validated burn-mint representation; NEAR Allbridge, Ethereum Moss, and Solana Allbridge are external representation routes. The legacy Klaytn oCUSD route is now re-read through Kaia's replacement public RPC, but its Orbit controller and route-state authority remain unresolved.",
@@ -314,8 +591,8 @@
             "url": "https://klaytnscope.com/token/0x08745bee17026ed2e0e39a98f81189b9e14ab1b3"
           },
           {
-            "label": "DefiLlama celo-dollar adapter",
-            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/celo-dollar/index.ts"
+            "label": "DefiLlama celo-dollar adapter (archived pre-consolidation revision)",
+            "url": "https://raw.githubusercontent.com/DefiLlama/peggedassets-server/cfb73336f802f6c30de5f91c6510a005ba040e5b/src/adapters/peggedAssets/celo-dollar/index.ts"
           }
         ]
       }

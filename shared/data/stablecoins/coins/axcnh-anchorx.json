@@ -30,11 +30,11 @@
   "detailProvider": "coingecko",
   "geckoId": "axcnh",
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "agreed-upon-procedures",
     "url": "https://anchorx.org/transparency",
     "provider": "Kreston ITH Digital Assets",
     "attestorTier": "regional",
-    "cadence": "quarterly",
+    "cadence": "monthly",
     "latestReport": {
       "periodEnd": "2026-06-30",
       "publishedAt": "2026-07-15",

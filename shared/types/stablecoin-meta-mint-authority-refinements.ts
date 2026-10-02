@@ -136,7 +136,7 @@ function validateAuthoredControls({ profile, ctx, controls, profileHasSourceLink
         path: ["controls", index, "address"],
       });
     }
-    if (control.authorityType === "safe" && control.safe == null) {
+    if (control.authorityType === "safe" && control.safe == null && !control.executionScope?.paths.some((path) => path.activation === "counterfactual" && path.counterfactual)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "authorityType safe requires safe details",
@@ -145,7 +145,7 @@ function validateAuthoredControls({ profile, ctx, controls, profileHasSourceLink
     }
     if (
       (control.authorityType === "safe" || control.authorityType === "multisig") &&
-      profile.confidence === "verified"
+      profile.confidence === "verified" && control.weightedQuorum == null
     ) {
       if (control.threshold == null) {
         ctx.addIssue({
@@ -172,7 +172,8 @@ function validateAuthoredControls({ profile, ctx, controls, profileHasSourceLink
         control.authorityType === "safe" &&
         control.safe != null &&
         control.safe.source !== "manual" &&
-        control.safe.observedBlock == null
+        control.safe.observedBlock == null &&
+        !control.executionScope?.paths.some((path) => path.activation === "counterfactual" && path.counterfactual)
       ) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,

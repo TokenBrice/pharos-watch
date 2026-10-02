@@ -27,8 +27,29 @@ import {
 } from "./safety-score-v9-facts.fixture-support";
 import type { V9AssetFactsV2, V9AssetFactsV3 } from "./safety-score-v9-facts.fixture-support";
 import { unresolvedArchetype } from "./safety-score-v9-facts.test-support";
+import { safeParseV9AssetFactsV3 } from "../safety-score-v9/compile";
 
 describe("Safety Score v9 fact compilation and upgrades", () => {
+  it("keeps admitted assets immutable without bypassing cohort or clone validation", () => {
+    const compiled = compileNativeV3FactSet(coreFixture());
+    const { v9FactSetDigest: digest, ...core } = structuredClone(compiled);
+    const admitted = core.assets.map((asset) => {
+      const parsed = safeParseV9AssetFactsV3(asset);
+      if (!parsed.success) throw parsed.error;
+      return parsed.data;
+    });
+    const admittedCore = { ...core, assets: admitted };
+    core.assets[0]!.supply.circulatingUsd = -1;
+    expect(compileV9FactSetV3(admittedCore).v9FactSetDigest).toBe(digest);
+    expect(() => { admitted[0]!.supply.circulatingUsd = -1; }).toThrow(TypeError);
+    expect(() => compileV9FactSetV3({
+      ...admittedCore,
+      activeAssetIds: admittedCore.activeAssetIds.slice(1),
+    })).toThrow("Assets must match the exact active asset set");
+    const cloned = structuredClone(admittedCore);
+    cloned.assets[0]!.supply.circulatingUsd = -1;
+    expect(() => compileV9FactSetV3(cloned)).toThrow();
+  });
   it("defaults retained v2 fact routes without modeled confidence to low", () => {
     const retained = structuredClone(coreFixture());
     const route = retained.assets[0]!.exitRoutes.find((candidate) => candidate.routeId === "amm-main")!;
@@ -285,7 +306,7 @@ describe("Safety Score v9 fact compilation and upgrades", () => {
       ),
     ).toBe(true);
   });
-  it("preserves explicit exit-gap and mechanism-profile ownership over native complete-empty fallback", () => {
+  it("preserves explicit exit-gap and mechanism-profile ownership for a complete but unmeasured inventory", () => {
     const nativeWithGap = structuredClone(compileNativeV3FactSet(coreFixture()));
     const { v9FactSetDigest: _gapDigest, ...gapCore } = nativeWithGap;
     const gapAsset = gapCore.assets.find(
@@ -300,7 +321,7 @@ describe("Safety Score v9 fact compilation and upgrades", () => {
     const exitGap = gapAsset.gaps.find(
       (gap) => gap.ownerDomain === "exit",
     )!;
-    exitGap.reasonCode = "no-viable-exit-path";
+    exitGap.reasonCode = "missing-same-notional-route";
     exitGap.responsibility = "issuer-undisclosed";
 
     const gapEvaluated = evaluateV9FactSet(
@@ -309,10 +330,12 @@ describe("Safety Score v9 fact compilation and upgrades", () => {
     ).assets.find((asset) => asset.assetId === "alpha")!;
     expect(gapEvaluated.scoreInput.pillars.exit.reasons).toContainEqual(
       expect.objectContaining({
-        code: "no-viable-exit-path",
+        code: "missing-same-notional-route",
         responsibility: "issuer-undisclosed",
       }),
     );
+    expect(gapEvaluated.exit.reasons).not.toContain("no-viable-exit-path");
+    expect(gapEvaluated.scoreInput.pillars.exit.adverseAttribution).toEqual([]);
 
     const profileCore = nativeCompleteEmptyCoreFixture();
     const profileAsset = profileCore.assets.find(

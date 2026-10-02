@@ -3,6 +3,7 @@
   "name": "Matrixdock Silver",
   "symbol": "XAGm",
   "oneLiner": "XAGm is Matrixdock's silver-backed commodity token, with each token representing roughly one troy ounce of LBMA Good Delivery silver vaulted in Asia.",
+  "custodyModel": "unknown",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "SILVER",
@@ -24,21 +25,17 @@
     "attestorJurisdiction": "Singapore",
     "attestorLicense": "Bullion vault inspection and assurance",
     "latestReport": {
-      "periodEnd": "2026-09-21",
-      "publishedAt": "2026-09-21",
-      "assuranceMethod": "self-verification",
-      "scope": "assets-and-liabilities",
-      "liabilityReconciliation": "full",
-      "reviewer": "Claude curation campaign 2026-09-21 (Resv05)",
+      "periodEnd": "2026-06-30",
+      "publishedAt": "2026-07-17",
+      "assuranceMethod": "audit",
+      "scope": "assets-only",
+      "liabilityReconciliation": "none",
+      "reviewer": "Sol curation pass 2026-10-01 (ValM03EUSD)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Matrixdock XAGm reserve dashboard",
-          "url": "https://www.matrixdock.com/xagm"
-        },
-        {
-          "label": "Matrixdock XAGm underlying assets dashboard",
-          "url": "https://www.matrixdock.com/transparency/underlying-assets?type=xagm&language=en"
+          "label": "Bureau Veritas physical bullion inventory report",
+          "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FVaFEA9CzGKo22HcojuSO%2FMatrixdock%20Gold%20Bureau%20Veritas%20Audit%20Jul%202026.pdf?alt=media&token=54e9714e-c65f-4b0c-8bcf-c7869956dd20"
         }
       ]
     }
@@ -73,7 +70,6 @@
     }
   ],
   "collateralQuality": "rwa",
-  "custodyModel": "institutional-regulated",
   "governanceQuality": "single-entity",
   "liveReservesConfig": {
     "adapter": "matrixdock-frs",

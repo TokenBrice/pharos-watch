@@ -32,7 +32,7 @@
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
-    "reserveDisclosureUrl": "https://apidocs.bridge.xyz/platform/issuance/faq",
+    "reserveDisclosureUrl": "https://transparency.bridge.xyz/v0/stablecoins/path_usd",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
     "notes": "Bridge (OCC filing ID 343543) received conditional approval for a federally chartered national trust bank on Feb 12, 2026: the same track as Circle, Ripple, Paxos, BitGo, and Fidelity Digital Assets. This is a trust charter conditional approval under existing OCC authority, not a PPSI approval under the GENIUS Act; the PPSI application framework itself remains in proposed-rulemaking. Bridge publicly describes its stack as GENIUS Act-ready. pathUSD is Tempo's TIP-20 quote token issued via Bridge infrastructure; no token-specific GENIUS authorization was located.",

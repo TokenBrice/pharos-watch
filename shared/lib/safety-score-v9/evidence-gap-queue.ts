@@ -28,6 +28,7 @@ import { readCompiledV9FactSetForEvaluation } from "./facts";
 import { assertV9ValidatedPolicyEnvelope, resolveV9ReasonPolicy } from "./policy";
 import { evaluateV9SubthresholdUnresolvedBridgeJoins } from "./control-bridge-join";
 import { compareText, deepFreeze } from "./primitives";
+import { v9AccessClaimGraphStatuses } from "../../types/safety-score-v9-access-lookthrough";
 
 const V9_EVIDENCE_GAP_QUEUE_DIGEST_DOMAIN_V1 = "safety-score-v9.evidence-gap-queue.v1";
 const V9_EVIDENCE_GAP_QUEUE_DIGEST_DOMAIN_V2 = "safety-score-v9.evidence-gap-queue.v2";
@@ -59,6 +60,7 @@ function statusesForAsset(asset: V9AssetFactsV3): V9FactStatusV2[] {
     asset.accessReview.transfer.status,
     asset.accessReview.freeze.status,
     ...asset.accessReview.freeze.reviews.map((review) => review.status),
+    ...v9AccessClaimGraphStatuses(asset.accessReview.freeze.claimGraph).map((row) => row.status),
     asset.peg.status,
     asset.supply.status,
   ];
@@ -180,6 +182,7 @@ function bridgeJoinForAsset(
   asset: V9AssetFactsV3,
   materialShareThreshold: number,
   commonModeShareThreshold: number,
+  unresolvedFullCeilingShareThreshold: number,
 ): V9EvidenceGapBridgeJoinV1 {
   const bridge = asset.economicControlReview.bridge;
   const join = evaluateV9SubthresholdUnresolvedBridgeJoins(
@@ -188,6 +191,7 @@ function bridgeJoinForAsset(
     bridge.routes,
     materialShareThreshold,
     commonModeShareThreshold,
+    unresolvedFullCeilingShareThreshold,
   );
   return {
     diagnostics: bridge.diagnostics ?? null,
@@ -292,7 +296,10 @@ export function buildV9EvidenceGapQueue(args: {
     // One join evaluation per asset, shared by every bridge-scoped gap on it.
     let assetBridgeJoin: V9EvidenceGapBridgeJoinV1 | null = null;
     const bridgeJoin = (): V9EvidenceGapBridgeJoinV1 =>
-      (assetBridgeJoin ??= bridgeJoinForAsset(asset, materialShareThreshold, materiality.commonModeShareThreshold));
+      (assetBridgeJoin ??= bridgeJoinForAsset(
+        asset, materialShareThreshold, materiality.commonModeShareThreshold,
+        materiality.unresolvedDeploymentFullCeilingSharePct / 100,
+      ));
     return asset.gaps.map((gap) => {
       const reasonPolicy = resolveV9ReasonPolicy(args.policy, gap.reasonCode);
       const policyBindingIssues: V9EvidenceGapPolicyBindingIssue[] = [];

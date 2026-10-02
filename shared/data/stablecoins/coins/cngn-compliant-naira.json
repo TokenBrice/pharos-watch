@@ -33,7 +33,7 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://cngn.co/transparency",
-    "provider": "cNGN transparency page (no reserve attestation is reachable: the page's only documents are smart-contract security audits, its live reserve widget renders zero values, and the reported Bala Isah Garba & Company ISAE 3000 engagement exists only in secondary press with the last referenced report October 2025)",
+    "provider": "cNGN transparency page (monthly reserve audits are claimed, but linked documents are smart-contract security audits; its zero-valued metrics dated September 21, 2026 are trading volumes and transaction counts, not reserve balances. No dated reserve attestation is linked. The historical Bala Isah Garba & Company ISAE 3000 engagement and October 2025 report reference remain secondary, unverified claims.)",
     "attestorTier": "undisclosed",
     "cadence": "undisclosed",
     "attestorJurisdiction": "Nigeria"

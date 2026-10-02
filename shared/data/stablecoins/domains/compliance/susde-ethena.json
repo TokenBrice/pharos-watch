@@ -1,12 +1,22 @@
 {
   "id": "susde-ethena",
   "mica": {
-    "status": "out-of-scope"
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Ethena staking receipt and EU/EEA acquisition restrictions",
+        "url": "https://docs.ethena.fi/technical-design/staking-usde"
+      },
+      {
+        "label": "MiCA Regulation (EU) 2023/1114 scope",
+        "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32023R1114"
+      }
+    ]
   },
   "genius": {
     "applicability": "non-payment-token",
     "applicabilityBasis": {
-      "summary": "sUSDe is a reward-accruing ERC-4626 staking receipt for USDe, with a changing exchange rate and no fixed-value payment function; Ethena also excludes EU and EEA acquisition.",
+      "summary": "sUSDe is a reward-accruing ERC-4626 USDe staking receipt with a variable exchange rate. This row records Pharos' editorial non-payment-token assessment of that savings-receipt structure, not a token-specific regulatory determination. GENIUS Act section 2(22) considers payment or settlement use and fixed monetary-value redemption; EU/EEA acquisition restrictions are a separate issuer policy.",
       "references": [
         {
           "label": "Ethena: Staking USDe",

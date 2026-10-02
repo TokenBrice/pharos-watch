@@ -1,7 +1,7 @@
 import {
   canonicalExitRouteAssetKey,
   canonicalExitRouteChain,
-} from "@shared/lib/exit-route-identity";
+} from "@shared/types/exit-route-identity";
 import type { DexAmmExecutionModel, DexExecutionCapabilityGate } from "@shared/types/market";
 import { toTokenUnits } from "@shared/lib/math";
 import { encodeFunctionData, keccak256, parseAbi } from "viem/utils";

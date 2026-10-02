@@ -15,7 +15,7 @@
         "0x437cc33344a0B27A429f795ff6B469C72698B291"
       ],
       "implementationAddresses": [
-        "0x6d9d63afccf515f393d5e65be69d38bb3b29d13"
+        "0x6d9db63afccf515f393d5e65be69d38bb3b29d13"
       ],
       "adminAddresses": [
         "0xf7298f047f92d0eb21231478ef6ba9fe1ecd4c73",
@@ -28,7 +28,7 @@
       "sources": [
         {
           "label": "Current WrappedMToken V2 implementation (Blockscout ETH)",
-          "url": "https://eth.blockscout.com/address/0x6d9d63afccf515f393d5e65be69d38bb3b29d13?tab=contract"
+          "url": "https://eth.blockscout.com/address/0x6d9db63afccf515f393d5e65be69d38bb3b29d13?tab=contract"
         },
         {
           "label": "Ethereum wM proxy (Blockscout ETH)",
@@ -62,16 +62,16 @@
           "threshold": 1,
           "enabledModules": [],
           "version": "1.4.1",
-          "observedAt": "2026-08-16",
-          "observedBlock": 25773353,
+          "observedAt": "2026-10-01",
+          "observedBlock": 26095800,
           "source": "onchain"
         },
-        "capDescription": "EIP-1967 minimal proxy with no admin slot; current implementation 0x6d9d63afccf515f393d5e65be69d38bb3b29d13 keeps wrap/unwrap M-backed, but upgrade requires a TTG-registered migrator AND migrationAdmin 0xf7298f047f92d0eb21231478ef6ba9fe1ecd4c73 to call migrate(). The migration Safe is one-of-two, so replacement logic can change the wrapper-local economic bound.",
+        "capDescription": "EIP-1967 minimal proxy with no admin slot; current implementation 0x6d9db63afccf515f393d5e65be69d38bb3b29d13 keeps wrap/unwrap M-backed, but upgrade requires a TTG-registered migrator AND migrationAdmin 0xf7298f047f92d0eb21231478ef6ba9fe1ecd4c73 to call migrate(). The migration Safe is one-of-two, so replacement logic can change the wrapper-local economic bound.",
         "canRaiseCap": true,
         "sources": [
           {
             "label": "Current WrappedMToken V2 implementation (Blockscout ETH)",
-            "url": "https://eth.blockscout.com/address/0x6d9d63afccf515f393d5e65be69d38bb3b29d13?tab=contract"
+            "url": "https://eth.blockscout.com/address/0x6d9db63afccf515f393d5e65be69d38bb3b29d13?tab=contract"
           },
           {
             "label": "Ethereum wM proxy (Blockscout ETH)",
@@ -86,11 +86,13 @@
             "url": "https://github.com/m0-platform/common/blob/489fae6daecd227616155e4f8cacfd17aeb3e2a1/src/Migratable.sol"
           }
         ],
-        "evidence": "At Ethereum block 25773353, the EIP-1967 implementation slot resolved to 0x6d9d63afccf515f393d5e65be69d38bb3b29d13 and the admin slot was zero. migrationAdmin() returned 0xf7298f047f92d0eb21231478ef6ba9fe1ecd4c73; that Safe returned two owners, threshold 1, Safe version 1.4.1, and no enabled modules. Guard and fallback-handler reads reverted and are not treated as verified controls. The current WrappedMToken implementation transfers M before minting wM and burns wM before returning M; migration additionally requires the TTG Registrar migrator key."
+        "evidence": "At Ethereum block 25773353, the EIP-1967 implementation slot resolved to 0x6d9db63afccf515f393d5e65be69d38bb3b29d13 and the admin slot was zero. migrationAdmin() returned 0xf7298f047f92d0eb21231478ef6ba9fe1ecd4c73; that Safe returned two owners, threshold 1, Safe version 1.4.1, and no enabled modules. Guard and fallback-handler reads reverted and are not treated as verified controls. The current WrappedMToken implementation transfers M before minting wM and burns wM before returning M; migration additionally requires the TTG Registrar migrator key. Current re-verification on 2026-10-01 at Ethereum block 26095800 confirmed the migrationAdmin, underlying M token, current implementation, and the one-of-two Safe with the same owners and no enabled modules.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095800
       },
       {
         "chain": "solana",
-        "address": "Anfx7wng5TEe5UrkFKTirtADBawmtRs9KoD15BUbEmv",
+        "address": "Anfx7wng5TEe5UrkFKTirtADBawmtRs9KoD15BUbEmvT",
         "deploymentRefs": [
           "ethereum:0x437cc33344a0b27a429f795ff6b469c72698b291"
         ],
@@ -101,10 +103,10 @@
         "canRaiseCap": true,
         "failureDomainKeys": [
           "program:solana:wMXX1K1nca5W4pZr1piETe78gcAVVrEFi9f4g46uXko",
-          "pda:solana:Anfx7wng5TEe5UrkFKTirtADBawmtRs9KoD15BUbEmv",
+          "pda:solana:Anfx7wng5TEe5UrkFKTirtADBawmtRs9KoD15BUbEmvT",
           "upgrade-authority:solana:9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW"
         ],
-        "capDescription": "The m_ext program's mint-authority PDA Anfx7wng5TEe5UrkFKTirtADBawmtRs9KoD15BUbEmv mints Token-2022 wM only after the wrap instruction transfers canonical M into the extension vault. This is wrapper-local issuance, not native M issuance; the current bound can be replaced by the program upgrade authority.",
+        "capDescription": "The m_ext program's mint-authority PDA Anfx7wng5TEe5UrkFKTirtADBawmtRs9KoD15BUbEmvT mints Token-2022 wM only after the wrap instruction transfers canonical M into the extension vault. This is wrapper-local issuance, not native M issuance; the current bound can be replaced by the program upgrade authority.",
         "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
@@ -116,9 +118,9 @@
             "url": "https://raw.githubusercontent.com/m0-foundation/solana-m-extensions/main/programs/m_ext/src/instructions/wrap.rs"
           }
         ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 439806760,
-        "evidence": "At finalized Solana slot 439806760, the Token-2022 mint mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp had mint authority PDA Anfx7wng5TEe5UrkFKTirtADBawmtRs9KoD15BUbEmv and freeze authority 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW. Official m_ext wrap.rs transfers M into the extension vault before invoking Token-2022 mintTo, so the PDA is currently M-backed and cap-limited; the upgradeable m_ext ProgramData names the same EOA as upgrade authority, with that upgrade surface separately scored under Bridge Risk."
+        "observedAt": "2026-10-01",
+        "observedBlock": 452212995,
+        "evidence": "At finalized Solana slot 439806760, the Token-2022 mint mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp had mint authority PDA Anfx7wng5TEe5UrkFKTirtADBawmtRs9KoD15BUbEmvT and freeze authority 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW. Official m_ext wrap.rs transfers M into the extension vault before invoking Token-2022 mintTo, so the PDA is currently M-backed and cap-limited; the upgradeable m_ext ProgramData names the same EOA as upgrade authority, with that upgrade surface separately scored under Bridge Risk. Current re-verification on 2026-10-01 at finalized response context slot 452212995 confirmed the corrected mint-authority PDA, freeze authority, and both Portal and m_ext ProgramData upgrade authorities."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -128,7 +130,7 @@
       "sources": [
         {
           "label": "Current WrappedMToken V2 implementation (Blockscout ETH)",
-          "url": "https://eth.blockscout.com/address/0x6d9d63afccf515f393d5e65be69d38bb3b29d13?tab=contract"
+          "url": "https://eth.blockscout.com/address/0x6d9db63afccf515f393d5e65be69d38bb3b29d13?tab=contract"
         },
         {
           "label": "M0 WrappedMToken GitHub",

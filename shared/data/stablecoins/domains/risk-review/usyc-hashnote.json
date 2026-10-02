@@ -2,10 +2,23 @@
   "id": "usyc-hashnote",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: USYC resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "USYC product structuring: allowlist, entitlements, and system halt",
+        "url": "https://usyc.docs.hashnote.com/overview/product-structuring.md"
+      },
+      {
+        "label": "USYC verified Ethereum implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbf0f2f3aad6b99893d80c550fbacec915545eb92"
+      },
+      {
+        "label": "Solana mainnet finalized account observation",
+        "url": "https://api.mainnet-beta.solana.com"
+      }
+    ],
+    "evidence": "Issuer documentation explicitly describes allowlist entitlements and a system halt that can freeze all USYC transactions. The verified Ethereum implementation checks transfer permissions through RolesAuthority. At finalized Solana slot 452213698, Token-2022 USYC retained live freezeAuthority DZ7j2YLDq7847t2HtCWaDQUTpLJ4BinPGsY8w9Aai63y, a non-executable account owned by the documented Teller and Permissions program. The prior inferred Yes verdict is now supported by primary documentation and pinned state.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA11USYC)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
@@ -310,13 +323,13 @@
         ],
         "authorityType": "eoa",
         "modulesOrGuardsStatus": "none-detected",
-        "capDescription": "The shared zero-code FundAdmin can immediately set BSC representation minter allowances to uint256.max; its Ethereum native FundAdmin and minter capability remains separately scored in Mint Authority.",
+        "capDescription": "The shared zero-code FundAdmin retains an indirect path to unbounded BSC representation minting: it can grant a non-FundAdmin role and configure that role's token setMinterAllowance capability. Its current direct setMinterAllowance permission is false and its allowance is zero; Ethereum native powers remain separately scored in Mint Authority.",
         "canRaiseCap": true,
         "routeChecks": {
-          "pausersAdminsUpgraders": "At BSC block 116356868, this zero-code EOA was the current FundAdmin on the BSC Entitlements/RolesAuthority and could immediately set representation-minter allowances."
+          "pausersAdminsUpgraders": "At BSC block 125134912, this account held System_FundAdmin (enum value 13) and could call Entitlements.setRoleCapability and setUserRole. The verified implementation permits it to assign a non-FundAdmin role and authorize that role for token setMinterAllowance, without an owner transaction or delay."
         },
-        "observedAt": "2026-08-16",
-        "observedBlock": 116356868,
+        "observedAt": "2026-10-01",
+        "observedBlock": 125134912,
         "sources": [
           {
             "label": "BSC USYC Entitlements/RolesAuthority",
@@ -329,9 +342,13 @@
           {
             "label": "BSC USYC Cross Chain Teller",
             "url": "https://bscscan.com/address/0xf38979e05650be7926ea07bb59c48fb9b1db3d08#code"
+          },
+          {
+            "label": "Sourcify verified current BSC RolesAuthority implementation and enum",
+            "url": "https://sourcify.dev/server/v2/contract/56/0x8cadc832040bc66a0aeef9bf6b6d1bd7bcc5acdb?fields=abi,sources"
           }
         ],
-        "evidence": "At BSC block 116356868, this zero-code EOA was the current FundAdmin on the BSC Entitlements/RolesAuthority. It could immediately set any BSC representation-minter allowance to uint256.max; this bridge-route capability is separate from its Ethereum native Mint Authority control."
+        "evidence": "Historical block 116356868 recorded direct FundAdmin allowance-setting. At BSC block 125134912, the current Entitlements proxy implementation was 0x8cadc832040bc66a0aeef9bf6b6d1bd7bcc5acdb. Its verified Role enum places System_FundAdmin at 13, explaining why the former value 255 reverted. getUserRoles returned 0x2080 and doesUserHaveRole(account,13) returned true. Direct token setMinterAllowance permission was false and minterAllowance was zero, but canCall(account,Entitlements,setRoleCapability) and canCall(account,Entitlements,setUserRole) were true. Verified source lets a FundAdmin assign any non-FundAdmin system role and configure that role's capabilities; it can therefore authorize itself or another account to set an unlimited token minter allowance. The adverse canRaiseCap fact remains true, and the deployment-specific ABI/capability uncertainty is resolved."
       }
     ]
   }

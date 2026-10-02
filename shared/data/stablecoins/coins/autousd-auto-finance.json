@@ -15,6 +15,22 @@
   "detailProvider": "coingecko",
   "collateral": "USDC deposited into Auto Finance's autoUSD autopool, with protocol-managed allocation across DeFi liquidity and yield destinations",
   "pegMechanism": "Autopool receipt-token share price appreciates as earnings auto-compound; withdrawals redeem shares for USDC subject to autopool liquidity and destination unwinds",
+  "mechanismArchetypeReview": {
+    "disposition": "unresolved",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC13)",
+    "rationale": "Ruling D18 requires the scored mechanism to follow the holder's actual claim. autoUSD is the identified ERC-4626 Autopool share whose USDC withdrawals depend on destination valuations, unwinds, fees and slippage. The reviewed architecture establishes a strategy-vault claim, not a direct fiat redemption obligation. No replacement archetype or classification override is asserted; the existing strategy-vault relationship remains, pending a reviewed score-family mapping for this exact product.",
+    "sources": [
+      {
+        "label": "Auto Finance autoUSD contract registry",
+        "url": "https://docs.auto.finance/developer-docs/contracts-overview/contract-addresses"
+      },
+      {
+        "label": "Auto Finance Autopool share valuation and redemption architecture",
+        "url": "https://docs.auto.finance/developer-docs/contracts-overview/autopool-eth-contracts-overview/autopool-contracts-and-systems/autopools"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

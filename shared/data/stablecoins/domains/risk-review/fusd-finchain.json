@@ -18,7 +18,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "FUSD has five independently stateful, issuer-native deployments on Ethereum, Avalanche, Sonic, Monad, and Solana. Chainlink CCIP BurnMintTokenPools and TokenBridgeSender provide additional cross-chain burn/mint and transfer machinery on the EVM deployments; their route-scoped controls remain separate from native Mint Authority. The Solana SPL deployment has an independently observed 1-of-3 mint-authority multisig and holder-freeze authority. The external CCIP messaging and pool validation path, plus shared FinChain EOA and ProxyAdmin failure domains, keep the overall bridge tier at external-validated-network.",
+    "summary": "FUSD's Ethereum, Avalanche, Sonic, and Monad deployments have issuer-native state and additional CCIP BurnMintTokenPool and TokenBridgeSender transfer machinery. The cataloged Solana mint has a verified 1-of-3 authority and freeze key, but its metadata names FinChain Dollar LP / FUSDLP while both issuer token pages list the same address. Its existing native route is retained pending liability-identity adjudication. External CCIP validation and shared FinChain EOA and ProxyAdmin failure domains remain reviewed at external-validated-network.",
     "reviewedAt": "2026-09-21",
     "reviewer": "Claude curation campaign 2026-09-21 (Ctrl8)",
     "confidence": "verified",
@@ -168,10 +168,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "At finalized Solana slot 449002572, the documented FUSD SPL mint was initialized under the legacy SPL Token program with mint authority Ch1Z9TZK7hiX73HZnhGQygsZ3zr1Rjh8ifspDfAqVRgm and freeze authority E1wYYoH89zYz5vfXFoWBfuvPhzmHCMsJ4WceK4A1WP7C. At slot 449002740, the mint-authority account parsed as an initialized 1-of-3 SPL Token multisig. This is independently stateful native issuance rather than an identified supply-conserving bridge representation.",
+        "reviewNote": "Finalized slot 452345452 on 2026-10-01 confirms the cataloged mint and its initialized 1-of-3 multisig. At finalized slot 452346924 its Metaplex metadata PDA G5gRiKMa56BuSNHr7WBgcVxdquMGGWioSrZrrMzTnZ6j names FinChain Dollar LP / FUSDLP. The issuer's FUSD Token and FUSDLP Token pages both list the same Solana mint. Native SPL issuance is observed, but whether this is a canonical FUSD liability or a separately issued FUSDLP fund token is unresolved. Retaining the route records existing exposure without resolving that identity conflict.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-09-21",
-        "observedBlock": 449002740,
+        "observedAt": "2026-10-01",
+        "observedBlock": 452345452,
         "controllerChain": "solana",
         "controllerAddress": "Ch1Z9TZK7hiX73HZnhGQygsZ3zr1Rjh8ifspDfAqVRgm",
         "failureDomainKeys": [
@@ -190,6 +190,10 @@
           {
             "label": "FUSD Solana mint explorer",
             "url": "https://solscan.io/token/51tpgun58apNKgrk96xAVUCN5yC7cDzt3EHov9UjBh3Q"
+          },
+          {
+            "label": "FinChain FUSDLP token page listing the same Solana mint",
+            "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusdlp-token"
           }
         ]
       }
@@ -305,7 +309,7 @@
           "rateLimits": "At Ethereum block 25770565, getRateLimitAdmin() returned the zero address. The pool enforces inbound and outbound rate limits, and FinChain EOA 0xc61f22aa3a6469f4f90994421f4570459217c215 can raise or reconfigure its route limits.",
           "pausersAdminsUpgraders": "The pool owner is the shared FinChain EOA 0xc61f22aa3a6469f4f90994421f4570459217c215, which is also the common token/gateway admin and ProxyAdmin owner."
         },
-        "capDescription": "Mint is constrained by authenticated inbound CCIP checks and per-route rate limits, but the shared FinChain owner can reconfigure or raise those route limits.",
+        "capDescription": "Current token MINTER_ROLE authorization is absent for this pool. The shared FinChain EOA currently holds the role's DEFAULT_ADMIN_ROLE and can restore the pool's permission through grantRole without an implementation upgrade. Bridge-mint remains an immediately restorable capability; authenticated CCIP checks and route limits constrain the pool after authorization is restored.",
         "canRaiseCap": true,
         "observedAt": "2026-08-16",
         "observedBlock": 25770565,
@@ -319,7 +323,7 @@
             "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "evidence": "At Ethereum block 25770565, this CCIP pool was a live FUSD token MINTER_ROLE holder. Its owner was FinChain EOA 0xc61f22aa3a6469f4f90994421f4570459217c215, its local token was FUSD 0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c, its router was 0x80226fc0ee2b096224eeac085bb9a8cba1146f7d, and getRateLimitAdmin() returned zero. It served three configured selectors at the observation and the shared EOA can raise route limits."
+        "evidence": "At Ethereum block 25770565, this CCIP pool was a live FUSD token MINTER_ROLE holder, owned by FinChain EOA 0xc61f22aa3a6469f4f90994421f4570459217c215, with three configured selectors. On 2026-10-01 at Ethereum block 26095806, token.hasRole(MINTER_ROLE, this pool) returned false. The pool still returned the same owner, local FUSD token 0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c, router 0x80226fc0ee2b096224eeac085bb9a8cba1146f7d, zero getRateLimitAdmin(), and three supported selectors. At Ethereum block 26097118 on 2026-10-01, the pool's MINTER_ROLE was still absent, owner() returned the same FinChain EOA, the EOA held token DEFAULT_ADMIN_ROLE, and getRoleAdmin(MINTER_ROLE) returned DEFAULT_ADMIN_ROLE. A read-only eth_call from that EOA to token.grantRole(MINTER_ROLE,pool) succeeded with result 0x, demonstrating immediate permission restoration without an upgrade; no transaction was sent. The historical mint grant and immediately restorable capability are retained, with no safety-tier improvement."
       },
       {
         "id": "fusd-avalanche-ccip-pool-chainlink",

@@ -3,6 +3,7 @@
   "name": "Sky Dollar",
   "symbol": "USDS",
   "oneLiner": "USDS is Sky's upgraded successor to DAI, minted 1:1 from DAI or against the same Maker vault system of RWA, USDC, and crypto collateral.",
+  "custodyModel": "mixed",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent",
@@ -66,7 +67,6 @@
     }
   ],
   "collateralQuality": "rwa",
-  "custodyModel": "institutional-top",
   "governanceQuality": "dao-governance",
   "liveReservesConfig": {
     "adapter": "sky-makercore",

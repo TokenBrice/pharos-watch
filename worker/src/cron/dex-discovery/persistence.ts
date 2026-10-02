@@ -5,7 +5,7 @@ import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { runCappedPruneFamily } from "../shared/capped-delete";
 import { CG_CHAIN_MAP, DS_CHAIN_MAP, GT_CHAIN_MAP } from "@shared/lib/chains";
 import { CURVE_NATIVE_DISCOVERY_CHAINS } from "@shared/lib/dex-deployment-coverage";
-import { canonicalExitRouteScopedId } from "@shared/lib/exit-route-identity";
+import { canonicalExitRouteScopedId } from "@shared/types/exit-route-identity";
 import type { ContractDeployment } from "@shared/types/core";
 import { tryParseJson } from "../../lib/json-parse";
 import {

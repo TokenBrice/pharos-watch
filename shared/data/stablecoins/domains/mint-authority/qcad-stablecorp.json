@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "QCAD token ownership and immediate proxy upgrades on Ethereum and Base use distinct chain-local 3/6 Safe instances. The token-owner Safes and proxy-admin Safes have different signer compositions; no modules or guards were detected. Stablecorp's issuance backend mints through the Safe-controlled token contracts.",
+    "summary": "QCAD token ownership and immediate proxy upgrades on Ethereum and Base use distinct chain-local 3/6 Safe instances. At Ethereum block 26095807 and Base block 52024171, the token-owner and proxy-admin Safes had identical six-owner sets, with no enabled modules or guard. The prior review recorded different signer compositions. Solana has a separate SPL-token mint authority and is not governed by these EVM Safe controls.",
     "controls": [
       {
         "deploymentRefs": [
@@ -21,8 +21,7 @@
       {
         "deploymentRefs": [
           "base:0xa15705e6fc8b3e08e7253f3758de1a754baa0761",
-          "ethereum:0x3fa142dd3f384414e05e71ad0939274edc82ec0a",
-          "solana:EeBX9JLdvsp4HnBbMgC1HnAjBkBQxgxtWxspcCLtT6ci"
+          "ethereum:0x3fa142dd3f384414e05e71ad0939274edc82ec0a"
         ],
         "label": "Stablecorp token owner — Gnosis Safe (6 signers, threshold 3)",
         "role": "minter-admin",
@@ -52,7 +51,9 @@
           "observedBlock": 25295037,
           "source": "onchain"
         },
-        "evidence": "At Ethereum block 25295037, owner() on QCAD ETH proxy 0x3fa142dd returned 0x4ff9ace93dd7a18bd7014aa9a179117adf20f6a9. getOwners() returned 6 addresses; getThreshold() = 3; VERSION() = '1.4.1'; getModulesPaginated returned empty array; guard storage slot = 0x0; fallbackHandler = 0xfd0732dc. Same Safe is owner on Base (confirmed via owner() at Base block 47200812).",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095807,
+        "evidence": "At Ethereum block 26095807 and Base block 52024171, both QCAD token proxies return owner() = 0x4ff9ace93dd7a18bd7014aa9a179117adf20f6a9. Each chain-local Safe returned the recorded six-owner set, threshold 3, version 1.4.1, no enabled modules, and zero guard. The fallback-handler value remains the historical Ethereum block 25295037 observation; it was not re-read in this pass.",
         "sources": [
           {
             "label": "QCAD Ethereum token proxy",
@@ -67,8 +68,7 @@
       {
         "deploymentRefs": [
           "base:0xa15705e6fc8b3e08e7253f3758de1a754baa0761",
-          "ethereum:0x3fa142dd3f384414e05e71ad0939274edc82ec0a",
-          "solana:EeBX9JLdvsp4HnBbMgC1HnAjBkBQxgxtWxspcCLtT6ci"
+          "ethereum:0x3fa142dd3f384414e05e71ad0939274edc82ec0a"
         ],
         "label": "Proxy-admin upgrade authority — Ethereum and Base",
         "role": "minter-admin",
@@ -85,7 +85,7 @@
           "version": "1.4.1",
           "owners": [
             "0x17780dA7aB5481B01D9cA0DB45ead47dd19FB3cb",
-            "0x4A2D43746509754AaC7E69d8e8fE96278D95E135",
+            "0xfb60a32d05cf45d4210ff982d7455521b4696197",
             "0x10daB7A725b39c46280DB77fB284e36D88bc9dEd",
             "0x5aFB77a4F308fF9235535C77727C86360a5F159b",
             "0x6868Cd7751d8Efc07f0F5A2Dd9a114831C231bc6",
@@ -94,13 +94,13 @@
           "threshold": 3,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "observedAt": "2026-07-13",
-          "observedBlock": 25526458,
+          "observedAt": "2026-10-01",
+          "observedBlock": 26095807,
           "source": "onchain"
         },
-        "observedAt": "2026-07-13",
-        "observedBlock": 25526458,
-        "evidence": "On Ethereum and Base, the EIP-1967 proxy-admin slots resolve to ProxyAdmins 0xcf09e8de3086678557dca73d7e4de7763cfdbbdd and 0x3037bd16377c89fcdffe785bec945b8e383db599. Each ProxyAdmin is owned by its chain-local Safe instance at 0x6c4c5c74a29b1985f08149fb422f5afa03b4f59e. Current on-chain reads returned Safe v1.4.1, threshold 3, six owners, no enabled modules, and zero guard; the signer set differs from the token-owner Safe at its second signer.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095807,
+        "evidence": "At Ethereum block 26095807 and Base block 52024171, the correct EIP-1967 admin slots resolve to ProxyAdmins 0xcf09e8de3086678557dca73d7e4de7763cfdbbdd and 0x3037bd16377c89fcdffe785bec945b8e383db599. Each ProxyAdmin is owned by its chain-local Safe at 0x6c4c5c74a29b1985f08149fb422f5afa03b4f59e. Both Safes returned threshold 3, six owners, no enabled modules, and zero guard. Their current signer sets match the token-owner Safe sets, replacing the historical different-second-signer observation.",
         "sources": [
           {
             "label": "QCAD Ethereum proxy-admin owner",
@@ -117,9 +117,9 @@
     "reconciliation": "periodic",
     "supervision": "prudential",
     "review": {
-      "evidence": "Ethereum and Base reads resolve chain-local QCAD token-owner Safes at 0x4ff9ace93dd7a18bd7014aa9a179117adf20f6a9 and separate chain-local proxy-admin Safes at 0x6c4c5c74a29b1985f08149fb422f5afa03b4f59e. Each Safe is 3/6 with no enabled modules or guard. The proxy-admin Safe signer set was refreshed on 2026-07-13 and differs from the token-owner Safe. Both transparent-proxy implementations and immediate ProxyAdmin paths are identified. QCAD is issued by QCAD Digital Trust under a receipted OSC prospectus in the CSA value-referenced crypto asset (VRCA) interim framework (final CSA approval 2025-11-24); the prospectus requires reserves at least equal to circulating QCAD held in segregated accounts at Canadian financial institutions and names Kingston Ross Pasnak LLP as auditor providing monthly attestations plus audited annual financials on SEDAR+. Reconciled monthly and prudentially supervised by a named securities regulator places QCAD in the moderate tier; the separate Stablecorp FINTRAC MSB registration is AML-only and not counted as prudential. Economic-posture fields reviewed 2026-08-15: unbounded issuer/backend mint and immediate Safe-controlled upgrades; monthly full-liability assurance and OSC/CSA product supervision remain supported.",
-      "reviewer": "Codex mint-authority review; Claude SOL-V mint-tier mop-up; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "At Ethereum block 26095807 and Base block 52024171, chain-local token-owner Safes at 0x4ff9ace93dd7a18bd7014aa9a179117adf20f6a9 and separate proxy-admin Safes at 0x6c4c5c74a29b1985f08149fb422f5afa03b4f59e are 3/6 with identical owner sets and no enabled modules or guard. The correct EIP-1967 slots confirm both existing implementations and ProxyAdmin paths. Solana mint and freeze authority at finalized slot 452213632 is 8386AjvCDAtuAWujQJt8RUkcGaMdDUEoTNL53dAhESeJ, separate from the EVM Safes. The OSC exemptive-relief decision dated 2025-11-20 identifies QCAD Digital Trust, its Stablecorp servicer, and Davidson & Company LLP as auditor; the prior Kingston Ross Pasnak attribution was incorrect. The decision requires daily reserve parity, segregated reserve accounts, monthly attestations, and annual audited financial statements. The fetched July 2026 CSAE 3000 report directly reconciles reserves to circulating QCAD. Unbounded backend mint and immediate Safe-controlled upgrades remain adverse control facts; FINTRAC MSB registration remains AML-only evidence.",
+      "reviewer": "Sol curation pass 2026-10-01 (CurB18BOLD)",
+      "reviewedAt": "2026-10-01",
       "sources": [
         {
           "label": "Stablecorp QCAD",
@@ -168,7 +168,8 @@
       "canChangeMintLogic": true,
       "delaySec": 0,
       "controlRef": "Proxy-admin upgrade authority — Ethereum and Base",
-      "observedAt": "2026-07-13",
+      "observedAt": "2026-10-01",
+      "observedBlock": 26095807,
       "sources": [
         {
           "label": "QCAD Ethereum proxy-admin owner",

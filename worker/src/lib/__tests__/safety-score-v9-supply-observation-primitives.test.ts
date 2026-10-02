@@ -11,6 +11,7 @@ import {
   fetchEvmCodeAtBlock,
   fetchEvmMulticall3Aggregate3AtBlock,
   fetchEvmStorageAtBlock,
+  MULTICALL3_ADDRESS,
 } from "../evm-rpc";
 import {
   decodeEvmAddress,
@@ -271,5 +272,130 @@ describe("Safety Score V9 supply observation primitives", () => {
       failedRouteId: "ethereum:demo-token",
     });
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  describe("pinned EVM reads without Multicall3", () => {
+    const contractAddress = "0x1111111111111111111111111111111111111111";
+    const blockHash = `0x${"a".repeat(64)}` as `0x${string}`;
+    const word = (value: number) => value.toString(16).padStart(64, "0");
+    const supply = `0x${word(42)}`;
+    const decimals = `0x${word(6)}`;
+    const protocolSelector = "0x5c975abb";
+
+    function fixture(input: {
+      multicall: "present" | "absent" | "unavailable";
+      requiredFailure?: boolean;
+      mismatch?: "number" | "hash";
+    }) {
+      const requests: Array<{ method: string; params: unknown[] }> = [];
+      let headers = 0;
+      // ABI aggregate3 response: supply, decimals, then an optional reverted read.
+      const entries = [supply, decimals, "0x"].map((data, index) =>
+        `${word(index < 2 ? 1 : 0)}${word(64)}${word((data.length - 2) / 2)}${data.slice(2)}`);
+      let offset = entries.length * 32;
+      const offsets = entries.map((entry) => {
+        const encoded = word(offset);
+        offset += entry.length / 2;
+        return encoded;
+      });
+      vi.stubGlobal("fetch", vi.fn(async (_url: string, init: RequestInit) => {
+        // Requests are generated in-process by the RPC helpers under test.
+        const request = JSON.parse(String(init.body)) as { method: string; params: unknown[] };
+        requests.push(request);
+        let result: unknown;
+        let error: unknown;
+        if (request.method === "eth_blockNumber") result = "0x11";
+        if (request.method === "eth_getBlockByNumber") {
+          headers += 1;
+          result = {
+            number: headers > 1 && input.mismatch === "number" ? "0xf" : "0x10",
+            timestamp: "0x64",
+            hash: headers > 1 && input.mismatch === "hash" ? `0x${"b".repeat(64)}` : blockHash,
+          };
+        }
+        if (request.method === "eth_getCode") {
+          if (request.params[0] === MULTICALL3_ADDRESS) {
+            if (input.multicall === "unavailable") error = { code: -32000, message: "unavailable" };
+            else result = input.multicall === "absent" ? "0x" : "0x6000";
+          } else result = "0x6001";
+        }
+        if (request.method === "eth_getStorageAt") result = `0x${word(0)}`;
+        if (request.method === "eth_call") {
+          const call = request.params[0] as { to: string; data: string };
+          if (call.to === MULTICALL3_ADDRESS) {
+            result = `0x${word(32)}${word(entries.length)}${offsets.join("")}${entries.join("")}`;
+          } else if (call.data === protocolSelector) {
+            error = { code: 3, message: "execution reverted" };
+          } else result = call.data === "0x18160ddd" ? supply : decimals;
+        }
+        return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, ...(error ? { error } : { result }) }));
+      }));
+      const observe = () => observeReviewedEvmDeployment({
+        routeId: `ethereum:${contractAddress}`,
+        chainId: "ethereum",
+        contractAddress,
+        scoringClockSec: 100,
+        chainRpcs: new Map<string, ChainRpcConfig>(),
+        dependencies: {
+          sha256HexFromBytes, fetchEvmBlockNumber, fetchEvmBlockHeader,
+          fetchEvmCodeAtBlock, fetchEvmMulticall3Aggregate3AtBlock, fetchEvmStorageAtBlock,
+        },
+        identity: () => ({}),
+        safeBlockLag: () => 1,
+        extraRpcUrls: () => ["https://rpc.example"],
+        protocolCalls: () => [{
+          label: "optional-paused", target: contractAddress, callData: protocolSelector,
+          allowFailure: !input.requiredFailure,
+        }],
+        decodeProtocolObservation: ({ results }) => results[2]?.success === false
+          ? { status: "accepted" as const, observation: {} }
+          : { status: "rejected" as const, rejectionCode: "deployment-state-invalid" as const },
+        identityValidationError: () => null,
+      });
+      return { requests, observe };
+    }
+
+    it("produces the same observations by direct calls, including allowed failures", async () => {
+      const multicall = fixture({ multicall: "present" });
+      const expected = await multicall.observe();
+      expect(expected).toMatchObject({
+        status: "accepted", observation: { rawSupply: "42", decimals: 6, blockHash },
+      });
+      const direct = fixture({ multicall: "absent" });
+      expect(await direct.observe()).toEqual(expected);
+    });
+
+    it("rejects the deployment when a required direct call fails", async () => {
+      const direct = fixture({ multicall: "absent", requiredFailure: true });
+      expect(await direct.observe()).toEqual({
+        status: "rejected", rejectionCode: "deployment-state-unavailable",
+        failedRouteId: `ethereum:${contractAddress}`,
+      });
+    });
+
+    it.each(["number", "hash"] as const)("rejects a changed block %s after direct reads", async (mismatch) => {
+      const direct = fixture({ multicall: "absent", mismatch });
+      expect(await direct.observe()).toMatchObject({
+        status: "rejected", rejectionCode: "deployment-state-unavailable",
+      });
+    });
+
+    it("keeps the canonical aggregate3 path when Multicall3 has code", async () => {
+      const multicall = fixture({ multicall: "present" });
+      expect(await multicall.observe()).toMatchObject({ status: "accepted", observation: { rawSupply: "42" } });
+      const calls = multicall.requests.filter((request) => request.method === "eth_call");
+      expect(calls.map((request) => {
+        const call = request.params[0];
+        return call && typeof call === "object" && "to" in call ? call.to : null;
+      })).toEqual([MULTICALL3_ADDRESS]);
+    });
+
+    it("does not mistake unavailable Multicall3 code for an absent contract", async () => {
+      const unavailable = fixture({ multicall: "unavailable" });
+      expect(await unavailable.observe()).toMatchObject({
+        status: "rejected", rejectionCode: "deployment-state-unavailable",
+      });
+      expect(unavailable.requests.some((request) => request.method === "eth_call")).toBe(false);
+    });
   });
 });

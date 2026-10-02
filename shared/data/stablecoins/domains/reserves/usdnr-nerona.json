@@ -34,7 +34,7 @@
       },
       {
         "label": "M0 deployed-address documentation",
-        "url": "https://docs.m0.org/get-started/resources/addresses/"
+        "url": "https://docs.m0.org/resources/addresses/m0-platform"
       }
     ],
     "rationale": "Nerona describes USDnr as fully backed by short-duration Treasuries through M0, and the configured M0 extension identifies M as the directly held wrapper asset. No primary source supports the prior separate 1% stability-reserve estimate, so the reviewed direct composition is 100% M.",

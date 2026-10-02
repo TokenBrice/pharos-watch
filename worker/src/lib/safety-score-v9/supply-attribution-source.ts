@@ -6,6 +6,8 @@ import { parseJson } from "../json-parse";
 import type { SafetyScoreV9CompilerInput } from "./native-input";
 import { CENTRIFUGE_BURN_MINT_ASSET_IDS } from "./supply-attribution-contract";
 import { XAUT_ASSET_ID } from "./xaut-supply-attribution-contract";
+import { REVIEWED_ECONOMIC_SUPPLY_PLANS } from "./supply-attribution-contract";
+import { SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ASSETS } from "@shared/lib/safety-score-v9-supply-attribution-journal";
 
 export const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_SOURCE_CACHE_KEY =
   "safety-score-v9:supply-attribution-source:v1";
@@ -14,7 +16,12 @@ export const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_ASSET_IDS = Object.freeze([
   "wm-m0",
   XAUT_ASSET_ID,
   ...CENTRIFUGE_BURN_MINT_ASSET_IDS,
+  ...REVIEWED_ECONOMIC_SUPPLY_PLANS.keys(),
 ]);
+if (SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_ASSET_IDS.length > SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ASSETS ||
+  new Set(SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_ASSET_IDS).size !== SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_ASSET_IDS.length) {
+  throw new Error("Supply attribution reviewed registry exceeds the bounded cohort or overlaps an existing proof lane");
+}
 
 const SafetyScoreV9SupplyAttributionSourceSchema = z
   .object({
@@ -39,6 +46,10 @@ const SafetyScoreV9SupplyAttributionSourceSchema = z
         z.object({ current: z.number().finite().nonnegative() }).strict(),
       ),
     ),
+    navPriceById: z.record(z.string(), z.strictObject({
+      priceUsd: z.number().finite().positive(), sourceId: z.string().min(1),
+      observedAtSec: z.number().int().nonnegative(), confidence: z.enum(["high", "medium", "low", "unknown"]),
+    })).default({}),
   })
   .strict();
 
@@ -54,7 +65,7 @@ export type SafetyScoreV9SupplyAttributionInput = Pick<
   | "activeAssetIds"
   | "aggregateCirculatingById"
   | "chainCirculatingById"
->;
+> & Partial<Pick<SafetyScoreV9SupplyAttributionSource, "navPriceById">>;
 
 export function buildSafetyScoreV9SupplyAttributionSource(
   input: Readonly<SafetyScoreV9CompilerInput>,
@@ -72,6 +83,10 @@ export function buildSafetyScoreV9SupplyAttributionSource(
     registryFingerprint: input.registryFingerprint,
     clockSec: input.clockSec,
     activeAssetIds,
+    navPriceById: sortedRecord(Object.fromEntries(activeAssetIds.flatMap(assetId => {
+      const price = input.navPriceById?.[assetId];
+      return price ? [[assetId, price]] : [];
+    }))),
     aggregateCirculatingById: sortedRecord(
       Object.fromEntries(
         activeAssetIds.flatMap((assetId) => {

@@ -34,7 +34,7 @@
   },
   "oracleRisk": {
     "tier": "single-source-or-laggy",
-    "summary": "Indigo V3 uses separate pull-based Pyth Lazer inverse-price feeds for the live ADA- and NIGHT-backed iUSD CDP branches. Signed prices are pushed through configured Cardano Pyth validators; no alternate oracle provider or fallback behavior is documented.",
+    "summary": "Indigo V3's official mainnet configuration lists separate Pyth inverse-price feeds for iUSD paired with ADA, NIGHT and USDCx (feed IDs 16, 2970 and 7). ADA and NIGHT branch profiles are authored; the configured USDCx feed does not establish current branch exposure or resolve the outstanding liquidation-parameter and reserve-attribution gaps.",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {

@@ -28,9 +28,9 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-30",
-    "reviewer": "Pharos dependency-map evidence review",
-    "confidence": "probable",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC19)",
+    "confidence": "manual-review",
     "sources": [
       {"label": "BSC Venus vault asset() at block 124853997 (2026-09-30)", "url": "https://bsc-rpc.publicnode.com"},
       {"label": "Binance B-token collateral page, token rows unavailable (accessed 2026-09-30)", "url": "https://www.binance.com/en/collateral-btokens"},
@@ -43,11 +43,11 @@
         "url": "https://docs.stoneyield.io/docs/protocol/yield-generation"
       }
     ],
-    "rationale": "StoneYield's current contract-design documentation identifies an 18-decimal BSC USDC deposit route into Venus. At BSC block 124853997 on 2026-09-30, asset() on the documented Venus vault 0x375defe9293671a4459cf7206ac6f440d0eb0970 returned Binance-Peg USDC 0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d; asset() on the tracked stUSD token reverted. The Binance B-token collateral page exposed no token-level escrow rows in the retrieved response, so escrow coverage is unverified. The strategy-vault USDC lineage is retained and annotated per the wave-1 owner ruling: D3 preserves variantOf-derived serial claims even when the intermediary remains unverified. This is not native Circle USDC custody or a 100% idle-USDC balance assertion.",
-    "compositionBasis": "Issuer contract-design disclosure accessed 2026-09-30 and exact documented Venus vault asset() read at BSC block 124853997",
+    "rationale": "The issuer describes a mutable StrategyRouter that routes deposits into Venus and permits the owner to adjust weights and add strategies. At BSC block 125091233 on October 1, 2026, tracked stUSD wrapper() resolved to 0xb4d3c1bb59be7b419af4e10e9b240f425782b22a, its susdcToken() resolved to 0xad66385c6db496258771b5fd8ac376e3dd0d1536, and the documented Venus vault asset() returned Binance-Peg USDC 0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d. These reads identify serial asset lineage, not complete strategy balances or reconciliation to holder liabilities. The 100% row preserves that lineage as contextual metadata under the earlier D3 ruling; D24 does not admit it as measured full backing or infer any missing remainder.",
+    "compositionBasis": "Selected strategy-vault asset lineage from issuer documentation and pinned BSC block 125091233 reads on 2026-10-01; no reconciled whole-token backing denominator",
     "compositionAsOf": "2026-09-30",
-    "scope": "full-composition",
-    "knownUnknownExposure": "Binance-Peg USDC bridge escrow and custody coverage remain unverified; current Venus balances and complete strategy allocation are not independently reconciled.",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "Complete strategy balances, allocation weights, holder-liability reconciliation and Binance-Peg USDC bridge custody coverage remain unverified. The retained 0% matches the absence of unresolved non-link dispositions in this serial-lineage envelope; it does not measure or imply zero unknown whole-token exposure. A 100% unknown backing figure is not inferred from missing inventory.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {

@@ -5,7 +5,7 @@ import {
   LIVE_RESERVE_ADAPTER_DEFINITIONS,
   LiveReservesConfigSchema,
 } from "@shared/lib/live-reserve-adapters";
-import { CHAIN_META } from "@shared/lib/chains";
+import { CHAIN_META } from "../../types/chain-identity";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { LiabilityScope } from "@shared/types/live-reserve-adapter-declarations";
 
@@ -14,12 +14,16 @@ const COIN_SOURCE_DIR = join(process.cwd(), "shared/data/stablecoins/coins");
 const RESERVE_SOURCE_DIR = join(process.cwd(), "shared/data/stablecoins/domains/reserves");
 
 interface CoinSource {
-  contracts?: Array<{ chain: string }>;
+  contracts?: Array<{ chain: string; address: string }>;
   liveReservesConfig?: {
     adapter: keyof typeof LIVE_RESERVE_ADAPTER_DEFINITIONS;
     scoring?: { maxSourceAgeSec?: number };
     inputs?: { primary?: { chain?: string } };
-    params?: { slice?: { expectedAssetAddress?: string }; liabilityScope?: LiabilityScope };
+    params?: {
+      slice?: { expectedAssetAddress?: string };
+      pooledClaim?: { basis: string; reviewedAt: string; sourceUrl: string };
+      liabilityScope?: LiabilityScope;
+    };
   };
 }
 
@@ -40,17 +44,18 @@ interface ReserveSource {
   reserves?: Array<{ sourceKey?: string }>;
 }
 
-let erc4626SidecarKeys: Set<string> | undefined;
+let erc4626SidecarKeys: Map<string, Set<string>> | undefined;
 
-function getErc4626SidecarKeys(): Set<string> {
-  return (erc4626SidecarKeys ??= new Set(
+function getErc4626SidecarKeys(): Map<string, Set<string>> {
+  return (erc4626SidecarKeys ??= new Map(
     readdirSync(RESERVE_SOURCE_DIR)
       .filter((fileName) => fileName.endsWith(".json"))
-      .flatMap((fileName) => {
+      .map((fileName) => {
         const sidecar = JSON.parse(readFileSync(join(RESERVE_SOURCE_DIR, fileName), "utf8")) as ReserveSource;
-        return (sidecar.reserves ?? [])
+        const keys = (sidecar.reserves ?? [])
           .map((row) => row.sourceKey?.toLowerCase() ?? "")
           .filter((sourceKey) => sourceKey.startsWith("erc4626-single-asset:"));
+        return [fileName.slice(0, -5), new Set(keys)] as const;
       }),
   ));
 }
@@ -99,12 +104,20 @@ describe("live reserve catalog integrity", () => {
       if (!config || config.adapter !== "erc4626-single-asset") continue;
       const chain = config.inputs?.primary?.chain;
       const asset = config.params?.slice?.expectedAssetAddress?.toLowerCase();
-      // The adapter emits `erc4626-single-asset:<chain>:<vault underlying>`; the
-      // reviewed sidecar slice must carry the same key. sgho-aave follows this
-      // rule too — the savings passthrough is keyed by the GHO underlying.
-      const sourceKey = chain && asset ? `erc4626-single-asset:${chain}:${asset}` : undefined;
-      if (!sourceKey || !sidecarKeys.has(sourceKey)) {
-        failures.push(`${id}: no reserve slice keyed ${sourceKey ?? "erc4626-single-asset:<chain>:<underlying>"}`);
+      const vault = source.contracts?.find((contract) => contract.chain === chain)?.address.toLowerCase();
+      // Pooled claims emit only the reviewed vault claim, never an allocation
+      // to the accounting asset. Other modes retain the underlying-token idle
+      // row or vault-keyed deployed strategy row.
+      const sourceKeys = config.params?.pooledClaim
+        ? chain && vault
+          ? [`erc4626-single-asset:${chain}:${vault}:pooled-claim`]
+          : []
+        : chain && asset && vault
+          ? [`erc4626-single-asset:${chain}:${asset}`, `erc4626-single-asset:${chain}:${vault}:deployed`]
+          : [];
+      const reviewedKeys = sidecarKeys.get(id);
+      if (!sourceKeys.some((sourceKey) => reviewedKeys?.has(sourceKey))) {
+        failures.push(`${id}: no reserve slice keyed ${sourceKeys.join(" or ") || "erc4626-single-asset:<chain>:<underlying-or-vault>"}`);
       }
     }
     expect(failures).toEqual([]);

@@ -34,7 +34,7 @@ export const COINBASE_PRODUCTS = [
   { symbol: "PAXG", productId: "PAXG-USD" },
   { symbol: "USDS", productId: "USDS-USD" },
   { symbol: "USD1", productId: "USD1-USD" },
-  { symbol: "HONEY", productId: "HONEY-USD" },
+  // Coinbase HONEY-USD is Solana Hivemapper, not Berachain's Bera USD.
   // 2026-09-27: Coinbase lists AUDD on its USDC-quoted FX-stablecoin book
   // (`fx_stablecoin: true`, USDC treated at USD par). Coinbase's AUDD asset
   // pins to the Novatti AUDD Ethereum contract 0x4cce605e..., which matches
@@ -59,7 +59,8 @@ export const REDSTONE_SYMBOL_CONFIG = [
   { stablecoinId: "frax-frax", metaSymbol: "FRAX", apiSymbol: "FRAX" },
   { stablecoinId: "frxusd-frax", metaSymbol: "FRXUSD", apiSymbol: "frxUSD" },
   { stablecoinId: "gho-aave", metaSymbol: "GHO", apiSymbol: "GHO" },
-  { stablecoinId: "honey-berachain", metaSymbol: "HONEY", apiSymbol: "HONEY" },
+  // Berachain renamed the same token BUSD; RedStone retains its HONEY feed.
+  { stablecoinId: "honey-berachain", metaSymbol: "BUSD", apiSymbol: "HONEY" },
   { stablecoinId: "lusd-liquity", metaSymbol: "LUSD", apiSymbol: "LUSD" },
   { stablecoinId: "pyusd-paypal", metaSymbol: "PYUSD", apiSymbol: "PYUSD" },
   { stablecoinId: "usd1-world-liberty-financial", metaSymbol: "USD1", apiSymbol: "USD1" },

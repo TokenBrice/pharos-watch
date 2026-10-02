@@ -45,6 +45,8 @@
         "evidence": "At Ethereum block 25,296,225, the JAAA Tranche token wards are: Root (0x7Ed48C31f2fdC40d37407cBaBf0870B2b688368f, contract), BalanceSheet (0x12a110cE5f0FC871cC72Bc7ECaF35cf39DD0f43e, contract), Spoke (0xEC3582fcDc34078a4B7a8c75a5a3AE46f48525aB, contract). No EOA has direct ward access. Root's ProtocolGuardian (0xCEb7eD5d5B3bAD3088f6A1697738B60d829635c6) routes to the Centrifuge protocol Safe.",
         "chain": "ethereum",
         "address": "0x7Ed48C31f2fdC40d37407cBaBf0870B2b688368f",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095796,
         "deploymentRefs": [
           "ethereum:0x5a0f93d040de44e78f251b03c43be9cf317dcf64"
         ]
@@ -75,8 +77,8 @@
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
           "version": "1.4.1",
-          "observedBlock": 25296225,
-          "source": "safe-api"
+          "observedBlock": 26095796,
+          "source": "onchain"
         },
         "sources": [
           {
@@ -87,6 +89,8 @@
         "evidence": "Safe API at Ethereum block 25,296,225: Safe 0x9711730060C73Ee7Fcfe1890e8A0993858a7D225, threshold 4-of-9, version 1.4.1, no modules, no guard. Root's ProtocolGuardian has onlySafe modifier routing control to this Safe.",
         "chain": "ethereum",
         "address": "0x9711730060C73Ee7Fcfe1890e8A0993858a7D225",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095796,
         "deploymentRefs": [
           "ethereum:0x5a0f93d040de44e78f251b03c43be9cf317dcf64"
         ]

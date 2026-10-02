@@ -3,7 +3,6 @@ import type { ChainRpcConfig, RpcEndpoint } from "../../../lib/chain-registry";
 import { registryRpcEndpoint } from "../../../test-helpers/chain-rpc-fixtures.test-support";
 import {
   createOptionalSourceBudget,
-  resolveCanonicalChain,
   resolveRpcUrls,
 } from "../sources-helpers";
 
@@ -32,15 +31,6 @@ function makeRpc(overrides: Partial<ChainRpcConfig> = {}): ChainRpcConfig {
     ...overrides,
   };
 }
-
-describe("resolveCanonicalChain", () => {
-  it("preserves alias and unknown-id behavior for yield sources", () => {
-    expect(resolveCanonicalChain(" Ethereum ")).toBe("ethereum");
-    expect(resolveCanonicalChain(1)).toBe("ethereum");
-    expect(resolveCanonicalChain(999_999)).toBe("999999");
-    expect(resolveCanonicalChain("   ")).toBeNull();
-  });
-});
 
 describe("resolveRpcUrls", () => {
   it("prefers the fallback URL by default and drops the missing side", () => {

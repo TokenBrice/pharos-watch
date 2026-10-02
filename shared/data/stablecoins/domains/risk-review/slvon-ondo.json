@@ -18,7 +18,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "SLVon has issuer-native GM issuance on Ethereum, BSC, and Solana, plus a HyperEVM bridge representation. Ethereum and BSC also expose separate OndoOFT burn/mint bridge minters, and Ondo documents LayerZero DVN validation for its bridge. No SLVon-specific lockbox is proven; the verified bridge lanes are therefore scored as external-validated-network. Current OFT owners, endpoints, token mappings, and representation upgrade administration remain in structured Bridge Risk controls, while unresolved peer, DVN, and route-limit values remain explicit evidence gaps.",
+    "summary": "SLVon has issuer-native GM issuance on Ethereum, BSC, and Solana, plus a HyperEVM bridge representation. Ethereum and BSC also expose separate OndoOFT burn/mint bridge minters. Fresh pinned reads locate the unified Messenger behind each OFT, match all six reciprocal EVM peers, and enumerate the selected Endpoint V2 send/receive ULN configurations and token-specific rate limits. No SLVon-specific lockbox is proven; these remain external-validated-network lanes. Owner signer/module posture and economically complete circulating bridge materiality remain unresolved.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Codex bridge route boundary migration",
     "confidence": "verified",
@@ -197,11 +197,11 @@
         "authorityType": "contract",
         "routeChecks": {
           "lockboxOrEscrow": "The OndoOFT route uses LayerZero OFT burn/mint semantics; no SLVon-specific lockbox is evidenced.",
-          "trustedPeerOrRemote": "At Ethereum block 25770488, owner() returned 0xbc6d5c103a3f586e68bd475942a49d041b171c3e. Current SLVon-specific peer and DVN values were not fully enumerated and are not asserted here.",
-          "rateLimits": "Ondo documents route rate limits, but the current SLVon-specific inbound/outbound values were not read in this review.",
+          "trustedPeerOrRemote": "At Ethereum block 26103185 on 2026-10-02, OndoOFT storage slot 1 points to Messenger 0xff2baba46df92919705e60120c477ae5b7341eb3. Its peers(30102) and peers(30367) match BSC Messenger 0x5f7d50242206993a4476c76b21950219a4ed2c91 and HyperEVM Messenger 0xdcf29fa293125ae2361e12fb83fc096699c4fc2f; reciprocal remote peers were read at BSC block 125253452 and HyperEVM block 47447869. Endpoint getConfig for the selected send and receive libraries requires all three DVNs 0x241c66a979125f230c239e79d103e0c2128c6618, 0x589dedbd617e0cbcb916a9223f4d1300c294236b and 0xa4fe5a5b9a846458a70cd0748228aed3bf65c2cd, with no optional DVNs. The OFT itself has no peers getter.",
+          "rateLimits": "At Ethereum block 26103185, Messenger rateLimiter() is 0x4d4e562d6882dc523b8d629d2e9df9230b699933. For SLVon tokenId 0x0ebfc186c224d787f8fd309daaaaa5fd80f9dc07898d2e0673dc04604818e2a9, outboundLimits/inboundLimits report raw token caps of 7953277147848771086126/8444723315480794157318 toward BSC (30102) and 8040167677160896012008/8958630031961704365029 toward HyperEVM (30367), each with an 86400-second window and 18-decimal denomination. These mutable flow limits are not an immutable aggregate issuance ceiling.",
           "pausersAdminsUpgraders": "The OFT token() returned the Ethereum SLVon deployment, endpoint() returned LayerZero Endpoint V2 0x1a44076050125825900e736c501f859c50fe728c, and approvalRequired() was false. The deployed owner is retained as a separate Bridge Risk admin control."
         },
-        "capDescription": "The OndoOFT can mint and burn SLVon for the Ethereum LayerZero route. No current route-specific cap was read; its route-level conservation and external validation remain distinct from native GM issuance.",
+        "capDescription": "The OndoOFT can mint and burn SLVon through a unified Messenger. Exact per-remote 86400-second rate limits are recorded in routeChecks, but the verified RateLimiter source permits owner reconfiguration; no immutable issuance cap is asserted. Route conservation and external validation remain distinct from native GM issuance.",
         "canRaiseCap": "unknown",
         "observedAt": "2026-08-16",
         "observedBlock": 25770488,
@@ -238,7 +238,7 @@
         ],
         "authorityType": "contract",
         "routeChecks": {
-          "pausersAdminsUpgraders": "The Ethereum OndoOFT owner() returned 0xbc6d5c103a3f586e68bd475942a49d041b171c3e at block 25770488. The owner is deployed code, but this review did not complete Safe/proxy identity, signer threshold, module/guard, peer, DVN, or rate-limit replay for the owner."
+          "pausersAdminsUpgraders": "At Ethereum block 26103320 on 2026-10-02, the OFT and Messenger owner remains 0xbc6d5c103a3f586e68bd475942a49d041b171c3e (verified-source OndoOwner). DEFAULT_ADMIN_ROLE has 4-of-7 Safe 0x71a4d411b5f7941dee020417fca30413712f1646; INSPECTOR_ADMIN has 1-of-9 Safe 0x2e55b738f5969eea10fb67e326bee5e2fa15a2cc; MESSENGER_ADMIN has the 4-of-7 Safe plus deployed contract 0x58d73026c64da97ce858766384477d2e8775e9ec; RATE_LIMITER_ADMIN has code-empty address 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b. Both identified Safes return no enabled modules and a zero guard slot. The additional messenger administrator's authority and complete downstream signer posture remain unresolved; no owner-control tier or review clock is promoted."
         },
         "observedAt": "2026-08-16",
         "observedBlock": 25770488,
@@ -252,7 +252,7 @@
             "url": "https://docs.ondo.finance/tools/ondo-bridge"
           }
         ],
-        "evidence": "At Ethereum block 25770488, the Ethereum OndoOFT owner() returned deployed contract 0xbc6d5c103a3f586e68bd475942a49d041b171c3e. Its route-administration identity and any downstream signer controls remain unresolved, so this exact owner address is retained as Bridge Risk admin evidence without inventing a Safe or timelock posture."
+        "evidence": "At Ethereum block 25770488, the Ethereum OndoOFT owner() returned deployed contract 0xbc6d5c103a3f586e68bd475942a49d041b171c3e. New block 26103320 confirms the same owner and partially resolves its AccessControl hierarchy and two downstream Safes, as recorded in routeChecks. Complete downstream control remains unresolved, so authorityType contract and the historical structured observation point are retained."
       },
       {
         "id": "slvon-bsc-ondo-oft",
@@ -273,11 +273,11 @@
         "authorityType": "contract",
         "routeChecks": {
           "lockboxOrEscrow": "The OndoOFT route uses LayerZero OFT burn/mint semantics; no SLVon-specific lockbox is evidenced.",
-          "trustedPeerOrRemote": "At BSC block 116349076, owner() returned 0x4d4e562d6882dc523b8d629d2e9df9230b699933. Current SLVon-specific peer and DVN values were not fully enumerated and are not asserted here.",
-          "rateLimits": "Ondo documents route rate limits, but the current SLVon-specific inbound/outbound values were not read in this review.",
+          "trustedPeerOrRemote": "At BSC block 125253452 on 2026-10-02, OndoOFT storage slot 1 points to Messenger 0x5f7d50242206993a4476c76b21950219a4ed2c91. Its peers(30101) and peers(30367) match Ethereum Messenger 0xff2baba46df92919705e60120c477ae5b7341eb3 and HyperEVM Messenger 0xdcf29fa293125ae2361e12fb83fc096699c4fc2f; reciprocal peers were also read. Endpoint getConfig for the selected send and receive libraries requires all three DVNs 0x00efecf8714c2bc9376f8391f47a2ffce8bcdfea, 0xfa9ba83c102283958b997adc8b44ed3a3cdb5dda and 0xfd6865c841c2d64565562fcc7e05e619a30615f0, with no optional DVNs. The OFT itself has no peers getter.",
+          "rateLimits": "At BSC block 125253452, Messenger rateLimiter() is 0x2ced30744edcf9ede5799eb07a0a29ce4f012a0c. For SLVon tokenId 0x0ebfc186c224d787f8fd309daaaaa5fd80f9dc07898d2e0673dc04604818e2a9, outboundLimits/inboundLimits report raw token caps of 7953277147848771086126/8444723315480794157318 toward Ethereum (30101) and 8040167677160896012008/8958630031961704365029 toward HyperEVM (30367), each with an 86400-second window and 18-decimal denomination. These mutable flow limits are not an immutable aggregate issuance ceiling.",
           "pausersAdminsUpgraders": "The OFT token() returned the BSC SLVon deployment, endpoint() returned LayerZero Endpoint V2 0x1a44076050125825900e736c501f859c50fe728c, and approvalRequired() was false. The deployed owner is retained as a separate Bridge Risk admin control."
         },
-        "capDescription": "The OndoOFT can mint and burn SLVon for the BSC LayerZero route. No current route-specific cap was read; its route-level conservation and external validation remain distinct from native GM issuance.",
+        "capDescription": "The OndoOFT can mint and burn SLVon through a unified Messenger. Exact per-remote 86400-second rate limits are recorded in routeChecks; no immutable issuance cap is asserted. Route conservation and external validation remain distinct from native GM issuance.",
         "canRaiseCap": "unknown",
         "observedAt": "2026-08-16",
         "observedBlock": 116349076,
@@ -314,7 +314,7 @@
         ],
         "authorityType": "contract",
         "routeChecks": {
-          "pausersAdminsUpgraders": "The BSC OndoOFT owner() returned 0x4d4e562d6882dc523b8d629d2e9df9230b699933 at block 116349076. The owner is deployed code, but this review did not complete Safe/proxy identity, signer threshold, module/guard, peer, DVN, or rate-limit replay for the owner."
+          "pausersAdminsUpgraders": "At BSC block 125257064 on 2026-10-02, the OFT and Messenger owner remains 0x4d4e562d6882dc523b8d629d2e9df9230b699933. DEFAULT_ADMIN_ROLE has 4-of-7 Safe 0xa307e57ca7f9712af3557af8c5624bef214aa913; INSPECTOR_ADMIN has 1-of-9 Safe 0x80120c4d44ffd6f86716fd8dacd5e395d8bbbe97; MESSENGER_ADMIN has the 4-of-7 Safe plus deployed contract 0x72c697d72beb419152ed457b9f1eee29c12e0ccb; RATE_LIMITER_ADMIN has code-empty address 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b. Both identified Safes return no enabled modules and a zero guard slot. The additional messenger administrator's authority and complete downstream signer posture remain unresolved; no owner-control tier or review clock is promoted."
         },
         "observedAt": "2026-08-16",
         "observedBlock": 116349076,
@@ -328,7 +328,7 @@
             "url": "https://docs.ondo.finance/tools/ondo-bridge"
           }
         ],
-        "evidence": "At BSC block 116349076, the BSC OndoOFT owner() returned deployed contract 0x4d4e562d6882dc523b8d629d2e9df9230b699933. Its route-administration identity and any downstream signer controls remain unresolved, so this exact owner address is retained as Bridge Risk admin evidence without inventing a Safe or timelock posture."
+        "evidence": "At BSC block 116349076, the BSC OndoOFT owner() returned deployed contract 0x4d4e562d6882dc523b8d629d2e9df9230b699933. New block 125257064 confirms the same owner and partially resolves its AccessControl hierarchy and two downstream Safes, as recorded in routeChecks. Complete downstream control remains unresolved, so authorityType contract and the historical structured observation point are retained."
       },
       {
         "id": "slvon-hyperevm-ondo-oft",
@@ -349,11 +349,11 @@
         "authorityType": "contract",
         "routeChecks": {
           "lockboxOrEscrow": "The HyperEVM OndoOFT route uses LayerZero OFT burn/mint semantics; no SLVon-specific lockbox is evidenced.",
-          "trustedPeerOrRemote": "At HyperEVM block 43372762, owner() returned 0x2e59565b98ec5339cb9767ddb903d9b1e2127e5d. Current SLVon-specific peer and DVN values were not fully enumerated and are not asserted here.",
-          "rateLimits": "Ondo documents route rate limits, but the current SLVon-specific inbound/outbound values were not read in this review.",
+          "trustedPeerOrRemote": "At HyperEVM block 47447869 on 2026-10-02, OndoOFT storage slot 1 points to Messenger 0xdcf29fa293125ae2361e12fb83fc096699c4fc2f. Its peers(30101) and peers(30102) match Ethereum Messenger 0xff2baba46df92919705e60120c477ae5b7341eb3 and BSC Messenger 0x5f7d50242206993a4476c76b21950219a4ed2c91; reciprocal peers were also read. Endpoint getConfig for the selected send and receive libraries requires all three DVNs 0x83342ec538df0460e730a8f543fe63063e2d44c4, 0x8614fb9ed4b75d83f781ce836c785eff04379a37 and 0xc097ab8cd7b053326dfe9fb3e3a31a0cce3b526f, with no optional DVNs. The OFT itself has no peers getter.",
+          "rateLimits": "At HyperEVM block 47447869, Messenger rateLimiter() is 0xe93e0ec409eeccfa841e18fed0db2c6968dd8e6d. For SLVon tokenId 0x0ebfc186c224d787f8fd309daaaaa5fd80f9dc07898d2e0673dc04604818e2a9, outboundLimits/inboundLimits toward both Ethereum (30101) and BSC (30102) report raw token caps of 8040167677160896012008/8958630031961704365029, each with an 86400-second window and 18-decimal denomination. These mutable flow limits are not an immutable aggregate issuance ceiling.",
           "pausersAdminsUpgraders": "The OFT token() returned the HyperEVM SLVon deployment, endpoint() returned 0x3a73033c0b1407574c76bdbac67f126f6b4a9aa9, and approvalRequired() was false. The deployed owner is retained as a separate Bridge Risk admin control; the token beacon upgrade path is also represented separately below."
         },
-        "capDescription": "The OndoOFT is the sole verified minter of the HyperEVM SLVon representation and can burn/mint for the LayerZero route. No current route-specific cap was read; this is bridge representation risk, not native issuance.",
+        "capDescription": "The OndoOFT is the historically verified sole minter of the HyperEVM SLVon representation and burns/mints through a unified Messenger. Exact per-remote 86400-second rate limits are recorded in routeChecks; no immutable issuance cap is asserted. This remains bridge representation risk, not native issuance.",
         "canRaiseCap": "unknown",
         "observedAt": "2026-08-16",
         "observedBlock": 43372762,
@@ -390,7 +390,7 @@
         ],
         "authorityType": "contract",
         "routeChecks": {
-          "pausersAdminsUpgraders": "The HyperEVM OndoOFT owner() returned 0x2e59565b98ec5339cb9767ddb903d9b1e2127e5d at block 43372762. The owner is deployed code, but this review did not complete Safe/proxy identity, signer threshold, module/guard, peer, DVN, or rate-limit replay for the owner."
+          "pausersAdminsUpgraders": "At HyperEVM block 47449523 on 2026-10-02, the OFT and Messenger owner remains 0x2e59565b98ec5339cb9767ddb903d9b1e2127e5d. DEFAULT_ADMIN_ROLE has 4-of-7 Safe 0xa307e57ca7f9712af3557af8c5624bef214aa913; INSPECTOR_ADMIN has 1-of-9 Safe 0xd484422208b1020c83a155336d2b13ce883e5a21; MESSENGER_ADMIN has the 4-of-7 Safe plus deployed contract 0xe3153764ab2a0a928a59c3805503b2ac56b802a3; RATE_LIMITER_ADMIN has code-empty address 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b. Both identified Safes return no enabled modules and a zero guard slot. The additional messenger administrator's authority and complete downstream signer posture remain unresolved; no owner-control tier or review clock is promoted."
         },
         "observedAt": "2026-08-16",
         "observedBlock": 43372762,
@@ -404,7 +404,7 @@
             "url": "https://docs.ondo.finance/tools/ondo-bridge"
           }
         ],
-        "evidence": "At HyperEVM block 43372762, the HyperEVM OndoOFT owner() returned deployed contract 0x2e59565b98ec5339cb9767ddb903d9b1e2127e5d. Its route-administration identity and any downstream signer controls remain unresolved, so this exact owner address is retained as Bridge Risk admin evidence without inventing a Safe or timelock posture."
+        "evidence": "At HyperEVM block 43372762, the HyperEVM OndoOFT owner() returned deployed contract 0x2e59565b98ec5339cb9767ddb903d9b1e2127e5d. New block 47449523 confirms the same owner and partially resolves its AccessControl hierarchy and two downstream Safes, as recorded in routeChecks. Complete downstream control remains unresolved, so authorityType contract and the historical structured observation point are retained."
       },
       {
         "id": "slvon-hyperevm-beacon-admin",

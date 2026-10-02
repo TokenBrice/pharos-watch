@@ -18,17 +18,19 @@
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095803,
         "sources": [
           {
-            "label": "Sourcify Spiko Token source",
-            "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74/sources/contracts/token/Token.sol"
+            "label": "Verified Spiko Token implementation source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74"
           },
           {
             "label": "Spiko docs",
             "url": "https://docs.spiko.io/"
           }
         ],
-        "evidence": "Ethereum block 25295019: implementation 0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74, owner() = zero, authority() = 0x344278aff344d6fb960705dc18a4912221608472, EIP-1967 proxy admin slot = zero (no external upgrade path). Token source confirms mint/burn are restricted() calls routed through the authority."
+        "evidence": "Ethereum block 26095803: implementation 0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74, owner() = zero, authority() = 0x344278aff344d6fb960705dc18a4912221608472, and the correct EIP-1967 admin slot is zero. A zero transparent-admin slot does not remove the UUPS upgrade path: Token._authorizeUpgrade is permission-restricted, and its upgrade requirement is group 0. mint() requires mask 0x05 (ADMIN group 0 or Minter group 2)."
       },
       {
         "chain": "ethereum",
@@ -36,19 +38,21 @@
         "deploymentRefs": [
           "ethereum:0xa0769f7a8fc65e47de93797b4e21c073c117fc80"
         ],
-        "label": "Spiko PermissionManager (minter group = 1/6 Safe)",
+        "label": "Spiko PermissionManager",
         "role": "minter-admin",
         "authorityType": "contract",
         "directMintAbility": "can-authorize",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095803,
         "sources": [
           {
             "label": "Blockscout PermissionManager implementation",
             "url": "https://eth.blockscout.com/address/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
           }
         ],
-        "evidence": "PermissionManager (UUPS proxy, implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e = verified PermissionManager.sol). Admin group (group 0) held by Safe 0x4eaa52b6280593a8820c45ce38f974290ae52cea (3/8, v1.4.1, no modules, no guard). Minter group (group 1) held by Safe 0xa4f97076721c78b050c2cd6a1bf7b442d801fb4a (1/6, v1.4.1, no modules, no guard). PermissionManager proxy admin slot = zero (UUPS, admin Safe controls upgrades via group 0)."
+        "evidence": "Ethereum block 26095803: implementation remains 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e; the correct EIP-1967 admin slot is zero. Safe 0x4eaa52b6280593a8820c45ce38f974290ae52cea holds ADMIN group 0 and now has threshold 3 with six owners. The token mint requirement is mask 0x05, admitting ADMIN group 0 or group 2. The rate-limited Minter 0x5ed5a75eeed1934ea060186e35187eaa73331366 holds group 2. Legacy Safe 0xa4f97076721c78b050c2cd6a1bf7b442d801fb4a holds group 1, which no longer intersects the current mint requirement; current Minter initiation and approval require groups 10 and 9 respectively, or ADMIN. Group 0 administers permissions and UUPS upgrades."
       },
       {
         "chain": "ethereum",
@@ -57,15 +61,15 @@
           "ethereum:0xa0769f7a8fc65e47de93797b4e21c073c117fc80"
         ],
         "label": "Spiko PermissionManager MINTER Safe (1-of-6)",
-        "role": "direct-minter",
+        "role": "other",
         "authorityType": "safe",
-        "directMintAbility": "direct",
+        "directMintAbility": "none",
         "threshold": 1,
         "signerCount": 6,
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-07-20",
-        "observedBlock": 25573477,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095803,
         "safe": {
           "version": "1.4.1",
           "owners": [
@@ -94,7 +98,7 @@
             "url": "https://rpc.mevblocker.io"
           }
         ],
-        "evidence": "At Ethereum block 25573477, the EUTBL PermissionManager mint requirement includes group 1, which is held by this Safe. Direct Safe reads returned version 1.4.1, the six listed owners, threshold 1, an empty module list, a zero guard storage slot, and master copy 0x41675c099f32341bf84bfc5382af534df5c7461a."
+        "evidence": "Historical review described this 1-of-6 Safe as a direct minter. At Ethereum block 26095803 its six owners and threshold 1 are unchanged and enabled modules are empty, but it holds only PermissionManager group 1 (plus PUBLIC). The token mint mask is 0x05 (groups 0 or 2), Minter initiation mask is 0x0401 (groups 0 or 10), and approval mask is 0x0201 (groups 0 or 9). Groups 2, 9, and 10 are administered only by group 0. Thus this legacy Safe has no current native-mint or mint-authorization capability on the reviewed Ethereum path; its historical label and Safe observation are retained."
       },
       {
         "chain": "ethereum",
@@ -102,35 +106,33 @@
         "deploymentRefs": [
           "ethereum:0xa0769f7a8fc65e47de93797b4e21c073c117fc80"
         ],
-        "label": "Spiko PermissionManager ADMIN Safe (3-of-8)",
+        "label": "Spiko PermissionManager ADMIN Safe (3-of-6)",
         "role": "proxy-admin",
         "authorityType": "safe",
         "directMintAbility": "can-authorize",
         "threshold": 3,
-        "signerCount": 8,
+        "signerCount": 6,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
           "version": "1.4.1",
           "owners": [
-            "0x75e0092e7D2c8D854Fcf5334f95554852d62746a",
-            "0xE9106C617D7180bf6BaDCFa5EdC664B726c5Dcbb",
-            "0x6c00Be5d1013a5bca938EF6aa8F1E5e706FF384d",
-            "0x4D1d9C5B5d9Ca448194313D799De374f362Bd460",
-            "0xDa47Bd72438F11bef7Cc54F18cd02426dd86A5a2",
-            "0xe67D2cbeaE3090bE017C66e7A6943961619a5D35",
-            "0x4896f23FF83242D8D4EB5fA1dEdF8c57e9145949",
-            "0xA6e06dfE42064B7Cd6DC902a62e74ca5Bb574011"
+            "0x75e0092e7d2c8d854fcf5334f95554852d62746a",
+            "0xd01046472371168721e45dc357296683f026d6b8",
+            "0x4d1d9c5b5d9ca448194313d799de374f362bd460",
+            "0xda47bd72438f11bef7cc54f18cd02426dd86a5a2",
+            "0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949",
+            "0xa6e06dfe42064b7cd6dc902a62e74ca5bb574011"
           ],
           "threshold": 3,
           "enabledModules": [],
           "guard": null,
-          "observedBlock": 25573477,
-          "observedAt": "2026-07-20",
+          "observedBlock": 26095803,
+          "observedAt": "2026-10-01",
           "source": "onchain"
         },
-        "observedAt": "2026-07-20",
-        "observedBlock": 25573477,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095803,
         "sources": [
           {
             "label": "Spiko PermissionManager implementation",
@@ -141,7 +143,7 @@
             "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "evidence": "At Ethereum block 25573477, Safe reads returned VERSION() = 1.4.1, eight owners, and threshold 3; existing PermissionManager review records no enabled modules or guard. Group 0 can administer PermissionManager permissions and its UUPS upgrade authorization, so it can authorize minters and replace mint-critical authority logic."
+        "evidence": "At Ethereum block 26095803, Safe reads returned VERSION() = 1.4.1, the six listed owners, threshold 3, and no enabled modules. This updates the historical 3-of-8 observation; guard status remains unknown. PermissionManager getGroups returns ADMIN group 0 for this Safe. Verified PermissionManager and Token source plus current requirement masks establish that group 0 can call token mint directly, administer minters and daily limits, and replace both token and PermissionManager UUPS logic."
       },
       {
         "chain": "starknet",
@@ -164,8 +166,8 @@
         ],
         "sources": [
           {
-            "label": "Starknet public RPC (rpc.starknet.lava.build)",
-            "url": "https://rpc.starknet.lava.build"
+            "label": "Starknet public RPC (starknet-rpc.publicnode.com)",
+            "url": "https://starknet-rpc.publicnode.com"
           },
           {
             "label": "Spiko docs",
@@ -330,6 +332,37 @@
           }
         ],
         "evidence": "At Arbitrum block 485896631, PermissionManager group 0 resolves to this sole Safe; getOwners() returned six owners, getThreshold() returned 3, and getModulesPaginated returned no modules. The mint requirement is mask 0x05 and both token and PermissionManager upgrades require mask 0x01."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x5ed5a75eeed1934ea060186e35187eaa73331366",
+        "deploymentRefs": [
+          "ethereum:0xa0769f7a8fc65e47de93797b4e21c073c117fc80"
+        ],
+        "label": "Spiko EUTBL rate-limited Minter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "dailyLimit(EUTBL) returned 0x746a528800 raw token units at the observed block. initiateMint blocks above-limit operations pending a privileged approveMint call; ADMIN can change the daily limit and can also call the token's mint function directly, so this local rate limit is not an immutable economic supply cap.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095803,
+        "sources": [
+          {
+            "label": "Spiko Ethereum deployment registry",
+            "url": "https://raw.githubusercontent.com/spiko-tech/contracts/main/.cache-1.json"
+          },
+          {
+            "label": "Verified deployed Minter implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043"
+          },
+          {
+            "label": "Spiko rate-limited minting design",
+            "url": "https://tech.spiko.io/posts/minter/"
+          }
+        ],
+        "evidence": "At Ethereum block 26095803, this proxy's implementation was 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043 and authority() returned PermissionManager 0x344278aff344d6fb960705dc18a4912221608472. PermissionManager getGroups(Minter) returned group 2 plus PUBLIC, which intersects the token mint mask 0x05. Minter initiation requires mask 0x0401, approval mask 0x0201, and setDailyLimit mask 0x01. Verified implementation code requires pending-state approval for above-limit mints and restricts daily-limit changes. Aggregate economic cap semantics remain unbounded because ADMIN retains direct native mint and upgrade powers."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -356,7 +389,7 @@
         "0x4eaa52b6280593a8820c45ce38f974290ae52cea"
       ],
       "canChangeMintLogic": true,
-      "controlRef": "Spiko PermissionManager ADMIN Safe (3-of-8)",
+      "controlRef": "Spiko PermissionManager ADMIN Safe (3-of-6)",
       "observedAt": "2026-07-20",
       "observedBlock": 25573477,
       "sources": [
@@ -381,8 +414,8 @@
           "url": "https://tech.spiko.io/posts/minter/"
         },
         {
-          "label": "Sourcify Spiko Token source",
-          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74/sources/contracts/token/Token.sol"
+          "label": "Verified Spiko Token implementation source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74"
         },
         {
           "label": "Blockscout PermissionManager implementation",
@@ -397,15 +430,15 @@
           "url": "https://ethereum-rpc.publicnode.com"
         },
         {
-          "label": "Starknet public RPC (rpc.starknet.lava.build)",
-          "url": "https://rpc.starknet.lava.build"
+          "label": "Starknet public RPC (starknet-rpc.publicnode.com)",
+          "url": "https://starknet-rpc.publicnode.com"
         },
         {
           "label": "Stellar public Soroban RPC (mainnet.sorobanrpc.com)",
           "url": "https://mainnet.sorobanrpc.com"
         }
       ],
-      "evidence": "The EUTBL authority surface is resolved across the tracked deployments. Ethereum and Base use PermissionManager 0x344278aff344d6fb960705dc18a4912221608472; Polygon and Etherlink use the same chain-local address; Arbitrum uses 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a. Fixed-block getGroups/getRequirements reads identify the sole ADMIN members as chain-local Safes: Polygon 0xa4196f06... (3-of-6, block 90611309), Base 0x4eaa52b6... (3-of-6, block 48916313), Etherlink 0x09991fbf... (3-of-6, block 48811809), and Arbitrum 0x7843225b... (3-of-6, block 485896631); no enabled Safe modules were found. The mint requirement is mask 0x05 and the token and PermissionManager upgrade requirement is mask 0x01. Starknet block 12085300 resolves token and PermissionManager authority to a 3-of-5 Argent multisig, while Stellar ledger 63567047 resolves token and PermissionManager ownership to one single-key account. The reviewed AMF-regulated UCITS fund and quarterly PwC audit support periodic reconciliation and prudential supervision. Economic-posture fields reviewed 2026-08-15: retained explicit unknown cap semantics and curated periodic reconciliation plus AMF prudential supervision. Wave 2 external research 2026-08-15: Spiko documents that admins can change each token's daily limit and mint approvers can execute blocked above-limit mints, so the no-timelock administrator paths make issuance economically unbounded.",
+      "evidence": "Historical multichain review: Ethereum, Polygon, Base, and Etherlink use chain-local PermissionManager 0x344278aff344d6fb960705dc18a4912221608472; Arbitrum uses 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a. The recorded July blocks resolved Polygon, Base, Etherlink, and Arbitrum ADMIN paths to 3-of-6 Safes, Starknet to a 3-of-5 Argent multisig, and Stellar to a single-key account. Re-verified 2026-10-01: current EVM token mint requirements remain 0x05 and upgrades require 0x01; current Ethereum ADMIN is 3-of-6 and the former group-1 Safe no longer intersects native mint permissions. Ethereum's rate-limited Minter holds group 2, with initiation group 10 and approval group 9; ADMIN can change limits and bypass the Minter by calling token mint. The AMF-regulated UCITS structure and prospectus-mandated statutory audit support the recorded supervision and periodic-reconciliation posture, but no dated audit report was obtained and quarterly PwC audit cadence is not established by the legal filing. Economic cap semantics remain unbounded because administrators can change limits and directly mint.",
       "reviewer": "P2 mint-free cohort; cur-8 Starknet/Stellar enumeration; OpenAI Codex V9 EVM completion; Sol economic-posture batch 2026-08-15",
       "reviewedAt": "2026-08-15",
       "disposition": "scoreable"

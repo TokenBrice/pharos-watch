@@ -1,12 +1,13 @@
 import type { V9ReasonCode, V9ValidatedPolicyEnvelope } from "../../types/safety-score-v9";
 import type { V9AssetFactsBase, V9ExitRouteFactV2, V9FactStatusV2 } from "../../types/safety-score-v9-facts";
-import type { ExitRouteObservationHistory } from "../../types/exit-route";
+import type { ExitExecutionCertificate, ExitRouteObservationHistory, PhysicalToUsdTrace } from "../../types/exit-route";
 import type {
   RedemptionAccessModel,
   RedemptionExecutionModel,
   RedemptionOutputAssetType,
   RedemptionSettlementModel,
 } from "../../types/redemption";
+import type { RedemptionRouteSuspension } from "../../types/redemption";
 import {
   blendExitCapacityComponent,
   composeExitComponentScore,
@@ -19,7 +20,8 @@ import {
 } from "../exit-route-scoring";
 import { clampScore, roundTo } from "../math";
 import { assertV9ValidatedPolicyEnvelope, resolveV9ReasonPolicy } from "./policy";
-import { compareText, uniqueSorted } from "./primitives";
+import { compareText, domainDigest, uniqueSorted } from "./primitives";
+import { admitExitExecutionCertificate, exitExecutionInputGenerationId, resolveExitExecutionRequestPoint } from "./exit-execution";
 
 export type V9ExitAccess = RedemptionAccessModel;
 export type V9ExitSettlement = RedemptionSettlementModel;
@@ -30,6 +32,7 @@ export type V9ExitOutputQuality = RedemptionOutputAssetType;
 export type V9ExitHolderEligibility =
   | "any-holder"
   | "verified-customer"
+  | "verified-customer-neutral"
   | "whitelisted-primary"
   | "pre-incident-holder"
   | "issuer-discretionary"
@@ -51,6 +54,7 @@ export interface V9ExitCapacityPoint {
 }
 
 export interface V9ExitEvaluationRoute {
+  routeSuspension?: RedemptionRouteSuspension;
   routeKey: string;
   lane: "dex" | "redemption";
   routeFamily: "dex-amm" | "dex-orderbook" | "issuer-redemption" | "protocol-redemption" | "eventual-redemption";
@@ -58,10 +62,10 @@ export interface V9ExitEvaluationRoute {
   settlementBoundUnproven: boolean;
   observationState: "known" | "missing" | "stale" | "unsupported" | "bounded-unknown";
   scoreEligible: boolean;
-  coverageClass: "exact-complete" | "exact-lower-bound" | "diagnostic";
+  coverageClass: "exact-complete" | "exact-lower-bound" | "modelled-terms-lower-bound" | "diagnostic";
   evidenceKind: string;
-  /** The route's reviewed fee is undisclosed: modeled capacity with an unbounded cost. */
-  feeEvidence?: "undisclosed-reviewed" | null;
+  /** Reviewed fee disclosure without a same-notional execution cost bound. */
+  feeEvidence?: "undisclosed-reviewed" | "disclosed-unquantified" | null;
   observationConfidence: "high" | "medium" | "low" | "unknown";
   modelConfidence: "high" | "medium" | "low";
   observationHistory?: ExitRouteObservationHistory | null;
@@ -78,6 +82,9 @@ export interface V9ExitEvaluationRoute {
   outputResolved: boolean;
   outputValueRetention: number;
   unboundedDeliveryCap?: number;
+  physicalToUsd?: PhysicalToUsdTrace;
+  executionModelId?: string;
+  executionCertificate?: ExitExecutionCertificate;
   capacityCurve: readonly V9ExitCapacityPoint[];
   routeScoreCap: "queue-redeem" | "offchain-issuer" | null;
   failureDomains: readonly string[];
@@ -85,11 +92,15 @@ export interface V9ExitEvaluationRoute {
 }
 
 export interface V9ExitRouteTrace {
+  routeSuspension?: RedemptionRouteSuspension;
   routeKey: string;
   routeFamily: V9ExitEvaluationRoute["routeFamily"];
+  feeEvidence?: V9ExitEvaluationRoute["feeEvidence"];
   observationConfidence: V9ExitEvaluationRoute["observationConfidence"];
   modelConfidence: V9ExitEvaluationRoute["modelConfidence"];
   observationHistory: ExitRouteObservationHistory | null;
+  physicalToUsd?: PhysicalToUsdTrace;
+  executionCertificate?: ExitExecutionCertificate;
   horizon: V9ExitHorizon;
   capacityScoringHorizon: V9ExitCapacityScoringHorizon;
   settlementDelaySec: number;
@@ -197,6 +208,7 @@ export function resolveV9ExitCapacityAtRequest(
   points: readonly V9ExitCapacityPoint[],
   request: V9ExitStressRequest,
 ): V9ExitCapacityPoint | null {
+  // Legacy curves retain interpolation; certified models use exact request points before reaching this boundary.
   if (points.length === 0 || curveIssue(points)) return null;
   const eligibleCosts = uniqueSorted(
     points.filter((point) => point.maxCostBps <= request.maxCostBps).map((point) => String(point.maxCostBps)),
@@ -324,14 +336,11 @@ export interface V9CreditableNonAtomicRedemptionInput {
  * hard-gating on a known observation, a resolved output, non-diagnostic
  * coverage, at least one enumerated failure domain, and a documented,
  * live-reserve, or on-chain redemption evidence kind. This gate decides only
- * *eligibility* for the discounted credit; whether the route actually clears
- * notional is settled downstream by its measured capacity curve. An impaired,
- * frozen, or discretionary route with a proven settlement bound does not
- * survive as a viable exit when its redemption cannot clear: its zero (or
- * immaterial) capacity curve removes its credit while preserving the measured
- * adverse trace. An open route whose settlement completion bound is unproven
- * is different: it is a bounded evidence gap, so it is excluded from scoring
- * and retained as a diagnostic rather than treated as measured zero.
+ * *eligibility* for discounted positive credit. Its capacity is a lower bound,
+ * not a measurement of exhaustion: zero or immaterial discounted capacity
+ * leaves missing same-notional evidence rather than measured adversity. A
+ * route whose settlement completion bound is unproven likewise stays a
+ * bounded evidence gap, excluded from scoring and retained diagnostically.
  */
 /**
  * A route output is resolved when it is both observed and valued. Two surfaces
@@ -384,8 +393,14 @@ function isCreditableNonAtomicRedemption(
 }
 
 function routeExclusionReason(route: V9ExitEvaluationRoute, envelope: V9ValidatedPolicyEnvelope): V9ReasonCode | null {
+  // Exact-channel cessation is neither a measured zero nor evidence about any other rail.
+  if (route.routeSuspension) return null;
   if (route.applicability === "not-applicable") return null;
   if (route.applicability === "unresolved") return "missing-same-notional-route";
+  if (route.executionModelId && (!route.executionCertificate || !route.scoreEligible || route.observationState !== "known")) {
+    return "unsupported-same-notional-route";
+  }
+  if (route.physicalToUsd?.rejectionReason != null) return "missing-same-notional-route";
   if (route.settlementBoundUnproven) return "unproven-settlement-bound";
   if (route.outputResolved === false) return "unresolved-exit-output";
   // `missing` means no retained observation at all and still excludes. `stale`
@@ -436,11 +451,21 @@ function resolveIncludedRouteCapacity(
   | { state: "excluded"; exclusionReason: V9ReasonCode | null }
   | { state: "incomparable" }
   | { state: "unsupported" } {
+  if (route.routeSuspension) return { state: "excluded", exclusionReason: null };
   const exclusionReason = routeExclusionReason(route, envelope);
   if (exclusionReason !== null || route.applicability === "not-applicable") {
     return { state: "excluded", exclusionReason };
   }
-  const capacityPoint = resolveV9ExitCapacityAtRequest(route.capacityCurve, request);
+  const proof = route.executionCertificate ? resolveExitExecutionRequestPoint(route.executionCertificate, request) : null;
+  const capacityPoint = route.executionModelId
+    ? proof && proof.certification !== "diagnostic"
+      ? route.capacityCurve.find((point) => point.requestedNotionalUsd === request.requestedNotionalUsd &&
+          point.maxCostBps === request.maxCostBps && point.executableUsd === proof.executableUsd &&
+          point.executionCostBps === proof.executionCostBps) ?? null
+      : null
+    : resolveV9ExitCapacityAtRequest(route.capacityCurve, route.physicalToUsd
+      ? { ...request, maxCostBps: envelope.policy.semantic.exit.physicalToUsd.maxCostBps }
+      : request);
   if (capacityPoint === null) return { state: "incomparable" };
   if (
     !Number.isFinite(route.outputValueRetention) ||
@@ -530,19 +555,36 @@ export function resolveV9DistinctExitCapacity(
   };
 }
 
+/** Exhaustive measurements retain adverse force when stale; aging is not clearance. */
+function isExhaustionMeasurement(route: V9ExitEvaluationRoute): boolean {
+  return (route.observationState === "known" || route.observationState === "stale") &&
+    route.scoreEligible &&
+    route.outputResolved &&
+    route.coverageClass === "exact-complete" &&
+    route.evidenceKind !== "documented-terms";
+}
+
+function hasUnquantifiedFee(route: V9ExitEvaluationRoute): boolean {
+  return route.feeEvidence === "undisclosed-reviewed" ||
+    route.feeEvidence === "disclosed-unquantified";
+}
+
 function evaluateRoute(
   route: V9ExitEvaluationRoute,
   request: V9ExitStressRequest,
   envelope: V9ValidatedPolicyEnvelope,
   preExitDangerHeld: boolean,
-  portfolioReviewed: boolean,
 ): V9ExitRouteTrace {
   const horizon = routeCapacityHorizon(route, request);
   const attribution = {
     routeFamily: route.routeFamily,
+    ...(route.feeEvidence ? { feeEvidence: route.feeEvidence } : {}),
     observationConfidence: route.observationConfidence,
     modelConfidence: route.modelConfidence,
     observationHistory: route.observationHistory ?? null,
+    ...(route.routeSuspension ? { routeSuspension: route.routeSuspension } : {}),
+    ...(route.physicalToUsd ? { physicalToUsd: route.physicalToUsd } : {}),
+    ...(route.executionCertificate ? { executionCertificate: route.executionCertificate } : {}),
     horizon,
     capacityScoringHorizon: route.capacityScoringHorizon,
     settlementDelaySec: route.settlementDelaySec,
@@ -558,7 +600,7 @@ function evaluateRoute(
   // route resolved before the lever — so the pre-exit danger that gates the
   // credit never feeds back through the exit pillar it is measured on. Every
   // other route, and every route on a non-danger-held asset, is unaffected.
-  if (preExitDangerHeld && route.feeEvidence === "undisclosed-reviewed") {
+  if (preExitDangerHeld && hasUnquantifiedFee(route)) {
     return {
       routeKey: route.routeKey,
       ...attribution,
@@ -602,15 +644,11 @@ function evaluateRoute(
   const { capacityPoint, valuedExecutableUsd } = resolvedCapacity;
   const policy = envelope.policy.semantic.exit;
   const completionRatio = valuedExecutableUsd / request.requestedNotionalUsd;
-  // A discounted, score-ineligible redemption can turn zero capacity into a
-  // measured adverse fact only when the route inventory itself is reviewed
-  // complete. If the surrounding surface is still incomplete, preserve the
-  // bounded-unknown outcome rather than manufacturing a measured F from one
-  // weak route observation.
+  // A lower bound proves executable capacity, never its absence above that
+  // bound. Discounted or modeled terms are credit evidence, not measurements
+  // of exhaustion, even when the inventory was reviewed complete.
   if (
-    !route.scoreEligible &&
-    isCreditableNonAtomicRedemption(route, envelope) &&
-    !portfolioReviewed &&
+    !isExhaustionMeasurement(route) &&
     !hasMaterialExitCapacity(
       {
         executableCapacityUsd: capacityPoint.executableUsd,
@@ -624,7 +662,7 @@ function evaluateRoute(
       ...attribution,
       score: null,
       included: false,
-      exclusionReason: "unsupported-same-notional-route",
+      exclusionReason: "missing-same-notional-route",
       capacityPoint: null,
       components: null,
       confidenceFactor: null,
@@ -660,7 +698,7 @@ function evaluateRoute(
     executionCertainty: policy.executionScores[route.execution],
     capacity,
     outputAssetQuality: Math.min(
-      policy.outputAssetScores[route.outputQuality],
+      route.physicalToUsd ? policy.outputAssetScores["physical-commodity-delivery"] : policy.outputAssetScores[route.outputQuality],
       route.unboundedDeliveryCap === undefined ? 100 : policy.unboundedDeliveryCap,
     ) * route.outputValueRetention,
     // A cost sitting exactly on the request bound is an upper bound, not a
@@ -668,7 +706,7 @@ function evaluateRoute(
     // realized marginal cost. Bounded-unknown cost scores at the policy
     // midpoint instead of pricing the worst case as if it were observed.
     cost:
-      capacityPoint.executionCostBps >= request.maxCostBps
+      !route.physicalToUsd && capacityPoint.executionCostBps >= request.maxCostBps
         ? policy.boundedCostScore
         : clampScore(100 * (1 - capacityPoint.executionCostBps / Math.max(1, request.maxCostBps))),
   };
@@ -715,6 +753,7 @@ function evaluateRoute(
   if (route.observationState === "stale") capsApplied.push("observation:stale");
   score *= confidenceFactor * policy.holderEligibilityMultipliers[route.holderEligibility];
   const routeCap =
+    route.physicalToUsd ? policy.routeFamilyCaps.offchainIssuer :
     route.routeScoreCap === "queue-redeem" ||
     route.capacityScoringHorizon === "daily" ||
     route.capacityScoringHorizon === "queued" ||
@@ -742,12 +781,12 @@ function evaluateRoute(
     score = policy.documentedTermsCreditCeiling;
     capsApplied.push("evidence-kind:documented-terms");
   }
-  // An undisclosed-reviewed fee leaves the route's exit cost unbounded even
-  // though its modeled capacity is emitted, so its credit is ceilinged below
-  // what a cost-bounded route can earn (SIM-EXIT-L2 lever).
-  if (route.feeEvidence === "undisclosed-reviewed" && score > policy.undisclosedFeeRouteScoreCeiling) {
+  // Both missing disclosure and an unevaluated published formula use the same
+  // conservative cost-credit ceiling. More disclosure cannot reduce credit;
+  // retain the provenance label without claiming an observed cost bound.
+  if (hasUnquantifiedFee(route) && score > policy.undisclosedFeeRouteScoreCeiling) {
     score = policy.undisclosedFeeRouteScoreCeiling;
-    capsApplied.push("fee-evidence:undisclosed-reviewed");
+    capsApplied.push(`fee-evidence:${route.feeEvidence}`);
   }
   return {
     routeKey: route.routeKey,
@@ -783,6 +822,8 @@ function mapHolderAccess(route: V9ExitRouteFactV2): {
       return { access: "issuer-api", holderEligibility: "any-holder" };
     case "institutional-eligible":
       return { access: "issuer-api", holderEligibility: "verified-customer" };
+    case "verified-customer-neutral":
+      return { access: "issuer-api", holderEligibility: "verified-customer-neutral" };
     case "allowlisted":
       return { access: "whitelisted-onchain", holderEligibility: "whitelisted-primary" };
     case "issuer-only":
@@ -853,6 +894,10 @@ export function projectV9ExitEvaluationRoute(route: V9ExitRouteFactV2): V9ExitEv
     observationConfidence: route.observationConfidence,
     modelConfidence: route.modelConfidence,
     observationHistory: route.observationHistory ?? null,
+    ...(route.routeSuspension ? { routeSuspension: route.routeSuspension } : {}),
+    ...(route.physicalToUsd ? { physicalToUsd: route.physicalToUsd } : {}),
+    ...(route.executionModelId ? { executionModelId: route.executionModelId } : {}),
+    ...(route.executionCertificate ? { executionCertificate: route.executionCertificate } : {}),
     ...access,
     capacityScoringHorizon: route.capacityScoringHorizon ?? "unknown",
     settlement: mapSettlement(route),
@@ -887,14 +932,32 @@ export function projectV9ExitEvaluationRoute(route: V9ExitRouteFactV2): V9ExitEv
   };
 }
 
+/**
+ * A bridge-materiality-only bound leaves the current circulating USD amount
+ * established by the supply producer. Use it only to size Exit; do not promote
+ * the supply status or infer a chain/bridge partition for any other consumer.
+ */
+export function selectV9ExitCirculatingUsd(supply: V9AssetFactsBase["supply"]): number | null {
+  const { status } = supply;
+  const currentAmountWithUnknownDistribution =
+    status.observationState === "bounded-unknown" &&
+    status.applicability.state === "required" &&
+    status.applicability.policyRuleId === "v9.supply.bridge-materiality";
+  return status.observationState === "known" || currentAmountWithUnknownDistribution
+    ? supply.circulatingUsd
+    : null;
+}
+
 export function evaluateV9ExitAssetFacts(
   asset: Pick<V9AssetFactsBase, "supply" | "exitStatus" | "exitRoutes">,
   envelope: V9ValidatedPolicyEnvelope,
   preExitDangerHeld = false,
+  executionContext?: { assetId: string; clockSec: number },
 ): V9ExitEvaluationResult {
   return evaluateV9Exit(
     {
-      circulatingUsd: asset.supply.status.observationState === "known" ? asset.supply.circulatingUsd : null,
+      ...executionContext,
+      circulatingUsd: selectV9ExitCirculatingUsd(asset.supply),
       portfolioStatus:
         asset.exitStatus.observationState === "known" && asset.exitStatus.applicability.state === "required"
           ? "reviewed-complete"
@@ -921,6 +984,8 @@ function routesAreIndependent(left: V9ExitEvaluationRoute, right: V9ExitEvaluati
 export function evaluateV9Exit(
   args: {
     circulatingUsd: number | null;
+    assetId?: string;
+    clockSec?: number;
     portfolioStatus?: "reviewed-complete" | "incomplete";
     routes: readonly V9ExitEvaluationRoute[];
     /** The asset is held down by a pre-exit adverse fact; undisclosed-fee routes earn no credit. */
@@ -951,14 +1016,27 @@ export function evaluateV9Exit(
       routes: [],
     };
   }
-  const routes = [...args.routes].sort((left, right) => compareText(left.routeKey, right.routeKey));
+  const routes = args.routes.map((route) => {
+    if (!route.executionModelId) return route;
+    const certificate = route.executionCertificate;
+    const admission = certificate && args.assetId !== undefined && args.clockSec !== undefined
+      ? admitExitExecutionCertificate({
+          certificate, envelope, assetId: args.assetId, clockSec: args.clockSec,
+          inputGenerationId: exitExecutionInputGenerationId(args.assetId, args.circulatingUsd, certificate.inputReference),
+          observationGenerationId: domainDigest("safety-score-v10.exit-execution-source.v1", certificate.source),
+          request: stressRequest,
+        })
+      : null;
+    return admission && admission.state !== "unavailable"
+      ? { ...route, coverageClass: admission.point.certification }
+      : { ...route, scoreEligible: false };
+  }).sort((left, right) => compareText(left.routeKey, right.routeKey));
   const traces = routes.map((route) =>
     evaluateRoute(
       route,
       stressRequest,
       envelope,
       args.preExitDangerHeld ?? false,
-      args.portfolioStatus !== "incomplete",
     ));
   const evaluated = traces
     .flatMap((trace, index) => (trace.score === null ? [] : [{ trace, route: routes[index]!, score: trace.score }]))
@@ -983,45 +1061,34 @@ export function evaluateV9Exit(
     }),
   ) as Record<V9ExitHorizon, V9ExitHorizonTrace>;
   if (evaluated.length === 0) {
-    const portfolioReviewed = args.portfolioStatus === "reviewed-complete";
-    const hasBoundedMissingRoute = diagnosticReasons.includes("missing-same-notional-route");
+    const hasBoundedMissingRoute = diagnosticReasons.includes("missing-same-notional-route") ||
+      routes.some((route) => route.routeSuspension !== undefined ||
+        (route.applicability !== "not-applicable" && !route.settlementBoundUnproven &&
+          !isExhaustionMeasurement(route))) ||
+      diagnosticReasons.some((reason) => reason !== "unproven-settlement-bound");
     const hasUnprovenSettlementBound = diagnosticReasons.includes("unproven-settlement-bound");
-    const onlyUnsupportedDiagnostics =
-      diagnosticReasons.length > 0 &&
-      diagnosticReasons.every((reason) => reason === "unsupported-same-notional-route");
-    // A complete route inventory proves "no viable exit" only when the reviewed
-    // route facts themselves are complete. A diagnostic route carrying
-    // `missing-same-notional-route` is explicit bounded uncertainty (for example,
-    // a known issuer mechanism whose stress capacity/SLA/cost is not established),
-    // not measured zero exit. An open route carrying
-    // `unproven-settlement-bound` is the same bounded gap even when the portfolio
-    // status is reviewed-complete: review establishes the route, but not that
-    // its operator queue settles within the scoring horizon. Only a genuinely
-    // measured zero reaches `no-viable-exit-path`.
-    const defaultReason = hasBoundedMissingRoute
-      ? "missing-same-notional-route"
-      : hasUnprovenSettlementBound
+    const provenEmptyInventory = args.portfolioStatus === "reviewed-complete" && routes.length === 0;
+    // A reviewed census proving no routes exist is adverse. A non-empty
+    // inventory whose routes were excluded or unmeasured is missing evidence,
+    // not proof of exhaustion; admitted exhaustive zeros remain included.
+    const defaultReason = provenEmptyInventory
+      ? "no-viable-exit-path"
+      : !hasBoundedMissingRoute && hasUnprovenSettlementBound
         ? "unproven-settlement-bound"
-        : portfolioReviewed
-          ? "no-viable-exit-path"
-          : onlyUnsupportedDiagnostics
-            ? null
-            : "missing-same-notional-route";
+        : "missing-same-notional-route";
     return {
-      score: hasBoundedMissingRoute
-        ? boundedFloor
-        : hasUnprovenSettlementBound
+      score: provenEmptyInventory
+        ? 0
+        : defaultReason === "unproven-settlement-bound"
           ? unprovenSettlementBoundedFloor
-          : portfolioReviewed
-            ? 0
-            : boundedFloor,
+          : boundedFloor,
       stressRequest,
       primaryRouteKey: null,
       diversificationRouteKey: null,
       diversificationBonus: 0,
       horizons,
       reasons: uniqueSorted([
-        ...(defaultReason ? [defaultReason] : []),
+        defaultReason,
         ...diagnosticReasons,
       ]) as V9ReasonCode[],
       routes: traces,
@@ -1037,9 +1104,9 @@ export function evaluateV9Exit(
   // stay bounded at the portfolio level too: it neither earns nor donates the
   // independent-route bonus, so opaque-fee routes cannot stack past the ceiling
   // or lift a stronger primary (adversarial-review hardening of SIM-EXIT-L2).
-  const undisclosedFeeInvolved =
-    primary.route.feeEvidence === "undisclosed-reviewed" ||
-    independent?.route.feeEvidence === "undisclosed-reviewed";
+  const unquantifiedFeeInvolved =
+    hasUnquantifiedFee(primary.route) ||
+    (independent !== undefined && hasUnquantifiedFee(independent.route));
   // Redundancy can improve a strong primary route, but a merely adequate
   // backup must not automatically fill all remaining headroom. Scale the
   // bounded redundancy allowance by the backup route's own quality. Because
@@ -1050,12 +1117,15 @@ export function evaluateV9Exit(
     100 * envelope.policy.semantic.exit.independentRouteBenefitLimit,
   );
   const diversificationBonus =
-    independent && !undisclosedFeeInvolved
+    independent && !unquantifiedFeeInvolved
       ? redundancyHeadroom * (independent.score / 100)
       : 0;
   const hasOtherIncludedRoute = evaluated.length > 1;
   const boundedGapReason =
-    boundedFloor !== null && diagnosticReasons.includes("missing-same-notional-route")
+    boundedFloor !== null && (diagnosticReasons.includes("missing-same-notional-route") ||
+      !isExhaustionMeasurement(primary.route) ||
+      (primary.score === 0 && routes.some((route) =>
+        route.applicability !== "not-applicable" && !isExhaustionMeasurement(route))))
       ? "missing-same-notional-route"
       : unprovenSettlementBoundedFloor !== null && diagnosticReasons.includes("unproven-settlement-bound")
         ? "unproven-settlement-bound"

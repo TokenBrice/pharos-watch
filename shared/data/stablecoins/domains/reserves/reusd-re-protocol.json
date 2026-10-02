@@ -125,14 +125,18 @@
         "url": "https://docs.re.xyz/products/about-reusd.md"
       },
       {
-        "label": "Re Protocol reUSD and reUSDe comparison",
-        "url": "https://docs.re.xyz/products/comparing-reusd-reusde.md"
+        "label": "Re Protocol About reUSDe: mezzanine and senior tranche comparison",
+        "url": "https://docs.re.xyz/products/about-reusde.md"
+      },
+      {
+        "label": "Historical TNF assets-only AUP, period 2025-10-31, signed 2025-12-17; excludes reUSD/reUSDe backing and does not attest this live composition",
+        "url": "https://storage.googleapis.com/foundation-files/AUP-Report-2025.pdf"
       }
     ],
     "rationale": "The current issuer metrics payload includes byAsset.reusd and byAsset.reusde on-chain numerators, but publishes offchain_capital as a protocol aggregate. It does not supply the attributable off-chain denominator and quantified tranche waterfall needed to turn these numerators into reUSD backing percentages. The measured protocol-pooled composition is retained as unlinked context. Every token link is withheld, including sUSDe (NC-116), so a reviewed overlay cannot turn protocol percentages into tranche dependencies.",
     "compositionBasis": "Protocol-pooled Re Metrics embedded payload captured 2026-09-30, normalized without rounding. These percentages describe protocol holdings, not attributable reUSD tranche backing.",
     "compositionAsOf": "2026-09-30",
-    "scope": "dependency-relationships",
+    "scope": "classification-only",
     "knownUnknownExposure": "The full protocol-pooled composition has unresolved reUSD attribution. Token-specific on-chain numerators alone do not establish an off-chain denominator or tranche loss allocation.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
@@ -191,5 +195,39 @@
         "rationale": "Protocol-pooled token holding lacks a reUSD-attributable denominator and tranche waterfall."
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Fireblocks",
+        "role": "custodian"
+      },
+      {
+        "name": "Resilience Inv SPC",
+        "role": "other",
+        "jurisdiction": "Cayman Islands"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA41reUSD)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Re Protocol: custody structure and principal-at-risk notes",
+        "url": "https://docs.re.xyz/transparency-and-data-show-me-the-receipts/audits-attestations-custody-structure.md"
+      },
+      {
+        "label": "Re Protocol: custody wallets and Fireblocks signing policy",
+        "url": "https://docs.re.xyz/products/smart-contracts.md"
+      },
+      {
+        "label": "The Network Firm AUP: historical Fireblocks wallet ownership observations",
+        "url": "https://storage.googleapis.com/foundation-files/AUP-Report-2025.pdf"
+      }
+    ],
+    "uncertainty": "Fireblocks provides the disclosed MPC custody infrastructure; Resilience Inv SPC holds the separate reUSD and reUSDe note portfolios. No current custody shares or named Section 114 trust bank were established. Segregated trust accounts protect ceding insurers, while token holders have no direct legal claim to those assets and instead have indirect exposure through unsecured, limited-recourse principal-at-risk notes. Token-holder bankruptcy remoteness, full-stack segregation and rehypothecation restrictions remain unverified."
   }
 }

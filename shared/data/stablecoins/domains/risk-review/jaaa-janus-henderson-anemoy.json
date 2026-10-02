@@ -10,11 +10,15 @@
       {
         "label": "Centrifuge docs",
         "url": "https://docs.centrifuge.io/"
+      },
+      {
+        "label": "Solana finalized JAAA Token-2022 mint state",
+        "url": "https://api.mainnet-beta.solana.com"
       }
     ],
-    "evidence": "JAAA is issued through permissioned fund or issuer rails with KYC-gated primary-market access and issuer/admin controls over transfer, mint, redemption, or token administration.",
-    "reviewer": "Codex 2026-05-14 execution-ready expansion",
-    "reviewedAt": "2026-05-14"
+    "evidence": "JAAA is issued through permissioned fund or issuer rails with KYC-gated primary-market access and issuer/admin controls over transfer, mint, redemption, or token administration. At finalized Solana slot 452212543, the JAAA Token-2022 mint names BUo4FKP1hSAZ1zcNGzJHTS1V9zcQM8fzUFpYj1NboRK4 as mint authority, freeze authority, and permanent delegate; its default account state is frozen. These current controls directly confirm the reviewed access restrictions.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA26JAAA)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

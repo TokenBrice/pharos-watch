@@ -1,5 +1,10 @@
+import "../../test-helpers/reviewed-deployment-catalog.test-support";
 import { describe, expect, it, vi } from "vitest";
 import { sha256HexFromBytes } from "@shared/lib/sha256";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import type { StablecoinMeta } from "@shared/types/core";
+import currentWm from "@shared/data/stablecoins/coins/wm-m0.json";
+import currentWmRisk from "@shared/data/stablecoins/domains/risk-review/wm-m0.json";
 import { makeWmDeploymentObservations } from "../../test-helpers/v9-fixed-input";
 import { uint256, addressWord, chainRpcs } from "./safety-score-v9-supply-observation.test-support";
 import type { EvmMulticall3Call, EvmMulticall3Result } from "../evm-rpc";
@@ -46,6 +51,13 @@ const RUNTIME_CODE_BY_CHAIN: Record<string, `0x${string}`> = {
   arbitrum: "0x60806040525f807f360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc54368280378136915af43d5f803e15603d573d5ff35b3d5ffdfea2646970667358221220873fa86d070f0e378ace52953e252f64968354d185bab148e3a6aad8dcd9523f64736f6c634300081a0033",
   base: "0x60806040525f8073ffffffffffffffffffffffffffffffffffffffff7f360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc5416368280378136915af43d5f803e156053573d5ff35b3d5ffdfea26469706673582212203fa62813d58f399d153670a92f46384f2ea4f80e48ba9cb71cfdead84a3b7f8d64736f6c634300081a0033",
   plume: "0x6080604052600a600c565b005b60186014601a565b605d565b565b5f60587f360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc5473ffffffffffffffffffffffffffffffffffffffff1690565b905090565b365f80375f80365f845af43d5f803e8080156076573d5ff35b3d5ffdfea2646970667358221220235077aeb2ddadd8a33ba3e240b110e0341538b2f43ca3e7c2c8d7794680257a64736f6c634300081a0033",
+  linea: "0x6080604052600a600c565b005b60186014601a565b605e565b565b600060597f360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc5473ffffffffffffffffffffffffffffffffffffffff1690565b905090565b3660008037600080366000845af43d6000803e808015607c573d6000f35b3d6000fdfea2646970667358221220dfa7cc3fb513e0c0eb8e3340bed4fc2891f97948792c41d95f7df430f035891964736f6c634300081a0033",
+  bsc: "0x6080604052600a600c565b005b60186014601a565b605d565b565b5f60587f360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc5473ffffffffffffffffffffffffffffffffffffffff1690565b905090565b365f80375f80365f845af43d5f803e8080156076573d5ff35b3d5ffdfea26469706673582212209ed70f8fd21605a65af001ce75b81b035349777cadde805ebbe7af9a134f3ca964736f6c634300081a0033",
+  hyperevm: "0x6080604052600a600c565b005b60186014601a565b605d565b565b5f60587f360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc5473ffffffffffffffffffffffffffffffffffffffff1690565b905090565b365f80375f80365f845af43d5f803e8080156076573d5ff35b3d5ffdfea2646970667358221220235077aeb2ddadd8a33ba3e240b110e0341538b2f43ca3e7c2c8d7794680257a64736f6c634300081a0033",
+  soneium: "0x6080604052600a600c565b005b60186014601a565b605d565b565b5f60587f360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc5473ffffffffffffffffffffffffffffffffffffffff1690565b905090565b365f80375f80365f845af43d5f803e8080156076573d5ff35b3d5ffdfea2646970667358221220feb6e35ad991024f887547200ccd636065a650ef9e95e8b3019f111224035e8d64736f6c634300081a0033",
+  plasma: "0x6080604052600a600c565b005b60186014601a565b605d565b565b5f60587f360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc5473ffffffffffffffffffffffffffffffffffffffff1690565b905090565b365f80375f80365f845af43d5f803e8080156076573d5ff35b3d5ffdfea2646970667358221220feb6e35ad991024f887547200ccd636065a650ef9e95e8b3019f111224035e8d64736f6c634300081a0033",
+  citrea: "0x6080604052600a600c565b005b60186014601a565b605d565b565b5f60587f360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc5473ffffffffffffffffffffffffffffffffffffffff1690565b905090565b365f80375f80365f845af43d5f803e8080156076573d5ff35b3d5ffdfea26469706673582212207eed827e1a5a77b2640843c916fba392c4cd6b3a699eda9592a178baca3c805064736f6c634300081a0033",
+  monad: "0x6080604052600a600c565b005b60186014601a565b605d565b565b5f60587f360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc5473ffffffffffffffffffffffffffffffffffffffff1690565b905090565b365f80375f80365f845af43d5f803e8080156076573d5ff35b3d5ffdfea26469706673582212208f78540d15442c08541556b8eea395f79fd1d5476de1f7f19a53c5dc6c7de2a864736f6c634300081a0033",
 };
 
 
@@ -69,7 +81,7 @@ function evmCodeAtBlock(
     routeIdentity?.runtime === "evm" &&
     address.toLowerCase() === routeIdentity.implementationAddress
   ) {
-    const marker = ["ethereum", "arbitrum", "base", "plume"].indexOf(chainId) + 1;
+    const marker = Object.keys(RUNTIME_CODE_BY_CHAIN).indexOf(chainId) + 1;
     return marker > 0
       ? (`0x${marker.toString(16).padStart(2, "0")}` as const)
       : null;
@@ -88,9 +100,7 @@ function dependencies() {
   return {
     sha256HexFromBytes: vi.fn((bytes: Uint8Array) => {
       if (bytes.length === 1) {
-        const chainId = ["ethereum", "arbitrum", "base", "plume"][
-          bytes[0]! - 1
-        ];
+        const chainId = Object.keys(RUNTIME_CODE_BY_CHAIN)[bytes[0]! - 1];
         if (chainId) {
           const identity = expectedWmDeploymentIdentity(
             `${chainId}:0x437cc33344a0b27a429f795ff6b469c72698b291`,
@@ -167,6 +177,85 @@ async function observe(overrides: ReturnType<typeof dependencies> = dependencies
 }
 
 describe("wM reviewed deployment observer", () => {
+  it("includes every expanded deployment in the atomic supply partition", async () => {
+    const metaById = ACTIVE_META_BY_ID as Map<string, StablecoinMeta>;
+    const reviewed = metaById.get("wm-m0")!;
+    const deps = dependencies();
+    metaById.set("wm-m0", {
+      ...reviewed,
+      contracts: currentWm.contracts,
+      bridgeRouteRisk: currentWmRisk.bridgeRouteRisk,
+    } as unknown as StablecoinMeta);
+    const addedChains = currentWm.contracts.map((route) => route.chain)
+      .filter((chain) => chain !== "solana" && !(chain in RAW_BY_CHAIN));
+    const fetchBlockNumber = deps.fetchEvmBlockNumber.getMockImplementation()!;
+    const fetchBlockHeader = deps.fetchEvmBlockHeader.getMockImplementation()!;
+    const fetchMulticall = deps.fetchEvmMulticall3Aggregate3AtBlock.getMockImplementation()!;
+    deps.fetchEvmBlockNumber.mockImplementation(async (chain) =>
+      addedChains.includes(chain) ? 1_000 : fetchBlockNumber(chain),
+    );
+    deps.fetchEvmBlockHeader.mockImplementation(async (chain, block, options) =>
+      addedChains.includes(chain) && typeof block === "number"
+        ? { number: block, timestamp: CLOCK_SEC - 20, hash: `0x${"b".repeat(64)}` as const }
+        : fetchBlockHeader(chain, block, options),
+    );
+    deps.fetchEvmMulticall3Aggregate3AtBlock.mockImplementation(async (chain, calls, block) =>
+      chain && addedChains.includes(chain)
+        ? calls.map((call) => ({
+            label: call.label,
+            success: true,
+            returnData: call.label === "total-supply" ? uint256(1_000_000n)
+              : call.label === "decimals" ? uint256(6n)
+                : addressWord(call.label === "m-token"
+                  ? "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b"
+                  : "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd"),
+          }))
+        : fetchMulticall(chain, calls, block),
+    );
+    try {
+      const attempt = await observeWmReviewedDeploymentUnitPartitionAttempt({
+        aggregateSupplyUsd: AGGREGATE_SUPPLY_USD,
+        registryFingerprint: REGISTRY_FINGERPRINT,
+        scoringClockSec: CLOCK_SEC,
+        chainRpcs: chainRpcs(Object.keys(RUNTIME_CODE_BY_CHAIN)),
+      }, deps);
+      expect(attempt.status).toBe("accepted");
+      if (attempt.status !== "accepted") throw new Error("Expected complete attribution");
+      expect(attempt.attribution.deployments.map((row) => row.routeId).sort()).toEqual(
+        currentWm.contracts.map((route) => `${route.chain}:${route.address}`).sort(),
+      );
+      const totalRaw = attempt.attribution.deployments.reduce(
+        (sum, row) => sum + BigInt(row.rawSupply), 0n,
+      );
+      for (const chain of addedChains) {
+        const deployment = attempt.attribution.deployments.find((row) => row.chainId === chain)!;
+        // Allocation floors each raw share to SHARE_SCALE before pricing, so allow micro-USD drift.
+        expect(deployment.currentSupplyUsd).toBeCloseTo(
+          AGGREGATE_SUPPLY_USD * 1_000_000 / Number(totalRaw),
+          6,
+        );
+      }
+      const validCode = deps.fetchEvmCodeAtBlock.getMockImplementation()!;
+      deps.fetchEvmCodeAtBlock.mockImplementation(async (chain, address, block) =>
+        chain === "monad" && address.toLowerCase() === "0x437cc33344a0b27a429f795ff6b469c72698b291"
+          ? "0x6000"
+          : validCode(chain, address, block),
+      );
+      await expect(observeWmReviewedDeploymentUnitPartitionAttempt({
+        aggregateSupplyUsd: AGGREGATE_SUPPLY_USD,
+        registryFingerprint: REGISTRY_FINGERPRINT,
+        scoringClockSec: CLOCK_SEC,
+        chainRpcs: chainRpcs(Object.keys(RUNTIME_CODE_BY_CHAIN)),
+      }, deps)).resolves.toEqual({
+        status: "rejected",
+        rejectionCode: "deployment-identity-mismatch",
+        failedRouteId: "monad:0x437cc33344a0b27a429f795ff6b469c72698b291",
+      });
+    } finally {
+      metaById.set("wm-m0", reviewed);
+    }
+  });
+
   it("captures all EVM and Solana routes atomically at reviewed identities", async () => {
     const deps = dependencies();
     const attribution = await observe(deps);

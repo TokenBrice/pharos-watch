@@ -1,4 +1,4 @@
-import { CHAIN_META } from "@shared/lib/chains";
+import { CHAIN_META } from "@shared/types/chain-identity";
 import type { StablecoinMeta } from "@shared/types";
 
 type ContractDeployment = NonNullable<StablecoinMeta["contracts"]>[number];

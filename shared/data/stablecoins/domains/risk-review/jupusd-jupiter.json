@@ -4,12 +4,12 @@
     "reviewedStatus": true,
     "sources": [
       {
-        "label": "Website",
-        "url": "https://jupusd.money/"
+        "label": "Solana RPC finalized mint observation, slot 452212935",
+        "url": "https://api.mainnet-beta.solana.com"
       }
     ],
-    "evidence": "Explicit Yes retained: reviewed metadata indicates a direct issuer, admin, proxy, pause, burn, or upgrade control surface beyond reserve-only exposure.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "At finalized Solana slot 452212935 on 2026-10-01, the JupUSD SPL mint JuprjznTrTSp2UFa3ZBUFgwdAmtZCq4MQCwysN55USD had freezeAuthority CkzLnD9r4d4ZZofsgNVo2VNunxDmte5YJ4vfAgMfBZNA. This is a direct token-account freeze capability, separate from upstream reserve exposure; the program remains upgradeable by the disclosed Squads vault.",
+    "reviewer": "Pharos curation pass 2026-10-01 (CurB09JUPUSD)",
+    "reviewedAt": "2026-10-01"
   }
 }

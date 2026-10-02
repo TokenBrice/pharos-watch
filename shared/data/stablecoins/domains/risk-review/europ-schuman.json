@@ -2,10 +2,19 @@
   "id": "europ-schuman",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: EUROP resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "EUROP Solana mint and Token-2022 authorities",
+        "url": "https://explorer.solana.com/address/euro5sNHrZC2wu2RoLvy6xxoVMc3Qnd1vjxoWf4MftA"
+      },
+      {
+        "label": "EUROP XRPL issuer account",
+        "url": "https://livenet.xrpl.org/accounts/rMkEuRii9w9uBMQDnWV5AA43gvYZR9JxVK"
+      }
+    ],
+    "evidence": "At finalized Solana slot 452219316, EUROP Token-2022 mint has freezeAuthority and permanentDelegate 28o3KhjN6kd1YHN8LXiZ8i9d2dcCjbwna2rGZz3pGcKW, and a pausableConfig authority at the same address. XRPL validated ledger 107354681 has noFreeze=false and allowTrustLineClawback=true for the issuer account. The Yes verdict is supported by observed holder-control capabilities rather than centralized classification alone.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurM03EUSD)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

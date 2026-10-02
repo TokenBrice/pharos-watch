@@ -2,7 +2,7 @@
   "id": "usdn-noble",
   "name": "Noble Dollar",
   "symbol": "USDN",
-  "oneLiner": "USDN is Noble chain's native rebasing yield-bearing dollar backed by short-term U.S. T-bills via M0, with T-bill yield accruing directly to USDN balances.",
+  "oneLiner": "USDN is Noble's yield-bearing representation of M0's M token, backed by short-term U.S. T-bills; Noble holders must claim rewards to increase balances.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized",
@@ -16,7 +16,7 @@
     "m0"
   ],
   "collateral": "Short-term U.S. Treasury Bills held in bankruptcy-remote SPVs via M0 Protocol; over 100% collateral coverage maintained by M0 Minters (including Superstate and MXON); collateral verified daily on-chain",
-  "pegMechanism": "Rebasing yield-bearing stablecoin; USDN is collateralized by M0's $M token on Ethereum via M0's Portal bridge (Wormhole NTT); the Noble chain module tracks each holder's principal against the latest rebasing multiplier from M0 on Ethereum, accruing T-bill yield directly to USDN balances; users mint/redeem via USDC through the Noble Express app",
+  "pegMechanism": "USDN represents M0's M token locked on Ethereum through M0's Portal bridge (Wormhole NTT). Noble's dollar module tracks principal against the M0 index and mints accrued Treasury rewards for holders to claim; balances on Noble increase when rewards are claimed.",
   "mechanismArchetype": "tbill",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
@@ -30,7 +30,7 @@
       },
       {
         "label": "Noble USDN architecture",
-        "url": "https://docs.noble.xyz/usdn/architecture/"
+        "url": "https://docs.noble.xyz/learn/usdn/architecture/"
       },
       {
         "label": "Noble Dollar collateral disclosure",
@@ -50,7 +50,7 @@
   "links": [
     {
       "label": "Website",
-      "url": "https://noble.xyz/usdn"
+      "url": "https://dollar.noble.xyz/"
     },
     {
       "label": "Twitter",
@@ -71,7 +71,7 @@
       "decimals": 6
     }
   ],
-  "custodyModel": "institutional-regulated",
+  "custodyModel": "onchain",
   "governanceQuality": "multisig",
   "liveReservesConfig": {
     "adapter": "m0",

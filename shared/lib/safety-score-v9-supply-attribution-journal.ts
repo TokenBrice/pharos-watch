@@ -1,4 +1,5 @@
 import { z } from "zod";
+import candidatePolicy from "../data/safety-score-v9/methodology-policy-candidate-v1.json";
 import { Sha256Schema } from "../types/safety-schema-primitives";
 import {
   ContentAddressedJournalAssetIdSchema,
@@ -156,6 +157,7 @@ const SupplyAttributionJournalV1PayloadDomainSchema = z
       "wm.reviewed-deployment-unit-partition.v1",
       "centrifuge.reviewed-deployment-unit-partition.v1",
       "xaut.canonical-lock-mint-group-partition.v2",
+      candidatePolicy.semantic.supplyAttribution.journalSourceId as "reviewed.economic-deployment-partition.v1",
     ]),
     sourceOriginClass: z.enum([
       "onchain-observation",
@@ -181,8 +183,8 @@ const SupplyAttributionJournalV1PayloadDomainSchema = z
   .strict()
   .superRefine((record, ctx) => {
     const expectedOrigin =
-      record.sourceId ===
-      "xaut.canonical-lock-mint-group-partition.v2"
+      record.sourceId === "xaut.canonical-lock-mint-group-partition.v2" ||
+      record.sourceId === candidatePolicy.semantic.supplyAttribution.journalSourceId
         ? "issuer-disclosure-plus-onchain"
         : "onchain-observation";
     if (record.sourceOriginClass !== expectedOrigin) {

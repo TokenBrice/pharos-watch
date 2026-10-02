@@ -9,7 +9,7 @@
     "governance": "centralized",
     "rwa": true
   },
-  "collateral": "Issuer-reported USDC and frxUSD custodian reserves, plus USDC in a Base treasury. The September 14, 2026 source reports no Korean Treasury Bond holdings. Holder control and the cross-chain circulating-liability perimeter remain unverified.",
+  "collateral": "Issuer-reported USDC and frxUSD custodian reserves, plus USDC in a Base treasury. The October 1, 2026 source reports these three stablecoin positions and no Korean Treasury Bond holdings. Pinned Ethereum reads verify custodian token bindings and Safe ownership; cross-chain circulating-liability reconciliation remains unverified.",
   "pegMechanism": "Centralized issuance against a 100% reserve. Mint and redemption are gated to KYC-verified institutional counterparties (exchanges, market makers, OTC desks). Ethereum is the canonical mint chain; Base and other destinations share unified supply via LayerZero OFT v2. KRWQ is not offered to South Korean residents pending domestic stablecoin legislation under the Korean National Assembly.",
   "mechanismArchetype": "fiat-cash",
   "mechanismArchetypeReview": {
@@ -116,7 +116,7 @@
     }
   ],
   "collateralQuality": "rwa",
-  "custodyModel": "institutional-regulated",
+  "custodyModel": "onchain",
   "governanceQuality": "single-entity",
   "notices": [
     {

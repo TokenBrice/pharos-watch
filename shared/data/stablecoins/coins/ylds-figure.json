@@ -11,21 +11,21 @@
     "navToken": true
   },
   "collateral": "Short-dated U.S. Treasury bills, overnight Treasury repo, a government money market fund, and cash held by Figure Certificate Company (FCC), an SEC-registered face-amount certificate company; qualified assets are on deposit with UMB Bank N.A. and Flagstar Bank N.A.",
-  "pegMechanism": "Fixed $1.00 face-amount certificate; daily interest accrual at SOFR minus 35bps (minimum 0%), paid monthly in USD or YLDS; 1:1 mint and redemption through Figure Certificate Company with mandatory KYC; registered under the Securities Act of 1933 and Investment Company Act of 1940",
+  "pegMechanism": "Registered face-amount certificate issued and surrendered at $0.01 per certificate; daily simple interest at SOFR minus 35bps (minimum 0%), paid monthly in USD and automatically reinvested unless opted out; mint and surrender through Figure Certificate Company subject to KYC and offering terms; registered under the Securities Act of 1933 and Investment Company Act of 1940",
   "mechanismArchetype": "tbill",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-07-15",
-    "reviewer": "SONG Safety Score V9 mechanism review",
-    "rationale": "YLDS documentation establishes a Figure Markets yield-bearing private-credit instrument, but the reviewed sources do not provide the complete current assurance, reconciliation, custody continuity, valuation, seniority, and loss-recovery inputs required for a full mechanism review.",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA31YLDS)",
+    "rationale": "Figure Certificate Company issues unsecured face-amount certificates backed by its qualified assets, including short-term Treasury securities, Treasury repos and cash. This Treasury-backed security is distinct from Figure's private-credit lending products. The December 31, 2025 KPMG audit remains the latest independent assurance located; the June 30, 2026 interim financial statements are explicitly unaudited.",
     "sources": [
       {
         "label": "YLDS official site",
         "url": "https://www.ylds.com/"
       },
       {
-        "label": "Provenance YLDS documentation",
-        "url": "https://docs.provenance.io/learn/the-ylds-stablecoin"
+        "label": "Figure Certificate Company prospectus and August 6, 2026 supplement",
+        "url": "https://cdn.figure.com/docs/markets/fcc-prospectus.pdf"
       }
     ]
   },

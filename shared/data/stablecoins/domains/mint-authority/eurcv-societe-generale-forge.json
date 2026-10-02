@@ -22,7 +22,8 @@
       ],
       "canChangeMintLogic": true,
       "controlRef": "EURCV SmartCoin technical upgrade executor",
-      "observedBlock": 25530438,
+      "observedAt": "2026-10-01",
+      "observedBlock": 26095802,
       "sources": [
         {
           "label": "EURCV SmartCoin V4 proxy",
@@ -47,7 +48,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedBlock": 25530438,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095802,
         "sources": [
           {
             "label": "SG-FORGE CoinVertible",
@@ -58,7 +60,7 @@
             "url": "https://etherscan.io/address/0xf4ccc80c4b831a0d8d1414f2aca82a3d760ff05b#code"
           }
         ],
-        "evidence": "At Ethereum block 25530438, getOperators() returned this address as registrar and eth_getCode returned empty bytecode. Verified SmartCoin V4 source gates mint() with onlyAllowedMinter and uses the registrar as its immutable mint authority; no numeric token cap is imposed. The registrar must also authorize a proposed implementation before the technical operator can execute a UUPS upgrade."
+        "evidence": "At pinned Ethereum block 26095802, getOperators() returned this registrar address and eth_getCode returned 0x. The implementation remained 0xf4ccc80c4b831a0d8d1414f2aca82a3d760ff05b. Its freshly fetched verified SmartCoin V4 source gates mint() with onlyAllowedMinter and uses the registrar as immutable mint authority, without a numeric token cap. Registrar authorization is also required before a technical-operator upgrade."
       },
       {
         "chain": "ethereum",
@@ -72,14 +74,15 @@
         "directMintAbility": "upgrade-only",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedBlock": 25530438,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095802,
         "sources": [
           {
             "label": "EURCV SmartCoin V4 implementation",
             "url": "https://etherscan.io/address/0xf4ccc80c4b831a0d8d1414f2aca82a3d760ff05b#code"
           }
         ],
-        "evidence": "At Ethereum block 25530438, getOperators() returned this address as technical operator and eth_getCode returned empty bytecode. Verified SmartCoin V4 source gates _authorizeUpgrade() with onlyTechnical and additionally requires consumeAuthorizeImplementation() for a candidate previously authorized by the registrar. The EIP-1967 implementation is 0xf4ccc80c4b831a0d8d1414f2aca82a3d760ff05b and the proxy-admin slot is zero."
+        "evidence": "At pinned Ethereum block 26095802, getOperators() returned this technical address and eth_getCode returned 0x. The verified implementation gates _authorizeUpgrade() with onlyTechnical and requires consumeAuthorizeImplementation() for registrar authorization. The implementation was unchanged at 0xf4ccc80c4b831a0d8d1414f2aca82a3d760ff05b; the correct EIP-1967 admin slot 0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103 returned zero, and newImplementation() returned zero."
       }
     ],
     "economicCapSemantics": "unbounded",

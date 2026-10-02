@@ -12,9 +12,9 @@
   "mechanismArchetype": "cdp",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-07-22",
-    "reviewer": "GPT SOL-NR-A wave6",
-    "rationale": "Yuzu documents yzUSD as the senior claim on an overcollateralized on-chain strategy pool, minted against USDT0 and protected by the separate yzPP first-loss tranche. Within the closed taxonomy, cdp is the closest collateralized-debt archetype even though risk is pooled rather than held in borrower-specific vaults.",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC03)",
+    "rationale": "Yuzu's re-opened documentation identifies yzUSD as the senior claim on an overcollateralized on-chain strategy pool, minted against USDT0 and protected by the separate yzPP first-loss tranche. The currently installed V3 implementation, activated 2026-08-31T07:18:47Z, adds administered NAV markdowns and mint/redeem throttles: the base-dollar payout uses min(stored NAV, par), so the documented 1:1 target is not an unconditional conversion guarantee. D20 treats this material repayment/loss-bearing change as a new implementation boundary while preserving product history. The existing cdp archetype is retained for the pooled collateralized-debt mechanism; no classification override is introduced.",
     "sources": [
       {
         "label": "Yuzu stablecoin documentation",
@@ -27,10 +27,18 @@
       {
         "label": "yzUSD Plasma contract creation transaction",
         "url": "https://plasmascan.to/tx/0x53b57e597db63f938d8e6f0ac85ab4510120f6793db8eb4c9af0efc7a80f9ca9"
+      },
+      {
+        "label": "Installed YuzuUSDV3 verified source (NAV conversion and throttles)",
+        "url": "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x8e02392855a51d9d5d18d71a7cfc731f56c68ea5"
+      },
+      {
+        "label": "YZUSD V3 activation transaction (2026-08-31T07:18:47Z)",
+        "url": "https://plasmascan.to/tx/0xd7fdb6b0acc12f79655f94ad3fb64394e84bcd90386fd91b2c95d02930e51ce9"
       }
     ]
   },
-  "implementationLaunchDate": "2025-10-10",
+  "implementationLaunchDate": "2026-08-31",
   "llamaId": "344",
   "detailProvider": "defillama",
   "geckoId": "yuzu-usd",

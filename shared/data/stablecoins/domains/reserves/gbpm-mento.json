@@ -38,5 +38,34 @@
     "scope": "full-composition",
     "knownUnknownExposure": "No additional direct GBPm reserve slice is identified; the upstream Mento Reserve basket is tracked through the linked USDm asset.",
     "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Mento GBPm CDP ActivePool and DefaultPool (Celo)",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurM16cNGN)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Mento CDP documentation",
+        "url": "https://docs.mento.org/mento-v3/dive-deeper/cdp"
+      },
+      {
+        "label": "Mento deployment registry",
+        "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+      },
+      {
+        "label": "Celo public RPC",
+        "url": "https://forno.celo.org"
+      }
+    ],
+    "uncertainty": "GBPm collateral is held by its Celo CDP pool contracts. At Celo block 78940190, ActivePool 0xa7873F4Bf2A1ea2EB20B1e8A992C4748e78473b2 and DefaultPool 0x95191e52d01eC060cEA753CDADfEEB07b78D0047 both returned USDm 0x765DE816845861e75A25fCA122bb6898B8B1282a as collToken. This documents direct on-chain collateral custody only; USDm's upstream reserve custody remains a linked dependency. Legal segregation, bankruptcy remoteness, and rehypothecation safeguards are not established by these contract reads."
   }
 }

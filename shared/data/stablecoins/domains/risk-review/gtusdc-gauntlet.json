@@ -5,7 +5,7 @@
     "sources": [
       {
         "label": "Verified gtUSDC MetaMorpho vault source",
-        "url": "https://eth.blockscout.com/address/0xdd0f28e19c1780eb6396170735d45153d261490d?tab=contract"
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdd0f28e19c1780eb6396170735d45153d261490d"
       },
       {
         "label": "Official morpho-org/metamorpho MetaMorpho.sol",
@@ -16,9 +16,9 @@
         "url": "https://docs.morpho.org/curate/"
       }
     ],
-    "evidence": "Re-verified 2026-07-30 at Ethereum block 25648562. The Blockscout exact-match verified MetaMorpho source (compiler v0.8.21) and all 40 bundled dependencies expose no holder blacklist, freeze, pause, allowlist, or transfer hook; holder transfer/transferFrom are vanilla OpenZeppelin ERC20 paths and the vault never overrides the ERC20 _update hook. The vault is immutable (EIP-1967 implementation slot zero) with owner() the Gauntlet Safe 4/7 0xc684c6587712e5e7bdf9fd64415f23bd2b05faec, whose reach is limited to vault parameters (fees, caps, timelocks, market allocation) with no holder-transfer gating. The inherited classification is retained: the vault's sole asset is USDC supplied into Morpho markets, so Circle's issuer-side blacklist authority over USDC (failure domain asset:usdc-circle) can freeze the upstream collateral, while gtUSDC shares themselves carry no token-level restriction.",
-    "reviewer": "Kimi T53 access review",
-    "reviewedAt": "2026-07-30"
+    "evidence": "Re-verified on 2026-10-01 at Ethereum block 26098754. The exact verified MetaMorpho source and 40 bundled dependencies retain ordinary ERC-20 share transfers without a holder blacklist, freeze, pause, allowlist or mutable transfer gate. The EIP-1967 implementation, admin and beacon slots are zero; owner() remains 0xc684c6587712e5e7bdf9fd64415f23bd2b05faec. Local share-transfer permissions are distinct from Circle's issuer-side powers over the USDC supplied to Morpho markets. The inherited classification therefore remains, with no claim that parent USDC is unfreezable.",
+    "reviewer": "Sol curation pass 2026-10-01 (R2WCircle), exact source and pinned local-access review",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",

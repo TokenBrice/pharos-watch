@@ -16,6 +16,7 @@ import type {
   V9ValidatedPolicyEnvelope,
 } from "../../types/safety-score-v9";
 import type { V9EvidenceResponsibility } from "../../types/safety-score-v9-facts";
+import { projectExitExecutionCertificate } from "./exit-execution";
 import { V9EvidenceResponsibilitySchema } from "../../types/safety-score-v9-fact-primitives";
 import { round4 } from "../math";
 import type { V9DependencyEconomicRole } from "../../types/dependency-types";
@@ -28,6 +29,7 @@ import { structuralSignalNeedsHardCap } from "./formula";
 import type { V9PillarReason, V9ProductionScoreInput, V9ProductionScoreTrace } from "./score";
 import { computeV9ResultDigest } from "./trace";
 import { compareText, uniqueSorted } from "./primitives";
+import { effectiveAuthoritySignatureRequirement } from "./control-scope";
 
 type V9PublicAccessProjectionInput = V9AccessPostureResult & {
   reasons?: readonly V9PillarReason[];
@@ -38,6 +40,7 @@ export interface V9PublicCardProjectionInput {
   /** Exact fact-set provenance; absent only in compatibility/test callers. */
   backingFromLiveReserves?: boolean;
   supply?: SafetyScoreV9CurrentCard["supply"];
+  providerRowExclusions?: SafetyScoreV9CurrentCard["scoreTrace"]["providerRowExclusions"];
   sharedBookId?: string | null;
   dependencyCoverage?: SafetyScoreV9CurrentCard["dependencyCoverage"];
   dependencyProvenance?: ReadonlyMap<string, NonNullable<SafetyScoreV9CurrentCard["dependencies"]["serial"][number]["provenance"]>>;
@@ -56,7 +59,7 @@ export interface V9PublicCardProjectionInput {
     | "diversificationBonus"
     | "routes"
   >;
-  control?: Pick<V9EconomicControlResult, "score" | "components">;
+  control?: Pick<V9EconomicControlResult, "score" | "components" | "controlFacts" | "unresolvedDeploymentAdjustment">;
   display?: {
     labels?: Readonly<Record<string, string>>;
     exitHolderEligibility?: Readonly<Record<string, V9ExitHolderEligibility>>;
@@ -157,6 +160,17 @@ function projectPillarAdjustments(
 ): SafetyScoreV9PillarAdjustment[] {
   const adjustments: SafetyScoreV9PillarAdjustment[] = [];
   let score = evaluatedScore;
+  const unresolvedDeploymentAdjustment = pillar === "control"
+    ? input.control?.unresolvedDeploymentAdjustment
+    : undefined;
+  if (unresolvedDeploymentAdjustment !== undefined) {
+    adjustments.push({
+      kind: "unresolved-deployment-share",
+      ...unresolvedDeploymentAdjustment,
+      delta: unresolvedDeploymentAdjustment.scoreAfter - unresolvedDeploymentAdjustment.scoreBefore,
+    });
+    score = unresolvedDeploymentAdjustment.scoreAfter;
+  }
   const configuredCredit = input.trace.operationalResilience?.pillarCredits[pillar] ?? 0;
   const creditedScore = Math.min(100, score + configuredCredit);
   if (creditedScore > score) {
@@ -320,6 +334,9 @@ function projectExitBreakdown(
       confidenceFactor: route.confidenceFactor,
       capacityScoringHorizon: route.capacityScoringHorizon,
       settlementDelaySec: route.settlementDelaySec,
+      ...(route.physicalToUsd ? { physicalToUsd: route.physicalToUsd } : {}),
+      ...(route.routeSuspension ? { routeSuspension: route.routeSuspension } : {}),
+      ...(route.executionCertificate ? { executionCertificate: projectExitExecutionCertificate(route.executionCertificate) } : {}),
     }));
   const publishedScore = input.scoreInput.pillars.exit.score!;
   return {
@@ -341,7 +358,10 @@ function projectExitBreakdown(
             key: completePrimary.routeKey,
             label: routeLabel(input, completePrimary),
             routeFamily: completePrimary.routeFamily,
+            ...(completePrimary.feeEvidence ? { feeEvidence: completePrimary.feeEvidence } : {}),
             score: completePrimary.score!,
+            ...(completePrimary.physicalToUsd ? { physicalToUsd: completePrimary.physicalToUsd } : {}),
+            ...(completePrimary.executionCertificate ? { executionCertificate: projectExitExecutionCertificate(completePrimary.executionCertificate) } : {}),
             components,
             confidenceFactor: completePrimary.confidenceFactor!,
             eligibilityMultiplier: policy.holderEligibilityMultipliers[holderEligibility!],
@@ -404,6 +424,18 @@ function projectControlBreakdown(
         score: component.score,
         binding: component.binding,
         posture: component.posture,
+        ...(control.controlFacts ? { controlDetails: control.controlFacts
+          .filter((fact) => component.controlKeys.includes(fact.controlKey))
+          .map((fact) => ({
+            controlKey: fact.controlKey,
+            authority: fact.authority,
+            minimumCryptographicSignatures: effectiveAuthoritySignatureRequirement(fact.authority),
+            executionScopeComplete: fact.executionScopeComplete ?? null,
+            moduleImpact: fact.moduleImpact ?? "unresolved",
+            diagnostics: fact.scopeDiagnostics ?? [],
+            executionPaths: [ ...(fact.executionScope?.paths ?? []), ...(fact.executionScopeContributors ?? []).flatMap((entry) => entry.scope?.paths ?? []) ]
+              .map((path) => ({ id: path.id, targetDeployment: path.targetDeployment, entrypointKind: path.entrypointKind, entrypoints: path.entrypoints, activation: path.activation, reach: path.reach, capabilities: path.capabilities })),
+          })) } : {}),
       })),
     adjustments: projectPillarAdjustments(input, "control", control.score),
   };
@@ -683,6 +715,7 @@ function projectScoreTrace(input: V9PublicCardProjectionInput): SafetyScoreV9Cur
 
   return {
     schemaVersion: 3,
+    ...(input.providerRowExclusions?.length ? { providerRowExclusions: input.providerRowExclusions } : {}),
     legacyAliases: {
       qualityScore: "weighted-pillar-mean",
       pegAdjustedScore: "post-deployment-pre-cap-score",
@@ -818,6 +851,7 @@ function projectSafetyScoreV9CardUnchecked(input: V9PublicCardProjectionInput): 
       unknownFields: uniqueSorted(input.access.unknownFields),
       signals: uniqueSorted(input.access.signals),
       reasons: canonicalPublicReasons(input.access.reasons ?? []),
+      freezeLookthrough: input.access.freezeLookthrough ?? null,
     },
     dependencies: projectDependencies(input),
     scoreTrace: projectScoreTrace(input),

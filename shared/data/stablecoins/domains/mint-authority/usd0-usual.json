@@ -62,13 +62,19 @@
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "DaoCollateral minting is bounded by eligible RWA collateral backing requirements in the swap flow.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095801,
         "sources": [
           {
             "label": "Usual USD0 flow and architecture",
             "url": "https://docs.usual.money/usual-products/usd0-stablecoin/usd0/flow-and-architecture"
+          },
+          {
+            "label": "Ethereum pinned observation block 26095801",
+            "url": "https://etherscan.io/block/26095801"
           }
         ],
-        "evidence": "At Ethereum block 25530270, RegistryAccess.hasRole(keccak256('USD0_MINT'), DaoCollateral) returned true. The transparent proxy resolved to implementation 0x0eEc861D49f15F585D6Bb4301FC4f89BCe22AF4e and ProxyAdmin 0xc6b60cbcec7d9f98fdcdef6b9a611a955d7fefd4. Minting remains bounded by eligible collateral in DaoCollateral."
+        "evidence": "At Ethereum block 26095801, RegistryAccess.hasRole(keccak256('USD0_MINT'), DaoCollateral) returned true. The transparent proxy resolved to implementation 0x0eEc861D49f15F585D6Bb4301FC4f89BCe22AF4e and ProxyAdmin 0xc6b60cbcec7d9f98fdcdef6b9a611a955d7fefd4. Minting remains bounded by eligible collateral in DaoCollateral."
       },
       {
         "chain": "ethereum",
@@ -141,7 +147,7 @@
             "0xD09C7955C38b9ACDC293e006bD5d0C059a57699a",
             "0xFe45baf0F18c207152A807c1b05926583CFE2e4b",
             "0x533C0b7959Eb6F042E19ca40700A7af22F69e2d8",
-            "0x0bB03BDF016c9F99AAe32fb2DA303e79a9e6FEC7",
+            "0x23F3967415290fbF7EC6768F562128CdBD351BEE",
             "0x118D6dCF55a0DfBC3d1052FBD41A483f8a6a68b3",
             "0x3b9eAF01facee23846cea722a92e853bee064d69",
             "0xDA1a7e2D400f09292F22d02343E9BF8445EAA71C",
@@ -154,16 +160,20 @@
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
           "masterCopy": "0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552",
-          "observedBlock": 25530270,
-          "source": "safe-api"
+          "observedBlock": 26095801,
+          "source": "onchain"
         },
         "sources": [
           {
             "label": "Safe Global API: USD0 ProxyAdmin owner",
             "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0xaaDa24358620d4638a2eE8788244c6F4b197Ca16"
+          },
+          {
+            "label": "Ethereum pinned observation block 26095801",
+            "url": "https://etherscan.io/block/26095801"
           }
         ],
-        "evidence": "At Ethereum block 25530270, owner() on the USD0 token, DaoCollateral, and RegistryAccess ProxyAdmins (0xc15091d3..., 0xc6b60c..., and 0x77c5d6...) returned 0xaaDa24.... Safe API returned an 8-of-15 threshold, no modules, zero guard, and the standard fallback handler."
+        "evidence": "At Ethereum block 26095801, owner() on the USD0 token, DaoCollateral, and RegistryAccess ProxyAdmins (0xc15091d3..., 0xc6b60c..., and 0x77c5d6...) returned 0xaaDa24.... Pinned reads returned an 8-of-15 threshold, no enabled modules, zero guard, and the standard fallback handler. Compared with the July observation, owner 0x0bB03BDF016c9F99AAe32fb2DA303e79a9e6FEC7 was replaced by 0x23F3967415290fbF7EC6768F562128CdBD351BEE."
       }
     ],
     "economicCapSemantics": "unbounded",

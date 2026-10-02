@@ -12,8 +12,8 @@
         "url": "https://goldfishgold.com/"
       },
       {
-        "label": "Goldfish whitepaper: GGBR is tokenized gold backed by the ION.au asset-backed security",
-        "url": "https://goldfishgold.com/whitepaper"
+        "label": "Goldfish support: gold denomination and issuer-disclosed GGBR Trust backing",
+        "url": "https://goldfishgold.com/support"
       }
     ]
   },
@@ -30,10 +30,10 @@
           "accessedAt": "2026-08-14"
         },
         {
-          "label": "Goldfish whitepaper",
-          "url": "https://goldfishgold.com/whitepaper",
+          "label": "Goldfish support: each GGBR represents 1/1000th of a troy ounce",
+          "url": "https://goldfishgold.com/support",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-01"
         }
       ]
     },
@@ -70,10 +70,10 @@
         "accessedAt": "2026-08-14"
       },
       {
-        "label": "Goldfish whitepaper",
-        "url": "https://goldfishgold.com/whitepaper",
+        "label": "Goldfish support: each GGBR represents 1/1000th of a troy ounce",
+        "url": "https://goldfishgold.com/support",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-01"
       },
       {
         "label": "SEC-hosted I-ON Digital exhibit describing the GGBR partnership",

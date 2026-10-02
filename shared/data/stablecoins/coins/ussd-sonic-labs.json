@@ -18,7 +18,7 @@
     "type": "real-time",
     "url": "https://facts.frax.finance/frxusd/balance-sheet",
     "provider": "Frax Finance",
-    "attestorTier": "niche",
+    "attestorTier": "self",
     "cadence": "real-time"
   },
   "links": [
@@ -71,7 +71,7 @@
     }
   ],
   "collateralQuality": "rwa",
-  "custodyModel": "institutional-regulated",
+  "custodyModel": "onchain",
   "governanceQuality": "single-entity",
   "launchDate": "2026-03-09",
   "liveReservesConfig": {

@@ -3,8 +3,8 @@
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "unbounded-reconciled",
-    "confidence": "verified",
-    "summary": "USDU BSC token is owned by a Gnosis Safe 3-of-5 (all EOA signers, no modules, v1.4.1) that can call mint(); the Solana Token-2022 mint has its mintAuthority set to the mint address itself, a self-referential pattern that prevents standard key-based verification.",
+    "confidence": "manual-review",
+    "summary": "USDU BSC issuance runs through UnitasMintingV2, whose 3-of-5 Safe admin can change rate limits and mint roles; the token's separate 3-of-5 owner Safe can replace that minter. Solana retains a non-null, self-referential Token-2022 mint authority; its signer custody is unresolved, so minting is not asserted to be disabled.",
     "upgradeability": {
       "model": "immutable",
       "canChangeMintLogic": false,
@@ -24,15 +24,17 @@
     "controls": [
       {
         "label": "USDU BSC owner — Gnosis Safe 3-of-5",
-        "role": "direct-minter",
+        "role": "minter-admin",
         "authorityType": "safe",
-        "directMintAbility": "direct",
+        "directMintAbility": "can-authorize",
         "chain": "bsc",
         "address": "0x8e3811b4dc5022ab9c8afbb54be4aa23780c62b3",
         "deploymentRefs": [
           "bsc:0xea953ea6634d55dac6697c436b1e81a679db5882"
         ],
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
+        "observedAt": "2026-10-01",
+        "observedBlock": 125056986,
         "threshold": 3,
         "signerCount": 5,
         "modulesOrGuardsStatus": "none-detected",
@@ -52,7 +54,7 @@
           "observedBlock": 103620388,
           "source": "onchain"
         },
-        "evidence": "At BSC block 103620388: token owner() = 0x8e3811b4…; getOwners() returned 5 EOA addresses (all eth_getCode=0x), threshold()=3, getModulesPaginated returned empty array (no modules), guard slot 6 = 0x0 (no guard), VERSION()='1.4.1'. BSC token is Ownable (non-upgradeable, mint() is onlyOwner) so the Safe is the sole on-chain minter on BSC.",
+        "evidence": "At BSC block 125056986, token owner() remained this 3-of-5 Safe and getOwners()/getThreshold() matched the recorded signers and threshold. getModulesPaginated returned no enabled modules and the canonical guard storage slot was zero. Verified USDu.sol gates mint() to its separate minter address, not onlyOwner; owner-only setMinter() lets this Safe replace that minter. Historical Safe implementation and fallback-handler observations remain dated to their original read.",
         "sources": [
           {
             "label": "USDU BSC contract",
@@ -63,19 +65,173 @@
       {
         "label": "USDU Solana mint authority",
         "role": "direct-minter",
-        "authorityType": "none",
-        "directMintAbility": "none",
+        "authorityType": "unknown",
+        "directMintAbility": "unknown",
         "chain": "solana",
         "address": "9ckR7pPPvyPadACDTzLwK2ZAEeUJ3qGSnzPs8bVaHrSy",
         "deploymentRefs": [
           "solana:9ckR7pPPvyPadACDTzLwK2ZAEeUJ3qGSnzPs8bVaHrSy"
         ],
         "canRaiseCap": "unknown",
-        "evidence": "Solana Token-2022 mint 9ckR7pPP…: mintAuthority = the mint address itself (self-referential). Extensions present: metadataPointer and tokenMetadata (updateAuthority also = mint address). No freezeAuthority. Supply = 10,951,433 USDU. This pattern cannot be verified via standard key-based authority reads, the controlling program or keypair is unknown from on-chain state alone. Judgment per the moveUSD precedent: a self-referential Token-2022 mintAuthority (the mint address itself) is a non-executable, non-signing account, so no party can invoke MintTo on Solana; the Solana supply is effectively frozen.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 452346328,
+        "evidence": "At finalized Solana slot 452346328, an atomic getMultipleAccounts read returned the exact USDu mint with self-referential mintAuthority, no freezeAuthority, 6 decimals, and metadataPointer/tokenMetadata extensions. The issuer-listed USDu Program USDuuELLS5piwJ7vmMoKByqxaguyZov7CxKQHYRBvo5 is executable and upgradeable: ProgramData CdPKgzLeuqFXaa16jchGUmK9ZaVqq8j6GfYwVLH5q9PX records upgrade authority 3UWMx8oCchy53x48aSb25SeSobqLfqF8U6eiCyUSdeVB. The issuer-listed USDu Config is owned by that program. This identifies the deployed program and its upgrade key; it does not prove the mint's signer derivation or current program-to-mint authorization. The two published Solana audits reference historical commits, and their source repository currently returns 404. Signer custody and audited-source equivalence to the deployed program remain unresolved.",
         "sources": [
           {
             "label": "USDU Solana mint",
             "url": "https://solscan.io/token/9ckR7pPPvyPadACDTzLwK2ZAEeUJ3qGSnzPs8bVaHrSy"
+          },
+          {
+            "label": "Unitas exact Solana program, mint and configuration roster",
+            "url": "https://docs.unitas.so/mainnet-program-and-address-index.md"
+          },
+          {
+            "label": "Finalized atomic program and ProgramData observation, slot 452346328",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "Oak Security Solana audit with reviewed commits",
+            "url": "https://raw.githubusercontent.com/UnipayFI/Audit/main/SVM/2025-04-04%20Audit%20Report%20-%20Unipay.pdf"
+          }
+        ]
+      },
+      {
+        "label": "UnitasMintingV2 (BSC token-authorized minter)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "bsc",
+        "address": "0xbb984ce670100aa855f6152f88b26ee57f4ea82a",
+        "deploymentRefs": [
+          "bsc:0xea953ea6634d55dac6697c436b1e81a679db5882"
+        ],
+        "canRaiseCap": false,
+        "observedAt": "2026-10-01",
+        "observedBlock": 125057055,
+        "executionScope": {
+          "controllerDeployment": "bsc:0xbb984ce670100aa855f6152f88b26ee57f4ea82a",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataUnitas)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Verified UnitasMintingV2 source and ABI",
+              "url": "https://sourcify.dev/server/v2/contract/56/0xbb984ce670100aa855f6152f88b26ee57f4ea82a?fields=sources,abi"
+            },
+            {
+              "label": "Pinned authorized minter and runtime BSC 125166733",
+              "url": "https://api-bsc-mainnet-full.n.dwellir.com"
+            }
+          ],
+          "pin": {
+            "position": "125166733",
+            "hash": "0x83fb74412192e34695640b6a9a185e8c86f33e76aaeaf9b21831b9064aaa07cc",
+            "runtimeIdentity": "sha256:684d35568e31c5c6cd4c1574ca46a86ad2bb09d0e43fd7487e96764455849fc9",
+            "signerIdentity": "MINTER_ROLE plus signed order and deduplicated benefactor nonce; role-holder/quorum and mutable admin alternatives not closed"
+          },
+          "observedState": {
+            "position": "125166733",
+            "hash": "0x83fb74412192e34695640b6a9a185e8c86f33e76aaeaf9b21831b9064aaa07cc",
+            "runtimeIdentity": "sha256:684d35568e31c5c6cd4c1574ca46a86ad2bb09d0e43fd7487e96764455849fc9",
+            "signerIdentity": "MINTER_ROLE plus signed order and deduplicated benefactor nonce; role-holder/quorum and mutable admin alternatives not closed"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "native-order-mint",
+              "targetDeployment": "bsc:0xbb984ce670100aa855f6152f88b26ee57f4ea82a",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x252ed2f1"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "raiseable",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "usdu-unitas"
+              ],
+              "affectedDeployments": [
+                "bsc:0xea953ea6634d55dac6697c436b1e81a679db5882"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
+        "capDescription": "Verified mint() requires MINTER_ROLE, a signed and deduplicated order, a valid route, a collateral-asset per-block limit, and a global per-block limit. These are rate limits, not a fixed outstanding-liability ceiling; the contract admin can alter them.",
+        "evidence": "At BSC block 125056986, USDu.minter() returned this address. At block 125057055, owner() returned 0x0a6db8e8f0b79ba5b9f5ac7f5728843b830bb1c8 and globalConfig() returned nonzero global mint/redeem limits. Sourcify's verified UnitasMintingV2 source directly records MINTER_ROLE, order-signature, route and per-block checks.",
+        "sources": [
+          {
+            "label": "Verified USDu token minter authorization",
+            "url": "https://sourcify.dev/server/v2/contract/56/0xea953ea6634d55dac6697c436b1e81a679db5882?fields=sources,abi"
+          },
+          {
+            "label": "Verified UnitasMintingV2 source and ABI",
+            "url": "https://sourcify.dev/server/v2/contract/56/0xbb984ce670100aa855f6152f88b26ee57f4ea82a?fields=sources,abi"
+          }
+        ]
+      },
+      {
+        "label": "UnitasMintingV2 admin — Safe 3-of-5",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "chain": "bsc",
+        "address": "0x0a6db8e8f0b79ba5b9f5ac7f5728843b830bb1c8",
+        "deploymentRefs": [
+          "bsc:0xea953ea6634d55dac6697c436b1e81a679db5882"
+        ],
+        "canRaiseCap": true,
+        "observedAt": "2026-10-01",
+        "observedBlock": 125059057,
+        "threshold": 3,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0xb17ec02641cbb05932041853ffec86a7191e91cc",
+            "0x276dbda1cccbd41e83ef37a4ce9ef0961c8c9f2b",
+            "0x2010161b0ecf277908beac2ff80538cda9b4090b",
+            "0x01444f55dd8d6b5ac61e0676b7c9476e52f069c6",
+            "0x4334c72283c03215706ff4a5a0604c2ea82cb1ae"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "observedBlock": 125059057,
+          "source": "onchain"
+        },
+        "evidence": "At BSC block 125057055, UnitasMintingV2.owner() returned this address. A fresh pinned read at block 125059057 identified Safe 1.4.1, the five recorded signers, threshold 3, no enabled modules, a zero guard slot, the recorded master copy and a nonzero fallback handler. Verified SingleAdminAccessControl and UnitasMintingV2 source give this admin role-setting and rate-limit powers; operational signer-key custody and any off-chain delay are not established.",
+        "sources": [
+          {
+            "label": "Verified UnitasMintingV2 admin and rate-limit functions",
+            "url": "https://sourcify.dev/server/v2/contract/56/0xbb984ce670100aa855f6152f88b26ee57f4ea82a?fields=sources,abi"
           }
         ]
       }
@@ -102,9 +258,35 @@
           "url": "https://sol.unitas.so/transparency"
         }
       ],
-      "evidence": "BSC block 103620388: Safe 3-of-5 (all EOA signers, no modules/guard, v1.4.1) confirmed as token owner with mint() = onlyOwner. Solana: Token-2022 mintAuthority = mint address itself (9ckR7pPP…), a self-referential configuration that cannot be verified as a standard keypair or program authority via on-chain reads. Promotion judgment: BSC mint surface fully confirmed (3-of-5 Safe, no modules); the Solana mintAuthority is self-referential and therefore unusable (moveUSD precedent), leaving no unconfirmed mint-capable surface. Accountable independently reconciles USDU backing assets to token liabilities. The public proof-of-solvency page advertises a 15-minute interval but showed reserve data last updated 2026-06-07, with its proof signature validated 2026-07-07; the observed evidence therefore supports periodic, not continuous, reconciliation. No registry evidence established prudential reserve supervision. Economic-posture fields reviewed 2026-08-15: the BSC 3-of-5 issuer Safe owns an uncapped mint path while Solana minting is inert; existing periodic reconciliation and attestation-only supervision remain supported.",
-      "reviewer": "Claude Phase 0c continuation; SOL-V mint-tier review; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "evidence": "Re-reviewed 2026-10-01. Pinned BSC reads and verified token source correct the earlier onlyOwner mint claim: the owner Safe selects a separate UnitasMintingV2 minter, which has an independently addressed admin. Its order/role/rate-limit checks are explicit, but rate limits are not an outstanding-supply ceiling. Solana's mint authority remains non-null; the prior assertion that a self-referential, non-executable account cannot sign is withdrawn because Token-2022 validates signer authorization without that restriction. Existing periodic reconciliation and attestation-only supervision are retained; the refreshed Accountable API and September HT Digital collateral letter do not establish prudential supervision.",
+      "reviewer": "Sol curation pass 2026-10-01 (CurB01USDU)",
+      "reviewedAt": "2026-10-01",
+      "scopedQuestions": [
+        {
+          "controlRef": "solana:9ckR7pPPvyPadACDTzLwK2ZAEeUJ3qGSnzPs8bVaHrSy",
+          "question": "Does the issuer-listed upgradeable USDu Program control the mint through a PDA signer, and what current source/binary verification and authority account establish that path? At finalized slot 452346328 its upgrade authority is 3UWMx8oCchy53x48aSb25SeSobqLfqF8U6eiCyUSdeVB; operator identity and key custody remain unverified.",
+          "reviewedAt": "2026-10-01",
+          "reviewer": "Sol curation pass 2026-10-01 (R2WStrategy)",
+          "sources": [
+            {
+              "label": "Token-2022 mint-authority signature validation",
+              "url": "https://raw.githubusercontent.com/solana-program/token-2022/program%40v10.0.0/program/src/processor.rs"
+            }
+          ]
+        },
+        {
+          "controlRef": "bsc:0x0a6db8e8f0b79ba5b9f5ac7f5728843b830bb1c8",
+          "question": "What operational signer-key custody and off-chain authorization safeguards govern the current 3-of-5 UnitasMintingV2 admin Safe?",
+          "reviewedAt": "2026-10-01",
+          "reviewer": "Sol curation pass 2026-10-01 (CurB01USDU)",
+          "sources": [
+            {
+              "label": "Verified UnitasMintingV2 admin",
+              "url": "https://sourcify.dev/server/v2/contract/56/0xbb984ce670100aa855f6152f88b26ee57f4ea82a?fields=sources,abi"
+            }
+          ]
+        }
+      ]
     }
   }
 }

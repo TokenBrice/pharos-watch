@@ -4,11 +4,12 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "Avalanche avUSD has one active token minter, the immutable AvantMintingV2 gateway. A single current MINTER_ROLE EOA may invoke its collateral-backed, per-block-capped mint flow; the token owner and gateway default admin are the same documented MPC-custodied EOA, which can replace minters and raise the cap.",
+    "summary": "Avalanche avUSD authorizes the immutable AvantMintingV2 gateway. Complete Routescan-indexed MinterUpdated and role-event replay through block 96542832, corroborated by pinned membership reads, identifies one active token minter and one gateway MINTER_ROLE caller. The common token owner/gateway admin can replace minters and raise the cap; Avant's archived address-specific disclosure identifies this admin as a 3-of-4 MPC controlled by core team members.",
     "upgradeability": {
       "model": "immutable",
       "canChangeMintLogic": false,
-      "observedBlock": 90283689,
+      "observedAt": "2026-10-01",
+      "observedBlock": 96511144,
       "sources": [
         {
           "label": "AvantMintingV2 verified source",
@@ -34,8 +35,9 @@
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "Verified source enforces supported collateral transfer, exact stable-value ratio at the current zero-delta setting, authorized MINTER_ROLE caller, and maxMintPerBlock. The current cap is 25,000,000 avUSD per Avalanche block.",
-        "observedBlock": 90283689,
-        "evidence": "Complete MinterUpdated event history plus minters(address) confirms this is the sole active minter on the Avalanche avUSD token at block 90283689. Verified AvantMintingV2 source calls avantcoin.mint() only after collateral, route, signature, and per-block-cap checks. Both token and gateway EIP-1967 slots are zero and their verified constructors establish non-proxy deployments.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 96542832,
+        "evidence": "Routescan MinterUpdated logs from deployment through Avalanche block 96542832 contain three events: the original gateway was enabled then revoked, and AvantMintingV2 remains the sole active token minter. Pinned minters(address) reads corroborate both active and revoked memberships; maxMintPerBlock remains 25,000,000 avUSD and stablesDeltaLimit zero. The earlier zero proxy-slot observations and verified constructors remain evidence of immutable code. PublicNode replay was attempted in 869 bounded 50,000-block chunks but historical queries returned not found; enumeration relies on the complete explorer index, not those failed RPC reads.",
         "sources": [
           {
             "label": "Avant contract addresses",
@@ -60,8 +62,9 @@
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "This EOA can call the immutable gateway, but each call remains bounded by collateral transfer, signature and route validation, and the 25,000,000 avUSD per-block gateway cap.",
-        "observedBlock": 90283689,
-        "evidence": "A complete RoleGranted/RoleRevoked replay and hasRole() at Avalanche block 90283689 confirm this is the sole current MINTER_ROLE caller on AvantMintingV2; eth_getCode returned empty bytecode. It is not itself an avUSD token minter and cannot change the gateway cap.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 96542832,
+        "evidence": "Complete Routescan RoleGranted/RoleRevoked logs from gateway deployment through Avalanche block 96542832 identify this address as the sole active MINTER_ROLE member; the original member was revoked. Pinned hasRole reads confirm the active and revoked memberships. The gateway's DEFAULT_ADMIN_ROLE can raise the cap; the caller cannot. The archived December 31, 2025 governance post prints Avalanche MPC 0xD5456b9A997768601bEdF15f91C0500943C698D, a malformed 39-hex-character identifier that does not match this active 40-hex-character caller. General issuer MPC policies therefore do not establish address-specific custody for this caller; its custody, signing threshold and vendor remain unverified.",
         "sources": [
           {
             "label": "AvantMintingV2 verified source",
@@ -78,6 +81,8 @@
         "label": "Avant avUSD token owner and gateway admin",
         "role": "minter-admin",
         "authorityType": "eoa",
+        "threshold": 3,
+        "signerCount": 4,
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
@@ -87,11 +92,16 @@
             {
               "label": "Avant secure asset management",
               "url": "https://docs.avantprotocol.com/security/secure-asset-management"
+            },
+            {
+              "label": "Avant address-specific admin MPC disclosure, December 31, 2025 (archived March 9, 2026)",
+              "url": "https://web.archive.org/web/20260309082850/https://gov.curve.finance/t/proposal-to-add-savusd-usdc-pool-to-gauge-controller/10977"
             }
           ]
         },
-        "observedBlock": 90283689,
-        "evidence": "At Avalanche block 90283689, avUSD.owner() returned this EOA and hasRole(DEFAULT_ADMIN_ROLE) on AvantMintingV2 returned true; eth_getCode returned empty bytecode. The owner can set token minters, while the gateway admin can grant caller roles and raise maxMintPerBlock. Avant documents Fireblocks/Fordefi MPC custody and policy controls for privileged operations.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 96542832,
+        "evidence": "At Avalanche block 96542832, avUSD.owner() and the gateway's DEFAULT_ADMIN_ROLE identify this address; eth_getCode is empty. Immutable AvUSD.setMinter lets the owner authorize arbitrary native minting, and the gateway admin can raise maxMintPerBlock without a fixed maximum. Avant's December 31, 2025 governance disclosure names this exact admin address as a 3-of-4 MPC of core team members with parameter and cross-chain authority. Current issuer security docs corroborate MPC and approval policies, while vendors remain NDA-only. MPC custody does not establish an immutable cap, independent timelock or whole-supply reconciliation.",
         "sources": [
           {
             "label": "Avant secure asset management",

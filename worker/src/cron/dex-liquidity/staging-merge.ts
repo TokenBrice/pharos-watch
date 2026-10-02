@@ -1,8 +1,8 @@
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { StagedPool } from "../dex-discovery/types";
-import { CHAIN_META } from "@shared/lib/chains";
-import { canonicalExitRouteChain, canonicalExitRouteScopedKey } from "@shared/lib/exit-route-identity";
+import { CHAIN_META } from "@shared/types/chain-identity";
+import { canonicalExitRouteChain, canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
 import {
   TEZOS_POOL_IDENTITY_REVIEW_VERSION,
   SLIPSTREAM_POOL_IDENTITY_REVIEW_VERSION,

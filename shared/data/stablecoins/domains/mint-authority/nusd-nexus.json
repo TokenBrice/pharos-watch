@@ -4,7 +4,7 @@
     "mintPath": "facilitator-bucket-mint",
     "authorityPosture": "bounded-admin",
     "confidence": "verified",
-    "summary": "NUSD's only native issuance is the Ethereum Synapse nexus-pool LPToken: mint is restricted to its SwapFlashLoan pool owner, and supply expands when LPs add liquidity. Both token and pool are fixed EIP-1167 clones. The pool is owned by a 2-of-3 Safe with an enabled transfer-only Allowance Module and no guard. The twelve non-Ethereum SynapseERC20 deployments are bridge representations and are assessed under Bridge Risk.",
+    "summary": "NUSD's only native issuance is the Ethereum Synapse nexus-pool LPToken: mint is restricted to its SwapFlashLoan pool owner, and supply expands when LPs add liquidity. Both token and pool are fixed EIP-1167 clones. At Ethereum block 26098746, the pool owner was a 2-of-3 Safe with no enabled modules, guard or module guard. The twelve non-Ethereum SynapseERC20 deployments are bridge representations and are assessed under Bridge Risk.",
     "upgradeability": {
       "model": "immutable",
       "deploymentRefs": [
@@ -58,6 +58,8 @@
         ],
         "capDescription": "Only onlyOwner can call mint() on the LPToken; the sole owner is the SwapFlashLoan pool; minting occurs only when LPs add liquidity. There is no independent fixed supply cap, so the native path is bounded by pool deposit/accounting logic. Pool ownership is held by the separately reviewed 2-of-3 Safe.",
         "evidence": "At Ethereum block 25770804 (2026-08-16), NUSD token 0x1b84765de8b7566e4ceaf4d0fd3c5af52d3dde4f remained the fixed LPToken clone and owner() returned SwapFlashLoan pool 0x1116898dda4015ed8ddefb84b6e8bc24528af2d8. The LPToken mint() path is onlyOwner and new shares require liquidity deposited into the pool; the pool's owner is the 2-of-3 Safe 0x67f60b0891ebd842ebe55e4ccca1098d7aac1a55.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095933,
         "sources": [
           {
             "label": "NUSD LPToken (Blockscout)",
@@ -82,26 +84,24 @@
         ],
         "signerCount": 3,
         "threshold": 2,
-        "modulesOrGuardsStatus": "present",
-        "observedAt": "2026-08-16",
-        "observedBlock": 25770804,
-        "evidence": "At Ethereum block 25770804 (2026-08-16), SwapFlashLoan pool owner() remained Safe 0x67f60b0891ebd842ebe55e4ccca1098d7aac1a55. The Safe was 2-of-3 with zero guard and module guard, standard fallback handler 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4, and enabled Allowance Module 0xcfbfac74c26f8647cbdb8c5caf80bb5b32e43134. Six delegates were configured in the module; verified module code limits them to allowance transfers and cannot replace either fixed clone target. The Safe can administer the pool route, but the reviewed LPToken mint path remains pool-deposit/accounting driven.",
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26098746,
+        "evidence": "At Ethereum block 26098746 (2026-10-01), SwapFlashLoan pool owner() returned Safe 0x67f60b0891ebd842ebe55e4ccca1098d7aac1a55. getOwners() returned three owners and getThreshold() returned 2. getModulesPaginated(0x1,100) returned an empty list and terminal sentinel 0x1; guard and module-guard slots were zero. VERSION() returned 1.4.1 and the fallback handler was 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. The earlier August 16 observation recorded an enabled Allowance Module and version 1.3.0; neither describes the current Safe state. This observation does not alter the reviewed immutable, pool-deposit/accounting-driven issuance path.",
         "safe": {
           "owners": [
-            "0xb3dad3c24a861b84fdf380b212662620627d4e15",
+            "0x6ef17a2bc5537dde7275d461c01a62a12cf81f75",
             "0x9ce9dc8b12e264f00e80f35326040c75201c38f3",
             "0x0d745ad687f2b1e1941569f09f612f60ad4ad5bc"
           ],
           "threshold": 2,
-          "enabledModules": [
-            "0xcfbfac74c26f8647cbdb8c5caf80bb5b32e43134"
-          ],
+          "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
           "moduleGuard": "0x0000000000000000000000000000000000000000",
-          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
-          "version": "1.3.0",
-          "observedBlock": 25770804,
-          "observedAt": "2026-08-16",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "version": "1.4.1",
+          "observedBlock": 26098746,
+          "observedAt": "2026-10-01",
           "source": "onchain"
         },
         "sources": [

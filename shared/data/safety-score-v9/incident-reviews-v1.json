@@ -2,6 +2,47 @@
   "schemaVersion": 1,
   "incidents": [
     {
+      "incidentId": "fxusd-2025-router-flash-loan-disclosure",
+      "assetId": "fxusd-f-x-protocol",
+      "domain": "security-history",
+      "kind": "disclosed-remediated-vulnerability",
+      "dateBasis": "public-disclosure",
+      "resolutionDateBasis": "primary-confirmation",
+      "occurredAt": "2025-06-17",
+      "resolvedAt": "2025-06-17",
+      "status": "resolved",
+      "realization": "no-reported-exploit",
+      "scope": {
+        "kind": "integration-only",
+        "integrationKey": "ethereum:0x33636d49fbefbe798e15e7f356e8dbef543cc708:balancer-v2-flash-loan"
+      },
+      "posture": {
+        "treatment": "informational-only"
+      },
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Safety Score V9 owner ruling D27",
+      "primarySources": [
+        {
+          "label": "ChainSecurity responsible disclosure: f(x) router double flash loan",
+          "url": "https://www.chainsecurity.com/blog/f-x-protocol-circumventing-access-control-with-a-double-flash-loan-attack/",
+          "publishedAt": "2025-06-17"
+        }
+      ],
+      "finding": "ChainSecurity disclosed a peripheral f(x) router access-control vulnerability discovered on April 20, 2025. Nested Morpho and Balancer flash loans could bypass the expected callback flow and steal collateral from approved CDP positions. The disclosure reports responsible remediation, not a realized exploit or loss; this is not evidence of a canonical fxUSD mint compromise or current deployment continuity. The history date is publication, not inferred onset.",
+      "remediation": {
+        "state": "verified",
+        "lastVerifiedAt": "2025-06-17",
+        "summary": "ChainSecurity confirms that the team removed the Balancer V2 flash-loan integration to eliminate this attack vector. The resolution date is the public confirmation date; an exact remediation transaction date is not asserted.",
+        "sources": [
+          {
+            "label": "ChainSecurity confirmation of Balancer V2 integration removal",
+            "url": "https://www.chainsecurity.com/blog/f-x-protocol-circumventing-access-control-with-a-double-flash-loan-attack/",
+            "publishedAt": "2025-06-17"
+          }
+        ]
+      }
+    },
+    {
       "incidentId": "parallel-2026-failed-exploit-attempt",
       "assetId": "usdp-parallel",
       "domain": "control",
@@ -48,6 +89,89 @@
             "label": "Parallel governance PGP-43",
             "url": "https://gov.parallel.best/t/pgp-43-l-additional-parallel-v3-2-security-audit/542",
             "publishedAt": "2026-07-02"
+          }
+        ]
+      }
+    },
+    {
+      "incidentId": "usd3-2026-batch-auction-vulnerability-disclosure",
+      "assetId": "usd3-reserve-protocol",
+      "domain": "security-history",
+      "kind": "disclosed-remediated-vulnerability",
+      "dateBasis": "public-disclosure",
+      "resolutionDateBasis": "primary-confirmation",
+      "occurredAt": "2026-02-26",
+      "resolvedAt": "2026-03-04",
+      "status": "resolved",
+      "realization": "no-reported-exploit",
+      "scope": {
+        "kind": "integration-only",
+        "integrationKey": "reserve-usd3:easyauction-batch-auctions"
+      },
+      "posture": {
+        "treatment": "informational-only"
+      },
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Safety Score V9 owner ruling D27",
+      "primarySources": [
+        {
+          "label": "Reserve disclosure and USD3 batch-auction disabling confirmation",
+          "url": "https://forum.reserve.org/t/ip-deprecating-batch-auctions-in-yield-dtfs/1458",
+          "publishedAt": "2026-02-26"
+        }
+      ],
+      "finding": "Reserve disclosed a third-party EasyAuction batch-auction vulnerability used by yield DTFs and explicitly stated that it was never exploited, the risk was mitigated, and funds were safe. The March 4 follow-up names USD3 among the integrations disabled through governance. This record is limited to that historical integration and asserts no theft, outage, canonical mint failure, or continuity to the current deployment.",
+      "remediation": {
+        "state": "verified",
+        "lastVerifiedAt": "2026-03-04",
+        "summary": "The issuer's March 4 follow-up explicitly names USD3 among passed proposals disabling the potential exploit vector. This verifies the reported integration removal, not an independently pinned remediation transaction or exact execution date.",
+        "sources": [
+          {
+            "label": "Reserve March 4 confirmation naming USD3",
+            "url": "https://forum.reserve.org/t/ip-deprecating-batch-auctions-in-yield-dtfs/1458/3",
+            "publishedAt": "2026-03-04"
+          }
+        ]
+      }
+    },
+    {
+      "incidentId": "xaut-2023-transferfrom-vulnerability-disclosure",
+      "assetId": "xaut-tether",
+      "domain": "security-history",
+      "kind": "disclosed-remediated-vulnerability",
+      "dateBasis": "public-disclosure",
+      "resolutionDateBasis": "primary-confirmation",
+      "occurredAt": "2023-05-27",
+      "resolvedAt": "2023-05-27",
+      "status": "resolved",
+      "realization": "no-reported-exploit",
+      "scope": {
+        "kind": "contract-component",
+        "deploymentKey": "ethereum:0x68749665ff8d2d112fa859aa293f07a622782f38",
+        "componentKey": "transferfrom"
+      },
+      "posture": {
+        "treatment": "informational-only"
+      },
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Safety Score V9 owner ruling D27",
+      "primarySources": [
+        {
+          "label": "BlockSec Tether Gold public transfer vulnerability disclosure",
+          "url": "https://blocksec.com/blog/public-transfer-vulnerability-of-the-tether-gold-smart-contract",
+          "publishedAt": "2023-05-27"
+        }
+      ],
+      "finding": "BlockSec disclosed a transferFrom vulnerability in the named Ethereum XAUT contract that allowed anyone to transfer other users' tokens to a predefined trusted recipient, with a potential pool-price manipulation path. It reported discovery on April 5 and demonstrated a fork proof of concept, not a realized exploit or loss. This is historical transfer-component exposure, not evidence of mint compromise, supply inflation, or a current active vulnerability.",
+      "remediation": {
+        "state": "verified",
+        "lastVerifiedAt": "2023-05-27",
+        "summary": "BlockSec states that it found the issue fixed on the disclosure date and illustrates the corrected transferFrom check. The resolution date is this public confirmation, not an inferred upgrade transaction date.",
+        "sources": [
+          {
+            "label": "BlockSec confirmation and illustration of transferFrom fix",
+            "url": "https://blocksec.com/blog/public-transfer-vulnerability-of-the-tether-gold-smart-contract",
+            "publishedAt": "2023-05-27"
           }
         ]
       }
@@ -140,6 +264,42 @@
             "publishedAt": "2026-03-13"
           }
         ]
+      }
+    },
+    {
+      "incidentId": "nusd-neutrl-2026-09-discounted-holder-exit",
+      "assetId": "nusd-neutrl",
+      "occurredAt": "2026-09-17",
+      "status": "active",
+      "scope": {
+        "kind": "holder-exit"
+      },
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol final D/F review 2026-10-02 (DfReview03)",
+      "primarySources": [
+        {
+          "label": "Neutrl September 17 separate fixed-rate USDC redemption program announcement",
+          "url": "https://x.com/Neutrl/status/2100614848241414280",
+          "publishedAt": "2026-09-17"
+        }
+      ],
+      "finding": "The separate September 17 recovery program redeems NUSD for fixed-rate USDC, not restored par redemption. Fresh exact NusdRedemption 0xb3f07d3392102fc23264a78e2a1a8b6421123828 state at Ethereum block26104271 has redemptionRate510000000000000000 and quoteRedeem(1e18)=510000 USDC base units, a49% discount to the1USD target. This is program payout, not a complete valuation of remaining illiquid reserves.",
+      "remediation": {
+        "state": "in-progress",
+        "lastVerifiedAt": "2026-10-02",
+        "summary": "A separate fixed-rate program is available subject to acknowledgement and terms; no dated primary evidence of restored ordinary par redemption was found.",
+        "sources": [
+          {
+            "label": "Neutrl September 17 separate fixed-rate USDC redemption program announcement",
+            "url": "https://x.com/Neutrl/status/2100614848241414280",
+            "publishedAt": "2026-09-17"
+          }
+        ]
+      },
+      "domain": "peg",
+      "kind": "holder-exit-impairment",
+      "posture": {
+        "treatment": "peg-multiplier-only"
       }
     }
   ]

@@ -1,3 +1,4 @@
+import "../../test-helpers/reviewed-deployment-catalog.test-support";
 import { describe, expect, it } from "vitest";
 import { makeWorkerSafetyScoreV9Publication } from "../../test-helpers/report-cards-v9";
 import { makeV9FixedInput, withV9WmReviewedDeploymentAttribution } from "../../test-helpers/v9-fixed-input";

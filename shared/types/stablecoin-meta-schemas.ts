@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { DeploymentAmountEncodingSchema } from "./deployment-amounts";
+import { ReserveReportCoverageSchema, ReserveObservationEnvelopeSchema } from "./safety-score-v9-reserve-scope";
 import {
   ATTESTOR_TIER_VALUES,
   BACKING_TYPE_VALUES,
@@ -54,12 +56,12 @@ export const PositiveIntegerSchema = z.number().finite().int().positive();
 
 export const ReviewDateSchema = StrictIsoDateSchema;
 
-// Shape only. `shared/types` must not import `shared/lib`, so the canonical-form
-// check stays with the single normalizer: `validateMintBridgeOwnership()` raises
+// Shape only; canonical-form admission uses the single normalizer in
+// `shared/types/deployment-id.ts`. `validateMintBridgeOwnership()` raises
 // `non-normalized-deployment-ref` for an id that parses but is not already
 // normalized, and it runs in the merged catalog schema, `check:stablecoin-data`,
-// and the V9 compiler defence. Duplicating `normalizeDeploymentId` here would
-// create a second normalization authority, which the authoring contract forbids.
+// and the V9 compiler defence. Keep these admission checks rather than adding
+// a second normalization authority here.
 export const DeploymentIdSchema = z
   .string()
   .regex(/^[a-z0-9][a-z0-9-]*:\S+$/, "Expected a chain:contractAddress deployment ID");
@@ -139,6 +141,19 @@ export const MechanismArchetypeReviewSchema = z
   })
   .strict();
 
+export const ParentBackingInheritanceSchema = z
+  .object({
+    state: z.literal("withheld"),
+    reason: z.literal("mixed-strategy-without-measured-parent-claim"),
+    reviewedAt: ReviewDateSchema,
+    reviewer: z.string().trim().min(1),
+    rationale: z.string().trim().min(1),
+    sources: z.array(StablecoinLinkSchema).min(1),
+  })
+  .strict();
+
+export type ParentBackingInheritance = z.output<typeof ParentBackingInheritanceSchema>;
+
 export const ProofOfReservesSchema = z
   .object({
     type: z.enum(PROOF_OF_RESERVES_TYPE_VALUES),
@@ -150,9 +165,10 @@ export const ProofOfReservesSchema = z
     attestorLicense: z.string().optional(),
     latestReport: z
       .object({
-        // Omit either date when the cited evidence does not establish its meaning.
+        // A signed/as-of date is a conservative publication bound, never a later inferred date.
         periodEnd: StrictIsoDateSchema.optional(),
         publishedAt: StrictIsoDateSchema.optional(),
+        publishedAtBasis: z.enum(["explicit", "signed-date-standin"]).optional(),
         reviewReference: z
           .object({
             date: StrictIsoDateSchema,
@@ -164,6 +180,7 @@ export const ProofOfReservesSchema = z
         assuranceMethod: z.enum(PROOF_ASSURANCE_METHOD_VALUES),
         scope: z.enum(PROOF_ASSURANCE_SCOPE_VALUES),
         liabilityReconciliation: z.enum(LIABILITY_RECONCILIATION_VALUES),
+        coverage: ReserveReportCoverageSchema.optional(),
         reviewer: z.string().min(1),
         confidence: z.enum(RESEARCH_REVIEW_CONFIDENCE_VALUES),
         sources: z.array(StablecoinLinkSchema).min(1),
@@ -174,6 +191,13 @@ export const ProofOfReservesSchema = z
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             message: "latestReport requires a sourced date or an explicitly uncertain review reference",
+          });
+        }
+        if (report.publishedAtBasis != null && report.publishedAt == null) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "latestReport publishedAtBasis requires publishedAt",
+            path: ["publishedAtBasis"],
           });
         }
         if (report.publishedAt != null && report.periodEnd != null && report.publishedAt < report.periodEnd) {
@@ -207,9 +231,19 @@ export const ContractDeploymentSchema = z
   .object({
     chain: z.string(),
     address: z.string(),
-    decimals: ContractDecimalsSchema,
+    decimals: ContractDecimalsSchema.nullable(),
+    amountEncoding: DeploymentAmountEncodingSchema.optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((deployment, ctx) => {
+    const issued = deployment.amountEncoding?.kind === "xrpl-issued-currency";
+    if (issued ? deployment.chain !== "xrpl" || deployment.decimals !== null : deployment.decimals === null) {
+      ctx.addIssue({ code: "custom", message: "Only explicit native XRPL issued amounts use null decimals" });
+    }
+    if (deployment.chain === "xrpl" && deployment.amountEncoding?.kind === "fixed-decimal") {
+      ctx.addIssue({ code: "custom", message: "XRPL issued deployments cannot claim fixed decimals" });
+    }
+  });
 
 export const DependencyWeightSchema = z
   .object({
@@ -228,7 +262,11 @@ export const ReserveReviewSchema = z
     rationale: z.string().min(1),
     compositionBasis: z.string().min(1),
     compositionAsOf: StrictIsoDateSchema.optional(),
+    /** Explicit adapter ownership; omission retains the curated/report date contract. */
+    compositionSource: z.literal("live-adapter").optional(),
     scope: z.enum(RESERVE_REVIEW_SCOPE_VALUES),
+    observations: z.array(ReserveObservationEnvelopeSchema).optional(),
+    reportScopeId: z.string().min(1).optional(),
     knownUnknownExposure: z.string().min(1),
     knownUnknownExposurePct: z.number().finite().min(0).max(100),
     nonLinkDispositions: z

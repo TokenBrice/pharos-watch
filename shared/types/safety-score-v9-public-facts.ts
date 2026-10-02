@@ -11,6 +11,7 @@ import { V9AccessFreezeExposureSchema, V9AccessGovernanceSchema, V9AccessPosture
 import { V9AccessPrimaryExitSchema, V9AccessTransferSchema } from "./safety-score-v9-vocabulary";
 
 import { V9_GRADE_THRESHOLDS } from "./safety-score-v9-grade";
+import { V9AccessLookthroughSummarySchema } from "./safety-score-v9-access-lookthrough";
 
 // Canonical ordering is a determinism-digest input; it has one definition.
 import { BaseInputGenerationIdSchema, ScoreSchema, Sha256Schema } from "./safety-schema-primitives";
@@ -63,6 +64,7 @@ export const V9_BOUNDED_ATTRIBUTION_REASON_CODES = [
   "unproven-settlement-bound",
   "missing-upgrade-control",
   "missing-upgradeability-review",
+  "oracle-topology-undisclosed",
   "partial-reserve-review",
   "stale-audited-reserve-composition",
   "peg-price-unavailable-adverse-history",
@@ -175,6 +177,7 @@ export const SafetyScoreV9AccessPostureSchema = z
     unknownFields: z.array(V9AccessPostureFieldSchema),
     signals: z.array(z.string().min(1)),
     reasons: SafetyScoreV9PublicReasonListSchema,
+    freezeLookthrough: V9AccessLookthroughSummarySchema.nullable().optional(),
   })
   .strict()
   .superRefine((posture, ctx) => {

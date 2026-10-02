@@ -1,6 +1,6 @@
 import { logWorkerEvent, logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { normalizeChainId } from "@shared/lib/chains";
+import { normalizeChainId } from "@shared/types/chain-identity";
 import { YIELD_VARIANT_CHILD_VENUE_PROTOCOLS } from "@shared/lib/yield-source-risk-registry";
 import type { YieldType } from "@shared/types/core";
 import type { YieldDeploymentPlace, YieldSourceRisk } from "@shared/types/yield";

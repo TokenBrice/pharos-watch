@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "sUSDS held by the Ethereum xDAI Foreign Bridge",
-      "pct": 99.03,
+      "pct": 98.49,
       "risk": "low",
       "coinId": "susds-sky",
       "depType": "collateral",
@@ -14,7 +14,7 @@
     },
     {
       "name": "Liquid USDS held by the Ethereum xDAI Foreign Bridge",
-      "pct": 0.97,
+      "pct": 1.51,
       "risk": "low",
       "coinId": "usds-sky",
       "depType": "collateral",
@@ -25,8 +25,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-18",
-    "reviewer": "OpenAI Codex Safety Score V9 backing review; W06 mint-boundary re-home",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (FixInv5)",
     "confidence": "verified",
     "sources": [
       {
@@ -42,36 +42,174 @@
         "url": "https://developers.skyeco.com/protocol/tokens/susds/"
       },
       {
-        "label": "Ethereum xDAI Foreign Bridge asset and principal reads at block 25584913",
+        "label": "Ethereum xDAI Foreign Bridge collateral-token reads at block 26095806",
         "url": "https://etherscan.io/address/0x4aa42145Aa6Ebf72e164C9bBC74fbD3788045016#readProxyContract"
       },
       {
-        "label": "Ethereum sUSDS balance and max-withdraw reads at block 25584913",
+        "label": "Ethereum sUSDS balance and max-withdraw reads at block 26095806",
         "url": "https://etherscan.io/address/0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD#readProxyContract"
       },
       {
-        "label": "Gnosis xDAI Home Bridge burnt-coin read at block 47325357",
+        "label": "Gnosis xDAI Home Bridge burnt-coin read at block 48529298",
         "url": "https://gnosis.blockscout.com/address/0x7301CFA0e1756B71869E93d4e4Dca5c7d0eb0AA6?tab=read_proxy"
       },
       {
-        "label": "Gnosis BlockReward bridge-mint read at block 47325357",
+        "label": "Gnosis BlockReward bridge-mint read at block 48529298",
         "url": "https://gnosis.blockscout.com/address/0x481c034c6d9441db23Ea48De68BCAe812C5d39bA?tab=read_contract"
       },
       {
-        "label": "Ethereum block 25584913",
-        "url": "https://etherscan.io/block/25584913"
+        "label": "Ethereum block 26095806 (2026-10-01T06:54:35Z)",
+        "url": "https://etherscan.io/block/26095806"
       },
       {
-        "label": "Gnosis block 47325357",
-        "url": "https://gnosis.blockscout.com/block/47325357"
+        "label": "Gnosis block 48529298 (2026-10-01T06:54:40Z)",
+        "url": "https://gnosis.blockscout.com/block/48529298"
       }
     ],
-    "rationale": "Gnosis documents that the completed migration replaced DAI and sDAI with USDS and sUSDS as xDAI bridge collateral. Timestamp-aligned reads at Ethereum block 25584913 (2026-07-22T01:13:47Z) and Gnosis block 47325357 (2026-07-22T01:13:50Z) reconcile the two sides. The Foreign Bridge held 705,559.039085990130672328 liquid USDS and 64,994,123.730852270706889290 sUSDS shares redeemable for 71,738,483.035424911185310499 USDS; only 0.052688189469517749 legacy DAI and zero sDAI remained. On Gnosis, BlockRewardAuRa mintedTotallyByBridge(Home Bridge) was 1,327,754,383.519273030164275956 xDAI and Home Bridge totalBurntCoins was 1,255,997,803.184027289689191742, leaving 71,756,580.335245740475084214 bridge-minted xDAI outstanding. Direct USDS plus the bridge's recorded 71,729,444.626685023633523932 USDS sUSDS principal and DAI dust total 72,435,003.718459203233714009, exceeding that liability by 678,423.383213462758629795 (100.95% principal coverage); max-withdrawable fair value is 72,444,042.127199090785500576. The fair-value composition normalizes to 99.03% sUSDS and 0.97% liquid USDS; legacy DAI is immaterial dust, not a reserve slice. W06 mint-boundary re-home (2026-08-18): keep both collateral rows in this sidecar as xDAI's Foreign Bridge backing composition (99.03% sUSDS + 0.97% liquid USDS at Ethereum 0x4aa42145Aa6Ebf72e164C9bBC74fbD3788045016). Do not convert them to a 100% usds-sky wrapper slice and do not add a parallel wrapper slice. Redemption pays USDS (or DAI), but the escrow's sUSDS share and minCashThreshold liquidity are real xDAI backing risk and must remain visible here; the live xdai-bridge adapter already emits this collateral mix. USDS/sUSDS mint risk stays on those assets as basket-exposure, not as inherited xDAI mint authority.",
-    "compositionBasis": "Timestamp-aligned Ethereum bridge escrow balances and sUSDS max-withdraw/principal reads reconciled to Gnosis bridge mint-minus-burn accounting",
-    "compositionAsOf": "2026-07-22",
+    "rationale": "Re-fetched fixed-block reads at Ethereum block 26095806 (2026-10-01T06:54:35Z) identify USDS and sUSDS as the Foreign Bridge's collateral tokens. The bridge holds 823,108.741077534044999388 liquid USDS and 48,331,262.650941988724367273 sUSDS shares, with maxWithdraw returning 53,711,261.055768077689618397 USDS. Normalizing liquid USDS and max-withdrawable sUSDS value gives 1.51% USDS and 98.49% sUSDS, rounded to two decimals; 0.052688189469517749 legacy DAI and zero sDAI remain immaterial dust. Gnosis block 48529298 (2026-10-01T06:54:40Z) records 1,337,958,897.531459019251049888 bridge-minted xDAI and 1,283,840,434.163870179025493045 burned, leaving 54,118,463.367588840225556843 outstanding. These on-chain observations do not constitute an independent attestation. Keep both escrow collateral rows visible; underlying USDS/sUSDS mint risk belongs to those assets rather than xDAI native mint authority.",
+    "compositionBasis": "Timestamp-aligned fixed-block Ethereum Foreign Bridge USDS balance and sUSDS maxWithdraw fair value; Gnosis bridge mint-minus-burn accounting separately observed.",
+    "compositionAsOf": "2026-10-01",
     "scope": "full-composition",
     "knownUnknownExposure": "No material reserve constituent remains unidentified; 0.052688189469517749 legacy DAI remains as quantified dust after the completed migration.",
-    "knownUnknownExposurePct": 0
+    "knownUnknownExposurePct": 0,
+    "observations": [
+      {
+        "kind": "onchain-observation",
+        "scopeId": "xdai-bridge-accounting",
+        "liabilityBookKey": "gnosis-native-bridge-issued",
+        "deploymentRefs": [
+          "ethereum:0x4aa42145aa6ebf72e164c9bbc74fbd3788045016",
+          "gnosis:0x7301cfa0e1756b71869e93d4e4dca5c7d0eb0aa6",
+          "ethereum:0xdc035d45d973e3ec169d2276ddab16f1e407384f",
+          "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+          "gnosis:0x481c034c6d9441db23ea48de68bcae812c5d39ba"
+        ],
+        "reviewer": "DataBBMisc10",
+        "confidence": "verified",
+        "sources": [
+          {
+            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com",
+            "accessedAtSec": 1790897048,
+            "sha256": "baefd292f3cdf16df609035929b1acba548ff3f01c33018120d77c11f4efd411"
+          },
+          {
+            "url": "https://api-gnosis-mainnet.n.dwellir.com",
+            "accessedAtSec": 1790897048,
+            "sha256": "c5de82c5b4b54a8fc9a54f595ca8a767862ab2e6d15978b3f17cd83434968788"
+          }
+        ],
+        "reviewedAtSec": 1790897048,
+        "observedAtSec": 1790896335,
+        "expiresAtSec": 1790914328,
+        "sourceGeneration": "xdai-bridge:0x08e3850174c0b3a2e14cece9d50e5f4d2fc682867c91a3b67c34c288e2d90e4c:0x741d6f5b3cde3dadd615c871191ff22c65bbc6ef4587429c7f77d365a9d3b6f9",
+        "sourceSha256": "86584e1abc33e8400b74122d717870b4aefc793b40c84a0ed9048ff6e8eda96d",
+        "completeness": "partial",
+        "obligations": [
+          {
+            "key": "bridge-minted-minus-burnt",
+            "disposition": "included",
+            "reason": "Pinned Home Bridge counters; this subset excludes pending messages and non-bridge native issuance."
+          },
+          {
+            "key": "pending-burns",
+            "disposition": "unresolved",
+            "reason": "No complete same-checkpoint economic obligation census established."
+          },
+          {
+            "key": "pending-mints",
+            "disposition": "unresolved",
+            "reason": "No complete same-checkpoint economic obligation census established."
+          },
+          {
+            "key": "non-bridge-native-issuance",
+            "disposition": "unresolved",
+            "reason": "No complete same-checkpoint economic obligation census established."
+          },
+          {
+            "key": "fees",
+            "disposition": "unresolved",
+            "reason": "No complete same-checkpoint economic obligation census established."
+          },
+          {
+            "key": "interest",
+            "disposition": "unresolved",
+            "reason": "The current interestAmount getter is observed, but does not reconcile the receiver claim and already-relayed pending interest."
+          }
+        ],
+        "blocks": [
+          {
+            "chain": "ethereum",
+            "number": 26100675,
+            "hash": "0x08e3850174c0b3a2e14cece9d50e5f4d2fc682867c91a3b67c34c288e2d90e4c",
+            "timestamp": 1790896343,
+            "finality": "safe"
+          },
+          {
+            "chain": "gnosis",
+            "number": 48540798,
+            "hash": "0x741d6f5b3cde3dadd615c871191ff22c65bbc6ef4587429c7f77d365a9d3b6f9",
+            "timestamp": 1790896335,
+            "finality": "safe"
+          }
+        ],
+        "quantities": [
+          {
+            "key": "liquid-usds",
+            "deploymentRef": "ethereum:0xdc035d45d973e3ec169d2276ddab16f1e407384f",
+            "selector": "0x70a082310000000000000000000000004aa42145aa6ebf72e164c9bbc74fbd3788045016",
+            "rawAmount": "716258151048624022834949",
+            "decimals": 18
+          },
+          {
+            "key": "susds-shares",
+            "deploymentRef": "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+            "selector": "0x70a082310000000000000000000000004aa42145aa6ebf72e164c9bbc74fbd3788045016",
+            "rawAmount": "48331262650941988724367273",
+            "decimals": 18
+          },
+          {
+            "key": "bridge-burnt",
+            "deploymentRef": "gnosis:0x7301cfa0e1756b71869e93d4e4dca5c7d0eb0aa6",
+            "selector": "0x0e8162ba",
+            "rawAmount": "1283960294778949108864008118",
+            "decimals": 18
+          },
+          {
+            "key": "bridge-minted",
+            "deploymentRef": "gnosis:0x481c034c6d9441db23ea48de68bcae812c5d39ba",
+            "selector": "0xb4a523e80000000000000000000000007301cfa0e1756b71869e93d4e4dca5c7d0eb0aa6",
+            "rawAmount": "1337971908556509039067400522",
+            "decimals": 18
+          },
+          {
+            "key": "invested-principal",
+            "deploymentRef": "ethereum:0x4aa42145aa6ebf72e164c9bbc74fbd3788045016",
+            "selector": "0xcff77444000000000000000000000000dc035d45d973e3ec169d2276ddab16f1e407384f",
+            "rawAmount": "53708894264538729241901662",
+            "decimals": 18
+          },
+          {
+            "key": "interest-getter",
+            "deploymentRef": "ethereum:0x4aa42145aa6ebf72e164c9bbc74fbd3788045016",
+            "selector": "0xc779c1c3000000000000000000000000dc035d45d973e3ec169d2276ddab16f1e407384f",
+            "rawAmount": "5899854345341887596378",
+            "decimals": 18
+          },
+          {
+            "key": "susds-assets",
+            "deploymentRef": "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+            "selector": "0x07a2d13a00000000000000000000000000000000000000000027fa8aff8db38c90855fa9",
+            "rawAmount": "53714795118884071129498040",
+            "decimals": 18
+          }
+        ],
+        "ratio": {
+          "numerator": "54431053269932695152332989",
+          "denominator": "54011613777559930203392404",
+          "unitBasis": "raw-18-decimal-bridge-token-units"
+        }
+      }
+    ]
   },
   "custodyProfile": {
     "providers": [

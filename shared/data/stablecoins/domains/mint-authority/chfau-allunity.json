@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "CHFAU is issuer-native on Ethereum, Polygon, Base, and Tempo. The three EVM deployments use the same deterministic ERC1967 proxy address and UUPS implementation; the same AllUnity EOAs hold DEFAULT_ADMIN_ROLE and MINTER_ROLE on Ethereum, Polygon, and Base. Tempo uses a native TIP-20 token whose role members are not enumerable through the standard EVM interface.",
+    "summary": "CHFAU is issuer-native on Ethereum, Polygon, Base, Tempo, Solana, and Arc. Ethereum, Polygon, and Base share a UUPS implementation; Arc uses a different implementation. The same minter/admin addresses hold the respective roles on all four EVM chains. Solana mint and freeze authority is program-owned; its program administration remains unresolved. Tempo role members and Arc upgrade authorization remain unresolved.",
     "upgradeability": {
       "model": "uups",
       "deploymentRefs": [
@@ -54,7 +54,10 @@
         "chain": "ethereum",
         "address": "0xd443f0460c39194faaa06bcd018422fcc70178dd",
         "deploymentRefs": [
-          "ethereum:0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78"
+          "ethereum:0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78",
+          "base:0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78",
+          "polygon:0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78",
+          "arc:0xc6df1b92a6ae61a27059c41e541a91ce8dcb1605"
         ],
         "label": "CHFAU EVM MINTER_ROLE holder",
         "role": "direct-minter",
@@ -80,7 +83,10 @@
         "chain": "ethereum",
         "address": "0xddaca43e3ae3a1485880a835edbf8924ab142b5f",
         "deploymentRefs": [
-          "ethereum:0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78"
+          "ethereum:0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78",
+          "base:0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78",
+          "polygon:0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78",
+          "arc:0xc6df1b92a6ae61a27059c41e541a91ce8dcb1605"
         ],
         "label": "CHFAU EVM default admin",
         "role": "minter-admin",
@@ -97,6 +103,32 @@
         "observedAt": "2026-07-21",
         "observedBlock": 25584014,
         "evidence": "hasRole(DEFAULT_ADMIN_ROLE, 0xddaca43e...) returned true on Ethereum block 25584014, Base block 48941293, and Polygon block 90644625. Each proxy's EIP-1967 implementation slot resolved to 0x5cad3aaa..., and eth_getCode on Ethereum returned no bytecode for the admin. The verified UUPS token interface gates upgrades through DEFAULT_ADMIN_ROLE with no separate on-chain delay."
+      },
+      {
+        "chain": "solana",
+        "address": "APJqyTzEng2jeLoyvRSZYgTpaZDBdxMetkvUSmvRMbTP",
+        "deploymentRefs": [
+          "solana:3GJfXJvPcjuAu6VQZmcs9pAXQau8nz3z88CCpBztgQSv"
+        ],
+        "label": "CHFAU Solana Token-2022 mint authority",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-01",
+        "observedBlock": 452213349,
+        "sources": [
+          {
+            "label": "AllUnity CHFAU deployment disclosure",
+            "url": "https://allunity.com/chfau"
+          },
+          {
+            "label": "Solana finalized atomic account observation",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "At finalized Solana slot 452213349, one getMultipleAccounts response confirmed the issuer-listed CHFAU Token-2022 mint has 6 decimals and mint/freeze authority APJqyTzEng2jeLoyvRSZYgTpaZDBdxMetkvUSmvRMbTP. The same response showed that authority account is owned by program Go6xKqsTwEWCsnzpW3ZLj9PYnPnZypFdqambKzGBP9J5. The account also holds permanent-delegate and pause authority; program administration, signer threshold, and issuance constraints have not been resolved."
       }
     ],
     "economicCapSemantics": "unbounded",

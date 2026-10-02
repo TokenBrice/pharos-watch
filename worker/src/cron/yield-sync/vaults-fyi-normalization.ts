@@ -1,5 +1,5 @@
 import { isRecord } from "@shared/lib/type-guards";
-import { resolveCanonicalChain } from "./sources-helpers";
+import { normalizeChainId } from "@shared/types/chain-identity";
 import type { ParsedRankableVault, VaultsFyiTelemetry } from "./vaults-fyi-types";
 
 export const VAULTS_FYI_MIN_VAULT_SCORE = 70;
@@ -32,7 +32,7 @@ function vaultsFyiNetworkToChain(value: unknown): string | null {
   if (raw === "mainnet") return "ethereum";
   if (raw === "mega-eth") return "megaeth";
   if (raw === "hyperliquid") return "hyperevm";
-  return resolveCanonicalChain(raw);
+  return normalizeChainId(raw);
 }
 
 export function rankableVaultNetwork(value: string): string {
@@ -49,14 +49,14 @@ export function resolveVaultsFyiChain(
 ): string | null {
   const numericChainId = getFiniteNumber(network?.chainId ?? network?.id);
   if (numericChainId != null) {
-    return resolveCanonicalChain(numericChainId);
+    return normalizeChainId(numericChainId);
   }
 
   const caip = getString(network?.networkCaip ?? network?.caip);
   if (caip) {
     const match = caip.match(/^eip155:(\d+)$/);
     if (match?.[1]) {
-      return resolveCanonicalChain(Number(match[1]));
+      return normalizeChainId(Number(match[1]));
     }
   }
 

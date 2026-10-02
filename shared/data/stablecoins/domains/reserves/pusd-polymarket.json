@@ -66,11 +66,11 @@
         "sharePct": 100
       }
     ],
-    "segregation": "segregated",
+    "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC26), D09 legal-versus-technical custody review",
     "confidence": "verified",
     "sources": [
       {
@@ -82,6 +82,6 @@
         "url": "https://polygonscan.com/address/0xc417fd8e9661c0d2120b64a04bb3278c17e99db1"
       }
     ],
-    "uncertainty": "The backing tokens are held at one identified onchain vault and are available through the documented unwrap path, but the reviewed sources do not establish legal bankruptcy-remoteness or a complete independent assessment of every authority that could affect reserve reuse."
+    "uncertainty": "The identified backing vault and documented onchain unwrap path provide technical separation of USDC backing. The public pUSD documentation reviewed on 2026-10-01 does not establish enforceable holder-benefit legal segregation or insolvency priority, so legal segregation and bankruptcy remoteness remain unknown under D09. Technical separation does not establish a legal safeguard or a complete assessment of authorities affecting reserve reuse."
   }
 }

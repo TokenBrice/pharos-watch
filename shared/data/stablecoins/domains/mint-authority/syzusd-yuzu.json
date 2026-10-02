@@ -5,26 +5,27 @@
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "inheritedFrom": "yzusd-yuzu",
-    "summary": "syzUSD is Yuzu's staking wrapper of yzUSD. Plasma is the only reviewed native issuance deployment: its current ERC-4626 share accounting is bounded by deposited yzUSD, while the Plasma ProxyAdmin owner Safe can replace that wrapper logic without a separate delay. Ethereum and Monad are bridge representations and their adapter/bridge upgrade surfaces are assessed under Bridge Risk; durable yzUSD mint authority remains represented by the exact parent dependency rather than duplicated as a local issuer minter.",
+    "summary": "syzUSD is Yuzu's staking wrapper of yzUSD. Plasma is the reviewed native ERC-4626 deployment, with share issuance against deposited yzUSD. Its ProxyAdmin is now owned by a 48-hour TimelockController; the previously direct 4-of-5 Safe holds proposer, executor, and canceller roles on that timelock. Satellite bridge administration remains in Bridge Risk. Parent yzUSD mint authority remains inherited through the tracked dependency.",
     "upgradeability": {
       "model": "transparent-proxy",
       "deploymentRefs": [
         "plasma:0xc8a8df9b210243c55d31c73090f06787ad0a1bf6"
       ],
       "proxyAddresses": [
-        "0xc8a8df9b210243c55d31c73090f067ad0a1bf6"
+        "0xc8a8df9b210243c55d31c73090f06787ad0a1bf6"
       ],
       "implementationAddresses": [
         "0x4ad9f1db810146b660eb863cc6f56649e0824a6e"
       ],
       "adminAddresses": [
         "0x7392751a860a51694231c7a0b4a9c853f8169cf0",
-        "0xa2a9700407934e913c840556b3d29f19cf6f203d"
+        "0x2130457539612ae9838e0314cda1a8abbdb7cfbc"
       ],
       "canChangeMintLogic": true,
-      "controlRef": "Yuzu Plasma ProxyAdmin owner Safe (4-of-5)",
-      "observedAt": "2026-08-16",
-      "observedBlock": 29981334,
+      "delaySec": 172800,
+      "controlRef": "Yuzu Plasma ProxyAdmin 48-hour timelock",
+      "observedAt": "2026-10-01",
+      "observedBlock": 33896602,
       "sources": [
         {
           "label": "syzUSD vault on Plasmascan",
@@ -45,19 +46,19 @@
         ],
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-08",
-        "observedBlock": 29275787,
+        "observedAt": "2026-10-01",
+        "observedBlock": 33896602,
         "sources": [
           {
             "label": "syzUSD vault on Plasmascan",
             "url": "https://plasmascan.to/address/0xc8a8df9b210243c55d31c73090f06787ad0a1bf6"
           }
         ],
-        "evidence": "On-chain review 2026-07-20 identifies this as the Plasma transparent-proxy ERC-4626 vault with asset() = yzUSD 0x6695c0f8706c5ace3bdf8995073179cca47926dc. It mints/burns shares only against yzUSD deposits and cannot create base yzUSD supply."
+        "evidence": "At Plasma block 33896602 on 2026-10-01, the vault resolves to verified StakedYuzuUSDV3 implementation 0x4ad9f1db810146b660eb863cc6f56649e0824a6e and asset() returns yzUSD 0x6695c0f8706c5ace3bdf8995073179cca47926dc. ERC-4626 deposits create wrapper shares against that asset rather than base yzUSD supply. V3 adds role-managed throttles and redemption settings."
       },
       {
-        "label": "Yuzu Plasma ProxyAdmin owner Safe (4-of-5)",
-        "role": "proxy-admin",
+        "label": "Yuzu Plasma timelock proposer/executor Safe (4-of-5)",
+        "role": "governor",
         "authorityType": "safe",
         "directMintAbility": "upgrade-only",
         "chain": "plasma",
@@ -68,6 +69,7 @@
         "canRaiseCap": true,
         "threshold": 4,
         "signerCount": 5,
+        "timelockDelaySec": 172800,
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
           "version": "1.4.1",
@@ -81,30 +83,53 @@
           "threshold": 4,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "fallbackHandler": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
           "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
-          "observedBlock": 29275684,
-          "observedAt": "2026-08-08",
+          "observedBlock": 33896602,
+          "observedAt": "2026-10-01",
           "source": "onchain"
         },
-        "observedAt": "2026-08-08",
-        "observedBlock": 29275684,
+        "observedAt": "2026-10-01",
+        "observedBlock": 33896602,
         "sources": [
           {
             "label": "syzUSD vault on Plasmascan",
             "url": "https://plasmascan.to/address/0xc8a8df9b210243c55d31c73090f06787ad0a1bf6"
           }
         ],
-        "evidence": "At Plasma block 29275684 on 2026-08-08, the vault ProxyAdmin 0x7392751a860a51694231c7a0b4a9c853f8169cf0 still reported this 4-of-5 Safe as owner. Direct Safe reads returned version 1.4.1, the listed five owners, no enabled modules, zero guard and fallback handler, and master copy 0x29fcb43b46531bca003ddc8fcb67ffe91900c762. The Safe can replace the Plasma vault implementation without a separate on-chain delay."
+        "evidence": "At Plasma block 33896602 on 2026-10-01, this Safe remains version 1.4.1 and 4-of-5 with the listed owners, no enabled modules, zero guard, fallback handler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99, and the recorded master copy. It is no longer the direct ProxyAdmin owner: the owner is TimelockController 0x2130457539612ae9838e0314cda1a8abbdb7cfbc, where hasRole confirms this Safe as proposer, executor, and canceller, but not default admin. The former no-delay direct ownership observation from 2026-08-08 is historical."
+      },
+      {
+        "label": "Yuzu Plasma ProxyAdmin 48-hour timelock",
+        "role": "proxy-admin",
+        "authorityType": "timelock",
+        "directMintAbility": "upgrade-only",
+        "chain": "plasma",
+        "address": "0x2130457539612ae9838e0314cda1a8abbdb7cfbc",
+        "deploymentRefs": [
+          "plasma:0xc8a8df9b210243c55d31c73090f06787ad0a1bf6"
+        ],
+        "timelockDelaySec": 172800,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 33896602,
+        "sources": [
+          {
+            "label": "Plasma TimelockController verified contract",
+            "url": "https://plasmascan.to/address/0x2130457539612ae9838e0314cda1a8abbdb7cfbc#code"
+          }
+        ],
+        "evidence": "At Plasma block 33896602, ProxyAdmin 0x7392751a860a51694231c7a0b4a9c853f8169cf0 owner() and vault defaultAdmin() both return this verified TimelockController. getMinDelay() returns 172800 seconds. The 4-of-5 Safe has proposer, executor, and canceller roles; the timelock has its own default admin role, while the probed original deployer, Safe, and zero address do not. The controller can replace mint-critical implementation logic through its scheduled execution path."
       }
     ],
     "economicCapSemantics": "raiseable",
     "reconciliation": "not-applicable",
     "supervision": "unknown",
     "review": {
-      "evidence": "syzUSD (variantOf yzusd-yuzu, variantKind strategy-vault) is a serial wrapper over yzUSD: the local Plasma share-accounting route cannot create durable parent supply, and yzUSD control is carried by the exact parent dependency. Plasma is the only reviewed native-issuance route. At Plasma block 29981334 on 2026-08-16, proxy 0xc8a8df9b210243c55d31c73090f06787ad0a1bf6 resolves to implementation 0xa3982582016375a0b25cb7d572379d3d49e5e9c8, ProxyAdmin 0x7392751a860a51694231c7a0b4a9c853f8169cf0, and asset() yzUSD 0x6695c0f8706c5ace3bdf8995073179cca47926dc; the ProxyAdmin owner is the reviewed 4-of-5 Safe 0xa2a9700407934e913c840556b3d29f19cf6f203d with no enabled modules or guard, so a completed Safe action can replace the current deposit-bounded wrapper logic without a separate delay. Ethereum 0x6dff69eb720986e98bb3e8b26cb9e02ec1a35d12 and Monad 0x484be0540ad49f351eaa04eeb35df0f937d4e73f are bridge-representation candidates; their bridge upgrade/admin surfaces are excluded from this native review and retained in Bridge Risk. No local issuer minter is duplicated from parent yzUSD.",
-      "reviewer": "OpenAI Codex syzUSD bridge-boundary correction",
-      "reviewedAt": "2026-08-16",
+      "evidence": "At Plasma block 33896602 on 2026-10-01, the canonical syzUSD vault resolves to verified StakedYuzuUSDV3 implementation 0x4ad9f1db810146b660eb863cc6f56649e0824a6e and asset() yzUSD 0x6695c0f8706c5ace3bdf8995073179cca47926dc. The immutable proxy admin remains 0x7392751a860a51694231c7a0b4a9c853f8169cf0; its owner is now TimelockController 0x2130457539612ae9838e0314cda1a8abbdb7cfbc with getMinDelay() 172800 seconds, also the vault default admin. The 4-of-5 Safe now proposes, executes, and cancels scheduled operations rather than directly owning the ProxyAdmin. Historical 2026-08-16 V2/no-delay observations are superseded by this pinned state. Wrapper shares remain backed by deposited yzUSD; satellite bridge powers stay in Bridge Risk and parent yzUSD issuance is inherited rather than duplicated.",
+      "reviewer": "Sol curation pass 2026-10-01 (CurA64syzUSD)",
+      "reviewedAt": "2026-10-01",
       "disposition": "scoreable",
       "sources": [
         {

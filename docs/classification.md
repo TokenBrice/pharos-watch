@@ -60,8 +60,8 @@ Key fields on `StablecoinMeta` (see `shared/types/core.ts` plus `shared/types/st
 - `marketAvailability?: "market-traded" | "limited-trading" | "non-traded-utility" | "legacy-or-wind-down"` — descriptive availability label for issuer/regulatory coverage audits; currently used to preserve eurostablecoins.xyz market-status distinctions for EUR stablecoins without changing runtime cache admission
 - `collateral?: string` — description of the collateral backing
 - `pegMechanism?: string` — description of the peg maintenance mechanism
-- `mechanismArchetype?: MechanismArchetype` — one of `"fiat-cash" | "tbill" | "cdp" | "synthetic-delta-neutral" | "algorithmic" | "rwa-credit-fund" | "commodity-claim"` (defined in `shared/types/core.ts`). When set, the coin detail page renders an SVG mechanism diagram in `PegStabilityCard` plus a "Learn how X stablecoins work" link to the matching `/learn/mechanisms/<slug>/` explainer. Slug helpers live in `shared/lib/classification/mechanism-archetypes.ts`; the dedicated explainer route contract is [learn-mechanisms-page.md](./learn-mechanisms-page.md).
-- `mechanismArchetypeReview?: MechanismArchetypeReview` — sourced base-metadata review with a `resolved` or `unresolved` disposition, reviewer, review date, rationale, and sources. A reviewed unresolved row deliberately blocks v9 classification instead of silently guessing an archetype.
+- `mechanismArchetype?: MechanismArchetype` — taxonomy owned by `MECHANISM_ARCHETYPE_VALUES` in `shared/types/stablecoin-taxonomy.ts` and re-exported through `shared/types/core.ts`. When set, the coin detail page renders an SVG mechanism diagram in `PegStabilityCard` plus a matching `/learn/mechanisms/<slug>/` link. Labels, short labels, one-liners and slug helpers live only in `shared/lib/classification.ts`; the route contract is [learn-mechanisms-page.md](./learn-mechanisms-page.md).
+- `mechanismArchetypeReview?: MechanismArchetypeReview` — sourced base-metadata review with a `resolved` or `unresolved` disposition, reviewer, evidence date, rationale and sources. A reviewed unresolved row deliberately blocks classification instead of guessing. Native V10 families also require an own exact-token resolved review admitted after its UTC day and before the existing mechanism-overlay expiry boundary.
 - `implementationLaunchDate?: string` — launch boundary for the currently deployed mechanism when it materially differs from the product's `launchDate`. The same fuzzy formats are supported, but track-record consumers use the latest possible date in the stated period as a conservative age lower bound.
 - `archetypeOverride?: boolean` — when `true`, this coin's `mechanismArchetype` is an intentional, sourced departure from its parent variant's archetype. Redundant same-archetype overrides are invalid.
 - `commodityOunces?: number` — troy ounces per token (for gold- and silver-pegged stablecoins)
@@ -103,6 +103,25 @@ Key fields on `StablecoinMeta` (see `shared/types/core.ts` plus `shared/types/st
 Cross-domain reviewed incidents are not a `StablecoinMeta` classification field. `shared/data/safety-score-v9/incident-reviews-v1.json` owns events that need explicit control, wrapper-local, operational, or peg routing plus root-claim, deployment, integration-only, or holder-exit scope. Each event changes the existing component that owns its risk; it does not create another Safety Score pillar. Domain-native evidence such as `mintAuthority.mintIncidents` remains in its existing sidecar and must not be duplicated into the cross-domain registry.
 
 Bridge, custody, mint-authority, and reserve-quality summaries share `RESEARCH_REVIEW_CONFIDENCE_LABELS` from `shared/lib/classification.ts`. Each summary retains its own missing/unknown-value fallback; oracle confidence keeps its separate vocabulary, including `limited`.
+
+### Native mechanism families
+
+- `ucits-trs-fund` is a proportional interest in an exact UCITS fund/share class with physical
+  securities and total-return swaps, not Treasury-only or custodial cash backing. Signed
+  derivatives, unswapped sleeves, collateral and recovery require their own mechanism evidence.
+- `shared-reserve` describes several protocol liabilities backed by a common pool. Operational
+  exchange rights do not establish exclusive allocation or enforceable insolvency priority.
+  All identified reserve-backed Mento members use this rule, including USDm/EURm with their
+  current V3 FPMM claim; Mento CDP currencies remain `cdp`.
+- `protocol-position` describes bridge, vault or module-issued operational liabilities, not
+  direct fiat ownership or necessarily borrower debt. Not all members are bridged. Parent
+  reserve quality does not erase local conservation, position custody, allocation and recovery.
+
+Family admission and component grading are owned by the
+[mechanism-overlay evidence standard](./process/mechanism-overlay-evidence-standard.md#native-family-admission-and-grading).
+Missing claim identity remains NR; unknown or undisclosed protections after admission remain
+priced bounded facts. This code capability does not author catalog members, change reserve
+percentages, grant new oracle tiers or add supply overrides.
 
 ### Implementation Age Policy
 

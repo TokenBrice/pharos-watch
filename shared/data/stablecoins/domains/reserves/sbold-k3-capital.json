@@ -15,7 +15,7 @@
         "liquidity",
         "market"
       ],
-      "liquidityHorizon": "over-seven-days"
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
@@ -42,5 +42,38 @@
     "scope": "full-composition",
     "knownUnknownExposure": "No additional direct sBOLD reserve slice is identified; its changing branch allocation is an internal attribute of the classified Stability Pool position.",
     "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "K3 Capital sBOLD ERC-4626 vault (Ethereum 0x50bd66d59911f5e086ec87ae43c811e0d059dd11)",
+        "role": "other"
+      },
+      {
+        "name": "Liquity V2 Stability Pool contracts",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB33JPYC)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "K3 sBOLD technical details",
+        "url": "https://k3-capital.gitbook.io/sbold/technical-details"
+      },
+      {
+        "label": "Verified deployed sBOLD and Stability Pool accounting source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x50bd66d59911f5e086ec87ae43c811e0d059dd11"
+      },
+      {
+        "label": "Ethereum pinned asset and owner observation block 26095889",
+        "url": "https://etherscan.io/block/26095889"
+      }
+    ],
+    "uncertainty": "Onchain assets are administered through the sBOLD vault and its Stability Pool positions. At Ethereum block 26095889, asset() resolves to BOLD and owner() resolves to the K3 2-of-3 Safe. Legal segregation, insolvency remoteness, and rehypothecation restrictions are not established by these contract observations. The owner can change pool allocation, the price oracle, and swap execution parameters; provider shares are not estimated."
   }
 }

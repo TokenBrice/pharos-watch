@@ -2,14 +2,23 @@
   "id": "mtbill-midas",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: mTBILL resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Midas mTBILL source: mToken inheritance and pause role",
+        "url": "https://github.com/midas-apps/contracts/blob/main/contracts/products/mTBILL/mTBILL.sol"
+      },
+      {
+        "label": "Midas mToken source: sender and recipient blacklist checks",
+        "url": "https://github.com/midas-apps/contracts/blob/main/contracts/mToken.sol"
+      }
+    ],
+    "evidence": "The issuer's mTBILL source inherits mToken and defines M_TBILL_PAUSE_OPERATOR_ROLE. mToken implements role-gated pause/unpause and calls _onlyNotBlacklisted() for both sender and recipient on transfers. October 1 pinned reads confirmed the recorded mTBILL identities, decimals, access-control addresses, and mint-role constant on the five listed native deployments. The capability is supported by product source, not inferred solely from centralized governance.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA40apxUSD)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "Midas issues mTBILL natively on Ethereum, Base, Rootstock, Plume, and Etherlink; per-chain minting runs through Midas deposit-vault minters under Midas admin Safes (mint-authority review 2026-07-15, proxy admins re-read 2026-07-20). No third-party bridge carries the representation.",
+    "summary": "October 1 pinned reads confirm mTBILL token identities and EIP-1967 proxy paths on Ethereum, Base, Rootstock, Plume and Etherlink. The issuer-listed issuance vaults hold M_TBILL_MINT_OPERATOR_ROLE on Ethereum, Base, Rootstock and Etherlink; the listed Plume vault does not hold that role at block 96626537. These reads do not establish an exhaustive minter census or exclude additional cross-chain adapters. The issuer contracts repository contains LayerZero and Axelar integrations, but their deployment-specific mTBILL use is not established by this review.",
     "reviewedAt": "2026-07-20",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-2 (lead usdc-circle)",
     "confidence": "verified",
@@ -25,7 +34,7 @@
     "sources": [
       {
         "label": "Midas mTBILL docs",
-        "url": "https://docs.midas.app/tokens/mtbill"
+        "url": "https://midas-docs.gitbook.io/midas-docs/tokens/mtbill.md"
       },
       {
         "label": "Midas contracts repository",

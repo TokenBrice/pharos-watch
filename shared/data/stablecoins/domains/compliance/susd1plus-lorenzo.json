@@ -1,22 +1,5 @@
 {
   "id": "susd1plus-lorenzo",
-  "mica": {
-    "status": "out-of-scope",
-    "references": [
-      {
-        "label": "MiCA Article 2: financial instruments and funds are outside MiCA scope",
-        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
-      },
-      {
-        "label": "Lorenzo USD1+ OTF launch: sUSD1+ represents shares in a yield-accruing fund and redeems by NAV",
-        "url": "https://lorenzo-protocol.ghost.io/usd1-mainnet-launch/"
-      },
-      {
-        "label": "Lorenzo sUSD1+ redemption guide: variable NAV and settlement cycle; Netherlands listed as a restricted region",
-        "url": "https://lorenzo-protocol.ghost.io/susd1-otf-redemption-guide/"
-      }
-    ]
-  },
   "genius": {
     "applicability": "non-payment-token",
     "applicabilityBasis": {

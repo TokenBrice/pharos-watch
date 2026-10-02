@@ -54,7 +54,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "Ripio issues wPEN natively on Ethereum, Base, Worldchain, BSC, Polygon, and Gnosis. Ripio's wFIAT Bridge separately burns source WPEN through BridgeDeposit 0x465e642387d3d73a57cdc1368ffa53a800ba5d47 and fulfills destination minting through LimitedMinterBridge 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6 across all 30 ordered pairs. The destination dailyMaxMint is 72.265625 WPEN per chain, but fulfillBridgeMint does not trustlessly verify the supplied source transaction or amount; the full rail is scored here rather than as native Mint Authority.",
+    "summary": "Ripio issues wPEN natively on the reviewed deployments. Its separate wFIAT Bridge burns source WPEN through BridgeDeposit 0x465e642387d3d73a57cdc1368ffa53a800ba5d47 and fulfills destination minting through LimitedMinterBridge 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6. Current pinned reads confirm all 30 ordered routes among Ethereum, Base, Worldchain, BSC, Polygon, and Gnosis are enabled. The destination dailyMaxMint is 18,500 WPEN per chain as of 2026-10-01, raised from the historical 72.265625 WPEN cap. The verified fulfillBridgeMint path still relies on an operator-supplied source transaction and amount rather than a trustless source-burn proof.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Codex mint-bridge-boundary migration wpen-ripio",
     "confidence": "verified",
@@ -364,14 +364,14 @@
         ],
         "authorityType": "contract",
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "At the 2026-08-16 fixed reads, tokenConfigs(WPEN) existed on all six LimitedMinterBridge deployments with dailyMaxMint = 72.265625 WPEN; DEFAULT_ADMIN_ROLE can change token registration and daily limits, while mintTo accepts an arbitrary recipient.",
+        "capDescription": "Current 2026-10-01 pinned tokenConfigs(WPEN) reads on Ethereum, Base, Worldchain, BSC, Polygon, and Gnosis return dailyMaxMint = 18,500 WPEN and exists = true. DEFAULT_ADMIN_ROLE can change this destination-adapter cap. The earlier 2026-08-16 cap was 72.265625 WPEN.",
         "canRaiseCap": true,
         "routeChecks": {
-          "caps": "WPEN dailyMaxMint was 72.265625 on Ethereum, Base, Worldchain, BSC, Polygon, and Gnosis at the reviewed blocks; the verified source permits an administrator to change token registration and daily limits.",
+          "caps": "Rechecked 2026-10-01: dailyMaxMint is 18,500 WPEN on all six reviewed LimitedMinterBridge deployments, raised from the historical 72.265625 WPEN observation. DEFAULT_ADMIN_ROLE can change token registration and daily limits.",
           "trustedPeerOrRemote": "The issuer-native burn/mint rail uses BridgeDeposit 0x465e642387d3d73a57cdc1368ffa53a800ba5d47 on the source and LimitedMinterBridge 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6 on the destination. Current routeConfigs show all 30 ordered pairs enabled: Ethereum→Base, Worldchain, BSC, Polygon, Gnosis; Base→Ethereum, Worldchain, BSC, Polygon, Gnosis; Worldchain→Ethereum, Base, BSC, Polygon, Gnosis; BSC→Ethereum, Base, Worldchain, Polygon, Gnosis; Polygon→Ethereum, Base, Worldchain, BSC, Gnosis; Gnosis→Ethereum, Base, Worldchain, BSC, Polygon.",
           "pausersAdminsUpgraders": "LimitedMinterBridge DEFAULT_ADMIN_ROLE is held by issuer EOA 0x466c02e2cc67b81a696af5afdb61605c41fe247b and Ripio Safe 0x2b839174fe62466067c22e2a4c8054071f9d8d68 on every reviewed deployment; the issuer EOA and BridgeDeposit 0x465e642387d3d73a57cdc1368ffa53a800ba5d47 hold MINTER_ROLE. The source exposes admin and pause surfaces; this adapter is not a native issuer mint path."
         },
-        "observedAt": "2026-08-16",
+        "observedAt": "2026-10-01",
         "sources": [
           {
             "label": "LimitedMinterBridge verified source",
@@ -382,7 +382,8 @@
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x465e642387d3d73a57cdc1368ffa53a800ba5d47"
           }
         ],
-        "evidence": "At Ethereum block 25771050, Base block 50068492, Worldchain block 33795348, BSC block 116366260, Polygon block 92147372, and Gnosis block 47808712 on 2026-08-16, LimitedMinterBridge 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6 reported WPEN tokenConfigs exists = true and dailyMaxMint = 72.265625 WPEN. The verified source defines pause, admin-controlled token registration and daily limits, and arbitrary-recipient mintTo. The issuer EOA and BridgeDeposit held the bridge minter role, while the issuer EOA and Ripio Safe held the bridge adapter's default admin role."
+        "evidence": "Current pinned tokenConfigs(WPEN) reads: ethereum block 26095831, base block 52024317, worldchain block 35751172, bsc block 125057591, polygon block 94755498, gnosis block 48529356. Every deployment returns dailyMaxMint 18500000000000000000000 base units (18,500 WPEN), exists true. The previous 72.265625 WPEN cap is historical; admin capability to change the limit remains documented in the verified adapter source.",
+        "observedBlock": 26095831
       },
       {
         "id": "wpen-limited-minter-bridge-admin-eoa",
@@ -414,13 +415,13 @@
         ],
         "authorityType": "eoa",
         "modulesOrGuardsStatus": "none-detected",
-        "capDescription": "The issuer EOA held DEFAULT_ADMIN_ROLE and MINTER_ROLE on LimitedMinterBridge across all six deployments; it can change WPEN's 72.265625 daily cap through the adapter's admin surface.",
+        "capDescription": "Current 2026-10-01 pinned tokenConfigs(WPEN) reads on Ethereum, Base, Worldchain, BSC, Polygon, and Gnosis return dailyMaxMint = 18,500 WPEN and exists = true. DEFAULT_ADMIN_ROLE can change this destination-adapter cap. The earlier 2026-08-16 cap was 72.265625 WPEN.",
         "canRaiseCap": true,
         "routeChecks": {
-          "caps": "The adapter's WPEN dailyMaxMint was 72.265625 on every reviewed deployment; DEFAULT_ADMIN_ROLE can change the token configuration and daily limit.",
+          "caps": "Rechecked 2026-10-01: dailyMaxMint is 18,500 WPEN on all six reviewed LimitedMinterBridge deployments, raised from the historical 72.265625 WPEN observation. DEFAULT_ADMIN_ROLE can change token registration and daily limits.",
           "pausersAdminsUpgraders": "The issuer EOA is the common-mode LimitedMinterBridge DEFAULT_ADMIN_ROLE and MINTER_ROLE holder on Ethereum, Base, Worldchain, BSC, Polygon, and Gnosis; the bridge adapter's pause and admin surfaces are separate from the EOA's native LatamStable mint authority."
         },
-        "observedAt": "2026-08-16",
+        "observedAt": "2026-10-01",
         "sources": [
           {
             "label": "LimitedMinterBridge verified source",
@@ -431,7 +432,8 @@
             "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
           }
         ],
-        "evidence": "At the six 2026-08-16 fixed blocks recorded for the native routes, the issuer EOA 0x466c02e2cc67b81a696af5afdb61605c41fe247b held DEFAULT_ADMIN_ROLE and MINTER_ROLE on LimitedMinterBridge 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6 on every deployment. Its bridge capabilities are daily-limit administration and destination minting; the EOA's separate direct native mint and UUPS upgrade powers remain scored under Mint Authority."
+        "evidence": "Current pinned tokenConfigs(WPEN) reads: ethereum block 26095831, base block 52024317, worldchain block 35751172, bsc block 125057591, polygon block 94755498, gnosis block 48529356. Every deployment returns dailyMaxMint 18500000000000000000000 base units (18,500 WPEN), exists true. The previous 72.265625 WPEN cap is historical; admin capability to change the limit remains documented in the verified adapter source.",
+        "observedBlock": 26095831
       },
       {
         "id": "wpen-limited-minter-bridge-admin-safe",
@@ -465,7 +467,7 @@
         "signerCount": 7,
         "safe": {
           "owners": [
-            "0x067823401127ca6647481c68011805b90d42231e",
+            "0xf7104ad39080c53e2c8c74a34c34e622d8abe2c5",
             "0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
             "0x5b72e13f78feb8f5b44392f2e32940d4f37fa313",
             "0x23cec92f92bde95e401f0a2b50b072a6069dfbd5",
@@ -478,17 +480,18 @@
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
           "version": "1.4.1",
-          "observedBlock": 25295015,
-          "source": "onchain"
+          "observedBlock": 26095831,
+          "source": "onchain",
+          "observedAt": "2026-10-01"
         },
         "modulesOrGuardsStatus": "none-detected",
-        "capDescription": "The 4-of-7 Ripio Safe held DEFAULT_ADMIN_ROLE on LimitedMinterBridge across all six deployments and can administer WPEN token registration and the 72.265625 daily cap through the adapter.",
+        "capDescription": "Current 2026-10-01 pinned tokenConfigs(WPEN) reads on Ethereum, Base, Worldchain, BSC, Polygon, and Gnosis return dailyMaxMint = 18,500 WPEN and exists = true. DEFAULT_ADMIN_ROLE can change this destination-adapter cap. The earlier 2026-08-16 cap was 72.265625 WPEN.",
         "canRaiseCap": true,
         "routeChecks": {
-          "caps": "The adapter's WPEN dailyMaxMint was 72.265625 on every reviewed deployment; the Safe's DEFAULT_ADMIN_ROLE can change token configuration and daily limits.",
+          "caps": "Rechecked 2026-10-01: dailyMaxMint is 18,500 WPEN on all six reviewed LimitedMinterBridge deployments, raised from the historical 72.265625 WPEN observation. DEFAULT_ADMIN_ROLE can change token registration and daily limits.",
           "pausersAdminsUpgraders": "The Ripio Safe is the common-mode LimitedMinterBridge DEFAULT_ADMIN_ROLE holder; its bridge admin capability is separate from its native token DEFAULT_ADMIN_ROLE assessment."
         },
-        "observedAt": "2026-08-16",
+        "observedAt": "2026-10-01",
         "sources": [
           {
             "label": "LimitedMinterBridge verified source",
@@ -499,7 +502,8 @@
             "url": "https://etherscan.io/address/0x2b839174fe62466067c22e2a4c8054071f9d8d68"
           }
         ],
-        "evidence": "At the six 2026-08-16 fixed blocks recorded for the native routes, the Ripio 4-of-7 Safe 0x2b839174fe62466067c22e2a4c8054071f9d8d68 held DEFAULT_ADMIN_ROLE on LimitedMinterBridge 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6 on every deployment. The preserved Safe state is 7 owners, threshold 4, no enabled modules, and no guard at Ethereum block 25295015."
+        "evidence": "Current pinned tokenConfigs(WPEN) reads: ethereum block 26095831, base block 52024317, worldchain block 35751172, bsc block 125057591, polygon block 94755498, gnosis block 48529356. Every deployment returns dailyMaxMint 18500000000000000000000 base units (18,500 WPEN), exists true. The previous 72.265625 WPEN cap is historical; admin capability to change the limit remains documented in the verified adapter source.",
+        "observedBlock": 26095831
       },
       {
         "id": "wpen-bridge-deposit",

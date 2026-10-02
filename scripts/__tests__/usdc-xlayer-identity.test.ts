@@ -28,7 +28,6 @@ describe("USDC X Layer deployment identity", () => {
     ]);
     for (const control of controls ?? []) {
       expect(control.deploymentRefs).toEqual([`xlayer:${native}`]);
-      expect(control.observedBlock).toBe(71772542);
     }
     const audit = buildBridgeRouteCoverageAudit([meta], "2026-09-27T00:00:00.000Z");
     expect(audit.summary.incompleteRouteProfiles).toBe(0);

@@ -31,13 +31,21 @@
       {
         "label": "Circle USYC developer overview",
         "url": "https://developers.circle.com/tokenized/usyc/overview"
+      },
+      {
+        "label": "USD0 verified implementation: full collateral enumeration and valuation",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xae12f6f805842e6dafe71a6d2b41b28ba5fc821e?fields=abi,sources"
+      },
+      {
+        "label": "Usual UZR factsheet: U0R vault identity and USD0 lending against bUSD0",
+        "url": "https://docs.usual.money/resources-and-ecosystem/fact-sheets/usual-products/busd0/uzr.md"
       }
     ],
     "rationale": "The exact July 14 onchain branch-balance capture identifies Hashnote USYC as 100% of observed USD0 collateral. Usual identifies USYC as USD0 collateral, and Circle identifies the token as an onchain share of Hashnote International Short Duration Yield Fund Ltd. with atomic T+0 subscriptions and redemptions under ordinary conditions.",
     "compositionBasis": "Exact Usual DaoCollateral branch balances captured on July 14, 2026",
     "compositionAsOf": "2026-07-14",
     "scope": "full-composition",
-    "knownUnknownExposure": "The direct USD0 collateral identity is fully resolved to USYC; USYC's underlying Treasury-bill and reverse-repo allocation is reviewed separately on the upstream asset.",
+    "knownUnknownExposure": "The July 14 allocation remains historical. At Ethereum block 26098750 (2026-10-01), the live USD0 TokenMapping enumerated seven accepted collateral tokens. The configured treasury held positive USYC, UsualM, EVK Vault eUSD0-4 (0xd001f0a15d272542687b2677ba627f48a4333b5d), UsualUSDC, USTBL and U0R (0xfe7c47895edb12a990b311df33b90cfea1d44c24), with zero UsualUSDtb. Same-block token balances, decimals and ClassicalOracle prices establish their gross protocol-accounting valuations. Both EVK Vault eUSD0-4 and U0R return USD0 as their asset; issuer UZR documentation describes lending USD0 against bUSD0. These circular USD0 loan claims cannot be treated as independent Treasury backing. Current economic composition requires complete producer branch coverage and an explicit treatment of circular claims; the historical 100% USYC allocation is not recertified.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
@@ -66,8 +74,12 @@
       {
         "label": "Circle USYC developer overview",
         "url": "https://developers.circle.com/tokenized/usyc/overview"
+      },
+      {
+        "label": "Usual UZR lending and vault disclosure",
+        "url": "https://docs.usual.money/resources-and-ecosystem/fact-sheets/usual-products/busd0/uzr.md"
       }
     ],
-    "uncertainty": "Usual identifies BNY Mellon custody through Marex and states that USYC assets are segregated, but current provider shares, account-level legal terms, and rehypothecation terms are not published."
+    "uncertainty": "BNY Mellon and Marex are evidenced for the USYC leg only. The seven-token collateral census at Ethereum block 26098750 also identifies UsualM, UsualUSDC, USTBL and two USD0-denominated lending-vault positions. Issuer UZR documentation identifies the DAO as sole lender and bUSD0 as borrower collateral; those protocol credit positions are not covered by the USYC custody disclosure. Current provider shares, account-level legal terms and rehypothecation remain unverified, and a whole-book institutional custody label requires a reviewed treatment of the lending and circular-claim layers."
   }
 }

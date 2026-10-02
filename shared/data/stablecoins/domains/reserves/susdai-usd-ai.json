@@ -90,6 +90,20 @@
       {
         "name": "GPU loan borrower SPVs and hardware colocation operators",
         "role": "other"
+      },
+      {
+        "name": "Wilmington Trust, National Association (segregated per-loan escrow where used)",
+        "role": "other",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "GPU Finance Ltd. (lender of record or administrative and collateral agent)",
+        "role": "other",
+        "jurisdiction": "British Virgin Islands"
+      },
+      {
+        "name": "GPU Servicer LLC (series-specific administrative and collateral agent where appointed)",
+        "role": "other"
       }
     ],
     "segregation": "unknown",
@@ -106,9 +120,21 @@
       {
         "label": "USD.AI reserves dashboard",
         "url": "https://app.usd.ai/reserves"
+      },
+      {
+        "label": "USD.AI borrower overview: Wilmington Trust escrow and borrower SPV structure",
+        "url": "https://docs.usd.ai/borrower/overview.md"
+      },
+      {
+        "label": "USD.AI borrower FAQ: scope of Wilmington Trust custody",
+        "url": "https://docs.usd.ai/borrower/faq.md"
+      },
+      {
+        "label": "USD.AI binding Terms, modified September 25, 2026: lender and agent identities",
+        "url": "https://docs.usd.ai/terms-of-service/usd.ai-terms-of-service.md"
       }
     ],
-    "uncertainty": "The PYUSD sleeve sits in USD.AI's on-chain reserve contracts, while GPU loans are extended to borrower SPVs with hardware collateral held at colocation sites; the reviewed sources do not establish legal segregation, SPV insolvency treatment, or reuse terms for the loan book.",
+    "uncertainty": "Targeted source follow-up on 2026-10-01 identifies Wilmington Trust as segregated per-loan escrow agent where escrow is used, and GPU Finance Ltd. or the appointed GPU Servicer LLC as legal lender/agent. The borrower SPV is described as bankruptcy-remote from its operating-company parent; that is not a whole-vault bankruptcy-remoteness opinion for sUSDai holders or the lender-of-record layer. Binding Terms deny holders a direct contractual claim against an individual borrower. Provider allocations, executed series-specific protection documents, and whole-book reuse/pledge covenants remain undisclosed. The July whole-book review date and unknown-exposure bound are retained, not refreshed from this partial provider identification.",
     "knownUnknownExposurePct": 40.70615616
   }
 }

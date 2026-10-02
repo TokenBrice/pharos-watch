@@ -3,12 +3,14 @@ import { Sha256Schema } from "@shared/types/safety-schema-primitives";
 import { PegSummaryCoinSchema } from "@shared/types/market";
 import { RedemptionBackstopMapSchema } from "@shared/types/redemption";
 import { ReserveSliceSchema } from "@shared/types/reserves";
+import { LiveReserveSnapshotProvenanceSchema } from "@shared/lib/safety-score-v9/reserve-provenance";
 import { sortedRecord } from "@shared/lib/compare";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { ReportCardEvidenceJournalByIdV1Schema } from "@shared/lib/report-card-evidence-journal";
 import { SupplyAttributionJournalByIdV1Schema } from "@shared/lib/safety-score-v9-supply-attribution-journal";
+import { ReviewedEconomicDeploymentPartitionSchema } from "@shared/types/safety-score-v9-supply-attribution";
 import {
   projectSafetyScoreV9PegScoreResult,
   projectSafetyScoreV9PegSummary,
@@ -17,6 +19,8 @@ import {
 import {
   normalizeReviewedDeploymentAttribution,
   reviewedDeploymentAttributionValidationError,
+  normalizeReviewedEconomicDeploymentAttribution,
+  reviewedEconomicDeploymentAttributionValidationError,
 } from "./safety-score-v9/supply-attribution-contract";
 import {
   normalizeXautRepresentationGroupAttribution,
@@ -83,6 +87,7 @@ export const SafetyScoreV9SupplyAttributionSchema = z.discriminatedUnion("model"
   CanonicalLockMintSupplyAttributionSchema,
   XautRepresentationGroupSupplyAttributionV2Schema,
   ReviewedDeploymentUnitPartitionSchema,
+  ReviewedEconomicDeploymentPartitionSchema,
 ]);
 
 export type SafetyScoreV9SupplyAttribution = z.infer<typeof SafetyScoreV9SupplyAttributionSchema>;
@@ -136,13 +141,7 @@ export function createFixedInputPayloadFields<
     liveReserveMap: z.record(z.string(), z.array(ReserveSliceSchema)),
     liveReserveProvenanceMap: z.record(
       z.string(),
-      z.object({
-        source: z.string().min(1),
-        fetchedAt: z.number().int().nonnegative(),
-        balanceSheetScope: z.literal("shared-sky-maker").optional(),
-        sharedBookAssetIds: z.array(z.string().min(1)).optional(),
-        sharedBookMeasuredHoldings: z.record(z.string(), z.number().finite().nonnegative()).optional(),
-      }),
+      LiveReserveSnapshotProvenanceSchema,
     ),
     chainCirculatingById: options.chainCirculatingByIdSchema,
     // DefiLlama list buckets are already USD-denominated. Consumers must use
@@ -187,6 +186,8 @@ export function assertSameIds(actual: readonly string[], expected: readonly stri
 
 interface CommonFixedInput {
   activeAssetIds: string[];
+  baseInputGenerationId?: string;
+  sourceGeneration?: string;
   navPriceById?: Record<string, unknown>;
   clockSec: number;
   registryFingerprint: string;
@@ -200,7 +201,8 @@ interface CommonFixedInput {
     dexLiquidity: z.infer<typeof FreshnessEntrySchema>;
     redemptionBackstops: z.infer<typeof FreshnessEntrySchema>;
   };
-  aggregateCirculatingById: Record<string, { circulating: Record<string, number> }>;
+  aggregateCirculatingById: Record<string, { circulating: Record<string, number>; observedAtSec?: number | null }>;
+  chainCirculatingById?: Record<string, Record<string, { current: number }>>;
   safetyScoreV9SupplyAttributionById: Record<string, SafetyScoreV9SupplyAttribution>;
   evidenceJournalById: Record<string, Array<{ completedAtSec: number }>>;
   supplyAttributionJournalById: Record<string, Array<{ completedAtSec: number }>>;
@@ -249,6 +251,19 @@ export function assertCommonFixedInputConsistency(
       }
       if (attribution.model !== "reviewed-deployment-unit-partition-v1" && attribution.observedAtSec > input.clockSec) {
         throw new Error(`V9 supply attribution for ${assetId} is later than the scoring clock`);
+      }
+      if (attribution.model === "reviewed-economic-deployment-partition-v1") {
+        const price = NavPriceObservationSchema.safeParse(input.navPriceById?.[assetId]);
+        const validationError = reviewedEconomicDeploymentAttributionValidationError({
+          assetId, attribution, aggregateSupplyUsd: getCirculatingRaw(input.aggregateCirculatingById[assetId] ?? {}),
+          registryFingerprint: input.registryFingerprint, clockSec: input.clockSec,
+          baseInputGenerationId: input.baseInputGenerationId, sourceGeneration: input.sourceGeneration,
+          aggregateObservedAtSec: input.aggregateCirculatingById[assetId]?.observedAtSec ?? null,
+          referencePrice: price.success ? price.data : null,
+          chainRows: input.chainCirculatingById?.[assetId],
+        });
+        if (validationError) throw new Error(validationError);
+        continue;
       }
       if (assetId === XAUT_ASSET_ID && attribution.model === "canonical-lock-mint-partition-v1") {
         throw new Error("Legacy XAUT lock/mint attribution is no longer admissible; a reconciled V2 packet is required");
@@ -421,7 +436,9 @@ export function normalizeCommonFixedInputRecords<T extends CommonNormalizationIn
             ? { ...attribution, currentSupplyUsdByChain: sortedRecord(attribution.currentSupplyUsdByChain) }
             : attribution.model === "canonical-lock-mint-group-partition-v2"
               ? normalizeXautRepresentationGroupAttribution(attribution)
-              : normalizeReviewedDeploymentAttribution(attribution),
+              : attribution.model === "reviewed-economic-deployment-partition-v1"
+                ? normalizeReviewedEconomicDeploymentAttribution(attribution)
+                : normalizeReviewedDeploymentAttribution(attribution),
         ]),
       ),
     ),

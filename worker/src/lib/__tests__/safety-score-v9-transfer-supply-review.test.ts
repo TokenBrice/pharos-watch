@@ -1,4 +1,5 @@
-import { resolveChainId } from "@shared/lib/chains";
+import { resolveChainId } from "@shared/types/chain-identity";
+import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -54,6 +55,9 @@ function observationsFor(
 ): SafetyScoreV9TransferMaterialityObservation[] {
   const meta = ACTIVE_META_BY_ID.get(assetId)!;
   return (meta.contracts ?? []).map((deployment, index) => {
+    if (!isFixedDecimalDeployment(deployment)) {
+      throw new Error(`Raw-unit fixture requires a fixed-decimal deployment: ${assetId}:${deployment.address}`);
+    }
     const chainId = resolveChainId(deployment.chain)!;
     return mutate({
       deploymentKey: safetyScoreV9TransferDeploymentKey(chainId, deployment.address),
@@ -110,6 +114,7 @@ describe("Safety Score V9 transfer-materiality supply partition", () => {
 
     expect(result).not.toBeNull();
     expect(result!.selectedBridgeRoutes).toHaveLength(30);
+    // No economic plan is authored: preserve the existing native route split.
     expect(result!.selectedBridgeRoutes.filter((row) => row.reviewedRouteKind === "native")).toHaveLength(2);
     expect(result!.selectedBridgeRoutes.filter((row) => row.reviewedRouteKind === "controlled")).toHaveLength(28);
     expect(result!.selectedBridgeRoutes.reduce((sum, row) => sum + row.supplyUsd, 0)).toBeCloseTo(

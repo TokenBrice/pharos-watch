@@ -1,5 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { installAdapterNetwork, runAdapter, type AdapterNetwork } from "./reserve-adapter.test-support";
+import { admitV10ReserveObservation } from "@shared/lib/safety-score-v9/reserve-scope";
+import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 
 const ADDRESSES = {
   foreign: "0x4aa42145Aa6Ebf72e164C9bBC74fbD3788045016",
@@ -172,12 +174,17 @@ async function fetchFixture(
   network = installXdaiNetwork(),
   params: Record<string, unknown> = {},
 ) {
-  const { result } = await runAdapter("xdai-bridge", "xdai-gnosis", {
-    network,
-    nowSec: NOW_SEC,
-    params,
-  });
-  return result;
+  const wallClock = vi.spyOn(Date, "now").mockReturnValue(NOW_SEC * 1000);
+  try {
+    const { result } = await runAdapter("xdai-bridge", "xdai-gnosis", {
+      network,
+      nowSec: NOW_SEC,
+      params,
+    });
+    return result;
+  } finally {
+    wallClock.mockRestore();
+  }
 }
 
 describe("xdai-bridge adapter", () => {
@@ -193,6 +200,26 @@ describe("xdai-bridge adapter", () => {
     expect(output.metadata?.collateralizationRatio).toBeCloseTo(65_036_450 / 64_623_307, 9);
     expect(output.metadata?.redemption).toBeUndefined();
     expect(output.metadata?.details).toMatchObject({ finalityTag: "safe", crossChainTimestampSkewSec: 0 });
+  });
+
+  it("admits only partial technical accounting, retaining unresolved obligations and exact counter arithmetic", async () => {
+    const output = await fetchFixture();
+    const observation = output.metadata!.reserveObservation!;
+    if (observation.kind !== "onchain-observation") throw new Error("Expected onchain accounting");
+    const quantities = Object.fromEntries(observation.quantities.map(row => [row.key, BigInt(row.rawAmount)]));
+    expect(quantities["bridge-minted"] - quantities["bridge-burnt"]).toBe(BigInt(observation.ratio!.denominator));
+    expect(quantities["liquid-usds"] + quantities["susds-assets"]).toBe(BigInt(observation.ratio!.numerator));
+    const input = { observation, deploymentRefs: observation.deploymentRefs, clockSec: NOW_SEC, policy: V9_CANDIDATE_POLICY_V1.policy };
+    expect(admitV10ReserveObservation(input)).toMatchObject({ admitted: true, currentLiabilityShare: null, wholeAssetComposition: false });
+    expect(observation.obligations.filter(row => row.disposition === "unresolved").map(row => row.key)).toEqual(
+      ["pending-burns", "pending-mints", "non-bridge-native-issuance", "fees", "interest"],
+    );
+    const skewed = structuredClone(observation);
+    skewed.blocks[1].timestamp = skewed.blocks[0].timestamp - 121;
+    skewed.observedAtSec = skewed.blocks[1].timestamp;
+    expect(admitV10ReserveObservation({ ...input, observation: skewed }).rejectionCodes).toContain("block-skew");
+    const zero = structuredClone(observation); zero.ratio!.denominator = "0";
+    expect(admitV10ReserveObservation({ ...input, observation: zero }).admitted).toBe(false);
   });
 
   it("fails closed when a bridge identity getter drifts", async () => {

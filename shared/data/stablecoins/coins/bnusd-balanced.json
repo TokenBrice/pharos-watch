@@ -2,13 +2,13 @@
   "id": "bnusd-balanced",
   "name": "Balanced Dollar",
   "symbol": "bnUSD",
-  "oneLiner": "bnUSD is Balanced's cross-chain decentralized dollar backed by crypto loan collateral and USDC or USDT held in its Stability Fund.",
+  "oneLiner": "This entry tracks Balanced v1 bnUSD(old), issued on ICON and moving to the distinct Sonic-based bnUSD through a 1:1 migration.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
   },
-  "collateral": "SODAX cross-chain money-market borrower collateral backing all facilitator-minted bnUSD; measured 2026-08-20 at Sonic block 77819356: ~32.17% sodahyTB, ~19.85% sodaUSDC, ~13.04% sodaUSDT, ~9.77% sodaBTC, ~6.04% sodaBNB, ~3.18% sodaAVAX, ~2.98% sodaSUI, ~2.76% sodasftUSD, ~2.45% sodaETH, ~2.44% sodaSODA, and the documented remaining tail of other SODAX-wrapped crypto collateral. Stability Fund approved-stablecoin 1:1 swaps mint through the same facilitator, so those stablecoin deposits are part of the measured borrower-collateral base",
-  "pegMechanism": "Users borrow bnUSD against eligible crypto collateral through Balanced's cross-chain money market, while the Stability Fund mints or burns bnUSD 1:1 against USDC and USDT to support the peg",
+  "collateral": "Tracked v1 bnUSD(old) is backed through the ICON Balanced Loans and Peg Stability contracts. The Sonic SODAX borrower-collateral census describes the distinct new bnUSD and is not a verified composition of this legacy liability.",
+  "pegMechanism": "The legacy ICON token uses Balanced Loans and Peg Stability contracts and xCall burn-mint representations. Issuer documentation offers a 1:1 migration into the distinct new bnUSD; current v2 Stability Fund capacity is not attributed to this legacy token.",
   "mechanismArchetype": "cdp",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
@@ -106,7 +106,7 @@
     {
       "type": "info",
       "title": "Balanced v1 transition and v2 launch",
-      "message": "Balanced's current documentation says v2 launched on April 7, 2026 and the original v1 app is no longer supported. The deployments tracked here are the historical v1 ICON-Hub bnUSD entry; current v2 issuance and authority are not asserted until a verified active contract inventory is available. The Sonic v2 reserve census is now live, while the tracked contract inventory remains v1; no global collateralization ratio is asserted."
+      "message": "Balanced v2 launched on April 7, 2026 and the original v1 app is no longer supported. Issuer documentation asks holders to withdraw or migrate before v1 goes offline on December 1, 2026; after that date, outstanding loans will be liquidated and contracts made inaccessible ahead of ICON's announced end-2026 shutdown. This entry tracks v1 bnUSD(old), not the distinct Sonic-based new bnUSD. The Sonic v2 reserve census does not establish backing or redemption capacity for the tracked legacy liability."
     }
   ],
   "liveReservesConfig": {

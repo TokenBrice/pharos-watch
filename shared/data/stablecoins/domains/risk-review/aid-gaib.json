@@ -2,10 +2,15 @@
   "id": "aid-gaib",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: AID resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "AID current implementation verified source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2db74834f556e1f19ed397e5f935a983e4c2f38b"
+      }
+    ],
+    "evidence": "At Ethereum block 26095946, the AID proxy's implementation slot resolved to 0x2db74834f556e1f19ed397e5f935a983e4c2f38b. Its fetched verified source implements addToDenyList(address[]) under DENY_LIST_GUARD_ROLE; _update rejects transfers from denied senders, while denied recipients may still receive. DEFAULT_ADMIN_ROLE can authorize deny-list guards and can pause the contract. This is a native token-level blacklist surface, not an inference from centralized backing.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurM01ZCHF)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",

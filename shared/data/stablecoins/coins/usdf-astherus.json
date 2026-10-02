@@ -8,7 +8,7 @@
     "governance": "centralized-dependent"
   },
   "collateral": "USDT held by custodian Ceffu; deployed in delta-neutral strategies (long spot + short perpetuals) executed via Ceffu MirrorX on Binance",
-  "pegMechanism": "1:1 USDT mint/redeem; yield from funding rate arbitrage via delta-neutral positions on Binance through Ceffu MirrorX",
+  "pegMechanism": "Minted against USDT at a 1:1 reference; issuer-documented redemption charges 0.1% and takes 1-2 days for standard amounts or up to 7 days for large amounts. Yield accrues to asUSDF from delta-neutral positions on Binance through Ceffu MirrorX.",
   "mechanismArchetype": "synthetic-delta-neutral",
   "llamaId": "219",
   "detailProvider": "defillama",
@@ -52,17 +52,17 @@
     "sources": [
       {
         "label": "Aster USDF",
-        "url": "https://www.asterdex.com/en/usdf"
+        "url": "https://docs.asterdex.com/usdf-stablecoin/overview/faqs"
       }
     ],
-    "rationale": "USDF is minted from and redeemed to USDT at the protocol's 1:1 reference. USDT therefore supplies both the holder exit asset and the reference unit, while USDF's actively managed backing and local controls remain distinct rather than inheriting USDT as a mechanically identical wrapper claim.",
+    "rationale": "USDF is minted from USDT at the protocol's 1:1 reference and redeemed to USDT after the issuer-documented 0.1% redemption fee. USDT supplies both the holder exit asset and the reference unit, while USDF's actively managed backing and local controls remain distinct rather than inheriting USDT as a mechanically identical wrapper claim. The issuer FAQ gives 1-2 days processing for standard amounts and up to 7 days for large amounts.",
     "relationships": [
       {
         "id": "usdt-tether",
         "weight": 1,
         "type": "mechanism",
         "economicRole": "exit-dependency",
-        "reason": "USDT is the protocol's 1:1 redemption output for USDF."
+        "reason": "USDT is the protocol's redemption output for USDF at a 1:1 reference before the issuer-documented 0.1% redemption fee."
       },
       {
         "id": "usdt-tether",

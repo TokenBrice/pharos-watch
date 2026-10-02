@@ -7,7 +7,7 @@
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
   },
-  "collateral": "Overcollateralized by XTZ, tzBTC, USDt, or SIRS (tez/tzBTC LP); target ratios vary by collateral (200% for XTZ, 115% for stablecoins); 300% applied only to legacy v1/v2 vaults",
+  "collateral": "XTZ, tzBTC, USDt, or SIRS (tez/tzBTC LP) in Tezos vaults. Official V3 documentation lists frontend targets/emergency ratios of 200%/160% for XTZ, 200%/135% for SIRS and one tzBTC engine, and 115%/110% for USDt and a separately listed tzBTC engine. Frontend target ratios are not enforced by V3 contracts. The separately listed 115%/110% tzBTC engine is not in the token-authorized census at level 15180739. Legacy v1/v2 documented targets were 300%.",
   "pegMechanism": "Overcollateralized CDP on Tezos with variable collateral ratios; liquidations triggered at emergency ratio with 12.5% reward; savings pool provides additional peg stability",
   "mechanismArchetype": "cdp",
   "llamaId": "75",

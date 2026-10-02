@@ -3,7 +3,7 @@
   "detailProvider": "coingecko",
   "name": "3Jane USD3",
   "symbol": "USD3",
-  "oneLiner": "USD3 is 3Jane's yield-bearing senior share in a USDC-funded credit pool, protected first by the junior sUSD3 tranche.",
+  "oneLiner": "USD3 is 3Jane's yield-bearing senior credit-pool share; locked profits absorb losses before junior sUSD3 principal and then senior principal.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized-dependent",
@@ -22,12 +22,12 @@
     "rationale": "USD3 is an ERC-4626 senior fund share whose NAV is backed primarily by pooled private-credit receivables, with a smaller USDC/Aave liquidity buffer and a subordinate first-loss tranche.",
     "sources": [
       {
-        "label": "3Jane core money market",
-        "url": "https://docs.3jane.xyz/architecture/core-money-market"
+        "label": "3Jane backing overview",
+        "url": "https://docs.3jane.xyz/backing/backing.md"
       },
       {
         "label": "3Jane suppliers",
-        "url": "https://docs.3jane.xyz/architecture/core-money-market/suppliers"
+        "url": "https://docs.3jane.xyz/usd3-susd3/suppliers.md"
       },
       {
         "label": "3Jane money-market contracts",
@@ -39,7 +39,7 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://app.3jane.xyz/info/backing",
-    "provider": "3Jane backing dashboard and onchain accounting",
+    "provider": "3Jane backing dashboard and onchain accounting; Accountable proof-of-solvency dashboard (coverage under review)",
     "attestorTier": "self",
     "cadence": "real-time"
   },

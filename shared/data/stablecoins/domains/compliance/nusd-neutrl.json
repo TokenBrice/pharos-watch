@@ -1,22 +1,5 @@
 {
   "id": "nusd-neutrl",
-  "mica": {
-    "status": "out-of-scope",
-    "references": [
-      {
-        "label": "ESMA Interim MiCA Register: ART/EMT issuer files reviewed; no Neutrl or NUSD match found on 2026-08-14",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
-      },
-      {
-        "label": "Neutrl Terms of Use: NUSD is a synthetic dollar and EU persons are listed among restricted jurisdictions",
-        "url": "https://www.neutrl.finance/legal/terms-of-use"
-      },
-      {
-        "label": "RWA.xyz NUSD profile: non-U.S. investor, non-regulated synthetic dollar profile",
-        "url": "https://app.rwa.xyz/assets/NUSD"
-      }
-    ]
-  },
   "genius": {
     "applicability": "non-payment-token",
     "applicabilityBasis": {

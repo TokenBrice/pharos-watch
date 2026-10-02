@@ -43,7 +43,7 @@
       },
       {
         "label": "Midas Liquid Yield Token overview",
-        "url": "https://docs.midas.app/liquid-yield-token"
+        "url": "https://midas-docs.gitbook.io/midas-docs/liquid-yield-token.md"
       },
       {
         "label": "Midas mToken pricing",
@@ -237,7 +237,7 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Katana is a LayerZero bridge representation, not an independent native issuance chain. Immutable adapter 0x0516ded0209874fa9381ee721e8f1bcbe6ec2832 points to the Katana token and endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, with peer EID 30101 = Ethereum adapter 0x148c86390a4ae6f7a02df5903bc0a89e8b4581a0. The adapter role was granted at block 30323406, revoked at block 36074971, and is absent at block 40181191; the shared owner Safe and default-admin authorities remain, so the route is paused/revoked rather than structurally incapable of reactivation. A LayerZero execute302 delivery at block 30324545 emitted a Katana mHYPER mint from the Ethereum adapter peer.",
+        "reviewNote": "Katana is a LayerZero bridge representation, not an independent native issuance chain. Adapter 0x0516ded0209874fa9381ee721e8f1bcbe6ec2832 points to the Katana token and LayerZero endpoint. Historical peer EID 30101 pointed to Ethereum adapter 0x148c86390a4ae6f7a02df5903bc0a89e8b4581a0, but the current peers(30101) read is zero at Katana block 44183975 on 2026-10-02. The owner remains Safe 0xb60842e9dabcd1c52e354ac30e82a97661cb7e89. The historical adapter mint role was granted at block 30323406, revoked at block 36074971, and absent at block 40181191; that role observation is not re-dated. A LayerZero execute302 delivery at block 30324545 emitted a Katana mHYPER mint. The zero current peer and retained admin powers do not prove permanent inability to reactivate, or zero liabilities; the token retains nonzero totalSupply at the current pin.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-08-16",
         "observedBlock": 40181191,

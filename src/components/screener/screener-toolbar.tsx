@@ -25,6 +25,7 @@ import {
   type MintAuthorityStatusKind,
 } from "@/lib/mint-authority-display";
 import {
+  CUSTODY_MODEL_LABELS,
   GOVERNANCE_LABELS_SHORT,
   MECHANISM_ARCHETYPE_LABELS,
   PEG_METADATA,
@@ -48,14 +49,6 @@ const BLACKLISTABLE_LABELS: Record<BlacklistableValue, string> = {
 };
 
 
-const CUSTODY_MODEL_LABELS: Record<CustodyModel, string> = {
-  onchain: "On-chain",
-  "institutional-top": "Top-tier institution",
-  "institutional-regulated": "Regulated institution",
-  "institutional-unregulated": "Unregulated institution",
-  "institutional-sanctioned": "Sanctioned institution",
-  cex: "Exchange",
-};
 
 type FilterPillOption<V extends string> = { value: V; label: string; title?: string };
 
@@ -207,7 +200,7 @@ export function ScreenerToolbar({
           defaultMin={SCREENER_FILTER_DEFAULTS.dewsMin}
         />
         <ThresholdField
-          label="V9 Mint Component"
+          label="V10 Mint Component"
           min={0}
           max={100}
           step={1}
@@ -285,7 +278,7 @@ export function ScreenerToolbar({
           defaultMin={SCREENER_FILTER_DEFAULTS.liquidityScoreMin}
         />
         <FilterPillGroup
-          kicker="V9 Evidence"
+          kicker="V10 Evidence"
           options={SAFETY_EVIDENCE_OPTIONS}
           selected={filters.safetyEvidence}
           justEntered={justEnteredEvidence}
@@ -340,7 +333,7 @@ export function ScreenerToolbar({
           onChange={(next) => update("mintAuthority", next)}
         />
         <FilterPillGroup
-          kicker="V9 Mint Component"
+          kicker="V10 Mint Component"
           options={MINT_AUTHORITY_SCORE_OPTIONS}
           selected={filters.mintAuthorityScores}
           justEntered={justEnteredMintAuthorityScores}

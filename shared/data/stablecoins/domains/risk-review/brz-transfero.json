@@ -2,10 +2,19 @@
   "id": "brz-transfero",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: BRZ resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Solana finalized BRZ Token-2022 mint account",
+        "url": "https://solana-rpc.publicnode.com"
+      },
+      {
+        "label": "Algorand official BRZ ASA metadata",
+        "url": "https://mainnet-idx.algonode.cloud/v2/assets/112866019"
+      }
+    ],
+    "evidence": "A fresh observation at Solana finalized context slot 452232837 identifies BRZ mint BRZbFNQDcWLfcdHmAkqEVnLHCAWKTRf6eHyEaWdZp3JN with permanent delegate 6L2wpGtfBxreB94qLPiWygZQo18pzTxxySvjBc1LXuGq. Algorand ASA 112866019 independently exposes nonempty freeze and clawback authorities ROCATE2BKXJ3PHNBRCAHE5HCTOYYKUENUANMMOZHXDVQB2QT5RY6YHUO5Y at indexer round 65563763. The positive control verdict is supported by addressed deployment evidence rather than a centralized-governance inference; this replaces the earlier Solana observation rather than claiming a historical replay.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA48USTBL)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

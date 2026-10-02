@@ -29,13 +29,28 @@
         "chain": "cardano",
         "capDescription": "DJED mint allowed only while the ADA reserve ratio stays at or above 400% (and within the 400%-800% band); mint price set by oracle ADA/USD.",
         "canRaiseCap": false,
-        "evidence": "Koios script_info re-verified 2026-07-20: the DJED minting policy (hash 8db269c3ec630e06ae29f74bc39edd1f87c819f1056206e879a1cd61) is type plutusV1, created in tx 46c1db4ab4cae757880056fc4f48abb313bccec71b3f8fff9f10c6749b819ead. Plutus V1 minting policies are immutable on Cardano. The reserve-ratio enforcement (mint allowed only within the 400%-800% reserve band) is hardcoded in the script and cannot be changed, upgraded, or bypassed. The policy hash is the on-chain identity of the autonomous bank's mint authority.",
+        "evidence": "Koios script_info observed on 2026-10-01 identifies minting policy 8db269c3ec630e06ae29f74bc39edd1f87c819f1056206e879a1cd61 as plutusV1, created in transaction 46c1db4ab4cae757880056fc4f48abb313bccec71b3f8fff9f10c6749b819ead. The same-session Cardano tip was block 14010981; script_info is a current metadata query, not a historical state call at that block. The official community FAQ distinguishes DJED's 400% lower mint guard from SHEN's 800% upper mint guard, while COTI's 25 August 2023 article says DJED minting is allowed only between 400% and 800%. The deployed-script upper guard remains unresolved; existing cap semantics are retained rather than changed from conflicting prose.",
         "address": "8db269c3ec630e06ae29f74bc39edd1f87c819f1056206e879a1cd61",
         "failureDomainKeys": [
           "protocol:djed",
           "contract:cardano:8db269c3ec630e06ae29f74bc39edd1f87c819f1056206e879a1cd61"
         ],
-        "observedAt": "2026-07-20"
+        "observedAt": "2026-10-01",
+        "observedBlock": 14010981,
+        "sources": [
+          {
+            "label": "Koios Djed minting policy script_info",
+            "url": "https://api.koios.rest/api/v1/script_info"
+          },
+          {
+            "label": "COTI Djed minting and burning FAQ",
+            "url": "https://faq.coticommunity.com/djed-and-shen/djed/minting-and-burning"
+          },
+          {
+            "label": "COTI August 2023 Djed questions and clarification (conflicting upper mint guard)",
+            "url": "https://medium.com/cotinetwork/answers-and-clarification-to-recent-djed-community-questions-95176450db09"
+          }
+        ]
       },
       {
         "label": "COTI / IOG operator (oracle price feed only)",

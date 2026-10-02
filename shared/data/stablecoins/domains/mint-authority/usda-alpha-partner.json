@@ -4,7 +4,7 @@
     "mintPath": "permissioned-minter",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "manual-review",
-    "summary": "USDA's BSC token has an uncapped MINT role. At BSC block 112274230, the MINT role is held by a minter contract and an EOA; the EOA is the sole DEFAULT_ADMIN_ROLE holder and can appoint more minters. The minter contract's owner is a separate EOA that can authorize callers through that contract. Address ownership, custody, and any non-standard replacement or migration authority are undisclosed.",
+    "summary": "USDA's BSC token has an uncapped MINT role. At BSC block 125055866, the previously recorded minter contract and EOA still hold MINT; the EOA still holds DEFAULT_ADMIN_ROLE and can appoint minters. The minter contract retains its separate EOA owner. Exhaustive current role-holder enumeration was not repeated, so no claim of a sole administrator or exactly two minters is made. Address ownership, key custody, and the unverified minter contract's downstream policy remain undisclosed.",
     "controls": [
       {
         "label": "USDA MINT role holder — BSC minter contract",
@@ -15,8 +15,8 @@
         "address": "0x56f237297306220ebc062b7c0348418c9cdccbdb",
         "modulesOrGuardsStatus": "unknown",
         "capDescription": "USDA has no maximum-supply check; this MINT-role contract can call the token's mint path without an on-chain amount cap.",
-        "observedAt": "2026-07-26",
-        "observedBlock": 112274230,
+        "observedAt": "2026-10-01",
+        "observedBlock": 125055866,
         "sources": [
           {
             "label": "USDA verified BSC token source",
@@ -31,7 +31,7 @@
             "url": "https://bscscan.com/tx/0xc8a6f731f413f81443321428adae8d083218a0d94bebd8aa75c685c6c95ee429"
           }
         ],
-        "evidence": "The verified USDA source defines MINT as keccak256('MINT') and restricts mint(address,uint256) to that role with no maximum-supply condition. The BSC receipt at block 56765548 records RoleGranted(MINT, 0x56f237297306220ebc062b7c0348418c9cdccbdb, 0xc2eff14db94094486a07c791362a6c4176d3c5f7); hasRole(MINT, 0x56f237297306220ebc062b7c0348418c9cdccbdb) returned true at block 112274230. This 4,314-byte contract is source-unverified, so its modules and downstream policy are not asserted."
+        "evidence": "Historical block 112274230 verified this MINT-role contract. At block 125055866, hasRole(MINT, this address) still returns true and hasRole(DEFAULT_ADMIN_ROLE, this address) returns false; deployed bytecode is present. The current matched USDAWithPremium source restricts mint(address,uint256) to MINT and contains no maximum-supply check. The minter contract remains source-unverified, so its downstream policy is not asserted."
       },
       {
         "label": "USDA MINT and DEFAULT_ADMIN_ROLE holder — BSC",
@@ -42,8 +42,8 @@
         "address": "0x14170c3332ccd96859c8fb5754a753e476d09751",
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "USDA has no maximum-supply check; this EOA can mint directly and, as DEFAULT_ADMIN_ROLE, can grant or revoke MINT.",
-        "observedAt": "2026-07-26",
-        "observedBlock": 112274230,
+        "observedAt": "2026-10-01",
+        "observedBlock": 125134982,
         "sources": [
           {
             "label": "USDA verified BSC token source",
@@ -58,7 +58,7 @@
             "url": "https://bscscan.com/tx/0x3fff5ba4101cd945dbb2679c84c948fba3033481bfa89b6432f883a66db1606c"
           }
         ],
-        "evidence": "At block 88662302 the former administrator granted DEFAULT_ADMIN_ROLE to this address; at block 88662792 this address granted itself MINT. At block 112274230, hasRole(MINT, address) and hasRole(DEFAULT_ADMIN_ROLE, address) both returned true, getRoleAdmin(MINT) returned DEFAULT_ADMIN_ROLE, and eth_getCode returned empty bytecode. No public source identifies the key owner, custody arrangement, or threshold."
+        "evidence": "Historical blocks 88662302 and 88662792 recorded the DEFAULT_ADMIN and MINT grants. At BSC block 125134982, hasRole(MINT, this address) and hasRole(DEFAULT_ADMIN_ROLE, this address) both return true, and eth_getCode returns 0x. The matched USDAWithPremium source assigns MINT's role admin to DEFAULT_ADMIN_ROLE and contains no mint amount cap. The complete current Alpha Partners documentation corpus and archived public site did not identify this key's operator, custody, or threshold; an empty-code EOA does not itself prove single-person or non-MPC custody. Exhaustive current role enumeration was not repeated."
       },
       {
         "label": "USDA MINT-role minter-contract owner — BSC",
@@ -69,8 +69,8 @@
         "address": "0xc2eff14db94094486a07c791362a6c4176d3c5f7",
         "modulesOrGuardsStatus": "unknown",
         "capDescription": "USDA has no maximum-supply check; this EOA owns the MINT-role minter contract and can authorize callers through its expand-minter path, but does not itself hold USDA MINT or DEFAULT_ADMIN_ROLE at the observed block.",
-        "observedAt": "2026-07-26",
-        "observedBlock": 112274230,
+        "observedAt": "2026-10-01",
+        "observedBlock": 125055866,
         "sources": [
           {
             "label": "USDA MINT-role minter contract (BscScan)",
@@ -81,7 +81,7 @@
             "url": "https://bscscan.com/tx/0x36d8622e39ccf14e080b8ba9961f00ae3bff975eed46ab81a2398ed3ed70c5b1"
           }
         ],
-        "evidence": "At block 112274230, owner() on the source-unverified MINT-role minter contract returned this empty-code address. Its pinned bytecode restricts the expand-minter update path to owner and its current mapping authorizes a caller that can successfully simulate dynamicRewardsMint through the MINT-role contract. USDA hasRole(MINT, address) and hasRole(DEFAULT_ADMIN_ROLE, address) both returned false at the same block. No custody or threshold is disclosed."
+        "evidence": "At block 125055866, owner() on MINT-role contract 0x56f237297306220ebc062b7c0348418c9cdccbdb still returns this empty-code address. USDA hasRole(MINT, this address) and hasRole(DEFAULT_ADMIN_ROLE, this address) both return false. Historical block 112274230 recorded an owner-gated expand-minter path, but the source-unverified downstream caller policy was not reconstructed in this review. No key custody or threshold is disclosed."
       }
     ],
     "economicCapSemantics": "unbounded",

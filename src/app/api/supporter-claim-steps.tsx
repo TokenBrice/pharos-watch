@@ -2,7 +2,7 @@ import Link from "next/link";
 import { DonorKeyClaim } from "@/components/donor-key-claim";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import type { DonorKeyQualifyingCoin } from "@/lib/donor-key-qualifying-coins";
-import { CHAIN_META } from "@shared/lib/chains";
+import { CHAIN_META } from "@shared/types/chain-identity";
 import { formatProseList } from "@shared/lib/format";
 import { DONOR_KEY_QUALIFYING_STABLECOINS, type DonorKeyGradeStatus } from "@shared/lib/funding/donor-eligibility";
 import type { Donation } from "@shared/lib/funding/schema";

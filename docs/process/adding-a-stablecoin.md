@@ -49,7 +49,7 @@ Useful repo references before editing:
 - Do not add manual supply overrides. Pharos uses DefiLlama first, then the reviewed fail-closed fallback paths in [Supply Snapshot](../supply-snapshot.md#supply-data-source).
 - Do not treat `infrastructures` and `dependencies` as interchangeable. `infrastructures` is project taxonomy; `dependencies` is the asset graph.
 - Keep `reserves[]` curated even when `liveReservesConfig` exists. Curated reserves still drive dependency inference and fallback views.
-- Use only chain IDs that already exist in `shared/lib/chains/index.ts`.
+- Use only chain IDs that already exist in `shared/types/chain-identity.ts`.
 - If you add a new upstream source, new adapter family, or change a methodology surface, update the relevant verified docs and the about page in the same change.
 
 ---

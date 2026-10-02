@@ -11,7 +11,7 @@
     "navToken": true
   },
   "collateral": "Short-term U.S. Treasury bills and reverse repo agreements held for Circle USYC / Hashnote fund shares in segregated brokerage and custody accounts.",
-  "pegMechanism": "Same-day subscription and redemption via USDC at NAV-based token price",
+  "pegMechanism": "Subscription and redemption via USDC at NAV-based token price; redemptions below instant redemption capacity settle in one block, while larger redemptions settle T+0 or T+1",
   "mechanismArchetype": "tbill",
   "llamaId": "237",
   "detailProvider": "defillama",

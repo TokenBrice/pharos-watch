@@ -8,7 +8,7 @@
     "governance": "decentralized"
   },
   "collateral": "wBTC, tBTC, sUSDS, sfrxUSD, scrvUSD, and ysyBOLD in immutable overcollateralized CDP markets on Ethereum",
-  "pegMechanism": "Overcollateralized CDP with Liquity v2-style redemptions and user-set interest rates; the hard redemption floor is effectively $0.995 because Liquity v2 deployments include a 0.5% fee floor",
+  "pegMechanism": "Overcollateralized CDP with Liquity v2-style collateral redemptions and user-set interest rates; redemption fees have a 0.5% minimum plus a dynamic base rate, so they do not establish a fixed $0.995 price floor",
   "mechanismArchetype": "cdp",
   "llamaId": "295",
   "detailProvider": "defillama",

@@ -2,10 +2,15 @@
   "id": "apyusd-apyx",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: apyUSD resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Blockscout verified deployed ApyUSD implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfd616567ecc1607f61073951a1e822f7315bb112"
+      }
+    ],
+    "evidence": "At Ethereum block 26095809, the canonical apyUSD proxy implementation slot returned 0xfd616567ecc1607f61073951a1e822f7315bb112 and paused() returned false. Its verified ApyUSD source enforces ERC20DenyListUpgradable and ERC20PausableUpgradeable in _update, applies checkNotDenied to deposit and withdrawal paths, and restricts setDenyList, pause and unpause through AccessManager. This directly supports blacklistability rather than inferring it from centralized governance.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA46apyUSD)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
@@ -24,7 +29,7 @@
           "burn-mint",
           "lock-release"
         ],
-        "note": "The official directory lists Ethereum as Lock/Release home and Base, BNB Chain, and Solana as Burn/Mint representations. Only the Ethereum and Base deployments are authored in this coin's catalog, so BNB/Solana control coverage is deferred pending catalog reconciliation."
+        "note": "The official directory lists all four authored deployments: Ethereum as Lock/Release home, and Base, BNB Chain and Solana as Burn/Mint representations. The three representation token pools have route-scoped bridge-mint and bridge-burn controls."
       }
     ],
     "sources": [
@@ -57,10 +62,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "At Ethereum block 25770413, asset() returned apxUSD 0x98A878b1Cd98131B271883B390f68D2c90674665, paused() was false, totalAssets() was nonzero, and the UUPS implementation was 0xfd616567ecc1607f61073951a1e822f7315bb112. No CCIP pool or LayerZero endpoint surface was found on the canonical wrapper; its shares mint natively against deposited apxUSD under the Ethereum AccessManager/3-of-6 Safe path. The Chainlink directory identifies Ethereum as the Lock/Release home deployment.",
+        "reviewNote": "At Ethereum block 26095809, asset() returned apxUSD 0x98a878b1cd98131b271883b390f68d2c90674665, paused() was false, totalAssets() was nonzero, and the UUPS implementation remained 0xfd616567ecc1607f61073951a1e822f7315bb112. The Ethereum AccessManager maps upgradeToAndCall to role 24, held by the 4-of-7 Safe with a 259200-second delay. The Chainlink directory identifies Ethereum as the Lock/Release home deployment; the external pool is 0x0f1bac2ea0311130da778c1ca287204338739f73.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-08-16",
-        "observedBlock": 25770413,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095809,
         "canonicalChain": "ethereum",
         "sources": [
           {
@@ -302,7 +307,8 @@
         ],
         "authorityType": "contract",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-09-21",
+        "observedAt": "2026-10-01",
+        "observedBlock": 125056118,
         "sources": [
           {
             "label": "Chainlink CCIP Directory - apyUSD",
@@ -313,7 +319,7 @@
             "url": "https://bscscan.com/address/0x363332b186a4AFCe7a754A49F34D1543AEC5e786"
           }
         ],
-        "evidence": "Observed 2026-09-21: Chainlink's official CCIP directory maps BNB Chain apyUSD 0xa14556f13516c53ff035858ffd21e1625e7eadfd to Burn/Mint token pool 0x363332b186a4afce7a754a49f34d1543aec5e786."
+        "evidence": "At BNB Chain block 125056118, apyUSD getCCIPPool() returned 0x363332b186a4afce7a754a49f34d1543aec5e786; this pool getToken() returned 0xa14556f13516c53ff035858ffd21e1625e7eadfd and owner() returned 0xf9862efc1704ac05e687f66e5cd8c130e5663ce2. Chainlink's official directory independently maps this same token and Burn/Mint pool."
       },
       {
         "id": "apyusd-solana-ccip-pool",

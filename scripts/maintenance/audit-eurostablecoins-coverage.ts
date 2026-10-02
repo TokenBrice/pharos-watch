@@ -3,7 +3,7 @@
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { CHAIN_META } from "@shared/lib/chains";
+import { CHAIN_META } from "@shared/types/chain-identity";
 import { isRecord } from "@shared/lib/type-guards";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 

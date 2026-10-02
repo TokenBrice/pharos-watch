@@ -4,12 +4,16 @@
     "reviewedStatus": true,
     "sources": [
       {
+        "label": "Sui mainnet GraphQL: checkpoint-pinned USDsui deny cap and BlocklistRole",
+        "url": "https://graphql.mainnet.sui.io/graphql"
+      },
+      {
         "label": "Bridge Issuance Docs",
         "url": "https://apidocs.bridge.xyz/platform/issuance/overview"
       }
     ],
-    "evidence": "Explicit Yes retained: centralized governance metadata indicates issuer or admin control; registry links were reviewed for direct freeze, blacklist, pause, burn, or upgrade authority.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "At Sui checkpoint 328957731, the exact USDsui Stablecoin<RESERVE_LEDGER, USDSUI> wrapper 0x80954159a8616660f73468919a2f372dcc9ac366931d50c1e378f0f5e342dfa5 contained deny_cap 0x783022795d9e1b4215382f691d97151d6582906a7b9e535935d4937ef8a7cdaa with allow_global_pause=true. The TokenAuthority roles table retained BlocklistRole for 0x50b9aa5bd947fb62dd6d4022940c47b89fd19cbe0262a1e3802299abcd62ee68. These are direct holder-control capabilities; the Yes verdict no longer rests on centralized-governance metadata.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA36SOFID)",
+    "reviewedAt": "2026-10-01"
   }
 }

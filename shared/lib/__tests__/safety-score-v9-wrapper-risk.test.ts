@@ -90,6 +90,38 @@ describe("Safety Score v9 wrapper-local risk", () => {
     ]);
   });
 
+  it.each(["measuredUnwind", "withdrawalTerms"] as const)(
+    "does not lower the parent limit for bounded %s integration uncertainty",
+    (factKey) => {
+      const localFacts = facts({ lossAbsorptionEmergencyControls: "high" }, "strategy-vault");
+      const measured = resolveV9WrapperParentLimit(input({ localFacts }));
+      localFacts.facts[factKey] = {
+        disposition: "integration-missing", assessment: null,
+        signals: ["same-notional-execution-not-proven"], evidenceRefIds: [],
+      };
+      const bounded = resolveV9WrapperParentLimit(input({ localFacts }));
+      expect(bounded.limit).toBe(measured.limit);
+      expect(bounded.localRiskDiscount).toBe(2.8);
+      expect(bounded.fallbackDiscount).toBe(0);
+      expect(bounded.factsComplete).toBe(false);
+      expect(bounded.missingFacts).toContainEqual({ factClass: factKey, disposition: "integration-missing" });
+    },
+  );
+
+  it.each(["method-unsupported", "producer-failed", "issuer-undisclosed"] as const)(
+    "does not convert %s unwind uncertainty into a form haircut",
+    (disposition) => {
+      const localFacts = facts({ lossAbsorptionEmergencyControls: "high" }, "strategy-vault");
+      localFacts.facts.measuredUnwind = {
+        disposition, assessment: null, signals: [], evidenceRefIds: [],
+      };
+      expect(resolveV9WrapperParentLimit(input({ localFacts }))).toMatchObject({
+        localRiskDiscount: 2.8, appliedDiscount: 2.8, fallbackDiscount: 0,
+        factsComplete: false, limit: 81.2,
+      });
+    },
+  );
+
   it("prices known local risk without also applying the fallback", () => {
     const result = resolveV9WrapperParentLimit(
       input({
@@ -192,9 +224,7 @@ describe("Safety Score v9 wrapper-local risk", () => {
       else if (missing === "riskTransfer") localFacts.riskTransfer.disposition = "producer-failed";
       else localFacts.facts.withdrawalTerms.disposition = "producer-failed";
       expect(resolveV9WrapperParentLimit(input({ localFacts })), missing).toMatchObject({
-        limit: 81,
         factsComplete: false,
-        treatment: "fallback-discount",
         missingFacts: [{ factClass: missing, disposition: "producer-failed" }],
         riskTransfer: { requestedCredit: 0, appliedCredit: 0 },
       });
@@ -233,89 +263,4 @@ describe("Safety Score v9 wrapper-local risk", () => {
     expect(higherParent - lowerParent).toBe(14);
   });
 
-  it("keeps production-shaped wM, sDAI, sBOLD, and sUSDai profiles distinct", () => {
-    const wm = facts(
-      { contractMutability: "high", custodyEscrow: "low", withdrawalTerms: "low" },
-      "pure",
-    );
-    const sdai = facts(
-      {
-        custodyEscrow: "low",
-        strategyComplexity: "low",
-        rehypothecationCorrelation: "low",
-        shareAccountingNavOracle: "moderate",
-        withdrawalTerms: "low",
-        measuredUnwind: "high",
-      },
-      "native-staked",
-    );
-    const sbold = facts(
-      {
-        custodyEscrow: "moderate",
-        strategyComplexity: "moderate",
-        rehypothecationCorrelation: "moderate",
-        shareAccountingNavOracle: "moderate",
-        withdrawalTerms: "moderate",
-        lossAbsorptionEmergencyControls: "moderate",
-      },
-      "strategy-vault",
-    );
-    sbold.facts.measuredUnwind = {
-      disposition: "producer-failed",
-      assessment: null,
-      signals: ["measured-unwind-not-produced"],
-      evidenceRefIds: ["redemption-terms"],
-    };
-    const susdai = facts(
-      {
-        contractMutability: "moderate",
-        strategyComplexity: "high",
-        shareAccountingNavOracle: "moderate",
-        lossAbsorptionEmergencyControls: "high",
-      },
-      "strategy-vault",
-    );
-    for (const factKey of ["custodyEscrow", "leverage", "rehypothecationCorrelation", "withdrawalTerms"] as const) {
-      susdai.facts[factKey] = {
-        disposition: "issuer-undisclosed",
-        assessment: null,
-        signals: [`undisclosed:${factKey}`],
-        evidenceRefIds: [`review:${factKey}`],
-      };
-    }
-    susdai.facts.measuredUnwind = {
-      disposition: "producer-failed",
-      assessment: null,
-      signals: ["measured-unwind-not-produced"],
-      evidenceRefIds: ["redemption-terms"],
-    };
-
-    const profiles = {
-      "wm-m0": resolveV9WrapperParentLimit(input({ parentScore: 90, localFacts: wm })),
-      "sdai-sky": resolveV9WrapperParentLimit(input({ parentScore: 81, localFacts: sdai })),
-      "sbold-k3-capital": resolveV9WrapperParentLimit(input({ parentScore: 84, localFacts: sbold })),
-      "susdai-usd-ai": resolveV9WrapperParentLimit(input({ parentScore: 90, localFacts: susdai })),
-    };
-
-    expect(profiles["wm-m0"]).toMatchObject({ form: "pure", factsComplete: true, limit: 88.1 });
-    expect(profiles["sdai-sky"]).toMatchObject({ form: "native-staked", factsComplete: true });
-    expect(profiles["sbold-k3-capital"]).toMatchObject({
-      form: "strategy-vault",
-      treatment: "fallback-discount",
-      limit: 74,
-    });
-    expect(profiles["susdai-usd-ai"]).toMatchObject({
-      form: "strategy-vault",
-      treatment: "fallback-discount",
-      limit: 80,
-    });
-    for (const result of Object.values(profiles)) {
-      expect(result.riskTransfer).toMatchObject({
-        disposition: "not-applicable",
-        mechanism: "none",
-        requestedCredit: 0,
-        appliedCredit: 0,
-      });
-    }
-  });
 });

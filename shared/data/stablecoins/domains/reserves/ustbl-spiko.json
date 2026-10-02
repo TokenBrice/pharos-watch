@@ -20,8 +20,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA48USTBL)",
     "confidence": "verified",
     "sources": [
       {
@@ -35,12 +35,17 @@
       {
         "label": "Spiko US T-Bills Money Market Fund KID",
         "url": "https://cdn.spiko.finance/legal_docs/EN/KID_USTBL_EN.pdf"
+      },
+      {
+        "label": "AMF GECO: Spiko SICAV semiannual report at 2026-06-30",
+        "url": "https://geco.amf-france.org/back-office/document/download/429960"
       }
     ],
-    "rationale": "The producer emits one 100% NAV identity for the regulated Spiko US T-Bills Money Market Fund. The KID and prospectus establish daily dealing, an explicit 180-day maximum residual maturity for eligible instruments, and a U.S.-government-instrument mandate. The prior 95/5 Treasury-bill and cash split was not a reported live allocation, so this review classifies the exact producer identity at the fund-share level.",
-    "compositionBasis": "Exact Chainlink NAV single-asset identity cross-checked against Spiko's current product page, prospectus, and KID",
+    "rationale": "The producer emits one 100% NAV identity for the regulated Spiko US T-Bills Money Market Fund. The June 30, 2026 semiannual report identifies the USD share by name, with 154,257,337.79249 outstanding shares and NAV 1.088028; the issuer prospectus and AMF fund record map that share to ISIN FR001400ODM9. The report inventories USD 154,557,588.30 in Treasury securities and USD 13,383,301.96 in bank balances at sub-fund level. These holdings remain inside the exact fund-share identity rather than being substituted for the NAV producer's single row. The KID states a 180-day maximum residual maturity for eligible instruments.",
+    "compositionBasis": "100% native fund-share NAV identity; dated fund/share identification from the AMF-hosted semiannual report, not a current look-through portfolio allocation",
+    "compositionAsOf": "2026-06-30",
     "scope": "full-composition",
-    "knownUnknownExposure": "No exposure outside the emitted fund NAV identity is indicated. Current security weights and operational settlement cash inside the regulated fund are not published by the NAV producer and are intentionally not represented as separate authored slices.",
+    "knownUnknownExposure": "The dated semiannual report publishes underlying Treasury-security and bank-balance amounts, but the NAV producer does not emit their weights. Current post-June portfolio weights, operational cash and named bank-account allocations remain unknown; no look-through split is authored.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {

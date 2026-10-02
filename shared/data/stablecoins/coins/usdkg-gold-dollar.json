@@ -16,7 +16,7 @@
   "llamaId": "409",
   "cmcSlug": "usdkg",
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "agreed-upon-procedures",
     "url": "https://www.usdkg.com/transparency",
     "provider": "Kreston Digital Assets Ltd (ISRS 4400 agreed-upon-procedures provider; the transparency portal currently indexes one reserve report, for 28 November 2025; the January 2025 document is a Consensys smart-contract audit).",
     "attestorTier": "niche",
@@ -24,6 +24,7 @@
     "latestReport": {
       "periodEnd": "2025-11-28",
       "publishedAt": "2025-11-30",
+      "publishedAtBasis": "signed-date-standin",
       "assuranceMethod": "agreed-upon-procedures",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "partial",
@@ -32,7 +33,7 @@
       "sources": [
         {
           "label": "Kreston Digital Assets USDKG agreed-upon-procedures report - November 2025",
-          "url": "https://www.usdkg.com/transparency"
+          "url": "https://cdn.prod.website-files.com/676044643c93dc0ff69305a1/6936f69aed2ddfcd2529ef79_USDKG%20November%20%2725%20Report.pdf"
         }
       ]
     }

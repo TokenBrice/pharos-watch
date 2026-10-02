@@ -3,7 +3,7 @@ import {
   type ChainCirculatingNormalizationDiagnostics,
 } from "@shared/lib/chains/circulating";
 
-import { CHAIN_META } from "@shared/lib/chains";
+import { CHAIN_META } from "@shared/types/chain-identity";
 import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import { getCirculatingRaw, getCirculatingRawOrNull, getPrevDayRawOrNull, getPrevMonthRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
 import type { SupplyGapFillProvenance } from "@shared/types/market";

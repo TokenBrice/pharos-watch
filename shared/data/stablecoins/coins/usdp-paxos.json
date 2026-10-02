@@ -2,12 +2,12 @@
   "id": "usdp-paxos",
   "name": "Pax Dollar",
   "symbol": "USDP",
-  "oneLiner": "USDP is Paxos's regulated dollar stablecoin, redeemable 1:1 and backed by U.S. Treasury bills, overnight repos, and FDIC-insured cash.",
+  "oneLiner": "USDP is Paxos's regulated dollar, redeemable 1:1 and backed by cash and U.S. Treasury-collateralized repos; some bank balances exceed FDIC limits.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized"
   },
-  "collateral": "Cash in FDIC-insured bank accounts and U.S. Treasury bills (including overnight reverse repos and T-bill money market funds) held in segregated, bankruptcy-remote accounts",
+  "collateral": "Cash deposits and U.S. Treasury-collateralized repurchase agreements held in segregated, bankruptcy-remote accounts; some commercial-bank cash exceeds FDIC insurance limits",
   "pegMechanism": "Direct 1:1 redemption through Paxos",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "11",
@@ -23,17 +23,23 @@
     "attestorJurisdiction": "United States",
     "attestorLicense": "PCAOB-registered",
     "latestReport": {
-      "periodEnd": "2026-07-31",
-      "publishedAt": "2026-08-25",
+      "periodEnd": "2026-08-31",
+      "publishedAt": "2026-09-24",
+      "publishedAtBasis": "signed-date-standin",
+      "reviewReference": {
+        "date": "2026-09-24",
+        "reviewedAt": "2026-10-01",
+        "dateKind": "unspecified"
+      },
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "Pharos safety-score curation 2026-09-23",
+      "reviewer": "Sol curation pass 2026-10-01 (RuleC16); August report and reserve composition refreshed together",
       "confidence": "verified",
       "sources": [
         {
-          "label": "KPMG USDP Redemption Assets Report - July 2026 (examination dated August 25, 2026)",
-          "url": "https://framerusercontent.com/assets/Kk04pJ7gWRmVlVJvl5rmYWj25M.pdf"
+          "label": "KPMG USDP Redemption Assets Report - August 2026 (examination dated September 24, 2026); matches the curated August composition",
+          "url": "https://framerusercontent.com/assets/YXrlcnHgVxcHy66TMLVHn2fM71U.pdf"
         }
       ]
     }

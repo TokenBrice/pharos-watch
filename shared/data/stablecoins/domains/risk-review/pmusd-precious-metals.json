@@ -2,14 +2,27 @@
   "id": "pmusd-precious-metals",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: pmUSD resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Current FractionalToken implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x32d93b015562cc8da0ef3ccbccc3f8e1da8541d8"
+      },
+      {
+        "label": "Current Treasury implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5fe0f17975819a2c40791e7cf8148c23b902c1d9"
+      },
+      {
+        "label": "Current permissioned Market implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x11b21afa735e24683f0912d9f6f8a8bfabbeb10e"
+      }
+    ],
+    "evidence": "At Ethereum block 0x18e35e4, the deployed token, Treasury and Market resolve to the cited implementations. Current Market redemption requires MANAGER_ROLE and burns only msg.sender through Treasury; the token's treasury-only burn primitive alone does not establish arbitrary third-party seizure. The RAAC Safe holds Market DEFAULT_ADMIN_ROLE and can directly grant/revoke manager access. It does not currently hold EMERGENCY_DAO_ROLE, but its admin can regrant that role for the current pauseRedeem path without an upgrade. Arbitrary transfer freezing or seizure added through replacement logic is a separate future-upgrade capability of the Safe-owned ProxyAdmin. The adverse access verdict is retained for the executable permissioning and restorable pause paths, not a centralization-only inference.",
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC15)",
+    "reviewedAt": "2026-10-01"
   },
   "oracleRisk": {
-    "tier": "oracleless",
-    "summary": "pmUSD uses an external gold-linked price for RWf(x) treasury accounting, but RAAC explicitly disables liquidation and self-liquidation, so there is no external liquidation-oracle branch.",
+    "tier": "single-source-or-laggy",
+    "summary": "At Ethereum block 26096125, pmUSD Treasury.priceOracle() points to ChainlinkOracleAdapter 0x0236497082f693525dca8717787b0f601ad62ce6, whose single priceFeed is 0x214ed9da11d2fbe465a6fc601a91e62ebec1a0d6 and maxStaleTime is 87000 seconds. Treasury requires the adapter's validity flag before using its share price for collateral valuation; emergency pricing is not an independent valid fallback. The separate PSM sUSDS/USDS pricing leg does not make native issuance oracleless.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
@@ -32,13 +45,21 @@
         }
       ]
     },
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex data review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (ValB11pmUSD)",
     "confidence": "verified",
     "sources": [
       {
         "label": "RAAC RWf(x) documentation",
         "url": "https://docs.raac.io/rw-fx/"
+      },
+      {
+        "label": "Pinned Treasury implementation: valuation requires valid oracle share price",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5fe0f17975819a2c40791e7cf8148c23b902c1d9"
+      },
+      {
+        "label": "Current ChainlinkOracleAdapter: single feed and invalid emergency fallback",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0236497082f693525dca8717787b0f601ad62ce6"
       }
     ]
   }

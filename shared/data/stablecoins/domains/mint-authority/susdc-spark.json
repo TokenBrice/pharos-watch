@@ -183,13 +183,15 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095794,
         "sources": [
           {
             "label": "Circle USDC docs",
             "url": "https://developers.circle.com/stablecoins/what-is-usdc"
           }
         ],
-        "evidence": "Inherited from the verified `usdc-circle` mintAuthority. Circle's MasterMinter can authorize issuer minters and raise mint allowances; wrapper share issuance cannot bypass this base-supply authority."
+        "evidence": "At Ethereum block 26095794 on 2026-10-01, masterMinter() on the underlying USDC proxy 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 returned 0xe982615d461dd5cd06575bbea87624fda4e3de17. This confirms the inherited controller identity; Circle's reviewed issuer mint authority remains on usdc-circle, and the wrapper does not create base USDC."
       }
     ],
     "economicCapSemantics": "raiseable",

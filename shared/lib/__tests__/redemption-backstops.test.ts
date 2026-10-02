@@ -16,6 +16,46 @@ describe("getRedemptionBackstopConfig", () => {
     expect(getRedemptionBackstopConfig(id)).toBeNull();
   });
 
+  it("does not expose a cash redemption route for non-refundable JPYC Prepaid v1", () => {
+    expect(getRedemptionBackstopConfig("jpyc-jpyc-v1")).toBeNull();
+  });
+
+  it("redeems the Curve savings wrapper into crvUSD rather than its market pool's other token", () => {
+    expect(getRedemptionBackstopConfig("scrvusd-curve")?.outputAssets).toEqual(["crvusd-curve"]);
+  });
+
+  it("keeps Apyx USDC output separate from its unproven settlement bound", () => {
+    const config = getRedemptionBackstopConfig("apxusd-apyx");
+
+    expect(config?.outputAssetType).toBe("stable-single");
+    expect(config?.outputAssets).toEqual(["usdc-circle"]);
+    expect(config?.executionModel).toBe("rules-based-nav");
+    expect(config?.v9RouteReviewTerms).toMatchObject({
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["settlement"],
+    });
+  });
+
+  it("keeps UTY's verified Base USDC payout separate from unbounded redemption terms", () => {
+    const config = getRedemptionBackstopConfig("uty-xsy");
+
+    expect(config?.outputAssetType).toBe("stable-single");
+    expect(config?.outputAssets).toEqual(["usdc-circle"]);
+    expect(config?.unresolvedOutputAssetKeys).toBeUndefined();
+    expect(config?.v9RouteReviewTerms).toMatchObject({
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+    });
+  });
+
+
+  it("excludes USDA from Indigo's current complete PSM payout set", () => {
+    expect(getRedemptionBackstopConfig("iusd-indigo-protocol")?.outputAssets).toEqual([
+      "usdm-moneta",
+      "usdc-circle",
+    ]);
+  });
+
   it.each([
     ["stkgho-umbrella-aave", "immediate-bounded"],
     ["usdrif-rif", "eventual-only"],
@@ -28,7 +68,6 @@ describe("getRedemptionBackstopConfig", () => {
   });
 
   it.each([
-    "uty-xsy",
     "hyusd-hylo",
     "dusd-dtrinity",
     "u-united-stables",

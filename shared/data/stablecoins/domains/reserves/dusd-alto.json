@@ -79,13 +79,21 @@
       {
         "label": "Ethereum frxUSD balanceOf(DUSD USM) at block 26088256 (2026-09-30)",
         "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "DUSD majority credit-line verified implementation (reviewed 2026-10-01)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x886bbdc1b5e264b919fb5bbb4b3ebd1243b86027"
+      },
+      {
+        "label": "Ethereum pinned issuance and collateral-state reads at block 26098753",
+        "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
       }
     ],
     "rationale": "The issuer snapshot generated 2026-09-30T04:59:16.540Z identifies six active mint markets by exact collateral address. Nominal DUSD debt is 30,200.944174390580748277 against frxUSD, 45,572.069612151089373128 against wstETH, 21,260.123630429006405805 against WETH, 1,507.499458397277262158 against rETH, 2.005169346594655752 against sUSDe 0x9d39a5de30e57443bff2a8307a4256c8797a3497, and 2.006327907100487479 against syrupUSDC 0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b. At Ethereum block 26088256 on 2026-09-30, balanceOf(0x1bd08b43d1579881cfad0a35aeea5b547dbe4c91) on frxUSD 0xcacd6fd266af91b8aed52accc382b4e165586e29 returned 223,104.611770924639631386. These mint debts plus the USM balance form a $321,649.2601435463 nominal issuance-path denominator. Borrow-market collateral is excluded because those markets redistribute existing DUSD. Eight-decimal percentages preserve both positive dust exposures; the rounding residual is assigned to the largest slice. The issuer API does not disclose a numeric source block (blockNumber is convex), so this is a dated cross-source issuance-path estimate, not an atomic collateral-value or total-liability reconciliation.",
     "compositionBasis": "Issuer active mint-market nominal DUSD debt from 2026-09-30T04:59:16.540Z plus pinned frxUSD USM balance at Ethereum block 26088256",
     "compositionAsOf": "2026-09-30",
-    "scope": "full-composition",
-    "knownUnknownExposure": "The active mint-path identities are verified; API and RPC observations are not atomic, and nominal issuance attribution does not establish market-valued collateral coverage or reconcile all outstanding DUSD.",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "At Ethereum block 26098753 on 2026-10-01, the 18 recorded minters' minted counters sum exactly to totalSupply (1,323,222.932595131357881304 DUSD). The omitted majority path is AltoConvexCreditLineMarket 0x6b3458c87cd38aefa6a5d059eb19f609420dd852 with 999,000 DUSD minted. Its collateral is Curve LP 0x104d6a1b97a6cef88d905d7b865a378d90be932a, staked in Convex reward pool 0x0e80fe9d6f6df530ab2ff69ad0259e77e2ffedeb; LP coins are frxUSD and DUSD itself. These verified identities reconcile issuance but do not turn the historical selected-slice nominal weights into whole-reserve market-value weights. Full composition requires LP look-through, elimination of self-issued DUSD and valuation of remaining market collateral.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {

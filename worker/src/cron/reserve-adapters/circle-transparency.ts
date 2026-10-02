@@ -20,21 +20,22 @@ interface CircleSliceConfig {
   attr: string;
   label: string;
   sourceKey: string;
+  bankCategory?: "sifi" | "other";
 }
 
 const CIRCLE_ABSOLUTE_MODE_MAX_RELATIVE_DIFF = 0.03;
 const CIRCLE_PERCENT_MODE_TOLERANCE_PCT = 2;
 
 const USDC_SLICES: CircleSliceConfig[] = [
-  { attr: "data-usdc-us-treasuries", label: "<3-Month U.S. Treasuries", sourceKey: "circle:usdc:treasuries-under-3m" },
-  { attr: "data-usdc-months", label: "Deposits at Systemically Important Institutions", sourceKey: "circle:usdc:sifi-deposits" },
-  { attr: "data-usdc-cash", label: "Other Bank Deposits", sourceKey: "circle:usdc:other-bank-deposits" },
-  { attr: "data-usdc-in-circulation", label: "Overnight Reverse Treasury Repo", sourceKey: "circle:usdc:overnight-reverse-treasury-repo" },
+  { attr: "data-usdc-months", label: "<3-Month U.S. Treasuries", sourceKey: "circle:usdc:treasuries-under-3m" },
+  { attr: "data-usdc-cash", label: "Cash at Regulated Financial Institutions", sourceKey: "circle:usdc:bank-deposits", bankCategory: "sifi" },
+  { attr: "data-usdc-in-circulation", label: "Cash at Regulated Financial Institutions", sourceKey: "circle:usdc:bank-deposits", bankCategory: "other" },
+  { attr: "data-usdc-us-treasuries", label: "Overnight Reverse Treasury Repo", sourceKey: "circle:usdc:overnight-reverse-treasury-repo" },
 ];
 
 const EURC_SLICES: CircleSliceConfig[] = [
-  { attr: "data-eurocoin-cash", label: "Other Bank Deposits", sourceKey: "circle:eurc:other-bank-deposits" },
-  { attr: "data-eurocoin-tokens", label: "Deposits at Systemically Important Institutions", sourceKey: "circle:eurc:sifi-deposits" },
+  { attr: "data-eurocoin-tokens", label: "Cash at Regulated Financial Institutions", sourceKey: "circle:eurc:bank-deposits", bankCategory: "other" },
+  { attr: "data-eurocoin-cash", label: "Cash at Regulated Financial Institutions", sourceKey: "circle:eurc:bank-deposits", bankCategory: "sifi" },
 ];
 
 function extractAttrValue(html: string, attr: string): number | null {
@@ -112,6 +113,12 @@ export function adaptCircleTransparency(html: string, coinType: string): Adapter
 
   const entries: Array<{ sourceKey: string; name: string; value: number; risk: "very-low" }> = [];
 
+  const bankDepositBreakdown = {
+    sourceKey: `circle:${coinType}:bank-deposits`,
+    unit: coinType === "eurc" ? "EUR-million" : "USD-billion",
+    sifi: 0,
+    other: 0,
+  };
   for (const cfg of sliceConfigs) {
     const val = extractAttrValue(canvas, cfg.attr);
     if (val == null) {
@@ -121,6 +128,10 @@ export function adaptCircleTransparency(html: string, coinType: string): Adapter
     // A disclosure row may legitimately read zero (e.g. no overnight repo
     // exposure); it is a valid parse and is simply omitted from the slices
     // below rather than treated as a missing attribute.
+    if (cfg.bankCategory) {
+      bankDepositBreakdown[cfg.bankCategory] = val;
+      continue;
+    }
     if (val === 0) continue;
     entries.push({ sourceKey: cfg.sourceKey, name: cfg.label, value: val, risk: "very-low" });
   }
@@ -130,6 +141,18 @@ export function adaptCircleTransparency(html: string, coinType: string): Adapter
       "circle-transparency",
       `missing reserve attributes for ${coinType}: ${missingAttrs.join(", ")}`,
     );
+  }
+
+  // The examination discloses aggregate bank cash, not institution shares.
+  // Keep the weekly split contextual and join one conservative bank domain.
+  const bankValue = bankDepositBreakdown.sifi + bankDepositBreakdown.other;
+  if (bankValue > 0) {
+    entries.push({
+      sourceKey: bankDepositBreakdown.sourceKey,
+      name: "Cash at Regulated Financial Institutions",
+      value: bankValue,
+      risk: "very-low",
+    });
   }
 
   const rawValueSum = entries.reduce((sum, entry) => sum + entry.value, 0);
@@ -176,11 +199,12 @@ export function adaptCircleTransparency(html: string, coinType: string): Adapter
       diag: {
         rawSumDeviation: useAbsoluteValues ? 0 : Math.abs(rawValueSum - 100),
         sliceCount: entries.length,
-        expectedSliceCount: sliceConfigs.length,
+        expectedSliceCount: coinType === "eurc" ? 1 : 3,
         valueMode: useAbsoluteValues ? "absolute" : "percentage",
         rawValueSum,
       },
       coinType,
+      bankDepositBreakdown,
       ...freshnessMetadataFromTimestamp(
         sourceTimestamp,
         "html-disclosure",

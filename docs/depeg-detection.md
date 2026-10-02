@@ -643,3 +643,7 @@ Returns `null` if < 7 days tracking. The 7–30 day "Early score" label describe
 | DEX freshness | Prices > 75 min old ignored |
 | Orphaned events | Closed with `close_reason = 'orphan-tracking-removed'` and `recovery_price = NULL` when coin drops off tracking |
 | Non-USD threshold | 150bps accounts for FX noise and thin liquidity |
+
+### Known limitation: missing trusted-price coverage
+
+Open depeg events without a current trusted price still accrue off-peg time: trusted off-peg observation and coverage-gap timestamps are not persisted. The owner deferred the migration-backed correction, planned as peg methodology 6.31, to a separate release; current 6.30 behavior is unchanged.

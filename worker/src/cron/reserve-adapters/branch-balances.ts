@@ -43,6 +43,9 @@ export interface AdaptBranchBalanceInput {
   priceMap: Map<string, number>;
   details?: Record<string, unknown>;
   metadata?: Record<string, unknown>;
+  /** True only for a reviewed census or a same-run registry match. */
+  censusComplete?: boolean;
+  liabilityUsd?: number;
 }
 
 type OnchainInput = ReturnType<typeof requireOnchainInput>;
@@ -299,48 +302,61 @@ export async function fetchBranchPriceMap(
 }
 
 export function adaptBranchBalanceReserves(input: AdaptBranchBalanceInput): AdapterResult {
-  const { adapterKey, balances, priceMap, details, metadata } = input;
-
-  const unreadableBranches = balances
-    .filter((entry) => entry.balanceRaw == null)
-    .map((entry) => entry.branch.name);
-  if (unreadableBranches.length > 0) {
-    throw new Error(`${adapterKey} adapter could not read balances for: ${unreadableBranches.join(", ")}`);
-  }
-
-  const pricedBranches = balances.filter((entry) => entry.balanceRaw != null && entry.balanceRaw > 0n);
-  if (pricedBranches.length === 0) {
-    throw new Error(`${adapterKey} adapter found no non-zero balances`);
-  }
-
+  const { adapterKey, balances, priceMap, details, metadata, liabilityUsd } = input;
   const warnings: LiveReserveWarning[] = [];
+  const unavailableBranches: Array<{ name: string; reason: string }> = [];
+  const unclassifiedBranches: string[] = [];
+  const observations: Array<Record<string, unknown>> = [];
+  const values: Array<{
+    sourceKey: string; value: number; name: string; risk: BranchConfig["risk"];
+    coinId?: string; depType?: BranchConfig["depType"];
+  }> = [];
 
-  // Configured-vs-on-chain decimals identity: a mismatched scale values every
-  // branch by a power of ten, so a mismatch must reject the snapshot rather
-  // than store a 10^12 valuation error. A reverting decimals() (non-ERC20) is
-  // not an identity failure — keep the configured scale and surface it as info.
-  for (const { branch, observedDecimals } of balances) {
-    if (observedDecimals === undefined) continue;
-    if (observedDecimals === null) {
-      warnings.push(reserveInfoWarning(
-        "branch-token-decimals-unavailable",
-        `${adapterKey} could not read decimals() for ${branch.name}; using configured ${branch.token.decimals}`,
-      ));
-    } else if (observedDecimals !== BigInt(branch.token.decimals)) {
+  for (const { branch, balanceRaw, observedDecimals, balanceDecimals } of balances) {
+    const price = branch.priceUsd ?? priceMap.get(branch.name);
+    const observation: Record<string, unknown> = {
+      name: branch.name, token: branch.token.address, chain: branch.chain ?? branch.token.chain,
+      balanceRaw: balanceRaw == null ? null : balanceRaw.toString(),
+      decimals: branch.token.decimals, observedDecimals: observedDecimals == null ? null : Number(observedDecimals),
+      priceUsd: price ?? null,
+    };
+    observations.push(observation);
+    if (balanceRaw == null) {
+      unavailableBranches.push({ name: branch.name, reason: "balance-unavailable" });
+      continue;
+    }
+    if (observedDecimals != null && observedDecimals !== BigInt(branch.token.decimals)) {
       warnings.push(reserveFatalWarning(
         "branch-token-decimals-mismatch",
         `${adapterKey} token ${branch.name} (${branch.token.address}) decimals mismatch: configured ${branch.token.decimals}, observed ${observedDecimals}`,
       ));
+      unavailableBranches.push({ name: branch.name, reason: "decimals-mismatch" });
+      continue;
     }
-  }
-
-  const values = pricedBranches.map(({ branch, balanceRaw, balanceDecimals }) => {
-    const price = branch.priceUsd ?? priceMap.get(branch.name);
-    if (price == null) {
-      throw new Error(`Missing DefiLlama price for ${branch.name}`);
+    if (observedDecimals === null) {
+      warnings.push(reserveInfoWarning(
+        "branch-token-decimals-unavailable",
+        `${adapterKey} could not read decimals() for ${branch.name}; configured ${branch.token.decimals}`,
+      ));
+      if (input.censusComplete === true) {
+        unavailableBranches.push({ name: branch.name, reason: "decimals-unavailable" });
+        continue;
+      }
     }
-    // Apply depeg policy tiers to USD-pegged branches when the price came
-    // from a live source (no explicit override).
+    // An observed zero needs no price and is not an unavailable constituent.
+    if (balanceRaw === 0n) continue;
+    if (branch.unclassifiedSelfReferential === true) {
+      observation.classification = "unclassified-self-referential";
+      unclassifiedBranches.push(branch.name);
+      if (price == null || !Number.isFinite(price) || price <= 0) {
+        unavailableBranches.push({ name: branch.name, reason: "price-unavailable" });
+      }
+      continue;
+    }
+    if (price == null || !Number.isFinite(price) || price <= 0) {
+      unavailableBranches.push({ name: branch.name, reason: "price-unavailable" });
+      continue;
+    }
     if (isUsdPeggedBranch(branch) && branch.priceUsd == null) {
       if (price < 0.5 || price > 1.5) {
         throw new Error(
@@ -354,16 +370,35 @@ export function adaptBranchBalanceReserves(input: AdaptBranchBalanceInput): Adap
         ));
       }
     }
-    return {
+    values.push({
       sourceKey: `${adapterKey}:${branch.chain ?? branch.token.chain}:${branch.token.address.toLowerCase()}`,
-      value: valueUsdFromBigIntPrice(balanceRaw ?? 0n, balanceDecimals ?? branch.token.decimals, price),
+      value: valueUsdFromBigIntPrice(balanceRaw, balanceDecimals ?? branch.token.decimals, price),
       name: branch.name,
       risk: branch.risk,
       ...(branch.coinId ? { coinId: branch.coinId } : {}),
       ...(branch.depType ? { depType: branch.depType } : {}),
-    };
-  });
+    });
+  }
   const totalValue = values.reduce((sum, value) => sum + value.value, 0);
+  const partial = unavailableBranches.length > 0 || unclassifiedBranches.length > 0;
+  const denominator = liabilityUsd != null && Number.isFinite(liabilityUsd) && liabilityUsd > 0
+    ? liabilityUsd : null;
+  // Liabilities are not a bound on unreadable collateral. A partial book
+  // retains measured amounts as diagnostics, never invented reserve shares.
+  const residualUsd = input.censusComplete === true && !partial ? 0 : null;
+  const residualUnavailable = partial;
+  if (values.length === 0 && !partial && denominator == null) {
+    throw new Error(`${adapterKey} adapter found no non-zero balances`);
+  }
+  if (partial) {
+    warnings.push(reserveDegradedWarning(
+      "branch-reserve-book-partial",
+      `${adapterKey} unavailable or unclassified constituents: ${[
+        ...unavailableBranches.map(({ name, reason }) => `${name} (${reason})`),
+        ...unclassifiedBranches.map((name) => `${name} (self-referential)`),
+      ].join(", ")}`,
+    ));
+  }
   // The normal one-decimal display precision would drop a real sub-0.05%
   // branch to 0.0%, which can erase a reviewed dependency edge. Preserve such
   // measured branches at three decimals, or six decimals when three would
@@ -374,19 +409,38 @@ export function adaptBranchBalanceReserves(input: AdaptBranchBalanceInput): Adap
   const hasSubSixDecimalPercentBranch = values.some(({ value }) =>
     Number.isFinite(value) && value > 0 && totalValue > 0 && (value / totalValue) * 100 < 0.0005,
   );
-  const slices = slicesFromValues(values, hasSubSixDecimalPercentBranch ? 6 : hasSubTenthPercentBranch ? 3 : 1);
+  const slices = residualUnavailable
+    ? [{ name: "Unclassified or unavailable reserve residual", pct: 100, risk: "high" as const }]
+    : slicesFromValues(values, hasSubSixDecimalPercentBranch ? 6 : hasSubTenthPercentBranch ? 3 : 1);
 
   return {
     slices,
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
-      branchCount: pricedBranches.length,
-      unknownExposurePct: 0,
+      branchCount: balances.filter(({ balanceRaw }) => balanceRaw != null && balanceRaw > 0n).length,
       ...notApplicableFreshnessMetadata({
         proofKind: "onchain-branch-balances",
         ...details,
       }),
       ...metadata,
+      censusComplete: input.censusComplete === true,
+      valuationComplete: !partial,
+      ...(residualUnavailable
+        ? { unknownExposurePct: 100, unknownExposureUnavailableReason: "partial-book-without-residual-bound" }
+        : input.censusComplete === true
+          ? { unknownExposurePct: 0 }
+          : { unknownExposureUnavailableReason: "configured-branches-not-certified-census" }),
+      details: {
+        proofKind: "onchain-branch-balances",
+        ...(metadata?.details as Record<string, unknown> | undefined),
+        ...details,
+        branchObservations: observations,
+        unavailableBranches,
+        unclassifiedSelfReferentialBranches: unclassifiedBranches,
+        knownReserveValueUsd: totalValue,
+        residualUsd,
+        contextualObservationsOnly: residualUnavailable,
+      },
     },
   };
 }

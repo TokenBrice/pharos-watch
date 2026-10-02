@@ -42,6 +42,8 @@
         "directMintAbility": "cap-limited",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095942,
         "capDescription": "Reservoir docs list the USDC PSM as a core mint/redeem entry point for rUSD.",
         "sources": [
           {
@@ -63,6 +65,8 @@
         "directMintAbility": "parameter-only",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095942,
         "capDescription": "Credit Enforcer enforces solvency, debt limits, and operational constraints on PSM minting.",
         "sources": [
           {
@@ -88,6 +92,8 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095942,
         "sources": [
           {
             "label": "Reservoir Credit Enforcer RoleGranted events at Ethereum block 25295029",

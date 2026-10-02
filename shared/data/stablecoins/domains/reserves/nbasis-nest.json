@@ -2,11 +2,11 @@
   "id": "nbasis-nest",
   "reserves": [
     {
-      "name": "Superstate USCC cash-and-carry fund",
+      "name": "Bitwise Crypto Carry Fund (USCC, formerly Superstate USCC)",
       "pct": 87.7,
       "risk": "low",
       "assetClass": "fund-share",
-      "issuerOrObligor": "Superstate USCC fund and CME futures counterparties",
+      "issuerOrObligor": "Bitwise Crypto Carry Fund (USCC), Superstate FundOS infrastructure, and futures counterparties",
       "riskFactors": [
         "credit",
         "duration",
@@ -74,6 +74,10 @@
       {
         "label": "Nest Basis Vault price-update API (2026-09-04)",
         "url": "https://api.nest.credit/v1/vaults/nest-basis-vault/last-price-update"
+      },
+      {
+        "label": "Bitwise USCC investment-management transition completed 1 June 2026",
+        "url": "https://bitwiseinvestments.com/newsroom/bitwise-debuts-inaugural-tokenized-fund-the-bitwise-crypto-carry-fund"
       }
     ],
     "rationale": "At the source timestamp 2026-09-04T02:11:29Z, the official positions API reported $115,236.19 of USCC, $15,337.03 of USTB, $766.18 of pUSD, and about $58.11 of other positive liquid stablecoin balances. The official vault directory publishes USCC 87.7%, USTB 11.7%, and about 0.63% liquid assets; the production adapter's one-decimal output is USCC 87.7%, USTB 11.7%, and pUSD liquid balance 0.6%.",
@@ -85,10 +89,10 @@
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Superstate USCC cash-and-carry fund",
+        "reserveName": "Bitwise Crypto Carry Fund (USCC, formerly Superstate USCC)",
         "pct": 87.7,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "USCC is an identified Superstate cash-and-carry fund share with no active tracked stablecoin record."
+        "rationale": "USCC is the Bitwise Crypto Carry Fund, renamed from Superstate USCC when investment management transitioned on 1 June 2026. The issuer states that the USCC symbol, smart contracts and token address are unchanged; it remains an untracked exogenous fund share."
       }
     ]
   }

@@ -10,11 +10,19 @@
       {
         "label": "Website",
         "url": "https://krwq.cash"
+      },
+      {
+        "label": "Current canonical KRWQ implementation and inherited allowance-gated burn code",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x350b6b5cf2bda130a9bee0a3cda86ec88e71dcca"
+      },
+      {
+        "label": "Canonical ProxyAdmin and owner-only upgrade code",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xff85d94fabb650c086c83b112e7126048a5e31bb"
       }
     ],
-    "evidence": "Explicit Yes retained: centralized governance metadata indicates issuer or admin control; registry links were reviewed for direct freeze, blacklist, pause, burn, or upgrade authority.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "At Ethereum block 0x18e35e2, the canonical proxy implementation is 0x350b6b5cf2bda130a9bee0a3cda86ec88e71dcca. Its current minterBurnFrom delegates to ERC20Burnable.burnFrom and spends holder allowance; the native implementation does not expose direct blacklist, pause or arbitrary seizure functions. Owner 0x56398b89d53e8731bca8c1b06886cfb14bd6b654 can immediately add or restore minters, but those minters remain allowance-gated for burning. The same address owns ProxyAdmin 0xff85d94fabb650c086c83b112e7126048a5e31bb, whose owner-only upgradeAndCall can install new restriction logic. This future-upgrade capability is distinct from currently executable native powers. Historical Yes is retained conservatively without a new claim that direct native freezing is active; the proposed asset-wide downgrade is discarded because native-only evidence does not check every reachable bridge-representation or restriction path.",
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC16)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
@@ -449,7 +457,6 @@
         "controllerAddress": "0x78f2bcc625896adca1d9bfb9059f0b791ebdef4b",
         "failureDomainKeys": [
           "safe:polygon:0x78f2bcc625896adca1d9bfb9059f0b791ebdef4b",
-          "eoa:polygon:0x9feab70f3c4a944b97b7565bac4991df5b7a69ff",
           "protocol:layerzero-oft",
           "protocol:layerzero-endpoint-v2",
           "contract:ethereum:0xbdc82654f3574a113cdbd62f39cbe02e5b522d57",
@@ -475,10 +482,10 @@
         "modulesOrGuardsStatus": "unknown",
         "routeChecks": {
           "trustedPeerOrRemote": "At Polygon block 92143510, the OFT endpoint was live and peers(30101) returned the Ethereum Adapter 0xbdc82654f3574a113cdbd62f39cbe02e5b522d57. The owner Safe can call setPeer(uint32,bytes32) to replace the trusted remote.",
-          "pausersAdminsUpgraders": "The Polygon OFT owner is Safe 0x78f2bcc6. The Safe controls the representation's peer/configuration path. ProxyAdmin 0x4583b85c6ddf3014c17e18bf4c719d268a9f8e15 is separately owned by EOA 0x9feab70f3c4a944b97b7565bac4991df5b7a69ff and can replace implementation 0x1dcb966101be76a6a06ac0f9ebfb7587ab1a77a8; the LayerZero Endpoint is the separate delivery caller for representation minting. These are Bridge Risk controls, not native Ethereum issuance.",
+          "pausersAdminsUpgraders": "At polygon block 94755088, both the OFT owner and its EIP-1967 ProxyAdmin owner are Safe 0x78f2bcc625896adca1d9bfb9059f0b791ebdef4b. Historical 2026-08-16 evidence recorded a separate EOA ProxyAdmin owner; the current owner read supersedes that controller identity. Native Ethereum issuance remains separate.",
           "onchainAmountBounds": "The verified KRWQOFT implementation mints on accepted LayerZero credit and burns on outbound transfer; its intended supply-conserving bound is the Adapter escrow and LayerZero message/peer validation, not an independent native liability cap."
         },
-        "capDescription": "The 3-of-6 Polygon Safe can set the OFT peer but does not directly call the LayerZero Endpoint delivery path that mints the representation. The separate single EOA ProxyAdmin owner can replace the representation implementation; neither capability belongs in native Mint Authority.",
+        "capDescription": "The 3-of-6 Safe controls OFT peer configuration and the ProxyAdmin upgrade path. LayerZero Endpoint delivery remains the bridge-mint caller; this control is not native Ethereum mint authority.",
         "canRaiseCap": true,
         "bypassSurfaces": [
           "LayerZero Endpoint V2, ULN, DVN, and Executor governance is external to the Polygon Safe and remains a shared bridge failure domain."
@@ -499,7 +506,7 @@
             "url": "https://polygon-bor-rpc.publicnode.com"
           }
         ],
-        "evidence": "At Polygon block 92143510 (2026-08-16), the KRWQ OFT 0x44c3950a6ed303c863a6568ea18c1a01e504ffd2 returned token() = itself, approvalRequired() = false, endpoint() = the chain's LayerZero V2 endpoint, and peers(30101) = the Ethereum Adapter. owner() returned Safe 0x78f2bcc6, whose current threshold was 3-of-6 and getModules() was empty; guard/fallback absence is not claimed because those reads were not compatible. The Safe can setPeer. ProxyAdmin 0x4583b85c6ddf3014c17e18bf4c719d268a9f8e15 is owned by the separately recorded single EOA 0x9feab70f3c4a944b97b7565bac4991df5b7a69ff."
+        "evidence": "At Polygon block 92143510 (2026-08-16), the KRWQ OFT 0x44c3950a6ed303c863a6568ea18c1a01e504ffd2 returned token() = itself, approvalRequired() = false, endpoint() = the chain's LayerZero V2 endpoint, and peers(30101) = the Ethereum Adapter. owner() returned Safe 0x78f2bcc6, whose current threshold was 3-of-6 and getModules() was empty; guard/fallback absence is not claimed because those reads were not compatible. The Safe can setPeer. ProxyAdmin 0x4583b85c6ddf3014c17e18bf4c719d268a9f8e15 is owned by the separately recorded single EOA 0x9feab70f3c4a944b97b7565bac4991df5b7a69ff. Follow-up 2026-10-01 at block 94755088: ProxyAdmin.owner() now equals the OFT owner Safe 0x78f2bcc625896adca1d9bfb9059f0b791ebdef4b; the separate EOA upgrade claim above describes the August observation only."
       },
       {
         "id": "krwq-fraxtal-oft-owner-safe",
@@ -515,7 +522,6 @@
         "controllerAddress": "0x5493f3dbe06accd1f51568213de839498a2a3b83",
         "failureDomainKeys": [
           "safe:fraxtal:0x5493f3dbe06accd1f51568213de839498a2a3b83",
-          "eoa:fraxtal:0x9feab70f3c4a944b97b7565bac4991df5b7a69ff",
           "protocol:layerzero-oft",
           "protocol:layerzero-endpoint-v2",
           "contract:ethereum:0xbdc82654f3574a113cdbd62f39cbe02e5b522d57",
@@ -540,10 +546,10 @@
         "modulesOrGuardsStatus": "unknown",
         "routeChecks": {
           "trustedPeerOrRemote": "At Fraxtal block 40054791, the OFT endpoint was live and peers(30101) returned the Ethereum Adapter 0xbdc82654f3574a113cdbd62f39cbe02e5b522d57. The owner Safe can call setPeer(uint32,bytes32) to replace the trusted remote.",
-          "pausersAdminsUpgraders": "The Fraxtal OFT owner is Safe 0x5493f3db. The Safe controls the representation's peer/configuration path. ProxyAdmin 0x3faff366c59eb98cacc6247816e98ad800f5a2fb is separately owned by EOA 0x9feab70f3c4a944b97b7565bac4991df5b7a69ff and can replace implementation 0x07fb13555085cedb41546d5deb58eedeb6791874; the LayerZero Endpoint is the separate delivery caller for representation minting. These are Bridge Risk controls, not native Ethereum issuance.",
+          "pausersAdminsUpgraders": "At fraxtal block 42013530, both the OFT owner and its EIP-1967 ProxyAdmin owner are Safe 0x5493f3dbe06accd1f51568213de839498a2a3b83. Historical 2026-08-16 evidence recorded a separate EOA ProxyAdmin owner; the current owner read supersedes that controller identity. Native Ethereum issuance remains separate.",
           "onchainAmountBounds": "The verified KRWQOFT implementation mints on accepted LayerZero credit and burns on outbound transfer; its intended supply-conserving bound is the Adapter escrow and LayerZero message/peer validation, not an independent native liability cap."
         },
-        "capDescription": "The 3-of-5 Fraxtal Safe can set the OFT peer but does not directly call the LayerZero Endpoint delivery path that mints the representation. The separate single EOA ProxyAdmin owner can replace the representation implementation; neither capability belongs in native Mint Authority.",
+        "capDescription": "The 3-of-5 Safe controls OFT peer configuration and the ProxyAdmin upgrade path. LayerZero Endpoint delivery remains the bridge-mint caller; this control is not native Ethereum mint authority.",
         "canRaiseCap": true,
         "bypassSurfaces": [
           "LayerZero Endpoint V2, ULN, DVN, and Executor governance is external to the Fraxtal Safe and remains a shared bridge failure domain."
@@ -564,7 +570,7 @@
             "url": "https://rpc.frax.com"
           }
         ],
-        "evidence": "At Fraxtal block 40054791 (2026-08-16), the KRWQ OFT 0xbe5b2eb217bb04a7ddd1a451e6a1567dc15e2fd6 returned token() = itself, approvalRequired() = false, endpoint() = the chain's LayerZero V2 endpoint, and peers(30101) = the Ethereum Adapter. owner() returned Safe 0x5493f3db, whose current threshold was 3-of-5 and getModules() was empty; guard/fallback absence is not claimed because those reads were not compatible. The Safe can setPeer. ProxyAdmin 0x3faff366c59eb98cacc6247816e98ad800f5a2fb is owned by the separately recorded single EOA 0x9feab70f3c4a944b97b7565bac4991df5b7a69ff."
+        "evidence": "At Fraxtal block 40054791 (2026-08-16), the KRWQ OFT 0xbe5b2eb217bb04a7ddd1a451e6a1567dc15e2fd6 returned token() = itself, approvalRequired() = false, endpoint() = the chain's LayerZero V2 endpoint, and peers(30101) = the Ethereum Adapter. owner() returned Safe 0x5493f3db, whose current threshold was 3-of-5 and getModules() was empty; guard/fallback absence is not claimed because those reads were not compatible. The Safe can setPeer. ProxyAdmin 0x3faff366c59eb98cacc6247816e98ad800f5a2fb is owned by the separately recorded single EOA 0x9feab70f3c4a944b97b7565bac4991df5b7a69ff. Follow-up 2026-10-01 at block 42013530: ProxyAdmin.owner() now equals the OFT owner Safe 0x5493f3dbe06accd1f51568213de839498a2a3b83; the separate EOA upgrade claim above describes the August observation only."
       },
       {
         "id": "krwq-base-oft-layerzero-endpoint",
@@ -802,8 +808,8 @@
         "evidence": "At Morph block 25379231 (2026-08-16), endpoint() on the live KRWQ OFT 0xe898e1cffa565aae8bacc364aa7d65d6a2d20f16 returned LayerZero Endpoint V2 0x6f475642a6e85809b1c36fa62763669b1b48dd5b and peers(30101) returned the Ethereum OFT Adapter. The verified OFT delivery path accepts the endpoint as its caller and mints the bridge representation; this is not native Morph issuance."
       },
       {
-        "id": "krwq-polygon-proxy-admin-eoa",
-        "label": "KRWQ Polygon ProxyAdmin owner (single EOA)",
+        "id": "krwq-polygon-proxy-admin-safe",
+        "label": "KRWQ Polygon ProxyAdmin owner (3/6 Safe)",
         "routeRefs": [
           "polygon:0x44c3950a6ed303c863a6568ea18c1a01e504ffd2"
         ],
@@ -812,21 +818,21 @@
           "admin"
         ],
         "controllerChain": "polygon",
-        "controllerAddress": "0x9feab70f3c4a944b97b7565bac4991df5b7a69ff",
+        "controllerAddress": "0x78f2bcc625896adca1d9bfb9059f0b791ebdef4b",
         "failureDomainKeys": [
-          "eoa:polygon:0x9feab70f3c4a944b97b7565bac4991df5b7a69ff",
+          "safe:polygon:0x78f2bcc625896adca1d9bfb9059f0b791ebdef4b",
           "contract:polygon:0x4583b85c6ddf3014c17e18bf4c719d268a9f8e15",
           "contract:polygon:0x44c3950a6ed303c863a6568ea18c1a01e504ffd2",
           "protocol:layerzero-oft"
         ],
-        "authorityType": "eoa",
-        "capDescription": "As sole owner of Polygon ProxyAdmin 0x4583b85c6ddf3014c17e18bf4c719d268a9f8e15, this EOA can call upgradeAndCall() to replace the KRWQ representation implementation with one that mints without limit. There is no cap, timelock, or multisig on this upgrade authority.",
+        "authorityType": "safe",
+        "capDescription": "At the current pinned block, the ProxyAdmin owner is the same 3-of-6 Safe that controls the OFT application. It can replace representation logic; no cap or enforced upgrade delay was established. Historical single-EOA ownership is retained in the evidence.",
         "canRaiseCap": true,
         "bypassSurfaces": [
-          "This single-key representation upgrade path is independent of the Polygon OFT owner Safe; LayerZero Endpoint V2 validation remains an additional external failure domain."
+          "LayerZero Endpoint V2 validation remains an additional external failure domain."
         ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 92143510,
+        "observedAt": "2026-10-01",
+        "observedBlock": 94755088,
         "sources": [
           {
             "label": "KRWQ Polygon token proxy",
@@ -841,11 +847,28 @@
             "url": "https://polygon-bor-rpc.publicnode.com"
           }
         ],
-        "evidence": "At Polygon block 92143510 (2026-08-16), the KRWQ proxy's EIP-1967 admin slot held ProxyAdmin 0x4583b85c6ddf3014c17e18bf4c719d268a9f8e15. ProxyAdmin.owner() returned 0x9feab70f3c4a944b97b7565bac4991df5b7a69ff, whose code was empty, confirming a plain EOA that can unilaterally replace the destination OFT implementation."
+        "evidence": "At Polygon block 92143510 (2026-08-16), the KRWQ proxy's EIP-1967 admin slot held ProxyAdmin 0x4583b85c6ddf3014c17e18bf4c719d268a9f8e15. ProxyAdmin.owner() returned 0x9feab70f3c4a944b97b7565bac4991df5b7a69ff, whose code was empty, confirming a plain EOA that can unilaterally replace the destination OFT implementation. Current read at polygon block 94755088 on 2026-10-01: the same ProxyAdmin now returns owner 0x78f2bcc625896adca1d9bfb9059f0b791ebdef4b; getOwners() returns 6 owners and getThreshold() returns 3. The older single-key authority is therefore historical, not current.",
+        "threshold": 3,
+        "signerCount": 6,
+        "modulesOrGuardsStatus": "unknown",
+        "safe": {
+          "owners": [
+            "0x0bfda3970a72557a5c785c90b0d85aad092d5a3a",
+            "0xf4e1d185666a624099298fcc42c50ba662dc7e52",
+            "0x9feab70f3c4a944b97b7565bac4991df5b7a69ff",
+            "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+            "0xf83b59a99f2e1ce05ec5c69ae1db4fbf41dade89",
+            "0xc8de9f45601da8c76158b8caf3e56e8a037f2228"
+          ],
+          "threshold": 3,
+          "observedBlock": 94755088,
+          "observedAt": "2026-10-01",
+          "source": "onchain"
+        }
       },
       {
-        "id": "krwq-fraxtal-proxy-admin-eoa",
-        "label": "KRWQ Fraxtal ProxyAdmin owner (single EOA)",
+        "id": "krwq-fraxtal-proxy-admin-safe",
+        "label": "KRWQ Fraxtal ProxyAdmin owner (3/5 Safe)",
         "routeRefs": [
           "fraxtal:0xbe5b2eb217bb04a7ddd1a451e6a1567dc15e2fd6"
         ],
@@ -854,21 +877,21 @@
           "admin"
         ],
         "controllerChain": "fraxtal",
-        "controllerAddress": "0x9feab70f3c4a944b97b7565bac4991df5b7a69ff",
+        "controllerAddress": "0x5493f3dbe06accd1f51568213de839498a2a3b83",
         "failureDomainKeys": [
-          "eoa:fraxtal:0x9feab70f3c4a944b97b7565bac4991df5b7a69ff",
+          "safe:fraxtal:0x5493f3dbe06accd1f51568213de839498a2a3b83",
           "contract:fraxtal:0x3faff366c59eb98cacc6247816e98ad800f5a2fb",
           "contract:fraxtal:0xbe5b2eb217bb04a7ddd1a451e6a1567dc15e2fd6",
           "protocol:layerzero-oft"
         ],
-        "authorityType": "eoa",
-        "capDescription": "As sole owner of Fraxtal ProxyAdmin 0x3faff366c59eb98cacc6247816e98ad800f5a2fb, this EOA can call upgradeAndCall() to replace the KRWQ representation implementation with one that mints without limit. There is no cap, timelock, or multisig on this upgrade authority.",
+        "authorityType": "safe",
+        "capDescription": "At the current pinned block, the ProxyAdmin owner is the same 3-of-5 Safe that controls the OFT application. It can replace representation logic; no cap or enforced upgrade delay was established. Historical single-EOA ownership is retained in the evidence.",
         "canRaiseCap": true,
         "bypassSurfaces": [
-          "This single-key representation upgrade path is independent of the Fraxtal OFT owner Safe; LayerZero Endpoint V2 validation remains an additional external failure domain."
+          "LayerZero Endpoint V2 validation remains an additional external failure domain."
         ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 40054791,
+        "observedAt": "2026-10-01",
+        "observedBlock": 42013530,
         "sources": [
           {
             "label": "KRWQ Fraxtal token proxy",
@@ -883,7 +906,23 @@
             "url": "https://rpc.frax.com"
           }
         ],
-        "evidence": "At Fraxtal block 40054791 (2026-08-16), the KRWQ proxy's EIP-1967 admin slot held ProxyAdmin 0x3faff366c59eb98cacc6247816e98ad800f5a2fb. ProxyAdmin.owner() returned 0x9feab70f3c4a944b97b7565bac4991df5b7a69ff, whose code was empty, confirming a plain EOA that can unilaterally replace the destination OFT implementation."
+        "evidence": "At Fraxtal block 40054791 (2026-08-16), the KRWQ proxy's EIP-1967 admin slot held ProxyAdmin 0x3faff366c59eb98cacc6247816e98ad800f5a2fb. ProxyAdmin.owner() returned 0x9feab70f3c4a944b97b7565bac4991df5b7a69ff, whose code was empty, confirming a plain EOA that can unilaterally replace the destination OFT implementation. Current read at fraxtal block 42013530 on 2026-10-01: the same ProxyAdmin now returns owner 0x5493f3dbe06accd1f51568213de839498a2a3b83; getOwners() returns 5 owners and getThreshold() returns 3. The older single-key authority is therefore historical, not current.",
+        "threshold": 3,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "unknown",
+        "safe": {
+          "owners": [
+            "0x9feab70f3c4a944b97b7565bac4991df5b7a69ff",
+            "0x0bfda3970a72557a5c785c90b0d85aad092d5a3a",
+            "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+            "0xc8de9f45601da8c76158b8caf3e56e8a037f2228",
+            "0xcbc616d595d38483e6adc45c7e426f44bf230928"
+          ],
+          "threshold": 3,
+          "observedBlock": 42013530,
+          "observedAt": "2026-10-01",
+          "source": "onchain"
+        }
       },
       {
         "id": "krwq-layerzero-dvn-validation",

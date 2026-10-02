@@ -221,19 +221,19 @@
         "url": "https://docs.onre.finance/for-capital-providers/collateral-composition"
       },
       {
-        "label": "OnRe underlying assets documentation",
-        "url": "https://docs.onre.finance/for-capital-providers/underlying-assets"
-      },
-      {
         "label": "OnRe reinsurance portfolio documentation",
         "url": "https://docs.onre.finance/reinsurance-framework/portfolio-makeup"
       },
       {
         "label": "OnRe USDv proof token account; finalized RPC slot 451897337 confirms replacement mint",
         "url": "https://solscan.io/account/EbzMwZPsJvgQ6juq7EJhkbmRwEkDBijXn9CWnYCiYxKR"
+      },
+      {
+        "label": "Apex ONyc August 31, 2026 AUP report (supplemental report reference; not evidence for September 28 composition)",
+        "url": "https://drive.google.com/file/d/14bVukKFAF98ZONT8uPdOPxPomOXaQHmA/view?usp=sharing"
       }
     ],
-    "rationale": "The September 28 Schedule of Assets reports $292,040,550.05 of collateral across thirteen asset rows and $293,047,864.56 of AUM. All reviewed weights were refreshed together against the asset total. The $1,007,314.51 shortfall to AUM remains explicit and continues to degrade live scoring admission. USDv contributes $1,000,849.82, or 0.34270919563349855%. The sheet's proof account EbzMwZPsJvgQ6juq7EJhkbmRwEkDBijXn9CWnYCiYxKR resolves at finalized Solana slot 451897337 to mint USDvUSpnhCr9yBgj3UyVrD239HRUv4RsHwH2FxsWuMk, matching the tracked replacement USDv, never the legacy mint. Treasury rows are combined; Kamino lending rows retain their upstream identities and protocol risk.",
+    "rationale": "The September 28 Schedule of Assets reports $292,040,550.05 of collateral across thirteen asset rows and $293,047,864.56 of AUM. All reviewed weights were refreshed together against the asset total. The $1,007,314.51 shortfall to AUM remains explicit and continues to degrade live scoring admission. USDv contributes $1,000,849.82, or 0.34270919563349855%. The sheet's proof account EbzMwZPsJvgQ6juq7EJhkbmRwEkDBijXn9CWnYCiYxKR resolves at finalized Solana slot 451897337 to mint USDvUSpnhCr9yBgj3UyVrD239HRUv4RsHwH2FxsWuMk, matching the tracked replacement USDv, never the legacy mint. Treasury rows are combined; Kamino lending rows retain their upstream identities and protocol risk. The August 31 Apex AUP report is preserved as supplemental evidence: its cover was re-fetched October 1 and explicitly marks the NAV un-audited. Full report download is disabled by the owner, so composition and reconciliation scope remain unverified. It cannot attest this September 28 composition, and no matching September report is listed. The live holdings adapter owns current composition; no structured latestReport is admitted until a report can be paired with the reviewed rows without changing either date.",
     "compositionBasis": "OnRe Schedule of Assets dated 2026-09-28; all asset amounts divided by $292,040,550.05 declared total; finalized USDv mint proof captured 2026-09-30",
     "compositionAsOf": "2026-09-28",
     "scope": "full-composition",
@@ -283,9 +283,9 @@
     ],
     "segregation": "segregated",
     "bankruptcyRemoteness": "structured",
-    "rehypothecation": "conditional",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC26), D10 reuse-rights review",
     "confidence": "verified",
     "sources": [
       {
@@ -303,8 +303,20 @@
       {
         "label": "Bermuda Monetary Authority regulated-entities registry",
         "url": "https://www.bma.bm/regulated-entities"
+      },
+      {
+        "label": "OnRe collateralised reinsurance structure: Participation Agreements govern investor capital",
+        "url": "https://docs.onre.finance/reinsurance-framework/collateralised-reinsurance-structure.md"
+      },
+      {
+        "label": "OnRe portfolio makeup: issuer statement on capital reuse",
+        "url": "https://docs.onre.finance/reinsurance-framework/portfolio-makeup.md"
+      },
+      {
+        "label": "OnRe platform terms: other agreements prevail",
+        "url": "https://docs.onre.finance/legal/platform-terms-of-use.md"
       }
     ],
-    "uncertainty": "The ONyc Pool operates inside a Bermuda segregated account whose assets and liabilities are legally ring-fenced from OnRe's other books, and On Re SAC Ltd holds BMA Class IIGB insurer and Class F DABA licences (registration 55347; registry match confirmed by the 2026-07-15 Pharos registry pass), which grounds segregated custody and a structured bankruptcy-remoteness posture. Not known: the off-chain banks, brokers, or reinsurance trust accounts holding posted collateral; per-account segregation at those institutions; and the recovery waterfall if a reinsurance counterparty or cedent defaults. Posting pool capital as collateral to reinsurance counterparties is the disclosed business model, recorded as conditional rehypothecation; no lending-out of the stablecoin reserve itself is documented. Collateral deployed into roughly 5-13 month reinsurance contracts is not withdrawable on demand, and primary redemptions remain subject to redemption windows, holding periods, and liquidity availability."
+    "uncertainty": "The ONyc Pool operates inside a Bermuda segregated account whose assets and liabilities are legally ring-fenced from OnRe's other books, and On Re SAC Ltd holds BMA Class IIGB insurer and Class F DABA licences (registration 55347; registry match confirmed by the 2026-07-15 Pharos registry pass), which grounds segregated custody and a structured bankruptcy-remoteness posture. Not known: the off-chain banks, brokers, or reinsurance trust accounts holding posted collateral; per-account segregation at those institutions; and the recovery waterfall if a reinsurance counterparty or cedent defaults. The 2026-07-20 review classified posting pool capital to reinsurance counterparties as conditional rehypothecation. Under D10, that investment and collateral-posting exposure remains distinct from a custodian's legal right to reuse pledged assets. OnRe's portfolio prose says capital is never leveraged or reused, but investor capital is governed by Participation Agreements and the platform terms give other agreements priority. Those governing reuse terms were not publicly recovered in this review; neither legal permission nor prohibition is established. Reinsurance exposure and redemption-liquidity risk remain independently applicable."
   }
 }

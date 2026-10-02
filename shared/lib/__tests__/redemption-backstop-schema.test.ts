@@ -23,6 +23,29 @@ function settlementReviewConfig(
 }
 
 describe("redemption backstop schema", () => {
+  it("requires a dated, sourced exact-channel review for suspension without changing open or unknown admission", () => {
+    const base = settlementReviewConfig("same-day", undefined) as Record<string, unknown>;
+    const suspension = {
+      routeId: "redemption:alpha:queue-redeem", channel: "Legacy issuer portal",
+      suspendedAt: "2026-06-30", reviewedAt: "2026-07-01", reviewer: "reviewer",
+      reason: "This portal ceased exchange operations; other channels are independent.",
+      sources: [{ url: "https://example.com/notice", quote: "Exchanges suspended June 30." }],
+    };
+    expect(RedemptionBackstopConfigSchema.safeParse({ ...base, routeStatus: "suspended", routeSuspension: suspension }).success).toBe(true);
+    for (const routeStatus of ["open", "unknown"]) {
+      expect(RedemptionBackstopConfigSchema.safeParse({ ...base, routeStatus }).success).toBe(true);
+      expect(RedemptionBackstopConfigSchema.safeParse({ ...base, routeStatus, routeSuspension: suspension }).success).toBe(false);
+    }
+    expect(RedemptionBackstopConfigSchema.safeParse({ ...base, routeStatus: "suspended" }).success).toBe(false);
+    for (const overrides of [
+      { sources: [] }, { reviewer: "" }, { reason: "" }, { reviewedAt: "2026-02-30" },
+      { suspendedAt: "2026-07-02" }, { routeId: "" },
+    ]) {
+      expect(RedemptionBackstopConfigSchema.safeParse({
+        ...base, routeStatus: "suspended", routeSuspension: { ...suspension, ...overrides },
+      }).success).toBe(false);
+    }
+  });
   it.each([
     ["xaut-tether", 1, 430, 25, 0],
     ["paxg-paxos", 1, 430, 0, 0],

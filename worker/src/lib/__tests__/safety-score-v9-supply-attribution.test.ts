@@ -230,6 +230,45 @@ describe("Safety Score V9 lock/mint supply attribution", () => {
     ).not.toHaveBeenCalled();
   });
 
+  it("journals an unexpected observer failure without trusting the upstream XAUT chain map", async () => {
+    rpcMocks.observeXautRepresentationGroupSupplyAttributionAttempt.mockRejectedValue(
+      new Error("RPC returned an undecodable deployment state"),
+    );
+    const fixedInput = xautFixedInput({ Ethereum: { current: XAUT_AGGREGATE_SUPPLY_USD } });
+    const capture = await captureSafetyScoreV9SupplyAttribution(fixedInput, chainRpcs());
+    expect(capture.attributionById).toEqual({});
+    expect(capture.journalRecords).toEqual([expect.objectContaining({
+      rejectionCode: "deployment-state-unavailable",
+      admissionCode: "supply-attribution.admission.rejected-upstream",
+      fallbackCode: "supply-attribution.fallback.aggregate-only",
+      failedRouteId: null,
+      sourceObservedAtSec: null,
+      contentSha256: null,
+    })]);
+    expect(safetyScoreV9ChainRows({
+      ...fixedInput, safetyScoreV9SupplyAttributionById: capture.attributionById,
+    }, "xaut-tether")).toEqual({});
+  });
+
+  it("propagates cancellation instead of recording an ordinary source rejection", async () => {
+    const controller = new AbortController();
+    const reason = new Error("Capture cancelled by its lease owner");
+    controller.abort(reason);
+    rpcMocks.observeXautRepresentationGroupSupplyAttributionAttempt.mockRejectedValue(reason);
+    await expect(captureSafetyScoreV9SupplyAttribution(
+      xautFixedInput(), chainRpcs(), controller.signal,
+    )).rejects.toBe(reason);
+  });
+
+  it("rejects a lockbox share that underflows the aggregate USD allocation", () => {
+    expect(deriveLockMintSupplyPartition({
+      aggregateSupplyUsd: Number.MIN_VALUE,
+      canonicalCirculatingLiabilityRaw: 100n,
+      lockboxBalancesRaw: [1n],
+      canonicalChainLabel: "Ethereum",
+      pooledRepresentationLabel: "Wrapped pool",
+    })).toBeNull();
+  });
   it("partitions aggregate XAUT without double-counting its XAUt0 lockbox", () => {
     const partition = deriveLockMintSupplyPartition({
       aggregateSupplyUsd: XAUT_AGGREGATE_SUPPLY_USD,
@@ -309,6 +348,12 @@ describe("Safety Score V9 lock/mint supply attribution", () => {
       attribution.canonical.currentSupplyUsd +
         attribution.representationGroup.currentSupplyUsd,
     ).toBe(XAUT_AGGREGATE_SUPPLY_USD);
+    expect(safetyScoreV9ChainRows({
+      ...fixedInput, safetyScoreV9SupplyAttributionById: captured,
+    }, "xaut-tether")).toEqual({
+      ethereum: { current: XAUT_AGGREGATE_SUPPLY_USD - representationGroupSupplyUsd },
+      "representation-group:xaut-tether:xaut0-omnichain": { current: representationGroupSupplyUsd },
+    });
     expect(
       rpcMocks.observeXautRepresentationGroupSupplyAttributionAttempt,
     ).toHaveBeenCalledWith(
@@ -690,7 +735,11 @@ describe("Safety Score V9 Centrifuge burn/mint supply attribution", () => {
           captureEndedAtSec: OBSERVED_AT_SEC - 10,
           registryFingerprint: "a".repeat(64),
           routeInventoryDigest: "b".repeat(64),
-          deployments: [],
+          deployments: [
+            { chainId: "ethereum", currentSupplyUsd: aggregateSupplyUsd * 0.6 },
+            { chainId: "ethereum", currentSupplyUsd: aggregateSupplyUsd * 0.1 },
+            { chainId: "plume", currentSupplyUsd: aggregateSupplyUsd * 0.3 },
+          ],
         },
       });
 
@@ -721,6 +770,12 @@ describe("Safety Score V9 Centrifuge burn/mint supply attribution", () => {
       admissionCode: "supply-attribution.admission.accepted",
       fallbackCode: "supply-attribution.fallback.not-used",
       sourceObservedAtSec: OBSERVED_AT_SEC - 10,
+    });
+    expect(safetyScoreV9ChainRows({
+      ...fixedInput(), safetyScoreV9SupplyAttributionById: capture.attributionById,
+    }, assetId)).toEqual({
+      ethereum: { current: aggregateSupplyUsd * 0.6 + aggregateSupplyUsd * 0.1 },
+      plume: { current: aggregateSupplyUsd * 0.3 },
     });
   });
 

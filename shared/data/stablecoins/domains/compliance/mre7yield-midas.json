@@ -12,12 +12,16 @@
         "url": "https://www.fma-li.li/en/financial-intermediaries/asset-management-and-markets-division/securities-prospectuses/register"
       },
       {
-        "label": "Midas Liquid Yield Token documentation: floating value and debt-instrument structure",
-        "url": "https://docs.midas.app/liquid-yield-token"
+        "label": "Midas mRe7YIELD Final Terms: debt instrument and underlying strategy",
+        "url": "https://content.gitbook.com/content/MndxFHqGeA4nzBBeKDTV/blobs/TXP3spquPMlsrPCVKmtu/Midas_Final_Terms_mRE7YIELD_Update_2025.pdf"
       },
       {
-        "label": "Midas mRE7YIELD risks: prospectus approval disclaimer",
-        "url": "https://docs.midas.app/tokens/mre7yield/risks"
+        "label": "Midas mRe7YIELD KID: bearer debt, issuer risk and no financial-authority supervision",
+        "url": "https://content.gitbook.com/content/MndxFHqGeA4nzBBeKDTV/blobs/9Xz2l1mKa8bDtQufrvS0/KID_mRe7YIELD.pdf"
+      },
+      {
+        "label": "ESMA MiCA Article 2(4)(a): financial instruments excluded from scope",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
       }
     ]
   }

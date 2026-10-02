@@ -4,7 +4,7 @@
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "bbqUSDC is an immutable MetaMorpho ERC-4626 vault (no EIP-1967 proxy slots); shares are minted only against USDC deposits. Vault owner is the Steakhouse Safe v1.4.1 8/5. Base USDC issuance is inherited from Circle.",
+    "summary": "bbqUSDC is an immutable MetaMorpho ERC-4626 vault (no EIP-1967 proxy slots); user minting deposits USDC, while accrued performance fees can mint shares to the fee recipient. At Ethereum block 26095933, the Steakhouse owner Safe has 10 owners and threshold 5. Base USDC issuance is inherited from Circle.",
     "inheritedFrom": "usdc-circle",
     "upgradeability": {
       "model": "immutable",
@@ -65,6 +65,8 @@
             "url": "https://github.com/circlefin/stablecoin-evm"
           }
         ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095933,
         "evidence": "Inherited from reviewed usdc-circle parent; base USDC issuance is Circle-controlled."
       }
     ],

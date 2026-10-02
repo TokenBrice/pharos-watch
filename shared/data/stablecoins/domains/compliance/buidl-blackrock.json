@@ -21,7 +21,7 @@
     "applicability": "excluded-security",
     "authorizationStatus": "not-applicable",
     "issuerPathway": "not-applicable",
-    "issuerEntity": "BlackRock / Securitize",
+    "issuerEntity": "BlackRock USD Institutional Digital Liquidity Fund Ltd.",
     "foreignExceptionStatus": "not-applicable",
     "daspOfferSaleStatus": "not-applicable",
     "notes": "BUIDL is treated here as outside GENIUS payment-stablecoin tracking because it is a tokenized fund rather than a payment stablecoin.",
@@ -30,6 +30,13 @@
         "label": "Securitize BlackRock BUIDL",
         "url": "https://securitize.io/blackrock/buidl",
         "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Issuer-authored BUIDL legal structure and service-provider roles",
+        "url": "https://forum.arbitrum.foundation/t/securitize-markets-buidl-step-application/23652",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2024-05-04",
+        "accessedAt": "2026-10-01"
       }
     ],
     "reviewer": "Pharos compliance research",

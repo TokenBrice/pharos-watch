@@ -1,0 +1,1618 @@
+{
+  "schemaVersion": 1,
+  "note": "Reviewed transitive reserve-access graphs. Empty until exact deployment, claim applicability and dated evidence are authored; no numeric reserve or supply overrides.",
+  "reviews": [
+    {
+      "assetId": "nusd-nexus",
+      "graphKey": "nusd-nexus:ethereum-selected-pool:26100711",
+      "rootNodeKey": "nusd-ethereum",
+      "nodes": [
+        {
+          "nodeKey": "nusd-ethereum",
+          "identity": {
+            "chainId": "ethereum",
+            "claimAddress": "0x1b84765de8b7566e4ceaf4d0fd3c5af52d3dde4f"
+          },
+          "assetId": "nusd-nexus",
+          "noCurrentReach": false,
+          "review": {
+            "reviewedAt": "2026-10-01T23:23:18.811Z",
+            "sources": [
+              "https://eth.blockscout.com/api/v2/smart-contracts/0x5a5fff6f753d7c11a56a52fe47a177a87e431655",
+              "https://eth.blockscout.com/address/0x1b84765de8b7566e4ceaf4d0fd3c5af52d3dde4f"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "nodeKey": "nexus-pool",
+          "identity": {
+            "chainId": "ethereum",
+            "claimAddress": "0x1116898dda4015ed8ddefb84b6e8bc24528af2d8"
+          },
+          "assetId": null,
+          "noCurrentReach": false,
+          "review": {
+            "reviewedAt": "2026-10-01T23:23:18.811Z",
+            "sources": [
+              "https://eth.blockscout.com/api/v2/smart-contracts/0x5a5fff6f753d7c11a56a52fe47a177a87e431655"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "nodeKey": "dai",
+          "identity": {
+            "chainId": "ethereum",
+            "claimAddress": "0x6b175474e89094c44da98b954eedeac495271d0f"
+          },
+          "assetId": "dai-makerdao",
+          "noCurrentReach": false,
+          "review": {
+            "reviewedAt": "2026-10-01T23:23:18.811Z",
+            "sources": [
+              "https://eth.blockscout.com/api/v2/smart-contracts/0x6b175474e89094c44da98b954eedeac495271d0f"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "nodeKey": "usdc",
+          "identity": {
+            "chainId": "ethereum",
+            "claimAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+          },
+          "assetId": "usdc-circle",
+          "noCurrentReach": false,
+          "review": {
+            "reviewedAt": "2026-10-01T23:23:18.811Z",
+            "sources": [
+              "https://eth.blockscout.com/api/v2/smart-contracts/0x43506849d7c04f9138d1a2050bbf3a0c054402dd"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "nodeKey": "usdt",
+          "identity": {
+            "chainId": "ethereum",
+            "claimAddress": "0xdac17f958d2ee523a2206206994597c13d831ec7"
+          },
+          "assetId": "usdt-tether",
+          "noCurrentReach": false,
+          "review": {
+            "reviewedAt": "2026-10-01T23:23:18.811Z",
+            "sources": [
+              "https://eth.blockscout.com/api/v2/smart-contracts/0xdac17f958d2ee523a2206206994597c13d831ec7"
+            ],
+            "responsibility": "integration-missing"
+          }
+        }
+      ],
+      "edges": [
+        {
+          "edgeKey": "nusd-to-pool-selected",
+          "fromNodeKey": "nusd-ethereum",
+          "toNodeKey": "nexus-pool",
+          "kind": "receipt",
+          "positionKey": "ethereum:nexus-pool-lp-claim",
+          "partitionKey": "nusd-selected-pool",
+          "basis": {
+            "kind": "selected-observation"
+          },
+          "reachesHeldClaim": true,
+          "enabled": true,
+          "review": {
+            "reviewedAt": "2026-10-01T23:23:18.811Z",
+            "sources": [
+              "https://eth.blockscout.com/api/v2/smart-contracts/0x5a5fff6f753d7c11a56a52fe47a177a87e431655"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "edgeKey": "pool-to-dai",
+          "fromNodeKey": "nexus-pool",
+          "toNodeKey": "dai",
+          "kind": "reserve-position",
+          "positionKey": "ethereum:0x1116898dda4015ed8ddefb84b6e8bc24528af2d8:0x6b175474e89094c44da98b954eedeac495271d0f",
+          "partitionKey": "pool-token-inventory",
+          "basis": {
+            "kind": "selected-observation"
+          },
+          "reachesHeldClaim": true,
+          "enabled": true,
+          "review": {
+            "reviewedAt": "2026-10-01T23:23:18.811Z",
+            "sources": [
+              "https://eth.blockscout.com/api/v2/smart-contracts/0x5a5fff6f753d7c11a56a52fe47a177a87e431655",
+              "https://eth.blockscout.com/api/v2/smart-contracts/0x6b175474e89094c44da98b954eedeac495271d0f"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "edgeKey": "pool-to-usdc",
+          "fromNodeKey": "nexus-pool",
+          "toNodeKey": "usdc",
+          "kind": "reserve-position",
+          "positionKey": "ethereum:0x1116898dda4015ed8ddefb84b6e8bc24528af2d8:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          "partitionKey": "pool-token-inventory",
+          "basis": {
+            "kind": "selected-observation"
+          },
+          "reachesHeldClaim": true,
+          "enabled": true,
+          "review": {
+            "reviewedAt": "2026-10-01T23:23:18.811Z",
+            "sources": [
+              "https://eth.blockscout.com/api/v2/smart-contracts/0x5a5fff6f753d7c11a56a52fe47a177a87e431655",
+              "https://eth.blockscout.com/api/v2/smart-contracts/0x43506849d7c04f9138d1a2050bbf3a0c054402dd"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "edgeKey": "pool-to-usdt",
+          "fromNodeKey": "nexus-pool",
+          "toNodeKey": "usdt",
+          "kind": "reserve-position",
+          "positionKey": "ethereum:0x1116898dda4015ed8ddefb84b6e8bc24528af2d8:0xdac17f958d2ee523a2206206994597c13d831ec7",
+          "partitionKey": "pool-token-inventory",
+          "basis": {
+            "kind": "selected-observation"
+          },
+          "reachesHeldClaim": true,
+          "enabled": true,
+          "review": {
+            "reviewedAt": "2026-10-01T23:23:18.811Z",
+            "sources": [
+              "https://eth.blockscout.com/api/v2/smart-contracts/0x5a5fff6f753d7c11a56a52fe47a177a87e431655",
+              "https://eth.blockscout.com/api/v2/smart-contracts/0xdac17f958d2ee523a2206206994597c13d831ec7"
+            ],
+            "responsibility": "integration-missing"
+          }
+        }
+      ],
+      "authorities": [
+        {
+          "authorityKey": "usdc-blacklister",
+          "nodeKey": "usdc",
+          "actingDeployment": {
+            "chainId": "ethereum",
+            "claimAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+          },
+          "controllerKey": "ethereum:0x0a06be16275b95a7d2567fbdae118b36c7da78f9",
+          "capability": "freeze",
+          "reach": "current",
+          "failureDomains": [
+            {
+              "kind": "reserve-issuer",
+              "key": "circle"
+            },
+            {
+              "kind": "chain",
+              "key": "ethereum"
+            }
+          ],
+          "review": {
+            "reviewedAt": "2026-10-01T23:23:18.811Z",
+            "sources": [
+              "https://eth.blockscout.com/api/v2/smart-contracts/0x43506849d7c04f9138d1a2050bbf3a0c054402dd"
+            ],
+            "responsibility": "measured-adverse"
+          }
+        },
+        {
+          "authorityKey": "usdc-pauser",
+          "nodeKey": "usdc",
+          "actingDeployment": {
+            "chainId": "ethereum",
+            "claimAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+          },
+          "controllerKey": "ethereum:0x4914f61d25e5c567143774b76edbf4d5109a8566",
+          "capability": "pause",
+          "reach": "current",
+          "failureDomains": [
+            {
+              "kind": "reserve-issuer",
+              "key": "circle"
+            },
+            {
+              "kind": "chain",
+              "key": "ethereum"
+            }
+          ],
+          "review": {
+            "reviewedAt": "2026-10-01T23:23:18.811Z",
+            "sources": [
+              "https://eth.blockscout.com/api/v2/smart-contracts/0x43506849d7c04f9138d1a2050bbf3a0c054402dd"
+            ],
+            "responsibility": "measured-adverse"
+          }
+        },
+        {
+          "authorityKey": "usdt-owner-freeze",
+          "nodeKey": "usdt",
+          "actingDeployment": {
+            "chainId": "ethereum",
+            "claimAddress": "0xdac17f958d2ee523a2206206994597c13d831ec7"
+          },
+          "controllerKey": "ethereum:0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828",
+          "capability": "freeze",
+          "reach": "current",
+          "failureDomains": [
+            {
+              "kind": "reserve-issuer",
+              "key": "tether"
+            },
+            {
+              "kind": "chain",
+              "key": "ethereum"
+            }
+          ],
+          "review": {
+            "reviewedAt": "2026-10-01T23:23:18.811Z",
+            "sources": [
+              "https://eth.blockscout.com/api/v2/smart-contracts/0xdac17f958d2ee523a2206206994597c13d831ec7"
+            ],
+            "responsibility": "measured-adverse"
+          }
+        },
+        {
+          "authorityKey": "usdt-owner-seize",
+          "nodeKey": "usdt",
+          "actingDeployment": {
+            "chainId": "ethereum",
+            "claimAddress": "0xdac17f958d2ee523a2206206994597c13d831ec7"
+          },
+          "controllerKey": "ethereum:0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828",
+          "capability": "seize",
+          "reach": "current",
+          "failureDomains": [
+            {
+              "kind": "reserve-issuer",
+              "key": "tether"
+            },
+            {
+              "kind": "chain",
+              "key": "ethereum"
+            }
+          ],
+          "review": {
+            "reviewedAt": "2026-10-01T23:23:18.811Z",
+            "sources": [
+              "https://eth.blockscout.com/api/v2/smart-contracts/0xdac17f958d2ee523a2206206994597c13d831ec7"
+            ],
+            "responsibility": "measured-adverse"
+          }
+        },
+        {
+          "authorityKey": "usdt-owner-pause",
+          "nodeKey": "usdt",
+          "actingDeployment": {
+            "chainId": "ethereum",
+            "claimAddress": "0xdac17f958d2ee523a2206206994597c13d831ec7"
+          },
+          "controllerKey": "ethereum:0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828",
+          "capability": "pause",
+          "reach": "current",
+          "failureDomains": [
+            {
+              "kind": "reserve-issuer",
+              "key": "tether"
+            },
+            {
+              "kind": "chain",
+              "key": "ethereum"
+            }
+          ],
+          "review": {
+            "reviewedAt": "2026-10-01T23:23:18.811Z",
+            "sources": [
+              "https://eth.blockscout.com/api/v2/smart-contracts/0xdac17f958d2ee523a2206206994597c13d831ec7"
+            ],
+            "responsibility": "measured-adverse"
+          }
+        }
+      ],
+      "partitions": [
+        {
+          "partitionKey": "nusd-selected-pool",
+          "nodeKey": "nusd-ethereum",
+          "disjoint": true,
+          "complete": false,
+          "review": {
+            "reviewedAt": "2026-10-01T23:23:18.811Z",
+            "sources": [
+              "https://eth.blockscout.com/api/v2/smart-contracts/0x5a5fff6f753d7c11a56a52fe47a177a87e431655"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "partitionKey": "pool-token-inventory",
+          "nodeKey": "nexus-pool",
+          "disjoint": true,
+          "complete": true,
+          "review": {
+            "reviewedAt": "2026-10-01T23:23:18.811Z",
+            "sources": [
+              "https://eth.blockscout.com/api/v2/smart-contracts/0x5a5fff6f753d7c11a56a52fe47a177a87e431655"
+            ],
+            "responsibility": "integration-missing"
+          }
+        }
+      ],
+      "unresolved": [
+        {
+          "branchKey": "whole-claim-pricing-and-liability-census",
+          "nodeKey": "nusd-ethereum",
+          "reason": "scope-unreconciled",
+          "responsibility": "integration-missing",
+          "review": {
+            "reviewedAt": "2026-10-01T23:23:18.811Z",
+            "sources": [
+              "https://eth.blockscout.com/api/v2/smart-contracts/0x5a5fff6f753d7c11a56a52fe47a177a87e431655"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "branchKey": "satellite-bridge-claims",
+          "nodeKey": "nusd-ethereum",
+          "reason": "research-incomplete",
+          "responsibility": "integration-missing",
+          "review": {
+            "reviewedAt": "2026-10-01T23:23:18.811Z",
+            "sources": [
+              "https://eth.blockscout.com/api/v2/smart-contracts/0x5a5fff6f753d7c11a56a52fe47a177a87e431655"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "branchKey": "dai-upstream-collateral-graph",
+          "nodeKey": "dai",
+          "reason": "scope-unreconciled",
+          "responsibility": "integration-missing",
+          "review": {
+            "reviewedAt": "2026-10-01T23:23:18.811Z",
+            "sources": [
+              "https://eth.blockscout.com/api/v2/smart-contracts/0x6b175474e89094c44da98b954eedeac495271d0f",
+              "https://developers.skyeco.com/"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "branchKey": "pool-local-controls",
+          "nodeKey": "nexus-pool",
+          "reason": "research-incomplete",
+          "responsibility": "integration-missing",
+          "review": {
+            "reviewedAt": "2026-10-01T23:23:18.811Z",
+            "sources": [
+              "https://eth.blockscout.com/api/v2/smart-contracts/0x5a5fff6f753d7c11a56a52fe47a177a87e431655"
+            ],
+            "responsibility": "integration-missing"
+          }
+        }
+      ]
+    },
+    {
+      "assetId": "nxusd-nereus",
+      "graphKey": "nxusd-selected-avalanche-markets-20261001",
+      "rootNodeKey": "nxusd-avalanche",
+      "nodes": [
+        {
+          "nodeKey": "nxusd-avalanche",
+          "identity": {
+            "chainId": "avalanche",
+            "claimAddress": "0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+          },
+          "assetId": "nxusd-nereus",
+          "noCurrentReach": false,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "nodeKey": "bentobox",
+          "identity": {
+            "chainId": "avalanche",
+            "claimAddress": "0x0b1f9c2211f77ec3fa2719671c5646cf6e59b775"
+          },
+          "assetId": null,
+          "noCurrentReach": false,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "nodeKey": "market:aavausdt",
+          "identity": {
+            "chainId": "avalanche",
+            "claimAddress": "0x51a8ff60fbaf277df02eeadc011f5c26dbae1991"
+          },
+          "assetId": null,
+          "noCurrentReach": false,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "nodeKey": "collateral:aavausdt",
+          "identity": {
+            "chainId": "avalanche",
+            "claimAddress": "0xfa71747531bc4bc8d86f847a3585b5e89043a8be"
+          },
+          "assetId": null,
+          "noCurrentReach": false,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "nodeKey": "receipt-asset:aavausdt",
+          "identity": {
+            "chainId": "avalanche",
+            "claimAddress": "0x6ab707aca953edaefbc4fd23ba73294241490620"
+          },
+          "assetId": null,
+          "noCurrentReach": false,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "nodeKey": "underlying:0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7",
+          "identity": {
+            "chainId": "avalanche",
+            "claimAddress": "0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7"
+          },
+          "assetId": null,
+          "noCurrentReach": false,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "nodeKey": "market:aavausdc",
+          "identity": {
+            "chainId": "avalanche",
+            "claimAddress": "0x2ecbcb8757f43676b5d280e706b1a2c0d1975b6a"
+          },
+          "assetId": null,
+          "noCurrentReach": false,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "nodeKey": "collateral:aavausdc",
+          "identity": {
+            "chainId": "avalanche",
+            "claimAddress": "0x333c21aba51f5e3bcd9b0a60073b572736bf9353"
+          },
+          "assetId": null,
+          "noCurrentReach": false,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "nodeKey": "receipt-asset:aavausdc",
+          "identity": {
+            "chainId": "avalanche",
+            "claimAddress": "0x625e7708f30ca75bfd92586e17077590c60eb4cd"
+          },
+          "assetId": null,
+          "noCurrentReach": false,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "nodeKey": "underlying:0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e",
+          "identity": {
+            "chainId": "avalanche",
+            "claimAddress": "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e"
+          },
+          "assetId": null,
+          "noCurrentReach": false,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "nodeKey": "market:aavadai",
+          "identity": {
+            "chainId": "avalanche",
+            "claimAddress": "0x2d2005feeabaf7dc54ebd9b33115a2fb6e2a80da"
+          },
+          "assetId": null,
+          "noCurrentReach": false,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "nodeKey": "collateral:aavadai",
+          "identity": {
+            "chainId": "avalanche",
+            "claimAddress": "0x1b9d6b0fed627dfa572b821c677cd46caf30c76d"
+          },
+          "assetId": null,
+          "noCurrentReach": false,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "nodeKey": "receipt-asset:aavadai",
+          "identity": {
+            "chainId": "avalanche",
+            "claimAddress": "0x82e64f49ed5ec1bc6e43dad4fc8af9bb3a2312ee"
+          },
+          "assetId": null,
+          "noCurrentReach": false,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "nodeKey": "underlying:0xd586e7f844cea2f87f50152665bcbc2c279d8d70",
+          "identity": {
+            "chainId": "avalanche",
+            "claimAddress": "0xd586e7f844cea2f87f50152665bcbc2c279d8d70"
+          },
+          "assetId": null,
+          "noCurrentReach": false,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "nodeKey": "market:qiusdcn",
+          "identity": {
+            "chainId": "avalanche",
+            "claimAddress": "0x9fb5a0bbee451643504524ddbfce8a1e09783d5b"
+          },
+          "assetId": null,
+          "noCurrentReach": false,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "nodeKey": "collateral:qiusdcn",
+          "identity": {
+            "chainId": "avalanche",
+            "claimAddress": "0xf9ff7de84373b777ecda41e6dfcb3199d08f681d"
+          },
+          "assetId": null,
+          "noCurrentReach": false,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "nodeKey": "receipt-asset:qiusdcn",
+          "identity": {
+            "chainId": "avalanche",
+            "claimAddress": "0xb715808a78f6041e46d61cb123c9b4a27056ae9c"
+          },
+          "assetId": null,
+          "noCurrentReach": false,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "nodeKey": "market:nrs",
+          "identity": {
+            "chainId": "avalanche",
+            "claimAddress": "0x6d0cc0e3e2c63f84b55d86b4a1312805c3b99a2c"
+          },
+          "assetId": null,
+          "noCurrentReach": false,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "nodeKey": "collateral:nrs",
+          "identity": {
+            "chainId": "avalanche",
+            "claimAddress": "0x05d9043936b55a55016af79363912169835b7a33"
+          },
+          "assetId": null,
+          "noCurrentReach": false,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        }
+      ],
+      "edges": [
+        {
+          "edgeKey": "debt-market:aavausdt",
+          "fromNodeKey": "nxusd-avalanche",
+          "toNodeKey": "market:aavausdt",
+          "kind": "reserve-position",
+          "positionKey": "0x51a8ff60fbaf277df02eeadc011f5c26dbae1991",
+          "partitionKey": "selected:nxusd-avalanche",
+          "basis": {
+            "kind": "selected-observation"
+          },
+          "reachesHeldClaim": true,
+          "enabled": true,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "edgeKey": "market-collateral:aavausdt",
+          "fromNodeKey": "market:aavausdt",
+          "toNodeKey": "collateral:aavausdt",
+          "kind": "reserve-position",
+          "positionKey": "0x51a8ff60fbaf277df02eeadc011f5c26dbae1991",
+          "partitionKey": "selected:market:aavausdt",
+          "basis": {
+            "kind": "selected-observation"
+          },
+          "reachesHeldClaim": true,
+          "enabled": true,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "edgeKey": "wrapped-receipt-asset:aavausdt",
+          "fromNodeKey": "collateral:aavausdt",
+          "toNodeKey": "receipt-asset:aavausdt",
+          "kind": "receipt",
+          "positionKey": "0x51a8ff60fbaf277df02eeadc011f5c26dbae1991",
+          "partitionKey": "selected:collateral:aavausdt",
+          "basis": {
+            "kind": "selected-observation"
+          },
+          "reachesHeldClaim": true,
+          "enabled": true,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "edgeKey": "receipt-underlying:aavausdt",
+          "fromNodeKey": "receipt-asset:aavausdt",
+          "toNodeKey": "underlying:0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7",
+          "kind": "receipt",
+          "positionKey": "0x51a8ff60fbaf277df02eeadc011f5c26dbae1991",
+          "partitionKey": "selected:receipt-asset:aavausdt",
+          "basis": {
+            "kind": "selected-observation"
+          },
+          "reachesHeldClaim": true,
+          "enabled": true,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "edgeKey": "debt-market:aavausdc",
+          "fromNodeKey": "nxusd-avalanche",
+          "toNodeKey": "market:aavausdc",
+          "kind": "reserve-position",
+          "positionKey": "0x2ecbcb8757f43676b5d280e706b1a2c0d1975b6a",
+          "partitionKey": "selected:nxusd-avalanche",
+          "basis": {
+            "kind": "selected-observation"
+          },
+          "reachesHeldClaim": true,
+          "enabled": true,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "edgeKey": "market-collateral:aavausdc",
+          "fromNodeKey": "market:aavausdc",
+          "toNodeKey": "collateral:aavausdc",
+          "kind": "reserve-position",
+          "positionKey": "0x2ecbcb8757f43676b5d280e706b1a2c0d1975b6a",
+          "partitionKey": "selected:market:aavausdc",
+          "basis": {
+            "kind": "selected-observation"
+          },
+          "reachesHeldClaim": true,
+          "enabled": true,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "edgeKey": "wrapped-receipt-asset:aavausdc",
+          "fromNodeKey": "collateral:aavausdc",
+          "toNodeKey": "receipt-asset:aavausdc",
+          "kind": "receipt",
+          "positionKey": "0x2ecbcb8757f43676b5d280e706b1a2c0d1975b6a",
+          "partitionKey": "selected:collateral:aavausdc",
+          "basis": {
+            "kind": "selected-observation"
+          },
+          "reachesHeldClaim": true,
+          "enabled": true,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "edgeKey": "receipt-underlying:aavausdc",
+          "fromNodeKey": "receipt-asset:aavausdc",
+          "toNodeKey": "underlying:0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e",
+          "kind": "receipt",
+          "positionKey": "0x2ecbcb8757f43676b5d280e706b1a2c0d1975b6a",
+          "partitionKey": "selected:receipt-asset:aavausdc",
+          "basis": {
+            "kind": "selected-observation"
+          },
+          "reachesHeldClaim": true,
+          "enabled": true,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "edgeKey": "debt-market:aavadai",
+          "fromNodeKey": "nxusd-avalanche",
+          "toNodeKey": "market:aavadai",
+          "kind": "reserve-position",
+          "positionKey": "0x2d2005feeabaf7dc54ebd9b33115a2fb6e2a80da",
+          "partitionKey": "selected:nxusd-avalanche",
+          "basis": {
+            "kind": "selected-observation"
+          },
+          "reachesHeldClaim": true,
+          "enabled": true,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "edgeKey": "market-collateral:aavadai",
+          "fromNodeKey": "market:aavadai",
+          "toNodeKey": "collateral:aavadai",
+          "kind": "reserve-position",
+          "positionKey": "0x2d2005feeabaf7dc54ebd9b33115a2fb6e2a80da",
+          "partitionKey": "selected:market:aavadai",
+          "basis": {
+            "kind": "selected-observation"
+          },
+          "reachesHeldClaim": true,
+          "enabled": true,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "edgeKey": "wrapped-receipt-asset:aavadai",
+          "fromNodeKey": "collateral:aavadai",
+          "toNodeKey": "receipt-asset:aavadai",
+          "kind": "receipt",
+          "positionKey": "0x2d2005feeabaf7dc54ebd9b33115a2fb6e2a80da",
+          "partitionKey": "selected:collateral:aavadai",
+          "basis": {
+            "kind": "selected-observation"
+          },
+          "reachesHeldClaim": true,
+          "enabled": true,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "edgeKey": "receipt-underlying:aavadai",
+          "fromNodeKey": "receipt-asset:aavadai",
+          "toNodeKey": "underlying:0xd586e7f844cea2f87f50152665bcbc2c279d8d70",
+          "kind": "receipt",
+          "positionKey": "0x2d2005feeabaf7dc54ebd9b33115a2fb6e2a80da",
+          "partitionKey": "selected:receipt-asset:aavadai",
+          "basis": {
+            "kind": "selected-observation"
+          },
+          "reachesHeldClaim": true,
+          "enabled": true,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "edgeKey": "debt-market:qiusdcn",
+          "fromNodeKey": "nxusd-avalanche",
+          "toNodeKey": "market:qiusdcn",
+          "kind": "reserve-position",
+          "positionKey": "0x9fb5a0bbee451643504524ddbfce8a1e09783d5b",
+          "partitionKey": "selected:nxusd-avalanche",
+          "basis": {
+            "kind": "selected-observation"
+          },
+          "reachesHeldClaim": true,
+          "enabled": true,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "edgeKey": "market-collateral:qiusdcn",
+          "fromNodeKey": "market:qiusdcn",
+          "toNodeKey": "collateral:qiusdcn",
+          "kind": "reserve-position",
+          "positionKey": "0x9fb5a0bbee451643504524ddbfce8a1e09783d5b",
+          "partitionKey": "selected:market:qiusdcn",
+          "basis": {
+            "kind": "selected-observation"
+          },
+          "reachesHeldClaim": true,
+          "enabled": true,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "edgeKey": "wrapped-receipt-asset:qiusdcn",
+          "fromNodeKey": "collateral:qiusdcn",
+          "toNodeKey": "receipt-asset:qiusdcn",
+          "kind": "receipt",
+          "positionKey": "0x9fb5a0bbee451643504524ddbfce8a1e09783d5b",
+          "partitionKey": "selected:collateral:qiusdcn",
+          "basis": {
+            "kind": "selected-observation"
+          },
+          "reachesHeldClaim": true,
+          "enabled": true,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "edgeKey": "receipt-underlying:qiusdcn",
+          "fromNodeKey": "receipt-asset:qiusdcn",
+          "toNodeKey": "underlying:0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e",
+          "kind": "receipt",
+          "positionKey": "0x9fb5a0bbee451643504524ddbfce8a1e09783d5b",
+          "partitionKey": "selected:receipt-asset:qiusdcn",
+          "basis": {
+            "kind": "selected-observation"
+          },
+          "reachesHeldClaim": true,
+          "enabled": true,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "edgeKey": "debt-market:nrs",
+          "fromNodeKey": "nxusd-avalanche",
+          "toNodeKey": "market:nrs",
+          "kind": "reserve-position",
+          "positionKey": "0x6d0cc0e3e2c63f84b55d86b4a1312805c3b99a2c",
+          "partitionKey": "selected:nxusd-avalanche",
+          "basis": {
+            "kind": "selected-observation"
+          },
+          "reachesHeldClaim": true,
+          "enabled": true,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "edgeKey": "market-collateral:nrs",
+          "fromNodeKey": "market:nrs",
+          "toNodeKey": "collateral:nrs",
+          "kind": "reserve-position",
+          "positionKey": "0x6d0cc0e3e2c63f84b55d86b4a1312805c3b99a2c",
+          "partitionKey": "selected:market:nrs",
+          "basis": {
+            "kind": "selected-observation"
+          },
+          "reachesHeldClaim": true,
+          "enabled": true,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        }
+      ],
+      "authorities": [],
+      "partitions": [
+        {
+          "partitionKey": "selected:nxusd-avalanche",
+          "nodeKey": "nxusd-avalanche",
+          "disjoint": false,
+          "complete": false,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "partitionKey": "selected:market:aavausdt",
+          "nodeKey": "market:aavausdt",
+          "disjoint": false,
+          "complete": false,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "partitionKey": "selected:collateral:aavausdt",
+          "nodeKey": "collateral:aavausdt",
+          "disjoint": false,
+          "complete": false,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "partitionKey": "selected:receipt-asset:aavausdt",
+          "nodeKey": "receipt-asset:aavausdt",
+          "disjoint": false,
+          "complete": false,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "partitionKey": "selected:market:aavausdc",
+          "nodeKey": "market:aavausdc",
+          "disjoint": false,
+          "complete": false,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "partitionKey": "selected:collateral:aavausdc",
+          "nodeKey": "collateral:aavausdc",
+          "disjoint": false,
+          "complete": false,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "partitionKey": "selected:receipt-asset:aavausdc",
+          "nodeKey": "receipt-asset:aavausdc",
+          "disjoint": false,
+          "complete": false,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "partitionKey": "selected:market:aavadai",
+          "nodeKey": "market:aavadai",
+          "disjoint": false,
+          "complete": false,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "partitionKey": "selected:collateral:aavadai",
+          "nodeKey": "collateral:aavadai",
+          "disjoint": false,
+          "complete": false,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "partitionKey": "selected:receipt-asset:aavadai",
+          "nodeKey": "receipt-asset:aavadai",
+          "disjoint": false,
+          "complete": false,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "partitionKey": "selected:market:qiusdcn",
+          "nodeKey": "market:qiusdcn",
+          "disjoint": false,
+          "complete": false,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "partitionKey": "selected:collateral:qiusdcn",
+          "nodeKey": "collateral:qiusdcn",
+          "disjoint": false,
+          "complete": false,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "partitionKey": "selected:receipt-asset:qiusdcn",
+          "nodeKey": "receipt-asset:qiusdcn",
+          "disjoint": false,
+          "complete": false,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "partitionKey": "selected:market:nrs",
+          "nodeKey": "market:nrs",
+          "disjoint": false,
+          "complete": false,
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        }
+      ],
+      "unresolved": [
+        {
+          "branchKey": "authority:aavausdt",
+          "nodeKey": "underlying:0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7",
+          "reason": "research-incomplete",
+          "responsibility": "integration-missing",
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "branchKey": "authority:aavausdc",
+          "nodeKey": "underlying:0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e",
+          "reason": "research-incomplete",
+          "responsibility": "integration-missing",
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "branchKey": "authority:aavadai",
+          "nodeKey": "underlying:0xd586e7f844cea2f87f50152665bcbc2c279d8d70",
+          "reason": "research-incomplete",
+          "responsibility": "integration-missing",
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "branchKey": "authority:qiusdcn",
+          "nodeKey": "underlying:0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e",
+          "reason": "research-incomplete",
+          "responsibility": "integration-missing",
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "branchKey": "nrs-access",
+          "nodeKey": "collateral:nrs",
+          "reason": "research-incomplete",
+          "responsibility": "integration-missing",
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "branchKey": "all-chain-census",
+          "nodeKey": "nxusd-avalanche",
+          "reason": "scope-unreconciled",
+          "responsibility": "integration-missing",
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "branchKey": "bentobox-conversion-access",
+          "nodeKey": "bentobox",
+          "reason": "research-incomplete",
+          "responsibility": "integration-missing",
+          "review": {
+            "reviewedAt": "2026-10-01T23:25:02.579557Z",
+            "sources": [
+              "https://nxusd.nereus.finance/js/app.60bde321.js",
+              "https://snowtrace.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387"
+            ],
+            "responsibility": "integration-missing"
+          }
+        }
+      ]
+    },
+    {
+      "assetId": "syzusd-yuzu",
+      "graphKey": "yuzu-native-wrapper-reserve-access-v1",
+      "rootNodeKey": "plasma-syzusd",
+      "nodes": [
+        {
+          "nodeKey": "plasma-syzusd",
+          "identity": {
+            "chainId": "plasma",
+            "claimAddress": "0xc8a8df9b210243c55d31c73090f06787ad0a1bf6"
+          },
+          "assetId": "syzusd-yuzu",
+          "noCurrentReach": false,
+          "review": {
+            "reviewedAt": "2026-10-01T23:22:36.860Z",
+            "sources": [
+              "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/key-addresses.md",
+              "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/staked-yzusd-syzusd.md",
+              "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x4ad9f1db810146b660eb863cc6f56649e0824a6e",
+              "https://rpc.plasma.to"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "nodeKey": "plasma-yzusd",
+          "identity": {
+            "chainId": "plasma",
+            "claimAddress": "0x6695c0f8706c5ace3bdf8995073179cca47926dc"
+          },
+          "assetId": "yzusd-yuzu",
+          "noCurrentReach": false,
+          "review": {
+            "reviewedAt": "2026-10-01T23:22:36.860Z",
+            "sources": [
+              "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/key-addresses.md",
+              "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x8e02392855a51d9d5d18d71a7cfc731f56c68ea5",
+              "https://rpc.plasma.to"
+            ],
+            "responsibility": "integration-missing"
+          }
+        }
+      ],
+      "edges": [
+        {
+          "edgeKey": "syzUSD-native-yzUSD-claim",
+          "fromNodeKey": "plasma-syzusd",
+          "toNodeKey": "plasma-yzusd",
+          "kind": "receipt",
+          "positionKey": "plasma-syzusd-held-yzusd",
+          "partitionKey": "plasma-syzusd-native-claim",
+          "basis": {
+            "kind": "serial-claim",
+            "dependencyEdgeKey": "serial-claim:wrapper:yzusd-yuzu",
+            "entireClaim": true,
+            "currentImplementation": "0x4ad9f1db810146b660eb863cc6f56649e0824a6e"
+          },
+          "reachesHeldClaim": true,
+          "enabled": true,
+          "review": {
+            "reviewedAt": "2026-10-01T23:22:36.860Z",
+            "sources": [
+              "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/staked-yzusd-syzusd.md",
+              "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x4ad9f1db810146b660eb863cc6f56649e0824a6e",
+              "https://rpc.plasma.to"
+            ],
+            "responsibility": "integration-missing"
+          }
+        }
+      ],
+      "authorities": [],
+      "partitions": [
+        {
+          "partitionKey": "plasma-syzusd-native-claim",
+          "nodeKey": "plasma-syzusd",
+          "disjoint": true,
+          "complete": true,
+          "review": {
+            "reviewedAt": "2026-10-01T23:22:36.860Z",
+            "sources": [
+              "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/staked-yzusd-syzusd.md",
+              "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x4ad9f1db810146b660eb863cc6f56649e0824a6e",
+              "https://rpc.plasma.to"
+            ],
+            "responsibility": "integration-missing"
+          }
+        }
+      ],
+      "unresolved": [
+        {
+          "branchKey": "syzusd-native-access",
+          "nodeKey": "plasma-syzusd",
+          "reason": "research-incomplete",
+          "responsibility": "integration-missing",
+          "review": {
+            "reviewedAt": "2026-10-01T23:22:36.860Z",
+            "sources": [
+              "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x4ad9f1db810146b660eb863cc6f56649e0824a6e",
+              "https://rpc.plasma.to"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "branchKey": "syzusd-satellite-materiality",
+          "nodeKey": "plasma-syzusd",
+          "reason": "scope-unreconciled",
+          "responsibility": "integration-missing",
+          "review": {
+            "reviewedAt": "2026-10-01T23:22:36.860Z",
+            "sources": [
+              "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/key-addresses.md",
+              "https://yuzu-money.gitbook.io/yuzu-money/security-infrastructure/chainlink-ccip-transporter-bridge.md"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "branchKey": "yzusd-originating-access",
+          "nodeKey": "plasma-yzusd",
+          "reason": "research-incomplete",
+          "responsibility": "integration-missing",
+          "review": {
+            "reviewedAt": "2026-10-01T23:22:36.860Z",
+            "sources": [
+              "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x8e02392855a51d9d5d18d71a7cfc731f56c68ea5",
+              "https://yuzu-money.gitbook.io/yuzu-money/security-infrastructure/hypernative-sentinel"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "branchKey": "yzusd-underlying-strategy-claims",
+          "nodeKey": "plasma-yzusd",
+          "reason": "issuer-undisclosed",
+          "responsibility": "issuer-undisclosed",
+          "review": {
+            "reviewedAt": "2026-10-01T23:22:36.860Z",
+            "sources": [
+              "https://cache.accountable.capital/dashboard/yuzu",
+              "https://yuzu-money.gitbook.io/yuzu-money/transparency/underlying-strategies"
+            ],
+            "responsibility": "issuer-undisclosed"
+          }
+        }
+      ]
+    },
+    {
+      "assetId": "yzusd-yuzu",
+      "graphKey": "yuzu-native-reserve-access-v1",
+      "rootNodeKey": "plasma-yzusd",
+      "nodes": [
+        {
+          "nodeKey": "plasma-yzusd",
+          "identity": {
+            "chainId": "plasma",
+            "claimAddress": "0x6695c0f8706c5ace3bdf8995073179cca47926dc"
+          },
+          "assetId": "yzusd-yuzu",
+          "noCurrentReach": false,
+          "review": {
+            "reviewedAt": "2026-10-01T23:22:36.860Z",
+            "sources": [
+              "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/key-addresses.md",
+              "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x8e02392855a51d9d5d18d71a7cfc731f56c68ea5",
+              "https://rpc.plasma.to"
+            ],
+            "responsibility": "integration-missing"
+          }
+        }
+      ],
+      "edges": [],
+      "authorities": [],
+      "partitions": [],
+      "unresolved": [
+        {
+          "branchKey": "yzusd-originating-access",
+          "nodeKey": "plasma-yzusd",
+          "reason": "research-incomplete",
+          "responsibility": "integration-missing",
+          "review": {
+            "reviewedAt": "2026-10-01T23:22:36.860Z",
+            "sources": [
+              "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x8e02392855a51d9d5d18d71a7cfc731f56c68ea5",
+              "https://yuzu-money.gitbook.io/yuzu-money/security-infrastructure/hypernative-sentinel"
+            ],
+            "responsibility": "integration-missing"
+          }
+        },
+        {
+          "branchKey": "yzusd-underlying-strategy-claims",
+          "nodeKey": "plasma-yzusd",
+          "reason": "issuer-undisclosed",
+          "responsibility": "issuer-undisclosed",
+          "review": {
+            "reviewedAt": "2026-10-01T23:22:36.860Z",
+            "sources": [
+              "https://cache.accountable.capital/dashboard/yuzu",
+              "https://yuzu-money.gitbook.io/yuzu-money/transparency/underlying-strategies"
+            ],
+            "responsibility": "issuer-undisclosed"
+          }
+        }
+      ]
+    }
+  ]
+}

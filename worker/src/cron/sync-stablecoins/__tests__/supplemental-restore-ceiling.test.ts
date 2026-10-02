@@ -42,13 +42,10 @@ function syrupChainCirculating(
 ): Record<string, Record<string, unknown>> {
   return {
     Ethereum: chainRow(70_000_000),
-    Base: chainRow(10_000_000),
-    Arbitrum: chainRow(5_000_000),
-    Solana: chainRow(10_000_000),
+    Plasma: chainRow(10_000_000),
+    BSC: chainRow(10_000_000),
+    Mantle: chainRow(10_000_000),
     Ink: chainRow(0),
-    Monad: chainRow(5_000_000),
-    "Robinhood Chain": chainRow(0),
-    Tempo: chainRow(0),
     ...overrides,
   };
 }
@@ -125,8 +122,8 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
 
   it("restores only the curated chain partition onto a reconciling fresh CoinGecko aggregate", () => {
     const current = asset({
-      id: "syrupusdc-maple",
-      symbol: "syrupUSDC",
+      id: "syrupusdt-maple",
+      symbol: "syrupUSDT",
       price: 1.12,
       priceSource: "defillama",
       priceUpdatedAt: NOW_SEC,
@@ -136,8 +133,8 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
       chainCirculating: {},
     });
     const previous = asset({
-      id: "syrupusdc-maple",
-      symbol: "syrupUSDC",
+      id: "syrupusdt-maple",
+      symbol: "syrupUSDT",
       price: 1.1,
       priceSource: "coingecko",
       supplySource: "onchain-total-supply",
@@ -149,7 +146,7 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
 
     const result = mergeSupplementalLastKnownGood(
       [current],
-      new Map([["syrupusdc-maple", previous]]),
+      new Map([["syrupusdt-maple", previous]]),
       new Set(),
       NOW_SEC,
     );
@@ -196,20 +193,20 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
     {
       label: "expired observation",
       patch: { supplyObservedAt: NOW_SEC - SUPPLEMENTAL_RESTORE_MAX_AGE_SEC - 1 },
-      expiredIds: ["syrupusdc-maple"],
+      expiredIds: ["syrupusdt-maple"],
     },
     {
       label: "future observation",
       patch: { supplyObservedAt: NOW_SEC + SUPPLEMENTAL_RESTORE_MAX_FUTURE_SKEW_SEC + 1 },
-      expiredIds: ["syrupusdc-maple"],
+      expiredIds: ["syrupusdt-maple"],
     },
   ])("retains the fresh fallback when the curated packet has $label", ({ patch, expiredIds }) => {
     const current = asset({
-      id: "syrupusdc-maple", symbol: "syrupUSDC",
+      id: "syrupusdt-maple", symbol: "syrupUSDT",
       supplySource: "coingecko-fallback", circulating: { peggedUSD: 100_000_000 },
     });
     const previous = asset({
-      id: "syrupusdc-maple", symbol: "syrupUSDC",
+      id: "syrupusdt-maple", symbol: "syrupUSDT",
       supplySource: "onchain-total-supply", circulating: { peggedUSD: 100_000_000 },
       chainCirculating: syrupChainCirculating(), supplyObservedAt: NOW_SEC - 900,
       ...patch,
@@ -225,11 +222,11 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
 
   it("refuses a curated partition that no longer sums to the fresh aggregate", () => {
     const current = asset({
-      id: "syrupusdc-maple", symbol: "syrupUSDC",
+      id: "syrupusdt-maple", symbol: "syrupUSDT",
       supplySource: "coingecko-fallback", circulating: { peggedUSD: 90_000_000 },
     });
     const previous = asset({
-      id: "syrupusdc-maple", symbol: "syrupUSDC",
+      id: "syrupusdt-maple", symbol: "syrupUSDT",
       supplySource: "onchain-total-supply", circulating: { peggedUSD: 100_000_000 },
       chainCirculating: syrupChainCirculating(), supplyObservedAt: NOW_SEC - 900,
     });
@@ -238,6 +235,31 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
     );
     expect(result.restoredCount).toBe(0);
     expect(result.expiredRestoreIds).toEqual([]);
+    expect(result.assets[0]).toBe(current);
+  });
+
+  it("does not restore syrupUSDC's old partition after the Arc deployment expands its roster", () => {
+    const current = asset({
+      id: "syrupusdc-maple", symbol: "syrupUSDC",
+      supplySource: "coingecko-fallback", circulating: { peggedUSD: 100_000_000 },
+    });
+    const previous = asset({
+      id: current.id, symbol: current.symbol,
+      supplySource: "onchain-total-supply", circulating: { peggedUSD: 100_000_000 },
+      supplyObservedAt: NOW_SEC - 900,
+      chainCirculating: {
+        Ethereum: chainRow(70_000_000), Base: chainRow(10_000_000),
+        Arbitrum: chainRow(5_000_000), Solana: chainRow(10_000_000),
+        Ink: chainRow(0), Monad: chainRow(5_000_000),
+        "Robinhood Chain": chainRow(0), Tempo: chainRow(0),
+      },
+    });
+    const result = mergeSupplementalLastKnownGood(
+      [current], new Map([[previous.id, previous]]), new Set(), NOW_SEC,
+    );
+    expect(result.restoredCount).toBe(0);
+    expect(result.expiredRestoreIds).toEqual([]);
+    expect(result.assets).toEqual([current]);
     expect(result.assets[0]).toBe(current);
   });
 

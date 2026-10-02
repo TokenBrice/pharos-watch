@@ -9,7 +9,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "XSGD has eight reviewed issuer-native issuance routes: Ethereum, Polygon, Arbitrum, Avalanche, Base, Solana, Hedera, and XRPL. These are canonical native liabilities, not bridge representations. No third-party bridge, adapter, lockbox, peer, validator, or bridge-admin capability is evidenced; native issuer controls remain exclusively in Mint Authority.",
+    "summary": "XSGD has nine reviewed issuer-native issuance routes: Ethereum, Polygon, Arbitrum, Avalanche, Base, Solana, Hedera, XRPL, and Zilliqa. These are canonical native liabilities, not bridge representations. No third-party bridge, adapter, lockbox, peer, validator, or bridge-admin capability is evidenced; native issuer controls remain exclusively in Mint Authority.",
     "reviewedAt": "2026-08-16",
     "reviewer": "OpenAI Codex mint-bridge boundary migration",
     "confidence": "verified",
@@ -140,9 +140,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "SPL mint authority is the reviewed 3-of-10 multisig (mint-authority profile); XSGD is issuer-minted natively on this chain, not via a third-party bridge.",
+        "reviewNote": "At finalized Solana slot 452222569 on 2026-10-01, XSGD's native SPL mint and freeze authority was CrtdStZqGrcqrpDZ5XnmaEKvzyBNLgq6uvNKCokFgo6v, a 3-of-11 SPL multisig. This replaces the historically reviewed 3-of-10 authority; XSGD remains issuer-minted natively, not through a third-party bridge.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-08-16",
+        "observedAt": "2026-10-01",
+        "observedBlock": 452222569,
         "sources": [
           {
             "label": "StraitsX XSGD",
@@ -189,6 +190,35 @@
           {
             "label": "StraitsX XSGD",
             "url": "https://www.straitsx.com/xsgd"
+          }
+        ]
+      },
+      {
+        "id": "zilliqa:zil1zu72vac254htqpg3mtywdcfm84l3dfd9qzww8t",
+        "destinationChain": "zilliqa",
+        "contractAddress": "zil1zu72vac254htqpg3mtywdcfm84l3dfd9qzww8t",
+        "protocol": "StraitsX native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer token list identifies this exact ZRC-2 token. StraitsX bank-funded Mint guide explicitly offers Zilliqa native minting, not bridge receipts. Six decimals confirmed by immutable Scilla proxy init. Live controls are separately researched; native state endpoint does not offer a historical pin. Latest-state reads at 2026-10-02T00:44:31.906Z–2026-10-02T00:44:43.959Z, bracketed by GetLatestTxBlock heights 37133765–37133775; these heights bound the observation interval, not historical state pins.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-02",
+        "sources": [
+          {
+            "label": "StraitsX exact XSGD deployment list",
+            "url": "https://support.straitsx.com/support/solutions/articles/157000365664-how-do-i-add-the-xsgd-token-to-my-eth-polygon-avalanche-arbitrum-zilliqa-xrp-ledger-hedera-sol"
+          },
+          {
+            "label": "Zilliqa native RPC current-state observation (not historical)",
+            "url": "https://api.zilliqa.com"
+          },
+          {
+            "label": "StraitsX bank-funded native mint guide",
+            "url": "https://www.straitsx.com/blog-post/mint-xsgd-bank-blockchain-address"
           }
         ]
       }

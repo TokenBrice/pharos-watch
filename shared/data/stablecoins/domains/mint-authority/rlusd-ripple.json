@@ -3,8 +3,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
-    "confidence": "verified",
-    "summary": "RLUSD Ethereum minting is gated by Ripple's custom 2-of-31 MultiSign minter. The proxy creation calldata and current role reads identify separate 7-of-12 Ripple MultiSign contracts for DEFAULT_ADMIN_ROLE and UPGRADER_ROLE. The XRPL issuer account has its master key active and no signer list.",
+    "confidence": "manual-review",
+    "summary": "All six catalogued native RLUSD holder surfaces retain technically unbounded issuer mint authority. Ethereum and Base minters remain uniform 2-of-32, and Optimism, Ink and Unichain minters remain uniform 2-of-30. Each EVM role-admin/upgrader has the exact eleven-address weighted roster with quorum 7 (minimum three cryptographic signatures); deployed MultiSign signing logic was matched to verified executable source at each pinned controller. XRPL ledger 107364064 records quorum 25 with eight weight-24 and eighteen weight-1 signers (minimum two), disabled master and absent RegularKey. Weighted facts establish neither independent people nor per-key custody. Native and NTT controls now carry partial execution certificates with exact controller, entrypoint and runtime/signing pins; no complete inventory, deployment-local economic exclusion or liability partition is claimed. Five EVM burning-mode NTT/13-of-19 Guardian domains remain separately recorded under Bridge Risk. The issuer also names XRPL EVM Sidechain, which remains outside the supported catalog chain registry and prevents an exhaustive all-chain claim. The singular upgradeability object stays Ethereum-scoped; other deployment upgrade authorities remain separate controls.",
     "upgradeability": {
       "model": "uups",
       "deploymentRefs": [
@@ -21,9 +21,9 @@
         "0x66fc2d9e4897cf3886a340a4cabc23cca2ac6a0e"
       ],
       "canChangeMintLogic": true,
-      "controlRef": "RLUSD Ethereum upgrader MultiSign (7-of-12)",
-      "observedAt": "2026-07-14",
-      "observedBlock": 25530195,
+      "controlRef": "RLUSD Ethereum upgrader MultiSign (weighted quorum 7, 11 signers)",
+      "observedAt": "2026-10-01",
+      "observedBlock": 26095802,
       "sources": [
         {
           "label": "Ethereum: RLUSD proxy creation transaction",
@@ -41,19 +41,131 @@
     },
     "controls": [
       {
-        "label": "RLUSD Ethereum minter - Ripple MultiSign contract (2-of-31)",
+        "label": "RLUSD Ethereum minter - Ripple MultiSign contract (2-of-32)",
         "role": "direct-minter",
         "authorityType": "multisig",
+        "chain": "ethereum",
         "address": "0x97e9d0b0bcbe86e1e230b0ffd3a5f1f9b8428591",
         "deploymentRefs": [
-          "ethereum:0x8292bb45bf1ee4d140127049757c2e0ff06317ed",
-          "xrpl:524C555344000000000000000000000000000000.rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De"
+          "ethereum:0x8292bb45bf1ee4d140127049757c2e0ff06317ed"
         ],
+        "executionScope": {
+          "controllerDeployment": "ethereum:0x97e9d0b0bcbe86e1e230b0ffd3a5f1f9b8428591",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Ethereum: RLUSD token contract",
+              "url": "https://eth.blockscout.com/address/0x8292bb45bf1ee4d140127049757c2e0ff06317ed"
+            },
+            {
+              "label": "Ethereum: Ripple MultiSign contract (Blockscout verified)",
+              "url": "https://eth.blockscout.com/address/0x97e9d0b0bcbe86e1e230b0ffd3a5f1f9b8428591"
+            }
+          ],
+          "pin": {
+            "position": "26098939",
+            "hash": "0x8cb8de2de5983d67cc251d6c689a18ddacc4179199d20806c7b4871aa057fd7c",
+            "runtimeIdentity": "sha256:8f32eb0b4b83b5cdf14d42a3d4f53a40223c0c999c0bee3d27b1aaf777e00e7c",
+            "signerIdentity": "sha256:628414319f4de6ce46027bb2381263e4944a0cca9bbeb228a1eefa99f3903827"
+          },
+          "observedState": {
+            "position": "26098939",
+            "hash": "0x8cb8de2de5983d67cc251d6c689a18ddacc4179199d20806c7b4871aa057fd7c",
+            "runtimeIdentity": "sha256:8f32eb0b4b83b5cdf14d42a3d4f53a40223c0c999c0bee3d27b1aaf777e00e7c",
+            "signerIdentity": "sha256:628414319f4de6ce46027bb2381263e4944a0cca9bbeb228a1eefa99f3903827"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "native-authority",
+              "targetDeployment": "ethereum:0x8292bb45bf1ee4d140127049757c2e0ff06317ed",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x40c10f19"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "rlusd-ripple"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x8292bb45bf1ee4d140127049757c2e0ff06317ed"
+              ],
+              "reach": "root",
+              "controlRefs": [
+                "signer-config"
+              ],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [
+                "signer-config"
+              ],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "signer-config",
+              "targetDeployment": "ethereum:0x97e9d0b0bcbe86e1e230b0ffd3a5f1f9b8428591",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x7460837f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "rlusd-ripple"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x8292bb45bf1ee4d140127049757c2e0ff06317ed"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "threshold": 2,
-        "signerCount": 31,
+        "signerCount": 32,
         "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095802,
         "sources": [
           {
             "label": "Ethereum: RLUSD token contract",
@@ -64,26 +176,268 @@
             "url": "https://eth.blockscout.com/address/0x97e9d0b0bcbe86e1e230b0ffd3a5f1f9b8428591"
           }
         ],
-        "evidence": "RLUSD ETH (0x8292) is a StablecoinProxy (UUPS), implementation StablecoinUpgradeableV2 at 0x9747a0d261c2d56eb93f542068e5d1e23170fa9e. hasRole(MINTER_ROLE, 0x97e9) = true (MINTER_ROLE bytes32 obtained via MINTER_ROLE() getter 0xd5391393). Contract 0x97e9 verified on Blockscout as Ripple's MultiSign (EIP-712 multisig): signers() returns 31 addresses, quorum() = 2, each signerWeight = 1, nonce = 350. No GnosisSafe module structure, custom Ripple EIP-712 multisig."
+        "evidence": "At Ethereum block 26095802, hasRole(MINTER_ROLE, 0x97e9d0b0bcbe86e1e230b0ffd3a5f1f9b8428591) returned true. MultiSign signers() returned 32 addresses; quorum() returned 2; all 32 signerWeight() reads returned 1; nonce() returned 610. The EIP-1967 implementation remained 0x9747a0d261c2d56eb93f542068e5d1e23170fa9e. This custom EIP-712 MultiSign controls Ethereum issuance, not the XRPL issuer."
       },
       {
         "deploymentRefs": [
-          "ethereum:0x8292bb45bf1ee4d140127049757c2e0ff06317ed",
           "xrpl:524C555344000000000000000000000000000000.rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De"
         ],
-        "label": "RLUSD XRPL issuer account (Ripple master key)",
+        "chain": "xrpl",
+        "address": "rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De",
+        "label": "RLUSD XRPL issuer account (Ripple weighted signer list)",
         "role": "direct-minter",
-        "authorityType": "issuer-backend",
+        "authorityType": "multisig",
+        "executionScope": {
+          "controllerDeployment": "xrpl:rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "XRPL: RLUSD issuer account rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De",
+              "url": "https://xrpscan.com/account/rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De"
+            }
+          ],
+          "pin": {
+            "position": "107364064",
+            "hash": "140428C89835397DD997E0979CD419177643DD61ADDF82C2608902CFBA13B83B",
+            "runtimeIdentity": "XRPL AccountRoot and SignerListID 0",
+            "signerIdentity": "sha256:99f9566c2c1ef11b25f356ed98663b8057b3fd11cdd82ab0836e81615123aac6"
+          },
+          "observedState": {
+            "position": "107364064",
+            "hash": "140428C89835397DD997E0979CD419177643DD61ADDF82C2608902CFBA13B83B",
+            "runtimeIdentity": "XRPL AccountRoot and SignerListID 0",
+            "signerIdentity": "sha256:99f9566c2c1ef11b25f356ed98663b8057b3fd11cdd82ab0836e81615123aac6"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "native-authority",
+              "targetDeployment": "xrpl:524C555344000000000000000000000000000000.rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De",
+              "entrypointKind": "xrpl-transaction",
+              "entrypoints": [
+                "Payment"
+              ],
+              "callMode": "native",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "rlusd-ripple"
+              ],
+              "affectedDeployments": [
+                "xrpl:524C555344000000000000000000000000000000.rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De"
+              ],
+              "reach": "root",
+              "controlRefs": [
+                "signer-config"
+              ],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [
+                "signer-config"
+              ],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "signer-config",
+              "targetDeployment": "xrpl:rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De",
+              "entrypointKind": "xrpl-transaction",
+              "entrypoints": [
+                "SignerListSet",
+                "SetRegularKey",
+                "AccountSet"
+              ],
+              "callMode": "native",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "rlusd-ripple"
+              ],
+              "affectedDeployments": [
+                "xrpl:524C555344000000000000000000000000000000.rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
+        "weightedQuorum": {
+          "scheme": "xrpl",
+          "deployment": "xrpl:rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De",
+          "signers": [
+            {
+              "account": "r4atrYAjm91GTB4qsDARjQQJPTi5svSEm",
+              "weight": 24
+            },
+            {
+              "account": "rkRFoAFGRGBsarkzhiA8kGzvyVHnZR1Co",
+              "weight": 24
+            },
+            {
+              "account": "rhogmBAzXLHhYvqn6iwZZdukbMwj1m6k36",
+              "weight": 1
+            },
+            {
+              "account": "rnw4p9U352SWuMquc9MxgoRD319THHQaWY",
+              "weight": 1
+            },
+            {
+              "account": "rnGL7M29kbXv4h2Lbnx87uxrTbD762gXug",
+              "weight": 24
+            },
+            {
+              "account": "raVEUzHFjwAy4HHH4ig6JmHB65SHL5nRe2",
+              "weight": 1
+            },
+            {
+              "account": "rfwUW9ff6zxcUdeDgY25aYWVHgYqhwCpTP",
+              "weight": 1
+            },
+            {
+              "account": "rfExtNyAg5gsmKakzZPQaowS8kPWmX4f1Z",
+              "weight": 1
+            },
+            {
+              "account": "r3DucgFuQDSRyJ66hUpFx6W9s6wQnCdiUf",
+              "weight": 24
+            },
+            {
+              "account": "r3WdRnCjsnNpHct8Tims5cimLMKVD34fcb",
+              "weight": 1
+            },
+            {
+              "account": "r9mGCUy43pxfstc24yd4Mq8hS6eHQS9631",
+              "weight": 24
+            },
+            {
+              "account": "rwJ7arqSfCLPqFyv63hk1xDfYyfNQ8S5FA",
+              "weight": 1
+            },
+            {
+              "account": "rwFESSqngExPayH5HN9DQ6QKjgsfUujkHv",
+              "weight": 1
+            },
+            {
+              "account": "rBpzqzJrNxthrBfLcGfJrkkCNq1tz6XKup",
+              "weight": 1
+            },
+            {
+              "account": "rUyCpgTR9HLrTQ4ss2aVspF3rV5vSfSytt",
+              "weight": 1
+            },
+            {
+              "account": "rNRkUBZGPKZxF23BcVUhw99UB9445QZFau",
+              "weight": 1
+            },
+            {
+              "account": "rGHNvJHHHQAqTxCGJi829E6teKRZrVMx7N",
+              "weight": 1
+            },
+            {
+              "account": "rH3GmSoCFgTMk4pMgLmjdA14ti5iY37D22",
+              "weight": 24
+            },
+            {
+              "account": "rJpKdQU6D6ZHuNXgQaEwcBDbdTaTpHEwAc",
+              "weight": 1
+            },
+            {
+              "account": "rJ2YSzpuNnT9QgBzesPt5KwYbyCNRwd9Zd",
+              "weight": 24
+            },
+            {
+              "account": "rKWvpdUUGgoRiFf7b7rQKyngjpXSqsh6RG",
+              "weight": 1
+            },
+            {
+              "account": "rMMqCGdLevMMX1rr31AV2zcCn878SzG2k3",
+              "weight": 1
+            },
+            {
+              "account": "r48mivRxDNerUcjqs3sdLixL2fEzgrGgxB",
+              "weight": 1
+            },
+            {
+              "account": "rPi8fRYg8HyXGBiMsagsQLZoBo91TdAqQE",
+              "weight": 24
+            },
+            {
+              "account": "rQNbmpvaaFjPULxWZTNz5hLaPDmJvhtCJS",
+              "weight": 1
+            },
+            {
+              "account": "rQLhRtSztTCptVjEyAb4ZSckQDkbhBHJ8v",
+              "weight": 1
+            }
+          ],
+          "quorum": 25,
+          "masterKey": "disabled",
+          "regularKey": {
+            "state": "absent"
+          },
+          "pin": {
+            "position": "107364064",
+            "hash": "140428C89835397DD997E0979CD419177643DD61ADDF82C2608902CFBA13B83B",
+            "runtimeIdentity": "XRPL AccountRoot and SignerListID 0",
+            "signerIdentity": "sha256:99f9566c2c1ef11b25f356ed98663b8057b3fd11cdd82ab0836e81615123aac6"
+          },
+          "status": "verified",
+          "reviewedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "sources": [
+            {
+              "label": "XRPL: RLUSD issuer account rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De",
+              "url": "https://xrpscan.com/account/rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De"
+            }
+          ]
+        },
         "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-01",
+        "observedBlock": 107358397,
         "sources": [
           {
             "label": "XRPL: RLUSD issuer account rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De",
             "url": "https://xrpscan.com/account/rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De"
           }
         ],
-        "evidence": "XRPL account_info for rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De: Flags = 0x819a0000 (RequireDestTag, DisallowXRP, DefaultRipple, DepositAuth SET; NoFreeze NOT set; GlobalFreeze NOT set). RegularKey = none. No signer_list present. Master key active; XRPL issuance fully controlled by Ripple. Total XRPL RLUSD obligations = 761,696,376 RLUSD."
+        "evidence": "Pinned XRPL account_info at validated ledger 107354222, hash B8DE3B19D5292634507586AC6D1FE22BF589213B84EBD629733F27062D164411: Flags 0x819a0000 includes DisableMaster; no RegularKey is present. SignerListID 0 has SignerQuorum 25 and 26 entries: eight signers have weight 24 and eighteen have weight 1. NoFreeze and GlobalFreeze are unset. The former master-key-active/no-signer-list description was incorrect. Mapping this weighted quorum into the person-count multisig schema remains a separate review question. D15 current observation at validated XRPL ledger 107358397 confirms the weighted roster and authority unchanged. One maximum-weight signer supplies 24, below quorum 25; two can meet quorum as 24+1 or 24+24. Master key remains disabled and no RegularKey is present. The new threshold is the minimum cryptographic signature count, not independent people. Complete current address/weight roster is retained in review.evidence."
       },
       {
         "chain": "ethereum",
@@ -91,16 +445,205 @@
         "deploymentRefs": [
           "ethereum:0x8292bb45bf1ee4d140127049757c2e0ff06317ed"
         ],
-        "label": "RLUSD Ethereum role-admin MultiSign (7-of-12)",
+        "label": "RLUSD Ethereum role-admin MultiSign (weighted quorum 7, 11 signers)",
         "role": "governor",
         "authorityType": "multisig",
+        "executionScope": {
+          "controllerDeployment": "ethereum:0x66fc2d9e4897cf3886a340a4cabc23cca2ac6a0e",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Ethereum: RLUSD proxy creation transaction",
+              "url": "https://eth.blockscout.com/tx/0x811c963004b19c2e3724850cda6bffd7cab7ff8f34d5670f86b51a9e1390327d"
+            },
+            {
+              "label": "Ethereum: Ripple role-admin MultiSign",
+              "url": "https://eth.blockscout.com/address/0x66fc2d9e4897cf3886a340a4cabc23cca2ac6a0e?tab=contract"
+            },
+            {
+              "label": "Ethereum PublicNode RPC",
+              "url": "https://ethereum-rpc.publicnode.com"
+            }
+          ],
+          "pin": {
+            "position": "26098939",
+            "hash": "0x8cb8de2de5983d67cc251d6c689a18ddacc4179199d20806c7b4871aa057fd7c",
+            "runtimeIdentity": "sha256:9019e664c8ea27713d9cf5813a070f3b91170917708aa68f510164cb20124496",
+            "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+          },
+          "observedState": {
+            "position": "26098939",
+            "hash": "0x8cb8de2de5983d67cc251d6c689a18ddacc4179199d20806c7b4871aa057fd7c",
+            "runtimeIdentity": "sha256:9019e664c8ea27713d9cf5813a070f3b91170917708aa68f510164cb20124496",
+            "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "native-authority",
+              "targetDeployment": "ethereum:0x8292bb45bf1ee4d140127049757c2e0ff06317ed",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x2f2ff15d",
+                "0xd547741f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "rlusd-ripple"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x8292bb45bf1ee4d140127049757c2e0ff06317ed"
+              ],
+              "reach": "root",
+              "controlRefs": [
+                "signer-config"
+              ],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [
+                "signer-config"
+              ],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "signer-config",
+              "targetDeployment": "ethereum:0x66fc2d9e4897cf3886a340a4cabc23cca2ac6a0e",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x7460837f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "rlusd-ripple"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x8292bb45bf1ee4d140127049757c2e0ff06317ed"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
-        "threshold": 7,
-        "signerCount": 12,
+        "weightedQuorum": {
+          "scheme": "contract",
+          "deployment": "ethereum:0x66fc2d9e4897cf3886a340a4cabc23cca2ac6a0e",
+          "signers": [
+            {
+              "account": "0x07808a134bd2bc8714993a6a4314449ea289df37",
+              "weight": 3
+            },
+            {
+              "account": "0x0ed0c62aebe31fde32531ee8f8660900a184aad9",
+              "weight": 3
+            },
+            {
+              "account": "0x1e88672935a5aec6222d4cdcf1a1e210eda7361a",
+              "weight": 2
+            },
+            {
+              "account": "0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26",
+              "weight": 2
+            },
+            {
+              "account": "0x42d887d2198c171308e465fd77293f1507b5e4bd",
+              "weight": 3
+            },
+            {
+              "account": "0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6",
+              "weight": 2
+            },
+            {
+              "account": "0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b",
+              "weight": 2
+            },
+            {
+              "account": "0xa50b04d5ca1f13b40a2f240190917aea87f5c700",
+              "weight": 2
+            },
+            {
+              "account": "0xd8e1af528960ed42c29bd9d3aa01b241235d2078",
+              "weight": 2
+            },
+            {
+              "account": "0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2",
+              "weight": 3
+            },
+            {
+              "account": "0xea23cc32e2eb009a0623c5faf8070bb32445fdc9",
+              "weight": 2
+            }
+          ],
+          "quorum": 7,
+          "pin": {
+            "position": "26098939",
+            "hash": "0x8cb8de2de5983d67cc251d6c689a18ddacc4179199d20806c7b4871aa057fd7c",
+            "runtimeIdentity": "sha256:9019e664c8ea27713d9cf5813a070f3b91170917708aa68f510164cb20124496",
+            "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+          },
+          "status": "verified",
+          "reviewedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "sources": [
+            {
+              "label": "Ethereum: RLUSD proxy creation transaction",
+              "url": "https://eth.blockscout.com/tx/0x811c963004b19c2e3724850cda6bffd7cab7ff8f34d5670f86b51a9e1390327d"
+            },
+            {
+              "label": "Ethereum: Ripple role-admin MultiSign",
+              "url": "https://eth.blockscout.com/address/0x66fc2d9e4897cf3886a340a4cabc23cca2ac6a0e?tab=contract"
+            },
+            {
+              "label": "Ethereum PublicNode RPC",
+              "url": "https://ethereum-rpc.publicnode.com"
+            }
+          ]
+        },
         "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-07-14",
-        "observedBlock": 25530195,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26097127,
         "sources": [
           {
             "label": "Ethereum: RLUSD proxy creation transaction",
@@ -115,7 +658,7 @@
             "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "evidence": "RLUSD proxy initialization calldata assigns DEFAULT_ADMIN_ROLE to 0x66fc. At block 25530195, hasRole(DEFAULT_ADMIN_ROLE, 0x66fc) returned true; the verified Ripple MultiSign reports quorum 7 and 12 signers. This role can grant and revoke mint-critical roles."
+        "evidence": "At Ethereum block 26095802, hasRole(DEFAULT_ADMIN_ROLE, 0x66fc2d9e4897cf3886a340a4cabc23cca2ac6a0e) returned true. MultiSign quorum() returned 7 and signers() returned 11 addresses. signerWeight() returned four weights of 3 and seven weights of 2. Weighted quorum 7 must not be presented as a seven-person threshold. The role can grant and revoke mint-critical roles; no person-count threshold is authored pending category mapping. D15 current observation at Ethereum block 26097127 confirms the weighted roster and authority unchanged. Two maximum-weight signers supply 3+3=6, below quorum 7; three can meet quorum as 3+2+2=7. The new threshold is the minimum cryptographic signature count, not independent people. Complete current address/weight roster is retained in review.evidence."
       },
       {
         "chain": "ethereum",
@@ -123,16 +666,204 @@
         "deploymentRefs": [
           "ethereum:0x8292bb45bf1ee4d140127049757c2e0ff06317ed"
         ],
-        "label": "RLUSD Ethereum upgrader MultiSign (7-of-12)",
+        "label": "RLUSD Ethereum upgrader MultiSign (weighted quorum 7, 11 signers)",
         "role": "proxy-admin",
         "authorityType": "multisig",
+        "executionScope": {
+          "controllerDeployment": "ethereum:0x863c8754c298d3efec3863f2a46f1c71a355ce6c",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Ethereum: RLUSD proxy creation transaction",
+              "url": "https://eth.blockscout.com/tx/0x811c963004b19c2e3724850cda6bffd7cab7ff8f34d5670f86b51a9e1390327d"
+            },
+            {
+              "label": "Ethereum: Ripple upgrader MultiSign",
+              "url": "https://eth.blockscout.com/address/0x863c8754c298d3efec3863f2a46f1c71a355ce6c?tab=contract"
+            },
+            {
+              "label": "Ethereum PublicNode RPC",
+              "url": "https://ethereum-rpc.publicnode.com"
+            }
+          ],
+          "pin": {
+            "position": "26098939",
+            "hash": "0x8cb8de2de5983d67cc251d6c689a18ddacc4179199d20806c7b4871aa057fd7c",
+            "runtimeIdentity": "sha256:86d0cef73ba7671005bbcbe2904d6c6f25eb4bd1d503746f513b209a7afad687",
+            "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+          },
+          "observedState": {
+            "position": "26098939",
+            "hash": "0x8cb8de2de5983d67cc251d6c689a18ddacc4179199d20806c7b4871aa057fd7c",
+            "runtimeIdentity": "sha256:86d0cef73ba7671005bbcbe2904d6c6f25eb4bd1d503746f513b209a7afad687",
+            "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "native-authority",
+              "targetDeployment": "ethereum:0x8292bb45bf1ee4d140127049757c2e0ff06317ed",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x4f1ef286"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "upgrade"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "rlusd-ripple"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x8292bb45bf1ee4d140127049757c2e0ff06317ed"
+              ],
+              "reach": "root",
+              "controlRefs": [
+                "signer-config"
+              ],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [
+                "signer-config"
+              ],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "signer-config",
+              "targetDeployment": "ethereum:0x863c8754c298d3efec3863f2a46f1c71a355ce6c",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x7460837f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "rlusd-ripple"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x8292bb45bf1ee4d140127049757c2e0ff06317ed"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
         "directMintAbility": "upgrade-only",
         "canRaiseCap": false,
-        "threshold": 7,
-        "signerCount": 12,
+        "weightedQuorum": {
+          "scheme": "contract",
+          "deployment": "ethereum:0x863c8754c298d3efec3863f2a46f1c71a355ce6c",
+          "signers": [
+            {
+              "account": "0x07808a134bd2bc8714993a6a4314449ea289df37",
+              "weight": 3
+            },
+            {
+              "account": "0x0ed0c62aebe31fde32531ee8f8660900a184aad9",
+              "weight": 3
+            },
+            {
+              "account": "0x1e88672935a5aec6222d4cdcf1a1e210eda7361a",
+              "weight": 2
+            },
+            {
+              "account": "0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26",
+              "weight": 2
+            },
+            {
+              "account": "0x42d887d2198c171308e465fd77293f1507b5e4bd",
+              "weight": 3
+            },
+            {
+              "account": "0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6",
+              "weight": 2
+            },
+            {
+              "account": "0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b",
+              "weight": 2
+            },
+            {
+              "account": "0xa50b04d5ca1f13b40a2f240190917aea87f5c700",
+              "weight": 2
+            },
+            {
+              "account": "0xd8e1af528960ed42c29bd9d3aa01b241235d2078",
+              "weight": 2
+            },
+            {
+              "account": "0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2",
+              "weight": 3
+            },
+            {
+              "account": "0xea23cc32e2eb009a0623c5faf8070bb32445fdc9",
+              "weight": 2
+            }
+          ],
+          "quorum": 7,
+          "pin": {
+            "position": "26098939",
+            "hash": "0x8cb8de2de5983d67cc251d6c689a18ddacc4179199d20806c7b4871aa057fd7c",
+            "runtimeIdentity": "sha256:86d0cef73ba7671005bbcbe2904d6c6f25eb4bd1d503746f513b209a7afad687",
+            "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+          },
+          "status": "verified",
+          "reviewedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "sources": [
+            {
+              "label": "Ethereum: RLUSD proxy creation transaction",
+              "url": "https://eth.blockscout.com/tx/0x811c963004b19c2e3724850cda6bffd7cab7ff8f34d5670f86b51a9e1390327d"
+            },
+            {
+              "label": "Ethereum: Ripple upgrader MultiSign",
+              "url": "https://eth.blockscout.com/address/0x863c8754c298d3efec3863f2a46f1c71a355ce6c?tab=contract"
+            },
+            {
+              "label": "Ethereum PublicNode RPC",
+              "url": "https://ethereum-rpc.publicnode.com"
+            }
+          ]
+        },
         "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-07-14",
-        "observedBlock": 25530195,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26097127,
         "sources": [
           {
             "label": "Ethereum: RLUSD proxy creation transaction",
@@ -147,7 +878,2555 @@
             "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "evidence": "RLUSD proxy initialization calldata assigns UPGRADER_ROLE to 0x863c. At block 25530195, hasRole(UPGRADER_ROLE, 0x863c) returned true; the verified Ripple MultiSign reports quorum 7 and the same 12-signer set as the role-admin MultiSign."
+        "evidence": "At Ethereum block 26095802, hasRole(UPGRADER_ROLE, 0x863c8754c298d3efec3863f2a46f1c71a355ce6c) returned true. MultiSign quorum() returned 7 and signers() returned the same 11 addresses as the role-admin contract. signerWeight() returned four weights of 3 and seven weights of 2. The current UUPS implementation is unchanged. Weighted quorum 7 is not a seven-person threshold; no person-count threshold is authored pending category mapping. D15 current observation at Ethereum block 26097127 confirms the weighted roster and authority unchanged. Two maximum-weight signers supply 3+3=6, below quorum 7; three can meet quorum as 3+2+2=7. The new threshold is the minimum cryptographic signature count, not independent people. Complete current address/weight roster is retained in review.evidence."
+      },
+      {
+        "label": "RLUSD base minter MultiSign (weighted quorum 2, 32 signers)",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "chain": "base",
+        "address": "0x9b8a83e875023c3fefd8354044e011d8bc847a34",
+        "deploymentRefs": [
+          "base:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+        ],
+        "executionScope": {
+          "controllerDeployment": "base:0x9b8a83e875023c3fefd8354044e011d8bc847a34",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Ripple RLUSD mainnet token addresses",
+              "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+            },
+            {
+              "label": "base current controller source/state",
+              "url": "https://base.blockscout.com/address/0x9b8a83e875023c3fefd8354044e011d8bc847a34?tab=contract"
+            },
+            {
+              "label": "Optimism verified Ripple MultiSign executable twin",
+              "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+            },
+            {
+              "label": "base current RLUSD implementation",
+              "url": "https://base.blockscout.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+            }
+          ],
+          "pin": {
+            "position": "52043057",
+            "hash": "0x94e5f2a59cd7955e0f663d481d557fa0928590601cf2272f5700bb0c9f079df7",
+            "runtimeIdentity": "sha256:9d04dd2daa5bb61a47546503fefcf3cbadaaec9698ce43a58b4e5f2bd4fc9fbb",
+            "signerIdentity": "sha256:628414319f4de6ce46027bb2381263e4944a0cca9bbeb228a1eefa99f3903827"
+          },
+          "observedState": {
+            "position": "52043057",
+            "hash": "0x94e5f2a59cd7955e0f663d481d557fa0928590601cf2272f5700bb0c9f079df7",
+            "runtimeIdentity": "sha256:9d04dd2daa5bb61a47546503fefcf3cbadaaec9698ce43a58b4e5f2bd4fc9fbb",
+            "signerIdentity": "sha256:628414319f4de6ce46027bb2381263e4944a0cca9bbeb228a1eefa99f3903827"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "native-authority",
+              "targetDeployment": "base:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x40c10f19"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "rlusd-ripple"
+              ],
+              "affectedDeployments": [
+                "base:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+              ],
+              "reach": "root",
+              "controlRefs": [
+                "signer-config"
+              ],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [
+                "signer-config"
+              ],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "signer-config",
+              "targetDeployment": "base:0x9b8a83e875023c3fefd8354044e011d8bc847a34",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x7460837f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "rlusd-ripple"
+              ],
+              "affectedDeployments": [
+                "base:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "threshold": 2,
+        "signerCount": 32,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "No hard token-level issuance cap: native MINTER_ROLE may mint arbitrary amounts; role-admin may grant that role and UPGRADER_ROLE may replace mint logic.",
+        "failureDomainKeys": [
+          "issuer:ripple-sctc"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 52041924,
+        "sources": [
+          {
+            "label": "Ripple RLUSD mainnet token addresses",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+          },
+          {
+            "label": "base current controller source/state",
+            "url": "https://base.blockscout.com/address/0x9b8a83e875023c3fefd8354044e011d8bc847a34?tab=contract"
+          },
+          {
+            "label": "Optimism verified Ripple MultiSign executable twin",
+            "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+          },
+          {
+            "label": "base current RLUSD implementation",
+            "url": "https://base.blockscout.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+          }
+        ],
+        "evidence": "Pinned base block 52041924: hasRole for the token's actual MINTER_ROLE getter returned true. quorum()=2; signers() returns 32 addresses; complete signerWeight(address) roster: 0x0202e69c6aa94d5b34123d3eae4aa5e104f569d2:1; 0x05302281b1d4cfa8716dbb55bb3a4f3d1c101515:1; 0x053dacfbbc80ef8a0d09f2f9931d03554f246257:1; 0x131810c8c6dcd264c999b878555889fb2b13e4cb:1; 0x15b9812edb53d416a53743219b59dfe35593e79e:1; 0x16ad0ca127e6f1695a90e1ba607854de479ea9a0:1; 0x195ce8a62d7663f242fad91b1d9f9d62c6d380c2:1; 0x243623fa9e049c1ee0a3be683d93550aa907a226:1; 0x2b3be65beb6f7572e0f9e94db5b9df16d1b1e651:1; 0x2cca7cb3141b08883dbc7a8fbe5cc65a9db7d8a7:1; 0x2eb17005fa381d0eac55e43acadf276a7f93e187:1; 0x3201f381b557b28a8b7c7e63d7be0597f2e36b6b:1; 0x3d3c74bba09554e6c9960d541e3e2815f892d6b2:1; 0x422a428af79dafc0203869604ef247b23cef2f84:1; 0x429ac8b23e2d81387effb38de58ad0e1356d19c1:1; 0x4668bd74a171879c86cce0bda355195ab2d202e2:1; 0x728e96ad32132471735ab7819ed099cd1f41036b:1; 0x7458967dbbd70d5fa643f088340bd4326974e955:1; 0x76634e26dde2d01962c3857aad89650e58fb2bcf:1; 0x7701cd6e62e9c25b9b4fd41612298f1fac25348f:1; 0x893ae7f682c62df584ef1a22b508d866d871e8c4:1; 0x9c036a73ad9e788a49504d590c40cf3692cba661:1; 0x9d4a75310f713a580541c0c94e0e1792493a076a:1; 0xa7471bd513fd220ed959a05e80369534261e7fea:1; 0xa7a60679b2b345a93e142cd825b04afa186e6559:1; 0xac7d50a18b0b5a542b30c6136387eb70e3faba64:1; 0xb08648a45bfe2d7c888a7486d242d8a634583848:1; 0xb44895320536bd35a0e81b4158c9d4b6598d407e:1; 0xbedd5b63a7619744822e0d77b015f792a7a26027:1; 0xd324dd7f49eee3bbe58dea6ebc49e4f43a0ee3b3:1; 0xde8adb41ffbbfad6c748d4f8be587de4b500e9fe:1; 0xec699bee3c011ba2ec026e4a377c6cd354d91bc6:1. Minimum cryptographic signatures=2; independent people/organizations are not established. Base explorer source is unverified; pinned runtime differs from the verified Optimism MultiSign in exactly its sole 32-byte EIP-712 domain immutable, independently reconciled to chain/address. All remaining runtime and metadata bytes match. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk."
+      },
+      {
+        "label": "RLUSD base role-admin MultiSign (weighted quorum 7, 11 signers)",
+        "role": "governor",
+        "authorityType": "multisig",
+        "chain": "base",
+        "address": "0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
+        "deploymentRefs": [
+          "base:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+        ],
+        "executionScope": {
+          "controllerDeployment": "base:0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Ripple RLUSD mainnet token addresses",
+              "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+            },
+            {
+              "label": "base current controller source/state",
+              "url": "https://base.blockscout.com/address/0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9?tab=contract"
+            },
+            {
+              "label": "Optimism verified Ripple MultiSign executable twin",
+              "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+            },
+            {
+              "label": "base current RLUSD implementation",
+              "url": "https://base.blockscout.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+            }
+          ],
+          "pin": {
+            "position": "52043057",
+            "hash": "0x94e5f2a59cd7955e0f663d481d557fa0928590601cf2272f5700bb0c9f079df7",
+            "runtimeIdentity": "sha256:1d19a0427fc0e76b7c9acec4b9b8d197e29fff8bd4f27d99fd6a658093c32f07",
+            "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+          },
+          "observedState": {
+            "position": "52043057",
+            "hash": "0x94e5f2a59cd7955e0f663d481d557fa0928590601cf2272f5700bb0c9f079df7",
+            "runtimeIdentity": "sha256:1d19a0427fc0e76b7c9acec4b9b8d197e29fff8bd4f27d99fd6a658093c32f07",
+            "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "native-authority",
+              "targetDeployment": "base:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x2f2ff15d",
+                "0xd547741f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "rlusd-ripple"
+              ],
+              "affectedDeployments": [
+                "base:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+              ],
+              "reach": "root",
+              "controlRefs": [
+                "signer-config"
+              ],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [
+                "signer-config"
+              ],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "signer-config",
+              "targetDeployment": "base:0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x7460837f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "rlusd-ripple"
+              ],
+              "affectedDeployments": [
+                "base:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "weightedQuorum": {
+          "scheme": "contract",
+          "deployment": "base:0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
+          "signers": [
+            {
+              "account": "0x07808a134bd2bc8714993a6a4314449ea289df37",
+              "weight": 3
+            },
+            {
+              "account": "0x0ed0c62aebe31fde32531ee8f8660900a184aad9",
+              "weight": 3
+            },
+            {
+              "account": "0x1e88672935a5aec6222d4cdcf1a1e210eda7361a",
+              "weight": 2
+            },
+            {
+              "account": "0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26",
+              "weight": 2
+            },
+            {
+              "account": "0x42d887d2198c171308e465fd77293f1507b5e4bd",
+              "weight": 3
+            },
+            {
+              "account": "0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6",
+              "weight": 2
+            },
+            {
+              "account": "0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b",
+              "weight": 2
+            },
+            {
+              "account": "0xa50b04d5ca1f13b40a2f240190917aea87f5c700",
+              "weight": 2
+            },
+            {
+              "account": "0xd8e1af528960ed42c29bd9d3aa01b241235d2078",
+              "weight": 2
+            },
+            {
+              "account": "0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2",
+              "weight": 3
+            },
+            {
+              "account": "0xea23cc32e2eb009a0623c5faf8070bb32445fdc9",
+              "weight": 2
+            }
+          ],
+          "quorum": 7,
+          "pin": {
+            "position": "52043057",
+            "hash": "0x94e5f2a59cd7955e0f663d481d557fa0928590601cf2272f5700bb0c9f079df7",
+            "runtimeIdentity": "sha256:1d19a0427fc0e76b7c9acec4b9b8d197e29fff8bd4f27d99fd6a658093c32f07",
+            "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+          },
+          "status": "verified",
+          "reviewedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "sources": [
+            {
+              "label": "Ripple RLUSD mainnet token addresses",
+              "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+            },
+            {
+              "label": "base current controller source/state",
+              "url": "https://base.blockscout.com/address/0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9?tab=contract"
+            },
+            {
+              "label": "Optimism verified Ripple MultiSign executable twin",
+              "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+            },
+            {
+              "label": "base current RLUSD implementation",
+              "url": "https://base.blockscout.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+            }
+          ]
+        },
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "No hard token-level issuance cap: native MINTER_ROLE may mint arbitrary amounts; role-admin may grant that role and UPGRADER_ROLE may replace mint logic.",
+        "failureDomainKeys": [
+          "issuer:ripple-sctc"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 52041924,
+        "sources": [
+          {
+            "label": "Ripple RLUSD mainnet token addresses",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+          },
+          {
+            "label": "base current controller source/state",
+            "url": "https://base.blockscout.com/address/0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9?tab=contract"
+          },
+          {
+            "label": "Optimism verified Ripple MultiSign executable twin",
+            "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+          },
+          {
+            "label": "base current RLUSD implementation",
+            "url": "https://base.blockscout.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+          }
+        ],
+        "evidence": "Pinned base block 52041924: hasRole for the token's actual DEFAULT_ADMIN_ROLE getter returned true. quorum()=7; signers() returns 11 addresses; complete signerWeight(address) roster: 0x07808a134bd2bc8714993a6a4314449ea289df37:3; 0x0ed0c62aebe31fde32531ee8f8660900a184aad9:3; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:2; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:2; 0x42d887d2198c171308e465fd77293f1507b5e4bd:3; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:2; 0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b:2; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:2; 0xd8e1af528960ed42c29bd9d3aa01b241235d2078:2; 0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2:3; 0xea23cc32e2eb009a0623c5faf8070bb32445fdc9:2. Minimum cryptographic signatures=3; independent people/organizations are not established. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk."
+      },
+      {
+        "label": "RLUSD base upgrader MultiSign (weighted quorum 7, 11 signers)",
+        "role": "proxy-admin",
+        "authorityType": "multisig",
+        "chain": "base",
+        "address": "0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+        "deploymentRefs": [
+          "base:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+        ],
+        "executionScope": {
+          "controllerDeployment": "base:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Ripple RLUSD mainnet token addresses",
+              "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+            },
+            {
+              "label": "base current controller source/state",
+              "url": "https://base.blockscout.com/address/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395?tab=contract"
+            },
+            {
+              "label": "Optimism verified Ripple MultiSign executable twin",
+              "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+            },
+            {
+              "label": "base current RLUSD implementation",
+              "url": "https://base.blockscout.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+            }
+          ],
+          "pin": {
+            "position": "52043057",
+            "hash": "0x94e5f2a59cd7955e0f663d481d557fa0928590601cf2272f5700bb0c9f079df7",
+            "runtimeIdentity": "sha256:b71cc8ff4396e6cfa40ddd5a8c3bfd2ba090ad203c515c716bd5981358a039ea",
+            "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+          },
+          "observedState": {
+            "position": "52043057",
+            "hash": "0x94e5f2a59cd7955e0f663d481d557fa0928590601cf2272f5700bb0c9f079df7",
+            "runtimeIdentity": "sha256:b71cc8ff4396e6cfa40ddd5a8c3bfd2ba090ad203c515c716bd5981358a039ea",
+            "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "native-authority",
+              "targetDeployment": "base:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x4f1ef286"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "upgrade"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "rlusd-ripple"
+              ],
+              "affectedDeployments": [
+                "base:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+              ],
+              "reach": "root",
+              "controlRefs": [
+                "signer-config"
+              ],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [
+                "signer-config"
+              ],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "signer-config",
+              "targetDeployment": "base:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x7460837f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "rlusd-ripple"
+              ],
+              "affectedDeployments": [
+                "base:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": false,
+        "weightedQuorum": {
+          "scheme": "contract",
+          "deployment": "base:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+          "signers": [
+            {
+              "account": "0x07808a134bd2bc8714993a6a4314449ea289df37",
+              "weight": 3
+            },
+            {
+              "account": "0x0ed0c62aebe31fde32531ee8f8660900a184aad9",
+              "weight": 3
+            },
+            {
+              "account": "0x1e88672935a5aec6222d4cdcf1a1e210eda7361a",
+              "weight": 2
+            },
+            {
+              "account": "0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26",
+              "weight": 2
+            },
+            {
+              "account": "0x42d887d2198c171308e465fd77293f1507b5e4bd",
+              "weight": 3
+            },
+            {
+              "account": "0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6",
+              "weight": 2
+            },
+            {
+              "account": "0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b",
+              "weight": 2
+            },
+            {
+              "account": "0xa50b04d5ca1f13b40a2f240190917aea87f5c700",
+              "weight": 2
+            },
+            {
+              "account": "0xd8e1af528960ed42c29bd9d3aa01b241235d2078",
+              "weight": 2
+            },
+            {
+              "account": "0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2",
+              "weight": 3
+            },
+            {
+              "account": "0xea23cc32e2eb009a0623c5faf8070bb32445fdc9",
+              "weight": 2
+            }
+          ],
+          "quorum": 7,
+          "pin": {
+            "position": "52043057",
+            "hash": "0x94e5f2a59cd7955e0f663d481d557fa0928590601cf2272f5700bb0c9f079df7",
+            "runtimeIdentity": "sha256:b71cc8ff4396e6cfa40ddd5a8c3bfd2ba090ad203c515c716bd5981358a039ea",
+            "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+          },
+          "status": "verified",
+          "reviewedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "sources": [
+            {
+              "label": "Ripple RLUSD mainnet token addresses",
+              "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+            },
+            {
+              "label": "base current controller source/state",
+              "url": "https://base.blockscout.com/address/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395?tab=contract"
+            },
+            {
+              "label": "Optimism verified Ripple MultiSign executable twin",
+              "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+            },
+            {
+              "label": "base current RLUSD implementation",
+              "url": "https://base.blockscout.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+            }
+          ]
+        },
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "No hard token-level issuance cap: native MINTER_ROLE may mint arbitrary amounts; role-admin may grant that role and UPGRADER_ROLE may replace mint logic.",
+        "failureDomainKeys": [
+          "issuer:ripple-sctc"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 52041924,
+        "sources": [
+          {
+            "label": "Ripple RLUSD mainnet token addresses",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+          },
+          {
+            "label": "base current controller source/state",
+            "url": "https://base.blockscout.com/address/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395?tab=contract"
+          },
+          {
+            "label": "Optimism verified Ripple MultiSign executable twin",
+            "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+          },
+          {
+            "label": "base current RLUSD implementation",
+            "url": "https://base.blockscout.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+          }
+        ],
+        "evidence": "Pinned base block 52041924: hasRole for the token's actual UPGRADER_ROLE getter returned true. quorum()=7; signers() returns 11 addresses; complete signerWeight(address) roster: 0x07808a134bd2bc8714993a6a4314449ea289df37:3; 0x0ed0c62aebe31fde32531ee8f8660900a184aad9:3; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:2; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:2; 0x42d887d2198c171308e465fd77293f1507b5e4bd:3; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:2; 0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b:2; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:2; 0xd8e1af528960ed42c29bd9d3aa01b241235d2078:2; 0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2:3; 0xea23cc32e2eb009a0623c5faf8070bb32445fdc9:2. Minimum cryptographic signatures=3; independent people/organizations are not established. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk.",
+        "bypassSurfaces": [
+          "UPGRADER_ROLE can replace the native token mint implementation without an enforced delay."
+        ]
+      },
+      {
+        "label": "RLUSD optimism minter MultiSign (weighted quorum 2, 30 signers)",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "chain": "optimism",
+        "address": "0x6e36e38910c0145cafaa96516083c160049fe3e6",
+        "deploymentRefs": [
+          "optimism:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+        ],
+        "executionScope": {
+          "controllerDeployment": "optimism:0x6e36e38910c0145cafaa96516083c160049fe3e6",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Ripple RLUSD mainnet token addresses",
+              "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+            },
+            {
+              "label": "optimism current controller source/state",
+              "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+            },
+            {
+              "label": "Optimism verified Ripple MultiSign executable twin",
+              "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+            },
+            {
+              "label": "optimism current RLUSD implementation",
+              "url": "https://explorer.optimism.io/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+            }
+          ],
+          "pin": {
+            "position": "157638342",
+            "hash": "0x2c2b274012bd4b3116c5db95bf24c8b313e8afb2c065644dd45d3628f980c535",
+            "runtimeIdentity": "sha256:ab2950a037df73696d0783d0fb2aefc3fdfc76acf46c5ad6ef7afc177971532a",
+            "signerIdentity": "sha256:2efffa6712dfbad914d5b070529921ed30ff7a34fcbd8c461e53bce4d3893969"
+          },
+          "observedState": {
+            "position": "157638342",
+            "hash": "0x2c2b274012bd4b3116c5db95bf24c8b313e8afb2c065644dd45d3628f980c535",
+            "runtimeIdentity": "sha256:ab2950a037df73696d0783d0fb2aefc3fdfc76acf46c5ad6ef7afc177971532a",
+            "signerIdentity": "sha256:2efffa6712dfbad914d5b070529921ed30ff7a34fcbd8c461e53bce4d3893969"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "native-authority",
+              "targetDeployment": "optimism:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x40c10f19"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "rlusd-ripple"
+              ],
+              "affectedDeployments": [
+                "optimism:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+              ],
+              "reach": "root",
+              "controlRefs": [
+                "signer-config"
+              ],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [
+                "signer-config"
+              ],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "signer-config",
+              "targetDeployment": "optimism:0x6e36e38910c0145cafaa96516083c160049fe3e6",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x7460837f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "rlusd-ripple"
+              ],
+              "affectedDeployments": [
+                "optimism:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "threshold": 2,
+        "signerCount": 30,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "No hard token-level issuance cap: native MINTER_ROLE may mint arbitrary amounts; role-admin may grant that role and UPGRADER_ROLE may replace mint logic.",
+        "failureDomainKeys": [
+          "issuer:ripple-sctc"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 157637209,
+        "sources": [
+          {
+            "label": "Ripple RLUSD mainnet token addresses",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+          },
+          {
+            "label": "optimism current controller source/state",
+            "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+          },
+          {
+            "label": "Optimism verified Ripple MultiSign executable twin",
+            "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+          },
+          {
+            "label": "optimism current RLUSD implementation",
+            "url": "https://explorer.optimism.io/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+          }
+        ],
+        "evidence": "Pinned optimism block 157637209: hasRole for the token's actual MINTER_ROLE getter returned true. quorum()=2; signers() returns 30 addresses; complete signerWeight(address) roster: 0x05302281b1d4cfa8716dbb55bb3a4f3d1c101515:1; 0x16ad0ca127e6f1695a90e1ba607854de479ea9a0:1; 0x195ce8a62d7663f242fad91b1d9f9d62c6d380c2:1; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:1; 0x27adea6c3a4e4d0f42f45e6e5e1faeefce072aa1:1; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:1; 0x2b3be65beb6f7572e0f9e94db5b9df16d1b1e651:1; 0x2eb17005fa381d0eac55e43acadf276a7f93e187:1; 0x3201f381b557b28a8b7c7e63d7be0597f2e36b6b:1; 0x3659a8dd16e0632bf68f27fee735b8ac2d391230:1; 0x3d3c74bba09554e6c9960d541e3e2815f892d6b2:1; 0x422a428af79dafc0203869604ef247b23cef2f84:1; 0x429ac8b23e2d81387effb38de58ad0e1356d19c1:1; 0x4668bd74a171879c86cce0bda355195ab2d202e2:1; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:1; 0x50e3f34e3a29ddc50720898b649b77a2cb752efa:1; 0x664a24cd367021cf1aa360587114d0ad86188918:1; 0x6cba9d49aaca72b556baf4c776370204bdf32f50:1; 0x728e96ad32132471735ab7819ed099cd1f41036b:1; 0x76634e26dde2d01962c3857aad89650e58fb2bcf:1; 0x8287885371490eb013b4cd257ffc0cfbbac56c0d:1; 0x948fe94d96ca2b1fdcad9f8b18f5fda58a33bd46:1; 0x9c036a73ad9e788a49504d590c40cf3692cba661:1; 0xa4fd21be102f34feddbece3c2c8c9b3830fcb33e:1; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:1; 0xac7d50a18b0b5a542b30c6136387eb70e3faba64:1; 0xb08648a45bfe2d7c888a7486d242d8a634583848:1; 0xbedd5b63a7619744822e0d77b015f792a7a26027:1; 0xd324dd7f49eee3bbe58dea6ebc49e4f43a0ee3b3:1; 0xde8adb41ffbbfad6c748d4f8be587de4b500e9fe:1. Minimum cryptographic signatures=2; independent people/organizations are not established. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk."
+      },
+      {
+        "label": "RLUSD optimism role-admin MultiSign (weighted quorum 7, 11 signers)",
+        "role": "governor",
+        "authorityType": "multisig",
+        "chain": "optimism",
+        "address": "0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
+        "deploymentRefs": [
+          "optimism:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+        ],
+        "executionScope": {
+          "controllerDeployment": "optimism:0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Ripple RLUSD mainnet token addresses",
+              "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+            },
+            {
+              "label": "optimism current controller source/state",
+              "url": "https://explorer.optimism.io/address/0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9?tab=contract"
+            },
+            {
+              "label": "Optimism verified Ripple MultiSign executable twin",
+              "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+            },
+            {
+              "label": "optimism current RLUSD implementation",
+              "url": "https://explorer.optimism.io/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+            }
+          ],
+          "pin": {
+            "position": "157638342",
+            "hash": "0x2c2b274012bd4b3116c5db95bf24c8b313e8afb2c065644dd45d3628f980c535",
+            "runtimeIdentity": "sha256:0c16118ed74f9ae68306505d21ad07a5265e313e5aed0e5f3993dbd81b7d6ac5",
+            "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+          },
+          "observedState": {
+            "position": "157638342",
+            "hash": "0x2c2b274012bd4b3116c5db95bf24c8b313e8afb2c065644dd45d3628f980c535",
+            "runtimeIdentity": "sha256:0c16118ed74f9ae68306505d21ad07a5265e313e5aed0e5f3993dbd81b7d6ac5",
+            "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "native-authority",
+              "targetDeployment": "optimism:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x2f2ff15d",
+                "0xd547741f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "rlusd-ripple"
+              ],
+              "affectedDeployments": [
+                "optimism:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+              ],
+              "reach": "root",
+              "controlRefs": [
+                "signer-config"
+              ],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [
+                "signer-config"
+              ],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "signer-config",
+              "targetDeployment": "optimism:0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x7460837f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "rlusd-ripple"
+              ],
+              "affectedDeployments": [
+                "optimism:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "weightedQuorum": {
+          "scheme": "contract",
+          "deployment": "optimism:0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
+          "signers": [
+            {
+              "account": "0x07808a134bd2bc8714993a6a4314449ea289df37",
+              "weight": 3
+            },
+            {
+              "account": "0x0ed0c62aebe31fde32531ee8f8660900a184aad9",
+              "weight": 3
+            },
+            {
+              "account": "0x1e88672935a5aec6222d4cdcf1a1e210eda7361a",
+              "weight": 2
+            },
+            {
+              "account": "0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26",
+              "weight": 2
+            },
+            {
+              "account": "0x42d887d2198c171308e465fd77293f1507b5e4bd",
+              "weight": 3
+            },
+            {
+              "account": "0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6",
+              "weight": 2
+            },
+            {
+              "account": "0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b",
+              "weight": 2
+            },
+            {
+              "account": "0xa50b04d5ca1f13b40a2f240190917aea87f5c700",
+              "weight": 2
+            },
+            {
+              "account": "0xd8e1af528960ed42c29bd9d3aa01b241235d2078",
+              "weight": 2
+            },
+            {
+              "account": "0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2",
+              "weight": 3
+            },
+            {
+              "account": "0xea23cc32e2eb009a0623c5faf8070bb32445fdc9",
+              "weight": 2
+            }
+          ],
+          "quorum": 7,
+          "pin": {
+            "position": "157638342",
+            "hash": "0x2c2b274012bd4b3116c5db95bf24c8b313e8afb2c065644dd45d3628f980c535",
+            "runtimeIdentity": "sha256:0c16118ed74f9ae68306505d21ad07a5265e313e5aed0e5f3993dbd81b7d6ac5",
+            "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+          },
+          "status": "verified",
+          "reviewedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "sources": [
+            {
+              "label": "Ripple RLUSD mainnet token addresses",
+              "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+            },
+            {
+              "label": "optimism current controller source/state",
+              "url": "https://explorer.optimism.io/address/0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9?tab=contract"
+            },
+            {
+              "label": "Optimism verified Ripple MultiSign executable twin",
+              "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+            },
+            {
+              "label": "optimism current RLUSD implementation",
+              "url": "https://explorer.optimism.io/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+            }
+          ]
+        },
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "No hard token-level issuance cap: native MINTER_ROLE may mint arbitrary amounts; role-admin may grant that role and UPGRADER_ROLE may replace mint logic.",
+        "failureDomainKeys": [
+          "issuer:ripple-sctc"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 157637209,
+        "sources": [
+          {
+            "label": "Ripple RLUSD mainnet token addresses",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+          },
+          {
+            "label": "optimism current controller source/state",
+            "url": "https://explorer.optimism.io/address/0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9?tab=contract"
+          },
+          {
+            "label": "Optimism verified Ripple MultiSign executable twin",
+            "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+          },
+          {
+            "label": "optimism current RLUSD implementation",
+            "url": "https://explorer.optimism.io/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+          }
+        ],
+        "evidence": "Pinned optimism block 157637209: hasRole for the token's actual DEFAULT_ADMIN_ROLE getter returned true. quorum()=7; signers() returns 11 addresses; complete signerWeight(address) roster: 0x07808a134bd2bc8714993a6a4314449ea289df37:3; 0x0ed0c62aebe31fde32531ee8f8660900a184aad9:3; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:2; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:2; 0x42d887d2198c171308e465fd77293f1507b5e4bd:3; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:2; 0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b:2; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:2; 0xd8e1af528960ed42c29bd9d3aa01b241235d2078:2; 0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2:3; 0xea23cc32e2eb009a0623c5faf8070bb32445fdc9:2. Minimum cryptographic signatures=3; independent people/organizations are not established. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk."
+      },
+      {
+        "label": "RLUSD optimism upgrader MultiSign (weighted quorum 7, 11 signers)",
+        "role": "proxy-admin",
+        "authorityType": "multisig",
+        "chain": "optimism",
+        "address": "0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+        "deploymentRefs": [
+          "optimism:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+        ],
+        "executionScope": {
+          "controllerDeployment": "optimism:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Ripple RLUSD mainnet token addresses",
+              "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+            },
+            {
+              "label": "optimism current controller source/state",
+              "url": "https://explorer.optimism.io/address/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395?tab=contract"
+            },
+            {
+              "label": "Optimism verified Ripple MultiSign executable twin",
+              "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+            },
+            {
+              "label": "optimism current RLUSD implementation",
+              "url": "https://explorer.optimism.io/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+            }
+          ],
+          "pin": {
+            "position": "157638342",
+            "hash": "0x2c2b274012bd4b3116c5db95bf24c8b313e8afb2c065644dd45d3628f980c535",
+            "runtimeIdentity": "sha256:3dea8b1b7940ad2e487119c3510589e95c9bd26bec54812615ac7980bbf75653",
+            "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+          },
+          "observedState": {
+            "position": "157638342",
+            "hash": "0x2c2b274012bd4b3116c5db95bf24c8b313e8afb2c065644dd45d3628f980c535",
+            "runtimeIdentity": "sha256:3dea8b1b7940ad2e487119c3510589e95c9bd26bec54812615ac7980bbf75653",
+            "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "native-authority",
+              "targetDeployment": "optimism:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x4f1ef286"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "upgrade"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "rlusd-ripple"
+              ],
+              "affectedDeployments": [
+                "optimism:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+              ],
+              "reach": "root",
+              "controlRefs": [
+                "signer-config"
+              ],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [
+                "signer-config"
+              ],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "signer-config",
+              "targetDeployment": "optimism:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x7460837f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "rlusd-ripple"
+              ],
+              "affectedDeployments": [
+                "optimism:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": false,
+        "weightedQuorum": {
+          "scheme": "contract",
+          "deployment": "optimism:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+          "signers": [
+            {
+              "account": "0x07808a134bd2bc8714993a6a4314449ea289df37",
+              "weight": 3
+            },
+            {
+              "account": "0x0ed0c62aebe31fde32531ee8f8660900a184aad9",
+              "weight": 3
+            },
+            {
+              "account": "0x1e88672935a5aec6222d4cdcf1a1e210eda7361a",
+              "weight": 2
+            },
+            {
+              "account": "0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26",
+              "weight": 2
+            },
+            {
+              "account": "0x42d887d2198c171308e465fd77293f1507b5e4bd",
+              "weight": 3
+            },
+            {
+              "account": "0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6",
+              "weight": 2
+            },
+            {
+              "account": "0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b",
+              "weight": 2
+            },
+            {
+              "account": "0xa50b04d5ca1f13b40a2f240190917aea87f5c700",
+              "weight": 2
+            },
+            {
+              "account": "0xd8e1af528960ed42c29bd9d3aa01b241235d2078",
+              "weight": 2
+            },
+            {
+              "account": "0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2",
+              "weight": 3
+            },
+            {
+              "account": "0xea23cc32e2eb009a0623c5faf8070bb32445fdc9",
+              "weight": 2
+            }
+          ],
+          "quorum": 7,
+          "pin": {
+            "position": "157638342",
+            "hash": "0x2c2b274012bd4b3116c5db95bf24c8b313e8afb2c065644dd45d3628f980c535",
+            "runtimeIdentity": "sha256:3dea8b1b7940ad2e487119c3510589e95c9bd26bec54812615ac7980bbf75653",
+            "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+          },
+          "status": "verified",
+          "reviewedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "sources": [
+            {
+              "label": "Ripple RLUSD mainnet token addresses",
+              "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+            },
+            {
+              "label": "optimism current controller source/state",
+              "url": "https://explorer.optimism.io/address/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395?tab=contract"
+            },
+            {
+              "label": "Optimism verified Ripple MultiSign executable twin",
+              "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+            },
+            {
+              "label": "optimism current RLUSD implementation",
+              "url": "https://explorer.optimism.io/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+            }
+          ]
+        },
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "No hard token-level issuance cap: native MINTER_ROLE may mint arbitrary amounts; role-admin may grant that role and UPGRADER_ROLE may replace mint logic.",
+        "failureDomainKeys": [
+          "issuer:ripple-sctc"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 157637209,
+        "sources": [
+          {
+            "label": "Ripple RLUSD mainnet token addresses",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+          },
+          {
+            "label": "optimism current controller source/state",
+            "url": "https://explorer.optimism.io/address/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395?tab=contract"
+          },
+          {
+            "label": "Optimism verified Ripple MultiSign executable twin",
+            "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+          },
+          {
+            "label": "optimism current RLUSD implementation",
+            "url": "https://explorer.optimism.io/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+          }
+        ],
+        "evidence": "Pinned optimism block 157637209: hasRole for the token's actual UPGRADER_ROLE getter returned true. quorum()=7; signers() returns 11 addresses; complete signerWeight(address) roster: 0x07808a134bd2bc8714993a6a4314449ea289df37:3; 0x0ed0c62aebe31fde32531ee8f8660900a184aad9:3; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:2; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:2; 0x42d887d2198c171308e465fd77293f1507b5e4bd:3; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:2; 0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b:2; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:2; 0xd8e1af528960ed42c29bd9d3aa01b241235d2078:2; 0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2:3; 0xea23cc32e2eb009a0623c5faf8070bb32445fdc9:2. Minimum cryptographic signatures=3; independent people/organizations are not established. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk.",
+        "bypassSurfaces": [
+          "UPGRADER_ROLE can replace the native token mint implementation without an enforced delay."
+        ]
+      },
+      {
+        "label": "RLUSD ink minter MultiSign (weighted quorum 2, 30 signers)",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "chain": "ink",
+        "address": "0xa2eea193444b16fe2d18cfe977aceeea6dd9c367",
+        "deploymentRefs": [
+          "ink:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+        ],
+        "executionScope": {
+          "controllerDeployment": "ink:0xa2eea193444b16fe2d18cfe977aceeea6dd9c367",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Ripple RLUSD mainnet token addresses",
+              "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+            },
+            {
+              "label": "ink current controller source/state",
+              "url": "https://explorer.inkonchain.com/address/0xa2eea193444b16fe2d18cfe977aceeea6dd9c367?tab=contract"
+            },
+            {
+              "label": "Optimism verified Ripple MultiSign executable twin",
+              "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+            },
+            {
+              "label": "ink current RLUSD implementation",
+              "url": "https://explorer.inkonchain.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+            }
+          ],
+          "pin": {
+            "position": "57377051",
+            "hash": "0xfa593d9d9b3c0752ce837f140de413ddda0eb907f4a2146da72e1b993239f96b",
+            "runtimeIdentity": "sha256:5705705405fefa4e3a6b00d33211ef59504dfac938ed2d6938ab8f7927e6dd0b",
+            "signerIdentity": "sha256:2efffa6712dfbad914d5b070529921ed30ff7a34fcbd8c461e53bce4d3893969"
+          },
+          "observedState": {
+            "position": "57377051",
+            "hash": "0xfa593d9d9b3c0752ce837f140de413ddda0eb907f4a2146da72e1b993239f96b",
+            "runtimeIdentity": "sha256:5705705405fefa4e3a6b00d33211ef59504dfac938ed2d6938ab8f7927e6dd0b",
+            "signerIdentity": "sha256:2efffa6712dfbad914d5b070529921ed30ff7a34fcbd8c461e53bce4d3893969"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "native-authority",
+              "targetDeployment": "ink:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x40c10f19"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "rlusd-ripple"
+              ],
+              "affectedDeployments": [
+                "ink:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+              ],
+              "reach": "root",
+              "controlRefs": [
+                "signer-config"
+              ],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [
+                "signer-config"
+              ],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "signer-config",
+              "targetDeployment": "ink:0xa2eea193444b16fe2d18cfe977aceeea6dd9c367",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x7460837f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "rlusd-ripple"
+              ],
+              "affectedDeployments": [
+                "ink:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "threshold": 2,
+        "signerCount": 30,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "No hard token-level issuance cap: native MINTER_ROLE may mint arbitrary amounts; role-admin may grant that role and UPGRADER_ROLE may replace mint logic.",
+        "failureDomainKeys": [
+          "issuer:ripple-sctc"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 57374785,
+        "sources": [
+          {
+            "label": "Ripple RLUSD mainnet token addresses",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+          },
+          {
+            "label": "ink current controller source/state",
+            "url": "https://explorer.inkonchain.com/address/0xa2eea193444b16fe2d18cfe977aceeea6dd9c367?tab=contract"
+          },
+          {
+            "label": "Optimism verified Ripple MultiSign executable twin",
+            "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+          },
+          {
+            "label": "ink current RLUSD implementation",
+            "url": "https://explorer.inkonchain.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+          }
+        ],
+        "evidence": "Pinned ink block 57374785: hasRole for the token's actual MINTER_ROLE getter returned true. quorum()=2; signers() returns 30 addresses; complete signerWeight(address) roster: 0x05302281b1d4cfa8716dbb55bb3a4f3d1c101515:1; 0x16ad0ca127e6f1695a90e1ba607854de479ea9a0:1; 0x195ce8a62d7663f242fad91b1d9f9d62c6d380c2:1; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:1; 0x27adea6c3a4e4d0f42f45e6e5e1faeefce072aa1:1; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:1; 0x2b3be65beb6f7572e0f9e94db5b9df16d1b1e651:1; 0x2eb17005fa381d0eac55e43acadf276a7f93e187:1; 0x3201f381b557b28a8b7c7e63d7be0597f2e36b6b:1; 0x3659a8dd16e0632bf68f27fee735b8ac2d391230:1; 0x3d3c74bba09554e6c9960d541e3e2815f892d6b2:1; 0x422a428af79dafc0203869604ef247b23cef2f84:1; 0x429ac8b23e2d81387effb38de58ad0e1356d19c1:1; 0x4668bd74a171879c86cce0bda355195ab2d202e2:1; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:1; 0x50e3f34e3a29ddc50720898b649b77a2cb752efa:1; 0x664a24cd367021cf1aa360587114d0ad86188918:1; 0x6cba9d49aaca72b556baf4c776370204bdf32f50:1; 0x728e96ad32132471735ab7819ed099cd1f41036b:1; 0x76634e26dde2d01962c3857aad89650e58fb2bcf:1; 0x8287885371490eb013b4cd257ffc0cfbbac56c0d:1; 0x948fe94d96ca2b1fdcad9f8b18f5fda58a33bd46:1; 0x9c036a73ad9e788a49504d590c40cf3692cba661:1; 0xa4fd21be102f34feddbece3c2c8c9b3830fcb33e:1; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:1; 0xac7d50a18b0b5a542b30c6136387eb70e3faba64:1; 0xb08648a45bfe2d7c888a7486d242d8a634583848:1; 0xbedd5b63a7619744822e0d77b015f792a7a26027:1; 0xd324dd7f49eee3bbe58dea6ebc49e4f43a0ee3b3:1; 0xde8adb41ffbbfad6c748d4f8be587de4b500e9fe:1. Minimum cryptographic signatures=2; independent people/organizations are not established. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk."
+      },
+      {
+        "label": "RLUSD ink role-admin MultiSign (weighted quorum 7, 11 signers)",
+        "role": "governor",
+        "authorityType": "multisig",
+        "chain": "ink",
+        "address": "0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
+        "deploymentRefs": [
+          "ink:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+        ],
+        "executionScope": {
+          "controllerDeployment": "ink:0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Ripple RLUSD mainnet token addresses",
+              "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+            },
+            {
+              "label": "ink current controller source/state",
+              "url": "https://explorer.inkonchain.com/address/0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9?tab=contract"
+            },
+            {
+              "label": "Optimism verified Ripple MultiSign executable twin",
+              "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+            },
+            {
+              "label": "ink current RLUSD implementation",
+              "url": "https://explorer.inkonchain.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+            }
+          ],
+          "pin": {
+            "position": "57377051",
+            "hash": "0xfa593d9d9b3c0752ce837f140de413ddda0eb907f4a2146da72e1b993239f96b",
+            "runtimeIdentity": "sha256:914d976ae5efab2a882bfe52dac7e11587aa8fb313f7d75c633a5d4cbbf1dafe",
+            "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+          },
+          "observedState": {
+            "position": "57377051",
+            "hash": "0xfa593d9d9b3c0752ce837f140de413ddda0eb907f4a2146da72e1b993239f96b",
+            "runtimeIdentity": "sha256:914d976ae5efab2a882bfe52dac7e11587aa8fb313f7d75c633a5d4cbbf1dafe",
+            "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "native-authority",
+              "targetDeployment": "ink:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x2f2ff15d",
+                "0xd547741f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "rlusd-ripple"
+              ],
+              "affectedDeployments": [
+                "ink:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+              ],
+              "reach": "root",
+              "controlRefs": [
+                "signer-config"
+              ],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [
+                "signer-config"
+              ],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "signer-config",
+              "targetDeployment": "ink:0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x7460837f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "rlusd-ripple"
+              ],
+              "affectedDeployments": [
+                "ink:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "weightedQuorum": {
+          "scheme": "contract",
+          "deployment": "ink:0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
+          "signers": [
+            {
+              "account": "0x07808a134bd2bc8714993a6a4314449ea289df37",
+              "weight": 3
+            },
+            {
+              "account": "0x0ed0c62aebe31fde32531ee8f8660900a184aad9",
+              "weight": 3
+            },
+            {
+              "account": "0x1e88672935a5aec6222d4cdcf1a1e210eda7361a",
+              "weight": 2
+            },
+            {
+              "account": "0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26",
+              "weight": 2
+            },
+            {
+              "account": "0x42d887d2198c171308e465fd77293f1507b5e4bd",
+              "weight": 3
+            },
+            {
+              "account": "0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6",
+              "weight": 2
+            },
+            {
+              "account": "0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b",
+              "weight": 2
+            },
+            {
+              "account": "0xa50b04d5ca1f13b40a2f240190917aea87f5c700",
+              "weight": 2
+            },
+            {
+              "account": "0xd8e1af528960ed42c29bd9d3aa01b241235d2078",
+              "weight": 2
+            },
+            {
+              "account": "0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2",
+              "weight": 3
+            },
+            {
+              "account": "0xea23cc32e2eb009a0623c5faf8070bb32445fdc9",
+              "weight": 2
+            }
+          ],
+          "quorum": 7,
+          "pin": {
+            "position": "57377051",
+            "hash": "0xfa593d9d9b3c0752ce837f140de413ddda0eb907f4a2146da72e1b993239f96b",
+            "runtimeIdentity": "sha256:914d976ae5efab2a882bfe52dac7e11587aa8fb313f7d75c633a5d4cbbf1dafe",
+            "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+          },
+          "status": "verified",
+          "reviewedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "sources": [
+            {
+              "label": "Ripple RLUSD mainnet token addresses",
+              "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+            },
+            {
+              "label": "ink current controller source/state",
+              "url": "https://explorer.inkonchain.com/address/0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9?tab=contract"
+            },
+            {
+              "label": "Optimism verified Ripple MultiSign executable twin",
+              "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+            },
+            {
+              "label": "ink current RLUSD implementation",
+              "url": "https://explorer.inkonchain.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+            }
+          ]
+        },
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "No hard token-level issuance cap: native MINTER_ROLE may mint arbitrary amounts; role-admin may grant that role and UPGRADER_ROLE may replace mint logic.",
+        "failureDomainKeys": [
+          "issuer:ripple-sctc"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 57374785,
+        "sources": [
+          {
+            "label": "Ripple RLUSD mainnet token addresses",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+          },
+          {
+            "label": "ink current controller source/state",
+            "url": "https://explorer.inkonchain.com/address/0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9?tab=contract"
+          },
+          {
+            "label": "Optimism verified Ripple MultiSign executable twin",
+            "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+          },
+          {
+            "label": "ink current RLUSD implementation",
+            "url": "https://explorer.inkonchain.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+          }
+        ],
+        "evidence": "Pinned ink block 57374785: hasRole for the token's actual DEFAULT_ADMIN_ROLE getter returned true. quorum()=7; signers() returns 11 addresses; complete signerWeight(address) roster: 0x07808a134bd2bc8714993a6a4314449ea289df37:3; 0x0ed0c62aebe31fde32531ee8f8660900a184aad9:3; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:2; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:2; 0x42d887d2198c171308e465fd77293f1507b5e4bd:3; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:2; 0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b:2; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:2; 0xd8e1af528960ed42c29bd9d3aa01b241235d2078:2; 0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2:3; 0xea23cc32e2eb009a0623c5faf8070bb32445fdc9:2. Minimum cryptographic signatures=3; independent people/organizations are not established. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk."
+      },
+      {
+        "label": "RLUSD ink upgrader MultiSign (weighted quorum 7, 11 signers)",
+        "role": "proxy-admin",
+        "authorityType": "multisig",
+        "chain": "ink",
+        "address": "0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+        "deploymentRefs": [
+          "ink:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+        ],
+        "executionScope": {
+          "controllerDeployment": "ink:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Ripple RLUSD mainnet token addresses",
+              "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+            },
+            {
+              "label": "ink current controller source/state",
+              "url": "https://explorer.inkonchain.com/address/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395?tab=contract"
+            },
+            {
+              "label": "Optimism verified Ripple MultiSign executable twin",
+              "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+            },
+            {
+              "label": "ink current RLUSD implementation",
+              "url": "https://explorer.inkonchain.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+            }
+          ],
+          "pin": {
+            "position": "57377051",
+            "hash": "0xfa593d9d9b3c0752ce837f140de413ddda0eb907f4a2146da72e1b993239f96b",
+            "runtimeIdentity": "sha256:bc4b0b5ba33262221bbee1eecd1dc691f77e7c26db7e48f54eed809eb4596181",
+            "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+          },
+          "observedState": {
+            "position": "57377051",
+            "hash": "0xfa593d9d9b3c0752ce837f140de413ddda0eb907f4a2146da72e1b993239f96b",
+            "runtimeIdentity": "sha256:bc4b0b5ba33262221bbee1eecd1dc691f77e7c26db7e48f54eed809eb4596181",
+            "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "native-authority",
+              "targetDeployment": "ink:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x4f1ef286"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "upgrade"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "rlusd-ripple"
+              ],
+              "affectedDeployments": [
+                "ink:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+              ],
+              "reach": "root",
+              "controlRefs": [
+                "signer-config"
+              ],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [
+                "signer-config"
+              ],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "signer-config",
+              "targetDeployment": "ink:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x7460837f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "rlusd-ripple"
+              ],
+              "affectedDeployments": [
+                "ink:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": false,
+        "weightedQuorum": {
+          "scheme": "contract",
+          "deployment": "ink:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+          "signers": [
+            {
+              "account": "0x07808a134bd2bc8714993a6a4314449ea289df37",
+              "weight": 3
+            },
+            {
+              "account": "0x0ed0c62aebe31fde32531ee8f8660900a184aad9",
+              "weight": 3
+            },
+            {
+              "account": "0x1e88672935a5aec6222d4cdcf1a1e210eda7361a",
+              "weight": 2
+            },
+            {
+              "account": "0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26",
+              "weight": 2
+            },
+            {
+              "account": "0x42d887d2198c171308e465fd77293f1507b5e4bd",
+              "weight": 3
+            },
+            {
+              "account": "0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6",
+              "weight": 2
+            },
+            {
+              "account": "0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b",
+              "weight": 2
+            },
+            {
+              "account": "0xa50b04d5ca1f13b40a2f240190917aea87f5c700",
+              "weight": 2
+            },
+            {
+              "account": "0xd8e1af528960ed42c29bd9d3aa01b241235d2078",
+              "weight": 2
+            },
+            {
+              "account": "0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2",
+              "weight": 3
+            },
+            {
+              "account": "0xea23cc32e2eb009a0623c5faf8070bb32445fdc9",
+              "weight": 2
+            }
+          ],
+          "quorum": 7,
+          "pin": {
+            "position": "57377051",
+            "hash": "0xfa593d9d9b3c0752ce837f140de413ddda0eb907f4a2146da72e1b993239f96b",
+            "runtimeIdentity": "sha256:bc4b0b5ba33262221bbee1eecd1dc691f77e7c26db7e48f54eed809eb4596181",
+            "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+          },
+          "status": "verified",
+          "reviewedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "sources": [
+            {
+              "label": "Ripple RLUSD mainnet token addresses",
+              "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+            },
+            {
+              "label": "ink current controller source/state",
+              "url": "https://explorer.inkonchain.com/address/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395?tab=contract"
+            },
+            {
+              "label": "Optimism verified Ripple MultiSign executable twin",
+              "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+            },
+            {
+              "label": "ink current RLUSD implementation",
+              "url": "https://explorer.inkonchain.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+            }
+          ]
+        },
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "No hard token-level issuance cap: native MINTER_ROLE may mint arbitrary amounts; role-admin may grant that role and UPGRADER_ROLE may replace mint logic.",
+        "failureDomainKeys": [
+          "issuer:ripple-sctc"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 57374785,
+        "sources": [
+          {
+            "label": "Ripple RLUSD mainnet token addresses",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+          },
+          {
+            "label": "ink current controller source/state",
+            "url": "https://explorer.inkonchain.com/address/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395?tab=contract"
+          },
+          {
+            "label": "Optimism verified Ripple MultiSign executable twin",
+            "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+          },
+          {
+            "label": "ink current RLUSD implementation",
+            "url": "https://explorer.inkonchain.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+          }
+        ],
+        "evidence": "Pinned ink block 57374785: hasRole for the token's actual UPGRADER_ROLE getter returned true. quorum()=7; signers() returns 11 addresses; complete signerWeight(address) roster: 0x07808a134bd2bc8714993a6a4314449ea289df37:3; 0x0ed0c62aebe31fde32531ee8f8660900a184aad9:3; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:2; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:2; 0x42d887d2198c171308e465fd77293f1507b5e4bd:3; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:2; 0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b:2; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:2; 0xd8e1af528960ed42c29bd9d3aa01b241235d2078:2; 0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2:3; 0xea23cc32e2eb009a0623c5faf8070bb32445fdc9:2. Minimum cryptographic signatures=3; independent people/organizations are not established. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk.",
+        "bypassSurfaces": [
+          "UPGRADER_ROLE can replace the native token mint implementation without an enforced delay."
+        ]
+      },
+      {
+        "label": "RLUSD unichain minter MultiSign (weighted quorum 2, 30 signers)",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "chain": "unichain",
+        "address": "0x866eb2f5c483fa525137f982c2be220aa096918c",
+        "deploymentRefs": [
+          "unichain:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+        ],
+        "executionScope": {
+          "controllerDeployment": "unichain:0x866eb2f5c483fa525137f982c2be220aa096918c",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Ripple RLUSD mainnet token addresses",
+              "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+            },
+            {
+              "label": "unichain current controller source/state",
+              "url": "https://unichain.blockscout.com/address/0x866eb2f5c483fa525137f982c2be220aa096918c?tab=contract"
+            },
+            {
+              "label": "Optimism verified Ripple MultiSign executable twin",
+              "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+            },
+            {
+              "label": "unichain current RLUSD implementation",
+              "url": "https://unichain.blockscout.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+            }
+          ],
+          "pin": {
+            "position": "60127103",
+            "hash": "0x78b6743cd07a71b741f20e2a745892d30f2fae5ef5107bedd202324654c159b0",
+            "runtimeIdentity": "sha256:4c0c846d4dd5c750454037012a3ecd7ff8e8bdab51e9c23fe76041b02f8d6854",
+            "signerIdentity": "sha256:2efffa6712dfbad914d5b070529921ed30ff7a34fcbd8c461e53bce4d3893969"
+          },
+          "observedState": {
+            "position": "60127103",
+            "hash": "0x78b6743cd07a71b741f20e2a745892d30f2fae5ef5107bedd202324654c159b0",
+            "runtimeIdentity": "sha256:4c0c846d4dd5c750454037012a3ecd7ff8e8bdab51e9c23fe76041b02f8d6854",
+            "signerIdentity": "sha256:2efffa6712dfbad914d5b070529921ed30ff7a34fcbd8c461e53bce4d3893969"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "native-authority",
+              "targetDeployment": "unichain:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x40c10f19"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "rlusd-ripple"
+              ],
+              "affectedDeployments": [
+                "unichain:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+              ],
+              "reach": "root",
+              "controlRefs": [
+                "signer-config"
+              ],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [
+                "signer-config"
+              ],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "signer-config",
+              "targetDeployment": "unichain:0x866eb2f5c483fa525137f982c2be220aa096918c",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x7460837f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "rlusd-ripple"
+              ],
+              "affectedDeployments": [
+                "unichain:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "threshold": 2,
+        "signerCount": 30,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "No hard token-level issuance cap: native MINTER_ROLE may mint arbitrary amounts; role-admin may grant that role and UPGRADER_ROLE may replace mint logic.",
+        "failureDomainKeys": [
+          "issuer:ripple-sctc"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 60124837,
+        "sources": [
+          {
+            "label": "Ripple RLUSD mainnet token addresses",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+          },
+          {
+            "label": "unichain current controller source/state",
+            "url": "https://unichain.blockscout.com/address/0x866eb2f5c483fa525137f982c2be220aa096918c?tab=contract"
+          },
+          {
+            "label": "Optimism verified Ripple MultiSign executable twin",
+            "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+          },
+          {
+            "label": "unichain current RLUSD implementation",
+            "url": "https://unichain.blockscout.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+          }
+        ],
+        "evidence": "Pinned unichain block 60124837: hasRole for the token's actual MINTER_ROLE getter returned true. quorum()=2; signers() returns 30 addresses; complete signerWeight(address) roster: 0x05302281b1d4cfa8716dbb55bb3a4f3d1c101515:1; 0x16ad0ca127e6f1695a90e1ba607854de479ea9a0:1; 0x195ce8a62d7663f242fad91b1d9f9d62c6d380c2:1; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:1; 0x27adea6c3a4e4d0f42f45e6e5e1faeefce072aa1:1; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:1; 0x2b3be65beb6f7572e0f9e94db5b9df16d1b1e651:1; 0x2eb17005fa381d0eac55e43acadf276a7f93e187:1; 0x3201f381b557b28a8b7c7e63d7be0597f2e36b6b:1; 0x3659a8dd16e0632bf68f27fee735b8ac2d391230:1; 0x3d3c74bba09554e6c9960d541e3e2815f892d6b2:1; 0x422a428af79dafc0203869604ef247b23cef2f84:1; 0x429ac8b23e2d81387effb38de58ad0e1356d19c1:1; 0x4668bd74a171879c86cce0bda355195ab2d202e2:1; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:1; 0x50e3f34e3a29ddc50720898b649b77a2cb752efa:1; 0x664a24cd367021cf1aa360587114d0ad86188918:1; 0x6cba9d49aaca72b556baf4c776370204bdf32f50:1; 0x728e96ad32132471735ab7819ed099cd1f41036b:1; 0x76634e26dde2d01962c3857aad89650e58fb2bcf:1; 0x8287885371490eb013b4cd257ffc0cfbbac56c0d:1; 0x948fe94d96ca2b1fdcad9f8b18f5fda58a33bd46:1; 0x9c036a73ad9e788a49504d590c40cf3692cba661:1; 0xa4fd21be102f34feddbece3c2c8c9b3830fcb33e:1; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:1; 0xac7d50a18b0b5a542b30c6136387eb70e3faba64:1; 0xb08648a45bfe2d7c888a7486d242d8a634583848:1; 0xbedd5b63a7619744822e0d77b015f792a7a26027:1; 0xd324dd7f49eee3bbe58dea6ebc49e4f43a0ee3b3:1; 0xde8adb41ffbbfad6c748d4f8be587de4b500e9fe:1. Minimum cryptographic signatures=2; independent people/organizations are not established. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk."
+      },
+      {
+        "label": "RLUSD unichain role-admin MultiSign (weighted quorum 7, 11 signers)",
+        "role": "governor",
+        "authorityType": "multisig",
+        "chain": "unichain",
+        "address": "0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
+        "deploymentRefs": [
+          "unichain:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+        ],
+        "executionScope": {
+          "controllerDeployment": "unichain:0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Ripple RLUSD mainnet token addresses",
+              "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+            },
+            {
+              "label": "unichain current controller source/state",
+              "url": "https://unichain.blockscout.com/address/0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9?tab=contract"
+            },
+            {
+              "label": "Optimism verified Ripple MultiSign executable twin",
+              "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+            },
+            {
+              "label": "unichain current RLUSD implementation",
+              "url": "https://unichain.blockscout.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+            }
+          ],
+          "pin": {
+            "position": "60127103",
+            "hash": "0x78b6743cd07a71b741f20e2a745892d30f2fae5ef5107bedd202324654c159b0",
+            "runtimeIdentity": "sha256:076a4010515657f356ea878e68f30b62168b4981d8efcb5faec4804a142c5544",
+            "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+          },
+          "observedState": {
+            "position": "60127103",
+            "hash": "0x78b6743cd07a71b741f20e2a745892d30f2fae5ef5107bedd202324654c159b0",
+            "runtimeIdentity": "sha256:076a4010515657f356ea878e68f30b62168b4981d8efcb5faec4804a142c5544",
+            "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "native-authority",
+              "targetDeployment": "unichain:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x2f2ff15d",
+                "0xd547741f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "rlusd-ripple"
+              ],
+              "affectedDeployments": [
+                "unichain:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+              ],
+              "reach": "root",
+              "controlRefs": [
+                "signer-config"
+              ],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [
+                "signer-config"
+              ],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "signer-config",
+              "targetDeployment": "unichain:0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x7460837f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "rlusd-ripple"
+              ],
+              "affectedDeployments": [
+                "unichain:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "weightedQuorum": {
+          "scheme": "contract",
+          "deployment": "unichain:0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
+          "signers": [
+            {
+              "account": "0x07808a134bd2bc8714993a6a4314449ea289df37",
+              "weight": 3
+            },
+            {
+              "account": "0x0ed0c62aebe31fde32531ee8f8660900a184aad9",
+              "weight": 3
+            },
+            {
+              "account": "0x1e88672935a5aec6222d4cdcf1a1e210eda7361a",
+              "weight": 2
+            },
+            {
+              "account": "0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26",
+              "weight": 2
+            },
+            {
+              "account": "0x42d887d2198c171308e465fd77293f1507b5e4bd",
+              "weight": 3
+            },
+            {
+              "account": "0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6",
+              "weight": 2
+            },
+            {
+              "account": "0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b",
+              "weight": 2
+            },
+            {
+              "account": "0xa50b04d5ca1f13b40a2f240190917aea87f5c700",
+              "weight": 2
+            },
+            {
+              "account": "0xd8e1af528960ed42c29bd9d3aa01b241235d2078",
+              "weight": 2
+            },
+            {
+              "account": "0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2",
+              "weight": 3
+            },
+            {
+              "account": "0xea23cc32e2eb009a0623c5faf8070bb32445fdc9",
+              "weight": 2
+            }
+          ],
+          "quorum": 7,
+          "pin": {
+            "position": "60127103",
+            "hash": "0x78b6743cd07a71b741f20e2a745892d30f2fae5ef5107bedd202324654c159b0",
+            "runtimeIdentity": "sha256:076a4010515657f356ea878e68f30b62168b4981d8efcb5faec4804a142c5544",
+            "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+          },
+          "status": "verified",
+          "reviewedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "sources": [
+            {
+              "label": "Ripple RLUSD mainnet token addresses",
+              "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+            },
+            {
+              "label": "unichain current controller source/state",
+              "url": "https://unichain.blockscout.com/address/0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9?tab=contract"
+            },
+            {
+              "label": "Optimism verified Ripple MultiSign executable twin",
+              "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+            },
+            {
+              "label": "unichain current RLUSD implementation",
+              "url": "https://unichain.blockscout.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+            }
+          ]
+        },
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "No hard token-level issuance cap: native MINTER_ROLE may mint arbitrary amounts; role-admin may grant that role and UPGRADER_ROLE may replace mint logic.",
+        "failureDomainKeys": [
+          "issuer:ripple-sctc"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 60124837,
+        "sources": [
+          {
+            "label": "Ripple RLUSD mainnet token addresses",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+          },
+          {
+            "label": "unichain current controller source/state",
+            "url": "https://unichain.blockscout.com/address/0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9?tab=contract"
+          },
+          {
+            "label": "Optimism verified Ripple MultiSign executable twin",
+            "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+          },
+          {
+            "label": "unichain current RLUSD implementation",
+            "url": "https://unichain.blockscout.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+          }
+        ],
+        "evidence": "Pinned unichain block 60124837: hasRole for the token's actual DEFAULT_ADMIN_ROLE getter returned true. quorum()=7; signers() returns 11 addresses; complete signerWeight(address) roster: 0x07808a134bd2bc8714993a6a4314449ea289df37:3; 0x0ed0c62aebe31fde32531ee8f8660900a184aad9:3; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:2; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:2; 0x42d887d2198c171308e465fd77293f1507b5e4bd:3; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:2; 0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b:2; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:2; 0xd8e1af528960ed42c29bd9d3aa01b241235d2078:2; 0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2:3; 0xea23cc32e2eb009a0623c5faf8070bb32445fdc9:2. Minimum cryptographic signatures=3; independent people/organizations are not established. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk."
+      },
+      {
+        "label": "RLUSD unichain upgrader MultiSign (weighted quorum 7, 11 signers)",
+        "role": "proxy-admin",
+        "authorityType": "multisig",
+        "chain": "unichain",
+        "address": "0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+        "deploymentRefs": [
+          "unichain:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+        ],
+        "executionScope": {
+          "controllerDeployment": "unichain:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Ripple RLUSD mainnet token addresses",
+              "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+            },
+            {
+              "label": "unichain current controller source/state",
+              "url": "https://unichain.blockscout.com/address/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395?tab=contract"
+            },
+            {
+              "label": "Optimism verified Ripple MultiSign executable twin",
+              "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+            },
+            {
+              "label": "unichain current RLUSD implementation",
+              "url": "https://unichain.blockscout.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+            }
+          ],
+          "pin": {
+            "position": "60127103",
+            "hash": "0x78b6743cd07a71b741f20e2a745892d30f2fae5ef5107bedd202324654c159b0",
+            "runtimeIdentity": "sha256:d5a0cf89d7bb96ad7a38785d205db3c2de28b58cacf4ef2fa9473185310f2c15",
+            "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+          },
+          "observedState": {
+            "position": "60127103",
+            "hash": "0x78b6743cd07a71b741f20e2a745892d30f2fae5ef5107bedd202324654c159b0",
+            "runtimeIdentity": "sha256:d5a0cf89d7bb96ad7a38785d205db3c2de28b58cacf4ef2fa9473185310f2c15",
+            "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "native-authority",
+              "targetDeployment": "unichain:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x4f1ef286"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "upgrade"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "rlusd-ripple"
+              ],
+              "affectedDeployments": [
+                "unichain:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+              ],
+              "reach": "root",
+              "controlRefs": [
+                "signer-config"
+              ],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [
+                "signer-config"
+              ],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "signer-config",
+              "targetDeployment": "unichain:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x7460837f"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "rlusd-ripple"
+              ],
+              "affectedDeployments": [
+                "unichain:0x8d58c0c60b8d6b88fa98b291a646db34d0f98258"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": false,
+        "weightedQuorum": {
+          "scheme": "contract",
+          "deployment": "unichain:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
+          "signers": [
+            {
+              "account": "0x07808a134bd2bc8714993a6a4314449ea289df37",
+              "weight": 3
+            },
+            {
+              "account": "0x0ed0c62aebe31fde32531ee8f8660900a184aad9",
+              "weight": 3
+            },
+            {
+              "account": "0x1e88672935a5aec6222d4cdcf1a1e210eda7361a",
+              "weight": 2
+            },
+            {
+              "account": "0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26",
+              "weight": 2
+            },
+            {
+              "account": "0x42d887d2198c171308e465fd77293f1507b5e4bd",
+              "weight": 3
+            },
+            {
+              "account": "0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6",
+              "weight": 2
+            },
+            {
+              "account": "0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b",
+              "weight": 2
+            },
+            {
+              "account": "0xa50b04d5ca1f13b40a2f240190917aea87f5c700",
+              "weight": 2
+            },
+            {
+              "account": "0xd8e1af528960ed42c29bd9d3aa01b241235d2078",
+              "weight": 2
+            },
+            {
+              "account": "0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2",
+              "weight": 3
+            },
+            {
+              "account": "0xea23cc32e2eb009a0623c5faf8070bb32445fdc9",
+              "weight": 2
+            }
+          ],
+          "quorum": 7,
+          "pin": {
+            "position": "60127103",
+            "hash": "0x78b6743cd07a71b741f20e2a745892d30f2fae5ef5107bedd202324654c159b0",
+            "runtimeIdentity": "sha256:d5a0cf89d7bb96ad7a38785d205db3c2de28b58cacf4ef2fa9473185310f2c15",
+            "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
+          },
+          "status": "verified",
+          "reviewedAt": "2026-10-01",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "sources": [
+            {
+              "label": "Ripple RLUSD mainnet token addresses",
+              "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+            },
+            {
+              "label": "unichain current controller source/state",
+              "url": "https://unichain.blockscout.com/address/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395?tab=contract"
+            },
+            {
+              "label": "Optimism verified Ripple MultiSign executable twin",
+              "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+            },
+            {
+              "label": "unichain current RLUSD implementation",
+              "url": "https://unichain.blockscout.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+            }
+          ]
+        },
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "No hard token-level issuance cap: native MINTER_ROLE may mint arbitrary amounts; role-admin may grant that role and UPGRADER_ROLE may replace mint logic.",
+        "failureDomainKeys": [
+          "issuer:ripple-sctc"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 60124837,
+        "sources": [
+          {
+            "label": "Ripple RLUSD mainnet token addresses",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+          },
+          {
+            "label": "unichain current controller source/state",
+            "url": "https://unichain.blockscout.com/address/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395?tab=contract"
+          },
+          {
+            "label": "Optimism verified Ripple MultiSign executable twin",
+            "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+          },
+          {
+            "label": "unichain current RLUSD implementation",
+            "url": "https://unichain.blockscout.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
+          }
+        ],
+        "evidence": "Pinned unichain block 60124837: hasRole for the token's actual UPGRADER_ROLE getter returned true. quorum()=7; signers() returns 11 addresses; complete signerWeight(address) roster: 0x07808a134bd2bc8714993a6a4314449ea289df37:3; 0x0ed0c62aebe31fde32531ee8f8660900a184aad9:3; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:2; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:2; 0x42d887d2198c171308e465fd77293f1507b5e4bd:3; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:2; 0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b:2; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:2; 0xd8e1af528960ed42c29bd9d3aa01b241235d2078:2; 0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2:3; 0xea23cc32e2eb009a0623c5faf8070bb32445fdc9:2. Minimum cryptographic signatures=3; independent people/organizations are not established. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk.",
+        "bypassSurfaces": [
+          "UPGRADER_ROLE can replace the native token mint implementation without an enforced delay."
+        ]
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -174,11 +3453,43 @@
         {
           "label": "Ethereum: Ripple MultiSign contract (Blockscout verified)",
           "url": "https://eth.blockscout.com/address/0x97e9d0b0bcbe86e1e230b0ffd3a5f1f9b8428591"
+        },
+        {
+          "label": "Ripple RLUSD mainnet token addresses",
+          "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+        },
+        {
+          "label": "Verified Ripple MultiSign source (Optimism)",
+          "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6?tab=contract"
+        },
+        {
+          "label": "Base current native token implementation",
+          "url": "https://base.blockscout.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
         }
       ],
-      "evidence": "ETH: MINTER_ROLE holder is 0x97e9 (Ripple MultiSign, quorum 2 of 31). The proxy creation calldata names 0x66fc as DEFAULT_ADMIN_ROLE and 0x863c as UPGRADER_ROLE; current hasRole reads at block 25530195 confirm both assignments, and both verified MultiSign contracts report quorum 7 of 12. XRPL: issuer rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De has its master key active and no signer list.",
-      "reviewer": "Codex V9 control curation / SOL-IV calibration",
-      "reviewedAt": "2026-07-15"
+      "evidence": "Ethereum block 26095802 confirms the unchanged implementation and role assignments, a 2-of-32 equal-weight minter, and separate role-admin/upgrader MultiSign contracts with weighted quorum 7 over 11 signers weighted 2 or 3. XRPL validated ledger 107354222 confirms a disabled master key, no regular key, and weighted signer quorum 25 over 26 entries. Controls are scoped only to their actual native deployment. Weighted-to-person-count mapping is proposed separately rather than overstating a protective threshold. D15 supersedes the held weighted-to-headcount mapping with the independently reproduced minimum signature counts, without granting organizational independence. Current EVM block 26097127 role-admin/upgrader identical address:weight roster: 0x07808a134bd2bc8714993a6a4314449ea289df37:3; 0x0ed0c62aebe31fde32531ee8f8660900a184aad9:3; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:2; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:2; 0x42d887d2198c171308e465fd77293f1507b5e4bd:3; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:2; 0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b:2; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:2; 0xd8e1af528960ed42c29bd9d3aa01b241235d2078:2; 0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2:3; 0xea23cc32e2eb009a0623c5faf8070bb32445fdc9:2. Quorum weight 7 requires minimum three signatures. Current validated XRPL ledger 107358397 (hash 86447D40875CA527FBB3F68150EE3CB5CBA13729DC2D4C06CE4B0E9AD0A049D0) account:weight roster: r4atrYAjm91GTB4qsDARjQQJPTi5svSEm:24; rkRFoAFGRGBsarkzhiA8kGzvyVHnZR1Co:24; rhogmBAzXLHhYvqn6iwZZdukbMwj1m6k36:1; rnw4p9U352SWuMquc9MxgoRD319THHQaWY:1; rnGL7M29kbXv4h2Lbnx87uxrTbD762gXug:24; raVEUzHFjwAy4HHH4ig6JmHB65SHL5nRe2:1; rfwUW9ff6zxcUdeDgY25aYWVHgYqhwCpTP:1; rfExtNyAg5gsmKakzZPQaowS8kPWmX4f1Z:1; r3DucgFuQDSRyJ66hUpFx6W9s6wQnCdiUf:24; r3WdRnCjsnNpHct8Tims5cimLMKVD34fcb:1; r9mGCUy43pxfstc24yd4Mq8hS6eHQS9631:24; rwJ7arqSfCLPqFyv63hk1xDfYyfNQ8S5FA:1; rwFESSqngExPayH5HN9DQ6QKjgsfUujkHv:1; rBpzqzJrNxthrBfLcGfJrkkCNq1tz6XKup:1; rUyCpgTR9HLrTQ4ss2aVspF3rV5vSfSytt:1; rNRkUBZGPKZxF23BcVUhw99UB9445QZFau:1; rGHNvJHHHQAqTxCGJi829E6teKRZrVMx7N:1; rH3GmSoCFgTMk4pMgLmjdA14ti5iY37D22:24; rJpKdQU6D6ZHuNXgQaEwcBDbdTaTpHEwAc:1; rJ2YSzpuNnT9QgBzesPt5KwYbyCNRwd9Zd:24; rKWvpdUUGgoRiFf7b7rQKyngjpXSqsh6RG:1; rMMqCGdLevMMX1rr31AV2zcCn878SzG2k3:1; r48mivRxDNerUcjqs3sdLixL2fEzgrGgxB:1; rPi8fRYg8HyXGBiMsagsQLZoBo91TdAqQE:24; rQNbmpvaaFjPULxWZTNz5hLaPDmJvhtCJS:1; rQLhRtSztTCptVjEyAb4ZSckQDkbhBHJ8v:1. Quorum weight 25 requires minimum two signatures. No independence follows from distinct addresses; confidence remains manual-review. R2 current pinned blocks ethereum=26098750, base=52041924, optimism=157637209, ink=57374785, unichain=60124837 establish all four newly catalogued EVM native minters and separate role-admin/upgrader paths; complete weighted rosters are in the new controls. Full deployment-to-pin explorer role history was cross-checked at every reported event block with 500-block RPC windows. Issuer-selected NTT manager is an additional live token MINTER_ROLE/BURNER_ROLE holder on all five EVM deployments, reviewed exclusively under Bridge Risk. Technical unrestricted native mint authority and lack of independently identified human controllers are retained, not cleared.",
+      "reviewer": "Sol owner rulings 2026-10-01 (RuleC01)",
+      "reviewedAt": "2026-10-01",
+      "scopedQuestions": [
+        {
+          "controlRef": "xrpl:rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De",
+          "question": "The complete weighted roster establishes a minimum cryptographic signer count, but independent human or organizational controllers are not established. Obtain a key-controller attestation before treating these addresses as independent people.",
+          "reviewedAt": "2026-10-01",
+          "reviewer": "Sol owner rulings 2026-10-01 (RuleC01)"
+        },
+        {
+          "controlRef": "ethereum:0x66fc2d9e4897cf3886a340a4cabc23cca2ac6a0e",
+          "question": "The complete weighted roster establishes a minimum cryptographic signer count, but independent human or organizational controllers are not established. Obtain a key-controller attestation before treating these addresses as independent people.",
+          "reviewedAt": "2026-10-01",
+          "reviewer": "Sol owner rulings 2026-10-01 (RuleC01)"
+        },
+        {
+          "controlRef": "ethereum:0x863c8754c298d3efec3863f2a46f1c71a355ce6c",
+          "question": "The complete weighted roster establishes a minimum cryptographic signer count, but independent human or organizational controllers are not established. Obtain a key-controller attestation before treating these addresses as independent people.",
+          "reviewedAt": "2026-10-01",
+          "reviewer": "Sol owner rulings 2026-10-01 (RuleC01)"
+        }
+      ]
     }
   }
 }

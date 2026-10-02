@@ -1,4 +1,5 @@
-import { CHAIN_META, getChainResilienceTier } from "./index";
+import { getChainResilienceTier } from "./index";
+import { CHAIN_META } from "../../types/chain-identity";
 import { canonicalizeChainCirculating } from "./circulating";
 import { TRACKED_META_BY_ID } from "../stablecoins/registry";
 import { getPegReference } from "../peg-rates";

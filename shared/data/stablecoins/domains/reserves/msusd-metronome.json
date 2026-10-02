@@ -36,13 +36,17 @@
       {
         "label": "Metronome post-mortem: msETH/msUSD underbacking",
         "url": "https://paragraph.com/@metronomedao/post-mortem-msethmsusd-underbacking"
+      },
+      {
+        "label": "Metronome September 16 recovery update, supplementary narrative review October 2 2026",
+        "url": "https://paragraph.com/@metronomedao/metronome-recovery-update"
       }
     ],
-    "rationale": "Accessed 2026-09-30: the issuer supported-assets table names Ethereum DAI, USDC, FRAX, ETH, WBTC, sfrxETH and Vesper receipts, and Optimism/Base USDC and ETH-family collateral. These are eligible assets, not positive measured msUSD holdings. The July 30 post-mortem still describes approximately 4.57 million msUSD unbacked float and a remediation strategy involving looped treasury positions, LPs and buyback/burn; those July amounts do not establish current backing or a recovery guarantee. The public disclosure supplies no msUSD-only allocation rule for shared multi-synth collateral and no reconciled current debt/float/treasury statement. NC-136 remains basket-needs-split. Next evidence: obtain the issuer's synth-specific loss/claim allocation rule and reconciled dated debt, circulating float, and net treasury backing; then independently measure exact DepositToken and held-receipt claims at the same chain checkpoints. No eligible token is promoted to an edge.",
+    "rationale": "The September 30 review of eligible collateral remains historical. Supplementary October 2, 2026 review: Metronome's September 16 recovery update reports that the July 30 shortfall was fully closed and a surplus established through treasury-funded buybacks and an $8 million USDC loan against treasury wstETH. The update also states that the synth swap remains closed indefinitely. This issuer-reported recovery does not supply a complete current msUSD-only collateral allocation, an independently scoped reserve-to-liability report, or an unconditional future recovery guarantee. Eligible multi-synth collateral is not a measured 100% msUSD allocation; NC-136 remains basket-needs-split, and compositionAsOf is unchanged.",
     "compositionBasis": "Historical eligible collateral envelope; supported-assets and July 30 underbacking post-mortem re-read 2026-09-30, without a new measured composition",
     "compositionAsOf": "2026-08-08",
     "scope": "selected-slices",
-    "knownUnknownExposure": "Current deposited balances and weights across the eligible collateral set are not published in the reviewed issuer documentation, cross-margin multi-synth pooling prevents treating raw DepositToken supplies as msUSD-only composition, and the July 2026 post-mortem confirms a period of underbacking in the synth swap module that left approximately 4.57 million msUSD without matching debt positions.",
+    "knownUnknownExposure": "A complete current msUSD-only collateral allocation is not established by the reviewed sources. Cross-margin multi-synth pooling prevents treating raw DepositToken supplies as msUSD-only composition. The July 2026 post-mortem documented approximately 4.57 million msUSD without matching debt positions; the September 16 issuer update reports that shortfall closed and a surplus established. Neither historical amount is treated as a current measured collateral allocation.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -65,7 +69,7 @@
         "role": "other"
       }
     ],
-    "segregation": "segregated",
+    "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "conditional",
     "reviewedAt": "2026-07-20",
@@ -81,7 +85,7 @@
         "url": "https://docs.metronome.io/metronome-synth/contracts"
       }
     ],
-    "uncertainty": "Collateral is pooled per asset in non-custodial DepositToken contracts with per-user debt tracked separately; plain assets (ETH, WBTC, USDC, DAI, FRAX) sit idle in those contracts, while Vesper va-token collateral (vaETH, vaUSDC, vaFRAX, and similar) represents positions whose underlying Vesper pools deploy capital into yield strategies by design, hence conditional reuse. No legal segregation, bankruptcy-remoteness, or rehypothecation terms exist for contract custody; published audits could not be located in primary sources.",
+    "uncertainty": "Collateral is pooled per asset in non-custodial DepositToken contracts with per-user debt tracked separately; plain assets (ETH, WBTC, USDC, DAI, FRAX) sit idle in those contracts, while Vesper va-token collateral (vaETH, vaUSDC, vaFRAX, and similar) represents positions whose underlying Vesper pools deploy capital into yield strategies by design, hence conditional reuse. The 2026-10-01 protocol and deployment-documentation review establishes technical per-asset contract separation, but did not establish enforceable legal segregation or bankruptcy-remoteness rights under ruling D09. Legal rehypothecation terms and a primary-source custody agreement were not located in that review.",
     "knownUnknownExposurePct": 100
   }
 }

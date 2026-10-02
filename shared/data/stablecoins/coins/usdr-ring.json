@@ -9,7 +9,38 @@
   },
   "collateral": "Undisclosed. Ring's current docs do not identify USDR reserve assets or allocations; the verified USDR/Core contracts expose no reserve ledger or PCV linkage. CoinGecko's circular-liquidity description is secondary and uncorroborated; archived RUSD PCV docs refer to different legacy addresses.",
   "pegMechanism": "Undisclosed for the tracked deployment. The verified AssetToken permits role-gated minting and burning through Core but exposes no bonding-curve, PCV, reserve, or holder-redemption function. CoinGecko claims circular liquidity and instant redemptions, while archived Ring docs describe an older RUSD PCV/bonding-curve design; neither is a current source mapping that mechanism to the tracked USDR deployment.",
-  "mechanismArchetype": "algorithmic",
+  "mechanismArchetypeReview": {
+    "disposition": "unresolved",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol NR wave 2026-10-02 (NrUsdr)",
+    "rationale": "At Ethereum block 26103180, tracked USDR 0x4ea40dcee961675683e0a2e1721bd49cb9bca913 remains AssetToken governed through Core 0xb2799ed78490ea642d2ecb23cb2ce9b8acc087d4, with three EOA minters and RingLaunchpad. Newly recovered issuer draft a7061d4 describes RingStableMinter accepting USDT, USDC or DAI, locking their FewTokens, and issuing USDR through fwUSDR, explicitly without redemption. That draft names no mainnet deployment; the current production client configures this minter and Fixed Yield only on Sepolia, and its configured minter address has no Ethereum-mainnet code at the pinned block. The discovered mainnet fwUSDR 0x29a294f8fe285dfb259705213e375ecb7fcf9d9b wraps the tracked token and holds USDR, so its unwrap claim does not establish external backing for origin USDR. No current exact-product whole-holder claim, reserve inventory or algorithmic contraction mechanism was established. D18's unresolved disposition is retained; retired RUSD, draft products and wrapper balances cannot supply a replacement archetype.",
+    "sources": [
+      {
+        "label": "Verified deployed USDR AssetToken source and constructor identity",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4ea40dcee961675683e0a2e1721bd49cb9bca913"
+      },
+      {
+        "label": "Current Ring public documentation index",
+        "url": "https://docs.ring.exchange/llms.txt"
+      },
+      {
+        "label": "Pinned current Ethereum product identity at block 26103180",
+        "url": "https://etherscan.io/block/26103180"
+      },
+      {
+        "label": "Issuer USDR Mint draft at a7061d4 (not a mainnet deployment disclosure)",
+        "url": "https://raw.githubusercontent.com/RingProtocol/docs/a7061d4fd0b539fca55db53871d193a386e086ad/docs/concepts/usdr-mint.md"
+      },
+      {
+        "label": "Production Ring Interface source map (Sepolia mint and yield configuration)",
+        "url": "https://app.ring.exchange/static/js/main.facb7bb4.js.map"
+      },
+      {
+        "label": "Verified mainnet fwUSDR source (unwrap returns origin USDR)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x29a294f8fe285dfb259705213e375ecb7fcf9d9b"
+      }
+    ]
+  },
   "detailProvider": "coingecko",
   "geckoId": "ring-usd",
   "protocolSlug": "ring-protocol",

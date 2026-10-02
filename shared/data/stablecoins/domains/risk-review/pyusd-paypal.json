@@ -2,10 +2,19 @@
   "id": "pyusd-paypal",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: PYUSD resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Paxos PYUSD asset protection role specification",
+        "url": "https://github.com/paxosglobal/pyusd-contract"
+      },
+      {
+        "label": "Paxos USD stablecoin terms, section 3.5",
+        "url": "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions"
+      }
+    ],
+    "evidence": "Paxos documents that ASSET_PROTECTION_ROLE can freeze and unfreeze any address and wipe a frozen balance. Section 3.5 of its USD stablecoin terms applies freeze, upgrade and legal-seizure powers to all holders; this confirms the existing Yes verdict without relying on centralized-governance inference.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA10PYUSD)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
@@ -25,8 +34,8 @@
     ],
     "sources": [
       {
-        "label": "PayPal PYUSD developer center",
-        "url": "https://developer.paypal.com/dev-center/pyusd/"
+        "label": "KPMG August 2026 PYUSD native deployment table",
+        "url": "https://framerusercontent.com/assets/VdMoM8qevL5j7tgTTmLhkemRdY.pdf"
       },
       {
         "label": "PayPal PYUSD on Arbitrum",
@@ -66,8 +75,8 @@
         "observedAt": "2026-06-13",
         "sources": [
           {
-            "label": "PayPal PYUSD developer center",
-            "url": "https://developer.paypal.com/dev-center/pyusd/"
+            "label": "KPMG August 2026 PYUSD native deployment table",
+            "url": "https://framerusercontent.com/assets/VdMoM8qevL5j7tgTTmLhkemRdY.pdf"
           },
           {
             "label": "PayPal PYUSD on Arbitrum",
@@ -124,8 +133,8 @@
         "observedAt": "2026-06-13",
         "sources": [
           {
-            "label": "PayPal PYUSD developer center",
-            "url": "https://developer.paypal.com/dev-center/pyusd/"
+            "label": "KPMG August 2026 PYUSD native deployment table",
+            "url": "https://framerusercontent.com/assets/VdMoM8qevL5j7tgTTmLhkemRdY.pdf"
           },
           {
             "label": "PayPal PYUSD on Arbitrum",
@@ -156,8 +165,8 @@
         "observedAt": "2026-06-13",
         "sources": [
           {
-            "label": "PayPal PYUSD developer center",
-            "url": "https://developer.paypal.com/dev-center/pyusd/"
+            "label": "KPMG August 2026 PYUSD native deployment table",
+            "url": "https://framerusercontent.com/assets/VdMoM8qevL5j7tgTTmLhkemRdY.pdf"
           },
           {
             "label": "PayPal PYUSD on Arbitrum",
@@ -738,15 +747,15 @@
           "contract:ethereum:0xa2c323fe5a74adffad2bf3e007e36bb029606444"
         ],
         "authorityType": "eoa",
-        "capDescription": "SupplyControl recorded a 560,000,000 PYUSD rolling capacity with a 6,482 PYUSD-per-second refill for the OFTWrapper at block 25711753; the SupplyControl manager can change that route-level configuration.",
+        "capDescription": "SupplyControl recorded a 660,000,000 PYUSD rolling capacity with a 7,639 PYUSD-per-second refill for the OFTWrapper at block 26095810; the SupplyControl manager can change that route-level configuration.",
         "canRaiseCap": true,
         "routeChecks": {
           "trustedPeerOrRemote": "The verified LayerZero OFT Adapter ABI exposes endpoint(), peers(), isPeer(), setPeer(), delegate, enforced-option, pre-crime, and message-inspector machinery; the full current peer/EID/DVN state was not re-read in this screen.",
-          "rateLimits": "At Ethereum block 25711753, the wrapper's SupplyControl rolling capacity was 560,000,000 PYUSD with a 6,482 PYUSD-per-second refill. The Paxos SupplyControl manager can change the controller capacity and recipient policy.",
-          "pausersAdminsUpgraders": "At Ethereum block 25770456, owner() on the verified OFTWrapper returned Paxos EOA 0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b. The wrapper is bridge machinery; its SupplyControl mint permission is canonical-side ingress/egress accounting and is not native Mint Authority."
+          "rateLimits": "At Ethereum block 26095810, the wrapper's SupplyControl rolling capacity was 660,000,000 PYUSD with a 7,639 PYUSD-per-second refill. The Paxos SupplyControl manager can change the controller capacity and recipient policy.",
+          "pausersAdminsUpgraders": "At Ethereum block 26095810, owner() on the verified OFTWrapper returned Paxos EOA 0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b. The wrapper is bridge machinery; its SupplyControl mint permission is canonical-side ingress/egress accounting and is not native Mint Authority."
         },
-        "observedAt": "2026-08-16",
-        "observedBlock": 25770456,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095810,
         "sources": [
           {
             "label": "Ethereum verified PYUSD OFTWrapper",
@@ -761,7 +770,7 @@
             "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "evidence": "The verified Ethereum OFTWrapper at 0xa2c323fe5a74adffad2bf3e007e36bb029606444 is a LayerZero OFT Adapter, not a generic Paxos issuer controller. Its ABI exposes bridge send/receive, peer, delegate, enforced-option, pre-crime/message-inspector, and rate-limit functions. At block 25770456 its owner was the Paxos EOA 0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b; at block 25711753 SupplyControl listed it as an active controller with the dated 560,000,000 rolling capacity and 6,482 PYUSD-per-second refill. This adverse bridge mint/burn and administrator exposure remains scoreable here while the same EOA's separately evidenced native controller-manager powers remain in Mint Authority."
+        "evidence": "At Ethereum block 26095810, the OFTWrapper at 0xa2c323fe5a74adffad2bf3e007e36bb029606444 returned the canonical PYUSD token and LayerZero V2 endpoint, with owner 0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b. SupplyControl listed the wrapper with a 660,000,000 PYUSD rolling capacity and 7,639 PYUSD-per-second refill, increased from the historical 560,000,000 capacity and 6,482 refill observed at block 25711753. Bridge mint/burn and administrator exposure remains in Bridge Risk; native controller-manager powers remain in Mint Authority."
       }
     ]
   }

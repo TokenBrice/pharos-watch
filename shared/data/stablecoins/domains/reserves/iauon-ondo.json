@@ -42,9 +42,21 @@
       {
         "label": "Ankura Ondo Stocks August 2026 aggregate monthly report",
         "url": "https://www.dropbox.com/scl/fo/7rlmba8f49nvbp3xwz1of/AP5IeDF7Zhzwb9TK1kEwCD4/Monthly%20Ankura%20-%20Ondo%20Stocks%20-%20Aug%202026_Ankura%20Attestation.pdf?rlkey=hokf0tffqvezfmsto25cvpovs&dl=1"
+      },
+      {
+        "label": "Ankura September 23, 2026 aggregate daily attestation (8pm ET); reference only, no IAUon-specific composition",
+        "url": "https://dl.dropboxusercontent.com/scl/fo/jzkrw308mrhsasauqrjqq/AN1ZwaNl07vhb2Gc5RsQAr8/2026/09%20September/Daily%20Report%20-%20Ondo%20Stocks%20-%202026-09-23_20_00_ET%20-%20Ankura%20Attestation.pdf?rlkey=nik1v5slekrzx5fbi0zan5sk3&dl=1"
+      },
+      {
+        "label": "Ankura September 29, 2026 daily attestation (8pm ET), archive member 2026/09 September/Daily Report - Ondo Stocks - 2026-09-29_20_00_ET - Ankura Attestation.pdf; aggregate reference only",
+        "url": "https://www.dropbox.com/scl/fo/jzkrw308mrhsasauqrjqq/AJxJak0F90kcwkADSN3DCD4?rlkey=nik1v5slekrzx5fbi0zan5sk3&dl=1"
+      },
+      {
+        "label": "IAUon issuer API: underlying ETF holdings and null wrapper supply/TVL fields, fetched October 2, 2026",
+        "url": "https://app.ondo.finance/api/v2/assets/iauon/info"
       }
     ],
-    "rationale": "Write-time re-open 2026-07-28 of Ondo Stocks overview and trust-and-transparency docs (Global Markets URLs redirect to ondo-stocks paths): each Ondo tokenized stock is fully backed by the underlying security together with cash in transit; Ankura Trust verifies holdings. IAUon product page remains live. Cash vs share weights undisclosed \u2192 100% IAU fund-share envelope with knownUnknownExposurePct=100. September 14 provenance follow-up reviewed the September 9 daily and August 1-31 monthly Ankura reports. Both reconcile aggregate Ondo Stocks and related USDY/USDon collateral; neither supplies IAUon-specific IAU shares, cash allocation or token liabilities. Their aggregate collateralization ratios cannot be attributed to IAUon. The IAU ETF holdings table also describes the underlying ETF rather than the Ondo wrapper reserves; no new composition date or weights are asserted.",
+    "rationale": "Write-time re-open 2026-07-28 of Ondo Stocks overview and trust-and-transparency docs (Global Markets URLs redirect to ondo-stocks paths): each Ondo tokenized stock is fully backed by the underlying security together with cash in transit; Ankura Trust verifies holdings. IAUon product page remains live. Cash vs share weights undisclosed \u2192 100% IAU fund-share envelope with knownUnknownExposurePct=100. September 14 provenance follow-up reviewed the September 9 daily and August 1-31 monthly Ankura reports. Both reconcile aggregate Ondo Stocks and related USDY/USDon collateral; neither supplies IAUon-specific IAU shares, cash allocation or token liabilities. Their aggregate collateralization ratios cannot be attributed to IAUon. The IAU ETF holdings table also describes the underlying ETF rather than the Ondo wrapper reserves; no new composition date or weights are asserted. October 1 report-scope review fetched the September 23 daily Ankura attestation: it still reports aggregate collateral and obligations without IAUon-specific share/cash weights or liabilities. October 2 research downloaded the complete issuer-linked daily and monthly report archives: the latest daily report is September 29, 2026 at 8pm ET and the latest monthly report ends August 31. Neither contains an IAUon-specific allocation or liability reconciliation. The public IAUon info API reports Physical Gold at 100% for the underlying ETF, while wrapper totalSupply, circulatingSupply and tvl are null; those fields cannot establish wrapper reserves. The binding Final Terms permit Other Collateral in addition to or instead of Standard Collateral. New reports and API disclosures are reference evidence only; the July 28 composition date and unknown exposure remain unchanged, and a current NAV feed is not a holdings observation.",
     "compositionBasis": "Ondo IAUon product disclosure and Ondo Global Markets backing and transparency documentation",
     "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
@@ -63,7 +75,12 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "Alpaca Securities LLC (named Ondo Stocks broker; IAUon-specific allocation undisclosed)",
+        "name": "Alpaca Securities LLC (IAUon Final Terms broker and custodian; allocation undisclosed)",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "BitGo Trust Company, Inc. (IAUon Final Terms custodian; crypto/fiat custody, allocation undisclosed)",
         "role": "custodian",
         "jurisdiction": "United States"
       },
@@ -99,9 +116,21 @@
       {
         "label": "Ankura Ondo Stocks August 2026 aggregate monthly report",
         "url": "https://www.dropbox.com/scl/fo/7rlmba8f49nvbp3xwz1of/AP5IeDF7Zhzwb9TK1kEwCD4/Monthly%20Ankura%20-%20Ondo%20Stocks%20-%20Aug%202026_Ankura%20Attestation.pdf?rlkey=hokf0tffqvezfmsto25cvpovs&dl=1"
+      },
+      {
+        "label": "IAUon Final Terms dated November 11, 2025; names Alpaca and BitGo custodians and permits lending only with prior investor agreement",
+        "url": "https://cdn.sanity.io/files/8k2tqa6n/production/f8568100c8d43609c8d83e6d57c7130d590711b0.pdf"
+      },
+      {
+        "label": "Base Prospectus dated November 11, 2025, sections 4.2.2 and 5.10.7: custody agreements and issuer-level reporting",
+        "url": "https://cdn.sanity.io/files/8k2tqa6n/production/ae1f1ca8ce2c2197a45b563e3e9add041924a249.pdf"
+      },
+      {
+        "label": "Ankura September 29, 2026 daily report; aggregate-only reference, archive member 2026/09 September/Daily Report - Ondo Stocks - 2026-09-29_20_00_ET - Ankura Attestation.pdf",
+        "url": "https://www.dropbox.com/scl/fo/jzkrw308mrhsasauqrjqq/AJxJak0F90kcwkADSN3DCD4?rlkey=nik1v5slekrzx5fbi0zan5sk3&dl=1"
       }
     ],
-    "uncertainty": "Ondo documents a bankruptcy-remote SPV, segregated assets/accounts and a first-priority security interest. The product disclosure names Alpaca Securities LLC; current aggregate Ankura reports include Alpaca trading and clearing accounts. Neither the September 9 daily report nor the August monthly report identifies the IAUon-specific shares/cash balance, provider allocation, liabilities or reuse restrictions. Aggregate collateralization does not establish IAUon-specific reserve composition.",
+    "uncertainty": "IAUon Final Terms name Alpaca Securities LLC and BitGo Trust Company, Inc. as custodians. Base Prospectus section 4.2.2 describes Alpaca securities custody and BitGo crypto/fiat custody; BitGo crypto-assets may be moved into shared accounts by the issuer. The Final Terms prohibit lending unless expressly agreed with the investor in advance, so no unconditional no-reuse safeguard is established. The September 29 daily and August monthly Ankura reports remain issuer-level aggregates without IAUon-specific IAU shares, cash or Other Collateral allocation, custodian shares or token liabilities. Named providers and new reference sources do not refresh the prior safeguard review date or establish a current composition.",
     "knownUnknownExposurePct": 100
   }
 }

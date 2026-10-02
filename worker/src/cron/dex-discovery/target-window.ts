@@ -1,5 +1,5 @@
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
-import { canonicalExitRouteAssetKey } from "@shared/lib/exit-route-identity";
+import { canonicalExitRouteAssetKey } from "@shared/types/exit-route-identity";
 import type { ContractDeployment } from "@shared/types/core";
 import { rotateFromCursor } from "../shared/cursor-rotation";
 import { DISCOVERY_TIERS } from "./types";

@@ -18,16 +18,16 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Resv21)",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB25mHYPER)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Gold Token SA live DGLD network reconciliation, observed 2026-09-21",
+        "label": "Gold Token SA live DGLD network reconciliation, observed 2026-10-01",
         "url": "https://production-gold-mapper-backend.onrender.com/v1/networks"
       },
       {
-        "label": "Gold Token SA live allocated PAMP bar registry, observed 2026-09-21",
+        "label": "Gold Token SA live allocated PAMP bar registry, observed 2026-10-01",
         "url": "https://production-gold-mapper-backend.onrender.com/v1/bars"
       },
       {
@@ -39,11 +39,11 @@
         "url": "https://dgld.ch/legal/general-terms-conditions-dgld-2"
       }
     ],
-    "rationale": "Observed 2026-09-21: Gold Token SA's live registry reports Base, Ethereum and Solana in matched reconciliation state. Aggregate token supply is 2,411.954999968 DGLD against 2,411.955 fine troy ounces across six live, serial-numbered PAMP bars. Base and Ethereum report zero gaps; Solana reports a 0.000000032 DGLD rounding gap. The registry therefore supports the full 100% allocation to physical PAMP gold at this checkpoint.",
+    "rationale": "Observed 2026-10-01: Gold Token SA's live registry reports Base, Ethereum and Solana in matched reconciliation state, with dated reconCheckedAt observations on October 1. Each network reports identical token supply and backedWeight and a zero gap. The live bar registry identifies the corresponding serial-numbered PAMP bars; redeemed bars are explicitly distinguished from live bars. This checkpoint supports the unchanged 100% allocation to physical PAMP gold and is issuer-maintained reconciliation, not independent assurance.",
     "compositionBasis": "Gold Token SA live bar registry reconciliation of all issued DGLD across Base, Ethereum and Solana to serial-numbered allocated PAMP bars",
-    "compositionAsOf": "2026-09-21",
+    "compositionAsOf": "2026-10-01",
     "scope": "full-composition",
-    "knownUnknownExposure": "The live registry reconciles every network supply to allocated PAMP bar weight. The only reported difference is a 0.000000032 DGLD Solana base-unit rounding gap, below the composition precision and materiality tolerance.",
+    "knownUnknownExposure": "Each active network reports token supply matched to allocated PAMP bar weight with a zero gap at its October 1 reconciliation checkpoint. Independent physical-vault verification and independently audited reserve-to-liability assurance are not established by this issuer-maintained registry.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {

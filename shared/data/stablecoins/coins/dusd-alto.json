@@ -7,7 +7,7 @@
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
   },
-  "collateral": "Over-collateralized on-chain assets in isolated lending markets on Ethereum: mint markets accept WETH, wstETH (Lido), rETH (Rocket Pool), mETH (Mantle LST), sUSDe (Ethena), and Syrup USDC; borrow markets accept cbBTC, WBTC, tBTC, sUSDe, Syrup USDC, and PAXG; each market is independently isolated with per-asset risk parameters; a Peg Stability Module enables 1:1 USDC↔DUSD swaps capped at 5M USDC",
+  "collateral": "On-chain collateral and fixed-price issuance routes on Ethereum. The current issuer snapshot lists active mint markets for frxUSD, wstETH, WETH, rETH, sUSDe and syrupUSDC. Historical isolated borrow/mint markets and USDC/frxUSD peg-stability routes remain distinct mechanisms; current limits and fees require contract review.",
   "pegMechanism": "Overcollateralized minting via isolated lending markets (mint and borrow); peg backstopped by a PSM enabling 1:1 USDC↔DUSD swaps at 0.20% fee (5M USDC cap); arbitrageurs exploit the PSM rate vs. market price to restore peg; all markets governed by ALTO token holder votes",
   "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",

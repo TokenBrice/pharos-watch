@@ -71,7 +71,7 @@
     {
       "type": "warning",
       "title": "Legacy USDv wind-down",
-      "message": "This profile tracks the original Solomon USDv mint. Solomon announced that the legacy front end and support end October 16, 2026; the sUSDv unstaking-request deadline is October 9. The replacement USDv uses a different mint and reserve model, with no automatic conversion. Legacy rewards ended August 27."
+      "message": "This profile tracks the original Solomon USDv mint, which remains outstanding during wind-down. The retained hedge, margin, loss-buffer, and venue measurements are from the legacy book's August 8, 2026 observation, not current replacement-token statistics. Solomon announced that the legacy front end and support end October 16, 2026; the sUSDv unstaking-request deadline is October 9. The replacement USDv uses a different mint and reserve model, with no automatic conversion. Legacy rewards ended August 27."
     },
     {
       "type": "warning",

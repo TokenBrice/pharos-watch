@@ -92,23 +92,19 @@
     ]
   },
   "bridgeRouteRisk": {
-    "tier": "single-chain-or-native",
-    "summary": "trUSD has no other live chain deployment. The Lock & Release pool is on Ethereum, while Burn & Mint pools elsewhere are not live, so no bridge route carries the claim.",
-    "reviewedAt": "2026-08-08",
-    "reviewer": "wave3-longtail-l01 (research agent)",
+    "tier": "external-validated-network",
+    "summary": "trUSD has native issuance on Ethereum and live Monad and Pharos CCIP BurnMint representations backed by Ethereum LockRelease escrow. CCIP validation and per-chain pool ownership are bridge dependencies; native ToriMinting authority remains Ethereum-only. Pool ownership was pinned, but exact current route limits and token-level peripheral administration require further verification.",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA61wM)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Tori docs: contract addresses (Ethereum mainnet primary; other EVM chains planned/TBA; CCIP CCT planned)",
-        "url": "https://docs.tori.finance/resources/contracts"
+        "label": "Tori mainnet deployments and CCIP configuration",
+        "url": "https://docs.tori.finance/resources/contracts.md"
       },
       {
-        "label": "DefiLlama stablecoin 401 (chainBalances: Ethereum only)",
-        "url": "https://stablecoins.llama.fi/stablecoin/401"
-      },
-      {
-        "label": "CoinGecko tori-trusd (platforms: ethereum only)",
-        "url": "https://api.coingecko.com/api/v3/coins/tori-trusd"
+        "label": "Chainlink trUSD mainnet token directory",
+        "url": "https://docs.chain.link/ccip/directory/mainnet/token/trUSD"
       }
     ],
     "routes": [
@@ -124,23 +120,304 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "trUSD is issued only on Ethereum mainnet through the whitelist-gated ToriMinting contract; the entire captured supply is the canonical Ethereum deployment (0xd0580192e98ea6ceb9c7b6191ed2e27560911697), matching the coin's sole contracts entry. DefiLlama chainBalances and CoinGecko platforms show Ethereum only, and Tori's contracts page lists other EVM chains as planned/TBA. No bridge route carries the claim.",
+        "reviewNote": "Canonical Ethereum-native trUSD is issued through ToriMinting. Chainlink and Tori list the Ethereum LockReleaseTokenPool 0x558d77ff4b6c760c1034536e379feb69db5a96e2 as its CCIP escrow, with peripheral BurnMint representations on Monad and Pharos. At block 26095800 the pool getToken() returned this native token, typeAndVersion() returned LockReleaseTokenPool 1.5.1 and owner() returned the 3-of-5 Tori administration Safe. This native issuance row remains separate from the escrow/bridge administration path; no whole-supply share is inferred from the stale single-chain catalog.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-08-08",
+        "observedAt": "2026-10-01",
         "sources": [
           {
-            "label": "Tori docs: contract addresses",
-            "url": "https://docs.tori.finance/resources/contracts"
+            "label": "Tori mainnet deployments and CCIP configuration",
+            "url": "https://docs.tori.finance/resources/contracts.md"
           },
           {
-            "label": "Blockscout trUSD UUPS proxy",
-            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd0580192e98ea6ceb9c7b6191ed2e27560911697"
+            "label": "Chainlink trUSD mainnet token directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/trUSD"
+          }
+        ],
+        "observedBlock": 26095800
+      },
+      {
+        "id": "monad:0x770a579ea200784723b31b8668b0773ba80393c9",
+        "sourceChain": "ethereum",
+        "destinationChain": "monad",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x770a579ea200784723b31b8668b0773ba80393c9",
+        "protocol": "Chainlink CCIP (BurnMintTokenPool)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer and Chainlink mainnet directories agree on the token and BurnMint pool 0xc7692e0501f534b9709406f50c660619967bbf0a. At monad block 109541916, symbol() was trUSD, decimals() was 18 and pool getToken() returned this token. Ethereum locks native trUSD in its LockRelease pool and peripheral supply represents those locked units. Pool ownership was pinned separately; numeric rate-limit states, token administrator roles and remote peer mappings remain unverified and no protective cap or delay is credited.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "monad",
+        "controllerAddress": "0xc7692e0501f534b9709406f50c660619967bbf0a",
+        "failureDomainKeys": [
+          "bridge:chainlink-ccip-trusd"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 109541916,
+        "sources": [
+          {
+            "label": "Tori mainnet deployments and CCIP configuration",
+            "url": "https://docs.tori.finance/resources/contracts.md"
           },
           {
-            "label": "DefiLlama stablecoin 401",
-            "url": "https://stablecoins.llama.fi/stablecoin/401"
+            "label": "Chainlink trUSD mainnet token directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/trUSD"
           }
         ]
+      },
+      {
+        "id": "pharos:0x3816102cdaff06e2a5a362ca7f767ccfd2337003",
+        "sourceChain": "ethereum",
+        "destinationChain": "pharos",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x3816102cdaff06e2a5a362ca7f767ccfd2337003",
+        "protocol": "Chainlink CCIP (BurnMintTokenPool)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer and Chainlink mainnet directories agree on the token and BurnMint pool 0xab7d93271b693ec5196ccd16639b4c8087d0d2f7. At pharos block 19075732, symbol() was trUSD, decimals() was 18 and pool getToken() returned this token. Ethereum locks native trUSD in its LockRelease pool and peripheral supply represents those locked units. Pool ownership was pinned separately; numeric rate-limit states, token administrator roles and remote peer mappings remain unverified and no protective cap or delay is credited.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "pharos",
+        "controllerAddress": "0xab7d93271b693ec5196ccd16639b4c8087d0d2f7",
+        "failureDomainKeys": [
+          "bridge:chainlink-ccip-trusd"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 19075732,
+        "sources": [
+          {
+            "label": "Tori mainnet deployments and CCIP configuration",
+            "url": "https://docs.tori.finance/resources/contracts.md"
+          },
+          {
+            "label": "Chainlink trUSD mainnet token directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/trUSD"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "trusd-ethereum-ccip-pool-owner",
+        "label": "trUSD ethereum CCIP pool owner",
+        "routeRefs": [
+          "ethereum:0xd0580192e98ea6ceb9c7b6191ed2e27560911697"
+        ],
+        "capabilities": [
+          "admin"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x0c6bbfd2d5666d44bf28580edeec0263692c8316",
+        "authorityType": "multisig",
+        "routeChecks": {
+          "lockboxOrEscrow": "Tori and Chainlink identify Ethereum LockRelease pool 0x558d77ff4b6c760c1034536e379feb69db5a96e2 as the canonical escrow; the ethereum pool getToken() returned its authored trUSD token.",
+          "pausersAdminsUpgraders": "Pool owner() returned 0x0c6bbfd2d5666d44bf28580edeec0263692c8316 at the pinned observation block. Remote peers, numeric rate limits, pool rate-limit-admin delegation and token-level mint/upgrade roles were not fully enumerated; no timelock for this bridge controller is claimed."
+        },
+        "capDescription": "Current numeric bridge capacity and the ability to alter it remain unverified.",
+        "canRaiseCap": "unknown",
+        "failureDomainKeys": [
+          "safe:0x0c6bbfd2d5666d44bf28580edeec0263692c8316"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095800,
+        "sources": [
+          {
+            "label": "Tori mainnet deployments and CCIP configuration",
+            "url": "https://docs.tori.finance/resources/contracts.md"
+          },
+          {
+            "label": "Chainlink trUSD mainnet token directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/trUSD"
+          }
+        ],
+        "evidence": "At ethereum block 26095800, pool 0x558d77ff4b6c760c1034536e379feb69db5a96e2 returned owner 0x0c6bbfd2d5666d44bf28580edeec0263692c8316; getToken() and typeAndVersion() matched the published pool mapping. The owner Safe returned threshold 3, the same five owners, and no enabled modules. Guard, fallback-handler and module-guard state were not freshly read for this bridge review.",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0x84e1091066fbcd48f2f2d8a2b7f1726812d167b3",
+            "0xfafe7fe2d5b7ffc92159df1d07ca4d27a6b99693",
+            "0xb5afef3ae424336de90ec1127ff7fec239b02b72",
+            "0x9a450e8787dd4c0d77f630d79469bbea64eb5506",
+            "0x53789955237a39024fc740a4344102d0d5117e53"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "observedAt": "2026-10-01",
+          "observedBlock": 26095800,
+          "source": "onchain"
+        }
+      },
+      {
+        "id": "trusd-monad-ccip-pool-owner",
+        "label": "trUSD monad CCIP pool owner",
+        "routeRefs": [
+          "monad:0x770a579ea200784723b31b8668b0773ba80393c9"
+        ],
+        "capabilities": [
+          "admin"
+        ],
+        "controllerChain": "monad",
+        "controllerAddress": "0x0c6bbfd2d5666d44bf28580edeec0263692c8316",
+        "authorityType": "multisig",
+        "routeChecks": {
+          "lockboxOrEscrow": "Tori and Chainlink identify Ethereum LockRelease pool 0x558d77ff4b6c760c1034536e379feb69db5a96e2 as the canonical escrow; the monad pool getToken() returned its authored trUSD token.",
+          "pausersAdminsUpgraders": "Pool owner() returned 0x0c6bbfd2d5666d44bf28580edeec0263692c8316 at the pinned observation block. Remote peers, numeric rate limits, pool rate-limit-admin delegation and token-level mint/upgrade roles were not fully enumerated; no timelock for this bridge controller is claimed."
+        },
+        "capDescription": "Current numeric bridge capacity and the ability to alter it remain unverified.",
+        "canRaiseCap": "unknown",
+        "failureDomainKeys": [
+          "safe:0x0c6bbfd2d5666d44bf28580edeec0263692c8316"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 109541916,
+        "sources": [
+          {
+            "label": "Tori mainnet deployments and CCIP configuration",
+            "url": "https://docs.tori.finance/resources/contracts.md"
+          },
+          {
+            "label": "Chainlink trUSD mainnet token directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/trUSD"
+          }
+        ],
+        "evidence": "At monad block 109541916, pool 0xc7692e0501f534b9709406f50c660619967bbf0a returned owner 0x0c6bbfd2d5666d44bf28580edeec0263692c8316; getToken() and typeAndVersion() matched the published pool mapping. The owner Safe returned threshold 3, the same five owners, and no enabled modules. Guard, fallback-handler and module-guard state were not freshly read for this bridge review.",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0x84e1091066fbcd48f2f2d8a2b7f1726812d167b3",
+            "0xfafe7fe2d5b7ffc92159df1d07ca4d27a6b99693",
+            "0xb5afef3ae424336de90ec1127ff7fec239b02b72",
+            "0x9a450e8787dd4c0d77f630d79469bbea64eb5506",
+            "0x53789955237a39024fc740a4344102d0d5117e53"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "observedAt": "2026-10-01",
+          "observedBlock": 109541916,
+          "source": "onchain"
+        }
+      },
+      {
+        "id": "trusd-pharos-ccip-pool-owner",
+        "label": "trUSD pharos CCIP pool owner",
+        "routeRefs": [
+          "pharos:0x3816102cdaff06e2a5a362ca7f767ccfd2337003"
+        ],
+        "capabilities": [
+          "admin"
+        ],
+        "controllerChain": "pharos",
+        "controllerAddress": "0x07adfa5e8c7e8e80d1449dac46c3d6e739850e64",
+        "authorityType": "eoa",
+        "routeChecks": {
+          "lockboxOrEscrow": "Tori and Chainlink identify Ethereum LockRelease pool 0x558d77ff4b6c760c1034536e379feb69db5a96e2 as the canonical escrow; the pharos pool getToken() returned its authored trUSD token.",
+          "pausersAdminsUpgraders": "Pool owner() returned 0x07adfa5e8c7e8e80d1449dac46c3d6e739850e64 at the pinned observation block. Remote peers, numeric rate limits, pool rate-limit-admin delegation and token-level mint/upgrade roles were not fully enumerated; no timelock for this bridge controller is claimed."
+        },
+        "capDescription": "Current numeric bridge capacity and the ability to alter it remain unverified.",
+        "canRaiseCap": "unknown",
+        "failureDomainKeys": [
+          "eoa:0x07adfa5e8c7e8e80d1449dac46c3d6e739850e64"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 19075732,
+        "sources": [
+          {
+            "label": "Tori mainnet deployments and CCIP configuration",
+            "url": "https://docs.tori.finance/resources/contracts.md"
+          },
+          {
+            "label": "Chainlink trUSD mainnet token directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/trUSD"
+          }
+        ],
+        "evidence": "At pharos block 19075732, pool 0xab7d93271b693ec5196ccd16639b4c8087d0d2f7 returned owner 0x07adfa5e8c7e8e80d1449dac46c3d6e739850e64; getToken() and typeAndVersion() matched the published pool mapping. The owner had empty code; off-chain key-policy claims are not credited."
+      },
+      {
+        "id": "trusd-monad-ccip-pool-mint",
+        "label": "trUSD monad CCIP pool mint authority",
+        "routeRefs": [
+          "monad:0x770a579ea200784723b31b8668b0773ba80393c9"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "monad",
+        "controllerAddress": "0xc7692e0501f534b9709406f50c660619967bbf0a",
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The CCIP token pool can mint the local bridge representation. Current numeric route limits and their mutability remain unverified; no protective cap or delay is credited.",
+        "canRaiseCap": "unknown",
+        "failureDomainKeys": [
+          "bridge:chainlink-ccip-trusd"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 109541916,
+        "sources": [
+          {
+            "label": "Tori mainnet deployments and CCIP configuration",
+            "url": "https://docs.tori.finance/resources/contracts.md"
+          },
+          {
+            "label": "Chainlink trUSD mainnet token directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/trUSD"
+          }
+        ],
+        "evidence": "At monad block 109541916, token 0x770a579ea200784723b31b8668b0773ba80393c9 getMinters() and getBurners() both returned the pool as their sole member: 0xc7692e0501f534b9709406f50c660619967bbf0a. This capability belongs to bridge representation issuance, not native Ethereum ToriMinting. The separately recorded pool-owner control is preserved."
+      },
+      {
+        "id": "trusd-pharos-ccip-pool-mint",
+        "label": "trUSD pharos CCIP pool mint authority",
+        "routeRefs": [
+          "pharos:0x3816102cdaff06e2a5a362ca7f767ccfd2337003"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "pharos",
+        "controllerAddress": "0xab7d93271b693ec5196ccd16639b4c8087d0d2f7",
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The CCIP token pool can mint the local bridge representation. Current numeric route limits and their mutability remain unverified; no protective cap or delay is credited.",
+        "canRaiseCap": "unknown",
+        "failureDomainKeys": [
+          "bridge:chainlink-ccip-trusd"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 19075732,
+        "sources": [
+          {
+            "label": "Tori mainnet deployments and CCIP configuration",
+            "url": "https://docs.tori.finance/resources/contracts.md"
+          },
+          {
+            "label": "Chainlink trUSD mainnet token directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/trUSD"
+          }
+        ],
+        "evidence": "At pharos block 19075732, token 0x3816102cdaff06e2a5a362ca7f767ccfd2337003 hasRole(keccak256(\"MINTER_ROLE\"), pool) returned true: 0xab7d93271b693ec5196ccd16639b4c8087d0d2f7. This capability belongs to bridge representation issuance, not native Ethereum ToriMinting. The separately recorded pool-owner control is preserved."
+      }
+    ],
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "Chainlink CCIP",
+        "url": "https://docs.chain.link/ccip/directory/mainnet/token/trUSD",
+        "bridgeTypes": [
+          "lockAndMint",
+          "burnAndMint"
+        ],
+        "note": "Official directory lists Ethereum LockRelease and Monad/Pharos BurnMint pools."
       }
     ]
   }

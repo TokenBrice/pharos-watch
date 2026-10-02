@@ -26,7 +26,7 @@
   },
   "oracleRisk": {
     "tier": "single-source-or-laggy",
-    "summary": "Three debt-bearing XDC pools use 15-minute-delayed, one-hour-valid feeds. XDC and psXDC share one XDC/USD path; CGO has a separate aggregator, but both aggregators have exactly one active node, the same reporter, and no secondary feed.",
+    "summary": "The three reviewed XDC collateral pools retain 15-minute-delayed, one-hour-valid feeds. At XDC block 107914458 on 2026-10-02, only psXDC had positive debt shares; WXDC and CGO had zero. XDC and psXDC share one configured XDC/USD aggregator, while CGO uses another. The one-node/same-reporter census is historical July evidence, not a newly established current census; no secondary feed is present in the reviewed oracle source.",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {

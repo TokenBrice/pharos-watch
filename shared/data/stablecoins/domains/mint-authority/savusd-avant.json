@@ -35,6 +35,8 @@
         ],
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 96511220,
         "sources": [
           {
             "label": "Avant Protocol docs",
@@ -45,7 +47,7 @@
             "url": "https://snowtrace.io/address/0x06d47f3fb376649c3a9dafe069b3d6e35572219e"
           }
         ],
-        "evidence": "At Avalanche block 87752599: owner() = 0xd4d23209aae8630bf386b7393763a5b7865e57cb; hasRole(DEFAULT_ADMIN_ROLE, owner) = true; proxiableUUID() reverts; EIP-1967 proxy admin and impl slots = zero (not an upgradeable proxy). StakedAvUSDV2 ABI (Routescan verified): deposit-only minting, no privileged mint(). Ethereum deployment 0xb8d89678... confirms same EOA owner. Deployer eth_getCode = 0x (EOA). No upgrade surface exists on the wrapper."
+        "evidence": "At Avalanche block 96511220 on 2026-10-01, asset() returned avUSD 0x24de8771bc5ddb3362db529fc3358f2df3a0e346; owner() returned 0xd4d23209aae8630bf386b7393763a5b7865e57cb and hasRole(DEFAULT_ADMIN_ROLE, owner) returned true. The correct EIP-1967 implementation and admin slots were zero. Routescan verified StakedAvUSDV2 source inherits ERC-4626 deposit-backed issuance and contains no upgrade entrypoint; redistributeLockedAmount burns an existing restricted balance before optionally minting the same shares to a new holder. Ethereum is a separate CCIP representation and is outside this canonical-vault finding."
       },
       {
         "chain": "avalanche",
@@ -60,8 +62,8 @@
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "Underlying avUSD minting requires supported collateral, route and signature validation, and the AvantMintingV2 per-block cap; savUSD inherits that base-asset issuance path.",
-        "observedAt": "2026-07-14",
-        "observedBlock": 90283689,
+        "observedAt": "2026-10-01",
+        "observedBlock": 96511220,
         "failureDomainKeys": [
           "asset:avusd-avant"
         ],
@@ -71,7 +73,48 @@
             "url": "https://snowtrace.io/address/0xcb43139E90f019624e3B76C56FB05394B162A49c#code"
           }
         ],
-        "evidence": "The separately reviewed avUSD parent establishes one active immutable AvantMintingV2 gateway at Avalanche block 90283689. savUSD asset() resolves to avUSD, so its base-asset mint authority is inherited from that verified gateway."
+        "evidence": "At Avalanche block 96511220 on 2026-10-01, AvantMintingV2 avantcoin() returned avUSD 0x24de8771bc5ddb3362db529fc3358f2df3a0e346; maxMintPerBlock() and maxRedeemPerBlock() each returned 25000000000000000000000000 (25,000,000 avUSD at 18 decimals). owner() returned 0xd4d23209aae8630bf386b7393763a5b7865e57cb and the correct EIP-1967 implementation/admin slots were zero. Verified source retains collateral, signature and route validation; this is the inherited base-asset issuer path, not an additional savUSD share mint path."
+      },
+      {
+        "chain": "avalanche",
+        "address": "0xd4d23209aae8630bf386b7393763a5b7865e57cb",
+        "deploymentRefs": [
+          "avalanche:0x06d47f3fb376649c3a9dafe069b3d6e35572219e"
+        ],
+        "label": "Inherited avUSD gateway cap administrator",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "threshold": 3,
+        "signerCount": 4,
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "keyCustodyAttestation": {
+          "kind": "mpc",
+          "sources": [
+            {
+              "label": "Avant address-specific admin MPC disclosure, December 31, 2025 (archived March 9, 2026)",
+              "url": "https://web.archive.org/web/20260309082850/https://gov.curve.finance/t/proposal-to-add-savusd-usdc-pool-to-gauge-controller/10977"
+            },
+            {
+              "label": "Avant secure asset management",
+              "url": "https://docs.avantprotocol.com/security/secure-asset-management"
+            }
+          ]
+        },
+        "capDescription": "DEFAULT_ADMIN_ROLE can set maxMintPerBlock without a fixed upper bound on the inherited avUSD gateway; changing this parent cap does not bypass savUSD deposit-backed share issuance.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 96542832,
+        "failureDomainKeys": [
+          "asset:avusd-avant"
+        ],
+        "sources": [
+          {
+            "label": "AvantMintingV2 verified source and ABI",
+            "url": "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xcb43139E90f019624e3B76C56FB05394B162A49c"
+          }
+        ],
+        "evidence": "At Avalanche block 96542832, gateway owner() and hasRole(DEFAULT_ADMIN_ROLE, owner) identify this controller; eth_getCode is empty and maxMintPerBlock remains 25,000,000 avUSD. Avant's December 31, 2025 governance disclosure identifies this exact address as a 3-of-4 MPC of core team members, corroborated by current issuer MPC and transaction-policy documentation. Its unrestricted parent cap and token-minter replacement powers remain adverse; MPC does not bypass savUSD deposit-backed share issuance or establish an independent timelock. Custody vendors remain NDA-only."
       }
     ],
     "economicCapSemantics": "bounded",

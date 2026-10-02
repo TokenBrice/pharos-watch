@@ -1,6 +1,6 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { getCirculatingRaw } from "@shared/lib/supply";
-import { resolveChainId } from "@shared/lib/chains";
+import { resolveChainId } from "@shared/types/chain-identity";
 import { MintBurnConservationRecordSchema, type MintBurnConservationRecord, type MintBurnReconciliationRow, type MintBurnReconciliationSummary, type StatusResponse } from "@shared/types/status";
 import { buildInClause } from "../db";
 import { buildCoinCoverageMap, readMintBurnCronSnapshot, type MintBurnCronSnapshot } from "../mint-burn-flows-service";

@@ -53,5 +53,32 @@
         "rationale": "The aggregate feed does not split current spot, derivative, margin, venue, and liquidity-buffer exposures."
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "CACEIS Bank",
+        "role": "custodian",
+        "jurisdiction": "France"
+      },
+      {
+        "name": "CACEIS Fund Administration",
+        "role": "other",
+        "jurisdiction": "France"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurM11bbqUSDC)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "SPKCC prospectus dated February 1, 2026",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_SPKCC_EN.pdf"
+      }
+    ],
+    "uncertainty": "The prospectus identifies CACEIS Bank as custodian and depositary and CACEIS Fund Administration as accounting and NAV administrator. Provider allocation shares, asset-level segregation and bankruptcy remoteness are not established here. Delegated custody functions may exist; the profile does not establish a current Coinbase spot-custody allocation or infer a fund-wide prohibition on collateral reuse."
   }
 }

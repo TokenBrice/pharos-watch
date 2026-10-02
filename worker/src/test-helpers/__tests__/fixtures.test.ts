@@ -1,3 +1,4 @@
+import "../reviewed-deployment-catalog.test-support";
 import { describe, expect, it, vi } from "vitest";
 import { makeAsset } from "../__shared/fixtures";
 import { mergeSourceRiskGoldenFixtures } from "@shared/test-utils/yield-source-risk-golden-fixtures";

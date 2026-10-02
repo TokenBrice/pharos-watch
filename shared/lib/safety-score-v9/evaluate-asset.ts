@@ -24,7 +24,8 @@ import {
 import { evaluateV9Backing } from "./archetypes";
 import { selectV9CdpLiquidationCapacity } from "./archetypes/cdp";
 import { evaluateV9EconomicControlAssetFacts } from "./control";
-import type { V9EconomicControlResult } from "./control-primitives";
+import { unresolvedDeploymentCohort } from "./control-bridge-join";
+import { deriveV9MintPosture, type V9EconomicControlResult } from "./control-primitives";
 import {
   projectV9RoleDependencyPillarLimits,
   type V9DependencyEvaluationPlan,
@@ -34,6 +35,7 @@ import {
 import {
   evaluateV9Exit,
   projectV9ExitEvaluationRoute,
+  selectV9ExitCirculatingUsd,
   type V9ExitEvaluationResult,
 } from "./exit";
 import {
@@ -102,6 +104,7 @@ export interface V9EvaluatedAsset {
   stressState: V9RetainedStressState;
   operationalResilience: V9OperationalResilienceResult | null;
   liquidationCapacitySelection?: V9CdpLiquidationCapacitySelection;
+  providerRowExclusions?: V9AssetFactsV3["supply"]["providerRowExclusions"];
 }
 
 type V9EvaluationGapIndex = V9GapIndex<V9AssetFactsV3["gaps"][number]>;
@@ -222,7 +225,15 @@ function structuralSignalFromBacking(reason: V9BackingResult["structuralReasons"
   return {
     kind: reason.kind,
     severity: reason.severity,
-    reason: `${reason.kind} condition at ${reason.pathKey}.`,
+    reason: reason.kind !== "speculative-credit"
+      ? `${reason.kind} condition at ${reason.pathKey}.`
+      : reason.pathKey === "mechanism:maturity-and-liquidity"
+        ? reason.metricApplicability === "unavailable"
+          ? "The issuer has not disclosed the maturity of its holdings."
+          : "Long-dated or illiquid holdings create a maturity/liquidity mismatch."
+        : reason.pathKey === "mechanism:credit-quality"
+          ? "The reviewed credit-quality condition is weak."
+          : "Material private-credit holdings create credit exposure.",
     responsibility: reason.responsibility,
     ...(reason.materialShare === null ? {} : { materialSharePct: clampShare(reason.materialShare) * 100 }),
     economicLossScope: "reserve-claim",
@@ -282,11 +293,27 @@ function structuralSignalFromControl(
         control.status.applicability.state === "required" &&
         control.status.observationState === "known",
     );
+  const controlsCarryAdverseMintEvidence =
+    (failure.kind === "centralized-mint" || failure.kind === "active-control-incident") &&
+    controls.length > 0 && controls.length === failure.controlKeys.length &&
+    controls.every((control) => {
+      const posture = deriveV9MintPosture(control, asset.economicControlReview.mint, false);
+      return control.controlKind !== "bridge" &&
+        control.status.applicability.state !== "not-applicable" &&
+        control.status.evidenceRefIds.length > 0 &&
+        (posture === "unbounded-or-compromised" || posture === "unbounded-reconciliation-unknown" || posture === "unbounded-reconciled");
+    });
+  const knownOraclePathEvidence =
+    failure.kind === "weak-oracle-branch" &&
+    asset.economicControlReview.oracle.knownPathTier !== undefined &&
+    asset.economicControlReview.oracle.paths?.some((path) =>
+      path.applicability.state === "required" && path.observationState === "known",
+    );
   const responsibility: V9EvidenceResponsibility =
     failure.kind !== "unreviewed-upgrade" &&
-    reviewStatus.applicability.state === "required" &&
-    reviewStatus.observationState === "known" &&
-    controlsKnown &&
+    ((reviewStatus.applicability.state === "required" && reviewStatus.observationState === "known") ||
+      failure.kind === "centralized-mint" || failure.kind === "active-control-incident" || knownOraclePathEvidence) &&
+    (controlsKnown || controlsCarryAdverseMintEvidence) &&
     economicLossScope !== undefined
       ? "measured-adverse"
       : failure.kind === "unreviewed-upgrade"
@@ -477,13 +504,13 @@ function exitPillar(
   gapIndex: V9EvaluationGapIndex,
 ): V9PillarEvaluation {
   const mechanismExitFacts = asset.mechanismExitFacts ?? [];
-  const hasKnownRuntimeRoute = result.routes.some((trace) => {
+  const hasRetainedRuntimeRoute = result.routes.some((trace) => {
     if (!trace.included) return false;
     const route = asset.exitRoutes.find((candidate) => candidate.routeKey === trace.routeKey);
-    return route?.status.observationState === "known";
+    return route?.status.observationState === "known" || route?.status.observationState === "stale";
   });
   const profileExplainsMissingRuntime =
-    !hasKnownRuntimeRoute &&
+    !hasRetainedRuntimeRoute &&
     mechanismExitFacts.length > 0;
   const profileResponsibility: V9EvidenceResponsibility =
     mechanismExitFacts.some((fact) => fact.disposition === "supported")
@@ -520,8 +547,10 @@ function exitPillar(
     primary !== null &&
     primaryTrace?.included === true &&
     primaryTrace.capacityPoint !== null &&
-    primary.status.observationState === "known" &&
-    primary.coverageClass !== "diagnostic" &&
+    (primary.status.observationState === "known" || primary.status.observationState === "stale") &&
+    primary.scoreEligible &&
+    primary.coverageClass === "exact-complete" &&
+    primary.evidenceKind !== "documented-terms" &&
     capacityFloor !== undefined
       ? [{
           source: "pillar-score",
@@ -571,6 +600,7 @@ function exitPillar(
           code === "no-viable-exit-path" &&
           asset.exitStatus.applicability.state === "required" &&
           asset.exitStatus.observationState === "known" &&
+          asset.exitRoutes.length === 0 &&
           result.score === 0 &&
           result.primaryRouteKey === null &&
           causalGaps.length === 0 &&
@@ -579,7 +609,10 @@ function exitPillar(
           code === "no-viable-exit-path" &&
           primary !== null &&
           primaryTrace?.included === true &&
-          primary.status.observationState === "known" &&
+          (primary.status.observationState === "known" || primary.status.observationState === "stale") &&
+          primary.scoreEligible &&
+          primary.coverageClass === "exact-complete" &&
+          primary.evidenceKind !== "documented-terms" &&
           capacityFloor !== undefined &&
           causalGaps.length === 0 &&
           profileFactKeys.length === 0;
@@ -617,6 +650,39 @@ function controlPillar(
   envelope: V9ValidatedPolicyEnvelope,
   gapIndex: V9EvaluationGapIndex,
 ): V9PillarEvaluation {
+  const fullCeilingShare = envelope.policy.semantic.materiality.unresolvedDeploymentFullCeilingSharePct / 100;
+  const unresolvedDeploymentControls = asset.controls.filter(
+    (control) =>
+      control.scope === "deployment" &&
+      control.economicLossScope === "deployment" &&
+      control.status.applicability.state !== "not-applicable" &&
+      (control.status.applicability.state !== "required" || control.status.observationState !== "known"),
+  );
+  const cohort = unresolvedDeploymentCohort(asset, asset.controls);
+  const canPriceProportionally = cohort.share !== null && cohort.share < fullCeilingShare;
+  const pricedControlKeys = canPriceProportionally ? cohort.controlKeys : new Set<string>();
+  if (canPriceProportionally && cohort.share! > 0) result.unresolvedDeploymentShare = cohort.share!;
+  const score = result.score === null
+    ? null
+    : decimalSnap(
+        result.score - Math.max(0, result.score - envelope.policy.semantic.control.boundedUnknownQuality) *
+          (canPriceProportionally ? cohort.share! : 0),
+      );
+  const scoreBearingReasons = [
+    ...result.reasons.filter(
+      (reason) => reason.controlKey === null || !pricedControlKeys.has(reason.controlKey),
+    ),
+    ...unresolvedDeploymentControls
+      .filter((control) => !pricedControlKeys.has(control.controlKey))
+      .map((control): V9EconomicControlResult["reasons"][number] => ({
+        code: "unresolved-control-identity",
+        controlKey: control.controlKey,
+        path: `control:${control.controlKey}:materiality`,
+        pathKind: "deployment-control",
+        critical: false,
+        label: "Unresolved deployment exposure is material or lacks an admitted supply share.",
+      })),
+  ];
   const gapsForStatus = (status: V9FactStatusV2) => gapsForV9Ids(gapIndex, status.gapIds);
   const controlDomainGaps = [...gapIndex.byDomainAndCode.values()]
     .flat()
@@ -683,15 +749,15 @@ function controlPillar(
   };
 
   return {
-    score: result.score,
+    score,
     evidenceLevel: reasonClassifiedEvidenceLevel(
-      result.score,
-      result.reasons.map((reason) => reason.code),
+      score,
+      scoreBearingReasons.map((reason) => reason.code),
       envelope,
       "strong",
     ),
     reasons: canonicalReasons(
-      result.reasons.flatMap((reason) => {
+      scoreBearingReasons.flatMap((reason) => {
         return pillarReasonsForGapIds(
           envelope,
           gapIndex,
@@ -710,9 +776,12 @@ function controlPillar(
           .filter((component) => component.binding)
           .flatMap((component) => component.controlKeys),
       );
-      return result.structuralFailures
-        .filter((failure) => failure.binding)
-        .map((failure) => structuralSignalFromControl(asset, failure, bindingComponentControlKeys));
+      return result.structuralFailures.flatMap((failure) => {
+        const signal = structuralSignalFromControl(asset, failure, bindingComponentControlKeys);
+        return failure.binding || (signal.economicLossScope === "deployment" && signal.responsibility === "measured-adverse")
+          ? [signal]
+          : [];
+      });
     })(),
   };
 }
@@ -915,6 +984,10 @@ function resolveInheritedStablecoinBacking(
   evaluatedById: ReadonlyMap<string, V9EvaluatedAsset>,
 ): V9InheritedStablecoinBacking | undefined {
   if (asset.reserveStatus.applicability.state === "not-applicable") return undefined;
+  if (
+    asset.wrapperLocalFacts?.applicability === "wrapper" &&
+    asset.wrapperLocalFacts.parentBackingInheritance?.state === "withheld"
+  ) return undefined;
   if (resolved.cycleBlocked) return undefined;
   if (resolved.serial.length + resolved.basket.length !== 1) return undefined;
   const wrapped = resolved.serial.length === 1;
@@ -957,6 +1030,7 @@ function resolveInheritedStablecoinBacking(
   return {
     parentAssetId: upstreamAssetId,
     parentBackingScore: projectV9EffectiveBackingPillarScore(parent)!,
+    collateralizationApplications: parent.backing.collateralizationApplications,
     weight: Math.min(1, weight),
     tier: wrapped ? "wrapped" : "pure",
     failureDomains: canonicalDomains([
@@ -1277,6 +1351,7 @@ export function evaluateV9Asset({
     assetId: asset.assetId,
     reserveStatus: asset.reserveStatus,
     reserveExposures: asset.reserveExposures,
+    reserveBoundFacts: asset.reserveBoundFacts,
     gaps: asset.gaps,
     gapIndex,
     resolvedUpstreamExposures: resolvedBackingExposures(
@@ -1301,6 +1376,7 @@ export function evaluateV9Asset({
       : { cdpLiquidationCapacitySelection: liquidationCapacitySelection }),
     ...(inheritedStablecoinBacking === undefined ? {} : { inheritedStablecoinBacking }),
     trackRecordMonths,
+    asOfSec: identity.asOfSec,
   };
   const backing =
     asset.mechanismRiskReview.review === null
@@ -1327,10 +1403,21 @@ export function evaluateV9Asset({
     facts: asset,
     transfer: asset.accessReview.transfer,
     freezeReviews: asset.accessReview.freeze.reviews,
+    claimGraph: asset.accessReview.freeze.claimGraph,
   });
   const peg = pegInput(asset, envelope, gapIndex);
   const backingPillarEvaluation = backingPillar(backing, envelope, gapIndex);
   const controlPillarEvaluation = controlPillar(asset, control, envelope, gapIndex);
+  if (
+    control.score !== null &&
+    controlPillarEvaluation.score !== null &&
+    controlPillarEvaluation.score < control.score
+  ) {
+    control.unresolvedDeploymentAdjustment = {
+      scoreBefore: control.score,
+      scoreAfter: controlPillarEvaluation.score,
+    };
+  }
   // The exit pillar's SIM-EXIT-L2 undisclosed-fee credit is withheld from an
   // asset already held down by a non-exit adverse fact. The gate reads the same
   // structural-signal set the scorer assembles (backing + control + dependency;
@@ -1353,8 +1440,7 @@ export function evaluateV9Asset({
   // status derived beside them) serves both the exit evaluation and the
   // retained stress state; evaluateV9Exit copies before sorting, so the shared
   // array is never mutated downstream.
-  const exitCirculatingUsd =
-    asset.supply.status.observationState === "known" ? asset.supply.circulatingUsd : null;
+  const exitCirculatingUsd = selectV9ExitCirculatingUsd(asset.supply);
   const exitPortfolioStatus =
     asset.exitStatus.observationState === "known" && asset.exitStatus.applicability.state === "required"
       ? "reviewed-complete"
@@ -1362,6 +1448,8 @@ export function evaluateV9Asset({
   const projectedExitRoutes = asset.exitRoutes.map(projectV9ExitEvaluationRoute);
   const exit = evaluateV9Exit(
     {
+      assetId: asset.assetId,
+      clockSec: identity.asOfSec,
       circulatingUsd: exitCirculatingUsd,
       portfolioStatus: exitPortfolioStatus,
       routes: projectedExitRoutes,
@@ -1435,6 +1523,7 @@ export function evaluateV9Asset({
     pillars,
     peg,
     trackRecordMonths,
+    unresolvedDeploymentShare: control.unresolvedDeploymentShare,
     parent: parentInput(
       asset,
       resolved,
@@ -1473,6 +1562,7 @@ export function evaluateV9Asset({
       compactTrace: projectCompactV9ScoreTrace(trace),
       stressState,
       operationalResilience,
+      ...(asset.supply.providerRowExclusions?.length ? { providerRowExclusions: asset.supply.providerRowExclusions } : {}),
       ...(liquidationCapacitySelection === undefined ? {} : { liquidationCapacitySelection }),
     },
     unavailabilityRoots,

@@ -65,5 +65,30 @@
         "rationale": "Sovryn identifies ZUSD as a supported DLLR bAsset, but it is not a tracked Pharos stablecoin and therefore cannot form a dependency graph edge."
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Sovryn Mynt MassetManager (Rootstock 0x5f777270259e32f79589fe82269db6209f7b7582)",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB23EURE)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Sovryn Mynt and DLLR documentation",
+        "url": "https://build.sovryn.com/builder-portal/smart-contracts/mynt"
+      },
+      {
+        "label": "Rootstock RPC: Mynt bAsset balances at block 9286816",
+        "url": "https://public-node.rsk.co"
+      }
+    ],
+    "uncertainty": "Pinned balanceOf reads at Rootstock block 9286816 confirm ZUSD and DOC in the MassetManager holder. The holder is a governed on-chain aggregator, not a named off-chain custodian. The profile does not infer legal segregation, insolvency priority, rehypothecation restrictions, or safeguards of the upstream bAsset issuers."
   }
 }

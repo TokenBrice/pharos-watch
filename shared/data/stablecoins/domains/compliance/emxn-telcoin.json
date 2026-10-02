@@ -20,7 +20,7 @@
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "Telcoin lists eMXN as a live Digital Cash stablecoin issued under a Nebraska-chartered Digital Asset Depository Bank, positioning it as a 1:1 MXN-backed payment instrument."
+      "summary": "Telcoin's eXYZ terms identify Telcoin LLC as the issuer of eMXN and describe fiat or currency-equivalent reserves with 1:1 redemption for eligible verified account holders. Telcoin Digital Asset Bank's eUSD is governed by separate bank terms; the bank charter is not evidence of authorization for eMXN."
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
@@ -33,7 +33,7 @@
     "reserveDisclosureUrl": "https://www.telco.in/en/terms-of-use",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "Telcoin Digital Asset Bank holds a Nebraska Digital Asset Depository charter (final approval Nov 2025) and has publicly positioned itself as GENIUS Act-aligned through that framework. No GENIUS PPSI approval or filed application exists; the GENIUS Act is still in proposed-rules rulemaking and no state has been certified as substantially similar. The telco.in/digital-cash page states Telcoin will publish monthly attestations -- future tense as of June 2026; none have been located in public sources. The stored issuerPathway remains unknown; Telcoin frames Nebraska as its intended GENIUS-aligned route, but no achieved state-qualified approval was found.",
+    "notes": "Review note for 2026-10-01: the binding eXYZ terms identify Telcoin LLC as eMXN issuer and describe its U.S. Money Services Business registration. They explicitly exclude eUSD, which is issued by Telcoin Inc. (Telcoin Digital Asset Bank) under separate terms. Nebraska's charter announcement names Telcoin Digital Asset Bank, not Telcoin LLC or eMXN; that affiliate charter is not token-specific GENIUS authorization evidence. The reviewed eXYZ terms and Digital Cash page do not identify an eMXN GENIUS approval or application. This is scoped nondiscovery, not proof that no application exists. The Digital Cash page promises future monthly external attestations but links no eMXN report.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",

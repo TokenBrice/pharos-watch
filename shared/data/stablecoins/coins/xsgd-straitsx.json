@@ -2,14 +2,14 @@
   "id": "xsgd-straitsx",
   "name": "StraitsX XSGD",
   "symbol": "XSGD",
-  "oneLiner": "XSGD is StraitsX's MAS-licensed Singapore-dollar stablecoin, redeemable 1:1 against SGD cash held at Tier-1 banks DBS and Standard Chartered.",
+  "oneLiner": "XSGD is StraitsX's MAS-licensed SGD stablecoin, redeemable 1:1 against segregated cash, short-dated government instruments or eligible overnight reverse repos.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "SGD",
     "governance": "centralized"
   },
-  "collateral": "Singapore dollar cash reserves held at Tier-1 banking institutions DBS and Standard Chartered, fully backed 1:1",
-  "pegMechanism": "Direct 1:1 redemption for SGD through StraitsX (MAS-licensed Major Payment Institution); independent attestation reports issued twice monthly",
+  "collateral": "SGD cash and short-dated MAS/government instruments or eligible overnight reverse repos, held in segregated reserve accounts on trust for token holders",
+  "pegMechanism": "Direct 1:1 redemption for SGD through StraitsX (MAS-licensed Major Payment Institution); the issuer links mid-month and month-end reserve attestation reports, although its product-page description calls the cadence monthly",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "289",
   "detailProvider": "defillama",
@@ -92,6 +92,14 @@
     {
       "chain": "xrpl",
       "address": "XSGD.rK67JczCpaYXVtfw3qJVmqwpSfa1bYTptw",
+      "decimals": null,
+      "amountEncoding": {
+        "kind": "xrpl-issued-currency"
+      }
+    },
+    {
+      "chain": "zilliqa",
+      "address": "zil1zu72vac254htqpg3mtywdcfm84l3dfd9qzww8t",
       "decimals": 6
     }
   ],

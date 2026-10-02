@@ -1045,14 +1045,6 @@ describe("Safety Score v9 economic control", () => {
       posture: string;
       score: number;
     }> = [
-      {
-        name: "unresolved cap semantics stays on the unknown floor (TUSD-shaped facts)",
-        mintControl: unboundedMint({ capSemantics: { kind: "unknown", bound: null } }),
-        supervision: "attestation-only",
-        reconciliation: "periodic",
-        posture: "unknown",
-        score: 45 - UNATTESTED_EOA_PENALTY,
-      },
       ...(["none", "not-applicable"] as const).flatMap((reconciliation) =>
         (["none", "unknown", "attestation-only"] as const).map((supervision) => ({
           name: `confirmed-absent reconciliation (${reconciliation}) under ${supervision} supervision stays on the adverse floor`,
@@ -1184,6 +1176,78 @@ describe("Safety Score v9 economic control", () => {
     expect(result.reasons.length).toBeGreaterThan(0);
     expect(result.reasons.every((reason) => !reason.critical)).toBe(true);
   });
+
+  it.each(["bounded-unknown", "stale", "missing"] as const)(
+    "retains each mint-capable authority's unknown or adverse facts when the aggregate review is %s and has no evidence",
+    (observationState) => {
+      const root = control("mint:healthy-root", "mint");
+      const unknown = control("mint:unreviewed", "mint", {
+        status: { ...boundedUnknown("mint:unreviewed"), evidenceRefIds: [] },
+        capSemantics: { kind: "unknown", bound: null },
+      });
+      const adverse = control("mint:adverse", "mint", { incidentState: "active" });
+      const review = {
+        ...boundedMint(root.controlKey),
+        status: { ...boundedUnknown("mint:review"), observationState, evidenceRefIds: [] },
+      };
+      const withUnknown = evaluateV9EconomicControl(args({
+        facts: facts([root, unknown]), mint: review,
+      }));
+      const knownReview = evaluateV9EconomicControl(args({
+        facts: facts([root, unknown]), mint: boundedMint(root.controlKey),
+      }));
+      expect(withUnknown.components).toContainEqual(expect.objectContaining({
+        kind: "mint", posture: "unknown", controlKeys: [unknown.controlKey],
+      }));
+      expect(withUnknown.score).toBeLessThanOrEqual(knownReview.score!);
+      const withAdverse = evaluateV9EconomicControl(args({
+        facts: facts([root, adverse]), mint: review,
+      }));
+      expect(withAdverse.components).toContainEqual(expect.objectContaining({
+        kind: "mint", posture: "unbounded-or-compromised", controlKeys: [adverse.controlKey],
+      }));
+      expect(withAdverse.score).toBeLessThan(withUnknown.score!);
+      const cleared = evaluateV9EconomicControl(args({
+        facts: facts([root, control(unknown.controlKey, "mint"), control(adverse.controlKey, "mint")]),
+        mint: boundedMint(root.controlKey),
+      }));
+      expect(cleared.score).toBeGreaterThan(withUnknown.score!);
+      expect(cleared.structuralFailures.some((failure) => failure.kind === "active-control-incident")).toBe(false);
+    },
+  );
+
+  it.each([[2, 0.04, true], [2, 0.05, true], [4, 0.03, true], [3, 0.05, false]] as const)(
+    "relaxes %s exact unresolved rows of share %s only below the aggregate full-ceiling boundary",
+    (count, share, complete) => {
+      const materiality = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality;
+      const controls = Array.from({ length: count }, (_, index) => control(`bridge:band:${index}`, "bridge", {
+        scope: "deployment", economicLossScope: "deployment", materialSupplyShare: share,
+        status: boundedUnknown(`bridge:band:${index}`),
+      }));
+      const cohortFacts = facts(controls, {
+        supply: makeSupplyPartition({
+          routes: [
+            { deploymentRouteKey: "ethereum:native", supplyShare: 1 - count * share,
+              reviewState: "selected-reviewed", reviewedRouteKind: "native" },
+            ...controls.map((row) => ({
+              deploymentRouteKey: row.deploymentKey, supplyShare: share, reviewState: "selected-unresolved" as const,
+            })),
+          ],
+          selectedRouteSupplyShare: 1 - count * share,
+          unreviewedRouteSupplyShare: count * share,
+          unknownRouteSupplyShare: 0,
+        }),
+      });
+      const join = evaluateV9SubthresholdUnresolvedBridgeJoins(
+        cohortFacts, controls,
+        controls.map((row) => ({ controlKey: row.controlKey, tier: "canonical-rollup-bridge" })),
+        materiality.deploymentMaterialSharePct / 100, materiality.commonModeShareThreshold,
+        materiality.unresolvedDeploymentFullCeilingSharePct / 100,
+      );
+      expect(join.complete).toBe(complete);
+      if (!complete) expect(join.cause).toMatchObject({ code: "unresolved-row-control-unproven" });
+    },
+  );
 
   it("keeps a weak peripheral bridge scoped but lets a canonical route bind", () => {
     const bridgeControl = control("bridge:edge", "bridge", {
@@ -1554,6 +1618,7 @@ describe("Safety Score v9 economic control", () => {
     };
     expect(evaluateV9SubthresholdUnresolvedBridgeJoins(
       economicFacts, [first], [route], 0.1, 0.1,
+      V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.unresolvedDeploymentFullCeilingSharePct / 100,
     )).toEqual({ complete: true, cause: null });
     for (const [controls, routes, code, controlKeys] of [
       [[first], [route, route], "duplicate-bridge-route-control", [first.controlKey]],
@@ -1562,6 +1627,7 @@ describe("Safety Score v9 economic control", () => {
     ] as const) {
       expect(evaluateV9SubthresholdUnresolvedBridgeJoins(
         economicFacts, controls, routes, 0.1, 0.1,
+        V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.unresolvedDeploymentFullCeilingSharePct / 100,
       )).toMatchObject({ complete: false, cause: { code, controlKeys } });
       const evaluationArgs = args({
         facts: { ...economicFacts, controls },
@@ -1746,7 +1812,7 @@ describe("Safety Score v9 economic control", () => {
   });
 
   it("ignores below-threshold bridge review residue but fails closed at the exact threshold", () => {
-    const threshold = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.deploymentMaterialSharePct / 100;
+    const threshold = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.unresolvedDeploymentFullCeilingSharePct / 100;
     const resultFor = (unreviewedRouteSupplyShare: number, supplyStatus = requiredKnown("supply")) => {
       const unresolvedBridge = control("bridge:unresolved-residue", "bridge", {
         scope: "deployment",
@@ -1942,86 +2008,6 @@ describe("Safety Score v9 economic control", () => {
     expect(result.components.some((component) => component.componentKey === "bridge:unverified")).toBe(false);
   });
 
-  it("publishes a trace bridge residue as a diagnostic rather than the material ceiling", () => {
-    // EURC's 2026-08-18 shape. Every material deployment is reviewed and the
-    // only unattributed supply is $257 of a $470M inventory. The completeness
-    // proof cannot clear it — the reviewed Tempo route's control is
-    // bounded-unknown rather than known, which fails the per-row join — so
-    // before 9.26 that trace took the material reason's 55 control-unverified
-    // ceiling, and, because a ceiling-treatment reason also classifies its
-    // pillar as limited evidence, the 69 evidence ceiling underneath it. The
-    // residue is still published; it just scores nothing.
-    const tempoControl = control("bridge:tempo", "bridge", {
-      deploymentKey: "tempo:0xtempo",
-      scope: "deployment",
-      economicLossScope: "deployment",
-      materialSupplyShare: 0.00002,
-      status: boundedUnknown("control.tempo"),
-    });
-    const economicFacts: V9EconomicControlAssetFacts = {
-      ...facts([tempoControl]),
-      supply: makeSupplyPartition({
-        status: requiredKnown("supply"),
-        routes: [
-          {
-            deploymentRouteKey: "ethereum:native",
-            supplyUsd: 99_997,
-            supplyShare: 0.99997,
-            reviewState: "selected-reviewed",
-            reviewedRouteKind: "native",
-          },
-          {
-            deploymentRouteKey: tempoControl.deploymentKey,
-            supplyUsd: 2,
-            supplyShare: 0.00002,
-            reviewState: "selected-reviewed",
-            reviewedRouteKind: "controlled",
-          },
-          {
-            deploymentRouteKey: "unmatched-chain:fixture-asset:icp",
-            supplyUsd: 1,
-            supplyShare: 0.00001,
-            reviewState: "unmatched",
-          },
-        ],
-        selectedRouteSupplyShare: 0.99999,
-        unknownRouteSupplyShare: 0.00001,
-        unreviewedRouteSupplyShare: 0,
-      }),
-    };
-    const result = evaluateV9EconomicControl(
-      args({
-        facts: economicFacts,
-        bridge: {
-          status: requiredKnown("bridge"),
-          routes: [{ controlKey: tempoControl.controlKey, tier: "external-validated-network" as const }],
-        },
-      }),
-    );
-
-    expect(result.reasons.map((reason) => reason.code)).toContain("nonmaterial-bridge-supply-unmatched");
-    expect(result.reasons.map((reason) => reason.code)).not.toContain("material-bridge-supply-unmatched");
-
-    // ODR-D5a: the same proof, asked directly, must name the row that failed
-    // rather than returning a bare boolean.
-    const materiality = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality;
-    const join = evaluateV9SubthresholdUnresolvedBridgeJoins(
-      economicFacts,
-      [tempoControl],
-      [{ controlKey: tempoControl.controlKey, tier: "external-validated-network" as const }],
-      materiality.deploymentMaterialSharePct / 100,
-      materiality.commonModeShareThreshold,
-    );
-    expect(join.complete).toBe(false);
-    expect(join.cause).toEqual({
-      code: "reviewed-row-control-unproven",
-      deploymentRouteKey: "tempo:0xtempo",
-      reviewState: "selected-reviewed",
-      reviewedRouteKind: "controlled",
-      supplyShare: 0.00002,
-      controlKeys: [tempoControl.controlKey],
-    });
-  });
 
   it("proves a clean sub-threshold bridge join and names no failing row", () => {
     const materiality = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality;
@@ -2048,6 +2034,7 @@ describe("Safety Score v9 economic control", () => {
       [],
       materiality.deploymentMaterialSharePct / 100,
       materiality.commonModeShareThreshold,
+      materiality.unresolvedDeploymentFullCeilingSharePct / 100,
     );
     expect(join).toEqual({ complete: true, cause: null });
   });
@@ -2091,6 +2078,7 @@ describe("Safety Score v9 economic control", () => {
       bridgeRoutes,
       materialShareThreshold,
       materiality.commonModeShareThreshold,
+      materiality.unresolvedDeploymentFullCeilingSharePct / 100,
     );
 
     // Before the fix, this native control joined the row and made the proof
@@ -2145,6 +2133,7 @@ describe("Safety Score v9 economic control", () => {
       bridgeRoutes,
       materialShareThreshold,
       materiality.commonModeShareThreshold,
+      materiality.unresolvedDeploymentFullCeilingSharePct / 100,
     );
 
     expect(join.complete).toBe(false);

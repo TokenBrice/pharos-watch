@@ -2,7 +2,7 @@
   "id": "pusd-plume",
   "name": "Plume USD",
   "symbol": "pUSD",
-  "oneLiner": "pUSD is Plume's dollar stablecoin minted 1:1 against USDC in a Nucleus BoringVault; zero-fee redemption on Ethereum or Plume Chain with OFAC compliance checks.",
+  "oneLiner": "pUSD wraps USDC 1:1 in Plume-managed Nucleus BoringVaults, with no protocol mint/redemption fees; cross-chain redemption can remain pending for up to 12 hours.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized"
@@ -31,7 +31,7 @@
     ]
   },
   "collateral": "1:1 backed by USDC deposited into a Nucleus BoringVault",
-  "pegMechanism": "Zero-fee mint/redeem at 1:1 for USDC on Ethereum or Plume Chain; reserves managed by Nucleus BoringVault contracts with OFAC compliance checks",
+  "pegMechanism": "Mint/redeem at 1:1 for USDC on Ethereum or Plume with no protocol fees. Cross-chain redemption can take up to 12 hours; the issuer documents a predicate-proxy mint gateway with off-chain compliance checks.",
   "llamaId": "266",
   "detailProvider": "defillama",
   "geckoId": "plume-usd",

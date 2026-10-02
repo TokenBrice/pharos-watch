@@ -2,7 +2,7 @@ import {
   getHorizonDiscoveryAsset,
   isHorizonDiscoveryDeployment,
 } from "@shared/lib/dex-deployment-coverage";
-import { canonicalExitRouteScopedKey } from "@shared/lib/exit-route-identity";
+import { canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
 import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type { ContractDeployment } from "@shared/types/core";
 import { sleepWithSignal } from "../../lib/abort";

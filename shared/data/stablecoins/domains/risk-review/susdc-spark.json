@@ -2,28 +2,26 @@
   "id": "susdc-spark",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: spUSDC resolves to Upstream because the wrapper holds USDC as its only reserve, inheriting Circle's blacklist surface.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Spark Savings Vaults V2: underlying asset and strategy accounting",
+        "url": "https://docs.spark.finance/dev/savings/spark-vaults-v2"
+      },
+      {
+        "label": "Circle Blacklistable contract source",
+        "url": "https://raw.githubusercontent.com/circlefin/stablecoin-evm/master/contracts/v1/Blacklistable.sol"
+      }
+    ],
+    "evidence": "Pinned Ethereum block 26095794 and Avalanche block 96511142 on 2026-10-01 confirmed asset() is local USDC on both tracked vaults. Ethereum USDC blacklister() returned 0x0a06be16275b95a7d2567fbdae118b36c7da78f9, and Circle's source documents its blacklist authority. The wrapper retains upstream USDC freeze exposure; this does not assert that all deployed strategy positions are held as USDC.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA20USDf)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "Spark Savings USDC is tracked on Ethereum and Avalanche as a wrapper/variant of USDC. On-chain reads on 2026-07-20 confirm both deployments are local Spark ERC-4626 savings vaults over local USDC (immutable clones, zero proxy admin), so issuance is native per chain with inherited USDC exposure.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
+    "summary": "The tracked Ethereum and Avalanche spUSDC deployments are local ERC-4626 USDC vaults behind upgradeable ERC-1967 UUPS proxies, not immutable clones. Pinned reads on 2026-10-01 confirm local USDC assets and DEFAULT_ADMIN_ROLE holders Spark SubProxy on Ethereum and Spark executor on Avalanche. Wrapper upgrades remain in Mint Authority; these local share contracts are not Avalanche Bridge representations.",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA20USDf)",
     "confidence": "verified",
-    "protocols": [
-      {
-        "source": "l2beat",
-        "name": "Avalanche Bridge",
-        "slug": "avalanche",
-        "url": "https://l2beat.com/bridges/projects/avalanche",
-        "bridgeTypes": [
-          "canonicalBridge"
-        ]
-      }
-    ],
     "sources": [
       {
         "label": "Spark docs",
@@ -34,8 +32,8 @@
         "url": "https://github.com/sparkdotfi/spark-address-registry"
       },
       {
-        "label": "L2BEAT Avalanche Bridge",
-        "url": "https://l2beat.com/bridges/projects/avalanche"
+        "label": "Spark Savings Vaults V2: UUPS architecture and local USDC deployments",
+        "url": "https://docs.spark.finance/dev/savings/spark-vaults-v2"
       }
     ],
     "routes": [
@@ -51,9 +49,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "On-chain 2026-07-20: 163-byte minimal proxy (implementation 0x1b992302652a92611dcd5090d1cb388c6377f455, EIP-1967 admin slot zero, no upgrade authority) of the Spark ERC-4626 savings vault with asset() = USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48; shares mint natively against local USDC deposits. The vault's DEFAULT_ADMIN is the Spark DAO SubProxy (SPARK_PROXY 0x3300f198988e4C9C63F75dF86De36421f06af8c4) per the Spark address registry. No bridge control carries the claim.",
+        "reviewNote": "At Ethereum block 26095794 on 2026-10-01, the ERC-1967 implementation slot returned 0x1b992302652a92611dcd5090d1cb388c6377f455 and the correct EIP-1967 admin slot was zero. This is a UUPS proxy: a zero transparent-admin slot does not imply immutability. Spark's source restricts upgrades to DEFAULT_ADMIN_ROLE, whose member at index 0 was Spark SubProxy 0x3300f198988e4c9c63f75df86de36421f06af8c4. asset() returned Ethereum USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48. Local share issuance and its upgrade authority are recorded in Mint Authority.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095794,
         "sources": [
           {
             "label": "spUSDC vault on Etherscan",
@@ -76,9 +75,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "On-chain 2026-07-20: 163-byte minimal proxy (implementation 0xc2c0582d1cce30449cf561c7b9c4d6d527547f12, EIP-1967 admin slot zero, no upgrade authority) of the Spark ERC-4626 savings vault with asset() = USDC 0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6e; shares mint natively against local USDC deposits. The vault's DEFAULT_ADMIN is the Spark cross-chain governance executor (SPARK_EXECUTOR 0x7566DEbC906C17338524A414343fA61BcA26A843, driven from mainnet via the LZReceiver 0xd905be48983D405C6fD7f5a983D2351fb61C691F) per the Spark address registry. No bridge control carries the claim.",
+        "reviewNote": "At Avalanche block 96511142 on 2026-10-01, the ERC-1967 implementation slot returned 0xc2c0582d1cce30449cf561c7b9c4d6d527547f12 and the correct EIP-1967 admin slot was zero. This is an upgradeable UUPS proxy, with DEFAULT_ADMIN_ROLE member at index 0 Spark executor 0x7566debc906c17338524a414343fa61bca26a843. The official registry identifies its LayerZero receiver as 0xd905be48983D405C6fD7f5a983D2351fb61C691F. asset() returned native USDC 0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e. Local share issuance and its upgrade authority are recorded in Mint Authority.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-01",
+        "observedBlock": 96511142,
         "sources": [
           {
             "label": "spUSDC vault on Snowscan",

@@ -97,11 +97,11 @@
     "sources": [
       {
         "label": "Zoth ZeUSD mechanics — CDP, LTV, redemption, and liquidation description",
-        "url": "https://docs.zoth.io/zoth/products/zeusd-an-omni-chain-and-composable-stable-token/mechanics-of-zeusd"
+        "url": "https://web.archive.org/web/20260519034706/https://docs.zoth.io/zoth/products/zeusd-an-omni-chain-and-composable-stable-token/mechanics-of-zeusd"
       },
       {
         "label": "Zoth contract deployments and V1/V2 boundary",
-        "url": "https://docs.zoth.io/zoth/tech-center/contract-deployments"
+        "url": "https://web.archive.org/web/20260519041844/https://docs.zoth.io/zoth/tech-center/contract-deployments"
       },
       {
         "label": "Tracked ZeUSD V1 router verified implementation",

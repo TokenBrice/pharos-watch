@@ -1,24 +1,26 @@
 import transferReviewOverlaysAsset from "@shared/data/safety-score-v9/transfer-review-overlays-v1.json";
-import { resolveChainId } from "@shared/lib/chains";
+import { resolveChainId } from "@shared/types/chain-identity";
 import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import {
-  SafetyScoreV9ReviewedTransferFileSchema,
+  SafetyScoreV9ReviewedTransferEnvelopeSchema,
+  SafetyScoreV9ReviewedTransferFactSchema,
   safetyScoreV9TransferDeploymentKey,
   type SafetyScoreV9ReviewedTransferFact,
 } from "@shared/types/safety-score-v9-transfer-overlays";
+import { createReviewedAssetRegistry } from "./extension-reviewed-registry";
 
 export { safetyScoreV9TransferDeploymentKey };
 export type { SafetyScoreV9ReviewedTransferFact };
 
-const REVIEWED_TRANSFER_FILE = SafetyScoreV9ReviewedTransferFileSchema.parse(transferReviewOverlaysAsset);
+const REVIEWED_TRANSFER_FILE = SafetyScoreV9ReviewedTransferEnvelopeSchema.parse(transferReviewOverlaysAsset);
 
 export function computeSafetyScoreV9ReviewedTransferFactsDigest(
-  reviews: Iterable<SafetyScoreV9ReviewedTransferFact>,
+  reviews?: Iterable<SafetyScoreV9ReviewedTransferFact>,
 ): string {
-  const canonicalReviews = [...reviews].sort((left, right) => compareText(left.assetId, right.assetId));
+  const canonicalReviews = [...(reviews ?? REVIEWED_TRANSFER_FILE.reviews)].sort((left, right) => compareText(left.assetId, right.assetId));
   return sha256Hex(
     stableJsonStringifyV1({
       domain: "safety-score-v9.reviewed-transfer-overlays.v1",
@@ -28,9 +30,13 @@ export function computeSafetyScoreV9ReviewedTransferFactsDigest(
   );
 }
 
-export const SAFETY_SCORE_V9_REVIEWED_TRANSFER_FACTS: ReadonlyMap<string, SafetyScoreV9ReviewedTransferFact> = new Map(
-  REVIEWED_TRANSFER_FILE.reviews.map((review) => [review.assetId, review]),
-);
+const reviewedTransfers = createReviewedAssetRegistry({
+  rows: REVIEWED_TRANSFER_FILE.reviews, schema: SafetyScoreV9ReviewedTransferFactSchema, path: "transferReviews.reviews",
+});
+
+export function getSafetyScoreV9ReviewedTransferFact(assetId: string): SafetyScoreV9ReviewedTransferFact | undefined {
+  return reviewedTransfers.get(assetId);
+}
 
 /**
  * Whether the asset has any surface the contract-addressed scope machinery can
@@ -39,13 +45,14 @@ export const SAFETY_SCORE_V9_REVIEWED_TRANSFER_FACTS: ReadonlyMap<string, Safety
  * share of supply — the shape of a chain-native asset (a Zano confidential
  * asset, a Zephyr protocol asset) that can never have `contracts[]` rows.
  */
-export type SafetyScoreV9TransferDeploymentModel = "contract-addressable" | "non-contract-native";
+export type SafetyScoreV9TransferDeploymentModel = "contract-addressable" | "non-contract-native" | "mixed-economic";
 
 export interface SafetyScoreV9TransferMaterialScope {
   authoritativeDeploymentKeys: readonly string[];
   materialDeploymentKeys: readonly string[];
   materialDeploymentScopeComplete: boolean;
   deploymentModel: SafetyScoreV9TransferDeploymentModel;
+  reviewedNativeDeploymentKeys?: readonly string[];
   unresolvedMaterialChainIds?: readonly string[];
   unresolvedDeclaredDeploymentKeys?: readonly string[];
   scopeBasis?: "attributed";
@@ -119,6 +126,11 @@ export function resolveSafetyScoreV9ReviewedTransferFact(
     return { observationState: "stale", posture: null };
   }
 
+  if (review.deployments.some(deployment => deployment.contractOrTokenId.startsWith("native:") &&
+    (materialScope.deploymentModel !== "mixed-economic" ||
+      !materialScope.reviewedNativeDeploymentKeys?.includes(safetyScoreV9TransferDeploymentKey(deployment.chainId, deployment.contractOrTokenId))))) {
+    return { observationState: "bounded-unknown", posture: null };
+  }
   const authoritativeDeploymentKeys = new Set(materialScope.authoritativeDeploymentKeys);
   const reviewedDeploymentKeys = new Set(
     review.deployments

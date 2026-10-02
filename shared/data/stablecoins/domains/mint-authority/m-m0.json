@@ -68,7 +68,7 @@
         "sources": [
           {
             "label": "M0 deployments",
-            "url": "https://docs.m0.org/get-started/resources/addresses/"
+            "url": "https://docs.m0.org/resources/addresses/m0-platform"
           },
           {
             "label": "M0 protocol docs",

@@ -46,6 +46,8 @@
         "address": "0x6cd3a5ba46fa254d4d2e3c2b37350ae337e94a0f",
         "capDescription": "Mint bounded by per-position overcollateralization against accepted Flare-ecosystem collateral (FXRP, wFLR, sFLR, stXRP), with Liquity V2 redemption and liquidation rules.",
         "canRaiseCap": true,
+        "observedAt": "2026-10-01",
+        "observedBlock": 71046632,
         "evidence": "At Flare block 62712638 (0x3bceb3f), CDP token at 0x6cd3a5ba46fa254d4d2e3c2b37350ae337e94a0f is an EIP-1967 proxy (implementation slot = 0x03dc7269d65018516133987de01104cf2607c884). owner() returned 0xdedda08961216adb9ca09b88986d110127b24270. eth_getCode for the token returns 2258-byte bytecode (confirmed contract)."
       },
       {
@@ -59,6 +61,8 @@
         "signerCount": 6,
         "modulesOrGuardsStatus": "none-detected",
         "canRaiseCap": true,
+        "observedAt": "2026-10-01",
+        "observedBlock": 71046632,
         "safe": {
           "owners": [
             "0xebde99acf9b5c288dc8d812fa3e807fc6f06300b",

@@ -9,16 +9,39 @@
     "yieldBearing": true,
     "navToken": true
   },
-  "collateral": "Hyperithm-managed market-neutral stablecoin strategies across on-chain markets and institutional execution venues, held under Fordefi MPC custody (manager holds the trading key share, Midas holds an admin/policy share). Tokenholders hold a qualified subordinated claim against Midas (no ownership of the underlying assets), secured by a Security Agent lien on the Collateral Account for tokenholders.",
-  "pegMechanism": "NAV-accreting tokenized debt instrument (blockchain-based certificate under German law), not a fixed $1 peg; value tracks the daily NAV of the Hyperithm-managed market-neutral reference portfolio. Primary mint/redeem only via permissioned Midas DepositVault/RedemptionVault for greenlisted users with NAV conversion settled off-chain by the issuer; instant redemptions are facilitated through Midas Staked Liquidity (MSL). No fixed $1 redemption floor.",
+  "collateral": "Hyperithm-managed market-neutral stablecoin strategies across on-chain markets and institutional execution venues, operated through Fordefi MPC workspaces (manager holds an MPC share, Midas holds an admin/policy share). Tokenholders hold a qualified subordinated debt claim against Midas with no ownership of the underlying assets. The mHYPER Final Terms list Custodian, Collateral and Security Agent as n/a; a tokenholder Security Agent lien is not specified for this product.",
+  "pegMechanism": "NAV-accreting tokenized debt instrument (blockchain-based certificate under German law), not a fixed $1 peg; value tracks the Hyperithm-managed market-neutral reference portfolio. Primary issuance and redemption follow Midas eligibility and KYC requirements. The product's Final Terms calculate cash redemption from a hypothetical best-efforts liquidation of the referenced assets, less tokenholder fees, with a 0.50% redemption fee and settlement currencies USD, USDC, USDT or EURO. Instant liquidity may use the issuer's on-chain oracle, but the legal redemption amount is not a guaranteed oracle price or fixed $1 floor.",
   "detailProvider": "coingecko",
   "geckoId": "midas-mhyper",
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://midas.app/transparency",
-    "provider": "Midas Attestation Engine: on-chain NAV/proof-of-reserves/price, independently verified via Chainlink, Canary, LlamaRisk and vLayer (launched first on mHYPER)",
+    "provider": "Midas Attestation Engine: issuer NAV and 1token protocol-level assets/liabilities, published through Chainlink CRE; workflow verification is distinct from an independent financial audit",
     "attestorTier": "self",
-    "cadence": "daily-nav"
+    "cadence": "daily-nav",
+    "latestReport": {
+      "publishedAt": "2026-09-29",
+      "publishedAtBasis": "explicit",
+      "assuranceMethod": "self-verification",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "partial",
+      "reviewer": "Sol NR wave 2026-10-02 (NrMhyper)",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "mHYPER SAVE checkpoint, published on Ethereum 2026-09-29; protocol assets, borrow liabilities and reported token supply",
+          "url": "https://gateway.pinata.cloud/ipfs/QmQxfaGhtGrP4im4B8TYyPHBn2MkxZQMx8Ta8JeDsUVCSX"
+        },
+        {
+          "label": "Midas attestation registry, latest mHYPER checkpoint pinned at Ethereum block 26103204",
+          "url": "https://etherscan.io/address/0x2d6e9f608807436de5d9603b00abe3fed1bc809d"
+        },
+        {
+          "label": "Midas public PoR workflow and source scope",
+          "url": "https://github.com/midas-apps/midas-por-v2/blob/bb7308eb5e3bdd4f882b039db580279c098c011f/README.md"
+        }
+      ]
+    }
   },
   "links": [
     {
@@ -36,6 +59,14 @@
     {
       "label": "CoinGecko",
       "url": "https://www.coingecko.com/en/coins/midas-mhyper"
+    },
+    {
+      "label": "mHYPER Final Terms, 11 August 2025",
+      "url": "https://content.gitbook.com/content/MndxFHqGeA4nzBBeKDTV/blobs/Rh0tXsofDB8UQWaklyuE/Midas_Final_Terms_mHYPER_2025.pdf"
+    },
+    {
+      "label": "mHYPER Key Information Document, 2 February 2026",
+      "url": "https://content.gitbook.com/content/MndxFHqGeA4nzBBeKDTV/blobs/0mtdYQ1fSELYbNqAP9jd/KID_mHYPER.pdf"
     }
   ],
   "jurisdiction": {
@@ -101,6 +132,29 @@
     "yieldSource": "Midas mHYPER / Hyperithm NAV",
     "yieldType": "nav-appreciation"
   },
-  "launchDate": "2025-07-15",
-  "mechanismArchetype": "synthetic-delta-neutral"
+  "launchDate": "2025-08-14",
+  "mechanismArchetypeReview": {
+    "disposition": "unresolved",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol NR wave 2026-10-02 (NrMhyper)",
+    "rationale": "The product KID and Final Terms identify a qualified subordinated issuer debt certificate referencing a dynamically allocated stablecoin strategy spanning spot, lending, arbitrage, derivatives and rewards, without direct asset ownership or a product-specific security agent. The 17 July 2026 succeeding prospectus expressly continues mHYPER ISIN CH1475894585 and states that the underlying is notional and the issuer is not obliged to acquire or hold it. Current Ethereum, Plasma, Monad and Katana token identities were pinned on 2 October. The dated 1token reports expose protocol assets and borrow liabilities but no complete hedge inventory. The siblings' delta-neutral descriptions do not establish mHYPER's exact hedge mechanism. Neither a UCITS/TRS fund share, shared-reserve liability nor a redeemable protocol-position claim is established by the notional issuer certificate. Existing families therefore remain unresolved under D18; no archetype is selected merely to remove NR.",
+    "sources": [
+      {
+        "label": "mHYPER Key Information Document (produced 2026-02-02, accessed 2026-10-01)",
+        "url": "https://content.gitbook.com/content/MndxFHqGeA4nzBBeKDTV/blobs/0mtdYQ1fSELYbNqAP9jd/KID_mHYPER.pdf"
+      },
+      {
+        "label": "mHYPER Final Terms (dated 2025-08-11, accessed 2026-10-01)",
+        "url": "https://content.gitbook.com/content/MndxFHqGeA4nzBBeKDTV/blobs/Rh0tXsofDB8UQWaklyuE/Midas_Final_Terms_mHYPER_2025.pdf"
+      },
+      {
+        "label": "Midas succeeding Base Prospectus, 17 July 2026, continuing mHYPER",
+        "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FkVT2uAi2AipgeMIyZAJe%2FMidas%20Software%20GmbH%20Base%20Prospectus%202026.pdf?alt=media&token=d80ceabb-07a6-4dc4-9020-70ec86b4f42f"
+      },
+      {
+        "label": "Midas current mHYPER protocol exposures, accessed 2026-10-02",
+        "url": "https://api-prod.midas.app/api/transparency?token=mHYPER"
+      }
+    ]
+  }
 }

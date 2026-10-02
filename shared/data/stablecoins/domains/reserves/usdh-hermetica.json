@@ -3,11 +3,12 @@
   "reserves": [
     {
       "name": "STRCx",
-      "pct": 94.059174,
+      "pct": 67.103949,
       "risk": "high",
       "assetClass": "tokenized-security",
       "issuerOrObligor": "Backed Assets (JE) Limited via Kraken xStocks; STRCx exposure to Strategy, Inc.",
       "riskFactors": [
+        "credit",
         "market",
         "counterparty",
         "custody",
@@ -18,7 +19,7 @@
     },
     {
       "name": "Other unitemized Ethereum Settlement Wallet assets",
-      "pct": 0.814359,
+      "pct": 4.999138,
       "risk": "high",
       "assetClass": "other",
       "issuerOrObligor": "Hermetica protocol Ethereum settlement wallet",
@@ -33,8 +34,8 @@
     },
     {
       "name": "Stacks Redeeming Reserve",
-      "pct": 0.380820,
-      "risk": "medium",
+      "pct": 0.386036,
+      "risk": "high",
       "assetClass": "other",
       "issuerOrObligor": "Hermetica protocol redemption-liquidity wallet on Stacks",
       "riskFactors": [
@@ -42,11 +43,11 @@
         "liquidity",
         "smart-contract"
       ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "Reserve Fund USDC",
-      "pct": 4.745648,
+      "pct": 4.810651,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -57,73 +58,102 @@
         "custody"
       ],
       "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "Unitemized Copper custodied assets",
+      "pct": 22.700226,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Hermetica protocol assets held with Copper Markets (Switzerland) AG",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "market",
+        "liquidity"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-04",
-    "reviewer": "Kimi T42 unknown-reduction wave-2 2026-07-30; Pharos reserve research",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Sol owner-session-4 reserve decisions 2026-10-02 (ReserveDecisions)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Hermetica August 2026 custodian attestation",
-        "url": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-august-2026"
+        "label": "Hermetica September 2026 report; snapshot September 30, published October 1",
+        "url": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026"
+      },
+      {
+        "label": "Hermetica STRCx credit-instrument backing integration",
+        "url": "https://blog.hermetica.fi/p/strcx-direct-tokenized-strc-exposure-for-usdh"
       }
     ],
-    "rationale": "Reviewed 2026-09-04 against Hermetica's August 2026 custodian attestation, published 2026-08-26: at 14:00 UTC on 2026-08-20, total backing was $2,110,315.15, including $2,002,130.54 Ethereum Settlement Wallet, $8,036.50 Stacks Redeeming Reserve, and $100,148.12 Reserve Fund USDC. The report itemizes 20,750 STRCx worth $1,984,945 within the settlement wallet; normalized slices are STRCx 94.059174%, other unitemized Ethereum Settlement Wallet assets 0.814359%, Stacks Redeeming Reserve 0.380820%, and Reserve Fund USDC 4.745648%. Copper, Ceffu, Mint Wallet, and Reserve Fund USDh were $0.",
-    "compositionBasis": "Hermetica August 2026 custodian attestation (2026-08-20 14:00 UTC snapshot) with disclosed STRCx split and venue weights normalized to total reported backing",
-    "compositionAsOf": "2026-08-20",
+    "rationale": "Scoped September 30, 2026 14:00 UTC backing review from the report published October 1, fetched October 2. Total reported assets are $2,081,799.60 against $1,981,448.18 USDh. The new Ethereum Settlement Wallet 0x1046a6AD45B60264c83A4b93F6D2c6078C73c1d5 holds $1,501,041.77, including $1,396,969.74 of STRCx credit-instrument backing and $104,072.03 unitemized assets. Copper holds $472,573.22 of aggregate BTC, USDT and USDC without instrument weights; Ceffu holds $0. Stacks Redeeming Reserve holds $8,036.50 without instrument itemization; Reserve Fund holds $100,148.12 USDC and $0 USDh. Percentages are independently calculated against reported total backing and rounded to six decimals. Location amounts sum to $2,081,799.61: the one-cent reporting discrepancy is not a balancing asset or favourable coverage claim. This review and latestReport.periodEnd move together; only Copper's custody subtotal is independently attested, not the whole book, legal safeguards or hedge reconciliation.",
+    "compositionBasis": "September 30, 2026 Hermetica report: disclosed STRCx and USDC plus explicit unclassified settlement-wallet, Copper and Stacks residuals; six-decimal shares of reported $2,081,799.60 backing",
+    "compositionAsOf": "2026-09-30",
     "scope": "full-composition",
-    "knownUnknownExposure": "The August attestation itemizes STRCx at 94.059174% of total backing; the remaining 0.814359% of the Ethereum Settlement Wallet is unitemized, as is the 0.380820% Stacks Redeeming Reserve.",
-    "knownUnknownExposurePct": 1.195179,
+    "knownUnknownExposure": "28.085400% instrument composition remains unknown: 4.999138% other Ethereum Settlement Wallet assets, 22.700226% unitemized Copper BTC/USDT/USDC, and 0.386036% Stacks Redeeming Reserve. Location totals do not prove instrument weights, delta neutrality, liquidity or holder safeguards.",
+    "knownUnknownExposurePct": 28.0854,
     "nonLinkDispositions": [
       {
         "reserveIndex": 1,
         "reserveName": "Other unitemized Ethereum Settlement Wallet assets",
-        "pct": 0.814359,
-        "disposition": "basket-needs-split",
-        "rationale": "The August 2026 attestation itemizes STRCx within the Ethereum Settlement Wallet but does not itemize the remaining assets."
+        "pct": 4.999138,
+        "disposition": "insufficient-evidence",
+        "rationale": "September report itemizes STRCx, not the remaining $104,072.03 in the settlement wallet; the residual remains unclassified unknown."
       },
       {
         "reserveIndex": 2,
         "reserveName": "Stacks Redeeming Reserve",
-        "pct": 0.380820,
-        "disposition": "basket-needs-split",
-        "rationale": "The August 2026 attestation reports the redemption-liquidity wallet total without itemizing its token contents."
+        "pct": 0.386036,
+        "disposition": "insufficient-evidence",
+        "rationale": "September report gives the $8,036.50 Stacks wallet total without token contents; the residual remains unclassified unknown."
+      },
+      {
+        "reserveIndex": 4,
+        "reserveName": "Unitemized Copper custodied assets",
+        "pct": 22.700226,
+        "disposition": "insufficient-evidence",
+        "rationale": "Copper's scoped attestation covers aggregate BTC, USDT and USDC including unrealized P&L, without weights or a hedge reconciliation; no instrument split is inferred."
       }
     ]
   },
   "custodyProfile": {
     "providers": [
       {
-        "name": "Hermetica Ethereum Settlement Wallet ($2,002,130.54, including 20,750 STRCx worth $1,984,945.00 at 2026-08-20)",
+        "name": "Hermetica Ethereum Settlement Wallet 0x1046a6AD45B60264c83A4b93F6D2c6078C73c1d5 ($1,501,041.77, including 14,070.30 STRCx worth $1,396,969.74 at 2026-09-30)",
         "role": "other"
       },
       {
-        "name": "Hermetica Stacks Redeeming Reserve ($8,036.50 at 2026-08-20)",
+        "name": "Hermetica Stacks Redeeming Reserve ($8,036.50 at 2026-09-30)",
         "role": "other"
       },
       {
-        "name": "Hermetica Reserve Fund (USDC $100,148.12; USDh $0.00 at 2026-08-20)",
+        "name": "Hermetica Reserve Fund (USDC $100,148.12; USDh $0.00 at 2026-09-30)",
+        "role": "other"
+      },
+      {
+        "name": "Copper Markets (Switzerland) AG ($472,573.22 of BTC, USDT and USDC at 2026-09-30)",
         "role": "other"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-09-04",
-    "reviewer": "Pharos reserve research",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Sol final D/F independent verification 2026-10-02 (VDf1)",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Hermetica August 2026 custodian attestation",
-        "url": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-august-2026"
+        "label": "Hermetica September 2026 report with scoped Copper custody attestation",
+        "url": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026"
       },
       {
         "label": "Hermetica USDh backing design",
         "url": "https://docs.hermetica.fi/usdh/how-it-works/backing"
       }
     ],
-    "uncertainty": "The August 2026 attestation identifies no funds within Copper or Ceffu and reports backing in the Ethereum Settlement Wallet, Stacks Redeeming Reserve, and Reserve Fund; Mint Wallet and Reserve Fund USDh were $0.00. It does not publish wallet key control, account-level segregation, insolvency terms, or rehypothecation terms. The report itemizes 20,750 STRCx worth $1,984,945 in the settlement wallet, but leaves the remaining wallet assets and Stacks Redeeming Reserve contents unitemized.",
+    "uncertainty": "The September 30, 2026 report identifies $472,573.22 at Copper and $0.00 at Ceffu, plus the new Ethereum Settlement Wallet 0x1046a6AD45B60264c83A4b93F6D2c6078C73c1d5, Stacks Redeeming Reserve and Reserve Fund. Copper Markets (Switzerland) AG signs a scoped off-exchange custody balance attestation covering aggregate BTC, USDT and USDC, not whole-protocol liabilities or legal holder safeguards. The settlement wallet contains $1,396,969.74 of STRCx credit-instrument backing, but its remaining assets, the Copper asset split and Stacks Redeeming Reserve contents are unitemized. Wallet key control, account-level segregation, insolvency terms and rehypothecation protections remain unknown. Current composition and latest report both use September 30; custody unknowns remain separately charged.",
     "knownUnknownExposurePct": 100
   }
 }

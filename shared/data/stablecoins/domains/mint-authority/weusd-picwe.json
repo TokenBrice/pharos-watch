@@ -52,8 +52,9 @@
         ],
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-16",
-        "evidence": "At BSC block 116362149, Base block 50067179, Arbitrum block 495300024, and Plume block 87694882, hasRole(DEFAULT_ADMIN_ROLE) and hasRole(MINTER_ROLE) on the local WEUSD token returned true for PicWe admin EOA 0xc12233455beac4e094a5de022be692a264c0c0bc; eth_getCode is empty, confirming an EOA. getRoleAdmin(MINTER_ROLE) returns DEFAULT_ADMIN_ROLE, so this EOA can appoint another native minter on each EVM deployment. These are independent native issuance controls; Movement's separate package publisher and the EVM Cross-Chain bridge controls are not included in this Mint Authority control.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 125063414,
+        "evidence": "Historical reads at BSC block 116362149, Base block 50067179, Arbitrum block 495300024, and Plume block 87694882 found DEFAULT_ADMIN_ROLE and MINTER_ROLE assigned to PicWe EOA 0xc12233455beac4e094a5de022be692a264c0c0bc, with DEFAULT_ADMIN_ROLE administering MINTER_ROLE. At BSC block 125063414 on 2026-10-01, both hasRole calls still returned true; the current control observation is scoped to BSC and does not refresh Plume or the Movement publisher. EOA code was empty at BSC block 125059523. Movement's separate publisher and EVM cross-chain controls are outside this control.",
         "sources": [
           {
             "label": "BscScan WEUSD contract",

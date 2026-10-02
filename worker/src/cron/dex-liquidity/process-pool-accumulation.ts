@@ -1,5 +1,5 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { canonicalExitRouteAssetKey } from "@shared/lib/exit-route-identity";
+import { canonicalExitRouteAssetKey } from "@shared/types/exit-route-identity";
 import {
   buildPoolFingerprint,
   computePoolPairQuality,

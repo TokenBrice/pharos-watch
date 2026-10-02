@@ -130,9 +130,9 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
   controlPosture: {
     title: "Control posture",
     summary:
-      "A descriptive classification of where operational authority sits. It preserves a legacy metadata field for context and does not enter Safety Score V9.",
+      "A descriptive classification of where operational authority sits. It preserves a legacy metadata field for context and does not enter Safety Score V10.",
     detail:
-      "V9 Economic Control uses reviewed mint, oracle, and bridge evidence instead of this classification.",
+      "V10 Economic Control uses reviewed mint, oracle, and bridge evidence instead of this classification.",
     methodologyPath: "/methodology/#safety-scores-methodology",
   },
   resilience: {
@@ -190,7 +190,7 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
     summary:
       "Standalone issuer or protocol route scored across access, settlement, execution certainty, capacity, output quality, and cost.",
     detail:
-      "This route score is separate from Safety Score V9 Exit, which re-evaluates exact same-notional route evidence under the V9 policy.",
+      "This route score is separate from Safety Score V10 Exit, which re-evaluates exact same-notional route evidence under the V10 policy.",
     methodologyPath: REDEMPTION_BACKSTOP_METHODOLOGY_PATH,
     versionLabel: REDEMPTION_BACKSTOP_METHODOLOGY_VERSION_LABEL,
     changelogPath: REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG_PATH,
@@ -200,7 +200,7 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
     summary:
       "Retired pre-V9 blend that compared the best redemption and DEX exit paths.",
     detail:
-      "Redemption v4.3 removed this combined score. Current publication keeps standalone route diagnostics while Safety Score V9 evaluates exact same-notional evidence inside its Exit pillar.",
+      "Redemption v4.3 removed this combined score. Current publication keeps standalone route diagnostics while Safety Score V10 evaluates exact same-notional evidence inside its Exit pillar.",
     methodologyPath: REDEMPTION_BACKSTOP_METHODOLOGY_PATH,
     versionLabel: REDEMPTION_BACKSTOP_METHODOLOGY_VERSION_LABEL,
     changelogPath: REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG_PATH,
@@ -208,7 +208,7 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
   mintAuthorityScore: {
     title: "Mint Authority Score",
     summary:
-      "The Safety Score V9 mint component: how much durable, unbacked supply privileged mint paths can create.",
+      "The Safety Score V10 mint component: how much durable, unbacked supply privileged mint paths can create.",
     detail:
       "Higher is better. Since safety 9.1 mint risk is graded once, inside the V9 Economic Control pillar. The component starts from a derived posture (cap semantics, claim impairment, reconciliation, supervision), then applies resolved-incident age decay, a key-custody penalty that MPC or HSM attestation waives, a multisig quorum ladder, and a small Safe module modifier. Route family is deliberately not priced separately. Missing or unresolved review data stays NR and never implies safety.",
     methodologyPath: MINT_AUTHORITY_METHODOLOGY_PATH,
@@ -303,7 +303,7 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
     summary:
       "0-100 DEX liquidity composite built from effective TVL, volume activity, pool quality, durability, and pair diversity.",
     detail:
-      "This aggregate market score is not a single-route execution test. Safety Score V9 Exit separately evaluates exact same-notional routes and independent backup credit.",
+      "This aggregate market score is not a single-route execution test. Safety Score V10 Exit separately evaluates exact same-notional routes and independent backup credit.",
     methodologyPath: "/methodology/#liquidity-methodology",
     versionLabel: LIQUIDITY_METHODOLOGY_VERSION_LABEL,
     changelogPath: LIQUIDITY_METHODOLOGY_CHANGELOG_PATH,

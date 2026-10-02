@@ -233,8 +233,12 @@ export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
     },
     { sourceFilePath: SOURCE_FILE_PATH },
   ),
+  // JPYC Prepaid v1 is deliberately excluded. The issuer's current notice
+  // (re-read 2026-10-01) ends v1-to-v2 exchange and says cash refunds are not
+  // planned; the separately tracked funds-transfer JPYC route is not this token.
+  // https://corporate.jpyc.co.jp/news/posts/prepaid-important-notice
   ...defineBatch(
-    ["kgst-kyrgyz-som", "jpyc-jpyc-v1"],
+    ["kgst-kyrgyz-som"],
     {
       ...issuerBase,
       capacityModel: {

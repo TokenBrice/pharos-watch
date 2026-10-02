@@ -105,20 +105,24 @@
     }
   },
   "launchDate": "2021-04-22",
-  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetype": "shared-reserve",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-07-13",
-    "reviewer": "Codex mechanism review",
-    "rationale": "EURm remains directly backed by the shared Mento Reserve and is minted or burned as reserve-backed inventory through Mento V3.",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol V10 data curation 2026-10-01 (DataMento)",
+    "rationale": "At Celo block 78986505, EURm token 0xd8763cba276a3738e6de85b4b3bf5fded6d6ca73 is token1 of current V3 FPMM 0x1ad2ea06502919f935d9c09028df73a462979e29, with USDm output at 0x765de816845861e75a25fca122bb6898b8b1282a. Nonzero quote, pool inventory and the pinned deployed FPMM swap code establish a limited operational claim. Explicit issuer configuration identifies shared-reserve backing. This review uses V3 rather than the deprecated V2 EURm/USDm pool and establishes no fiat priority, whole-pool reconciliation or funded default recovery.",
     "sources": [
       {
-        "label": "Mento V3 stable token docs",
-        "url": "https://docs.mento.org/mento-v3/build/smart-contracts/stabletoken"
+        "label": "Explicit reserve backing at commit 53bfb26749fd99fc3bbd3c251064b5eaaa77717d",
+        "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/stablecoin-backing.config.ts"
       },
       {
-        "label": "Mento V3 launch",
-        "url": "https://www.mento.org/blog/mento-v3-is-here-onchain-fx-built-to-scale-across-chains"
+        "label": "FPMM operational claim at documentation commit 41bf2c2b4295cb6eb625a89c2b781fe5bb8fb850",
+        "url": "https://raw.githubusercontent.com/mento-protocol/docs/41bf2c2b4295cb6eb625a89c2b781fe5bb8fb850/build/smart-contracts/fpmm.md"
+      },
+      {
+        "label": "Deployed FPMM swap source; runtime matched at Celo block 78986505",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x8cb0518a0510ab62450f79f3cd9ee0cbddb77f30"
       }
     ]
   },

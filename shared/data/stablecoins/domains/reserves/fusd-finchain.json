@@ -2,11 +2,43 @@
   "id": "fusd-finchain",
   "reserves": [
     {
-      "name": "Tokenized Treasury and money-market fund basket",
-      "pct": 100,
+      "name": "Taikang Kaitai US Dollar Money Market Fund tokenized unlisted class (TKUSD)",
+      "pct": 24.8776,
       "risk": "low",
       "assetClass": "fund-share",
-      "issuerOrObligor": "Taikang Asset Management, China Asset Management, and BNY Mellon Fund Management",
+      "issuerOrObligor": "Taikang Kaitai US Dollar Money Market Fund (Unlisted Tokenised Class)",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "legal"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "ChinaAMC USD Digital Money Market Fund tokenized unlisted Class F USD (CUMFU)",
+      "pct": 24.8077,
+      "risk": "low",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "ChinaAMC USD Digital Money Market Fund (Tokenized Unlisted Class)",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "legal"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Finloop USD Instant Digital Liquidity Token - Acc (FUIDL-AC), referencing BNY Mellon U.S. Dollar Liquidity Fund",
+      "pct": 50.3147,
+      "risk": "low",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Finloop USD Instant Digital Liquidity Token - Acc",
       "riskFactors": [
         "credit",
         "duration",
@@ -19,8 +51,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
-    "reviewer": "Kimi T35 unknown-reduction review 2026-07-30; R13 re-open",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol NR wave 2026-10-02 (NrFusd)",
     "confidence": "verified",
     "sources": [
       {
@@ -38,23 +70,53 @@
       {
         "label": "FinChain FUSD reserve dashboard",
         "url": "https://fusd.finchain.global/#reserves"
+      },
+      {
+        "label": "Pinned Ethereum FUSDLP reserve-token and treasury balance reads at block 26103182",
+        "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+      },
+      {
+        "label": "Verified current FUSDLP implementation: tracked reserves and reserve pricing",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfe137edbc766b97f6d0a8c227b4d60c656a3040e"
+      },
+      {
+        "label": "Verified current reserve bundle aggregator implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbb199ed75d4fdd04833bb4477285eda0bd91abc1"
+      },
+      {
+        "label": "FinChain reserve API product-address mapping; embedded April 21 timestamp is not a fresh report",
+        "url": "https://api.finchain.global/api/v0/fusd-data"
       }
     ],
-    "rationale": "Write-time re-open 2026-07-30 of the FinChain FUSD reserves, reserve-assets, and vendors docs: FUSD is collateralized by tokenized U.S. Treasury / money-market products from Taikang Asset Management (HK), China Asset Management (HK), and BNY Mellon Fund Management (Luxembourg) under a stated minimum 100% collateralization ratio. The reserve-assets page names the tokenized share classes (TKUSD, CUMFU, FUIDL-AC), the tokenization agents (BC Technology (Hong Kong), Standard Chartered Bank (Hong Kong), Finloop Finance Technology Services), and BNY Mellon fund ratings (S&P AAAm, Moody's Aaa-mf, Fitch AAAmmf). Current product weights remain undisclosed, so the envelope stays one 100% fund-share basket with knownUnknownExposurePct=100. R13 re-open 2026-08-08: the FinChain reserve dashboard still shows only aggregate reserve-ratio placeholders ('as of July 2026') and no per-product percentage breakdown; Gitbook docs remain unchanged. No current weights can be authored without fabrication.",
-    "compositionBasis": "FinChain named FUSD reserve-fund inventory",
+    "rationale": "At Ethereum block 26103182 on 2026-10-02, gateway LP storage resolves to 0x3fea1cb36d2c5523c062d0e060eac253608b4daf. Its getTotalReservesInfo() identifies the three exact reserve tokens; every tracked quantity equals its treasury token balance. Current issuer API product addresses and values match the pinned tuple: TKUSD 304595.134265585947553817, CUMFU 303739.818920391652339903 and FUIDL-AC 616041.200182124511630189, totaling 1224376.153368102111523909 in issuer-marked USD. The API's published six-decimal ratios directly supply the authored percentages (24.8776%, 24.8077%, 50.3147%). latestBundleTimestamp() is 2026-10-02T07:05:01Z, independently dating the issuer NAV mark publication; updateAt 1776736295 remains reserve configuration time in April. This refresh records a new current token-inventory and publisher-NAV observation, not a financial report or independently authenticated underlying fund holdings. Each share remains insufficient-evidence for underlying obligor, liquidity, holder-priority and recovery look-through; known unknown exposure remains 100%.",
+    "compositionBasis": "Pinned Ethereum reserve-token inventory and issuer-marked USD values at block 26103182, matched to the current official API product-address mapping and directly published ratios",
     "scope": "full-composition",
-    "knownUnknownExposure": "Current weights across the Taikang, ChinaAMC, and BNY Mellon products, plus their underlying holdings and maturity profile, are not published.",
+    "knownUnknownExposure": "Current reserve token quantities and publisher-marked product weights are observable on-chain. Independent reconciliation to fund-held assets, fund NAV administration, underlying holdings and maturities, holder priority and recovery safeguards remain unverified.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Tokenized Treasury and money-market fund basket",
-        "pct": 100,
+        "reserveName": "Taikang Kaitai US Dollar Money Market Fund tokenized unlisted class (TKUSD)",
+        "pct": 24.8776,
         "disposition": "insufficient-evidence",
-        "rationale": "The three products are identified, but their current allocations are not disclosed."
+        "rationale": "Exact issuer-labelled token inventory and NAV weight are observed; underlying fund holdings, obligations, liquidity and enforceable FUSD holder rights are unverified."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "ChinaAMC USD Digital Money Market Fund tokenized unlisted Class F USD (CUMFU)",
+        "pct": 24.8077,
+        "disposition": "insufficient-evidence",
+        "rationale": "Exact issuer-labelled token inventory and NAV weight are observed; underlying fund holdings, obligations, liquidity and enforceable FUSD holder rights are unverified."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "Finloop USD Instant Digital Liquidity Token - Acc (FUIDL-AC), referencing BNY Mellon U.S. Dollar Liquidity Fund",
+        "pct": 50.3147,
+        "disposition": "insufficient-evidence",
+        "rationale": "The immediate instrument is issuer-disclosed FUIDL-AC, referencing the BNY fund; no direct FUSD ownership of BNY fund units or independently reconciled underlying collateral is inferred."
       }
     ],
-    "compositionAsOf": "2026-07-30"
+    "compositionAsOf": "2026-10-02"
   },
   "custodyProfile": {
     "providers": [

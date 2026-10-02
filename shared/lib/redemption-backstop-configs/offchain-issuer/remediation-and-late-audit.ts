@@ -19,18 +19,50 @@ import {
 } from "./shared";
 
 export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig> = {
-  ...Object.fromEntries(([["kau-kinesis", "XAU", 1 / 31.1034768, 100], ["kag-kinesis", "XAG", 1, 200]] as const).map(
-    ([id, commodity, deliverableOuncesPerToken, minimumDeliveryTokens]) => [id, {
+  "kau-kinesis": {
     ...commodityIssuerBase,
     ...reviewedDirectRedemptionSupplyFull,
     reviewedAt: "2026-09-21",
     outputAssetType: "physical-commodity-delivery",
     physicalCommodityDelivery: {
-      commodity,
-      deliverableOuncesPerToken,
-      minimumDeliveryTokens,
+      commodity: "XAU",
+      deliverableOuncesPerToken: 1 / 31.1034768,
+      minimumDeliveryTokens: 100,
       deliveryTermsUnbounded: true,
       feeModel: { bps: 45, flatUsd: 100, deliveryUsd: 0 }, sameNotionalEligible: false,
+    },
+    physicalToUsd: {
+      metal: "XAU", fineTroyOuncesPerToken: 0.03215074656862798,
+      lot: { minimumTokens: 100, incrementTokens: 100, bars: [] },
+      vaultLocations: ["london", "zurich", "singapore", "hong-kong", "other"], barClass: "small-bar-or-coin",
+      saleLocation: "delivered", deliveryScope: "cross-border", fineness: 0.9999,
+      eligibility: "verified-customer",
+      fees: { issuerFeeBps: 45, issuerFixedUsd: 100, deliveryUsdPerLot: null, insuranceBps: null, assayUsdPerLot: null, taxBps: null, conversionBps: null },
+      settlementLegs: [
+        { leg: "issuer-request-contact-only", maximumBusinessDays: 2, typicalBusinessDays: null },
+        { leg: "issuer-acceptance-and-bullion-release", maximumBusinessDays: "unbounded", typicalBusinessDays: null },
+        { leg: "bullion-delivery", maximumBusinessDays: null, typicalBusinessDays: null },
+      ],
+      bestEffortIssuerCashOut: {
+        operatingProcess: "Verified customers sell KAU on the Kinesis platform for C1USD, convert C1USD to USD cash, then withdraw to their linked bank. This is platform trading, not guaranteed bullion repurchase.",
+        lot: { minimumTokens: null, incrementTokens: null, bars: [] },
+        fees: { issuerFeeBps: 22, issuerFixedUsd: 25, deliveryUsdPerLot: 0, insuranceBps: 0, assayUsdPerLot: 0, taxBps: null, conversionBps: null },
+        settlementLegs: [
+          { leg: "platform-sale-order-execution", maximumBusinessDays: "unbounded", typicalBusinessDays: null },
+          { leg: "c1usd-to-usd-conversion", maximumBusinessDays: null, typicalBusinessDays: null },
+          { leg: "usd-bank-withdrawal", maximumBusinessDays: null, typicalBusinessDays: null },
+        ],
+      },
+      reviewedAt: "2026-10-01", reviewExpiresAt: "2026-12-30",
+      evidence: [
+        { url: "https://kinesis.money/gold/", quote: "1 gold (KAU) = 1 gram of gold" },
+        { url: "https://kinesis.money/about-us/fees/", quote: "KAU | 0.45% + $100 + delivery fee* | 100g gold. Coins or bars with a fine weight of 100g of .9999 gold. Buy or sell gold (KAU) and silver (KAG) bullion at the quoted market price, via the Kinesis dashboard or the Kinesis Exchange: | 0.22% fee. US | $25 | $100" },
+        { url: "https://support.kinesis.money/hc/en-gb/articles/12439302237085-How-to-redeem-physical-gold-and-silver", quote: "Redemptions of gold and silver can only be made in increments of 100 KAU or 200 KAG. Your request will be sent to the Kinesis operations team, who will contact you with the next steps within 1-2 working days. Follow these simple steps to get physical gold and silver delivered to your door, anywhere in the world." },
+        { url: "https://support.kinesis.money/hc/en-gb/articles/12357060901789-How-are-my-gold-and-silver-stored-and-secured", quote: "The physical precious metal backing the Kinesis gold (KAU) and silver (KAG) currencies, is stored within fully insured, world-class vaulting facilities across the globe, across Dubai, Hong Kong, Istanbul, Vaduz, London, New York, Singapore, Sydney, Toronto, Zurich, Panama City, Batam and Brisbane." },
+        { url: "https://kinesis.money/about-us/documents/terms-of-use/", quote: "If Kinesis agrees to accept a requested Redemption of Kinesis Currency, it shall be on the basis that you will be required to comply with the terms and undertakings of this Clause 8. You acknowledge and agree that when placing an order, it may be executed in part. If part of an order is not executed, it will remain open until such time as it is executed or you cancel it in Kinesis Exchange." },
+        { url: "https://support.kinesis.money/hc/en-gb/articles/35218102923293-Convert-between-Currency-One-Stablecoins-and-cash", quote: "Convert between cash and supported Currency One stablecoins with a 0% conversion fee (spreads or minimums may apply). Use the convert function to move Currency One stablecoins back into their corresponding fiat currencies. Navigate to your fiat currency tile under Assets. Select Withdraw and follow the prompts to send funds to your linked bank account." },
+        { url: "https://support.kinesis.money/hc/en-gb/articles/12398056853661-Sending-and-receiving-assets", quote: "Users must fully KYC-verify their accounts to buy and sell through on the Kinesis platform." },
+      ],
     },
     costModel: {
       ...documentedVariableFee("KAU: 0.45% + $100 + delivery fee; KAG: 0.45% + $100 + delivery fee"),
@@ -44,7 +76,65 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
         ["route", "capacity", "access", "settlement"],
       ),
     ],
-  } satisfies RedemptionBackstopConfig])),
+  },
+  "kag-kinesis": {
+    ...commodityIssuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
+    reviewedAt: "2026-09-21",
+    outputAssetType: "physical-commodity-delivery",
+    physicalCommodityDelivery: {
+      commodity: "XAG",
+      deliverableOuncesPerToken: 1,
+      minimumDeliveryTokens: 200,
+      deliveryTermsUnbounded: true,
+      feeModel: { bps: 45, flatUsd: 100, deliveryUsd: 0 }, sameNotionalEligible: false,
+    },
+    physicalToUsd: {
+      metal: "XAG", fineTroyOuncesPerToken: 1,
+      lot: { minimumTokens: 200, incrementTokens: 200, bars: [] },
+      vaultLocations: ["london", "zurich", "singapore", "hong-kong", "other"], barClass: "small-bar-or-coin",
+      saleLocation: "delivered", deliveryScope: "cross-border", fineness: 0.999,
+      eligibility: "verified-customer",
+      fees: { issuerFeeBps: 45, issuerFixedUsd: 100, deliveryUsdPerLot: null, insuranceBps: null, assayUsdPerLot: null, taxBps: null, conversionBps: null },
+      settlementLegs: [
+        { leg: "issuer-request-contact-only", maximumBusinessDays: 2, typicalBusinessDays: null },
+        { leg: "issuer-acceptance-and-bullion-release", maximumBusinessDays: "unbounded", typicalBusinessDays: null },
+        { leg: "bullion-delivery", maximumBusinessDays: null, typicalBusinessDays: null },
+      ],
+      bestEffortIssuerCashOut: {
+        operatingProcess: "Verified customers sell KAG on the Kinesis platform for C1USD, convert C1USD to USD cash, then withdraw to their linked bank. This is platform trading, not guaranteed bullion repurchase.",
+        lot: { minimumTokens: null, incrementTokens: null, bars: [] },
+        fees: { issuerFeeBps: 22, issuerFixedUsd: 25, deliveryUsdPerLot: 0, insuranceBps: 0, assayUsdPerLot: 0, taxBps: null, conversionBps: null },
+        settlementLegs: [
+          { leg: "platform-sale-order-execution", maximumBusinessDays: "unbounded", typicalBusinessDays: null },
+          { leg: "c1usd-to-usd-conversion", maximumBusinessDays: null, typicalBusinessDays: null },
+          { leg: "usd-bank-withdrawal", maximumBusinessDays: null, typicalBusinessDays: null },
+        ],
+      },
+      reviewedAt: "2026-10-01", reviewExpiresAt: "2026-12-30",
+      evidence: [
+        { url: "https://kinesis.money/silver/", quote: "1 silver (KAG) = 1 ounce of silver" },
+        { url: "https://kinesis.money/about-us/fees/", quote: "KAG | 0.45% + $100 + delivery fee* | 200oz silver. Coins or bars with a fine weight of 200oz of .999 silver. Buy or sell gold (KAU) and silver (KAG) bullion at the quoted market price, via the Kinesis dashboard or the Kinesis Exchange: | 0.22% fee. US | $25 | $100" },
+        { url: "https://support.kinesis.money/hc/en-gb/articles/12439302237085-How-to-redeem-physical-gold-and-silver", quote: "Redemptions of gold and silver can only be made in increments of 100 KAU or 200 KAG. Your request will be sent to the Kinesis operations team, who will contact you with the next steps within 1-2 working days. Follow these simple steps to get physical gold and silver delivered to your door, anywhere in the world." },
+        { url: "https://support.kinesis.money/hc/en-gb/articles/12357060901789-How-are-my-gold-and-silver-stored-and-secured", quote: "The physical precious metal backing the Kinesis gold (KAU) and silver (KAG) currencies, is stored within fully insured, world-class vaulting facilities across the globe, across Dubai, Hong Kong, Istanbul, Vaduz, London, New York, Singapore, Sydney, Toronto, Zurich, Panama City, Batam and Brisbane." },
+        { url: "https://kinesis.money/about-us/documents/terms-of-use/", quote: "If Kinesis agrees to accept a requested Redemption of Kinesis Currency, it shall be on the basis that you will be required to comply with the terms and undertakings of this Clause 8. You acknowledge and agree that when placing an order, it may be executed in part. If part of an order is not executed, it will remain open until such time as it is executed or you cancel it in Kinesis Exchange." },
+        { url: "https://support.kinesis.money/hc/en-gb/articles/35218102923293-Convert-between-Currency-One-Stablecoins-and-cash", quote: "Convert between cash and supported Currency One stablecoins with a 0% conversion fee (spreads or minimums may apply). Use the convert function to move Currency One stablecoins back into their corresponding fiat currencies. Navigate to your fiat currency tile under Assets. Select Withdraw and follow the prompts to send funds to your linked bank account." },
+        { url: "https://support.kinesis.money/hc/en-gb/articles/12398056853661-Sending-and-receiving-assets", quote: "Users must fully KYC-verify their accounts to buy and sell through on the Kinesis platform." },
+      ],
+    },
+    costModel: {
+      ...documentedVariableFee("KAU: 0.45% + $100 + delivery fee; KAG: 0.45% + $100 + delivery fee"),
+      feeBpsMax: 45,
+    },
+    docs: [
+      sourceRefRouteCapacityFees("Kinesis fees", "https://kinesis.money/about-us/fees/"),
+      sourceRef(
+        "Kinesis physical redemption guide",
+        "https://support.kinesis.money/hc/en-gb/articles/12439302237085-How-to-redeem-physical-gold-and-silver-bullion",
+        ["route", "capacity", "access", "settlement"],
+      ),
+    ],
+  },
   "cgo-comtech": {
     ...commodityIssuerBase,
     ...documentedBoundSupplyFull(REVIEWED_REMEDIATION_AT),
@@ -54,6 +144,31 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
       commodity: "XAU", deliverableOuncesPerToken: 1 / 31.1034768, minimumDeliveryTokens: 1000,
       deliveryTermsUnbounded: true,
       feeModel: { bps: 0, flatUsd: 0, deliveryUsd: 0 }, sameNotionalEligible: false,
+    },
+    physicalToUsd: {
+      metal: "XAU", fineTroyOuncesPerToken: 0.03211859582205935,
+      lot: { minimumTokens: 1000, incrementTokens: 1000, bars: [{ barId: "contractual-one-kilogram-999-minimum-purity", fineTroyOunces: 32.118595822059355 }] },
+      vaultLocations: ["other"], barClass: "kilobar",
+      saleLocation: "in-vault", deliveryScope: "same-jurisdiction", fineness: 0.999,
+      eligibility: "verified-customer",
+      fees: { issuerFeeBps: 100, issuerFixedUsd: null, deliveryUsdPerLot: null, insuranceBps: 0, assayUsdPerLot: null, taxBps: null, conversionBps: null },
+      settlementLegs: [{ leg: "issuer-release-and-vault-collection", maximumBusinessDays: null, typicalBusinessDays: null }],
+      bestEffortIssuerCashOut: {
+        operatingProcess: "ComTech app publishes a sell quote during international market hours; holder places a sell order and receives funds into the trading-platform account. Bank withdrawal and spendable USD endpoint are undocumented.",
+        lot: { minimumTokens: null, incrementTokens: null, bars: [] },
+        fees: { issuerFeeBps: null, issuerFixedUsd: null, deliveryUsdPerLot: 0, insuranceBps: 0, assayUsdPerLot: 0, taxBps: null, conversionBps: null },
+        settlementLegs: [
+          { leg: "app-sell-order-execution", maximumBusinessDays: null, typicalBusinessDays: null },
+          { leg: "platform-funds-to-spendable-usd", maximumBusinessDays: null, typicalBusinessDays: null },
+        ],
+      },
+      reviewedAt: "2026-10-01", reviewExpiresAt: "2026-12-30",
+      evidence: [
+        { url: "https://cgold.ae/assets/pdf/Terms_and_Conditions.pdf", quote: "Each Digital Gold unit represents undivided ownership and specific interest in one (1) gram of at least 999 purity gold in the Gold Reserves. The physical Gold Reserves will be of standardised 1 kg bars of 999 purity from internationally accepted refineries. You may instruct the Digitization Entity to convert Digital Gold to physical gold from the Gold Reserves of a minimum quantity of one kilogram and in further denominations of one kilogram each" },
+        { url: "https://cgold.ae/assets/pdf/Terms_and_Conditions.pdf", quote: "The Digitization Entity shall procure the release of the underlying Gold Reserves of the Redeemed Digital Gold Units (\"Redeemed Gold Bars\"), less applicable fees, and to procure Your collection of the Redeemed Gold Bars in person in the Vault or request delivery of the Commodity to You at Your own cost and expense (certain limitations apply) on the terms and conditions set out herein. The Digitization Entity shall store the Gold Reserves with custodians of international repute in the UAE or elsewhere operating specialized high-security storage facilities" },
+        { url: "https://cgold.ae/Digitalgold", quote: "Transaction Fees: Nil. Custody Fees: Nil. Insurance Fees: Nil. Transfer Fees: 0.50%. Physical Gold Redemption Fees: 0.50%" },
+        { url: "https://comtechgold.com/assets/pdf/ComTech_Gold_FAQ_Final.pdf", quote: "ComTech Gold provides a sell price quote on their ComTech Gold app during international market hours You can choose to sell any amount to a maximum of the amount of gold that you own. Retail Customers are required to provide us with the requisite KYC documents and enter the basic personal information" },
+      ],
     },
     costModel: documentedVariableFee("Contractual 1,000 CGO minimum is used conservatively over the FAQ's 10 CGO; making, delivery and applicable storage remain unpriced"),
     docs: [
@@ -72,6 +187,24 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
       commodity: "XAU", deliverableOuncesPerToken: 1, minimumDeliveryTokens: 1 / 31.1034768,
       deliveryTermsUnbounded: true,
       feeModel: { bps: 0, flatUsd: 0, deliveryUsd: 0 }, sameNotionalEligible: false,
+    },
+    physicalToUsd: {
+      metal: "XAU", fineTroyOuncesPerToken: 1,
+      lot: { minimumTokens: 0.03215074656862798, incrementTokens: null, bars: [{ barId: "gold-avenue-pamp-lady-fortuna-one-gram", fineTroyOunces: 0.03214753149397112 }] },
+      vaultLocations: ["other"], barClass: "small-bar-or-coin",
+      saleLocation: "delivered", deliveryScope: "cross-border", fineness: 0.9999,
+      eligibility: "verified-customer",
+      fees: { issuerFeeBps: 0, issuerFixedUsd: null, deliveryUsdPerLot: null, insuranceBps: null, assayUsdPerLot: null, taxBps: null, conversionBps: null },
+      settlementLegs: [
+        { leg: "gold-avenue-quote-and-compliance", maximumBusinessDays: null, typicalBusinessDays: null },
+        { leg: "europe-shipping-after-order-acceptance", maximumBusinessDays: null, typicalBusinessDays: 7 },
+      ],
+      reviewedAt: "2026-10-01", reviewExpiresAt: "2026-12-30",
+      evidence: [
+        { url: "https://dgld.ch/docs/terms", quote: "Each fungible DGLD token represents co-ownership rights corresponding to one fine troy ounce of LBMA Certified Gold. The Gold is held in segregated, secure and insured vault in Switzerland, under the custody of MKS PAMP, as part of the Services performed by GTSA (see Section 5.2 and 5.3). Any persons involved must comply with KYC, AML/CFT and sanctions-related requirements when requested by GTSA." },
+        { url: "https://dgld.ch/docs/terms", quote: "No Burning Fee shall apply where Delivery is effected pursuant to Section 8.2.2 unless expressly provided otherwise. The Tokenholder shall bear all premiums, fees, charges and expenses imposed by the approved third-party provider in connection with the Delivery, including any fabrication premium, logistics, handling, transportation, insurance, customs duties, taxes and any other applicable costs." },
+        { url: "https://dgld.ch/news/dgld-complete-step-by-step-guide-november-2025", quote: "Decide how many grams you want (minimum 1 g). Bars: sealed PAMP Lady Fortuna, 999.9 fine. Europe: 3–7 business days, insured post" },
+      ],
     },
     costModel: fixedFee(0, "No custody or transfer fees per Gold Token SA; minimum 1 gram"),
     docs: [
@@ -151,6 +284,20 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
       commodity: "XAU", deliverableOuncesPerToken: 1, minimumDeliveryTokens: 32.15,
       deliveryTermsUnbounded: true,
       feeModel: { bps: 50, flatUsd: 0, deliveryUsd: 0 }, sameNotionalEligible: false,
+    },
+    physicalToUsd: {
+      metal: "XAU", fineTroyOuncesPerToken: 0.9999,
+      lot: { minimumTokens: 32.15, incrementTokens: null, bars: [] },
+      vaultLocations: ["hong-kong"], barClass: "small-bar-or-coin",
+      saleLocation: "delivered", deliveryScope: "same-jurisdiction", fineness: 0.9999,
+      eligibility: "verified-customer",
+      fees: { issuerFeeBps: null, issuerFixedUsd: null, deliveryUsdPerLot: null, insuranceBps: null, assayUsdPerLot: null, taxBps: null, conversionBps: null },
+      settlementLegs: [{ leg: "issuer-redemption-and-offline-pickup", maximumBusinessDays: "unbounded", typicalBusinessDays: null }],
+      reviewedAt: "2026-10-01", reviewExpiresAt: "2026-12-30",
+      evidence: [
+        { url: "https://pleasing.gitbook.io/docs/user-guide/redeem-physical-gold", quote: "Enter the PGOLD amount on the left (minimum 32.15 PGOLD per redemption). The right side shows the quantity of physical gold you will receive. The swap is always at 1 PGOLD = 1 ounce of 99.99% pure gold. Wait for customer support to contact you for the subsequent offline pickup." },
+        { url: "https://pleasing.gitbook.io/docs/legal/terms-of-sale-and-service", quote: "Eligible KYC/KYB-verified holders may request redemption. Initial physical delivery/collection supported in Hong Kong (expanded APAC coverage may follow). Bar sizes, minimum redemption thresholds, lead times, and logistics constraints apply. Redemption, handling, insurance, and delivery fees per the Fee Schedule. We use commercially reasonable efforts; delays may occur due to market/liquidity, logistics, regulatory, or force-majeure events. We may refuse, suspend, or terminate Token Services at any time to comply with law, risk, or operational requirements." },
+      ],
     },
     executionModel: "opaque",
     costModel: documentedVariableFee(

@@ -10,7 +10,7 @@
     "rwa": true
   },
   "collateral": "Physical gold reported in custody at Philoro in Liechtenstein; the latest AUP reconciles 13,100 tokens to 13,100 gross grams but does not validate gold quality, value, legal rights, or physical presence",
-  "pegMechanism": "Each VNXAU represents one gram of gold; verified VNX platform users can sell tokens through the platform and request physical collection or delivery from one-kilogram bar denominations",
+  "pegMechanism": "Each VNXAU corresponds to one gram of allocated gold. The current issuer case study states that VNX Commodities AG does not provide purchase, sale, exchange, custody or trading services in relation to VNXAU; existing token rights and cancellation are governed by applicable contractual arrangements.",
   "mechanismArchetype": "commodity-claim",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
@@ -24,7 +24,7 @@
       },
       {
         "label": "AREVA VNXAU agreed-upon procedures report",
-        "url": "https://vnx.li/wp-content/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf"
+        "url": "https://vnx.li/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf"
       }
     ]
   },
@@ -33,8 +33,8 @@
   "geckoId": "vnx-gold",
   "protocolSlug": "vnx",
   "proofOfReserves": {
-    "type": "independent-audit",
-    "url": "https://vnx.li/wp-content/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf",
+    "type": "agreed-upon-procedures",
+    "url": "https://vnx.li/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf",
     "provider": "AREVA General Auditing and Trust Company Limited",
     "attestorTier": "niche",
     "cadence": "ad-hoc",
@@ -51,7 +51,7 @@
       "sources": [
         {
           "label": "AREVA VNXAU agreed-upon procedures report as of December 31, 2025",
-          "url": "https://vnx.li/wp-content/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf"
+          "url": "https://vnx.li/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf"
         },
         {
           "label": "AREVA licences and registrations",

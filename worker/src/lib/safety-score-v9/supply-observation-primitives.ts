@@ -117,16 +117,17 @@ export async function observeReviewedEvmDeployment<Identity>(input: {
   });
   if (blockHeader === null) return rejectDeployment("safe-block-unavailable");
   const blockNumber = blockHeader.number;
+  const stateOptions = { ...options, stateBlockHash: blockHeader.hash, multicallFallbackBlockHash: blockHeader.hash };
   const calls = [
     { label: "total-supply", target: contractAddress, callData: TOTAL_SUPPLY_SELECTOR, allowFailure: false },
     { label: "decimals", target: contractAddress, callData: DECIMALS_SELECTOR, allowFailure: false },
     ...input.protocolCalls(identity),
   ];
   const [results, runtimeCode, implementationSlot] = await Promise.all([
-    dependencies.fetchEvmMulticall3Aggregate3AtBlock(chainId, calls, blockNumber, options),
-    dependencies.fetchEvmCodeAtBlock(chainId, contractAddress, blockNumber, options),
+    dependencies.fetchEvmMulticall3Aggregate3AtBlock(chainId, calls, blockNumber, stateOptions),
+    dependencies.fetchEvmCodeAtBlock(chainId, contractAddress, blockNumber, stateOptions),
     dependencies.fetchEvmStorageAtBlock(chainId, contractAddress,
-      EIP1967_IMPLEMENTATION_SLOT, blockNumber, options),
+      EIP1967_IMPLEMENTATION_SLOT, blockNumber, stateOptions),
   ]);
   if (!results || results.length !== calls.length || !runtimeCode || !implementationSlot) {
     return rejectDeployment("deployment-state-unavailable");
@@ -150,7 +151,7 @@ export async function observeReviewedEvmDeployment<Identity>(input: {
         chainId,
         protocolResult.implementationAddress,
         blockNumber,
-        options,
+        stateOptions,
       ) ?? "")
     : null;
   if (protocolResult.implementationAddress && implementationBytes === null) {

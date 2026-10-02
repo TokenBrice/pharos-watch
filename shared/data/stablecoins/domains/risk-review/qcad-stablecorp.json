@@ -2,10 +2,23 @@
   "id": "qcad-stablecorp",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: QCAD resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "QCAD Ethereum verified implementation",
+        "url": "https://etherscan.io/address/0xa2b0b95310be62e67fc46d33610187f827c90890#code"
+      },
+      {
+        "label": "QCAD Base verified implementation",
+        "url": "https://basescan.org/address/0x4f5f7e6c5cda08ecca56b58340dbe13485db1ea9#code"
+      },
+      {
+        "label": "QCAD Solana mint",
+        "url": "https://solscan.io/token/EeBX9JLdvsp4HnBbMgC1HnAjBkBQxgxtWxspcCLtT6ci"
+      }
+    ],
+    "evidence": "Pinned Ethereum block 26095807 and Base block 52024171 resolve the authored proxies to the cited implementations. Their verified source exposes administrator-controlled addBlocked/removeBlocked and pause/unpause functions, establishing direct transfer controls rather than a centralization-only inference. The Solana SPL-token mint at finalized slot 452213632 has freezeAuthority 8386AjvCDAtuAWujQJt8RUkcGaMdDUEoTNL53dAhESeJ. The existing affirmative blacklistability verdict is retained.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB18BOLD)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
@@ -49,8 +62,8 @@
             "url": "https://etherscan.io/address/0x3fa142dd3f384414e05e71ad0939274edc82ec0a"
           },
           {
-            "label": "QCAD (Stablecorp)",
-            "url": "https://www.qcad.ca/"
+            "label": "Stablecorp QCAD deployment balances API",
+            "url": "https://api.sdc.stablecorp.ca/reports/balances?type=unformatted_json"
           }
         ]
       },
@@ -71,12 +84,12 @@
         "observedAt": "2026-07-20",
         "sources": [
           {
-            "label": "QCAD on Etherscan (owner() probed 2026-07-20)",
-            "url": "https://etherscan.io/address/0x3fa142dd3f384414e05e71ad0939274edc82ec0a"
+            "label": "QCAD Base token proxy",
+            "url": "https://basescan.org/address/0xa15705e6fc8b3e08e7253f3758de1a754baa0761"
           },
           {
-            "label": "QCAD (Stablecorp)",
-            "url": "https://www.qcad.ca/"
+            "label": "Stablecorp QCAD deployment balances API",
+            "url": "https://api.sdc.stablecorp.ca/reports/balances?type=unformatted_json"
           }
         ]
       },

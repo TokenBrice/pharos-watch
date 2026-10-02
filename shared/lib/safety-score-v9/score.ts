@@ -70,6 +70,7 @@ export interface V9ProductionScoreInput {
     reasons: readonly V9PillarReason[];
   };
   trackRecordMonths: number;
+  unresolvedDeploymentShare?: number;
   parent: {
     required: boolean;
     score: number | null;
@@ -222,6 +223,7 @@ type V9ScoringInputSource = {
   readonly pillars: Readonly<Record<V9QualityPillar, Pick<V9PillarEvaluation, "score" | "evidenceLevel">>>;
   readonly peg: Pick<V9ProductionScoreInput["peg"], "score" | "applicable" | "activeDepegBps">;
   readonly trackRecordMonths: number;
+  readonly unresolvedDeploymentShare?: number;
 };
 
 function worstEvidenceLevel(
@@ -255,6 +257,7 @@ export function projectV9ScoringInput(
     evidenceLevel: worstEvidenceLevel(input.pillars, envelope),
     trackRecordMonths: input.trackRecordMonths,
     activeDepegBps: input.peg.activeDepegBps,
+    unresolvedDeploymentShare: input.unresolvedDeploymentShare,
     ...projection,
   });
 }

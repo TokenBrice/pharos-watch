@@ -50,7 +50,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "Legacy FRAX is Ethereum-native; its 13 tracked EVM CrossChainCanonical deployments are issuer-operated bridge representations administered by per-chain Frax Safes or, on ZKsync Era, an EOA. Controls and historical Multichain/FraxFerry ingress remain scored under Bridge Risk. Fraxtal WFRAX is a distinct gas-token wrapper and is not a tracked FRAX route. Peripheral non-EVM routes are preserved: NEAR via Rainbow Bridge lock-mint, Osmosis via Axelar, and Solana via Wormhole.",
+    "summary": "Legacy FRAX is Ethereum-native; its 13 tracked EVM CrossChainCanonical deployments are issuer-operated bridge representations administered by per-chain Frax controls. ZKsync Era's current owner/timelock is a 3-of-5 Safe, superseding the historical EOA observation; Polygon zkEVM retains a separate EOA timelock alongside its 3-of-5 owner Safe. Controls and historical Multichain/FraxFerry ingress remain scored under Bridge Risk. Fraxtal WFRAX is a distinct gas-token wrapper and is not a tracked FRAX route. Peripheral non-EVM routes are preserved: NEAR via Rainbow Bridge lock-mint, Osmosis via Axelar, and Solana via Wormhole.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Codex mint-bridge-boundary FIX-10",
     "confidence": "verified",
@@ -354,9 +354,10 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Bridge representation: the polygon-zkevm FRAX token is Frax's own CrossChainCanonicalFRAX contract (owner() = timelock_address() = the Frax 3-of-5 Gnosis Safe 0x030BD43af99cb72B51dA233A73F7697Cd2461C0b, getOwners/getThreshold verified 2026-07-20; signer set overlaps the Ethereum Frax Comptroller Safe signers). Circulating supply historically entered via Multichain anyFRAX swap-ins (the contract's bridge_tokens_array) and FraxFerry lock-release; the Frax Safe is the bridge-route mint authority; timelock_address() = EOA 0x967d0c5f7362A54b156cf2831Fb17dA8681FAD7D (no code). Not a canonical-rollup or third-party bridge mint. The polygon-zkevm shared bridge holds zero FRAX. It is scoped under Bridge Risk and is not an independent native FRAX liability.",
+        "reviewNote": "At Polygon zkEVM block 33391890 on 2026-10-01, owner() is 3-of-5 Safe 0x030bd43af99cb72b51da233a73f7697cd2461c0b, while timelock_address() is distinct EOA 0x967d0c5f7362a54b156cf2831fb17da8681fad7d (eth_getCode 0x). The owner Safe remains an enabled minter. The historical 2026-07-20 note incorrectly equated owner and timelock; its EOA-only control classification also contradicted the Safe observation. CrossChainCanonicalV2 has no mint-cap field or setter. Historical Multichain/FraxFerry ingress is preserved; this remains a bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-01",
+        "observedBlock": 33391890,
         "sources": [
           {
             "label": "FRAX polygon-zkevm token (owner Safe 0x030BD43af99cb72B51dA233A73F7697Cd2461C0b)",
@@ -533,9 +534,10 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Bridge representation: the ZKsync Era FRAX token is a Frax CrossChainCanonical-type contract whose owner()/timelock is the EOA 0x6549DAa31C76d5C19099B7bdAD82d8813774C651 (no code, sole minter, unique among the Frax canonical set, which otherwise uses 3-of-5 Safes; flagged in review). Not the canonical zkSync-Era bridge representation (the zkSync Lite main contract holds zero FRAX escrow). It is scoped under Bridge Risk and is not an independent native FRAX liability.",
+        "reviewNote": "At ZKsync Era block 72286740 on 2026-10-01, owner(), timelock_address() and the only nonzero minters_array entry are 3-of-5 Safe 0xd492df0ce7905d7d91ae48f5e893acaa38221486. Historical 2026-07-20 EOA 0x6549daa31c76d5c19099b7bdad82d8813774c651 remains documented here but is no longer owner/timelock and minters(oldEOA) now returns false. This remains a bridge representation; current mint-cap semantics are unresolved.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-01",
+        "observedBlock": 72286740,
         "sources": [
           {
             "label": "FRAX ZKsync Era token (owner EOA, read 2026-07-20)",
@@ -609,6 +611,72 @@
           {
             "label": "DefiLlama FRAX adapter (solana entry)",
             "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/frax/index.ts"
+          }
+        ]
+      },
+      {
+        "id": "base:0x909dbde1ebe906af95660033e478d59efe831fed",
+        "destinationChain": "base",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x909dbde1ebe906af95660033e478d59efe831fed",
+        "protocol": "LayerZero (legacy Frax OFT)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer identifies this as a legacy LayerZero FRAX OFT, redeemable only for the Frax asset in the LayerZero lockbox, not a native Frax liability. At Base block 52025317 name() returned Frax, symbol() FRAX, decimals() 18, owner() 0xcbfd4ef00a8cf91fd1e1fe97dc05910772c15e53 and endpoint() 0x1a44076050125825900e736c501f859c50fe728c. No structured bridge-mint controller is asserted; conservative route-derived control treatment remains.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "base",
+        "controllerAddress": "0xcbfd4ef00a8cf91fd1e1fe97dc05910772c15e53",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "safe:base:0xcbfd4ef00a8cf91fd1e1fe97dc05910772c15e53"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 52025317,
+        "sources": [
+          {
+            "label": "Frax legacy LayerZero OFT addresses and liability boundary",
+            "url": "https://docs.frax.finance/cross-chain/layerzero-x-stargate.md"
+          },
+          {
+            "label": "Official FRAX deployments",
+            "url": "https://docs.frax.finance/frax-v1-original/frax.md"
+          }
+        ]
+      },
+      {
+        "id": "blast:0x909dbde1ebe906af95660033e478d59efe831fed",
+        "destinationChain": "blast",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x909dbde1ebe906af95660033e478d59efe831fed",
+        "protocol": "LayerZero (legacy Frax OFT)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer identifies this as a legacy LayerZero FRAX OFT, redeemable only for the Frax asset in the LayerZero lockbox, not a native Frax liability. At Blast block 41015081 name() returned Frax, symbol() FRAX, decimals() 18, owner() 0x33a133020b2c2cd41a24f74033b11ec2fc0bf97a and endpoint() 0x1a44076050125825900e736c501f859c50fe728c. No structured bridge-mint controller is asserted; conservative route-derived control treatment remains.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "blast",
+        "controllerAddress": "0x33a133020b2c2cd41a24f74033b11ec2fc0bf97a",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "safe:blast:0x33a133020b2c2cd41a24f74033b11ec2fc0bf97a"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 41015081,
+        "sources": [
+          {
+            "label": "Frax legacy LayerZero OFT addresses and liability boundary",
+            "url": "https://docs.frax.finance/cross-chain/layerzero-x-stargate.md"
+          },
+          {
+            "label": "Official FRAX deployments",
+            "url": "https://docs.frax.finance/frax-v1-original/frax.md"
           }
         ]
       }
@@ -973,27 +1041,27 @@
         "capabilities": [
           "admin",
           "bridge-mint",
-          "bridge-burn",
-          "rate-limit"
+          "bridge-burn"
         ],
         "controllerChain": "polygon-zkevm",
         "controllerAddress": "0x030bd43af99cb72b51da233a73f7697cd2461c0b",
         "failureDomainKeys": [
           "protocol:frax-crosschaincanonical",
           "contract:polygon-zkevm:0xff8544fed5379d9ffa8d47a74ce6b91e632ac44d",
-          "eoa:polygon-zkevm:0x030bd43af99cb72b51da233a73f7697cd2461c0b"
+          "safe:polygon-zkevm:0x030bd43af99cb72b51da233a73f7697cd2461c0b"
         ],
-        "authorityType": "eoa",
+        "authorityType": "safe",
         "threshold": 3,
         "signerCount": 5,
-        "canRaiseCap": true,
-        "modulesOrGuardsStatus": "not-applicable",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "unknown",
         "routeChecks": {
           "lockboxOrEscrow": "CrossChainCanonical bridge accounting preserves the historical bridge_tokens_array / Multichain swap-in path and FraxFerry lock-release ingress; this route is a bridge representation, not an independent native FRAX liability.",
-          "caps": "CrossChainCanonical exposes mint-cap administration through the owner/timelock path; cap evidence remains route-scoped and does not make this deployment native.",
-          "pausersAdminsUpgraders": "owner()/timelock resolved to EOA 0x030bd43af99cb72b51da233a73f7697cd2461c0b with no code; it is the sole route minter and is retained as an explicit weak Bridge Risk controller."
+          "caps": "Verified CrossChainCanonicalV2 source has minter-authorized minting but no mint-cap field or setter; mint_cap() reverted at block 33391890. No token-enforced quantitative mint cap is established.",
+          "pausersAdminsUpgraders": "owner() is 3-of-5 Safe 0x030bd43af99cb72b51da233a73f7697cd2461c0b. timelock_address() is distinct EOA 0x967d0c5f7362a54b156cf2831fb17da8681fad7d with no code. Both are administrative paths under onlyByOwnGov; the EOA is retained as a separate weak controller."
         },
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-01",
+        "observedBlock": 33391890,
         "sources": [
           {
             "label": "FRAX polygon-zkevm token (owner Safe 0x030BD43af99cb72B51dA233A73F7697Cd2461C0b)",
@@ -1008,7 +1076,7 @@
             "url": "https://docs.frax.finance/cross-chain/bridge"
           }
         ],
-        "evidence": "Bridge representation: the polygon-zkevm FRAX token is Frax's own CrossChainCanonicalFRAX contract (owner() = timelock_address() = the Frax 3-of-5 Gnosis Safe 0x030BD43af99cb72B51dA233A73F7697Cd2461C0b, getOwners/getThreshold verified 2026-07-20; signer set overlaps the Ethereum Frax Comptroller Safe signers). Circulating supply historically entered via Multichain anyFRAX swap-ins (the contract's bridge_tokens_array) and FraxFerry lock-release; the Frax Safe is the bridge-route mint authority; timelock_address() = EOA 0x967d0c5f7362A54b156cf2831Fb17dA8681FAD7D (no code). Not a canonical-rollup or third-party bridge mint. The polygon-zkevm shared bridge holds zero FRAX. It is scoped under Bridge Risk and is not an independent native FRAX liability."
+        "evidence": "At Polygon zkEVM block 33391890, owner() and its enabled minter entry resolve to 3-of-5 Safe 0x030bd43af99cb72b51da233a73f7697cd2461c0b. getOwners() returned five owners and getModulesPaginated returned no enabled modules; guards and fallback handler remain unreviewed. The former EOA-only classification for this address was incorrect. The distinct timelock_address() EOA 0x967d0c5f7362a54b156cf2831fb17da8681fad7d remains an adverse administrative path. Bridge-representation classification is unchanged."
       },
       {
         "id": "frax-moonbeam-crosschain-route",
@@ -1219,25 +1287,27 @@
         "capabilities": [
           "admin",
           "bridge-mint",
-          "bridge-burn",
-          "rate-limit"
+          "bridge-burn"
         ],
         "controllerChain": "zksync",
-        "controllerAddress": "0x6549daa31c76d5c19099b7bdad82d8813774c651",
+        "controllerAddress": "0xd492df0ce7905d7d91ae48f5e893acaa38221486",
         "failureDomainKeys": [
           "protocol:frax-crosschaincanonical",
           "contract:zksync:0xb4c1544cb4163f4c2eca1ae9ce999f63892d912a",
-          "eoa:zksync:0x6549daa31c76d5c19099b7bdad82d8813774c651"
+          "safe:zksync:0xd492df0ce7905d7d91ae48f5e893acaa38221486"
         ],
-        "authorityType": "eoa",
-        "canRaiseCap": true,
-        "modulesOrGuardsStatus": "not-applicable",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "unknown",
         "routeChecks": {
           "lockboxOrEscrow": "CrossChainCanonical bridge accounting preserves the historical bridge_tokens_array / Multichain swap-in path and FraxFerry lock-release ingress; this route is a bridge representation, not an independent native FRAX liability.",
-          "caps": "CrossChainCanonical exposes mint-cap administration through the owner/timelock path; cap evidence remains route-scoped and does not make this deployment native.",
-          "pausersAdminsUpgraders": "owner()/timelock resolved to EOA 0x6549daa31c76d5c19099b7bdad82d8813774c651 with no code; it is the sole route minter and is retained as an explicit weak Bridge Risk controller."
+          "caps": "Verified ZKsync CrossChainCanonicalV2 inherits ERC20PermitPermissionedMint: minter_mint calls super._mint under onlyMinters with no quantitative cap or rate-limit check, and the deployed source has no cap field or setter. mint_cap() reverted at block 72287863. The owner/timelock can change authorized minters; no token-enforced mint cap is established.",
+          "pausersAdminsUpgraders": "At block 72286740, owner()/timelock_address() and the only nonzero minters_array entry resolved to 3-of-5 Safe 0xd492df0ce7905d7d91ae48f5e893acaa38221486. Historical EOA 0x6549daa31c76d5c19099b7bdad82d8813774c651 is no longer owner/timelock and minters(oldEOA) returned false."
         },
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-01",
+        "observedBlock": 72286740,
         "sources": [
           {
             "label": "FRAX ZKsync Era token (owner EOA, read 2026-07-20)",
@@ -1246,9 +1316,13 @@
           {
             "label": "Frax CrossChainCanonicalFRAX source (frax-solidity)",
             "url": "https://github.com/FraxFinance/frax-solidity/blob/master/src/hardhat/contracts/ERC20/__CROSSCHAIN/CrossChainCanonicalFRAX.sol"
+          },
+          {
+            "label": "ZKsync verified CrossChainCanonicalV2 source",
+            "url": "https://block-explorer-api.mainnet.zksync.io/api?module=contract&action=getsourcecode&address=0xb4c1544cb4163f4c2eca1ae9ce999f63892d912a"
           }
         ],
-        "evidence": "Bridge representation: the ZKsync Era FRAX token is a Frax CrossChainCanonical-type contract whose owner()/timelock is the EOA 0x6549DAa31C76d5C19099B7bdAD82d8813774C651 (no code, sole minter, unique among the Frax canonical set, which otherwise uses 3-of-5 Safes; flagged in review). Not the canonical zkSync-Era bridge representation (the zkSync Lite main contract holds zero FRAX escrow). It is scoped under Bridge Risk and is not an independent native FRAX liability."
+        "evidence": "At ZKsync Era block 72286740, owner(), timelock_address() and the only nonzero minters_array entry resolved to this 3-of-5 Safe. getOwners() returned five owners and getModulesPaginated returned no enabled modules. Guards and fallback handler remain unreviewed. The adverse historical 2026-07-20 EOA 0x6549daa31c76d5c19099b7bdad82d8813774c651 is preserved in this history; minters(oldEOA) is now false. Independently fetched verified CrossChainCanonicalV2 and ERC20PermitPermissionedMint source on 2026-10-01 shows minter-authorized minting without a quantitative cap or rate-limit check; mint_cap() also reverted at block 72287863. Bridge-representation classification is unchanged."
       },
       {
         "id": "frax-arbitrum-crosschain-extra-minter",
@@ -1325,6 +1399,34 @@
           }
         ],
         "evidence": "The harmony CrossChainCanonical review identified extra minter 0x8d0a8f07f5ea7f0982ed116993200c331e4cdd27 (contract, unidentified) with bridge-route mint rights. The controller is retained as adverse Bridge Risk evidence; its exact role was not independently resolved."
+      },
+      {
+        "id": "frax-polygon-zkevm-eoa-timelock",
+        "label": "FRAX Polygon zkEVM EOA timelock administrator",
+        "routeRefs": [
+          "polygon-zkevm:0xff8544fed5379d9ffa8d47a74ce6b91e632ac44d"
+        ],
+        "capabilities": [
+          "admin"
+        ],
+        "controllerChain": "polygon-zkevm",
+        "controllerAddress": "0x967d0c5f7362a54b156cf2831fb17da8681fad7d",
+        "failureDomainKeys": [
+          "protocol:frax-crosschaincanonical",
+          "contract:polygon-zkevm:0xff8544fed5379d9ffa8d47a74ce6b91e632ac44d",
+          "eoa:polygon-zkevm:0x967d0c5f7362a54b156cf2831fb17da8681fad7d"
+        ],
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 33391890,
+        "sources": [
+          {
+            "label": "Verified CrossChainCanonicalV2 source",
+            "url": "https://sourcify.dev/server/v2/contract/1101/0xff8544fed5379d9ffa8d47a74ce6b91e632ac44d?fields=all"
+          }
+        ],
+        "evidence": "At block 33391890, timelock_address() returned this address, eth_getCode returned 0x, and Safe/timelock method probes returned empty data. CrossChainCanonicalV2 onlyByOwnGov permits timelock_address alongside owner to change minters and administrative settings. The field name does not establish an enforced delay; this remains an EOA administrative path independent of the owner Safe."
       }
     ]
   }

@@ -156,19 +156,19 @@
         "failureDomainKeys": [
           "multisig:xdc:0x527e5b61bc8806059aef098c97fb36db3bc4cc63"
         ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 106140914,
+        "observedAt": "2026-10-01",
+        "observedBlock": 107888010,
         "sources": [
           {
             "label": "XDC EURS contract record",
             "url": "https://xdcscan.com/address/0x1eBb2C8a71A9ec59bF558886a8Adf8F4a565814F"
           },
           {
-            "label": "XDC public RPC",
-            "url": "https://rpc.xinfin.network"
+            "label": "Pinned XDC RPC controller and mint-call reads at block 107888010",
+            "url": "https://api-xdc-mainnet.n.dwellir.com"
           }
         ],
-        "evidence": "At XDC block 106140914, the EURS token's mint gate was controlled by this deployed MultiSigWallet-style contract. getOwners() returned five owners and required() returned 2. A current eth_call of createTokens(1) returned true with this controller as msg.sender and reverted from unrelated addresses. XDCScan does not present an exact verified source match for the deployed token, but the controller, owner set, and mint call gate are verified from RPC."
+        "evidence": "At XDC block 107888010 on 2026-10-01, getOwners() returned five owners and required() returned 2 for this MultiSigWallet-style controller. An eth_call of createTokens(1) on the native EURS token returned true with this controller as msg.sender. The 2-of-5 native mint path remains executable, so its selection as the weakest native authority is based on verified control facts. The historical review recorded rejection from unrelated senders and lacked an exact verified token source match; this refresh corroborates the controller quorum and successful controller-origin call without claiming a new source-code verification."
       },
       {
         "label": "Stellar issuer account multisig",

@@ -8,8 +8,8 @@
         "url": "https://docs.tangent.finance/docs/usg/overview_usg"
       },
       {
-        "label": "Sourcify USG source",
-        "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1/sources/src/USG/Tokens/USG.sol"
+        "label": "Verified USG source API",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb1c2db5d6ca03fce73dbd304d320bf76c55ae1b1"
       }
     ],
     "evidence": "Verified USG source exposes burnDebt(address,uint256), callable by owner-managed burner roles, and burns from the supplied address without holder allowance. That is direct holder-balance burn/seizure authority.",
@@ -18,14 +18,14 @@
   },
   "oracleRisk": {
     "tier": "standard-external",
-    "summary": "Tangent has 12 debt-bearing USG markets and one staged zero-cap msETH/WETH market that remains unpaused, callable, and collateral-holding. Each outer oracle requires Curve LP/component calls, so the end-to-end route is standard-external even where Chainlink leaves have heartbeat-checked fallback and last-good behavior.",
+    "summary": "At block 26096134, Tangent has 16 authorized USG markets and 13 with positive debt shares. The msETH/WETH market is debt-bearing with a 500,000 USG cap, rather than staged zero-cap; msETH/OETH is fully paused with zero debt but retains collateral. Newly created cbBTC/WBTC and reUSD/sDOLA markets are debt-bearing. Mandatory Curve LP/component calls retain the standard-external end-to-end posture; older recursive leaf details retain their original observation dates.",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "ORCL-ROOT-DRAIN data review",
-      "rationale": "At finalized Ethereum block 25531905, all 13 authorized USG markets remained unpaused and callable. Twelve had positive debt and debt caps. The staged msETH/WETH market 0x7b1b38cad63B0715A0adFeEB75E46431b48E73B6 had a zero debt cap, zero debt shares, and zero bad debt but held 288.932208501029515818 collateral tokens, so it is retained as the thirteenth branch rather than excluded.",
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (CurM14USDX)",
+      "rationale": "Current complete role/factory census contains 16 authorized markets, including three post-July additions. Thirteen have positive debt shares. All 16 have collateral and remain applicable: the fully paused msETH/OETH market is retained rather than excluded, and msETH/WETH has positive debt, a 500,000 USG cap, deposit pause true and withdrawal/borrowing pauses false. Old recursive leaf configurations are not re-dated by current outer-price reads.",
       "sources": [
         {
           "label": "Tangent USG contracts and markets",
@@ -769,9 +769,9 @@
       },
       {
         "id": "usg-mseth-weth",
-        "label": "msETH / WETH Curve LP staged market",
+        "label": "msETH / WETH Curve LP market",
         "tier": "standard-external",
-        "summary": "The authorized msETH/WETH market is unpaused and callable and holds collateral, but its debt cap and debt shares were zero at the fixed block. Its mandatory Curve-derived msETH leg and heartbeat-checked WETH leg make it a staged live branch rather than an exclusion.",
+        "summary": "Current pinned reads show positive debt shares, a 500,000 USG debt cap and 261845039093554732187 raw collateral units. Deposit is paused; withdrawal and borrowing are not paused. The mandatory Curve-derived msETH/WETH pricing path remains applicable, not a staged zero-cap exclusion.",
         "collateralAssets": [
           "msETH/WETH Curve LP"
         ],
@@ -801,13 +801,13 @@
           {
             "asset": "msETH/WETH Curve LP",
             "maximumLtvPct": 72,
-            "note": "Liquidation threshold 76%; market 0x7b1b38cad63B0715A0adFeEB75E46431b48E73B6. Debt cap, debt shares, and bad debt were zero, while total collateral was 288932208501029515818 raw units; deposit, withdraw, and borrow pauses were all false."
+            "note": "Liquidation threshold 76%; market 0x7b1b38cad63b0715a0adfeeb75e46431b48e73b6. At block 26096134 debt cap is 500000e18, debt shares are positive, collateral is 261845039093554732187 raw units, and deposit/withdraw/borrow pause flags are 1/0/0."
           }
         ],
         "liquidationMechanism": "Permissionless immediate liquidation below health 1 transfers collateral directly or sells it through the zapping proxy. The 20% fee applies only to positive liquidation profit, is minted to the fee treasury, and is added to the liquidator's USG burn requirement.",
         "liquidationDelaySec": 0,
         "backstop": "No funded Stability Pool is used. Undercollateralized seizure records market bad debt, which anyone may repay by burning USG.",
-        "shutdownOrBadDebtBehavior": "The owner may change the zero debt cap or pause entry operations. Liquidation and seizure remain available; recorded bad debt consumes debt-cap capacity until repaid.",
+        "shutdownOrBadDebtBehavior": "Owner may change the debt cap or pause entry operations; current deposit is paused while withdrawal and borrowing are not. Liquidation and seizure remain available under the verified market implementation; bad debt consumes debt-cap capacity until repaid.",
         "failureDomainKeys": [
           "tangent-market-0x7b1b",
           "tangent-oracle-0x66d7",

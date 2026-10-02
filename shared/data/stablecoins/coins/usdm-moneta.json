@@ -2,14 +2,14 @@
   "id": "usdm-moneta",
   "name": "Moneta",
   "symbol": "USDM",
-  "oneLiner": "USDM is Moneta's dollar stablecoin on Cardano, issued through U.S. and EEA routes with NBX EMI-license and MiCA-pending framing.",
+  "oneLiner": "USDM is a Cardano dollar token issued independently by Moneta and NBX, with separate reserve books and issuer-attributed redemption obligations.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized",
     "rwa": true
   },
-  "collateral": "USD bank deposits and money market funds managed by Fidelity and Western Asset Management (Moneta/USA issuance) and Sparebanken Norge / Amundi USD MM fund (NBX/EEA issuance), held in segregated reserve accounts",
-  "pegMechanism": "Direct 1:1 redemption through Moneta (USA) or NBX (EEA); KYC required; Charli3 oracle verifies reserve backing on-chain before each mint on Cardano",
+  "collateral": "Separate USD reserve books: Moneta bank deposits and money market funds managed by Fidelity and Western Asset Management; NBX deposits at Sparebanken Norge and Amundi USD money market funds. Neither issuer's reserve backs the other's issuance.",
+  "pegMechanism": "Par USD redemption against the responsible issuer, subject to KYC and issuer-attribution checks. NBX redeems its own attributable issuance from its separate reserve; Moneta-attributable USDM presented to NBX is redeemable only from settled Moneta funds already received. Mixed or unresolved attribution can delay processing. An independent reserve-verification oracle gates minting on Cardano; the latest NBX whitepaper does not name the current provider.",
   "mechanismArchetype": "fiat-cash",
   "implementationLaunchDate": "2024-03-16",
   "mechanismArchetypeReview": {
@@ -62,12 +62,5 @@
     }
   ],
   "custodyModel": "institutional-regulated",
-  "governanceQuality": "regulated-entity",
-  "notices": [
-    {
-      "type": "warning",
-      "title": "Implementation date not publicly established",
-      "message": "Safety Score V9 implementation-date review on 2026-07-14 checked the current Moneta, NBX, Cardano, and USDM deployment materials but found no reliable dated launch or implementation event for the scored USDM implementation; no date is inferred."
-    }
-  ]
+  "governanceQuality": "regulated-entity"
 }

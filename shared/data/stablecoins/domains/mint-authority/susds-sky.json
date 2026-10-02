@@ -2,9 +2,9 @@
   "id": "susds-sky",
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
-    "summary": "sUSDS is Sky's ERC-4626 savings wrapper over USDS and is natively issued only by the Ethereum vault. Vault share minting is backed by deposited USDS and inherits reviewed USDS_JOIN plus Sky governance authority for base supply; Base, Optimism, and Arbitrum bridge representation administration is scored separately under bridgeRouteRisk.",
+    "summary": "sUSDS is Sky's ERC-4626 savings wrapper over USDS and is natively issued only by the Ethereum vault. Ordinary share minting requires deposited USDS, but governance-set savings accrual creates durable USDS through authenticated Vat.suck and USDS_JOIN.exit without a numeric mint ceiling or posted-collateral test. The unbounded annotation describes this verified funding path, not a reported compromise. Sky governance retains a two-day delayed upgrade and rate-setting path; Base, Optimism, and Arbitrum bridge representation administration is scored separately under bridgeRouteRisk.",
     "inheritedFrom": "usds-sky",
     "upgradeability": {
       "model": "uups",
@@ -23,12 +23,12 @@
       "canChangeMintLogic": true,
       "delaySec": 172800,
       "controlRef": "Inherited Sky Pause Proxy governance executor",
-      "observedAt": "2026-07-21",
-      "observedBlock": 25579746,
+      "observedAt": "2026-10-01",
+      "observedBlock": 26095796,
       "sources": [
         {
           "label": "Sky sUSDS implementation source",
-          "url": "https://github.com/sky-ecosystem/usds/blob/d65551dbc11cfe1afcc4718ab790663b99d766af/src/Usds.sol"
+          "url": "https://github.com/sky-ecosystem/sdai/blob/dfc7f41cb7599afcb0f0eb1ddaadbf9dd4015dce/src/SUsds.sol"
         },
         {
           "label": "Ethereum sUSDS proxy",
@@ -52,7 +52,9 @@
         "authorityType": "contract",
         "directMintAbility": "none",
         "modulesOrGuardsStatus": "unknown",
-        "capDescription": "ERC-4626 share accounting over deposited USDS; does not mint base USDS.",
+        "capDescription": "ERC-4626 shares are minted against USDS deposits; drip realizes savings accrual through Vat.suck and USDS_JOIN.exit.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095796,
         "sources": [
           {
             "label": "Sky sUSDS docs",
@@ -63,7 +65,86 @@
             "url": "https://chainlog.skyeco.com/"
           }
         ],
-        "evidence": "Local metadata marks sUSDS as `variantOf: usds-sky` and `variantKind: savings-passthrough`. At Ethereum block 25295174, EIP-1967 admin slot = 0x0 (no external proxy admin; UUPS pattern) and impl slot = 0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0 (implementation confirmed). wards(MakerDAO PauseProxy 0xBE8E3e...) = 1: Sky governance is the upgrade authority."
+        "executionScope": {
+          "controllerDeployment": "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2026-12-30",
+          "reviewer": "Sol curation pass 2026-10-01 (DataSky)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Pinned runtime and verified source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0"
+            },
+            {
+              "label": "Pinned runtime and verified source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3c0f895007ca717aa01c8693e59df1e8c3777feb"
+            },
+            {
+              "label": "Pinned runtime and verified source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x35d1b3f3d7966a1dfe207aa4514c12a259a0492b"
+            }
+          ],
+          "pin": {
+            "position": "26099923",
+            "hash": "0xb13bc76dc68c2cb30d78d501de6aff17b3f50658c3993f017a8bea57d33eacdc",
+            "runtimeIdentity": "sha256:acb4a6031845e7fa8848b0eaf97fe68b0e87e05395a7f3db4d2ce0e1b3f783a9;implementation:0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0;sha256:2b0bb429f9846f24dedf2e04cea6bd75c3149caa0dea4859acbb8b4e0c1278ba",
+            "signerIdentity": "drip public;Vat.wards(0xa3931d71877c0e7a3148cb7eb4463524fec27fbd)=1;USDS.wards(USDS_JOIN)=1;upstream SSR and upgrade closure unresolved"
+          },
+          "observedState": {
+            "position": "26099923",
+            "hash": "0xb13bc76dc68c2cb30d78d501de6aff17b3f50658c3993f017a8bea57d33eacdc",
+            "runtimeIdentity": "sha256:acb4a6031845e7fa8848b0eaf97fe68b0e87e05395a7f3db4d2ce0e1b3f783a9;implementation:0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0;sha256:2b0bb429f9846f24dedf2e04cea6bd75c3149caa0dea4859acbb8b4e0c1278ba",
+            "signerIdentity": "drip public;Vat.wards(0xa3931d71877c0e7a3148cb7eb4463524fec27fbd)=1;USDS.wards(USDS_JOIN)=1;upstream SSR and upgrade closure unresolved"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "native-savings-accrual",
+              "targetDeployment": "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x9f678cca"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "susds-sky",
+                "usds-sky"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
+        "evidence": "At Ethereum block 26095796, asset() returned USDS 0xdc035d45d973e3ec169d2276ddab16f1e407384f, the EIP-1967 implementation slot returned 0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0, and the correct EIP-1967 admin slot was zero. wards(0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB) returned 1. The current verified SUsds implementation gates _authorizeUpgrade by auth, share issuance transfers deposited USDS, and drip funds SSR accrual through Vat.suck and USDS_JOIN.exit."
       },
       {
         "chain": "ethereum",
@@ -74,17 +155,99 @@
         "label": "Inherited USDS_JOIN token adapter",
         "role": "direct-minter",
         "authorityType": "contract",
-        "directMintAbility": "cap-limited",
+        "directMintAbility": "direct",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "Inherited USDS_JOIN minting is bounded by the reviewed USDS adapter/accounting path; sUSDS share minting itself does not create base USDS.",
+        "capDescription": "USDS_JOIN.exit requires internal Vat dai balance and mints matching USDS without an adapter numeric ceiling. Vat.suck creates that accounting balance against system debt without posted collateral; sUSDS drip uses this durable path for governance-set SSR accrual. Deposited USDS gates ordinary vault share issuance, but does not bound inherited base-token expansion.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095796,
         "sources": [
           {
             "label": "Sky Chainlog",
             "url": "https://chainlog.sky.money/api/mainnet/active.json"
+          },
+          {
+            "label": "Verified immutable USDS_JOIN adapter",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3c0f895007ca717aa01c8693e59df1e8c3777feb"
           }
         ],
-        "evidence": "Inherited from reviewed `usds-sky` mintAuthority."
+        "executionScope": {
+          "controllerDeployment": "ethereum:0x3c0f895007ca717aa01c8693e59df1e8c3777feb",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2026-12-30",
+          "reviewer": "Sol curation pass 2026-10-01 (DataSky)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Pinned runtime and verified source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3c0f895007ca717aa01c8693e59df1e8c3777feb"
+            },
+            {
+              "label": "Pinned runtime and verified source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x35d1b3f3d7966a1dfe207aa4514c12a259a0492b"
+            }
+          ],
+          "pin": {
+            "position": "26099923",
+            "hash": "0xb13bc76dc68c2cb30d78d501de6aff17b3f50658c3993f017a8bea57d33eacdc",
+            "runtimeIdentity": "sha256:7c4855a3669b6e1093704c90f6fe6ac45437a3e54930c5da03cbf7fa6d9d2b02",
+            "signerIdentity": "exit public against Vat.dai caller balance;USDS.wards(0x3c0f895007ca717aa01c8693e59df1e8c3777feb)=1;Vat.suck funding closure unresolved"
+          },
+          "observedState": {
+            "position": "26099923",
+            "hash": "0xb13bc76dc68c2cb30d78d501de6aff17b3f50658c3993f017a8bea57d33eacdc",
+            "runtimeIdentity": "sha256:7c4855a3669b6e1093704c90f6fe6ac45437a3e54930c5da03cbf7fa6d9d2b02",
+            "signerIdentity": "exit public against Vat.dai caller balance;USDS.wards(0x3c0f895007ca717aa01c8693e59df1e8c3777feb)=1;Vat.suck funding closure unresolved"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "inherited-usds-exit",
+              "targetDeployment": "ethereum:0x3c0f895007ca717aa01c8693e59df1e8c3777feb",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xef693bed"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "susds-sky",
+                "usds-sky"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+                "ethereum:0xdc035d45d973e3ec169d2276ddab16f1e407384f"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
+        "evidence": "At Ethereum block 26095796, the sUSDS vault's usdsJoin() returned 0x3C0f895007CA717Aa01c8693e59DF1e8C3777FEB and the USDS token returned wards(adapter) = 1. Verified UsdsJoin.exit first calls vat.move(msg.sender, address(this), RAY * wad), then usds.mint(usr, wad); no adapter-specific debt ceiling is present."
       },
       {
         "chain": "ethereum",
@@ -100,6 +263,8 @@
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "Sky governance executes through the Pause Proxy after the current 2-day Pause delay and can change system modules, parameters, and USDS authorizations.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095796,
         "sources": [
           {
             "label": "Sky Chainlog",
@@ -110,10 +275,145 @@
             "url": "https://docs.sky.money/"
           }
         ],
-        "evidence": "Inherited from reviewed usds-sky mintAuthority: the Sky Pause Proxy is the governance executor authorized to raise the USDS_JOIN debt ceiling that bounds the inherited USDS mint path underlying sUSDS shares."
+        "executionScope": {
+          "controllerDeployment": "ethereum:0xbe8e3e3618f7474f8cb1d074a26affef007e98fb",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2026-12-30",
+          "reviewer": "Sol curation pass 2026-10-01 (DataSky)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Pinned runtime and verified source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0"
+            }
+          ],
+          "pin": {
+            "position": "26099923",
+            "hash": "0xb13bc76dc68c2cb30d78d501de6aff17b3f50658c3993f017a8bea57d33eacdc",
+            "runtimeIdentity": "sha256:ab4f2b404904fa69f1402692bd3be3c8dcfd2ab89ee0f7604b77d8cf7b431cb9",
+            "signerIdentity": "sUSDS.wards(0xbe8e3e3618f7474f8cb1d074a26affef007e98fb)=1;Pause.delay=172800;upstream executor and alternative wards closure unresolved"
+          },
+          "observedState": {
+            "position": "26099923",
+            "hash": "0xb13bc76dc68c2cb30d78d501de6aff17b3f50658c3993f017a8bea57d33eacdc",
+            "runtimeIdentity": "sha256:ab4f2b404904fa69f1402692bd3be3c8dcfd2ab89ee0f7604b77d8cf7b431cb9",
+            "signerIdentity": "sUSDS.wards(0xbe8e3e3618f7474f8cb1d074a26affef007e98fb)=1;Pause.delay=172800;upstream executor and alternative wards closure unresolved"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "native-governance-upgrade",
+              "targetDeployment": "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x4f1ef286"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "upgrade"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "susds-sky"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "native-governance-ssr",
+              "targetDeployment": "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x29ae8114"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "susds-sky"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            },
+            {
+              "id": "native-governance-permissions",
+              "targetDeployment": "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x65fae35e",
+                "0x9c52a7f1"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": null,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "susds-sky"
+              ],
+              "affectedDeployments": [
+                "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
+        "evidence": "At Ethereum block 26095796, wards(Pause Proxy) on sUSDS returned 1 and MCD_PAUSE.delay() returned 172800 seconds. The current verified SUsds implementation permits authorized wards to change SSR and authorize UUPS upgrades. USDS_JOIN itself has no configurable debt ceiling; the executor's broader accounting and base-token authority remains inherited from usds-sky."
       }
     ],
-    "economicCapSemantics": "raiseable",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
@@ -125,11 +425,23 @@
         {
           "label": "Sky sUSDS docs",
           "url": "https://developers.skyeco.com/protocol/tokens/susds/"
+        },
+        {
+          "label": "Verified USDS_JOIN durable accounting conversion",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3c0f895007ca717aa01c8693e59df1e8c3777feb"
+        },
+        {
+          "label": "Verified Vat system-debt creation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x35d1b3f3d7966a1dfe207aa4514c12a259a0492b"
+        },
+        {
+          "label": "Verified sUSDS SSR funding implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0"
         }
       ],
-      "evidence": "sUSDS is a savings wrapper over reviewed USDS. Vault share minting is separate from base USDS issuance, and only the Ethereum deployment is treated as native issuance. The Base, Optimism, and Arbitrum deployments are SkyLink bridge representations; their bridge token wards, governance relays, and UUPS implementation authorities are reviewed in bridgeRouteRisk rather than counted here. At Ethereum block 25295174: EIP-1967 admin slot = 0x0 (no external proxy admin), impl slot = 0x4e7991e5 (UUPS), wards(MakerDAO PauseProxy)=1. Upgrade authority is Sky governance via the wards mechanism. Wrapper has no privileged mint surface. Economic-posture fields reviewed 2026-08-15: local shares remain deposit-gated and changing wrapper mint logic requires Sky's enforced two-day Pause, with no separate wrapper reconciliation cadence or named supervisor.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20); Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-16"
+      "evidence": "At Ethereum block 26097122, sUSDS asset() returned USDS, usdsJoin() identified the immutable USDS_JOIN adapter, getImplementation() returned 0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0 and wards(Pause Proxy) was 1. Vat.wards(sUSDS) and USDS.wards(USDS_JOIN) were both 1. Verified share issuance transfers deposited USDS, while drip funds governance-set SSR accrual through Vat.suck and USDS_JOIN.exit. Vat.suck creates internal dai and matching system debt without a collateral test or numeric ceiling; USDS_JOIN converts internal accounting balance into durable USDS without a separately configured adapter ceiling or same-transaction repayment requirement. D14 therefore admits direct adapter mint ability and unbounded economic-cap semantics, not a collateral-gated or numeric-cap label. The earlier block 26095796 review recorded a 172800-second governance delay; upgradeability and route-scoped bridge facts remain unchanged.",
+      "reviewer": "Sol curation pass 2026-10-01 (RuleC02)",
+      "reviewedAt": "2026-10-01"
     }
   }
 }

@@ -39,9 +39,13 @@
       {
         "label": "sAID Ethereum vault",
         "url": "https://etherscan.io/address/0xb3b3c527ba57cd61648e2ec2f5e006a0b390a9f8"
+      },
+      {
+        "label": "sAID Vault Strategy Memorandum, pages 3 and 5 (rendered preview recovered 2026-10-01)",
+        "url": "https://drive.google.com/file/d/1GMwfOw_XXHKXOXopqU8_QGu_y5ozM9hV/preview"
       }
     ],
-    "rationale": "At Ethereum block 26088256 on 2026-09-30, asset() on tracked sAID 0xb3b3c527ba57cd61648e2ec2f5e006a0b390a9f8 returned tracked AID 0x18f52b3fb465118731d9e0d276d4eb3599d57596, matching GAIB's deployment registry. The serial lineage is retained as a strategy-vault claim under owner decision D3, not as a statement that the vault holds 100% idle AID. AI financing, custody, liquidity and counterparty risk remain explicit.",
+    "rationale": "At Ethereum block 26088256 on 2026-09-30, asset() on tracked sAID 0xb3b3c527ba57cd61648e2ec2f5e006a0b390a9f8 returned tracked AID 0x18f52b3fb465118731d9e0d276d4eb3599d57596, matching GAIB's deployment registry. The serial lineage is retained as a strategy-vault claim under owner decision D3, not as a statement that the vault holds 100% idle AID. AI financing, custody, liquidity and counterparty risk remain explicit. The product-specific memorandum recovered on 2026-10-01 identifies SpiceFlow AI Corporation as the operator and Good AI SPC as the Cayman segregated portfolio company through which strategies execute. Page 5 states that tokens confer no direct redemption of vault contents, voting or equity rights, and that redemption rights are not a demand-deposit or repayable debt obligation of any sAID Group entity. This documents the holder-right limitations without establishing a security interest, bankruptcy remoteness, named reserve custodians or their allocations.",
     "compositionBasis": "Exact Ethereum sAID asset() read at block 26088256 and issuer deployment registry",
     "compositionAsOf": "2026-09-30",
     "scope": "full-composition",

@@ -58,13 +58,15 @@
         "authorityType": "contract",
         "directMintAbility": "can-authorize",
         "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095801,
         "sources": [
           {
             "label": "Reviewed USDC metadata source",
             "url": "https://github.com/circlefin/stablecoin-evm"
           }
         ],
-        "evidence": "Inherited from reviewed usdc-circle parent; base USDC issuance is Circle-controlled."
+        "evidence": "At Ethereum block 26095801, USDC.masterMinter() returned this address and MasterMinter.owner() returned 0xc1d9fe41d19dd52cb3ae5d1d3b0030b5d498c704. This is inherited parent issuance authority, not a local gtUSDC share minter."
       }
     ],
     "economicCapSemantics": "bounded",

@@ -2,10 +2,15 @@
   "id": "ausd-agora",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: AUSD resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Agora Bermuda Limited Terms of Use, September 1, 2026, Upgrades and Asset Freezing",
+        "url": "https://static.agora.finance/termsofuse.pdf"
+      }
+    ],
+    "evidence": "The September 1, 2026 Terms of Use expressly give Agora the ability and right to freeze individual accounts/addresses and their tokens, prevent sending, receiving or interacting with AUSD, and pause or upgrade AUSD smart contracts. This directly supports the existing positive blacklistability verdict.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA31YLDS)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
@@ -445,7 +450,7 @@
           },
           {
             "label": "Plasma Explorer: AUSD0 token",
-            "url": "https://plasma-explorer.com/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a"
+            "url": "https://plasmascan.to/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a"
           },
           {
             "label": "AUSD: Now Borderless Onchain",
@@ -459,16 +464,17 @@
         "destinationChain": "plume",
         "canonicalChain": "ethereum",
         "contractAddress": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
-        "protocol": "Agora AUSD0 / LayerZero OFT",
+        "protocol": "Agora AUSD / LayerZero OFT",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
         "riskTier": "external-validated-network",
         "semantics": "burn-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Officially listed Agora deployment; on-chain symbol reads AUSD0 at the deterministic address with the standard OFT adapter 0x9CaB7Ede13dc56652E44D2404E969C212f22689b present.",
+        "reviewNote": "At Plume block 96621068 on 2026-10-01, the authored deployment returned name and symbol AUSD, decimals 6, native getMinterRoleMembers() holder 0x65e28662b0dcd6d89d4652a61fb0896d4f58d7ff, access-control manager 0x68898b77ebf7b55dca8a2e62d6fd74959a2930e2 and proxyAdminAddress() 0xb8fcc66d613e5f54ee6a425ddbf4a2fdbe4dedee. The prior AUSD0 symbol observation is historical; current bridge peers, validators and adapter settings were not established by these native-token reads.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-19",
+        "observedAt": "2026-10-01",
+        "observedBlock": 96621068,
         "sources": [
           {
             "label": "Agora AUSD contract deployments",

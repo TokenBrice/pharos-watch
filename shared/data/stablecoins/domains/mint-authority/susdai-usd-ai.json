@@ -15,7 +15,7 @@
         "0x0b2b2b2076d95dda7817e785989fe353fe955ef9"
       ],
       "implementationAddresses": [
-        "0x88a233b8746da5dfd9c5e82c8a9f9f91b737198b"
+        "0x4637193852df85b7ac05dd052b187460d81551f6"
       ],
       "adminAddresses": [
         "0x0b3296b6f50611b28d466a6d5a49754dad4d8d9f"
@@ -23,16 +23,16 @@
       "canChangeMintLogic": true,
       "delaySec": 172800,
       "controlRef": "sUSDai Arbitrum ProxyAdmin timelock",
-      "observedAt": "2026-08-16",
-      "observedBlock": 495160622,
+      "observedAt": "2026-10-01",
+      "observedBlock": 510720428,
       "sources": [
         {
           "label": "Arbitrum sUSDai proxy",
           "url": "https://arbitrum.blockscout.com/address/0x0b2b2b2076d95dda7817e785989fe353fe955ef9?tab=contract"
         },
         {
-          "label": "Arbitrum verified StakedUSDai implementation",
-          "url": "https://arbitrum.blockscout.com/address/0x88a233b8746da5dfd9c5e82c8a9f9f91b737198b?tab=contract"
+          "label": "Arbitrum verified StakedUSDai v1.14 implementation",
+          "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x4637193852df85b7ac05dd052b187460d81551f6"
         },
         {
           "label": "USD.AI StakedUSDai source",
@@ -61,12 +61,12 @@
         "failureDomainKeys": [
           "contract:arbitrum:0x0b2b2b2076d95dda7817e785989fe353fe955ef9"
         ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 495160622,
+        "observedAt": "2026-10-01",
+        "observedBlock": 510584190,
         "sources": [
           {
             "label": "Arbitrum verified StakedUSDai implementation",
-            "url": "https://arbitrum.blockscout.com/address/0x88a233b8746da5dfd9c5e82c8a9f9f91b737198b?tab=contract"
+            "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xef07186d90ca00107c4fc73a6fbfcb5ec3d3860d"
           },
           {
             "label": "USD.AI StakedUSDai source",
@@ -77,7 +77,7 @@
             "url": "https://docs.usd.ai/app-guide/buy-stake"
           }
         ],
-        "evidence": "At Arbitrum block 495160622, the proxy resolved to source-verified StakedUSDai implementation 0x88a233b8746da5dfd9c5e82c8a9f9f91b737198b, asset() returned USDai 0x0A1a1A107E45b7Ced86833863f482BC5f4ed82EF, and paused() was false. Verified source mints deposit shares only after computing the USDai amount and pulling it into the vault. The adapter-only mint(address,uint256) path decrements bridgedSupply, so an amount above previously burned outbound supply underflows and reverts. Satellite OToken role authority is excluded here and retained in bridgeRouteRisk."
+        "evidence": "At Arbitrum block 510584190 on 2026-10-01, the proxy resolved to verified StakedUSDai 1.13 implementation 0xef07186d90ca00107c4fc73a6fbfcb5ec3d3860d, replacing the implementation observed on 2026-08-16. asset() returned USDai 0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef and paused() returned false. The current verified source pulls USDai through safeTransferFrom during deposit issuance and restricts mint(address,uint256) to the immutable bridge adapter while decrementing bridgedSupply. ProxyAdmin and its 172800-second timelock owner were independently re-verified at the same block. Satellite mint/burn controls remain in bridgeRouteRisk."
       },
       {
         "chain": "arbitrum",

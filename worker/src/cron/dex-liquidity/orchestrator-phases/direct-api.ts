@@ -1,5 +1,5 @@
 import { logWorkerEventArgs } from "../../../lib/structured-log";
-import { canonicalExitRouteAssetKey } from "@shared/lib/exit-route-identity";
+import { canonicalExitRouteAssetKey } from "@shared/types/exit-route-identity";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import type { PriceValidationReferences } from "../../../lib/price-validation";
 import type { ChainRpcConfig } from "../../../lib/chain-registry";

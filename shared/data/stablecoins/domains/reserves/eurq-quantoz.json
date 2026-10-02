@@ -3,11 +3,11 @@
   "reserves": [
     {
       "sourceKey": "quantoz-transparency:government-bonds",
-      "name": "Government bonds (Netherlands, Germany, and US)",
+      "name": "Government bonds (Netherlands and Germany)",
       "pct": 66,
       "risk": "very-low",
       "assetClass": "government-security",
-      "issuerOrObligor": "Sovereign issuers of the Netherlands, Germany, and United States",
+      "issuerOrObligor": "Sovereign issuers of the Netherlands and Germany",
       "riskFactors": [
         "duration",
         "liquidity",
@@ -18,7 +18,7 @@
     {
       "sourceKey": "quantoz-transparency:cash",
       "name": "Cash deposits at Tier 1 European banks",
-      "pct": 34,
+      "pct": 33,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Undisclosed Tier 1 European banking partners",
@@ -28,31 +28,75 @@
         "concentration"
       ],
       "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "Unclassified residual in published reserve percentages",
+      "pct": 1,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Undisclosed",
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
-    "confidence": "probable",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol decision wave 2026-10-02 (DwEurq)",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Quantoz transparency",
+        "label": "Quantoz transparency: published snapshot 30 August 2026",
         "url": "https://www.quantoz.com/transparency"
       },
       {
         "label": "Quantoz EURQ whitepaper v1.4",
+        "url": "https://www.quantoz.com/documents/eurq-wp-1.4-30-4-2026.pdf"
+      }
+    ],
+    "rationale": "Quantoz's snapshot published 30 August 2026 reports EURQ at 33% cash and 66% government bonds, with a 100.76% reserve ratio. The disclosed allocation totals 99%; the remaining 1% is retained as unclassified exposure, without renormalising the named categories or assuming rounding explains the discrepancy. The reserve policy identifies euro government bonds as Dutch and German. No newer dated reserve snapshot or public reserve attestation was found in the issuer's transparency page or supporting-document listings on 2 October 2026.",
+    "compositionBasis": "Quantoz EURQ published reserve snapshot dated 30 August 2026; no separate underlying balance date is disclosed",
+    "compositionAsOf": "2026-08-30",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The published percentages leave 1% unclassified. Quantoz does not explain that residual or identify individual banking partners, bond security identifiers, country weights, or a maximum maturity. Liquidity horizon remains unknown for the government-bond bucket. The reported reserve ratio is issuer self-reporting, not independent assurance or a complete liability reconciliation.",
+    "knownUnknownExposurePct": 1,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 2,
+        "reserveName": "Unclassified residual in published reserve percentages",
+        "pct": 1,
+        "disposition": "insufficient-evidence",
+        "rationale": "Cash at 33% and government bonds at 66% total 99%. The source neither classifies the missing percentage point nor confirms a rounding adjustment; no favorable class or dependency is assigned to it."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Stichting Quantoz (Quantoz Foundation, reserve safeguarding entity)",
+        "role": "other",
+        "jurisdiction": "Netherlands"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurM06UTY)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Quantoz EURQ whitepaper v1.4: safeguarding structure",
         "url": "https://cdn.prod.website-files.com/681a44e26c4471fa4634aa06/69f8aa5175db824c8a5190cc_EURQ-WP-1.4%20(30-4-2026).pdf"
       },
       {
-        "label": "DNB public register - Quantoz Payments B.V.",
+        "label": "Quantoz transparency: reserve safeguarding",
+        "url": "https://www.quantoz.com/transparency"
+      },
+      {
+        "label": "DNB register: Quantoz Payments and related escrow foundation",
         "url": "https://www.dnb.nl/en/public-register/information-detail/?registerCode=WFTEG&relationNumber=R186418"
       }
     ],
-    "rationale": "Quantoz's June 30 reserve overview reports EURQ at 34% allocated cash and 66% government bonds, with a 100.66% reserve ratio. The EURQ whitepaper confirms that at least 30% is held in separate bank accounts and the remainder in secure, low-risk, highly liquid instruments; the dashboard identifies the bond issuers as the Netherlands, Germany, and United States.",
-    "compositionBasis": "Quantoz Reserve Status Overview updated June 30, 2026",
-    "compositionAsOf": "2026-06-30",
-    "scope": "full-composition",
-    "knownUnknownExposure": "The two disclosed categories cover the full reserve allocation, but Quantoz does not identify individual banking partners, bond security identifiers, country weights, or a maximum maturity. Liquidity horizon therefore remains unknown for the government-bond bucket.",
-    "knownUnknownExposurePct": 0
+    "uncertainty": "The whitepaper identifies Stichting Quantoz as the bankruptcy-remote safeguarding entity and separate reserve accounts. The current transparency page describes multiple Tier 1 European banks but does not name the banks, securities custodians, provider allocations, or asset-reuse terms. Protection against issuer insolvency does not eliminate bank or investment risk.",
+    "knownUnknownExposurePct": 100
   }
 }

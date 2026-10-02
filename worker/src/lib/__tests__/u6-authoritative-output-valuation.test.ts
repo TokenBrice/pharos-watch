@@ -12,12 +12,12 @@ import {
 import { makeV9Extension, makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
 import { makeSupplyFullRedemption } from "./redemption-backstops-store.test-support";
 
-const NOW = Date.UTC(2026, 8, 1, 18) / 1_000;
+const NOW = Date.UTC(2026, 9, 1, 18) / 1_000;
 const REVIEW_MAX_AGE_SEC = 365 * 24 * 60 * 60;
 
 const RESOLVED_OUTPUTS = {
   "fxd-fathom": ["usdt-tether"],
-  "iusd-indigo-protocol": ["usdm-moneta", "usda-anzens", "usdc-circle"],
+  "iusd-indigo-protocol": ["usdm-moneta", "usdc-circle"],
   "jusd-juicedollar": ["usdc-circle", "usdt-tether", "ctusd-citrea"],
 } as const;
 
@@ -27,7 +27,6 @@ const ROUTE_DEPLOYMENTS = {
   ],
   "iusd-indigo-protocol": [
     ["usdm-moneta", "cardano", "c48cbb3d5e57ed56e276bc45f99ab39abe94e6cd7ac39fb402da47ad0014df105553444d", 6],
-    ["usda-anzens", "cardano", "fe7c786ab321f41c654ef6c1af7b3250a613c24e4213e0425a7ae45655534441", 6],
     ["usdc-circle", "cardano", "1f3aec8bfe7ea4fe14c5f121e2a92e301afe414147860d557cac7e345553444378", 6],
   ],
   "jusd-juicedollar": [

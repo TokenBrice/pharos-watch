@@ -9,7 +9,7 @@ export function SafetyScoresOverview() {
   return (
     <>
       <p>
-        Safety Score V9 is the active model for identity-aware consumers. It evaluates three material risk pillars:
+        Safety Score V10 is the active model for identity-aware consumers. It evaluates three material risk pillars:
         Backing (40%), Exit (35%), and Economic Control (25%). The aggregation allows bounded headroom above the
         weakest material path, then applies peg behavior, structural ceilings, evidence sufficiency, track record,
         dependencies, and wrapper-local risk. A strong unrelated pillar therefore cannot erase a weak material
@@ -19,7 +19,7 @@ export function SafetyScoresOverview() {
         Exit selects the strongest exact same-notional route and may add a bounded independent-backup credit:
         {" "}<span className="font-mono">min(10, 100 - primary) × backup / 100</span>. The score card shows the
         selected route, backup credit, and actual stress-request completion separately. The standalone DEX market
-        score and redemption route score describe their own modules; neither is the V9 Exit score.
+        score and redemption route score describe their own modules; neither is the V10 Exit score.
       </p>
       <p>
         Since methodology v9.96, issuer redemption routes honor reviewed explicit stablecoin payouts before the legacy
@@ -64,13 +64,13 @@ export function SafetyScoresOverview() {
         unproven settlement bound takes the bounded floor and exit-unverified ceiling instead of Exit 0.
       </p>
       <p>
-        Equal-score route ties and every other canonical V9 array use locale-independent JavaScript code-unit order.
+        Equal-score route ties and every other canonical V10 array use locale-independent JavaScript code-unit order.
         The same facts therefore select the same primary and backup routes, dependency paths, ordered traces, and
         digest inputs on every runtime host. This ordering can rotate identity or provenance where an older locale
         collated a non-ASCII or case-sensitive key differently, but it does not change numeric score or grade math.
       </p>
       <p>
-        V9 distinguishes measured adverse evidence from issuer non-disclosure, unsupported methodology, missing
+        V10 distinguishes measured adverse evidence from issuer non-disclosure, unsupported methodology, missing
         integration, and transient producer failure. Bounded gaps can remain rateable under explicit ceilings; an
         unbounded required fact remains NR. F is reserved for causally attributed measured danger, while a D requires
         measured weakness or traceable policy-bounded uncertainty.
@@ -130,9 +130,19 @@ export function SafetyScoresOverview() {
         are not production freshness evidence or score forecasts.
       </p>
       <p>
-        Reviewed curated compositions require verified, complete evidence. An unresolved reserve disposition or known
-        unknown exposure withholds the whole curated reserve envelope, not just the disputed link. That can change
-        backing scores and downstream parent limits even when the unresolved share is tiny.
+        Since methodology v10.0, a current known circulating USD amount can size the Exit stress request even when
+        its chain or bridge distribution is bounded-unknown. This changes only the request notional: bridge
+        materiality, transfer scope, Economic Control, and their evidence gaps and ceilings remain unresolved.
+        Unknown, stale, or unavailable circulating amounts still receive no request, and sizing does not establish
+        executable capacity or waive route valuation, cost, access, or settlement evidence.
+      </p>
+      <p>
+        Reviewed curated compositions require verified, complete, sourced, dated evidence under the existing chronology
+        and freshness gates. Methodology v10.0 admits an explicitly reconciled unclassified residual of at most 0.1%,
+        the policy-owned limit, only when that residual can still be charged as bounded-unknown. The unknown share
+        remains in the composition and is not normalized away. Unrecorded, above-threshold, or unchargeably small
+        positive tails, other unresolved reserve dispositions, and incomplete or unverified evidence still withhold
+        the whole curated reserve envelope, not just the disputed link.
       </p>
       <p>
         Responsibility follows causal provenance instead of the nearest processing stage. An explicit reason-level
@@ -154,8 +164,9 @@ export function SafetyScoresOverview() {
         while an issuer-undisclosed settlement asset stays issuer-undisclosed; neither becomes scoreable. Date-only
         dispositions enter replay only after their reviewed UTC day. Partial control reviews retain the controls that
         were actually reviewed while unresolved surfaces remain bounded and fail closed. Strategy-vault wrapper
-        loss-control facts can use those reviewed local controls as wrapper evidence, but risk-transfer credit remains
-        zero unless a separate enforceable parent-loss backstop is reviewed. Subthreshold unrecognized chain-label
+        loss-control facts can use those reviewed local controls as wrapper evidence. Methodology v10.0 grants no
+        parent first-loss or risk-transfer credit, even for documented backstops. Activating that credit requires a new
+        evidence lane, reviewed intake, a review window, and a methodology change. Subthreshold unrecognized chain-label
         supply pools are tolerated by the bridge-materiality proof and no longer surface as public
         evidence-responsibility facts; material unmatched bridge supply still fails closed. Coverage that no
         supported adapter can observe is unsupported methodology rather than producer failure: deployment census
@@ -211,12 +222,15 @@ export function SafetyScoresOverview() {
         immediately. Freeze and economic-control scope remain independent.
       </p>
       <p>
-        Since methodology v9.8, reviewed physical gold or silver delivery is valued at USD per troy ounce
-        times deliverable ounces, less published percentage and flat fees. Bounded delivery fees are
-        deducted as before, with output quality capped at 65. Unpriced delivery or handling is not
-        invented as a fee: it explicitly lowers the output tier to 55. Requests below the documented
-        minimum have zero deliverable value. Physical metal never earns fiat or same-notional credit;
-        a missing or stale raw commodity reference remains unresolved, never replaced by a token price.
+        Physical delivery alone remains diagnostic. This methodology can compose reviewed gold or silver
+        redemption with a modelled in-vault sale to USD for any verified customer. Minimums and bar
+        increments constrain the same stress request; all-in costs must not exceed 500 bps (other
+        routes retain 200 bps), and output quality and the offchain route ceiling remain 65.
+        Published fees and explicit settlement maxima win; unpublished fees and stated typical times
+        use conservative, publicly traced policy assumptions at lower confidence. Explicit unbounded
+        terms, unstated timing, expired 90-day reviews or missing/stale 24-hour metal references earn
+        no credit. Sale costs are charged once, with no metal-price-movement charge; best-effort issuer
+        cash-out can qualify independently at lower confidence when its lot, cost and timing are established.
       </p>
       <p>
         Since methodology v9.47, a dependent&apos;s exposure to an upstream with an open reserve gap counts once per
@@ -300,11 +314,16 @@ export function SafetyScoresOverview() {
       </p>
       <p>
         Methodology v9.4 also makes control scope follow the liability a control can reach. A proved deployment-local
-        control contributes a proportional exposure adjustment only with a complete reconciled liability partition;
-        root-reaching, contradictory, or unresolved controls retain global hard-cap treatment. A control that still
-        binds Economic Control retains its causal attribution, and a scope correction alone cannot turn an unchanged
-        measured D or F into NR. Common-control thresholds count independent root liabilities, so wrappers and
-        derivatives do not manufacture another affected asset and same-issuer controllers remain diagnostic. Chain
+        control contributes a proportional exposure adjustment only with a complete reconciled liability partition.
+        Methodology v10.0 prices the full admitted unresolved deployment cohort, including unattributed remainder:
+        below 5% of supply, the bounded-unknown charge is proportional; from 5% to 15%, the control-unverified ceiling
+        blends smoothly; at 15% or more, or with an unknown share, the full ceiling applies. These thresholds are
+        policy-owned. An admitted known-share cohort below 15% carries no second Control evidence cliff. Out-of-cohort
+        uncertainty and proved adverse or root-reaching controls keep their charges; contradictory scope still fails
+        closed. A control that still binds Economic Control retains its causal attribution, and a scope correction
+        alone cannot turn an unchanged measured D or F into NR. Common-control thresholds count independent root
+        liabilities, so wrappers and derivatives do not manufacture another affected asset and same-issuer controllers
+        remain diagnostic. Chain
         maturity is a dated five-gate review requiring 36 months of continuous production history,
         a 365-day liveness record, permissionless participation or at least 21 independently operated block producers
         or finality members, no unilateral instant change path (with L2s at Stage 1 or later and at least a 7-day holder
@@ -318,7 +337,7 @@ export function SafetyScoresOverview() {
         the affected liability.
       </p>
       <p>
-        Publication is fail-closed. Global, stale, or identity failures retain the last accepted V9 ratings and expose
+        Publication is fail-closed. Global, stale, or identity failures retain the last accepted V10 ratings and expose
         the publication as held. Attributable asset-local producer failures instead quarantine affected assets to NR
         and can publish while at least 90% of active assets remain unaffected. Active consumers do not recompute or
         fall back to V8.

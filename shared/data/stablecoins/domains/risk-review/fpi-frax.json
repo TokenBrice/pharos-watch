@@ -179,15 +179,16 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "controllerChain": "zksync",
-        "controllerAddress": "0x6549daa31c76d5c19099b7bdad82d8813774c651",
+        "controllerAddress": "0xd492df0ce7905d7d91ae48f5e893acaa38221486",
         "failureDomainKeys": [
           "protocol:frax-ferry",
-          "authority:zksync:0x6549daa31c76d5c19099b7bdad82d8813774c651"
+          "authority:zksync:0xd492df0ce7905d7d91ae48f5e893acaa38221486"
         ],
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified at zkSync Era block 71379489: CrossChainCanonicalV2 is the FPI destination representation, with owner(), timelock_address(), and sole minter resolving to the codeless Frax deployer EOA 0x6549DAa31C76d5C19099B7bdAD82d8813774C651. L2BEAT attributes the route to Frax Ferry; it is issuer-canonical burn/mint representation, not independent native issuance.",
+        "reviewNote": "Historical block 71379489 used deployer EOA 0x6549daa31c76d5c19099b7bdad82d8813774c651. At pinned zkSync block 72287180, owner() and timelock_address() instead return contract 0xd492df0ce7905d7d91ae48f5e893acaa38221486; minters(new controller)=true and minters(old deployer)=false. Its internal signer/upgrade controls remain unreviewed. Frax Ferry attribution is retained, not independently re-established by these authority reads.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-30",
+        "observedAt": "2026-10-01",
+        "observedBlock": 72287180,
         "sources": [
           {
             "label": "FPI ZKsync Era verified source (CrossChainCanonicalV2)",
@@ -330,18 +331,18 @@
           "admin"
         ],
         "controllerChain": "zksync",
-        "controllerAddress": "0x6549daa31c76d5c19099b7bdad82d8813774c651",
+        "controllerAddress": "0xd492df0ce7905d7d91ae48f5e893acaa38221486",
         "failureDomainKeys": [
           "protocol:frax-ferry",
-          "authority:zksync:0x6549daa31c76d5c19099b7bdad82d8813774c651"
+          "authority:zksync:0xd492df0ce7905d7d91ae48f5e893acaa38221486"
         ],
-        "authorityType": "eoa",
+        "authorityType": "contract",
         "routeChecks": {
           "trustedPeerOrRemote": "L2BEAT attributes the zkSync Era FPI route to the Frax Ferry path.",
-          "pausersAdminsUpgraders": "At zkSync block 71379489, the verified CrossChainCanonicalV2 owner(), timelock_address(), and sole minter all resolved to the codeless Frax deployer EOA; EIP-1967 implementation and admin slots were zero."
+          "pausersAdminsUpgraders": "At pinned zkSync block 72287180, owner(), timelock_address(), and minters(new controller)=true bind authority to contract 0xd492df0ce7905d7d91ae48f5e893acaa38221486; the former deployer is no longer a minter. Internal authority and delay semantics of the new contract remain unknown."
         },
-        "observedAt": "2026-07-30",
-        "observedBlock": 71379489,
+        "observedAt": "2026-10-01",
+        "observedBlock": 72287180,
         "sources": [
           {
             "label": "FPI zkSync CrossChainCanonicalV2",
@@ -356,7 +357,7 @@
             "url": "https://l2beat.com/scaling/projects/zksync-era/tvs-breakdown"
           }
         ],
-        "evidence": "The verified zkSync CrossChainCanonicalV2 FPI deployment has a sole minter/deployer at 0x6549DAa31C76d5C19099B7bdAD82d8813774C651, observed at block 71379489. Its issuer-canonical burn/mint authority and Frax Ferry attribution are retained under Bridge Risk rather than Mint Authority."
+        "evidence": "Historical block 71379489 used deployer EOA 0x6549daa31c76d5c19099b7bdad82d8813774c651. Pinned zkSync block 72287180 instead identifies contract 0xd492df0ce7905d7d91ae48f5e893acaa38221486 as owner, timelock address, and authorized minter; the former deployer returns minters=false. Contract bytecode is present. These reads do not establish a Safe threshold, timelock delay, numeric mint cap, or complete minter enumeration."
       }
     ]
   }

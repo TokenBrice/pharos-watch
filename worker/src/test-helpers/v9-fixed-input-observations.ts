@@ -148,6 +148,13 @@ const DEFAULT_WM_RAW_SUPPLY_BY_ROUTE: Readonly<Record<string, string>> = {
   "base:0x437cc33344a0b27a429f795ff6b469c72698b291": "70802728527",
   "plume:0x437cc33344a0b27a429f795ff6b469c72698b291": "0",
   "solana:mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp": "247794997129",
+  "linea:0x437cc33344a0b27a429f795ff6b469c72698b291": "0",
+  "bsc:0x437cc33344a0b27a429f795ff6b469c72698b291": "0",
+  "hyperevm:0x437cc33344a0b27a429f795ff6b469c72698b291": "0",
+  "soneium:0x437cc33344a0b27a429f795ff6b469c72698b291": "0",
+  "plasma:0x437cc33344a0b27a429f795ff6b469c72698b291": "0",
+  "citrea:0x437cc33344a0b27a429f795ff6b469c72698b291": "0",
+  "monad:0x437cc33344a0b27a429f795ff6b469c72698b291": "0",
 };
 
 const DEFAULT_WM_BLOCK_OFFSET_BY_CHAIN: Readonly<Record<string, number>> = {
@@ -156,6 +163,13 @@ const DEFAULT_WM_BLOCK_OFFSET_BY_CHAIN: Readonly<Record<string, number>> = {
   base: -13,
   plume: -12,
   solana: -25,
+  linea: -15,
+  bsc: -16,
+  hyperevm: -17,
+  soneium: -18,
+  plasma: -19,
+  citrea: -20,
+  monad: -22,
 };
 
 export function makeWmDeploymentObservations(

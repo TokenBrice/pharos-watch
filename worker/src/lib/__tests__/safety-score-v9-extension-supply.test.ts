@@ -3,7 +3,7 @@ import type { BridgeRouteRiskProfile } from "@shared/types/core";
 import syzusdRiskReview from "@shared/data/stablecoins/domains/risk-review/syzusd-yuzu.json";
 import xautRiskReview from "@shared/data/stablecoins/domains/risk-review/xaut-tether.json";
 import xdaiRiskReview from "@shared/data/stablecoins/domains/risk-review/xdai-gnosis.json";
-import wmRiskReview from "@shared/data/stablecoins/domains/risk-review/wm-m0.json";
+import { REVIEWED_DEPLOYMENT_CATALOG } from "../../test-helpers/reviewed-deployment-catalog.test-support";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 import { adaptBridgeReview } from "../safety-score-v9/extension-bridge";
 import {
@@ -169,7 +169,7 @@ describe("buildSafetyScoreV9SupplyReview", () => {
   });
 
   it("joins a reviewed deployment packet by exact wM route ID and retains zero supply", () => {
-    const profile = wmRiskReview.bridgeRouteRisk as BridgeRouteRiskProfile;
+    const profile = REVIEWED_DEPLOYMENT_CATALOG["wm-m0"]!.bridgeRouteRisk as BridgeRouteRiskProfile;
     const supplyUsdByChain: Record<string, number> = {
       ethereum: 86_613_000,
       arbitrum: 88_000,

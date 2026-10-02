@@ -26,15 +26,15 @@
         "url": "https://developer.wspn.io/5768563m0"
       },
       {
-        "label": "WSPN FAQ (trust-structure custody and periodic third-party audit claims; no published report)",
-        "url": "https://wspn.io/faq.html"
+        "label": "WSPN transparency: reserve-attestation commitment",
+        "url": "https://wspn.io/transparency/"
       },
       {
         "label": "WSPN-OpenEden TBILL reserve partnership announcement",
         "url": "https://www.businesswire.com/news/home/20240222125092/en/WSPN-and-OpenEden-Labs-Forge-Pioneering-Partnership-for-On-Chain-Integration-of-WUSD-Stablecoin-in-DeFi-Ecosystem/"
       }
     ],
-    "rationale": "WSPN's reserve policy limits backing to cash, cash equivalents, and Treasury bills and describes a possible 70-80% cash-equivalent and 20-30% sub-90-day Treasury allocation; a 2024 partnership allocates an undisclosed portion of reserves to OpenEden TBILL. Re-verified on 2026-07-30: the About WUSD disclosure, FAQ, and whitepaper still publish policy ranges only, no dated current composition, and the FAQ's periodic third-party audit claim has no published report. The disclosed ranges are policy targets rather than a dated current composition, so one evidenced aggregate basket is retained.",
+    "rationale": "WSPN's reserve policy limits backing to cash, cash equivalents, and Treasury bills and describes a possible 70-80% cash-equivalent and 20-30% sub-90-day Treasury allocation. Re-verified on 2026-10-01: the About WUSD disclosure and whitepaper publish policy ranges, not dated current composition, and the rendered transparency page commits to independent attestations without a dated reserve-liability report. The old FAQ renders an application 404. The previously reviewed 2024 OpenEden partnership remains historical evidence only: its BusinessWire URL timed out during this session and no current TBILL weight was verified. The single aggregate basket and 100% unknown split are retained without a composition date.",
     "compositionBasis": "WSPN reserve-management policy; current asset-class weights undisclosed",
     "scope": "full-composition",
     "knownUnknownExposure": "The eligible reserve categories and maximum Treasury maturity are disclosed, but current category weights, instruments, banks, provider shares, and the size of the announced TBILL allocation are not public in the reviewed sources.",
@@ -68,10 +68,10 @@
         "url": "https://assets.wspn.io/docs/Whitepaper_Worldwide_Stablecoin_Payment_Network.pdf"
       },
       {
-        "label": "WSPN FAQ (trust-structure custodial arrangements; custodians unnamed)",
-        "url": "https://wspn.io/faq.html"
+        "label": "WSPN terms: segregated custodial reserve accounts",
+        "url": "https://assets.wspn.io/docs/WSPN_Term%20of%20Use.pdf"
       }
     ],
-    "uncertainty": "WSPN states that reserve and operating funds use separate bank accounts and its FAQ claims a trust structure for custodial arrangements managed by licensed trust companies and custodians, but no reviewed source identifies the banks, trustees, custodians, provider shares, legal account structure, bankruptcy treatment, or rehypothecation terms."
+    "uncertainty": "The whitepaper describes a reserve-segregation policy and the terms state that cash and cash equivalents are held in segregated custodial accounts for customers. Neither reviewed document identifies the reserve banks, trustees, custodians, provider shares, actual account structure, bankruptcy treatment, or rehypothecation terms. The former FAQ URL now renders a 404 application error, so its previously recorded licensed-trust-company claim could not be re-verified."
   }
 }

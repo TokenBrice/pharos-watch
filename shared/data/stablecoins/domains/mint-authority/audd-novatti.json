@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "AUDD is issued by AUDC Pty Ltd (Novatti, AFSL 700123); minting and 1:1 AUD redemption run through the issuer's centralized backend against segregated AUD cash and Treasury bills at Australian ADIs.",
+    "summary": "AUDD is issued by AUDC Pty Ltd (AFSL 700123), with issuer-controlled multichain minting against AUD reserves held on bare trust for holders. The PDS permits Australian or foreign bank cash and AUD-denominated cash equivalents; the August 2026 AUP records cash at Westpac and Banking Circle. Ethereum's ProxyAdmin owner is now a 3-of-5 Safe. Stellar and XRPL issuer signing use 3-of-7 multisigs; XRPL's disabled master key does not lock issuance while its SignerList remains active. Solana mint authority is a 2-of-3 SPL Token multisig; Hedera token keys reference its issuer contract, not a standalone private key.",
     "controls": [
       {
         "deploymentRefs": [
@@ -25,23 +25,56 @@
         "evidence": "Issuer-operated mint/redeem: AUDC Pty Ltd creates and redeems AUDD supply 1:1 against custodied AUD reserves; no permissionless or user-collateralized mint route exists across its native multichain deployments."
       },
       {
-        "label": "AUDD Ethereum token owner",
+        "label": "AUDD Ethereum contract-native mint quorum",
         "role": "direct-minter",
-        "authorityType": "eoa",
-        "address": "0x59a50cbd643347296e2cf5573b40eda3099d0c54",
+        "authorityType": "multisig",
+        "address": "0x4cce605ed955295432958d8951d0b176c10720d5",
+        "threshold": 3,
+        "signerCount": 9,
+        "modulesOrGuardsStatus": "not-applicable",
         "deploymentRefs": [
-          "base:0x449b3317a6d1efb1bc3ba0700c9eaa4ffff4ae65",
-          "ethereum:0x4cce605ed955295432958d8951d0b176c10720d5",
-          "hedera:0x39ceba2b467fa987546000eb5d1373acf1f3a2e1",
-          "redbelly:0x54a210e824b0f89da988e4b5586440ab354f0e46",
-          "solana:AUDDttiEpCydTm7joUMbYddm72jAWXZnCpPZtDoxqBSw",
-          "stellar:AUDD-GDC7X2MXTYSAKUUGAIQ7J7RPEIM7GXSAIWFYWWH4GLNFECQVJJLB2EEU",
-          "xdc:0x9fe4e6321eeb7c4bc537570f015e4734b15002b8",
-          "xrpl:4155444400000000000000000000000000000000.rUN5Zxt3K1AnMRJgEWywDJT8QDMMeLH5ok"
+          "ethereum:0x4cce605ed955295432958d8951d0b176c10720d5"
         ],
+        "chain": "ethereum",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26098746,
         "directMintAbility": "direct",
         "canRaiseCap": true,
-        "evidence": "At Ethereum block 25295029, owner() on the AUDD ERC1967 proxy (0x4cce...0c54, impl 0xc6114a25) returned 0x59a50cbd643347296e2cf5573b40eda3099d0c54. eth_getCode returns no bytecode → EOA.",
+        "executionScope": {
+          "controllerDeployment": "ethereum:0x4cce605ed955295432958d8951d0b176c10720d5",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2026-10-31",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc01)",
+          "confidence": "partial",
+          "sources": [{"label": "Verified StableCoin implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc6114a25f69c8115b1778c1c301efa9bd7154e72"}],
+          "pin": {"position": "26098826", "hash": null, "runtimeIdentity": "ethereum:0xc6114a25f69c8115b1778c1c301efa9bd7154e72", "signerIdentity": "getSignatoryList/getThresholds at ethereum:26098826; native mint 3-of-9"},
+          "observedState": {"position": "26098826", "hash": null, "runtimeIdentity": "ethereum:0xc6114a25f69c8115b1778c1c301efa9bd7154e72", "signerIdentity": "getSignatoryList/getThresholds at ethereum:26098826; native mint 3-of-9"},
+          "inventory": "partial",
+          "closure": {"entrypoints": false, "mutableTargets": false, "delegateAndFallback": false, "permissions": false, "upgrades": false, "bypasses": false, "liabilityInventory": false},
+          "paths": [{
+            "id": "native-request-mint",
+            "targetDeployment": "ethereum:0x4cce605ed955295432958d8951d0b176c10720d5",
+            "entrypointKind": "evm-selector",
+            "entrypoints": ["0x64cc5eae"],
+            "callMode": "call",
+            "capabilities": ["mint"],
+            "capSemantics": {"kind": "unbounded", "bound": null},
+            "claimImpairment": "unbounded",
+            "economicLossScope": "global-claim",
+            "unavoidableDelaySec": null,
+            "activation": "active",
+            "affectedLiabilityIds": ["audd-novatti"],
+            "affectedDeployments": ["ethereum:0x4cce605ed955295432958d8951d0b176c10720d5"],
+            "reach": "root",
+            "controlRefs": [],
+            "reactivationRefs": [],
+            "permissionChangeRefs": [],
+            "upgradeRefs": [],
+            "bypassRefs": []
+          }]
+        },
+        "evidence": "At Ethereum block 26098746, getSignatoryList() returned nine signatories and getThresholds(TOKEN_SUPPLY_CONTROL) returned [1,3] for burn and mint. Signatory and threshold changes also require three approvals. Verified implementation 0xc6114a25f69c8115b1778c1c301efa9bd7154e72 requires an ACCEPTED request owned by the executor before minting. owner() remains EOA 0x59a50cbd643347296e2cf5573b40eda3099d0c54, but ownership alone does not bypass the three-signatory mint path. The separate governance-token swap() and proxy-upgrade paths are not covered by this quorum.",
         "sources": [
           {
             "label": "Ethereum Blockscout AUDD contract",
@@ -52,21 +85,21 @@
       {
         "label": "AUDD Ethereum proxy admin",
         "role": "minter-admin",
-        "authorityType": "eoa",
-        "address": "0x840b18b93e44ded7d616a0f61aff8562f2548743",
+        "authorityType": "safe",
+        "address": "0x0cc2ecc9b227f98c1628c1dbfb73bdfcab0623f2",
+        "threshold": 3,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {"version": "1.4.1", "owners": ["0x56d7cdab5b97de0ef28a77440106f7bad87b4456", "0x01065985934615ac69c93aacd5e0c3b7cc34069b", "0x15ac59fd55d59349f0aa40e9685da7c4a206df30", "0xffc7ee66c5e30c7f89a14e7438dad7d863a2953b", "0x3b985976198f4f712ddeaf3a3d393713d52b569d"], "threshold": 3, "enabledModules": [], "guard": "0x0000000000000000000000000000000000000000", "moduleGuard": "0x0000000000000000000000000000000000000000", "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99", "observedBlock": 26095936, "observedAt": "2026-10-01", "source": "onchain"},
         "deploymentRefs": [
-          "base:0x449b3317a6d1efb1bc3ba0700c9eaa4ffff4ae65",
-          "ethereum:0x4cce605ed955295432958d8951d0b176c10720d5",
-          "hedera:0x39ceba2b467fa987546000eb5d1373acf1f3a2e1",
-          "redbelly:0x54a210e824b0f89da988e4b5586440ab354f0e46",
-          "solana:AUDDttiEpCydTm7joUMbYddm72jAWXZnCpPZtDoxqBSw",
-          "stellar:AUDD-GDC7X2MXTYSAKUUGAIQ7J7RPEIM7GXSAIWFYWWH4GLNFECQVJJLB2EEU",
-          "xdc:0x9fe4e6321eeb7c4bc537570f015e4734b15002b8",
-          "xrpl:4155444400000000000000000000000000000000.rUN5Zxt3K1AnMRJgEWywDJT8QDMMeLH5ok"
+          "ethereum:0x4cce605ed955295432958d8951d0b176c10720d5"
         ],
+        "chain": "ethereum",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095936,
         "directMintAbility": "none",
         "canRaiseCap": true,
-        "evidence": "At Ethereum block 25295029, EIP-1967 admin slot on AUDD proxy returned 0x0ac6d3de693072bc9a3e46ea2ac3bb554619598b (a ProxyAdmin contract). That ProxyAdmin's owner() returned 0x840b18b93e44ded7d616a0f61aff8562f2548743. eth_getCode returns no bytecode → EOA.",
+        "evidence": "At Ethereum block 26095936, ProxyAdmin owner() is Safe 0x0cc2ecc9b227f98c1628c1dbfb73bdfcab0623f2; threshold 3, five owners, VERSION 1.4.1, empty modules, zero guard/module-guard and standard fallback handler. Earlier review recorded EOA 0x840b18b93e44ded7d616a0f61aff8562f2548743; the current Safe observation supersedes that owner.",
         "sources": [
           {
             "label": "Ethereum Blockscout AUDD proxy admin",
@@ -75,23 +108,56 @@
         ]
       },
       {
-        "label": "AUDD Base token owner",
+        "label": "AUDD Base contract-native mint quorum",
         "role": "direct-minter",
-        "authorityType": "eoa",
-        "address": "0xa375adbc3b5497f1c3eb20cbe986e115bd2b9127",
+        "authorityType": "multisig",
+        "address": "0x449b3317a6d1efb1bc3ba0700c9eaa4ffff4ae65",
+        "threshold": 3,
+        "signerCount": 9,
+        "modulesOrGuardsStatus": "not-applicable",
         "deploymentRefs": [
-          "base:0x449b3317a6d1efb1bc3ba0700c9eaa4ffff4ae65",
-          "ethereum:0x4cce605ed955295432958d8951d0b176c10720d5",
-          "hedera:0x39ceba2b467fa987546000eb5d1373acf1f3a2e1",
-          "redbelly:0x54a210e824b0f89da988e4b5586440ab354f0e46",
-          "solana:AUDDttiEpCydTm7joUMbYddm72jAWXZnCpPZtDoxqBSw",
-          "stellar:AUDD-GDC7X2MXTYSAKUUGAIQ7J7RPEIM7GXSAIWFYWWH4GLNFECQVJJLB2EEU",
-          "xdc:0x9fe4e6321eeb7c4bc537570f015e4734b15002b8",
-          "xrpl:4155444400000000000000000000000000000000.rUN5Zxt3K1AnMRJgEWywDJT8QDMMeLH5ok"
+          "base:0x449b3317a6d1efb1bc3ba0700c9eaa4ffff4ae65"
         ],
+        "chain": "base",
+        "observedAt": "2026-10-01",
+        "observedBlock": 52041974,
         "directMintAbility": "direct",
         "canRaiseCap": true,
-        "evidence": "At Base block 47200702, owner() on the AUDD Base proxy (0x449b...ae65, impl 0x3c9ead9a) returned 0xa375adbc3b5497f1c3eb20cbe986e115bd2b9127. eth_getCode returns no bytecode → EOA.",
+        "executionScope": {
+          "controllerDeployment": "base:0x449b3317a6d1efb1bc3ba0700c9eaa4ffff4ae65",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2026-10-31",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc01)",
+          "confidence": "partial",
+          "sources": [{"label": "Verified Base StableCoin implementation", "url": "https://base.blockscout.com/api/v2/smart-contracts/0x3c9ead9ac7732b76beac828ea4ab92d8b758383b"}],
+          "pin": {"position": "52042380", "hash": null, "runtimeIdentity": "base:0x3c9ead9ac7732b76beac828ea4ab92d8b758383b", "signerIdentity": "getSignatoryList/getThresholds at base:52042380; native mint 3-of-9"},
+          "observedState": {"position": "52042380", "hash": null, "runtimeIdentity": "base:0x3c9ead9ac7732b76beac828ea4ab92d8b758383b", "signerIdentity": "getSignatoryList/getThresholds at base:52042380; native mint 3-of-9"},
+          "inventory": "partial",
+          "closure": {"entrypoints": false, "mutableTargets": false, "delegateAndFallback": false, "permissions": false, "upgrades": false, "bypasses": false, "liabilityInventory": false},
+          "paths": [{
+            "id": "native-request-mint",
+            "targetDeployment": "base:0x449b3317a6d1efb1bc3ba0700c9eaa4ffff4ae65",
+            "entrypointKind": "evm-selector",
+            "entrypoints": ["0x64cc5eae"],
+            "callMode": "call",
+            "capabilities": ["mint"],
+            "capSemantics": {"kind": "unbounded", "bound": null},
+            "claimImpairment": "unbounded",
+            "economicLossScope": "global-claim",
+            "unavoidableDelaySec": null,
+            "activation": "active",
+            "affectedLiabilityIds": ["audd-novatti"],
+            "affectedDeployments": ["base:0x449b3317a6d1efb1bc3ba0700c9eaa4ffff4ae65"],
+            "reach": "root",
+            "controlRefs": [],
+            "reactivationRefs": [],
+            "permissionChangeRefs": [],
+            "upgradeRefs": [],
+            "bypassRefs": []
+          }]
+        },
+        "evidence": "At Base block 52041974, getSignatoryList() returned nine signatories and getThresholds(TOKEN_SUPPLY_CONTROL) returned [1,3] for burn and mint. Verified implementation 0x3c9ead9ac7732b76beac828ea4ab92d8b758383b requires an ACCEPTED request owned by the executor before minting. owner() remains 0xa375adbc3b5497f1c3eb20cbe986e115bd2b9127, but ownership alone does not bypass the three-signatory mint path. The separate governance-token swap() path is outside this quorum; the EOA-controlled Base proxy-upgrade path remains independently adverse.",
         "sources": [
           {
             "label": "Base Blockscout AUDD contract",
@@ -105,15 +171,11 @@
         "authorityType": "eoa",
         "address": "0x31c9cf32b2e33e1a5561c1dcf3889f574f2977fa",
         "deploymentRefs": [
-          "base:0x449b3317a6d1efb1bc3ba0700c9eaa4ffff4ae65",
-          "ethereum:0x4cce605ed955295432958d8951d0b176c10720d5",
-          "hedera:0x39ceba2b467fa987546000eb5d1373acf1f3a2e1",
-          "redbelly:0x54a210e824b0f89da988e4b5586440ab354f0e46",
-          "solana:AUDDttiEpCydTm7joUMbYddm72jAWXZnCpPZtDoxqBSw",
-          "stellar:AUDD-GDC7X2MXTYSAKUUGAIQ7J7RPEIM7GXSAIWFYWWH4GLNFECQVJJLB2EEU",
-          "xdc:0x9fe4e6321eeb7c4bc537570f015e4734b15002b8",
-          "xrpl:4155444400000000000000000000000000000000.rUN5Zxt3K1AnMRJgEWywDJT8QDMMeLH5ok"
+          "base:0x449b3317a6d1efb1bc3ba0700c9eaa4ffff4ae65"
         ],
+        "chain": "base",
+        "observedAt": "2026-10-01",
+        "observedBlock": 52024948,
         "directMintAbility": "none",
         "canRaiseCap": true,
         "evidence": "At Base block 47200702, EIP-1967 admin slot on AUDD Base proxy returned 0x0bc67421c729b8cd22a725e40d1c4f5ca3d32f9f (ProxyAdmin contract). That ProxyAdmin's owner() returned 0x31c9cf32b2e33e1a5561c1dcf3889f574f2977fa. eth_getCode returns no bytecode → EOA.",
@@ -130,15 +192,10 @@
         "authorityType": "contract",
         "address": "GDC7X2MXTYSAKUUGAIQ7J7RPEIM7GXSAIWFYWWH4GLNFECQVJJLB2EEU",
         "deploymentRefs": [
-          "base:0x449b3317a6d1efb1bc3ba0700c9eaa4ffff4ae65",
-          "ethereum:0x4cce605ed955295432958d8951d0b176c10720d5",
-          "hedera:0x39ceba2b467fa987546000eb5d1373acf1f3a2e1",
-          "redbelly:0x54a210e824b0f89da988e4b5586440ab354f0e46",
-          "solana:AUDDttiEpCydTm7joUMbYddm72jAWXZnCpPZtDoxqBSw",
-          "stellar:AUDD-GDC7X2MXTYSAKUUGAIQ7J7RPEIM7GXSAIWFYWWH4GLNFECQVJJLB2EEU",
-          "xdc:0x9fe4e6321eeb7c4bc537570f015e4734b15002b8",
-          "xrpl:4155444400000000000000000000000000000000.rUN5Zxt3K1AnMRJgEWywDJT8QDMMeLH5ok"
+          "stellar:AUDD-GDC7X2MXTYSAKUUGAIQ7J7RPEIM7GXSAIWFYWWH4GLNFECQVJJLB2EEU"
         ],
+        "chain": "stellar",
+        "observedAt": "2026-10-01",
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "evidence": "Stellar Horizon confirmed: issuer account GDC7X2MX... has master key weight 0 (locked), 7 co-signers each weight 1, and low/med/high thresholds all = 3. Effective authority is a 3-of-7 multisig. Asset is AUDD issued by this account.",
@@ -151,21 +208,21 @@
       },
       {
         "deploymentRefs": [
-          "base:0x449b3317a6d1efb1bc3ba0700c9eaa4ffff4ae65",
-          "ethereum:0x4cce605ed955295432958d8951d0b176c10720d5",
-          "hedera:0x39ceba2b467fa987546000eb5d1373acf1f3a2e1",
-          "redbelly:0x54a210e824b0f89da988e4b5586440ab354f0e46",
-          "solana:AUDDttiEpCydTm7joUMbYddm72jAWXZnCpPZtDoxqBSw",
-          "stellar:AUDD-GDC7X2MXTYSAKUUGAIQ7J7RPEIM7GXSAIWFYWWH4GLNFECQVJJLB2EEU",
-          "xdc:0x9fe4e6321eeb7c4bc537570f015e4734b15002b8",
           "xrpl:4155444400000000000000000000000000000000.rUN5Zxt3K1AnMRJgEWywDJT8QDMMeLH5ok"
         ],
-        "label": "AUDD XRPL issuer (master key disabled — account locked)",
+        "label": "AUDD XRPL issuer (3-of-7 SignerList; master disabled)",
         "role": "direct-minter",
-        "authorityType": "issuer-backend",
-        "directMintAbility": "none",
-        "canRaiseCap": false,
-        "evidence": "XRPL account_info confirmed: AccountFlags 9437184 = 0x900000 (lsfDefaultRipple=true, lsfDisableMaster=true). No RegularKey field. No SignerList (account_objects returned empty). The issuer account's master key is disabled and no signing authority exists. The XRPL AUDD issuer account is locked and cannot mint new tokens or modify balances on XRPL.",
+        "authorityType": "multisig",
+        "address": "rUN5Zxt3K1AnMRJgEWywDJT8QDMMeLH5ok",
+        "chain": "xrpl",
+        "observedAt": "2026-10-01",
+        "observedBlock": 107355092,
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 7,
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "At validated XRPL ledger 107355092 (hash 54A300D5307120F8541E27305788F01BC3A3C69D33A5D7A1EA5A2F9BBC8FDF75), account_info with signer_lists=true returns a SignerList with quorum 3 and seven weight-1 entries. disableMasterKey is true and RegularKey is absent, but multisigning remains active. The previous locked-account conclusion based on an incomplete account_objects read is superseded; disabling the master key does not remove this native issuance path.",
         "sources": [
           {
             "label": "XRPL account",
@@ -174,23 +231,22 @@
         ]
       },
       {
-        "label": "AUDD Solana mint authority (EOA wallet)",
+        "label": "AUDD Solana mint authority (2-of-3 SPL Token multisig)",
         "role": "direct-minter",
-        "authorityType": "eoa",
+        "authorityType": "multisig",
         "address": "CnwUoCJvduyJeKYVNVV5q21JcmRHYAb74unx9Y7mYNLF",
+        "threshold": 2,
+        "signerCount": 3,
+        "modulesOrGuardsStatus": "not-applicable",
         "deploymentRefs": [
-          "base:0x449b3317a6d1efb1bc3ba0700c9eaa4ffff4ae65",
-          "ethereum:0x4cce605ed955295432958d8951d0b176c10720d5",
-          "hedera:0x39ceba2b467fa987546000eb5d1373acf1f3a2e1",
-          "redbelly:0x54a210e824b0f89da988e4b5586440ab354f0e46",
-          "solana:AUDDttiEpCydTm7joUMbYddm72jAWXZnCpPZtDoxqBSw",
-          "stellar:AUDD-GDC7X2MXTYSAKUUGAIQ7J7RPEIM7GXSAIWFYWWH4GLNFECQVJJLB2EEU",
-          "xdc:0x9fe4e6321eeb7c4bc537570f015e4734b15002b8",
-          "xrpl:4155444400000000000000000000000000000000.rUN5Zxt3K1AnMRJgEWywDJT8QDMMeLH5ok"
+          "solana:AUDDttiEpCydTm7joUMbYddm72jAWXZnCpPZtDoxqBSw"
         ],
+        "chain": "solana",
+        "observedAt": "2026-10-01",
+        "observedBlock": 452225929,
         "directMintAbility": "direct",
         "canRaiseCap": true,
-        "evidence": "Solana getAccountInfo (jsonParsed) for SPL mint AUDDttiEpCydTm7joUMbYddm72jAWXZnCpPZtDoxqBSw returned mintAuthority = CnwUoCJvduyJeKYVNVV5q21JcmRHYAb74unx9Y7mYNLF. Confirmed EOA: account is owned by System Program (11111...), executable=false, zero data.",
+        "evidence": "Finalized Solana mint observation at slot 452225454 returns mintAuthority CnwUoCJvduyJeKYVNVV5q21JcmRHYAb74unx9Y7mYNLF. Its finalized jsonParsed account at slot 452225929 is owned by the SPL Token program, type multisig, numRequiredSigners=2 and numValidSigners=3. It is not a System Program EOA. The separately recorded freeze authority remains 6yusyKzzPDydZeGu1JCNTcXjyEJzGRjLK8xwqAK9wqFs.",
         "sources": [
           {
             "label": "Solana Mainnet SPL mint",
@@ -200,21 +256,17 @@
       },
       {
         "deploymentRefs": [
-          "base:0x449b3317a6d1efb1bc3ba0700c9eaa4ffff4ae65",
-          "ethereum:0x4cce605ed955295432958d8951d0b176c10720d5",
-          "hedera:0x39ceba2b467fa987546000eb5d1373acf1f3a2e1",
-          "redbelly:0x54a210e824b0f89da988e4b5586440ab354f0e46",
-          "solana:AUDDttiEpCydTm7joUMbYddm72jAWXZnCpPZtDoxqBSw",
-          "stellar:AUDD-GDC7X2MXTYSAKUUGAIQ7J7RPEIM7GXSAIWFYWWH4GLNFECQVJJLB2EEU",
-          "xdc:0x9fe4e6321eeb7c4bc537570f015e4734b15002b8",
-          "xrpl:4155444400000000000000000000000000000000.rUN5Zxt3K1AnMRJgEWywDJT8QDMMeLH5ok"
+          "hedera:0x39ceba2b467fa987546000eb5d1373acf1f3a2e1"
         ],
-        "label": "AUDD Hedera token admin key",
+        "label": "AUDD Hedera contract-controlled token keys",
         "role": "minter-admin",
-        "authorityType": "issuer-backend",
+        "authorityType": "contract",
+        "address": "0x39ceba2b467fa987546000eb5d1373acf1f3a2e1",
+        "chain": "hedera",
+        "observedAt": "2026-10-01",
         "directMintAbility": "direct",
         "canRaiseCap": true,
-        "evidence": "Hedera mirror node for token 0.0.8317071 (treasury 0.0.8317070): admin_key, freeze_key, pause_key, supply_key, and wipe_key are all the same ProtobufEncoded key (4205188ed1fb03). KYC key is null. The supply_key controls minting; all control keys are the same single key held by the issuer backend.",
+        "evidence": "Mirror token 0.0.8317071 returns identical admin, freeze, pause, supply and wipe protobuf keys 4205188ed1fb03. Hedera Key field 8 decodes as delegatable_contract_id, with ContractID contractNum=8317070. The mirror contract record maps 0.0.8317070 to EVM address 0x39ceba2b467fa987546000eb5d1373acf1f3a2e1. These are contract-controlled HTS keys, not a single standalone issuer private key; the wrapper's ultimate role/upgrade authority requires its own review.",
         "sources": [
           {
             "label": "Hedera Mirror Node token",
@@ -223,27 +275,68 @@
         ]
       },
       {
-        "label": "AUDD XDC token owner (EOA)",
+        "label": "AUDD XDC contract-native mint quorum",
         "role": "direct-minter",
-        "authorityType": "eoa",
-        "address": "0x994a586f6df51acefb6a417f13ce659a3150e30d",
+        "authorityType": "multisig",
+        "address": "0x9fe4e6321eeb7c4bc537570f015e4734b15002b8",
+        "threshold": 3,
+        "signerCount": 9,
+        "modulesOrGuardsStatus": "not-applicable",
         "deploymentRefs": [
-          "base:0x449b3317a6d1efb1bc3ba0700c9eaa4ffff4ae65",
-          "ethereum:0x4cce605ed955295432958d8951d0b176c10720d5",
-          "hedera:0x39ceba2b467fa987546000eb5d1373acf1f3a2e1",
-          "redbelly:0x54a210e824b0f89da988e4b5586440ab354f0e46",
-          "solana:AUDDttiEpCydTm7joUMbYddm72jAWXZnCpPZtDoxqBSw",
-          "stellar:AUDD-GDC7X2MXTYSAKUUGAIQ7J7RPEIM7GXSAIWFYWWH4GLNFECQVJJLB2EEU",
-          "xdc:0x9fe4e6321eeb7c4bc537570f015e4734b15002b8",
-          "xrpl:4155444400000000000000000000000000000000.rUN5Zxt3K1AnMRJgEWywDJT8QDMMeLH5ok"
+          "xdc:0x9fe4e6321eeb7c4bc537570f015e4734b15002b8"
         ],
+        "chain": "xdc",
+        "observedAt": "2026-10-01",
+        "observedBlock": 107888340,
         "directMintAbility": "direct",
         "canRaiseCap": true,
-        "evidence": "XDC rpc.xinfin.network: owner() on AUDD contract 0x9fe4e6321eeb7c4bc537570f015e4734b15002b8 returned 0x994a586f6df51acefb6a417f13ce659a3150e30d. eth_getCode returned 0x → EOA.",
+        "executionScope": {
+          "controllerDeployment": "xdc:0x9fe4e6321eeb7c4bc537570f015e4734b15002b8",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2026-10-31",
+          "reviewer": "Sol curation pass 2026-10-01 (DataMisc01)",
+          "confidence": "partial",
+          "sources": [{"label": "XDC exact-match implementation", "url": "https://xdcscan.com/address/0xbf6db4baae78071777a208924290b77601895273#code"}, {"label": "Verified identical Ethereum source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc6114a25f69c8115b1778c1c301efa9bd7154e72"}],
+          "pin": {"position": "107888340", "hash": null, "runtimeIdentity": "xdc:0xbf6db4baae78071777a208924290b77601895273; runtime-sha256:e22b4723ad6d3d5cd4df41ed314e3151648760c1303fe24af44bb0d641866b97", "signerIdentity": "getSignatoryList/getThresholds at xdc:107888340; native mint 3-of-9"},
+          "observedState": {"position": "107888340", "hash": null, "runtimeIdentity": "xdc:0xbf6db4baae78071777a208924290b77601895273; runtime-sha256:e22b4723ad6d3d5cd4df41ed314e3151648760c1303fe24af44bb0d641866b97", "signerIdentity": "getSignatoryList/getThresholds at xdc:107888340; native mint 3-of-9"},
+          "inventory": "partial",
+          "closure": {"entrypoints": false, "mutableTargets": false, "delegateAndFallback": false, "permissions": false, "upgrades": false, "bypasses": false, "liabilityInventory": false},
+          "paths": [{
+            "id": "native-request-mint",
+            "targetDeployment": "xdc:0x9fe4e6321eeb7c4bc537570f015e4734b15002b8",
+            "entrypointKind": "evm-selector",
+            "entrypoints": ["0x64cc5eae"],
+            "callMode": "call",
+            "capabilities": ["mint"],
+            "capSemantics": {"kind": "unbounded", "bound": null},
+            "claimImpairment": "unbounded",
+            "economicLossScope": "global-claim",
+            "unavoidableDelaySec": null,
+            "activation": "active",
+            "affectedLiabilityIds": ["audd-novatti"],
+            "affectedDeployments": ["xdc:0x9fe4e6321eeb7c4bc537570f015e4734b15002b8"],
+            "reach": "root",
+            "controlRefs": [],
+            "reactivationRefs": [],
+            "permissionChangeRefs": [],
+            "upgradeRefs": [],
+            "bypassRefs": []
+          }]
+        },
+        "evidence": "At XDC block 107888340, getSignatoryList() returned nine signatories and getThresholds(TOKEN_SUPPLY_CONTROL) returned [1,3] for burn and mint. EIP-1967 implementation 0xbf6db4baae78071777a208924290b77601895273 has byte-for-byte identical runtime to verified Ethereum StableCoin implementation 0xc6114a25f69c8115b1778c1c301efa9bd7154e72 at Ethereum block 26098826. Native request minting requires distinct signatory approvals and an ACCEPTED request owned by the executor; owner() 0x994a586f6df51acefb6a417f13ce659a3150e30d does not bypass this quorum. The separate governance-token swap() and proxy-upgrade paths are outside this quorum and remain unresolved for XDC.",
         "sources": [
           {
             "label": "XDC RPC",
             "url": "https://rpc.xinfin.network"
+          },
+          {
+            "label": "XDCScan exact-match StableCoin implementation",
+            "url": "https://xdcscan.com/address/0xbf6db4baae78071777a208924290b77601895273#code"
+          },
+          {
+            "label": "Verified identical Ethereum StableCoin source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc6114a25f69c8115b1778c1c301efa9bd7154e72"
           }
         ]
       }
@@ -264,7 +357,7 @@
       ],
       "adminAddresses": [
         "0x0ac6d3de693072bc9a3e46ea2ac3bb554619598b",
-        "0x840b18b93e44ded7d616a0f61aff8562f2548743",
+        "0x0cc2ecc9b227f98c1628c1dbfb73bdfcab0623f2",
         "0x0bc67421c729b8cd22a725e40d1c4f5ca3d32f9f",
         "0x31c9cf32b2e33e1a5561c1dcf3889f574f2977fa"
       ],
@@ -295,10 +388,18 @@
     "reconciliation": "periodic",
     "supervision": "attestation-only",
     "review": {
-      "evidence": "AUDD whitepaper and transparency materials describe a single regulated issuer (AUDC Pty Ltd / Novatti) minting against off-chain AUD reserves with William Buck attestations. All addressable mint surfaces confirmed: Ethereum (owner EOA 0x59a5..., proxy admin EOA 0x840b...) and Base (owner EOA 0xa375..., proxy admin EOA 0x31c9...) via EIP-1967 reads. Stellar (3-of-7 multisig, master key weight 0). XRPL (single master key, no SignerList). Solana SPL mintAuthority = EOA CnwUo... Hedera supply_key = issuer protobuf key. XDC owner = EOA 0x994a... Redbelly uses same contract structure as Ethereum (not independently queried, note-only). Multiple distinct EOA owners per chain is consistent with per-chain issuer key management for a centralized fiat-backed issuer. William Buck performs monthly independent agreed-upon procedures; the latest reviewed report covers June 30, 2026, was published July 6, 2026, and fully reconciles AUDD liabilities to reserve accounts. ASIC's professional register and AUDC's terms match AFSL 700123 to AUDC Pty Ltd, but an AFSL is conduct authorization rather than APRA prudential supervision and AUDC is not an APRA-authorized deposit-taking institution. Supervision is therefore attestation-only. Economic-posture fields reviewed 2026-08-15: issuer EOAs, multisig, and backend keys retain uncapped mint authority; monthly William Buck AUP reports reconcile the whole multichain supply, while ASIC AFSL conduct authorization is not prudential supervision.",
-      "reviewer": "OpenAI Codex SOL-IV regulated-issuer review; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "Re-reviewed 2026-10-01: PDS dated 10 February 2026 establishes issuer AUDC Pty Ltd and bare-trust AUD reserves, permitting Australian/foreign bank cash or AUD equivalents. William Buck August AUP covers 31 August and is signed 4 September; it reconciles cash and all eight chains but expressly provides no assurance opinion and has no independence requirement. Pinned Ethereum/Base/XDC proxies and owners match recorded identities except Ethereum ProxyAdmin owner now a 3-of-5 Safe (full modules/guard census at block 26095936), superseding old EOA 0x840b. Stellar has seven weight-1 signers and thresholds 3; XRPL ledger 107355092 has an active 3-of-7 SignerList despite disabled master, superseding prior account-locked inference. Solana mint authority is a 2-of-3 SPL multisig, not an EOA. Hedera keys decode to contract 0.0.8317070. Redbelly owner/implementation/admin were directly queried at block 3209863. Uncapped issuer mint authority and non-prudential AFSL conduct authorization remain adverse limitations.",
+      "reviewer": "Sol curation pass 2026-10-01 (CurM14USDX)",
+      "reviewedAt": "2026-10-01",
       "sources": [
+        {
+          "label": "AUDD current PDS",
+          "url": "https://www.audd.digital/wp-content/uploads/2026/02/202602_AUDD-PDS.pdf"
+        },
+        {
+          "label": "William Buck August 2026 AUP",
+          "url": "https://www.audd.digital/wp-content/uploads/2026/09/AUDC-Agreed-upon-procedures-report-Aug26_.pdf"
+        },
         {
           "label": "Ethereum Blockscout AUDD contract",
           "url": "https://eth.blockscout.com/address/0x4cce605ed955295432958d8951d0b176c10720d5"

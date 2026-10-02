@@ -1,5 +1,5 @@
 import { logWorkerEventArgs } from "./structured-log";
-import { CHAIN_META } from "@shared/lib/chains";
+import { CHAIN_META } from "@shared/types/chain-identity";
 import type { ChainRpcConfig } from "./chain-registry";
 import { throwIfAborted } from "./abort";
 import { parseChainlinkLatestRoundData } from "./chainlink-round-data";

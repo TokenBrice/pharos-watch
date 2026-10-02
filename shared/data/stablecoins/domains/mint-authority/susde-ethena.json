@@ -4,7 +4,7 @@
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "none-resolved-mint",
     "confidence": "verified",
-    "summary": "sUSDe is Ethena's savings wrapper over USDe. Ethereum wrapper shares are minted against deposited USDe and the many bridged/wrapped deployments inherit base USDe's signed-order issuer mint path.",
+    "summary": "sUSDe is Ethena's savings wrapper over USDe. Ethereum wrapper shares are created against deposited USDe; durable parent issuance remains inherited from usde-ethena. Satellite representation minting and transfer controls belong to bridgeRouteRisk.",
     "inheritedFrom": "usde-ethena",
     "controls": [
       {
@@ -18,8 +18,8 @@
         "authorityType": "contract",
         "directMintAbility": "none",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-08",
-        "observedBlock": 25711751,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095796,
         "capDescription": "Wrapper/share accounting over deposited USDe; does not mint base USDe.",
         "sources": [
           {
@@ -35,11 +35,11 @@
             "url": "https://eth.blockscout.com/address/0x9d39a5de30e57443bff2a8307a4256c8797a3497?tab=contract"
           },
           {
-            "label": "Ethereum dRPC observation endpoint",
-            "url": "https://eth.drpc.org"
+            "label": "Ethereum Dwellir pinned observation endpoint",
+            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
           }
         ],
-        "evidence": "At Ethereum block 25711751, asset() returned USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3 and both EIP-1967 implementation and admin slots were zero, confirming a direct non-proxy deployment. owner() returned Ethena's 86,400-second timelock 0xe8dc0fab349ea169283c48ccfd09d797e6db7c94. Wrapper shares mint only against deposited USDe; no privileged path can create unbacked wrapper shares."
+        "evidence": "At Ethereum block 26095796, asset() returned USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3; the canonical EIP-1967 implementation, admin and beacon slots were zero. The verified deployed StakedUSDeV2 source has no upgrade entry point. owner() returned 0xe8dc0fab349ea169283c48ccfd09d797e6db7c94; its getMinDelay() returned 86400 seconds. The owner contract supports whitelisted-function delay bypass, so the minimum delay is not a universal delay guarantee. Ordinary shares mint against deposited USDe; restricted-holder redistribution burns existing shares before reissuing them, without creating unbacked shares."
       }
     ],
     "economicCapSemantics": "bounded",
@@ -49,8 +49,8 @@
       "model": "immutable",
       "canChangeMintLogic": false,
       "controlRef": "Ethereum sUSDe staking wrapper",
-      "observedAt": "2026-08-08",
-      "observedBlock": 25711751,
+      "observedAt": "2026-10-01",
+      "observedBlock": 26095796,
       "sources": [
         {
           "label": "Ethena staking docs",
@@ -65,8 +65,8 @@
           "url": "https://eth.blockscout.com/address/0x9d39a5de30e57443bff2a8307a4256c8797a3497?tab=contract"
         },
         {
-          "label": "Ethereum dRPC observation endpoint",
-          "url": "https://eth.drpc.org"
+          "label": "Ethereum Dwellir pinned observation endpoint",
+          "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
         }
       ]
     },
@@ -85,13 +85,13 @@
           "url": "https://eth.blockscout.com/address/0x9d39a5de30e57443bff2a8307a4256c8797a3497?tab=contract"
         },
         {
-          "label": "Ethereum dRPC observation endpoint",
-          "url": "https://eth.drpc.org"
+          "label": "Ethereum Dwellir pinned observation endpoint",
+          "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
         }
       ],
-      "evidence": "At Ethereum block 25711751, the sUSDe contract's asset() was USDe, both EIP-1967 implementation and admin slots were zero, and owner() returned Ethena's 86,400-second timelock. The direct non-proxy wrapper has no privileged unbacked-share mint: local shares are created only against deposited USDe, so local issuance is bounded while durable USDe authority remains inherited from usde-ethena. No local reserve reconciliation or named prudential supervisor applies to the wrapper.",
-      "reviewer": "OpenAI Codex C01 control review",
-      "reviewedAt": "2026-08-08",
+      "evidence": "Pinned Ethereum block 26095796 confirms USDe as asset(), zero canonical EIP-1967 implementation/admin/beacon slots and owner 0xe8dc0fab349ea169283c48ccfd09d797e6db7c94. Verified StakedUSDeV2 and StakedUSDe source corroborates direct non-proxy share accounting, deposits against USDe, and restricted-holder redistribution of existing shares. The owner's getMinDelay() is 86400 seconds, but its verified source includes whitelisted-function bypass. Native parent issuance remains inherited from usde-ethena; satellite bridge controls are separate.",
+      "reviewer": "Sol curation pass 2026-10-01 (CurA19sUSDe)",
+      "reviewedAt": "2026-10-01",
       "disposition": "scoreable"
     }
   }

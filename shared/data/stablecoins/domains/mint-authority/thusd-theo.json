@@ -22,8 +22,8 @@
       "canChangeMintLogic": true,
       "delaySec": 172800,
       "controlRef": "thUSD administration timelock",
-      "observedAt": "2026-09-30",
-      "observedBlock": 26088438,
+      "observedAt": "2026-10-01",
+      "observedBlock": 26095797,
       "sources": [
         {
           "label": "Blockscout thUSD ERC1967Proxy",
@@ -36,6 +36,10 @@
         {
           "label": "Theo roles and access control (thUSD owner is the timelock)",
           "url": "https://docs.theo.xyz/security-and-transparency/roles-and-access-control.md"
+        },
+        {
+          "label": "Ethereum pinned implementation, owner and timelock delay reads at block 26095797 (2026-10-01)",
+          "url": "https://etherscan.io/block/26095797"
         }
       ]
     },

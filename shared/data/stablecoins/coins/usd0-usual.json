@@ -25,8 +25,8 @@
     "governance": "centralized-dependent",
     "rwa": true
   },
-  "collateral": "Tokenized short-term U.S. Treasury bills and reverse repos, primarily via Hashnote USYC; also M by M0, USDtb by Ethena (via UsualUSDtb wrapper), and indirect USDC gateway liquidity",
-  "pegMechanism": "1:1 minting by depositing approved RWA tokens (e.g. USYC) directly, or depositing USDC via a gateway; redeemable 1:1 for underlying RWA assets via the DaoCollateral contract at any time; arbitrageurs enforce the peg",
+  "collateral": "Issuer documentation identifies USYC, M by M0 and Spiko USTBL as eligible direct RWA collateral and USDC as an indirect minting route; technical documentation also describes the UsualUSDtb wrapper. Eligibility and wrapper availability do not establish current holdings or allocation.",
+  "pegMechanism": "1:1 minting by depositing approved RWA tokens (e.g. USYC) directly, or depositing USDC via a gateway; direct redemption returns underlying RWA assets via DaoCollateral, with a documented 0.10% DAO Treasury redemption fee; arbitrageurs enforce the peg",
   "llamaId": "195",
   "detailProvider": "defillama",
   "geckoId": "usual-usd",
@@ -69,7 +69,7 @@
       "decimals": 18
     }
   ],
-  "custodyModel": "institutional-regulated",
+  "custodyModel": "mixed",
   "governanceQuality": "multisig",
   "liveReservesConfig": {
     "adapter": "evm-branch-balances",
@@ -88,6 +88,20 @@
       }
     },
     "params": {
+      "debtContract": "0x73a15fed60bf67631dc6cd7bc5b6e8da8190acf5",
+      "debtSelector": "0x18160ddd",
+      "debtDecimals": 18,
+      "census": {
+        "kind": "onchain-registry",
+        "contract": "0x43882c864a406d55411b8c166bca604709fdf624",
+        "selector": "0x43069d46",
+        "maxAssets": 32
+      },
+      "priceOracle": {
+        "contract": "0xb97e163ce6a8296f36112b042891cfe1e23c35bf",
+        "selector": "0x41976e09",
+        "decimals": 18
+      },
       "branches": [
         {
           "name": "Hashnote USYC",
@@ -111,8 +125,7 @@
           },
           "risk": "low",
           "coinId": "m-m0",
-          "depType": "collateral",
-          "priceUsd": 1
+          "depType": "collateral"
         },
         {
           "name": "USDtb by Ethena (via UsualUSDtb wrapper)",
@@ -124,8 +137,53 @@
           },
           "risk": "low",
           "coinId": "usdtb-ethena",
-          "depType": "collateral",
-          "priceUsd": 1
+          "depType": "collateral"
+        },
+        {
+          "name": "UsualUSDC",
+          "holder": "0xdd82875f0840AAD58a455A70B88eEd9F59ceC7c7",
+          "token": {
+            "chain": "ethereum",
+            "address": "0xb672b3976baa3952bfb2ece8eefb784f8dab1424",
+            "decimals": 6
+          },
+          "risk": "low",
+          "coinId": "usdc-circle",
+          "depType": "collateral"
+        },
+        {
+          "name": "Spiko USTBL",
+          "holder": "0xdd82875f0840AAD58a455A70B88eEd9F59ceC7c7",
+          "token": {
+            "chain": "ethereum",
+            "address": "0xe4880249745eac5f1ed9d8f7df844792d560e750",
+            "decimals": 5
+          },
+          "risk": "low",
+          "coinId": "ustbl-spiko",
+          "depType": "collateral"
+        },
+        {
+          "name": "EVK Vault eUSD0-4",
+          "holder": "0xdd82875f0840AAD58a455A70B88eEd9F59ceC7c7",
+          "token": {
+            "chain": "ethereum",
+            "address": "0xd001f0a15d272542687b2677ba627f48a4333b5d",
+            "decimals": 18
+          },
+          "risk": "high",
+          "unclassifiedSelfReferential": true
+        },
+        {
+          "name": "U0R",
+          "holder": "0xdd82875f0840AAD58a455A70B88eEd9F59ceC7c7",
+          "token": {
+            "chain": "ethereum",
+            "address": "0xfe7c47895edb12a990b311df33b90cfea1d44c24",
+            "decimals": 18
+          },
+          "risk": "high",
+          "unclassifiedSelfReferential": true
         }
       ]
     }

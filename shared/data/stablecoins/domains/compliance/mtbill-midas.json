@@ -8,8 +8,8 @@
         "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
       },
       {
-        "label": "Midas base prospectus: blockchain certificates are derivative financial instruments and issuer is not FMA-licensed",
-        "url": "https://www.mfsa.mt/wp-content/uploads/2024/11/Midas-Software-GmbH-Base-Prospectus-Document-dated-17-July-2024.pdf"
+        "label": "Midas 2026 base prospectus: derivative financial instruments and no issuer regulatory supervision",
+        "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FkVT2uAi2AipgeMIyZAJe%2FMidas%20Software%20GmbH%20Base%20Prospectus%202026.pdf?alt=media&token=d80ceabb-07a6-4dc4-9020-70ec86b4f42f"
       },
       {
         "label": "Liechtenstein FMA register of approved securities prospectuses",
@@ -20,7 +20,7 @@
   "genius": {
     "applicability": "excluded-security",
     "applicabilityBasis": {
-      "summary": "mTBILL is a Liechtenstein Derivative Debt Instrument (blockchain-based certificate) classified as a MiFID II financial instrument/security, issued by Midas Software GmbH under EU Prospectus Regulation with prospectus approved by the Liechtenstein FMA. The GENIUS Act's definition of 'payment stablecoin' explicitly excludes digital assets that are securities under federal securities laws; mTBILL's fluctuating NAV, yield-bearing structure, and classification as a debt security place it squarely outside the payment-stablecoin perimeter. mTBILL is also not offered to US persons."
+      "summary": "mTBILL is a non-interest-bearing, NAV-linked debt certificate issued by Midas Software GmbH under the European prospectus framework. Its July 17, 2026 final terms specify USDC subscription and settlement. GENIUS defines a payment stablecoin by payment or settlement use, a fixed monetary-value redemption obligation and a stable-value representation, and separately excludes securities under specified U.S. federal securities laws. This review retains the inherited excluded-security status without treating European securities classification as a U.S. federal securities determination."
     },
     "authorizationStatus": "not-applicable",
     "issuerPathway": "not-applicable",
@@ -30,10 +30,11 @@
     "foreignExceptionStatus": "not-applicable",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-applicable",
-    "reserveDisclosurePresent": false,
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://api-prod.midas.app/api/transparency?token=mTBILL",
     "redemptionPolicyPresent": false,
     "monthlyAttestationPresent": false,
-    "notes": "mTBILL is a tokenized debt instrument (Blockchain-based Certificate) classified as a MiFID II security under European law, with prospectus approved by the Liechtenstein FMA on 17 July 2024 (renewed July 2025). Issuer is Midas Software GmbH (Berlin, Germany); the FMA approved only the prospectus under EU Prospectus Regulation: the issuer is not licensed or registered with the FMA. mTBILL is not a payment stablecoin under the GENIUS Act: its value is NAV-accreting (fluctuating, not stable), it pays yield to holders, it is structured as a debt security, and it is explicitly not offered to US persons. The GENIUS Act's definition of 'payment stablecoin' excludes securities under federal securities laws, placing mTBILL entirely outside the Act's scope.",
+    "notes": "The July 17, 2026 base prospectus and mTBILL final terms continue the certificate series under a prospectus valid until July 17, 2027. The products are derivative financial instruments (debt instruments), issued as Swiss-law ledger-based securities; Midas Software GmbH is incorporated in Germany. FMA prospectus approval does not license or supervise the issuer or endorse the securities. The mTBILL final terms specify USDC settlement, redemption gates, and a holdback. The reserve API publishes issuer-reported USTB and BUIDL positions with a September 18, 2026 source timestamp; these are not independent assurance. The inherited excluded-security applicability status is unchanged; European securities classification alone is not a fresh U.S. legal determination.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -41,13 +42,13 @@
         "sourceKind": "federal-regulator"
       },
       {
-        "label": "Midas mTBILL docs",
-        "url": "https://docs.midas.app/tokens/mtbill",
+        "label": "Midas mTBILL current legal documentation",
+        "url": "https://docs.midas.app/resources/legal-product-documentation/mtbill",
         "sourceKind": "issuer-disclosure"
       },
       {
-        "label": "Readi.fi mTBILL analysis: MiFID II debt security, Liechtenstein FMA prospectus",
-        "url": "https://readi.fi/asset/structured-product-mtbill-midas-mtbill-by-midas/",
+        "label": "Midas mTBILL final terms dated July 17, 2026",
+        "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FUDquVH8yRhSxnVqxp0X4%2F20260714_mTBILL_FT_signed_final.pdf?alt=media&token=bf215cdc-f549-474d-8ca9-5a1810fabeb8",
         "sourceKind": "issuer-disclosure"
       },
       {

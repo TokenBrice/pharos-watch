@@ -9,7 +9,7 @@
       "coinId": "usdc-circle",
       "depType": "wrapper",
       "assetClass": "stablecoin",
-      "issuerOrObligor": "Circle Internet Financial, Inc.",
+      "issuerOrObligor": "Circle Internet Financial, LLC and Circle Internet Financial Europe SAS (USDC issuers)",
       "riskFactors": [
         "credit",
         "liquidity",
@@ -36,6 +36,10 @@
       {
         "label": "Morpho curation docs",
         "url": "https://docs.morpho.org/curate/"
+      },
+      {
+        "label": "USDC Reserve Report May 2026: legal issuer entities (fetched 2026-10-01)",
+        "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20May%2026.pdf"
       }
     ],
     "rationale": "The official Morpho vault page identifies USDC as the sole deposit asset and describes Gauntlet's allocation across curated lending markets. The reserve envelope is therefore one 100% USDC dependency; market allocation and available withdrawal liquidity remain dynamic.",
@@ -58,8 +62,8 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "owner-triage",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (R2WCircle), pinned allocation and exact deployed-source review",
     "confidence": "probable",
     "sources": [
       {
@@ -73,8 +77,16 @@
       {
         "label": "Morpho terms - noncustodial Vaults",
         "url": "https://morpho.org/terms-of-use"
+      },
+      {
+        "label": "Exact MetaMorpho deployment source and bundled dependencies",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdd0f28e19c1780eb6396170735d45153d261490d"
+      },
+      {
+        "label": "Gauntlet branded-vault disclaimer (December 2025)",
+        "url": "https://storage.googleapis.com/gauntlet-public-web-assets/gauntlet-branded-vault-disclaimer-dec-2025.pdf"
       }
     ],
-    "uncertainty": "MetaMorpho Vaults and Morpho markets are noncustodial smart contracts, not legal custodians. The reviewed materials do not establish legal segregation, bankruptcy remoteness, or rehypothecation treatment for deposited USDC."
+    "uncertainty": "At Ethereum block 26098754 on 2026-10-01, all eight withdrawal-queue markets were enumerated. Seven funded positions lend USDC against cbBTC, WBTC, wstETH or WETH at 86% LLTV; the idle market has zero supply shares. Every vault position has zero borrow shares and zero posted collateral. The exact immutable MetaMorpho source exposes supply and withdrawal operations, with no borrowing, collateral-supply or authorization-granting surface. Gauntlet's disclaimer states that its vaults are not custodial products and that Gauntlet is not a custodian. These observations establish on-chain custody, absence of local vault leverage and disclosed lending reuse at this block; they do not establish legal segregation or insolvency rights. Parent USDC reserve custody remains separate inherited exposure. The shared wrapper-allocation review, rather than these legal-custody enums, owns the structural on-chain assessment."
   }
 }

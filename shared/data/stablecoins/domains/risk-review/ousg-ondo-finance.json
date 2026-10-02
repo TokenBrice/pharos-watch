@@ -2,10 +2,19 @@
   "id": "ousg-ondo-finance",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: OUSG resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Ondo OUSG eligibility and permitted transfers",
+        "url": "https://docs.ondo.finance/qualified-access-products/ousg/overview"
+      },
+      {
+        "label": "OUSG Solana mint and freeze authority",
+        "url": "https://solscan.io/token/i7u4r16TcsJTgq1kAG8opmVZyVnAKBwLKu6ZPMwzxNc"
+      }
+    ],
+    "evidence": "Ondo permits OUSG transfers only between investors already onboarded to its Qualified Access Funds. At finalized Solana slot 452212765 on 2026-10-01, the OUSG mint's freezeAuthority was 6ViaRWzv7p56RfP1A9Hxy2ctu9kfE3XL43SxWuq3E4cE, confirming an addressed native freeze control. The reviewedStatus remains true.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA38OUSG)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

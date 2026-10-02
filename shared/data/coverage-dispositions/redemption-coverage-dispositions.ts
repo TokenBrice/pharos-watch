@@ -30,7 +30,7 @@ export interface ReviewedRedemptionCoverageDisposition {
 }
 
 const REVIEWER = "Pharos Safety research";
-const REVIEWED_DATE = "2026-07-12";
+const REVIEWED_DATE = "2026-10-01";
 
 function reviewed(
   row: Omit<ReviewedRedemptionCoverageDisposition, "reviewer" | "reviewedDate">,
@@ -53,15 +53,17 @@ function reviewedOn(
 /**
  * Source-reviewed decisions for every active stablecoin without a redemption
  * config. The coverage audit rejects missing, duplicate, unknown, configured,
- * or no-longer-active rows so this list cannot silently become stale.
+ * or no-longer-active rows so this list cannot silently become stale. The
+ * October 2026 review includes dated source-recovery outcomes; a failed fetch
+ * retains the earlier adverse assessment, never proves that a route is absent.
  */
 export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedemptionCoverageDisposition[] = [
-  reviewedOn("2026-08-12", {
+  reviewedOn("2026-10-01", {
     id: "bnusd-balanced",
     disposition: "defer",
     reasonCode: "route-status-unverified",
     blocker:
-      "The tracked asset is Balanced v1 bnUSD(old) on ICON, and the maintained documentation has narrowed to wind-down tasks — withdraw funds, move loans to v2, migrate assets, claim rewards, unstake sICX. No Stability Fund redemption page survives there, and the marketing page describes the Stability Fund as working 'behind the scenes with SODAX Intents', on token identities distinct from the tracked contract.",
+      "Balanced's current v1 documentation says the original app is no longer supported and must be withdrawn from or migrated before December 1, 2026. The migration guide distinguishes bnUSD(old), used by v1 loans and pools, from the new bnUSD; it does not establish a current stablecoin redemption for the tracked old token.",
     rationale:
       "A 1:1 Stability Fund swap into USDC or USDT is documented in the abstract, but nothing published shows a holder of the tracked v1 token calling it today: the only documented v1 action is migrating bnUSD(old) 1:1 into the new bnUSD, and that new identity is not this tracked asset. Crediting the fund's capacity here would attribute a route on one token to a different one.",
     evidenceNeeded:
@@ -94,7 +96,7 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     disposition: "hard-reject",
     reasonCode: "pegkeeper-only",
     blocker:
-      "Curve documents loan repayment and PegKeeper market operations, not broad crvUSD-holder redemption for collateral.",
+      "The earlier review identified borrower repayment and PegKeeper operations, not holder collateral redemption. Both cited resources URLs returned HTTP 404 on 2026-10-01; that source-recovery failure does not establish any new route or re-verify their historical contents.",
     rationale:
       "Borrower debt repayment and protocol-operated pool rebalancing do not give an unrelated holder a redemption claim.",
     evidenceNeeded:
@@ -126,7 +128,7 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     disposition: "hard-reject",
     reasonCode: "no-holder-route",
     blocker:
-      "Current Frax materials describe AMO and balance-sheet peg management without a broad FRAX holder redemption facility.",
+      "The maintained Frax documentation index describes frxUSD and other current products but does not establish a holder redemption facility for the separately tracked legacy FRAX token. The earlier AMO-only assessment is retained, not transferred to the frxUSD identity.",
     rationale: "Protocol treasury operations and secondary liquidity cannot be treated as a deterministic holder exit.",
     evidenceNeeded: "New official holder-facing redemption terms with callable mechanics, output, fees, and capacity.",
     evidenceUrls: ["https://docs.frax.finance/"],
@@ -149,7 +151,7 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     disposition: "needs-research",
     reasonCode: "route-status-unverified",
     blocker:
-      "ISC claims liquid exits, but the current dashboard reports zero reserves and supply and no executable holder route is documented.",
+      "The ISC website and dashboard could not be fetched on 2026-10-01. The reachable whitepaper describes reserve buying and selling in markets, not an identified holder-callable redemption; the prior dashboard's zero figures are historical and are not treated as current observations.",
     rationale:
       "Reserve-market buybacks described in the whitepaper are issuer operations, not enough to prove a currently usable holder redemption.",
     evidenceNeeded:
@@ -161,12 +163,12 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     ],
     allowedRouteFamilyIfProven: null,
   }),
-  reviewedOn("2026-08-12", {
+  reviewedOn("2026-10-01", {
     id: "iusd-initia",
     disposition: "needs-research",
     reasonCode: "documentation-insufficient",
     blocker:
-      "Initia's maintained documentation does not identify an iUSD-specific unwrap, redemption contract, output asset, or capacity; the bridge page re-read on 2026-08-12 does not mention iUSD at all.",
+      "Initia's bridge page re-read on 2026-10-01 describes generic Skip, LayerZero, CCTP, IBC, and DEX routing, but names no iUSD-specific burn, unwrap, output contract, fee, or capacity.",
     rationale:
       "The shape research suggests — burn iUSD, unlock AUSD0 locally, reverse the LayerZero route, then redeem through Agora — is assembled from generic bridge and issuer functionality, and no documented Move view or entry point exposes the vault's unlocked balance, the burn entrypoint, or a fee and settlement schedule.",
     evidenceNeeded:
@@ -177,25 +179,30 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
   reviewed({
     id: "lvusd-leverup",
     disposition: "defer",
-    reasonCode: "borrower-repay-only",
+    reasonCode: "route-status-unverified",
     blocker:
-      "LeverUp describes lvUSD borrowing and repayment but not an independent holder redemption against collateral.",
-    rationale: "Repayment burns a borrower's debt and does not give unrelated holders access to protocol collateral.",
-    evidenceNeeded: "Official holder redemption mechanics and live capacity, fee, and settlement support.",
+      "Current LeverUp docs do describe conditional LVUSD-to-USDC holder redemption, contrary to the earlier borrower-only classification: protocol-loss redemptions use the prevailing circulation exchange rate, and a secondary-market TWAP below 0.9 enables daily quota-based exits.",
+    rationale:
+      "A conditional, quota-limited, potentially below-par exit is not a continuously open 1:1 collateral claim. No live gateway state, quota, fee, or complete execution bound was established in this review.",
+    evidenceNeeded:
+      "Exact deployed LVUSD/USDC gateway, live activation condition, daily quota, exchange-rate calculation, fee, and current executable USDC inventory.",
     evidenceUrls: ["https://leverup.gitbook.io/docs/liquidity-layer/lvusd-stablecoin"],
-    allowedRouteFamilyIfProven: "collateral-redeem",
+    allowedRouteFamilyIfProven: "stablecoin-redeem",
   }),
-  reviewedOn("2026-08-12", {
+  reviewedOn("2026-10-01", {
     id: "mai-qidao",
     disposition: "defer",
-    reasonCode: "documentation-insufficient",
+    reasonCode: "capacity-unpublished",
     blocker:
-      "QiDao's Peg Stability Module, fee, and contract-address pages all return HTTP 404, so the three-day withdrawal queue can no longer be read from a live primary source.",
+      "QiDao's PSM documentation is reachable at /docs/peg-stability-module and explicitly describes permissionless MAI redemption after a three-day public withdrawal queue. It names USDC and DAI strategies but gives no numeric redemption fee or live executable PSM capacity.",
     rationale:
-      "Search engines still serve a cached copy of the old PSM page, but a cached snapshot is not evidence that the route is documented today, and even that text describes a redemption fee without a numeric bound.",
+      "Source recovery completes the documentation milestone, not route admission: neither CDP repayment fees nor deposited strategy assets establish the PSM payout fee or currently withdrawable inventory.",
     evidenceNeeded:
-      "A reachable official PSM page with the current queue duration and a numeric redemption fee, plus live PSM balances and contract verification for the active deployments.",
-    evidenceUrls: ["https://docs.mai.finance/"],
+      "Exact active PSM deployments and complete payout identities, current queue and fee parameters, pause state, and same-run executable withdrawal capacity.",
+    evidenceUrls: [
+      "https://docs.mai.finance/docs/peg-stability-module",
+      "https://docs.mai.finance/docs/fees",
+    ],
     allowedRouteFamilyIfProven: "queue-redeem",
   }),
   reviewed({
@@ -231,7 +238,7 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     disposition: "hard-reject",
     reasonCode: "route-status-unverified",
     blocker:
-      "Current Synapse documentation no longer provides an operational NUSD holder redemption route or maintained product terms.",
+      "The Synapse documentation endpoint could not be fetched on 2026-10-01. The current website documents bridging but no maintained NUSD holder redemption terms; the earlier unverified-route assessment remains, without treating a failed fetch as proof of nonexistence.",
     rationale: "Legacy token history and secondary bridge liquidity are insufficient to model a current backstop.",
     evidenceNeeded: "New maintained issuer or protocol documentation plus live callable route evidence.",
     evidenceUrls: ["https://docs.synapseprotocol.com/", "https://synapseprotocol.com/"],
@@ -242,7 +249,7 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     disposition: "defer",
     reasonCode: "borrower-repay-only",
     blocker:
-      "Nereus materials do not establish a broad NXUSD holder redemption route beyond borrower repayment and markets.",
+      "Nereus's current site describes perpetual trading and cross-chain deposits and withdrawals, but does not identify an NXUSD redemption gateway. The historical borrower-repayment path is not a verified current holder route.",
     rationale: "The lending position close path is not available to arbitrary token holders.",
     evidenceNeeded: "Official redemption docs or audited callable route for ordinary holders.",
     evidenceUrls: ["https://nereus.finance/"],
@@ -261,22 +268,23 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
   }),
   reviewed({
     id: "spusd-soulpeg",
-    disposition: "hard-reject",
-    reasonCode: "no-holder-route",
+    disposition: "defer",
+    reasonCode: "documentation-insufficient",
     blocker:
-      "SoulPeg documents wrapping into transferable spUSD but no verified reverse path from spUSD through sUSDC to USDC for ordinary holders.",
-    rationale: "One-way wrapping and secondary liquidity do not establish a stablecoin redemption backstop.",
+      "SoulPeg's current introduction promises 1:1 conversion between sUSDC and SPUSD, so reverse wrapping is not ruled out. It still does not establish a complete ordinary-holder SPUSD-to-USDC withdrawal with executable capacity, lock conditions, fees, and deployed contract identity.",
+    rationale:
+      "The documented wrapper conversion alone does not prove that a secondary SPUSD holder can unlock and withdraw Venus-backed USDC.",
     evidenceNeeded:
-      "New audited reverse conversion and USDC withdrawal documentation with current capacity and access.",
+      "Audited reverse-wrapper and USDC withdrawal contracts, secondary-holder access and lock conditions, fees, and same-run withdrawable capacity.",
     evidenceUrls: ["https://docs.soulpeg.io/"],
-    allowedRouteFamilyIfProven: null,
+    allowedRouteFamilyIfProven: "queue-redeem",
   }),
   reviewed({
     id: "stusd-stoneyield",
     disposition: "needs-research",
     reasonCode: "capacity-unpublished",
     blocker:
-      "StoneYield's public docs do not provide a complete current stUSD burn, withdrawal, cooldown, and capacity specification.",
+      "StoneYield's current contract-design page describes manually unlocked STUSD, owner-controlled strategy withdrawals, and an internal Venus ERC-4626 vault; it does not identify a complete public STUSD burn-to-USDC route or executable capacity.",
     rationale:
       "The USDC-linked wrapper may have a vault exit, but the accessible sources are insufficient to model it safely.",
     evidenceNeeded: "Deployed redeem function, USDC output, queue or cooldown, fees, live capacity, and route status.",
@@ -344,7 +352,7 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     disposition: "defer",
     reasonCode: "borrower-repay-only",
     blocker:
-      "Last/HypurrFi materials support CDP debt repayment but do not describe direct USDXL holder redemption at par.",
+      "Last's website could not be fetched on 2026-10-01; the reachable HypurrFi site describes lending, trading, and credit products but no USDXL-specific holder redemption. The earlier borrower-only assessment remains historical, not a fresh operational claim.",
     rationale: "Borrower debt settlement and protocol-owned market liquidity are not general redemption.",
     evidenceNeeded: "Official ordinary-holder redemption mechanics with capacity, output, fees, and route status.",
     evidenceUrls: ["https://www.last.net/", "https://hypurrfi.com/"],
@@ -384,12 +392,12 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     evidenceUrls: ["https://vcred.trade/"],
     allowedRouteFamilyIfProven: null,
   }),
-  reviewedOn("2026-08-12", {
+  reviewedOn("2026-10-01", {
     id: "zeusd-zoth",
     disposition: "hard-reject",
     reasonCode: "borrower-repay-only",
     blocker:
-      "Zoth documents repayment to reclaim a user's own RWA collateral, not broad ZeUSD-holder redemption for reserve assets. Re-verified 2026-08-12: the route is the ZeDP position NFT holder burning that position's own ZeUSD debt to withdraw the exact collateral originally deposited, and the shared V1 deposit/redemption router is recorded as paused.",
+      "The earlier 2026-08-12 source review found position-specific ZeDP repayment and a paused legacy V1 router, not secondary-holder redemption. The mechanics and ZeDP documentation endpoints returned HTTP 404 on 2026-10-01, so those historical facts are retained pending source recovery rather than asserted as newly observed state.",
     rationale:
       "CDP debt closure is position-specific and does not create a claim for secondary holders. V1 is additionally deprecated, so even the position route is not currently exercisable; the separate V2 contracts are a different deployment and cannot be substituted for the tracked asset.",
     evidenceNeeded:
@@ -402,11 +410,28 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     allowedRouteFamilyIfProven: null,
   }),
   reviewed({
+    id: "usdv-solomon-v2",
+    disposition: "defer",
+    reasonCode: "issuer-terms-missing",
+    blocker:
+      "Solomon's replacement USDv docs confirm approved counterparties can burn USDv for an approved payout asset, subject to onboarding, liquidity, operational controls, program terms, and processing windows. They do not enumerate the complete direct-redemption payout set or publish quantitative capacity, fees, or a settlement bound.",
+    rationale:
+      "The replacement Chancery mint is distinct from legacy USDv. USDC/USDG reserves and onchain market pairs do not by themselves identify guaranteed direct-redemption outputs, and open market swaps are not issuer redemption.",
+    evidenceNeeded:
+      "Current Chancery redemption instruction and approved payout registry, counterparty access, live limits and payout liquidity, numeric fees, and processing/settlement terms for the replacement mint.",
+    evidenceUrls: [
+      "https://docs.solomonlabs.org/usdv/acquiring-and-redeeming/",
+      "https://docs.solomonlabs.org/usdv/peg-stability-and-reserves",
+      "https://github.com/SolomonLabs/chancery/blob/main/config/networks/mainnet.ts",
+    ],
+    allowedRouteFamilyIfProven: "stablecoin-redeem",
+  }),
+  reviewed({
     id: "zkusd-goal3",
     disposition: "needs-research",
     reasonCode: "route-status-unverified",
     blocker:
-      "The former Goal3 portal and official product documentation are unavailable, so the claimed 1:1 USDC route cannot be verified as live.",
+      "The former Goal3 portal and product documentation were unavailable in the earlier review. The current explorer page identifies the token, but no holder gateway, active capacity, or maintained 1:1 USDC redemption terms were established on 2026-10-01.",
     rationale:
       "The token contract remains identifiable on-chain, but an ERC-20 contract alone does not prove a working redemption gateway.",
     evidenceNeeded:

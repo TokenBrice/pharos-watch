@@ -2,11 +2,11 @@
   "id": "sofid-sofi",
   "reserves": [
     {
-      "name": "USD cash and cash equivalents at SoFi Bank Federal Reserve master account",
+      "name": "USD cash at Federal Reserve and BitGo fiduciary bank account",
       "pct": 100,
       "risk": "very-low",
-      "assetClass": "bank-deposit",
-      "issuerOrObligor": "SoFi Bank, N.A. and the Federal Reserve master account",
+      "assetClass": "cash",
+      "issuerOrObligor": "Federal Reserve and unnamed commercial bank (BitGo fiduciary account)",
       "riskFactors": [
         "counterparty",
         "custody",
@@ -18,33 +18,30 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
-    "confidence": "probable",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (ValA36SOFID)",
+    "confidence": "verified",
     "sources": [
       {
         "label": "SoFiUSD official product page",
         "url": "https://www.sofi.com/crypto/sofiusd/"
       },
       {
-        "label": "SoFiUSD Deloitte filing",
+        "label": "SoFi Consumer Loan Program 2026-2 Trust ABS-15G filing (consumer-loan AUP; not a SoFiUSD reserve attestation)",
         "url": "https://www.sec.gov/Archives/edgar/data/0002012974/000114036126016624/ef20070215_abs15g.htm"
+      },
+      {
+        "label": "Deloitte SoFiUSD July 31, 2026 reserve examination",
+        "url": "https://d32ijn7u0aqfv4.cloudfront.net/wp/wp-content/uploads/raw/SoFiUSD-Stablecoin-Attestation-Report-7.31.2026.pdf"
       }
     ],
-    "rationale": "SoFi describes SOFID as a bank-issued payment stablecoin backed 1:1 by cash or cash equivalents and says reserves are expected to receive periodic independent third-party attestation. The reviewed materials do not publish current reserve balances, bank-account shares, or the cash-equivalent mix.",
-    "compositionBasis": "SoFiUSD product and reserve-attestation disclosures",
+    "rationale": "Schedule II directly reports Cash and Total of $309,934,457 as of July 31, 2026. Cash is held in SoFi Bank's Federal Reserve master account ($304,530,533) and a fiduciary account at an unnamed depository institution established by BitGo Trust Company, Inc. ($5,403,924); all reported reserves are cash, without a cash-equivalent basket. The ABS-15G link covers consumer loans and is not reserve evidence.",
+    "compositionBasis": "Deloitte-examined SoFiUSD Reserve Report Schedule II",
+    "compositionAsOf": "2026-07-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "The issuer identifies the SoFi Bank/Federal Reserve cash-reserve envelope but does not publish current balances, cash-equivalent composition, or custody shares.",
-    "knownUnknownExposurePct": 100,
-    "nonLinkDispositions": [
-      {
-        "reserveIndex": 0,
-        "reserveName": "USD cash and cash equivalents at SoFi Bank Federal Reserve master account",
-        "pct": 100,
-        "disposition": "insufficient-evidence",
-        "rationale": "The issuer describes the reserve framework but no current dated composition or completed attestation is available in the reviewed sources."
-      }
-    ]
+    "knownUnknownExposure": "The report identifies all reserves as USD cash and provides account-type balances. The commercial bank is unnamed, percentage custody shares are not authored, and SoFi insolvency treatment remains unverified.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": []
   },
   "custodyProfile": {
     "providers": [
@@ -52,20 +49,29 @@
         "name": "SoFi Bank, N.A. Federal Reserve master account",
         "role": "bank",
         "jurisdiction": "United States"
+      },
+      {
+        "name": "BitGo Trust Company, Inc.",
+        "role": "custodian",
+        "jurisdiction": "United States"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
-    "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
-    "confidence": "probable",
+    "rehypothecation": "prohibited",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (ValA36SOFID)",
+    "confidence": "verified",
     "sources": [
       {
         "label": "SoFiUSD official product page",
         "url": "https://www.sofi.com/crypto/sofiusd/"
+      },
+      {
+        "label": "Deloitte SoFiUSD July 31, 2026 reserve examination, Schedule II",
+        "url": "https://d32ijn7u0aqfv4.cloudfront.net/wp/wp-content/uploads/raw/SoFiUSD-Stablecoin-Attestation-Report-7.31.2026.pdf"
       }
     ],
-    "uncertainty": "SoFi identifies the bank and Federal Reserve master-account framework but does not disclose account segregation, bankruptcy treatment, rehypothecation, or any other custody provider shares."
+    "uncertainty": "Schedule II states that Federal Reserve cash is tracked separately within SoFi's master account and that BitGo fiduciary reserves are legally segregated from BitGo corporate assets. All reserves are unencumbered and may not be pledged, lent, rehypothecated, or used in SoFi operations. The commercial bank is unnamed; accounting separation at SoFi is not established as legally segregated or bankruptcy-remote from SoFi, so overall segregation and bankruptcy remoteness remain unknown. August 31 is the report signature date, not a verified publication date."
   }
 }

@@ -114,10 +114,10 @@
         "url": "https://files.buildwithfern.com/agora.docs.buildwithfern.com/938a11767a399cc2cfd2a15efc4cdfab65a53e59402e61c9e166b5354b5c9673/docs/assets/2026%20May%20-%20Agora%20Dollar%20Reserve%20Report.pdf"
       },
       {
-        "label": "Agora Bermuda Limited Terms of Use (as of 2026-05-27)",
+        "label": "Agora Bermuda Limited Terms of Use (current document dated 2026-09-01)",
         "url": "https://static.agora.finance/termsofuse.pdf"
       }
     ],
-    "uncertainty": "The May 2026 attestation and the Terms of Use dated 2026-05-27 document that reserve assets are held for the benefit of AUSD holders in a segregated account of Agora Bermuda Limited under the Bermuda Segregated Accounts Companies Act 2000, protected from the Company's general-account creditors, with 99% of the Agora Reserve Fund LP held through that account. The current primary documents do not name the fund custodian, administrator, investment manager, repo counterparties, bank identities, or stablecoin issuers, and they do not disclose rehypothecation terms or provider-level shares beyond the reported asset categories."
+    "uncertainty": "Provider shares above are historical May 2026 reserve-category shares, not current provider concentration estimates. The current September 1, 2026 Terms of Use still establish Agora Bermuda Limited's Bermuda segregated-account structure and protection from general-account creditors. The August reserve examination names USDC and PYUSD within a combined stablecoin category without individual balances. Agora's issuer blog names VanEck and State Street as reserve-management partners, but the examined report and legal terms do not assign provider-specific balances or fully describe their current custody and administration roles. Repo counterparties, bank identities and rehypothecation terms remain undisclosed. No current provider share is inferred."
   }
 }

@@ -4,7 +4,7 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "HONEY is minted only by the Berachain HoneyFactory against whitelisted collateral vaults. Both the HONEY token and HoneyFactory are UUPS proxies, and the same 3/5 Berachain Safe holds DEFAULT_ADMIN_ROLE for immediate upgrades and HoneyFactory parameter administration.",
+    "summary": "Bera USD (BUSD, formerly HONEY) is minted by the Berachain HoneyFactory against whitelisted collateral vaults. Both the token and HoneyFactory are UUPS proxies, and the same 3/5 Berachain Safe retains DEFAULT_ADMIN_ROLE for immediate upgrades and HoneyFactory parameter administration.",
     "upgradeability": {
       "model": "uups",
       "proxyAddresses": [
@@ -12,8 +12,8 @@
         "0xa4afef880f5ce1f63c9fb48f661e27f8b4216401"
       ],
       "implementationAddresses": [
-        "0x96b1a552a97da5503343d0f9ff2766c616e62905",
-        "0x6331f0a4e0220a14be27bd31af091f0a1ac036a1"
+        "0x33260b0b0a81dbb6d23509dcdc5f321cb585f22a",
+        "0xb587f98c81c37432067060196ac1ddaec106ed8d"
       ],
       "adminAddresses": [
         "0xd13948f99525fb271809f45c268d72a3c00a568d"
@@ -21,8 +21,8 @@
       "canChangeMintLogic": true,
       "delaySec": 0,
       "controlRef": "Berachain HoneyFactory admin (3/5 Safe)",
-      "observedAt": "2026-07-13",
-      "observedBlock": 23484618,
+      "observedAt": "2026-10-01",
+      "observedBlock": 26911429,
       "sources": [
         {
           "label": "Berachain HONEY documentation",
@@ -30,11 +30,11 @@
         },
         {
           "label": "HONEY implementation verified source",
-          "url": "https://api.routescan.io/v2/network/mainnet/evm/80094/etherscan/api?module=contract&action=getsourcecode&address=0x96b1a552a97da5503343d0f9ff2766c616e62905"
+          "url": "https://sourcify.dev/server/v2/contract/80094/0x33260b0b0a81dbb6d23509dcdc5f321cb585f22a?fields=abi,sources"
         },
         {
           "label": "HoneyFactory implementation verified source",
-          "url": "https://api.routescan.io/v2/network/mainnet/evm/80094/etherscan/api?module=contract&action=getsourcecode&address=0x6331f0a4e0220a14be27bd31af091f0a1ac036a1"
+          "url": "https://sourcify.dev/server/v2/contract/80094/0xb587f98c81c37432067060196ac1ddaec106ed8d?fields=abi,sources"
         },
         {
           "label": "Berachain PublicNode RPC",
@@ -53,17 +53,17 @@
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "HONEY mints only when whitelisted stablecoin collateral is deposited through the HoneyFactory into per-asset vaults; Basket Mode restricts mint/redeem when a collateral asset depegs.",
-        "observedAt": "2026-07-13",
-        "observedBlock": 23484618,
-        "evidence": "At Berachain block 23484618, HoneyFactory's implementation slot resolved to 0x6331f0a4e0220a14be27bd31af091f0a1ac036a1 while its proxy-admin and beacon slots were zero. Verified VaultAdmin source authorizes UUPS upgrades through DEFAULT_ADMIN_ROLE, which the reviewed Safe still held.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26911429,
+        "evidence": "At Berachain block 26911429, HoneyFactory's EIP-1967 implementation slot resolved to 0xb587f98c81c37432067060196ac1ddaec106ed8d and the correct EIP-1967 admin slot was zero. hasRole(DEFAULT_ADMIN_ROLE, 0xd13948f99525fb271809f45c268d72a3c00a568d) returned true. The prior implementation at block 23484618 was 0x6331f0a4e0220a14be27bd31af091f0a1ac036a1.",
         "sources": [
           {
             "label": "Berachain HONEY docs",
             "url": "https://docs.berachain.com/learn/pol/tokens/honey"
           },
           {
-            "label": "HoneyFactory verified source (Routescan)",
-            "url": "https://api.routescan.io/v2/network/mainnet/evm/80094/etherscan/api?module=contract&action=getsourcecode&address=0xA4aFef880F5cE1f63c9fb48F661E27F8B4216401"
+            "label": "Current HoneyFactory verified source (Sourcify)",
+            "url": "https://sourcify.dev/server/v2/contract/80094/0xb587f98c81c37432067060196ac1ddaec106ed8d?fields=abi,sources"
           }
         ]
       },
@@ -91,12 +91,13 @@
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
           "version": "1.3.0",
-          "observedBlock": 23484618,
+          "observedBlock": 26911429,
+          "observedAt": "2026-10-01",
           "source": "onchain"
         },
-        "observedAt": "2026-07-13",
-        "observedBlock": 23484618,
-        "evidence": "At Berachain block 23484618, getOwners() returned the same five owners, getThreshold() returned 3, getModulesPaginated() returned no modules, VERSION() returned 1.3.0, the guard slot was zero, and the fallback-handler slot remained 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4. hasRole(DEFAULT_ADMIN_ROLE, Safe) returned true on both the HONEY token and HoneyFactory.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26911429,
+        "evidence": "At Berachain block 26911429, the Safe retained the same five owners, threshold 3, no enabled modules, version 1.3.0, zero guard, and fallback handler 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4. hasRole(DEFAULT_ADMIN_ROLE, Safe) returned true on both the BUSD token and HoneyFactory. The historical block 23484618 observations remain consistent.",
         "sources": [
           {
             "label": "HoneyFactory on Berachain explorer",
@@ -109,17 +110,17 @@
     "reconciliation": "continuous",
     "supervision": "none",
     "review": {
-      "evidence": "At Berachain block 23484618, HONEY and HoneyFactory were UUPS proxies with implementations 0x96b1a552... and 0x6331f0a4..., zero proxy-admin and beacon slots, and implementations returning the standard proxiable UUID. Verified HONEY source permits mint/burn only from factory() 0xa4afef88... and authorizes upgrades through DEFAULT_ADMIN_ROLE. The same unchanged 3/5 Safe held that role on both proxies with no enabled modules or guard. Economic-posture fields reviewed 2026-08-15: the undelayed admin Safe can replace mint logic, and the single-chain factory vault feed continuously covers the collateral-gated mint path without named prudential supervision.",
-      "reviewer": "Codex Safety Score V9 registry pass; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "At Berachain block 26911429, BUSD and HoneyFactory implementation slots returned 0x33260b0b0a81dbb6d23509dcdc5f321cb585f22a and 0xb587f98c81c37432067060196ac1ddaec106ed8d; correct EIP-1967 admin slots were zero. The unchanged 3/5 Safe retained DEFAULT_ADMIN_ROLE on both proxies, without enabled modules or guard. Current verified implementation sources retain factory-gated issuance and admin-authorized upgrades. The prior implementations at block 23484618 were 0x96b1a552a97da5503343d0f9ff2766c616e62905 and 0x6331f0a4e0220a14be27bd31af091f0a1ac036a1.",
+      "reviewer": "Sol curation pass 2026-10-01 (CurB02ACRDX)",
+      "reviewedAt": "2026-10-01",
       "sources": [
         {
           "label": "Berachain HONEY docs",
           "url": "https://docs.berachain.com/learn/pol/tokens/honey"
         },
         {
-          "label": "HoneyFactory verified source (Routescan)",
-          "url": "https://api.routescan.io/v2/network/mainnet/evm/80094/etherscan/api?module=contract&action=getsourcecode&address=0xA4aFef880F5cE1f63c9fb48F661E27F8B4216401"
+          "label": "Current HoneyFactory verified source (Sourcify)",
+          "url": "https://sourcify.dev/server/v2/contract/80094/0xb587f98c81c37432067060196ac1ddaec106ed8d?fields=abi,sources"
         }
       ]
     }

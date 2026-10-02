@@ -20,13 +20,13 @@
         "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x4989d2b05833820092401455cb689460b861e7f34b761f58b07a4910bd847f83/resources"
       },
       {
-        "label": "Movement USDCx admin multisig resources (4-of-6) re-read 2026-08-09",
-        "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1/resources"
+        "label": "Movement USDCx admin multisig resources (3-of-6) re-read 2026-10-01",
+        "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1/resources?ledger_version=220370475"
       }
     ],
-    "evidence": "Re-verified 2026-08-09 at Movement ledger_version 192151559 (block_height 83362507); the 2026-07-14 inherited verdict stands with a stronger token-local record. The deployed usdcx module exposes no holder-selective freeze, blacklist, denylist, or seizure entry point, and its paused asserts gate only mint and burn_internal, so the module never sits on holder-to-holder fungible-asset transfers; a TransferRef is generated and stored in usdcx::Management but no function uses it. The local surface is not immutable: the circle_remote package (module usdcx) carries upgrade_policy 1 (compatible) at upgrade_number 0 and its ObjectCore owner is Movement-native multisig 0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1, re-read as 0x1::multisig_account::MultisigAccount with 4 required signatures over 6 owners and no timelock, so holder controls could be added by upgrade. The dominant, named exposure is still upstream: USDCx is issued 1:1 against USDC locked in Circle's xReserve, the sole reserve slice is usdc-circle at 100%, and usdc-circle's own review is reviewedStatus true (Circle holder blacklist). The honest end-state therefore remains inherited over usdc-circle rather than a token-local possible verdict, which would drop the named upstream failure domain without adding any live control.",
-    "reviewer": "Kimi ACCESS-FREEZE AF03; verified and adjusted by Claude FV-B access/freeze verification",
-    "reviewedAt": "2026-08-09"
+    "evidence": "At Movement ledger version 220370475 (block height 97379184), the token's Roles.admin and its actual package 0x4989d2b05833820092401455cb689460b861e7f34b761f58b07a4910bd847f83 ObjectCore.owner resolve to 0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1. That account now requires 3 signatures over 6 owners, replacing the historical 4-of-6 observation. PackageRegistry records compatible upgrade policy 1, upgrade_number 0, published source, and source_digest 780F94E9BB25259CB190418FB9D76BE1CBC8E0DB4353BD8E671A3456CF4E864B. The deployed ABI exposes no holder-selective freeze or seizure entry point; the published source stores TransferRef without using it and gates mint/burn on pause. Source publication alone is not bytecode equivalence proof. The 100% USDC collateral retains the named upstream Circle blacklist exposure, so the inherited verdict is preserved; compatible upgrades remain an adverse local control.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurM07yvUSDC1.MovementReview)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
@@ -279,10 +279,10 @@
         "routeChecks": {
           "attestorQuorum": "At Movement ledger version 195984896, get_attesters() returned the current two keys: 0x2d4b0769063a340abaae3647366096e8b2a8b249f8bb2686d8418860592b2bb8dd6f3114c56b682f15135b60a84abf59c315ec54c49a0bb93d7d092a21bcf466 and 0x6a4854078428eea517e8013827cba9f90583f8a9fdf8610c8791d1b04feb6a3eee428bf506c98ead1e870918f26a1d41f5bfb792b1e4f331679d1ad3e527326f.",
           "signingModel": "The Movement usdcx::mint entry requires an xReserve message and signature; this key is one of the current attesters and is not a permissionless public minter.",
-          "caps": "The fungible asset maximum is the uint256 maximum rather than a useful economic cap; current supply was 1,720,946.355996 USDCx at the observed ledger."
+          "caps": "At Movement ledger version 220370475, ConcurrentSupply.current.max_value was 340282366920938463463374607431768211455 (uint128 maximum), not a useful economic cap; current supply was 752,546.308411 USDCx."
         },
-        "observedAt": "2026-08-16",
-        "observedBlock": 85264354,
+        "observedAt": "2026-10-01",
+        "observedBlock": 97379184,
         "sources": [
           {
             "label": "Current Movement USDCx resources",
@@ -294,14 +294,14 @@
           },
           {
             "label": "Current Movement USDCx module ABI and bytecode",
-            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x4989d2c1a648a6fcf8cf3b74a954e9ab6b6d6bd6b4c6cbcd3cacf7d5e847f83/module/usdcx?ledger_version=195984896"
+            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x4989d2b05833820092401455cb689460b861e7f34b761f58b07a4910bd847f83/module/usdcx?ledger_version=220370475"
           }
         ],
         "evidence": "At Movement ledger version 195984896 and block height 85264354, the current get_attesters() view returned two active xReserve attester keys, including this key and the second key recorded in failureDomainKeys. The usdcx::mint entry requires a signed message, so this is a bridge validator and remote-mint/remote-burn control rather than independent native issuance. The older observation's key remains active in the current two-key set; the current two-key read replaces the stale one-attester interpretation."
       },
       {
         "id": "movement-usdcx-admin-attester-package-owner",
-        "label": "Movement USDCx 4-of-6 admin, attester, and package-owner multisig",
+        "label": "Movement USDCx 3-of-6 admin, attester, and package-owner multisig",
         "routeRefs": [
           "movement:0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e"
         ],
@@ -318,42 +318,42 @@
         "controllerAddress": "0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1",
         "failureDomainKeys": [
           "movement:0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1",
-          "package:movement:0x4989d2c1a648a6fcf8cf3b74a954e9ab6b6d6bd6b4c6cbcd3cacf7d5e847f83",
+          "package:movement:0x4989d2b05833820092401455cb689460b861e7f34b761f58b07a4910bd847f83",
           "protocol:circle-xreserve"
         ],
         "authorityType": "multisig",
-        "threshold": 4,
+        "threshold": 3,
         "signerCount": 6,
         "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "not-applicable",
         "canRaiseCap": true,
-        "capDescription": "The Movement fungible asset maximum is the uint256 maximum rather than a useful economic cap. The admin can replace attesters, change route policy, pause bridge mint/burn, or upgrade compatible function bodies without an observed delay; xReserve attestations and collateral reconciliation remain the practical route boundary.",
+        "capDescription": "ConcurrentSupply.current.max_value is the uint128 maximum rather than a useful economic cap. The admin can replace attesters, change route policy, pause bridge mint/burn, or upgrade compatible function bodies without an observed delay; xReserve attestations and collateral reconciliation remain the practical route boundary.",
         "bypassSurfaces": [
-          "The 4-of-6 account is both usdcx::Roles.admin and ObjectCore.owner of the compatible-policy package.",
-          "The current package module response has source_digest null; exact source-level mint implementation verification is incomplete."
+          "The 3-of-6 account is both usdcx::Roles.admin and ObjectCore.owner of the compatible-policy package.",
+          "PackageRegistry publishes source and a source_digest; bytecode-to-source equivalence was not independently established."
         ],
         "routeChecks": {
-          "signingModel": "At Movement ledger version 195984896, account 0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1 was a native 0x1::multisig_account::MultisigAccount with threshold 4 and six ordinary account owners.",
+          "signingModel": "At Movement ledger version 220370475, account 0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1 was a native 0x1::multisig_account::MultisigAccount with threshold 3 and six ordinary account owners.",
           "attestorQuorum": "get_attesters() returned two current attester keys; the same view returned eight pausers and is_paused() = false.",
           "trustedPeerOrRemote": "get_domain() returned 10005, the Circle xReserve remote domain for Movement; the current usdcx ABI exposes domain and signed mint/burn state.",
           "rateLimits": "get_min_burn_size() returned 5,000,000 base units (5 USDCx). This is a minimum burn size, not a native collateral cap or proof of aggregate supply conservation.",
-          "caps": "The fungible asset maximum is the uint256 maximum; current supply was 1,720,946.355996 USDCx at ledger version 195984896.",
-          "pausersAdminsUpgraders": "The multisig was the current usdcx::Roles.admin and package ObjectCore.owner. Package policy 1 permits compatible upgrades that preserve public layout while changing function bodies; no timelock or enforced delay was observed, and the current module response reports source_digest null."
+          "caps": "ConcurrentSupply.current.max_value is the uint128 maximum; current supply was 752,546.308411 USDCx at ledger version 220370475.",
+          "pausersAdminsUpgraders": "The multisig is the current usdcx::Roles.admin and actual package ObjectCore.owner. Package policy 1 permits compatible upgrades; no additional timelock was established. PackageRegistry reports upgrade_number 0 and source_digest 780F94E9BB25259CB190418FB9D76BE1CBC8E0DB4353BD8E671A3456CF4E864B, with published source."
         },
-        "observedAt": "2026-08-16",
-        "observedBlock": 85264354,
+        "observedAt": "2026-10-01",
+        "observedBlock": 97379184,
         "sources": [
           {
             "label": "Current Movement USDCx admin multisig resources",
-            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1/resources?ledger_version=195984896"
+            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1/resources?ledger_version=220370475"
           },
           {
             "label": "Current Movement USDCx package resources",
-            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x4989d2c1a648a6fcf8cf3b74a954e9ab6b6d6bd6b4c6cbcd3cacf7d5e847f83/resources?ledger_version=195984896"
+            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x4989d2b05833820092401455cb689460b861e7f34b761f58b07a4910bd847f83/resources?ledger_version=220370475"
           },
           {
             "label": "Current Movement USDCx module ABI and bytecode",
-            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x4989d2c1a648a6fcf8cf3b74a954e9ab6b6d6bd6b4c6cbcd3cacf7d5e847f83/module/usdcx?ledger_version=195984896"
+            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x4989d2b05833820092401455cb689460b861e7f34b761f58b07a4910bd847f83/module/usdcx?ledger_version=220370475"
           },
           {
             "label": "Movement Move package documentation",
@@ -364,7 +364,7 @@
             "url": "https://legacy.aptos.dev/move/move-on-aptos/modules-on-aptos/"
           }
         ],
-        "evidence": "At Movement ledger version 195984896 and block height 85264354, account 0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1 was the current 4-of-6 admin multisig and the ObjectCore.owner of package 0x4989d2c1a648a6fcf8cf3b74a954e9ab6b6d6bd6b4c6cbcd3cacf7d5e847f83. Its owners were 0xe409dcf645fed5437e8d824853846c997bbc603864062a3ef58da467e705a09f, 0x49ca66964d9932cac56acd3fe4a06fc614dfc3dfa2469cdb172d2e9ae0b8157a, 0x90d5fff22134646ac25f7f39db6d77cb3472bbced136c0dbe43ab4579bd4492e, 0x8f74be8a4e703502f222c17eecd74737b4eb9f84915ff723f6d5adafd12d843, 0xc9153e132398b925c78aac2edafd5c0f4b701b3e58244a5163434cb7596b6321, and 0x53d163b14e497aabd0fa8e2f40cb783e3fd364fe2620c430dfd08144f06e4cc9. The same current view reported two attesters, eight pausers, domain 10005, minimum burn size 5,000,000 base units, and is_paused() = false. Package policy 1 supports compatible upgrades with no observed delay; source_digest is null."
+        "evidence": "At Movement ledger version 220370475 and block height 97379184, account 0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1 requires 3-of-6 signatures and controls Roles.admin and ObjectCore.owner of actual package 0x4989d2b05833820092401455cb689460b861e7f34b761f58b07a4910bd847f83. Its owners are 0xe409dcf645fed5437e8d824853846c997bbc603864062a3ef58da467e705a09f, 0x49ca66964d9932cac56acd3fe4a06fc614dfc3dfa2469cdb172d2e9ae0b8157a, 0x174e145e4551ba3ea573aaa26e29b2ba5e25691d3fabd87eb5c46ca068ce8ffd, 0xb11304cd9e2c2c292a67f88f138630c84d3742d2ce1654b69da295558cc8fe7a, 0xc9153e132398b925c78aac2edafd5c0f4b701b3e58244a5163434cb7596b6321, and 0x318b667284cd9e0e8aa04f0df96f5a3fdf52a4ccbb57df60b9d82e4b55dcae28. Token resources show two attesters, eight pausers, domain 10005, minimum burn size 5,000,000 base units, and paused false. PackageRegistry has policy 1, upgrade_number 0, published source, and source_digest 780F94E9BB25259CB190418FB9D76BE1CBC8E0DB4353BD8E671A3456CF4E864B. The previously cited package address returns no resources and module_not_found; its source_digest-null claim was not evidence about this token's package. Historical 4-of-6 findings are superseded by this current 3-of-6 observation."
       }
     ]
   }

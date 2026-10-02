@@ -1,22 +1,5 @@
 {
   "id": "susds-sky",
-  "mica": {
-    "status": "out-of-scope",
-    "references": [
-      {
-        "label": "ESMA MiCA Q&A: crypto-assets with no identifiable issuer",
-        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
-      },
-      {
-        "label": "Sky sUSDS protocol documentation",
-        "url": "https://developers.skyeco.com/protocol/tokens/susds/"
-      },
-      {
-        "label": "Sky sUSDS product explanation",
-        "url": "https://sky.money/blog/what-is-susds"
-      }
-    ]
-  },
   "genius": {
     "applicability": "non-payment-token",
     "applicabilityBasis": {

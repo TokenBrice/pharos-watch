@@ -200,6 +200,20 @@ const ARCHETYPE_CASES = [
 ] as const satisfies ReadonlyArray<MechanismDiagramCase>;
 
 describe("mechanismDiagramFor", () => {
+  it.each([
+    ["ucits-trs-fund", "EURSAFO", /proportional.*fund interest/i, /counterparty/i],
+    ["shared-reserve", "AUDm", /several currency liabilities/i, /shared liability deficit/i],
+    ["protocol-position", "USDB", /local custody.*liability conservation/i, /withdrawal failure/i],
+  ] as const)("renders the %s claim and stress path on desktop and mobile", (archetype, symbol, claim, stress) => {
+    const diagram = renderDiagram(archetype, symbol);
+    for (const svg of [diagram.desktopSvg, diagram.mobileSvg]) {
+      expect(svg.getAttribute("aria-label")).toContain(symbol);
+      expect(svg.querySelector("desc")?.textContent).toMatch(claim);
+      expect(svg.querySelector("desc")?.textContent).not.toMatch(/custodies the funds in cash|short-duration T-Bills and repurchase agreements/);
+    }
+    expect(diagram.container.textContent).toMatch(stress);
+    cleanup();
+  });
   it.each(ARCHETYPE_CASES)("states the $archetype mechanism in both variants", (testCase: MechanismDiagramCase) => {
     const diagram = renderDiagram(testCase.archetype, testCase.symbol);
     const desktopNodes = textNodes(diagram.desktopSvg);

@@ -1,6 +1,9 @@
+import { z } from "zod";
 import {
   V9FactSetCoreV2Schema,
-  V9FactSetCoreV3Schema,
+  V9AssetFactsV3Schema,
+  createV9FactSetCoreV3Schema,
+  type V9AssetFactsV3,
   type CompiledV9FactSetV2,
   type CompiledV9FactSetV3,
   type V9FactSetCoreV2,
@@ -10,6 +13,22 @@ import { computeValidatedV9FactSetDigest } from "./facts";
 import { deepFreeze } from "./primitives";
 
 const validatedCompiledFactSets = new WeakSet<object>();
+const validatedAssetFacts = new WeakSet<object>();
+const inProcessFactSetSchema = createV9FactSetCoreV3Schema(z.union([
+  z.custom<V9AssetFactsV3>((value) =>
+    value !== null && typeof value === "object" && validatedAssetFacts.has(value)),
+  V9AssetFactsV3Schema,
+]));
+
+/** Admit once, then retain only immutable identity proof, never an extra fact graph. */
+export function safeParseV9AssetFactsV3(input: unknown) {
+  const parsed = V9AssetFactsV3Schema.safeParse(input);
+  if (parsed.success) {
+    deepFreeze(parsed.data);
+    validatedAssetFacts.add(parsed.data);
+  }
+  return parsed;
+}
 
 function sealValidatedFactSet<T extends CompiledV9FactSetV2 | CompiledV9FactSetV3>(
   factSet: T,
@@ -39,7 +58,7 @@ export function compileV9FactSetV2(input: unknown): Readonly<CompiledV9FactSetV2
 
 /** Compile the responsibility-bearing V3 fact contract. */
 export function compileV9FactSetV3(input: unknown): Readonly<CompiledV9FactSetV3> {
-  const core: V9FactSetCoreV3 = V9FactSetCoreV3Schema.parse(input);
+  const core: V9FactSetCoreV3 = inProcessFactSetSchema.parse(input);
   const compiled: CompiledV9FactSetV3 = {
     ...core,
     v9FactSetDigest: computeValidatedV9FactSetDigest(core),

@@ -1,6 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { resolveDexDeploymentCensusMaxAgeSec } from "../../cron/dex-liquidity/deployment-census-coverage";
+
+const scrvusdMeta = ACTIVE_META_BY_ID.get("scrvusd-curve")!;
+// The rotating-sweep window grows with the reviewed deployment footprint, so the
+// stale case sits one second past the window the production loader derives.
+const scrvusdCensusMaxAgeSec = resolveDexDeploymentCensusMaxAgeSec([
+  ...(scrvusdMeta.contracts ?? []),
+  ...(scrvusdMeta.tradedContracts ?? []),
+]);
 
 const mocks = vi.hoisted(() => ({
   getCache: vi.fn(),
@@ -90,7 +100,9 @@ describe("report-card V9 publication input health", () => {
 
   it.each([
     { id: "scrvusd-curve", ageSec: 20 * 60 * 60, observedSupplyRatio: 1, unknownChains: [] },
-    { id: "scrvusd-curve", ageSec: 48 * 60 * 60 + 1, observedSupplyRatio: 0, unknownChains: ["ethereum"] },
+    // r2/data/results/scrvusd-curve.json adds six satellites: the rotating census sweep stays fresh past 48h.
+    { id: "scrvusd-curve", ageSec: 48 * 60 * 60 + 1, observedSupplyRatio: 1, unknownChains: [] },
+    { id: "scrvusd-curve", ageSec: scrvusdCensusMaxAgeSec + 1, observedSupplyRatio: 0, unknownChains: ["ethereum"] },
     { id: "usdc-circle", ageSec: 72 * 60 * 60, observedSupplyRatio: 1, unknownChains: [] },
   ])("ages deployment census independently of quotes ($id, $ageSec seconds)", async ({
     id, ageSec, observedSupplyRatio, unknownChains,

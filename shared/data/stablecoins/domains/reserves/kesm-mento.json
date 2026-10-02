@@ -268,27 +268,47 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "Mento Reserve smart contract (Celo)",
+        "name": "Mento Reserve Safe (Celo/Monad), 0x87647780180b8f55980c7d3ffefe08a9b29e9ae1",
+        "role": "other"
+      },
+      {
+        "name": "Mento Reserve Safe (Ethereum), 0xd0697f70e79476195b742d5afab14be50f98cc1e",
+        "role": "other"
+      },
+      {
+        "name": "Mento Ops Safe, 0xd3d2e5c5af667da817b2d752d86c8f40c22137e1",
+        "role": "other"
+      },
+      {
+        "name": "Mento V2 Liquidity Reserve (Celo), 0x9380fa34fd9e4fd14c06305fd7b6199089ed4eb9",
+        "role": "other"
+      },
+      {
+        "name": "Mento V3 Liquidity Reserve (Monad), 0x4255cf38e51516766180b33122029a88cb853806",
         "role": "other"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-5 (lead ylds-figure)",
-    "confidence": "probable",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB11pmUSD)",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Mento Reserve dashboard",
         "url": "https://reserve.mento.org/"
       },
       {
+        "label": "Mento issuer reserve API: asset-level wallet, lending, and liquidity positions observed 2026-10-01; no legal custody safeguards inferred",
+        "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+      },
+      {
         "label": "Mento protocol documentation",
         "url": "https://docs.mento.org/"
       }
     ],
-    "uncertainty": "Reserve assets are held in the on-chain Mento Reserve contract under Mento governance rather than with a legal custodian, so legal segregation, insolvency treatment, and reuse restrictions are not established by the reviewed sources; constituent-level custody (e.g. Circle, Tether, Lido) sits with each issuer.",
+    "uncertainty": "The issuer reserve API distributes collateral among Reserve Safes on Celo/Monad and Ethereum, an Ops Safe, V2/V3 Liquidity Reserves, rebalancer/ops accounts, and lending or liquidity positions. The listed providers are observed wallet/contract labels, not a complete legal-custodian census. Legal segregation, insolvency treatment, and reuse restrictions remain unknown; constituent issuer custody and bridge escrow are separate exposures. No provider allocation or safeguard is inferred from hot/cold/ops labels.",
     "knownUnknownExposurePct": 100
   }
 }

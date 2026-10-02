@@ -43,7 +43,7 @@ export function BlacklistTrackerMethodologySection() {
               <p>
                 Blacklistability uses the report-card four-status model: Yes, Upstream, Possible, and No. The sourced
                 `blacklistabilityReview.reviewedStatus` is the sole status authority; the generated client status is a
-                direct projection, while Safety Score V9 consumes the review as evidence rather than a fallback verdict.
+                direct projection, while Safety Score V10 consumes the review as evidence rather than a fallback verdict.
                 Upstream applies when a token has no direct Yes or Possible holder-facing freeze control and strictly
                 more than half of its reserves are exposed to Yes, Upstream, or Possible upstream assets or rails.
                 Possible is reserved for curated direct token or vault controls that are not confirmed direct blacklist

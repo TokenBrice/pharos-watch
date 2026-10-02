@@ -4,15 +4,19 @@
  * The extension builder was one 2,500-line module; the reserve, bridge, and
  * oracle adapters now live in sibling files. This holds what all of them need:
  * the registry-meta projection, the extension-asset aliases, the reviewed-
- * research evidence builder, and the small clock/status helpers. Pure move —
- * every function here is byte-identical to its previous definition in
- * `safety-score-v9-extension.ts`.
+ * research evidence builder, and the small clock/status helpers. Reviewed
+ * evidence uses Worker-native incremental SHA-256 over the shared canonical
+ * JSON byte stream.
  */
+import { createHash } from "node:crypto";
+import { stableJsonStringifyChunksV1 } from "@shared/lib/stable-json";
 import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import type { V9PublishedEvidenceAttribution } from "@shared/lib/safety-score-v9/evidence";
-import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
+import { compareText } from "@shared/lib/safety-score-v9/primitives";
+import { normalizeDeploymentId } from "@shared/types/deployment-id";
+import type { V9WeightedQuorum } from "@shared/types/safety-score-v9-control-scope";
 import type { MintAuthorityControl, StablecoinLink, StablecoinMeta } from "@shared/types/core";
 import type { V9FactStatusV2 } from "@shared/types/safety-score-v9-facts";
 import type { SafetyScoreV9FactSetExtensionV2 } from "./fact-set-schema";
@@ -24,8 +28,10 @@ export type V9ExtensionRegistryMeta = Pick<
   | "variantOf"
   | "variantKind"
   | "wrapperOperator"
+  | "parentBackingInheritance"
   | "archetypeOverride"
   | "mechanismArchetype"
+  | "mechanismArchetypeReview"
   | "implementationLaunchDate"
   | "launchDate"
   | "reserves"
@@ -42,7 +48,7 @@ export type V9ExtensionRegistryMeta = Pick<
   | "blacklistabilityReview"
   | "contracts"
 > &
-  Partial<Pick<StablecoinMeta, "flags">>;
+  Partial<Pick<StablecoinMeta, "flags" | "custodyModel">>;
 export type ExtensionAsset = SafetyScoreV9FactSetExtensionV2["assets"][number];
 export type ResearchEvidence = ExtensionAsset["researchEvidence"][number];
 export type ComponentEvidence = ExtensionAsset["componentEvidence"][number];
@@ -51,7 +57,7 @@ export type ControlOverlay = NonNullable<
 >["controls"][number];
 export type ReserveClassification = ExtensionAsset["reserveClassifications"][number];
 
-export function authorityModelForType(
+function authorityModelForType(
   authorityType: MintAuthorityControl["authorityType"],
 ): NonNullable<ControlOverlay["authority"]>["model"] {
   if (authorityType === "safe" || authorityType === "multisig") return "multisig";
@@ -61,6 +67,30 @@ export function authorityModelForType(
   if (authorityType === "validator-quorum") return "validator-quorum";
   if (authorityType === "contract" || authorityType === "timelock" || authorityType === "bridge") return "contract";
   return authorityType === "none" ? "none" : "unknown";
+}
+
+export function projectControlAuthority(args: {
+  authorityType: MintAuthorityControl["authorityType"];
+  chain?: string;
+  address?: string;
+  fallbackKey: string | null;
+  threshold?: number;
+  signerCount?: number;
+  weightedQuorum?: V9WeightedQuorum;
+  executionScope?: MintAuthorityControl["executionScope"];
+}): ControlOverlay["authority"] {
+  const authorityKey = args.address
+    ? args.executionScope || args.weightedQuorum
+      ? normalizeDeploymentId(`${args.chain ?? "chain-unresolved"}:${args.address}`)
+      : `${args.chain ?? "chain-unresolved"}:${args.address.toLowerCase()}`
+    : args.fallbackKey;
+  if (!authorityKey) return null;
+  const model = authorityModelForType(args.authorityType);
+  return {
+    authorityKey, model,
+    threshold: !args.weightedQuorum && model === "multisig" && args.threshold != null && args.signerCount != null ? { required: args.threshold, total: args.signerCount } : null,
+    ...(args.weightedQuorum ? { weightedQuorum: args.weightedQuorum } : {}),
+  };
 }
 
 export const DEPLOYMENT_MATERIAL_SHARE_THRESHOLD =
@@ -75,7 +105,7 @@ export function parseBoundedDateSec(
   label: string,
   errorKind: "review-date" | "date" = "review-date",
 ): number {
-  const timestampMs = Date.parse(`${value}T00:00:00.000Z`);
+  const timestampMs = Date.parse(value.includes("T") ? value : `${value}T00:00:00.000Z`);
   const review = errorKind === "review-date";
   if (!Number.isFinite(timestampMs)) {
     throw new Error(`Safety Score v9 ${label} has an invalid ${review ? "review date" : "date"}`);
@@ -107,7 +137,9 @@ export class ReviewEvidenceBuilder {
   add(args: {
     componentKeys: readonly string[];
     sourceId: string;
-    reviewedAt: string;
+    reviewedAt?: string;
+    reviewedAtSec?: number;
+    observedAtSec?: number;
     observedAt?: string;
     publishedAt?: string;
     publishedBy?: V9PublishedEvidenceAttribution;
@@ -116,12 +148,21 @@ export class ReviewEvidenceBuilder {
     payload: unknown;
     maxAgeSec?: number | null;
   }): string[] {
-    parseBoundedDateSec(args.reviewedAt, this.clockSec, `${this.assetId}:${args.sourceId}:reviewed`);
-    const observedAtSec = parseBoundedDateSec(
-      args.observedAt ?? args.reviewedAt,
-      this.clockSec,
-      `${this.assetId}:${args.sourceId}:observed`,
-    );
+    if ((args.reviewedAt == null) === (args.reviewedAtSec == null)) {
+      throw new Error("Review evidence requires exactly one reviewed date or timestamp");
+    }
+    const reviewSec = args.reviewedAtSec ?? parseBoundedDateSec(args.reviewedAt!, this.clockSec, `${this.assetId}:${args.sourceId}:reviewed`);
+    const observedAtSec = args.observedAtSec ?? (args.reviewedAtSec != null
+      ? args.reviewedAtSec
+      : parseBoundedDateSec(args.observedAt ?? args.reviewedAt!, this.clockSec, `${this.assetId}:${args.sourceId}:observed`));
+    if (args.reviewedAtSec != null || args.observedAtSec != null) {
+      for (const timestamp of [reviewSec, observedAtSec]) {
+        if (!Number.isSafeInteger(timestamp) || timestamp < 0 || timestamp > this.clockSec) {
+          throw new Error("Review evidence timestamp is invalid or later than the scoring clock");
+        }
+      }
+      if (observedAtSec > reviewSec) throw new Error("Evidence observation cannot postdate review");
+    }
     const publishedAtSec = args.publishedAt
       ? parseBoundedDateSec(args.publishedAt, this.clockSec, `${this.assetId}:${args.sourceId}:published`)
       : null;
@@ -131,17 +172,22 @@ export class ReviewEvidenceBuilder {
         )
       : [null];
     const evidenceKeys = sources.map((source, index) => {
-      const contentSha256 = domainDigest("safety-score-v9.reviewed-metadata-evidence.v2", {
-        assetId: this.assetId,
-        sourceId: args.sourceId,
-        reviewedAt: args.reviewedAt,
-        observedAt: args.observedAt ?? args.reviewedAt,
-        publishedAt: args.publishedAt ?? null,
-        publishedBy: args.publishedBy ?? "unknown",
-        confidence: args.confidence ?? "manual-review",
-        source,
-        payload: args.payload,
-      });
+      const hash = createHash("sha256");
+      for (const chunk of stableJsonStringifyChunksV1({
+        domain: "safety-score-v9.reviewed-metadata-evidence.v2",
+        payload: {
+          assetId: this.assetId,
+          sourceId: args.sourceId,
+          reviewedAt: args.reviewedAtSec ?? args.reviewedAt,
+          observedAt: args.observedAtSec ?? args.observedAt ?? args.reviewedAtSec ?? args.reviewedAt,
+          publishedAt: args.publishedAt ?? null,
+          publishedBy: args.publishedBy ?? "unknown",
+          confidence: args.confidence ?? "manual-review",
+          source,
+          payload: args.payload,
+        },
+      })) hash.update(chunk);
+      const contentSha256 = hash.digest("hex");
       const evidenceKey = `${args.sourceId}:${index}:${contentSha256.slice(0, 16)}`;
       this.evidence.set(evidenceKey, {
         evidenceKey,

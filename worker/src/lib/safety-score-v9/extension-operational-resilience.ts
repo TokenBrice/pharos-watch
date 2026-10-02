@@ -4,8 +4,10 @@ import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import {
   SafetyScoreV9OperationalResilienceOverlaySchema,
   SafetyScoreV9OperationalResilienceOverlayFileSchema,
+  SafetyScoreV9OperationalResilienceOverlayEnvelopeSchema,
   type SafetyScoreV9OperationalResilienceOverlay,
 } from "@shared/types/safety-score-v9-operational-resilience-overlays";
+import { createReviewedAssetRegistry } from "./extension-reviewed-registry";
 
 export {
   SafetyScoreV9OperationalResilienceOverlaySchema,
@@ -13,7 +15,7 @@ export {
 };
 export type { SafetyScoreV9OperationalResilienceOverlay };
 
-const OPERATIONAL_RESILIENCE_OVERLAY_FILE = SafetyScoreV9OperationalResilienceOverlayFileSchema.parse(
+const OPERATIONAL_RESILIENCE_OVERLAY_FILE = SafetyScoreV9OperationalResilienceOverlayEnvelopeSchema.parse(
   operationalResilienceOverlaysAsset,
 );
 
@@ -24,10 +26,11 @@ export const SAFETY_SCORE_V9_OPERATIONAL_RESILIENCE_OVERLAYS_DIGEST = sha256Hex(
   }),
 );
 
-const SAFETY_SCORE_V9_OPERATIONAL_RESILIENCE_OVERLAYS: ReadonlyMap<
-  string,
-  SafetyScoreV9OperationalResilienceOverlay
-> = new Map(OPERATIONAL_RESILIENCE_OVERLAY_FILE.overlays.map((overlay) => [overlay.assetId, overlay]));
+const SAFETY_SCORE_V9_OPERATIONAL_RESILIENCE_OVERLAYS = createReviewedAssetRegistry({
+  rows: OPERATIONAL_RESILIENCE_OVERLAY_FILE.overlays,
+  schema: SafetyScoreV9OperationalResilienceOverlaySchema,
+  path: "operationalResilience.overlays",
+});
 
 export function getSafetyScoreV9OperationalResilienceOverlay(
   assetId: string,

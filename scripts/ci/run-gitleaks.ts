@@ -254,6 +254,19 @@ export function runGitleaksConfigSelfTest(
     const tronUsdt = ["TR7NHqjeKQxGTCi8q8", "ZY4pL8otSzgjLj6t"].join("");
     const tronUsdtHex = ["a614f803b6fd780986a42", "c78ec9c7f77e6ded13c"].join("");
     const legacyUsdvPool = ["DmXXwEcK2c7fuVoW6TBzF5", "UDByhuQBHZS1qHnwprvHFH"].join("");
+    const spikoAuthority = ["GhRFGntEPkDi3ass8HYPqd", "qWMZQ4F4hs8a3QfNtT622h"].join("");
+    const midasProspectusUuid = ["d80ceabb-07a6-4dc4", "-9020-70ec86b4f42f"].join("");
+    const apyxAttestationUuid = ["0386fd1d-2316-4320", "-b799-96ec6c4e827e"].join("");
+    const matrixdockUuids = [
+      ["3cad87ae-7846-4bfe", "-ba2e-411fbf166f60"].join(""),
+      ["cad709b6-47f1-427d", "-ad14-443fa5cd76e1"].join(""),
+      ["d5a97752-ca3b-46d3", "-9077-16ac2bc11ee8"].join(""),
+    ];
+    const gldtLeg = ["gldt-reverse", "swap-to-specific-gld-nft"].join("-");
+    const uniXautPair = [
+      "UNI0x1f9840a85d5af5bf1d1762f925bdaddc4201f984",
+      "XAUT0x68749665ff8d2d112fa859aa293f07a622782f38",
+    ].join("/");
     const publicControls = [
       {
         path: "worker/scripts/repair-tron-blacklist-amounts.ts",
@@ -274,6 +287,35 @@ export function runGitleaksConfigSelfTest(
       {
         path: "shared/data/stablecoins/coins/xaum-matrixdock.json",
         value: { url: `https://2505056629-files.gitbook.io/a.pdf?alt=media&token=${gitbookUuid}` },
+      },
+      ...["safo-spiko-usd", "ustbl-spiko", "eursafo-spiko"].map((id) => ({
+        path: `shared/data/stablecoins/domains/mint-authority/${id}.json`,
+        value: { key: `solana:key:${spikoAuthority}` },
+      })),
+      ...[
+        "shared/data/stablecoins/coins/mhyper-midas.json",
+        "shared/data/stablecoins/domains/compliance/mtbill-midas.json",
+        "shared/lib/redemption-backstop-configs/offchain-issuer/non-usd-and-tokenized.ts",
+        ".github/workflows/artifacts/safety-score-missing-data-reviewed-ledger.json",
+      ].map((path) => ({
+        path,
+        value: { url: `https://3475141875-files.gitbook.io/a.pdf?alt=media&token=${midasProspectusUuid}` },
+      })),
+      {
+        path: "shared/data/stablecoins/domains/reserves/apyusd-apyx.json",
+        value: { url: `https://1731598137-files.gitbook.io/a.pdf?alt=media&token=${apyxAttestationUuid}` },
+      },
+      ...matrixdockUuids.map((uuid) => ({
+        path: "shared/lib/redemption-backstop-configs/offchain-issuer/commodity.ts",
+        value: { url: `https://2505056629-files.gitbook.io/a.pdf?alt=media&token=${uuid}` },
+      })),
+      {
+        path: "shared/lib/redemption-backstop-configs/offchain-issuer/commodity.ts",
+        value: { leg: gldtLeg },
+      },
+      {
+        path: ".github/workflows/artifacts/safety-score-missing-data-reviewed-ledger.json",
+        value: { evidence: `token0/token1 -> ${uniXautPair}; getReserves0x0902f1ac` },
       },
     ];
     const awsKey = ["AKIA", "Q7M2V3N4P6R2S3T5"].join("");

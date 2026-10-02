@@ -1,4 +1,5 @@
-import { CHAIN_META, getActiveChainIds } from "@shared/lib/chains";
+import { getActiveChainIds } from "@shared/lib/chains";
+import { CHAIN_META } from "@shared/types/chain-identity";
 import { BACKING_LABELS_SHORT, GOVERNANCE_LABELS_SHORT, PEG_LABELS_SHORT } from "@shared/lib/classification";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types";

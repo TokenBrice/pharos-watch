@@ -36,7 +36,7 @@
       {
         "source": "explorer",
         "name": "Hyperlane",
-        "url": "https://docs.hyperlane.xyz/docs/reference/contract-addresses",
+        "url": "https://raw.githubusercontent.com/hyperlane-xyz/hyperlane-registry/main/chains/soneium/addresses.yaml",
         "bridgeTypes": [
           "external-validated-network"
         ],
@@ -142,7 +142,7 @@
           "contract:soneium:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
           "contract:soneium:0xfcc1d596ad6cab0b5394eaa447d8626813180f32",
           "contract:soneium:0x3a464f746d23ab22155710f44db16dca53e0775e",
-          "contract:soneium:0x85b4fedc2183ecf8cbb6c608eb8a9fa3df74ce51"
+          "contract:soneium:0x5f7d51ef1a99820dc37174aa276d86ff37c730f2"
         ],
         "observedAt": "2026-08-16",
         "observedBlock": 26895895,
@@ -375,8 +375,8 @@
             "url": "https://soneium.blockscout.com/address/0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a"
           },
           {
-            "label": "Startale USDSC extension source",
-            "url": "https://github.com/StartaleGroup/usdsc-extension"
+            "label": "Verified Soneium USDSC implementation source",
+            "url": "https://soneium.blockscout.com/api/v2/smart-contracts/0x38e4713a896efcf253430efd6292515dc13489a1"
           }
         ],
         "evidence": "At Soneium block 26895895, the USDSC proxy resolved to implementation 0x38e4713a896efcf253430efd6292515dc13489a1, bound to the same M token and SwapFacility constructor addresses. Its M balance exceeded USDSC supply by 36.282551 M. This local wrapper is retained as bridge-route machinery because Soneium M is a Portal-minted representation of canonical M."
@@ -711,27 +711,27 @@
         "controllerAddress": "0x6af23eb68a6223a4af9f056e10d93ef4d960da05",
         "failureDomainKeys": [
           "protocol:hyperlane-mailbox",
-          "eoa:soneium:0x6af23eb68a6223a4af9f056e10d93ef4d960da05",
+          "contract:soneium:0x6af23eb68a6223a4af9f056e10d93ef4d960da05",
           "contract:soneium:0x3a464f746d23ab22155710f44db16dca53e0775e"
         ],
-        "authorityType": "eoa",
-        "modulesOrGuardsStatus": "not-applicable",
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "unknown",
         "routeChecks": {
-          "signingModel": "Soneium Mailbox default ISM is 0x85b4fedc2183ecf8cbb6c608eb8a9fa3df74ce51; the Mailbox owner controls the default ISM and hook selection."
+          "signingModel": "At Soneium block 28851456, the Mailbox default ISM is 0x5f7d51ef1a99820dc37174aa276d86ff37c730f2. The Mailbox owner is an OwnableMulticall minimal proxy, not the previously described code-free EOA; its owner() returns interchainAccountRouter 0xc08c1451979e9958458da3387e92c9feb1571f9c. The upstream interchain account authorization path remains unresolved."
         },
-        "observedAt": "2026-08-16",
-        "observedBlock": 26895812,
+        "observedAt": "2026-10-01",
+        "observedBlock": 28851456,
         "sources": [
           {
             "label": "Soneium Hyperlane Mailbox",
             "url": "https://soneium.blockscout.com/address/0x3a464f746d23ab22155710f44db16dca53e0775e"
           },
           {
-            "label": "Hyperlane contract addresses",
-            "url": "https://docs.hyperlane.xyz/docs/reference/contract-addresses"
+            "label": "Hyperlane canonical Soneium deployment registry",
+            "url": "https://raw.githubusercontent.com/hyperlane-xyz/hyperlane-registry/main/chains/soneium/addresses.yaml"
           }
         ],
-        "evidence": "At Soneium block 26895812, Mailbox 0x3a464f746d23ab22155710f44db16dca53e0775e reported local domain 1868, default ISM 0x85b4fedc2183ecf8cbb6c608eb8a9fa3df74ce51, default hook 0x2f0e57527bb37e5e064ef243fad56cce6241906c, required hook 0x5ddfca27f9a308c1429a010c4dab291b5534a297, and owner 0x6af23eb68a6223a4af9f056e10d93ef4d960da05."
+        "evidence": "Historical block 26895812 selected default ISM 0x85b4fedc2183ecf8cbb6c608eb8a9fa3df74ce51. At Soneium block 28851456, Mailbox localDomain() remains 1868, defaultHook() remains 0x2f0e57527bb37e5e064ef243fad56cce6241906c, and requiredHook() remains 0x5ddfca27f9a308c1429a010c4dab291b5534a297. defaultIsm() now returns 0x5f7d51ef1a99820dc37174aa276d86ff37c730f2. The unchanged owner address 0x6af23eb68a6223a4af9f056e10d93ef4d960da05 has minimal-proxy bytecode targeting OwnableMulticall 0x26ce7b75123fae74ed274a91b40fa43f0d2a4209; its owner() returns 0xc08c1451979e9958458da3387e92c9feb1571f9c. No upstream authorization, signer threshold, or delay is inferred."
       },
       {
         "id": "soneium-hyperlane-default-ism",
@@ -743,10 +743,10 @@
           "validator"
         ],
         "controllerChain": "soneium",
-        "controllerAddress": "0x85b4fedc2183ecf8cbb6c608eb8a9fa3df74ce51",
+        "controllerAddress": "0x5f7d51ef1a99820dc37174aa276d86ff37c730f2",
         "failureDomainKeys": [
           "protocol:hyperlane-mailbox",
-          "contract:soneium:0x85b4fedc2183ecf8cbb6c608eb8a9fa3df74ce51"
+          "contract:soneium:0x5f7d51ef1a99820dc37174aa276d86ff37c730f2"
         ],
         "authorityType": "contract",
         "capDescription": "The Mailbox-selected default ISM validates inbound Hyperlane messages for the Soneium route, but its verified validator roster, threshold, and upgrade/admin relationship were not enumerated.",
@@ -754,8 +754,8 @@
         "routeChecks": {
           "signingModel": "Default ISM selection was read on Soneium Mailbox, but the explorer did not provide verified source/ABI metadata for the ISM; validator threshold and current administrator remain unresolved."
         },
-        "observedAt": "2026-08-16",
-        "observedBlock": 26895812,
+        "observedAt": "2026-10-01",
+        "observedBlock": 28851456,
         "sources": [
           {
             "label": "Soneium Hyperlane Mailbox",
@@ -763,10 +763,10 @@
           },
           {
             "label": "Soneium default ISM address",
-            "url": "https://soneium.blockscout.com/address/0x85b4fedc2183ecf8cbb6c608eb8a9fa3df74ce51"
+            "url": "https://soneium.blockscout.com/address/0x5f7d51ef1a99820dc37174aa276d86ff37c730f2"
           }
         ],
-        "evidence": "At Soneium block 26895812, the Mailbox selected default ISM 0x85b4fedc2183ecf8cbb6c608eb8a9fa3df74ce51. The address is live, but no verified source/ABI metadata was available to enumerate its validator roster, threshold, or upgrade/admin relationship. This unresolved validator failure domain is retained while the route remains classified external-validated-network."
+        "evidence": "Historical block 26895812 selected default ISM 0x85b4fedc2183ecf8cbb6c608eb8a9fa3df74ce51. At Soneium block 28851456, defaultIsm() instead returns 0x5f7d51ef1a99820dc37174aa276d86ff37c730f2, matching Hyperlane's canonical Soneium registry. The current explorer API provides no verified source/ABI metadata for the new ISM; validator roster, threshold, and upgrade/admin relationship remain unresolved. The route remains classified external-validated-network."
       }
     ]
   }

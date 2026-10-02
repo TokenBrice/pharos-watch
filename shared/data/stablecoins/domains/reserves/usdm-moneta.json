@@ -36,13 +36,17 @@
       {
         "label": "NBX USDM reserve and co-issuer disclosure",
         "url": "https://nbx.com/en/usdm"
+      },
+      {
+        "label": "NBX modified USDM whitepaper notified 2026-09-24 (separate issuer books and redemption attribution)",
+        "url": "https://cdn.prod.website-files.com/6152dfaed2ce58d94ef37b88/6ab4e90ceb46558d48fc093a_USDM%20White%20Paper%20-%20Modified%20version%202026-09-24.pdf"
       }
     ],
-    "rationale": "Moneta's current transparency display reports an 80% money-market-fund allocation and 20% USD bank deposits. Its reserve policy identifies institutional money-market funds and short-duration Treasury exposure, while NBX identifies the named managers and banking counterparties used across the separately maintained issuer pools.",
-    "compositionBasis": "Moneta current USDM reserve-composition publication",
+    "rationale": "The 2026-07-14 review recorded a Moneta 80% money-market-fund and 20% USD bank-deposit disclosure. It did not establish a combined-token portfolio across both issuers. The NBX whitepaper notified 2026-09-24 expressly establishes separate, non-cross-backed reserve books and issuer-attributed redemption obligations. Historical composition and review dates are retained without presenting the older allocation as a current whole-asset measurement.",
+    "compositionBasis": "Historical Moneta-only allocation disclosure; no current matched combined-token portfolio across the separate issuer books",
     "compositionAsOf": "2026-07-14",
     "scope": "full-composition",
-    "knownUnknownExposure": "The issuer does not publish position-level fund holdings, bank balances, or the split between the separately maintained Moneta and NBX reserve pools.",
+    "knownUnknownExposure": "The 2026-09-24 NBX whitepaper expressly separates Moneta and NBX reserve books and liabilities with no pooled or cross-backed reserve. The historical Moneta 80/20 allocation is not a current combined-token composition; current issuer-attributed reserve values, provider allocations and a matched whole-asset liability denominator remain unestablished.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
@@ -102,8 +106,12 @@
       {
         "label": "NBX USDM terms",
         "url": "https://nbx.com/en/usdm-terms"
+      },
+      {
+        "label": "NBX modified USDM whitepaper notified 2026-09-24 (issuer-specific safeguarding and continuity)",
+        "url": "https://cdn.prod.website-files.com/6152dfaed2ce58d94ef37b88/6ab4e90ceb46558d48fc093a_USDM%20White%20Paper%20-%20Modified%20version%202026-09-24.pdf"
       }
     ],
-    "uncertainty": "The sources establish separate reserve pools, segregated accounts, and no rehypothecation for Moneta's reserve, but do not publish provider shares or establish statutory bankruptcy remoteness for every pool."
+    "uncertainty": "The earlier sources establish separate reserve pools, segregated accounts and no rehypothecation for Moneta's reserve. The NBX whitepaper notified 2026-09-24 additionally describes NBX-specific creditor protection, recovery/redemption plans and continuing NBX-funded redemption if Moneta mint/burn cooperation fails. Those protections do not extend to Moneta-attributable issuance: its NBX redemption requires settled Moneta funds, and unresolved issuer attribution can delay processing. Current provider shares and matched issuer-book liabilities remain unestablished; no whole-token statutory bankruptcy-remoteness or composition refresh is inferred."
   }
 }

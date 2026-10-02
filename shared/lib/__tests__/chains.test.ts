@@ -1,14 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  CG_CHAIN_MAP,
-  CHAIN_META,
-  GT_CHAIN_MAP,
-  getActiveChainIds,
-  getChainResilienceTier,
-  normalizeChainId,
-  resolveChainId,
-} from "@shared/lib/chains";
+import { CG_CHAIN_MAP, GT_CHAIN_MAP, getActiveChainIds, getChainResilienceTier } from "@shared/lib/chains";
+import { CHAIN_META, normalizeChainId, resolveChainId } from "../../types/chain-identity";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 
 describe("CHAIN_META", () => {

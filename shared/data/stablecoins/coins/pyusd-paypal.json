@@ -22,17 +22,23 @@
     "attestorJurisdiction": "United States",
     "attestorLicense": "PCAOB-registered",
     "latestReport": {
-      "periodEnd": "2026-07-31",
-      "publishedAt": "2026-08-25",
+      "periodEnd": "2026-08-31",
+      "publishedAt": "2026-09-24",
+      "publishedAtBasis": "signed-date-standin",
+      "reviewReference": {
+        "date": "2026-09-24",
+        "reviewedAt": "2026-10-01",
+        "dateKind": "unspecified"
+      },
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "Pharos safety-score curation 2026-09-23",
+      "reviewer": "Sol curation pass 2026-10-01 (RuleC14); August report and composition refreshed together under D01; examination date is not a verified publication date",
       "confidence": "verified",
       "sources": [
         {
-          "label": "KPMG PYUSD Redemption Assets Report - July 2026 (examination dated August 25, 2026)",
-          "url": "https://framerusercontent.com/assets/AzDCU1EG16dVKso3JV6W7I5Bk.pdf"
+          "label": "KPMG PYUSD Redemption Assets Report - August 2026 (examination dated September 24, 2026)",
+          "url": "https://framerusercontent.com/assets/VdMoM8qevL5j7tgTTmLhkemRdY.pdf"
         }
       ]
     }
@@ -48,7 +54,7 @@
     },
     {
       "label": "Docs",
-      "url": "https://developer.paypal.com/dev-center/pyusd/"
+      "url": "https://docs.paxos.com/guides/stablecoin/pyusd/mainnet"
     }
   ],
   "jurisdiction": {

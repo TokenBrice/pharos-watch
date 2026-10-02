@@ -1,3 +1,4 @@
+import type { V9ReserveBoundedFact } from "../../types/reserve-bounded-facts";
 import type {
   V9AssetFactsBase,
   V9EvidenceResponsibility,
@@ -16,7 +17,7 @@ import type {
 } from "../../types/safety-score-v9";
 import type { MechanismArchetype } from "../../types/stablecoin-taxonomy";
 export type { V9MechanismFactV1 } from "../../types/safety-score-v9-backing";
-import type { V9MechanismFactV1 } from "../../types/safety-score-v9-backing";
+import type { V9MechanismFactV1, V9MechanismMetricApplicability } from "../../types/safety-score-v9-backing";
 import { assertV9ValidatedPolicyEnvelope } from "./policy";
 import { projectGapReasons, type V9GapIndex } from "./gap-index";
 
@@ -72,12 +73,14 @@ export interface V9InheritedStablecoinBacking {
    */
   readonly tier: "pure" | "wrapped";
   readonly failureDomains: readonly V9FailureDomainRef[];
+  readonly collateralizationApplications?: readonly V9CollateralizationApplication[];
 }
 
 export interface V9BackingAssetInput {
   readonly assetId: string;
   readonly reserveStatus: V9AssetFactsBase["reserveStatus"];
   readonly reserveExposures: readonly V9ReserveExposureFactV2[];
+  readonly reserveBoundFacts?: readonly V9ReserveBoundedFact[];
   readonly gaps: readonly (V9FactGapV2 | V9FactGapV3)[];
   readonly gapIndex?: V9GapIndex;
   readonly resolvedUpstreamExposures: readonly V9ResolvedUpstreamExposure[];
@@ -90,6 +93,8 @@ export interface V9BackingAssetInput {
   readonly inheritedStablecoinBacking?: V9InheritedStablecoinBacking;
   /** Conservative measured months since launch; absent → no seasoning credit. */
   readonly trackRecordMonths?: number;
+  /** Evaluation clock; absent means a dated collateralization fact cannot be admitted. */
+  readonly asOfSec?: number;
 }
 
 export interface V9CdpLiquidationCapacitySelection {
@@ -111,6 +116,7 @@ export interface V9BackingStructuralReason {
   readonly severity: V9Severity;
   readonly responsibility: V9EvidenceResponsibility;
   readonly pathKey: string;
+  readonly metricApplicability?: V9MechanismMetricApplicability["state"];
   readonly materialShare: number | null;
   readonly ceiling: number;
   readonly evidenceRefIds: readonly string[];
@@ -153,6 +159,16 @@ export interface V9BackingUnresolvedReason {
   readonly causalKey?: string;
 }
 
+export interface V9CollateralizationApplication {
+  readonly measurementId: string;
+  readonly measuredAt: string;
+  readonly ratio: number;
+  readonly evidenceRefIds: readonly string[];
+  readonly appliedByAssetId: string;
+  /** Immediate parent whose score already includes this application. */
+  readonly inheritedFromAssetId: string | null;
+}
+
 export interface V9BackingResult {
   readonly assetId: string;
   readonly archetype: string;
@@ -166,6 +182,7 @@ export interface V9BackingResult {
   readonly unresolved: readonly V9BackingUnresolvedReason[];
   readonly evidenceRefIds: readonly string[];
   readonly failureDomains: readonly V9FailureDomainRef[];
+  readonly collateralizationApplications?: readonly V9CollateralizationApplication[];
   readonly traceDigest: string;
 }
 

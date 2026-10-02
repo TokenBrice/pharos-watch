@@ -13,7 +13,7 @@ Use owner documents for semantics; this skill coordinates queues, comparisons, a
 ## Read first
 
 - `shared/data/safety-score-v9/AGENTS.md`
-- [V9 Model](../../../docs/report-cards.md#v9-model) and [Canonical Publication](../../../docs/report-cards.md#canonical-publication)
+- [V10 Model](../../../docs/report-cards.md#v10-model) and [Canonical Publication](../../../docs/report-cards.md#canonical-publication)
 - Expiry sweep: [capture](../../../docs/process/safety-score-curation-expiry-sweep.md#1-capture-the-current-production-input), [missing-data registry](../../../docs/process/safety-score-curation-expiry-sweep.md#4a-generate-and-drain-the-typed-missing-data-registry), and [weekly close](../../../docs/process/safety-score-curation-expiry-sweep.md#6-close-the-weekly-sweep)
 - Equivalence harness: [when](../../../docs/process/safety-score-equivalence-harness.md#when-to-use-it), [capture](../../../docs/process/safety-score-equivalence-harness.md#a-export-a-production-capture), [replay](../../../docs/process/safety-score-equivalence-harness.md#b-replay-a-capture-at-a-given-commit), [diff](../../../docs/process/safety-score-equivalence-harness.md#c-diff-a-baseline-replay-against-a-candidate-replay), and [post-deploy](../../../docs/process/safety-score-equivalence-harness.md#e-post-deploy-first-cycle-check)
 - [Mechanism evidence](../../../docs/process/mechanism-overlay-evidence-standard.md#evidence-classes) and [requirements](../../../docs/process/mechanism-overlay-evidence-standard.md#process-requirements); [DDRR commands](../../../docs/process/ddrr-calibration.md#commands) and [guardrails](../../../docs/process/ddrr-calibration.md#guardrails)

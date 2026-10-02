@@ -18,6 +18,8 @@
         ],
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 78938455,
         "sources": [
           {
             "label": "Pinned Mento deployment registry",
@@ -42,6 +44,8 @@
         ],
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 78938455,
         "sources": [
           {
             "label": "Pinned Mento deployment registry",
@@ -89,6 +93,8 @@
           "observedBlock": 72082708,
           "source": "safe-api"
         },
+        "observedAt": "2026-10-01",
+        "observedBlock": 78938455,
         "sources": [
           {
             "label": "CHFm minter migration transaction",

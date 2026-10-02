@@ -89,9 +89,9 @@ const COLUMNS: readonly DataTableColumn<ScreenerSortKey>[] = [
   },
   {
     id: "v9Profile",
-    label: "V9 Profile",
+    label: "V10 Profile",
     className: "text-center",
-    title: "Safety Score V9 pillars: Backing / Exit / Economic Control. The weakest published pillar is highlighted.",
+    title: "Safety Score V10 pillars: Backing / Exit / Economic Control. The weakest published pillar is highlighted.",
   },
   { id: "mechanism", label: "Mechanism", className: "text-left" },
   { id: "peg", label: "Peg", className: "text-left" },
@@ -527,8 +527,8 @@ function projectScreenerTopDriver(row: ScreenerRow): SafetyScoreV9TopDriver | nu
 
 function V9Profile({ row, compact = false }: { row: ScreenerRow; compact?: boolean }) {
   const title = row.safetyBindingCapReason
-    ? `Binding V9 cap: ${row.safetyBindingCapReason}`
-    : `V9 evidence: ${SAFETY_EVIDENCE_LABELS[row.safetyEvidence]}`;
+    ? `Binding V10 cap: ${row.safetyBindingCapReason}`
+    : `V10 evidence: ${SAFETY_EVIDENCE_LABELS[row.safetyEvidence]}`;
   return (
     <span className={`inline-flex ${compact ? "items-center" : "flex-col"} gap-1`} title={title}>
       <span className="inline-flex items-center gap-1 pharos-numeric text-xs">

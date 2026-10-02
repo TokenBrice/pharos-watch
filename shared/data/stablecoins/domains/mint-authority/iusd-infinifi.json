@@ -4,7 +4,7 @@
     "mintPath": "permissioned-minter",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "IUSD receipt-token minting is gated by RECEIPT_TOKEN_MINTER in the infiniFi Core. Four protocol contracts hold the native role; the fifth current role holder, OutlandVault, is cross-chain portal reconciliation machinery assessed in Bridge Risk. Only YieldSharing is upgradeable. Mint-role administration, ReceiptToken core replacement, and YieldSharing upgrades all require the 4-of-8 admin Safe to schedule an action through a seven-day timelock.",
+    "summary": "IUSD receipt-token minting is gated by RECEIPT_TOKEN_MINTER in the infiniFi Core. At Ethereum block 26095801, the role had six holders: the four reviewed native protocol contracts and two OutlandVault portal-reconciliation contracts, 0x4197f2adfce9fdeb36b02e96737ddf646c841e45 and 0x77776f422b7eb0a95ccd35fbd088a5957d4408ea, assessed as bridge machinery. The previously reviewed OutlandVault 0xf0d0f1fdee5595628de17b37e4134a5bac4441c3 was no longer in that enumeration. YieldSharing's recorded implementation and ProxyAdmin were unchanged; the ProxyAdmin remained owned by the seven-day timelock. The Ethereum admin Safe remained 4-of-8.",
     "upgradeability": {
       "model": "custom",
       "deploymentRefs": [

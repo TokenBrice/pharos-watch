@@ -41,7 +41,7 @@ const DISPLAY_CONFIG: Record<MethodologyChangelogRegistryKey, ChangelogDisplayCo
     title: "Safety Scores Changelog",
     lead: () => (
       <>
-        The active V9 identity and the full numeric V8-and-earlier grading history
+        The active V10 identity and the full numeric V8-and-earlier grading history
         &mdash; every weight change, new pillar or dimension, and structural decision.
       </>
     ),

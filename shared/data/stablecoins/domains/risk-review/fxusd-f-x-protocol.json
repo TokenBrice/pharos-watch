@@ -26,7 +26,7 @@
   },
   "oracleRisk": {
     "tier": "redundant-with-failover",
-    "summary": "f(x) V2 combines Chainlink, DEX spot, and anchor feeds for ETH/WBTC pricing and falls back to anchor pricing when governed deviation thresholds are breached.",
+    "summary": "f(x) V2 combines Chainlink, DEX spot, and anchor feeds for ETH/WBTC pricing and falls back to anchor pricing when governed deviation thresholds are breached. At Ethereum block 26095796, both collateral oracles were owned directly by the 6-of-9 operational Safe 0x26B2ec4E02ebe2F54583af25b647b1D619e67BbF, rather than the native-upgrade TimelockController; owner-only threshold and spot-source changes therefore remain under that Safe's direct authority.",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
@@ -50,8 +50,8 @@
     "confidence": "verified",
     "sources": [
       {
-        "label": "f(x) ETH oracle docs",
-        "url": "https://fxprotocol.gitbook.io/fx-docs/risk-management/oracle/eth.md"
+        "label": "Verified Ethereum StETHPriceOracle source and ABI",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x0c5c61025f047cb7e3e85852dc8eafd7b9a4abfb?fields=abi,sources"
       },
       {
         "label": "f(x) WBTC oracle docs",
@@ -64,6 +64,10 @@
       {
         "label": "f(x) protocol contracts",
         "url": "https://github.com/AladdinDAO/fx-protocol-contracts"
+      },
+      {
+        "label": "Verified Ethereum WBTCPriceOracle source and ABI",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xb3c90e64eb6f456a5f5c17aa99b6aeca6f4a6390?fields=abi,sources"
       }
     ],
     "branches": [
@@ -71,7 +75,7 @@
         "id": "wbtc-long-pool",
         "label": "WBTC long-pool collateral branch",
         "tier": "redundant-with-failover",
-        "summary": "The WBTC long pool prices WBTC from a Chainlink BTC/USD anchor and configured on-chain spot paths, with a 1% deviation clamp to the anchor.",
+        "summary": "The WBTC long pool prices WBTC from Chainlink BTC/USD and WBTC/BTC anchors plus configured on-chain spot paths. At Ethereum block 26095935, maxPriceDeviation was 20000000000000000 on the 1e18 scale (2%).",
         "collateralAssets": [
           "WBTC"
         ],
@@ -94,9 +98,9 @@
             ]
           }
         ],
-        "fallbackBehavior": "The oracle includes its Chainlink-derived anchor with on-chain spot paths and replaces an outlying minimum or maximum with the anchor when deviation exceeds the governed threshold (initialized to 1%). A stale or non-positive Chainlink answer reverts rather than using a cached last-good price.",
-        "observedAt": "2026-07-14",
-        "observedBlock": 25530458,
+        "fallbackBehavior": "The oracle includes its Chainlink-derived anchor with on-chain spot paths and replaces an outlying minimum or maximum with the anchor when deviation exceeds the governed threshold. The constructor initialized maxPriceDeviation to 1%; the current value at Ethereum block 26095935 is 2%. A stale or non-positive Chainlink answer reverts rather than using a cached last-good price.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095935,
         "collateralParameters": [
           {
             "asset": "WBTC",
@@ -131,6 +135,10 @@
           {
             "label": "f(x) WBTC long pool on Ethereum",
             "url": "https://etherscan.io/address/0xAB709e26Fa6B0A30c119D8c55B887DeD24952473"
+          },
+          {
+            "label": "Verified WBTCPriceOracle current source and ABI",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xb3c90e64eb6f456a5f5c17aa99b6aeca6f4a6390?fields=abi,sources"
           }
         ]
       },
@@ -186,8 +194,8 @@
         ],
         "sources": [
           {
-            "label": "f(x) ETH oracle docs",
-            "url": "https://fxprotocol.gitbook.io/fx-docs/risk-management/oracle/eth.md"
+            "label": "Verified Ethereum StETHPriceOracle source and ABI",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x0c5c61025f047cb7e3e85852dc8eafd7b9a4abfb?fields=abi,sources"
           },
           {
             "label": "f(x) liquidation processing",

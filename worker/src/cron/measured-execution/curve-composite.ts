@@ -1,6 +1,6 @@
 import { encodeFunctionData, parseAbi } from "viem/utils";
 
-import { canonicalExitRouteAssetKey } from "@shared/lib/exit-route-identity";
+import { canonicalExitRouteAssetKey } from "@shared/types/exit-route-identity";
 import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
 import type {
   DexMeasuredExecutionBudgetStopReason,

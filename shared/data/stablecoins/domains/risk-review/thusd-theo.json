@@ -20,13 +20,13 @@
         "url": "https://sourcify.dev/server/v2/contract/42161/0x9aa9aa0530a6af70ee7bc47cf1240100f514b065?fields=all"
       },
       {
-        "label": "Stable pinned eth_getCode and storage reads at block 41274206",
+        "label": "Stable pinned eth_getCode and storage reads at block 41398751 (2026-10-01)",
         "url": "https://rpc.stable.xyz"
       }
     ],
-    "evidence": "At Ethereum block 26088429, the thUSD UUPS proxy still resolved to verified ThUSD implementation 0xcd04f57464d25f257089a286aab47df096d300ad, with owner 0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02 and getMinDelay() = 172800 seconds. Current ERC-20 transfers have no pause, blacklist, allowlist, seizure, or transfer hook; TheoWhitelist gates mint and redeem only. Owner-only _authorizeUpgrade can replace this logic after the timelock, so freeze exposure remains possible. The Stable OFT at block 41274206 and Arbitrum OFT at block 510263215 are direct non-proxy ThUSDOFT deployments with ordinary ERC-20 transfers and no local pause, blacklist, seizure, arbitrary-holder burn, or upgrade function. Stable runtime matches the exact-match Sourcify Arbitrum implementation outside compiler-declared immutable slots (the chain-local endpoint differs). Bridge peer and EndpointV2 configuration authority affects cross-chain delivery and issuance, not local holder transfers.",
+    "evidence": "Re-verified on 2026-10-01 at Ethereum block 26095797, Arbitrum block 510584327 and Stable block 41398751. The Ethereum UUPS proxy resolves to 0xcd04f57464d25f257089a286aab47df096d300ad; its owner is 0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02 and getMinDelay() is 172800 seconds. Pinned runtime matches the fetched Blockscout-verified ThUSD implementation, whose ERC-20 transfers have no pause, blacklist, allowlist, seizure or transfer hook; TheoWhitelist gates mint and redeem only. Owner-only _authorizeUpgrade can replace this logic after the timelock, so freeze exposure remains possible. The Arbitrum runtime exactly matches Sourcify's ThUSDOFT, and Stable matches outside compiler-declared immutable slots. These direct deployments have ordinary local transfers and no local pause, blacklist, seizure, arbitrary-holder burn or upgrade function. Their implementation slots and the correct EIP-1967 admin slots are zero; the canonical UUPS admin slot is also zero, which does not remove its owner-authorized upgrade path. All three EndpointV2 delegates remain the chain-local operator Safe; their bridge configuration authority concerns cross-chain issuance and delivery, not local holder transfers.",
     "reviewer": "Pharos risk review",
-    "reviewedAt": "2026-09-30"
+    "reviewedAt": "2026-10-01"
   },
   "oracleRisk": {
     "tier": "privileged-internal-pricing",

@@ -31,7 +31,7 @@ const vnxGitbookBase: RedemptionBackstopConfig = {
   ],
 };
 
-/** eurau-allunity and chfau-allunity are byte-identical (same base, cost, docs). */
+/** Historical AllUnity issuer-redemption shape; CHFAU has a separately reviewed fee policy below. */
 const allunityBase: RedemptionBackstopConfig = {
   ...issuerBase,
   ...reviewedDirectRedemptionSupplyFull,
@@ -96,17 +96,28 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
     costModel: undisclosedReviewedFee(
-      "Direct 1:1 issuance and redemption through AnchorX for CNH transfers; public fee schedule not disclosed",
+      "Direct 1:1 AnchorX redemption for CNH; the Terms of Service reserve the right to implement fees and publish no all-in fee bound",
     ),
+    reviewedAt: "2026-10-02",
     v9RouteReviewTerms: {
       scoringDisposition: "bounded-terms-gap",
       missingScoringFields: ["capacity", "settlement", "cost"],
       rationale:
-        "AnchorX's official site re-opened on 2026-09-04 still establishes only a direct CNH redemption mechanism; no dated public terms establish executable capacity at the scoring notional, bank-credit settlement timing, or all-in redemption cost.",
-      reviewedAt: "2026-09-04",
-      docs: [sourceRefRouteCapacity("AnchorX website", "https://www.anchorx.org/")],
+        "AnchorX's Terms of Service and disclosure pages were re-opened on 2026-10-02. The terms limit services to Professional Investors, reserve the right to implement fees, and permit access suspension or termination at any time for any reason; no public terms establish executable capacity at the scoring notional, bank-credit settlement timing, or all-in redemption cost.",
+      reviewedAt: "2026-10-02",
+      docs: [
+        sourceRef("AnchorX Terms of Service (undated; reviewed 2026-10-02)", "https://www.anchorx.org/terms", ["route", "access", "fees"]),
+        sourceRef("AnchorX transparency disclosure", "https://www.anchorx.org/transparency", ["route"]),
+      ],
     },
-    docs: [sourceRefRouteCapacity("AnchorX website", "https://www.anchorx.org/")],
+    docs: [
+      sourceRef("AnchorX Terms of Service (undated; reviewed 2026-10-02)", "https://www.anchorx.org/terms", ["route", "access", "fees"]),
+      sourceRef("AnchorX transparency disclosure", "https://www.anchorx.org/transparency", ["route"]),
+    ],
+    notes: [
+      "AnchorX Group's public Terms of Service limit platform subscription and redemption services to Professional Investors as defined in Part 1 of Schedule 1 of the Hong Kong SFO; this is not an ordinary-holder access guarantee.",
+      "The 1:1 CNH redemption description is not a USD payout promise, scored-notional capacity certificate, settlement SLA, or zero-fee commitment. The public portal requires account login.",
+    ],
   },
   "idrt-rupiah-token": {
     ...issuerBase,
@@ -187,7 +198,27 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       sourceRef("Schuman reserve audits", "https://schuman.io/reserve-attestations/", ["capacity"]),
     ],
   },
-  ...expandIds(["eurau-allunity", "chfau-allunity"], allunityBase),
+  ...expandIds(["eurau-allunity"], allunityBase),
+  "chfau-allunity": {
+    ...allunityBase,
+    reviewedAt: "2026-10-02",
+    costModel: fixedFee(
+      0,
+      "AllUnity Redemption Policy section 3.5: the issuer does not charge administrative, processing, or redemption fees; holders pay third-party blockchain gas.",
+    ),
+    docs: [
+      sourceRefRouteCapacity("AllUnity whitepaper", "https://allunity.com/whitepaper/"),
+      sourceRef("AllUnity trust center", "https://allunity.com/trust-center/", ["capacity"]),
+      sourceRef(
+        "AllUnity Redemption Policy, section 3.5",
+        "https://framerusercontent.com/assets/keEVPCLx5HJ504alVRJUCVRjBz0.pdf",
+        ["fees"],
+      ),
+    ],
+    notes: [
+      "AllUnity Redemption Policy section 4.3 aims to complete the process within five business days after documentation is fully received and verified; this is a target, not a guaranteed bank-credit deadline. Retain the platform's reviewed direct-redemption treatment pending a platform-wide owner ruling on settlement aims.",
+    ],
+  },
   "usda-anzens": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
@@ -310,37 +341,40 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     ...reviewedDirectRedemptionSupplyFull,
     capacityModel: { kind: "supply-ratio", ratio: 0.02, confidence: "heuristic", basis: "hot-buffer" },
     settlementModel: "days",
-    costModel: fixedFee(7, "Midas documents a 0.07% redemption fee"),
+    outputAssets: ["usdc-circle"],
+    costModel: fixedFee(7, "The July 17, 2026 mTBILL Final Terms specify a 0.07% instant redemption fee"),
     v9RouteReviewTerms: {
       scoringDisposition: "bounded-terms-gap",
       missingScoringFields: ["capacity", "settlement"],
       rationale:
-        "The reviewed 7 bps redemption fee is retained, but the Midas atomic-redemptions and transparency URLs checked on 2026-09-04 still publish a dynamic atomic-capacity target rather than a current lower bound, and the stated 1-7-business-day fallback remains nonbinding; capacity and settlement therefore stay withheld.",
-      reviewedAt: "2026-09-04",
+        "The July 17, 2026 Final Terms specify USDC settlement and a 7 bps instant fee, but instant capacity is not guaranteed. Standard redemption has a one-business-day realisation period plus up to five business days under base-prospectus condition 8.3c, subject to a 25% daily gate and market-disruption postponements; no unconditional calendar-day bound or measured executable capacity is established.",
+      reviewedAt: "2026-10-02",
       docs: [
-        sourceRef("Midas mTBILL atomic redemptions", "https://docs.midas.app/tokens/mtbill/atomic-redemptions", [
+        sourceRef("Midas atomic redemption targets and shared liquidity", "https://midas-docs.gitbook.io/midas-docs/defi-integration/atomic-redemption.md", [
           "route",
           "capacity",
           "settlement",
         ]),
         sourceRef("Midas transparency", "https://midas.app/transparency", ["capacity"]),
+        sourceRef("mTBILL Final Terms dated July 17, 2026", "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FUDquVH8yRhSxnVqxp0X4%2F20260714_mTBILL_FT_signed_final.pdf?alt=media&token=bf215cdc-f549-474d-8ca9-5a1810fabeb8", ["route", "access", "fees", "settlement"]),
+        sourceRef("Midas 2026 base prospectus conditions 8.3c and 12", "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FkVT2uAi2AipgeMIyZAJe%2FMidas%20Software%20GmbH%20Base%20Prospectus%202026.pdf?alt=media&token=d80ceabb-07a6-4dc4-9020-70ec86b4f42f", ["access", "capacity", "settlement"]),
       ],
     },
-    reviewedAt: "2026-05-17",
+    reviewedAt: "2026-10-02",
     docs: [
-      sourceRef("Midas mTBILL atomic redemptions", "https://docs.midas.app/tokens/mtbill/atomic-redemptions", [
+      sourceRef("Midas atomic redemption targets and shared liquidity", "https://midas-docs.gitbook.io/midas-docs/defi-integration/atomic-redemption.md", [
         "route",
         "capacity",
         "settlement",
       ]),
-      sourceRef("Midas prospectus documents", "https://docs.midas.app/resources/legal-documents/prospectus-documents", [
-        "fees",
-      ]),
+      sourceRef("mTBILL Final Terms dated July 17, 2026", "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FUDquVH8yRhSxnVqxp0X4%2F20260714_mTBILL_FT_signed_final.pdf?alt=media&token=bf215cdc-f549-474d-8ca9-5a1810fabeb8", ["route", "access", "fees", "settlement"]),
+      sourceRef("Midas 2026 base prospectus conditions 8.3c and 12", "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FkVT2uAi2AipgeMIyZAJe%2FMidas%20Software%20GmbH%20Base%20Prospectus%202026.pdf?alt=media&token=d80ceabb-07a6-4dc4-9020-70ec86b4f42f", ["access", "capacity", "settlement"]),
       sourceRef("Midas transparency", "https://midas.app/transparency", ["capacity"]),
     ],
     notes: [
-      "Midas documents atomic USDC redemptions when protocol liquidity is available, while standard processing completes within two business days in normal conditions and up to seven business days in stressed cases",
+      "Reviewed USDC payout: instant fee 0.07%; standard fee up to 0.05%, one-business-day realisation plus up to five business days, subject to the 25% daily gate and disruption clauses; instant Deferred Price Method may retain up to 5% holdback.",
       "The 2% hot-buffer ratio is a conservative modeling heuristic, not a documented lower bound; current Midas materials publish a dynamic atomic-capacity target rather than a binding floor",
+      "Ethereum block 26103199: the instant vault holds 0.000008 USDC but can source USDC by redeeming USTB through its configured external facility. The direct cash balance is not total executable capacity and does not establish a no-liquidity finding.",
     ],
   },
   "usdy-ondo-finance": {

@@ -53,7 +53,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "SPKCC is issued natively by Spiko on all seven chains: the six existing deployments plus Etherlink were verified as canonical issuer-native fund shares (EVM authority() = Spiko PermissionManager; Starknet owner = Spiko's Starknet owner account; Stellar contract in Spiko's official stellar-contracts registry). Cross-chain transfers run over Chainlink CCIP, Spiko's documented interoperability rail, so the profile remains external-validated-network over issuer-native deployments pending exact SPKCC-specific pool and controller verification.",
+    "summary": "SPKCC has seven issuer-native fund-share deployments. The cited Spiko CCIP announcement explicitly concerns EUTBL and USTBL, not SPKCC. Exact SPKCC-specific cross-chain pool, peer, limits and controller evidence remains unresolved; native token identity does not establish a live transfer rail.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
     "confidence": "verified",

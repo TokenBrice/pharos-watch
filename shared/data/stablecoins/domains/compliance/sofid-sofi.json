@@ -6,7 +6,7 @@
       "summary": "SOFID is a U.S. dollar payment stablecoin issued by SoFi Bank, N.A. with 1:1 mint and redemption."
     },
     "authorizationStatus": "no-public-authorization-found",
-    "issuerPathway": "unknown",
+    "issuerPathway": "idi-subsidiary",
     "issuerEntity": "SoFi Bank, N.A.",
     "issuerDomicile": "United States",
     "licensingRegulator": "OCC",
@@ -20,6 +20,13 @@
     "monthlyAttestationPresent": false,
     "notes": "Re-checked 2026-09-29: no SoFiUSD reserve attestation is publicly filed. EDGAR full-text search returns no SoFiUSD attestation, and SoFi Bank N.A. ABS-15G filings (March–September 2026) are Deloitte agreed-upon-procedures reports for consumer-loan securitization trusts, not stablecoin reserve attestations. The May 27, 2026 retail-launch release cites regular attestations by an independent U.S.-licensed CPA without naming cadence or attestor; monthlyAttestationPresent stays false pending a published report.",
     "references": [
+      {
+        "label": "OCC Corporate Decision 1388: SoFi Bank payment-stablecoin operating subsidiary approval",
+        "url": "https://occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/cd1388.pdf",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-07-23",
+        "accessedAt": "2026-10-01"
+      },
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
@@ -50,23 +57,16 @@
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act rulemaking bulletin and public releases",
-        "OCC SoFi Bank approval and charter materials",
-        "SoFiUSD product and investor-relations pages",
-        "Web search for SoFi PPSI application filings June 2026",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "OCC Corporate Decision 1388 (July 23, 2026; published September 2026): SoFi Bank operating subsidiary approval",
+        "OCC Bulletin 2026-3: GENIUS proposed rule",
+        "Targeted October 1, 2026 searches for SoFi GENIUS PPSI authorization or application",
+        "SoFi investor-relations launch releases (available metadata only; product/legal pages blocked)"
       ],
-      "summary": "No token-specific public GENIUS PPSI approval, state-qualified approval, or official application source was located for SOFID as of 2026-06-18. GENIUS Act is law (enacted July 2025) but implementing regulations remain in proposed-rules phase; no PPSI applications have been accepted yet. SoFi Bank N.A. is an OCC-supervised IDI and under GENIUS would issue via a subsidiary; no such subsidiary PPSI application was found.",
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "summary": "OCC Corporate Decision 1388 approves SoFi Bank's March 27, 2026 application to establish a payment-stablecoin operating subsidiary and requires conformance with GENIUS and implementing regulations. This establishes an approved subsidiary pathway, but the letter does not identify a GENIUS PPSI approval or the subsidiary's legal name. No separate token-specific PPSI approval was located in the reviewed sources as of 2026-10-01; issuer identity remains SoFi Bank pending evidence of an actual issuance transfer.",
+      "reviewer": "Sol curation pass 2026-10-01 (CurA36SOFID)",
+      "reviewedAt": "2026-10-01"
     },
-    "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-09-29"
+    "reviewer": "Sol curation pass 2026-10-01 (CurA36SOFID)",
+    "reviewedAt": "2026-10-01"
   }
 }

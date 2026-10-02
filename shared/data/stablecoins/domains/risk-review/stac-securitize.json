@@ -8,13 +8,17 @@
         "url": "https://securitize.io/"
       },
       {
-        "label": "CoinGecko",
-        "url": "https://www.coingecko.com/en/coins/securitize-tokenized-aaa-clo-fund"
+        "label": "Current verified DSToken implementation (issuer seizure and transfer compliance)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x77684815f44b28726bc3efa4471b88ef3b93feb0"
+      },
+      {
+        "label": "Solana finalized mint and authority observations",
+        "url": "https://solana-rpc.publicnode.com"
       }
     ],
-    "evidence": "STAC is issued through permissioned fund or issuer rails with KYC-gated primary-market access and issuer/admin controls over transfer, mint, redemption, or token administration.",
-    "reviewer": "Codex 2026-05-14 execution-ready expansion",
-    "reviewedAt": "2026-05-14"
+    "evidence": "STAC remains permissioned and issuer-controllable. At Ethereum block 26095797, the proxy implementation remained 0x77684815f44b28726bc3efa4471b88ef3b93feb0; its verified DSToken source exposes seize(address,address,uint256,string) under onlyTransferAgentOrAbove and routes transfers through compliance validation. At finalized Solana slot 452212788, mint u49MwZqu4bHRHRsciaBarHK7JZDYGxuaNnwyMBdEKYk retained freezeAuthority and permanentDelegate GSM7ZTDNByoGwayftzcSrDqWmMF9L3mU6KLVrca57j2M, plus a transfer hook. These primary observations support the existing true verdict without relying on a symbol-only or marketing-source match.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA32rwaUSDi)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",

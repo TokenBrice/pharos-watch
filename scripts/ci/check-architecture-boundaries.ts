@@ -194,7 +194,9 @@ class DependencyGraph {
 export function checkArchitectureBoundaries(root = ROOT, rules: readonly Rule[] = [
   "reserve-network", "frontend-routes", "recap-cost", "verification-url", "stability-light",
 ]): string[] {
-  root = resolve(root);
+  // Entries and resolved dependencies use real paths; the root must share
+  // their identity (for example macOS /var is a symlink to /private/var).
+  root = realpathSync(resolve(root));
   const graph = new DependencyGraph(root);
   const violations = new Set<string>();
   const sources = (directory: string) => existsSync(resolve(root, directory))

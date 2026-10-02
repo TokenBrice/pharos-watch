@@ -4,6 +4,7 @@ import {
   CanonicalTextSchema,
   StrictIsoDateSchema,
   uniqueKeyedCollectionSchema,
+  reviewedAssetCollectionEnvelopeSchema,
 } from "./safety-schema-primitives";
 
 const SafetyScoreV9TransferPostureSchema = z.enum([
@@ -58,7 +59,7 @@ const SingleDeploymentAttributionSchema = z.object({
   }
 });
 
-const SafetyScoreV9ReviewedTransferFactSchema = z
+export const SafetyScoreV9ReviewedTransferFactSchema = z
   .object({
     assetId: CanonicalTextSchema,
     reviewedAt: StrictIsoDateSchema,
@@ -89,5 +90,6 @@ export const SafetyScoreV9ReviewedTransferFileSchema = uniqueKeyedCollectionSche
   duplicateMessage: "Duplicate reviewed transfer assetId",
   noteSchema: CanonicalTextSchema,
 });
+export const SafetyScoreV9ReviewedTransferEnvelopeSchema = reviewedAssetCollectionEnvelopeSchema("reviews", CanonicalTextSchema);
 
 export type SafetyScoreV9ReviewedTransferFact = z.infer<typeof SafetyScoreV9ReviewedTransferFactSchema>;

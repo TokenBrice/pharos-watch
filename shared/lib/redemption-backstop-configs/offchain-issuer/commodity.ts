@@ -25,6 +25,32 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
       deliveryTermsUnbounded: true,
       feeModel: { bps: 0, flatUsd: 0, deliveryUsd: 0 }, sameNotionalEligible: false,
     },
+    physicalToUsd: {
+      metal: "XAU",
+      fineTroyOuncesPerToken: 1,
+      lot: { minimumTokens: 430, incrementTokens: null, bars: [{ barId: "london-good-delivery-variable-weight", fineTroyOunces: 350, maximumFineTroyOunces: 430 }] },
+      vaultLocations: ["london"],
+      barClass: "good-delivery",
+      saleLocation: "in-vault",
+      deliveryScope: "same-jurisdiction",
+      fineness: 0.995,
+      eligibility: "verified-customer",
+      fees: { issuerFeeBps: null, issuerFixedUsd: null, deliveryUsdPerLot: null, insuranceBps: null, assayUsdPerLot: null, taxBps: null, conversionBps: 0 },
+      settlementLegs: [{ leg: "issuer-release-in-vault", maximumBusinessDays: null, typicalBusinessDays: "several-business-days" }],
+      bestEffortIssuerCashOut: {
+        operatingProcess: "Paxos platform five-second PAXG/USD conversion quote followed by withdrawal to the customer's own bank account.",
+        lot: { minimumTokens: null, incrementTokens: null, bars: [] },
+        fees: { issuerFeeBps: null, issuerFixedUsd: null, deliveryUsdPerLot: 0, insuranceBps: 0, assayUsdPerLot: 0, taxBps: null, conversionBps: null },
+        settlementLegs: [{ leg: "platform-conversion", maximumBusinessDays: "unbounded" }, { leg: "bank-withdrawal-large-requests", maximumBusinessDays: "unbounded" }],
+      },
+      reviewedAt: "2026-10-01",
+      reviewExpiresAt: "2026-12-30",
+      evidence: [
+        { url: "https://www.paxos.com/terms-and-conditions/pax-gold-terms-conditions", quote: "§4.2 one fine troy ounce; §4.11 only verified Customers; §11.4 minimum 430 PAXG plus fee per variable-weight London Good Delivery bar, excess refunded, holder responsible for delivery; §11.5 commercially reasonable efforts; §12.3 larger withdrawals may take substantially longer; §15 fees in User Guide/private Pricing Supplement." },
+        { url: "https://www.lbma.org.uk/publications/good-delivery-rules/technical-specifications", quote: "Gold Good Delivery bars contain 350–430 fine troy ounces; conservative deposit uses 430 and delivered capacity uses 350, with excess tokens refunded." },
+        { url: "https://www.bullionbypost.co.uk/sell-to-us/", quote: "Currently processing deliveries within 2 working days; once metals arrive and are checked, payment is made directly to the customer's bank. Used as modelled dealer-sale typical time, not an issuer delivery SLA." },
+      ],
+    },
     costModel: undisclosedReviewedFee(
       "1:1 physical gold or cash equivalent through Paxos Trust Company; public fee schedule not disclosed",
     ),
@@ -47,6 +73,34 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
       commodity: "XAU", deliverableOuncesPerToken: 1, minimumDeliveryTokens: 430,
       deliveryTermsUnbounded: true,
       feeModel: { bps: 25, flatUsd: 0, deliveryUsd: 0 }, sameNotionalEligible: false,
+    },
+    physicalToUsd: {
+      metal: "XAU", fineTroyOuncesPerToken: 1,
+      lot: { minimumTokens: 430, incrementTokens: 430, bars: [{ barId: "switzerland-london-good-delivery-variable-weight", fineTroyOunces: 350, maximumFineTroyOunces: 430 }] },
+      vaultLocations: ["other"], barClass: "good-delivery",
+      saleLocation: "delivered", deliveryScope: "same-jurisdiction", fineness: 0.995,
+      eligibility: "verified-customer",
+      fees: { issuerFeeBps: 25, issuerFixedUsd: null, deliveryUsdPerLot: null, insuranceBps: null, assayUsdPerLot: null, taxBps: null, conversionBps: null },
+      settlementLegs: [{ leg: "issuer-redemption-and-physical-delivery-in-switzerland", maximumBusinessDays: null, typicalBusinessDays: "several-business-days" }],
+      bestEffortIssuerCashOut: {
+        operatingProcess: "After full-bar redemption, Tether Gold or its representative attempts sale to a relationship Swiss gold dealer or broker. Successful sale proceeds less fees are remitted in USD by wire; no repurchase obligation or sale/wire deadline is documented.",
+        lot: { minimumTokens: 430, incrementTokens: 430, bars: [{ barId: "switzerland-london-good-delivery-variable-weight", fineTroyOunces: 350, maximumFineTroyOunces: 430 }] },
+        fees: { issuerFeeBps: 25, issuerFixedUsd: null, deliveryUsdPerLot: null, insuranceBps: null, assayUsdPerLot: null, taxBps: null, conversionBps: null },
+        settlementLegs: [
+          { leg: "issuer-full-bar-redemption", maximumBusinessDays: null, typicalBusinessDays: "several-business-days" },
+          { leg: "best-effort-swiss-gold-sale", maximumBusinessDays: "unbounded", typicalBusinessDays: null },
+          { leg: "fiat-wire-to-usable-usd", maximumBusinessDays: null, typicalBusinessDays: null },
+        ],
+      },
+      reviewedAt: "2026-10-01", reviewExpiresAt: "2026-12-30",
+      evidence: [
+        { url: "https://gold.tether.to/legal", quote: "Each Gold Token reflects ownership of an undivided specific interest in one fine troy ounce of gold in the Gold Reserves. In order to purchase Gold Tokens from Tether Gold and to have them redeemed through orders submitted through the Site, you must be a verified customer of Tether Gold. However, it may take several business days for any redemption to be completed." },
+        { url: "https://gold.tether.to/legal/feeschedule", quote: "Redemption of Gold Tokens: .25% plus applicable fees. Redemption of Gold Tokens for underlying gold can be effecutated in increments of 430 tokens. If a delivered bullion bar is smaller than 430 ounces, the number of Gold Tokens redeemed will be reduced accordingly to match bar size, to 3 decimal places." },
+        { url: "https://gold.tether.to/faq", quote: "If you request physical delivery from TG Commodities, S.A. de C.V. for your gold bar(s), the company will arrange for its secure transit to the delivery address in Switzerland specified by you. TG Commodities, S.A. de C.V. will charge 25 basis points on the gold price in the Swiss gold market at the time of redemption of the XAU₮ tokens, plus the cost of delivery." },
+        { url: "https://gold.tether.to/legal", quote: "Tether Gold or its representative will attempt to sell the user’s gold bar to a gold dealer or broker with whom Tether Gold or such representative has a relationship. Tether Gold and its Affiliates have no obligation to repurchase any Gold Tokens or any bullion bars." },
+        { url: "https://gold.tether.to/Relevant%20Information%20Document%20-%20TG%20Commodities,%20S.A.%20de%20C.V.%20(ENG).pdf", quote: "The Gold Reserves are held by the custodian in a vault in Switzerland. If the gold bar is successfully sold, Tether Gold will provide the KYC Verified Customer with the fiat money in US Dollars received in exchange for the gold, less the 25 bps fee for redemption of the Tether Gold Tokens described above." },
+        { url: "https://www.lbma.org.uk/publications/good-delivery-rules/technical-specifications", quote: "Minimum gold content: 350 fine troy ounces (approximately 10.9 kilograms). Maximum gold content: 430 fine troy ounces (approximately 13.4 kilograms)." },
+      ],
     },
     costModel: documentedVariableFee(
       "Physical gold through TG Commodities; minimum 430 XAUt for a full bar; physical delivery to Switzerland only",
@@ -89,6 +143,33 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
       commodity: "XAU", deliverableOuncesPerToken: 1, minimumDeliveryTokens: 32.148,
       deliveryTermsUnbounded: true,
       feeModel: { bps: 25, flatUsd: 0, deliveryUsd: 0 }, sameNotionalEligible: false,
+    },
+    physicalToUsd: {
+      metal: "XAU", fineTroyOuncesPerToken: 1,
+      lot: { minimumTokens: 32.148, incrementTokens: null, bars: [{ barId: "lbma-kilobar-9999-fineness", fineTroyOunces: 32.147531493971115 }] },
+      vaultLocations: ["singapore", "hong-kong"], barClass: "kilobar",
+      saleLocation: "in-vault", deliveryScope: "same-jurisdiction", fineness: 0.9999,
+      eligibility: "verified-customer",
+      fees: { issuerFeeBps: 25, issuerFixedUsd: null, deliveryUsdPerLot: null, insuranceBps: null, assayUsdPerLot: null, taxBps: null, conversionBps: null },
+      settlementLegs: [{ leg: "issuer-release-to-holder-vault-account", maximumBusinessDays: null, typicalBusinessDays: null }],
+      bestEffortIssuerCashOut: {
+        operatingProcess: "Verified customers submit XAUm with maximum slippage; Matrixdock sells physical bars and sends supported USDC or USDT within T+3 after execution. Out-of-slippage orders are cancelled for a new quote or refund; no cash minimum or pre-execution deadline is documented.",
+        lot: { minimumTokens: null, incrementTokens: null, bars: [] },
+        fees: { issuerFeeBps: 25, issuerFixedUsd: null, deliveryUsdPerLot: null, insuranceBps: null, assayUsdPerLot: null, taxBps: null, conversionBps: null },
+        settlementLegs: [
+          { leg: "quote-acceptance-to-execution", maximumBusinessDays: null, typicalBusinessDays: null },
+          { leg: "executed-order-to-supported-stablecoin-receipt", maximumBusinessDays: 3, typicalBusinessDays: null },
+        ],
+      },
+      reviewedAt: "2026-10-01", reviewExpiresAt: "2026-12-30",
+      evidence: [
+        { url: "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/what-is-xaum", quote: "In the ERC-20/BEP-20 token form, 1 XAUm is backed by 1 fine troy ounce LBMA gold." },
+        { url: "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/minting-and-redeeming", quote: "Redeeming XAUm for physical LBMA gold is at a minimum of 32.148 XAUm, equivalent to a 1kg gold bar. It can be collected via customer pickup or secured delivery. After order execution, Matrixdock will provide you with the final transaction price and the corresponding stablecoin amount. The stablecoins will be sent within T+3." },
+        { url: "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/faq", quote: "A fee of 0.25% will be charged for each redemption order. You are able to redeem XAUm directly with Matrixdock into supported stablecoins such as USDC and USDT. Matrixdock will perform the sale of physical bars and transfer the stablecoins to your wallet." },
+        { url: "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/physical-gold-custody", quote: "The physical gold backing XAUm tokens is securely stored in vaults located in Singapore and Hong Kong." },
+        { url: "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/physical-silver-vault-audit", quote: "1KG – 0.9999 Fineness POINT GOLD Gold Bar" },
+        { url: "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2Foa3Zaj3t7Mic13UuT1ph%2FXAUm%20Token%20Terms%20and%20Conditions.docx.pdf?alt=media&token=3cad87ae-7846-4bfe-ba2e-411fbf166f60", quote: "Once you accept a Quote and the Token Issuer receives the XAUm Tokens intended to be redeemed, the Token Issuer will, in a timely manner, remove from circulation or “burn” such XAUm Tokens and either, as applicable, instruct a Matrix Entity to (a) deliver to a vault account in your name at a Vault Provider a corresponding amount of LBMA Gold;" },
+      ],
     },
     costModel: fixedFee(25, "Matrixdock FAQ lists a 0.25% redemption fee"),
     docs: [
@@ -135,6 +216,37 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
       deliveryTermsUnbounded: true,
       feeModel: { bps: 0, flatUsd: 0, deliveryUsd: 0 }, sameNotionalEligible: false,
     },
+    physicalToUsd: {
+      metal: "XAU", fineTroyOuncesPerToken: 0.0003214753149397112,
+      lot: { minimumTokens: 100, incrementTokens: 100, bars: [{ barId: "gld-nft-one-gram-metalor", fineTroyOunces: 0.03214753149397112 }] },
+      vaultLocations: ["zurich"], barClass: "small-bar-or-coin",
+      saleLocation: "delivered", deliveryScope: "same-jurisdiction", fineness: 0.9999,
+      eligibility: "verified-customer",
+      // CHF300 is published, but no captured CHF/USD conversion bounds it in USD.
+      fees: { issuerFeeBps: 100, issuerFixedUsd: null, deliveryUsdPerLot: "unbounded", insuranceBps: null, assayUsdPerLot: null, taxBps: null, conversionBps: null },
+      settlementLegs: [
+        { leg: "gldt-reverse-swap-to-specific-gld-nft", maximumBusinessDays: null, typicalBusinessDays: null },
+        { leg: "bity-kyc-and-zurich-vault-pickup-appointment", maximumBusinessDays: null, typicalBusinessDays: null },
+      ],
+      bestEffortIssuerCashOut: {
+        operatingProcess: "Reverse-swap into a specific GLD NFT, complete Bity KYC and accept a 24-hour LBMA quote less 3%; Bity sends USDT after NFT transaction confirmation. USD conversion remains undocumented.",
+        lot: { minimumTokens: 100, incrementTokens: 100, bars: [{ barId: "gld-nft-one-gram-metalor", fineTroyOunces: 0.03214753149397112 }] },
+        fees: { issuerFeeBps: 400, issuerFixedUsd: null, deliveryUsdPerLot: 0, insuranceBps: 0, assayUsdPerLot: 0, taxBps: null, conversionBps: null },
+        settlementLegs: [
+          { leg: "gldt-reverse-swap-to-specific-gld-nft", maximumBusinessDays: null, typicalBusinessDays: null },
+          { leg: "bity-nft-buyback-to-usdt", maximumBusinessDays: null, typicalBusinessDays: null },
+          { leg: "usdt-to-spendable-usd", maximumBusinessDays: null, typicalBusinessDays: null },
+        ],
+      },
+      reviewedAt: "2026-10-01", reviewExpiresAt: "2026-12-30",
+      evidence: [
+        { url: "https://docs.gold-dao.org/how-to/redeem-physical-gold", quote: "Since GLDT is a fungible token representing fractional ownership (where 100 GLDT = 1g of gold), the core requirement is to perform a reverse swap via the GLDT Swap platform to reclaim a GLD NFT. They will guide you through the necessary KYC (Know Your Customer) protocols and coordinate the pickup of the specific bullion bars linked to your NFT." },
+        { url: "https://gldt.org/", quote: "For reverse swapping from GLDT to GLD NFT, a fee of 1 GLDT is charged for every GLD NFT that is unlocked from the swap canister. For example, if 500 GLDT are swapped to 5x 1g GLD NFT, 5x 1 GLDT fee are applied." },
+        { url: "https://bity.com/en/gold/", quote: "Bity Gold offers an innovative solution by tokenizing physical gold, offering seamless access to LBMA gold bars (highest standard, 999.9 purity) without any extra fees." },
+        { url: "https://help.bity.com/en/articles/9680077-how-can-i-redeem-the-physical-gold-bar-from-my-nfts", quote: "After sending your NFT to the provided address, you will receive another address to pay the CHF 300 fee (operational fees charged by the vault). This fee applies regardless of the size or quantity of gold. At present, physical gold can only be redeemed in Zurich, Switzerland." },
+        { url: "https://help.bity.com/en/articles/9680058-how-can-i-resell-my-gld-nft", quote: "Bity will provide a price based on the LBMA spot gold price, fixed for the next 24 hours, minus a 3% fee. The price will be quoted in USDT. Once the transaction is confirmed, we will send the agreed USDT amount to your specified address." },
+      ],
+    },
     executionModel: "rules-based-nav",
     costModel: undisclosedReviewedFee(
       "Gold DAO materials describe reverse swapping GLDT into GLD NFTs at the published gold-denomination ratio; public materials reviewed do not publish one fixed redemption fee",
@@ -152,10 +264,31 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
   "vnxau-vnx": {
     ...commodityIssuerBase,
     ...documentedBoundSupplyFull(REVIEWED_COVERAGE_EXPANSION_AT),
+    reviewedAt: "2026-10-02",
+    routeStatus: "suspended",
+    routeSuspension: {
+      routeId: "redemption:vnxau-vnx:offchain-issuer",
+      channel: "VNX legacy vnx.li issuer-platform exchange",
+      suspendedAt: "2026-06-30",
+      reviewedAt: "2026-10-02",
+      reviewer: "BuildRailSuspension",
+      reason: "VNX's June 19 notice suspended exchange operations on the legacy vnx.li platform from June 30, 2026 at 18:00 CET; the remaining-balance withdrawal window ended July 31 at 18:00 CET. This removes only that channel's credit, not VNXAU holder rights or other market and issuer channels.",
+      sources: [
+        { url: "https://vnx.li/blog", quote: "Please be informed that exchange operations on the VNX platform, available at vnx.li, will be suspended as of June 30, 2026, at 18:00 CET." },
+        { url: "https://vnx.li/blog", quote: "After the suspension of exchange operations, clients will still be able to withdraw their remaining balances to their whitelisted wallets or bank accounts until July 31, at 18:00 CET." },
+        { url: "https://vnx.li/vnxau", quote: "VNX Commodities AG does not offer VNXAU to the public and does not provide purchase, sale, exchange, custody or trading services in relation to VNXAU." },
+      ],
+    },
+    unresolvedOutputDisposition: "issuer-undisclosed",
     costModel: documentedVariableFee(
-      "VNX platform supports sell/redemption and physical collection or delivery from one-kilogram gold bars; public materials reviewed do not expose one fixed VNXAU redemption fee",
+      "The historical VNX platform offered sell/redemption and physical collection or delivery from one-kilogram gold bars; current VNXAU-specific payout terms and a fixed redemption fee are not established after the platform suspension",
     ),
     docs: [
+      sourceRef(
+        "VNX platform suspension notice",
+        "https://vnx.li/blog",
+        ["route", "access", "settlement"],
+      ),
       sourceRefRouteCapacityAccess("VNX Gold executive summary", "https://vnx.gitbook.io/vnx-platform/vnx-gold/executive-summary"),
       sourceRefRouteCapacityFees("VNX Gold token details", "https://vnx.gitbook.io/vnx-platform/vnx-gold/token-details"),
       sourceRef(
@@ -165,12 +298,42 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
       ),
       sourceRef(
         "VNXAU AREVA report",
-        "https://vnx.li/wp-content/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf",
+        "https://vnx.li/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf",
         ["capacity"],
+      ),
+      sourceRef(
+        "VNXAU current service and contractual-rights disclosure",
+        "https://vnx.li/vnxau",
+        ["route", "access", "settlement"],
+      ),
+      sourceRef(
+        "VNXAU current transparency and report inventory",
+        "https://vnx.li/vnxau-transparency",
+        ["capacity"],
+      ),
+      sourceRef(
+        "VNX Global current terms: commodity-token proprietary exchange",
+        "https://prod-global-terms.s3.sa-east-1.amazonaws.com/VNX-Global-Terms.pdf",
+        ["route", "access", "settlement"],
+      ),
+      sourceRef(
+        "Metals.io physical gold FAQ: legacy issuer contact, no release timeline",
+        "https://help.metals.io/en/articles/14129282-how-can-i-redeem-physical-gold",
+        ["route", "access", "settlement"],
+      ),
+      sourceRef(
+        "Metals.io current Etherlink VNXAU market interface",
+        "https://app.metals.io/en/VNXAU",
+        ["route"],
       ),
     ],
     notes: [
-      "Primary route is VNX platform redemption or physical gold collection/delivery for verified users; physical delivery minimums make the backstop operationally slower than spot exchange liquidity",
+      "The historical VNX platform route offered fiat or supported cryptocurrency sale proceeds and physical bars starting at 1 kg; this is not a fixed complete payout basket or an atomic stablecoin redemption.",
+      "Re-reviewed 2026-10-02: the June 19 primary notice suspends the legacy vnx.li issuer-platform exchange from June 30, 2026 at 18:00 CET and ends the remaining-balance withdrawal window July 31 at 18:00 CET. The exact legacy rail is reviewed suspended and receives no capacity or credit. The current VNXAU page states that purchase, sale, exchange, custody and trading services are not provided by VNX Commodities AG while holder rights remain governed by contractual arrangements. This does not establish whole-token exit failure or wind-down.",
+      "Historical physical collection/delivery starts at 1 kg in kilogram multiples. The historical one-business-day statement applies to purchase/sale transactions, not bullion release or delivery, so it cannot supply a physicalToUsd settlement leg. Unpriced cross-border logistics remain unavailable. No physicalToUsd block is admitted from these suspended-platform disclosures.",
+      "The current transparency page still links only the December 31, 2025 AREVA AUP. Its historical 13,100 gross grams and non-assured holder-rights notes do not establish current bar inventory, release throughput, purity-adjusted weight or currently available holder service.",
+      "VNX Global's current terms separately permit proprietary exchange of Commodity Tokens, including VNXAU, for fiat or other digital assets. Section 6 makes that service resource-dependent, discretionary and not guaranteed. This successor venue is not a physical redemption obligation and does not establish a complete payout set, current same-notional execution capacity or settlement maximum. The old issuer-platform suspension is not evidence that all VNXAU market exits have ceased.",
+      "Independent verification found that Metals.io still directs physical-redemption requests in 1 kg multiples to support@vnx.li, without publishing a release timeline or evidence that the issuer service resumed. Its current Etherlink VNXAU market interface separately returned an indicative 1,000-token sale quote in USDC, subject to sign-in and execution. This is a secondary-market diagnostic, not physical redemption, measured same-notional capacity or proof that every holder can execute."
     ],
   },
   "xagm-matrixdock": {
@@ -182,6 +345,32 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
       commodity: "XAG", deliverableOuncesPerToken: 0.998463014, minimumDeliveryTokens: 2100,
       deliveryTermsUnbounded: true,
       feeModel: { bps: 50, flatUsd: 0, deliveryUsd: 0 }, sameNotionalEligible: false,
+    },
+    physicalToUsd: {
+      metal: "XAG", fineTroyOuncesPerToken: 0.998380822,
+      lot: { minimumTokens: 2100, incrementTokens: null, bars: [{ barId: "lbma-good-delivery-silver-variable-weight", fineTroyOunces: null }] },
+      vaultLocations: ["singapore", "hong-kong"], barClass: "good-delivery",
+      saleLocation: "in-vault", deliveryScope: "same-jurisdiction", fineness: 0.999,
+      eligibility: "verified-customer",
+      fees: { issuerFeeBps: 50, issuerFixedUsd: null, deliveryUsdPerLot: null, insuranceBps: null, assayUsdPerLot: null, taxBps: null, conversionBps: null },
+      settlementLegs: [{ leg: "issuer-release-to-holder-vault-collection", maximumBusinessDays: null, typicalBusinessDays: null }],
+      bestEffortIssuerCashOut: {
+        operatingProcess: "Verified customers submit XAGm with maximum slippage; Matrixdock sells physical silver through silver partners and sends USDC or USDT within T+3 after execution. Out-of-slippage orders are cancelled for a new quote or refund; cash minimum and pre-execution deadline are not documented.",
+        lot: { minimumTokens: null, incrementTokens: null, bars: [] },
+        fees: { issuerFeeBps: 50, issuerFixedUsd: null, deliveryUsdPerLot: null, insuranceBps: null, assayUsdPerLot: null, taxBps: null, conversionBps: null },
+        settlementLegs: [
+          { leg: "quote-acceptance-to-execution", maximumBusinessDays: null, typicalBusinessDays: null },
+          { leg: "executed-order-to-supported-stablecoin-receipt", maximumBusinessDays: 3, typicalBusinessDays: null },
+        ],
+      },
+      reviewedAt: "2026-10-01", reviewExpiresAt: "2026-12-30",
+      evidence: [
+        { url: "https://www.matrixdock.com/xagm", quote: "Current Troy Ounce Per Token: 0.998380822. The ozPerToken value starts at 1 and reduces daily according to an annual 0.3% custody fee." },
+        { url: "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/minting-and-redeeming", quote: "Redeeming XAGm for physical LBMA silver is at a minimum of 2100 XAGm. The final silver amount will be determined based on the applicable ozPerToken ratio at the time of redemption. It can be collected via customer pickup or secured delivery. After order execution, Matrixdock will provide you with the final transaction price and the corresponding stablecoin amount. The stablecoins will be sent within T+3." },
+        { url: "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/faq", quote: "A fee of 0.50% will be charged for each redemption order. You are able to redeem XAGm directly with Matrixdock into supported stablecoins such as USDC and USDT. Matrixdock will perform the sale of physical bars and transfer the stablecoins to your wallet." },
+        { url: "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FTRQNUC7Hw1k5EyWrxUrR%2FMatrixdock%20Silver%20XAGm%20Whitepaper.pdf?alt=media&token=cad709b6-47f1-427d-ad14-443fa5cd76e1", quote: "Physical LBMA silver bars are following the LBMA Good Delivery standard, which accepts a range of approximately 100 troy oz. above/below the 1000 oz. fine weight specification. When redeeming into a physical LBMA silver bar, a request has to be made to the Matrixdock Silver operator to seek confirmation on the time, location of collection and other relevant details." },
+        { url: "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2Frlo39Pv6A1ZIVdLEROOh%2FMatrixdock%20Silver%20Bureau%20Veritas%20Audit%20Jul%202026.pdf?alt=media&token=d5a97752-ca3b-46d3-9077-16ac2bc11ee8", quote: "HERAEUS Silver Bar 1000 toz – 999.0 Fineness | 64 PCS | BRINK’S HK. HERAEUS Silver Bar 1000 toz – 999.0 Fineness | 2 PCS | MALCA-AMIT SG" },
+      ],
     },
     costModel: documentedVariableFee(
       "Matrixdock mint/redeem route is available for KYC users and follows the issuer's XAGm silver-per-token framework; public materials reviewed do not expose one global fixed XAGm redemption fee",
@@ -201,12 +390,30 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
   "ggbr-goldfish-gold": {
     ...commodityIssuerBase,
     ...documentedBoundSupplyFull("2026-08-09"),
-    reviewedAt: "2026-09-21",
+    reviewedAt: "2026-10-01",
     outputAssetType: "physical-commodity-delivery",
     physicalCommodityDelivery: {
       commodity: "XAU", deliverableOuncesPerToken: 0.001, minimumDeliveryTokens: 13500,
       deliveryTermsUnbounded: true,
       feeModel: { bps: 300, flatUsd: 0, deliveryUsd: 0 }, sameNotionalEligible: false,
+    },
+    physicalToUsd: {
+      metal: "XAU", fineTroyOuncesPerToken: 0.001,
+      lot: { minimumTokens: 13500, incrementTokens: null, bars: [] },
+      vaultLocations: ["other"], barClass: "small-bar-or-coin",
+      saleLocation: "in-vault", deliveryScope: "same-jurisdiction", fineness: null,
+      eligibility: "verified-customer",
+      fees: { issuerFeeBps: 300, issuerFixedUsd: null, deliveryUsdPerLot: null, insuranceBps: null, assayUsdPerLot: null, taxBps: null, conversionBps: null },
+      settlementLegs: [
+        { leg: "issuer-processing", maximumBusinessDays: null, typicalBusinessDays: 7 },
+        { leg: "physical-gold-release-in-vault", maximumBusinessDays: null, typicalBusinessDays: null },
+      ],
+      reviewedAt: "2026-10-01", reviewExpiresAt: "2026-12-30",
+      evidence: [
+        { url: "https://app.goldfishgold.com/redemption", quote: "Minimum Redemption: 13500.00 GGBR. Redemption Fee: 3%. Processing Time: 5-7 Business Days. Delivery Options: Vault Storage / Physical Delivery. Note: Physical gold redemption requires KYC verification and may incur additional shipping and insurance fees." },
+        { url: "https://goldfishgold.com/", quote: "By design, these tokens are engineered to track the live spot price of gold with one token representing exactly 1/1000th of a troy ounce, giving users a transparent, fractional, and highly liquid way to digitally own gold." },
+        { url: "https://goldfishgold.com/support", quote: "Goldfish utilizes an \"in-situ\" (unmined) collateral model. The gold backing GGBR is fully verified, measured, and legally secured, but it remains in the ground at the Happy 2 claims." },
+      ],
     },
     routeStatus: "open",
     costModel: {
@@ -233,7 +440,7 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
     ],
     notes: [
       "Current app minimum 13,500 GGBR and 3% fee supersede the older support FAQ's 8,818.49 GGBR minimum and 2%-3% processing/delivery range; additional shipping and insurance remain unbounded.",
-      "Settlement timing and eligible jurisdictions are not published on Goldfish's public pages; the earlier five-to-seven-business-day figure came from the sign-in-gated redemption dashboard and could not be re-verified from public sources on 2026-08-09.",
+      "Re-reviewed 2026-10-01: the public redemption app now displays 'Processing Time 5-7 Business Days' alongside the 13,500 GGBR minimum and 3% fee. Processing time is not a final physical-delivery SLA or proof of a same-notional USD payout; eligible jurisdictions and additional delivery costs remain unbounded.",
     ],
   },
   "euroe-membrane": {

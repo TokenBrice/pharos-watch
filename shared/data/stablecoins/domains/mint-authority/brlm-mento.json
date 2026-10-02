@@ -52,6 +52,7 @@
         "directMintAbility": "cap-limited",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Broker swaps are restricted to registered exchange providers and their exchange validation. For each exchange/token limit ID, configured trading-limit flags activate net-flow state updates and verification; exceeding a configured limit reverts. Limits are governance-configurable rather than an immutable BRLm supply ceiling. Numeric current pool limits have not been decoded in this review.",
         "observedAt": "2026-07-14",
         "observedBlock": 72138428,
         "sources": [

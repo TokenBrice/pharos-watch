@@ -1,3 +1,4 @@
+import { evaluateV9ReserveEligibilityEnvelope, resolveV9ReserveFactorBounds } from "./reserve-bound-facts";
 import type {
   V9EvidenceResponsibility,
   V9FailureDomainRef,
@@ -68,10 +69,11 @@ function boundedUnknownReserveEvaluation(
   policy: V9BackingEvaluationPolicy,
 ): ReserveEvaluation {
   const backing = backingPolicy(policy);
-  const quality = backing.boundedUnknownQuality;
-  const evidenceRefIds = uniqueSorted(asset.reserveStatus.evidenceRefIds);
+  const bounded = evaluateV9ReserveEligibilityEnvelope(asset.reserveBoundFacts ?? [], backing, asset.asOfSec ?? 0);
+  const quality = bounded?.quality ?? backing.boundedUnknownQuality;
+  const evidenceRefIds = uniqueSorted([...asset.reserveStatus.evidenceRefIds, ...(bounded?.evidenceRefIds ?? [])]);
   return {
-    score: quality,
+    score: quality * (1 - backing.reserve.concentrationWeight) + backing.boundedUnknownQuality * backing.reserve.concentrationWeight,
     contributions: [
       {
         componentKey: "reserve:unclassified-residual",
@@ -88,9 +90,9 @@ function boundedUnknownReserveEvaluation(
       {
         componentKey: "reserve:concentration",
         source: "reserve-concentration",
-        score: quality,
+        score: backing.boundedUnknownQuality,
         normalizedWeight: backing.reserve.concentrationWeight,
-        weightedScore: quality * backing.reserve.concentrationWeight,
+        weightedScore: backing.boundedUnknownQuality * backing.reserve.concentrationWeight,
         observationState: "bounded-unknown",
         provenance: null,
         evidenceRefIds,
@@ -141,22 +143,24 @@ function scoreFromMaturity(
 }
 
 function scoreV9ReserveExposureClassification(
-  exposure: Pick<V9ReserveExposureFactV2, "assetClass" | "liquidityHorizon" | "maturityDaysMax">,
+  exposure: V9ReserveExposureFactV2,
   policy: V9BackingEvaluationPolicy,
-): number {
+  asset: V9BackingAssetInput,
+): { score: number; evidenceRefIds: string[] } {
   const backing = backingPolicy(policy);
-  if (exposure.assetClass === null) return backing.boundedUnknownQuality;
+  if (exposure.assetClass === null) return { score: backing.boundedUnknownQuality, evidenceRefIds: [] };
   const assetQuality = backing.reserve.assetClassQuality[exposure.assetClass];
-  const liquidity =
-    exposure.liquidityHorizon === null
-      ? backing.boundedUnknownQuality
-      : backing.reserve.liquidityQuality[exposure.liquidityHorizon];
-  const maturity = scoreFromMaturity(exposure.assetClass, exposure.maturityDaysMax, backing);
+  const baseline = {
+    liquidity: exposure.liquidityHorizon === null ? backing.boundedUnknownQuality : backing.reserve.liquidityQuality[exposure.liquidityHorizon],
+    maturity: scoreFromMaturity(exposure.assetClass, exposure.maturityDaysMax, backing),
+  };
+  const bounds = resolveV9ReserveFactorBounds(exposure, asset.reserveBoundFacts ?? [], backing, asset.asOfSec ?? 0, baseline);
   const weights = backing.reserve.factorWeights;
   const totalWeight = weights.assetQuality + weights.liquidity + weights.maturity;
-  return (
-    (assetQuality * weights.assetQuality + liquidity * weights.liquidity + maturity * weights.maturity) / totalWeight
-  );
+  return {
+    score: (assetQuality * weights.assetQuality + bounds.liquidity * weights.liquidity + bounds.maturity * weights.maturity) / totalWeight,
+    evidenceRefIds: bounds.evidenceRefIds,
+  };
 }
 
 function concentrationScore(share: number, policy: V9BackingSemanticPolicy): number {
@@ -474,7 +478,8 @@ function appendReserveExposureEvaluation(params: {
     exposure.provenance === "live" || exposure.evidenceClass === "independent"
       ? 1
       : backing.reserve.issuerAttestedConfidenceMultiplier;
-  const classifiedScore = scoreV9ReserveExposureClassification(exposure, policy) * confidenceMultiplier;
+  const classification = scoreV9ReserveExposureClassification(exposure, policy, asset);
+  const classifiedScore = classification.score * confidenceMultiplier;
   let score =
     state === "known" || state === "stale"
       ? classifiedScore
@@ -542,7 +547,7 @@ function appendReserveExposureEvaluation(params: {
     weightedScore: exposure.weight * clampScore(score),
     observationState: state,
     provenance: exposure.provenance,
-    evidenceRefIds: uniqueSorted(exposure.status.evidenceRefIds),
+    evidenceRefIds: uniqueSorted([...exposure.status.evidenceRefIds, ...classification.evidenceRefIds]),
     failureDomains,
     upstreamAssetId: upstream?.upstreamAssetId ?? exposure.trackedAssetId,
   });

@@ -2,6 +2,7 @@ import type { ScheduledCheckpointIdentity } from "../scheduled-recovery-checkpoi
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { LiveReserveSnapshotProvenance as SharedSnapshotProvenance } from "@shared/types/safety-score-v9-reserve-scope";
 import type {
   LiveReserveEvidenceClass,
   LiveReserveSnapshotMetadata,
@@ -153,13 +154,7 @@ export interface AuthoritativeReserveSnapshot {
   evidenceClass: LiveReserveEvidenceClass;
 }
 
-export interface LiveReserveSnapshotProvenance {
-  source: string;
-  fetchedAt: number;
-  balanceSheetScope?: "shared-sky-maker";
-  sharedBookAssetIds?: string[];
-  sharedBookMeasuredHoldings?: Record<string, number>;
-}
+export type LiveReserveSnapshotProvenance = SharedSnapshotProvenance;
 
 export interface LiveReserveScoringMap extends Map<string, ReserveSlice[]> {
   readonly provenanceById: ReadonlyMap<string, LiveReserveSnapshotProvenance>;

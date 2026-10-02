@@ -5,13 +5,13 @@ description: Verify CoinGecko identity, populate known stablecoin deployments, o
 
 # Stablecoin Identity And Contracts
 
-Choose one mode: `verify`, `populate`, or `discover`. Read the coin’s base file in `shared/data/stablecoins/coins/`, `shared/lib/chains/index.ts`, and [chain-resolution.md](references/chain-resolution.md). The base file owns scalar identity and `contracts`; generated projections are read-only. `verify` writes nothing. `populate` may patch only independently verified `contracts[]` entries and never overwrites curated rows or other base-file fields. `discover` writes only a candidates list under `agents/`.
+Choose one mode: `verify`, `populate`, or `discover`. Read the coin’s base file in `shared/data/stablecoins/coins/`, `shared/types/chain-identity.ts`, and [chain-resolution.md](references/chain-resolution.md). The base file owns scalar identity and `contracts`; generated projections are read-only. `verify` writes nothing. `populate` may patch only independently verified `contracts[]` entries and never overwrites curated rows or other base-file fields. `discover` writes only a candidates list under `agents/`.
 
 ## Shared Rules
 
 - Source order is official issuer deployment material, CoinGecko structured metadata, then the relevant explorer. DefiLlama chain supply is a gap signal, never address proof.
 - Validate name, symbol, chain, address, and decimals before writing. Never guess decimals or overwrite a curated contract.
-- Use only chain IDs accepted by `shared/lib/chains/index.ts`; report unsupported chains instead of adding chain support. Lowercase EVM addresses and preserve native non-EVM casing.
+- Use only chain IDs accepted by `shared/types/chain-identity.ts`; report unsupported chains instead of adding chain support. Lowercase EVM addresses and preserve native non-EVM casing.
 - DefiLlama list `circulating` is already USD-denominated; never multiply it by price.
 - Research can stop with findings. Apply changes only when requested, patch the smallest permitted fields for the selected mode, then run `npm run bootstrap:generated` and `npm run check:stablecoin-data`.
 

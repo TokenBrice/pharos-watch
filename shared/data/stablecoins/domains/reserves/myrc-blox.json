@@ -3,7 +3,8 @@
   "reserves": [
     {
       "name": "MYR cash at Malaysian banks",
-      "pct": 81.964029,
+      "sourceKey": "blox:cash",
+      "pct": 66.68,
       "risk": "very-low",
       "assetClass": "cash",
       "issuerOrObligor": "Undisclosed Malaysian banks (trustee accounts)",
@@ -16,7 +17,8 @@
     },
     {
       "name": "Halogen Shariah MYR Liquid Fund",
-      "pct": 18.035971,
+      "sourceKey": "blox:halogen-myr-liquid-fund",
+      "pct": 33.32,
       "risk": "very-low",
       "assetClass": "money-market-fund",
       "issuerOrObligor": "Halogen Capital (Securities Commission Malaysia-licensed asset manager)",
@@ -29,37 +31,37 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
-    "reviewer": "PoR verification sweep 2026-08; R13 reserve pass",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurM02USDK)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Tommy Ung & Partners PLT MYRC reserve attestation (2026-06-30)",
-        "url": "https://cdn.blox.my/attestations/2026/Blox%20Attestation%20Report-2026-06-June.pdf"
+        "label": "Tommy Ung & Partners PLT MYRC reserve examination (2026-08-31; signed 2026-09-29)",
+        "url": "https://cdn.blox.my/attestations/2026/Blox%20Attestation%20Report-2026-08-August.pdf"
       },
       {
         "label": "BLOX MYRC transparency",
         "url": "https://www.blox.my/myrc/transparency"
       }
     ],
-    "rationale": "Tommy Ung & Partners PLT ISAE 3000 (Revised) reasonable-assurance examination as of 30 June 2026 (report dated 2026-07-21, PDF read this pass): MYR 1,817,790.25 cash (81.96%) and MYR 400,000.00 in the Halogen Shariah MYR Liquid Fund (18.04%), totalling MYR 2,217,790.25 exactly equal to 2,217,790.25 MYRC in circulation (zero surplus). Circulation = 6,365,298.65 total supply less 4,147,508.40 authorized-but-not-issued. The report restricts distribution to the Company and discloses BLOX is in Open Beta and not in any Malaysian regulatory sandbox. The prior 100%-cash composition (from the 2025-07-31 report) no longer holds. R13 re-open 2026-08-08: no July 2026 attestation was publicly accessible; the June 2026 composition remains the freshest available.",
-    "compositionBasis": "Tommy Ung & Partners PLT examination as of 30 June 2026",
-    "compositionAsOf": "2026-06-30",
+    "rationale": "The August 2026 ISAE 3000 reasonable-assurance examination reports 1,800,903.74 MYRC in circulation and MYR 1,800,903.74 of reserve assets in its assertion. Its itemized breakdown states MYR 1,200,903.77 cash (66.68%) and MYR 600,000.00 Halogen Shariah MYR Liquid Fund (33.32%), totaling MYR 1,800,903.77. The MYR 0.03 difference between the assertion and breakdown is retained explicitly rather than silently reconciled. The report is signed 2026-09-29 and the archive lists an upload on 2026-09-30; neither is treated as a separately stated publication date. Named banks, provider shares and account safeguards remain undisclosed.",
+    "compositionBasis": "Published allocation percentages in the Tommy Ung & Partners PLT August 2026 reserve examination",
+    "compositionAsOf": "2026-08-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "The latest independent report identifies 81.96% MYR cash/bank deposits and 18.04% Halogen Shariah MYR Liquid Fund, but the specific Malaysian financial institutions, provider shares, account segregation, and legal terms are not disclosed.",
+    "knownUnknownExposure": "The August 2026 examination identifies 66.68% MYR cash/bank deposits and 33.32% Halogen Shariah MYR Liquid Fund, but bank identities, provider shares, account segregation and legal terms remain undisclosed. The breakdown total exceeds the asserted total by MYR 0.03.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "MYR cash at Malaysian banks",
-        "pct": 81.964029,
+        "pct": 66.68,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "The June 2026 examination identifies MYR cash at banks; fiat cash is an exogenous reserve rather than a tracked stablecoin dependency."
+        "rationale": "The August 2026 examination identifies MYR cash at banks; fiat cash is an exogenous reserve rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 1,
         "reserveName": "Halogen Shariah MYR Liquid Fund",
-        "pct": 18.035971,
+        "pct": 33.32,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The Halogen Shariah MYR Liquid Fund is a Securities Commission Malaysia-licensed money-market fund, not a tracked stablecoin dependency."
       }

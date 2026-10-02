@@ -16,9 +16,9 @@
         "url": "https://bank.telco.in/terms-of-use"
       }
     ],
-    "evidence": "The reviewed Solana eUSD mint has the issuer authority as both mintAuthority and freezeAuthority, establishing direct holder-level freeze capability for a material deployment. Telcoin's current Terms also state that TDAB may block transactions to or from addresses associated with illegal activity. Ethereum and EVM bridge controls remain deployment-specific, so the reviewed status is conservatively direct capability rather than an assertion that every chain uses identical controls.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "The reviewed Solana eUSD mint has the issuer authority as both mintAuthority and freezeAuthority, establishing direct holder-level freeze capability for a material deployment. Telcoin's current Terms also state that TDAB may block transactions to or from addresses associated with illegal activity. Ethereum and EVM bridge controls remain deployment-specific, so the reviewed status is conservatively direct capability rather than an assertion that every chain uses identical controls. At finalized Solana slot 452232859 on 2026-10-01, getMultipleAccounts confirms the Token-2022 mint still has this mint/freeze authority and a permanentDelegate plus pausableConfig controlled by the same address (paused=false). transferHook.programId is null, but its configuration authority is the issuer address.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB29BUCK)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

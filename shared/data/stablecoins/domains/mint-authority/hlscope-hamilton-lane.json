@@ -42,7 +42,7 @@
         },
         {
           "label": "Sourcify DSToken source",
-          "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xa2f6ef3144753f31fcd728910b96a92bbbb462c9/sources/contracts/token/DSToken.sol"
+          "url": "https://sourcify.dev/server/v2/contract/1/0xa2f6ef3144753f31fcd728910b96a92bbbb462c9?fields=sources"
         },
         {
           "label": "Plume HLSCOPE proxy",
@@ -80,7 +80,7 @@
           },
           {
             "label": "Sourcify DSToken source",
-            "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xa2f6ef3144753f31fcd728910b96a92bbbb462c9/sources/contracts/token/DSToken.sol"
+            "url": "https://sourcify.dev/server/v2/contract/1/0xa2f6ef3144753f31fcd728910b96a92bbbb462c9?fields=sources"
           },
           {
             "label": "Ethereum PublicNode RPC",
@@ -221,11 +221,12 @@
           "optimism:0x59c1eacec450c57dcb9b8725d0f96635c2b676ee",
           "plume:0x59c1eacec450c57dcb9b8725d0f96635c2b676ee"
         ],
-        "observedAt": "2026-07-14",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095807,
         "sources": [
           {
             "label": "Sourcify DSToken source",
-            "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xa2f6ef3144753f31fcd728910b96a92bbbb462c9/sources/contracts/token/DSToken.sol"
+            "url": "https://sourcify.dev/server/v2/contract/1/0xa2f6ef3144753f31fcd728910b96a92bbbb462c9?fields=sources"
           },
           {
             "label": "Plume HLSCOPE implementation",
@@ -284,7 +285,7 @@
         },
         {
           "label": "Sourcify DSToken source",
-          "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xa2f6ef3144753f31fcd728910b96a92bbbb462c9/sources/contracts/token/DSToken.sol"
+          "url": "https://sourcify.dev/server/v2/contract/1/0xa2f6ef3144753f31fcd728910b96a92bbbb462c9?fields=sources"
         },
         {
           "label": "Ethereum PublicNode RPC",

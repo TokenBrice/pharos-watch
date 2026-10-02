@@ -5,7 +5,7 @@
     "sources": [
       {
         "label": "YUSD Ethereum token contract",
-        "url": "https://etherscan.io/address/0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a#code"
+        "url": "https://sourcify.dev/server/v2/contract/1/0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a?fields=sources"
       }
     ],
     "evidence": "The verified Ethereum YUSD source gives the owner addBlackList and removeBlackList authority. Its _update hook rejects transfers where either the sender or recipient is blacklisted, establishing a direct holder-level transfer restriction on the tracked token.",
@@ -13,8 +13,8 @@
     "reviewedAt": "2026-07-14"
   },
   "oracleRisk": {
-    "tier": "oracleless",
-    "summary": "YUSD is issued against Aegis's pooled BTC spot and COIN-M hedge portfolio rather than borrower debt positions with oracle-triggered collateral liquidation.",
+    "tier": "privileged-internal-pricing",
+    "summary": "YUSD has no borrower liquidation branches. Both native AegisMinting deployments use Chainlink collateral USD prices and a configured Aegis YUSD/USD oracle to bound redemption collateral amounts. SETTINGS_MANAGER_ROLE can replace the Aegis oracle, whose operator can directly set the YUSD/USD price and whose owner can appoint operators. Ethereum block 26097119 and BSC block 125091227 on 2026-10-01 confirm nonzero configured oracle addresses. This is discretionary top-level price authority, not automatic balance-derived share accounting.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
@@ -37,8 +37,8 @@
         }
       ]
     },
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex data review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC04)",
     "confidence": "verified",
     "sources": [
       {
@@ -48,6 +48,18 @@
       {
         "label": "Aegis YUSD backing and strategy",
         "url": "https://aegis.im/"
+      },
+      {
+        "label": "Verified Ethereum AegisMinting oracle selection and redemption bounds",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xc4df68e592245ca5202fe8b7c438d2b799820fc2?fields=sources"
+      },
+      {
+        "label": "Verified BSC AegisMinting oracle selection and redemption bounds",
+        "url": "https://sourcify.dev/server/v2/contract/56/0x02bf8f0e046f471709e578b1e633077096ce65cf?fields=sources"
+      },
+      {
+        "label": "Verified configured Ethereum AegisOracle operator price updates and owner permissions",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x2b4ad1d479561064cd1c311004aca93d15041aec?fields=sources"
       }
     ]
   },
@@ -343,7 +355,6 @@
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
           "observedAt": "2026-08-16",
-          "observedBlock": 25770366,
           "source": "safe-api"
         },
         "modulesOrGuardsStatus": "none-detected",
@@ -405,7 +416,6 @@
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
           "observedAt": "2026-08-16",
-          "observedBlock": 25770366,
           "source": "safe-api"
         },
         "modulesOrGuardsStatus": "none-detected",

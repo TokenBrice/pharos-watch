@@ -270,14 +270,34 @@
       {
         "name": "Mento Reserve smart contract (Celo)",
         "role": "other"
+      },
+      {
+        "name": "Mento Reserve Safe (Celo): 0x87647780180B8f55980C7D3fFeFe08a9B29e9aE1",
+        "role": "other"
+      },
+      {
+        "name": "Mento Reserve Safe (Ethereum): 0xd0697f70E79476195B742d5aFAb14BE50f98CC1E",
+        "role": "other"
+      },
+      {
+        "name": "Mento Reserve Safe (Monad): 0x87647780180B8f55980C7D3fFeFe08a9B29e9aE1",
+        "role": "other"
+      },
+      {
+        "name": "Mento Operations Safe (Celo): 0xD3D2e5c5Af667DA817b2D752d86c8f40c22137E1",
+        "role": "other"
+      },
+      {
+        "name": "Mento Operations Safe (Ethereum): 0xD3D2e5c5Af667DA817b2D752d86c8f40c22137E1",
+        "role": "other"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-4 (lead usdf-falcon)",
-    "confidence": "probable",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (ValB08CHFAU)",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Mento Reserve dashboard",
@@ -286,9 +306,17 @@
       {
         "label": "Mento protocol documentation",
         "url": "https://docs.mento.org/"
+      },
+      {
+        "label": "Mento itemized reserve API (observed 2026-10-01)",
+        "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+      },
+      {
+        "label": "Mento reserve address configuration",
+        "url": "https://github.com/mento-protocol/mento-analytics-api/blob/main/src/api/reserve/config/addresses.config.ts"
       }
     ],
-    "uncertainty": "Reserve assets are held in the on-chain Mento Reserve contract under Mento governance rather than with a legal custodian, so legal segregation, insolvency treatment, and reuse restrictions are not established by the reviewed sources; constituent-level custody (e.g. Circle, Tether, Lido) sits with each issuer.",
+    "uncertainty": "The API enumerates separate Celo, Ethereum and Monad reserve safes, Celo and Ethereum operations safes, and liquidity positions; the named providers are not an exhaustive wallet census. Pinned 2026-10-01 reads observed 3-of-8 on the Celo and Ethereum reserve safes, 3-of-6 on the Monad reserve safe, and 1-of-3 Celo / 1-of-2 Ethereum operations safes. Modules, guards, signer custody, aggregate ownership reconciliation, provider shares, legal segregation, insolvency treatment, reuse restrictions and recourse to indirect issuer custody remain unresolved; no protective tier or unknown-exposure reduction is inferred.",
     "knownUnknownExposurePct": 100
   }
 }

@@ -1,5 +1,5 @@
 import type { BridgeRouteRiskTier, StablecoinMeta } from "../../types";
-import { CHAIN_META } from "./index";
+import { CHAIN_META } from "../../types/chain-identity";
 import {
   L2BEAT_INTEROP_SNAPSHOT_META,
   L2BEAT_INTEROP_PROTOCOLS,

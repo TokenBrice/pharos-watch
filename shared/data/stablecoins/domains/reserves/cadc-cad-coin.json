@@ -53,24 +53,36 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "ATB Financial (segregated trust accounts for CADC holders)",
+        "name": "ATB Financial (issuer-disclosed segregated cash account)",
         "role": "bank",
         "jurisdiction": "Canada"
       }
     ],
     "segregation": "segregated",
-    "bankruptcyRemoteness": "structured",
+    "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-8 (lead rwausdi-multipli)",
-    "confidence": "probable",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC25)",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Loon transparency and monthly CADC reserve attestations",
         "url": "https://loon.finance/transparency/"
+      },
+      {
+        "label": "Loon CADC reserve FAQ: segregated ATB Financial cash account",
+        "url": "https://loon.finance/support-centre/"
+      },
+      {
+        "label": "Issuer report registry: August 2026 ATB bank confirmation for PayTrie AB Inc",
+        "url": "https://loon.finance/api/attestations"
+      },
+      {
+        "label": "Loon February 2026 CADC terms: trust arrangement and unpublished indenture",
+        "url": "https://loon.finance/terms-of-service/"
       }
     ],
-    "uncertainty": "Loon's monthly third-party attestation confirms Canadian-dollar cash held one-to-one in segregated ATB Financial accounts in trust for CADC holders; the trust structure supports bankruptcy remoteness, but account-level terms and any reuse permissions are not published.",
+    "uncertainty": "Loon discloses segregated Canadian-dollar cash at ATB Financial. Its February 2026 terms describe a CADC Trust, name Odyssey Trust Company as trustee, and say an indenture is available upon request; the Trust Agreement date is printed as a placeholder and downstream holders only may be beneficiaries. The August 31, 2026 bank confirmation identifies PayTrie AB Inc as the account client and does not establish that indenture or enforceable CADC-holder insolvency rights. The prior 2026-07-20 structured-remoteness assessment remains withdrawn under D09. The issuer-described trust is a research lead, not proof that protection is absent or a basis to restore an enforceable legal tier without the operative instrument. Account-level safeguards, liability reconciliation and reuse permissions remain unverified.",
     "knownUnknownExposurePct": 0
   }
 }

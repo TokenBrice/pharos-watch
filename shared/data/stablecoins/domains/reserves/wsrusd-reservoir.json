@@ -55,7 +55,7 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "Reservoir wsrUSD Savingcoin ERC-4626 wrapper contract 0xd3fd63209fa2d55b07a0f6db36c2f43900be3094 (self-custodied; wraps rUSD held in upstream Reservoir protocol contracts)",
+        "name": "Reservoir wsrUSD Savingcoin ERC-4626 wrapper contract 0xd3fd63209fa2d55b07a0f6db36c2f43900be3094 (burns rUSD on deposit and mints rUSD on withdrawal; economic backing is upstream in Reservoir)",
         "role": "other",
         "sharePct": 100,
         "jurisdiction": "Cayman Islands"
@@ -81,6 +81,6 @@
         "url": "https://eth.blockscout.com/address/0xd3fd63209fa2d55b07a0f6db36c2f43900be3094?tab=contract"
       }
     ],
-    "uncertainty": "wsrUSD's only direct reserve is rUSD deposited in the non-upgradeable ERC-4626 wrapper contract (asset() = rUSD 0x09D4214C03D01F49544C0448DBE3A27f768F2b34, re-verified 2026-07-20), so custody of the economic backing is inherited entirely from rUSD: the upstream Reservoir balance sheet sits in protocol-controlled adapter contracts with no named third-party custodian, trust, SPV, or holder claim documented in the ToS (2024-08-23) or product docs. The wrapper itself does not re-lend its rUSD, but the upstream rUSD reserve model is active re-deployment into lending markets, vaults, and RWA credit, so rehypothecation is marked permitted at the economic level. Redemption is documented as immediate only up to available PSM liquidity. Wrapper parameters (setCap, update) are governed by the 3-of-5 MANAGER Safe 0x4E8a4894275780f571AaD53122e641D9f50Ff04f, while DEFAULT_ADMIN_ROLE remains with EOA 0xb7570e32 and can grant or revoke MANAGER (mint-authority review, 2026-07-14). No bankruptcy-remoteness structure for wsrUSD holders is documented."
+    "uncertainty": "wsrUSD's direct underlying asset is rUSD 0x09D4214C03D01F49544C0448DBE3A27f768F2b34. The verified Savingcoin source burns rUSD from the depositor and mints wrapper shares; withdrawal burns shares and mints rUSD to the receiver. At Ethereum block 26095801 on 2026-10-01, asset() returned that rUSD address and rUSD.balanceOf(wrapper) was zero. The wrapper therefore does not custody an idle rUSD deposit balance. Custody of the economic backing is inherited from rUSD and its protocol-controlled adapters. The existing economic-level rehypothecation and legal-safeguard annotations remain subject to upstream evidence; the Terms of Service and product documents do not identify a holder trust or bankruptcy-remoteness structure. Product documentation conditions immediate redemption on available PSM liquidity. At the same block, MANAGER Safe 0x4E8a4894275780f571AaD53122e641D9f50Ff04f remained 3-of-5, and EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 retained DEFAULT_ADMIN_ROLE."
   }
 }

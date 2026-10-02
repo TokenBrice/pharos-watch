@@ -4,7 +4,7 @@
     {
       "sourceKey": "accountable:apyx:deployment:strc",
       "name": "STRC / STRCx (Strategy preferred-equity exposure)",
-      "pct": 86.7,
+      "pct": 85.00644,
       "risk": "high",
       "assetClass": "other",
       "issuerOrObligor": "Strategy, Inc. preferred equity, held directly and through tokenized STRCx; current split undisclosed",
@@ -21,7 +21,7 @@
     {
       "sourceKey": "accountable:apyx:deployment:cash-equivalents",
       "name": "Cash & Equivalents (cash, stablecoins, bills and DeFi positions)",
-      "pct": 13.3,
+      "pct": 14.990681,
       "risk": "medium",
       "assetClass": "other",
       "issuerOrObligor": "Apyx reserve counterparties and DeFi protocols; cash, stablecoin, Treasury and deployed-position split undisclosed",
@@ -33,11 +33,26 @@
         "market"
       ],
       "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "accountable:apyx:deployment:other",
+      "name": "Other (unclassified external reserve balance)",
+      "pct": 0.002878,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Undisclosed counterparty or obligor",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "liquidity",
+        "market"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-16",
-    "reviewer": "Pharos APX net external reserve accounting review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC07)",
     "confidence": "verified",
     "sources": [
       {
@@ -73,37 +88,44 @@
         "url": "https://1731598137-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2F6XK8DXRkFImTNSbo86o2%2Fuploads%2F133oAatMzJ47DEJ8gAoT%2FAugust%202026%20Attestation%20Opinion%20(Final).pdf?alt=media"
       }
     ],
-    "rationale": "Issuer documentation classifies Inventory and Protocol Owned Liquidity as non-reserve, nonredeemable self-issued claims. Gross reserves of $307,593,129.35 less Inventory of $61,062,157.37285687 and POL of $53,894,639.55179605 give $192,636,332.42534712 in external reserves. API supply of $307,573,514.82 less the same own claims gives $192,616,717.8953471 in redeemable claims; the derived ratio of 1.0001018319 matches the reported 1.000102. This reserve accounting does not modify public circulating supply. External STRC/STRCx exposure is 86.74094097%, Cash & Equivalents is 13.25535639%, and Other is 0.00370265%; live one-decimal output rounds to 86.7% and 13.3%. Cash remains conservative because issuer documentation includes lending and liquidity positions. The Wolf August opinion, signed September 11, examines securities as of August 13 and August 31. August 31 holdings include $66,363,383 in brokerage STRC/SATA and $102,095,394 in self-custodied STRCx. The opinion does not reconcile all cash, reserves, or liabilities.",
-    "compositionBasis": "Accountable timestamp 1789502434250; exclude issuer-documented nonredeemable Inventory and POL from both gross asset and claim totals; classify the resulting external reserve mix",
-    "compositionAsOf": "2026-09-15",
+    "rationale": "Accountable cache timestamp 1790853095680 (2026-10-01T11:11:35.680Z) reports USD 307,812,016.45 gross reserves: STRC 156,313,198.70, Cash & Equivalents 27,565,457.04, Other 5,293.09, Protocol Owned Liquidity 65,431,912.00 and Inventory 58,496,155.62. The five disclosed amounts reconcile exactly to the gross total. Issuer definitions exclude nonredeemable Inventory and POL from external backing, giving a USD 183,883,948.83 denominator. Independently dividing the three external amounts by that denominator and rounding to six decimals gives 85.006440%, 14.990681% and 0.002878%. No public supply logic, favorable category upgrade or invented residual is introduced. Wolf's August securities examination remains historical sleeve-only evidence, not complete-reserve or liability assurance.",
+    "compositionBasis": "Accountable timestamp 1790853095680; USD category amounts excluding issuer-documented nonredeemable Inventory and POL; each external category divided by USD 183,883,948.83",
+    "compositionAsOf": "2026-10-01",
     "scope": "full-composition",
-    "knownUnknownExposure": "Cash & Equivalents combines cash, stablecoins, Treasury bills and deployed DeFi positions without weights; STRC combines direct shares with STRCx without current weights; Other is 0.00370265% and below live one-decimal slice precision. Gross own claims remain separately reconciled in live metadata. Wolf examines securities only, not complete reserves or redeemable liabilities.",
-    "knownUnknownExposurePct": 13.3,
+    "knownUnknownExposure": "Cash & Equivalents combines cash, stablecoins, Treasury bills, lending and liquidity positions without weights; STRC combines direct shares and STRCx without current weights. The separately disclosed Other balance remains unclassified. Wolf examines securities only, not complete reserves or redeemable liabilities.",
+    "knownUnknownExposurePct": 14.993559,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "STRC / STRCx (Strategy preferred-equity exposure)",
-        "pct": 86.7,
+        "pct": 85.00644,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Preferred equity and tokenized STRCx are not tracked stablecoin dependencies; current direct/tokenized split is not supplied."
       },
       {
         "reserveIndex": 1,
         "reserveName": "Cash & Equivalents (cash, stablecoins, bills and DeFi positions)",
-        "pct": 13.3,
+        "pct": 14.990681,
         "disposition": "basket-needs-split",
         "rationale": "Issuer names cash, stablecoins, Treasury bills, lending and liquidity positions without source weights; no specific stablecoin dependency fraction is invented."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "Other (unclassified external reserve balance)",
+        "pct": 0.002878,
+        "disposition": "insufficient-evidence",
+        "rationale": "The source discloses Other as an external reserve category but gives no attributable obligor or dependency allocation."
       }
     ]
   },
   "custodyProfile": {
     "providers": [
       {
-        "name": "Alpaca (STRC and SATA; July 2026 attestation)",
+        "name": "Alpaca (STRC and SATA; August 2026 attestation)",
         "role": "custodian"
       },
       {
-        "name": "Preference Foundation or subsidiary-controlled self-custodied wallets (STRCx; July 2026 attestation)",
+        "name": "Preference Foundation or subsidiary-controlled self-custodied wallets (STRCx; August 2026 attestation)",
         "role": "other"
       },
       {
@@ -115,9 +137,9 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-08-28",
-    "reviewer": "Codex Apyx custody refresh",
-    "confidence": "manual-review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA40apxUSD)",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Apyx transparency documentation",
@@ -130,8 +152,12 @@
       {
         "label": "APYX Accountable dashboard",
         "url": "https://accountable.apyx.fi/"
+      },
+      {
+        "label": "Wolf August 2026 securities examination, signed September 11",
+        "url": "https://1731598137-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2F6XK8DXRkFImTNSbo86o2%2Fuploads%2F133oAatMzJ47DEJ8gAoT%2FAugust%202026%20Attestation%20Opinion%20(Final).pdf?alt=media"
       }
     ],
-    "uncertainty": "The July 2026 Wolf & Company examination identifies Alpaca as holding STRC and SATA and Preference Foundation or a subsidiary as controlling self-custodied STRCx wallets for the July attested securities. Custody arrangements for Inventory, Protocol Owned Liquidity, Cash & Equivalents, and Other remain undisclosed; account segregation, bankruptcy remoteness, and rehypothecation terms remain unknown."
+    "uncertainty": "The August 2026 Wolf & Company examination identifies Alpaca as holding STRC and SATA and Preference Foundation or a subsidiary as controlling self-custodied STRCx wallets for the August 13 and August 31 attested securities. Inventory and Protocol Owned Liquidity are issuer-documented nonredeemable own claims, not external reserves. Custody arrangements for Cash & Equivalents and Other, provider shares in the current reserve mix, account segregation, bankruptcy remoteness, and rehypothecation terms remain unknown."
   }
 }

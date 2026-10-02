@@ -1,39 +1,22 @@
 {
   "id": "ustb-superstate",
-  "mica": {
-    "status": "out-of-scope",
-    "references": [
-      {
-        "label": "ESMA MiCA register landing page: ART/EMT register reviewed; no USTB match found on 2026-08-14",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
-      },
-      {
-        "label": "ESMA/EBA/EIOPA crypto-assets factsheet: MiCA does not apply to financial instruments and funds",
-        "url": "https://www.esma.europa.eu/sites/default/files/2025-10/Updated_Joint_ESAs_Factsheet_on_crypto-assets_MT_EN.pdf"
-      },
-      {
-        "label": "Superstate USTB: tokenized private fund share",
-        "url": "https://superstate.com/assets/ustb"
-      }
-    ]
-  },
   "genius": {
     "applicability": "excluded-security",
     "applicabilityBasis": {
-      "summary": "USTB is a Section 3(c)(7) private investment fund offering tokenized shares in a short-duration U.S. Treasury fund; it meets the definition of a security under federal securities laws and is expressly excluded from the GENIUS Act definition of a payment stablecoin (which excludes any asset that otherwise qualifies as a security under the Securities Act of 1933, the Securities Exchange Act of 1934, the Investment Company Act of 1940, or the Investment Advisers Act of 1940). USTB is not marketed or used as a payment instrument; its token represents a fund share that accretes at NAV."
+      "summary": "USTB represents NAV-accreting shares in a short-duration U.S. Treasury fund. GENIUS Act Section 2(22)(B)(iii) excludes securities as defined by the Securities Act of 1933, Securities Exchange Act of 1934, or Investment Company Act of 1940; it does not list the Investment Advisers Act. The statute also states that an instrument issued by a permitted payment stablecoin issuer is not a security solely because it satisfies the payment-stablecoin conditions. The excluded-security classification is based on USTB's fund-share structure, not a claim of GENIUS authorization."
     },
     "authorizationStatus": "not-applicable",
     "issuerPathway": "not-applicable",
-    "issuerEntity": "Superstate Trust (d/b/a Invesco Short-Duration U.S. Government Securities Fund after the completed Invesco takeover in Q2 2026)",
+    "issuerEntity": "Invesco Short Duration US Government Securities Fund, a separate series of Superstate Asset Trust",
     "issuerDomicile": "United States",
-    "licensingRegulator": "SEC: private Section 3(c)(7) fund exempt from Investment Company Act registration; offered under Reg D Rule 506(c); N-1A pending for conversion to registered MMF",
+    "licensingRegulator": "SEC Form D/A filed July 14, 2026 reports reliance on Regulation D Rule 506(c) and Investment Company Act Section 3(c)(7); current issuer disclosures state that the Fund is not registered as an investment company under the Investment Company Act. Form D is a notice filing, not SEC approval.",
     "foreignExceptionStatus": "not-applicable",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-applicable",
     "reserveDisclosurePresent": false,
     "redemptionPolicyPresent": false,
     "monthlyAttestationPresent": false,
-    "notes": "USTB is outside GENIUS payment-stablecoin tracking because it is a tokenized fund share (security), not a payment stablecoin. Invesco completed the takeover in Q2 2026; the token addresses, smart contracts, and USTB ticker will remain unchanged. A pending N-1A before the SEC (filed April 2025) would convert the fund to a registered money market fund upon reorganization: this would not change the excluded-security classification.",
+    "notes": "USTB represents NAV-accreting fund shares rather than a fixed-value payment token; no GENIUS authorization is asserted. The current issuer page names Invesco Advisers, Inc. as investment manager. SEC CIK 2004367 identifies the issuer as a separate series of Superstate Asset Trust. The April 2025 N-1A belongs to Superstate Trust, CIK 1982577; it does not by itself establish a current conversion timetable for this fund. Current issuer disclosures retain the adverse fact that the Fund is not registered under the Investment Company Act.",
     "references": [
       {
         "label": "GENIUS Act S.1582 text: payment stablecoin definition (excludes securities)",
@@ -56,8 +39,8 @@
         "sourceKind": "news"
       },
       {
-        "label": "SEC EDGAR N-1A filing for Superstate USTB Money Market Fund (April 2025)",
-        "url": "https://www.sec.gov/Archives/edgar/data/1982577/000110465925042142/tm2513524d1_n1a.htm",
+        "label": "SEC Form D/A: USTB issuer identity and claimed Rule 506(c)/Section 3(c)(7) exemptions (July 14, 2026)",
+        "url": "https://www.sec.gov/Archives/edgar/data/2004367/000200436726000008/xslFormDX01/primary_doc.xml",
         "sourceKind": "issuer-filing"
       }
     ],

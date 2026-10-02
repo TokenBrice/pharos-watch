@@ -4,17 +4,21 @@
     "reviewedStatus": true,
     "sources": [
       {
-        "label": "Website",
-        "url": "https://allunity.com/chfau/"
+        "label": "CHFAU whitepaper v1.2, transfer restrictions",
+        "url": "https://framerusercontent.com/assets/lfHzRwNo9LAdtDuKhicsDSTFM2g.pdf"
+      },
+      {
+        "label": "Solana finalized Token-2022 mint observation",
+        "url": "https://api.mainnet-beta.solana.com"
       }
     ],
-    "evidence": "Explicit Yes retained: centralized governance metadata indicates issuer or admin control; registry links were reviewed for direct freeze, blacklist, pause, burn, or upgrade authority.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "CHFAU whitepaper v1.2, Clause 3(4), reserves the issuer's right to block transfers to or from blacklisted addresses. At finalized Solana slot 452213349, the issuer-listed CHFAU mint had freeze, permanent-delegate, and pause authority APJqyTzEng2jeLoyvRSZYgTpaZDBdxMetkvUSmvRMbTP. This directly verifies issuer-controlled transfer restrictions rather than inferring them from governance classification.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB08CHFAU)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "AllUnity publishes CHFAU as an issuer-native asset on Ethereum, Polygon, Base, Tempo, and Solana. The three EVM deployments share AllUnity's deterministic UUPS proxy, implementation, minter, and admin; Tempo is an issuer-announced native TIP-20 deployment, and Solana is an issuer-listed Token-2022 mint with direct mint authority rather than an unaffiliated bridge representation.",
+    "summary": "AllUnity publishes CHFAU as an issuer-native asset on Ethereum, Polygon, Base, Tempo, Solana, and Arc. Ethereum, Polygon, and Base share AllUnity's deterministic UUPS proxy, implementation, minter, and admin; Arc has the same observed minter and default-admin roles but a different implementation whose upgrade authorization has not been verified. Tempo is an issuer-announced native TIP-20 deployment, and Solana is an issuer-listed Token-2022 mint with direct mint authority rather than an unaffiliated bridge representation.",
     "reviewedAt": "2026-07-21",
     "reviewer": "Codex bridge route review",
     "confidence": "verified",
@@ -171,6 +175,38 @@
         ],
         "failureDomainKeys": [
           "authority:solana:APJqyTzEng2jeLoyvRSZYgTpaZDBdxMetkvUSmvRMbTP"
+        ]
+      },
+      {
+        "id": "arc:0xc6df1b92a6ae61a27059c41e541a91ce8dcb1605",
+        "destinationChain": "arc",
+        "canonicalChain": "arc",
+        "contractAddress": "0xc6df1b92a6ae61a27059c41e541a91ce8dcb1605",
+        "protocol": "AllUnity native CHFAU (Arc)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "controllerChain": "arc",
+        "controllerAddress": "0xd443f0460c39194faaa06bcd018422fcc70178dd",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "AllUnity's CHFAU product page lists this exact Arc mainnet deployment. At Arc block 23670483, name() returned AllUnity CHF, symbol() CHFAU, decimals() 6, and hasRole(MINTER_ROLE, 0xd443f0460c39194faaa06bcd018422fcc70178dd) returned true. The EIP-1967 implementation slot resolved to 0xa5a15c2f23daf75563355f9397ab51ca320ce7e5; that implementation's upgrade authorization remains unreviewed.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-01",
+        "observedBlock": 23670483,
+        "sources": [
+          {
+            "label": "AllUnity CHFAU supported blockchains",
+            "url": "https://allunity.com/chfau"
+          },
+          {
+            "label": "Arc mainnet pinned JSON-RPC",
+            "url": "https://rpc.mainnet.arc.io"
+          }
+        ],
+        "failureDomainKeys": [
+          "issuer:allunity"
         ]
       }
     ]

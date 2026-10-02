@@ -2,7 +2,7 @@
   "id": "eursafo-spiko",
   "name": "Spiko Amundi Overnight Swap Fund (EUR)",
   "symbol": "EURSAFO",
-  "oneLiner": "EURSAFO is Spiko's EUR share of the Spiko/Amundi Smart Cash fund, a UCITS overnight-swap money-market vehicle authorized by the AMF.",
+  "oneLiner": "EURSAFO is Spiko's EUR share of the Spiko/Amundi Smart Cash fund, an AMF-authorized UCITS using fully collateralized overnight total-return swaps.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "EUR",
@@ -13,16 +13,58 @@
   },
   "collateral": "EUR share class of the Spiko / Amundi Smart Cash fund using fully collateralized total-return swaps with tier-1 bank counterparties and collateral made of liquid financial instruments / money-market fund exposure.",
   "pegMechanism": "EUR-denominated NAV-accreting share class; subscriptions and redemptions are KYC-gated through Spiko fund-transfer rails at the published fund NAV.",
-  "mechanismArchetype": "tbill",
+  "mechanismArchetype": "ucits-trs-fund",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol V10 data curation 2026-10-01 (DataSpiko)",
+    "rationale": "EURSAFO is the exact EUR share class FR0014015LD3 of Spiko Amundi Overnight Swap Fund, fund UUID 59c2c924-ebf8-492d-a4b0-72d72ebf61e6. The issuer share-class API identifies its current native registers, including Ethereum 0x0990b149e915cb08e2143a5c6f669c907eddc8b0 and Solana 6ALgseJyDVHbXVep9hcqEB92xNUZJFLQ66PWoHbGu4P7. The September 2026 prospectus and exact EUR KID establish proportional UCITS portfolio ownership, legally separate fund assets and portfolio-wide total-return swaps with a possible unswapped money-market UCITS sleeve. Current dated physical securities and signed swap inventory corroborate the ucits-trs-fund family; this is not direct Treasury-bill backing, complete NAV reconciliation or funded default-recovery proof.",
+    "sources": [
+      {
+        "label": "Spiko SICAV prospectus published 1 September 2026, SAFO strategy and shareholder rights",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+      },
+      {
+        "label": "Exact EUR share-class KID, FR0014015LD3",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/KID_eurSAFO_EN.pdf"
+      },
+      {
+        "label": "Exact EURSAFO issuer share-class identity and eight native registers",
+        "url": "https://public-api.spiko.io/share-classes/eurSAFO"
+      },
+      {
+        "label": "Dated SAFO physical and signed derivative inventory, 1 October 2026",
+        "url": "https://public-api.spiko.io/fund-assets/?fundId=59c2c924-ebf8-492d-a4b0-72d72ebf61e6"
+      }
+    ]
+  },
   "detailProvider": "coingecko",
   "geckoId": "spiko-amundi-overnight-swap-fund-eur",
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://cdn.spiko.finance/legal_docs/EN/SAFO_Letter_EN.pdf",
-    "provider": "PricewaterhouseCoopers Audit, statutory auditor (SAFO, the Spiko Amundi Overnight Swap Fund, was authorised by the AMF on 2026-02-23 and its first financial year has not closed, so no PwC certification exists yet; the spiko.io fund pages are unlaunched placeholders with dummy data and the 'four audits annually' claim is template marketing text)",
+    "provider": "PricewaterhouseCoopers Audit is the statutory auditor named in the Spiko SICAV prospectus. The linked AMF authorization certificate is not a financial assurance report. The AMF-hosted 30 June 2026 semiannual report contains SAFO assets, liabilities, share counts and NAVs, but no audit opinion; a current SAFO-specific financial audit opinion remains unverified.",
     "attestorTier": "big4",
     "cadence": "annual",
-    "attestorJurisdiction": "France"
+    "attestorJurisdiction": "France",
+    "latestReport": {
+      "periodEnd": "2026-06-30",
+      "assuranceMethod": "unknown",
+      "scope": "unknown",
+      "liabilityReconciliation": "unknown",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WSpikoEur)",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "AMF-hosted Spiko SICAV semiannual report at 30 June 2026, SAFO pages 26–43; reports assets and liabilities, but on-chain liability reconciliation and assurance scope are unknown; no audit opinion",
+          "url": "https://geco.amf-france.org/back-office/document/download/429960"
+        },
+        {
+          "label": "Spiko SICAV prospectus, statutory auditor and annual reporting engagement",
+          "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+        }
+      ]
+    }
   },
   "links": [
     {
@@ -85,6 +127,11 @@
     {
       "chain": "stellar",
       "address": "CBOOCGZSVRSZFRE4U2NWR2B4RXYVJWRCBTGOUD2JPI2TDJPWMTJX7FZP",
+      "decimals": 5
+    },
+    {
+      "chain": "solana",
+      "address": "6ALgseJyDVHbXVep9hcqEB92xNUZJFLQ66PWoHbGu4P7",
       "decimals": 5
     }
   ],

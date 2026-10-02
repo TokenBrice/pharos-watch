@@ -8,7 +8,7 @@
     "governance": "centralized-dependent",
     "rwa": true
   },
-  "collateral": "Tokenized cash-equivalent reserves held by governance-approved enshrined custodians, each of which mints and redeems frxUSD 1:1 against reserves it holds on-chain. The observed balance sheet is WisdomTree WTGXX (U.S. government money market), Superstate USTB (T-bills), BlackRock BUIDL (U.S. Treasuries/repos via Securitize), Bridge USDB, and a segregated Erebor Bank reserve account. Governance has additionally approved Superstate USCC (FIP-420), Agora AUSD (FIP-425), Centrifuge JTRSY (FIP-426), and Circle USDC as custodian assets, but no balances have been observed for them beyond dust USDC in the redemption contract.",
+  "collateral": "Tokenized cash-equivalent reserves held by governance-approved enshrined custodians, each of which mints and redeems frxUSD against its backing asset subject to caps and fees. The official balance sheet at 2026-10-01T07:43:47Z reports WTGXX, USTB, BUIDL, Agora AUSD, USDC, a small Bridge USDB balance, and the Erebor Bank FBO frxUSD reserve account. WTGXX is held both in the redemption contract and in Frax Inc's BitGo Trust Account. Governance approval alone does not establish a current balance for other eligible assets.",
   "pegMechanism": "1:1 mint and redemption through governance-approved enshrined custodians; each custodian holds provable on-chain reserves and can mint or burn frxUSD 1:1; redeemable from any custodian with available collateral",
   "mechanismArchetype": "tbill",
   "llamaId": "235",
@@ -174,6 +174,31 @@
       "chain": "tempo",
       "address": "0x20c0000000000000000000003554d28269e0f3c2",
       "decimals": 6
+    },
+    {
+      "chain": "abstract",
+      "address": "0xea77c590bb36c43ef7139ce649cfbcfd6163170d",
+      "decimals": 18
+    },
+    {
+      "chain": "monad",
+      "address": "0x58e3ee6accd124642ddb5d3f91928816be8d8ed3",
+      "decimals": 18
+    },
+    {
+      "chain": "stable",
+      "address": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+      "decimals": 18
+    },
+    {
+      "chain": "worldchain",
+      "address": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+      "decimals": 18
+    },
+    {
+      "chain": "hyperevm",
+      "address": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+      "decimals": 18
     }
   ],
   "custodyModel": "institutional-top",

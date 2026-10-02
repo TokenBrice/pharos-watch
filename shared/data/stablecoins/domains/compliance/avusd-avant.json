@@ -13,7 +13,7 @@
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
-    "reserveDisclosureUrl": "https://docs.avantprotocol.com/overview/core-tokens",
+    "reserveDisclosureUrl": "https://app.avantprotocol.com/api/metrics/avusd",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
     "notes": "avUSD has stablecoin-like reserve and redemption disclosures; no public GENIUS approval or foreign-issuer exception source was found. Terms of Use (avantprotocol.com) govern under BVI law and refer to 'Avant Protocol Foundation and its affiliates' as the operating entity; company profiles list Palo Alto, CA as operational HQ but no US legal entity name is disclosed. BVI domicile retained as primary; issuerPathway kept unknown pending clearer entity structure disclosure.",
@@ -29,6 +29,12 @@
         "sourceKind": "issuer-disclosure"
       },
       {
+        "label": "Avant dated avUSD portfolio disclosure",
+        "url": "https://app.avantprotocol.com/api/metrics/avusd",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-01"
+      },
+      {
         "label": "Avant Terms of Use (BVI governing law; Avant Protocol Foundation)",
         "url": "https://docs.avantprotocol.com/legal-and-risk/terms-of-use",
         "sourceKind": "issuer-disclosure"
@@ -36,22 +42,15 @@
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act rulemaking bulletin and public releases",
-        "Avant Protocol Terms of Use (BVI governing law, entity name)",
-        "Avant Protocol token documentation (core-tokens)",
-        "Tracxn and The Block company profile (no regulatory filings found)",
-        "Federal Register 2026-04089 (OCC GENIUS NPRM, no avUSD or Avant named)",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "OCC Bulletin 2026-3 GENIUS proposed rule (fetched 2026-10-01)",
+        "OCC digital asset licensing applications directory (full applicant table fetched 2026-10-01; no Avant Protocol Foundation or avUSD entry)",
+        "Avant Terms of Use (fetched 2026-10-01)",
+        "Avant core-token documentation (fetched 2026-10-01)",
+        "Scoped web search on 2026-10-01 for Avant and avUSD on occ.gov, occ.treas.gov, federalregister.gov and home.treasury.gov; no exact match returned"
       ],
-      "summary": "No token-specific U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception was located for avUSD or Avant Protocol Foundation across OCC rulemaking materials, issuer disclosures, and news sources checked June 2026.",
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "summary": "The 2026-10-01 review found no Avant Protocol Foundation or avUSD entry in the OCC digital-asset licensing applicant table and no token-specific GENIUS authorization in the fetched OCC bulletin or issuer disclosures. The scoped search returned no exact match on the named federal domains. The June 2026 broader review is historical and was not renewed; this review is not an exhaustive federal/state approval, foreign-exception or enforcement search.",
+      "reviewer": "Sol curation pass 2026-10-01 (ValA53avUSD)",
+      "reviewedAt": "2026-10-01"
     },
     "reviewer": "Pharos compliance research",
     "reviewedAt": "2026-06-18"

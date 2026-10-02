@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types/core";
+import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import { buildChainRpcs, type ChainRpcConfig } from "../../../../lib/chain-registry";
 
 const fetchEearnSuiSupplyMock = vi.hoisted(() => vi.fn());
@@ -223,12 +224,17 @@ describe("fetchOnChainMcap", () => {
     });
   });
 
-  it("skips the supply probe when contract decimals are missing", async () => {
+  it.each([
+    { chain: "ethereum", decimals: null },
+    { chain: "xrpl", decimals: null, amountEncoding: { kind: "xrpl-issued-currency" as const } },
+    { chain: "xrpl", decimals: 6 },
+    { chain: "ethereum", decimals: 6, amountEncoding: { kind: "xrpl-issued-currency" as const } },
+  ])("skips deployments without fixed-decimal amounts: %j", async (deployment) => {
     const source = makeSingleContractMeta();
     const meta = {
       ...source,
-      contracts: [{ chain: "ethereum", address: source.contracts?.[0]?.address ?? "0x0" }],
-    } as unknown as StablecoinMeta;
+      contracts: [{ ...source.contracts![0], ...deployment }],
+    };
 
     await expect(fetchOnChainMcap(meta, 1)).resolves.toBeNull();
     expect(probeTrackedTokenSupplyMock).not.toHaveBeenCalled();
@@ -502,21 +508,90 @@ describe("fetchCuratedAggregateOnChainMcap", () => {
 });
 
 
-it.each([undefined, "hyperevm", "sei", "pharos", "berachain"])("conserves syzUSD canonical supply and requires every spoke (unreadable=%s)", async (unreadable) => {
-  fetchErc20TotalSupplyMock.mockImplementation(async (input) => input.chain === unreadable ? null : 10n * 10n ** 18n);
-  probeTrackedTokenSupplyMock.mockImplementation(async (_meta, input) => {
-    if (input.chain === unreadable) return null;
-    return (input.chain === "plasma" ? 100n : 10n) * 10n ** 18n;
+describe("curation-expanded complete supply rosters", () => {
+  const cases: { id: string; canonical?: string; supplies: Record<string, number> }[] = [
+    {
+      id: "susdt-spark",
+      canonical: undefined,
+      supplies: { ethereum: 100, arbitrum: 10, xlayer: 20 },
+    },
+    {
+      id: "syrupusdc-maple",
+      canonical: "ethereum",
+      supplies: { ethereum: 100, base: 10, arbitrum: 10, solana: 10, ink: 10, monad: 10, robinhood: 10, tempo: 10, arc: 10 },
+    },
+    {
+      id: "syzusd-yuzu",
+      canonical: "plasma",
+      supplies: { plasma: 100, ethereum: 10, monad: 10, hyperevm: 10, sei: 10, pharos: 10, berachain: 10, aptos: 0.25 },
+    },
+  ];
+
+  beforeEach(() => {
+    fetchErc20TotalSupplyMock.mockReset();
+    probeTrackedTokenSupplyMock.mockReset();
+    fetchSolanaTokenSupplyMock.mockReset();
+    fetchMoveFungibleAssetSupplyMock.mockReset();
+    fetchOnchainUint256Mock.mockReset();
   });
-  const result = await fetchCuratedAggregateOnChainMcap(TRACKED_META_BY_ID.get("syzusd-yuzu")!, 1);
-  if (unreadable) {
-    expect(result).toBeNull();
-  } else {
-    expect(result?.mcap).toBe(100);
-    expect(result?.chainCirculating?.Plasma?.current).toBe(40);
-    expect(Object.keys(result?.chainCirculating ?? {})).toHaveLength(7);
-    expect(Object.values(result?.chainCirculating ?? {}).reduce((sum, row) => sum + row.current, 0)).toBe(100);
+
+  function installSupplyReads(meta: StablecoinMeta, supplies: Record<string, number>, unreadable?: string) {
+    const raw = (chain: string) => {
+      if (chain === unreadable) return null;
+      const contract = meta.contracts?.find((contract) => contract.chain === chain);
+      if (!contract || !isFixedDecimalDeployment(contract)) {
+        throw new Error(`Supply fixture requires fixed decimals for ${chain}`);
+      }
+      return BigInt(supplies[chain] * 10 ** contract.decimals);
+    };
+    probeTrackedTokenSupplyMock.mockImplementation(async (_meta, input) =>
+      raw(input.kind === "onchain-solana" ? "solana" : input.chain),
+    );
+    fetchErc20TotalSupplyMock.mockImplementation(async (input) => raw(input.chain));
+    fetchSolanaTokenSupplyMock.mockImplementation(async () => raw("solana"));
+    fetchMoveFungibleAssetSupplyMock.mockImplementation(async () => {
+      const rawSupply = raw("aptos");
+      return rawSupply == null ? null : { rawSupply, decimals: 6, ledgerVersion: "7439737313" };
+    });
   }
+
+  it.each(cases)("publishes $id's complete partition without double-counting representations", async ({ id, canonical, supplies }) => {
+    const meta = TRACKED_META_BY_ID.get(id)!;
+    installSupplyReads(meta, supplies);
+    const price = 1.25;
+    const result = await fetchCuratedAggregateOnChainMcap(meta, price, buildChainRpcs());
+    const total = canonical ? supplies[canonical] : Object.values(supplies).reduce((sum, value) => sum + value, 0);
+    const representations = Object.entries(supplies).reduce((sum, [chain, units]) => chain === canonical ? sum : sum + units, 0);
+    expect(result?.mcap).toBe(total * price);
+    expect(Object.fromEntries(Object.values(result!.chainCirculating!).map((row) => [row.chainId, row.current]))).toEqual(
+      Object.fromEntries(Object.entries(supplies).map(([chain, units]) => [
+        chain, (chain === canonical ? total - representations : units) * price,
+      ])),
+    );
+    expect(Object.values(result!.chainCirculating!).reduce((sum, row) => sum + row.current, 0)).toBe(total * price);
+    // Aptos must not be sent through Movement's asset-restricted xReserve gate.
+    expect(fetchOnchainUint256Mock).not.toHaveBeenCalled();
+  });
+
+  it.each(cases.flatMap(({ id, supplies }) => Object.keys(supplies).map((unreadable) => ({ id, supplies, unreadable }))))(
+    "fails $id closed when $unreadable cannot be read",
+    async ({ id, supplies, unreadable }) => {
+      const meta = TRACKED_META_BY_ID.get(id)!;
+      installSupplyReads(meta, supplies, unreadable);
+      await expect(fetchCuratedAggregateOnChainMcap(meta, 1.25, buildChainRpcs())).resolves.toBeNull();
+    },
+  );
+
+  it.each(["decimals", "exception"])("fails syzUSD closed on Aptos %s failure", async (failure) => {
+    const meta = TRACKED_META_BY_ID.get("syzusd-yuzu")!;
+    installSupplyReads(meta, cases[2].supplies);
+    if (failure === "decimals") {
+      fetchMoveFungibleAssetSupplyMock.mockResolvedValue({ rawSupply: 250_000n, decimals: 8, ledgerVersion: "7439737313" });
+    } else {
+      fetchMoveFungibleAssetSupplyMock.mockRejectedValue(new Error("Aptos REST unavailable"));
+    }
+    await expect(fetchCuratedAggregateOnChainMcap(meta, 1.25, buildChainRpcs())).resolves.toBeNull();
+  });
 });
 
 describe("eEARN complete native aggregate", () => {

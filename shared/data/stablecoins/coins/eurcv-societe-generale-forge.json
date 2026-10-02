@@ -5,13 +5,30 @@
   "oneLiner": "EURCV is Societe Generale-FORGE's regulated euro stablecoin issued under the EU MiCA framework, designed for institutional on-chain settlement.",
   "marketAvailability": "market-traded",
   "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC18)",
+    "rationale": "EURCV retains its April 20, 2023 product launch. The issuer states that its restructuring into a MiCA electronic-money token took effect July 1, 2024 and removed transfer whitelisting. The contemporaneous EMT white paper gives holders a continuing Article 49 claim against the issuer and par euro redemption, with segregated accounts subject to Article 54 reserve investment rules. This replacement of the legal holder-claim and transfer/redemption framework is a material scored-mechanism boundary under D20; the implementation clock begins July 1, 2024, not on a later routine chain deployment or document update.",
+    "sources": [
+      {
+        "label": "SG-FORGE EURCV EMT restructuring effective July 1, 2024",
+        "url": "https://www.sgforge.com/stablecoin-elevation/"
+      },
+      {
+        "label": "Contemporaneous EURCV EMT white paper, June 28, 2024",
+        "url": "https://www.sgforge.com/wp-content/uploads/2024/07/SG-Forge-EURCV-White-Paper-20240628.pdf"
+      }
+    ]
+  },
+  "implementationLaunchDate": "2024-07-01",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "EUR",
     "governance": "centralized"
   },
-  "collateral": "Euro-denominated cash deposits and high-quality securities held in a segregated fiduciary estate at Societe Generale, with daily public disclosure of reserve composition",
-  "pegMechanism": "Direct 1:1 redemption through SG-FORGE",
+  "collateral": "Euro cash deposits at Societe Generale in segregated issuer accounts; the issuer's daily disclosure dated 2026-10-01 reports EURCV reserves 100% at Societe Generale.",
+  "pegMechanism": "EEA-resident holders have 1:1 euro redemption rights through SG-FORGE after KYC/AML and sanctions controls; payment is due by the last business day of the following month after controls are completed. Non-EEA holders have no direct redemption right, and the issuer cannot transact with U.S. residents.",
   "llamaId": "254",
   "detailProvider": "defillama",
   "geckoId": "societe-generale-forge-eurcv",
@@ -24,16 +41,19 @@
     "attestorLicense": "EMI (MiCA)",
     "attestorTier": "self",
     "latestReport": {
-      "periodEnd": "2026-07-14",
-      "publishedAt": "2026-07-15",
+      "reviewReference": {
+        "date": "2026-10-01",
+        "reviewedAt": "2026-10-01",
+        "dateKind": "unspecified"
+      },
       "assuranceMethod": "self-verification",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "PoR verification sweep 2026-08 (lockstep alignment: snapshot dates pinned to the dated observation the composition review itself records) - SG-FORGE daily disclosure of 2026-07-14 (published next day)",
+      "reviewer": "Sol curation pass 2026-10-01 (CurA29KAU): issuer dashboard states Last update 1/10/2026, 164,388,393.02 EURCV and matching euro reserves, 100% at Societe Generale. Last-update date is retained as a review reference; no report-period end or distinct publication date is stated.",
       "confidence": "verified",
       "sources": [
         {
-          "label": "SG-FORGE EURCV daily reserve disclosure - July 15, 2026",
+          "label": "SG-FORGE EURCV daily reserve disclosure: Last update 1/10/2026",
           "url": "https://www.sgforge.com/product/coinvertible/"
         }
       ]
@@ -63,7 +83,10 @@
     {
       "chain": "xrpl",
       "address": "4555524356000000000000000000000000000000.rUNaS5sqRuxZz6V7rBGhoSaZiVYA3ut4UL",
-      "decimals": 0
+      "decimals": null,
+      "amountEncoding": {
+        "kind": "xrpl-issued-currency"
+      }
     },
     {
       "chain": "stellar",

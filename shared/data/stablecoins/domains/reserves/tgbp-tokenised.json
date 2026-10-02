@@ -2,19 +2,37 @@
   "id": "tgbp-tokenised",
   "reserves": [
     {
-      "name": "GBP bank deposits, money market funds, and UK Treasuries",
-      "pct": 100,
-      "risk": "very-low",
+      "name": "GBP cash accounts",
+      "pct": 17.275008,
+      "risk": "low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Undisclosed regulated financial institutions holding BCP Technologies Ltd reserve cash accounts",
+      "riskFactors": ["counterparty", "custody", "concentration"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "GBP bonds (issuers and maturities undisclosed)",
+      "pct": 22.440424,
+      "risk": "medium",
       "assetClass": "other",
-      "issuerOrObligor": "BCP Technologies Ltd reserve accounts and eligible GBP-denominated liquid assets",
+      "issuerOrObligor": "Undisclosed bond issuers in BCP Technologies Ltd reserves",
+      "riskFactors": ["credit", "duration", "liquidity", "custody", "concentration"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "GBP money market funds",
+      "pct": 60.284568,
+      "risk": "low",
+      "assetClass": "money-market-fund",
+      "issuerOrObligor": "Undisclosed money market funds in BCP Technologies Ltd reserves",
       "riskFactors": ["counterparty", "duration", "liquidity", "custody", "concentration"],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-22",
-    "reviewer": "GPT SOL-BIND wave6",
-    "confidence": "probable",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (R2VMisc10)",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Tokenised GBP issuer site and terms (site bundle dated 2026-07-14)",
@@ -23,20 +41,39 @@
       {
         "label": "Andersen tGBP agreed-upon procedures report - June 30, 2026",
         "url": "https://hypzwtzgiiobtwtrskfq.supabase.co/storage/v1/object/public/Website%20Files/Independent%20Accounts%20Report%20-%20BCP%20Technologies%20Ltd%20-%20%2030%20June%202026.pdf"
+      },
+      {
+        "label": "Andersen tGBP agreed-upon procedures report - August 31, 2026 (page 2 reserve table visually verified)",
+        "url": "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf"
       }
     ],
-    "rationale": "BCP Technologies' current terms identify bank deposits, money market funds, and UK Treasuries as eligible liquid reserve assets. Andersen's June 30, 2026 agreed-upon procedures report establishes aggregate reserve sufficiency but does not identify asset classes or weights, so the reserve remains one aggregate basket without inventing a split.",
-    "compositionBasis": "Current Tokenised GBP terms and June 30, 2026 Andersen reserve-sufficiency procedures; asset-class weights undisclosed",
+    "rationale": "The August 31, 2026 Andersen report's image-based page 2 table identifies GBP 3,455,964.06 of cash accounts, GBP 4,489,335.00 of bonds and GBP 12,060,272.00 of money market funds, totaling GBP 20,005,571.06. Percentages are these reported amounts divided by the reported reserve total, rounded to six decimal places. The AUP engagement provides factual findings, not assurance. Bond issuers, instrument types and maturities are not identified in the table, so the bond slice remains unclassified rather than assumed to be Treasury bills.",
+    "compositionBasis": "August 31, 2026 Andersen AUP page 2 reserve table; reported asset amounts normalized to the reported GBP reserve total",
+    "compositionAsOf": "2026-08-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "The issuer identifies the eligible reserve envelope but does not publish the current allocation among bank deposits, money market funds, and UK Treasuries.",
-    "knownUnknownExposurePct": 100,
+    "knownUnknownExposure": "The asset-class allocation is disclosed. The 22.440424% bonds slice lacks issuer, instrument and maturity details. Banks, MMF identities and provider shares remain undisclosed, and no fixed full-book liquidation horizon is established.",
+    "knownUnknownExposurePct": 22.440424,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "GBP bank deposits, money market funds, and UK Treasuries",
-        "pct": 100,
-        "disposition": "basket-needs-split",
-        "rationale": "The issuer and Andersen report do not publish the current deposit, money-market-fund, and Treasury weights."
+        "reserveName": "GBP cash accounts",
+        "pct": 17.275008,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Reported cash accounts are off-chain GBP reserves, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "GBP bonds (issuers and maturities undisclosed)",
+        "pct": 22.440424,
+        "disposition": "insufficient-evidence",
+        "rationale": "The report labels this holding Bonds but does not identify issuers, instrument types or maturities."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "GBP money market funds",
+        "pct": 60.284568,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Reported GBP money market fund holdings are off-chain reserves, not a tracked stablecoin dependency."
       }
     ]
   },

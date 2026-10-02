@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "VBILL is a Securitize-administered fund token with issuer-native issuance surfaces on Ethereum, Avalanche, BNB Chain, and Solana. The three EVM DSToken proxies expose owner-gated issueTokens and UUPS upgrade paths controlled by the same EOA 0x59c1eA...76Ee with no delay. On Solana the Token-2022 mint and freeze authority BJXUcHs7...cgiK is a program-derived address of the Securitize DS controller 7tXjm...9tvP, driven by a single issuer signature, and that controller's program upgrade authority is the single plain key 8d36iv2Y...zbB6 shared with the controller that mints STAC. These are native issuance controls, not Wormhole Guardian or transfer-admin controls. Every issuance surface is uncapped and single-key governed, with no on-chain threshold or delay anywhere in the stack.",
+    "summary": "VBILL is a Securitize-administered fund token with issuer-native issuance surfaces on Ethereum, Avalanche, BNB Chain, and Solana. The three EVM DSToken proxies have the same observed owner EOA 0x59c1eA...76Ee and return cap() = 0. Their verified DSToken sources gate issuance through trust-service issuer/master roles and UUPS authorization through the owner or a master role. The shared owner holds MASTER role in each observed trust service and therefore has direct native mint authority; owner() alone still does not enumerate every authorized minter or upgrader. On Solana the Token-2022 mint and freeze authority BJXUcHs7...cgiK is a program-derived address of the Securitize DS controller 7tXjm...9tvP, driven by a single issuer signature, and that controller's program upgrade authority is the single plain key 8d36iv2Y...zbB6 shared with the controller that mints STAC. These are native issuance controls, not Wormhole Guardian or transfer-admin controls. No protective on-chain threshold or timelock has been established for these issuer-administered issuance surfaces.",
     "upgradeability": {
       "model": "uups",
       "deploymentRefs": [
@@ -62,8 +62,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-16",
-        "observedBlock": 25770003,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095800,
         "sources": [
           {
             "label": "Sourcify DSToken source",
@@ -82,7 +82,7 @@
             "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "evidence": "At Ethereum block 25295081, owner() returned 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee (unchanged from block 25166611). Implementation 0xaf88485377cca5e690e7dcb1ba81370f0b575156 confirmed. Source identifies issueTokens and issueTokensWithNoCompliance as mint entry points gated by the owner."
+        "evidence": "At Ethereum block 26095800 on 2026-10-01, owner() returned 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee, cap() returned zero, and the EIP-1967 implementation remained 0xaf88485377cca5e690e7dcb1ba81370f0b575156. The verified DSToken source routes issueTokens through issueTokensWithMultipleLocks with onlyIssuerOrAbove; issueTokensWithNoCompliance uses the same modifier. ServiceConsumer permits trust-service ROLE_ISSUER or ROLE_MASTER, not an owner-only mint gate. BaseDSContract authorizes UUPS upgrades through onlyMaster, which permits the owner or a trust-service master. The complete active trust-service role roster was not enumerated."
       },
       {
         "chain": "avalanche",
@@ -96,9 +96,13 @@
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-16",
-        "observedBlock": 92972905,
+        "observedAt": "2026-10-01",
+        "observedBlock": 96511203,
         "sources": [
+          {
+            "label": "Routescan verified Avalanche DSToken implementation sources",
+            "url": "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xc7579a9a4801a805b66742e5bd56a1581705fe0d"
+          },
           {
             "label": "Avalanche VBILL token",
             "url": "https://snowscan.xyz/address/0x7f4546ef315efc65336187fe3765ea779ac90183"
@@ -112,7 +116,7 @@
             "url": "https://securitize.io/primary-market/vaneck-vbill"
           }
         ],
-        "evidence": "At Avalanche block 92972905, owner() returned the shared EOA 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee and the EIP-1967 implementation slot resolved to 0xc7579a9a4801a805b66742e5bd56a1581705fe0d. The verified Securitize DSToken model exposes owner-gated issueTokens and issueTokensWithNoCompliance, so this is an issuer-native issuance surface rather than a Wormhole controller."
+        "evidence": "At Avalanche block 96511203 on 2026-10-01, owner() returned 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee, cap() returned zero, and EIP-1967 implementation was 0xc7579a9a4801a805b66742e5bd56a1581705fe0d. Routescan's verified implementation source gates issueTokens via onlyIssuerOrAbove and UUPS authorization via onlyMaster. getDSService(1) returned trust service 0x5c5ff37cb5da4dcc25f166a502fbc4fc3d158cd4, whose getRole(sharedOwner) returned 1 (MASTER). The shared owner can therefore directly mint; the full authorized-role roster was not enumerated. This is issuer-native issuance, not Wormhole control."
       },
       {
         "chain": "bsc",
@@ -126,9 +130,13 @@
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-16",
-        "observedBlock": 116336111,
+        "observedAt": "2026-10-01",
+        "observedBlock": 125056599,
         "sources": [
+          {
+            "label": "Sourcify verified BNB Chain DSToken implementation sources",
+            "url": "https://sourcify.dev/server/v2/contract/56/0xcd01d1c5c78ad428cd01913d4664c20ed1e61923?fields=sources"
+          },
           {
             "label": "BNB Chain VBILL token",
             "url": "https://bscscan.com/address/0x14d72634328c4d03bba184a48081df65f1911279"
@@ -142,7 +150,7 @@
             "url": "https://securitize.io/primary-market/vaneck-vbill"
           }
         ],
-        "evidence": "At BNB Chain block 116336111, owner() returned the shared EOA 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee and the EIP-1967 implementation slot resolved to 0xcd01d1c5c78ad428cd01913d4664c20ed1e61923. The verified Securitize DSToken model exposes owner-gated issueTokens and issueTokensWithNoCompliance, so this is an issuer-native issuance surface rather than a Wormhole controller."
+        "evidence": "On 2026-10-01, BNB Chain block 125056599 returned owner 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee and cap zero; block 125057149 resolved EIP-1967 implementation 0xcd01d1c5c78ad428cd01913d4664c20ed1e61923. Sourcify's verified implementation source gates issueTokens via onlyIssuerOrAbove and UUPS authorization via onlyMaster. At block 125059607, getDSService(1) returned trust service 0x079864f3dab043382f3cab4683fcb2aaa56894a4 and its getRole(sharedOwner) returned 1 (MASTER), recovered at the same pinned block through the public BNB RPC after a Dwellir header error. The shared owner can directly mint; the full authorized-role roster was not enumerated. This is issuer-native issuance, not Wormhole control."
       },
       {
         "chain": "solana",
@@ -156,8 +164,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-18",
-        "observedBlock": 440030249,
+        "observedAt": "2026-10-01",
+        "observedBlock": 452212936,
         "sources": [
           {
             "label": "Solana VBILL Token-2022 mint",
@@ -198,11 +206,85 @@
         "label": "VBILL token owner EOA",
         "role": "minter-admin",
         "authorityType": "eoa",
-        "directMintAbility": "can-authorize",
+        "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-16",
-        "observedBlock": 25770003,
+        "executionScope": {
+          "controllerDeployment": "ethereum:0x59c1eacec450c57dcb9b8725d0f96635c2b676ee",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2026-11-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataSecuritize)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "VBILL verified current DSToken implementation",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xaf88485377cca5e690e7dcb1ba81370f0b575156"
+            },
+            {
+              "label": "Ethereum pinned RPC",
+              "url": "https://ethereum-rpc.publicnode.com"
+            }
+          ],
+          "pin": {
+            "position": "26099926",
+            "hash": "0xd2aaee1dfb96a21f51eccf24572f7f12bee0e04cc4ef28d9db3d6b7bc9cb2812",
+            "runtimeIdentity": "eth_getCode:0x",
+            "signerIdentity": "ethereum:0x59c1eacec450c57dcb9b8725d0f96635c2b676ee"
+          },
+          "observedState": {
+            "position": "26099926",
+            "hash": "0xd2aaee1dfb96a21f51eccf24572f7f12bee0e04cc4ef28d9db3d6b7bc9cb2812",
+            "runtimeIdentity": "eth_getCode:0x",
+            "signerIdentity": "ethereum:0x59c1eacec450c57dcb9b8725d0f96635c2b676ee"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "vbill-ethereum-owner-uups-upgrade",
+              "targetDeployment": "ethereum:0x2255718832bc9fd3be1caf75084f4803da14ff01",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x4f1ef286"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "upgrade"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "vbill-vaneck"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x2255718832bc9fd3be1caf75084f4803da14ff01"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095800,
         "sources": [
           {
             "label": "Etherscan VBILL owner address",
@@ -217,7 +299,7 @@
             "url": "https://bsc-dataseed.binance.org"
           }
         ],
-        "evidence": "At Ethereum block 25770003, Avalanche block 92972905, and BNB Chain block 116336111, owner() returned the same code-empty EOA 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee. The verified Securitize DSToken model gates issueTokens and UUPS authorization through the owner; off-chain MPC/HSM custody is indistinguishable from the EOA read."
+        "evidence": "On 2026-10-01, owner() returned the same code-empty EOA 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee on Ethereum at block 26095800, Avalanche at block 96511203, and BNB Chain at block 125056599. Verified deployment sources gate issuance through trust-service issuer/master roles and UUPS authorization through owner-or-master. getDSService(1) identified each trust service, and getRole(sharedOwner) returned 1 (MASTER) at Ethereum block 26095800, Avalanche block 96511203 and BNB block 125059607, establishing direct native mint authority as well as administrative control. These reads do not enumerate every other authorized role holder. Off-chain MPC/HSM custody is indistinguishable from the EOA read."
       },
       {
         "chain": "solana",
@@ -228,8 +310,82 @@
         "directMintAbility": "upgrade-only",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-08-18",
-        "observedBlock": 440030249,
+        "executionScope": {
+          "controllerDeployment": "solana:8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6",
+          "reviewedAt": "2026-10-01",
+          "observedAt": "2026-10-01",
+          "expiresAt": "2026-11-01",
+          "reviewer": "Sol curation pass 2026-10-01 (DataSecuritize)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Finalized Solana account and ProgramData read",
+              "url": "https://solana-rpc.publicnode.com"
+            },
+            {
+              "label": "Solana program authority and upgrade semantics",
+              "url": "https://solana.com/docs/programs/deploying"
+            }
+          ],
+          "pin": {
+            "position": "452398136",
+            "hash": "HxqdN1bh9HdtjQnSD81udSrH7S1Pnk7KfpvwPsSqBtts",
+            "runtimeIdentity": "system-owned:zero-data:non-executable",
+            "signerIdentity": "solana:8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6"
+          },
+          "observedState": {
+            "position": "452398136",
+            "hash": "HxqdN1bh9HdtjQnSD81udSrH7S1Pnk7KfpvwPsSqBtts",
+            "runtimeIdentity": "system-owned:zero-data:non-executable",
+            "signerIdentity": "solana:8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "vbill-solana-controller-upgrade",
+              "targetDeployment": "solana:7tXjmbkZVY3Gmg9kDBebcNXT1yC5pyoxxXVLwdbv9tvP",
+              "entrypointKind": "solana-instruction",
+              "entrypoints": [
+                "BPFLoaderUpgradeab1e11111111111111111111111:Upgrade"
+              ],
+              "callMode": "native",
+              "capabilities": [
+                "upgrade"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "vbill-vaneck"
+              ],
+              "affectedDeployments": [
+                "solana:34mJztT9am2jybSukvjNqRjgJBZqHJsHnivArx1P4xy1"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
+        "observedAt": "2026-10-01",
+        "observedBlock": 452212936,
         "sources": [
           {
             "label": "Solana JSON-RPC (publicnode)",

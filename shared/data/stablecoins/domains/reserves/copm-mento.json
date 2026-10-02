@@ -284,17 +284,33 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "Mento Reserve smart contract (Celo)",
+        "name": "Mento Reserve Safe wallets (Celo and Ethereum)",
+        "role": "other"
+      },
+      {
+        "name": "Mento V2 Liquidity Reserve (Celo)",
+        "role": "other"
+      },
+      {
+        "name": "Mento V3 Liquidity Reserve (Monad)",
+        "role": "other"
+      },
+      {
+        "name": "Mento operational wallets and deployed protocol positions",
         "role": "other"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-7 (lead tusd-trueusd)",
-    "confidence": "probable",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB28LUSD)",
+    "confidence": "verified",
     "sources": [
+      {
+        "label": "Mento Reserve issuer API: wallet and protocol-position inventory",
+        "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+      },
       {
         "label": "Mento Reserve dashboard",
         "url": "https://reserve.mento.org/"
@@ -304,7 +320,7 @@
         "url": "https://docs.mento.org/"
       }
     ],
-    "uncertainty": "Reserve assets are held in the on-chain Mento Reserve contract under Mento governance rather than with a legal custodian, so legal segregation, insolvency treatment, and reuse restrictions are not established by the reviewed sources; constituent-level custody (e.g. Circle, Tether, Lido) sits with each issuer.",
+    "uncertainty": "The issuer API identifies reserve Safe wallets, liquidity reserves and operational holdings across chains, including deployed protocol positions; custody is not confined to one Celo Reserve contract. No legal segregation, insolvency treatment, reuse restriction or independently verified custody share is established. Constituent-level custody remains with each underlying issuer or protocol.",
     "knownUnknownExposurePct": 100
   }
 }

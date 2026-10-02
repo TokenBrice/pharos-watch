@@ -884,7 +884,7 @@ Returns current Yield Intelligence rankings and risk-adjusted fields.
 ```json
 {
   "currentVersion": "8.46",
-  "methodologyVersion": "9.98"
+  "methodologyVersion": "10.0"
 }
 ```
 

@@ -1,7 +1,7 @@
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { aggregateChains } from "@shared/lib/chains/aggregator";
 import { derivePegRates } from "@shared/lib/peg-rates";
-import { CHAIN_META } from "@shared/lib/chains";
+import { CHAIN_META } from "@shared/types/chain-identity";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-registry";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";

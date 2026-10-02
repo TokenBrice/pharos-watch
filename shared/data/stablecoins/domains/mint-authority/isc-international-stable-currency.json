@@ -14,8 +14,8 @@
         "3gvYRKWyXRR9xKWe1ZjPhLY5ZJRN7KDB4rFZFGoJfFk2"
       ],
       "canChangeMintLogic": false,
-      "observedAt": "2026-07-13",
-      "observedBlock": 432714278,
+      "observedAt": "2026-10-01",
+      "observedBlock": 452220867,
       "sources": [
         {
           "label": "Solana RPC",
@@ -44,12 +44,12 @@
         "signerCount": 3,
         "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-07-13",
-        "observedBlock": 432714278,
+        "observedAt": "2026-10-01",
+        "observedBlock": 452219100,
         "failureDomainKeys": [
           "solana:3XM6WqYLx5gKpRNwnCcUrBmJAhRHx3imktwEvbRwXavZ"
         ],
-        "evidence": "At Solana slot 432714278, mint J9BcrQfX4p9D1bvLzRNCbMDv8f44a9LFdeqNE4Yk2WMD returned mintAuthority and freezeAuthority 3XM6WqYLx5gKpRNwnCcUrBmJAhRHx3imktwEvbRwXavZ. That Token Program-owned account decoded as an immutable SPL multisig with threshold 2 and signers B6PG7xN8W1G3PA8XoTzUEAdzNzWfDXQeWud5axWtHCPi, FUPe37ryYxB2J8Ckvq3pzpw7EMahYyeT8WtzJqh3Ge3f, and 3kHz9pTwSeCz6JemWsKoKMPS8E1RUbwbU2xg1b1ajFGF. All three are on-curve externally signable public keys. Tokenkeg ProgramData had no upgrade authority.",
+        "evidence": "At finalized Solana slot 452219100 on 2026-10-01, the ISC mint J9BcrQfX4p9D1bvLzRNCbMDv8f44a9LFdeqNE4Yk2WMD retained six decimals and mint/freeze authority 3XM6WqYLx5gKpRNwnCcUrBmJAhRHx3imktwEvbRwXavZ. The same-slot authority account remains Token Program-owned SPL multisig with threshold 2, three valid signers, and the three previously recorded signer public keys. A separate finalized read at slot 452220867 confirms Tokenkeg ProgramData 3gvYRKWyXRR9xKWe1ZjPhLY5ZJRN7KDB4rFZFGoJfFk2 has no upgrade authority.",
         "sources": [
           {
             "label": "ISC SPL mint on Solana Explorer",

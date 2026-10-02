@@ -40,7 +40,7 @@
     "m0"
   ],
   "collateral": "Underlying M (M0 Protocol) is backed 100% by short-term U.S. Treasury bills (30 to 90 day WAM) held in bankruptcy-remote SPVs by permissioned Minters; M0 Validators independently attest collateral sufficiency on-chain before any M can be minted, and wM holds M 1:1 inside the Wrapped M Token contract",
-  "pegMechanism": "Non-rebasing 1:1 ERC-20 wrapper around M: anyone can call wrap() to deposit M and mint wM, or unwrap() to redeem wM back to M at any time without fees or queues; wM holders are non-earning by default, so yield accrued by the underlying M is redirected via TTG-approved earner accounts and the claimExcess() mechanism to ecosystem yield recipients (downstream M0 extensions and apps), leaving wM as a flat USD-denominated unit",
+  "pegMechanism": "Non-rebasing M-backed ERC-20 wrapper with 1:1 principal conversion through the M0 SwapFacility. The current Ethereum WrappedMToken accepts wrap() and unwrap() only from that facility; both paths are subject to pause and account-freeze checks. Non-earning accounts retain fixed balances, while approved earning accounts can claim underlying M yield and claimExcess() directs excess reserves to the configured recipient. Unwrapping returns M, not fiat, and does not itself establish access to M0 institutional redemption.",
   "mechanismArchetype": "tbill",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
@@ -112,6 +112,41 @@
     {
       "chain": "solana",
       "address": "mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp",
+      "decimals": 6
+    },
+    {
+      "chain": "linea",
+      "address": "0x437cc33344a0b27a429f795ff6b469c72698b291",
+      "decimals": 6
+    },
+    {
+      "chain": "bsc",
+      "address": "0x437cc33344a0b27a429f795ff6b469c72698b291",
+      "decimals": 6
+    },
+    {
+      "chain": "hyperevm",
+      "address": "0x437cc33344a0b27a429f795ff6b469c72698b291",
+      "decimals": 6
+    },
+    {
+      "chain": "soneium",
+      "address": "0x437cc33344a0b27a429f795ff6b469c72698b291",
+      "decimals": 6
+    },
+    {
+      "chain": "plasma",
+      "address": "0x437cc33344a0b27a429f795ff6b469c72698b291",
+      "decimals": 6
+    },
+    {
+      "chain": "citrea",
+      "address": "0x437cc33344a0b27a429f795ff6b469c72698b291",
+      "decimals": 6
+    },
+    {
+      "chain": "monad",
+      "address": "0x437cc33344a0b27a429f795ff6b469c72698b291",
       "decimals": 6
     }
   ],

@@ -387,14 +387,14 @@
         ],
         "authorityType": "contract",
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "The 2026-08-16 review recorded a 76,000,000 WCLP daily cap on Ethereum. External token administrators can change registration and route limits, while adapter administrators control pause state and arbitrary-recipient mint access.",
+        "capDescription": "At Ethereum block 26095805 on 2026-10-01, tokenConfigs returned a 4,750,000 WCLP daily limit and exists=true. The prior 2026-08-16 review recorded 76,000,000 WCLP. External token administrators can change registration and route limits, while adapter administrators control pause state and arbitrary-recipient mint access.",
         "canRaiseCap": true,
         "routeChecks": {
-          "caps": "The Ethereum adapter's reviewed tokenConfigs dailyMaxMint was 76,000,000 WCLP. Its verified source lets an external token administrator register or unregister WCLP and change this limit.",
-          "trustedPeerOrRemote": "The adapter held WCLP MINTER_ROLE at the fixed review; its own MINTER_ROLE member count was zero, so no active fulfillment caller was established at that observation.",
+          "caps": "Pinned Ethereum tokenConfigs returned dailyMaxMint=4750000000000000000000000 base units (4,750,000 WCLP) and exists=true. The issuer source lets an external token administrator register or unregister WCLP and change this limit.",
+          "trustedPeerOrRemote": "The adapter retains WCLP MINTER_ROLE. At Ethereum block 26095805, its own MINTER_ROLE member count was 2; the prior review had counted zero. Caller identities and remote-message authentication were not established by this count read.",
           "pausersAdminsUpgraders": "Verified source exposes administrator-controlled token registration, daily-limit changes, minter grants, and pause state."
         },
-        "observedAt": "2026-08-16",
+        "observedAt": "2026-10-01",
         "sources": [
           {
             "label": "Ripio LimitedMinterBridge source",
@@ -409,7 +409,7 @@
             "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "evidence": "At the fixed 2026-08-16 review, Ethereum LimitedMinterBridge 0x46167cB034FeC6ceC46CaeD4f61281f5Aa0Eb0e6 held WCLP MINTER_ROLE and had a 76,000,000-token daily limit; its own MINTER_ROLE member count was zero. The verified source defines administrator-controlled registration, limits, pause, and arbitrary-recipient minting."
+        "evidence": "At Ethereum block 26095805 on 2026-10-01, the adapter tokenConfigs call returned an enabled WCLP registration with a 4,750,000-token daily limit, getRoleMemberCount(MINTER_ROLE) returned 2, and paused() returned false. The issuer source retains administrator-controlled registration, limits, pause, and arbitrary-recipient minting; these limits remain raiseable rather than immutable economic caps."
       },
       {
         "id": "wclp-base-limited-minter-bridge",
@@ -429,7 +429,7 @@
         ],
         "authorityType": "contract",
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "Verified source permits external token administrators to register WCLP and change the Base daily limit; the numeric limit was not independently re-read in this refresh.",
+        "capDescription": "At pinned Base block 52024165 on 2026-10-01, tokenConfigs returned dailyMaxMint=4750000000000000000000000 base units (4,750,000 WCLP) and exists=true. The issuer source permits external token administrators to change registration and this daily limit.",
         "canRaiseCap": true,
         "routeChecks": {
           "trustedPeerOrRemote": "The fixed 2026-08-16 role review identified the local adapter as a WCLP minter; active adapter callers were not re-enumerated in this refresh.",
@@ -460,7 +460,7 @@
         ],
         "authorityType": "contract",
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "Verified source permits external token administrators to register WCLP and change the Worldchain daily limit; the numeric limit was not independently re-read in this refresh.",
+        "capDescription": "At pinned Worldchain block 35751020 on 2026-10-01, tokenConfigs returned dailyMaxMint=4750000000000000000000000 base units (4,750,000 WCLP) and exists=true. The issuer source permits external token administrators to change registration and this daily limit.",
         "canRaiseCap": true,
         "routeChecks": {
           "trustedPeerOrRemote": "The fixed 2026-08-16 role review identified the local adapter as a WCLP minter; active adapter callers were not re-enumerated in this refresh.",
@@ -491,7 +491,7 @@
         ],
         "authorityType": "contract",
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "Verified source permits external token administrators to register WCLP and change the BSC daily limit; the numeric limit was not independently re-read in this refresh.",
+        "capDescription": "At pinned BSC block 125060440 on 2026-10-01, tokenConfigs returned dailyMaxMint=4750000000000000000000000 base units (4,750,000 WCLP) and exists=true. The issuer source permits external token administrators to change registration and this daily limit.",
         "canRaiseCap": true,
         "routeChecks": {
           "trustedPeerOrRemote": "The fixed 2026-08-16 role review identified the local adapter as a WCLP minter; active adapter callers were not re-enumerated in this refresh.",
@@ -522,7 +522,7 @@
         ],
         "authorityType": "contract",
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "Verified source permits external token administrators to register WCLP and change the Polygon daily limit; the numeric limit was not independently re-read in this refresh.",
+        "capDescription": "At pinned Polygon block 94756352 on 2026-10-01, tokenConfigs returned dailyMaxMint=4750000000000000000000000 base units (4,750,000 WCLP) and exists=true. The issuer source permits external token administrators to change registration and this daily limit.",
         "canRaiseCap": true,
         "routeChecks": {
           "trustedPeerOrRemote": "The fixed 2026-08-16 role review identified the local adapter as a WCLP minter; active adapter callers were not re-enumerated in this refresh.",
@@ -553,7 +553,7 @@
         ],
         "authorityType": "contract",
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "Verified source permits external token administrators to register WCLP and change the Gnosis daily limit; the numeric limit was not independently re-read in this refresh.",
+        "capDescription": "At pinned Gnosis block 48529297 on 2026-10-01, tokenConfigs returned dailyMaxMint=4750000000000000000000000 base units (4,750,000 WCLP) and exists=true. The issuer source permits external token administrators to change registration and this daily limit.",
         "canRaiseCap": true,
         "routeChecks": {
           "trustedPeerOrRemote": "The fixed 2026-08-16 role review identified the local adapter as a WCLP minter; active adapter callers were not re-enumerated in this refresh.",

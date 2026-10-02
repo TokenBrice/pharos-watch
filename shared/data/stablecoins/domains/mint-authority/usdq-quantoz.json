@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
-    "summary": "USDQ is issuer-minted natively on Ethereum, Polygon, XRPL, and Algorand. Ethereum and Polygon expose independent HadronToken onlyOwner mint paths with 3/5 and 2/5 issuer multisig owners, respectively; both proxy admins are 3/5 multisigs with no detected modules. XRPL issuance is controlled by the USDQ issuer account, while Algorand ASA distribution and role replacement are controlled by the issuer manager/reserve account. The EVM paths remain economically unbounded, and no independent whole-supply reconciliation is verified.",
+    "summary": "USDQ is issuer-minted natively on Ethereum, Polygon, XRPL, and Algorand. Ethereum and Polygon expose independent HadronToken onlyOwner mint paths; both issuer owners and both proxy admins are 3-of-5 multisigs in the 2026-10-01 pinned census. The Polygon issuer owner was historically 2-of-5. XRPL issuance is controlled by the USDQ issuer account, while Algorand ASA distribution and role replacement are controlled by issuer reserve and manager accounts. The EVM paths remain economically unbounded, and no independent whole-supply reconciliation is verified.",
     "controls": [
       {
         "chain": "ethereum",
@@ -17,14 +17,16 @@
         "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26096002,
         "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
             "label": "Sourcify USDQ Ethereum HadronToken source",
-            "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xbAe166f5e8B4b6735341446b1405FA779a92D7c7/sources/contracts/tokens/HadronToken.sol"
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbae166f5e8b4b6735341446b1405fa779a92d7c7"
           }
         ],
-        "evidence": "At Ethereum block 25294990, owner() = 0x284Df7B9d9F471554E9257bD9b116189f7997d45 (confirmed). HadronToken exposes mint(destination,amount) onlyOwner. Implementation = 0xbae166f5e8b4b6735341446b1405fa779a92d7c7."
+        "evidence": "At ethereum block 26096002 on 2026-10-01, owner() and EIP-1967 implementation/admin slots matched the recorded addresses. Historical observation: At Ethereum block 25294990, owner() = 0x284Df7B9d9F471554E9257bD9b116189f7997d45 (confirmed). HadronToken exposes mint(destination,amount) onlyOwner. Implementation = 0xbae166f5e8b4b6735341446b1405fa779a92d7c7."
       },
       {
         "chain": "ethereum",
@@ -39,6 +41,8 @@
         "threshold": 3,
         "signerCount": 5,
         "canRaiseCap": "unknown",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26096002,
         "modulesOrGuardsStatus": "none-detected",
         "sources": [
           {
@@ -46,7 +50,7 @@
             "url": "https://etherscan.io/address/0x284Df7B9d9F471554E9257bD9b116189f7997d45"
           }
         ],
-        "evidence": "At Ethereum block 25294990, owner() confirmed 0x284Df7B9d9F471554E9257bD9b116189f7997d45. required()=3, getOwners() returned 5 addresses (0x58e1d8a4c9a737f017acb8f139146cbc21b6bbf7, 0xe21878fc9b562991edd46723babf0a0dae084c71, 0x212bffa08a20f69f3a8b88defcb16954c1898b3e, 0x06b37cbc0979c2202d1df6be13c687cc933def44, 0x8c6dd21ec066742cb502d8a3354ea43c3e94508d). getModules()=0x (no modules)."
+        "evidence": "At ethereum block 26096002 on 2026-10-01, required()=3 and getOwners() returned the same five recorded signer addresses. Historical observation: At Ethereum block 25294990, owner() confirmed 0x284Df7B9d9F471554E9257bD9b116189f7997d45. required()=3, getOwners() returned 5 addresses (0x58e1d8a4c9a737f017acb8f139146cbc21b6bbf7, 0xe21878fc9b562991edd46723babf0a0dae084c71, 0x212bffa08a20f69f3a8b88defcb16954c1898b3e, 0x06b37cbc0979c2202d1df6be13c687cc933def44, 0x8c6dd21ec066742cb502d8a3354ea43c3e94508d). getModules()=0x (no modules)."
       },
       {
         "chain": "ethereum",
@@ -61,8 +65,10 @@
         "threshold": 3,
         "signerCount": 5,
         "canRaiseCap": "unknown",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26096002,
         "modulesOrGuardsStatus": "none-detected",
-        "evidence": "At Ethereum block 25294990, EIP-1967 proxy-admin slot confirmed. required()=3, getOwners() returned 5 addresses (0xb924ba8f0b6ef038eb95546464370caf0c5319db, 0x083aa04c8106c42986261cf4ffed3067898009b6, 0x52126765ff90fa2d1ff341c25ce7a3285606b525, 0x0674cd4cc43764dfce39cd08dd30ddab128e649a, 0x3f5af3c2ea1cfad9c34e5189fe5246ff4939079b). getModules()=0x (no modules)."
+        "evidence": "At ethereum block 26096002 on 2026-10-01, required()=3 and getOwners() returned the same five recorded signer addresses. Historical observation: At Ethereum block 25294990, EIP-1967 proxy-admin slot confirmed. required()=3, getOwners() returned 5 addresses (0xb924ba8f0b6ef038eb95546464370caf0c5319db, 0x083aa04c8106c42986261cf4ffed3067898009b6, 0x52126765ff90fa2d1ff341c25ce7a3285606b525, 0x0674cd4cc43764dfce39cd08dd30ddab128e649a, 0x3f5af3c2ea1cfad9c34e5189fe5246ff4939079b). getModules()=0x (no modules)."
       },
       {
         "chain": "polygon",
@@ -75,6 +81,8 @@
         "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
+        "observedAt": "2026-10-01",
+        "observedBlock": 94756595,
         "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
@@ -82,7 +90,7 @@
             "url": "https://polygonscan.com/address/0xb291996477504506bf5f583102b5b5ea5d1e40e0"
           }
         ],
-        "evidence": "At Polygon block 88323726, owner() = 0x84e8d731fCBe186B803DB51e9E58142083417929 (confirmed). Implementation = 0x43f2f77664c29626f4756f6b22fa73dbd59306b0 (same HadronToken mint(destination,amount) onlyOwner). Polygon can independently mint."
+        "evidence": "At polygon block 94756595 on 2026-10-01, owner() and EIP-1967 implementation/admin slots matched the recorded addresses. Historical observation: At Polygon block 88323726, owner() = 0x84e8d731fCBe186B803DB51e9E58142083417929 (confirmed). Implementation = 0x43f2f77664c29626f4756f6b22fa73dbd59306b0 (same HadronToken mint(destination,amount) onlyOwner). Polygon can independently mint."
       },
       {
         "chain": "polygon",
@@ -94,11 +102,13 @@
         "role": "minter-admin",
         "authorityType": "multisig",
         "directMintAbility": "direct",
-        "threshold": 2,
+        "threshold": 3,
         "signerCount": 5,
         "canRaiseCap": "unknown",
+        "observedAt": "2026-10-01",
+        "observedBlock": 94756595,
         "modulesOrGuardsStatus": "none-detected",
-        "evidence": "At Polygon block 88323726, owner() confirmed. required()=2, getOwners() returned 5 addresses (0x58e1d8a4c9a737f017acb8f139146cbc21b6bbf7, 0x212bffa08a20f69f3a8b88defcb16954c1898b3e, 0x06b37cbc0979c2202d1df6be13c687cc933def44, 0x8c6dd21ec066742cb502d8a3354ea43c3e94508d, 0xe21878fc9b562991edd46723babf0a0dae084c71). getModules()=0x (no modules)."
+        "evidence": "At Polygon block 94756595 on 2026-10-01, required()=3 and getOwners() returned the same five recorded owner addresses. This supersedes the historical 2-of-5 threshold at block 88323726; no current module or guard conclusion is inferred from these two getter reads."
       },
       {
         "chain": "polygon",
@@ -113,8 +123,10 @@
         "threshold": 3,
         "signerCount": 5,
         "canRaiseCap": "unknown",
+        "observedAt": "2026-10-01",
+        "observedBlock": 94756595,
         "modulesOrGuardsStatus": "none-detected",
-        "evidence": "At Polygon block 88323726, EIP-1967 proxy-admin slot confirmed. required()=3, getOwners() returned 5 addresses (0xb924ba8f0b6ef038eb95546464370caf0c5319db, 0x083aa04c8106c42986261cf4ffed3067898009b6, 0x0674cd4cc43764dfce39cd08dd30ddab128e649a, 0x52126765ff90fa2d1ff341c25ce7a3285606b525, 0x3f5af3c2ea1cfad9c34e5189fe5246ff4939079b). getModules()=0x (no modules). Same 5 signers as ETH proxy admin."
+        "evidence": "At polygon block 94756595 on 2026-10-01, required()=3 and getOwners() returned the same five recorded signer addresses. Historical observation: At Polygon block 88323726, EIP-1967 proxy-admin slot confirmed. required()=3, getOwners() returned 5 addresses (0xb924ba8f0b6ef038eb95546464370caf0c5319db, 0x083aa04c8106c42986261cf4ffed3067898009b6, 0x0674cd4cc43764dfce39cd08dd30ddab128e649a, 0x52126765ff90fa2d1ff341c25ce7a3285606b525, 0x3f5af3c2ea1cfad9c34e5189fe5246ff4939079b). getModules()=0x (no modules). Same 5 signers as ETH proxy admin."
       },
       {
         "chain": "xrpl",
@@ -185,13 +197,13 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "unknown",
+    "reconciliation": "internal-ledger",
     "supervision": "prudential",
     "review": {
       "sources": [
         {
           "label": "Sourcify USDQ Ethereum HadronToken source",
-          "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xbAe166f5e8B4b6735341446b1405FA779a92D7c7/sources/contracts/tokens/HadronToken.sol"
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbae166f5e8b4b6735341446b1405fa779a92d7c7"
         },
         {
           "label": "Quantoz USDQ product page",
@@ -208,9 +220,13 @@
         {
           "label": "DNB register - Quantoz Payments B.V.",
           "url": "https://www.dnb.nl/en/public-register/information-detail/?registerCode=WFTEG&relationNumber=R186418"
+        },
+        {
+          "label": "Quantoz USDQ whitepaper v1.4 (30 April 2026), key backup and NEXUS ledger processes",
+          "url": "https://www.quantoz.com/documents/usdq-wp-1.4-30-04-2026.pdf"
         }
       ],
-      "evidence": "At Ethereum block 25294990 and Polygon block 88323726, the HadronToken deployments expose independent issuer-controlled onlyOwner mint paths, with 3/5 and 2/5 owner multisigs and separate 3/5 proxy-admin multisigs; those proxy admins can replace mint logic. At validated XRPL ledger 106344095, the Quantoz issuer account natively controls the USDQ issued-currency obligation, with no SignerList object present. At Algorand round 64138559, ASA 2768603795 is a native Quantoz USDQ asset with a fixed total, issuer manager, and reserve/freeze/clawback controls; the reserve distributes pre-created supply and the manager can replace role addresses. These four authored deployments are native issuance and are not bridge representations. Quantoz publishes a dated issuer-operated reserve snapshot and DNB supervision, but accessible evidence does not establish a recurring independent whole-supply assets-and-liabilities reconciliation, so reconciliation remains unknown. The EVM direct-mint and upgrade paths remain economically unbounded, and supervision remains prudential.",
+      "evidence": "At Ethereum block 25294990 and Polygon block 88323726, the HadronToken deployments expose independent issuer-controlled onlyOwner mint paths, with 3/5 and 2/5 owner multisigs and separate 3/5 proxy-admin multisigs; those proxy admins can replace mint logic. At validated XRPL ledger 106344095, the Quantoz issuer account natively controls the USDQ issued-currency obligation, with no SignerList object present. At Algorand round 64138559, ASA 2768603795 is a native Quantoz USDQ asset with a fixed total, issuer manager, and reserve/freeze/clawback controls; the reserve distributes pre-created supply and the manager can replace role addresses. These four authored deployments are native issuance and are not bridge representations. Quantoz publishes a dated issuer-operated reserve snapshot and DNB supervision, but accessible evidence does not establish a recurring independent whole-supply assets-and-liabilities reconciliation. The EVM direct-mint and upgrade paths remain economically unbounded, and supervision remains prudential. R2 source re-fetch 2026-10-01: USDQ whitepaper v1.4 states that keys are accessible only by security-assigned personnel and recoverable from offline-held deterministic seed codes; it also states that NEXUS supports ledger reconciliation and mint/burn execution. These are documented issuer security and internal ledger processes, not proof of a hardware/MPC custody model for an identified minter or a named independent whole-supply reserve-to-liability reconciliation. Reconciliation-only review 2026-10-02: the section A.15 NEXUS disclosure establishes the internal mint-ledger process across native issuer paths, but neither its cadence nor independent financial assurance. Record internal-ledger rather than unknown; the XRPL single-key signer risk and all reserve-assurance non-disclosure remain unchanged.",
       "reviewer": "OpenAI Codex SOL-IV regulated-issuer review; Sol economic-posture batch 2026-08-15; Sol Wave 2 external research 2026-08-15; OpenAI Codex mint-bridge-boundary migration 2026-08-16",
       "reviewedAt": "2026-08-16"
     },
@@ -230,7 +246,7 @@
       "sources": [
         {
           "label": "Sourcify USDQ Ethereum HadronToken source",
-          "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xbAe166f5e8B4b6735341446b1405FA779a92D7c7/sources/contracts/tokens/HadronToken.sol"
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbae166f5e8b4b6735341446b1405fa779a92d7c7"
         },
         {
           "label": "Quantoz USDQ product page",

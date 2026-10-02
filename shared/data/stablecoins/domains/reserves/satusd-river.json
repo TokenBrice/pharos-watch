@@ -22,7 +22,7 @@
       "pct": 62.54,
       "risk": "high",
       "assetClass": "cryptoasset",
-      "issuerOrObligor": "River Prime Vault institutional custody partners (custodians undisclosed); 655.00 bfBTC on BNB Chain, 205.00 uniBTC on BOB, and 341.3682 uniBTC on Base per the issuer's Prime Vault page",
+      "issuerOrObligor": "River Prime Vault institutional custody partners (issuer names Ceffu and Cobo; legal entities, asset-level assignments and shares undisclosed); 655.00 bfBTC on BNB Chain, 205.00 uniBTC on BOB, and 341.3682 uniBTC on Base per the issuer's Prime Vault page",
       "riskFactors": [
         "market",
         "liquidity",
@@ -34,11 +34,11 @@
       "liquidityHorizon": "unknown"
     },
     {
-      "name": "Smart Vault custodial USDT deposits (Ethereum)",
+      "name": "Smart Vault USDT-denominated strategy deposits (Ethereum; holdings unreconciled)",
       "pct": 10.27,
-      "risk": "low",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Tether (USDT issuer); deposits held in River Smart Vault custodian wallets (10,000,000 USDT capped vault and 7,620,553.57 USDT open-cap vault, both displayed claimable at review time)",
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "River Smart Vault strategy operators and undisclosed DeFi, CeDeFi and RWA counterparties; historical deposit denomination is USDT, not verified current direct USDT holdings",
       "riskFactors": [
         "credit",
         "counterparty",
@@ -50,9 +50,9 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-30",
-    "reviewer": "Pharos dependency-map review 2026-09-30",
-    "confidence": "verified",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC19)",
+    "confidence": "manual-review",
     "sources": [
       {
         "label": "River app overview (per-branch Collaterals panel, satUSD circulation; observed 2026-09-29)",
@@ -91,11 +91,11 @@
         "url": "https://docs.riverai.inc/products/prime-vault.md"
       }
     ],
-    "rationale": "Refresh 2026-09-29: River's own protocol dashboard now decomposes satUSD backing into product-level collateral lists, so the prior single undisclosed basket is replaced with three evidence-backed slices. (1) On-chain omni-CDP trove collateral of $46,668,112 (clBTC Arbitrum $37,717,472.64, clBTC Base $8,378,524.34, and $572,115 of residual branches): the two material clBTC branches were reconciled to pinned RPC reads of getEntireSystemColl()/getEntireSystemDebt() on the Arbitrum clBTC TroveManagerProxy at block 510062308 (449.9901 clBTC backing 9,645,850.28 satUSD of debt) and the Base clBTC TroveManagerProxy at block 51952263 (100.0021 clBTC); the Base uniBTC trove managers hold zero collateral, proving the dashboard's uniBTC rows are not trove positions. (2) Prime Vault custodial BTC of $107,330,000 (bfBTC on BNB Chain 655.00/$60.87M, uniBTC on BOB 205.00/$17.46M, uniBTC on Base 341.3682/$29.00M, staking factor 20%): uniBTC rows are counted once, in this bucket, because the on-chain troves hold none; custodians are unnamed in River's documentation. (3) Smart Vault custodial USDT of $17,620,553.57 across the two listed Ethereum vaults, both displayed claimable at review time. The three buckets total $171,618,666 against protocol-reported satUSD circulation of $137,077,438.42 (corroborated on-chain: satUSD totalSupply 79,352,049 on BNB Chain, 12,381,309 on Base, 10,801,687 on Arbitrum, 8,432,973 on Ethereum), a 125.2% aggregate collateral coverage. Slice percentages are computed from these same-day issuer-dashboard observations, so they carry the dashboard's pricing and product-scope completeness rather than a third-party aggregate.",
-    "compositionBasis": "Issuer protocol dashboard product-level TVL decomposition observed 2026-09-29 (omni-CDP Collaterals panel, Prime Vault vault list, Smart Vault vault list), with the material Arbitrum and Base clBTC trove branches reconciled to pinned on-chain reads at blocks 510062308 and 51952263",
+    "rationale": "The September 29 dashboard observations are retained as historical gross product-deposit context: $46,668,112 trove collateral, $107,330,000 Prime Vault deposits and $17,620,553.57 Smart Vault deposits, totaling $171,618,666. Those amounts produced the retained 27.19%, 62.54% and 10.27% contextual weights. River's current Smart Vault documentation says deposits deploy into DeFi, CeDeFi and RWA strategies and internally minted satUSD depends on a governance-controlled staking factor. No complete current strategy holdings, product liabilities or whole-token reconciliation was disclosed in that source. The former 125.2% gross-deposits-to-circulation comparison is not accepted as reserve coverage. Under D24 these selected observations cannot establish a score-bearing full composition.",
+    "compositionBasis": "Historical September 29, 2026 gross product-deposit observations, normalized only for contextual display; no reconciled whole-token backing denominator",
     "compositionAsOf": "2026-09-29",
-    "scope": "full-composition",
-    "knownUnknownExposure": "All collateral locations River publishes are identified, and no undisclosed product surface appears in its documentation or app. Remaining issuer-described facts: Prime Vault and Smart Vault custodian identities, addresses, and segregation terms are undisclosed; vault-level completeness beyond the listed vaults cannot be independently verified; the share of circulation minted internally by vaults versus trove debt is not published; both Smart Vault USDT vaults are displayed claimable, so near-term USDT outflows are possible. The on-chain trove bucket is independently verifiable and was verified for the material branches.",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "Current full liability-weighted composition is unverified. The retained 10.27% is the fingerprinted unresolved Smart Vault share within historical observed deposits, not a measured whole-token unknown-exposure percentage. Vault-level completeness, deployed strategy assets and liabilities, internally minted satUSD, Prime Vault assignments and safeguarding terms remain unresolved. No missing remainder is inferred.",
     "knownUnknownExposurePct": 10.27,
     "nonLinkDispositions": [
       {
@@ -114,7 +114,7 @@
       },
       {
         "reserveIndex": 2,
-        "reserveName": "Smart Vault custodial USDT deposits (Ethereum)",
+        "reserveName": "Smart Vault USDT-denominated strategy deposits (Ethereum; holdings unreconciled)",
         "pct": 10.27,
         "disposition": "insufficient-evidence",
         "rationale": "USDT is tracked as usdt-tether, but 10.27% is the dashboard deposit share, not a reconciled direct reserve-token weight. Smart Vault deposits enter DeFi, CeDeFi, and RWA strategies and mint or stake satUSD internally. Published wallet holdings, deployed strategy claims, and the liabilities minted by each vault must be reconciled before linking a weighted USDT dependency.",
@@ -123,5 +123,46 @@
         ]
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Ceffu",
+        "role": "custodian"
+      },
+      {
+        "name": "Cobo",
+        "role": "custodian"
+      },
+      {
+        "name": "Undisclosed Smart Vault custody partner(s)",
+        "role": "custodian"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (ValA51satUSD)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "River homepage names Prime Vault custodians",
+        "url": "https://riverai.inc/"
+      },
+      {
+        "label": "River Prime Vault custody and internal minting",
+        "url": "https://docs.riverai.inc/products/prime-vault.md"
+      },
+      {
+        "label": "River Smart Vault institutional custody and strategies",
+        "url": "https://docs.riverai.inc/products/smart-vault.md"
+      },
+      {
+        "label": "River general interface terms",
+        "url": "https://riverai.inc/terms-of-service"
+      }
+    ],
+    "uncertainty": "River names Ceffu and Cobo as Prime Vault custodians on its homepage; this is an issuer disclosure, not an independent custodian attestation. The legal entities, asset-level assignments, quantitative shares, wallet addresses, safeguarding terms, jurisdictions, insolvency treatment and contractual rehypothecation rights are not established. Smart Vault documentation describes institutional custodian wallets without naming providers. The general terms describe a non-custodial interface and do not establish a product-specific Prime/Smart custody agreement. No regulatory status, insurance coverage, segregation, bankruptcy protection or full-backing composition is inferred."
   }
 }

@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "ONYC mint authority is PDA AbpE5YLpdpxj2jRczG9P341Jicf67NvZsaZYrATbMnNX, which is signed by the OnRe program onreuGhHHgVzMWSkj2oQDLDtvvGvoepBPkqyaubFcwe. The program remains upgradeable through Squads v4 vault FvmhydbpHGQzMUp51GmhB1fwsrkyfmnRsTg7oPwDe25f, controlled without delay by autonomous 3-of-6 multisig 2AD4x72wXvjZVxSQPCt77NYZGXNdMbFvtD5F3mcUAtcN. The prior record incorrectly classified the off-curve vault PDA as an EOA.",
+    "summary": "ONYC mint authority is PDA AbpE5YLpdpxj2jRczG9P341Jicf67NvZsaZYrATbMnNX, owned by the OnRe program onreuGhHHgVzMWSkj2oQDLDtvvGvoepBPkqyaubFcwe. At finalized Solana slot 452212758, the program remained upgradeable through Squads v4 vault FvmhydbpHGQzMUp51GmhB1fwsrkyfmnRsTg7oPwDe25f; its autonomous multisig 2AD4x72wXvjZVxSQPCt77NYZGXNdMbFvtD5F3mcUAtcN now requires 4-of-7 signatures and a six-hour execution timelock.",
     "upgradeability": {
       "model": "custom",
       "proxyAddresses": [
@@ -18,10 +18,10 @@
         "2AD4x72wXvjZVxSQPCt77NYZGXNdMbFvtD5F3mcUAtcN"
       ],
       "canChangeMintLogic": true,
-      "delaySec": 0,
+      "delaySec": 21600,
       "controlRef": "OnRe program upgrade Squads v4 multisig",
-      "observedAt": "2026-07-13",
-      "observedBlock": 432714278,
+      "observedAt": "2026-10-01",
+      "observedBlock": 452212758,
       "sources": [
         {
           "label": "Solana RPC",
@@ -56,12 +56,12 @@
         "canRaiseCap": true,
         "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-13",
-        "observedBlock": 432714278,
+        "observedAt": "2026-10-01",
+        "observedBlock": 452212758,
         "failureDomainKeys": [
           "solana:onreuGhHHgVzMWSkj2oQDLDtvvGvoepBPkqyaubFcwe"
         ],
-        "evidence": "At Solana slot 432714278, ONYC mint 5Y8NV33Vv7WbnLfq3zBcKSdYPrk7g2KoiQoe7M2tcxp5 retained mint authority AbpE5YLpdpxj2jRczG9P341Jicf67NvZsaZYrATbMnNX. The authority is an OnRe-program-owned PDA. A cutoff transaction at slot 432713422 showed the OnRe program directly invoking Tokenkeg MintToChecked with that PDA as mint authority.",
+        "evidence": "At finalized Solana slot 452212758, ONYC mint 5Y8NV33Vv7WbnLfq3zBcKSdYPrk7g2KoiQoe7M2tcxp5 retained mint authority AbpE5YLpdpxj2jRczG9P341Jicf67NvZsaZYrATbMnNX, and that authority account remained owned by the OnRe program. Historical evidence at slot 432713422 showed the program directly invoking Tokenkeg MintToChecked with this PDA; the current read verifies account ownership and mint authority, not a new mint transaction.",
         "sources": [
           {
             "label": "ONYC SPL mint on Solana Explorer",
@@ -81,12 +81,12 @@
         "authorityType": "multisig",
         "directMintAbility": "upgrade-only",
         "canRaiseCap": true,
-        "threshold": 3,
-        "signerCount": 6,
-        "timelockDelaySec": 0,
+        "threshold": 4,
+        "signerCount": 7,
+        "timelockDelaySec": 21600,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-13",
-        "observedBlock": 432714278,
+        "observedAt": "2026-10-01",
+        "observedBlock": 452212758,
         "failureDomainKeys": [
           "solana:2AD4x72wXvjZVxSQPCt77NYZGXNdMbFvtD5F3mcUAtcN"
         ],
@@ -108,16 +108,16 @@
             "url": "https://api.mainnet-beta.solana.com"
           }
         ],
-        "evidence": "At Solana slot 432714278, ProgramData 91o8wFyxszM4DeQ5R6X6wJdyn9e8VRnsreVBTLb7Yrpg named off-curve Squads v4 vault FvmhydbpHGQzMUp51GmhB1fwsrkyfmnRsTg7oPwDe25f as upgrade authority. The vault resolved to autonomous multisig 2AD4x72wXvjZVxSQPCt77NYZGXNdMbFvtD5F3mcUAtcN with threshold 3, six on-curve members, zero timelock, and no config authority. Members were 2HGJuU5LhHoxn1oaRiQWc9wAsVaFSRubrgtMcomu4dJH, 5xmqRUqK33A2oBRxjyG36HgMjjM19NRt8gYEBT9u78s6, 8dk5KyDAttJYT4pa9nSQYqLEK85w7ZbcHZdZjBMHoAhz, 96yg1uazqtxT4R4mTKPDcLSfbp3AAJiXJFMKZj28bsSk, DiNi78eqjYxVdwXiAiran2Fh4sPAbvQA4oDTq2a6mDQe, and J7nrqDcSuL77TPr1Vz7n8RC4VUeN4pXfx6Xx9E4SA59e. The Squads v4 program itself had no upgrade authority."
+        "evidence": "At finalized Solana slot 452212758, ProgramData 91o8wFyxszM4DeQ5R6X6wJdyn9e8VRnsreVBTLb7Yrpg retained Squads vault FvmhydbpHGQzMUp51GmhB1fwsrkyfmnRsTg7oPwDe25f as upgrade authority. Squads-owned multisig 2AD4x72wXvjZVxSQPCt77NYZGXNdMbFvtD5F3mcUAtcN decoded to threshold 4, seven members each with permission mask 7, time_lock 21600 seconds, and zero config_authority. Members were 2HGJuU5LhHoxn1oaRiQWc9wAsVaFSRubrgtMcomu4dJH, 5xmqRUqK33A2oBRxjyG36HgMjjM19NRt8gYEBT9u78s6, 8dk5KyDAttJYT4pa9nSQYqLEK85w7ZbcHZdZjBMHoAhz, 96yg1uazqtxT4R4mTKPDcLSfbp3AAJiXJFMKZj28bsSk, DiNi78eqjYxVdwXiAiran2Fh4sPAbvQA4oDTq2a6mDQe, HqJPgqx5x9vjBDShuedaxW4KKktJ6qftRDknkK3xbf3y, and J7nrqDcSuL77TPr1Vz7n8RC4VUeN4pXfx6Xx9E4SA59e. Historical July evidence was 3-of-6 without delay. A separate finalized read at slot 452214263 confirmed the Squads v4 ProgramData has no upgrade authority."
       }
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "periodic",
     "supervision": "prudential",
     "review": {
-      "evidence": "At Solana slot 432714278, ONYC mint authority remained PDA AbpE5YLpdpxj2jRczG9P341Jicf67NvZsaZYrATbMnNX under OnRe program onreuGhHHgVzMWSkj2oQDLDtvvGvoepBPkqyaubFcwe. The live ProgramData upgrade authority was off-curve Squads vault FvmhydbpHGQzMUp51GmhB1fwsrkyfmnRsTg7oPwDe25f, not an EOA. It resolved to autonomous 3-of-6 Squads multisig 2AD4x72wXvjZVxSQPCt77NYZGXNdMbFvtD5F3mcUAtcN with zero timelock and no config authority. The Squads program itself was immutable. No permissionless mint route existed. Reserve reconciliation: OnRe appointed Apex Group as independent attestation provider for ONyc, with monthly attestations; the latest published product attestation covers ONyc NAV, treasury balances, and reserve allocations as of 2026-05-31. Prudential supervision: the Bermuda Monetary Authority registry identifies On Re SAC Ltd (registration number 55347) as both a Class IIGB insurer and a Class F digital-asset business, matching the ONyc issuing entity. Reviewed 2026-07-15. Economic-posture fields reviewed 2026-08-15: unbounded issuer/program mint with immediate multisig upgrade control; monthly Apex reconciliation and BMA supervision remain supported.",
-      "reviewer": "Codex Safety Score V9 registry pass; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "Reviewed 2026-10-01. At finalized Solana slot 452212758, ONYC retained its OnRe-program-owned mint authority PDA and Squads vault upgrade authority. The upgrade multisig now requires 4-of-7 signatures and a 21600-second timelock, with no external config authority; the historical July configuration was 3-of-6 without delay. ProgramData records the OnRe program's latest deployment at slot 442113459. The issuer's monthly Apex report directory now includes August 2026; the report cover identifies an unaudited agreed-upon-procedures engagement for ONyc NAV as of 2026-08-31, while publication date and detailed reconciliation scope remain unverified. The BMA registry re-opened this session names On Re SAC Ltd as a Class IIGB insurer and Class F digital-asset business, registration 55347. The mint remains program-controlled and upgradeable; no fixed economic supply bound is established by this review.",
+      "reviewer": "Sol curation pass 2026-10-01 (CurA58ONyc)",
+      "reviewedAt": "2026-10-01",
       "disposition": "scoreable",
       "sources": [
         {
@@ -147,6 +147,14 @@
         {
           "label": "Bermuda Monetary Authority regulated-entities registry",
           "url": "https://www.bma.bm/regulated-entities"
+        },
+        {
+          "label": "Apex ONyc August 2026 agreed-upon-procedures report",
+          "url": "https://drive.google.com/file/d/14bVukKFAF98ZONT8uPdOPxPomOXaQHmA/view?usp=sharing"
+        },
+        {
+          "label": "Squads v4 multisig account layout",
+          "url": "https://raw.githubusercontent.com/Squads-Protocol/v4/main/programs/squads_multisig_program/src/state/multisig.rs"
         }
       ]
     }

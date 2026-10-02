@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "USDC is issuer-minted by Circle. Ethereum's MinterAdmin, token owner and proxy admin were checked at block 25711753 on August 8, 2026; native X Layer's MasterMinter, token owner and proxy admin were checked at block 71772542 on September 27, 2026. These observations establish control paths, not exhaustive minter coverage or off-chain key custody.",
+    "summary": "USDC is issuer-minted by Circle. Ethereum's MinterAdmin, token owner, proxy admin and implementation were rechecked at block 26095807 on 2026-10-01; native X Layer's equivalent paths were rechecked at block 72068661. The recorded addresses are unchanged. These observations establish current addressed paths, not exhaustive minter coverage, exact deployed-source equivalence, or off-chain key custody.",
     "upgradeability": {
       "model": "transparent-proxy",
       "deploymentRefs": [
@@ -22,8 +22,8 @@
       "canChangeMintLogic": true,
       "delaySec": 0,
       "controlRef": "Ethereum USDC proxy admin",
-      "observedAt": "2026-08-08",
-      "observedBlock": 25711753,
+      "observedAt": "2026-10-01",
+      "observedBlock": 26095807,
       "sources": [
         {
           "label": "Circle stablecoin-evm contracts",
@@ -52,8 +52,8 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-08",
-        "observedBlock": 25711753,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095807,
         "sources": [
           {
             "label": "Circle USDC docs",
@@ -86,8 +86,8 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-08",
-        "observedBlock": 25711753,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095807,
         "sources": [
           {
             "label": "Ethereum USDC contract",
@@ -112,8 +112,8 @@
         "directMintAbility": "upgrade-only",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-08",
-        "observedBlock": 25711753,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095807,
         "sources": [
           {
             "label": "FiatTokenProxy admin slot read at block 25711753",
@@ -137,8 +137,8 @@
         "authorityType": "contract",
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
-        "observedAt": "2026-09-27",
-        "observedBlock": 71772542,
+        "observedAt": "2026-10-01",
+        "observedBlock": 72068661,
         "sources": [
           {
             "label": "Circle USDC mainnet contract addresses",
@@ -167,8 +167,8 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-09-27",
-        "observedBlock": 71772542,
+        "observedAt": "2026-10-01",
+        "observedBlock": 72068661,
         "sources": [
           {
             "label": "Circle USDC mainnet contract addresses",
@@ -197,8 +197,8 @@
         "directMintAbility": "upgrade-only",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-09-27",
-        "observedBlock": 71772542,
+        "observedAt": "2026-10-01",
+        "observedBlock": 72068661,
         "sources": [
           {
             "label": "Circle USDC mainnet contract addresses",

@@ -295,10 +295,9 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "Mento Reserve smart contract (Celo), controlled by Mento governance behind the 172800-second timelock",
+        "name": "Mento reserve contracts, Safe wallets and operational holdings",
         "role": "other",
-        "sharePct": 100,
-        "jurisdiction": "Celo (on-chain)"
+        "jurisdiction": "Celo, Ethereum, Monad and Polygon (on-chain)"
       }
     ],
     "segregation": "unknown",
@@ -321,6 +320,6 @@
         "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
       }
     ],
-    "uncertainty": "The shared Mento Reserve is self-custodied in on-chain protocol contracts on Celo under Mento governance (48-hour timelock per the 2026-07-15 access review); there is no third-party custodian, trust, or SPV, so no legal segregation or bankruptcy-remoteness structure exists. Parts of the basket are deployed into yield-bearing positions (sUSDS savings shares, stETH staking), which is protocol-level redeployment of reserve assets rather than custodian rehypothecation; per-asset account segregation inside the reserve contract is not published."
+    "uncertainty": "The issuer reserve API retrieved on 2026-10-01 reports holdings on Celo, Ethereum, Monad and Polygon in reserve contracts, Safe wallets and operational addresses, so the former 100% single-Celo-contract custody attribution is not supported. The 48-hour governance timelock is verified for the ZARm token and Broker; it does not prove identical custody controls for every reported reserve wallet or yield position. No complete provider-control allocation or current legal segregation, trust, SPV, or bankruptcy-remoteness assurance was established. Parts of the basket are deployed into sUSDS savings shares and stETH staking; complete reuse terms remain unverified."
   }
 }

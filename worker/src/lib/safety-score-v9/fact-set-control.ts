@@ -10,6 +10,8 @@ import type {
   V9EconomicControlReviewV2,
   V9FactGapV3,
   V9FactStatusV2,
+  V9AssetFactsBase,
+  V9EffectiveDependenciesV3,
 } from "@shared/types/safety-score-v9-facts";
 import type { AssetExtension } from "./fact-set-schema";
 import {
@@ -20,7 +22,12 @@ import {
   normalizeReviewedFactStatus,
   type AssetBuildContext,
 } from "./fact-set-context";
+import { compileReviewedControlScope, weightedReviewIsCurrent } from "@shared/lib/safety-score-v9/control-scope";
+import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { DEPLOYMENT_MATERIAL_SHARE_THRESHOLD } from "./extension-shared";
+import { v9AccessClaimGraphStatuses } from "@shared/types/safety-score-v9-access-lookthrough";
+import { computeSafetyScoreV9ReserveExposureKey } from "./fact-set-schema";
+import { evaluateV9AccessLookthrough } from "@shared/lib/safety-score-v9/access-lookthrough";
 
 type ExtensionControlOverlay = Extract<
   NonNullable<AssetExtension["controlReview"]>,
@@ -57,15 +64,32 @@ export function buildControls(context: AssetBuildContext): {
       controls: [],
     };
   }
-  // An inventory demoted only by reviewer-scoped open questions keeps the
-  // scoped reason so the whole-asset cause matches the per-control gaps; any
+  // Each authority's own certificate is checked; a friendly sibling's proof
+  // cannot close an unreviewed contributor on the same deployment.
+  review.controls = review.controls.map((control) => {
+    if (!control.executionScope && !control.executionScopeContributors && !control.authority?.weightedQuorum) return control;
+    const projections = control.executionScopeContributors
+      ? control.executionScopeContributors.map((entry) => compileReviewedControlScope(entry.scope, entry.authorityKey, context.asset.assetId, context.fixedInput.clockSec, V9_REVIEW_EVIDENCE_MAX_AGE_SEC))
+      : [compileReviewedControlScope(control.executionScope, control.authority?.authorityKey ?? "", context.asset.assetId, context.fixedInput.clockSec, V9_REVIEW_EVIDENCE_MAX_AGE_SEC)];
+    return {
+      ...control,
+      ...(control.executionScope || control.executionScopeContributors ? {
+        executionScopeComplete: projections.every((projection) => projection.complete),
+        moduleImpact: projections.some((projection) => projection.moduleImpact === "relevant") ? "relevant" as const
+          : projections.every((projection) => projection.moduleImpact === "verified-noninterfering" || projection.moduleImpact === "not-applicable") ? "verified-noninterfering" as const : "unresolved" as const,
+        scopeDiagnostics: [...new Set(projections.flatMap((projection) => projection.diagnostics))].sort(),
+      } : {}),
+      ...(control.authority?.weightedQuorum && !weightedReviewIsCurrent(control.authority.weightedQuorum, context.fixedInput.clockSec, V9_REVIEW_EVIDENCE_MAX_AGE_SEC)
+        ? { authority: { ...control.authority, weightedQuorum: { ...control.authority.weightedQuorum, status: "unknown" as const } } } : {}),
+    };
+  });
   // unresolved control without one keeps the hard reason.
   const unresolvedControls = review.controls.filter((control) => !controlCanCarryKnownStatus(control));
   const allUnresolvedScoped =
     unresolvedControls.length > 0 &&
     unresolvedControls.every((control) => control.scopedQuestionFresh === true);
   const status =
-    review.state === "reviewed-controls"
+    review.state === "reviewed-controls" && unresolvedControls.length === 0
       ? createV9FactStatus({
           applicability: requiredV9Applicability("v9.control.review"),
           observationState: "known",
@@ -77,7 +101,7 @@ export function buildControls(context: AssetBuildContext): {
           ownerDomain: "control",
           responsibility: "issuer-undisclosed",
           policyRuleId: "v9.control.review",
-          message: review.rationale,
+          message: review.state === "partially-reviewed-controls" ? review.rationale : "One or more independently identified authorities remain unreviewed.",
           observationState: "bounded-unknown",
           evidenceRefIds: evidenceIds,
         }).status;
@@ -88,13 +112,11 @@ export function buildControls(context: AssetBuildContext): {
   return {
     controlStatus: status,
     controls: review.controls.map((control) => {
-      const controlStatus = controlCanCarryKnownStatus(control)
+      // Materiality bounds the charge, not our knowledge of the authority.
+      const controlStatus = (!controlHasExactAuthorityReview(control) && control.economicLossScope === "access-only") || controlSemanticsAreKnown(control)
         ? createV9FactStatus({
-            applicability: controlNeedsNonApplicableStatus(control)
-              ? notApplicableV9Fact(
-                  "v9.control.review",
-                  "This resolved control does not bind the control pillar.",
-                )
+            applicability: !controlHasExactAuthorityReview(control) && controlNeedsNonApplicableStatus(control)
+              ? notApplicableV9Fact("v9.control.review", "This resolved control does not bind the control pillar.")
               : requiredV9Applicability("v9.control.review"),
             observationState: "known",
             evidenceRefIds: evidenceIds,
@@ -109,35 +131,36 @@ export function buildControls(context: AssetBuildContext): {
   };
 }
 
+function controlHasExactAuthorityReview(control: ExtensionControlOverlay): boolean {
+  return control.executionScopeComplete === true;
+}
+
 function controlIsNonBinding(control: ExtensionControlOverlay): boolean {
-  return (
-    control.economicLossScope === "access-only" ||
-    (control.economicLossScope === "deployment" &&
-      control.materialSupplyShare !== null &&
-      control.materialSupplyShare < DEPLOYMENT_MATERIAL_SHARE_THRESHOLD)
-  );
+  return control.economicLossScope === "access-only" ||
+    (control.economicLossScope === "deployment" && control.materialSupplyShare !== null &&
+      control.materialSupplyShare < DEPLOYMENT_MATERIAL_SHARE_THRESHOLD);
 }
 
 function controlNeedsNonApplicableStatus(control: ExtensionControlOverlay): boolean {
+  return controlIsNonBinding(control) &&
+    (control.capSemantics.kind === "unknown" || control.claimImpairment === "unknown" ||
+      control.authority === null || control.failureDomains.length === 0);
+}
+
+
+function controlSemanticsAreKnown(control: ExtensionControlOverlay): boolean {
   return (
-    controlIsNonBinding(control) &&
-    (control.capSemantics.kind === "unknown" ||
-      control.claimImpairment === "unknown" ||
-      control.authority === null ||
-      control.failureDomains.length === 0)
+    control.capSemantics.kind !== "unknown" &&
+    control.claimImpairment !== "unknown" &&
+    control.economicLossScope !== "unknown" &&
+    control.incidentState !== "unknown" &&
+    control.authority !== null &&
+    control.authority.model !== "unknown"
   );
 }
 
 export function controlCanCarryKnownStatus(control: ExtensionControlOverlay): boolean {
-  return (
-    controlIsNonBinding(control) ||
-    (control.capSemantics.kind !== "unknown" &&
-      control.claimImpairment !== "unknown" &&
-      control.economicLossScope !== "unknown" &&
-      control.incidentState !== "unknown" &&
-      control.authority !== null &&
-      control.authority.model !== "unknown")
-  );
+  return (!controlHasExactAuthorityReview(control) && controlIsNonBinding(control)) || controlSemanticsAreKnown(control);
 }
 
 function boundedControlSemanticsStatus(
@@ -306,7 +329,11 @@ function normalizeAccessStatus(
   });
 }
 
-export function buildAccessReview(context: AssetBuildContext): V9AccessReviewV2 {
+export function buildAccessReview(
+  context: AssetBuildContext,
+  reserves?: Pick<V9AssetFactsBase, "reserveStatus" | "reserveExposures">,
+  dependencies?: V9EffectiveDependenciesV3,
+): V9AccessReviewV2 {
   const review = context.asset.accessReview;
   if (review === null) {
     return {
@@ -342,5 +369,73 @@ export function buildAccessReview(context: AssetBuildContext): V9AccessReviewV2 
     ...freezeReview,
     status: normalizeAccessStatus(context, freezeReview.status, `freeze:${freezeReview.reviewKey}`, freezeDisposition),
   }));
+  const graph = normalized.freeze.claimGraph;
+  if (graph) {
+    const pricedScopes = (context.asset.reserveScopeAdmissions ?? []).filter((scope) => scope.admitted && scope.wholeAssetComposition && (scope.kind === "portfolio-observation" || scope.kind === "onchain-observation"));
+    // Receiving-book fractions may cross unit claims, never a second reserve denominator.
+    const receivingBookNodes = new Set([graph.rootNodeKey]);
+    let expanded = true;
+    while (expanded) {
+      expanded = false;
+      for (const edge of graph.edges) {
+        if (edge.basis.kind === "serial-claim" && edge.weight === 1 && edge.enabled && edge.reachesHeldClaim &&
+          edge.status.observationState === "known" && receivingBookNodes.has(edge.fromNodeKey) && !receivingBookNodes.has(edge.toNodeKey)) {
+          receivingBookNodes.add(edge.toNodeKey);
+          expanded = true;
+        }
+      }
+    }
+    for (const edge of graph.edges) {
+      if (edge.basis.kind === "reserve-position") {
+        const basis = edge.basis;
+        const target = graph.nodes.find((node) => node.nodeKey === edge.toNodeKey);
+        const exposure = reserves?.reserveExposures.find((row) => row.exposureKey === basis.exposureKey);
+        const liveObservation = context.fixedInput.liveReserveProvenanceMap[context.asset.assetId]?.reserveObservation;
+        const staticRows = context.asset.reviewedStaticReserveRows;
+        const scopeComplete = pricedScopes.some((scope) => exposure?.provenance === "live"
+          ? liveObservation?.scopeId === scope.scopeId && liveObservation.observedAtSec === scope.observedAtSec
+          : staticRows?.sourceKind === scope.kind && staticRows.scopeId === scope.scopeId);
+        const exactKey = basis.sourceKey === null || computeSafetyScoreV9ReserveExposureKey({ name: "identity", pct: 100, risk: "low", sourceKey: basis.sourceKey }) === basis.exposureKey;
+        const matched = exactKey && exposure?.status.observationState === "known" && (exposure.trackedAssetId === null || exposure.trackedAssetId === target?.assetId);
+        edge.weight = matched && scopeComplete && receivingBookNodes.has(edge.fromNodeKey) && reserves?.reserveStatus.observationState === "known" ? exposure!.weight : null;
+        if (!matched) edge.reachesHeldClaim = false;
+      } else if (edge.basis.kind === "serial-claim" && edge.basis.dependencyEdgeKey !== null) {
+        const key = edge.basis.dependencyEdgeKey;
+        const target = graph.nodes.find((node) => node.nodeKey === edge.toNodeKey);
+        if (dependencies?.status.observationState !== "known" || !dependencies.edges.some((row) => row.edgeKey === key && row.economicRole === "serial-claim" && row.upstreamAssetId === target?.assetId)) {
+          edge.weight = null;
+          edge.reachesHeldClaim = false;
+        }
+      }
+    }
+    for (const partition of graph.partitions) {
+      const edges = graph.edges.filter((edge) => edge.partitionKey === partition.partitionKey);
+      partition.denominatorEstablished = edges.length > 0 && edges.every((edge) => edge.weight !== null);
+    }
+    for (const { label, status } of v9AccessClaimGraphStatuses(graph)) {
+      const branch = graph.unresolved.find((row) => label === `access:graph:unresolved:${row.branchKey}`);
+      const binding = label.endsWith(":admission") ? label.slice(0, -":admission".length).replace("access:graph:unresolved:", "") : label;
+      Object.assign(status, normalizeReviewedFactStatus(context, status, {
+        bindingKey: binding, staleEvidenceError: `Access graph ${label} has inconsistent stale evidence`,
+        gapId: `${context.asset.assetId}:gap:${label}`, reasonCode: "missing-access-review", ownerDomain: "control",
+        componentKey: label, message: `Diagnostic reserve-access uncertainty: ${branch?.reason ?? "review incomplete"}.`,
+        responsibility: branch?.responsibility,
+      }));
+    }
+    const summary = evaluateV9AccessLookthrough(graph);
+    if (summary.unresolvedCoverageShare === null) {
+      for (const branch of summary.unresolved) {
+        if (graph.unresolved.some((row) => row.branchKey === branch.branchKey)) continue;
+        const evidenceRefIds = graph.nodes.find((node) => node.nodeKey === branch.nodeKey)?.status.evidenceRefIds ?? [];
+        const fact = missingLocalFact(context, {
+          componentKey: `access:graph:unresolved:${branch.branchKey}`, reasonCode: "missing-access-review", ownerDomain: "control",
+          responsibility: branch.responsibility, policyRuleId: "v9.access.freeze-review",
+          message: `Diagnostic reserve-access uncertainty: ${branch.reason}.`,
+          observationState: evidenceRefIds.length > 0 ? "bounded-unknown" : "missing", evidenceRefIds,
+        });
+        graph.unresolved.push({ ...branch, status: fact.status });
+      }
+    }
+  }
   return normalized;
 }

@@ -1,12 +1,9 @@
 {
   "id": "cusd-celo",
-  "mica": {
-    "status": "out-of-scope"
-  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "USDm is a USD-pegged reserve-backed stablecoin designed for payments and cross-border transfers, meeting the GENIUS Act's functional definition of a payment stablecoin. The issuing entity (Mento Labs GmbH) is a German GmbH domiciled in Berlin with no identified US operations, subsidiary, or regulatory presence. The protocol is governed by Mento DAO (MENTO token holders) with a 4/7 multisig Safe as the Celo token owner. Market focus is Africa and emerging markets (MiniPay in Nigeria, Kenya, Ghana). Market cap ~$14M as of June 2026.",
+      "summary": "USDm is a USD-pegged reserve-backed stablecoin designed for payments and cross-border transfers, meeting the GENIUS Act's functional definition of a payment stablecoin. The issuing entity (Mento Labs GmbH) is a German GmbH domiciled in Berlin with no identified US operations, subsidiary, or regulatory presence. The protocol is governed by Mento DAO (MENTO token holders) with a 4/6 multisig Safe as the Celo token owner. Market focus is Africa and emerging markets (MiniPay in Nigeria, Kenya, Ghana). Market cap ~$14M as of June 2026.",
       "references": [
         {
           "label": "Mento Labs GmbH: Registercheck (Berlin, HRB 247880 B)",

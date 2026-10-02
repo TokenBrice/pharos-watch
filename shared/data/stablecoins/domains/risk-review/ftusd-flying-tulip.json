@@ -10,11 +10,15 @@
       {
         "label": "Website",
         "url": "https://flyingtulip.com/"
+      },
+      {
+        "label": "Pinned Ethereum and Sonic RPC blacklist-role reads",
+        "url": "https://api-sonic-mainnet-archive.n.dwellir.com"
       }
     ],
-    "evidence": "Explicit Yes retained: reviewed metadata indicates a direct issuer, admin, proxy, pause, burn, or upgrade control surface beyond reserve-only exposure.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "At Ethereum block 26095812 and Sonic block 80179134, ftUSD blacklister() and pauser() both returned 0x1118e1c057211306a40a4d7006c040dbfe1370cb, the token owner/masterMinter Safe. paused() returned false on each chain. The direct blacklist and pause roles confirm the existing Yes verdict without inferring control solely from centralized governance.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB23EURE)",
+    "reviewedAt": "2026-10-01"
   },
   "oracleRisk": {
     "tier": "oracleless",

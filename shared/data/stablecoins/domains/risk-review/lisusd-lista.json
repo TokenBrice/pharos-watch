@@ -101,7 +101,7 @@
         "feeds": [
           {
             "provider": "Lista Resilient Price Oracle",
-            "path": "Configured Binance Oracle, Chainlink, RedStone, or API3 sources -> cross-validation -> Lista Spot collateral price",
+            "path": "Issuer-documented token-specific Atlas, Chainlink, RedStone and custom feeds; Resilient Oracle cross-validation where configured -> Lista Spot collateral price",
             "address": "0xf3afD82A4071f272F403dC176916141f44E6c750",
             "chain": "bsc",
             "failureDomainKeys": [

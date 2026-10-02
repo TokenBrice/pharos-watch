@@ -205,7 +205,7 @@ describe("redemption backstop config consistency", () => {
   it.each([
     ["usdc-circle", "offchain-issuer", "supply-ratio", "dynamic-or-unclear"],
     ["usdcv-societe-generale-forge", "offchain-issuer", "supply-full", "dynamic-or-unclear"],
-    ["chfau-allunity", "offchain-issuer", "supply-full", "dynamic-or-unclear"],
+    ["chfau-allunity", "offchain-issuer", "supply-full", "fee-bps"],
     ["m-m0", "offchain-issuer", "supply-full", "dynamic-or-unclear"],
     ["dai-makerdao", "psm-swap", "reserve-sync-metadata", "fee-bps"],
     ["usds-sky", "psm-swap", "reserve-sync-metadata", "fee-bps"],

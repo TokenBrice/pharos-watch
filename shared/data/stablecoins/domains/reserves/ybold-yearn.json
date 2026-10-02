@@ -39,5 +39,26 @@
     "scope": "full-composition",
     "knownUnknownExposure": "The BOLD backing is identified; allocation among Liquity V2 Stability Pools remains dynamic.",
     "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Yearn yBOLD vault and Liquity V2 Stability Pools",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol owner-ruling review 2026-10-01 (RuleC05)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Yearn yBOLD direct wrapper custody and strategy",
+        "url": "https://docs.yearn.fi/getting-started/products/yvaults/yBold"
+      }
+    ],
+    "uncertainty": "This profile describes direct wrapper/strategy custody: yBOLD represents BOLD deployed through Yearn into Liquity V2 Stability Pools. The tracked Ethereum vault asset() returned BOLD at block 26097116. Under D08, upstream collateral custody remains with the BOLD parent dependency; the existing onchain scalar describes these direct contracts. Legal segregation, bankruptcy treatment, reuse rights and allocation among Stability Pools are not established by these sources."
   }
 }

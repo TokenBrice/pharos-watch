@@ -1,22 +1,5 @@
 {
   "id": "usdsc-startale",
-  "mica": {
-    "status": "out-of-scope",
-    "references": [
-      {
-        "label": "ESMA Interim MiCA Register: ART/EMT issuer CSVs reviewed; no Startale/USDSC match found on 2026-08-14",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
-      },
-      {
-        "label": "Startale USD Terms: Startale Development (BVI) Ltd describes the swap as unregulated and makes no EU MiCA authorization disclosure",
-        "url": "https://usd.startale.com/terms"
-      },
-      {
-        "label": "Startale USD: USDSC is a branded M0 stablecoin extension issued by Startale Group",
-        "url": "https://usd.startale.com/"
-      }
-    ]
-  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "authorizationStatus": "no-public-authorization-found",
@@ -30,7 +13,7 @@
     "reserveDisclosureUrl": "https://usd.startale.com/",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "USDSC is a Soneium-native M0 extension; M0 infrastructure disclosures do not establish a Startale-specific GENIUS authorization or foreign-issuer exception.",
+    "notes": "USDSC is marketed as issued by Startale Group; the product terms identify Startale Development (BVI) Ltd as website and swap counterparty. These reviewed sources do not resolve the exact token liability issuer or establish token-specific GENIUS authorization or a foreign-issuer exception.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",

@@ -2,10 +2,19 @@
   "id": "ylds-figure",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: YLDS resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Figure Certificate Company prospectus and blockchain administrative controls",
+        "url": "https://cdn.figure.com/docs/markets/fcc-prospectus.pdf"
+      },
+      {
+        "label": "Stellar YLDS issuer account",
+        "url": "https://horizon.stellar.org/accounts/GAC7MOPTQLQUM3KC24AW4GHS3RLF72LPEZO54AH7EZ6TSMGRB5SOAVH3"
+      }
+    ],
+    "evidence": "The prospectus states that FCC's transfer agent retains the ability to correct unauthorized Certificate ownership records on-chain. Current Provenance marker state permits ACCESS_FORCE_TRANSFER, and the Stellar issuer account retains auth_required, auth_revocable and auth_clawback_enabled. The existing positive blacklistability verdict is supported directly rather than inferred from centralized governance.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA31YLDS)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

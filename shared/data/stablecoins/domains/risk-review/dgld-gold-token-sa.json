@@ -2,10 +2,19 @@
   "id": "dgld-gold-token-sa",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: DGLD resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "DGLD General Terms & Conditions: freeze of blockchain addresses",
+        "url": "https://dgld.ch/legal/general-terms-conditions-dgld-2"
+      },
+      {
+        "label": "DGLD Solana Token-2022 mint",
+        "url": "https://solscan.io/token/dg1dmo6NZNagkwB6EAfUeaco6CFXFLRhb1KCrsqXTVz"
+      }
+    ],
+    "evidence": "Issuer terms Section 6 permit GTSA to freeze blockchain addresses, making transactions to and from a frozen address fail. Finalized Solana mint state at slot 452214879 on 2026-10-01 identifies freezeAuthority 43q5VC58Hr5GRGjWVDKKT51k1Sq1QxtyV9KNzJgxieSA, permanentDelegate 9DmokD97i3bGzoaJsyW1x65krpLHpHVukfeftfrwrCFx and pausable authority 9CyHHoZikyCRWBpwuU8hvNoCToySyQGSWyKzXssnmRKc (paused=false). At finalized slot 452214956 the freeze authority is a Token-2022 1-of-2 multisig. This replaces the prior governance-only inference with explicit legal and current on-chain access evidence; signing custody is not established.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB25mHYPER)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

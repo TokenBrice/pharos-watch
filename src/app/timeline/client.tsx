@@ -13,7 +13,7 @@ import {
 import { SEVERITY_LABEL } from "@/components/tape/event-card";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { PEG_FILTER_OPTIONS } from "@shared/lib/classification";
-import { CHAIN_META } from "@shared/lib/chains";
+import { CHAIN_META } from "@shared/types/chain-identity";
 import type { PegCurrency } from "@shared/types";
 import { TAPE_FILTER_SEVERITY_VALUES } from "@/hooks/use-events";
 import { logosById } from "@/lib/logos";

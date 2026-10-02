@@ -1,3 +1,4 @@
+import "../../test-helpers/reviewed-deployment-catalog.test-support";
 import { describe, expect, it } from "vitest";
 import type { DexLiquidityData, ExitRouteObservation } from "@shared/types/market";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";

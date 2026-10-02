@@ -19,6 +19,7 @@ import type { RedemptionDocSource } from "../../types";
 import { isValidIsoDateOnly } from "../../types/date-primitives";
 import { formatUtcDateOnly } from "../format";
 import { isRedemptionSettlementFaster } from "./settlement";
+import { RedemptionRouteSuspensionSchema } from "../../types/redemption";
 
 const MAX_REDEMPTION_OUTPUT_ASSETS = 16;
 const RatioSchema = z.number().finite().gt(0).lte(1);
@@ -161,6 +162,65 @@ export const PhysicalCommodityDeliveryTermsSchema = z.strictObject({
   sameNotionalEligible: z.literal(false),
 });
 
+const PhysicalBoundSchema = z.union([NonNegativeNumberSchema, z.literal("unbounded")]).nullable();
+const PhysicalRouteFeesSchema = z.strictObject({
+  issuerFeeBps: PhysicalBoundSchema,
+  issuerFixedUsd: PhysicalBoundSchema,
+  deliveryUsdPerLot: PhysicalBoundSchema,
+  insuranceBps: PhysicalBoundSchema,
+  assayUsdPerLot: PhysicalBoundSchema,
+  taxBps: PhysicalBoundSchema,
+  conversionBps: PhysicalBoundSchema,
+});
+const PhysicalSettlementLegSchema = z.strictObject({
+  leg: z.string().min(1),
+  maximumBusinessDays: PhysicalBoundSchema,
+  typicalBusinessDays: z.union([NonNegativeNumberSchema, z.literal("several-business-days")]).nullable().optional(),
+});
+const PhysicalLotSchema = z.strictObject({
+  minimumTokens: PositiveNumberSchema.nullable(),
+  incrementTokens: PositiveNumberSchema.nullable(),
+  // Fine weight floor counts delivered capacity; upper weight sizes the deposit.
+  bars: z.array(z.strictObject({
+    barId: z.string().min(1),
+    fineTroyOunces: PositiveNumberSchema.nullable(),
+    maximumFineTroyOunces: PositiveNumberSchema.optional(),
+  })).max(32),
+});
+const PhysicalThroughputSchema = z.strictObject({
+  tokens: PositiveNumberSchema,
+  periodSec: z.number().int().positive(),
+  evidence: z.strictObject({ url: HttpUrlSchema, quote: z.string().min(1) }),
+});
+export const PhysicalToUsdRouteSchema = z.strictObject({
+  metal: z.enum(["XAU", "XAG"]),
+  fineTroyOuncesPerToken: PositiveNumberSchema,
+  lot: PhysicalLotSchema,
+  throughput: PhysicalThroughputSchema.optional(),
+  vaultLocations: z.array(z.enum(["london", "zurich", "singapore", "hong-kong", "eu", "other"])).min(1),
+  barClass: z.enum(["good-delivery", "kilobar", "small-bar-or-coin"]),
+  saleLocation: z.enum(["in-vault", "delivered"]).default("in-vault"),
+  deliveryScope: z.enum(["same-jurisdiction", "cross-border"]).default("same-jurisdiction"),
+  fineness: z.number().finite().min(0).max(1).nullable().optional(),
+  eligibility: z.literal("verified-customer"),
+  fees: PhysicalRouteFeesSchema,
+  settlementLegs: z.array(PhysicalSettlementLegSchema).min(1),
+  bestEffortIssuerCashOut: z.strictObject({
+    operatingProcess: z.string().min(1),
+    lot: PhysicalLotSchema,
+    throughput: PhysicalThroughputSchema.optional(),
+    fees: PhysicalRouteFeesSchema,
+    settlementLegs: z.array(PhysicalSettlementLegSchema).min(1),
+  }).optional(),
+  reviewedAt: ReviewedAtSchema,
+  reviewExpiresAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(isValidIsoDateOnly),
+  evidence: z.array(z.strictObject({
+    url: HttpUrlSchema,
+    quote: z.string().min(1),
+  })).min(1),
+});
+export type PhysicalToUsdRoute = z.infer<typeof PhysicalToUsdRouteSchema>;
+
 export const RedemptionBackstopConfigSchema = z
   .strictObject({
     routeFamily: RedemptionRouteFamilySchema,
@@ -169,6 +229,7 @@ export const RedemptionBackstopConfigSchema = z
     executionModel: RedemptionExecutionModelSchema,
     outputAssetType: RedemptionOutputAssetTypeSchema,
     physicalCommodityDelivery: PhysicalCommodityDeliveryTermsSchema.optional(),
+    physicalToUsd: PhysicalToUsdRouteSchema.optional(),
     capacityModel: RedemptionCapacityModelSchema,
     costModel: RedemptionCostModelSchema,
     /**
@@ -196,7 +257,8 @@ export const RedemptionBackstopConfigSchema = z
      */
     v9ComposedDexExit: RedemptionV9ComposedDexExitSchema.optional(),
     holderEligibility: RedemptionHolderEligibilitySchema.optional(),
-    routeStatus: z.enum(["open", "unknown"]).optional(),
+    routeStatus: z.enum(["open", "unknown", "suspended"]).optional(),
+    routeSuspension: RedemptionRouteSuspensionSchema.optional(),
     routeExitCorrelation: RedemptionRouteExitCorrelationSchema.optional(),
     /**
      * Per-config escape hatch for routes whose documented rail composes with a
@@ -240,6 +302,12 @@ export const RedemptionBackstopConfigSchema = z
     notes: z.array(z.string()).optional(),
   })
   .superRefine((config, ctx) => {
+    if ((config.routeStatus === "suspended") !== (config.routeSuspension !== undefined)) {
+      ctx.addIssue({ code: "custom", path: ["routeSuspension"], message: "Suspended status requires an exact-channel reviewed suspension, and only suspended status may carry it" });
+    }
+    if (config.routeSuspension && config.routeSuspension.reviewedAt > currentUtcDate()) {
+      ctx.addIssue({ code: "custom", path: ["routeSuspension", "reviewedAt"], message: "Suspension review cannot be future-dated" });
+    }
     if ((config.outputAssetType === "physical-commodity-delivery") !== (config.physicalCommodityDelivery !== undefined)) {
       ctx.addIssue({ code: "custom", path: ["physicalCommodityDelivery"], message: "Physical delivery requires explicit commodity, quantity, minimum and published fees" });
     }
@@ -504,6 +572,14 @@ export const RedemptionBackstopConfigSchema = z
   });
 
 export type RedemptionBackstopConfig = z.infer<typeof RedemptionBackstopConfigSchema>;
+
+/** Capture-time, exact-route admission; other issuer channels and DEX routes are untouched. */
+export function resolveReviewedRouteSuspension(config: RedemptionBackstopConfig | null | undefined, routeId: string, clockSec: number) {
+  const suspension = config?.routeStatus === "suspended" ? config.routeSuspension : undefined;
+  if (!suspension || suspension.routeId !== routeId) return undefined;
+  const reviewedAtSec = Date.parse(`${suspension.reviewedAt}T00:00:00Z`) / 1_000;
+  return reviewedAtSec <= clockSec ? suspension : undefined;
+}
 
 export function currentUtcDate(): string {
   return formatUtcDateOnly(new Date());

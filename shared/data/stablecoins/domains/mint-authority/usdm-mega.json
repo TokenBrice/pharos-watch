@@ -75,22 +75,22 @@
         "label": "USDM USDmMinting MINTER_ROLE EOAs (10)",
         "role": "direct-minter",
         "authorityType": "eoa",
-        "directMintAbility": "direct",
+        "directMintAbility": "cap-limited",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "The ten current MINTER_ROLE EOAs can invoke the native USDmMinting path, but each invocation remains subject to signed-order, supported-asset, collateral-transfer, route-ratio, and global/per-asset per-block checks in the immutable gateway.",
         "failureDomainKeys": [
           "contract:ethereum:0xe0406bee6d58bcd7c1ca78191b6fde9ca060f6f2"
         ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 25770626,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26098751,
         "sources": [
           {
             "label": "Ethereum USDmMinting verified source and ABI",
             "url": "https://eth.blockscout.com/address/0xe0406bee6d58bcd7c1ca78191b6fde9ca060f6f2"
           }
         ],
-        "evidence": "At Ethereum block 25770626, the verified MINTER_ROLE hash 0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6 was active for ten EOAs: 0x29f1f862aaed5f77ce23cbf4969269b4e69af1e6, 0xe28f1d45a5a6b436d13c0756af572f245338683d, 0xd316704b9783fdde38839e4a69aa2db4e2606e82, 0xc3a0a22901a7b018b423d4d5425e1f8db1addfa3, 0x4569a33362d2356979c6e2d31421b9d8f0215a5c, 0x5dee2b7bfeeed6c18e6b4c50e32aa890d3844b2c, 0x04053a8f50651832f042ed8938bf427b580061ca, 0x254c8aff4559da3ee52f76a7503bd620777b6d17, 0x14ef18f0b11c0b52f71a2079e686e3d2ecb1490a, and 0x31cf91c38c01e1acfb7e89a34f47516fe5454d23. The same ten addresses were active for the observed REDEEMER_ROLE."
+        "evidence": "At Ethereum block 26098751, the deployment-to-pin MINTER_ROLE RoleGranted log census (23969773 through 26098751, 213 non-overlapping ranges of at most 10,000 blocks) returned ten granted addresses. hasRole(MINTER_ROLE,address) remained true and eth_getCode remained empty for all ten: 0x29f1f862aaed5f77ce23cbf4969269b4e69af1e6, 0xe28f1d45a5a6b436d13c0756af572f245338683d, 0xd316704b9783fdde38839e4a69aa2db4e2606e82, 0xc3a0a22901a7b018b423d4d5425e1f8db1addfa3, 0x4569a33362d2356979c6e2d31421b9d8f0215a5c, 0x5dee2b7bfeeed6c18e6b4c50e32aa890d3844b2c, 0x04053a8f50651832f042ed8938bf427b580061ca, 0x254c8aff4559da3ee52f76a7503bd620777b6d17, 0x14ef18f0b11c0b52f71a2079e686e3d2ecb1490a, and 0x31cf91c38c01e1acfb7e89a34f47516fe5454d23. Verified USDmMinting mint()/mintWETH() enforce signed-order, supported-asset, collateral-transfer and global/per-asset per-block bounds for these callers; they are not arbitrary direct token minters. Signer key custody and whole-claim reconciliation remain unknown, and the owner Safe's arbitrary-minter/upgrade bypass remains unbounded."
       },
       {
         "chain": "ethereum",

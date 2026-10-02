@@ -22,11 +22,11 @@
     },
     {
       "sourceKey": "erc4626-single-asset:ethereum:0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a:deployed",
-      "name": "apyUSD deployed strategy positions",
+      "name": "Vested apxUSD yield recognized by apyUSD",
       "pct": 0.015424433505003776,
       "risk": "high",
-      "assetClass": "protocol-position",
-      "issuerOrObligor": "Apyx apyUSD vault and its apxUSD strategy accounting",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Apyx apxUSD held through the vesting contract",
       "riskFactors": [
         "credit",
         "liquidity",
@@ -35,12 +35,14 @@
         "smart-contract",
         "market"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "unknown",
+      "coinId": "apxusd-apyx",
+      "depType": "wrapper"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Slice2)",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (ValA46apyUSD)",
     "confidence": "verified",
     "sources": [
       {
@@ -50,22 +52,55 @@
       {
         "label": "Ethereum apyUSD verified proxy and current token holdings",
         "url": "https://etherscan.io/address/0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a#code"
+      },
+      {
+        "label": "Verified deployed ApyUSD implementation: totalAssets includes vested apxUSD yield",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfd616567ecc1607f61073951a1e822f7315bb112"
+      },
+      {
+        "label": "Verified LinearVestV0 asset and beneficiary; Ethereum block 26095984",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0d62b4cc02b4b51ed19ddf41d7a7979cf394c99f"
       }
     ],
-    "rationale": "Apyx identifies apyUSD as the yield-bearing wrapper minted by staking apxUSD and publishes the Ethereum apyUSD and apxUSD contracts. The live ERC-4626 adapter reports the direct apxUSD balance separately from the small totalAssets-to-balance difference. That difference is classified conservatively as an Apyx vault protocol position rather than assigned to an undisclosed venue.",
+    "rationale": "Verified deployed ApyUSD totalAssets() includes its direct apxUSD balance and LinearVestV0 vestedAmount(). At Ethereum block 26095984, the vesting contract's asset is the published apxUSD token and its beneficiary is the apyUSD vault; its apxUSD balance covers the recognized vested yield, which exactly equals totalAssets minus the direct vault balance. Both slices therefore represent apxUSD exposure. This review corrects slice identity and dependency only; the September 21 composition percentages and compositionAsOf are retained, not refreshed.",
     "compositionBasis": "Live ERC-4626 totalAssets and apxUSD balance for the published Ethereum apyUSD deployment",
     "compositionAsOf": "2026-09-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "The deployed-position venue is not published. Its Apyx vault failure domain and apxUSD strategy-accounting identity are established without assigning a venue.",
-    "knownUnknownExposurePct": 0,
-    "nonLinkDispositions": [
+    "knownUnknownExposure": "Vested yield is apxUSD held at LinearVestV0 0x0d62b4cc02b4b51ed19ddf41d7a7979cf394c99f for the apyUSD vault. Neither this custody read nor the dependency link establishes legal segregation, bankruptcy remoteness, or protections in the underlying apxUSD reserve.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
       {
-        "reserveIndex": 1,
-        "reserveName": "apyUSD deployed strategy positions",
-        "pct": 0.015424433505003776,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "The adapter-derived deployed amount is a vault accounting position, not a separately identified tracked stablecoin balance."
+        "name": "Apyx apyUSD Ethereum ERC-4626 vault",
+        "role": "other"
+      },
+      {
+        "name": "Alpaca (underlying Preference Foundation brokerage securities)",
+        "role": "other",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Preference Foundation or its subsidiaries (underlying STRCx self-custodied wallets)",
+        "role": "other"
       }
-    ]
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA46apyUSD)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Apyx apyUSD ERC-4626 product and underlying",
+        "url": "https://docs.apyx.fi/product-overview/apyusd-overview.md"
+      },
+      {
+        "label": "Wolf & Company August 2026 securities balance examination",
+        "url": "https://1731598137-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2F6XK8DXRkFImTNSbo86o2%2Fuploads%2F133oAatMzJ47DEJ8gAoT%2FAugust%202026%20Attestation%20Opinion%20(Final).pdf?alt=media&token=0386fd1d-2316-4320-b799-96ec6c4e827e"
+      }
+    ],
+    "uncertainty": "The immediate asset is apxUSD held by the Ethereum vault, verified at block 26095809. The August 31 underlying securities report names Alpaca for brokerage-held STRC and Preference Foundation-controlled wallets for STRCx. These underlying providers do not directly custody apyUSD or establish a token-holder claim. Provider shares across the complete backing, segregation, bankruptcy remoteness and rehypothecation protections are not established; the existing institutional-regulated summary does not describe every layer."
   }
 }

@@ -1056,6 +1056,21 @@ function scoreV9InputWithCaps(
 
   const capCandidates: Omit<V9CapTrace, "binding">[] = [];
   capCandidates.push(...reasonCeilings);
+  if (input.unresolvedDeploymentShare !== undefined && preCapScoreRaw !== null) {
+    const materiality = policy.policy.semantic.materiality;
+    const start = materiality.unresolvedDeploymentBlendStartSharePct / 100;
+    const end = materiality.unresolvedDeploymentFullCeilingSharePct / 100;
+    const blend = Math.max(0, Math.min(1, (input.unresolvedDeploymentShare - start) / (end - start)));
+    const ceiling = resolveV9ReasonPolicy(policy, "unresolved-control-identity").ceiling;
+    if (blend > 0 && ceiling !== null) {
+      capCandidates.push({
+        source: "evidence",
+        kind: "unresolved-deployment-share-band",
+        limit: decimalSnap(preCapScoreRaw - Math.max(0, preCapScoreRaw - ceiling.limit) * blend),
+        reason: `Unresolved deployment exposure (${decimalSnap(input.unresolvedDeploymentShare * 100)}%) blends proportional pricing into the whole-coin control ceiling.`,
+      });
+    }
+  }
   const evidenceCeiling = policy.policy.semantic.evidence.ceilings[input.evidenceLevel];
   if (evidenceCeiling !== null) {
     capCandidates.push({

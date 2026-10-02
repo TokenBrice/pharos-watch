@@ -1,4 +1,4 @@
-import { CHAIN_META } from "@shared/lib/chains";
+import { CHAIN_META } from "@shared/types/chain-identity";
 import type { ChainSummary, HealthBand } from "@shared/types/chains";
 
 const MAX_HARBORS = 8;

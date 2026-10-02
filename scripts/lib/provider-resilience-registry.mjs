@@ -10,6 +10,22 @@ export const REQUIRED_PROVIDER_SURFACE_FAMILIES = [
 
 export const PROVIDER_RESILIENCE_REGISTRY = [
   {
+    id: "safety-score-economic-supply-observer",
+    family: "safety-score-attribution",
+    description: "Isolated reviewed economic partition API/validated-ledger observations.",
+    files: ["worker/src/lib/safety-score-v9/economic-supply-observer.ts"],
+    tests: ["worker/src/lib/__tests__/safety-score-v9-transfer-materiality-observer.test.ts"],
+    allowBareFetch: true,
+    directFetchJustification: "Single-attempt reviewed observations under the isolated producer AbortSignal; no public-handler fetching or retry policy.",
+    resilience: {
+      transport: "direct-reviewed-observation",
+      timeout: "Uses the existing producer/capture AbortSignal; Solana transport remains in the shared bounded RPC reader.",
+      body: "Consumes reviewed API response text before parsing; validated-ledger reads consume successful JSON.",
+      circuitSources: [],
+    },
+    requiredMarkers: ["signal", "response.text", "rethrowIfAborted"],
+  },
+  {
     id: "fetch-with-retry-core",
     family: "provider-transport",
     description: "Shared Worker HTTP retry wrapper.",

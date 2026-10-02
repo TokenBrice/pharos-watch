@@ -33,8 +33,8 @@
     "reviewedAt": "2026-08-08"
   },
   "oracleRisk": {
-    "tier": "standard-external",
-    "summary": "sGHO is an ERC-4626 savings wrapper over GHO and has no borrower-owned collateral positions or token-level liquidation engine. Its underlying GHO exposure inherits the external Aave reserve-oracle risk reviewed on the parent asset.",
+    "tier": "privileged-internal-pricing",
+    "summary": "sGHO share-to-GHO conversion uses a yield index accrued at the target rate set through YIELD_MANAGER_ROLE, rather than a balance-derived ERC-4626 ratio. At Ethereum block 26097120, targetRate() was 450 basis points, and the Aave Level-1 Executor retained DEFAULT_ADMIN_ROLE controlling that role. D11 therefore identifies a wrapper-local discretionary price-relevant input. Parent GHO collateral-oracle exposure remains separate; no external feed or liquidation engine is inferred for the wrapper.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
@@ -53,17 +53,17 @@
         }
       ]
     },
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex data review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC18)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Aave sGHO guide",
-        "url": "https://aave.com/docs/aave-v3/guides/sgho"
+        "label": "Sourcify verified sGHO implementation: role-controlled target rate and index conversion",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xff229a0bbb614a284de8ae0e41e5974878fd7c04?fields=sources,abi"
       },
       {
-        "label": "Aave Oracle docs",
-        "url": "https://aave.com/docs/ecosystem/oracle"
+        "label": "Aave sGHO launch configuration: discretionary rate governance",
+        "url": "https://governance.aave.com/t/arfc-sgho-launch-configuration/24346"
       }
     ]
   }

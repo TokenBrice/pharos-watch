@@ -80,8 +80,8 @@
     },
     {
       "type": "info",
-      "title": "No per-token attestation located",
-      "message": "Ripio describes wFIAT local-currency backing, but no reliable public per-token reserve attestation was found for WCLP during this addition. Curated reserves remain conservative until source coverage improves."
+      "title": "Reserve certification requires clarification",
+      "message": "Ripio's attestation archive links a wCLP certification headed June 30, 2026 and signed July 28, 2026. Its liability procedure instead names March 31, and its reserve statements mix Chilean pesos with ARS and Argentine pesos. The report's existence is verified, but its dates and currency need clarification before its balances can support a reserve composition."
     }
   ],
   "launchDate": "2025-11-27"

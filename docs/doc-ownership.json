@@ -418,7 +418,7 @@
         "functions/__tests__/safety-map-png.test.ts"
       ],
       "docs": [
-        { "path": "docs/report-cards.md", "anchor": "v9-model" },
+        { "path": "docs/report-cards.md", "anchor": "v10-model" },
         { "path": "docs/report-cards.md", "anchor": "dependency-coverage" },
         { "path": "docs/report-cards.md", "anchor": "canonical-publication" },
         { "path": "docs/mint-authority-scoring.md", "anchor": "mint-authority-entry" },

@@ -1,7 +1,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { canonicalExitRouteAssetKey } from "../../shared/lib/exit-route-identity";
+import { canonicalExitRouteAssetKey } from "../../shared/types/exit-route-identity";
 import { computeDexLiquidityPayloadFingerprint } from "../../shared/lib/report-cards-fixed-input-identity";
 import { REPORT_CARDS_REGISTRY_FINGERPRINT } from "../../shared/data/stablecoins/report-card-registry-fingerprint.generated";
 import { ACTIVE_STABLECOINS } from "../../shared/lib/stablecoins/registry";

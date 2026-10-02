@@ -53,6 +53,23 @@
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
   "governanceQuality": "multisig",
+  "liveReservesConfig": {
+    "adapter": "leverup-lvusd",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "lvusd-leverup",
+    "display": {
+      "url": "https://leverup.gitbook.io/docs/liquidity-layer/lvusd-stablecoin",
+      "label": "LeverUp designated reserve vault"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "monad",
+        "rpcMode": "public-rpc"
+      }
+    }
+  },
   "notices": [
     {
       "type": "warning",

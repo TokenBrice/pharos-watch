@@ -1,4 +1,4 @@
-import { CHAIN_META } from "./chains";
+import { CHAIN_META } from "../types/chain-identity";
 
 /**
  * Entity type for block-explorer URL construction.

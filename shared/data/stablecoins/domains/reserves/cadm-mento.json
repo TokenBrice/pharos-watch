@@ -264,5 +264,39 @@
         "rationale": "ETH is identified exogenous cryptoasset collateral, not a tracked stablecoin dependency."
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Mento Reserve Safes (Celo, Ethereum and Monad)",
+        "role": "other"
+      },
+      {
+        "name": "Mento liquidity reserves, operational accounts and strategies",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (R2WMento)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "CADm issuer backing configuration",
+        "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/main/src/api/v2/config/stablecoin-backing.config.ts"
+      },
+      {
+        "label": "Itemized shared reserve locations captured October 1",
+        "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+      },
+      {
+        "label": "Archived reserve management disclosure, February 13, 2026",
+        "url": "https://web.archive.org/web/20260213094746/https://docs.mento.org/mento/overview/core-concepts/the-reserve"
+      }
+    ],
+    "uncertainty": "CADm is classified as shared-reserve-backed in the issuer configuration. The current itemized API reports assets in Reserve Safes, liquidity reserves, operational accounts, Aave and liquidity-pool strategies. These are immediate reserve locations, not evidence of asset-specific legal segregation or constituent issuers' underlying custody. No provider percentage, bankruptcy-remoteness protection, or quantitative reuse limit is established. On-chain storage does not determine enforceable holder rights.",
+    "knownUnknownExposurePct": 100
   }
 }

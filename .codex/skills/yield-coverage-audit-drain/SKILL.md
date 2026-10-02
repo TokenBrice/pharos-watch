@@ -100,7 +100,7 @@ For each candidate:
    wrapper mapping, chain alias, and symbol. Symbol-only matches are acceptable
    only when address data is unavailable and no same-symbol collision exists.
 3. For CoinGecko-derived or contract-derived identity, use existing Pharos
-   chain IDs from `shared/lib/chains/index.ts`; do not invent unsupported chain
+   chain IDs from `shared/types/chain-identity.ts`; do not invent unsupported chain
    identifiers.
 4. Add same-symbol false-positive guards to
    `AUTO_LENDING_COLLISION_BLOCKLIST` when a live pool is valid but belongs to a

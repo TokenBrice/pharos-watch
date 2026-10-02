@@ -55,6 +55,7 @@ export function evaluateV9RwaCreditFundBacking(
       createV9BackingStructuralReason(policy, backing.structural.rwaCreditFund.signal, {
         responsibility: maturityApplicability.responsibility,
         pathKey: "mechanism:maturity-and-liquidity",
+        metricApplicability: maturityApplicability.state,
         materialShare: null,
         evidenceRefIds: maturityApplicability.evidenceRefIds,
         failureDomains: review.maturityAndLiquidity.failureDomains,

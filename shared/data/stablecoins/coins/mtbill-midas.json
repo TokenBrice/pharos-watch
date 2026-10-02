@@ -2,7 +2,7 @@
   "id": "mtbill-midas",
   "name": "Midas mTBILL",
   "symbol": "mTBILL",
-  "oneLiner": "mTBILL is Midas's NAV-accreting Treasury-bill fund token, with disclosed USTB and BUIDL positions and portfolio-level NAV reporting.",
+  "oneLiner": "mTBILL is Midas's NAV-linked Treasury-bill certificate, with issuer-reported USTB and BUIDL positions and USDC settlement.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized",
@@ -11,7 +11,7 @@
     "navToken": true
   },
   "collateral": "Treasury-bill fund portfolio with issuer-reported USTB and BUIDL positions and an explicitly unclassified residual. The transparency source reports rounded position values and a source timestamp; these are portfolio estimates, not independently examined holdings.",
-  "pegMechanism": "NAV-accreting token (not pegged to $1); price launched at ~$1.00 and appreciates continuously as T-bill yield accrues; permissioned mint/redeem at daily NAV via Midas smart contracts in USDC/USDT or fiat; on-chain NAV reporting",
+  "pegMechanism": "NAV-linked Treasury-bill certificate rather than a $1 payment token. The July 17, 2026 final terms specify USDC subscription and settlement, issuer-calculated NAV, a one-business-day realisation period, redemption gates of 25% of outstanding mTokens per settlement day, and a holdback of up to 5%; instant redemption uses a deferred-price method.",
   "mechanismArchetype": "tbill",
   "detailProvider": "coingecko",
   "geckoId": "midas-mtbill",
@@ -20,7 +20,30 @@
     "url": "https://midas.app/transparency?token=mtbill",
     "provider": "Midas transparency dashboard (issuer-reported portfolio estimates)",
     "attestorTier": "self",
-    "cadence": "real-time"
+    "cadence": "real-time",
+    "latestReport": {
+      "publishedAt": "2026-10-01",
+      "publishedAtBasis": "explicit",
+      "assuranceMethod": "self-verification",
+      "scope": "unknown",
+      "liabilityReconciliation": "unknown",
+      "reviewer": "Sol NR wave 2026-10-02 (NrMtbill)",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Midas signed SAVE checkpoint: created October 1, 2026; issuer claims, not an independent financial opinion",
+          "url": "https://gateway.pinata.cloud/ipfs/QmUSSdWVKkCDh4sGGm2PBT6tmrPNen36F2S7YjFj376h67"
+        },
+        {
+          "label": "Pinned Midas SAVE integration: off-chain consensus proves origin, not independently recomputable portfolio data",
+          "url": "https://raw.githubusercontent.com/midas-apps/midas-por-v2/bb7308eb5e3bdd4f882b039db580279c098c011f/INTEGRATION.md"
+        },
+        {
+          "label": "Midas SAVE registry: Ethereum block 26103199 returns publication timestamp 1790862587 (October 1, 2026 13:49:47 UTC)",
+          "url": "https://etherscan.io/address/0x2D6e9F608807436DE5D9603B00Abe3FEd1Bc809d"
+        }
+      ]
+    }
   },
   "links": [
     {
@@ -33,7 +56,7 @@
     },
     {
       "label": "Docs",
-      "url": "https://docs.midas.app/tokens/mtbill"
+      "url": "https://docs.midas.app/resources/legal-product-documentation/mtbill"
     }
   ],
   "jurisdiction": {

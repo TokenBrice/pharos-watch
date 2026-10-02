@@ -34,9 +34,8 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://app.ondo.finance/legal-documentation/us",
-    "provider": "NAV Consulting, Inc. (fund administrator; daily third-party reporting per ondo.finance/ousg; administrator not named on current public pages, and the former Google Drive report folder is now sign-in-gated, so the record points at Ondo's legal-documentation portal)",
-    "attestorTier": "niche",
-    "cadence": "daily-nav",
+    "provider": "BPM LLP (Ondo I LP auditor named in Ondo Capital Management LLC's May 13, 2026 Form ADV, Schedule D 7.B.(1); NAV Consulting is the separate fund administrator)",
+    "cadence": "annual",
     "attestorJurisdiction": "United States"
   },
   "links": [
@@ -60,7 +59,7 @@
   "jurisdiction": {
     "country": "United States",
     "regulator": "SEC",
-    "license": "Reg D Rule 506(c); Section 3(c)(7) exemption; restricted to U.S. Qualified Purchasers"
+    "license": "Reg D Rule 506(c); Section 3(c)(7) exemption; restricted to accredited investors who are Qualified Purchasers"
   },
   "contracts": [
     {
@@ -81,7 +80,10 @@
     {
       "chain": "xrpl",
       "address": "4F55534700000000000000000000000000000000.rHuiXXjHLpMP8ZE9sSQU5aADQVWDwv6h5p",
-      "decimals": 6
+      "decimals": null,
+      "amountEncoding": {
+        "kind": "xrpl-issued-currency"
+      }
     }
   ],
   "collateralQuality": "rwa",

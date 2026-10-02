@@ -20,20 +20,20 @@
         "url": "https://docs.chain.link/ccip/directory/mainnet/token/GHO"
       }
     ],
-    "evidence": "Re-verified 2026-08-10. The canonical GhoToken is a direct non-proxy deployment (EIP-1967 implementation slot zero), and its verified source exposes ordinary ERC-20 transfer/transferFrom paths without a holder blacklist, balance freeze, seizure, arbitrary-holder burn, or global transfer pause. Aave and Chainlink identify the reviewed non-Ethereum representations as CCIP burn/mint tokens; those bridge controls do not establish a current holder-level restriction on canonical GHO. Aave DAO facilitator and bucket roles affect issuance, not existing-holder transfers. GHO nevertheless resolves as upstream under the >50% reserve-exposure rule: the reviewed reserve composition includes 44.3% mainnet GSM aggregate exposure whose underlying stablecoin identities are not published at slice level, plus 7.4% tracked stataUSDT GSM exposure, so more than 50% of current composition is exposed to stablecoin/GSM freeze surfaces.",
-    "reviewer": "OpenAI Codex FreezeWatch consistency review",
-    "reviewedAt": "2026-08-10"
+    "evidence": "At Ethereum block 26095800 (2026-10-01), canonical GHO bytecode matched the verified GhoToken and ordinary ERC-20 implementation; the EIP-1967 implementation and correct admin slots were zero. Its transfer paths contain no holder blacklist, freeze, seizure or global pause, and the external burn function burns only the caller's balance. The current Chainlink directory identifies the nine non-Ethereum deployments as BurnMint pools. The prior inherited-status rationale cited obsolete 44.3% mainnet GSM and 7.4% stataUSDT weights. The September 30 reserve review instead records 41.630945892818% unresolved mainnet GSM residual, 2.718124202359% measured stataUSDT and positive USDC dust, plus unresolved remote allocations. Unknown residual issuance is not proof of specific issuer holdings. The adverse inherited verdict is retained pending reconciliation of the opaque exposures and owner review of the greater-than-50% test; no current threshold-satisfaction claim is made.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA24GHO)",
+    "reviewedAt": "2026-10-01"
   },
   "oracleRisk": {
     "tier": "standard-external",
-    "summary": "GHO borrowing in Aave V3 Ethereum Core uses governance-selected reserve price sources through AaveOracle, with the common Pool health-factor liquidation and v3.3 deficit path.",
+    "summary": "Ethereum Core, Lido and Horizon are price-sensitive lending paths. Exact Mainnet/Plasma/Arbitrum/Monad GhoDirectFacilitator allocations have no local price or liquidation authority at Ethereum block 26098749, independently confirmed at block 26098867; this does not classify remote GSM collateral or downstream pricing. OWNER-2026-10-01-horizon-nav admits Horizon's Chainlink-relayed administrator NAV feeds as standard-external with documented underlying feed heartbeats; timestamp enforcement, permissioned RWA liquidation and absent local Umbrella remain distinct limitations.",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex data review",
-      "rationale": "GHO can be borrowed against multiple governance-enabled reserves whose price sources and collateral thresholds are configured per reserve. Those reserves share the Aave V3 Ethereum Core AaveOracle, Pool liquidation, v3.3 deficit-accounting, and GHO Umbrella backstop path reviewed here, so the common engine is represented as one grouped collateral branch.",
+      "reviewedAt": "2026-10-01",
+      "reviewer": "R2 A1 verified path applicability",
+      "rationale": "The explicit path inventory distinguishes three price-sensitive lending markets from four role-gated direct-allocation deployments. Per-path reviews govern applicability; only lending paths require borrower-price and liquidation branches.",
       "sources": [
         {
           "label": "Aave GHO docs",
@@ -49,8 +49,8 @@
         }
       ]
     },
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex data review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "R2 A1 path scope and OWNER-2026-10-01-horizon-nav",
     "confidence": "verified",
     "sources": [
       {
@@ -144,12 +144,374 @@
             "url": "https://aave.com/help/umbrella/umbrella"
           }
         ]
+      },
+      {
+        "id": "aave-v3-ethereum-lido",
+        "label": "Aave V3 Ethereum Lido collateral reserves",
+        "tier": "standard-external",
+        "summary": "LidoGhoDirectMinter supplies GHO to Pool 0x4e033931ad43597d96d6bcc25c280717730b58b1. Borrower collateral is valued through AaveOracle 0xe3c061981870c0c7b1f3c4f4bb36b95f1f260be6; this market has no registered Umbrella backstop at the observation block.",
+        "collateralAssets": [
+          "wstETH",
+          "WETH",
+          "Legacy ezETH, sUSDe, rsETH and tETH positions"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Governance-configured Aave reserve price sources",
+            "path": "Reserve sources -> Lido AaveOracle -> Pool account health factor",
+            "address": "0xe3c061981870c0c7b1f3c4f4bb36b95f1f260be6",
+            "chain": "ethereum",
+            "observedAt": "2026-10-01",
+            "observedBlock": 26098749,
+            "failureDomainKeys": [
+              "aave-governance",
+              "aave-reserve-price-sources",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The fallback oracle is address(0). Missing or non-positive reserve prices therefore enter an unavailable fallback; source reverts propagate. AaveOracle does not independently enforce a timestamp bound on latestAnswer().",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26098749,
+        "collateralParameters": [
+          {
+            "asset": "wstETH",
+            "maximumLtvPct": 82,
+            "note": "Reserve configuration: liquidation threshold 83%, liquidation bonus 6%; source 0xe1d97bf61901b075e9626c8a2340a7de385861ef. eMode can apply category-specific parameters."
+          },
+          {
+            "asset": "WETH",
+            "maximumLtvPct": 84,
+            "note": "Reserve configuration: liquidation threshold 85%, liquidation bonus 5%; source 0x5424384b256154046e9667ddfaaa5e550145215e. eMode can apply category-specific parameters."
+          },
+          {
+            "asset": "Legacy ezETH, sUSDe, rsETH and tETH positions",
+            "note": "Each has reserve LTV 0%, liquidation threshold 0.1%, and liquidation bonus 7.5%. Sources remain configured for existing collateral; these parameters do not establish new borrowing eligibility."
+          }
+        ],
+        "liquidationMechanism": "The deployed Pool uses Aave LiquidationLogic: collateral/debt valuation and health factor determine liquidation eligibility, priced collateral is exchanged for debt repayment, and close factors depend on health factor and position size. At Ethereum block 26100093 (timestamp 1790889335), getLiquidationGracePeriod returned 0 for wstETH, WETH, ezETH, sUSDe, rsETH, tETH and GHO debt; no grace was active. The pinned Pool implementation's LiquidationLogic and ValidationLogic impose no other time delay. Reserve pause checks remain applicable.",
+        "liquidationDelaySec": 0,
+        "backstop": "The Lido PoolAddressesProvider UMBRELLA registry entry is address(0) at the pinned block. Ethereum Core's stkGHO backstop is not a backstop for the Lido market.",
+        "shutdownOrBadDebtBehavior": "The deployed LiquidationLogic burns residual borrower debt when no collateral remains and records reserve deficit. No market-local Umbrella is registered; this observation does not establish any automatic deficit coverage or global GHO shutdown.",
+        "failureDomainKeys": [
+          "aave-governance",
+          "aave-reserve-price-sources",
+          "aave-liquidators",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "Aave oracle documentation",
+            "url": "https://aave.com/docs/ecosystem/oracle"
+          },
+          {
+            "label": "Verified deployed Lido GhoDirectMinter implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xc718786a7e45353835de634897385b3371a749f0?fields=sources,abi"
+          },
+          {
+            "label": "Verified deployed Lido Pool and LiquidationLogic",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x78680a9ac74b093571e7a5b76636248f031d9bc2?fields=sources,abi"
+          },
+          {
+            "label": "Verified Lido AaveOracle source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe3c061981870c0c7b1f3c4f4bb36b95f1f260be6"
+          }
+        ]
+      },
+      {
+        "id": "aave-v3-ethereum-horizon",
+        "label": "Aave Horizon RWA collateral reserves",
+        "tier": "standard-external",
+        "summary": "HorizonGhoDirectMinter supplies Ethereum Pool 0xae05cd22df81871bc7cc2a04becfb516bfe332c8. OWNER-2026-10-01-horizon-nav admits its Chainlink-relayed administrator NAV feeds as standard-external after documenting every underlying feed heartbeat. RWA issuers restrict eligible liquidators; feed update cadence is not an on-chain timestamp rejection guarantee.",
+        "collateralAssets": [
+          "0x43415eb6ff9db7e26a15b704e7a3edce97d31c4e",
+          "0x14d60e7fdc0d71d8611742720e4c50e7a974020c",
+          "0x136471a34f6ef19fe571effc1ca711fdb8e49f2b",
+          "0x8c213ee79581ff4984583c6a801e5263418c4b86",
+          "0x5a0f93d040de44e78f251b03c43be9cf317dcf64",
+          "0x2255718832bc9fd3be1caf75084f4803da14ff01",
+          "0x17418038ecf73ba4026c4f428547bf099706f27b",
+          "0x7433806912eae67919e66aea853d46fa0aef98a8"
+        ],
+        "chains": ["ethereum"],
+        "feeds": [
+          {
+            "provider": "Chainlink USTB NAV / Aave LlamaGuard",
+            "path": "USTB underlying feed 0xde49c7b5c0e54b1624ed21c7d88ba6593d444aa0 -> ScaledPriceAdapter 0x5ae4d93b9b9626dc3289e1afb14b821fd3c95f44 -> Horizon AaveOracle; 97200-second documented feed heartbeat, no adapter timestamp enforcement",
+            "address": "0x5ae4d93b9b9626dc3289e1afb14b821fd3c95f44",
+            "chain": "ethereum",
+            "heartbeatSec": 97200,
+            "observedAt": "2026-10-01",
+            "observedBlock": 26098749,
+            "failureDomainKeys": ["horizon-nav-publishers", "chainlink-nav", "ethereum"]
+          },
+          {
+            "provider": "Chainlink USCC NAV / Aave LlamaGuard",
+            "path": "USCC underlying feed 0x19e2d716288751c5a59deab61af012d5df895962 -> ScaledPriceAdapter 0x14cb2e810eb93b79363f489d45a972b609e47230 -> Horizon AaveOracle; 97200-second documented feed heartbeat, no adapter timestamp enforcement",
+            "address": "0x14cb2e810eb93b79363f489d45a972b609e47230",
+            "chain": "ethereum",
+            "heartbeatSec": 97200,
+            "observedAt": "2026-10-01",
+            "observedBlock": 26098749,
+            "failureDomainKeys": ["horizon-nav-publishers", "chainlink-nav", "ethereum"]
+          },
+          {
+            "provider": "Chainlink USYC NAV / Aave LlamaGuard",
+            "path": "USYC -> 0xe8e65fb9116875012f5990ecaab290b3531dbeb9 -> Horizon AaveOracle; 97200-second documented feed heartbeat",
+            "address": "0xe8e65fb9116875012f5990ecaab290b3531dbeb9",
+            "chain": "ethereum",
+            "heartbeatSec": 97200,
+            "observedAt": "2026-10-01",
+            "observedBlock": 26098749,
+            "failureDomainKeys": ["horizon-nav-publishers", "chainlink-nav", "ethereum"]
+          },
+          {
+            "provider": "Chainlink JTRSY NAV / Aave LlamaGuard",
+            "path": "JTRSY underlying feed 0x23adce82907d20c509101e2af0723a9e16224efb -> ScaledPriceAdapter 0xfab6790e399f0481e1303167c655b3c39ee6e7a0 -> Horizon AaveOracle; 97200-second documented feed heartbeat, no adapter timestamp enforcement",
+            "address": "0xfab6790e399f0481e1303167c655b3c39ee6e7a0",
+            "chain": "ethereum",
+            "heartbeatSec": 97200,
+            "observedAt": "2026-10-01",
+            "observedBlock": 26098749,
+            "failureDomainKeys": ["horizon-nav-publishers", "chainlink-nav", "ethereum"]
+          },
+          {
+            "provider": "Chainlink JAAA NAV / Aave LlamaGuard",
+            "path": "JAAA underlying feed 0x1e41ef40ac148706c114534e8192ca608f80fc48 -> ScaledPriceAdapter 0xf77f2537dba4ffd60f77facdfb2c1706364fa03d -> Horizon AaveOracle; 86400-second documented feed heartbeat, no adapter timestamp enforcement",
+            "address": "0xf77f2537dba4ffd60f77facdfb2c1706364fa03d",
+            "chain": "ethereum",
+            "heartbeatSec": 86400,
+            "observedAt": "2026-10-01",
+            "observedBlock": 26098749,
+            "failureDomainKeys": ["horizon-nav-publishers", "chainlink-nav", "ethereum"]
+          },
+          {
+            "provider": "Chainlink VBILL NAV / Aave LlamaGuard",
+            "path": "VBILL -> 0x5ed77a9d9b7cc80e9d0d7711024af38c2643c1c4 -> Horizon AaveOracle; 97200-second documented feed heartbeat",
+            "address": "0x5ed77a9d9b7cc80e9d0d7711024af38c2643c1c4",
+            "chain": "ethereum",
+            "heartbeatSec": 97200,
+            "observedAt": "2026-10-01",
+            "observedBlock": 26098749,
+            "failureDomainKeys": ["horizon-nav-publishers", "chainlink-nav", "ethereum"]
+          },
+          {
+            "provider": "Chainlink ACRED NAV / Aave LlamaGuard",
+            "path": "ACRED -> 0x60aed7d20ac6328f7ba771ad58931c996aff30e8 -> Horizon AaveOracle; 97200-second documented feed heartbeat",
+            "address": "0x60aed7d20ac6328f7ba771ad58931c996aff30e8",
+            "chain": "ethereum",
+            "heartbeatSec": 97200,
+            "observedAt": "2026-10-01",
+            "observedBlock": 26098749,
+            "failureDomainKeys": ["horizon-nav-publishers", "chainlink-nav", "ethereum"]
+          },
+          {
+            "provider": "Chainlink mGlobal NAV / Aave LlamaGuard",
+            "path": "mGlobal -> 0xe034de753a3d855b6dad1a4984de75a5c443e939 -> Horizon AaveOracle; 86400-second documented feed heartbeat",
+            "address": "0xe034de753a3d855b6dad1a4984de75a5c443e939",
+            "chain": "ethereum",
+            "heartbeatSec": 86400,
+            "observedAt": "2026-10-01",
+            "observedBlock": 26098749,
+            "failureDomainKeys": ["horizon-nav-publishers", "chainlink-nav", "ethereum"]
+          }
+        ],
+        "fallbackBehavior": "Horizon AaveOracle fallback is address(0); missing/nonpositive source answers cannot obtain a valid alternate price, while source-call reverts propagate. ScaledPriceAdapter forwards latestAnswer without timestamp enforcement. The official Chainlink directory documents 97200-second heartbeats for USTB/USCC/USYC/JTRSY/VBILL/ACRED and 86400 seconds for JAAA/mGlobal; these are publication cadences, not enforced rejection bounds.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26098749,
+        "collateralParameters": [
+          { "asset": "0x43415eb6ff9db7e26a15b704e7a3edce97d31c4e", "maximumLtvPct": 88, "note": "Reserve liquidation threshold 90%, liquidation bonus 3%; eMode/category settings may override the reserve baseline." },
+          { "asset": "0x14d60e7fdc0d71d8611742720e4c50e7a974020c", "maximumLtvPct": 85, "note": "Reserve liquidation threshold 88%, liquidation bonus 5%; eMode/category settings may override the reserve baseline." },
+          { "asset": "0x136471a34f6ef19fe571effc1ca711fdb8e49f2b", "maximumLtvPct": 88, "note": "Reserve liquidation threshold 90%, liquidation bonus 3.1%; eMode/category settings may override the reserve baseline." },
+          { "asset": "0x8c213ee79581ff4984583c6a801e5263418c4b86", "maximumLtvPct": 86, "note": "Reserve liquidation threshold 88%, liquidation bonus 3.5%; eMode/category settings may override the reserve baseline." },
+          { "asset": "0x5a0f93d040de44e78f251b03c43be9cf317dcf64", "maximumLtvPct": 81, "note": "Reserve liquidation threshold 86%, liquidation bonus 5%; eMode/category settings may override the reserve baseline." },
+          { "asset": "0x2255718832bc9fd3be1caf75084f4803da14ff01", "maximumLtvPct": 88, "note": "Reserve liquidation threshold 90%, liquidation bonus 3%; eMode/category settings may override the reserve baseline." },
+          { "asset": "0x17418038ecf73ba4026c4f428547bf099706f27b", "maximumLtvPct": 66, "note": "Reserve liquidation threshold 76%, liquidation bonus 9%; eMode/category settings may override the reserve baseline." },
+          { "asset": "0x7433806912eae67919e66aea853d46fa0aef98a8", "maximumLtvPct": 0.05, "note": "Reserve liquidation threshold 0.1%, liquidation bonus 6%; eMode/category settings may override the reserve baseline." }
+        ],
+        "liquidationMechanism": "Aave liquidationCall repays debt and releases priced RWA collateral when health-factor and reserve checks permit. Liquidators must meet RWA issuer transfer/investor requirements; this is not unrestricted liquidation or guaranteed atomic redemption. At Ethereum block 26100093 (timestamp 1790889335), getLiquidationGracePeriod returned 0 for all eight listed RWA collateral assets and GHO debt; no grace was active. The pinned Pool implementation's LiquidationLogic and ValidationLogic impose no other time delay; the provider's priceOracleSentinel was address(0). Reserve pause and issuer eligibility checks remain applicable, not a fixed delay.",
+        "liquidationDelaySec": 0,
+        "backstop": "The Horizon provider UMBRELLA entry is address(0) at block 26098749; Core stkGHO covers only the Core Pool and supplies no automatic Horizon deficit backstop.",
+        "shutdownOrBadDebtBehavior": "Deployed LiquidationLogic burns residual debt after collateral exhaustion and records reserve deficit. No local automatic Umbrella is registered. Issuer-token permissions and reserve pause/grace settings can constrain liquidation; no global GHO shutdown is established.",
+        "failureDomainKeys": ["horizon-nav-publishers", "chainlink-nav", "aave-horizon-configuration", "issuer-liquidator-allowlists", "ethereum"],
+        "sources": [
+          { "label": "Verified Horizon direct-minter implementation", "url": "https://sourcify.dev/server/v2/contract/1/0x68807d04df1f1bb74bb7498b1e832d2ce356cd18?fields=sources,abi" },
+          { "label": "Verified Horizon AaveOracle", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x985bcfab7e0f4ef2606cc5b64fc1a16311880442" },
+          { "label": "Verified deployed Horizon Pool liquidation source", "url": "https://sourcify.dev/server/v2/contract/1/0xcd8b9ac3b72e81fd8a0c9a0dbba583597e48a23a?fields=sources,abi" },
+          { "label": "Aave Labs Horizon permissioning architecture", "url": "https://governance.aave.com/t/arfc-horizon-s-rwa-instance/21898" },
+          { "label": "Official Chainlink Ethereum feed directory: underlying NAV proxy heartbeats", "url": "https://reference-data-directory.vercel.app/feeds-mainnet.json" },
+          { "label": "Verified USTB scaled adapter and immutable source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5ae4d93b9b9626dc3289e1afb14b821fd3c95f44" },
+          { "label": "Verified USCC scaled adapter and immutable source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x14cb2e810eb93b79363f489d45a972b609e47230" },
+          { "label": "Verified JTRSY scaled adapter and immutable source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfab6790e399f0481e1303167c655b3c39ee6e7a0" },
+          { "label": "Verified JAAA scaled adapter and immutable source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf77f2537dba4ffd60f77facdfb2c1706364fa03d" }
+        ]
+      }
+    ],
+    "paths": [
+      {
+        "id": "aave-v3-ethereum-core",
+        "chain": "ethereum",
+        "address": "0x5513224daaeabca31af5280727878d52097afa05",
+        "pricingAuthority": "external-price",
+        "branchId": "aave-v3-ethereum-core",
+        "applicability": {
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-01",
+          "reviewer": "R2 A1 verified path applicability",
+          "confidence": "verified",
+          "rationale": "The registered CoreGhoDirectMinter supplies the Core lending Pool; borrower health factors and liquidation depend on reserve prices. This review admits path applicability, not a new oracle tier.",
+          "sources": [
+            {
+              "label": "Canonical GHO registered facilitator inventory",
+              "url": "https://eth.blockscout.com/address/0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+            },
+            {
+              "label": "Aave GHO borrower documentation",
+              "url": "https://aave.com/docs/ecosystem/gho"
+            }
+          ]
+        }
+      },
+      {
+        "id": "aave-v3-ethereum-lido",
+        "chain": "ethereum",
+        "address": "0x2ce01c87fec1b71a9041c52caed46fc5f4807285",
+        "pricingAuthority": "external-price",
+        "branchId": "aave-v3-ethereum-lido",
+        "applicability": {
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-01",
+          "reviewer": "R2 A1 verified path applicability",
+          "confidence": "verified",
+          "rationale": "LidoGhoDirectMinter supplies the Lido lending Pool. Its borrower health-factor and liquidation engine uses collateral prices; the direct-minter name is not an oracle exemption.",
+          "sources": [
+            {
+              "label": "Verified deployed Lido direct-minter implementation",
+              "url": "https://sourcify.dev/server/v2/contract/1/0xc718786a7e45353835de634897385b3371a749f0?fields=sources,abi"
+            }
+          ]
+        }
+      },
+      {
+        "id": "aave-v3-ethereum-horizon",
+        "chain": "ethereum",
+        "address": "0xe10c78a3ac7f016ed2de1a89c5479b1039eab9ea",
+        "pricingAuthority": "external-price",
+        "branchId": "aave-v3-ethereum-horizon",
+        "applicability": {
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-01",
+          "reviewer": "R2 A1 verified path applicability",
+          "confidence": "verified",
+          "rationale": "HorizonGhoDirectMinter supplies a lending Pool whose health-factor and liquidation engine consumes RWA NAV prices. OWNER-2026-10-01-horizon-nav admits standard-external for the verified Chainlink-relayed administrator NAV feeds with documented underlying feed heartbeats; no enforced timestamp rejection bound is inferred.",
+          "sources": [
+            {
+              "label": "Verified deployed Horizon direct-minter implementation",
+              "url": "https://sourcify.dev/server/v2/contract/1/0x68807d04df1f1bb74bb7498b1e832d2ce356cd18?fields=sources,abi"
+            }
+          ]
+        }
+      },
+      {
+        "id": "gho-direct-facilitator-mainnet",
+        "chain": "ethereum",
+        "address": "0xe9ac5231faecb633da0fe85fcb2785b8363427d2",
+        "pricingAuthority": "none",
+        "applicability": {
+          "disposition": "not-applicable",
+          "reviewedAt": "2026-10-01",
+          "reviewer": "R2 A1 verified path applicability",
+          "confidence": "verified",
+          "rationale": "The exact registered GhoDirectFacilitator GSMs Mainnet deployment exposes role-gated mint and burn, not borrower pricing, internal valuation or liquidation. Mainnet Risk Council MINTER_ROLE remains a mint-authority risk. This local exemption makes no claim about downstream GSM pricing or collateral.",
+          "sources": [
+            {
+              "label": "Verified deployed Mainnet allocation facilitator",
+              "url": "https://sourcify.dev/server/v2/contract/1/0xe9ac5231faecb633da0fe85fcb2785b8363427d2?fields=sources,abi"
+            },
+            {
+              "label": "Mainnet facilitator complete role history",
+              "url": "https://eth.blockscout.com/api/v2/addresses/0xe9ac5231faecb633da0fe85fcb2785b8363427d2/logs"
+            }
+          ]
+        }
+      },
+      {
+        "id": "gho-direct-facilitator-plasma",
+        "chain": "ethereum",
+        "address": "0x2bd010ab5393ab51b601b99c4b33ba148d9466e9",
+        "pricingAuthority": "none",
+        "applicability": {
+          "disposition": "not-applicable",
+          "reviewedAt": "2026-10-01",
+          "reviewer": "R2 A1 verified path applicability",
+          "confidence": "verified",
+          "rationale": "The exact registered Ethereum GhoDirectFacilitator Plasma deployment exposes only role-gated allocation mint and burn, not a borrower-price, internal valuation or liquidation engine. Its destination label does not establish remote collateral or downstream pricing applicability.",
+          "sources": [
+            {
+              "label": "Verified GhoDirectFacilitator allocation implementation",
+              "url": "https://sourcify.dev/server/v2/contract/1/0xe9ac5231faecb633da0fe85fcb2785b8363427d2?fields=sources,abi"
+            },
+            {
+              "label": "Plasma facilitator complete role history",
+              "url": "https://eth.blockscout.com/api/v2/addresses/0x2bd010ab5393ab51b601b99c4b33ba148d9466e9/logs"
+            }
+          ]
+        }
+      },
+      {
+        "id": "gho-direct-facilitator-arbitrum",
+        "chain": "ethereum",
+        "address": "0x436dccc028322afc355f608cf582b7d7f19fdfed",
+        "pricingAuthority": "none",
+        "applicability": {
+          "disposition": "not-applicable",
+          "reviewedAt": "2026-10-01",
+          "reviewer": "R2 A1 verified path applicability",
+          "confidence": "verified",
+          "rationale": "The exact registered Ethereum GhoDirectFacilitator GSM Arbitrum deployment exposes only role-gated allocation mint and burn, not borrower pricing, internal valuation or liquidation. No remote GSM collateral or downstream price authority is inferred from the facilitator label.",
+          "sources": [
+            {
+              "label": "Verified GhoDirectFacilitator allocation implementation",
+              "url": "https://sourcify.dev/server/v2/contract/1/0xe9ac5231faecb633da0fe85fcb2785b8363427d2?fields=sources,abi"
+            },
+            {
+              "label": "Arbitrum facilitator complete role history",
+              "url": "https://eth.blockscout.com/api/v2/addresses/0x436dccc028322afc355f608cf582b7d7f19fdfed/logs"
+            }
+          ]
+        }
+      },
+      {
+        "id": "gho-direct-facilitator-monad",
+        "chain": "ethereum",
+        "address": "0x0cb7c2a2ab38aed3e6096631d7dba3dabf237134",
+        "pricingAuthority": "none",
+        "applicability": {
+          "disposition": "not-applicable",
+          "reviewedAt": "2026-10-01",
+          "reviewer": "R2 A1 verified path applicability",
+          "confidence": "verified",
+          "rationale": "The exact registered Ethereum GhoDirectFacilitator GSM Monad deployment exposes role-gated mint and burn, not borrower pricing, internal valuation or liquidation. Its non-price-sensitive local allocation path says nothing about remote backing composition or downstream GSM prices.",
+          "sources": [
+            {
+              "label": "Verified deployed Monad allocation facilitator",
+              "url": "https://sourcify.dev/server/v2/contract/1/0x0cb7c2a2ab38aed3e6096631d7dba3dabf237134?fields=sources,abi"
+            },
+            {
+              "label": "Monad facilitator complete role history",
+              "url": "https://eth.blockscout.com/api/v2/addresses/0x0cb7c2a2ab38aed3e6096631d7dba3dabf237134/logs"
+            }
+          ]
+        }
       }
     ]
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "GHO is natively issued on Ethereum by Aave facilitators; its cross-chain destination deployments are minted via Chainlink CCIP burn/mint pools, with the Ethereum CCIP pool acting as lock/release for supply in transit. The CCIP common-mode failure domain applies to the bridged destination routes (~2% of supply); the natively held Ethereum supply is not CCIP-dependent. The route is external validated-network infrastructure governed by Aave/CCIP controls.",
+    "summary": "GHO is natively issued on Ethereum by Aave facilitators; its cross-chain destination deployments are minted via Chainlink CCIP burn/mint pools, with the Ethereum CCIP pool acting as lock/release for supply in transit. The CCIP common-mode failure domain applies to the bridged destination routes; the natively held Ethereum supply is not CCIP-dependent. The route is external validated-network infrastructure governed by Aave/CCIP controls.",
     "reviewedAt": "2026-07-21",
     "reviewer": "Codex AB-CURATION bridge re-review (native-route common-mode attribution)",
     "confidence": "verified",

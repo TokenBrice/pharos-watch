@@ -21,7 +21,7 @@
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "USDT is a fiat-referenced dollar stablecoin marketed for payments, transfers, and 1:1 redemption through Tether for eligible customers."
+      "summary": "USDT is a fiat-referenced dollar token designed for payments and settlement, with issuer redemption for eligible verified customers at fixed fiat value less applicable fees."
     },
     "authorizationStatus": "issuer-announced-intent",
     "issuerPathway": "unknown",
@@ -35,7 +35,7 @@
     "reserveDisclosureUrl": "https://tether.to/en/transparency/",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "Tether CEO Paolo Ardoino publicly committed on July 18 2025 (day the GENIUS Act was signed) that Tether will comply via the GENIUS Act foreign issuer pathway, with three years to meet all requirements including AML and audited reserves. Tether's January 27 2026 USAT press release explicitly states USDT is 'progressing towards GENIUS Act compliance' while USAT (issued by Anchorage Digital Bank, N.A.) serves the U.S. domestic market. No formal foreign-issuer registration has been filed for USDT: the Treasury equivalency-determination process is still in NPRM phase as of June 2026 and no comparability determination for El Salvador/Tether has been issued. foreignExceptionStatus remains unknown (more conservative than registration-pending) because no application framework is finalized and no formal filing exists. Historical CFTC and NYAG actions are tracked as enforcement-warning evidence for Tether/USDT history; they do not establish a current GENIUS authorization decision.",
+    "notes": "Tether's January 27, 2026 USAT launch release says USD\u20ae is progressing towards GENIUS Act compliance, while USA\u20ae is issued by Anchorage Digital Bank, N.A. for the U.S. domestic market; this is issuer-announced intent, not USDT authorization. The issuer remains Tether International, S.A. de C.V. in El Salvador under CNAD. In the public OCC/Treasury sources searched on 2026-10-01, no USDT foreign-issuer approval or Treasury comparability determination for Tether/El Salvador was established; this negative public review does not establish that no confidential or unpublished application was filed. The March 2 OCC framework and August 17 Treasury section 3 framework are proposed rules, not evidence of an issuer-specific authorization. foreignExceptionStatus and issuerPathway remain unknown. Current reserve evidence is quarterly BDO ISAE3000R assurance; the separately announced August 13 KPMG audit covers FY2025 financial statements and is not a monthly attestation. The CFTC October 2021 reserve-misrepresentation order and NYAG February 2021 settlement are preserved as historical non-GENIUS enforcement evidence, not an issuer-specific GENIUS section 3 order.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -82,9 +82,23 @@
         "sourceKind": "state-regulator",
         "sourceDate": "2021-02-23",
         "accessedAt": "2026-06-18"
+      },
+      {
+        "label": "Treasury section 3 proposed rule, August 17 2026",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-01"
+      },
+      {
+        "label": "OCC GENIUS proposed rule published March 2 2026",
+        "url": "https://occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-03-02",
+        "accessedAt": "2026-10-01"
       }
     ],
-    "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewer": "Sol curation validation 2026-10-01 (ValA01USDT)",
+    "reviewedAt": "2026-10-01"
   }
 }

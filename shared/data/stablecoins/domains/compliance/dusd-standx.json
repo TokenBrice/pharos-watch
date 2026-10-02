@@ -30,7 +30,7 @@
     "reserveDisclosurePresent": false,
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "DUSD is treated as an apparent payment stablecoin despite its yield-bearing and derivatives-margin functions because the issuer describes direct minting and redemption against USDT/USDC and a stablecoin role. U.S. users are geo-blocked, but no GENIUS foreign-exception registration or U.S. authorization was found. The MiCA row is separate: the issuer terms appear to permit EU users, while the current ESMA EMT issuer register contains no StandX row found in this review.",
+    "notes": "DUSD is treated as an apparent payment stablecoin despite its yield-bearing and derivatives-margin functions because the issuer describes direct minting and redemption against USDT/USDC and a stablecoin role. U.S. users are geo-blocked, and the prior authorization search remains dated 2026-08-14. The issuer terms also qualify redemption: reserve losses reduce the quote pro rata and a 10-basis-point reimbursement charge applies. No MiCA row is authored for DUSD; the former statement that a separate row existed was incorrect.",
     "references": [
       {
         "label": "OCC GENIUS Act proposed rule (Bulletin 2026-3)",
@@ -65,11 +65,11 @@
         "accessedAt": "2026-08-14"
       },
       {
-        "label": "GENIUS Act text",
-        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
         "sourceKind": "statute",
         "sourceDate": "2025-07-18",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-01"
       }
     ],
     "negativeEvidenceReview": {

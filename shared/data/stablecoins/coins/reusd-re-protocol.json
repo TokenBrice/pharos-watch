@@ -2,7 +2,7 @@
   "id": "reusd-re-protocol",
   "name": "Re Protocol reUSD",
   "symbol": "reUSD",
-  "oneLiner": "reUSD is Re Protocol's senior NAV-based tranche, backed by onchain sUSDe-centered liquidity and offchain Regulation 114 trust collateral (Cayman Islands).",
+  "oneLiner": "Re Protocol's senior NAV-based reinsurance tranche, issued by Resilience (BVI) Ltd with offchain exposure through principal-at-risk notes.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized-dependent",
@@ -10,22 +10,26 @@
     "rwa": true,
     "navToken": true
   },
-  "collateral": "At least 50% of the high-water-mark capital remains onchain as redemption liquidity, primarily sUSDe; up to 50% is deployed offchain into Regulation 114 trust accounts as collateral supporting reinsurance contracts",
+  "collateral": "Onchain stablecoins and offchain reinsurance capital support the senior tranche. The instant redemption buffer is sized from 50% of the deposit high-water mark but can draw down; token holders have no direct legal claim on Section 114 trust assets and obtain offchain exposure through principal-at-risk notes.",
   "pegMechanism": "NAV-based token price recalculated daily at UTC 00:00 from a blend of the offchain SOFR-based return and the onchain trailing sUSDe basis rate, plus 250 bps; instant redemptions are liquidity-limited and fall back to a quarterly queue",
   "mechanismArchetype": "rwa-credit-fund",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "owner-triage",
-    "rationale": "Current Re documentation describes reUSD as the senior tranche of a reinsurance-capital structure, with up to half of capital deployed into Regulation 114 trust accounts. That architecture is a real-world credit/fund exposure rather than the prior synthetic delta-neutral classification.",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA41reUSD)",
+    "rationale": "Re documentation describes reUSD as the senior tranche of a reinsurance-capital structure with offchain exposure through principal-at-risk notes supporting Regulation 114 trust collateral. That architecture is a real-world credit/fund exposure rather than a synthetic delta-neutral mechanism.",
     "sources": [
       {
         "label": "Re Protocol About reUSD",
         "url": "https://docs.re.xyz/products/about-reusd.md"
       },
       {
-        "label": "Re Protocol reUSD and reUSDe comparison",
-        "url": "https://docs.re.xyz/products/comparing-reusd-reusde.md"
+        "label": "Re Protocol About reUSDe: mezzanine and senior tranche comparison",
+        "url": "https://docs.re.xyz/products/about-reusde.md"
+      },
+      {
+        "label": "Re Protocol: custody structure and principal-at-risk notes",
+        "url": "https://docs.re.xyz/transparency-and-data-show-me-the-receipts/audits-attestations-custody-structure.md"
       }
     ]
   },
@@ -34,8 +38,8 @@
   "geckoId": "re-protocol-reusd",
   "proofOfReserves": {
     "type": "real-time",
-    "url": "https://app.re.xyz/transparency",
-    "provider": "The Network Firm live daily on-chain transparency dashboard (current through 2026-08-08; the only formal TNF artefact is an AUP report dated 2025-10-31, ~9 months old, so periodic-report framing would overstate freshness)",
+    "url": "https://app.re.xyz/metrics",
+    "provider": "The Network Firm daily offchain reserve AUP observations published through Chainlink. The most recent full AUP covers protocol supporting assets as of 2025-10-31, is signed 2025-12-17, and excludes reUSD/reUSDe backing, token valuations and liability reconciliation; it does not attest the current live composition. Historical report: https://storage.googleapis.com/foundation-files/AUP-Report-2025.pdf",
     "attestorTier": "niche",
     "cadence": "daily"
   },
@@ -54,8 +58,7 @@
     }
   ],
   "jurisdiction": {
-    "country": "Cayman Islands",
-    "license": "Exempted Limited Guarantee Foundation Company (IC-414560)"
+    "country": "British Virgin Islands"
   },
   "contracts": [
     {
@@ -107,6 +110,16 @@
       "chain": "solana",
       "address": "2uxaYT1fVrp6Fg2BrxQcyKSW91hefM6dG9krpbeDiirT",
       "decimals": 9
+    },
+    {
+      "chain": "berachain",
+      "address": "0xd156a8e80a6593ddafa099f76754fdce0f808a55",
+      "decimals": 18
+    },
+    {
+      "chain": "monad",
+      "address": "0xd25f563e12ff616262f8c947fec108db934f8059",
+      "decimals": 18
     }
   ],
   "collateralQuality": "exotic",

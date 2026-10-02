@@ -4,6 +4,10 @@
     "reviewedStatus": "inherited",
     "sources": [
       {
+        "label": "Initia iUSD FAQ: inherited Agora freeze controls",
+        "url": "https://contents.initia.xyz/app/iusd-faq.json"
+      },
+      {
         "label": "Initia documentation",
         "url": "https://docs.initia.xyz"
       },
@@ -12,9 +16,9 @@
         "url": "https://scan.initia.xyz"
       }
     ],
-    "evidence": "BLOCKED: the tracked Initia iUSD Move asset and issuer documentation establish its Agora AUSD bridge-backed design, but the reviewed public materials do not provide a current module-level inventory of holder freeze, denylist, or transfer-control authority. The inherited classification is retained for the bridged AUSD exposure; no direct holder-control posture is asserted without verified Move-module authority evidence.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "Initia's iUSD FAQ, fetched 2026-10-01, explicitly states that Agora retains administrative controls including the ability to freeze addresses and associated AUSD. The inherited classification is retained for this underlying exposure. The exact iUSD metadata resources also expose managed_coin::Capabilities.freeze_cap and coin::ManagingRefs.transfer_ref, but a complete local callable holder-control path and the pinned Move-module authority inventory remain unverified; no local no-freeze claim is made.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB07msUSD)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",

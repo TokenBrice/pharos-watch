@@ -10,20 +10,20 @@
   },
   "collateral": "DAI held through Blast's MakerDAO DSR yield manager; USDC, USDT, and DAI are supported bridge deposit inputs, while USDB withdrawals redeem to DAI.",
   "pegMechanism": "Automatic rebasing with yield from underlying centralized stablecoin strategies",
-  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetype": "protocol-position",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-07-15",
-    "reviewer": "SONG Safety Score V9 mechanism review",
-    "rationale": "Blast documentation establishes the USDB route and yield-bearing reserve framework, but the reviewed sources do not provide the complete current assurance, reconciliation, custody continuity, valuation, seniority, and loss-recovery inputs required for a full mechanism review.",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (DataMisc11)",
+    "rationale": "USDB at Blast 0x4300000000000000000000000000000000000003 is an auto-rebasing protocol-position liability with an operational bridge withdrawal claim to Ethereum DAI, rather than a fiat cash claim, direct fund share or holder-created CDP. Re-fetched issuer documentation explicitly identifies DAI redemption. At Ethereum block 26099927, USDYieldManager 0xa230285d5683c74935ad14c446e137c8c8828438 retained implementation 0xecddf748a60e23609c07af6ca3856744b139b911, TOKEN()=DAI and one DSR provider 0x0733f618118bf420b6b604c969498ecf143681a8; provider index 1 reverted out-of-bounds. At Blast block 41038766, USDB bridge() and REPORTER() retained the exact L2BlastBridge and Ethereum manager. This establishes the current operational claim and model only; whole-liability reconciliation, complete position custody/continuity, encumbrance/allocation and funded default priority remain unresolved.",
     "sources": [
       {
-        "label": "Blast documentation",
-        "url": "https://docs.blast.io/"
+        "label": "Blast USDB rebasing and DAI redemption documentation",
+        "url": "https://docs.blast.io/about-blast"
       },
       {
-        "label": "Blast official site",
-        "url": "https://blast.io/"
+        "label": "Pinned USDYieldManager implementation source (Ethereum block 26099927)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xecddf748a60e23609c07af6ca3856744b139b911"
       }
     ]
   },

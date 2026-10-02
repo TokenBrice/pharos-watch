@@ -233,7 +233,7 @@ export function minimalAsset(assetId: string) {
       ...fixturePegFact(knownStatus(), SOURCE_FINGERPRINTS.peg.generationId),
       pegScore: 98,
       currentDeviationBps: 2,
-      failureDomains: [{ kind: "oracle-feed", key: "oracle:fixture" }],
+      failureDomains: [{ kind: "oracle-feed" as const, key: "oracle:fixture" }],
     },
     supply: {
       status: knownStatus(),
@@ -251,7 +251,7 @@ export function minimalAsset(assetId: string) {
       selectedRouteSupplyShare: 0,
       unknownRouteSupplyShare: 0,
       unreviewedRouteSupplyShare: 0,
-      failureDomains: [{ kind: "chain", key: "chain:fixture" }],
+      failureDomains: [{ kind: "chain" as const, key: "chain:fixture" }],
     },
   };
 }

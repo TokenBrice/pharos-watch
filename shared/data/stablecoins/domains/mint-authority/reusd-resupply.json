@@ -4,15 +4,15 @@
     "mintPath": "permissioned-minter",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "REUSD mint() requires operators[msg.sender] || msg.sender == owner(). No direct REUSD operators have been set, and owner() returns the Core contract (0xc07e…), Resupply's on-chain governance hub. Core.execute() is callable by the Voter contract (0x1111…), a token-weighted on-chain governance contract requiring quorum, a voting period, and execution delay; bounded Guardian operator permissions remain active for emergency actions but do not grant direct stablecoin mint access.",
+    "summary": "REUSD mint() accepts the immutable Core owner or an authorized token operator. At Ethereum block 26095801, Registry 0x10101010e0c3171d894b71b3400668af311e7d94 is an active direct mint operator; its mint() accepts registered lending pairs. Core.voter() resolves to 0x11111111063874ce8dc6232cb5c1c849359476e6, with a seven-day voting period and one-day execution delay. Core can authorize additional operators through governance; the earlier claim that no direct operators were set is incorrect.",
     "upgradeability": {
       "model": "immutable",
       "implementationAddresses": [
         "0x57ab1e0003f623289cd798b1824be09a793e4bec"
       ],
       "canChangeMintLogic": false,
-      "observedAt": "2026-07-16",
-      "observedBlock": 25321527,
+      "observedAt": "2026-10-01",
+      "observedBlock": 26095801,
       "sources": [
         {
           "label": "REUSD exact verified direct-deployment source",
@@ -51,6 +51,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095801,
         "sources": [
           {
             "label": "Blockscout: REUSD contract",
@@ -61,7 +63,30 @@
             "url": "https://eth.blockscout.com/address/0xc07e000044f95655c11fda4cd37f70a94d7e0a7d"
           }
         ],
-        "evidence": "At Ethereum block 25321527: owner() on REUSD returned 0xc07e000044f95655c11fda4cd37f70a94d7e0a7d. eth_getCode returned contract code. REUSD source: mint() requires operators[msg.sender] || msg.sender == owner(); no direct REUSD operator was found in the reviewed state. Core source: execute() is callable by voter 0x11111111063874ce8dc6232cb5c1c849359476e6 (token-weighted on-chain governance) or operators with explicit per-selector permissions. Active GuardianUpgradeable permissions are bounded emergency/operator functions rather than direct stablecoin mint authority."
+        "evidence": "At Ethereum block 26095801, REUSD owner() returned Core 0xc07e000044f95655c11fda4cd37f70a94d7e0a7d and Core.voter() returned 0x11111111063874ce8dc6232cb5c1c849359476e6. Voter executionDelay() was 86400 and votingPeriod() was 604800 seconds. Verified Stablecoin source allows owner or operators to mint and lets only Core set token operators. Registry is an active token operator, correcting the previous no-direct-operator statement. Core's previously reviewed per-selector emergency permissions are not exhaustively re-audited by these reads."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x10101010e0c3171d894b71b3400668af311e7d94",
+        "label": "Resupply Registry: registered-pair mint operator",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095801,
+        "sources": [
+          {
+            "label": "Verified Resupply Registry source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x10101010e0c3171d894b71b3400668af311e7d94"
+          },
+          {
+            "label": "Verified REUSD token source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x57ab1e0003f623289cd798b1824be09a793e4bec"
+          }
+        ],
+        "evidence": "At Ethereum block 26095801, REUSD operators(Registry) returned true. Registry mint(receiver,amount) requires pairsByName[IERC20Metadata(msg.sender).name()] == msg.sender, then invokes token.mint(receiver,amount). The current pair registry returns 22 addresses. This is native issuance through registered collateral pairs, not a bridge controller."
       }
     ],
     "economicCapSemantics": "raiseable",
@@ -83,11 +108,11 @@
         },
         {
           "label": "Resupply governance voting docs",
-          "url": "https://docs.resupply.fi/resupply-governance/governance-voting"
+          "url": "https://docs.resupply.finance/resupply-governance/governance-voting.md"
         },
         {
           "label": "Resupply multisig and admin permissions",
-          "url": "https://docs.resupply.fi/faq/multisig-and-admin-permissions"
+          "url": "https://docs.resupply.finance/faq/multisig-and-admin-permissions.md"
         }
       ],
       "evidence": "At Ethereum block 25321527: REUSD mint() is gated by owner (Core 0xc07e…) or direct stablecoin operators; Core.voter() returns 0x11111111063874ce8dc6232cb5c1c849359476e6. The Voter contract enforces token-weighted proposal execution with 30% quorum, a 7-day voting period, and a 1-day execution delay. Resupply's docs state contracts are owned by Core and governed through on-chain voting. The current GuardianUpgradeable proxy is controlled by a 3-of-5 Safe and has bounded emergency/operator permissions, but the active implementation does not expose the older revertVoter path and does not hold direct REUSD mint authority. Mint authority is therefore DAO-governed with emergency multisig controls. reUSD minting is over-collateralised issuance gated by owner (the Resupply Core governance contract) or explicitly set operators; at block 25321527 Core execution is controlled by the token-weighted Voter contract enforcing a 30% quorum, a 7-day voting period and a 1-day execution delay, so authorising new mint capacity requires on-chain governance behind an independently enforced delay. The encoding-derived direct-mint cap is therefore economically raiseable rather than unbounded, placing reUSD outside the fiat-custodial centralized-mint scope. Economic-posture fields reviewed 2026-08-15: token-weighted governance and its one-day execution delay bound new mint authority, current issuance is on-chain CDP collateral, and no supervisor or attestor is evidenced.",

@@ -35,7 +35,7 @@
     },
     {
       "sourceKey": "btcfi:unknown",
-      "name": "Unmapped BTC variants",
+      "name": "Unmapped collateral handler 5",
       "pct": 13.53,
       "risk": "high"
     },
@@ -94,7 +94,7 @@
         "url": "https://bscscan.com/token/0x7130d2a12b9bcBFAe4f2634d864A1Ee1Ce3Ead9c"
       }
     ],
-    "rationale": "The configured BTCFi producer reports the current collateral mix by positive deposit_value for non-stable handlers. Native BTC is direct crypto collateral, while BTCB, cbBTC, and WBTC retain their wrapper issuer, custody, counterparty, and smart-contract failure domains; the omitted handler 5 remains an explicitly unknown BTC variant until independently identified.",
+    "rationale": "The configured BTCFi producer reports collateral through positive deposit_value. BTC, BTCB, cbBTC, and WBTC have supported-handler identities; handler 5 remains unidentified because the supported-handler registry contains only IDs 0 through 4. Its identity must not be inferred from symbol-only producer labeling or assumed to be a BTC variant.",
     "compositionBasis": "BTCFi current market API positive deposit_value across handlers, captured 2026-09-04 and normalized over the $8,917,531.02 positive-deposit total; handler 5 is retained as an unknown bucket because the supported-handler registry has no row for it.",
     "compositionAsOf": "2026-09-04",
     "scope": "full-composition",
@@ -117,7 +117,7 @@
       },
       {
         "reserveIndex": 2,
-        "reserveName": "Unmapped BTC variants",
+        "reserveName": "Unmapped collateral handler 5",
         "pct": 13.53,
         "disposition": "insufficient-evidence",
         "rationale": "BTCFi handler 5 is exposed in the market API but has no corresponding supported-handler registry row or independently verified identity."

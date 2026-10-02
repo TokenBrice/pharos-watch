@@ -20,8 +20,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-14",
-    "reviewer": "OpenAI Codex reserve disclosure review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (FixInv9)",
     "confidence": "verified",
     "sources": [
       {
@@ -37,13 +37,13 @@
         "url": "https://blog.midas.app/introducing-the-midas-attestation-engine/"
       },
       {
-        "label": "Midas mRe7YIELD risk documentation",
-        "url": "https://docs.midas.app/tokens/mre7yield/risks"
+        "label": "Midas mRe7YIELD Key Information Document",
+        "url": "https://content.gitbook.com/content/MndxFHqGeA4nzBBeKDTV/blobs/9Xz2l1mKa8bDtQufrvS0/KID_mRe7YIELD.pdf"
       }
     ],
-    "rationale": "mRe7YIELD tracks a Re7 Capital managed DeFi yield strategy. The issuer-prepared September 10 weekly report provides aggregate assets and liabilities and three collateral categories, but approximately 98.29% of reported assets remains grouped as Market Neutral Strategy. Settlement categories do not identify their assets or custodians. This is current aggregate reporting, not complete look-through or independent assurance; the NAV envelope remains unresolved.",
-    "compositionBasis": "Current Midas product, risk, and attestation disclosures; live NAV row identity from the Midas Chainlink NAV oracle adapter",
-    "compositionAsOf": "2026-07-20",
+    "rationale": "Re-reviewed the complete issuer-prepared September 10, 2026 weekly report on 2026-10-01. It reports Market Neutral Strategy $8,070,595.48, Settlement Reserve $65,124.54, and Settlement Funds in Process $75,478.00, totaling $8,211,198.02. These are broad accounting categories, not identified underlying positions or custody allocations. The existing 100% Re7-managed strategy NAV envelope was re-verified against this report and retains high risk, unknown liquidity, and 100% unresolved look-through exposure. The chainlink-nav adapter owns the live portfolio NAV row; report categories are not substituted for that row or treated as verified dependency weights.",
+    "compositionBasis": "September 10, 2026 issuer-prepared mRe7YIELD weekly report, re-verified as an unresolved whole-portfolio NAV envelope; live row identity remains owned by the Midas Chainlink NAV adapter",
+    "compositionAsOf": "2026-09-10",
     "scope": "full-composition",
     "knownUnknownExposure": "The September 10 issuer report discloses aggregate strategy and settlement categories, but underlying strategy positions, liabilities, venue weights and settlement-asset custody remain unverified. Its broad categories do not provide a complete classified portfolio.",
     "knownUnknownExposurePct": 100,

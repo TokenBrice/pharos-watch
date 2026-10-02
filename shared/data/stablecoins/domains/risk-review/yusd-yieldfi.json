@@ -58,7 +58,7 @@
         "source": "issuer",
         "name": "YieldFi BridgeCCIP",
         "slug": "yieldfi-bridge-ccip",
-        "url": "https://docs.yield.fi/resources/contract-addresses",
+        "url": "https://docs.yield.fi/resources/legacy-smart-contract-addresses.md",
         "bridgeTypes": [
           "Issuer-native burn/mint",
           "Issuer-native lock/mint"
@@ -78,8 +78,8 @@
     ],
     "sources": [
       {
-        "label": "YieldFi official current contract directory",
-        "url": "https://docs.yield.fi/resources/contract-addresses"
+        "label": "YieldFi official legacy V2 contract directory",
+        "url": "https://docs.yield.fi/resources/legacy-smart-contract-addresses.md"
       },
       {
         "label": "YieldFi yTokens architecture",
@@ -130,8 +130,8 @@
         ],
         "sources": [
           {
-            "label": "YieldFi official current contract directory",
-            "url": "https://docs.yield.fi/resources/contract-addresses"
+            "label": "YieldFi official legacy V2 contract directory",
+            "url": "https://docs.yield.fi/resources/legacy-smart-contract-addresses.md"
           },
           {
             "label": "Ethereum BridgeCCIP verified source",
@@ -162,8 +162,8 @@
         ],
         "sources": [
           {
-            "label": "YieldFi official current contract directory",
-            "url": "https://docs.yield.fi/resources/contract-addresses"
+            "label": "YieldFi official legacy V2 contract directory",
+            "url": "https://docs.yield.fi/resources/legacy-smart-contract-addresses.md"
           },
           {
             "label": "Arbitrum YTokenL2 verified source",
@@ -198,8 +198,8 @@
         ],
         "sources": [
           {
-            "label": "YieldFi official current contract directory",
-            "url": "https://docs.yield.fi/resources/contract-addresses"
+            "label": "YieldFi official legacy V2 contract directory",
+            "url": "https://docs.yield.fi/resources/legacy-smart-contract-addresses.md"
           },
           {
             "label": "YieldFi yTokens architecture",
@@ -230,8 +230,8 @@
         ],
         "sources": [
           {
-            "label": "YieldFi official current contract directory",
-            "url": "https://docs.yield.fi/resources/contract-addresses"
+            "label": "YieldFi official legacy V2 contract directory",
+            "url": "https://docs.yield.fi/resources/legacy-smart-contract-addresses.md"
           },
           {
             "label": "YieldFi yTokens architecture",
@@ -262,8 +262,8 @@
         ],
         "sources": [
           {
-            "label": "YieldFi official current contract directory",
-            "url": "https://docs.yield.fi/resources/contract-addresses"
+            "label": "YieldFi official legacy V2 contract directory",
+            "url": "https://docs.yield.fi/resources/legacy-smart-contract-addresses.md"
           },
           {
             "label": "YieldFi yTokens architecture",
@@ -294,8 +294,8 @@
         ],
         "sources": [
           {
-            "label": "YieldFi official current contract directory",
-            "url": "https://docs.yield.fi/resources/contract-addresses"
+            "label": "YieldFi official legacy V2 contract directory",
+            "url": "https://docs.yield.fi/resources/legacy-smart-contract-addresses.md"
           },
           {
             "label": "YieldFi yTokens architecture",
@@ -326,8 +326,8 @@
         ],
         "sources": [
           {
-            "label": "YieldFi official current contract directory",
-            "url": "https://docs.yield.fi/resources/contract-addresses"
+            "label": "YieldFi official legacy V2 contract directory",
+            "url": "https://docs.yield.fi/resources/legacy-smart-contract-addresses.md"
           },
           {
             "label": "YieldFi yTokens architecture",
@@ -358,8 +358,8 @@
         ],
         "sources": [
           {
-            "label": "YieldFi official current contract directory",
-            "url": "https://docs.yield.fi/resources/contract-addresses"
+            "label": "YieldFi official legacy V2 contract directory",
+            "url": "https://docs.yield.fi/resources/legacy-smart-contract-addresses.md"
           },
           {
             "label": "YieldFi yTokens architecture",
@@ -390,8 +390,8 @@
         ],
         "sources": [
           {
-            "label": "YieldFi official current contract directory",
-            "url": "https://docs.yield.fi/resources/contract-addresses"
+            "label": "YieldFi official legacy V2 contract directory",
+            "url": "https://docs.yield.fi/resources/legacy-smart-contract-addresses.md"
           },
           {
             "label": "YieldFi yTokens architecture",
@@ -422,8 +422,8 @@
         ],
         "sources": [
           {
-            "label": "YieldFi official current contract directory",
-            "url": "https://docs.yield.fi/resources/contract-addresses"
+            "label": "YieldFi official legacy V2 contract directory",
+            "url": "https://docs.yield.fi/resources/legacy-smart-contract-addresses.md"
           },
           {
             "label": "YieldFi yTokens architecture",
@@ -468,8 +468,8 @@
         "observedBlock": 25770718,
         "sources": [
           {
-            "label": "YieldFi official current contract directory",
-            "url": "https://docs.yield.fi/resources/contract-addresses"
+            "label": "YieldFi official legacy V2 contract directory",
+            "url": "https://docs.yield.fi/resources/legacy-smart-contract-addresses.md"
           },
           {
             "label": "Verified YieldFi Administrator implementation",
@@ -514,8 +514,8 @@
             "url": "https://eth.blockscout.com/address/0x6Be164Af10879A86E4643089638b6864eF12b1eE?tab=contract"
           },
           {
-            "label": "YieldFi official current contract directory",
-            "url": "https://docs.yield.fi/resources/contract-addresses"
+            "label": "YieldFi official legacy V2 contract directory",
+            "url": "https://docs.yield.fi/resources/legacy-smart-contract-addresses.md"
           }
         ],
         "evidence": "At Ethereum block 25770717, 0x6be164af10879a86e4643089638b6864ef12b1ee held the Administrator's BRIDGE role. The verified BridgeCCIP source checks the configured LockBox and peer on send(), validates processed messages and the allowed peer on _ccipReceive(), and delegates the Ethereum lock/unlock accounting to the LockBox. This is bridge machinery, not an independent native mint authority."
@@ -551,8 +551,8 @@
             "url": "https://arbitrum.blockscout.com/address/0x8a264A32d73D12E597E9532f1D16baC12948f066?tab=contract"
           },
           {
-            "label": "YieldFi official current contract directory",
-            "url": "https://docs.yield.fi/resources/contract-addresses"
+            "label": "YieldFi official legacy V2 contract directory",
+            "url": "https://docs.yield.fi/resources/legacy-smart-contract-addresses.md"
           }
         ],
         "evidence": "At Arbitrum block 495286801, 0x8a264a32d73d12e597e9532f1d16bac12948f066 held the Administrator's BRIDGE role. The verified BridgeCCIP burns local YTokenL2 shares before sending and invokes the corresponding manager accounting return only after validated CCIP receipt; it is not an OFT token contract."
@@ -584,8 +584,8 @@
         "observedBlock": 50065577,
         "sources": [
           {
-            "label": "YieldFi official current contract directory",
-            "url": "https://docs.yield.fi/resources/contract-addresses"
+            "label": "YieldFi official legacy V2 contract directory",
+            "url": "https://docs.yield.fi/resources/legacy-smart-contract-addresses.md"
           },
           {
             "label": "Chainlink official CCIP documentation",
@@ -621,8 +621,8 @@
         "observedBlock": 155660862,
         "sources": [
           {
-            "label": "YieldFi official current contract directory",
-            "url": "https://docs.yield.fi/resources/contract-addresses"
+            "label": "YieldFi official legacy V2 contract directory",
+            "url": "https://docs.yield.fi/resources/legacy-smart-contract-addresses.md"
           },
           {
             "label": "Chainlink official CCIP documentation",
@@ -658,8 +658,8 @@
         "observedBlock": 77632993,
         "sources": [
           {
-            "label": "YieldFi official current contract directory",
-            "url": "https://docs.yield.fi/resources/contract-addresses"
+            "label": "YieldFi official legacy V2 contract directory",
+            "url": "https://docs.yield.fi/resources/legacy-smart-contract-addresses.md"
           },
           {
             "label": "Chainlink official CCIP documentation",
@@ -695,8 +695,8 @@
         "observedBlock": 87686934,
         "sources": [
           {
-            "label": "YieldFi official current contract directory",
-            "url": "https://docs.yield.fi/resources/contract-addresses"
+            "label": "YieldFi official legacy V2 contract directory",
+            "url": "https://docs.yield.fi/resources/legacy-smart-contract-addresses.md"
           },
           {
             "label": "Chainlink official CCIP documentation",
@@ -732,8 +732,8 @@
         "observedBlock": 40177692,
         "sources": [
           {
-            "label": "YieldFi official current contract directory",
-            "url": "https://docs.yield.fi/resources/contract-addresses"
+            "label": "YieldFi official legacy V2 contract directory",
+            "url": "https://docs.yield.fi/resources/legacy-smart-contract-addresses.md"
           },
           {
             "label": "Chainlink official CCIP documentation",
@@ -769,8 +769,8 @@
         "observedBlock": 116355059,
         "sources": [
           {
-            "label": "YieldFi official current contract directory",
-            "url": "https://docs.yield.fi/resources/contract-addresses"
+            "label": "YieldFi official legacy V2 contract directory",
+            "url": "https://docs.yield.fi/resources/legacy-smart-contract-addresses.md"
           },
           {
             "label": "Chainlink official CCIP documentation",
@@ -806,8 +806,8 @@
         "observedBlock": 92980757,
         "sources": [
           {
-            "label": "YieldFi official current contract directory",
-            "url": "https://docs.yield.fi/resources/contract-addresses"
+            "label": "YieldFi official legacy V2 contract directory",
+            "url": "https://docs.yield.fi/resources/legacy-smart-contract-addresses.md"
           },
           {
             "label": "Chainlink official CCIP documentation",
@@ -843,8 +843,8 @@
         "observedBlock": 29979956,
         "sources": [
           {
-            "label": "YieldFi official current contract directory",
-            "url": "https://docs.yield.fi/resources/contract-addresses"
+            "label": "YieldFi official legacy V2 contract directory",
+            "url": "https://docs.yield.fi/resources/legacy-smart-contract-addresses.md"
           },
           {
             "label": "Chainlink official CCIP documentation",
@@ -883,8 +883,8 @@
             "url": "https://eth.blockscout.com/address/0x659b5bc7F2F888dB3D5901b78Cdb34DF270E2231?tab=contract"
           },
           {
-            "label": "YieldFi official current contract directory",
-            "url": "https://docs.yield.fi/resources/contract-addresses"
+            "label": "YieldFi official legacy V2 contract directory",
+            "url": "https://docs.yield.fi/resources/legacy-smart-contract-addresses.md"
           }
         ],
         "evidence": "The Ethereum LockBox 0x659b5bc7f2f888db3d5901b78cdb34df270e2231 is the verified bridge escrow for the L1 route. Its bridge-only unlock() and Manager-delegating _sync path preserve the adverse escrow and accounting failure domain without treating the LockBox as a global native minter."
@@ -923,8 +923,8 @@
             "url": "https://docs.chain.link/ccip"
           },
           {
-            "label": "YieldFi official current contract directory",
-            "url": "https://docs.yield.fi/resources/contract-addresses"
+            "label": "YieldFi official legacy V2 contract directory",
+            "url": "https://docs.yield.fi/resources/legacy-smart-contract-addresses.md"
           }
         ],
         "evidence": "The verified route-specific BridgeCCIP implementations identify the exact delivery controller and configured Chainlink Router, then enforce allowed-peer and replay checks. Chainlink's documentation establishes a separate DON/RMN validation layer, but the reviewed evidence does not establish an exact validator authority or one controllerAddress for that layer, so its authority remains unresolved. Reclassified 2026-09-01 under AUTHORITY-LADDER 9.46: the controlling party for this control is the external Chainlink CCIP DON/RMN validation quorum itself, a rotating protocol-scoped operator set with no single controllerAddress to record. Its authority model is therefore validator-quorum, known but weak, graded no higher than a named issuer backend and never above a named multisig, rather than unknown. The unresolved roster, quorum, override and peer facts recorded above are unchanged; only the authority classification moved."

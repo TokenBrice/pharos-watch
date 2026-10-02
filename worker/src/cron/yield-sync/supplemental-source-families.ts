@@ -1,3 +1,4 @@
+import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { PYS_APY_SANITY_MAX } from "@shared/lib/yield-scoring";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
@@ -397,6 +398,7 @@ function buildAaveTargets(startSec: number): AaveV3RateTarget[] {
     for (const contract of meta.contracts ?? []) {
       if (
         AAVE_SUPPORTED_CHAINS.has(contract.chain) &&
+        isFixedDecimalDeployment(contract) &&
         contract.address &&
         !targets.some((target) => target.stablecoinId === meta.id && target.chain === contract.chain)
       ) {

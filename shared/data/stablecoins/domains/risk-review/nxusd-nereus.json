@@ -227,7 +227,7 @@
           },
           {
             "provider": "Nereus MimAvax ProxyOracle",
-            "path": "MIM/WAVAX LP state -> Chainlink MIM/USD 0x54EdAB30a7134A16a54218AE64C73e1DAC5a8Fb plus AVAX/USD 0x0A77230d17318075983913bC2145DB16C7366156 -> proxy implementation 0x3e6ef9E97147C266c5bddeF03E7dfba7a167d853; the same outer oracle is configured by both live Trader Joe and SushiSwap Cauldrons",
+            "path": "MIM/WAVAX LP state -> Chainlink MIM/USD 0x54EdAB30a7134A16a54218AE64C73e1DAf48a8Fb plus AVAX/USD 0x0A77230d17318075983913bC2145DB16C7366156 -> proxy implementation 0x3e6ef9E97147C266c5bddeF03E7dfba7a167d853; the same outer oracle is configured by both live Trader Joe and SushiSwap Cauldrons",
             "address": "0x15f57fbCB7A443aC6022e051a46cAE19491bC298",
             "chain": "avalanche",
             "observedAt": "2026-07-14",
@@ -469,7 +469,7 @@
       },
       {
         "label": "Avalanche NXUSD verified source",
-        "url": "https://repo.sourcify.dev/contracts/full_match/43114/0xf14f4ce569cb3679e99d5059909e23b07bd2f387/sources/contracts/NXUSD.sol"
+        "url": "https://sourcify.dev/server/v2/contract/43114/0xf14f4ce569cb3679e99d5059909e23b07bd2f387?fields=abi,sources"
       },
       {
         "label": "Polygon NXUSDV2 verified source",
@@ -495,7 +495,7 @@
         "sources": [
           {
             "label": "Avalanche NXUSD verified source",
-            "url": "https://repo.sourcify.dev/contracts/full_match/43114/0xf14f4ce569cb3679e99d5059909e23b07bd2f387/sources/contracts/NXUSD.sol"
+            "url": "https://sourcify.dev/server/v2/contract/43114/0xf14f4ce569cb3679e99d5059909e23b07bd2f387?fields=abi,sources"
           }
         ]
       },

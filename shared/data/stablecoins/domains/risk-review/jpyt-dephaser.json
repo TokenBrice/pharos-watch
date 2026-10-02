@@ -4,20 +4,16 @@
     "reviewedStatus": "inherited",
     "sources": [
       {
-        "label": "Sourcify Optimism contract source",
-        "url": "https://repo.sourcify.dev/contracts/partial_match/10/0xc47da4cb96ce65a96844a01bfae509f9d5454534/sources/src/DephaserJPY.sol"
+        "label": "Optimism DephaserJPY verified source API",
+        "url": "https://optimism.blockscout.com/api/v2/smart-contracts/0xc47da4cb96ce65a96844a01bfae509f9d5454534"
       },
       {
         "label": "Docs",
         "url": "https://docs.dephaser.com/concept/what-is-jpyt"
       },
       {
-        "label": "DephaserJPY verified source on Optimism",
-        "url": "https://optimism.blockscout.com/address/0xc47da4cb96ce65a96844a01bfae509f9d5454534?tab=contract"
-      },
-      {
         "label": "DephaserJPY verified source on Base",
-        "url": "https://base.blockscout.com/address/0xc47da4cb96ce65a96844a01bfae509f9d5454534?tab=contract"
+        "url": "https://base.blockscout.com/api/v2/smart-contracts/0xc47da4cb96ce65a96844a01bfae509f9d5454534"
       },
       {
         "label": "Optimism fixed-block RPC",
@@ -28,20 +24,20 @@
         "url": "https://base-rpc.publicnode.com"
       }
     ],
-    "evidence": "Re-verified 2026-08-08 at Optimism block 155309915 and Base block 49714630. Both tracked DephaserJPY deployments retained direct runtime code with zero EIP-1967 implementation and admin slots. Their verified ABI/source exposes standard ERC-20 transfer paths, role-gated mint, and allowance-gated burnFrom, but no pause, blacklist, freeze, allowlist, seizure, transfer hook, or privileged arbitrary-holder burn. The earlier PAUSER_ROLE wording was stale: the current verified ABI has no PAUSER_ROLE or pause function. Direct JPYT blacklistability is false. Locked USDC/USDT can be frozen upstream and impair backing or redemption, but those issuers cannot restrict JPYT holder balances.",
-    "reviewer": "OpenAI Codex C11 access review",
-    "reviewedAt": "2026-08-08"
+    "evidence": "Re-verified 2026-10-01 at Optimism block 157619450 and Base block 52024165. Pinned runtime bytecode exactly matched the respective Blockscout verified-source deployments; EIP-1967 implementation and admin slots were zero. Both sources expose standard ERC-20 transfer paths, role-gated mint, and allowance-gated burnFrom, but no pause, blacklist, freeze, allowlist, seizure, transfer hook, or privileged arbitrary-holder burn. Direct JPYT blacklistability remains false. Locked USDC/USDT remain upstream freeze exposures that can impair backing or redemption, not powers to restrict JPYT holder balances.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB13XUSD)",
+    "reviewedAt": "2026-10-01"
   },
   "oracleRisk": {
     "tier": "standard-external",
-    "summary": "DePhaser mints JPYT using Chainlink USD/JPY exchange-rate data for USDT/USDC deposits, with no fallback or failure handling documented.",
+    "summary": "Optimism issuance reads Chainlink-style USDT/USD and JPY/USD feeds; Base issuance reads a Chainlink-style USDC/USD feed and Pyth USD/JPY. At Base block 52075154, pythValidTimePeriod() was 31,536,000 seconds. The managers reject non-positive deposit-token feed answers without checking their timestamps; no independent oracle fallback is implemented in the reviewed sources.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "top-level-only",
       "reviewedAt": "2026-08-24",
       "reviewer": "OpenAI Codex external-a oracle applicability review",
-      "rationale": "JPYT has no borrower-specific undercollateralized positions or liquidation branches. Its deposit manager nevertheless reads Chainlink USD prices for the deposit token and JPY to calculate the JPYT amount minted, while redemptions use the accumulated deposit-token/JPYT conversion rate; these are price-sensitive top-level issuance and redemption authorities.",
+      "rationale": "JPYT has no borrower-specific undercollateralized positions or liquidation branches. Its per-chain deposit managers calculate issuance from the deposit token and JPY exchange rate: the current Optimism implementation uses Chainlink-style aggregators, while the current Base implementation uses a Chainlink-style USDC/USD aggregator and Pyth USD/JPY. Redemptions use accumulated deposit-token/JPYT conversion rates. These are price-sensitive top-level issuance and redemption authorities; the Base Pyth path is not a redundant fallback.",
       "sources": [
         {
           "label": "DePhaser USDT DepositManager source (document commit 2024-10-10)",
@@ -64,6 +60,14 @@
       {
         "label": "DePhaser overview",
         "url": "https://docs.dephaser.com/concept/what-is-dephaser.md"
+      },
+      {
+        "label": "Current Base UsdcDepositManager verified implementation",
+        "url": "https://base.blockscout.com/api/v2/smart-contracts/0xf3b4eaaa9660143712fa3b3ebf5f460e3e8ea2cb"
+      },
+      {
+        "label": "Current Optimism UsdtDepositManager verified implementation",
+        "url": "https://optimism.blockscout.com/api/v2/smart-contracts/0xb46aaeeb63aa3c41728f348e06d8c4db7c5ee9f5"
       }
     ]
   },

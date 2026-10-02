@@ -21,9 +21,9 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex Safety Score V9 curation",
-    "confidence": "probable",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA09USDG)",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Avant Protocol documentation",
@@ -36,12 +36,43 @@
       {
         "label": "Avant Protocol source repository",
         "url": "https://github.com/Avant-Protocol"
+      },
+      {
+        "label": "Avalanche verified StakedAvUSDV2 source",
+        "url": "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x06d47f3fb376649c3a9dafe069b3d6e35572219e"
       }
     ],
     "rationale": "savUSD's live ERC-4626 adapter emits one 100% avUSD savings-vault share exposure, and avUSD is the tracked upstream dependency. The wrapper relationship is classified directly; avUSD's underlying collateral remains the upstream asset's reserve question and is not duplicated as savUSD backing.",
-    "compositionBasis": "Avant Protocol documentation and the exact live ERC-4626 single-asset row",
+    "compositionBasis": "Standing single-asset ERC-4626 structure: verified StakedAvUSDV2 source and asset() pinned at Avalanche block 96511220 (2026-10-01T06:53:44Z); this dates the direct wrapper exposure, not the parent avUSD strategy composition.",
+    "compositionAsOf": "2026-10-01",
     "scope": "full-composition",
     "knownUnknownExposure": "No additional direct savUSD reserve slice is identified; the upstream avUSD reserve composition, vault liquidity, and withdrawal conditions remain upstream questions.",
     "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Avant Protocol MPC custody providers (names undisclosed)",
+        "role": "custodian"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA09USDG)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Avant secure asset management",
+        "url": "https://docs.avantprotocol.com/security/secure-asset-management"
+      },
+      {
+        "label": "Avant Protocol custody vendor disclosure",
+        "url": "https://www.avantprotocol.com/"
+      }
+    ],
+    "uncertainty": "Avant documents multi-provider MPC custody, controlled transaction policies and role-based access, but withholds custody vendor names under NDA. This is upstream avUSD strategy custody, not a second direct savUSD reserve basket. Provider reserve shares, jurisdictions, regulatory status, legal segregation, bankruptcy remoteness and rehypothecation terms are not publicly established; the existing institutional-regulated custodyModel is therefore not independently corroborated.",
+    "knownUnknownExposurePct": 100
   }
 }

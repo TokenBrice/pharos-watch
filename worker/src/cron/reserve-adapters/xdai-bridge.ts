@@ -4,6 +4,10 @@ import {
 } from "@shared/lib/live-reserve-adapters";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
+import { sha256Hex } from "@shared/lib/sha256";
+import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { ReserveObservationEnvelopeSchema } from "@shared/types/safety-score-v9-reserve-scope";
 import {
   fetchEvmBlockHeader,
   fetchEvmBlockHeaderAtTag,
@@ -95,6 +99,8 @@ export interface XdaiBridgeObservation {
   legacyDai: bigint;
   legacySdai: bigint;
   outstanding: bigint;
+  minted: bigint;
+  burnt: bigint;
 }
 
 function ratioFromBigInts(numerator: bigint, denominator: bigint, label: string): number {
@@ -494,6 +500,47 @@ function adaptXdaiBridgeResponse(
 
   const collateralUsd = decimalNumberFromBigInt(collateral, 18);
   const outstandingUsd = decimalNumberFromBigInt(observation.outstanding, 18);
+  const observedAtSec = Math.min(observation.ethereumBlock.timestamp, observation.gnosisBlock.timestamp);
+  const reviewedAtSec = Math.floor(Date.now() / 1000);
+  const sourceSha256 = sha256Hex(stableJsonStringifyV1({
+    ...observation,
+    ...Object.fromEntries(Object.entries(observation).filter(([, value]) => typeof value === "bigint").map(([key, value]) => [key, String(value)])),
+  }));
+  const foreignRef = `ethereum:${params.foreignBridgeAddress.toLowerCase()}`;
+  const homeRef = `gnosis:${params.homeBridgeAddress.toLowerCase()}`;
+  const usdsRef = `ethereum:${params.usdsAddress.toLowerCase()}`;
+  const susdsRef = `ethereum:${params.susdsAddress.toLowerCase()}`;
+  const rewardRef = `gnosis:${params.blockRewardAddress.toLowerCase()}`;
+  const reserveObservation = ReserveObservationEnvelopeSchema.parse({
+    kind: "onchain-observation", scopeId: "xdai-bridge-accounting", liabilityBookKey: "gnosis-native-bridge-issued",
+    deploymentRefs: [foreignRef, homeRef, usdsRef, susdsRef, rewardRef], reviewer: "xdai-bridge-producer", confidence: "verified",
+    sources: [foreignRef, homeRef, usdsRef, susdsRef, rewardRef].map(ref => ({
+      url: `https://${ref.startsWith("ethereum:") ? "etherscan.io" : "gnosisscan.io"}/address/${ref.split(":")[1]}`,
+      accessedAtSec: reviewedAtSec, sha256: sourceSha256,
+    })),
+    reviewedAtSec, observedAtSec,
+    expiresAtSec: reviewedAtSec + V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.onchainObservationMaxAgeSec,
+    sourceGeneration: `xdai-bridge:${observation.ethereumBlock.hash}:${observation.gnosisBlock.hash}`,
+    sourceSha256, completeness: "partial",
+    obligations: [
+      { key: "bridge-minted-minus-burnt", disposition: "included", reason: "Pinned Home Bridge counters" },
+      ...["pending-burns", "pending-mints", "non-bridge-native-issuance", "fees", "interest"].map(key => ({
+        key, disposition: "unresolved", reason: "Not a complete economic liability census",
+      })),
+    ],
+    blocks: [[ETHEREUM_CHAIN, observation.ethereumBlock], [GNOSIS_CHAIN, observation.gnosisBlock]].map(([chain, block]) => {
+      const header = block as XdaiBridgeBlock;
+      return { chain, number: header.number, hash: header.hash, timestamp: header.timestamp, finality: header.finalityTag };
+    }),
+    quantities: [
+      { key: "liquid-usds", deploymentRef: usdsRef, selector: encodeAddressCallData(SELECTORS.balanceOf, params.foreignBridgeAddress), rawAmount: observation.liquidUsds.toString(), decimals: 18 },
+      { key: "susds-shares", deploymentRef: susdsRef, selector: encodeAddressCallData(SELECTORS.balanceOf, params.foreignBridgeAddress), rawAmount: observation.susdsShares.toString(), decimals: 18 },
+      { key: "susds-assets", deploymentRef: susdsRef, selector: `${SELECTORS.convertToAssets}${encodeUint256(observation.susdsShares)}`, rawAmount: observation.susdsAssets.toString(), decimals: 18 },
+      { key: "bridge-minted", deploymentRef: rewardRef, selector: encodeAddressCallData(SELECTORS.mintedTotallyByBridge, params.homeBridgeAddress), rawAmount: observation.minted.toString(), decimals: 18 },
+      { key: "bridge-burnt", deploymentRef: homeRef, selector: SELECTORS.totalBurntCoins, rawAmount: observation.burnt.toString(), decimals: 18 },
+    ],
+    ratio: { numerator: collateral.toString(), denominator: observation.outstanding.toString(), unitBasis: "raw-18-decimal-bridge-token-units" },
+  });
   return {
     slices,
     warnings,
@@ -502,6 +549,7 @@ function adaptXdaiBridgeResponse(
       totalReserveUsd: collateralUsd,
       supplyUsd: outstandingUsd,
       collateralizationRatio: coverageRatio,
+      reserveObservation,
       details: {
         finalityTag: observation.ethereumBlock.finalityTag,
         ethereumBlock: observation.ethereumBlock,
@@ -547,7 +595,10 @@ export async function fetchXdaiBridgeReserves(
     readFinalizedBlock(ETHEREUM_CHAIN, params, signal, ctx, deadlineMs, nowSec),
     readFinalizedBlock(GNOSIS_CHAIN, params, signal, ctx, deadlineMs, nowSec),
   ]);
-  const maxCrossChainSkewSec = params.maxCrossChainSkewSec ?? DEFAULTS.maxCrossChainSkewSec;
+  const maxCrossChainSkewSec = Math.min(
+    params.maxCrossChainSkewSec ?? DEFAULTS.maxCrossChainSkewSec,
+    V9_CANDIDATE_POLICY_V1.policy.semantic.backing.reserveScope.crossChainObservationMaxSkewSec,
+  );
   const [ethereumBlock, gnosisBlock] = await alignFinalizedBlocks(
     ethereumAnchor,
     gnosisAnchor,
@@ -630,6 +681,8 @@ export async function fetchXdaiBridgeReserves(
     legacyDai: ethereum.values["dai-balance"],
     legacySdai: ethereum.values["sdai-balance"],
     outstanding: minted - burnt,
+    minted,
+    burnt,
   };
   await Promise.all([
     recheckBlockHash(ETHEREUM_CHAIN, ethereumBlock, params, signal, ctx, deadlineMs),

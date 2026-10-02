@@ -168,8 +168,8 @@ const PLOT_SCENE = {
 export const PLOT_LAYOUT = {
   /** R1 reference: 1440×800 with the real chrome; the frame follows the 1368 px content box. */
   reference: { viewportWidth: 1440, viewportHeight: 800, frameWidth: 1368 },
-  /** Sticky chrome (105 px) + 8 px: the top of the visible band. */
-  chromeTop: 113,
+  /** Sticky chrome (3 px status strip + 56 px nav) + 8 px: the top of the visible band. */
+  chromeTop: 67,
   /** Zoom toolbar row ("← Whole cemetery" + section chip). */
   zoomBar: 52,
   zoomSideInset: 24,

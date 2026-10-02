@@ -25,6 +25,7 @@ const PROFILE_CLOCK_SEC = Date.UTC(2026, 8, 6) / 1_000;
 const PROFILE_FIXED_INPUT = {
   clockSec: PROFILE_CLOCK_SEC,
   liveReserveMap: {},
+  liveReserveProvenanceMap: {},
 } as unknown as ReportCardsFixedInput;
 
 function namedOverlay(assetId: string) {

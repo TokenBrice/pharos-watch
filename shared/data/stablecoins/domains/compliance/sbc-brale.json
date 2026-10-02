@@ -34,13 +34,13 @@
     "reserveDisclosureUrl": "https://brale.xyz/stablecoins/SBC",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "notes": "Reserve-report date recorded as of 2026-06-18 review: 2026-05-31 (date kind unspecified).",
+    "notes": "The historical June 18 review recorded the May 31 reserve report. The latest MCCPA examination reviewed on 2026-10-01 covers August 31, 2026 and is signed September 15, 2026; reserve attestation and MSB/state licenses do not establish GENIUS authorization.",
     "references": [
       {
         "label": "Brale SBC reserve disclosure",
         "url": "https://brale.xyz/stablecoins/SBC",
-        "sourceKind": "auditor-report",
-        "accessedAt": "2026-06-07"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-01"
       },
       {
         "label": "Brale terms",

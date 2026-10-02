@@ -58,9 +58,9 @@
             "url": "https://eth.blockscout.com/address/0xa5f8e5843dd597a179453bf782844e8bf808a90b?tab=contract"
           }
         ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 25770766,
-        "evidence": "At Ethereum block 25770766, owner() on the nOPAL Teller 0xa5f8e5843dd597a179453bf782844e8bf808a90b returned the 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982."
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095800,
+        "evidence": "At ethereum block 26095800 on 2026-10-01, owner() on 0xa5f8e5843dd597a179453bf782844e8bf808a90b returned the 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982."
       },
       {
         "label": "Nest BlackOpal LiquidStone II Vault Manager (strategy/admin)",
@@ -84,9 +84,9 @@
             "url": "https://eth.blockscout.com/address/0xea452b14fc86847182f8dd0486206eb56dda0393?tab=contract"
           }
         ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 25770766,
-        "evidence": "At Ethereum block 25770766, owner() on the nOPAL Manager 0xea452b14fc86847182f8dd0486206eb56dda0393 returned the 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982, which can authorize the Manager's vault-management issuance path."
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095800,
+        "evidence": "At ethereum block 26095800 on 2026-10-01, owner() on 0xea452b14fc86847182f8dd0486206eb56dda0393 returned the 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982. Manager vault() returned the exact nOPAL deployment 0x119dd7daff816f29d7ee47596ae5e4bdc4299165."
       },
       {
         "label": "Nest vault owner Safe (3-of-6) — Ethereum",
@@ -117,7 +117,7 @@
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0x017062a1de2fe6b99be3d9d37841fed19f573804",
           "version": "1.3.0",
-          "observedBlock": 25770766,
+          "observedBlock": 26095800,
           "source": "onchain"
         },
         "sources": [
@@ -130,9 +130,9 @@
             "url": "https://eth.blockscout.com/address/0xa08a0dc480bd60d1d56c8eec6c722125eafea982?tab=contract"
           }
         ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 25770766,
-        "evidence": "At Ethereum block 25770766, the 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 owns the nOPAL Teller and Manager and has PROPOSER_ROLE and CANCELLER_ROLE on the nOPAL Timelock 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a. getThreshold() returned 3, getOwners() returned the six listed signers, and getModulesPaginated() returned no enabled modules; the Timelock getMinDelay() returned 172800 seconds."
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095800,
+        "evidence": "At ethereum block 26095800 on 2026-10-01, getThreshold() returned 3, getOwners() returned the same six signers, getModulesPaginated() returned no enabled modules, the guard slot was zero, and the fallback handler and version remained unchanged. The Safe owns the nOPAL Teller and Manager and holds PROPOSER_ROLE and CANCELLER_ROLE on the token-owner Timelock; getMinDelay() returned 172800 seconds. Signer key custody and delay bypasses were not verified."
       },
       {
         "label": "Nest nOPAL token owner Timelock — Ethereum",
@@ -157,9 +157,9 @@
             "url": "https://eth.blockscout.com/address/0x8faacdc65de5d78975df4f9dc4b6548979ceb23a?tab=contract"
           }
         ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 25770766,
-        "evidence": "At Ethereum block 25770766, nOPAL owner() returned the Nest Timelock 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a. Its getMinDelay() returned 172800 seconds; the verified BoringVault owner-authenticated enter() path has no supply cap, so this owner-controlled path is direct native issuance after the Timelock delay."
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095800,
+        "evidence": "At ethereum block 26095800 on 2026-10-01, nOPAL owner() returned 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a and getMinDelay() returned 172800 seconds. hasRole() confirmed the current 3-of-6 Safe holds PROPOSER_ROLE and CANCELLER_ROLE. This observation does not establish signer key custody or enumerate every authorization path."
       },
       {
         "label": "Nest BlackOpal LiquidStone II Vault Teller (issuance/redemption) — Plume",
@@ -183,9 +183,9 @@
             "url": "https://explorer.plumenetwork.xyz/address/0xa5f8e5843dd597a179453bf782844e8bf808a90b?tab=contract"
           }
         ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 87688297,
-        "evidence": "At Plume block 87688297, owner() on the nOPAL Teller 0xa5f8e5843dd597a179453bf782844e8bf808a90b returned the 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982. The official Nest registry lists this same Teller for the nOPAL vault's Plume deployment."
+        "observedAt": "2026-10-01",
+        "observedBlock": 96620522,
+        "evidence": "At plume block 96620522 on 2026-10-01, owner() on 0xa5f8e5843dd597a179453bf782844e8bf808a90b returned the 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982."
       },
       {
         "label": "Nest BlackOpal LiquidStone II Vault Manager (strategy/admin) — Plume",
@@ -205,9 +205,9 @@
             "url": "https://explorer.plumenetwork.xyz/address/0xea452b14fc86847182f8dd0486206eb56dda0393?tab=contract"
           }
         ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 87688297,
-        "evidence": "At Plume block 87688297, owner() on the verified ManagerWithMerkleVerification 0xea452b14fc86847182f8dd0486206eb56dda0393 returned the 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982, and vault() returned the Plume nOPAL deployment 0x119dd7daff816f29d7ee47596ae5e4bdc4299165."
+        "observedAt": "2026-10-01",
+        "observedBlock": 96620522,
+        "evidence": "At plume block 96620522 on 2026-10-01, owner() on 0xea452b14fc86847182f8dd0486206eb56dda0393 returned the 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982. Manager vault() returned the exact nOPAL deployment 0x119dd7daff816f29d7ee47596ae5e4bdc4299165."
       },
       {
         "label": "Nest vault owner Safe (3-of-6) — Plume",
@@ -228,8 +228,8 @@
           "owners": [
             "0x66a0c12a7bf3dd40dda33cd43beb553d2d7fbf7f",
             "0x98be74d3d5604904d0686eef9b4267f681f9520a",
-            "0xcef3d04f13a6c1a7614657641ab574c2d29d4cc6",
             "0x4e1d7121544a586b0a1c35d7e196b0dd9ba7f572",
+            "0xcef3d04f13a6c1a7614657641ab574c2d29d4cc6",
             "0x0fcabe7b2410d31d9516ac27d2992f040a1b29a9",
             "0x6d303f4e0e3406c397855551a006c8b33d4f3240"
           ],
@@ -238,7 +238,7 @@
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0x017062a1de2fe6b99be3d9d37841fed19f573804",
           "version": "1.3.0",
-          "observedBlock": 87688297,
+          "observedBlock": 96620522,
           "source": "onchain"
         },
         "sources": [
@@ -251,9 +251,9 @@
             "url": "https://explorer.plumenetwork.xyz/address/0xa08a0dc480bd60d1d56c8eec6c722125eafea982?tab=contract"
           }
         ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 87688297,
-        "evidence": "At Plume block 87688297, the Safe threshold is 3 and getOwners() returned the six listed signers; getModulesPaginated() returned no enabled modules. The Safe owns the Plume nOPAL Teller and Manager and has PROPOSER_ROLE and CANCELLER_ROLE on the Plume nOPAL Timelock, whose minimum delay is 172800 seconds."
+        "observedAt": "2026-10-01",
+        "observedBlock": 96620522,
+        "evidence": "At plume block 96620522 on 2026-10-01, getThreshold() returned 3, getOwners() returned the same six signers, getModulesPaginated() returned no enabled modules, the guard slot was zero, and the fallback handler and version remained unchanged. The Safe owns the nOPAL Teller and Manager and holds PROPOSER_ROLE and CANCELLER_ROLE on the token-owner Timelock; getMinDelay() returned 172800 seconds. Signer key custody and delay bypasses were not verified."
       },
       {
         "label": "Nest nOPAL token owner Timelock — Plume",
@@ -278,9 +278,9 @@
             "url": "https://explorer.plumenetwork.xyz/address/0x8faacdc65de5d78975df4f9dc4b6548979ceb23a?tab=contract"
           }
         ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 87688297,
-        "evidence": "At Plume block 87688297, nOPAL owner() returned the Nest Timelock 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a and getMinDelay() returned 172800 seconds. The same Safe is the current proposer and canceller, while the verified BoringVault owner-authenticated enter() path has no supply cap."
+        "observedAt": "2026-10-01",
+        "observedBlock": 96620522,
+        "evidence": "At plume block 96620522 on 2026-10-01, nOPAL owner() returned 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a and getMinDelay() returned 172800 seconds. hasRole() confirmed the current 3-of-6 Safe holds PROPOSER_ROLE and CANCELLER_ROLE. This observation does not establish signer key custody or enumerate every authorization path."
       },
       {
         "label": "Nest BlackOpal LiquidStone II Vault Teller (issuance/redemption) — BSC",
@@ -304,9 +304,9 @@
             "url": "https://bscscan.com/address/0xa5f8e5843dd597a179453bf782844e8bf808a90b"
           }
         ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 116356466,
-        "evidence": "At BSC block 116356466, owner() on the nOPAL Teller 0xa5f8e5843dd597a179453bf782844e8bf808a90b returned the 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982. The official Nest registry lists this same Teller for the nOPAL vault's BSC deployment."
+        "observedAt": "2026-10-01",
+        "observedBlock": 125055879,
+        "evidence": "At bsc block 125055879 on 2026-10-01, owner() on 0xa5f8e5843dd597a179453bf782844e8bf808a90b returned the 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982."
       },
       {
         "label": "Nest BlackOpal LiquidStone II Vault Manager (strategy/admin) — BSC",
@@ -326,9 +326,9 @@
             "url": "https://bscscan.com/address/0xea452b14fc86847182f8dd0486206eb56dda0393"
           }
         ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 116356466,
-        "evidence": "At BSC block 116356466, owner() on the verified ManagerWithMerkleVerification 0xea452b14fc86847182f8dd0486206eb56dda0393 returned the 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982, and vault() returned the BSC nOPAL deployment 0x119dd7daff816f29d7ee47596ae5e4bdc4299165."
+        "observedAt": "2026-10-01",
+        "observedBlock": 125055879,
+        "evidence": "At bsc block 125055879 on 2026-10-01, owner() on 0xea452b14fc86847182f8dd0486206eb56dda0393 returned the 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982. Manager vault() returned the exact nOPAL deployment 0x119dd7daff816f29d7ee47596ae5e4bdc4299165."
       },
       {
         "label": "Nest vault owner Safe (3-of-6) — BSC",
@@ -359,7 +359,7 @@
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0x017062a1de2fe6b99be3d9d37841fed19f573804",
           "version": "1.3.0",
-          "observedBlock": 116356466,
+          "observedBlock": 125055879,
           "source": "onchain"
         },
         "sources": [
@@ -372,9 +372,9 @@
             "url": "https://bscscan.com/address/0xa08a0dc480bd60d1d56c8eec6c722125eafea982"
           }
         ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 116356466,
-        "evidence": "At BSC block 116356466, the Safe threshold is 3 and getOwners() returned the six listed signers; current getModulesPaginated() returned no enabled modules. The Safe owns the BSC nOPAL Teller and Manager and has PROPOSER_ROLE and CANCELLER_ROLE on the BSC nOPAL Timelock, whose minimum delay is 172800 seconds."
+        "observedAt": "2026-10-01",
+        "observedBlock": 125055879,
+        "evidence": "At bsc block 125055879 on 2026-10-01, getThreshold() returned 3, getOwners() returned the same six signers, getModulesPaginated() returned no enabled modules, the guard slot was zero, and the fallback handler and version remained unchanged. The Safe owns the nOPAL Teller and Manager and holds PROPOSER_ROLE and CANCELLER_ROLE on the token-owner Timelock; getMinDelay() returned 172800 seconds. Signer key custody and delay bypasses were not verified."
       },
       {
         "label": "Nest nOPAL token owner Timelock — BSC",
@@ -399,9 +399,9 @@
             "url": "https://bscscan.com/address/0x8faacdc65de5d78975df4f9dc4b6548979ceb23a"
           }
         ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 116356466,
-        "evidence": "At BSC block 116356466, nOPAL owner() returned the Nest Timelock 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a and getMinDelay() returned 172800 seconds. The same Safe is the current proposer and canceller, while the verified BoringVault owner-authenticated enter() path has no supply cap."
+        "observedAt": "2026-10-01",
+        "observedBlock": 125055879,
+        "evidence": "At bsc block 125055879 on 2026-10-01, nOPAL owner() returned 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a and getMinDelay() returned 172800 seconds. hasRole() confirmed the current 3-of-6 Safe holds PROPOSER_ROLE and CANCELLER_ROLE. This observation does not establish signer key custody or enumerate every authorization path."
       },
       {
         "label": "Nest BlackOpal LiquidStone II Vault Teller (issuance/redemption) — Plasma",
@@ -415,8 +415,8 @@
         ],
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-09-05",
-        "observedBlock": 31654043,
+        "observedAt": "2026-10-01",
+        "observedBlock": 33896629,
         "sources": [
           {
             "label": "Nest current vault registry API",
@@ -427,7 +427,7 @@
             "url": "https://rpc.plasma.to"
           }
         ],
-        "evidence": "At Plasma block 31654043 on 2026-09-05, owner() on the nOPAL Teller 0xa5f8e5843dd597a179453bf782844e8bf808a90b (deployed at the same address as on Ethereum, Plume, and BSC) returned the 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982. On Plasma that Safe has threshold 3, six owners, the Safe v1.3.0 L1 singleton 0xfb1bffc9d739b8d520daf37df666da4c687191ea at slot 0, and a zero guard slot. A complete Safe modules read on Plasma was not obtainable this pass, so no Plasma Safe control row is authored."
+        "evidence": "At plasma block 33896629 on 2026-10-01, owner() on 0xa5f8e5843dd597a179453bf782844e8bf808a90b returned the 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982."
       },
       {
         "label": "Nest BlackOpal LiquidStone II Vault Manager (strategy/admin) — Plasma",
@@ -441,15 +441,15 @@
         ],
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-09-05",
-        "observedBlock": 31654043,
+        "observedAt": "2026-10-01",
+        "observedBlock": 33896629,
         "sources": [
           {
             "label": "Plasma public JSON-RPC",
             "url": "https://rpc.plasma.to"
           }
         ],
-        "evidence": "At Plasma block 31654043 on 2026-09-05, owner() on the Manager 0xea452b14fc86847182f8dd0486206eb56dda0393 returned the 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982, and vault() returned the Plasma nOPAL deployment 0x119dd7daff816f29d7ee47596ae5e4bdc4299165, tying the Plasma Manager to the dormant Plasma share token."
+        "evidence": "At plasma block 33896629 on 2026-10-01, owner() on 0xea452b14fc86847182f8dd0486206eb56dda0393 returned the 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982. Manager vault() returned the exact nOPAL deployment 0x119dd7daff816f29d7ee47596ae5e4bdc4299165."
       },
       {
         "label": "Nest nOPAL token owner Timelock — Plasma",
@@ -464,8 +464,8 @@
         "canRaiseCap": true,
         "timelockDelaySec": 172800,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-09-05",
-        "observedBlock": 31654043,
+        "observedAt": "2026-10-01",
+        "observedBlock": 33896629,
         "sources": [
           {
             "label": "Plasma nOPAL token and Timelock reads via public RPC",
@@ -476,7 +476,7 @@
             "url": "https://api.nest.credit/v1/vaults"
           }
         ],
-        "evidence": "At Plasma block 31652535 on 2026-09-05, nOPAL owner() returned the Nest Timelock 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a, and at block 31654043 the Timelock's getMinDelay() returned 172800 seconds with hasRole() confirming the 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 holds PROPOSER_ROLE and CANCELLER_ROLE (role hashes read from the contract's own getters). The Plasma token's runtime bytecode is byte-for-byte the Ethereum nOPAL share contract except chain-specific immutables, so the same owner-authenticated enter() path with no supply cap applies; the deployment is dormant with totalSupply 0 at the reviewed block."
+        "evidence": "At plasma block 33896629 on 2026-10-01, nOPAL owner() returned 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a and getMinDelay() returned 172800 seconds. hasRole() confirmed the current 3-of-6 Safe holds PROPOSER_ROLE and CANCELLER_ROLE. This observation does not establish signer key custody or enumerate every authorization path."
       }
     ],
     "economicCapSemantics": "unbounded",

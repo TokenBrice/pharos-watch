@@ -115,7 +115,7 @@ function drawLine(el: HTMLElement, x1: number, y1: number, x2: number, y2: numbe
 
 /**
  * The viewport band the plan can use, measured down the middle of the viewport: its top sits 8 px under the sticky
- * chrome (105 px of bars at 1024 px and wider, 60 px below), its bottom above any fixed bottom bar (the phone nav below
+ * chrome (59 px of bars at 1024 px and wider, 60 px below), its bottom above any fixed bottom bar (the phone nav below
  * 1024 px). Without hit testing (jsdom) it falls back to the desktop chrome and the full viewport.
  */
 function visibleBand(): { top: number; bottom: number } {

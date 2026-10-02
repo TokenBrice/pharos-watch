@@ -14,7 +14,7 @@
         "custody",
         "concentration"
       ],
-      "liquidityHorizon": "one-day",
+      "liquidityHorizon": "unknown",
       "sourceKey": "nest-vault-positions:credit-vaults"
     },
     {

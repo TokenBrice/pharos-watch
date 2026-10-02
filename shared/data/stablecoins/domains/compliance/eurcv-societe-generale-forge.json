@@ -8,7 +8,7 @@
     "authorizedEntity": "Société Générale - Forge",
     "references": [
       {
-        "label": "ESMA Interim MiCA Register: Issuers of EMTs (EMTWP.csv, updated 2026-06-04)",
+        "label": "ESMA Interim MiCA Register: EURCV EMT row naming Societe Generale - Forge and ACPR (retrieved 2026-10-01)",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       },
       {
@@ -18,6 +18,10 @@
       {
         "label": "SG-FORGE EURCV MiCA white paper (Oct 2025)",
         "url": "https://www.sgforge.com/wp-content/uploads/2025/10/EURCV-WP-Ethereum-Solana_XRPL_Stellar_2025.10.14.pdf"
+      },
+      {
+        "label": "SG-FORGE EURCV MiCA white paper (September 2026)",
+        "url": "https://www.sgforge.com/wp-content/uploads/2026/09/EURCV-WP-Ethereum_Solana_XRPL_Stellar_Canton_2026-09-30.pdf"
       }
     ]
   },
@@ -86,17 +90,16 @@
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC Bulletin 2026-3 and Federal Register 2026-04089: proposed GENIUS foreign-issuer and permitted-issuer framework",
-        "OCC Digital Assets Licensing Applications table checked on 2026-08-14",
-        "GENIUS Act Public Law 119-27, including the foreign-issuer exception",
-        "Treasury state-level GENIUS comparability rulemaking",
-        "Federal GENIUS implementation materials reviewed from OCC, Treasury, FinCEN/OFAC, FDIC, Federal Reserve, and NCUA",
-        "SG-FORGE CoinVertible product page and EURCV European listing announcement",
-        "Web search for SG-FORGE/EURCV GENIUS Act approval, application, OCC registration, and comparability determination"
+        "OCC Digital Assets Licensing Applications table, including raw HTML applicant rows, retrieved 2026-10-01",
+        "OCC Bulletin 2026-3 and Federal Register 91 FR 10202 (2026-04089) proposed-rulemaking materials",
+        "GENIUS Act Public Law 119-27 definitions and foreign-issuer framework",
+        "Treasury state-level regulatory-regime proposal dated 2026-04-01 and section 3 proposal dated 2026-08-17",
+        "SG-FORGE EURCV whitepaper dated 2026-09-30, including issuer identity and U.S.-resident restriction",
+        "Targeted web search for SG-FORGE GENIUS approval, registration, OCC and Treasury"
       ],
-      "summary": "No token-specific U.S. GENIUS PPSI approval, state-qualified approval, official application, OCC foreign-issuer registration, Treasury comparability determination, or registered foreign-issuer exception was located for EURCV or SG-FORGE. The federal and state implementation materials reviewed remain proposed-rulemaking, while SG-FORGE publicly restricts U.S. persons.",
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-08-14"
+      "summary": "No SG-FORGE/EURCV U.S. issuer authorization, OCC application or foreign registration, or Treasury comparability determination was located in this named source/search scope. The OCC table covers digital-asset bank licensing and is not asserted to be an exhaustive GENIUS foreign-issuer register. This review does not establish universal absence or the status of every federal/state rulemaking; MiCA licensing is not U.S. permission, and the EURCV whitepaper prohibits issuer transactions with U.S. residents.",
+      "reviewer": "Sol curation pass 2026-10-01 (ValA29KAU)",
+      "reviewedAt": "2026-10-01"
     },
     "reviewer": "Pharos compliance research",
     "reviewedAt": "2026-08-14"

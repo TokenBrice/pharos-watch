@@ -27,8 +27,8 @@
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://docs.apyx.fi/collateral-and-custody/transparency",
-    "redemptionPolicyPresent": true,
-    "monthlyAttestationPresent": false,
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": true,
     "notes": "apxUSD is stablecoin-adjacent but its preferred-share collateral (primarily STRC, Strategy preferred equity) and BVI domicile make GENIUS payment-stablecoin classification unresolved. The Terms of Service explicitly state the protocol is facilitated by Preference Capital (BVI) Ltd. under BVI law, describe apxUSD as a protocol-generated asset rather than a claim against any legal entity, and block US, EU, UK, and Canadian persons from accessing the platform. A depeg event occurred on 2026-06-04 with apxUSD trading at $0.90 to $0.93 due to STRC preferred-share volatility.",
     "references": [
       {

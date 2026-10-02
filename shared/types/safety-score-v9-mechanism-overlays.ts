@@ -5,7 +5,7 @@ import {
   safetyScoreV9MechanismProfileArchetype,
 } from "./safety-score-v9-mechanism-profile";
 import { MECHANISM_ARCHETYPE_VALUES } from "./stablecoin-taxonomy";
-import { StrictIsoDateSchema, uniqueKeyedCollectionSchema } from "./safety-schema-primitives";
+import { StrictIsoDateSchema, uniqueKeyedCollectionSchema, reviewedAssetCollectionEnvelopeSchema } from "./safety-schema-primitives";
 
 const SafetyScoreV9MechanismArchetypeSchema = z.enum(MECHANISM_ARCHETYPE_VALUES);
 
@@ -61,6 +61,17 @@ export const SafetyScoreV9MechanismReviewOverlaySchema = z
     profileReview: V9MechanismProfileReviewSchema.optional(),
     metricApplicability: z.record(z.string(), SafetyScoreV9MechanismMetricApplicabilitySchema).optional(),
     analogousMetrics: z.record(z.string(), z.number().finite()).optional(),
+    collateralizationMeasurement: z
+      .object({
+        /** Identity of the measured subject and immutable pin, shared unchanged by wrappers. */
+        measurementId: z.string().trim().min(1),
+        ratio: z.number().finite().nonnegative(),
+        rationale: z.string().trim().min(1),
+        sourceUrl: z.string().url(),
+      })
+      .strict()
+      .nullable()
+      .optional(),
     venueShares: z
       .array(
         z
@@ -76,6 +87,28 @@ export const SafetyScoreV9MechanismReviewOverlaySchema = z
   })
   .strict()
   .superRefine((overlay, ctx) => {
+    if (
+      overlay.archetype === "ucits-trs-fund" ||
+      overlay.archetype === "shared-reserve" ||
+      overlay.archetype === "protocol-position"
+    ) {
+      if (
+        Object.keys(overlay.metrics).length > 0 ||
+        Object.keys(overlay.metricApplicability ?? {}).length > 0 ||
+        Object.keys(overlay.analogousMetrics ?? {}).length > 0 ||
+        overlay.venueShares !== undefined
+      ) {
+        ctx.addIssue({ code: "custom", path: ["metrics"], message: "Native families do not admit position metrics" });
+      }
+      for (const [key, component] of Object.entries(overlay.components)) {
+        if ("applicability" in component && component.applicability === "not-applicable") {
+          ctx.addIssue({
+            code: "custom", path: ["components", key],
+            message: "Native family components remain applicable; unavailable facts must be bounded",
+          });
+        }
+      }
+    }
     if (overlay.profileReview !== undefined) {
       const expectedArchetype = safetyScoreV9MechanismProfileArchetype(overlay.profileReview.profile);
       if (expectedArchetype !== overlay.archetype) {
@@ -94,6 +127,13 @@ export const SafetyScoreV9MechanismReviewOverlaySchema = z
       }
     }
     const sourceUrls = new Set(overlay.sources.map((source) => source.url));
+    if (overlay.collateralizationMeasurement && !sourceUrls.has(overlay.collateralizationMeasurement.sourceUrl)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["collateralizationMeasurement", "sourceUrl"],
+        message: "Collateralization measurement sourceUrl must match an overlay source",
+      });
+    }
     for (const [componentKey, component] of Object.entries(overlay.components)) {
       if (
         "applicability" in component &&
@@ -124,6 +164,7 @@ export const SafetyScoreV9MechanismReviewOverlayFileSchema = uniqueKeyedCollecti
   duplicateMessage: "Duplicate overlay assetId",
   noteSchema: z.string(),
 });
+export const SafetyScoreV9MechanismReviewOverlayEnvelopeSchema = reviewedAssetCollectionEnvelopeSchema("overlays", z.string());
 
 export type SafetyScoreV9MechanismReviewOverlay = z.infer<
   typeof SafetyScoreV9MechanismReviewOverlaySchema

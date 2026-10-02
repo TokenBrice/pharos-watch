@@ -1,22 +1,5 @@
 {
   "id": "usda-anzens",
-  "mica": {
-    "status": "out-of-scope",
-    "references": [
-      {
-        "label": "ESMA MiCA Interim Register and register guidance",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
-      },
-      {
-        "label": "EMURGO: Anzens USDA launch and geographic availability",
-        "url": "https://www.emurgo.io/press-news/anzens-is-live-usda-stablecoin-minting-access-is-here-cardano/"
-      },
-      {
-        "label": "Anzens USDA homepage",
-        "url": "https://www.anzens.com/"
-      }
-    ]
-  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
@@ -62,22 +45,13 @@
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act rulemaking bulletin and public releases (2026-06-18)",
-        "Anzens USDA website and terms (2026-06-18)",
-        "Anzens FinCEN MSB and state no-objection-letter disclosures",
-        "EMURGO partner announcements and press releases",
-        "Web searches for Anzens GENIUS Act, PPSI application, or authorization (2026-06-18)",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "2026-10-01: Anzens homepage and terms; EMURGO launch/custody disclosures",
+        "2026-10-01: OCC Bulletin 2026-3 public proposed-rule disclosure",
+        "2026-10-01 web search: Anzens USDA GENIUS PPSI authorization application site:occ.gov OR site:federalregister.gov OR site:fincen.gov"
       ],
-      "summary": "No public GENIUS issuer intent, token-specific PPSI approval, state-qualified approval, or official application source was located for USDA/Anzens Inc. Re-verified June 2026 with no change in status.",
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "summary": "No token-specific PPSI authorization or official application source for Anzens/USDA was located in this review scope. Anzens MSB registration is not itself PPSI authorization. This is a scoped negative public search, not proof of absence from every official register.",
+      "reviewer": "Sol curation pass 2026-10-01 (ValB43scrvUSD)",
+      "reviewedAt": "2026-10-01"
     },
     "reviewer": "Pharos compliance research",
     "reviewedAt": "2026-06-18"

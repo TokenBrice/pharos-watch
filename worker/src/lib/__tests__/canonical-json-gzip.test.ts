@@ -6,6 +6,24 @@ import {
 } from "../canonical-json-gzip";
 
 describe("bounded canonical gzip", () => {
+  it("preserves compressed bytes and UTF-8 identity across streamed surrogate boundaries", async () => {
+    const chunks = ['{"value":"', "a".repeat(65_535), "\ud83d", "", "\ude00", "€", '"}'];
+    const options = {
+      label: "fixture",
+      maximumCompressedBytes: 4_096,
+      maximumUncompressedBytes: 100_000,
+    };
+    const whole = await gzipCanonicalJson(chunks.join(""), options);
+    const streamed = await gzipCanonicalJson(chunks, options);
+    expect(streamed).toEqual(whole);
+    await expect(gunzipTextBounded(streamed.compressed, options)).resolves.toBe(chunks.join(""));
+  });
+
+  it("bounds streamed UTF-8 bytes and rejects empty streams", async () => {
+    const options = { label: "fixture", maximumCompressedBytes: 1_024, maximumUncompressedBytes: 3 };
+    await expect(gzipCanonicalJson(["é", "é"], options)).rejects.toThrow("uncompressed byte limit");
+    await expect(gzipCanonicalJson(["", ""], options)).rejects.toThrow("cannot be empty");
+  });
   it("round-trips text within explicit compressed and expanded limits", async () => {
     const text = JSON.stringify({ value: "ok" });
     const compressed = await gzipCanonicalJson(text, {

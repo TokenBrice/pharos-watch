@@ -2,9 +2,79 @@
   "schemaVersion": 1,
   "policyId": "safety-score-v9",
   "lifecycle": "active",
-  "releaseVersion": "9.98",
+  "releaseVersion": "10.0",
   "semantic": {
+    "accessLookthrough": {
+      "edgeKinds": ["reserve-position", "receipt", "bridge-representation"],
+      "coverageStates": ["complete", "incomplete"],
+      "authorityCapabilities": ["freeze", "seize", "pause"],
+      "unresolvedReasons": ["issuer-undisclosed", "research-incomplete", "producer-missing", "identity-unverified", "scope-unreconciled", "stale", "future-dated", "cycle", "overlap", "deployment-mismatch", "claim-inapplicable"],
+      "scopeBasis": "admitted-current-claim-graph",
+      "aggregation": "disjoint-position-union",
+      "transferInheritance": "never",
+      "unpricedShares": "null",
+      "cycleTreatment": "unknown-affected-component"
+    },
+    "supplyAttribution": {
+      "amountBases": ["circulating-usd", "fixed-token-units", "issued-currency-decimal", "native-ledger"],
+      "accountingFamilies": ["independent-liability", "lock-mint", "native-wrapped"],
+      "holdingKinds": ["contract", "issued-currency", "native-gas"],
+      "inFlightTreatments": ["observed-reconciled", "atomic-native-wrapper"],
+      "sourcePreference": "complete-provider-first",
+      "journalSourceId": "reviewed.economic-deployment-partition.v1",
+      "observationMaxAgeSec": 1800,
+      "observationMaxSkewSec": 120,
+      "referencePriceMaxAgeSec": 1800,
+      "postClockMaxSkewSec": 120,
+      "conservationAbsoluteToleranceUsd": 0.000001,
+      "conservationRelativeTolerance": 1e-12,
+      "reviewMaxAgeDays": 365
+    },
     "formula": {
+      "wrapperAllocationScope": {
+        "completenessMode": "all-required-scopes",
+        "aggregation": "worst-risk",
+        "parentLegalInheritance": "adverse-only",
+        "contractIdentity": "exact-chain-deployment-implementation",
+        "requiredScopes": {
+          "contractOnly": {
+            "custodyEscrow": ["contract", "holder-claim"],
+            "leverage": ["contract"],
+            "rehypothecationCorrelation": ["contract", "holder-claim"]
+          },
+          "mixedInstitutional": {
+            "custodyEscrow": ["contract", "immediate-custodian", "holder-claim"],
+            "leverage": ["contract", "lender-of-record"],
+            "rehypothecationCorrelation": ["contract", "immediate-custodian", "holder-claim"]
+          },
+          "privateCredit": {
+            "custodyEscrow": ["contract", "immediate-custodian", "borrower-spv", "holder-claim"],
+            "leverage": ["contract", "borrower-spv", "lender-of-record"],
+            "rehypothecationCorrelation": ["contract", "borrower-spv", "lender-of-record", "holder-claim"]
+          }
+        },
+        "leverageAssessments": {
+          "no-borrowing-surface": "none",
+          "bounded-up-to-1.1x": "low",
+          "bounded-up-to-1.5x": "moderate",
+          "bounded-up-to-2x": "high",
+          "unbounded-or-above-2x": "critical"
+        },
+        "reuseAssessments": {
+          "none": "none",
+          "bluechip-overcollateralized-lending": "low",
+          "mixed-overcollateralized-lending": "moderate",
+          "long-tail-overcollateralized-lending": "high",
+          "multi-strategy-reuse": "high",
+          "liquidation-loss-absorption": "high",
+          "single-borrower-risk-capital": "high"
+        },
+        "custodyAssessments": {
+          "idle-token-custody-absent": "none",
+          "segregated-structured": "low",
+          "unsegregated": "high"
+        }
+      },
       "pillarWeights": {
         "backing": 0.4,
         "exit": 0.35,
@@ -277,6 +347,8 @@
         "issuerAttestedReserveMaxAgeSec": 31536000,
         "reviewedReserveClassificationMaxAgeSec": 31536000,
         "reviewedReserveCompositionMaxAgeSec": 2678400,
+        "onchainObservationMaxAgeSec": 17280,
+        "standingStructureMaxAgeSec": 7776000,
         "reviewedReserveCompositionGraceSec": 604800
       }
     },
@@ -284,6 +356,8 @@
       "serialRequiredPathsAlwaysBind": true,
       "basketExposureTreatment": "proportional",
       "deploymentMaterialSharePct": 10,
+      "unresolvedDeploymentBlendStartSharePct": 5,
+      "unresolvedDeploymentFullCeilingSharePct": 15,
       "commonModeOracleMinBranches": 2,
       "commonControlMinAssets": 2,
       "commonControlMinPaths": 2,
@@ -310,11 +384,32 @@
         "failed": 10
       },
       "boundedUnknownQuality": 35,
+      "reserveScope": {
+        "crossChainObservationMaxSkewSec": 120,
+        "maxFutureSkewSec": 0,
+        "financialMethodQuality": { "audit": "strong", "examination": "strong", "review": "adequate", "attestation": "adequate", "agreed-upon-procedures": "adequate" },
+        "observationKinds": ["portfolio-observation", "onchain-observation", "standing-structure"],
+        "liabilityExclusionKinds": ["frozen", "treasury", "pending-redemption", "legacy", "other"],
+        "admissionRejectionCodes": ["unverified", "future-evidence", "expired", "identity-mismatch", "denominator-incomplete", "checkpoint-mismatch", "financial-method-ineligible", "current-partition-unavailable", "exclusion-unresolved", "overlapping-scope", "block-skew", "structure-not-whole-claim"],
+        "standingEvidenceClass": "static-validated",
+        "unknownResidualTreatment": "bounded-unknown"
+      },
       "assuranceSeasonedCredit": {
         "points": 3,
         "minMonths": 60
       },
       "reserve": {
+        "maxUnclassifiedCuratedResidualPct": 0.1,
+        "boundedFacts": {
+          "factKinds": ["contractual-maturity-maximum", "observed-portfolio-maturity", "eligibility-envelope", "currently-liquid-fraction", "maturity-applicability", "stressed-realization-bound"],
+          "scopeKinds": ["reserve-envelope", "exposure", "sub-instrument"],
+          "termUnits": ["days", "calendar-months"],
+          "observedMaturityQualityLevel": "limited",
+          "currentAvailabilityQualityLevel": "limited",
+          "currentLiquidFractionMaxAgeSec": 10800,
+          "requireExhaustiveEligibility": true,
+          "requireStressedFinalSettlement": true
+        },
         "assetClassQuality": {
           "cash": 98,
           "bank-deposit": 88,
@@ -484,6 +579,7 @@
       "archetypes": {
         "fiat-cash": {
           "reserveWeight": 0.55,
+          "allowCompleteLiveParentMechanismBypass": true,
           "componentWeights": {
             "claim-and-segregation": 0.18,
             "custody-continuity": 0.12,
@@ -506,6 +602,7 @@
         },
         "commodity-claim": {
           "reserveWeight": 0.55,
+          "allowCompleteLiveParentMechanismBypass": true,
           "componentWeights": {
             "title-and-allocation": 0.15,
             "custody-continuity": 0.1,
@@ -529,6 +626,7 @@
         },
         "tbill": {
           "reserveWeight": 0.35,
+          "allowCompleteLiveParentMechanismBypass": true,
           "componentWeights": {
             "fund-claim-and-seniority": 0.2,
             "nav-valuation": 0.15,
@@ -552,6 +650,7 @@
         },
         "cdp": {
           "reserveWeight": 0.4,
+          "allowCompleteLiveParentMechanismBypass": true,
           "componentWeights": {
             "collateralization-parameters": 0.12,
             "liquidation-mechanics": 0.15,
@@ -582,6 +681,7 @@
         },
         "synthetic-delta-neutral": {
           "reserveWeight": 0.3,
+          "allowCompleteLiveParentMechanismBypass": true,
           "componentWeights": {
             "venue-and-custody": 0.08,
             "hedge-reconciliation": 0.15,
@@ -612,6 +712,7 @@
         },
         "algorithmic": {
           "reserveWeight": 0.25,
+          "allowCompleteLiveParentMechanismBypass": true,
           "componentWeights": {
             "contraction-capacity": 0.2,
             "confidence-and-incentives": 0.2,
@@ -636,6 +737,7 @@
         },
         "rwa-credit-fund": {
           "reserveWeight": 0.4,
+          "allowCompleteLiveParentMechanismBypass": true,
           "componentWeights": {
             "credit-quality": 0.15,
             "seniority": 0.1,
@@ -663,10 +765,96 @@
               "severity": "high"
             }
           }
+        },
+        "ucits-trs-fund": {
+          "reserveWeight": 0.35,
+          "allowCompleteLiveParentMechanismBypass": false,
+          "componentWeights": {
+            "fund-claim-and-segregation": 0.15,
+            "nav-and-reconciliation": 0.1,
+            "portfolio-hedge": 0.1,
+            "counterparty-and-collateral": 0.1,
+            "custody-continuity": 0.1,
+            "default-recovery": 0.1
+          },
+          "serialComponentKeys": ["fund-claim-and-segregation"],
+          "structuralComponents": {
+            "fund-claim-and-segregation": { "kind": "unsafe-backing", "severity": "critical" },
+            "custody-continuity": { "kind": "unsafe-backing", "severity": "high" },
+            "default-recovery": { "kind": "unsafe-backing", "severity": "high" }
+          }
+        },
+        "shared-reserve": {
+          "reserveWeight": 0.4,
+          "allowCompleteLiveParentMechanismBypass": false,
+          "componentWeights": {
+            "holder-claim": 0.15,
+            "liability-conservation": 0.15,
+            "reserve-custody": 0.1,
+            "encumbrance-and-allocation": 0.1,
+            "default-recovery": 0.1
+          },
+          "serialComponentKeys": ["holder-claim"],
+          "structuralComponents": {
+            "holder-claim": { "kind": "unsafe-backing", "severity": "critical" },
+            "reserve-custody": { "kind": "unsafe-backing", "severity": "high" },
+            "default-recovery": { "kind": "unsafe-backing", "severity": "high" }
+          }
+        },
+        "protocol-position": {
+          "reserveWeight": 0.4,
+          "allowCompleteLiveParentMechanismBypass": false,
+          "componentWeights": {
+            "holder-claim": 0.15,
+            "liability-conservation": 0.15,
+            "position-custody": 0.1,
+            "encumbrance-and-allocation": 0.1,
+            "default-recovery": 0.1
+          },
+          "serialComponentKeys": ["holder-claim"],
+          "structuralComponents": {
+            "holder-claim": { "kind": "unsafe-backing", "severity": "critical" },
+            "position-custody": { "kind": "unsafe-backing", "severity": "high" },
+            "default-recovery": { "kind": "unsafe-backing", "severity": "high" }
+          }
         }
       }
     },
     "exit": {
+      "executionModels": {
+        "orderbook": {
+          "admission": "enabled",
+          "requiredGates": ["market-identity", "account", "deposit", "withdrawal", "fees", "settlement"],
+          "exactRequestRequired": true,
+          "sourceMaxAgeSec": 300,
+          "priceMaxAgeSec": 300,
+          "futureSkewSec": 60,
+          "permittedBases": ["exhaustive-book-walk", "observed-prefix-book-walk"],
+          "maximumCertification": "exact-complete"
+        },
+        "securitize-offramp": {
+          "admission": "enabled",
+          "requiredGates": ["implementation", "holder-eligibility", "holds", "provider-eligibility", "inventory", "allowance", "fees", "min-output", "execution", "settlement"],
+          "exactRequestRequired": true,
+          "sourceMaxAgeSec": 300,
+          "priceMaxAgeSec": 300,
+          "futureSkewSec": 60,
+          "permittedBases": ["transaction-simulation"],
+          "maximumCertification": "exact-lower-bound"
+        },
+        "mento-broker": { "admission": "research-only", "requiredGates": ["execution", "trading-limits", "oracle", "breaker", "fees", "settlement"], "exactRequestRequired": true, "sourceMaxAgeSec": 300, "priceMaxAgeSec": 300, "futureSkewSec": 60, "permittedBases": ["transaction-simulation"], "maximumCertification": "diagnostic" },
+        "cdp-holder-redemption": { "admission": "research-only", "requiredGates": ["execution", "holder-right", "debt", "fees", "settlement"], "exactRequestRequired": true, "sourceMaxAgeSec": 300, "priceMaxAgeSec": 300, "futureSkewSec": 60, "permittedBases": ["transaction-simulation"], "maximumCertification": "diagnostic" },
+        "erc4626-realizable": { "admission": "research-only", "requiredGates": ["execution", "liquidity", "fees", "settlement"], "exactRequestRequired": true, "sourceMaxAgeSec": 300, "priceMaxAgeSec": 300, "futureSkewSec": 60, "permittedBases": ["transaction-simulation"], "maximumCertification": "diagnostic" },
+        "stable-basket-withdraw": { "admission": "research-only", "requiredGates": ["execution", "every-output-leg", "fees", "settlement"], "exactRequestRequired": true, "sourceMaxAgeSec": 300, "priceMaxAgeSec": 300, "futureSkewSec": 60, "permittedBases": ["transaction-simulation"], "maximumCertification": "diagnostic" },
+        "conditional-holder-redemption": { "admission": "research-only", "requiredGates": ["execution", "holder-right", "quota", "liquidity", "fees", "settlement"], "exactRequestRequired": true, "sourceMaxAgeSec": 300, "priceMaxAgeSec": 300, "futureSkewSec": 60, "permittedBases": ["transaction-simulation"], "maximumCertification": "diagnostic" },
+        "funded-queue": { "admission": "research-only", "requiredGates": ["funded-claim", "nav", "fees", "completion-maximum"], "exactRequestRequired": true, "sourceMaxAgeSec": 300, "priceMaxAgeSec": 300, "futureSkewSec": 60, "permittedBases": ["funded-claim"], "maximumCertification": "diagnostic" },
+        "bridge-withdrawal": { "admission": "research-only", "requiredGates": ["initiation", "proof", "finalization", "destination-liquidity", "fees", "settlement"], "exactRequestRequired": true, "sourceMaxAgeSec": 300, "priceMaxAgeSec": 300, "futureSkewSec": 60, "permittedBases": ["funded-claim"], "maximumCertification": "diagnostic" },
+        "rate-bearing-balancer": { "admission": "research-only", "requiredGates": ["execution", "rate", "transfer", "fees", "settlement"], "exactRequestRequired": true, "sourceMaxAgeSec": 300, "priceMaxAgeSec": 300, "futureSkewSec": 60, "permittedBases": ["transaction-simulation"], "maximumCertification": "diagnostic" },
+        "stableswap-underlying": { "admission": "research-only", "requiredGates": ["execution", "underlying-identity", "rate", "fees", "settlement"], "exactRequestRequired": true, "sourceMaxAgeSec": 300, "priceMaxAgeSec": 300, "futureSkewSec": 60, "permittedBases": ["transaction-simulation"], "maximumCertification": "diagnostic" },
+        "saucerswap": { "admission": "research-only", "requiredGates": ["execution", "pool-identity", "transfer", "fees", "settlement"], "exactRequestRequired": true, "sourceMaxAgeSec": 300, "priceMaxAgeSec": 300, "futureSkewSec": 60, "permittedBases": ["transaction-simulation"], "maximumCertification": "diagnostic" },
+        "documented-cash-or-physical": { "admission": "research-only", "requiredGates": ["holder-right", "fees", "limits", "settlement", "usd-endpoint"], "exactRequestRequired": true, "sourceMaxAgeSec": 7776000, "priceMaxAgeSec": 86400, "futureSkewSec": 60, "permittedBases": ["documented-only"], "maximumCertification": "diagnostic" },
+        "migration": { "admission": "research-only", "requiredGates": ["recipient", "entitlement", "fees", "capacity", "settlement"], "exactRequestRequired": true, "sourceMaxAgeSec": 300, "priceMaxAgeSec": 300, "futureSkewSec": 60, "permittedBases": ["transaction-simulation", "funded-claim"], "maximumCertification": "diagnostic" }
+      },
       "stressRequest": {
         "notionalGridUsd": [
           100000,
@@ -680,6 +868,48 @@
         "capUsd": 25000000,
         "maxCostBps": 200,
         "settlementHorizonSec": 300
+      },
+      "physicalToUsd": {
+        "maxCostBps": 500,
+        "undocumentedThroughputLotsPerSettlementWindow": 1,
+        "termsMaxAgeSec": 7776000,
+        "metalPriceMaxAgeSec": 86400,
+        "modelledSaleTypicalBusinessDays": 2,
+        "inVaultTaxBps": 0,
+        "deliveredTaxBps": {
+          "london": { "XAU": 0, "XAG": 2000 },
+          "zurich": { "XAU": 0, "XAG": 810 },
+          "singapore": { "XAU": 0, "XAG": 0 },
+          "hong-kong": { "XAU": 0, "XAG": 0 },
+          "eu": { "XAU": 0, "XAG": 2000 },
+          "other": { "XAU": 0, "XAG": 2000 }
+        },
+        "taxExemptionMinimumFineness": { "singapore": { "XAU": 0.995, "XAG": 0.999 }, "otherGold": 0.995 },
+        "unqualifiedTaxBps": 2000,
+        "deliveredLogistics": {
+          "good-delivery": { "deliveryUsdPerLot": 3000, "insuranceBps": 100, "assayUsdPerLot": 1000 },
+          "kilobar": { "deliveryUsdPerLot": 500, "insuranceBps": 100, "assayUsdPerLot": 100 },
+          "small-bar-or-coin": { "deliveryUsdPerLot": 100, "insuranceBps": 100, "assayUsdPerLot": 50 }
+        },
+        "vagueTypicalBusinessDays": { "several-business-days": 7 },
+        "assumptions": {
+          "typicalTimeMultiplier": 3,
+          "minimumBusinessDays": 10,
+          "maximumBusinessDays": 30,
+          "issuerFeeBps": 100,
+          "conversionBps": 50,
+          "unknownFixedUsd": 100
+        },
+        "saleSpreadBps": {
+          "good-delivery": { "primaryVault": 100, "otherVault": 200 },
+          "kilobar": { "primaryVault": 200, "otherVault": 300 },
+          "small-bar-or-coin": { "primaryVault": 400, "otherVault": 500 }
+        },
+        "silverSaleSpreadBps": {
+          "good-delivery": { "primaryVault": 100, "otherVault": 200 },
+          "kilobar": { "primaryVault": 300, "otherVault": 400 },
+          "small-bar-or-coin": { "primaryVault": 800, "otherVault": 900 }
+        }
       },
       "componentWeights": {
         "access": 0.2,
@@ -855,6 +1085,7 @@
       "holderEligibilityMultipliers": {
         "any-holder": 1,
         "verified-customer": 0.9,
+        "verified-customer-neutral": 1,
         "whitelisted-primary": 0.85,
         "pre-incident-holder": 0.85,
         "issuer-discretionary": 0.6,
@@ -866,6 +1097,19 @@
       "undisclosedFeeRouteScoreCeiling": 52
     },
     "control": {
+      "exactScope": {
+        "activationStates": ["active", "counterfactual", "disabled-reactivatable", "disabled-final", "unknown"],
+        "entrypointKinds": ["evm-selector", "solana-instruction", "xrpl-transaction"],
+        "callModes": ["call", "delegatecall", "native"],
+        "reachStates": ["root", "deployment", "other-liability", "unknown"],
+        "moduleImpactStates": ["relevant", "verified-noninterfering", "unresolved", "not-applicable"],
+        "weightedSchemes": ["xrpl", "contract"],
+        "admissionRule": "complete-execution-proof",
+        "latentPowerRule": "reachable-worst-path",
+        "moduleRule": "verified-noninterference-waives-presence-only",
+        "weightedRule": "minimum-signatures-no-independence-credit",
+        "issuedCurrencyAmount": { "significantDigits": 16, "minExponent": -96, "maxExponent": 80, "maxInputLength": 256 }
+      },
       "mintPostureQuality": {
         "none-resolved": 100,
         "bounded-admin": 85,
@@ -982,7 +1226,7 @@
           "low": null,
           "moderate": 74,
           "high": 59,
-          "critical": 39
+          "critical": null
         },
         "active-control-incident": {
           "low": 84,
@@ -1638,6 +1882,23 @@
       "defaultTreatment": "ceiling",
       "releaseSeverity": "review-required",
       "publicLabel": "Oracle and liquidation profile is missing",
+      "auditClassification": "missing-data",
+      "ceilingRule": {
+        "source": "named-ceiling",
+        "key": "oracle-unverified"
+      }
+    },
+    {
+      "code": "oracle-topology-undisclosed",
+      "ownerDomain": "control",
+      "archetypes": ["*"],
+      "pathKinds": ["local-component"],
+      "defaultFactClass": "missing-global-bounded",
+      "boundedness": "globally-bounded",
+      "permittedTreatments": ["ceiling"],
+      "defaultTreatment": "ceiling",
+      "releaseSeverity": "review-required",
+      "publicLabel": "The issuer has not disclosed the oracle topology",
       "auditClassification": "missing-data",
       "ceilingRule": {
         "source": "named-ceiling",

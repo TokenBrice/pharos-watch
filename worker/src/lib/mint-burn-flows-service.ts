@@ -10,7 +10,7 @@ import { decodeJsonString } from "./cache-json";
 import { logMalformedJsonPath } from "./json-decode-observability";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
-import { CHAIN_META } from "@shared/lib/chains";
+import { CHAIN_META } from "@shared/types/chain-identity";
 import {
   addMintBurnValuationTally,
   emptyMintBurnValuationTally,

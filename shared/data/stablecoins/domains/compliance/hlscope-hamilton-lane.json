@@ -9,7 +9,7 @@
       },
       {
         "label": "SEC Form D: Hamilton Lane SCOPE Securitize Tokenized Feeder LP",
-        "url": "https://www.sec.gov/Archives/edgar/data/1976710/000197671023000001/0001976710-23-000001-index.htm"
+        "url": "https://www.sec.gov/Archives/edgar/data/1976710/000197671023000001/primary_doc.xml"
       },
       {
         "label": "Hamilton Lane: SCOPE available via Securitize",
@@ -30,9 +30,9 @@
         },
         {
           "label": "SEC Form D: Hamilton Lane SCOPE Securitize Tokenized Feeder LP",
-          "url": "https://www.sec.gov/Archives/edgar/data/1976710/000197671023000001/0001976710-23-000001-index.htm",
+          "url": "https://www.sec.gov/Archives/edgar/data/1976710/000197671023000001/primary_doc.xml",
           "sourceKind": "issuer-filing",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-01"
         }
       ]
     },
@@ -54,10 +54,10 @@
       },
       {
         "label": "SEC Form D: Hamilton Lane SCOPE Securitize Tokenized Feeder LP",
-        "url": "https://www.sec.gov/Archives/edgar/data/1976710/000197671023000001/0001976710-23-000001-index.htm",
+        "url": "https://www.sec.gov/Archives/edgar/data/1976710/000197671023000001/primary_doc.xml",
         "sourceKind": "issuer-filing",
-        "sourceDate": "2023-01-03",
-        "accessedAt": "2026-08-14"
+        "sourceDate": "2023-05-16",
+        "accessedAt": "2026-10-01"
       },
       {
         "label": "Hamilton Lane: SCOPE available via Securitize",

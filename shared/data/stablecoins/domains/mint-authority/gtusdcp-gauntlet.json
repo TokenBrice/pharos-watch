@@ -4,7 +4,7 @@
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "gtUSDCp has three independent immutable Morpho vault deployments on Ethereum, Base, and Arbitrum; local ERC-4626 shares mint only against each chain's USDC deposits. The inherited Ethereum USDC MasterMinter remains parent exposure from usdc-circle and does not mint gtUSDCp shares or replace vault bytecode; no bridge representation is included in Mint Authority.",
+    "summary": "gtUSDCp has three independent immutable Morpho vault deployments on Ethereum, Base and Arbitrum. Depositors receive shares for chain-local USDC, and the contracts can also mint fee shares during accrual. The inherited USDC MasterMinter remains parent exposure, not authority to mint vault shares or replace vault bytecode.",
     "inheritedFrom": "usdc-circle",
     "upgradeability": {
       "model": "immutable",
@@ -36,14 +36,14 @@
         "deploymentRefs": [
           "ethereum:0x8c106eedad96553e64287a5a6839c3cc78afa3d0"
         ],
-        "label": "Gauntlet USDC Prime MetaMorpho V2 vault Ethereum (immutable, deposit-only mint)",
+        "label": "Gauntlet USDC Prime Vault V2 Ethereum (immutable share accounting)",
         "role": "wrapper",
         "authorityType": "contract",
         "directMintAbility": "none",
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-13",
         "observedBlock": 25527215,
-        "capDescription": "Vault shares minted only against deposited USDC. No EIP-1967 proxy slots. The vault is immutable. Owner (0xc684c6587712e5e7bdf9fd64415f23bd2b05faec) is the Gauntlet Safe 4/7 managing parameters only.",
+        "capDescription": "User shares are issued against deposited USDC; the contract also mints accrued performance and management fee shares. The verified immutable vault does not give its owner a direct arbitrary share-mint function. Owner 0xc684c6587712e5e7bdf9fd64415f23bd2b05faec is a 4-of-7 Safe.",
         "sources": [
           {
             "label": "Morpho vault page",
@@ -62,12 +62,12 @@
         "deploymentRefs": [
           "base:0xee8f4ec5672f09119b96ab6fb59c27e1b7e44b61"
         ],
-        "label": "Gauntlet USDC Prime MetaMorpho vault Base (immutable, deposit-only mint)",
+        "label": "Gauntlet USDC Prime MetaMorpho Base (immutable share accounting)",
         "role": "wrapper",
         "authorityType": "contract",
         "directMintAbility": "none",
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "Vault shares mint only against deposited Base USDC. Owner 0x5a4e19842e09000a582c20a4f524c26fb48dd4d0 is a 4-of-7 Gauntlet Safe that manages parameters but cannot replace the immutable vault bytecode.",
+        "capDescription": "User shares are issued against deposited Base USDC; the contract also mints accrued performance fee shares. Owner 0x5a4e19842e09000a582c20a4f524c26fb48dd4d0 is a 4-of-7 Safe that manages parameters but cannot replace the immutable vault bytecode.",
         "observedAt": "2026-07-13",
         "observedBlock": 48599296,
         "sources": [
@@ -84,12 +84,12 @@
         "deploymentRefs": [
           "arbitrum:0x7c574174da4b2be3f705c6244b4bfa0815a8b3ed"
         ],
-        "label": "Gauntlet USDC Prime MetaMorpho vault Arbitrum (immutable, deposit-only mint)",
+        "label": "Gauntlet USDC Prime MetaMorphoV1_1 Arbitrum (immutable share accounting)",
         "role": "wrapper",
         "authorityType": "contract",
         "directMintAbility": "none",
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "Vault shares mint only against deposited Arbitrum USDC. Owner 0x5a4e19842e09000a582c20a4f524c26fb48dd4d0 is a 3-of-7 Gauntlet Safe that manages parameters but cannot replace the immutable vault bytecode.",
+        "capDescription": "User shares are issued against deposited Arbitrum USDC; the contract also mints accrued performance fee shares. Owner 0x5a4e19842e09000a582c20a4f524c26fb48dd4d0 is a 3-of-7 Safe that manages parameters but cannot replace the immutable vault bytecode.",
         "observedAt": "2026-07-13",
         "observedBlock": 483587934,
         "sources": [
@@ -112,13 +112,15 @@
         "authorityType": "contract",
         "directMintAbility": "can-authorize",
         "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095807,
         "sources": [
           {
             "label": "Reviewed USDC metadata source",
             "url": "https://github.com/circlefin/stablecoin-evm"
           }
         ],
-        "evidence": "Inherited from reviewed usdc-circle parent."
+        "evidence": "At Ethereum block 26095807, the vault asset() returned USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 and USDC.masterMinter() returned 0xe982615d461dd5cd06575bbea87624fda4e3de17. This parent-issuer control does not mint vault shares or replace vault bytecode."
       }
     ],
     "economicCapSemantics": "bounded",
@@ -156,9 +158,9 @@
           "url": "https://www.dfs.ny.gov/virtual_currency_businesses"
         }
       ],
-      "evidence": "The full three-chain inventory was checked independently: Ethereum at block 25527215, Base at block 48599296, and Arbitrum at block 483587934. Every verified direct vault had zero EIP-1967 implementation, admin, and beacon slots and returned the chain-local native USDC as asset(). Ethereum owner 0xc684c6587712e5e7bdf9fd64415f23bd2b05faec and Base owner 0x5a4e19842e09000a582c20a4f524c26fb48dd4d0 were 4-of-7 Safes; the same Arbitrum owner address was 3-of-7. All three had no modules or guard. Owners can curate vault parameters but cannot replace vault bytecode or mint base USDC. The inherited Ethereum USDC MasterMinter control is parent exposure from usdc-circle, scoped to the Ethereum native vault route; it cannot mint gtUSDCp shares without a USDC deposit or replace any gtUSDCp vault bytecode. No bridge representation or bridge controller is included in Mint Authority. Economic-control evidence reviewed 2026-07-15: each immutable MetaMorpho deployment can mint shares only against deposited native USDC; the inherited base issuer publishes monthly Deloitte reserve examinations. The latest USDC report covers May 2026, and the NYDFS list matches Circle Internet Financial, LLC. M-2 evidence review 2026-08-08: supervision and reconciliation downgraded to the wrapper-level convention (steakusdc precedent) - the coin's issuer of record is the vault curator, which no named prudential regime supervises (jurisdiction is correspondingly empty), and the deposit-only share wrapper is not a separate issuer reserve regime. Circle's NYDFS supervision and monthly Deloitte examinations are facts of the underlying USDC, credited on usdc-circle, not of this wrapper. Economic-posture fields reviewed 2026-08-15: all three immutable vaults mint shares only against chain-local USDC deposits, with no local attestation or prudential regime.",
-      "reviewer": "Codex Safety Score V9 registry pass; Sol economic-posture batch 2026-08-15; Codex mint/bridge boundary migration 2026-08-16",
-      "reviewedAt": "2026-08-16"
+      "evidence": "Historical inventory review at Ethereum block 25527215, Base block 48599296 and Arbitrum block 483587934 is retained in the individual controls. Re-verification on 2026-10-01 at Ethereum block 26095807, Base block 52024171 and Arbitrum block 510584559 confirms zero corrected EIP-1967 implementation, admin and beacon slots, native chain-local USDC asset(), unchanged owners, owner Safe configurations of 4-of-7, 4-of-7 and 3-of-7 respectively, and no enabled modules or guard. Exact verified sources identify Ethereum VaultV2, Base MetaMorpho and Arbitrum MetaMorphoV1_1, not three MetaMorpho V2 instances. Depositor shares require assets, but accrual can separately mint fee shares; this does not grant arbitrary privileged share issuance. At the pinned Ethereum block, underlying USDC.masterMinter() matches the inherited control; it cannot mint vault shares or replace vault bytecode. Circle's reserve examinations and supervision remain parent evidence, not a wrapper attestation or prudential regime. The May 2026 USDC report cited below is historical and is not represented as the latest report. Wrapper-level reconciliation and supervision remain not-applicable and none.",
+      "reviewer": "Sol curation pass 2026-10-01 (CurA57DOLA)",
+      "reviewedAt": "2026-10-01"
     }
   }
 }

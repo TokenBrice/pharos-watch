@@ -9,16 +9,16 @@
     "governance": "centralized",
     "rwa": true
   },
-  "collateral": "Each GGBR token represents 1/1000th of a troy ounce of gold held by the GGBR Trust: 1,000,000 troy ounces of in-situ gold from the Happy 2 claims (Pinal County, Arizona), independently verified under NI 43-101 / S-K 1300 standards by a Qualified Person, with roughly 40:1 coverage against 25,000,000 GGBR outstanding (issuer collateral page, read 2026-09-04).",
-  "pegMechanism": "GGBR price tracks the LBMA Gold Spot Price in real time at 1/1000th of a troy ounce per token; supply is created and redeemed through issuer-controlled mint/redeem contracts, with physical gold redemption available through regulated precious-metals dealers and on-chain proof-of-reserve oracles for collateral verification",
+  "collateral": "The issuer states that each GGBR represents 1/1000th of a troy ounce and that the GGBR Trust holds 1,000,000 troy ounces of in-situ Happy 2 gold in Pinal County, Arizona for token-holder beneficiaries. It claims NI 43-101 / S-K 1300 verification and roughly 40:1 coverage against 25,000,000 tokens; the underlying dated geological report, trust deed and title/lien records were not obtained from the reviewed public pages.",
+  "pegMechanism": "Issuer-targeted gold spot exposure at 1/1000th of a troy ounce per GGBR, supported by advertised oracle price feeds, managed liquidity and arbitrage, with physical gold redemption advertised through regulated dealers. GGBR minting is issuer-controlled through the GoldfishTokenFactory; the deployed factory's gold-reserve verification and allocation checks are commented out, so its mint path does not enforce those reserve checks.",
   "mechanismArchetype": "commodity-claim",
   "commodityOunces": 0.001,
   "detailProvider": "commodity",
   "geckoId": "goldfish-gold",
   "proofOfReserves": {
-    "type": "real-time",
+    "type": "self-reported",
     "url": "https://goldfishgold.com/collateral",
-    "provider": "Goldfish designated collateral wallet on Ethereum (proves only a related-party ION.au token balance versus GGBR supply; underlying in-situ gold quantity and extractability are not independently attested)",
+    "provider": "Goldfish issuer collateral disclosure and live wallet/supply comparison; the reviewed page states 1,000,000 troy ounces of in-situ Happy 2 gold but does not publish a dated token-specific reserve-to-liability engagement or the underlying geological and title reports",
     "attestorTier": "self",
     "cadence": "real-time"
   },

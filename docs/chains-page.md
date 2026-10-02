@@ -19,6 +19,7 @@ Contract for the public chain analytics surfaces:
 - **Primary API:** `GET /api/chains`
 - **Methodology version source:** `shared/lib/methodology-versions/registry.ts`
 - **Scoring implementation:** `shared/lib/chains/health.ts`, `shared/lib/chains/aggregator.ts`, `shared/lib/chains/index.ts`
+- **Chain registry and identity:** `shared/types/chain-identity.ts` owns `CHAIN_META`, chain types, and display-name/alias normalization; `shared/lib/chains/index.ts` owns derived provider maps and resilience tiers.
 - **Shared chain UI helpers:** `src/lib/chain-ui.ts` (formatting + health band color maps)
 - **Active chain derivation:** `getActiveChainIds()` in `shared/lib/chains/index.ts`
 
@@ -28,7 +29,7 @@ The leaderboard is public and indexable. The profile routes are statically gener
 
 `CHAIN_META` membership is not only a display concern. `resolveChainId()` is what turns a raw DefiLlama supply label into a canonical chain identity, so an unregistered label is pooled into the Safety Score V9 uncanonicalized-chain-label row (`worker/src/lib/safety-score-v9/extension-supply.ts`). Above the common-mode materiality floor that pool fails closed into `unresolved-control-identity`, no matter how well the asset's other deployments are reviewed. Registering a chain is therefore the precondition for attributing its supply — it names the chain, but a reviewed `bridgeRouteRisk` route for that chain is still what clears the residual.
 
-The most recent registration is Arc (`arc`, EVM chain 5042, explorer `https://arc.etherscan.io`, logged into `CHAIN_RESILIENCE_TIER` as tier 3). It resolves the DefiLlama `Arc` label so USDC and EURC deployments there are attributed through their reviewed native routes (`arc:0x3600…` and `arc:0xbef5…`) instead of the unmatched-label pool, and it has no `providers` block yet, so its deployments record the DEX census `unsupported_scope` reason (`DEX_DISCOVERY_UNSUPPORTED_SCOPE_REASON`: "No registered token-pool provider supports this chain") instead of a pool query that cannot run. Registration attributes supply and names the chain; it does not create DEX liquidity evidence.
+The most recent registration is Zilliqa (`zilliqa`, `type: "other"`, no EVM chain ID, explorer `https://viewblock.io/zilliqa`, explicit resilience tier 2). This registration identifies Scilla/ZRC-2 deployments, not Zilliqa's separate EVM interface. The DefiLlama `Zilliqa` label resolves through the registry name without a redundant alias, joining XSGD supply to its issuer-native route and eight reviewed controls. XSGD uses the issuer's `zil1…` token address; native control identities retain RPC `0x…` ByStr20 addresses. The supply-probe family resolver rejects both address forms because this chain is non-EVM and has no native supply reader. With no `providers` block, DEX census records `unsupported_scope` (`DEX_DISCOVERY_UNSUPPORTED_SCOPE_REASON`: "No registered token-pool provider supports this chain"), not a failed EVM/pool query or liquidity evidence. Control evidence is a dated latest-state observation bracketed by native tx-block heights, never a historical state pin. Arc remains registered as `arc` (EVM 5042, resilience tier 3), likewise without pool providers.
 
 ---
 

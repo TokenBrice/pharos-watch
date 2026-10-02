@@ -150,18 +150,15 @@
     "providers": [
       {
         "name": "Falcon-controlled multisig wallets",
-        "role": "other",
-        "sharePct": 95.4
+        "role": "other"
       },
       {
         "name": "Ceffu",
-        "role": "custodian",
-        "sharePct": 2.5
+        "role": "custodian"
       },
       {
         "name": "Fireblocks",
-        "role": "custodian",
-        "sharePct": 2
+        "role": "custodian"
       }
     ],
     "segregation": "unknown",
@@ -184,7 +181,7 @@
         "url": "https://app.falcon.finance/transparency"
       }
     ],
-    "uncertainty": "The issuer's live transparency API attributes each reserve asset to three custody venues; at the 2026-07-17 snapshot roughly 95.4% sat in Falcon-labelled multisig wallets, 2.6% at Ceffu, and 2.1% at Fireblocks (venue shares shift over time). Falcon states that Fireblocks and Ceffu provide MPC custody and off-exchange settlement, but the reviewed sources do not establish account-level segregation, insolvency treatment, or signer structure, and reserve assets are actively deployed into trading and yield strategies, so reuse is inherent to the strategy.",
+    "uncertainty": "The 2026-07-20 review recorded provider shares of 95.4% for Falcon-controlled multisig wallets, 2.5% for Ceffu and 2% for Fireblocks; these are historical review values, not current allocations. The issuer API's 2026-09-30 snapshot reports per-asset ceffu, multisig and fireblocks balance labels, additional reserve venue labels, and an empty venues object, without establishing current legal custody-provider shares. Falcon names Fireblocks and Ceffu for MPC custody and off-exchange settlement, but the reviewed sources do not establish current account-level segregation, insolvency treatment or signer structure. Assets remain actively deployed into trading and yield strategies; no protective custody-field upgrade is inferred.",
     "knownUnknownExposurePct": 0
   }
 }

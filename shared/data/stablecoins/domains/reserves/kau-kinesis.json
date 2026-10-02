@@ -20,8 +20,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-11",
-    "reviewer": "PoR verification sweep 2026-08 (lockstep coherent refresh: report and composition review updated together from the same artefact); coverage-scope review 2026-09-11",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA29KAU): standing reserve structure and disclosed native-KAU wallet; no newly dated composition report",
     "confidence": "verified",
     "sources": [
       {
@@ -43,9 +43,8 @@
     ],
     "rationale": "KMS Labs states each ERC-20 KAU is backed 1:1 by Kinesis-native KAU held in segregated wallets maintained by KMS Labs; native KAU's allocated physical-gold backing is a second-layer asset and not the ERC-20 token's direct reserve. Coverage scope measured 2026-09-11: the Chainlink PoR feed's answer (2,567,133.466 with 18 decimals) is the audited Kinesis Cayman fine-gold balance, and the issuer reconciles that balance against Kinesis-native KAU circulation (2,565,133.465 at audit ledger 43137668 on 2026-04-20; 3,987,303.5292 at ledger 45450621 on 2026-09-10), not against any single-chain token supply. The only registry-readable KAU deployment is the Ethereum ERC-20 wrapper 0x14dab79fd7b7b3f748d434812fd6a9aac460ea52 (1,640,000 totalSupply at 2026-09-11, 88.96% of it in one address), which the bridge review and mint-authority review both classify as a KMS Labs representation of native KAU. That wrapper supply is therefore a subset of the native-chain liability the feed covers, so comparing the two produced the artefactual 156.53% over-coverage; the live config declares `incompleteSupplyScope` and publishes no ratio.",
     "compositionBasis": "KMS Labs ERC-20 KAU backing and reserve-wallet disclosure, including terms section 8",
-    "compositionAsOf": "2026-09-04",
     "scope": "full-composition",
-    "knownUnknownExposure": "The direct reserve is identified as native KAU, but the reviewed disclosure does not publish a current ERC-20-to-native-KAU balance reconciliation, wallet balance, or independent digital-asset custodian.",
+    "knownUnknownExposure": "The direct reserve is identified as native KAU. KMS Labs links reserve wallet GAJ6XIVDKRHVMYF5ZUDDJCX755F25JXGIAWX4JO2OUHC4B2XHVTA6ERC, whose API returned 1,640,000.0992650 native KAU with last modification at ledger 44502076 on 2026-07-13. This is an account observation, not an independent, simultaneous ERC-20 reserve-to-liability reconciliation; no independent digital-asset custodian is disclosed.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
@@ -80,8 +79,8 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-09-04",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA29KAU)",
     "confidence": "verified",
     "sources": [
       {
@@ -91,8 +90,12 @@
       {
         "label": "KMS Labs terms, segregation and custody clause",
         "url": "https://kmslabs.money/kms-labs-tcs/"
+      },
+      {
+        "label": "Kinesis native-KAU reserve wallet signer and threshold observation, October 1, 2026",
+        "url": "https://kau-mainnet.kinesisgroup.io/accounts/GAJ6XIVDKRHVMYF5ZUDDJCX755F25JXGIAWX4JO2OUHC4B2XHVTA6ERC"
       }
     ],
-    "uncertainty": "KMS Labs is disclosed as administrator of segregated native-KAU reserve wallets; no independent digital-asset custodian or wallet-level allocation is disclosed. ABX, Brinks, and Loomis are underlying native-KAU bullion custody context, not direct ERC-20 reserve custodians; statutory bankruptcy remoteness and rehypothecation prohibition are not established."
+    "uncertainty": "KMS Labs administers the segregated native-KAU reserve wallet linked on its website. The October 1, 2026 Kinesis account response lists four ed25519 signers of weight 3, a master-key weight of 0, and medium/high thresholds of 5; spending therefore requires at least two listed signers under the reported threshold configuration. Signer identity, independence, and MPC/HSM custody are not disclosed. Its terms expressly deny ERC-20 holders legal, equitable, or beneficial title to reserves and a trust or fiduciary relationship. ABX, Brinks, and Loomis describe underlying native-KAU bullion custody only. Independent ERC-20 reserve verification, statutory bankruptcy remoteness, and a rehypothecation prohibition are not established."
   }
 }

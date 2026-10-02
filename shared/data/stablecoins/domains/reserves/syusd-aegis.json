@@ -31,5 +31,39 @@
     "scope": "dependency-relationships",
     "knownUnknownExposure": "The linked YUSD backing is disclosed; dynamic reward accrual is not modeled as a separate reserve slice.",
     "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Ethereum sYUSD ERC-4626 vault 0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64 and its cooldown silo",
+        "role": "other"
+      },
+      {
+        "name": "BSC sYUSD ERC-4626 vault 0x24db057b19241eefb9b522e8627c293ed8f93af2",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurM06UTY); owner ruling D08 follow-up (OwnerFollowups)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Current Ethereum sYUSD verified implementation",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xb0c63bb1667b6e9215aee562af2957739b2676fe?fields=sources"
+      },
+      {
+        "label": "Ethereum sYUSD contract",
+        "url": "https://etherscan.io/address/0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64"
+      },
+      {
+        "label": "BSC sYUSD contract",
+        "url": "https://bscscan.com/address/0x24db057b19241eefb9b522e8627c293ed8f93af2#code"
+      }
+    ],
+    "uncertainty": "The onchain custodyModel describes wrapper-local custody of deposited YUSD in the Ethereum and BSC sYUSD vault contracts and the Ethereum cooldown silo. On 2026-10-01, asset() identified chain-local YUSD at Ethereum block 26098750 and BSC block 125134867; Ethereum totalAssets() exactly matched YUSD balanceOf(vault). The current Ethereum and BSC implementations reject rescueTokens when token == asset(), and ERC-4626 deposit/mint transfers the parent asset into the vault before minting shares. These implementation constraints do not remove the reviewed proxy-upgrade authority. Under owner ruling D08, YUSD's underlying strategy custody risk remains on yusd-aegis through the existing parent dependency; this wrapper review does not establish upstream custodians, allocations, segregation, bankruptcy protection, or reuse rights. No provider shares are inferred.",
+    "knownUnknownExposurePct": 100
   }
 }

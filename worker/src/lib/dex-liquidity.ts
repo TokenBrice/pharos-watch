@@ -9,7 +9,7 @@ import {
   classifyLiquidityEvidence,
   type LiquidityEvidenceClassification,
 } from "@shared/lib/dex-liquidity-evidence";
-import { canonicalExitRouteAssetKey } from "@shared/lib/exit-route-identity";
+import { canonicalExitRouteAssetKey } from "@shared/types/exit-route-identity";
 import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { parseJsonObject } from "./json-parse";
 

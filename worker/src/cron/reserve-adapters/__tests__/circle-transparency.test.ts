@@ -3,6 +3,11 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it, expect } from "vitest";
 import { adaptCircleTransparency } from "../circle-transparency";
+import {
+  buildReviewedReserveClassifications,
+  buildSafetyScoreV9ReviewedCuratedFallbackReserveRows,
+} from "../../../lib/safety-score-v9/extension-reserves";
+import type { V9ExtensionRegistryMeta } from "../../../lib/safety-score-v9/extension-shared";
 
 const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
 const CIRCLE_HTML = readFileSync(join(FIXTURES_DIR, "circle-usdc.html"), "utf8");
@@ -124,18 +129,16 @@ describe("adaptCircleTransparency", () => {
       sourceTimestamp: Date.UTC(2026, 7, 6) / 1000,
     });
     expect(result.slices).toEqual([
-      { sourceKey: "circle:usdc:treasuries-under-3m", name: "<3-Month U.S. Treasuries", pct: 71.9, risk: "very-low" },
-      { sourceKey: "circle:usdc:other-bank-deposits", name: "Other Bank Deposits", pct: 13.9, risk: "very-low" },
-      { sourceKey: "circle:usdc:sifi-deposits", name: "Deposits at Systemically Important Institutions", pct: 12.5, risk: "very-low" },
-      { sourceKey: "circle:usdc:overnight-reverse-treasury-repo", name: "Overnight Reverse Treasury Repo", pct: 1.7, risk: "very-low" },
+      { sourceKey: "circle:usdc:overnight-reverse-treasury-repo", name: "Overnight Reverse Treasury Repo", pct: 71.9, risk: "very-low" },
+      { sourceKey: "circle:usdc:bank-deposits", name: "Cash at Regulated Financial Institutions", pct: 15.6, risk: "very-low" },
+      { sourceKey: "circle:usdc:treasuries-under-3m", name: "<3-Month U.S. Treasuries", pct: 12.5, risk: "very-low" },
     ]);
   });
 
   it("normalizes current absolute-value EURC disclosures into percentages", () => {
     const result = adaptCircleTransparency(CIRCLE_HTML, "eurc");
     expect(result.slices).toEqual([
-      { sourceKey: "circle:eurc:other-bank-deposits", name: "Other Bank Deposits", pct: 98.6, risk: "very-low" },
-      { sourceKey: "circle:eurc:sifi-deposits", name: "Deposits at Systemically Important Institutions", pct: 1.4, risk: "very-low" },
+      { sourceKey: "circle:eurc:bank-deposits", name: "Cash at Regulated Financial Institutions", pct: 100, risk: "very-low" },
     ]);
   });
 
@@ -188,8 +191,7 @@ describe("adaptCircleTransparency", () => {
     });
     expect(result.warnings).toContainEqual(expect.objectContaining({ code: "circle-disclosure-timestamp-ambiguous" }));
     expect(result.slices).toEqual([
-      { sourceKey: "circle:eurc:other-bank-deposits", name: "Other Bank Deposits", pct: 98.6, risk: "very-low" },
-      { sourceKey: "circle:eurc:sifi-deposits", name: "Deposits at Systemically Important Institutions", pct: 1.4, risk: "very-low" },
+      { sourceKey: "circle:eurc:bank-deposits", name: "Cash at Regulated Financial Institutions", pct: 100, risk: "very-low" },
     ]);
   });
 
@@ -220,9 +222,9 @@ describe("adaptCircleTransparency", () => {
     const result = adaptCircleTransparency(html, "usdc");
 
     expect(result.slices).toEqual([
-      { sourceKey: "circle:usdc:treasuries-under-3m", name: "<3-Month U.S. Treasuries", pct: 70, risk: "very-low" },
-      { sourceKey: "circle:usdc:sifi-deposits", name: "Deposits at Systemically Important Institutions", pct: 20, risk: "very-low" },
-      { sourceKey: "circle:usdc:other-bank-deposits", name: "Other Bank Deposits", pct: 10, risk: "very-low" },
+      { sourceKey: "circle:usdc:overnight-reverse-treasury-repo", name: "Overnight Reverse Treasury Repo", pct: 70, risk: "very-low" },
+      { sourceKey: "circle:usdc:treasuries-under-3m", name: "<3-Month U.S. Treasuries", pct: 20, risk: "very-low" },
+      { sourceKey: "circle:usdc:bank-deposits", name: "Cash at Regulated Financial Institutions", pct: 10, risk: "very-low" },
     ]);
   });
 
@@ -237,5 +239,76 @@ describe("adaptCircleTransparency", () => {
 </canvas>
 `;
     expect(() => adaptCircleTransparency(html, "usdc")).toThrow(/layout-changed/);
+  });
+
+  it("matches the issuer chart's category wiring and retains bank shares outside score-bearing rows", () => {
+    const html = readFileSync(join(FIXTURES_DIR, "circle-transparency-2026-10-01.html"), "utf8");
+    const usdc = adaptCircleTransparency(html, "usdc");
+    expect(usdc.slices).toEqual([
+      { sourceKey: "circle:usdc:overnight-reverse-treasury-repo", name: "Overnight Reverse Treasury Repo", pct: expect.closeTo(37.68 / 75.5 * 100, 0), risk: "very-low" },
+      { sourceKey: "circle:usdc:treasuries-under-3m", name: "<3-Month U.S. Treasuries", pct: expect.closeTo(26.84 / 75.5 * 100, 0), risk: "very-low" },
+      { sourceKey: "circle:usdc:bank-deposits", name: "Cash at Regulated Financial Institutions", pct: expect.closeTo((9.48 + 1.5) / 75.5 * 100, 0), risk: "very-low" },
+    ]);
+    expect(usdc.metadata?.bankDepositBreakdown).toEqual({
+      sourceKey: "circle:usdc:bank-deposits", unit: "USD-billion", sifi: 9.48, other: 1.5,
+    });
+    const eurc = adaptCircleTransparency(html, "eurc");
+    expect(eurc.slices).toEqual([
+      { sourceKey: "circle:eurc:bank-deposits", name: "Cash at Regulated Financial Institutions", pct: 100, risk: "very-low" },
+    ]);
+    expect(eurc.metadata?.bankDepositBreakdown).toEqual({
+      sourceKey: "circle:eurc:bank-deposits", unit: "EUR-million", sifi: 402.12, other: 4.96,
+    });
+  });
+
+  it.each(["usdc", "eurc"])("joins %s aggregate bank cash to a period-matched fallback without inventing a bank split", (coinType) => {
+    const html = readFileSync(join(FIXTURES_DIR, "circle-transparency-2026-10-01.html"), "utf8");
+    const live = adaptCircleTransparency(html, coinType).slices;
+    const sourceKey = `circle:${coinType}:bank-deposits`;
+    const meta: V9ExtensionRegistryMeta = {
+      id: `${coinType}-circle`,
+      reserves: [{
+        sourceKey, name: "Examined aggregate net bank cash", pct: 100, risk: "very-low",
+        assetClass: "bank-deposit", issuerOrObligor: "Undisclosed regulated bank counterparties",
+        riskFactors: ["counterparty", "custody", "concentration"], liquidityHorizon: "immediate",
+      }],
+      reserveReview: {
+        reviewedAt: "2026-10-01", reviewer: "fixture", confidence: "verified",
+        sources: [{ label: "Dated examination", url: "https://example.com/august.pdf" }],
+        rationale: "Complete examined bank cash net of disclosed settlement adjustments",
+        compositionBasis: "Dated examination", compositionAsOf: "2026-08-31",
+        scope: "full-composition", knownUnknownExposure: "Bank counterparties undisclosed", knownUnknownExposurePct: 0,
+      },
+      proofOfReserves: {
+        type: "independent-audit", url: "https://example.com/transparency",
+        latestReport: {
+          periodEnd: "2026-08-31", assuranceMethod: "examination", scope: "assets-and-liabilities",
+          liabilityReconciliation: "full", reviewer: "fixture", confidence: "verified",
+          sources: [{ label: "Dated examination", url: "https://example.com/august.pdf" }],
+        },
+      },
+      liveReservesConfig: {
+        adapter: "circle-transparency", version: 2, semantics: "attestation-mix",
+        inputs: { primary: { kind: "http-html", url: "https://www.circle.com/transparency" } },
+        params: { coinType },
+      },
+    };
+    const clockSec = Date.UTC(2026, 9, 1, 12) / 1000;
+    const classifications = buildReviewedReserveClassifications(live, meta, clockSec);
+    const bank = classifications.find((row) => row.assetClass === "bank-deposit");
+    expect(bank).toMatchObject({
+      issuerOrObligorKey: "Undisclosed regulated bank counterparties",
+      riskFactors: ["concentration", "counterparty", "custody"],
+      failureDomains: [{ kind: "reserve-issuer", key: "Undisclosed regulated bank counterparties" }],
+    });
+    expect(buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(meta, clockSec)).toMatchObject({
+      evidenceClass: "static-validated", provenance: "curated-fallback", rows: meta.reserves,
+    });
+    expect(buildSafetyScoreV9ReviewedCuratedFallbackReserveRows({
+      ...meta, reserveReview: { ...meta.reserveReview!, compositionAsOf: "2026-09-24" },
+    }, clockSec)).toBeNull();
+    expect(buildSafetyScoreV9ReviewedCuratedFallbackReserveRows({
+      ...meta, reserveReview: { ...meta.reserveReview!, compositionAsOf: undefined },
+    }, clockSec)).toBeNull();
   });
 });

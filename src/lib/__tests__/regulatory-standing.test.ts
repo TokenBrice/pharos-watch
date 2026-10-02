@@ -152,6 +152,12 @@ describe("buildRegulatoryStandingView", () => {
     else expect(note).not.toContain("published");
   });
 
+  it("labels a conservative publication stand-in as signed, not published", () => {
+    const note = formatReserveReportNote({ ...REPORT, publishedAtBasis: "signed-date-standin" });
+    expect(note).toContain("period end 2026-06-30; signed 2026-07-29");
+    expect(note).not.toContain("published");
+  });
+
   it("qualifies an ambiguous legacy date by its review without claiming a latest report", () => {
     const note = formatReserveReportNote({
       ...REPORT,

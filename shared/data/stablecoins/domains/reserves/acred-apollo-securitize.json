@@ -31,9 +31,13 @@
       {
         "label": "Chainlink ACRED NAV feed",
         "url": "https://data.chain.link/feeds/ethereum/mainnet/acred-nav"
+      },
+      {
+        "label": "Apollo underlying fund June 30, 2026 semiannual report",
+        "url": "https://www.sec.gov/Archives/edgar/data/1676197/000139834426016399/fp0100670-1_ncsrs.htm"
       }
     ],
-    "rationale": "ACRED is an ERC-4626 feeder share into the Apollo Diversified Credit Fund, so the fund NAV, tracked live by the Chainlink ACRED NAV oracle that backs the configured reserve adapter, is the reserve asset. Securitize describes the fund as multi-strategy private credit (direct lending, structured credit, performing credit, and dislocated credit) without dated public position weights, so the NAV is retained as one classified fund-share slice with the internal allocation recorded as the known unknown.",
+    "rationale": "ACRED is a permissioned feeder share into Apollo Diversified Credit Fund; its Ethereum deployment uses Securitize DSToken rather than an ERC-4626 vault. The configured Chainlink NAV adapter values the fund-share reserve. The underlying fund's June 30, 2026 SEC report publishes a dated consolidated investment schedule and strategy allocations. Those underlying-fund figures do not establish the tokenized feeder's own dated allocation or cash balance, so the existing fund-share composition and date are retained without extrapolating a feeder-level split.",
     "compositionBasis": "Chainlink ACRED NAV oracle (the configured live-reserve surface) and Securitize fund disclosures",
     "compositionAsOf": "2026-07-20",
     "scope": "full-composition",
@@ -45,7 +49,7 @@
         "reserveName": "Apollo Diversified Credit Fund NAV",
         "pct": 100,
         "disposition": "basket-needs-split",
-        "rationale": "The fund publishes strategy-level descriptions of its diversified credit book but no dated constituent weights."
+        "rationale": "The underlying fund publishes dated constituent values, but a measured look-through allocation for the tokenized feeder and its own cash balance has not been established."
       }
     ]
   },
@@ -72,9 +76,13 @@
       {
         "label": "Securitize ACRED fund page",
         "url": "https://securitize.io/primary-market/apollo-diversified-credit-securitize-fund"
+      },
+      {
+        "label": "Apollo underlying fund prospectus: custodian and rehypothecation",
+        "url": "https://www.sec.gov/Archives/edgar/data/1676197/000119312526192295/d335502d486bpos.htm"
       }
     ],
-    "uncertainty": "ACRED represents a share of the Apollo Diversified Credit Fund, a regulated investment vehicle whose assets are held at the fund level apart from Securitize's tokenization stack, supporting structural bankruptcy remoteness; the fund's custodian, segregation terms, and any leverage or reuse are not disclosed in the reviewed public sources.",
+    "uncertainty": "The underlying Apollo Diversified Credit Fund prospectus names Bank of New York Mellon Trust Company, National Association as custodian and permits BNP to rehypothecate pledged portfolio securities up to the outstanding loan balance, subject to conditions. These are underlying-fund facts, not proof of the tokenized feeder's own custody accounts or provider shares. Feeder-level segregation and bankruptcy-remoteness terms remain unverified.",
     "knownUnknownExposurePct": 100
   }
 }

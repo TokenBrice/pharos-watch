@@ -30,7 +30,7 @@
     "issuerPathway": "federal-qualified-nonbank",
     "issuerEntity": "Circle Internet Financial, LLC",
     "issuerDomicile": "United States",
-    "licensingRegulator": "OCC (conditional national trust bank charter for First National Digital Currency Bank, N.A.; current issuer licensed as state MTL/NYDFS BitLicense)",
+    "licensingRegulator": "OCC (First National Digital Currency Bank, N.A., listed as an active national trust bank as of August 31, 2026; this affiliate charter is not a GENIUS PPSI approval for Circle Internet Financial, LLC)",
     "primaryFederalRegulator": "OCC",
     "foreignExceptionStatus": "not-applicable",
     "enforcementStatus": "no-public-action-found",
@@ -39,7 +39,7 @@
     "reserveDisclosureUrl": "https://www.circle.com/transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "notes": "Evidence as of 2026-06-18 review: Circle received conditional OCC approval on Dec 12 2025 for First National Digital Currency Bank, N.A.: a federal-qualified-nonbank trust charter pathway consistent with the GENIUS Act framework. This is a conditional charter under existing OCC authority, not a PPSI approval; GENIUS Act rulemaking remains in proposed-rules phase with no approvals granted. Pharos found no token-specific public GENIUS PPSI approval as of review. Reserve-report date recorded as of 2026-06-18 review: 2026-04-30 (date kind unspecified).",
+    "notes": "Historical evidence as of the 2026-06-18 review: Circle had received conditional OCC approval in December 2025 for First National Digital Currency Bank, N.A.; the review found no token-specific public GENIUS PPSI approval. Reserve-report date recorded in that review was 2026-04-30 with unspecified date semantics. Update checked 2026-10-01: Circle announced final OCC charter approval on July 10, 2026, and the OCC lists First National Digital Currency Bank, National Association, charter 25361, among trust banks active as of August 31, 2026. Circle National Trust is an affiliate custody institution; Circle's current licensing page still names regulated affiliates as USDC issuers and describes reserve management by the trust bank as a future capability. This charter does not establish GENIUS PPSI approval, so authorizationStatus and issuerEntity are unchanged. The negative-evidence review below records a scoped October 1 search; it does not assert worldwide absence of approvals or applications.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -60,27 +60,39 @@
         "label": "Circle USDC transparency",
         "url": "https://www.circle.com/transparency",
         "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "OCC active trust banks as of August 31, 2026",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/financial-institution-lists/trust-by-name.pdf",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-01"
+      },
+      {
+        "label": "Circle final OCC charter announcement: July 10, 2026",
+        "url": "https://www.circle.com/pressroom/circle-receives-final-occ-approval-to-establish-national-trust-bank",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-07-10",
+        "accessedAt": "2026-10-01"
+      },
+      {
+        "label": "Circle licensing and issuer identity",
+        "url": "https://www.circle.com/legal/licenses",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-01"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act rulemaking bulletin 2026-3 and public releases",
-        "Federal Register GENIUS notices (OCC Feb 2026, FDIC Dec 2025 / Apr 2026 / May 2026, FinCEN+OFAC Apr 2026, Treasury Apr 2026, NCUA Feb / May 2026)",
-        "Circle GENIUS Act, transparency, legal, and licensing pages",
-        "Circle OCC national trust bank charter announcement Dec 2025",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "OCC GENIUS Act bulletin 2026-3",
+        "OCC proposed issuances 2026 page",
+        "OCC active trust-bank register as of August 31, 2026",
+        "Circle current licensing, GENIUS Act and Circle National Trust pages"
       ],
-      "summary": "No GENIUS PPSI approval or state-qualified approval has been granted to any issuer; OCC conditional trust charter (Dec 2025) is pre-GENIUS-application-framework and not a PPSI status; no public application filed under GENIUS Act rulemaking.",
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "summary": "Within these issuer and OCC sources checked on October 1, 2026, no USDC/Circle Internet Financial, LLC GENIUS PPSI approval was located. The active First National Digital Currency Bank affiliate is identified as a trust/custody institution; its charter does not establish PPSI authorization. This finite review does not establish that no issuer anywhere has an approval or application.",
+      "reviewer": "Sol curation pass 2026-10-01 (ValA02USDC)",
+      "reviewedAt": "2026-10-01"
     },
-    "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewer": "Sol curation pass 2026-10-01 (ValA02USDC)",
+    "reviewedAt": "2026-10-01"
   }
 }

@@ -26,7 +26,7 @@
 
 import { readFileSync } from "node:fs";
 import { getDexDiscoveryProviders } from "@shared/lib/dex-deployment-coverage";
-import { canonicalExitRouteAssetKey } from "@shared/lib/exit-route-identity";
+import { canonicalExitRouteAssetKey } from "@shared/types/exit-route-identity";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { isRecord } from "@shared/lib/type-guards";
 import {

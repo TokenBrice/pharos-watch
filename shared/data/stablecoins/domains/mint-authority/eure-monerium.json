@@ -152,6 +152,8 @@
           "The Safe can replace the Ethereum UUPS implementation with no on-chain timelock.",
           "The Safe can set the maximum mint allowance and add or remove system/admin accounts."
         ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095812,
         "evidence": "At Ethereum block 25770440, EURe owner() returned 0x5591a6495d726c7efafb9a9dad32695d137b4d9f and the EIP-1967 implementation slot was nonzero while the transparent-admin slot was zero. The current Safe service reports threshold 3, six owners, no enabled modules, and a zero guard. Monerium Token.sol makes owner() the UUPS upgrade and system/admin-role authority; no on-chain timelock was evidenced."
       },
       {
@@ -459,7 +461,7 @@
         "sources": [
           {
             "label": "EURe MiCA white paper",
-            "url": "https://monerium.com/whitepapers/eure-whitepaper/"
+            "url": "https://monerium.com/assets/whitepapers/eure/EURe-WP-static.xhtml"
           },
           {
             "label": "Noble latest block REST API",
@@ -518,7 +520,7 @@
         },
         {
           "label": "EURe MiCA white paper",
-          "url": "https://monerium.com/whitepapers/eure-whitepaper/"
+          "url": "https://monerium.com/assets/whitepapers/eure/EURe-WP-static.xhtml"
         },
         {
           "label": "Safe Transaction Service",

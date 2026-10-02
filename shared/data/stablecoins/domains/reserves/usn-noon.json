@@ -138,27 +138,27 @@
       },
       {
         "label": "Noon USN Terms of Service (reserve categories in Section 5; redemption and unsecured-debt terms in Section 6)",
-        "url": "https://docs.noon.capital/additional-resources/terms-and-policies/asset-terms-usn-terms-of-service"
+        "url": "https://docs.noon.capital/7.-terms-and-policies/asset-terms-usn-terms-of-service.md"
       },
       {
         "label": "Noon custody documentation (Alpaca via Dinari for bills and CLOs, Fasanara for private credit, ForDefi MPC for DeFi positions, Ceffu for funding-rate arbitrage)",
-        "url": "https://docs.noon.capital/built-for-safety/1.-custody-you-can-trust"
+        "url": "https://docs.noon.capital/5.-the-security-framework/trusted-custody.md"
       },
       {
         "label": "Noon transparency page (published on-chain collateral wallets)",
-        "url": "https://docs.noon.capital/built-for-safety/transparency"
+        "url": "https://docs.noon.capital/6.-resources/contract-addresses-and-oracles.md"
       },
       {
         "label": "Noon deployment strategies (cash-and-carry funding-rate arbitrage; Morpho/Euler lending)",
-        "url": "https://docs.noon.capital/built-for-high-yields/our-deployment-strategies"
+        "url": "https://docs.noon.capital/3.-the-yield-engine/overview.md"
       },
       {
         "label": "Noon DeFi Lending risk assessment (USDC/USDT, Morpho and Euler)",
-        "url": "https://docs.noon.capital/built-for-high-yields/our-deployment-strategies/defi-lending"
+        "url": "https://docs.noon.capital/3.-the-yield-engine/yield-strategies/defi-lending.md"
       },
       {
         "label": "Noon liquidity disclosures (T-bills and CLOs T+0 to T+3; lending T+0; T+5 waterfall)",
-        "url": "https://docs.noon.capital/noon-the-basics/liquidity"
+        "url": "https://docs.noon.capital/2.-usdusn-and-usdsusn/liquidity.md"
       },
       {
         "label": "Dinari USD+ token 0xc9e3df3d230980b45adc623c81c3df4a73a5350f on Etherscan",
@@ -277,15 +277,15 @@
     "sources": [
       {
         "label": "Noon custody documentation (Alpaca via Dinari, Fasanara, ForDefi MPC, Ceffu)",
-        "url": "https://docs.noon.capital/built-for-safety/1.-custody-you-can-trust"
+        "url": "https://docs.noon.capital/5.-the-security-framework/trusted-custody.md"
       },
       {
         "label": "Noon USN Terms of Service (Section 1 segregation from corporate operating funds; Section 6 unsecured redemption debt)",
-        "url": "https://docs.noon.capital/additional-resources/terms-and-policies/asset-terms-usn-terms-of-service"
+        "url": "https://docs.noon.capital/7.-terms-and-policies/asset-terms-usn-terms-of-service.md"
       },
       {
         "label": "Noon transparency page (published on-chain collateral wallets)",
-        "url": "https://docs.noon.capital/built-for-safety/transparency"
+        "url": "https://docs.noon.capital/6.-resources/contract-addresses-and-oracles.md"
       },
       {
         "label": "Noon Accountable dashboard API payload with reserves_split (data timestamp 2026-09-22T20:31:03.926Z)",

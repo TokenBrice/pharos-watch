@@ -10,11 +10,15 @@
       {
         "label": "Website",
         "url": "https://ethena.fi/"
+      },
+      {
+        "label": "Ethereum sUSDe verified deployed source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9d39a5de30e57443bff2a8307a4256c8797a3497"
       }
     ],
-    "evidence": "Explicit Yes retained: reviewed metadata indicates a direct issuer, admin, proxy, pause, burn, or upgrade control surface beyond reserve-only exposure.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "The verified Ethereum StakedUSDe source grants BLACKLIST_MANAGER_ROLE the addToBlacklist/removeFromBlacklist functions. FULL_RESTRICTED_STAKER_ROLE blocks transfers, staking and unstaking; DEFAULT_ADMIN_ROLE can burn and redistribute an existing restricted holder's shares. At Ethereum block 26095796, owner() returned 0xe8dc0fab349ea169283c48ccfd09d797e6db7c94. The blacklist verdict remains Yes.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA19sUSDe)",
+    "reviewedAt": "2026-10-01"
   },
   "oracleRisk": {
     "tier": "redundant-with-failover",
@@ -57,9 +61,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "LayerZero metadata identifies Ethereum's sUSDe OFT adapter and 22 non-native OFT or OFT Adapter deployments. Those reviewed routes depend on LayerZero V2 messaging, the Ethereum source adapter, and destination token or adapter controls; Plasma, TON, and X Layer remain unresolved because the API does not list them.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "owner-triage; Kimi P2 control cohort dc-6 (lead usde-ethena)",
+    "summary": "LayerZero metadata identifies Ethereum's sUSDe OFT adapter and 22 non-native OFT or OFT Adapter deployments. Pinned reads additionally confirm sUSDe deployments and LayerZero endpoints on Plasma and X Layer; their owners have changed since the July Safe observations. TON's tsUSDe jetton remains mintable with a disclosed admin. Route identities are documented, while complete messaging controls, TON bridge internals and current runtime materiality remain unresolved.",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA19sUSDe)",
     "confidence": "probable",
     "protocols": [
       {
@@ -105,7 +109,9 @@
         "scope": "canonical",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-14",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095796,
+        "reviewNote": "Pinned ethereum block 26095796: symbol() = sUSDe; decimals() = 18; asset() = USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3; owner() = 0xe8dc0fab349ea169283c48ccfd09d797e6db7c94. Canonical staking shares; the separate Ethereum OFT adapter token() returns this vault address.",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -139,7 +145,7 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-01",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -154,11 +160,11 @@
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           },
           {
-            "label": "sUSDe OFT on plasma explorer (verified 2026-07-20)",
-            "url": "https://plasma-explorer.com/address/0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
+            "label": "Plasmascan verified sUSDe token contract",
+            "url": "https://plasmascan.to/address/0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
           }
         ],
-        "reviewNote": "Verified on plasma at block 27570608: sUSDe OFT symbol()='sUSDe', endpoint() = LayerZero endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, owner() = Ethena Safe 0x2c57434603f21f580c91a3bdc0cc5f3f20278632 (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2 escrowing canonical sUSDe 0x9d39a5de30e57443bff2a8307a4256c8797a3497.",
+        "reviewNote": "Historical 2026-07-20 review reported a 5-of-10 Safe owner. Current owner differs. Pinned plasma block 33896578: symbol() = sUSDe; decimals() = 18; endpoint() = 0x6f475642a6e85809b1c36fa62763669b1b48dd5b; owner() = 0xabd3645ba0bb60c238bede64378826e1206f5072. getMinDelay() = 86400 seconds. This does not prove every operation is delayed; whitelist bypass and messaging configuration remain unverified.",
         "controllerChain": "plasma",
         "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
         "failureDomainKeys": [
@@ -166,7 +172,7 @@
           "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
           "contract:plasma:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
         ],
-        "observedBlock": 27570608
+        "observedBlock": 33896578
       },
       {
         "id": "linea:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
@@ -182,7 +188,9 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-14",
+        "observedAt": "2026-10-01",
+        "observedBlock": 32198402,
+        "reviewNote": "Pinned linea block 32198402: symbol() = sUSDe; decimals() = 18; endpoint() = 0x1a44076050125825900e736c501f859c50fe728c; owner() = 0x022f6538ab8468d75314d91f906c867e6b048c74. getMinDelay() = 86400 seconds. This does not prove every operation is delayed; whitelist bypass and messaging configuration remain unverified.",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -223,7 +231,9 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-14",
+        "observedAt": "2026-10-01",
+        "observedBlock": 42013426,
+        "reviewNote": "Pinned fraxtal block 42013426: symbol() = sUSDe; decimals() = 18; endpoint() = 0x1a44076050125825900e736c501f859c50fe728c; owner() = 0xc66bbbf821f2cfb3a85683acf0326eac92c160bd. getThreshold() = 5; getOwners() returns 10 owners. Modules, guards, signer custody and complete messaging configuration remain unverified.",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -264,7 +274,9 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-14",
+        "observedAt": "2026-10-01",
+        "observedBlock": 47357391,
+        "reviewNote": "Pinned hyperevm block 47357391: symbol() = sUSDe; decimals() = 18; endpoint() = 0x3a73033c0b1407574c76bdbac67f126f6b4a9aa9; owner() = 0x0b10127af7a839a89c0083986a8cd68d82d33379. getMinDelay() = 86400 seconds. This does not prove every operation is delayed; whitelist bypass and messaging configuration remain unverified.",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -305,7 +317,9 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-14",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26911422,
+        "reviewNote": "Pinned berachain block 26911422: symbol() = sUSDe; decimals() = 18; endpoint() = 0x6f475642a6e85809b1c36fa62763669b1b48dd5b; owner() = 0x093d3f4785149a3d2600cb10d63afa14f9b09364. getThreshold() = 5; getOwners() returns 10 owners. Modules, guards, signer custody and complete messaging configuration remain unverified.",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -346,7 +360,9 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-14",
+        "observedAt": "2026-10-01",
+        "observedBlock": 35450675,
+        "reviewNote": "Pinned zircuit block 35450675: symbol() = sUSDe; decimals() = 18; endpoint() = 0x6f475642a6e85809b1c36fa62763669b1b48dd5b; owner() = 0x07762c592e243d4add1648a7ab4916d898780bae. getThreshold() = 5; getOwners() returns 10 owners. Modules, guards, signer custody and complete messaging configuration remain unverified.",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -387,7 +403,9 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-14",
+        "observedAt": "2026-10-01",
+        "observedBlock": 23225232,
+        "reviewNote": "Pinned metis block 23225232: symbol() = sUSDe; decimals() = 18; endpoint() = 0x1a44076050125825900e736c501f859c50fe728c; owner() = 0x795db361ed5727f3f27dccde15b7d0d975fc94e0. getThreshold() = 5; getOwners() returns 10 owners. Modules, guards, signer custody and complete messaging configuration remain unverified.",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -428,7 +446,7 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-01",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -447,7 +465,7 @@
             "url": "https://www.oklink.com/xlayer/address/0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
           }
         ],
-        "reviewNote": "Verified on xlayer at block 65741928: sUSDe OFT symbol()='sUSDe', endpoint() = LayerZero endpoint 0x1a44076050125825900e736c501f859c50fe728c, owner() = Ethena Safe 0xce2f77841a8b974ce8e79157bccbecf17599f0e8 (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2 escrowing canonical sUSDe 0x9d39a5de30e57443bff2a8307a4256c8797a3497.",
+        "reviewNote": "Historical 2026-07-20 review reported a 5-of-10 Safe owner. Current owner differs. Pinned xlayer block 72068529: symbol() = sUSDe; decimals() = 18; endpoint() = 0x1a44076050125825900e736c501f859c50fe728c; owner() = 0xa179d46706d78a8bb24bd36bfb6472d4a0e15569. getMinDelay() = 86400 seconds. This does not prove every operation is delayed; whitelist bypass and messaging configuration remain unverified.",
         "controllerChain": "xlayer",
         "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
         "failureDomainKeys": [
@@ -455,7 +473,7 @@
           "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
           "contract:xlayer:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
         ],
-        "observedBlock": 65741928
+        "observedBlock": 72068529
       },
       {
         "id": "base:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
@@ -471,7 +489,9 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-14",
+        "observedAt": "2026-10-01",
+        "observedBlock": 52024109,
+        "reviewNote": "Pinned base block 52024109: symbol() = sUSDe; decimals() = 18; endpoint() = 0x1a44076050125825900e736c501f859c50fe728c; owner() = 0xd896f26f76ed089a1711284a00af497b19d65171. getMinDelay() = 86400 seconds. This does not prove every operation is delayed; whitelist bypass and messaging configuration remain unverified.",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -512,7 +532,9 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-14",
+        "observedAt": "2026-10-01",
+        "observedBlock": 125055767,
+        "reviewNote": "Pinned bsc block 125055767: symbol() = sUSDe; decimals() = 18; endpoint() = 0x1a44076050125825900e736c501f859c50fe728c; owner() = 0x89bad41d3307072cfd3118b5fd08101e23b2e129. Owner policy and complete messaging configuration remain unverified.",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -553,7 +575,9 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-14",
+        "observedAt": "2026-10-01",
+        "observedBlock": 27633747,
+        "reviewNote": "Pinned morph-l2 block 27633747: symbol() = sUSDe; decimals() = 18; endpoint() = 0x6f475642a6e85809b1c36fa62763669b1b48dd5b; owner() = 0x2a07237ebe1abf114f35c876c3673e2f5229e567. getThreshold() = 5; getOwners() returns 10 owners. Modules, guards, signer custody and complete messaging configuration remain unverified.",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -594,7 +618,9 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-14",
+        "observedAt": "2026-10-01",
+        "observedBlock": 35235158,
+        "reviewNote": "Pinned scroll block 35235158: symbol() = sUSDe; decimals() = 18; endpoint() = 0x1a44076050125825900e736c501f859c50fe728c; owner() = 0x3970a0af8819613f139ae9cccf4bb0412a6c68aa. getMinDelay() = 86400 seconds. This does not prove every operation is delayed; whitelist bypass and messaging configuration remain unverified.",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -635,7 +661,9 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-14",
+        "observedAt": "2026-10-01",
+        "observedBlock": 22820786,
+        "reviewNote": "Pinned kava block 22820786: symbol() = sUSDe; decimals() = 18; endpoint() = 0x1a44076050125825900e736c501f859c50fe728c; owner() = 0x10e9219dd188d0f3af30824469dc874a539733b6. getThreshold() = 5; getOwners() returns 10 owners. Modules, guards, signer custody and complete messaging configuration remain unverified.",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -676,7 +704,9 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-14",
+        "observedAt": "2026-10-01",
+        "observedBlock": 29048789,
+        "reviewNote": "Pinned swellchain block 29048789: symbol() = sUSDe; decimals() = 18; endpoint() = 0xcb566e3b6934fa77258d68ea18e931fa75e1aaaa; owner() = 0x182ad0c7526e201102e5c486cc20ae50d6528481. getThreshold() = 5; getOwners() returns 10 owners. Modules, guards, signer custody and complete messaging configuration remain unverified.",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -717,7 +747,9 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-14",
+        "observedAt": "2026-10-01",
+        "observedBlock": 45334991,
+        "reviewNote": "Pinned mode block 45334991: symbol() = sUSDe; decimals() = 18; endpoint() = 0x1a44076050125825900e736c501f859c50fe728c; owner() = 0x273ced5b9da8f5ba6e40c82c126898cb5307b2ea. getThreshold() = 5; getOwners() returns 10 owners. Modules, guards, signer custody and complete messaging configuration remain unverified.",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -758,7 +790,9 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-14",
+        "observedAt": "2026-10-01",
+        "observedBlock": 101353627,
+        "reviewNote": "Pinned mantle block 101353627: symbol() = sUSDe; decimals() = 18; endpoint() = 0x1a44076050125825900e736c501f859c50fe728c; owner() = 0xcd4769571095e66c96d9c86b16610217b4184a0b. getMinDelay() = 86400 seconds. This does not prove every operation is delayed; whitelist bypass and messaging configuration remain unverified.",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -799,7 +833,9 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-14",
+        "observedAt": "2026-10-01",
+        "observedBlock": 510584105,
+        "reviewNote": "Pinned arbitrum block 510584105: symbol() = sUSDe; decimals() = 18; endpoint() = 0x1a44076050125825900e736c501f859c50fe728c; owner() = 0x89bad41d3307072cfd3118b5fd08101e23b2e129. getMinDelay() = 86400 seconds. This does not prove every operation is delayed; whitelist bypass and messaging configuration remain unverified.",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -840,7 +876,9 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-14",
+        "observedAt": "2026-10-01",
+        "observedBlock": 9661360,
+        "reviewNote": "Pinned manta block 9661360: symbol() = sUSDe; decimals() = 18; endpoint() = 0x1a44076050125825900e736c501f859c50fe728c; owner() = 0xa408fd6724341b27f2e348faf9eccec04a2299ea. getThreshold() = 5; getOwners() returns 10 owners. Modules, guards, signer custody and complete messaging configuration remain unverified.",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -881,7 +919,9 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-14",
+        "observedAt": "2026-10-01",
+        "observedBlock": 41013875,
+        "reviewNote": "Pinned blast block 41013875: symbol() = sUSDe; decimals() = 18; endpoint() = 0x1a44076050125825900e736c501f859c50fe728c; owner() = 0x689272b1d2b2f37a0b3fe1f5af0420c64f6cc9e3. getThreshold() = 5; getOwners() returns 10 owners. Modules, guards, signer custody and complete messaging configuration remain unverified.",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -922,7 +962,9 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-14",
+        "observedAt": "2026-10-01",
+        "observedBlock": 157619394,
+        "reviewNote": "Pinned optimism block 157619394: symbol() = sUSDe; decimals() = 18; endpoint() = 0x1a44076050125825900e736c501f859c50fe728c; owner() = 0xbb4db1dd2851a4c06afbc2c115de874d103090b4. getMinDelay() = 86400 seconds. This does not prove every operation is delayed; whitelist bypass and messaging configuration remain unverified.",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -963,22 +1005,30 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-01",
         "sources": [
           {
             "label": "Ethena key addresses",
             "url": "https://docs.ethena.fi/solution-design/key-addresses"
           },
           {
-            "label": "tsUSDe jetton on TONviewer (mintable, admin observed 2026-07-20)",
+            "label": "tsUSDe jetton on TONviewer",
             "url": "https://tonviewer.com/EQDQ5UUyPHrLcQJlPAczd_fjxn8SLrlNQwolBznxCdSlfQwr"
           },
           {
             "label": "Jetton admin account on TONviewer",
             "url": "https://tonviewer.com/EQAfYnfDyjgtyBuQyKKdRlbWQWt5aAuhGIvGQCfkNPJ7_Ni5"
+          },
+          {
+            "label": "TON API tsUSDe jetton metadata and admin",
+            "url": "https://tonapi.io/v2/jettons/EQDQ5UUyPHrLcQJlPAczd_fjxn8SLrlNQwolBznxCdSlfQwr"
+          },
+          {
+            "label": "TON API jetton admin get_multisig_data",
+            "url": "https://tonapi.io/v2/blockchain/accounts/0:1f6277c3ca382dc81b90c8a29d4656d6416b79680ba1188bc64027e434f27bfc/methods/get_multisig_data"
           }
         ],
-        "reviewNote": "TON jetton master EQDQ5UUyPHrLcQJlPAczd_fjxn8SLrlNQwolBznxCdSlfQwr ('Ethena tsUSDe', tonapi.io whitelisted, metadata hosted on metadata.layerzero-api.com, queried 2026-07-20) reports mintable=true with admin 0:1f6277c3ca382dc81b90c8a29d4656d6416b79680ba1188bc64027e434f27bfc (EQAfYnfDyjgtyBuQyKKdRlbWQWt5aAuhGIvGQCfkNPJ7_Ni5, wallet-type account). The jetton admin is the mint authority for the TON representation; its internal signer set is not enumerable via public APIs, controller identity recorded, composition unverified.",
+        "reviewNote": "TON API queried 2026-10-01 reports the Ethena tsUSDe jetton (6 decimals) mintable=true with admin 0:1f6277c3ca382dc81b90c8a29d4656d6416b79680ba1188bc64027e434f27bfc. TONviewer identifies this admin as multisig_v2. The admin get_multisig_data getter returned success=true, threshold=5 and 11 enumerated signer addresses, correcting the earlier claim that signers were not publicly enumerable. These explorer reads do not expose a pinned block; bridge internals and signer custody remain unverified.",
         "controllerChain": "ton",
         "controllerAddress": "EQAfYnfDyjgtyBuQyKKdRlbWQWt5aAuhGIvGQCfkNPJ7_Ni5",
         "failureDomainKeys": [
@@ -1001,7 +1051,9 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-14",
+        "observedAt": "2026-10-01",
+        "observedBlock": 452212860,
+        "reviewNote": "Finalized Solana getAccountInfo context slot 452212860: SPL mint decimals = 9, mintAuthority = D27Yp9iR2UAgD8BkBbWrHeK6MooSQu353NJm3SVmEvXw and freezeAuthority = EWZCJs2JRo3tMKgDt8FGx7MccD8sKv4QEcdsY9ZhVKZA. Slot records the returned account observation, not an historical-request parameter. Program upgrade and messaging configuration remain unverified.",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -1042,7 +1094,9 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-14",
+        "observedAt": "2026-10-01",
+        "observedBlock": 72286734,
+        "reviewNote": "Pinned zksync block 72286734: symbol() = sUSDe; decimals() = 18; endpoint() = 0xd07c30af3ff30d96bdc9c6044958230eb797ddbf; owner() = 0xa026e9a5e54e16349d7b594449f32901e02c609a. getThreshold() = 5; getOwners() returns 10 owners. Modules, guards, signer custody and complete messaging configuration remain unverified.",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -1083,7 +1137,9 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-14",
+        "observedAt": "2026-10-01",
+        "observedBlock": 96511161,
+        "reviewNote": "Pinned avalanche block 96511161: symbol() = sUSDe; decimals() = 18; endpoint() = 0x1a44076050125825900e736c501f859c50fe728c; owner() = 0x33038a97ed7e407914e23b67234728a965645cd4. getMinDelay() = 86400 seconds. This does not prove every operation is delayed; whitelist bypass and messaging configuration remain unverified.",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -1124,7 +1180,9 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-14",
+        "observedAt": "2026-10-01",
+        "observedBlock": 7436594254,
+        "reviewNote": "Aptos resources pinned to ledger version 7436594254 report Staked USDe, symbol sUSDe, decimals 6 and ObjectCore owner 0xa84fcc405fa7e5415f02f50167aac3d4ec2947187aabb9087f6b16d31c8715e5. observedBlock records the Aptos ledger version. Mint capability, adapter admin and messaging configuration remain unverified.",
         "sources": [
           {
             "label": "Ethena key addresses",

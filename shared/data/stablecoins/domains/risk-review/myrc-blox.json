@@ -4,17 +4,17 @@
     "reviewedStatus": true,
     "sources": [
       {
-        "label": "Docs",
-        "url": "https://docs.blox.my"
+        "label": "Solana finalized RPC observation (context slot 452252165)",
+        "url": "https://api.mainnet-beta.solana.com"
       },
       {
         "label": "Website",
         "url": "https://www.blox.my"
       }
     ],
-    "evidence": "Explicit Yes retained: centralized governance metadata indicates issuer or admin control; registry links were reviewed for direct freeze, blacklist, pause, burn, or upgrade authority.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "At finalized Solana slot 452347437 on 2026-10-01, MYRC SPL mint myrcAs6bpP2g5oGHZ3qpgrfZQAFkbo9KUHdqYDXMjGv retained freezeAuthority Df8T8pvEx7WmC4RjBmzcDqLfuKDLf9wWxSzMvQ95Ln4z. This establishes holder-level SPL account-freeze capability on Solana. The off-curve authority derives as vault index 0 of Squads v4 multisig 96eSyXBfZiDmGVgU5VcGxQuoCsWcxXpNQeaG7ECWaraA, with threshold 2-of-4 voting members (seven total members), zero timelock and zero external configuration authority. The controlling Squads program is immutable (ProgramData upgrade authority None); full governance evidence is recorded in the mint-authority sidecar.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurM02USDK)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
@@ -120,7 +120,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Reviewed mintAuthority documents the Solana mint and freeze authority as the issuer keypair Df8T8pvEx7WmC4RjBmzcDqLfuKDL (read at slot 425797741). Issuer-native deployment; no bridge control carries the claim.",
+        "reviewNote": "At finalized Solana slot 452347437, the mint and freeze authority Df8T8pvEx7WmC4RjBmzcDqLfuKDLf9wWxSzMvQ95Ln4z is the off-curve vault index 0 of Squads v4 multisig 96eSyXBfZiDmGVgU5VcGxQuoCsWcxXpNQeaG7ECWaraA, not an issuer keypair. Current mint-authority review establishes threshold 2-of-4 voting members, autonomous configuration and an immutable controlling program. Issuer-native deployment; no bridge control carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [

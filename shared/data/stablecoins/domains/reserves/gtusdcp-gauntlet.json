@@ -35,12 +35,12 @@
         "url": "https://docs.morpho.org/curate/"
       },
       {
-        "label": "Gauntlet USDC Prime V2 vault",
-        "url": "https://app.gauntlet.xyz/vaults/opt%3A0xc30ce6a5758786e0f640cc5f881dd96e9a1c5c59"
+        "label": "Exact Ethereum Gauntlet USDC Prime Vault V2",
+        "url": "https://app.morpho.org/ethereum/vault/0x8c106eedad96553e64287a5a6839c3cc78afa3d0/gauntlet-usdc-prime"
       }
     ],
-    "rationale": "Morpho and Gauntlet identify USDC as the sole supply asset for the Gauntlet USDC Prime V2 vault family across its reviewed deployments. The reserve envelope is therefore one 100% USDC dependency; market allocation and available liquidity remain dynamic.",
-    "compositionBasis": "Morpho and Gauntlet USDC Prime V2 vault disclosures",
+    "rationale": "Pinned asset() reads on 2026-10-01 identify native USDC for the Ethereum Vault V2, Base MetaMorpho and Arbitrum MetaMorphoV1_1 deployments. The single tracked USDC dependency describes the strategy's denomination, not a measured allocation among lending markets or a claim that all holdings are idle USDC. Market allocation and available liquidity remain dynamic.",
+    "compositionBasis": "USDC-denominated strategy dependency; no current constituent-market allocation percentages are asserted",
     "scope": "full-composition",
     "knownUnknownExposure": "The sole tracked dependency is identified, but current deployment-level market allocations and available liquidity are dynamic.",
     "knownUnknownExposurePct": 0
@@ -48,8 +48,8 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "Gauntlet USDC Prime V2 MetaMorpho vaults on Ethereum, Base, and Arbitrum",
-        "role": "custodian"
+        "name": "Gauntlet USDC Prime Vault V2 on Ethereum and MetaMorpho vaults on Base and Arbitrum",
+        "role": "other"
       },
       {
         "name": "Morpho lending markets",
@@ -59,8 +59,8 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (R2WCircle), complete pinned three-deployment allocation review",
     "confidence": "probable",
     "sources": [
       {
@@ -70,8 +70,28 @@
       {
         "label": "Morpho curation docs",
         "url": "https://docs.morpho.org/curate/"
+      },
+      {
+        "label": "Gauntlet branded-vault disclaimer (Dec 2025)",
+        "url": "https://storage.googleapis.com/gauntlet-public-web-assets/gauntlet-branded-vault-disclaimer-dec-2025.pdf"
+      },
+      {
+        "label": "Exact Ethereum VaultV2 deployment source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8c106eedad96553e64287a5a6839c3cc78afa3d0"
+      },
+      {
+        "label": "Exact Ethereum MorphoMarketV1AdapterV2 source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdf62f57ea333a842db200d4892c90f98204fa22f"
+      },
+      {
+        "label": "Exact Base MetaMorpho deployment source",
+        "url": "https://base.blockscout.com/api/v2/smart-contracts/0xee8f4ec5672f09119b96ab6fb59c27e1b7e44b61"
+      },
+      {
+        "label": "Exact Arbitrum MetaMorphoV1_1 deployment source",
+        "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x7c574174da4b2be3f705c6244b4bfa0815a8b3ed"
       }
     ],
-    "uncertainty": "The vaults and Morpho markets are on-chain, but the reviewed materials do not establish legal segregation, bankruptcy remoteness, or rehypothecation treatment for deposited USDC."
+    "uncertainty": "Current allocations were enumerated at Ethereum block 26098754, Base block 52041959 and Arbitrum block 510719674 on 2026-10-01. Ethereum has one MorphoMarketV1AdapterV2 with seven funded USDC markets against cbBTC, WBTC, wstETH or WETH at 86% LLTV; its expected market assets sum exactly to adapter realAssets and vault totalAssets. Base has seven funded markets against cbBTC, wstETH, WETH or cbETH at 77% or 86% LLTV. Arbitrum has four funded collateralized markets against wstETH, WETH, WBTC or sUSDS at 86% or 94.5% LLTV plus an idle market. Every observed vault or adapter position has zero borrow shares and zero posted collateral. Exact deployed vault and adapter sources expose lending operations without a local borrowing surface. Gauntlet disclaims custody. On-chain custody, no local leverage and lending reuse are established at these blocks; legal segregation and insolvency rights remain unestablished, and parent USDC custody is inherited exposure. The shared wrapper-allocation review owns the structural assessment; these legal-custody enums do not describe whether USDC is lent."
   }
 }

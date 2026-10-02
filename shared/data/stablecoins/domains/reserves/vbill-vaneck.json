@@ -63,11 +63,11 @@
       }
     ],
     "segregation": "unknown",
-    "bankruptcyRemoteness": "structured",
+    "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
-    "confidence": "verified",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC06)",
+    "confidence": "probable",
     "sources": [
       {
         "label": "Securitize and VanEck VBILL launch disclosure",

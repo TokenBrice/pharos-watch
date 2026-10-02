@@ -46,8 +46,8 @@
       "observedBlock": 25648573,
       "sources": [
         {
-          "label": "YieldFi current contract directory",
-          "url": "https://docs.yield.fi/resources/contract-addresses"
+          "label": "YieldFi legacy V2 contract directory",
+          "url": "https://docs.yield.fi/resources/legacy-smart-contract-addresses.md"
         },
         {
           "label": "Arbitrum verified YTokenL2 implementation",
@@ -90,6 +90,8 @@
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "The Ethereum YToken and nine YTokenL2 deployments mint local vault shares through ERC-4626 deposit/mint against each chain's configured asset; this share issuance does not mint the upstream base asset.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095938,
         "sources": [
           {
             "label": "YieldFi yUSD terms",
@@ -136,6 +138,8 @@
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "The common Manager's manageAssetAndShares and manager-only mintYToken/burnYToken paths can adjust arbitrary yUSD shares with no protocol supply ceiling on each local deployment. Native share issuance through the YIELD role remains Mint Authority; BRIDGE and LOCKBOX route accounting is separately authored under Bridge Risk.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095938,
         "sources": [
           {
             "label": "YieldFi yUSD terms",
@@ -236,8 +240,8 @@
         "bypassSurfaces": [
           "A single ADMIN key can self-appoint as an operator and mint unbounded yUSD shares in the same block."
         ],
-        "observedBlock": 25629035,
-        "observedAt": "2026-07-28",
+        "observedBlock": 26098748,
+        "observedAt": "2026-10-01",
         "sources": [
           {
             "label": "YieldFi yUSD terms",
@@ -260,7 +264,7 @@
             "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x10472f91f67c49260bdd65f016ea0757bb1fc91e&fromBlock=22364994&toBlock=25575158&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
           }
         ],
-        "evidence": "The complete Administrator RoleGranted/RoleRevoked replay from block 22364994, confirmed by live hasRole reads at block 25575158, returns exactly two current ADMIN holders: 0xa6e98a21ea3cbe891b8a24f7233443748c17b387 and 0x241ac00dc77fc1981e0483de3da3828b787b8764. eth_getCode returns empty bytecode for both, so neither is a Safe, multisig, or timelock. Verified source shows grantRoles and revokeRoles are onlyAdmin and immediate. Re-verified 2026-07-28 block 25629035: both ADMIN EOAs still hold keccak256(\"ADMIN\") on dual independent RPCs; both remain bytecode-less."
+        "evidence": "Historical complete Administrator RoleGranted/RoleRevoked replay identified ADMIN holders 0xa6e98a21ea3cbe891b8a24f7233443748c17b387 and 0x241ac00dc77fc1981e0483de3da3828b787b8764. Re-verified at Ethereum block 26098748 on 2026-10-01: hasRole(keccak256(\"ADMIN\"), account) returned true and eth_getCode returned 0x for each. The verified Administrator source exposes immediate onlyAdmin grantRoles for non-ADMIN roles; Manager manageAssetAndShares exposes operator-controlled arbitrary share minting. Neither address is an on-chain Safe, multisig, or timelock. The issuer's generic MPC control description does not map these ADMIN addresses to a documented signing policy."
       },
       {
         "chain": "ethereum",
@@ -321,8 +325,8 @@
     "review": {
       "sources": [
         {
-          "label": "YieldFi current contract directory",
-          "url": "https://docs.yield.fi/resources/contract-addresses"
+          "label": "YieldFi legacy V2 contract directory",
+          "url": "https://docs.yield.fi/resources/legacy-smart-contract-addresses.md"
         },
         {
           "label": "YieldFi yTokens architecture",

@@ -4,7 +4,7 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "bnUSD minting is limited on ICON to the registered Balanced Loans and Peg Stability SCOREs, subject to the token debt ceiling; the current owner of the Governance SCORE is a single EOA that can raise that ceiling and upgrade mint-critical SCORE logic.",
+    "summary": "Tracked v1 bnUSD(old) minting is restricted on ICON to the registered Balanced Loans and Peg Stability SCOREs. At block 118950736 the token's debt ceiling read 0, replacing the historical 8,000,000 value; its Governance SCORE remains owned by a single EOA able to raise the ceiling or replace mint-critical SCORE logic.",
     "upgradeability": {
       "model": "custom",
       "deploymentRefs": [
@@ -15,8 +15,8 @@
       ],
       "canChangeMintLogic": true,
       "controlRef": "Balanced Governance owner",
-      "observedAt": "2026-08-08",
-      "observedBlock": 116683553,
+      "observedAt": "2026-10-01",
+      "observedBlock": 118950736,
       "sources": [
         {
           "label": "ICON public RPC",
@@ -39,11 +39,11 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
-        "capDescription": "At ICON block 116683553, the bnUSD SCORE debt ceiling remained 8,000,000 bnUSD; only the registered Loans or Peg Stability SCORE may call mintTo, while Governance can raise the ceiling.",
+        "capDescription": "At ICON block 118950736 on 2026-10-01, getDebtCeiling returned 0. The registered Loans and Peg Stability contracts remain the restricted native mint paths, and Governance can change the ceiling. Historical observation at block 116683553: 8,000,000 bnUSD.",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-08",
-        "observedBlock": 116683553,
+        "observedAt": "2026-10-01",
+        "observedBlock": 118950736,
         "sources": [
           {
             "label": "ICON public RPC",
@@ -54,7 +54,7 @@
             "url": "https://tracker.icon.community/transaction/0x807cd811b5add6bc32044f500c0833843f8c0cf2bd2433814cfe80fddf387db3"
           }
         ],
-        "evidence": "The active bnUSD SCORE returned this registered Loans address. Its exact v1.1.2 deployed archive permits mintTo only from getLoans() or getStabilityFund(), and its mint implementation rejects supply above the configured debt ceiling."
+        "evidence": "At ICON block 118950736, the canonical bnUSD SCORE getAddress('Balanced Loans') returned this address and getDebtCeiling returned 0. Both token and Loans remained active and owned by Governance SCORE cx44250a12074799e26fdeee75648ae47e2cc84219. The token codeHash remained 0xf4d53569a3e4ba10dd69178004a070b24723cd697b899f5683722d6ea3110d41, matching the historical v1.1.2 deployed archive that restricts mintTo to Loans or Peg Stability and enforces the configured ceiling."
       },
       {
         "chain": "icon",
@@ -66,11 +66,11 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
-        "capDescription": "At ICON block 116683553, the bnUSD SCORE debt ceiling remained 8,000,000 bnUSD; only the registered Loans or Peg Stability SCORE may call mintTo, while Governance can raise the ceiling.",
+        "capDescription": "At ICON block 118950736 on 2026-10-01, getDebtCeiling returned 0. The registered Loans and Peg Stability contracts remain the restricted native mint paths, and Governance can change the ceiling. Historical observation at block 116683553: 8,000,000 bnUSD.",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-08",
-        "observedBlock": 116683553,
+        "observedAt": "2026-10-01",
+        "observedBlock": 118950736,
         "sources": [
           {
             "label": "ICON public RPC",
@@ -81,7 +81,7 @@
             "url": "https://tracker.icon.community/transaction/0x807cd811b5add6bc32044f500c0833843f8c0cf2bd2433814cfe80fddf387db3"
           }
         ],
-        "evidence": "The active bnUSD SCORE returned this registered Peg Stability address. Its exact v1.1.2 deployed archive permits mintTo only from getLoans() or getStabilityFund(), and its mint implementation rejects supply above the configured debt ceiling."
+        "evidence": "At ICON block 118950736, the canonical bnUSD SCORE getAddress('Balanced Peg Stability') returned this address and getDebtCeiling returned 0. Token and Peg Stability remained active and owned by Governance SCORE cx44250a12074799e26fdeee75648ae47e2cc84219. The token's unchanged codeHash retains the previously reviewed restricted mintTo and ceiling-enforcement implementation."
       },
       {
         "chain": "icon",
@@ -96,8 +96,8 @@
         "capDescription": "The Governance SCORE owns bnUSD and its single current EOA owner can execute Governance calls that raise the debt ceiling or deploy replacement mint-critical SCORE code without an on-chain vote delay.",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-08",
-        "observedBlock": 116683553,
+        "observedAt": "2026-10-01",
+        "observedBlock": 118950736,
         "sources": [
           {
             "label": "ICON public RPC",
@@ -108,16 +108,16 @@
             "url": "https://tracker.icon.community/transaction/0x6256edc11641f0d94e74acaa8bcdfc8ec9e466eff2b545710b3e47fccc101546"
           }
         ],
-        "evidence": "At block 116683553, the active Governance SCORE owner was this hx account and the bnUSD SCORE owner was the Governance SCORE. The exact v1.0.3 deployed archive gates execute() and deployTo() to that SCORE owner, allowing it to change bnUSD's debt ceiling or mint-critical SCORE code."
+        "evidence": "At ICON block 118950736 on 2026-10-01, the canonical bnUSD SCORE remained owned by Governance SCORE cx44250a12074799e26fdeee75648ae47e2cc84219. That active Governance SCORE returned owner hx80e312d8e68ee2db8fb95e6e7daae2e770d0e368 and codeHash 0x68eaccb4c5cf73124b6da512d1ef4129ea29e56dc08c9611e47c74d1c16d7d01. Its unchanged v1.0.3 deployed archive, reviewed historically at block 116683553, gates execute() and deployTo() to this owner, allowing debt-ceiling changes or replacement mint-critical code."
       }
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
-      "evidence": "Fresh ICON RPC reads at block 116683553 confirm the canonical bnUSD SCORE remains active at code hash 0xf4d53569a3e4ba10dd69178004a070b24723cd697b899f5683722d6ea3110d41, is owned by Balanced Governance, and still reports an 8,000,000 bnUSD debt ceiling against approximately 908,680 bnUSD supply. The Loans and Peg Stability SCOREs remain active and owned by Governance; the Governance SCORE is still owned by the single hx80e312d8e68ee2db8fb95e6e7daae2e770d0e368 EOA. The exact deployed archives limit direct mintTo to Loans/PSM while the Governance owner can raise the ceiling or deploy replacement SCORE code, so the economic cap is raiseable. This is a collateralized protocol mint rather than issuer reserve issuance, making reconciliation not applicable and prudential supervision none. Economic-posture fields reviewed 2026-08-15: the single Governance-owner EOA can raise the debt ceiling or replace mint-critical code without an independent timelock, making the cap unbounded; protocol collateral remains on-chain and no prudential supervisor or independent attestor applies.",
-      "reviewer": "OpenAI Codex C09 control review; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "At ICON block 118968355 on 2026-10-01, the canonical legacy bnUSD SCORE reports a zero debt ceiling and remains active at code hash 0xf4d53569a3e4ba10dd69178004a070b24723cd697b899f5683722d6ea3110d41, owned by Governance SCORE cx44250a12074799e26fdeee75648ae47e2cc84219. Governance remains active at unchanged code hash 0x68eaccb4c5cf73124b6da512d1ef4129ea29e56dc08c9611e47c74d1c16d7d01, owned by hx80e312d8e68ee2db8fb95e6e7daae2e770d0e368. This supersedes the historical 8,000,000 ceiling cited in the August review without removing the previously reviewed owner-authorized cap and upgrade powers. The issuer confirms community governance retired in November 2025. The native administrative path remains unbounded; a zero current ceiling is not an immutable mint restriction. The owner's private-key custody is not established by the SCORE ownership read or retirement disclosure.",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WMisc02)",
+      "reviewedAt": "2026-10-01",
       "disposition": "scoreable",
       "unresolvedQuestions": [],
       "sources": [

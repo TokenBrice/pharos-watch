@@ -213,8 +213,18 @@ export const BRLV_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = {
   reportDateFromCandidate: brlvReportDate,
 };
 
-function audmReportDate(href: string): string | null {
+function audmReportDate(href: string, text: string): string | null {
   const fileName = decodeURIComponent(new URL(href).pathname.split("/").pop() ?? "");
+  const value = `${fileName} ${text}`;
+  // The prefix can be the document creation date, not the reserve period end.
+  const asAt = [...value.matchAll(/\bas\s+at\s+(\d{1,2})(?:st|nd|rd|th)?\s+(January|Jan|February|Feb|March|Mar|April|Apr|May|June|Jun|July|Jul|August|Aug|September|Sept|Sep|October|Oct|November|Nov|December|Dec)\.?\s+(\d{4})\b/gi)];
+  const asAtMarkers = [...value.matchAll(/\bas\s+at\b/gi)];
+  if (asAtMarkers.length > 0) {
+    if (asAt.length !== asAtMarkers.length) return null;
+    const dates = asAt.map((match) =>
+      formatDate(Number(match[3]), monthNumberFromLabel(match[2])!, Number(match[1])));
+    return dates.every((date) => date != null && date === dates[0]) ? dates[0]! : null;
+  }
   const yymmdd = fileName.match(/[_-](\d{2})(\d{2})(\d{2})\s+Catena/i);
   if (yymmdd) {
     return formatDate(2000 + Number(yymmdd[1]), Number(yymmdd[2]), Number(yymmdd[3]));

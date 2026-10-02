@@ -25,9 +25,9 @@
     },
     "authorizationStatus": "issuer-announced-intent",
     "issuerPathway": "federal-qualified-nonbank",
-    "issuerEntity": "BitGo Trust Company / BitGo Bank & Trust, N.A. (OCC conditional approval Dec 2025; current issuer); WLTC Holdings LLC / World Liberty Trust Company, N.A. (de novo OCC national trust charter application pending, filed Jan 2026)",
+    "issuerEntity": "BitGo Bank & Trust, N.A.",
     "issuerDomicile": "United States",
-    "licensingRegulator": "OCC (BitGo Bank & Trust conditional approval Dec 2025; WLTC Holdings OCC application Jan 2026)",
+    "licensingRegulator": "OCC (BitGo Bank & Trust national trust bank; proposed World Liberty Trust Company received preliminary conditional charter approval August 14, 2026)",
     "primaryFederalRegulator": "OCC",
     "foreignExceptionStatus": "not-applicable",
     "enforcementStatus": "no-public-action-found",
@@ -36,8 +36,15 @@
     "reserveDisclosureUrl": "https://www.bitgo.com/usd1/attestations/",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "notes": "Evidence as of 2026-06-18 review: USD1 is legally issued by BitGo Trust Company (operating post-conditional-OCC-approval as BitGo Bank & Trust, N.A.); World Liberty Financial Inc. is the brand sponsor/co-founder. In January 2026, WLTC Holdings LLC (a WLFI subsidiary) filed a de novo OCC national trust bank charter application to establish World Liberty Trust Company, N.A., which would take over direct issuance and custody of USD1 if approved. The OCC charter applications are under existing OCC authority: not GENIUS Act PPSI applications. No GENIUS PPSI framework has been finalized; issuer-announced-intent remains the correct status. No token-specific GENIUS PPSI approval, state-qualified approval, or official PPSI application was located. Reserve-report date recorded as of 2026-06-18 review: 2026-04-30 (date kind unspecified).",
+    "notes": "Issuer and charter update checked 2026-10-01: OCC Corporate Decision 1385, dated August 14, 2026, names BitGo Bank & Trust, N.A. as USD1's current exclusive issuer and custodian and grants World Liberty Trust Company preliminary conditional approval only. Final authorization to commence business requires completion of preopening requirements; the proposed bank intends to assume issuance and reserve liabilities from BitGo after establishment. The August 2026 KPMG reserve report continues to identify BitGo Bank & Trust as issuer. Preliminary national trust charter approval is not a token-specific GENIUS PPSI approval, so the existing authorizationStatus is retained. The June 18, 2026 negative-authorization and enforcement review remains historical and has not been re-dated by this issuer-specific update.",
     "references": [
+      {
+        "label": "OCC Corporate Decision 1385: World Liberty Trust preliminary conditional approval",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/cd1385.pdf",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-14",
+        "accessedAt": "2026-10-01"
+      },
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",

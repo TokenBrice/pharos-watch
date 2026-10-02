@@ -52,13 +52,13 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB03USDKG)",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Independent public accountant certification for wARS - March 2026",
-        "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331_wARS_Certification.pdf"
+        "label": "Independent public accountant certification for wARS - June 2026",
+        "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/Aug%202026/Token%20wARS%2006.30.2026%20Certification%20vf.pdf?hsLang=en"
       },
       {
         "label": "Ripio local stablecoins",

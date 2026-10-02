@@ -2,9 +2,18 @@
   "id": "susd-solayer",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: sUSD resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Solayer official sUSD mint identity",
+        "url": "https://docs.solayer.org/susd/yield-bearing-stablecoin/what-is-susd"
+      },
+      {
+        "label": "Solana finalized atomic mint and program observation",
+        "url": "https://api.mainnet-beta.solana.com"
+      }
+    ],
+    "evidence": "At finalized Solana slot 452213349, one getMultipleAccounts response confirmed freezeAuthority FhVcYNEe58SMtxpZGnTu2kpYJrTu2vwCZDGpPLqbd2yG on the official sUSD Token-2022 mint. That account is owned by the Solayer sUSD program s1aysqpEyZyijPybUV89oBGeooXrR22wMNLjnG2SWJA; its ProgramData names upgrade authority 7671j7qpSf9X5KbQDraXReGK8Dxg5xGjr9n913BWhqru. The positive verdict is supported by an explicit freeze authority and mutable program, not governance inference.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB08CHFAU)",
+    "reviewedAt": "2026-10-01"
   }
 }

@@ -16,9 +16,52 @@
     "reviewer": "Codex 2026-05-14 execution-ready expansion",
     "reviewedAt": "2026-05-14"
   },
+  "oracleRisk": {
+    "tier": "standard-external",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "CACEIS calculates the SAFO fund NAV, which determines subscriptions and redemptions. Chainlink publishes the exact EURSAFO NAV through Ethereum proxy 0x799fdc55150583b5baa0b47065e1c901862c95d5. At block 26098764, description() returned EURSAFO NAV, decimals() returned 6, and aggregator() returned 0xe774bc668d300e3ac157e405149aaff89eed1df6. The EURSAFO/EURCV Morpho oracle 0x8bb55b19f2ea18d4684b59a3b768a1926ab41409 uses this proxy as its immutable BASE_FEED_1. This establishes the external NAV publication path, without claiming independent valuation of CACEIS data, a second feed, or automatic failover. The documented feed heartbeat is 97200 seconds; the Morpho consumer does not enforce a staleness bound.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WSpikoEur)",
+      "rationale": "EURSAFO is the EUR UCITS share class FR0014015LD3, valued at the fund NAV for subscriptions and redemptions. It has a top-level NAV publication authority, not borrower-specific liquidation branches. The separate Morpho lending market is an integration using the same NAV feed and does not turn EURSAFO's own issuance mechanism into a CDP.",
+      "sources": [
+        {
+          "label": "Spiko SICAV prospectus dated 1 September 2026, SAFO share-class and NAV terms",
+          "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+        },
+        {
+          "label": "Amundi and Spiko SAFO launch release identifying Chainlink NAV publication",
+          "url": "https://int.media.amundi.com/files/nuxeo/dl/be27cca1-ad67-4fc4-87a9-7ec68766e2d4"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (R2WSpikoEur)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Chainlink Ethereum feed directory, exact EURSAFO NAV identity and CACEIS source",
+        "url": "https://reference-data-directory.vercel.app/feeds-mainnet.json"
+      },
+      {
+        "label": "Amundi and Spiko SAFO launch release identifying Chainlink NAV publication",
+        "url": "https://int.media.amundi.com/files/nuxeo/dl/be27cca1-ad67-4fc4-87a9-7ec68766e2d4"
+      },
+      {
+        "label": "EURSAFO Morpho oracle verified source and immutable feed configuration",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8bb55b19f2ea18d4684b59a3b768a1926ab41409"
+      },
+      {
+        "label": "Ethereum EURSAFO NAV feed, observed at block 26098764",
+        "url": "https://etherscan.io/address/0x799fdc55150583b5baa0b47065e1c901862c95d5"
+      }
+    ]
+  },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "Spiko announced Chainlink CCIP integration for regulated money-market fund tokens across multiple blockchains. EURSAFO therefore carries external CCIP validation assumptions instead of an issuer-only native route.",
+    "summary": "Spiko's cited 2025 CCIP announcement explicitly concerns EUTBL and USTBL, not EURSAFO. The EURSAFO deployments below are documented fund-share issuance routes; that source does not establish EURSAFO-specific CCIP participation. The existing adverse external-validation tier is retained pending token-specific transport and deployment-control evidence, rather than removed on the strength of an inapplicable announcement.",
     "reviewedAt": "2026-07-20",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
     "confidence": "verified",
@@ -57,9 +100,10 @@
         "semantics": "native-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native EURSAFO on Arbitrum: authority() = PermissionManager 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a (read 2026-07-20).",
+        "reviewNote": "At Arbitrum block 510584284, name() and symbol() identify EURSAFO, decimals() = 5 and authority() = PermissionManager 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a. Current native deployment identity agrees with the September 2026 prospectus; this does not identify an EURSAFO CCIP transport rail.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-01",
+        "observedBlock": 510584284,
         "sources": [
           {
             "label": "arbitrum explorer EURSAFO token",
@@ -83,9 +127,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native EURSAFO: 212-byte EIP-1967 proxy whose authority() = the Spiko PermissionManager 0x344278aff344d6fb960705dc18a4912221608472 (read 2026-07-20); mint access sits with Spiko's issuer-backend relayer proxies under the 8-of-3 super-admin Safe (mint-authority review). Spiko mints natively on this chain.",
+        "reviewNote": "At Ethereum block 26095799, EURSAFO identity and five decimals are confirmed and authority() remains PermissionManager 0x344278aff344d6fb960705dc18a4912221608472. The super-admin Safe is now 3-of-6. The old alleged relayers are EUTBL/USTBL token proxies and fail EURSAFO mint permission. Actual Minter 0x5ed5a75eeed1934ea060186e35187eaa73331366 is authorized; its 5,000,000-share ordinary daily limit is raiseable and over-limit pending mints are admin-approvable. Complete operator rosters remain a scoped mint-authority question. The cited EUTBL/USTBL announcement still does not establish EURSAFO-specific CCIP transport.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095799,
         "sources": [
           {
             "label": "ethereum explorer EURSAFO token",
@@ -109,9 +154,10 @@
         "semantics": "native-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native EURSAFO on Polygon: authority() = the same PermissionManager 0x344278aff344d6fb960705dc18a4912221608472 (read 2026-07-20).",
+        "reviewNote": "At Polygon block 94754983, name(), symbol() and decimals() confirm EURSAFO with five decimals, and authority() = PermissionManager 0x344278aff344d6fb960705dc18a4912221608472. The address matches the September 2026 fund prospectus.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-01",
+        "observedBlock": 94754983,
         "sources": [
           {
             "label": "polygon explorer EURSAFO token",
@@ -135,9 +181,10 @@
         "semantics": "native-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native EURSAFO on Base: authority() = the same PermissionManager 0x344278aff344d6fb960705dc18a4912221608472 (read 2026-07-20).",
+        "reviewNote": "At Base block 52024133, name(), symbol() and decimals() confirm EURSAFO with five decimals, and authority() = PermissionManager 0x344278aff344d6fb960705dc18a4912221608472. The address matches the September 2026 fund prospectus.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-01",
+        "observedBlock": 52024133,
         "sources": [
           {
             "label": "base explorer EURSAFO token",
@@ -161,9 +208,10 @@
         "semantics": "native-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native EURSAFO on Etherlink: authority() = the same PermissionManager 0x344278aff344d6fb960705dc18a4912221608472 (read 2026-07-20).",
+        "reviewNote": "At Etherlink block 54657562, name(), symbol() and decimals() confirm EURSAFO with five decimals, and authority() = PermissionManager 0x344278aff344d6fb960705dc18a4912221608472. The address matches the September 2026 fund prospectus.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-01",
+        "observedBlock": 54657562,
         "sources": [
           {
             "label": "etherlink explorer EURSAFO token",
@@ -187,9 +235,10 @@
         "semantics": "native-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native EURSAFO on Starknet: starknet_call name() on 0x0128f41ef8017ab56140ffad6439305a3196ed862841ba61ff4d78e380c346a6 returns 'Spiko Amundi Overnight Swap Fund (EUR)' (read 2026-07-20); Spiko's own Starknet deployment.",
+        "reviewNote": "At Starknet block 15717856, starknet_call name, symbol and decimals on this address returned Spiko Amundi Overnight Swap Fund (EUR), eurSAFO and 5. The address matches the September 2026 fund prospectus. These identity reads do not independently resolve Starknet mint or upgrade authorities.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-01",
+        "observedBlock": 15717856,
         "sources": [
           {
             "label": "starknet explorer EURSAFO token",
@@ -224,6 +273,45 @@
           {
             "label": "Spiko smart contracts",
             "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+          }
+        ]
+      },
+      {
+        "id": "solana:6ALgseJyDVHbXVep9hcqEB92xNUZJFLQ66PWoHbGu4P7",
+        "destinationChain": "solana",
+        "contractAddress": "6ALgseJyDVHbXVep9hcqEB92xNUZJFLQ66PWoHbGu4P7",
+        "protocol": "Spiko native issuance (Solana Minter)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Finalized slot 452397907 verifies the exact issuer-listed EURSAFO Token-2022 mint, five decimals, nonzero raw supply and native MinterConfig authority BDvZMhgdCAv1HooiymSCkgH2Rupoqv8Yf15gneHMyWcZ. The issuer commit afdab14fb1a59bf3abe2f263870023349a560e2e identifies this exact deployment, and the prospectus describes Solana as a selectable native share register. Issuer admin and program-upgrade powers belong in Mint Authority; this classification neither excludes a transfer rail nor establishes complete economic supply attribution.",
+        "mappingVersion": "bridge-route-facts-v2",
+        "controllerChain": "solana",
+        "controllerAddress": "BDvZMhgdCAv1HooiymSCkgH2Rupoqv8Yf15gneHMyWcZ",
+        "failureDomainKeys": [
+          "contract:solana:8CVKFptWa13Z43e82tYufueoWH7tqJfsNQXB33g1WeVw"
+        ],
+        "observedAt": "2026-10-01",
+        "observedBlock": 452397907,
+        "sources": [
+          {
+            "label": "Exact EURSAFO issuer share-class register roster",
+            "url": "https://public-api.spiko.io/share-classes/eurSAFO"
+          },
+          {
+            "label": "Immutable exact EURSAFO Solana deployment manifest",
+            "url": "https://raw.githubusercontent.com/spiko-tech/solana-contracts/afdab14fb1a59bf3abe2f263870023349a560e2e/deployments/eurSAFO-mainnet-beta.json"
+          },
+          {
+            "label": "Spiko SICAV prospectus, 1 September 2026",
+            "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+          },
+          {
+            "label": "Finalized native mint/configuration observation",
+            "url": "https://solana-rpc.publicnode.com"
           }
         ]
       }

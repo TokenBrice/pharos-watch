@@ -2,10 +2,19 @@
   "id": "onyc-onre",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: ONYC resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "ONyc SPL mint account: finalized RPC observation at slot 452212758",
+        "url": "https://explorer.solana.com/address/5Y8NV33Vv7WbnLfq3zBcKSdYPrk7g2KoiQoe7M2tcxp5"
+      },
+      {
+        "label": "OnRe token configuration: program-controlled collateral Squads vault",
+        "url": "https://docs.onre.finance/technical-resources/token-configuration-and-reference.md"
+      }
+    ],
+    "evidence": "At finalized Solana slot 452212758, the ONyc SPL mint has freezeAuthorityOption=1 and freezeAuthority=45YnzauhsBM8CpUz96Djf8UG5vqq2Dua62wuW9H3jaJ5. Issuer documentation identifies this address as its Solana collateral Squads vault. The positive freeze verdict is now supported by the mint's explicit freeze authority rather than inferred from centralized governance. This observation does not establish the vault's current signing threshold.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA58ONyc)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",

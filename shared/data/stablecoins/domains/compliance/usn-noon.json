@@ -9,7 +9,7 @@
       },
       {
         "label": "Noon USN and sUSN product documentation",
-        "url": "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn"
+        "url": "https://docs.noon.capital/2.-usdusn-and-usdsusn/usdusn-and-usdsusn.md"
       },
       {
         "label": "Noon terms and geographic restrictions",
@@ -21,7 +21,7 @@
     "applicability": "apparent-payment-stablecoin",
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
-    "issuerEntity": "Noon Capital",
+    "issuerEntity": "Noon YBS Issuer Ltd",
     "issuerDomicile": "British Virgin Islands",
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
@@ -39,12 +39,12 @@
       },
       {
         "label": "Noon USN docs",
-        "url": "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn",
+        "url": "https://docs.noon.capital/2.-usdusn-and-usdsusn/usdusn-and-usdsusn.md",
         "sourceKind": "issuer-disclosure"
       },
       {
         "label": "Noon minting and redemption",
-        "url": "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn/minting-and-redemption",
+        "url": "https://docs.noon.capital/2.-usdusn-and-usdsusn/mint-and-redeem.md",
         "sourceKind": "issuer-disclosure"
       },
       {
@@ -58,6 +58,13 @@
         "sourceKind": "news",
         "sourceDate": "2025-05-08",
         "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "USN terms identify Noon YBS Issuer Ltd as the BVI legal issuer",
+        "url": "https://docs.noon.capital/7.-terms-and-policies/asset-terms-usn-terms-of-service.md",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-07-31",
+        "accessedAt": "2026-10-01"
       }
     ],
     "negativeEvidenceReview": {

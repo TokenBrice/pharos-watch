@@ -40,14 +40,15 @@
         "0x1b6e58e9f72a8428cd8af3f8c45d509f4c5f73e3",
         "0x094b60f2295c68a898f3f1d04348b84deb11d3f7",
         "0x013e761f65e054d80fcfe3eced6770666d44c40f",
-        "0xc689b47a95a8a4ef006f29ddd111e5d466bfaa48"
+        "0xc689b47a95a8a4ef006f29ddd111e5d466bfaa48",
+        "0xa9ecf240b4621cf703adc3985a084770d8df1f3a"
       ],
       "adminAddresses": [
         "0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47"
       ],
       "canChangeMintLogic": true,
       "controlRef": "satUSD UUPS owner and ward administrator",
-      "observedAt": "2026-08-16",
+      "observedAt": "2026-10-01",
       "sources": [
         {
           "label": "satUSD Ethereum proxy",
@@ -252,16 +253,20 @@
         "label": "satUSD Base UUPS owner and ward administrator",
         "role": "proxy-admin",
         "authorityType": "eoa",
-        "directMintAbility": "can-authorize",
+        "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-20",
-        "observedBlock": 48861445,
-        "evidence": "owner() on the Base satUSD UUPS proxy 0x70654aad8b7734dc319d0c3608ec7b32e03fa162 returns this address (read 2026-07-20, eth_getCode empty). It is the same River owner EOA recorded as the Ethereum proxy admin; on Base it can _authorizeUpgrade() and rely() new mint wards, so it is the cap-raise authority for the Base SatoshiXApp cap-limited minter.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 52041928,
+        "evidence": "At Base block 52041928, owner() on satUSD 0x70654aad8b7734dc319d0c3608ec7b32e03fa162 returns this address, eth_getCode on it is empty and wards(address) returns true. Implementation slot remains 0x256bd26fddc17a1d1a9b974bcd268f89bfe15789. Its verified DebtTokenWithLz source permits an authorized ward to mint arbitrary amounts without a token-level collateral check or numeric cap. The owner can also rely()/deny() wards and authorize UUPS upgrades directly, with no timelock in those functions. This is verified unbounded native issuance, not a missing-evidence inference. Operational key custody and whole-claim reserve reconciliation remain unverified.",
         "sources": [
           {
             "label": "satUSD Base proxy",
             "url": "https://basescan.org/address/0x70654aad8b7734dc319d0c3608ec7b32e03fa162"
+          },
+          {
+            "label": "Verified Base DebtTokenWithLz implementation",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x256bd26fddc17a1d1a9b974bcd268f89bfe15789"
           }
         ]
       },
@@ -284,7 +289,7 @@
         "sources": [
           {
             "label": "River Arbitrum deployment",
-            "url": "https://docs.river.inc/outro/deployed-contracts/arbitrum"
+            "url": "https://docs.riverai.inc/outro/deployed-contracts/arbitrum.md"
           },
           {
             "label": "satUSD Arbitrum token",
@@ -311,7 +316,7 @@
         "sources": [
           {
             "label": "River deployed-contract registry",
-            "url": "https://docs.river.inc/outro/deployed-contracts"
+            "url": "https://docs.riverai.inc/outro/deployed-contracts.md"
           },
           {
             "label": "satUSD BSC token",
@@ -338,7 +343,7 @@
         "sources": [
           {
             "label": "River Sonic deployment",
-            "url": "https://docs.river.inc/outro/deployed-contracts/sonic"
+            "url": "https://docs.riverai.inc/outro/deployed-contracts/sonic.md"
           },
           {
             "label": "satUSD Sonic token",
@@ -365,7 +370,7 @@
         "sources": [
           {
             "label": "River deployed-contract registry",
-            "url": "https://docs.river.inc/outro/deployed-contracts"
+            "url": "https://docs.riverai.inc/outro/deployed-contracts.md"
           },
           {
             "label": "satUSD BOB token",
@@ -392,7 +397,7 @@
         "sources": [
           {
             "label": "River Bitlayer deployment",
-            "url": "https://docs.river.inc/outro/deployed-contracts/bitlayer"
+            "url": "https://docs.riverai.inc/outro/deployed-contracts/bitlayer.md"
           },
           {
             "label": "satUSD Bitlayer token",
@@ -418,7 +423,7 @@
         "sources": [
           {
             "label": "River B² deployment",
-            "url": "https://docs.river.inc/products/editor/bsquared"
+            "url": "https://docs.riverai.inc/outro/deployed-contracts/bsquared.md"
           },
           {
             "label": "satUSD B² token",
@@ -445,7 +450,7 @@
         "sources": [
           {
             "label": "River Hemi deployment",
-            "url": "https://docs.river.inc/outro/deployed-contracts/hemi"
+            "url": "https://docs.riverai.inc/outro/deployed-contracts/hemi.md"
           },
           {
             "label": "satUSD Hemi token",
@@ -471,7 +476,7 @@
         "sources": [
           {
             "label": "River BEVM deployment",
-            "url": "https://docs.river.inc/outro/deployed-contracts/bevm"
+            "url": "https://docs.riverai.inc/outro/deployed-contracts/bevm.md"
           },
           {
             "label": "satUSD BEVM token",
@@ -498,7 +503,7 @@
         "sources": [
           {
             "label": "River X Layer deployment",
-            "url": "https://docs.river.inc/outro/deployed-contracts/xlayer"
+            "url": "https://docs.riverai.inc/outro/deployed-contracts/x-layer.md"
           },
           {
             "label": "satUSD X Layer token",
@@ -517,11 +522,11 @@
       "sources": [
         {
           "label": "River docs",
-          "url": "https://docs.river.inc"
+          "url": "https://docs.riverai.inc/"
         },
         {
           "label": "River Omni-CDP minting",
-          "url": "https://docs.river.inc/basics/editor/minting"
+          "url": "https://docs.riverai.inc/products/editor/minting.md"
         },
         {
           "label": "satUSD on Etherscan",

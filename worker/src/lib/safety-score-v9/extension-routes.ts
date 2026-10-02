@@ -1,4 +1,5 @@
 import { valuePhysicalCommodityDelivery } from "@shared/lib/physical-commodity-delivery";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { resolvedExitRouteOutputAssetKeys } from "@shared/lib/exit-route-output";
 import { isDexExitRouteCoverageComplete } from "@shared/lib/p4-exit-route-capacity";
@@ -10,9 +11,11 @@ import {
   type RedemptionBackstopConfig,
 } from "@shared/lib/redemption-backstops";
 import { isRedemptionSettlementFaster } from "@shared/lib/redemption-backstop-configs/settlement";
+import { resolveReviewedRouteSuspension } from "@shared/lib/redemption-backstop-configs/schema";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import type { ExitRouteObservation } from "@shared/types/exit-route";
+import { exitRawUsd, exitUsdBoundary } from "@shared/lib/safety-score-v9/exit-execution-units";
 import { canonicalV9ExecutionCostKey } from "@shared/types/safety-score-v9-fact-primitives";
 import {
   getDexMeasuredExecutionFreshnessMaxSec,
@@ -21,6 +24,7 @@ import {
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import {
   deriveSupplyModelExitRouteObservation,
+  buildPhysicalToUsdExitObservation,
   REDEMPTION_SETTLEMENT_HORIZON_CEILING_SEC,
 } from "../redemption-exit-route-observations";
 import type { SafetyScoreV9FactSetExtensionV2 } from "./fact-set-schema";
@@ -250,6 +254,48 @@ function buildOutputReview(
   assetId: string,
 ): RouteOutputReview | null {
   const output = observation.output;
+  if (observation.executionCertificate) {
+    const certificate = observation.executionCertificate;
+    const point = certificate.points.find((entry) => entry.requestedNotionalUsd === observation.requestedNotionalUsd &&
+      entry.maxCostBps === observation.maxCostBps);
+    if (!point || point.outputs.length === 0 || point.certification === "diagnostic") return null;
+    const expectedValues = point.outputs.map((leg) => point.executableUsd === 0 && point.outputs.length === 1
+      ? leg.expectedUnitValueUsd : exitUsdBoundary(exitRawUsd(BigInt(leg.rawUnits), leg.decimals, leg.expectedUnitValueUsd)));
+    const expectedUsd = expectedValues.reduce((sum, value) => sum + value, 0);
+    const actualUsd = point.executableUsd === 0 && point.outputs.length === 1 ? point.outputs[0]!.unitValueUsd :
+      exitUsdBoundary(point.outputs.reduce((sum, leg) => sum + exitRawUsd(BigInt(leg.rawUnits), leg.decimals, leg.unitValueUsd), 0n));
+    if (!Number.isFinite(expectedUsd) || !Number.isFinite(actualUsd) || expectedUsd <= 0 || actualUsd <= 0) return null;
+    const assetKeys = [...new Set(point.outputs.map((leg) => leg.assetKey))].sort(compareText);
+    return {
+      kind: output.kind === "fiat" ? "fiat" : assetKeys.length > 1 ? "basket" : "tracked-stablecoin",
+      assetKeys,
+      basketWeights: assetKeys.length > 1 ? assetKeys.map((assetKey) => ({
+        assetKey, weight: point.outputs.reduce((sum, leg, index) => sum + (leg.assetKey === assetKey ? expectedValues[index]! : 0), 0) / expectedUsd,
+      })) : [],
+      valuation: {
+        basis: "price", referenceAssetKey: assetKeys.join("+"),
+        unitValueUsd: actualUsd / expectedUsd, expectedUnitValueUsd: 1,
+        confidence: "medium", observedAtSec: Math.min(...point.outputs.map((leg) => leg.observedAtSec)),
+        sourceId: "exit-execution-output-legs", sourceGenerationId: certificate.observationGenerationId,
+        maxAgeSec: certificate.priceMaxAgeSec, url: null, contentSha256: null,
+      },
+    };
+  }
+  if (observation.physicalToUsd) {
+    const trace = observation.physicalToUsd;
+    if (trace.rejectionReason !== null) return null;
+    // All fees and spread belong to execution cost, not USD output retention.
+    return {
+      kind: "fiat", assetKeys: ["fiat:USD"], basketWeights: [],
+      valuation: { basis: "price", referenceAssetKey: "fiat:USD",
+        unitValueUsd: 1, expectedUnitValueUsd: 1, confidence: "medium",
+        observedAtSec: trace.metalPriceObservedAtSec,
+        sourceId: "physical-to-usd-modelled-endpoint", sourceGenerationId,
+        maxAgeSec: trace.metalPriceMaxAgeSec,
+        url: getRedemptionBackstopConfig(assetId)?.physicalToUsd?.evidence[0]?.url ?? null,
+        contentSha256: null },
+    };
+  }
   if (output.kind === "physical-commodity-delivery") {
     const config = getRedemptionBackstopConfig(assetId);
     const terms = config?.physicalCommodityDelivery;
@@ -483,12 +529,34 @@ function dexCoverageClass(fixedInput: Readonly<SafetyScoreV9CompilerInput>, asse
   return "exact-lower-bound";
 }
 
+function buildCertifiedRouteReview(fixedInput: Readonly<SafetyScoreV9CompilerInput>, assetId: string, observation: ExitRouteObservation): RouteReview {
+  const certificate = observation.executionCertificate!;
+  const point = certificate.points.find((entry) => entry.requestedNotionalUsd === observation.requestedNotionalUsd && entry.maxCostBps === observation.maxCostBps);
+  const maximumSec = certificate.settlement.maximumCompletionSec;
+  return {
+    lane: observation.routeFamily === "dex-orderbook" || observation.routeFamily === "dex-amm" ? "dex" : "redemption",
+    routeId: observation.routeId,
+    holderAccess: certificate.holder === "any-holder" ? "permissionless" : certificate.holder === "verified-customer" ? "institutional-eligible" : "allowlisted",
+    executionModel: certificate.capacityBasis.endsWith("book-walk") ? "market-depth" : "deterministic",
+    executionCertainty: "conditional", modelConfidence: "medium",
+    coverageClass: point?.certification ?? "diagnostic",
+    capacityScoringHorizon: maximumSec === null ? "unknown" : maximumSec <= observation.settlementHorizonSec ? "immediate" : "queued",
+    settlementModel: maximumSec === 0 ? "atomic" : maximumSec === null ? "unknown" : "bounded-delay",
+    settlementSlaSec: maximumSec, queueDepthUsd: null, dailyLimitUsd: null, minRedeemUsd: null,
+    physicalResourceKeys: [...certificate.resourceKeys].sort(compareText),
+    failureDomains: certificate.failureDomainKeys.map((key) => ({ kind: "redemption-rail" as const, key })).sort((a, b) => compareText(a.key, b.key)),
+    executionCosts: canonicalExecutionCosts(observation, () => null),
+    output: buildOutputReview(fixedInput, observation, certificate.observationGenerationId, assetId),
+  };
+}
+
 function buildDexRouteReview(
   fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   assetId: string,
   observation: ExitRouteObservation,
   composedExit?: ComposedDexExit,
 ): RouteReview {
+  if (observation.executionCertificate) return buildCertifiedRouteReview(fixedInput, assetId, observation);
   const observationHistory = observation.observationHistory;
   const matureMeasuredHistory =
     observation.evidenceKind === "measured-executable-depth" &&
@@ -609,6 +677,9 @@ function redemptionCoverageClass(
   ) {
     return "diagnostic";
   }
+  // The current-open gate protects producer-eligible immediate execution.
+  // Unscored observations retain the evaluator's separate redemption-credit
+  // treatment; an unknown open status is not measured proof of no viable exit.
   const requiresCurrentOpenAttribution =
     observation.scoreEligible &&
     entry.sourceMode === "dynamic" &&
@@ -751,6 +822,8 @@ function buildRedemptionRouteReview(
   observation: ExitRouteObservation,
 ): RouteReview {
   const staticConfig = getRedemptionBackstopConfig(entry.stablecoinId);
+  const routeSuspension = resolveReviewedRouteSuspension(staticConfig, observation.routeId, fixedInput.clockSec);
+  if (observation.executionCertificate && !routeSuspension) return buildCertifiedRouteReview(fixedInput, entry.stablecoinId, observation);
   const unresolvedOutputDispositionReviewedAtSec = staticConfig?.reviewedAt
     ? Date.parse(`${staticConfig.reviewedAt}T00:00:00.000Z`) / 1_000
     : Number.NaN;
@@ -782,11 +855,19 @@ function buildRedemptionRouteReview(
   return {
     lane: "redemption",
     routeId: observation.routeId,
+    ...(routeSuspension ? { routeSuspension } : {}),
+    // Old captures mislabeled published formulas as issuer non-disclosure.
+    // Correct provenance only: no formula evaluation or <=200 bps claim.
+    ...(observation.feeEvidence === "undisclosed-reviewed" &&
+    entry.feeConfidence === "formula" &&
+    (entry.feeModelKind === "formula" || entry.feeModelKind === "documented-variable")
+      ? { feeEvidence: "disclosed-unquantified" as const }
+      : {}),
     holderAccess: redemptionHolderAccess(entry),
     executionModel: redemptionExecutionModel(entry),
     executionCertainty: redemptionExecutionCertainty(entry, modelConfidence),
     modelConfidence,
-    coverageClass: redemptionCoverageClass(entry, observation),
+    coverageClass: routeSuspension ? "diagnostic" : redemptionCoverageClass(entry, observation),
     capacityScoringHorizon: entry.capacityProfile?.scoringHorizon ?? "unknown",
     ...redemptionSettlement(reviewedTerms.settlementModel, reviewedTerms.settlementDelaySec),
     settlementHorizonSec: reviewedTerms.overridesCapturedSettlementHorizon
@@ -796,10 +877,26 @@ function buildRedemptionRouteReview(
     dailyLimitUsd: entry.dailyLimitUsd ?? null,
     minRedeemUsd: reviewedTerms.minRedeemUsd,
     executionCosts: redemptionExecutionCosts(entry, observation),
-    physicalResourceKeys,
+    physicalResourceKeys: routeSuspension ? [] : physicalResourceKeys,
     output: outputReview,
     ...(unresolvedOutputResponsibility === null ? {} : { unresolvedOutputResponsibility }),
     failureDomains: [],
+  };
+}
+
+function buildPhysicalRouteReview(fixedInput: Readonly<SafetyScoreV9CompilerInput>, assetId: string, observation: ExitRouteObservation): RouteReview {
+  const trace = observation.physicalToUsd!;
+  return {
+    lane: "redemption", routeId: observation.routeId, holderAccess: "verified-customer-neutral",
+    executionModel: "deterministic", executionCertainty: trace.modelConfidence === "low" ? "discretionary" : "conditional",
+    modelConfidence: trace.modelConfidence,
+    coverageClass: trace.rejectionReason === null ? "modelled-terms-lower-bound" : "diagnostic",
+    capacityScoringHorizon: "eventual", settlementModel: "bounded-delay",
+    settlementSlaSec: trace.maximumSettlementSec, settlementHorizonSec: observation.settlementHorizonSec,
+    queueDepthUsd: null, dailyLimitUsd: null, minRedeemUsd: trace.minimumUsd,
+    executionCosts: canonicalExecutionCosts(observation, () => observation.maxCostBps),
+    physicalResourceKeys: [`issuer:${assetId}`], failureDomains: [],
+    output: buildOutputReview(fixedInput, observation, fixedInput.redemptionGenerationId, assetId),
   };
 }
 
@@ -835,10 +932,14 @@ export function buildSafetyScoreV9RouteReviews(
     }
   }
   const redemption = fixedInput.redemptionBackstopMap[assetId];
+  const retainedRedemption = buildSafetyScoreV9RetainedRedemptionRoutes(fixedInput, assetId);
+  for (const retained of retainedRedemption.filter((route) => route.observation.physicalToUsd)) {
+    addReview(buildPhysicalRouteReview(fixedInput, assetId, retained.observation));
+  }
   for (const observation of redemption?.capacityProfile?.exitRouteObservations ?? []) {
     addReview(buildRedemptionRouteReview(fixedInput, redemption!, observation));
   }
-  for (const retained of buildSafetyScoreV9RetainedRedemptionRoutes(fixedInput, assetId)) {
+  for (const retained of retainedRedemption.filter((route) => !route.observation.physicalToUsd)) {
     addReview(buildRedemptionRouteReview(fixedInput, redemption!, retained.observation));
   }
   return reviews.sort((left, right) => compareText(`${left.lane}:${left.routeId}`, `${right.lane}:${right.routeId}`));
@@ -856,10 +957,27 @@ export function buildSafetyScoreV9RetainedRedemptionRoutes(
   assetId: string,
 ): RetainedRoute[] {
   const redemption = fixedInput.redemptionBackstopMap[assetId];
-  if (!redemption || (redemption.capacityProfile?.exitRouteObservations?.length ?? 0) > 0) return [];
-  const observation = deriveSupplyModelExitRouteObservation(redemption, fixedInput.clockSec);
-  if (!observation) return [];
-  return [{ lane: "redemption", observation, disposition: "observed", rejection: null }];
+  const retained: RetainedRoute[] = [];
+  const config = getRedemptionBackstopConfig(assetId);
+  if (config?.physicalToUsd) {
+    const reference = fixedInput.pegDataById[assetId]?.pegReference;
+    const expectedCurrency = config.physicalToUsd.metal === "XAU" ? "GOLD" : "SILVER";
+    const metal = fixedInput.pegDataById[assetId]?.pegCurrency === expectedCurrency ? reference : null;
+    const observation = buildPhysicalToUsdExitObservation({
+      assetId, config, clockSec: fixedInput.clockSec,
+      supplyUsd: getCirculatingRawOrNull(fixedInput.aggregateCirculatingById?.[assetId] ?? {}),
+      reference: { usdPerTroyOunce: metal?.usdPerTroyOunce ?? NaN, observedAtSec: metal?.asOf ?? 0 },
+      // The separately reviewed physical channel is not the suspended legacy exchange.
+      routeOpen: redemption?.routeStatus === "open" || (redemption?.routeStatus === "suspended" &&
+        resolveReviewedRouteSuspension(config, `redemption:${assetId}:${config.routeFamily}`, fixedInput.clockSec) !== undefined),
+    });
+    if (observation) retained.push({ lane: "redemption", observation, disposition: "observed", rejection: null });
+  }
+  if (redemption && (redemption.capacityProfile?.exitRouteObservations?.length ?? 0) === 0) {
+    const observation = deriveSupplyModelExitRouteObservation(redemption, fixedInput.clockSec);
+    if (observation) retained.push({ lane: "redemption", observation, disposition: "observed", rejection: null });
+  }
+  return retained;
 }
 
 export function buildSafetyScoreV9RetainedRoutes(

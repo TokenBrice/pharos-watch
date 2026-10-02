@@ -1,6 +1,8 @@
-import { describe, expect, it } from "vitest";
+import "../../test-helpers/reviewed-deployment-catalog.test-support";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { WM_SUPPLY_ATTRIBUTION_MAX_POST_CLOCK_SEC } from "@shared/lib/safety-score-v9-supply-attribution-journal";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   corruptWmDeploymentObservation,
   corruptXautObservation,
@@ -391,6 +393,72 @@ describe("Centrifuge burn/mint deployment supply attribution contract", () => {
     ],
   ])("fails closed for %s", (_label, mutate) => {
     expect(deriveCentrifuge(mutate())).toBeNull();
+  });
+
+  describe("unreviewed zero-supply deployment", () => {
+    const assetId = "jtrsy-anemoy";
+    const route = ACTIVE_META_BY_ID.get(assetId)!.bridgeRouteRisk!.routes!.find(
+      (candidate) => candidate.destinationChain === "solana",
+    )!;
+    const originalRoute = structuredClone(route);
+
+    beforeEach(() => {
+      Object.assign(route, {
+        reviewDisposition: "unresolved",
+        semantics: "unknown",
+        issuanceModel: "unknown",
+      });
+    });
+    afterEach(() => Object.assign(route, originalRoute));
+
+    function deriveJtrsy(rows = centrifugeObservations(assetId)) {
+      return deriveReviewedDeploymentUnitPartition({
+        assetId,
+        aggregateSupplyUsd: CENTRIFUGE_AGGREGATE_SUPPLY_USD,
+        registryFingerprint: REGISTRY_FINGERPRINT,
+        scoringClockSec: CLOCK_SEC,
+        observations: rows,
+      });
+    }
+
+    it("preserves other deployment allocations with same-generation observed zero", () => {
+      const attribution = deriveJtrsy()!;
+      expect(attribution).not.toBeNull();
+      expect(attribution.deployments.find((row) => row.chainId === "solana"))
+        .toMatchObject({ rawSupply: "0", currentSupplyUsd: 0 });
+      expect(attribution.deployments.reduce((sum, row) => sum + row.currentSupplyUsd, 0))
+        .toBe(CENTRIFUGE_AGGREGATE_SUPPLY_USD);
+      expect(reviewedDeploymentAttributionValidationError({
+        assetId,
+        attribution,
+        aggregateSupplyUsd: CENTRIFUGE_AGGREGATE_SUPPLY_USD,
+        registryFingerprint: REGISTRY_FINGERPRINT,
+        clockSec: CLOCK_SEC,
+      })).toBeNull();
+      expect(route.reviewDisposition).toBe("unresolved");
+    });
+
+    it("rejects an unreviewed deployment with even one raw unit", () => {
+      expect(deriveJtrsy(centrifugeObservations(assetId).map((row) =>
+        row.chainId === "solana" ? { ...row, rawSupply: "1" } : row,
+      ))).toBeNull();
+    });
+
+    it("rejects an unobserved unreviewed deployment rather than assuming zero", () => {
+      expect(deriveJtrsy(centrifugeObservations(assetId).filter((row) =>
+        row.chainId !== "solana",
+      ))).toBeNull();
+    });
+
+    it("does not waive identity or freshness gates for an observed zero", () => {
+      const rows = centrifugeObservations(assetId);
+      expect(deriveJtrsy(rows.map((row) => row.chainId === "solana"
+        ? { ...row, mintAuthority: "11111111111111111111111111111111" } : row,
+      ))).toBeNull();
+      expect(deriveJtrsy(rows.map((row) => row.chainId === "solana"
+        ? { ...row, blockTimeSec: CLOCK_SEC - 10_000 } : row,
+      ))).toBeNull();
+    });
   });
 });
 

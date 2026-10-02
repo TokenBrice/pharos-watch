@@ -82,7 +82,9 @@
             "url": "https://eth.blockscout.com/address/0xc21511edd1e6ecdc36e8ad4c82117033e50d5921"
           }
         ],
-        "evidence": "At Ethereum block 25295093, hasRole(M_APOLLO_MINT_OPERATOR_ROLE=keccak256('M_APOLLO_MINT_OPERATOR_ROLE')=0x5940…, 0xc215…) returned true on MidasAccessControl 0x0312…. Implementation: MApolloDepositVault (0xD60c…). Confirmed via live mint TX 0xb786…."
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095806,
+        "evidence": "At Ethereum block 26095806, hasRole(M_APOLLO_MINT_OPERATOR_ROLE=0x59407f5c6daac4079fa24b515198321ffd28cbdf6f85639037afa72b911a29cf, 0xc21511edd1e6ecdc36e8ad4c82117033e50d5921) returned true on MidasAccessControl 0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b. The deposit vault's EIP-1967 implementation remained 0xd60cb8329199becb500d4cf9daf7d9d4697b5dc3."
       },
       {
         "chain": "ethereum",
@@ -99,7 +101,9 @@
             "url": "https://eth.blockscout.com/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
           }
         ],
-        "evidence": "At Ethereum block 25295093, hasRole(M_APOLLO_MINT_OPERATOR_ROLE, 0xe10a…) returned true; eth_getCode = 0x (EOA)."
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095806,
+        "evidence": "At Ethereum block 26095806, hasRole(M_APOLLO_MINT_OPERATOR_ROLE, 0xe10abe1af40afa411190cf776ead838f8d70d9d3) returned true on MidasAccessControl 0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b; eth_getCode returned 0x for this address."
       },
       {
         "chain": "ethereum",
@@ -154,7 +158,9 @@
             "url": "https://eth.blockscout.com/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
           }
         ],
-        "evidence": "At Ethereum block 25295093, hasRole(DEFAULT_ADMIN_ROLE, 0xd419…) returned true; eth_getCode = 0x (EOA)."
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095806,
+        "evidence": "At Ethereum block 26095806, hasRole(DEFAULT_ADMIN_ROLE, 0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227) returned true on MidasAccessControl 0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b; eth_getCode returned 0x for this address."
       },
       {
         "chain": "ethereum",

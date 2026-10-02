@@ -70,5 +70,35 @@
         "rationale": "The current on-chain accounting emits one credit-receivables value. 3Jane documents the Fintech Credit Conduits and Crypto Credit Lines sleeves but does not disclose their current weights or the underlying facility and merchant allocations, so no narrower dependency or obligor split is authored."
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Erebor",
+        "role": "bank",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "3Jane protocol and Aave V3 USDC market",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA39GUSD)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "3Jane banking rail and cash staging",
+        "url": "https://docs.3jane.xyz/backing/fcc/banking-rail-erebor.md"
+      },
+      {
+        "label": "3Jane backing overview",
+        "url": "https://docs.3jane.xyz/backing/backing.md"
+      }
+    ],
+    "uncertainty": "3Jane identifies its Erebor account for off-ramped staging cash, disbursements, and collections, and Aave V3 for idle USDC. Facility-level bankruptcy-remote SPVs are described, but no pool-wide segregation, holder bankruptcy-remoteness, rehypothecation terms, complete custody-provider roster, or sourced provider shares are established. Facility originators and borrower asset-proof platforms are not treated as pool custodians."
   }
 }

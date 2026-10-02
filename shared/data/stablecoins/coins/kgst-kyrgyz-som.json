@@ -40,6 +40,11 @@
       "chain": "bsc",
       "address": "0x94be0bba8e1e303fe998c9360b57b826f1a4f828",
       "decimals": 18
+    },
+    {
+      "chain": "tron",
+      "address": "TN3cfcFhLrdNZhMdHZVZ4z2XFWb7uB9CXg",
+      "decimals": 18
     }
   ],
   "collateralQuality": "rwa",

@@ -18,7 +18,7 @@
     },
     {
       "name": "wstETH (Lido)",
-      "pct": 31.3,
+      "pct": 31.4,
       "risk": "low",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Lido DAO and Ethereum validators",
@@ -66,7 +66,7 @@
     },
     {
       "name": "cbETH (Coinbase)",
-      "pct": 24.8,
+      "pct": 24.7,
       "risk": "low",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Coinbase and Ethereum validators",
@@ -114,8 +114,7 @@
     "providers": [
       {
         "name": "Base Dollar ActivePool branch contracts",
-        "role": "other",
-        "jurisdiction": "Base"
+        "role": "other"
       }
     ],
     "segregation": "unknown",

@@ -98,10 +98,12 @@
     "attestorJurisdiction": "Argentina",
     "latestReport": {
       "periodEnd": "2026-06-30",
+      "publishedAt": "2026-07-28",
+      "publishedAtBasis": "signed-date-standin",
       "assuranceMethod": "agreed-upon-procedures",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "OpenAI Codex backing review",
+      "reviewer": "Sol NR wave 2026-10-02 (NrWars); signed date pinned from certification",
       "confidence": "probable",
       "sources": [
         {

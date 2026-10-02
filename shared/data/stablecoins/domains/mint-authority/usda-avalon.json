@@ -24,8 +24,8 @@
       ],
       "canChangeMintLogic": true,
       "controlRef": "USDa token and minter-proxy admin Safe",
-      "observedAt": "2026-08-08",
-      "observedBlock": 25712112,
+      "observedAt": "2026-10-01",
+      "observedBlock": 26095796,
       "sources": [
         {
           "label": "USDa Ethereum token",
@@ -58,15 +58,15 @@
         "directMintAbility": "direct",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-08",
-        "observedBlock": 25712112,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095796,
         "sources": [
           {
             "label": "USDa Ethereum source",
             "url": "https://etherscan.io/address/0x8a60e489004ca22d775c5f2c657598278d17d9c2#code"
           }
         ],
-        "evidence": "A complete RoleGranted/RoleRevoked replay plus hasRole() confirms this transparent proxy still holds MINT_ROLE at Ethereum block 25712112. Its EIP-1967 implementation is 0x10d162bb7fa363201b0c749cd96322082f733a97 and ProxyAdmin is 0x8ed73f9e5a4b49d07e696fe03b867e0870ac0e69, owned by the reviewed USDa Safe. The current implementation is not explorer-verified, so no narrower call-level cap is claimed."
+        "evidence": "At Ethereum block 26095796, hasRole(MINT_ROLE,address) confirms this proxy still holds MINT_ROLE. Its EIP-1967 implementation remains 0x10d162bb7fa363201b0c749cd96322082f733a97 and ProxyAdmin remains 0x8ed73f9e5a4b49d07e696fe03b867e0870ac0e69, whose owner() returns the reviewed USDa Safe. The complete role replay was historical at block 25712112; this pass confirms the known holder but does not establish the absence of newly added holders. No verified implementation source or narrower call-level cap was retrieved."
       },
       {
         "chain": "ethereum",
@@ -80,15 +80,15 @@
         "directMintAbility": "direct",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-08",
-        "observedBlock": 25712112,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095796,
         "sources": [
           {
             "label": "USDa Ethereum source",
             "url": "https://etherscan.io/address/0x8a60e489004ca22d775c5f2c657598278d17d9c2#code"
           }
         ],
-        "evidence": "A complete RoleGranted/RoleRevoked replay plus hasRole() confirms this transparent proxy still holds MINT_ROLE at Ethereum block 25712112. Its EIP-1967 implementation is 0x1d6321c031665802b9829f60a0602364bf30456f and ProxyAdmin is 0x06de2c3fe2b69ad0acfe2aeccc871f327b08d093, owned by the reviewed USDa Safe. The current implementation is not explorer-verified, so no narrower call-level cap is claimed."
+        "evidence": "At Ethereum block 26095796, hasRole(MINT_ROLE,address) confirms this proxy still holds MINT_ROLE. Its EIP-1967 implementation remains 0x1d6321c031665802b9829f60a0602364bf30456f and ProxyAdmin remains 0x06de2c3fe2b69ad0acfe2aeccc871f327b08d093, whose owner() returns the reviewed USDa Safe. The complete role replay was historical at block 25712112; this pass confirms the known holder but does not establish the absence of newly added holders. No verified implementation source or narrower call-level cap was retrieved."
       },
       {
         "chain": "ethereum",
@@ -119,12 +119,12 @@
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
           "masterCopy": "0xd9db270c1b5e3bd161e8c8503c55ceabee709552",
-          "observedAt": "2026-08-08",
-          "observedBlock": 25712112,
+          "observedAt": "2026-10-01",
+          "observedBlock": 26095796,
           "source": "safe-api"
         },
-        "observedAt": "2026-08-08",
-        "observedBlock": 25712112,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095796,
         "sources": [
           {
             "label": "USDa admin Safe",
@@ -135,7 +135,7 @@
             "url": "https://etherscan.io/address/0x8a60e489004ca22d775c5f2c657598278d17d9c2#code"
           }
         ],
-        "evidence": "At Ethereum block 25712112, owner() returned this Safe and hasRole() confirmed it holds DEFAULT_ADMIN_ROLE and ADMIN_ROLE. Both minter ProxyAdmin owner() calls also returned this Safe. RPC and Safe Transaction Service reported threshold 5, six owners, no modules, and zero guard. It can grant MINT_ROLE and upgrade either existing minter proxy."
+        "evidence": "At Ethereum block 26095796, token owner() and both minter ProxyAdmin owner() calls return this Safe; hasRole() confirms DEFAULT_ADMIN_ROLE and ADMIN_ROLE. Pinned getThreshold() returns 5 and getOwners() returns six owners. Pinned Safe module-list and guard storage reads return an empty module list and zero guard, corroborated by the fetched Safe Transaction Service response. This confirms current controls but does not refresh the historical complete role replay."
       }
     ],
     "economicCapSemantics": "unbounded",

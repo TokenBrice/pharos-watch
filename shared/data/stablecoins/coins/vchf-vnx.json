@@ -78,7 +78,10 @@
     {
       "chain": "xrpl",
       "address": "VCHF-rLPtwF4FZi8bNVmbQ8JgoDUooozhwMNXr3",
-      "decimals": 6
+      "decimals": null,
+      "amountEncoding": {
+        "kind": "xrpl-issued-currency"
+      }
     },
     {
       "chain": "fraxtal",

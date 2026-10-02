@@ -1,10 +1,10 @@
 {
   "id": "xofm-mento",
   "mintAuthority": {
-    "mintPath": "user-collateralized-governed",
+    "mintPath": "permissioned-minter",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "XOFm uses StableTokenV2 with minting restricted to broker/validator paths; the token owner is the Mento Timelock (2-day delay, MentoGovernor as sole proposer, open executor). BorrowerOperations is immutable.",
+    "summary": "XOFm's StableTokenV2 authorizes the Mento Broker and Validators addresses to mint. The token owner and proxy administrator are the Mento Timelock with an observed two-day delay; XOFm is reserve-backed, not the BorrowerOperations CDP liability.",
     "upgradeability": {
       "model": "transparent-proxy",
       "proxyAddresses": [
@@ -19,8 +19,8 @@
       "canChangeMintLogic": true,
       "delaySec": 172800,
       "controlRef": "Mento Timelock (XOFm token owner)",
-      "observedAt": "2026-07-14",
-      "observedBlock": 72127035,
+      "observedAt": "2026-10-01",
+      "observedBlock": 78937958,
       "sources": [
         {
           "label": "Mento V3 deployments",
@@ -35,21 +35,41 @@
     "controls": [
       {
         "chain": "celo",
-        "address": "0x8ec9A81871F816F1EF007a82293703057A943B8A",
-        "label": "Mento BorrowerOperations (immutable CDP minter)",
+        "address": "0x777a8255ca72412f0d706dc03c9d1987306b4cad",
+        "label": "Mento Broker (XOFm minter)",
         "role": "direct-minter",
         "authorityType": "contract",
-        "directMintAbility": "cap-limited",
-        "canRaiseCap": false,
-        "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "XOFm mints only against USDm CDP collateral; BorrowerOperations has no owner() and no EIP-1967 proxy slot, immutable.",
+        "directMintAbility": "direct",
+        "observedAt": "2026-10-01",
+        "observedBlock": 78937958,
         "sources": [
           {
-            "label": "Mento V3 deployments",
+            "label": "XOFm verified StableTokenV2 implementation",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x434563b0604be100f04b7ae485bcafe3c9d8850e"
+          },
+          {
+            "label": "Mento deployed addresses",
             "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
           }
         ],
-        "evidence": "At Celo block 69291577, BorrowerOperations 0x8ec9A81871F816F1EF007a82293703057A943B8A: 46358-byte code, owner() empty, EIP-1967 impl and admin slots zero, immutable."
+        "evidence": "At Celo block 78937958, XOFm broker() returned this address. The verified StableTokenV2 onlyMinter modifier authorizes broker, validators, or exchange; mint(address,uint256) calls _mint without a token-level numeric ceiling. Broker swap constraints are a separate contract surface and are not represented as a USDm borrower-CDP cap."
+      },
+      {
+        "chain": "celo",
+        "address": "0xaeb865bca93ddc8f47b8e29f40c5399ce34d0c58",
+        "label": "Celo Validators (XOFm authorized minter)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "observedAt": "2026-10-01",
+        "observedBlock": 78937958,
+        "sources": [
+          {
+            "label": "XOFm verified StableTokenV2 implementation",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x434563b0604be100f04b7ae485bcafe3c9d8850e"
+          }
+        ],
+        "evidence": "At Celo block 78937958, XOFm validators() returned this address and exchange() was zero. StableTokenV2 explicitly includes validators in onlyMinter. This records the configured token-level authorization, not a verified external key threshold, operational issuance policy, or collateral cap."
       },
       {
         "chain": "celo",
@@ -61,22 +81,24 @@
         "timelockDelaySec": 172800,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 78937958,
         "sources": [
           {
             "label": "Mento V3 deployments",
             "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
           }
         ],
-        "evidence": "At Celo block 69291577, XOFm owner() = 0x890DB8A597940165901372Dd7DB61C9f246e2147; getMinDelay() = 172800; hasRole(PROPOSER_ROLE, MentoGovernor 0x47036d78bB3169b4F5560dD77BF93f4412A59852) = true; hasRole(EXECUTOR_ROLE, 0x0) = true (open executor, standard OZ TimelockController). Prior read also confirmed broker() = 0x777A8255cA72412f0d706dc03C9D1987306B4CaD."
+        "evidence": "At Celo block 78937958, XOFm owner() and the EIP-1967 proxy admin slot both returned 0x890db8a597940165901372dd7db61c9f246e2147. getMinDelay() returned 172800; hasRole(PROPOSER_ROLE, MentoGovernor 0x47036d78bb3169b4f5560dd77bf93f4412a59852) and hasRole(EXECUTOR_ROLE, zero address) returned true. Membership of these two accounts does not establish an exhaustive proposer inventory. The verified token owner can change broker, validators, and exchange; the proxy admin can replace mint-critical logic."
       }
     ],
     "economicCapSemantics": "raiseable",
     "reconciliation": "continuous",
     "supervision": "none",
     "review": {
-      "evidence": "At Celo block 69291577, XOFm owner() resolved to the 172800-second Mento Timelock and BorrowerOperations was confirmed immutable. At block 72127035, the XOFm EIP-1967 implementation slot resolved to StableTokenV2 implementation 0x434563b0...850e and the EIP-1967 admin slot resolved directly to the same Mento Timelock, which can replace mint-critical token logic after its two-day delay. Economic-posture fields reviewed 2026-08-15: cap or minter replacement runs through the enforced two-day Mento Timelock, the live full-composition Mento reserve feed provides continuous reconciliation, and no regulator or independent attestor is evidenced.",
-      "reviewer": "Codex CTRL root batch 05; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "Re-reviewed at Celo block 78937958: XOFm resolves to StableTokenV2 implementation 0x434563b0604be100f04b7ae485bcafe3c9d8850e, with Mento Timelock 0x890db8a597940165901372dd7db61c9f246e2147 as both owner and proxy administrator. The timelock delay is 172800 seconds, the named MentoGovernor has proposer membership, and execution is open. broker() and validators() identify the two configured nonzero onlyMinter paths; exchange() is zero. The prior BorrowerOperations control and USDm-CDP cap description belonged to a different liability and are removed. Mento's pinned backing configuration identifies XOFm as reserve-backed. The token owner can replace minter addresses and the proxy implementation; the reserve API remains an issuer-run holdings disclosure, not independent prudential supervision.",
+      "reviewer": "Sol curation pass 2026-10-01 (CurB43scrvUSD)",
+      "reviewedAt": "2026-10-01",
       "sources": [
         {
           "label": "Mento V3 docs",

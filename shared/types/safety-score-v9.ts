@@ -4,6 +4,13 @@ import { MECHANISM_ARCHETYPE_VALUES } from "./stablecoin-taxonomy";
 import { V9EvidenceResponsibilitySchema } from "./safety-score-v9-fact-primitives";
 import { BRIDGE_ROUTE_RISK_TIER_VALUES, ORACLE_RISK_TIER_VALUES } from "./core";
 import { ScoreSchema } from "./safety-schema-primitives";
+import { V9SupplyAttributionPolicySchema } from "./safety-score-v9-supply-attribution";
+import { ExitExecutionModelPolicySchema } from "./exit-route";
+import { V9WrapperAllocationScopePolicySchema } from "./safety-score-v9-allocation";
+import { V9ExactControlPolicySchema } from "./safety-score-v9-control-scope";
+import { V9AccessLookthroughPolicySchema } from "./safety-score-v9-access-lookthrough";
+import { ReserveScopePolicySchema } from "./safety-score-v9-reserve-scope";
+import { ReserveBoundedFactKindSchema, ReserveBoundedScopeKindSchema, ReserveBoundedTermUnitSchema } from "./reserve-bounded-facts";
 import {
   RedemptionAccessModelSchema,
   RedemptionExecutionModelSchema,
@@ -65,6 +72,7 @@ export const V9_REASON_CODES = [
   "nonmaterial-bridge-supply-unmatched",
   "nonmaterial-dependency-unavailable",
   "no-viable-exit-path",
+  "oracle-topology-undisclosed",
   "parent-cycle",
   "partial-reserve-review",
   "stale-audited-reserve-composition",
@@ -313,6 +321,7 @@ export const V9ScoringInputSchema = z
     pegApplicable: z.boolean(),
     evidenceLevel: V9EvidenceLevelSchema,
     trackRecordMonths: z.number().finite().nonnegative(),
+    unresolvedDeploymentShare: z.number().finite().min(0).max(1).optional(),
     activeDepegBps: z.number().finite().nonnegative().nullable(),
     parentRequired: z.boolean(),
     parentScore: ScoreSchema.nullable(),
@@ -568,6 +577,7 @@ export type V9AssetPremiumPolicy = z.infer<typeof V9AssetPremiumPolicySchema>;
 
 const V9FormulaPolicySchema = z
   .object({
+    wrapperAllocationScope: V9WrapperAllocationScopePolicySchema,
     pillarWeights: z
       .object({
         backing: z.number().finite().min(0).max(1),
@@ -684,6 +694,8 @@ const V9EvidencePolicySchema = z
         reviewedReserveClassificationMaxAgeSec: z.number().int().positive(),
         reviewedReserveCompositionMaxAgeSec: z.number().int().positive(),
         reviewedReserveCompositionGraceSec: z.number().int().positive(),
+        onchainObservationMaxAgeSec: z.number().int().positive(),
+        standingStructureMaxAgeSec: z.number().int().positive(),
       })
       .strict(),
   })
@@ -699,6 +711,7 @@ const V9BackingSignalRuleSchema = z
 const V9BackingArchetypePolicySchema = z
   .object({
     reserveWeight: z.number().finite().min(0).max(1),
+    allowCompleteLiveParentMechanismBypass: z.boolean(),
     componentWeights: z.record(z.string().min(1), z.number().finite().min(0).max(1)),
     serialComponentKeys: z.array(z.string().min(1)),
     structuralComponents: z.record(z.string().min(1), V9BackingSignalRuleSchema),
@@ -707,6 +720,7 @@ const V9BackingArchetypePolicySchema = z
 
 const V9BackingPolicySchema = z
   .object({
+    reserveScope: ReserveScopePolicySchema,
     componentQuality: z
       .object({
         strong: ScoreSchema,
@@ -730,6 +744,22 @@ const V9BackingPolicySchema = z
       .default({ points: 0, minMonths: 60 }),
     reserve: z
       .object({
+        boundedFacts: z.object({
+          factKinds: z.array(ReserveBoundedFactKindSchema).length(ReserveBoundedFactKindSchema.options.length),
+          scopeKinds: z.array(ReserveBoundedScopeKindSchema).length(ReserveBoundedScopeKindSchema.options.length),
+          termUnits: z.array(ReserveBoundedTermUnitSchema).length(ReserveBoundedTermUnitSchema.options.length),
+          observedMaturityQualityLevel: z.enum(["strong", "adequate", "limited", "weak", "failed"]),
+          currentAvailabilityQualityLevel: z.enum(["strong", "adequate", "limited", "weak", "failed"]),
+          currentLiquidFractionMaxAgeSec: z.number().int().positive(),
+          requireExhaustiveEligibility: z.literal(true),
+          requireStressedFinalSettlement: z.literal(true),
+        }).strict().superRefine((value, ctx) => {
+          for (const key of ["factKinds", "scopeKinds", "termUnits"] as const) {
+            if (new Set<string>(value[key]).size !== value[key].length) {
+              ctx.addIssue({ code: "custom", path: [key], message: "Bounded fact vocabularies must be unique" });
+            }
+          }
+        }),
         assetClassQuality: z
           .object({
             cash: ScoreSchema,
@@ -789,6 +819,7 @@ const V9BackingPolicySchema = z
             maturity: z.number().finite().min(0).max(1),
           })
           .strict(),
+        maxUnclassifiedCuratedResidualPct: z.number().finite().min(0).max(100),
         issuerAttestedConfidenceMultiplier: z.number().finite().positive().max(1),
         concentrationWeight: z.number().finite().min(0).max(1),
         concentrationBands: z
@@ -873,13 +904,24 @@ const V9BackingPolicySchema = z
         "synthetic-delta-neutral": V9BackingArchetypePolicySchema,
         algorithmic: V9BackingArchetypePolicySchema,
         "rwa-credit-fund": V9BackingArchetypePolicySchema,
+        "ucits-trs-fund": V9BackingArchetypePolicySchema,
+        "shared-reserve": V9BackingArchetypePolicySchema,
+        "protocol-position": V9BackingArchetypePolicySchema,
       })
       .strict(),
   })
-  .strict();
+  .strict().superRefine((value, ctx) => {
+    const bounded = value.reserve.boundedFacts;
+    const observed = value.componentQuality[bounded.observedMaturityQualityLevel];
+    const available = value.componentQuality[bounded.currentAvailabilityQualityLevel];
+    if (observed < value.boundedUnknownQuality || available < value.reserve.liquidityQuality.unknown || available >= value.reserve.liquidityQuality["seven-days"]) {
+      ctx.addIssue({ code: "custom", path: ["reserve", "boundedFacts"], message: "Informational bound qualities must improve unknown factors without claiming stressed liquidity" });
+    }
+  });
 
 const V9ControlPolicySchema = z
   .object({
+    exactScope: V9ExactControlPolicySchema,
     mintPostureQuality: z
       .object({
         "none-resolved": ScoreSchema,
@@ -991,6 +1033,7 @@ const V9ControlPolicySchema = z
 
 const V9ExitPolicySchema = z
   .object({
+    executionModels: z.record(z.string().min(1), ExitExecutionModelPolicySchema),
     stressRequest: z
       .object({
         notionalGridUsd: z.array(z.number().finite().positive()).min(1),
@@ -1002,6 +1045,39 @@ const V9ExitPolicySchema = z
         settlementHorizonSec: z.number().finite().positive(),
       })
       .strict(),
+    physicalToUsd: z.object({
+      maxCostBps: z.number().finite().nonnegative(),
+      undocumentedThroughputLotsPerSettlementWindow: z.number().int().positive().max(1),
+      termsMaxAgeSec: z.number().int().positive(),
+      metalPriceMaxAgeSec: z.number().int().positive(),
+      modelledSaleTypicalBusinessDays: z.number().finite().nonnegative(),
+      inVaultTaxBps: z.number().finite().nonnegative(),
+      deliveredTaxBps: z.record(z.enum(["london", "zurich", "singapore", "hong-kong", "eu", "other"]),
+        z.object({ XAU: z.number().finite().nonnegative(), XAG: z.number().finite().nonnegative() }).strict()),
+      taxExemptionMinimumFineness: z.object({ singapore: z.object({ XAU: z.number().finite().min(0).max(1), XAG: z.number().finite().min(0).max(1) }).strict(), otherGold: z.number().finite().min(0).max(1) }).strict(),
+      unqualifiedTaxBps: z.number().finite().nonnegative(),
+      deliveredLogistics: z.record(z.enum(["good-delivery", "kilobar", "small-bar-or-coin"]),
+        z.object({ deliveryUsdPerLot: z.number().finite().nonnegative(), insuranceBps: z.number().finite().nonnegative(), assayUsdPerLot: z.number().finite().nonnegative() }).strict()),
+      vagueTypicalBusinessDays: z.object({ "several-business-days": z.number().finite().positive() }).strict(),
+      assumptions: z.object({
+        typicalTimeMultiplier: z.number().finite().positive(),
+        minimumBusinessDays: z.number().finite().positive(),
+        maximumBusinessDays: z.number().finite().positive(),
+        issuerFeeBps: z.number().finite().nonnegative(),
+        conversionBps: z.number().finite().nonnegative(),
+        unknownFixedUsd: z.number().finite().nonnegative(),
+      }).strict(),
+      saleSpreadBps: z.object({
+        "good-delivery": z.object({ primaryVault: z.number().finite().nonnegative(), otherVault: z.number().finite().nonnegative() }).strict(),
+        kilobar: z.object({ primaryVault: z.number().finite().nonnegative(), otherVault: z.number().finite().nonnegative() }).strict(),
+        "small-bar-or-coin": z.object({ primaryVault: z.number().finite().nonnegative(), otherVault: z.number().finite().nonnegative() }).strict(),
+      }).strict(),
+      silverSaleSpreadBps: z.object({
+        "good-delivery": z.object({ primaryVault: z.number().finite().nonnegative(), otherVault: z.number().finite().nonnegative() }).strict(),
+        kilobar: z.object({ primaryVault: z.number().finite().nonnegative(), otherVault: z.number().finite().nonnegative() }).strict(),
+        "small-bar-or-coin": z.object({ primaryVault: z.number().finite().nonnegative(), otherVault: z.number().finite().nonnegative() }).strict(),
+      }).strict(),
+    }).strict(),
     componentWeights: z
       .object({
         access: z.number().finite().min(0).max(1),
@@ -1069,6 +1145,7 @@ const V9ExitPolicySchema = z
       .object({
         "any-holder": z.number().finite().min(0).max(1),
         "verified-customer": z.number().finite().min(0).max(1),
+        "verified-customer-neutral": z.number().finite().min(0).max(1),
         "whitelisted-primary": z.number().finite().min(0).max(1),
         "pre-incident-holder": z.number().finite().min(0).max(1),
         "issuer-discretionary": z.number().finite().min(0).max(1),
@@ -1109,6 +1186,8 @@ const V9MaterialityPolicySchema = z
     serialRequiredPathsAlwaysBind: z.literal(true),
     basketExposureTreatment: z.literal("proportional"),
     deploymentMaterialSharePct: z.number().finite().min(0).max(100),
+    unresolvedDeploymentBlendStartSharePct: z.number().finite().min(0).max(100),
+    unresolvedDeploymentFullCeilingSharePct: z.number().finite().min(0).max(100),
     commonModeOracleMinBranches: z.number().int().positive(),
     commonControlMinAssets: z.number().int().positive(),
     commonControlMinPaths: z.number().int().positive(),
@@ -1129,6 +1208,13 @@ const V9MaterialityPolicySchema = z
   })
   .strict()
   .superRefine((materiality, ctx) => {
+    if (materiality.unresolvedDeploymentBlendStartSharePct >= materiality.unresolvedDeploymentFullCeilingSharePct) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["unresolvedDeploymentFullCeilingSharePct"],
+        message: "Unresolved-deployment full-ceiling share must exceed the blend-start share",
+      });
+    }
     if (materiality.commonModeShareThreshold >= materiality.commonModeHighShareThreshold) {
       ctx.addIssue({
         code: "custom",
@@ -1236,6 +1322,8 @@ const V9MethodologySemanticSchema = z
     formula: V9FormulaPolicySchema,
     evidence: V9EvidencePolicySchema,
     materiality: V9MaterialityPolicySchema,
+    supplyAttribution: V9SupplyAttributionPolicySchema,
+    accessLookthrough: V9AccessLookthroughPolicySchema,
     backing: V9BackingPolicySchema,
     exit: V9ExitPolicySchema,
     control: V9ControlPolicySchema,

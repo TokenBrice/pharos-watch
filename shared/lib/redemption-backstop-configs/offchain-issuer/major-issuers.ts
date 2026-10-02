@@ -150,7 +150,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
       sourceRefRouteCapacity("Crown BRLV whitepaper", "https://crown-2b36dce9.mintlify.app/whitepaper"),
     ],
     notes: [
-      "Modeled against documented BRL issuer redemption for approved users; standard settlement can extend to T+3, so the route remains offchain-issuer rather than instant stablecoin swap capacity",
+      "Crown's binding terms updated September 18, 2026 describe standard BRL redemption for approved users with cutoff-dependent T+1, T+2, or T+3 business-day targets and final settlement up to three business days, subject to banking and reserve-liquidation constraints. Pharos retains the conservative 14-day modeled route horizon; these terms do not establish atomic liquidity or measured same-notional execution capacity.",
     ],
   },
   "usdglo-glo": {

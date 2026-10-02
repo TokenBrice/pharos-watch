@@ -8,7 +8,7 @@
     "governance": "centralized-dependent",
     "rwa": true
   },
-  "collateral": "Isolated basket of institutional credit assets: private credit, structured finance, project finance, asset-backed loans, plus market-neutral fund strategies (Nomura, Fasanara, Edge Capital), with periodic NAV and scheduled non-instant redemption.",
+  "collateral": "Institutional, permissioned private-pool exposure with periodic pricing and scheduled, non-instant redemption. The current AFI category feed reports lithium mining, gold commodity, real estate, and copper mining exposures without identifying position-level legal instruments or named obligors.",
   "pegMechanism": "NAV-based valuation of underlying RWA basket; KYB-gated 1:1 minting and redemption restricted to verified institutional counterparties",
   "mechanismArchetype": "rwa-credit-fund",
   "mechanismArchetypeReview": {
@@ -36,8 +36,8 @@
     "attestorTier": "self",
     "cadence": "weekly",
     "latestReport": {
-      "periodEnd": "2026-09-29",
-      "publishedAt": "2026-09-29",
+      "periodEnd": "2026-10-01",
+      "publishedAt": "2026-10-01",
       "assuranceMethod": "self-verification",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "partial",
@@ -45,7 +45,7 @@
       "confidence": "probable",
       "sources": [
         {
-          "label": "AFI rwaUSDi proof-of-reserves snapshot (TEE attestation 2026-09-29T14:30:46Z, proof 3eb0ce0917dbb230)",
+          "label": "AFI rwaUSDi proof-of-reserves snapshot (data timestamp 2026-10-01T06:30:00Z, TEE attestation 2026-10-01T06:30:58Z, proof bbed05ca9c97d24c)",
           "url": "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/proofs"
         },
         {
@@ -53,7 +53,7 @@
           "url": "https://verification.afiprotocol.xyz/multipli/rwaUSDi"
         },
         {
-          "label": "AFI rwaUSDi signed reserve-breakdown feed, retrieved 2026-09-29",
+          "label": "AFI rwaUSDi signed reserve-breakdown feed, timestamp 2026-10-01T10:01:38.545Z, retrieved 2026-10-01",
           "url": "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/graph/reserve-breakdown"
         }
       ]

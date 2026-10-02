@@ -1,8 +1,8 @@
 {
   "id": "steakusdc-steakhouse",
-  "name": "Steakhouse USDC V2",
+  "name": "Steakhouse Prime USDC",
   "symbol": "steakUSDC",
-  "oneLiner": "steakUSDC is Steakhouse's curated Morpho ERC-4626 lending vault over USDC; share price accrues borrower interest with FIFO withdrawal queue on Morpho liquidity.",
+  "oneLiner": "steakUSDC is Steakhouse's Morpho Vault V2 over USDC; withdrawals use idle USDC and a configured liquidity adapter, while strategy losses can reduce share price.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent",
@@ -12,22 +12,22 @@
   "variantOf": "usdc-circle",
   "variantKind": "strategy-vault",
   "pegReferenceId": "usdc-circle",
-  "collateral": "USDC deposited into a Steakhouse-curated Morpho vault that allocates across Morpho lending markets backed by blue-chip crypto and real-world asset collateral",
-  "pegMechanism": "ERC-4626-style Morpho vault shares appreciate against USDC as borrower interest accrues; withdrawals redeem vault shares for available USDC liquidity or wait for Morpho market liquidity to return",
+  "collateral": "USDC deposited into a Steakhouse-curated Morpho Vault V2 that aims to lend against blue-chip crypto and real-world asset collateral markets depending on market conditions",
+  "pegMechanism": "ERC-4626 Morpho Vault V2 shares accrue strategy interest and realize losses against USDC; withdrawals use idle assets and the configured liquidity adapter, subject to available market liquidity",
   "mechanismArchetype": "fiat-cash",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex mechanism review",
-    "rationale": "steakUSDC is an immutable, deposit-only MetaMorpho ERC-4626 vault share over USDC; it does not create discretionary base-asset supply.",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA13BUIDL)",
+    "rationale": "The exact deployment is an immutable Morpho Vault V2 ERC-4626 share over USDC. User shares mint against deposits; interest accrual can also mint management and performance fee shares. The vault does not create discretionary USDC supply.",
     "sources": [
       {
-        "label": "Steakhouse USDC V2 MetaMorpho vault",
+        "label": "Steakhouse Prime USDC Morpho Vault V2",
         "url": "https://app.morpho.org/ethereum/vault/0xbeef088055857739c12cd3765f20b7679def0f51/steakhouse-prime-instant"
       },
       {
-        "label": "MetaMorpho source",
-        "url": "https://github.com/morpho-org/metamorpho/blob/main/src/MetaMorpho.sol"
+        "label": "Verified VaultV2 source for the exact deployed contract",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef088055857739c12cd3765f20b7679def0f51"
       }
     ]
   },

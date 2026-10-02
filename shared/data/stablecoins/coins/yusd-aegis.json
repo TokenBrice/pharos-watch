@@ -9,7 +9,7 @@
     "yieldBearing": true
   },
   "collateral": "Bitcoin held in institutional custody (Fireblocks, Copper, CEFFU); delta-neutral hedge via COIN-M perpetual futures; funded by user deposits of USDT, USDC, or DAI converted to BTC",
-  "pegMechanism": "Delta-neutral hedging: BTC spot long + COIN-M perpetual short; 1:1 redemption via Aegis Mint contract; funding rate yield distributed to registered YUSD holders; insurance fund backstop for extreme events",
+  "pegMechanism": "Delta-neutral hedging: BTC spot long + COIN-M perpetual short; primary redemption requires a whitelisted wallet and trusted-signer order, locks YUSD pending funds-manager approval, and pays the order's supported collateral asset subject to price bounds and available funds. Ethereum and BSC redemption fees were 10 basis points on 2026-10-01; request acceptance is not completed settlement. Funding-rate yield is distributed to registered YUSD holders, with an insurance fund backstop for extreme events.",
   "mechanismArchetype": "synthetic-delta-neutral",
   "llamaId": "255",
   "detailProvider": "defillama",

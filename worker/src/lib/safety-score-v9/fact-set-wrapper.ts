@@ -1,6 +1,6 @@
 import {
-  evaluateV9ExitAssetFacts,
   resolveV9ExitCapacityAtRequest,
+  selectV9ExitCirculatingUsd,
   selectV9ExitStressRequest,
 } from "@shared/lib/safety-score-v9/exit";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
@@ -27,6 +27,8 @@ import {
   fallbackResearchEvidence,
   type AssetBuildContext,
 } from "./fact-set-context";
+import type { V9AllocationScopeFact, V9AllocationScoredDimension } from "@shared/types/safety-score-v9-allocation";
+import { resolveAllocationDimensionCoverage } from "./fact-set-allocation";
 
 interface WrapperLocalFactBuildInputs {
   implementation: V9AssetFactsV2["implementation"];
@@ -40,6 +42,7 @@ interface WrapperLocalFactBuildInputs {
   economicControlReview: V9EconomicControlReviewV2;
   peg: V9AssetFactsV2["peg"];
   supply: V9AssetFactsV2["supply"];
+  allocationScopeFacts?: readonly V9AllocationScopeFact[];
 }
 
 export function resolveWrapperForm(
@@ -145,41 +148,31 @@ function isDirectSerialWrapper(
   );
 }
 
-type WrapperAllocationReview = NonNullable<AssetBuildContext["asset"]["wrapperAllocationReview"]>;
-
-function wrapperAllocationLeverageAssessment(
-  leverage: WrapperAllocationReview["localLeverage"],
-): V9WrapperRiskAssessment {
-  switch (leverage) {
-    case "no-borrowing-surface":
-      return "none";
-    case "bounded-up-to-1.1x":
-      return "low";
-    case "bounded-up-to-1.5x":
-      return "moderate";
-    case "bounded-up-to-2x":
-      return "high";
-    case "unbounded-or-above-2x":
-      return "critical";
+function resolveWrapperFactFromScope(
+  existing: V9WrapperLocalDimensionFact,
+  facts: readonly V9AllocationScopeFact[],
+  dimension: V9AllocationScoredDimension,
+): V9WrapperLocalDimensionFact {
+  const scope = resolveAllocationDimensionCoverage(facts, dimension);
+  if (scope.signals.length === 0) return existing;
+  const evidenceRefIds = uniqueEvidenceRefIds([...existing.evidenceRefIds, ...scope.evidenceRefIds]);
+  const signals = [...existing.signals, ...scope.signals];
+  // Partial favorable evidence is diagnostic, never a whole-book verdict.
+  // Existing reviewed adverse facts are not replaced by a better local scope.
+  if (scope.assessment !== null && existing.disposition === "reviewed" && existing.assessment !== null) {
+    return { ...existing, assessment: worstWrapperRisk([existing.assessment, scope.assessment]), signals, evidenceRefIds };
   }
-}
-
-function wrapperAllocationReuseAssessment(
-  capitalReuse: WrapperAllocationReview["capitalReuse"],
-): V9WrapperRiskAssessment {
-  switch (capitalReuse) {
-    case "none":
-      return "none";
-    case "bluechip-overcollateralized-lending":
-      return "low";
-    case "mixed-overcollateralized-lending":
-      return "moderate";
-    case "long-tail-overcollateralized-lending":
-    case "multi-strategy-reuse":
-    case "liquidation-loss-absorption":
-    case "single-borrower-risk-capital":
-      return "high";
+  if (scope.complete && scope.assessment !== null && scope.assessment !== "none" && existing.disposition === "not-applicable") {
+    // Complete positive adverse evidence supersedes a structural absence
+    // assumption; a savings/pure label cannot hide proved local borrowing.
+    return { disposition: "reviewed", assessment: scope.assessment,
+      signals: [...scope.signals, "allocation-scope-overrides-structural-absence"], evidenceRefIds };
   }
+  if (scope.complete && scope.assessment !== null && allocationCanResolveWrapperFact(existing)) {
+    return { disposition: "reviewed", assessment: scope.assessment,
+      signals: [...scope.signals, `allocation-scope-complete:${dimension}`], evidenceRefIds };
+  }
+  return { ...existing, signals, evidenceRefIds };
 }
 
 function allocationCanResolveWrapperFact(fact: V9WrapperLocalDimensionFact): boolean {
@@ -301,7 +294,17 @@ function buildWrapperStructuralDimensions(
     allocationEvidenceRefIds,
   } = state;
   const directSerialWrapper = isDirectSerialWrapper(context, form, wrapperEdge);
-  const allocation = context.asset.wrapperAllocationReview ?? null;
+  const authoredAllocation = context.asset.wrapperAllocationReview ?? null;
+  // Reuse the A3 date/custody gate at the compiler boundary as well as intake:
+  // retained extensions cannot turn expired or future allocation proof into relief.
+  const allocation =
+    authoredAllocation !== null &&
+    authoredAllocation.scopeKind === "whole-allocation" &&
+    Date.parse(`${authoredAllocation.reviewedAt}T00:00:00.000Z`) <= context.fixedInput.clockSec * 1_000 &&
+    context.fixedInput.clockSec * 1_000 < Date.parse(`${authoredAllocation.expiresAt}T00:00:00.000Z`) &&
+    authoredAllocation.custody === "fully-onchain-no-offchain-custodian"
+      ? authoredAllocation
+      : null;
   let contractMutability: V9WrapperLocalDimensionFact;
   const upgrade = input.economicControlReview.mint.upgrade;
   if (input.economicControlReview.mint.status.observationState !== "known") {
@@ -354,14 +357,21 @@ function buildWrapperStructuralDimensions(
 
   let custodyEscrow: V9WrapperLocalDimensionFact;
   const custody = context.asset.wrapperCustodyReview ?? null;
-  if (custody !== null) {
+  const hasUnknownCustody =
+    custody === null ||
+    custody.segregation === "unknown" ||
+    custody.bankruptcyRemoteness === "unknown" ||
+    custody.knownUnknownExposureShare === null ||
+    custody.knownUnknownExposureShare > 0;
+  // The on-chain enum scopes a direct claim only when corroborated by current
+  // allocation proof or the custody review's own complete exposure checks.
+  const directOnchainCustody =
+    directSerialWrapper &&
+    custody?.custodyModel === "onchain" &&
+    (allocation !== null || !hasUnknownCustody);
+  if (custody !== null && !directOnchainCustody) {
     const custodyEvidence = componentResearchEvidence(context, "wrapper-local:custodyEscrow");
-    const hasUnknown =
-      custody.segregation === "unknown" ||
-      custody.bankruptcyRemoteness === "unknown" ||
-      custody.knownUnknownExposureShare === null ||
-      custody.knownUnknownExposureShare > 0;
-    custodyEscrow = hasUnknown
+    custodyEscrow = hasUnknownCustody
       ? unavailableWrapperFact(
           "issuer-undisclosed",
           `wrapper-custody-terms-incomplete:${custody.knownUnknownExposureShare ?? "unknown"}`,
@@ -386,7 +396,11 @@ function buildWrapperStructuralDimensions(
       form === "pure"
         ? "pure-wrapper-custody-is-the-serial-parent-contract-claim"
         : "savings-passthrough-has-no-local-custody-or-escrow",
-      uniqueEvidenceRefIds([...reviewedFormEvidence, ...allocationEvidenceRefIds]),
+      uniqueEvidenceRefIds([
+        ...reviewedFormEvidence,
+        ...allocationEvidenceRefIds,
+        ...(directOnchainCustody ? componentResearchEvidence(context, "wrapper-local:custodyEscrow") : []),
+      ]),
     );
   } else {
     custodyEscrow = unavailableWrapperFact(
@@ -426,9 +440,26 @@ function buildWrapperStructuralDimensions(
       reviewedFormEvidence,
     );
   } else if (form === "strategy-vault") {
+    // A current, no-reuse allocation over one fully tracked serial claim scopes
+    // custody uncertainty to the parent. Mixed books and stale reviews do not.
+    const directParentAllocation =
+      allocation !== null &&
+      allocation.localLeverage === "no-borrowing-surface" &&
+      allocation.capitalReuse === "none" &&
+      wrapperEdge !== undefined &&
+      wrapperEdge.weight === 1 &&
+      input.dependencies.diagnostics.graphState === "valid" &&
+      input.dependencies.edges.length === 1 &&
+      input.reserveStatus.observationState === "known" &&
+      input.reserveExposures.length > 0 &&
+      input.reserveExposures.every((exposure) =>
+        exposure.status.observationState === "known" &&
+        exposure.trackedAssetId === wrapperEdge.upstreamAssetId,
+      );
     const highComplexity =
       input.reserveExposures.some((exposure) => exposure.assetClass === "private-credit") ||
-      (custody?.knownUnknownExposureShare ?? 0) > 0;
+      (!directParentAllocation && custody?.knownUnknownExposureShare != null &&
+        custody.knownUnknownExposureShare > 0);
     strategyComplexity = reviewedWrapperFact(
       context,
       highComplexity ? "high" : "moderate",
@@ -438,7 +469,11 @@ function buildWrapperStructuralDimensions(
           : "strategy-vault-adds-third-party-allocation-layer",
         `wrapper-strategy-reserve-components:${input.reserveExposures.length}`,
       ],
-      uniqueEvidenceRefIds([...reviewedFormEvidence, ...reserveEvidenceRefIds]),
+      uniqueEvidenceRefIds([
+        ...reviewedFormEvidence,
+        ...reserveEvidenceRefIds,
+        ...(directParentAllocation ? allocationEvidenceRefIds : []),
+      ]),
     );
   } else {
     strategyComplexity = unavailableWrapperFact(
@@ -484,7 +519,7 @@ function buildWrapperStructuralDimensions(
       leverage,
       reviewedWrapperFact(
         context,
-        wrapperAllocationLeverageAssessment(allocation.localLeverage),
+        V9_CANDIDATE_POLICY_V1.policy.semantic.formula.wrapperAllocationScope.leverageAssessments[allocation.localLeverage],
         [
           `wrapper-allocation-local-leverage:${allocation.localLeverage}`,
           `wrapper-allocation-observation-count:${allocation.observations.length}`,
@@ -495,7 +530,7 @@ function buildWrapperStructuralDimensions(
   }
 
   let rehypothecationCorrelation: V9WrapperLocalDimensionFact;
-  if (custody !== null) {
+  if (custody !== null && !directOnchainCustody) {
     const custodyEvidence = componentResearchEvidence(context, "wrapper-local:rehypothecationCorrelation");
     rehypothecationCorrelation =
       custody.rehypothecation === "unknown"
@@ -522,7 +557,13 @@ function buildWrapperStructuralDimensions(
       form === "pure"
         ? "pure-wrapper-parent-correlation-is-applied-by-serial-dependency"
         : "savings-passthrough-holds-one-parent-and-reuses-nothing",
-      uniqueEvidenceRefIds([...reviewedFormEvidence, ...allocationEvidenceRefIds]),
+      uniqueEvidenceRefIds([
+        ...reviewedFormEvidence,
+        ...allocationEvidenceRefIds,
+        ...(directOnchainCustody
+          ? componentResearchEvidence(context, "wrapper-local:rehypothecationCorrelation")
+          : []),
+      ]),
     );
   } else {
     rehypothecationCorrelation = unavailableWrapperFact(
@@ -536,7 +577,7 @@ function buildWrapperStructuralDimensions(
       rehypothecationCorrelation,
       reviewedWrapperFact(
         context,
-        wrapperAllocationReuseAssessment(allocation.capitalReuse),
+        V9_CANDIDATE_POLICY_V1.policy.semantic.formula.wrapperAllocationScope.reuseAssessments[allocation.capitalReuse],
         [
           `wrapper-allocation-capital-reuse:${allocation.capitalReuse}`,
           `wrapper-allocation-observation-count:${allocation.observations.length}`,
@@ -564,22 +605,27 @@ function buildWrapperStructuralDimensions(
     const oracleTier = input.economicControlReview.oracle.tier;
     const weakOracle =
       oracleTier === "privileged-internal-pricing" ||
-      oracleTier === "single-source-or-laggy" ||
-      oracleTier === "opaque-or-unknown";
-    shareAccountingNavOracle = reviewedWrapperFact(
-      context,
-      weakOracle ? "high" : "moderate",
-      [
-        `wrapper-share-form:${context.asset.variantKind}`,
-        `wrapper-share-reference-kind:${input.peg.referenceKind}`,
-        `wrapper-share-oracle-tier:${oracleTier ?? "not-applicable"}`,
-      ],
-      uniqueEvidenceRefIds([
-        ...reviewedFormEvidence,
-        ...input.peg.status.evidenceRefIds,
-        ...input.economicControlReview.oracle.status.evidenceRefIds,
-      ]),
-    );
+      oracleTier === "single-source-or-laggy";
+    shareAccountingNavOracle = oracleTier === "opaque-or-unknown"
+      ? unavailableWrapperFact(
+          "issuer-undisclosed",
+          "wrapper-share-oracle-topology-undisclosed",
+          input.economicControlReview.oracle.status.evidenceRefIds,
+        )
+      : reviewedWrapperFact(
+          context,
+          weakOracle ? "high" : "moderate",
+          [
+            `wrapper-share-form:${context.asset.variantKind}`,
+            `wrapper-share-reference-kind:${input.peg.referenceKind}`,
+            `wrapper-share-oracle-tier:${oracleTier ?? "not-applicable"}`,
+          ],
+          uniqueEvidenceRefIds([
+            ...reviewedFormEvidence,
+            ...input.peg.status.evidenceRefIds,
+            ...input.economicControlReview.oracle.status.evidenceRefIds,
+          ]),
+        );
   } else {
     shareAccountingNavOracle = unavailableWrapperFact(
       wrapperFactDisposition(
@@ -591,6 +637,9 @@ function buildWrapperStructuralDimensions(
       [...input.peg.status.evidenceRefIds, ...input.economicControlReview.mint.status.evidenceRefIds],
     );
   }
+  custodyEscrow = resolveWrapperFactFromScope(custodyEscrow, input.allocationScopeFacts ?? [], "custodyEscrow");
+  leverage = resolveWrapperFactFromScope(leverage, input.allocationScopeFacts ?? [], "leverage");
+  rehypothecationCorrelation = resolveWrapperFactFromScope(rehypothecationCorrelation, input.allocationScopeFacts ?? [], "rehypothecationCorrelation");
   return {
     contractMutability,
     custodyEscrow,
@@ -643,6 +692,7 @@ function buildWrapperExitDimensions(
       if (
         route.holderAccess === "allowlisted" ||
         route.holderAccess === "institutional-eligible" ||
+        route.holderAccess === "verified-customer-neutral" ||
         route.executionCertainty === "conditional"
       ) {
         return "moderate";
@@ -652,39 +702,37 @@ function buildWrapperExitDimensions(
     withdrawalTerms = reviewedWrapperFact(
       context,
       worstWrapperRisk(termsRisk),
-      knownRedemptionRoutes.flatMap((route) => [
-        `wrapper-withdrawal-access:${route.holderAccess}`,
-        `wrapper-withdrawal-execution:${route.executionModel}`,
-        `wrapper-withdrawal-settlement:${route.settlementModel}:${route.settlementSlaSec ?? "atomic"}`,
-      ]),
+      [
+        ...knownRedemptionRoutes.flatMap((route) => [
+          `wrapper-withdrawal-access:${route.holderAccess}`,
+          `wrapper-withdrawal-execution:${route.executionModel}`,
+          `wrapper-withdrawal-settlement:${route.settlementModel}:${route.settlementSlaSec ?? "atomic"}`,
+        ]),
+        // Fee quantification is a separate integration gap, never a reason to
+        // erase observed access, execution, or queue restrictions.
+        ...(knownRedemptionRoutes.some((route) => route.feeEvidence === "disclosed-unquantified")
+          ? ["wrapper-withdrawal-formula-fee-not-quantified-at-policy-notional"]
+          : []),
+      ],
       routeEvidenceRefIds,
     );
   }
 
-  const stressRequest =
-    input.supply.status.observationState === "known"
-      ? selectV9ExitStressRequest(input.supply.circulatingUsd, V9_CANDIDATE_POLICY_V1)
-      : null;
-  const admittedDocumentedUnwindRouteKeys =
-    stressRequest === null
-      ? new Set<string>()
-      : new Set(
-          evaluateV9ExitAssetFacts(
-            {
-              supply: input.supply,
-              exitStatus: input.exitStatus,
-              exitRoutes: [...input.exitRoutes],
-            },
-            V9_CANDIDATE_POLICY_V1,
-          ).routes.flatMap((route) => (route.included ? [route.routeKey] : [])),
-        );
+  const stressRequest = selectV9ExitStressRequest(
+    selectV9ExitCirculatingUsd(input.supply),
+    V9_CANDIDATE_POLICY_V1,
+  );
+  // A modeled route or partial inventory can establish a lower bound, not
+  // observed exhaustion. Keep the same measurement gate as the Exit pillar.
   const observedUnwindRoutes = input.exitRoutes.filter(
     (route) =>
-      (route.status.observationState === "known" && route.scoreEligible && route.capacityCurve.length > 0) ||
-      // Undisclosed-fee credit is conditionally withheld by a later danger gate
-      // that is unavailable while facts are being compiled.
-      (route.feeEvidence !== "undisclosed-reviewed" &&
-        admittedDocumentedUnwindRouteKeys.has(route.routeKey)),
+      route.status.observationState === "known" &&
+      route.scoreEligible &&
+      route.coverageClass === "exact-complete" &&
+      route.evidenceKind !== "documented-terms" &&
+      route.feeEvidence === undefined &&
+      !route.settlementBoundUnproven &&
+      route.capacityCurve.length > 0,
   );
   let measuredUnwind: V9WrapperLocalDimensionFact;
   const stressCompletions =
@@ -694,8 +742,9 @@ function buildWrapperExitDimensions(
           const point = resolveV9ExitCapacityAtRequest(route.capacityCurve, stressRequest);
           return point === null ? [] : [point.completionRatio];
         });
-  if (stressCompletions.length > 0) {
-    const bestCompletion = Math.max(...stressCompletions);
+  const bestCompletion = stressCompletions.length > 0 ? Math.max(...stressCompletions) : null;
+  const unwindInventoryComplete = stressCompletions.length === input.exitRoutes.length;
+  if (bestCompletion !== null && (bestCompletion >= 0.95 || unwindInventoryComplete)) {
     measuredUnwind = reviewedWrapperFact(
       context,
       bestCompletion >= 0.95
@@ -715,10 +764,9 @@ function buildWrapperExitDimensions(
       routeEvidenceRefIds,
     );
   } else if (input.exitStatus.observationState === "known" && stressRequest !== null) {
-    measuredUnwind = reviewedWrapperFact(
-      context,
-      "critical",
-      ["wrapper-measured-unwind:no-score-eligible-capacity"],
+    measuredUnwind = unavailableWrapperFact(
+      "integration-missing",
+      "wrapper-measured-unwind:no-observed-complete-capacity",
       routeEvidenceRefIds,
     );
   } else {
@@ -748,8 +796,22 @@ function buildWrapperLossAbsorptionFact(
     );
   } else {
     const localControls =
-      context.asset.variantKind === "strategy-vault"
-        ? input.controls.filter((control) => control.controlKind !== "bridge")
+      context.asset.variantKind === "strategy-vault" || context.asset.variantKind === "risk-absorption"
+        ? input.controls.filter(
+            (control) =>
+              control.controlKind !== "bridge" &&
+              !input.dependencies.edges.some(
+                (edge) =>
+                  edge.pathKind === "serial-dependency" &&
+                  edge.dependencyType === "wrapper" &&
+                  (control.controllerAssetId === edge.upstreamAssetId ||
+                    control.failureDomains.some(
+                      (domain) =>
+                        domain.kind === "mint-control" &&
+                        domain.key === `asset:${edge.upstreamAssetId}`,
+                    )),
+              ),
+          )
         : [];
     const reviewableLocalControls = localControls.filter((control) =>
       isReviewableLocalControlStatus(control.status),
@@ -776,11 +838,24 @@ function buildWrapperLossAbsorptionFact(
               ],
               controlEvidenceRefIds,
             )
-          : unavailableWrapperFact(
-              "integration-missing",
-              "wrapper-emergency-control-review-has-no-local-controls",
-              controlEvidenceRefIds,
-            );
+          : input.controlStatus.observationState === "known" &&
+              input.controls.some((control) => control.controlKind !== "bridge")
+            ? context.asset.variantKind === "risk-absorption"
+              ? reviewedWrapperFact(
+                  context,
+                  "moderate",
+                  ["wrapper-holder-bears-protocol-loss-absorption"],
+                  reviewedFormEvidence,
+                )
+              : notApplicableWrapperFact(
+                  "wrapper-emergency-controls-priced-through-parent",
+                  controlEvidenceRefIds,
+                )
+            : unavailableWrapperFact(
+                "integration-missing",
+                "wrapper-emergency-control-review-has-no-local-controls",
+                controlEvidenceRefIds,
+              );
     } else {
       lossAbsorptionEmergencyControls = unavailableWrapperFact(
         wrapperFactDisposition(context, [input.controlStatus]),
@@ -826,9 +901,13 @@ export function buildWrapperLocalFacts(
     ...(wrapperEdge?.evidenceRefIds ?? []),
   ]);
   const allocationEvidenceRefIds =
-    context.asset.wrapperAllocationReview === null || context.asset.wrapperAllocationReview === undefined
+    context.asset.wrapperAllocationReview?.scopeKind !== "whole-allocation"
       ? []
-      : componentResearchEvidence(context, "wrapper-local:leverage");
+      : uniqueEvidenceRefIds([
+          ...componentResearchEvidence(context, "wrapper-local:custodyEscrow"),
+          ...componentResearchEvidence(context, "wrapper-local:leverage"),
+          ...componentResearchEvidence(context, "wrapper-local:rehypothecationCorrelation"),
+        ]);
   const routeEvidenceRefIds = uniqueEvidenceRefIds([
     ...input.exitStatus.evidenceRefIds,
     ...input.exitRoutes.flatMap((route) => [
@@ -884,6 +963,13 @@ export function buildWrapperLocalFacts(
         : [`wrapper-operator:${context.asset.wrapperOperator}`]),
     ],
     formEvidenceRefIds: reviewedFormEvidence,
+    ...(context.asset.parentBackingInheritance === undefined ? {} : {
+      parentBackingInheritance: {
+        state: context.asset.parentBackingInheritance.state,
+        reason: context.asset.parentBackingInheritance.reason,
+        evidenceRefIds: componentResearchEvidence(context, "wrapper-local:parentBackingInheritance"),
+      },
+    }),
     facts: {
       contractMutability,
       custodyEscrow,

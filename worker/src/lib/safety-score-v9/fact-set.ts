@@ -1,4 +1,4 @@
-import { compileV9FactSetV3 } from "@shared/lib/safety-score-v9/compile";
+import { compileV9FactSetV3, safeParseV9AssetFactsV3 } from "@shared/lib/safety-score-v9/compile";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import {
   createV9FactStatus,
@@ -36,6 +36,7 @@ import {
 import {
   createAssetBuildContext,
   normalizeCompiledFailureDomains,
+  componentResearchEvidence,
   projectResearchOverlayPayload,
   type AssetBuildContext,
 } from "./fact-set-context";
@@ -61,6 +62,7 @@ import {
   buildSupply,
 } from "./fact-set-peg-supply";
 import { buildWrapperLocalFacts, resolveWrapperForm } from "./fact-set-wrapper";
+import { buildAllocationScopeFacts } from "./fact-set-allocation";
 
 export {
   SafetyScoreV9FactSetExtensionV2Schema,
@@ -121,10 +123,13 @@ function buildAssetFacts(
   const routes = buildRoutes(context);
   const controls = buildControls(context);
   const economicControlReview = buildEconomicControlReview(context);
-  const accessReview = buildAccessReview(context);
+  const accessReview = buildAccessReview(context, reserves, dependencies);
   const peg = buildPeg(context);
   const supply = buildSupply(context);
   const operationalResilience = buildOperationalResilienceFact(context);
+  const allocationScopeFacts = buildAllocationScopeFacts(context, {
+    dependencies, reserveStatus: reserves.reserveStatus, reserveExposures: reserves.reserveExposures,
+  });
   const wrapperLocalFacts = applySafetyScoreV9WrapperIncidentRoutes(
     context,
     buildWrapperLocalFacts(context, {
@@ -139,8 +144,12 @@ function buildAssetFacts(
       economicControlReview,
       peg,
       supply,
+      allocationScopeFacts,
     }),
   );
+  const reserveScopeAdmissions = context.asset.reserveScopeAdmissions?.map(row => ({
+    ...row, evidenceRefIds: row.admitted ? componentResearchEvidence(context, `reserve-scope:${row.scopeId}`) : [],
+  }));
   const compiledAsset: V9AssetFactsV3 = {
     assetId: context.asset.assetId,
     assetIssuerKey: context.asset.assetIssuerKey ?? null,
@@ -156,6 +165,7 @@ function buildAssetFacts(
     ...(cdpStressCoverage === undefined ? {} : { cdpStressCoverage }),
     dependencies,
     ...reserves,
+    ...(reserveScopeAdmissions === undefined ? {} : { reserveScopeAdmissions }),
     ...routes,
     ...controls,
     economicControlReview,
@@ -164,6 +174,7 @@ function buildAssetFacts(
     supply,
     operationalResilience,
     wrapperLocalFacts,
+    allocationScopeFacts,
   };
   // Normalize once at the producer boundary so every score-bearing pillar,
   // including nested mechanism reviews, shares the same chain identity.
@@ -374,6 +385,7 @@ function buildQuarantinedAssetFacts(
       failureDomains: [],
     },
     operationalResilience: null,
+    allocationScopeFacts: [],
     wrapperLocalFacts: quarantinedWrapperLocalFacts(
       context.asset,
       dependencies,
@@ -489,7 +501,7 @@ function compileAssetOutcome(
       "fact-build",
     );
   }
-  const parsed = V9AssetFactsV3Schema.safeParse(facts);
+  const parsed = safeParseV9AssetFactsV3(facts);
   if (!parsed.success) {
     return quarantinedAssetOutcome(
       context,

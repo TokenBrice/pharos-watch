@@ -77,8 +77,8 @@
         "jurisdiction": "Luxembourg"
       },
       {
-        "name": "Fordefi (on-chain MPC custody for Midas protocol wallets; per Midas transparency listings)",
-        "role": "custodian"
+        "name": "Fordefi (platform-level MPC technology; mGLOBAL-specific custody mandate unverified)",
+        "role": "other"
       }
     ],
     "segregation": "segregated",

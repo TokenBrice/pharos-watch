@@ -2,26 +2,12 @@
   "id": "eurc-circle",
   "reserves": [
     {
-      "sourceKey": "circle:eurc:other-bank-deposits",
-      "name": "Other Bank Deposits",
-      "pct": 98.56135,
+      "sourceKey": "circle:eurc:bank-deposits",
+      "name": "Cash at Regulated Financial Institutions (net settlement adjustments)",
+      "pct": 100,
       "risk": "very-low",
       "assetClass": "bank-deposit",
-      "issuerOrObligor": "Other regulated financial institutions in the EEA",
-      "riskFactors": [
-        "counterparty",
-        "custody",
-        "concentration"
-      ],
-      "liquidityHorizon": "immediate"
-    },
-    {
-      "sourceKey": "circle:eurc:sifi-deposits",
-      "name": "Deposits at Systemically Important Institutions",
-      "pct": 1.43865,
-      "risk": "very-low",
-      "assetClass": "bank-deposit",
-      "issuerOrObligor": "Systemically important financial institutions in the EEA",
+      "issuerOrObligor": "Regulated financial institutions in the EEA (individual counterparties undisclosed)",
       "riskFactors": [
         "counterparty",
         "custody",
@@ -31,24 +17,20 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-29",
-    "reviewer": "GLM issue-sweep 2026-09-29 (WithheldFallbackCircle) — fallback-composition reconciliation to the Deloitte July 2026 examination (report PDF read directly this pass)",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CircleRecovery), D01 independently reproduced examination arithmetic",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Deloitte EURC examination report - July 2026",
-        "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/EURC%20Attestations/2026%20EURC_Examination%20Report%20July%2026%20(1).pdf"
-      },
-      {
-        "label": "Circle transparency (weekly reserve disclosure)",
-        "url": "https://www.circle.com/transparency"
+        "label": "Deloitte EURC examination report - August 2026",
+        "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/EURC%20Attestations/2026%20EURC_Examination%20Report%20August%2026.pdf"
       }
     ],
-    "rationale": "Rows keep the live Circle transparency adapter's two EURC slice identities (adapter-owned source keys). The Deloitte examination as of July 31, 2026 (read directly this pass: €400,113,753 fair value of EURC reserve assets vs €397,363,133 EURC in circulation — €400,053,404 cash held at regulated financial institutions plus €60,349 settlement/timing net) substantiates an unchanged 100% euro bank-cash composition, so the previously curated weights stand. The examination does not split cash between systemically important and other institutions; the split carries the Aug 06, 2026 weekly-disclosure mix (€5.71M SIFI / €391.19M other = 1.43865% / 98.56135%), and the immaterial +0.015% settlement net is folded into the deposit slices. compositionAsOf equals the examination period end, so the curated rows are the independently examined fallback composition; the 2026-08-08 pass deliberately omitted the date because its weights tracked the rolling weekly disclosure rather than the examined balance-sheet date.",
-    "compositionBasis": "Deloitte examination of the EURC Reserve Report as of July 31, 2026 (100% euro cash held at regulated financial institutions in Segregated Accounts), mapped onto the Circle transparency adapter's two slice identities",
-    "compositionAsOf": "2026-07-31",
+    "rationale": "The complete August 31, 2026 examination reports EUR 395,424,211 of cash at regulated financial institutions less EUR 2,139,303 of net timing and settlement adjustments, totaling EUR 393,284,908 of reserve assets. Net cash divided by the examined denominator, EUR 393,284,908, times 100 is exactly 100%. This uses only examined EUR amounts, with no weekly SIFI/non-SIFI split or invented residual. The aggregate bank row carries one conservative common-mode issuer domain; the live adapter uses the same bank-deposits key and retains its weekly bank-category amounts only in contextual metadata.",
+    "compositionBasis": "Complete August 31, 2026 examined EUR bank-cash balances net of settlement adjustments; independently reproduced arithmetic under D01",
+    "compositionAsOf": "2026-08-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "All examined reserve assets are classified as euro cash at regulated financial institutions. The SIFI vs non-SIFI split of the examined cash is not disclosed by the examination and is carried from the Aug 06, 2026 weekly-disclosure deposit mix; individual deposit institutions are not named.",
+    "knownUnknownExposure": "All examined reserve assets are euro bank cash net of timing and settlement adjustments. Individual banks and their shares are not disclosed. The aggregate bank category receives no inferred diversification credit; the weekly SIFI/non-SIFI split does not describe this report period.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
@@ -61,8 +43,8 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "structured",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-17",
-    "reviewer": "Kimi FIAT-CTRL shard-03 control-evidence review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA34EURC), current legal disclosures and August 2026 examination",
     "confidence": "verified",
     "sources": [
       {
@@ -74,14 +56,14 @@
         "url": "https://www.circle.com/fr/legal/mica-eurc-whitepaper"
       },
       {
-        "label": "Deloitte EURC examination report - May 2026 (unencumbered Segregated Accounts definition)",
-        "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/EURC%20Attestations/2026%20EURC_Examination%20Report%20May%2026.pdf"
+        "label": "Deloitte EURC examination report - August 2026 (unencumbered Segregated Accounts definition)",
+        "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/EURC%20Attestations/2026%20EURC_Examination%20Report%20August%2026.pdf"
       },
       {
         "label": "Circle EURC reserve and bankruptcy-remoteness disclosure",
         "url": "https://www.circle.com/eurc"
       }
     ],
-    "uncertainty": "Circle's ACPR-filed MiCA white paper (section D.3) states that funds received in exchange for EURC are protected against any recourse by other creditors of Circle Internet Financial Europe SAS, including in enforcement or insolvency proceedings, and the EURC Terms and Deloitte's May 2026 examination define reserves as unencumbered segregated accounts apart from corporate funds, held on behalf of and for the benefit of holders. Bank identities, institution count, provider-level shares, custodian-replacement arrangements, and rehypothecation terms are not published; the May 2026 report shows the reserve is 100% cash at regulated financial institutions. Issuer pages describe the reserve banks as regulated financial institutions in the EEA, while one circle.com/eurc footnote states cash is held at US financial institutions; account-level placement is not public."
+    "uncertainty": "Circle's MiCA white paper, section D.3, states that funds received in exchange for EURC are protected against other creditors of Circle Internet Financial Europe SAS, including in enforcement or insolvency proceedings. The EURC Terms and August 2026 examination define reserves as unencumbered segregated accounts apart from corporate funds, held for holders. The August 31 examination reports EUR 395,424,211 of bank cash less EUR 2,139,303 of timing and settlement adjustments. It does not identify individual banks, institution count, provider-level shares, or replacement arrangements. Rehypothecation terms remain unknown. The issuer page describes EEA financial institutions but also retains a conflicting US-institution footnote; account-level placement is not disclosed."
   }
 }

@@ -27,5 +27,56 @@
     "evidence": "At Ethereum block 25535640, the sole tracked USDU token returned curator=0x9fe66037c44236c87D9Ac8345F489b4413fDFf06, guardian=zero, timelock=604800 seconds, and no pending role or timelock change. Its verified source makes setFreeze(account, message) curator-only and immediately records the account timestamp; the ERC-20 _update hook then rejects transfers from a frozen sender. An eth_call simulation of setFreeze from the current curator succeeded without broadcasting state, while the same call from an unprivileged address reverted; a normal transfer simulation from a funded holder currently returned true. The curator is an EIP-1967 Aragon DAO proxy, so its governance is an additional control layer, but no delayed parameter change is needed for the current curator to freeze a holder. The issuer transparency page independently states that the curator can freeze specific USDU accounts. Inherited USDC backing remains a separate reserve exposure and is not the basis for this direct-token result.",
     "reviewer": "Codex Safety Score V9 access review",
     "reviewedAt": "2026-07-15"
+  },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "summary": "USDU uses internal mint, redemption and backing-accounting rates rather than an independent dollar-price feed. The reviewed MorphoAdapterV1_2 values its own USDU vault shares with core.convertToAssets and mints the excess over totalMinted as revenue; its deposits and redemptions are curator-controlled. Both reviewed SwapBridgeMorphoV1 modules value ERC-4626 shares through vault.convertToAssets and convert USDC/USDT to USDU at nominal parity, adjusted for fees and decimals. The issuer also values legacy Curve USDC/USDU backing through pool virtual price with both legs soft-pegged to USD. These endogenous marks are applicable economic pricing authority, not an oracleless exemption or a verified external feed.",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol V10 DataCUsdu primary-evidence review",
+      "rationale": "The independently verified round-2 module census at Ethereum block 26098837 identifies MorphoAdapterV1_2 and the USDC/USDT SwapBridgeMorphoV1 modules as the three valid minters. Verified deployed source and the issuer's valuation disclosure establish internal mint, redemption and reserve exchange-rate accounting. USDU holders do not originate borrower debt positions in these modules; underlying lending-vault borrower liquidations are backing-position exposure, not local USDU issuance branches. This aggregate profile covers the reviewed endogenous valuation posture, including disclosed legacy Curve accounting; it does not assert complete current residual backing allocation, vault-manager custody or independent USD price verification.",
+      "sources": [
+        {
+          "label": "USDU issuer backing valuation and curator powers",
+          "url": "https://usdu.finance/transparency/"
+        },
+        {
+          "label": "Verified MorphoAdapterV1_2 mint and reconciliation source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfb46481a9819e068af0eb64a2c2824fcecaaaa45"
+        },
+        {
+          "label": "Verified USDC SwapBridgeMorphoV1 valuation source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6b6893d82edbc8d6769ba3c407102d33da2b623f"
+        },
+        {
+          "label": "Verified USDT SwapBridgeMorphoV1 valuation source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd9141f634ef9e871a5fe4f64195747db77a13f3e"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol V10 DataCUsdu primary-evidence review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "USDU issuer backing valuation and curator powers",
+        "url": "https://usdu.finance/transparency/"
+      },
+      {
+        "label": "Verified MorphoAdapterV1_2 mint and reconciliation source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfb46481a9819e068af0eb64a2c2824fcecaaaa45"
+      },
+      {
+        "label": "Verified USDC SwapBridgeMorphoV1 valuation source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6b6893d82edbc8d6769ba3c407102d33da2b623f"
+      },
+      {
+        "label": "Verified USDT SwapBridgeMorphoV1 valuation source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd9141f634ef9e871a5fe4f64195747db77a13f3e"
+      }
+    ]
   }
 }

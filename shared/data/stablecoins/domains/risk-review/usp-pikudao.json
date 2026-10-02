@@ -33,7 +33,7 @@
         },
         {
           "label": "Piku USP workflow contracts",
-          "url": "https://docs.piku.co/piku/piku-platform/token-and-workflow-contracts/usp.md"
+          "url": "https://docs.piku.co/piku/piku-platform/token-and-workflow-contracts/usp-yield-vault.md"
         },
         {
           "label": "Piku terms of use",
@@ -47,11 +47,11 @@
     "sources": [
       {
         "label": "Piku USP price documentation",
-        "url": "https://docs.piku.co/piku/piku-finance/vaults/usp-yield-optimized-stablecoin/minting-and-redemption/how-to-get-usp-price.md"
+        "url": "https://docs.piku.co/piku/piku-finance/vaults/usp-yield-vault/minting-and-redemption/how-to-get-usp-price.md"
       },
       {
         "label": "Piku USP workflow contracts",
-        "url": "https://docs.piku.co/piku/piku-platform/token-and-workflow-contracts/usp.md"
+        "url": "https://docs.piku.co/piku/piku-platform/token-and-workflow-contracts/usp-yield-vault.md"
       },
       {
         "label": "Piku Oracle Module implementation",

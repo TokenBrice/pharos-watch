@@ -1,6 +1,16 @@
 {
   "id": "acrdx-anemoy-apollo",
   "mica": {
-    "status": "out-of-scope"
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "BVI FSC exact Anemoy fund issuer",
+        "url": "https://www.bvifsc.vg/regulated-entities/anemoy-capital-spc-limited"
+      },
+      {
+        "label": "Anemoy exact ACRDX feeder-fund disclosure",
+        "url": "https://www.anemoy.io/news/acrdx-launched"
+      }
+    ]
   }
 }

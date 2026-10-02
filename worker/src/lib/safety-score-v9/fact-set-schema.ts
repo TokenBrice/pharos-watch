@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { ReserveBoundedFactSchema } from "@shared/types/reserve-bounded-facts";
+import { ReserveScopedAdmissionSchema } from "@shared/types/safety-score-v9-reserve-scope";
+import { AdmittedProviderRowExclusionSchema } from "@shared/types/safety-score-v9-supply-attribution";
 import { compareCodeUnits } from "@shared/lib/compare";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { isRecord } from "@shared/lib/type-guards";
@@ -32,8 +35,9 @@ import {
 } from "@shared/types/exit-route";
 import { ReserveSliceSchema, ReserveIntermediarySchema } from "@shared/types/reserves";
 import type { ReserveSlice } from "@shared/types/reserves";
-import { WRAPPER_OPERATOR_VALUES } from "@shared/types/core";
-import { SafetyScoreV9WrapperAllocationReviewSchema } from "./extension-wrapper-allocation";
+import { CustodyModelSchema, WRAPPER_OPERATOR_VALUES } from "@shared/types/core";
+import { ParentBackingInheritanceSchema } from "@shared/types/stablecoin-meta-schemas";
+import { SafetyScoreV9WrapperAllocationReviewSchema, V9AllocationScopeIdentityReviewSchema } from "@shared/types/safety-score-v9-allocation";
 import { canonicalArrayBy } from "@shared/types/safety-score-v9-fact-primitives";
 import {
   CanonicalFailureDomainsSchema,
@@ -123,6 +127,8 @@ const ReserveClassificationSchema = z
     failureDomains: CanonicalFailureDomainsSchema,
     trackedAssetId: CanonicalTextSchema.nullable().optional(),
     trackedAssetDisposition: z.enum(["source", "reviewed-non-link"]).optional(),
+    /** Exact reviewed source identity whose amount remains unclassified. */
+    unclassifiedResidual: z.literal(true).optional(),
   })
   .strict();
 
@@ -329,6 +335,7 @@ const SupplyReviewSchema = z
     unknownRouteSupplyShare: FractionSchema,
     unreviewedRouteSupplyShare: FractionSchema,
     failureDomains: CanonicalFailureDomainsSchema,
+    providerRowExclusions: z.array(AdmittedProviderRowExclusionSchema).optional(),
   })
   .strict();
 
@@ -340,6 +347,8 @@ const ReviewedStaticReserveRowsSchema = z
     ).refine((rows) => rows.length > 0, { message: "Reviewed static reserve admission requires rows" }),
     evidenceClass: z.enum(["independent", "issuer-attested", "static-validated"]),
     provenance: z.enum(["curated", "curated-fallback", "audited-fallback"]).default("curated"),
+    sourceKind: z.enum(["standing-structure", "portfolio-observation", "financial-report"]).optional(),
+    scopeId: z.string().min(1).optional(),
   })
   .strict();
 
@@ -362,6 +371,8 @@ const MechanismExitFactOverlaySchema = z
 
 const WrapperCustodyReviewSchema = z
   .object({
+    // Authored wrapper custody model only; absence does not prove on-chain custody.
+    custodyModel: CustodyModelSchema.default("unknown"),
     providers: canonicalArrayBy(
       z
         .object({
@@ -434,7 +445,9 @@ const AssetExtensionSchema = z
     dependencies: EffectiveDependenciesOverlaySchema.nullable(),
     reserveApplicability: ReserveApplicabilitySchema,
     reserveClassifications: canonicalArrayBy(ReserveClassificationSchema, (row) => row.exposureKey),
+    reserveBoundFacts: canonicalArrayBy(ReserveBoundedFactSchema, (row) => row.factKey).optional(),
     reviewedStaticReserveRows: ReviewedStaticReserveRowsSchema.nullable().optional(),
+    reserveScopeAdmissions: z.array(ReserveScopedAdmissionSchema).optional(),
     routeReviews: canonicalArrayBy(RouteReviewSchema, (row) => `${row.lane}:${row.routeId}`),
     retainedRoutes: canonicalArrayBy(
       RetainedRouteSchema,
@@ -450,12 +463,22 @@ const AssetExtensionSchema = z
     // baseline producer emits the reviewed registry projection when available.
     wrapperCustodyReview: WrapperCustodyReviewSchema.nullable().optional(),
     wrapperAllocationReview: SafetyScoreV9WrapperAllocationReviewSchema.nullable().optional(),
+    allocationScopeIdentityReview: V9AllocationScopeIdentityReviewSchema.optional(),
+    parentBackingInheritance: ParentBackingInheritanceSchema.optional(),
     researchEvidence: canonicalArrayBy(ResearchEvidenceSchema, (evidence) => evidence.evidenceKey).default([]),
     componentEvidence: canonicalArrayBy(ComponentEvidenceBindingSchema, (binding) => binding.componentKey).default([]),
     admissionQuarantine: AssetAdmissionQuarantineSchema.optional(),
   })
   .strict()
   .superRefine((asset, ctx) => {
+    for (const [field, review] of [
+      ["wrapperAllocationReview", asset.wrapperAllocationReview],
+      ["allocationScopeIdentityReview", asset.allocationScopeIdentityReview],
+    ] as const) {
+      if (review != null && review.assetId !== asset.assetId) {
+        ctx.addIssue({ code: "custom", path: [field, "assetId"], message: "Allocation review must match extension asset" });
+      }
+    }
     if (
       asset.operationalResilience !== undefined &&
       asset.operationalResilience !== null &&

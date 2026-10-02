@@ -2,14 +2,14 @@
   "id": "jupusd-jupiter",
   "name": "JupUSD",
   "symbol": "JUPUSD",
-  "oneLiner": "JupUSD is Jupiter's dollar stablecoin on Solana, backed 90% by Ethena USDtb (BlackRock BUIDL T-bills) and 10% USDC, with 1:1 mint and redeem against USDC.",
+  "oneLiner": "JupUSD is Jupiter's Solana dollar stablecoin, targeting 90% USDtb and 10% USDC reserves; direct minting and redemption require KYC/KYB onboarding.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized-dependent",
     "rwa": true
   },
-  "collateral": "90% USDtb (BlackRock BUIDL tokenized U.S. Treasuries issued by Ethena under GENIUS-compliant framework, custodied by Porto/Anchorage Digital) and 10% USDC liquidity buffer",
-  "pegMechanism": "Reserve-backed 1:1 mint and redeem on Solana against USDC; Ethena manages day-to-day reserve operations (custody, bridging, rebalancing between USDtb and USDC)",
+  "collateral": "USDtb and USDC reserves targeting a 90%/10% mix, rebalanced daily; actual weights fluctuate with minting and redemption",
+  "pegMechanism": "Whitelisted KYC/KYB participants mint and redeem against USDC or USDtb through the Solana program at 1:1 before a 0.04% fee; market-maker arbitrage and an automated peg bot support secondary-market stability",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "335",
   "detailProvider": "defillama",

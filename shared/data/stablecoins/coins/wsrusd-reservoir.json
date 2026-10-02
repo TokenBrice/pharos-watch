@@ -2,7 +2,7 @@
   "id": "wsrusd-reservoir",
   "name": "Wrapped Savings rUSD",
   "symbol": "wsrUSD",
-  "oneLiner": "wsrUSD is a non-rebasing ERC-4626 savings wrapper of Reservoir's rUSD stablecoin, accruing yield from T-bill, DeFi lending, and basis strategies behind rUSD.",
+  "oneLiner": "wsrUSD is Reservoir's non-rebasing ERC-4626 savings token over rUSD, with a governance-set rate and exposure to the upstream protocol balance sheet.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized-dependent",
@@ -10,7 +10,7 @@
     "rwa": true,
     "navToken": true
   },
-  "collateral": "T-bills and government securities (RWA allocation via governance-approved Asset Adapters), overcollateralized DeFi lending in Morpho and Euler vaults (curators include Steakhouse, Re7, MEV Capital, Gauntlet, Objective Labs), and crypto funding-rate / basis strategies; Credit Enforcer smart contracts enforce minimum 105% Liquidity, Solvency, and Capital Ratios before any leverage-increasing action",
+  "collateral": "T-bills and government securities (RWA allocation via governance-approved Asset Adapters), overcollateralized DeFi lending in Morpho and Euler vaults (curators include Steakhouse, Re7, MEV Capital, Gauntlet, Objective Labs), and crypto funding-rate / basis strategies; Credit Enforcer smart contracts enforce governance-set minimum Liquidity, Asset, and Equity Ratios before allocation changes. Reservoir's documentation describes approximately 105% as a usual illustrative minimum, not a verified current threshold.",
   "pegMechanism": "wsrUSD is a non-rebasing ERC-4626 vault token that accepts rUSD and accrues yield per block; token price appreciates continuously from $1.00 as protocol yield accrues, and users can redeem wsrUSD for rUSD at any time. rUSD itself is minted and redeemed through Reservoir's Peg Stability Module (PSM) against supported stablecoins, subject to available protocol liquidity.",
   "detailProvider": "coingecko",
   "geckoId": "wrapped-savings-rusd",

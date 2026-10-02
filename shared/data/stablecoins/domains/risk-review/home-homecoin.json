@@ -32,8 +32,8 @@
         "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "evidence": "Re-reviewed 2026-08-08 at Ethereum block 25712294: HOME proxy 0xb8919522331c59f5c16bdfaa6a121a6e03a91f62 pointed to verified Pool16 implementation 0x366049d336e73cfaf39c6a933780ca4c96ea084c behind ProxyAdmin 0x5729890f78c07bc2d1c09345001f6c1f0c9d7d6f. ProxyAdmin owner 0xa42f6fb68607048dde54fcd53d2195cc8ca5f486 remained a five-owner, threshold-three legacy multisig. The current implementation and exact ABI expose standard transfer/transferFrom behavior but no blacklist, pause, freeze, seize, allowlist, or privileged holder-burn path. The official repository contains mortgage-originator agreements, but no current token-holder terms that positively exclude an issuer-level legal restriction were available; absence of such terms cannot support a false verdict. The direct review therefore remains honestly possible, while the live no-timelock 3/5 upgrade path is verified as restrictable in the transfer overlay.",
-    "reviewer": "OpenAI Codex C06 access review",
-    "reviewedAt": "2026-08-08"
+    "evidence": "At Ethereum block 26095802, HOME retained verified Pool16 implementation 0x366049d336e73cfaf39c6a933780ca4c96ea084c and ProxyAdmin 0x5729890f78c07bc2d1c09345001f6c1f0c9d7d6f. Its owner and the Pool16 servicer are Gnosis Safe v1.3.0 0xa42f6fb68607048dde54fcd53d2195cc8ca5f486, currently 3-of-5, with empty module pagination; guard and fallback were not inspected. Pool16 exposes standard transfers and self-burn, with no blacklist, pause, freeze or privileged holder-burn method in the fetched ABI. The proxy upgrade path can replace that implementation. Current holder terms excluding legal restrictions were not found in the issuer website, official README/FAQ or mortgage-originator agreements. The reviewed possible access verdict remains warranted; absence of a blacklist method is not a guarantee against future upgrade or legal restrictions. Earlier characterization of the controller as a legacy pre-Safe MultiSigWallet is corrected by current pinned singleton and VERSION reads.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB22mGLOBAL)",
+    "reviewedAt": "2026-10-01"
   }
 }

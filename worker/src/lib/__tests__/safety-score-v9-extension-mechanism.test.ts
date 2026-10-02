@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import mechanismReviewOverlaysAsset from "@shared/data/safety-score-v9/mechanism-review-overlays-v1.json";
 import xdaiMetaSource from "@shared/data/stablecoins/coins/xdai-gnosis.json";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { evaluateV9Backing } from "@shared/lib/safety-score-v9/archetypes";
+import { asset as backingAsset, exposure, knownStatus } from "@shared/lib/__tests__/safety-score-v9-backing.test-support";
 import type { ProofOfReservesLatestReport, StablecoinMeta } from "@shared/types/core";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 import {
@@ -28,7 +30,7 @@ function fixedInputStub(
   liveReserves: Record<string, unknown[]> = {},
   clockSec = STUB_CLOCK_SEC,
 ): ReportCardsFixedInput {
-  return { clockSec, liveReserveMap: liveReserves } as unknown as ReportCardsFixedInput;
+  return { clockSec, liveReserveMap: liveReserves, liveReserveProvenanceMap: {}, safetyScoreV9SupplyAttributionById: {} } as unknown as ReportCardsFixedInput;
 }
 
 const BARE_META: MechanismMeta = { id: "alpha" } as MechanismMeta;
@@ -57,6 +59,70 @@ const ATTESTED_META = {
 } satisfies MechanismMeta;
 
 describe("buildSafetyScoreV9MechanismReview", () => {
+  it.each(["ucits-trs-fund", "shared-reserve", "protocol-position"] as const)(
+    "keeps every %s residual bounded despite generic assurance and reserve totals",
+    (archetype) => {
+      const meta = {
+        ...ATTESTED_META,
+        mechanismArchetype: archetype,
+        mechanismArchetypeReview: {
+          disposition: "resolved" as const, reviewedAt: "2026-07-19", reviewer: "Fixture reviewer",
+          rationale: "Exact deployed token holder claim established by pinned primary evidence.",
+          sources: [{ label: "Exact token claim", url: "https://example.com/exact-token" }],
+        },
+      };
+      const review = buildSafetyScoreV9MechanismReview(fixedInputStub({ alpha: [{ pct: 100 }] }), meta, archetype);
+      expect(review).not.toBeNull();
+      for (const [key, fact] of Object.entries(review!)) {
+        if (key === "archetype") continue;
+        expect(fact).toMatchObject({ quality: null, status: { observationState: "bounded-unknown", applicability: { state: "required" } } });
+      }
+      const result = evaluateV9Backing(
+        backingAsset([exposure({ key: "reserve", weight: 1, policyRuleId: "mechanism.required" })]),
+        review!, V9_CANDIDATE_POLICY_V1,
+      );
+      expect(result.contributions.filter((row) => row.source === "mechanism").every(
+        (row) => row.score === V9_CANDIDATE_POLICY_V1.policy.semantic.backing.boundedUnknownQuality && row.effectiveWeight > 0,
+      )).toBe(true);
+    },
+  );
+
+  it("rejects label-only, wrong-family and unresolved native claims even with a dashboard total", () => {
+    const input = fixedInputStub({ alpha: [{ pct: 100 }] });
+    expect(buildSafetyScoreV9MechanismReview(input, ATTESTED_META, "protocol-position")).toBeNull();
+    const unresolved = {
+      ...ATTESTED_META,
+      mechanismArchetype: "shared-reserve" as const,
+      mechanismArchetypeReview: {
+        disposition: "unresolved" as const, reviewedAt: "2026-07-19", reviewer: "Fixture reviewer",
+        rationale: "Current exact-token holder claim is not established.",
+        sources: [{ label: "Claim search", url: "https://example.com/search" }],
+      },
+    };
+    expect(buildSafetyScoreV9MechanismReview(input, unresolved, "shared-reserve")).toBeNull();
+    expect(buildSafetyScoreV9MechanismReview(input, { ...unresolved, mechanismArchetypeReview: { ...unresolved.mechanismArchetypeReview, disposition: "resolved" } }, "protocol-position")).toBeNull();
+  });
+
+  it("rejects unavailable-as-not-applicable and dormant legacy component grades for a native family", () => {
+    const overlay = {
+      assetId: "fixture-position", archetype: "protocol-position" as const, reviewedAt: "2026-07-19",
+      sources: [{ label: "Position disclosures", url: "https://example.com/position" }],
+      notes: "Identity-bound module claim; full liability book unavailable.",
+      metrics: {}, components: { holderClaim: { quality: "limited" as const } },
+    };
+    const review = expandOverlayReview(overlay);
+    expect(review.archetype).toBe("protocol-position");
+    if (review.archetype !== "protocol-position") throw new Error("unexpected family");
+    expect(review.holderClaim.quality).toBe("limited");
+    expect(review.liabilityConservation.quality).toBeNull();
+    expect(() => expandOverlayReview({ ...overlay, components: { claimAndSegregation: { quality: "strong" } } })).toThrow();
+    expect(MechanismReviewOverlaySchema.safeParse({
+      ...overlay,
+      components: { encumbranceAndAllocation: { applicability: "not-applicable", rationale: "Inventory not disclosed", sourceUrl: overlay.sources[0]!.url } },
+    }).success).toBe(false);
+    expect(() => expandOverlayReview({ ...overlay, metrics: { exogenousBackingShare: 1 } })).toThrow();
+  });
+
   it("returns no review without any reserve, custody, or assurance evidence", () => {
     expect(buildSafetyScoreV9MechanismReview(fixedInputStub(), BARE_META, "fiat-cash")).toBeNull();
     expect(buildSafetyScoreV9MechanismReview(fixedInputStub(), BARE_META, "tbill")).toBeNull();
@@ -158,6 +224,51 @@ describe("buildSafetyScoreV9MechanismReview", () => {
     expect(
       buildSafetyScoreV9MechanismReview(fixedInputStub({ alpha: [{}] }), ATTESTED_META, "synthetic-delta-neutral"),
     ).toBeNull();
+  });
+
+  it("prices the dated LVUSD census while current and withdraws the expired measurement", () => {
+    const overlay = MechanismReviewOverlaySchema.parse(
+      mechanismReviewOverlaysAsset.overlays.find((row) => row.assetId === "lvusd-leverup"),
+    );
+    const reviewedAtSec = Date.parse(`${overlay.reviewedAt}T00:00:00Z`) / 1_000;
+    const admittedClockSec = reviewedAtSec + 86_400;
+    const review = buildSafetyScoreV9MechanismReview(
+      fixedInputStub({}, admittedClockSec),
+      { id: overlay.assetId } as MechanismMeta,
+      overlay.archetype,
+    );
+    if (!review) throw new Error("expected a current LVUSD mechanism review");
+    expect(review.collateralizationMeasurement).toMatchObject({
+      measurementId: "lvusd-leverup:monad:88937390",
+      measuredAt: overlay.reviewedAt,
+      sourceUrl: "https://rpc.monad.xyz",
+      status: {
+        evidenceRefIds: ["extension-evidence:mechanism:collateralization:lvusd-leverup:monad:88937390"],
+      },
+    });
+    const input = {
+      ...backingAsset([exposure({
+        key: "usdc",
+        weight: 1,
+        policyRuleId: "mechanism.required",
+      })], [], knownStatus("evidence:reserves", "mechanism.required")),
+      asOfSec: admittedClockSec,
+    };
+    const baseline = evaluateV9Backing(input, {
+      ...review,
+      collateralizationMeasurement: null,
+    }, V9_CANDIDATE_POLICY_V1);
+    const measured = evaluateV9Backing(input, review, V9_CANDIDATE_POLICY_V1);
+    expect(measured.score).toBeCloseTo(baseline.score! * 0.638707, 8);
+    const expiredClockSec = reviewedAtSec
+      + V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.mechanismOverlayMaxAgeSec;
+    expect(evaluateV9Backing({ ...input, asOfSec: expiredClockSec }, review, V9_CANDIDATE_POLICY_V1))
+      .toEqual(baseline);
+    expect(buildSafetyScoreV9MechanismReview(
+      fixedInputStub({}, expiredClockSec),
+      { id: overlay.assetId } as MechanismMeta,
+      overlay.archetype,
+    )).toBeNull();
   });
 
   it("expands a curated overlay with sourced metrics, component facts, and archetype guarding", () => {
@@ -378,7 +489,7 @@ describe("buildSafetyScoreV9MechanismReview", () => {
     expect(review.assuranceAndReconciliation.quality).toBe("adequate");
   });
 
-  it("derives xDAI assurance from its onchain proof instead of a duplicate overlay claim", () => {
+  it("keeps xDAI onchain observations bounded without an independently published assurance report", () => {
     const overlay = mechanismReviewOverlaysAsset.overlays.find(
       (candidate) => candidate.assetId === "xdai-gnosis",
     );
@@ -389,7 +500,7 @@ describe("buildSafetyScoreV9MechanismReview", () => {
     const fallback = buildSafetyScoreV9MechanismReview(
       fixedInputStub(
         { "xdai-gnosis": [{}] },
-        Date.parse("2026-07-24T00:00:00Z") / 1_000,
+        Date.parse("2026-10-02T00:00:00Z") / 1_000,
       ),
       xdaiMetaSource as unknown as MechanismMeta,
       "fiat-cash",
@@ -402,8 +513,8 @@ describe("buildSafetyScoreV9MechanismReview", () => {
       throw new Error("unexpected archetype");
     }
     expect(review.assuranceAndReconciliation).toMatchObject({
-      quality: "adequate",
-      status: { observationState: "known" },
+      quality: null,
+      status: { observationState: "bounded-unknown" },
     });
   });
 
@@ -472,7 +583,69 @@ describe("buildSafetyScoreV9MechanismReview", () => {
     expect(review.liquidationMechanics.status.applicability.state).toBe("not-applicable");
   });
 
-  it("expands partial sdn/rwa overlays with unavailable metrics and rejects CDP unavailability", () => {
+  it("admits unavailable CDP metrics without adverse signals or favourable credit", () => {
+    const sourceUrl = "https://example.com/cdp-evidence";
+    const unavailable = { state: "unavailable" as const, rationale: "Current funded metrics cannot be authenticated.", sourceUrl };
+    const overlay = MechanismReviewOverlaySchema.parse({
+      assetId: "cdp-unavailable",
+      archetype: "cdp",
+      reviewedAt: "2026-07-27",
+      sources: [{ label: "Protocol evidence", url: sourceUrl }],
+      notes: "Unknown ratios are not measured zeroes or structural absence.",
+      metrics: { collateralizationRatio: null, liquidationCapacityRatio: null },
+      metricApplicability: { collateralizationRatio: unavailable, liquidationCapacityRatio: unavailable },
+      components: {
+        collateralizationParameters: { applicability: "unavailable", rationale: unavailable.rationale, sourceUrl },
+        liquidationMechanics: { applicability: "unavailable", rationale: unavailable.rationale, sourceUrl },
+        structuralRedemption: { quality: "adequate" },
+      },
+    });
+    const review = expandOverlayReview(overlay);
+    if (review.archetype !== "cdp") throw new Error("Expected CDP review");
+    const input = backingAsset([exposure({ key: "collateral", weight: 1 })]);
+    const result = evaluateV9Backing(input, review, V9_CANDIDATE_POLICY_V1);
+    expect(result.rateability).toBe("rateable");
+    expect(result.structuralReasons).toEqual([]);
+    for (const [metric, component] of [
+      ["collateralizationRatio", "collateralization-parameters"],
+      ["liquidationCapacityRatio", "liquidation-mechanics"],
+    ] as const) {
+      expect(review.metricApplicability[metric]).toMatchObject({
+        state: "unavailable", rationale: unavailable.rationale,
+        evidenceRefIds: [`extension-evidence:mechanism:${metric.replace(/[A-Z]/g, (char) => `-${char.toLowerCase()}`)}`],
+      });
+      expect(result.contributions.find((row) => row.componentKey === `mechanism:${component}`)).toMatchObject({
+        observationState: "bounded-unknown",
+        score: V9_CANDIDATE_POLICY_V1.policy.semantic.backing.boundedUnknownQuality,
+        evidenceRefIds: [`extension-evidence:mechanism:${component}`],
+      });
+      expect(result.contributions.find((row) => row.componentKey === `mechanism:${component}`)!.effectiveWeight).toBeGreaterThan(0);
+    }
+    // Metric uncertainty does not erase independently evidenced mechanism quality.
+    expect(result.contributions.find((row) => row.componentKey === "mechanism:structural-redemption")?.score)
+      .toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.backing.componentQuality.adequate);
+    const knownDesign = expandOverlayReview({
+      ...overlay, components: { ...overlay.components, collateralizationParameters: { quality: "strong" } },
+    });
+    if (knownDesign.archetype !== "cdp") throw new Error("Expected CDP review");
+    expect(evaluateV9Backing(input, knownDesign, V9_CANDIDATE_POLICY_V1).contributions
+      .find((row) => row.componentKey === "mechanism:collateralization-parameters")?.score)
+      .toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.backing.componentQuality.strong);
+    const measured = expandOverlayReview({
+      ...overlay,
+      metrics: { collateralizationRatio: 0.5, liquidationCapacityRatio: 0 },
+      metricApplicability: { collateralizationRatio: { state: "measured" }, liquidationCapacityRatio: { state: "measured" } },
+    });
+    expect(evaluateV9Backing(input, measured, V9_CANDIDATE_POLICY_V1).structuralReasons).toEqual(expect.arrayContaining([
+      expect.objectContaining({ pathKey: "mechanism:collateralization-parameters", severity: "critical" }),
+      expect.objectContaining({ pathKey: "mechanism:liquidation-mechanics" }),
+    ]));
+    expect(() => expandOverlayReview({
+      ...overlay, metrics: { collateralizationRatio: 0.5, liquidationCapacityRatio: null },
+    })).toThrow();
+  });
+
+  it("expands partial sdn/rwa overlays with unavailable metrics", () => {
     const sourceUrl = "https://example.com/transparency";
     // usdf-falcon-shaped: loss absorption measured, hedge/margin honestly unavailable.
     const sdnOverlay = MechanismReviewOverlaySchema.parse({
@@ -535,24 +708,6 @@ describe("buildSafetyScoreV9MechanismReview", () => {
     expect(rwaReview.valuationCadenceDays).toBe(30);
     expect(rwaReview.metricApplicability?.weightedAverageMaturityDays.state).toBe("unavailable");
 
-    // CDP has no defined severity for an unavailable ratio.
-    expect(() =>
-      expandOverlayReview(
-        MechanismReviewOverlaySchema.parse({
-          assetId: "cdp-unavailable",
-          archetype: "cdp",
-          reviewedAt: "2026-07-27",
-          sources: [{ label: "Protocol design", url: sourceUrl }],
-          notes: "CDP metrics cannot be marked unavailable.",
-          metrics: { collateralizationRatio: null, liquidationCapacityRatio: 1 },
-          metricApplicability: {
-            collateralizationRatio: { state: "unavailable", rationale: "Unpublished.", sourceUrl },
-          },
-          components: { structuralRedemption: { quality: "adequate" } },
-        }),
-      ),
-    ).toThrow(/CDP admits only measured or not-applicable metrics/);
-
     // Unavailable metric sourceUrl must match an overlay source.
     expect(() =>
       MechanismReviewOverlaySchema.parse({
@@ -608,25 +763,49 @@ describe("buildSafetyScoreV9MechanismReview", () => {
     ).toThrow(/sourceUrl must match an overlay source/);
   });
 
-  it("publishes complete unhealthy USDQ evidence as failed health rather than missing coverage", () => {
-    const review = buildSafetyScoreV9MechanismReview(fixedInputStub(), { id: "usdq-quill" } as MechanismMeta, "cdp");
-    if (review?.archetype !== "cdp") throw new Error("expected the curated USDQ CDP overlay");
-    expect(review.collateralizationRatio).toBe(0.676425);
-    expect(review.liquidationCapacityRatio).toBe(0.00383);
+  it("keeps complete unhealthy CDP evidence as failed health rather than missing coverage", () => {
+    const overlay = MechanismReviewOverlaySchema.parse({
+      assetId: "unhealthy-cdp-fixture", archetype: "cdp", reviewedAt: "2026-07-20",
+      sources: [{ label: "Pinned complete branch accounting", url: "https://example.com/cdp" }],
+      notes: "All branches observed; low collateral coverage and an unhealthy branch are verified facts.",
+      metrics: { collateralizationRatio: 0.676425, liquidationCapacityRatio: 0.00383 },
+      metricApplicability: { collateralizationRatio: { state: "measured" }, liquidationCapacityRatio: { state: "measured" } },
+      components: {
+        collateralizationParameters: { applicability: "measured", quality: "adequate" },
+        liquidationMechanics: { applicability: "measured", quality: "weak" },
+        backstop: { applicability: "measured", quality: "weak" },
+        branchIsolation: { applicability: "measured", quality: "adequate" },
+        shutdownAndBadDebt: { applicability: "measured", quality: "failed" },
+        structuralRedemption: { applicability: "measured", quality: "weak" },
+      },
+    });
+    const review = expandOverlayReview(overlay);
+    if (review.archetype !== "cdp") throw new Error("Expected CDP review");
     expect(review.metricApplicability.collateralizationRatio.state).toBe("measured");
     expect(review.shutdownAndBadDebt.status.observationState).toBe("known");
     expect(review.shutdownAndBadDebt.quality).toBe("failed");
+    const result = evaluateV9Backing(backingAsset([exposure({ key: "collateral", weight: 1 })]), review, V9_CANDIDATE_POLICY_V1);
+    expect(result.score).not.toBeNull();
+    expect(result.contributions.find(row => row.componentKey === "mechanism:shutdown-and-bad-debt")).toMatchObject({
+      observationState: "known", score: V9_CANDIDATE_POLICY_V1.policy.semantic.backing.componentQuality.failed,
+    });
   });
 
-  it("publishes Mento conversion inventory only as a structural analogue", () => {
-    const review = buildSafetyScoreV9MechanismReview(fixedInputStub(), { id: "audm-mento" } as MechanismMeta, "cdp");
-    if (review?.archetype !== "cdp") throw new Error("expected the curated Mento CDP overlay");
+  it("publishes CHFm conversion inventory only as a structural analogue", () => {
+    const review = buildSafetyScoreV9MechanismReview(fixedInputStub(), { id: "chfm-mento" } as MechanismMeta, "cdp");
+    if (review?.archetype !== "cdp") throw new Error("expected the curated CHFm CDP overlay");
     expect(review.collateralizationRatio).toBeNull();
     expect(review.liquidationCapacityRatio).toBeNull();
     expect(review.metricApplicability.collateralizationRatio.state).toBe("not-applicable");
     expect(review.metricApplicability.liquidationCapacityRatio.state).toBe("not-applicable");
     expect(review.liquidationMechanics.status.applicability.state).toBe("not-applicable");
-    expect(review.structuralRedemption.quality).toBe("adequate");
+    expect(review.structuralRedemption.quality).toBe("limited");
+  });
+
+  it("does not publish a CDP review for AUDm's shared crypto reserve", () => {
+    expect(
+      buildSafetyScoreV9MechanismReview(fixedInputStub(), { id: "audm-mento" } as MechanismMeta, "cdp"),
+    ).toBeNull();
   });
 
   describe("commodity-claim (v9.14)", () => {

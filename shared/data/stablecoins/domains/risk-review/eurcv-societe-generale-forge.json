@@ -2,10 +2,15 @@
   "id": "eurcv-societe-generale-forge",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: EURCV resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "EURCV verified SmartCoin V4 implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf4ccc80c4b831a0d8d1414f2aca82a3d760ff05b"
+      }
+    ],
+    "evidence": "The current Ethereum implementation exposes registrar-controlled freezing, unfreezing and wipeFrozenAddress(). At pinned Ethereum block 26095802 the implementation slot resolved to this verified SmartCoin V4 source and getOperators() identified registrar 0x7de0bbdfcd4a6a956f149befcca30d6b5bc5da69. The existing Yes verdict is confirmed from contract controls rather than inferred governance.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA29KAU)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

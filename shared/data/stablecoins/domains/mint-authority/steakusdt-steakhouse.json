@@ -4,7 +4,7 @@
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "none-resolved-mint",
     "confidence": "verified",
-    "summary": "steakUSDT is a Morpho ERC-4626 vault over USDT; wrapper minting is deposit/share accounting while durable USDT issuance is inherited from reviewed Tether controls. Morpho vault owner/curator reads remain wrapper-governance facts, not separate USDT mint ability.",
+    "summary": "steakUSDT is an immutable Morpho V2 ERC-4626 vault over USDT. User issuance requires deposited USDT; the contract can also mint configured fee shares during accrual. Owner/curator parameter powers do not create native USDT, whose issuance remains inherited from Tether.",
     "inheritedFrom": "usdt-tether",
     "economicCapSemantics": "bounded",
     "reconciliation": "not-applicable",
@@ -13,16 +13,16 @@
       "model": "immutable",
       "canChangeMintLogic": false,
       "controlRef": "steakUSDT MetaMorpho vault",
-      "observedAt": "2026-07-20",
-      "observedBlock": 25573280,
+      "observedAt": "2026-10-01",
+      "observedBlock": 26095798,
       "sources": [
         {
           "label": "Morpho vault page",
           "url": "https://app.morpho.org/ethereum/vault/0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9/steakhouse-prime-instant"
         },
         {
-          "label": "Ethereum PublicNode RPC",
-          "url": "https://ethereum-rpc.publicnode.com"
+          "label": "Dwellir Ethereum archive RPC (pinned block 26095798)",
+          "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
         }
       ]
     },
@@ -36,19 +36,19 @@
         "directMintAbility": "none",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-20",
-        "observedBlock": 25573280,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095798,
         "sources": [
           {
             "label": "Morpho vault page",
             "url": "https://app.morpho.org/ethereum/vault/0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9/steakhouse-prime-instant"
           },
           {
-            "label": "MetaMorpho source",
-            "url": "https://github.com/morpho-org/metamorpho/blob/main/src/MetaMorpho.sol"
+            "label": "Matched Morpho VaultV2 source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9?fields=abi,sources,compilation"
           }
         ],
-        "evidence": "At Ethereum block 25573280, asset() returned USDT 0xdAC17F958D2ee523a2206206994597C13D831ec7; owner() returned 0x4D7bd498Bb24098Ca281C05519629c605407f71d and curator() returned 0x827e86072B06674a077f592A531dcE4590aDeCdB. EIP-1967 implementation, admin, and beacon slots were zero, so the vault is direct immutable code with no upgrade path."
+        "evidence": "At Ethereum block 26095798 on 2026-10-01, asset() returned USDT 0xdac17f958d2ee523a2206206994597c13d831ec7; owner() returned 0x4d7bd498bb24098ca281c05519629c605407f71d and curator() returned 0x827e86072b06674a077f592a531dce4590adecdb. EIP-1967 implementation, corrected admin, and beacon slots were zero. Sourcify compilation identifies VaultV2, not MetaMorpho V1; matched code has no upgrade entrypoint. Deposit/mint pull USDT; accrueInterest() can mint performance/management fee shares, although both fee rates read zero at this block."
       },
       {
         "chain": "ethereum",
@@ -60,6 +60,8 @@
         "canRaiseCap": false,
         "threshold": 5,
         "signerCount": 10,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095798,
         "failureDomainKeys": [
           "safe:ethereum:0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd"
         ],
@@ -77,26 +79,26 @@
             "url": "https://etherscan.io/address/0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd"
           }
         ],
-        "evidence": "Read 2026-07-20: the immutable steakUSDT MetaMorpho vault's owner() is the contract 0x4d7bd498bb24098ca281c05519629c605407f71d (16,415 bytes live code), whose own owner() is the 5-of-10 Gnosis Safe 0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd (getOwners()/getThreshold() verified). The Safe chain holds parameter-only control (curator/allocator/fee configuration); it cannot mint vault shares outside the deposit flow.",
+        "evidence": "Pinned Ethereum block 26095798 on 2026-10-01: the vault owner remains 0x4d7bd498bb24098ca281c05519629c605407f71d, whose owner() remains Safe 0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd. getThreshold() is 5 and getOwners() returns 10 owners, nine of which differ from the July record. getModulesPaginated(0x1,100) returned an empty module list and sentinel next pointer; the Safe guard storage slot was zero. The Safe controls the owner chain and curator appointment, not native USDT issuance. V2 curator powers include adapter, allocation-cap, and fee configuration; fee accrual can mint fee shares outside user deposits, so the previous blanket no-share-mint-outside-deposit statement was incorrect.",
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
           "owners": [
-            "0xfc615395336aade67fd853a0157001a215ea1279",
-            "0xf83db716a1ff12f9005f98f678d8be97b8bc81d6",
-            "0x8ae8ee5ad6eae89836b0070ebc47af06e3d7422b",
-            "0xd2b8dd0fd51d80bf939047a9aaa55919112838e8",
-            "0xd8baa2606c4f0d121d4a08b0d83acf0dee9dca77",
-            "0xcc771952fde840e30c6802734e5ad20479c2959f",
-            "0xe3fcee6b6cd564e073346f71394f60ec9adf5120",
-            "0x0d61c8b6ca9669a36f351de3ae335e9689dd9c5b",
-            "0x86bd534a95fb2cc36d526ba149464c4477315c32",
-            "0x387cde8598e1cbb297fdc5baeba5e5c5c2735344"
+            "0xc04f9610694a9e07e0d6a361bec53abeadf9cf9e",
+            "0x005398827d00c2951ffb52bd91164ef402bcf105",
+            "0x2e8c25a6f7f7f34666b998813abf97d8b617f111",
+            "0x5571a6fef340a9d26f1428684b9e893ea84b46ac",
+            "0x32e5cb1a68761a0cff88d4baa21e398422b5166e",
+            "0x21c1e5be991bf1544ca9759a601f66dc60083f7d",
+            "0x9a86713145f38cd688969c0ecc87b314b23254b2",
+            "0xbc27046213d34d4a153cf57a48c74d74239e8968",
+            "0x394e6ef80c6f4ad14a891a3987d8bd1387afa0b1",
+            "0x86bd534a95fb2cc36d526ba149464c4477315c32"
           ],
           "threshold": 5,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "observedBlock": 25571720,
-          "observedAt": "2026-07-20",
+          "observedBlock": 26095798,
+          "observedAt": "2026-10-01",
           "source": "onchain"
         }
       }
@@ -116,9 +118,9 @@
           "url": "https://etherscan.io/address/0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd"
         }
       ],
-      "evidence": "At Ethereum block 25573280, asset() confirmed USDT and EIP-1967 implementation, admin, and beacon slots were zero, making the MetaMorpho vault immutable. The owner chain resolves on-chain to the 5-of-10 Steakhouse Safe, whose parameter control cannot mint shares outside the deposit flow. Durable mint authority remains inherited from reviewed USDT; no wrapper-specific reserve reconciliation or prudential supervisor is established.",
-      "reviewer": "P2 mint-free cohort",
-      "reviewedAt": "2026-07-20",
+      "evidence": "Current exact-deployment review at Ethereum block 26095798 confirms immutable Morpho V2 code with USDT as asset and the same owner chain leading to a 5-of-10 Safe. The Safe owner set changed and is refreshed above; no enabled module or guard was observed. Native USDT issuance remains inherited. The wrapper can mint fee shares during accrual under configured fee parameters, even though both fee rates are zero at this observation. This review does not establish wrapper-specific reserve reconciliation, prudential supervision, or key-custody attestation.",
+      "reviewer": "Sol curation pass 2026-10-01 (CurA49sDAI)",
+      "reviewedAt": "2026-10-01",
       "disposition": "scoreable"
     }
   }

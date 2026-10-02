@@ -34,7 +34,7 @@
     "reserveDisclosureUrl": "https://www.paxos.com/usdg-transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "notes": "Evidence as of 2026-06-18 review: USDG's primary issuing entity is Paxos Digital Singapore (MAS-regulated), with EU issuance by Paxos Issuance Europe Oy (FIN-FSA/MiCA). The GENIUS Act was enacted July 18, 2025, but its PPSI licensing framework remains in proposed-rulemaking phase as of June 2026 with no PPSI approvals granted to any issuer. On December 12, 2025 the OCC conditionally approved Paxos Trust Company, N.A. for a national trust bank charter conversion (from NYDFS); however Paxos confirmed USDG is issued by Paxos Digital Singapore, not Paxos Trust Company, so this OCC charter does not constitute a PPSI authorization for USDG. No public GENIUS Act application, foreign-issuer registration, or comparable-jurisdiction determination has been found for USDG. Reserve-report date recorded as of 2026-06-18 review: 2026-04-30 (date kind unspecified).",
+    "notes": "The June 18, 2026 review identified Paxos Digital Singapore and Paxos Issuance Europe Oy as USDG issuers and located no token-specific U.S. GENIUS authorization. On October 1, 2026, current Paxos terms again identified PDS/PIE as joint USDG issuers. The OCC's December 12, 2025 Paxos Trust conversion decision expressly requires a separate written non-objection before that bank offers, markets, issues or makes USDG available through its multi-jurisdictional platform; the charter alone does not establish USDG authorization. A scoped review of that decision, OCC Bulletin 2026-3, the OCC digital-assets licensing inventory and Paxos terms, plus an OCC-site USDG/PDS search, located no public USDG-specific PPSI approval, pending GENIUS application or foreign-issuer registration. The inventory is not exhaustive and excludes conversion application documents; this negative search does not establish that no approval exists or that no issuer has been approved. Historical reserve-report review reference retained from the June review: 2026-04-30, date kind unspecified.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -57,28 +57,34 @@
         "label": "Paxos USDG terms and conditions",
         "url": "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions",
         "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "OCC Paxos Trust conversion decision, USDG non-objection condition",
+        "url": "https://occ.gov/news-issuances/news-releases/2025/nr-occ-2025-125e.pdf",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2025-12-12",
+        "accessedAt": "2026-10-01"
+      },
+      {
+        "label": "OCC digital-assets licensing inventory (limited scope)",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-01"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act rulemaking bulletin and public releases",
-        "OCC conditional national trust charter for Paxos Trust Company N.A. (Dec 12 2025)",
-        "Paxos USDG transparency and terms",
-        "MAS stablecoin and payment-institution public materials",
-        "Public foreign payment stablecoin issuer exception materials",
+        "OCC December 12, 2025 Paxos Trust conversion decision, condition 4",
         "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "OCC digital-assets licensing applications inventory (limited scope)",
+        "Paxos current USD stablecoin terms, sections 3.1.1 and 3.1.5",
+        "Public web search on 2026-10-01: site:occ.gov USDG OR Paxos Digital Singapore GENIUS"
       ],
-      "summary": "MAS and MiCA issuer evidence was found; OCC trust charter for Paxos Trust confirmed but USDG is not covered by it; no token-specific public U.S. GENIUS PPSI approval, official application, or foreign-issuer registration was located for USDG.",
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "summary": "The October 1 scoped review located no public USDG-specific PPSI approval, pending GENIUS application or foreign-issuer registration. Paxos terms identify PDS/PIE as joint issuers. The Paxos Trust charter decision requires a separate USDG non-objection; no such determination was located. The licensing inventory is limited and this search is not an exhaustive absence claim.",
+      "reviewer": "Sol curation pass 2026-10-01 (ValA09USDG)",
+      "reviewedAt": "2026-10-01"
     },
-    "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewer": "Sol curation pass 2026-10-01 (ValA09USDG)",
+    "reviewedAt": "2026-10-01"
   }
 }

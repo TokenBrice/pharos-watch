@@ -17,6 +17,8 @@ import {
   evaluateV9SubthresholdUnresolvedBridgeJoins,
   materialBridgeSeverity,
   provenNullShareDeploymentBound,
+  unresolvedDeploymentCohort,
+  providerRowExclusionShares,
 } from "./control-bridge-join";
 import {
   applyMergedMintSignals,
@@ -26,6 +28,7 @@ import {
 import {
   bindingByMateriality,
   controlCanRepresent,
+  deriveV9MintPosture,
   hasFreshScopedQuestion,
   isControlEconomicallyRelevant,
   isKnownRequired,
@@ -37,7 +40,6 @@ import {
   type V9EconomicControlAssetSource,
   type V9EconomicControlResult,
   type V9EconomicControlReviewExtension,
-  type V9MintPosture,
   type V9OracleBranchKind,
   type V9OracleBranchReview,
 } from "./control-primitives";
@@ -78,6 +80,7 @@ export function projectV9EconomicControlEvaluation(
         selectedRouteSupplyShare: asset.supply.selectedRouteSupplyShare,
         unknownRouteSupplyShare: asset.supply.unknownRouteSupplyShare,
         unreviewedRouteSupplyShare: asset.supply.unreviewedRouteSupplyShare,
+        ...(asset.supply.providerRowExclusions === undefined ? {} : { providerRowExclusions: asset.supply.providerRowExclusions }),
       },
     },
     mint: {
@@ -108,6 +111,20 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
   assertV9ValidatedPolicyEnvelope(args.policy);
   const policy = args.policy.policy.semantic;
   const materialShareThreshold = policy.materiality.deploymentMaterialSharePct / 100;
+  const unresolvedFullCeilingShareThreshold = policy.materiality.unresolvedDeploymentFullCeilingSharePct / 100;
+  const unresolvedCohort = unresolvedDeploymentCohort(args.facts, args.facts.controls);
+  const controlBinding = (control: V9DeploymentControlFactV2, bound: number | null = null) =>
+    bindingByMateriality(
+      control,
+      unresolvedCohort.share !== null && unresolvedCohort.share < unresolvedFullCeilingShareThreshold &&
+        unresolvedCohort.controlKeys.has(control.controlKey) &&
+        args.facts.supply.selectedBridgeRoutes.some(
+          (row) => row.deploymentRouteKey === control.deploymentKey && row.reviewState !== "unmatched",
+        )
+        ? unresolvedFullCeilingShareThreshold
+        : materialShareThreshold,
+      bound,
+    );
   const controls = [...args.facts.controls].sort((left, right) => compareText(left.controlKey, right.controlKey));
   const controlsByKey = new Map(controls.map((control) => [control.controlKey, control]));
   const components: V9ControlComponent[] = [];
@@ -158,8 +175,21 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
         control.status.applicability.state !== "not-applicable" &&
         !isKnownRequired(control.status),
     );
+    // A measured unresolved deployment cohort owns its smooth exposure charge.
+    // Its still-bounded inventory is evidence, not a second whole-coin ceiling.
+    // Any unresolved control outside that exact cohort keeps the aggregate gap.
+    const inventoryPricedByDeployment =
+      unresolvedCohort.share !== null &&
+      unresolvedCohort.share < unresolvedFullCeilingShareThreshold &&
+      unresolvedControls.length > 0 &&
+      controls.every((control) =>
+        control.status.applicability.state === "not-applicable" ||
+        isKnownRequired(control.status) ||
+        unresolvedCohort.controlKeys.has(control.controlKey));
     const allScoped = unresolvedControls.length > 0 && unresolvedControls.every(hasFreshScopedQuestion);
-    addReason(allScoped ? "scoped-control-question" : "unresolved-control-identity", "local-component", "controls");
+    if (!inventoryPricedByDeployment) {
+      addReason(allScoped ? "scoped-control-question" : "unresolved-control-identity", "local-component", "controls");
+    }
   }
 
   for (const control of controls) {
@@ -167,7 +197,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
     if (control.status.applicability.state === "not-applicable") continue;
     const nullShareBound = provenNullShareDeploymentBound(args.facts, control);
     const provenImmaterial = nullShareBound !== null && nullShareBound < materialShareThreshold;
-    const binding = bindingByMateriality(control, materialShareThreshold, nullShareBound);
+    const binding = controlBinding(control, nullShareBound);
     const pathKind = control.controlKind === "bridge" ? "deployment-control" : "local-component";
     const path = `control:${control.controlKey}`;
     if (control.status.applicability.state === "unresolved" || control.status.observationState !== "known") {
@@ -221,6 +251,22 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
   }
 
   const mint = args.mint;
+  const retainedAdverseMintControls =
+    mint.status.applicability.state !== "not-applicable" &&
+    !isKnownRequired(mint.status)
+      ? controls.filter((control) => {
+          if (
+            control.controlKind === "bridge" ||
+            control.status.applicability.state === "not-applicable" ||
+            !isControlEconomicallyRelevant(control) ||
+            (!control.capabilities.includes("mint") && control.controlKey !== mint.controlKey)
+          ) return false;
+          const posture = deriveV9MintPosture(control, mint, false);
+          return posture === "unknown" ||
+            (control.status.evidenceRefIds.length > 0 &&
+              (posture === "unbounded-or-compromised" || posture === "unbounded-reconciliation-unknown" || posture === "unbounded-reconciled"));
+        })
+      : [];
   if (mint.status.applicability.state === "not-applicable") {
     const noneResolvedScore = policy.control.mintPostureQuality["none-resolved"];
     components.push({
@@ -246,7 +292,8 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
       "mint",
       mint.controlKey,
     );
-  } else {
+  }
+  if (isKnownRequired(mint.status) || retainedAdverseMintControls.length > 0) {
     const mintControl = mint.controlKey === null ? null : (controlsByKey.get(mint.controlKey) ?? null);
     const immutableMechanism =
       mint.controlKey === null && mint.upgrade.state === "immutable" && mint.reconciliation === "not-applicable";
@@ -255,21 +302,6 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
     } else if (mint.controlKey !== null && (!mintControl || !controlCanRepresent(mintControl, "mint"))) {
       addReason("unresolved-control-identity", "local-component", "mint", mint.controlKey);
     }
-    if (mintControl?.capSemantics.kind === "unknown") {
-      addReason("unknown-control-cap-authority", "local-component", "mint:cap", mint.controlKey);
-    }
-    if (mintControl?.claimImpairment === "unknown") {
-      addReason("unknown-control-mint-ability", "local-component", "mint:claim-impairment", mint.controlKey);
-    }
-    if (
-      mintControl &&
-      mintControl.claimImpairment !== "none" &&
-      mintControl.authority?.model === "issuer-backend" &&
-      (mint.reconciliation === "not-applicable" || mint.reconciliation === "unknown")
-    ) {
-      addReason("mint-control-question", "local-component", "mint:reconciliation", mint.controlKey);
-    }
-
     let upgradeControl: V9DeploymentControlFactV2 | null = null;
     let upgradeUnreviewed = false;
     if (mint.upgrade.state === "unknown") {
@@ -286,159 +318,176 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
       }
     }
 
-    const compromised = mintControl?.incidentState === "active";
-    const posture: V9MintPosture = (() => {
-      if (compromised) return "unbounded-or-compromised";
-      if (!mintControl) return immutableMechanism ? "none-resolved" : "unknown";
+    // The review key anchors admission; it is not an exhaustive mint inventory.
+    // Every non-bridge durable-mint path must compete, including separate
+    // deployment observations of the same authority.
+    const mintControls = isKnownRequired(mint.status)
+      ? controls.filter(
+          (control) =>
+            control.controlKind !== "bridge" &&
+            control.status.applicability.state !== "not-applicable" &&
+            (control.capabilities.includes("mint") || control === mintControl),
+        )
+      : retainedAdverseMintControls;
+    for (const mintControl of mintControls.length > 0 ? mintControls : [null]) {
+      if (mintControl?.capSemantics.kind === "unknown") {
+        addReason("unknown-control-cap-authority", "local-component", "mint:cap", mintControl.controlKey);
+      }
+      if (mintControl?.claimImpairment === "unknown") {
+        addReason("unknown-control-mint-ability", "local-component", "mint:claim-impairment", mintControl.controlKey);
+      }
       if (
-        mintControl.capSemantics.kind === "unknown" ||
-        mintControl.claimImpairment === "unknown" ||
-        mintControl.economicLossScope === "unknown"
+        mintControl &&
+        mintControl.claimImpairment !== "none" &&
+        mintControl.authority?.model === "issuer-backend" &&
+        (mint.reconciliation === "not-applicable" || mint.reconciliation === "unknown")
       ) {
-        return "unknown";
+        addReason("mint-control-question", "local-component", "mint:reconciliation", mintControl.controlKey);
       }
-      if (mintControl.capSemantics.kind === "unbounded" || mintControl.claimImpairment === "unbounded") {
-        // Economically unbounded minting that is reconciled against reserves is
-        // a distinct, higher-quality posture than an unreconciled one; only the
-        // latter (and any compromise, handled above) stays unbounded-or-compromised.
-        // Prudential supervision by a named financial regulator is itself evidence
-        // that issuance is constrained by the supervisory regime, so it qualifies
-        // as reconciled even when reserve-reconciliation cadence is not-applicable.
-        const reconciled =
-          mint.reconciliation === "continuous" ||
-          mint.reconciliation === "periodic" ||
-          mint.supervision === "prudential";
-        // MINT-LADDER 9.32 (2026-08-21): split the exposed floor when review
-        // positively establishes no reconciliation from a still-unverified one.
-        if (reconciled) return "unbounded-reconciled";
-        if (mint.reconciliation === "unknown") return "unbounded-reconciliation-unknown";
-        return "unbounded-or-compromised";
-      }
-      if (mintControl.claimImpairment === "none") return "none-resolved";
-      // MINT-LADDER 9.32 (2026-08-21): collateral-gated minting is bounded by
-      // construction while retaining its concentrated administrator surface.
-      if (mintControl.capSemantics.kind === "collateral-gated") return "collateral-gated";
-      if (mintControl.capSemantics.kind === "raiseable" || mint.reconciliation === "periodic") {
-        return "partially-bounded-admin";
-      }
-      if (mintControl.capSemantics.kind === "bounded") return "bounded-admin";
-      return "concentrated-admin";
-    })();
-    const componentControlKeys = uniqueSorted(
-      [mintControl?.controlKey, upgradeControl?.controlKey].filter((value): value is string => value !== undefined),
-    );
-    const componentFailureDomains = canonicalDomains([
-      ...(mintControl?.failureDomains ?? []),
-      ...(upgradeControl?.failureDomains ?? []),
-    ]);
-    const mintControlKeys = mintControl === null ? [] : [mintControl.controlKey];
-    const mintFailureDomains = canonicalDomains(mintControl?.failureDomains ?? []);
-    const upgradeControlKeys = upgradeControl === null ? [] : [upgradeControl.controlKey];
-    const upgradeFailureDomains = canonicalDomains(upgradeControl?.failureDomains ?? []);
-    const mintBinding = mintControl === null ? true : bindingByMateriality(mintControl, materialShareThreshold);
-    const mintReconciled = mint.reconciliation === "continuous" || mint.reconciliation === "periodic";
-    const gradedPostureScore =
-      (posture === "concentrated-admin" || posture === "unbounded-reconciled") && mintReconciled
-        ? mint.supervision === "prudential"
-          ? policy.control.mintPostureGrading.prudentialReconciled
-          : mint.supervision === "attestation-only"
-            ? policy.control.mintPostureGrading.attestationOnlyReconciled
-            : policy.control.mintPostureQuality[posture]
-        : policy.control.mintPostureQuality[posture];
-    // T5 seasoned-issuer credit (owner ruling 2026-07-22, R2): a reconciled,
-    // non-adverse measured posture with >= seasonedCreditMinMonths of track
-    // record earns seasonedCreditPoints, capped at the next rung of the merged
-    // posture/grading ladder — longevity can close the gap to the next rung
-    // but never leapfrog it. MINT-LADDER 9.32 (2026-08-21) also permits the
-    // two unreconciled adverse rungs to earn credit when no active compromise
-    // remains; the compromised rung uses its dedicated adverse ceiling.
-    const mintPostureScore = (() => {
-      const grading = policy.control.mintPostureGrading;
-      const adverseSeasonedEligible =
-        (posture === "unbounded-or-compromised" && mintControl?.incidentState !== "active") ||
-        posture === "unbounded-reconciliation-unknown";
+
+      const compromised = mintControl?.incidentState === "active";
+      const posture = deriveV9MintPosture(mintControl, mint, immutableMechanism);
+      const componentControlKeys = uniqueSorted(
+        [mintControl?.controlKey, upgradeControl?.controlKey].filter((value): value is string => value !== undefined),
+      );
+      const componentFailureDomains = canonicalDomains([
+        ...(mintControl?.failureDomains ?? []),
+        ...(upgradeControl?.failureDomains ?? []),
+      ]);
+      const mintControlKeys = mintControl === null ? [] : [mintControl.controlKey];
+      const mintFailureDomains = canonicalDomains(mintControl?.failureDomains ?? []);
+      const upgradeControlKeys = upgradeControl === null ? [] : [upgradeControl.controlKey];
+      const upgradeFailureDomains = canonicalDomains(upgradeControl?.failureDomains ?? []);
+      const mintBinding = mintControl === null ? true : controlBinding(mintControl);
+      const mintReconciled = mint.reconciliation === "continuous" || mint.reconciliation === "periodic";
+      const gradedPostureScore =
+        (posture === "concentrated-admin" || posture === "unbounded-reconciled") && mintReconciled
+          ? mint.supervision === "prudential"
+            ? policy.control.mintPostureGrading.prudentialReconciled
+            : mint.supervision === "attestation-only"
+              ? policy.control.mintPostureGrading.attestationOnlyReconciled
+              : policy.control.mintPostureQuality[posture]
+          : policy.control.mintPostureQuality[posture];
+      // T5 seasoned-issuer credit (owner ruling 2026-07-22, R2): a reconciled,
+      // non-adverse measured posture with >= seasonedCreditMinMonths of track
+      // record earns seasonedCreditPoints, capped at the next rung of the merged
+      // posture/grading ladder — longevity can close the gap to the next rung
+      // but never leapfrog it. MINT-LADDER 9.32 (2026-08-21) also permits the
+      // two unreconciled adverse rungs to earn credit when no active compromise
+      // remains; the compromised rung uses its dedicated adverse ceiling.
+      const mintPostureScore = (() => {
+        const grading = policy.control.mintPostureGrading;
+        const adverseSeasonedEligible =
+          (posture === "unbounded-or-compromised" && mintControl?.incidentState !== "active") ||
+          posture === "unbounded-reconciliation-unknown";
+        if (
+          grading.seasonedCreditPoints <= 0 ||
+          args.trackRecordMonths === undefined ||
+          args.trackRecordMonths < grading.seasonedCreditMinMonths ||
+          (!mintReconciled && !adverseSeasonedEligible) ||
+          posture === "unknown" ||
+          (posture === "unbounded-or-compromised" && mintControl?.incidentState === "active")
+        ) {
+          return gradedPostureScore;
+        }
+        const ladder = [
+          ...Object.values(policy.control.mintPostureQuality),
+          grading.prudentialReconciled,
+          grading.attestationOnlyReconciled,
+        ].sort((left, right) => left - right);
+        const nextRung = ladder.find((value) => value > gradedPostureScore);
+        // Strictly below the next rung: a seasoned credit rewards longevity but can
+        // never make a lower posture class read identical to the class above it
+        // (adversarial-review finding on the credit widening to 10).
+        const ceiling =
+          posture === "unbounded-or-compromised"
+            ? grading.adverseSeasonedCreditCeiling
+            : nextRung === undefined
+              ? gradedPostureScore
+              : nextRung - 1;
+        return Math.min(gradedPostureScore + grading.seasonedCreditPoints, ceiling);
+      })();
+      // Safety 9.1 merged mint grader: quorum granularity, Safe module evidence,
+      // and resolved-incident age decay refine the posture-derived score. The
+      // active-incident path above is untouched — a live compromise still pins the
+      // posture at unbounded-or-compromised and raises the critical signal.
+      const mergedMintScore = applyMergedMintSignals(
+        mintPostureScore,
+        mintControl,
+        args.resolvedIncidentAgeMonths,
+        policy.control,
+      );
+      components.push({
+        componentKey: "mint",
+        kind: "mint",
+        posture,
+        score: !isKnownRequired(mint.status) ||
+          mintControl?.capSemantics.kind === "unknown" || mintControl?.claimImpairment === "unknown"
+          ? Math.min(mergedMintScore, applyMergedMintSignals(
+              policy.control.boundedUnknownQuality, mintControl, args.resolvedIncidentAgeMonths, policy.control,
+            ))
+          : mergedMintScore,
+        binding: mintBinding,
+        controlKeys: componentControlKeys,
+        failureDomains: componentFailureDomains,
+      });
       if (
-        grading.seasonedCreditPoints <= 0 ||
-        args.trackRecordMonths === undefined ||
-        args.trackRecordMonths < grading.seasonedCreditMinMonths ||
-        (!mintReconciled && !adverseSeasonedEligible) ||
-        posture === "unknown" ||
-        (posture === "unbounded-or-compromised" && mintControl?.incidentState === "active")
-      ) {
-        return gradedPostureScore;
-      }
-      const ladder = [
-        ...Object.values(policy.control.mintPostureQuality),
-        grading.prudentialReconciled,
-        grading.attestationOnlyReconciled,
-      ].sort((left, right) => left - right);
-      const nextRung = ladder.find((value) => value > gradedPostureScore);
-      // Strictly below the next rung: a seasoned credit rewards longevity but can
-      // never make a lower posture class read identical to the class above it
-      // (adversarial-review finding on the credit widening to 10).
-      const ceiling =
+        posture === "unbounded-reconciled" ||
+        posture === "unbounded-reconciliation-unknown" ||
         posture === "unbounded-or-compromised"
-          ? grading.adverseSeasonedCreditCeiling
-          : nextRung === undefined
-            ? gradedPostureScore
-            : nextRung - 1;
-      return Math.min(gradedPostureScore + grading.seasonedCreditPoints, ceiling);
-    })();
-    // Safety 9.1 merged mint grader: quorum granularity, Safe module evidence,
-    // and resolved-incident age decay refine the posture-derived score. The
-    // active-incident path above is untouched — a live compromise still pins the
-    // posture at unbounded-or-compromised and raises the critical signal.
-    const mergedMintScore = applyMergedMintSignals(
-      mintPostureScore,
-      mintControl,
-      args.resolvedIncidentAgeMonths,
-      policy.control,
-    );
-    components.push({
-      componentKey: "mint",
-      kind: "mint",
-      posture,
-      score: mergedMintScore,
-      binding: mintBinding,
-      controlKeys: componentControlKeys,
-      failureDomains: componentFailureDomains,
-    });
-    if (
-      posture === "unbounded-reconciled" ||
-      posture === "unbounded-reconciliation-unknown" ||
-      posture === "unbounded-or-compromised"
-    ) {
-      // R3 keeps reconciled mint risk inside the control pillar for prudential
-      // issuers, emits a diagnostic low signal for attestation-only issuers,
-      // and fails closed for absent/unknown supervision. Only an active mint
-      // compromise stays critical; an unbounded/unreconciled mint with no active
-      // incident takes the high rung so its composite reflects its pillar blend
-      // rather than being hard-capped at the critical floor (the 9.32 unknown-
-      // reconciliation rung is scored separately above the confirmed floor).
-      const prudentiallySupervised = posture === "unbounded-reconciled" && mint.supervision === "prudential";
-      const severity: V9Severity | null =
-        posture === "unbounded-reconciliation-unknown"
-          ? "high"
-          : posture === "unbounded-or-compromised"
-            ? compromised
-              ? "critical"
-              : "high"
-            : prudentiallySupervised
-              ? null
-              : mint.supervision === "attestation-only"
-                ? "low"
-                : "high";
-      if (severity !== null) {
+      ) {
+        // R3 keeps reconciled mint risk inside the control pillar for prudential
+        // issuers, emits a diagnostic low signal for attestation-only issuers,
+        // and fails closed for absent/unknown supervision. Only an active mint
+        // compromise stays critical; an unbounded/unreconciled mint with no active
+        // incident takes the high rung so its composite reflects its pillar blend
+        // rather than being hard-capped at the critical floor (the 9.32 unknown-
+        // reconciliation rung is scored separately above the confirmed floor).
+        const prudentiallySupervised = posture === "unbounded-reconciled" && mint.supervision === "prudential";
+        const severity: V9Severity | null =
+          posture === "unbounded-reconciliation-unknown"
+            ? "high"
+            : posture === "unbounded-or-compromised"
+              ? compromised
+                ? "critical"
+                : "high"
+              : prudentiallySupervised
+                ? null
+                : mint.supervision === "attestation-only"
+                  ? "low"
+                  : "high";
+        if (severity !== null) {
+          addStructuralFailure({
+            kind: "centralized-mint",
+            severity,
+            binding: mintBinding,
+            reason:
+              posture === "unbounded-reconciliation-unknown"
+                ? "Minting is economically unbounded and its reconciliation is unverified."
+                : posture === "unbounded-or-compromised"
+                  ? "Economically effective minting is unbounded or compromised."
+                  : "Minting is economically unbounded but supply is reconciled against reserves.",
+            materialSharePct:
+              mintControl?.materialSupplyShare == null
+                ? null
+                : v9StructuralSignalSharePct(
+                    args.facts.assetId,
+                    "structuralSignals[*].materialSharePct",
+                    mintControl.materialSupplyShare,
+                  ),
+            controlKeys: mintControlKeys,
+            failureDomains: mintFailureDomains,
+          });
+        }
+      } else if (posture === "concentrated-admin" || posture === "collateral-gated") {
         addStructuralFailure({
           kind: "centralized-mint",
-          severity,
+          severity: "moderate",
           binding: mintBinding,
           reason:
-            posture === "unbounded-reconciliation-unknown"
-              ? "Minting is economically unbounded and its reconciliation is unverified."
-              : posture === "unbounded-or-compromised"
-                ? "Economically effective minting is unbounded or compromised."
-                : "Minting is economically unbounded but supply is reconciled against reserves.",
+            posture === "collateral-gated"
+              ? "Minting is collateral-gated behind a privileged administrator surface."
+              : "Minting depends on one concentrated administrator path.",
           materialSharePct:
             mintControl?.materialSupplyShare == null
               ? null
@@ -451,55 +500,48 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
           failureDomains: mintFailureDomains,
         });
       }
-    } else if (posture === "concentrated-admin" || posture === "collateral-gated") {
-      addStructuralFailure({
-        kind: "centralized-mint",
-        severity: "moderate",
-        binding: mintBinding,
-        reason:
-          posture === "collateral-gated"
-            ? "Minting is collateral-gated behind a privileged administrator surface."
-            : "Minting depends on one concentrated administrator path.",
-        materialSharePct:
-          mintControl?.materialSupplyShare == null
-            ? null
-            : v9StructuralSignalSharePct(
-                args.facts.assetId,
-                "structuralSignals[*].materialSharePct",
-                mintControl.materialSupplyShare,
-              ),
-        controlKeys: mintControlKeys,
-        failureDomains: mintFailureDomains,
-      });
-    }
-    if (upgradeUnreviewed) {
-      const upgradeBinding =
-        upgradeControl === null ? mintBinding : bindingByMateriality(upgradeControl, materialShareThreshold);
-      addStructuralFailure({
-        kind: "unreviewed-upgrade",
-        severity: "high",
-        binding: upgradeBinding,
-        reason: "Mint-critical upgrade authority is not fully reviewed.",
-        materialSharePct:
-          upgradeControl?.materialSupplyShare == null
-            ? null
-            : v9StructuralSignalSharePct(
-                args.facts.assetId,
-                "structuralSignals[*].materialSharePct",
-                upgradeControl.materialSupplyShare,
-              ),
-        controlKeys: upgradeControlKeys,
-        failureDomains: upgradeFailureDomains,
-      });
+      if (upgradeUnreviewed) {
+        const upgradeBinding =
+          upgradeControl === null ? mintBinding : controlBinding(upgradeControl);
+        addStructuralFailure({
+          kind: "unreviewed-upgrade",
+          severity: "high",
+          binding: upgradeBinding,
+          reason: "Mint-critical upgrade authority is not fully reviewed.",
+          materialSharePct:
+            upgradeControl?.materialSupplyShare == null
+              ? null
+              : v9StructuralSignalSharePct(
+                  args.facts.assetId,
+                  "structuralSignals[*].materialSharePct",
+                  upgradeControl.materialSupplyShare,
+                ),
+          controlKeys: upgradeControlKeys,
+          failureDomains: upgradeFailureDomains,
+        });
+      }
     }
   }
 
   const oracle = args.oracle;
+  const retainedOracleTier = oracle.status.applicability.state === "unresolved" &&
+    oracle.paths?.some((path) => path.applicability.state === "required" && path.observationState === "known")
+    ? oracle.knownPathTier ?? null
+    : null;
   if (oracle.status.applicability.state === "not-applicable") {
     // No price-sensitive oracle or internal valuation path exists to score.
     // Not-applicable is neutral rather than evidence of a strong control.
   } else if (oracle.status.applicability.state === "unresolved") {
     addReason("unresolved-oracle-branch-applicability", "local-component", "oracle");
+    if (retainedOracleTier !== null) {
+      // Keep sibling uncertainty binding independently of the reviewed paths.
+      // Components compete by minimum quality; they are not additive charges.
+      components.push({
+        componentKey: "oracle", kind: "oracle", posture: "opaque-or-unknown",
+        score: policy.control.boundedUnknownQuality, binding: true,
+        controlKeys: [], failureDomains: [],
+      });
+    }
   } else if (oracle.status.observationState !== "known") {
     const code =
       oracle.status.observationState === "missing"
@@ -508,7 +550,9 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
           ? "unreviewed-oracle-profile"
           : "incomplete-oracle-liquidation-branch";
     addReason(code, "local-component", "oracle");
-  } else {
+  }
+  if (isKnownRequired(oracle.status) || retainedOracleTier !== null) {
+    const oracleTier = retainedOracleTier ?? oracle.tier;
     const branchesByKind = new Map<V9OracleBranchKind, V9OracleBranchReview>();
     for (const branch of oracle.branches) {
       if (branchesByKind.has(branch.branch)) throw new Error(`Duplicate v9 oracle branch ${branch.branch}`);
@@ -556,30 +600,29 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
         }
       }
     }
-    if (oracle.tier === null) {
+    if (oracleTier === null) {
       addReason("missing-oracle-profile", "local-component", "oracle:tier");
     } else {
       const linkedControls = [...oracleControls.values()];
       const failureDomains = canonicalDomains(linkedControls.flatMap((control) => control.failureDomains));
       components.push({
-        componentKey: "oracle",
+        componentKey: retainedOracleTier === null ? "oracle" : "oracle:known-paths",
         kind: "oracle",
-        posture: oracle.tier,
-        score: policy.control.oracleTierQuality[oracle.tier],
+        posture: oracleTier,
+        score: policy.control.oracleTierQuality[oracleTier],
         binding: true,
         controlKeys: linkedControls.map((control) => control.controlKey).sort(compareText),
         failureDomains,
       });
-      if (
-        oracle.tier === "privileged-internal-pricing" ||
-        oracle.tier === "single-source-or-laggy" ||
-        oracle.tier === "opaque-or-unknown"
-      ) {
+      if (oracleTier === "opaque-or-unknown") {
+        // A reviewed inventory can establish non-disclosure, not unsafe topology.
+        addReason("oracle-topology-undisclosed", "local-component", "oracle:topology");
+      } else if (oracleTier === "single-source-or-laggy") {
         addStructuralFailure({
           kind: "weak-oracle-branch",
-          severity: oracle.tier === "opaque-or-unknown" ? "critical" : "high",
+          severity: "high",
           binding: true,
-          reason: `Oracle control topology is ${oracle.tier}.`,
+          reason: `Oracle control topology is ${oracleTier}.`,
           materialSharePct: null,
           controlKeys: linkedControls.map((control) => control.controlKey),
           failureDomains,
@@ -614,14 +657,17 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
   // with an empty partition had null shares. "Partitioned but empty" is not a
   // reachable state, so treating null as zero would only ever license scoring an
   // inventory whose residual was never measured.
-  const unknownRouteSupplyShare = args.facts.supply.unknownRouteSupplyShare;
-  const unreviewedRouteSupplyShare = args.facts.supply.unreviewedRouteSupplyShare;
+  const excludedSupply = providerRowExclusionShares(args.facts.assetId, args.facts.supply);
+  const unknownRouteSupplyShare = args.facts.supply.unknownRouteSupplyShare === null ? null :
+    Math.max(0, args.facts.supply.unknownRouteSupplyShare - excludedSupply.unknown);
+  const unreviewedRouteSupplyShare = args.facts.supply.unreviewedRouteSupplyShare === null ? null :
+    Math.max(0, args.facts.supply.unreviewedRouteSupplyShare - excludedSupply.unreviewed);
   const unattributedBridgeShare =
     unknownRouteSupplyShare === null || unreviewedRouteSupplyShare === null
       ? null
       : Math.min(1, unknownRouteSupplyShare + unreviewedRouteSupplyShare);
   const boundedBridgeGapIsImmaterial =
-    unattributedBridgeShare !== null && unattributedBridgeShare < materialShareThreshold;
+    unattributedBridgeShare !== null && unattributedBridgeShare < unresolvedFullCeilingShareThreshold;
 
   const bridge = args.bridge;
   if (bridge.status.applicability.state === "not-applicable") {
@@ -645,22 +691,25 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
     // so this evaluator emits only the common reason code.
     addReason("runtime-bridge-materiality-unavailable", "deployment-control", "bridge");
   } else {
-    // A bounded section whose unattributed supply is immaterial keeps its reason
-    // (and its reason-coded ceiling) but does not discard the rows it did review.
-    // Each row below still fails closed on its own: a row that is not
-    // known-required leaves `selected-bridge-route-unresolved` and contributes no
-    // component, so an inventory whose rows are all unresolved still reaches the
-    // `bridge:unverified` fallback.
-    if (bridge.status.observationState !== "known") {
-      addReason("runtime-bridge-materiality-unavailable", "deployment-control", "bridge");
-    }
+    // Retain reviewed rows under a bounded residual. An unresolved route
+    // contributes no component, but needs no whole-coin fallback when the
+    // full cohort is bounded and every selected supply row has a proved join.
+    // A reconciled partition may prove a null-share deployment immaterial;
+    // that join relief is not admission of an exact share for pricing.
     const completeSubthresholdUnresolvedJoins = evaluateV9SubthresholdUnresolvedBridgeJoins(
       args.facts,
       controls,
       bridge.routes,
       materialShareThreshold,
       policy.materiality.commonModeShareThreshold,
+      unresolvedFullCeilingShareThreshold,
     ).complete;
+    if (
+      bridge.status.observationState !== "known" &&
+      !(bridge.status.observationState === "bounded-unknown" && completeSubthresholdUnresolvedJoins)
+    ) {
+      addReason("runtime-bridge-materiality-unavailable", "deployment-control", "bridge");
+    }
     const unresolvedBridgeResidueBinds =
       unattributedBridgeShare === null ||
       (unattributedBridgeShare > 0 && !completeSubthresholdUnresolvedJoins);
@@ -682,7 +731,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
       if (!isControlEconomicallyRelevant(control)) continue;
       const nullShareBound = provenNullShareDeploymentBound(args.facts, control);
       const provenImmaterial = nullShareBound !== null && nullShareBound < materialShareThreshold;
-      const binding = bindingByMateriality(control, materialShareThreshold, nullShareBound);
+      const binding = controlBinding(control, nullShareBound);
       if (!isKnownRequired(control.status)) {
         if (binding) {
           addReason("selected-bridge-route-unresolved", "deployment-control", "bridge:route", route.controlKey);
@@ -708,7 +757,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
       }
       if (
         selectedSupplyRoute?.reviewState === "unmatched" &&
-        selectedSupplyRoute.supplyShare >= materialShareThreshold
+        Math.max(0, selectedSupplyRoute.supplyShare - (excludedSupply.byDeployment.get(selectedSupplyRoute.deploymentRouteKey) ?? 0)) >= materialShareThreshold
       ) {
         addReason("material-bridge-supply-unmatched", "deployment-control", "bridge:supply", route.controlKey);
       }
@@ -752,23 +801,13 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
       1,
       (unknownRouteSupplyShare ?? 0) + (unreviewedRouteSupplyShare ?? 0),
     );
-    // The aggregate residue is graded on the same deployment-materiality floor the
-    // per-row branch above already applies, which is what the reason's own name
-    // asserts. Firing the material reason on any residue at all read a rounding
-    // tail as a material control gap: on the 2026-08-18 capture EURC ($257 of
-    // $470M), PYUSD ($201), frxUSD ($40), and AUSD ($874) each took the 55
-    // control-unverified ceiling for a residue under a thousandth of a percent,
-    // and because a ceiling-treatment reason also classifies its pillar as
-    // limited evidence, the same gap applied the 69 evidence ceiling underneath.
-    // A sub-material residue is still published, as the diagnostic twin that
-    // scores nothing and keeps the row in the BRIDGE_MATERIALITY curation queue.
-    //
-    // The material branch does not consult the completeness proof. That proof
-    // clears each unmatched row against the materiality floor individually, so a
-    // long tail of sub-material rows could sum past the floor and still prove
-    // complete — harmless while the trigger was `> 0`, an escape once it is the
-    // floor itself. A material aggregate now fails closed on its own terms.
-    if (unknownBridgeShare >= materialShareThreshold) {
+    // Unknown route supply keeps the deployment-material floor (including the
+    // RULED D-J pool). Joined unresolved routes instead use the full-cohort
+    // band, so they cannot regain the old 10% ceiling through this residue path.
+    if (
+      (unknownRouteSupplyShare ?? 0) >= materialShareThreshold ||
+      (unknownBridgeShare >= materialShareThreshold && !completeSubthresholdUnresolvedJoins)
+    ) {
       addReason("material-bridge-supply-unmatched", "deployment-control", "bridge:supply");
     } else if (unknownBridgeShare > 0 && !completeSubthresholdUnresolvedJoins) {
       addReason("nonmaterial-bridge-supply-unmatched", "deployment-control", "bridge:supply");
@@ -793,6 +832,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
     let hasBindingGap = false;
     let hasUnverifiedGap = false;
     for (const reason of reasons.values()) {
+      if (resolveV9ReasonPolicy(args.policy, reason.code).reason.defaultTreatment === "diagnostic") continue;
       const sectionMatch = reason.path === fallback.kind || reason.path.startsWith(`${fallback.kind}:`);
       const reasonControl = reason.controlKey === null ? undefined : controlsByKey.get(reason.controlKey);
       const controlMatch = reasonControl !== undefined && controlFallbackKind(reasonControl) === fallback.kind;
@@ -848,19 +888,8 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
     (left, right) =>
       compareText(left.kind, right.kind) || compareText(left.controlKeys.join("+"), right.controlKeys.join("+")),
   );
-  // A deployment-scoped control leaves the whole-asset pillar in exactly two
-  // cases, and component binding must agree with attribution in both:
-  //
-  //  1. Its loss is already priced proportionally, i.e. a binding structural
-  //     failure carries its known share. Deployment risk owns it from there.
-  //  2. Its reconciled share is below the deployment-materiality threshold, so
-  //     it cannot bind the global claim at all.
-  //
-  // Case 2 was missing. An immaterial deployment-local control stayed binding at
-  // its adverse component score while its scoped adjustment computed zero
-  // points, so the card kept an adverse pillar with no causal attribution and
-  // the D/F gate withheld it — turning unchanged cards into NR. Material,
-  // non-adverse deployment controls still bind.
+  // Deployment-local adverse loss is owned by proportional deployment risk;
+  // retain its component for publication even when it cannot bind the pillar.
   const pricedDeploymentControlKeys = new Set(
     normalizedStructuralFailures
       .filter((failure) => failure.binding && failure.materialSharePct !== null)
@@ -877,23 +906,52 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
       .filter(
         (control) =>
           control.economicLossScope === "deployment" &&
-          !bindingByMateriality(control, materialShareThreshold),
+          !controlBinding(control),
       )
       .map((control) => control.controlKey),
   ]);
-  const normalizedComponents = components
-    .map((component) =>
+  const normalizedComponents: V9ControlComponent[] = [];
+  let worstMint: V9ControlComponent | null = null;
+  let worstBindingMint: V9ControlComponent | null = null;
+  const scopedMintComponents: V9ControlComponent[] = [];
+  for (const component of components) {
+    const normalized =
       component.binding &&
       component.controlKeys.length > 0 &&
       component.controlKeys.every((controlKey) => scopedDeploymentControlKeys.has(controlKey))
         ? { ...component, binding: false }
-        : component,
-    )
-    .sort((left, right) => compareText(left.componentKey, right.componentKey));
+        : component;
+    if (normalized.kind !== "mint") {
+      normalizedComponents.push(normalized);
+      continue;
+    }
+    if (!normalized.binding) scopedMintComponents.push(normalized);
+    if (normalized.binding && (worstBindingMint === null || normalized.score < worstBindingMint.score)) {
+      worstBindingMint = normalized;
+    }
+    if (
+      worstMint === null ||
+      normalized.score < worstMint.score ||
+      (normalized.score === worstMint.score && normalized.binding && !worstMint.binding)
+    ) {
+      worstMint = normalized;
+    }
+  }
+  if (worstMint !== null) normalizedComponents.push(worstMint);
+  for (const component of scopedMintComponents) {
+    if (component !== worstMint) normalizedComponents.push({
+      ...component,
+      componentKey: `mint:deployment:${component.controlKeys.join("+")}`,
+    });
+  }
+  if (worstBindingMint !== null && worstBindingMint !== worstMint) {
+    normalizedComponents.push({ ...worstBindingMint, componentKey: "mint:binding" });
+  }
+  normalizedComponents.sort((left, right) => compareText(left.componentKey, right.componentKey));
   const bindingControlFailureDomains = controls
     .filter(isControlEconomicallyRelevant)
     .filter((control) => isKnownRequired(control.status))
-    .filter((control) => bindingByMateriality(control, materialShareThreshold))
+    .filter((control) => controlBinding(control))
     .flatMap((control) => control.failureDomains);
   const failureDomains = canonicalDomains([
     ...bindingControlFailureDomains,
@@ -919,6 +977,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
     state: score === null ? "not-rated" : "rated",
     oracleApplicability: oracle.status.applicability.state,
     components: normalizedComponents,
+    controlFacts: controls,
     reasons: normalizedReasons,
     structuralFailures: normalizedStructuralFailures,
     failureDomains,

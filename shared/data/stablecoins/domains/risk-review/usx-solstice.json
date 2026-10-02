@@ -12,9 +12,9 @@
         "url": "https://solscan.io/account/USXyiSTsPEWz55pSK7sZoUL79ntoVGQbaTDT57tH6bx"
       }
     ],
-    "evidence": "At finalized Solana slot 421873034, the USX mint listed Ze3CQhTMi6KMU3nWZQUegA2JpeFd2eMx1Y2Gswqnto4 as its live freezeAuthority as well as mintAuthority. The authority account is owned by the Solstice USX program, so the program can directly freeze individual USX token accounts and thereby restrict their transfers.",
-    "reviewer": "Codex Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "At finalized Solana slot 452212332, the USX mint still listed Ze3CQhTMi6KMU3nWZQUegA2JpeFd2eMx1Y2Gswqnto4 as freezeAuthority and mintAuthority. The non-executable authority account is owned by USXyiSTsPEWz55pSK7sZoUL79ntoVGQbaTDT57tH6bx. The SPL freeze capability remains live, agreeing with the historical observation at slot 421873034.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA11USYC)",
+    "reviewedAt": "2026-10-01"
   },
   "oracleRisk": {
     "tier": "redundant-with-failover",

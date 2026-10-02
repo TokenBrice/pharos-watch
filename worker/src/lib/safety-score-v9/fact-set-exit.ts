@@ -1,5 +1,8 @@
 import { z } from "zod";
 import { resolvedExitRouteOutputAssetKeys } from "@shared/lib/exit-route-output";
+import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
+import { resolveReviewedRouteSuspension } from "@shared/lib/redemption-backstop-configs/schema";
+import type { RedemptionRouteSuspension } from "@shared/types/redemption";
 import { isDexExitRouteCoverageWithinRouteBudget } from "@shared/lib/p4-exit-route-capacity";
 import { isDexExitRouteScoreEligible } from "@shared/lib/p4-exit-route-capability-policy";
 import { canonicalV9RouteKey } from "@shared/lib/safety-score-v9/facts";
@@ -15,6 +18,11 @@ import {
 } from "@shared/lib/safety-score-v9/reasons";
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
+import { selectV9ExitStressRequest } from "@shared/lib/safety-score-v9/exit";
+import { loadV9CandidateMethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
+import { admitExitExecutionCertificate, exitExecutionInputGenerationId, exitExecutionReviewDigest, validateExitExecutionModelReviews } from "@shared/lib/safety-score-v9/exit-execution";
+import reviewedExecutionModels from "@shared/data/safety-score-v9/exit-execution-model-reviews-v1.json";
 import { canonicalV9ExecutionCostKey } from "@shared/types/safety-score-v9-fact-primitives";
 import type {
   V9EvidenceResponsibility,
@@ -72,20 +80,18 @@ function routeEvidence(
   rejection: z.infer<typeof RejectionSchema> | null,
   retained: boolean,
 ): string {
-  const generationId = lane === "dex" ? context.fixedInput.dexGenerationId : context.fixedInput.redemptionGenerationId;
+  const generationId = observation.executionCertificate?.observationGenerationId ??
+    (lane === "dex" ? context.fixedInput.dexGenerationId : context.fixedInput.redemptionGenerationId);
   // Documented-terms evidence lives on the review cadence the policy states
   // (semantic.exit.documentedTermsMaxAgeSec), not the producer cron cadence.
-  const maxAgeSec =
+  const maxAgeSec = observation.executionCertificate?.sourceMaxAgeSec ?? (
     lane === "dex"
       ? observation.evidenceKind === "measured-executable-depth"
-        ? Math.max(
-            context.extension.routeFreshness.dexMaxAgeSec,
-            getDexMeasuredExecutionFreshnessMaxSec(observation.adapterProfileId ?? ""),
-          )
+        ? Math.max(context.extension.routeFreshness.dexMaxAgeSec, getDexMeasuredExecutionFreshnessMaxSec(observation.adapterProfileId ?? ""))
         : context.extension.routeFreshness.dexMaxAgeSec
       : observation.evidenceKind === "documented-terms"
         ? context.extension.routeFreshness.documentedTermsMaxAgeSec
-        : context.extension.routeFreshness.redemptionMaxAgeSec;
+        : context.extension.routeFreshness.redemptionMaxAgeSec);
   return addEvidence(
     context,
     createV9EvidenceReference(
@@ -177,6 +183,40 @@ function routeGap(
   );
 }
 
+function buildSuspendedRoute(context: AssetBuildContext, suspension: RedemptionRouteSuspension): V9ExitRouteFactV2 {
+  const generationId = context.fixedInput.redemptionGenerationId;
+  const routeKey = canonicalV9RouteKey("redemption", generationId, suspension.routeId);
+  const evidenceId = addEvidence(context, createV9EvidenceReference({
+    evidenceId: `${context.asset.assetId}:route-suspension:${suspension.routeId}`,
+    sourceId: "reviewed-redemption-channel-suspension",
+    sourceGenerationId: context.extension.sources.researchOverlays.generationId,
+    disposition: "observed",
+    observedAtSec: Date.parse(`${suspension.reviewedAt}T00:00:00Z`) / 1_000,
+    contentSha256: domainDigest("safety-score-v10.route-suspension.v1", suspension),
+    url: suspension.sources[0]!.url,
+  }, context.fixedInput.clockSec));
+  const gapId = routeGap(context, routeKey, "suspended", "bounded-unknown",
+    "missing-same-notional-route", "integration-missing",
+    `${suspension.channel}: ${suspension.reason} This establishes no total-exit measurement.`, [evidenceId]);
+  const status = createV9FactStatus({
+    applicability: requiredV9Applicability("v9.exit.same-notional-route"),
+    observationState: "bounded-unknown", evidenceRefIds: [evidenceId], gapIds: [gapId],
+  });
+  return {
+    routeKey, routeId: suspension.routeId, routeSuspension: suspension, lane: "redemption",
+    sourceGenerationId: generationId,
+    routeFamily: getRedemptionBackstopConfig(context.asset.assetId)?.routeFamily === "offchain-issuer" ? "issuer-redemption" : "protocol-redemption",
+    holderAccess: "unknown", executionModel: "unknown", executionCertainty: "unknown",
+    modelConfidence: "low", observationConfidence: "unknown", observationHistory: null,
+    evidenceKind: "documented-terms", coverageClass: "diagnostic", capacityScoringHorizon: "unknown",
+    settlementModel: "unknown", settlementSlaSec: null,
+    queueDepthUsd: null, dailyLimitUsd: null, minRedeemUsd: null, settlementEvidenceRefIds: [],
+    physicalResourceKeys: [], status, scoreEligible: false, request: null, capacityCurve: [],
+    output: { status, kind: "unknown", assetKeys: [], basketWeights: [], valuation: null },
+    failureDomains: [{ kind: "redemption-rail", key: suspension.channel }],
+  };
+}
+
 function buildRoute(
   context: AssetBuildContext,
   args: {
@@ -188,6 +228,10 @@ function buildRoute(
     retained: boolean;
   },
 ): V9ExitRouteFactV2 {
+  const suspension = args.lane === "redemption" ? resolveReviewedRouteSuspension(
+    getRedemptionBackstopConfig(context.asset.assetId), args.observation.routeId, context.fixedInput.clockSec,
+  ) : undefined;
+  if (suspension) return buildSuspendedRoute(context, suspension);
   const generationId =
     args.lane === "dex" ? context.fixedInput.dexGenerationId : context.fixedInput.redemptionGenerationId;
   const routeKey = canonicalV9RouteKey(args.lane, generationId, args.observation.routeId);
@@ -201,6 +245,20 @@ function buildRoute(
   );
   const evidence = context.evidence.get(evidenceId)!;
   const baseDomains = scopeFailureDomains(args.observation, args.lane);
+  const certificate = args.observation.executionCertificate;
+  const supplyUsd = getCirculatingRawOrNull(context.fixedInput.aggregateCirculatingById?.[context.asset.assetId] ?? {});
+  const executionPolicy = args.observation.executionModelId ? loadV9CandidateMethodologyPolicy(context.fixedInput.clockSec) : null;
+  const executionRequest = executionPolicy ? selectV9ExitStressRequest(supplyUsd, executionPolicy) : null;
+  const executionAdmission = args.observation.executionModelId
+    ? certificate && executionPolicy && executionRequest
+      ? admitExitExecutionCertificate({
+          certificate, envelope: executionPolicy, assetId: context.asset.assetId, clockSec: context.fixedInput.clockSec,
+          inputGenerationId: exitExecutionInputGenerationId(context.asset.assetId, supplyUsd, certificate.inputReference),
+          observationGenerationId: domainDigest("safety-score-v10.exit-execution-source.v1", certificate.source),
+          request: executionRequest,
+        })
+      : { state: "unavailable" as const, reason: "execution-certificate-missing", responsibility: "method-unsupported" as const }
+    : null;
 
   if (!args.review) {
     const gapId = routeGap(
@@ -273,13 +331,22 @@ function buildRoute(
     const cost = costByKey.get(canonicalV9ExecutionCostKey(point));
     if (!cost) throw new Error(`Missing execution cost for ${context.asset.assetId}:${routeKey}`);
     costByKey.delete(canonicalV9ExecutionCostKey(point));
-    return { ...point, executionCostBps: cost.executionCostBps };
+    // Curated terms can supersede the captured quote's cost. Re-apply the
+    // request budget without claiming the underlying route has no liquidity.
+    const withinBudget = cost.executionCostBps <= point.maxCostBps;
+    return {
+      ...point,
+      executableUsd: withinBudget ? point.executableUsd : 0,
+      completionRatio: withinBudget ? point.completionRatio : 0,
+      executionCostBps: cost.executionCostBps,
+    };
   });
   if (costByKey.size > 0) throw new Error(`Unmatched execution costs for ${context.asset.assetId}:${routeKey}`);
 
   let routeState: V9FactStatusV2["observationState"] = "known";
   if (args.disposition === "rejected") routeState = "unsupported";
   else if (evidence.freshness.state === "stale") routeState = "stale";
+  if (executionAdmission?.state === "unavailable") routeState = "unsupported";
   const routeGapId =
     routeState === "known"
       ? null
@@ -289,8 +356,8 @@ function buildRoute(
           routeState === "stale" ? "stale" : "rejected",
           routeState,
           routeState === "stale" ? "missing-runtime-route-evidence" : "unsupported-same-notional-route",
-          routeState === "stale" ? "producer-failed" : "method-unsupported",
-          routeState === "stale"
+          executionAdmission?.state === "unavailable" ? executionAdmission.responsibility : routeState === "stale" ? "producer-failed" : "method-unsupported",
+          executionAdmission?.state === "unavailable" ? executionAdmission.reason : routeState === "stale"
             ? "The retained route observation is older than the lane freshness bound."
             : "The retained route observation was rejected by its producer or review process.",
           [evidenceId],
@@ -395,10 +462,11 @@ function buildRoute(
   // atomic producer route can become an unbounded queue), so re-apply the
   // score-bearing contract after the review has been materialized.
   const scoreEligible = isDexExitRouteScoreEligible({
-    producerScoreEligible: args.observation.scoreEligible,
+    producerScoreEligible: args.observation.scoreEligible && executionAdmission?.state !== "unavailable",
     routeState,
     outputState: output.status.observationState,
-    coverageClass: args.review.coverageClass,
+    coverageClass: executionAdmission && executionAdmission.state !== "unavailable"
+      ? executionAdmission.point.certification : args.review.coverageClass,
     holderAccess: args.review.holderAccess,
     executionModel: args.review.executionModel,
     executionCertainty: args.review.executionCertainty,
@@ -406,6 +474,8 @@ function buildRoute(
     settlementModel: args.review.settlementModel,
     settlementSlaSec: args.review.settlementSlaSec,
     physicalResourceKeys: args.review.physicalResourceKeys,
+    executionModelId: args.observation.executionModelId,
+    executionAdmission,
   });
   return {
     routeKey,
@@ -420,8 +490,14 @@ function buildRoute(
     observationConfidence: args.observation.confidence,
     observationHistory: args.observation.observationHistory ?? null,
     evidenceKind: args.observation.evidenceKind,
-    ...(args.observation.feeEvidence ? { feeEvidence: args.observation.feeEvidence } : {}),
-    coverageClass: args.review.coverageClass,
+    ...((args.review.feeEvidence ?? args.observation.feeEvidence)
+      ? { feeEvidence: args.review.feeEvidence ?? args.observation.feeEvidence } : {}),
+    ...(args.observation.physicalToUsd ? { physicalToUsd: args.observation.physicalToUsd } : {}),
+    ...(args.observation.executionModelId ? { executionModelId: args.observation.executionModelId } : {}),
+    ...(certificate ? { executionCertificate: certificate } : {}),
+    coverageClass: executionAdmission
+      ? executionAdmission.state === "unavailable" ? "diagnostic" : executionAdmission.point.certification
+      : args.review.coverageClass,
     capacityScoringHorizon: args.review.capacityScoringHorizon ?? "unknown",
     settlementModel: args.review.settlementModel,
     settlementSlaSec: args.review.settlementSlaSec,
@@ -574,6 +650,12 @@ export function buildRoutes(context: AssetBuildContext): {
   // Preserve the producer gap so a small observed DEX route cannot turn an
   // unavailable redemption measurement into known-negative exit evidence.
   const redemption = context.fixedInput.redemptionBackstopMap[context.asset.assetId];
+  const config = getRedemptionBackstopConfig(context.asset.assetId);
+  const suspension = resolveReviewedRouteSuspension(config,
+    `redemption:${context.asset.assetId}:${config?.routeFamily}`, context.fixedInput.clockSec);
+  if (suspension && !routes.some((route) => route.routeId === suspension.routeId && route.lane === "redemption")) {
+    routes.push(buildSuspendedRoute(context, suspension));
+  }
   if (
     redemption?.provider === "reserve-sync-metadata" &&
     redemption.resolutionState === "missing-capacity" &&
@@ -623,17 +705,33 @@ export function buildRoutes(context: AssetBuildContext): {
     );
   }
   if (routes.length === 0) {
-    // A reviewed-complete DEX surface with zero retained pools and no
-    // redemption row is KNOWN negative evidence (score-defined zero exit),
-    // not missing evidence; missing is reserved for incomplete coverage
-    // (VER-006).
+    // Local 0/0 pool coverage proves global exhaustion only when the captured
+    // deployment census also accounts for every supply-bearing chain.
     const emptyCoverage = context.fixedInput.dexLiqMap[context.asset.assetId]?.exitRouteObservationCoverage;
-    const emptySurfaceComplete =
+    const locallyEmptySurface =
       emptyCoverage != null &&
       emptyCoverage.status === "populated" &&
       emptyCoverage.retainedPoolCount === 0 &&
       emptyCoverage.unsupportedPoolCount === 0;
-    if (emptySurfaceComplete) {
+    const chainSupply = context.fixedInput.chainCirculatingById[context.asset.assetId] ?? {};
+    let capturedChainSupplyUsd = 0;
+    for (const chain in chainSupply) capturedChainSupplyUsd += chainSupply[chain]!.current;
+    const supplyCoverage = context.fixedInput.dexDeploymentSupplyCoverageById[context.asset.assetId];
+    const supplyToleranceUsd = Math.max(0.000001, capturedChainSupplyUsd * 1e-12);
+    const fullSupplyVerifiedEmpty =
+      capturedChainSupplyUsd > 0 &&
+      supplyCoverage != null &&
+      supplyCoverage.unknownChains.length === 0 &&
+      supplyCoverage.unknownSupplyUsd === 0 &&
+      supplyCoverage.unknownSupplyRatio === 0 &&
+      supplyCoverage.providerInaccessibleSupplyUsd === 0 &&
+      supplyCoverage.providerInaccessibleSupplyRatio === 0 &&
+      supplyCoverage.observedSupplyUsd === 0 &&
+      supplyCoverage.observedSupplyRatio === 0 &&
+      supplyCoverage.verifiedNoPoolsSupplyRatio === 1 &&
+      Math.abs(supplyCoverage.totalSupplyUsd - capturedChainSupplyUsd) <= supplyToleranceUsd &&
+      Math.abs(supplyCoverage.verifiedNoPoolsSupplyUsd - capturedChainSupplyUsd) <= supplyToleranceUsd;
+    if (locallyEmptySurface) {
       // Known-empty negative evidence must carry the DEX producer's observation
       // time, not the scoring clock: a stale empty surface is not a current
       // "known" zero-exit fact but a bounded-unknown/stale one (VER2-007). Fresh
@@ -647,12 +745,32 @@ export function buildRoutes(context: AssetBuildContext): {
             sourceGenerationId: context.fixedInput.dexGenerationId,
             disposition: "observed",
             observedAtSec: context.fixedInput.dexLiqMap[context.asset.assetId]!.updatedAt,
-            contentSha256: domainDigest("safety-score-v9.exit-route-observation-coverage.v1", emptyCoverage),
+            contentSha256: domainDigest("safety-score-v9.exit-route-observation-coverage.v1", {
+              coverage: emptyCoverage,
+              supplyCoverage: supplyCoverage ?? null,
+              chainSupply,
+            }),
             maxAgeSec: context.extension.routeFreshness.dexMaxAgeSec,
           },
           context.fixedInput.clockSec,
         ),
       );
+      if (!fullSupplyVerifiedEmpty) {
+        return {
+          exitStatus: missingLocalFact(context, {
+            componentKey: "exit-routes",
+            reasonCode: "missing-runtime-route-evidence",
+            ownerDomain: "exit",
+            responsibility: "integration-missing",
+            policyRuleId: "v9.exit.same-notional-route",
+            observationState: "bounded-unknown",
+            evidenceRefIds: [coverageEvidenceId],
+            message:
+              "The locally empty DEX census does not verify an empty market footprint for every supply-bearing chain in the captured chain distribution.",
+          }).status,
+          exitRoutes: [],
+        };
+      }
       const coverageStale = context.evidence.get(coverageEvidenceId)!.freshness.state === "stale";
       const staleGapId = coverageStale
         ? addGap(
@@ -743,9 +861,10 @@ export function buildRoutes(context: AssetBuildContext): {
       exitRoutes: [],
     };
   }
-  const statuses = routes.flatMap((route) => [route.status, route.output.status]);
+  // A withdrawn channel does not make the observation of independent channels incomplete.
+  const statuses = routes.filter((route) => !route.routeSuspension).flatMap((route) => [route.status, route.output.status]);
   const gapIds = [...new Set(statuses.flatMap((status) => status.gapIds))];
-  const evidenceRefIds = [...new Set(statuses.flatMap((status) => status.evidenceRefIds))];
+  const evidenceRefIds = [...new Set(routes.flatMap((route) => [route.status, route.output.status]).flatMap((status) => status.evidenceRefIds))];
   // "known" asserts the whole exit surface is observed (it upgrades evidence
   // level and arms the reviewed-complete zero-score path), so it additionally
   // requires every budget-admitted score-eligible DEX capability pool to carry
@@ -768,6 +887,23 @@ export function buildRoutes(context: AssetBuildContext): {
     coverage.status === "populated" &&
     (coverage.retainedPoolCount === 0 || isDexExitRouteCoverageWithinRouteBudget(coverage));
   const portfolioGapIds = [...gapIds];
+  if (reviewedExecutionModels.reviews.length > 0) {
+    const executionPolicy = loadV9CandidateMethodologyPolicy();
+    for (const review of validateExitExecutionModelReviews(reviewedExecutionModels, executionPolicy)) {
+      if (review.identity.assetId !== context.asset.assetId || Date.parse(review.reviewedAt) > context.fixedInput.clockSec * 1000 ||
+          Date.parse(review.expiresAt) < context.fixedInput.clockSec * 1000 ||
+          routes.some((route) => route.routeId === `execution:${exitExecutionReviewDigest(review)}`)) continue;
+      portfolioGapIds.push(addGap(context, createV9FactGapV3({
+        gapId: `${context.asset.assetId}:gap:exit-execution:${exitExecutionReviewDigest(review)}`,
+        reasonCode: "missing-runtime-route-evidence", ownerDomain: "exit", policyRuleId: "v9.exit.same-notional-route",
+        observationState: "missing",
+        responsibility: executionPolicy.policy.semantic.exit.executionModels[review.modelId]!.admission === "enabled" ? "producer-failed" : "method-unsupported",
+        path: { kind: "local-component", componentKey: `exit-execution:${exitExecutionReviewDigest(review)}` },
+        message: "A reviewed execution rail has no runtime certificate; capacity is unavailable, not observed zero.",
+        evidenceRefIds: [],
+      })));
+    }
+  }
   if (!dexSurfaceComplete) {
     // R1-A / R1-B (owner ruling 2026-07-29). The legacy single message asserted
     // that reviewed execution-capability pools exist but are unobserved, which

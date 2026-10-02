@@ -1,6 +1,6 @@
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
-import { CHAIN_META } from "@shared/lib/chains";
+import { CHAIN_META } from "@shared/types/chain-identity";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { keccak256, toFunctionSelector } from "viem/utils";
 import { encodeAddress } from "../../lib/evm-selectors";

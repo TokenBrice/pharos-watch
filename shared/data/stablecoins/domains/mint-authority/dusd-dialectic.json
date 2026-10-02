@@ -50,11 +50,11 @@
         "role": "wrapper",
         "authorityType": "contract",
         "directMintAbility": "none",
-        "capDescription": "The Machine mints DUSD only against deposited USDC at the current share price, and only up to the Risk-Manager-set share supply cap of 75,000,000 shares. It does not mint the underlying USDC.",
+        "capDescription": "The Machine mints deposit shares against USDC at the current share price up to the Risk-Manager-set share supply cap of 75,000,000 shares. It also mints fee shares without new AUM, diluting holders within the governance-set fee-accrual limits. It does not mint the underlying USDC.",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-29",
-        "observedBlock": 25637903,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095805,
         "sources": [
           {
             "label": "Makina deposits",
@@ -65,7 +65,7 @@
             "url": "https://etherscan.io/address/0x6b006870c83b1cd49e766ac9209f8d68763df721"
           }
         ],
-        "evidence": "At Ethereum block 25637903 the Machine returns shareToken() = 0x1e33e98af620f1d563fcd3cfd3c75ace841204ef, accountingToken() = USDC, shareLimit() = 75,000,000e18, and recoveryMode() = false. The share token's minter() and owner() both resolve to this Machine, so no external address can mint shares."
+        "evidence": "At Ethereum block 26095805 the Machine returns shareToken() = 0x1e33e98af620f1d563fcd3cfd3c75ace841204ef, accountingToken() = 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 (USDC), shareLimit() = 75,000,000e18, riskManager() = 0x36ba7c92cd68051fb304bd4580c4a51c1d376532, and recoveryMode() = false. The share token's minter() and owner() both resolve to this Machine. Makina's fee documentation separately identifies fee-share issuance without new AUM; Machine-only mint authority does not mean every minted share is matched by a fresh USDC deposit."
       },
       {
         "chain": "ethereum",
@@ -85,7 +85,7 @@
         "sources": [
           {
             "label": "Makina fees",
-            "url": "https://docs.makina.finance/concepts/architecture/machine/overview/fees"
+            "url": "https://docs.makina.finance/concepts/architecture/machine/fees"
           },
           {
             "label": "Watermark Fee Manager on Etherscan",
@@ -263,7 +263,7 @@
       "sources": [
         {
           "label": "Makina fees",
-          "url": "https://docs.makina.finance/concepts/architecture/machine/overview/fees"
+          "url": "https://docs.makina.finance/concepts/architecture/machine/fees"
         },
         {
           "label": "Makina protocol upgrades",

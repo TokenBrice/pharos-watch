@@ -1,27 +1,5 @@
 {
   "id": "kag-kinesis",
-  "mica": {
-    "status": "non-compliant",
-    "tokenType": "ART",
-    "references": [
-      {
-        "label": "ESMA MiCA interim register: ART issuer CSV reviewed; no KMS Labs/KAG entry found on 2026-08-14",
-        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/ARTZZ.csv"
-      },
-      {
-        "label": "KMS Labs terms: KMS Labs S.A. issues ERC20 KAG against Kinesis-native KAG and does not list an EU prohibition",
-        "url": "https://kmslabs.money/kms-labs-tcs/"
-      },
-      {
-        "label": "Kinesis supported assets: KAG is available on Kinesis Pay and the platform supports SEPA/EUR rails",
-        "url": "https://support.kinesis.money/hc/en-gb/articles/23830420583069-What-currencies-are-supported-on-the-Kinesis-platform-and-exchange"
-      },
-      {
-        "label": "ESMA MiCA Article 3 definitions: ART covers crypto-assets referencing value or rights other than a single official currency",
-        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
-      }
-    ]
-  },
   "genius": {
     "applicability": "non-payment-token",
     "applicabilityBasis": {
@@ -48,7 +26,7 @@
     "issuerDomicile": "Panama",
     "foreignExceptionStatus": "not-applicable",
     "daspOfferSaleStatus": "not-applicable",
-    "notes": "KAG is a silver-backed commodity token rather than a payment stablecoin. No GENIUS payment-stablecoin authorization is asserted.",
+    "notes": "Issuer terms peg ERC-20 KAG 1:1 to native KAG and make direct redemption discretionary. The existing non-payment-token assessment is a scope interpretation, not a GENIUS authorization finding.",
     "references": [
       {
         "label": "OCC GENIUS Act proposed rule",

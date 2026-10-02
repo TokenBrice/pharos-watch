@@ -6,7 +6,7 @@
   "genius": {
     "applicability": "excluded-security",
     "applicabilityBasis": {
-      "summary": "USDY is a tokenized note issued under U.S. Securities Act Regulation S exemption, restricted to non-U.S. investors, and accrues yield via NAV appreciation rather than functioning as a fixed-value payment instrument. As of December 15, 2025, it is issued by Ondo Global Markets (BVI) Limited, a BVI SPV. These characteristics place it outside the GENIUS Act's definition of a payment stablecoin."
+      "summary": "USDY is a tokenized note offered under Regulation S to qualifying non-U.S. investors, with yield reflected in an increasing redemption price. The issuer describes current issuance under Ondo Global Markets (BVI) Limited's Ondo Stocks umbrella, while separate daily reports continue to reconcile outstanding legacy Ondo USDY LLC obligations. The excluded-security classification concerns the note structure, not an assertion that all outstanding issuance is a single BVI liability."
     },
     "authorizationStatus": "not-applicable",
     "issuerPathway": "not-applicable",
@@ -14,7 +14,7 @@
     "issuerDomicile": "British Virgin Islands",
     "foreignExceptionStatus": "not-applicable",
     "daspOfferSaleStatus": "not-applicable",
-    "notes": "USDY is structured as a tokenized note under Reg S, accessible only to qualifying non-U.S. investors, and accrues yield through NAV appreciation rather than functioning as a fixed-value payment stablecoin. As of December 15, 2025, Ondo USDY LLC was folded into the Ondo Global Markets (BVI) Limited umbrella as issuer. These structural and legal characteristics place it outside the GENIUS Act's payment stablecoin definition.",
+    "notes": "USDY is structured as a tokenized secured note under Reg S, accessible to qualifying non-U.S. investors, and accrues yield through NAV appreciation. On 2026-10-01, issuer docs still describe the December 15, 2025 move into the Ondo Stocks umbrella and direct USDC redemption through Ondo Global Markets (BVI) Limited, but preserve bank-wire redemption through Ondo USDY LLC. The LLC's 2026-09-25 attestation expressly excludes BVI issuance. Current BVI issuance and outstanding legacy LLC obligations therefore have distinct reporting scope. Existing excluded-security/not-applicable classifications are retained; this review does not assert a new regulatory authorization.",
     "references": [
       {
         "label": "Ondo USDY basics",
@@ -25,6 +25,13 @@
         "label": "Ondo Global Markets legal and regulatory",
         "url": "https://docs.ondo.finance/ondo-global-markets/legal-and-regulatory",
         "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Ondo USDY LLC 2026-09-25 attestation: legacy LLC obligations exclude BVI issuance",
+        "url": "https://www.dropbox.com/scl/fo/375wdvar3rbc7o23nxsgp/ABoF-avpNclglsNxAeWZO_k/2026/09%20September?rlkey=4icqn1z9bez725wywr30fx52a&dl=1",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-09-25",
+        "accessedAt": "2026-10-01"
       }
     ],
     "reviewer": "Pharos compliance research",

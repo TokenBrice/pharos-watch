@@ -72,25 +72,50 @@
         "deploymentRefs": [
           "solana:myrcAs6bpP2g5oGHZ3qpgrfZQAFkbo9KUHdqYDXMjGv"
         ],
-        "label": "MYRC Solana mint and freeze authority (issuer keypair)",
+        "label": "MYRC Solana mint and freeze authority (off-curve address; controller controls unresolved)",
         "role": "direct-minter",
-        "authorityType": "eoa",
+        "authorityType": "multisig",
         "directMintAbility": "direct",
-        "modulesOrGuardsStatus": "not-applicable",
+        "threshold": 2,
+        "signerCount": 4,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-01",
+        "observedBlock": 452347437,
         "sources": [
           {
             "label": "Solana MYRC mint",
             "url": "https://solscan.io/token/myrcAs6bpP2g5oGHZ3qpgrfZQAFkbo9KUHdqYDXMjGv"
+          },
+          {
+            "label": "Current Squads v4 multisig account",
+            "url": "https://explorer.solana.com/address/96eSyXBfZiDmGVgU5VcGxQuoCsWcxXpNQeaG7ECWaraA"
+          },
+          {
+            "label": "Squads v4 multisig state and permission definitions",
+            "url": "https://raw.githubusercontent.com/Squads-Protocol/v4/main/programs/squads_multisig_program/src/state/multisig.rs"
+          },
+          {
+            "label": "Squads v4 vault PDA derivation",
+            "url": "https://raw.githubusercontent.com/Squads-Protocol/v4/main/sdk/multisig/src/pda.ts"
+          },
+          {
+            "label": "Squads spending limits transfer existing tokens only",
+            "url": "https://raw.githubusercontent.com/Squads-Protocol/v4/main/programs/squads_multisig_program/src/instructions/spending_limit_use.rs"
+          },
+          {
+            "label": "Squads approved-proposal vault execution",
+            "url": "https://raw.githubusercontent.com/Squads-Protocol/v4/main/programs/squads_multisig_program/src/instructions/vault_transaction_execute.rs"
           }
         ],
-        "evidence": "At Solana slot 425797741, getAccountInfo on mint myrcAs6b... returned mintAuthority and freezeAuthority Df8T8pvE..., a System-Program-owned non-executable account (issuer keypair, EOA-equivalent)."
+        "evidence": "At finalized Solana slot 452347437 on 2026-10-01, a single getMultipleAccounts read confirmed the MYRC mint and freeze authority Df8T8pvEx7WmC4RjBmzcDqLfuKDLf9wWxSzMvQ95Ln4z. This address exactly derives as vault index 0, bump 255, of Squads v4 multisig 96eSyXBfZiDmGVgU5VcGxQuoCsWcxXpNQeaG7ECWaraA under program SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf. The program-owned Multisig account discriminator matches account:Multisig; threshold is 2, time_lock is 0, and config_authority is the zero pubkey (autonomous configuration, no separate configuration-key bypass). Seven members exist, but only four have Vote permission: Byox7nqJUBr6xvtCnB3o2BZY3EWkSrupqCVqB3Krtoox (7), ERckQPKdf7bKRwUYpDseV9GmrqRmKU5wWv8MqsnHDQyh (3), ExEEFginJXEghXPTD4jEyP5ppGB595gJ2CeDVk6DkZFA (7), Gim5aKdA1ZsTiVQ4eNn1fcdX52trZ6xGJ5grLFuLKW3P (7). The other three have Initiate permission only. signerCount records four voting signers, not all seven members. ProgramData Fy3YMJCvwbAXUgUM5b91ucUVA3jYzwWLHL3MwBqKsh8n has upgrade-authority option None (immutable program). Published Squads spending-limit code only transfers SOL or existing tokens and cannot mint SPL supply; vault execution requires an approved proposal. No mint-bypassing modules or external configuration authority were detected in the reviewed native-issuance path. Human signer identities and operational key custody are not inferred. The stable control label retains its prior unresolved annotation as an identity reference."
       }
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "periodic",
     "supervision": "attestation-only",
     "review": {
-      "evidence": "MYRC Ethereum uses OZ AccessControl (non-enumerable). MINTER_ROLE confirmed held by 2-of-3 Safe 0xcca0793... via hasRole at block 25295023 and corroborated by RoleGranted event log. Safe has 3 signers, threshold 2, no modules, no guard. Arbitrum/Base deploy same implementation (same bytecode); ARB deployer 0xdae4932... does NOT hold MINTER_ROLE, consistent with safe-based role management applied post-deploy on all chains. Solana mint not checked (non-EVM, low supply on Solana vs EVM). Solana mint authority resolved at slot 425797741: issuer keypair (EOA-equivalent). Mint-tier review (2026-07-15): Tommy Ung & Partners PLT issued monthly reserve attestations through 2025-11-30, but the expected subsequent monthly reports are absent as of 2026-07-15; current recurring reconciliation is therefore not established. Securities Commission Malaysia's public register does not establish Blox as a prudential stablecoin issuer. Reconciliation review (2026-08-08): the monthly reports the 2026-07-15 pass recorded as absent after 2025-11-30 do exist, published under cdn.blox.my/attestations. Tommy Ung & Partners PLT (AF 002378), Chartered Accountants Malaysia, issue ISAE 3000 (Revised) reasonable-assurance opinions that MYR-denominated assets held equal or exceed MYRC in circulation - verified for 2025-11-30 (831,090.83 MYRC) and 2026-06-30 (2,217,790.25 MYRC, signed 2026-07-21), with reports present for every month probed in between. Recurring third-party reconciliation is therefore established. Supervision stays non-prudential: Blox's own product term sheet states MYRC does not constitute electronic money or a payment instrument unless and until Blox obtains Bank Negara Malaysia approval. Economic-posture fields reviewed 2026-08-15: issuer-controlled direct mint or immediate minter-administration paths are economically unbounded; existing whole-supply periodic reconciliation and independent attestation evidence remain supported.",
+      "evidence": "MYRC Ethereum uses OZ AccessControl (non-enumerable). MINTER_ROLE confirmed held by 2-of-3 Safe 0xcca0793... via hasRole at block 25295023 and corroborated by RoleGranted event log. Safe has 3 signers, threshold 2, no modules, no guard. Arbitrum/Base deploy same implementation (same bytecode); ARB deployer 0xdae4932... does NOT hold MINTER_ROLE, consistent with safe-based role management applied post-deploy on all chains. Solana correction 2026-10-01: the off-curve mint/freeze authority is the immutable Squads v4 vault at index 0 of multisig 96eSyXBfZiDmGVgU5VcGxQuoCsWcxXpNQeaG7ECWaraA, verified at finalized slot 452347437. Current voting threshold is 2-of-4 across seven total members; configuration authority is zero and timelock is zero. The prior keypair assertion was incorrect. Human signer identity and operational custody remain undisclosed. Mint-tier review (2026-07-15): Tommy Ung & Partners PLT issued monthly reserve attestations through 2025-11-30, but the expected subsequent monthly reports are absent as of 2026-07-15; current recurring reconciliation is therefore not established. Securities Commission Malaysia's public register does not establish Blox as a prudential stablecoin issuer. Reconciliation review (2026-08-08): the monthly reports the 2026-07-15 pass recorded as absent after 2025-11-30 do exist, published under cdn.blox.my/attestations. Tommy Ung & Partners PLT (AF 002378), Chartered Accountants Malaysia, issue ISAE 3000 (Revised) reasonable-assurance opinions that MYR-denominated assets held equal or exceed MYRC in circulation - verified for 2025-11-30 (831,090.83 MYRC) and 2026-06-30 (2,217,790.25 MYRC, signed 2026-07-21), with reports present for every month probed in between. Recurring third-party reconciliation is therefore established. Supervision stays non-prudential: Blox's own product term sheet states MYRC does not constitute electronic money or a payment instrument unless and until Blox obtains Bank Negara Malaysia approval. Economic-posture fields reviewed 2026-08-15: issuer-controlled direct mint or immediate minter-administration paths are economically unbounded; existing whole-supply periodic reconciliation and independent attestation evidence remain supported.",
       "reviewer": "Codex SOL-V mint-tier research; Sol economic-posture batch 2026-08-15",
       "reviewedAt": "2026-08-15",
       "sources": [

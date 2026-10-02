@@ -36,6 +36,21 @@
     "attestorTier": "self",
     "cadence": "none"
   },
+  "liveReservesConfig": {
+    "adapter": "solomon-chancery",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "display": {
+      "url": "https://app.solomonlabs.org/stats",
+      "label": "Solomon Chancery reserve accounts (selected scope)"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://data.solomonlabs.io/api/solomon-protocol/token-backing"
+      }
+    }
+  },
   "links": [
     {
       "label": "Website",

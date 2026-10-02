@@ -9,8 +9,8 @@
     "governance": "centralized",
     "rwa": true
   },
-  "collateral": "~99% BlackRock USD Institutional Digital Liquidity Fund (BUIDL), investing in cash, U.S. Treasury Bills/Notes, and repurchase agreements; remainder in cash at FDIC-insured major commercial banks; issued by Anchorage Digital Bank N.A.; reserves held in segregated fiduciary trust accounts for the benefit of USDtb holders, with BUIDL self-custodied by Anchorage in segregated wallets (May 2026 Deloitte-examined reserve report)",
-  "pegMechanism": "Direct 1:1 mint and redemption; BUIDL shares redeemable 24/7 via atomic swap with Securitize; LayerZero OFT cross-chain transfers",
+  "collateral": "BlackRock USD Institutional Digital Liquidity Fund (BUIDL) and cash; August 31, 2026 examined reserves comprised $525,205,527 BUIDL and $5,214,126 demand deposits at FDIC-insured institutions, including $4,964,126 above insurance limits. Anchorage Digital Bank N.A. issues USDtb and holds reserves in unencumbered segregated fiduciary trust accounts for token holders; BUIDL is self-custodied in segregated wallets.",
+  "pegMechanism": "Customer-gated mint and redemption at $1 par, net of applicable fees; BUIDL is redeemable at NAV through Securitize on a daily basis; LayerZero OFT cross-chain transfers",
   "llamaId": "221",
   "detailProvider": "defillama",
   "geckoId": "usdtb",
@@ -21,19 +21,72 @@
     "attestorTier": "big4",
     "cadence": "monthly",
     "latestReport": {
-      "periodEnd": "2026-07-31",
-      "publishedAt": "2026-08-28",
+      "periodEnd": "2026-08-31",
+      "publishedAt": "2026-09-28",
+      "publishedAtBasis": "signed-date-standin",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "GLM issue-sweep 2026-09-29 (WithheldFallbackCircle; refreshed to the July 2026 report; PDF retrieved, Deloitte & Touche LLP examination opinion and Anchorage management assertion dated August 28, 2026 verified by research pass)",
+      "reviewer": "Sol curation pass 2026-10-01 (CurA28USDTB); August report fetched and examination opinion, Schedules I-III and dated management signatures verified",
       "confidence": "verified",
       "sources": [
         {
-          "label": "USDtb Reserve Report - July 2026",
-          "url": "https://learn.anchorage.com/07.31.26_USDtb-Stablecoin-Attestation-Report-signed.pdf"
+          "label": "USDtb Reserve Report - August 2026",
+          "url": "https://learn.anchorage.com/08.31.26_USDtb_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf"
         }
-      ]
+      ],
+      "coverage": {
+        "scopeId": "anchorage-usdtb-2026-08-31-native-redeemable",
+        "liabilityBookKey": "anchorage-digital-bank-na:usdtb:reported-native-redeemable-book",
+        "deploymentRefs": [
+          "ethereum:0xc139190f447e929f090edeb554d95abb8b18ac1c",
+          "solana:8yXrtJ54jZtE84xEBzTESKuegjcAkAuDrdAhRd8i8n3T"
+        ],
+        "liabilityExclusions": [],
+        "denominator": {
+          "periodEnd": "2026-08-31",
+          "asOfSec": 1788220799,
+          "currency": "USDtb",
+          "unitBasis": "quantity-of-usdtb-tokens",
+          "decimals": null,
+          "totalCoveredLiabilities": "529269213",
+          "included": [
+            {
+              "identity": {
+                "deploymentRef": "ethereum:0xc139190f447e929f090edeb554d95abb8b18ac1c",
+                "bookKey": "anchorage-digital-bank-na:usdtb:reported-native-redeemable-book",
+                "account": null
+              },
+              "amount": "483388029",
+              "evidenceRefIds": [
+                "https://learn.anchorage.com/08.31.26_USDtb_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf#page=4"
+              ]
+            },
+            {
+              "identity": {
+                "deploymentRef": "solana:8yXrtJ54jZtE84xEBzTESKuegjcAkAuDrdAhRd8i8n3T",
+                "bookKey": "anchorage-digital-bank-na:usdtb:reported-native-redeemable-book",
+                "account": null
+              },
+              "amount": "45881184",
+              "evidenceRefIds": [
+                "https://learn.anchorage.com/08.31.26_USDtb_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf#page=4"
+              ]
+            }
+          ],
+          "excluded": [],
+          "completeness": "complete",
+          "evidenceRefIds": [
+            "https://learn.anchorage.com/08.31.26_USDtb_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf#page=4",
+            "https://learn.anchorage.com/08.31.26_USDtb_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf#page=7"
+          ],
+          "sourceSha256": "68ec843bef72418f3de2388abecb0db227444a8ac040e9bc0904bdf7148b8fbb"
+        },
+        "reconciliationWithinScope": "full",
+        "assetsAsOfSec": 1788220799,
+        "reviewedAtSec": 1790896819,
+        "confidence": "verified"
+      }
     }
   },
   "links": [

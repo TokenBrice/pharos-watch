@@ -423,8 +423,8 @@
         "authorityType": "eoa",
         "modulesOrGuardsStatus": "none-detected",
         "canRaiseCap": true,
-        "observedAt": "2026-07-13",
-        "observedBlock": 432714278,
+        "observedAt": "2026-10-01",
+        "observedBlock": 452213790,
         "sources": [
           {
             "label": "Solana ACRED issuer program",
@@ -443,7 +443,7 @@
             "url": "https://solscan.io/account/GQDbgV5oYTtovRDJU7b2w87PbTVqD7dGjJSZtqH5uS4w"
           }
         ],
-        "evidence": "At Solana slot 432714278, the issuer, PDA controller, transfer-hook, and ACRED on-ramp programs were all BPF-upgradeable and shared this system-owned single-account upgrade authority. Their ProgramData accounts had no post-cutoff writes, and the authority could replace all four programs immediately with no on-chain delay. This upgrade domain is retained for the Solana bridge representation, not canonical Mint Authority."
+        "evidence": "At finalized Solana slot 452213790, the ProgramData headers for the issuer, PDA controller, transfer-hook and ACRED on-ramp programs all retain upgrade authority 8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6. Their last upgrade slots are respectively 432873504, 326714033, 362658040 and 409219836. The issuer program was therefore upgraded after the prior observation at slot 432714278; this refresh confirms the shared authority, not that the earlier program binary remains current. A separate finalized read at slot 452213697 confirms that the authority account remains system-owned. This upgrade domain remains Bridge Risk evidence for the Solana representation."
       },
       {
         "id": "acred-aptos-issuer-one",
@@ -574,8 +574,8 @@
         "bypassSurfaces": [
           "The same key is ROLE_MASTER on the trust service, so it can grant itself or others any DSToken role, and it holds the UUPS upgrade path on the token proxy."
         ],
-        "observedAt": "2026-09-01",
-        "observedBlock": 25881932,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095798,
         "sources": [
           {
             "label": "Ethereum ACRED proxy and verified DSToken implementation",
@@ -594,7 +594,7 @@
             "url": "https://wormhole.com/blog/securitize-announces-the-live-deployment-of-wormhole-enabling-tokenized"
           }
         ],
-        "evidence": "The Ethereum deployment is ACRED's canonical native issuance route and also the source leg for the five Securitize/Wormhole representations, but it carried no bridge control until now. At Ethereum block 25881932 on 2026-09-01 the same zero-code key that is destination master on Avalanche, Ink, Polygon, Solana and Aptos, 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee, is also the source-side owner() of the ACRED proxy and ROLE_MASTER on its trust service 0xc397436742eaf7c325ddbfc4dc63d95822b27101. The proxy's admin slot is zero, so the upgrade path is UUPS through that owner, and cap() is zero, which the verified DSToken treats as uncapped. Because the ACRED-specific Wormhole manager and peer set are still unidentified, the source-side burn or lock that should conserve supply against the destination mints is unproven; this control is retained as adverse common-mode bridge exposure across all six ACRED deployments rather than as a second canonical liability."
+        "evidence": "At Ethereum block 26095798 on 2026-10-01, owner() on the ACRED token and getRole(address) on trust service 0xc397436742eaf7c325ddbfc4dc63d95822b27101 confirm 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee as the zero-code source-side owner and MASTER. The same EVM owner address is present on Avalanche, Ink and Polygon; it is not the Aptos master or the Solana upgrade authority. The correct EIP-1967 admin slots are zero, while verified token and trust-service source authorize UUPS upgrades with onlyMaster. cap() remains zero, which TokenLibrary treats as uncapped. The ACRED-specific Wormhole manager, peers and source-to-destination conservation path remain unverified; the existing adverse source bridge control is retained."
       }
     ]
   }

@@ -12,7 +12,27 @@
   },
   "collateral": "Shared Mento Reserve: current issuer configuration classifies this currency as reserve-backed, not USDm locked in a borrower-specific CDP.",
   "pegMechanism": "COPm is issued and retired through Mento V2's oracle-priced USDm/COPm Broker/BiPoolManager pool. USDm-to-COPm swaps burn incoming USDm and mint the FX token; reverse swaps burn the FX token and mint USDm, subject to the configured oracle, spread, trading limits, and breaker checks.",
-  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetype": "shared-reserve",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol V10 data curation 2026-10-01 (DataMento)",
+    "rationale": "At Celo block 78986505, COPm token 0x8a567e2ae79ca692bd748ab832081c45de4041ea is bound to the Broker's USDm/COPm pool. Its nonzero reverse quote, reserve stable-asset membership and deployed mint/burn code establish a limited operational shared-reserve claim, subject to oracle and trading-limit checks. The pinned explicit backing configuration and MGP-18 confirm reserve backing rather than CDP ownership. Fiat legal priority, whole-pool reconciliation and default recovery remain unestablished.",
+    "sources": [
+      {
+        "label": "Explicit reserve backing at commit 53bfb26749fd99fc3bbd3c251064b5eaaa77717d",
+        "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/stablecoin-backing.config.ts"
+      },
+      {
+        "label": "MGP-18: exact legacy FX pool and holder exit",
+        "url": "https://forum.mento.org/t/mgp-18-mento-v2-deprecation/137"
+      },
+      {
+        "label": "Deployed Broker mint/burn source; runtime matched at Celo block 78986505",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x1b78f6acd05e7bcb00f74863bfd8a7c264143e37"
+      }
+    ]
+  },
   "geckoId": "ccop",
   "proofOfReserves": {
     "type": "real-time",

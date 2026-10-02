@@ -424,7 +424,7 @@
     "compositionBasis": "Accountable exposure_split snapshot dated 2026-08-28 09:26:05 UTC, normalized to the nearest contemporaneous timeline reserve total with an explicit reconciliation residual",
     "compositionAsOf": "2026-08-28",
     "scope": "full-composition",
-    "knownUnknownExposure": "NC-097: Accountable API accessed 2026-09-30 still reports exposure_split_ts 2026.09.25 09:19:29 UTC and Global_Dollar PT_USDG_Loop value $1,732,033.7455591. The strategy label supplies no PT contract, chain, expiry, SY/redemption-token path or held-claim census; the issuer underlying-strategies page lists USDG as eligible but cannot settle the exact claim. The current total-reserves $63,659,756.28 is newer than the split, so it cannot refresh or replace the split denominator. PT USDG remains an unlinked identity lead, not an extra guessed 2.7% USDG edge. Next evidence: identify held PT and expiry from dated position inventory, verify SY/redemption asset resolves to canonical USDG, disclose loop debt/gross-versus-net accounting, and reconcile weights to the contemporaneous backing total. The 0.348657% field below pertains only to the historical August 28 residual; it is not the size of this newly observed claim gap.",
+    "knownUnknownExposure": "Reviewed 2026-10-01: the Accountable API reports exposure_split_ts 2026.09.30 09:19:41 UTC. Current unmapped or identity-incomplete labels include [Global_Dollar]_PT_USDG_Loop ($1,852,089.9399398), [Aave]_USDG ($120,097.573408), [Re]_reUSD_LP ($1,983,800.363839857), [Re]_PT_reUSD ($1,510,790.30879608), [Morpho]_USDC ($4,161,069.90054416), and [Morpho]_USDT ($822,196.891571827). Labels alone disclose neither exact held token contracts and chain/expiry nor loop debt and gross-versus-net accounting. The independently re-fetched API reports total backing value $63,851,724.51 at dataset timestamp 2026-10-01T08:01:52.084Z; this newer October 1 observation is not the contemporaneous September 30 split denominator. No new dependency link or full-composition refresh is inferred. The authored compositionAsOf and 0.348657% knownUnknownExposurePct remain the historical August 28 composition and residual; that percentage does not measure the current unidentified buckets. Next evidence: dated position inventory with exact LP/PT contracts, redemption assets, debt treatment and a matching backing-total observation.",
     "knownUnknownExposurePct": 0.348657,
     "nonLinkDispositions": [
       {
@@ -464,8 +464,8 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "permitted",
-    "reviewedAt": "2026-07-28",
-    "reviewer": "GROK-RESEARCH wave-8 phase1 reserve",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA58ONyc)",
     "confidence": "probable",
     "sources": [
       {
@@ -481,6 +481,6 @@
         "url": "https://yuzu.accountable.capital/"
       }
     ],
-    "uncertainty": "Write-time re-open 2026-07-28: Accountable still reports Fordefi workspace policy default_action=block and m_threshold=4 (fordefi.modified_at=2026-07-25), with fifteen disclosed main wallets and seven RWA fund wallets. Issuer Fordefi docs corroborate MPC custody over protocol funds. Legal segregation, insolvency treatment of strategy positions, and any off-chain custodial arrangements remain undisclosed; reserves are deliberately deployed into third-party yield strategies."
+    "uncertainty": "Re-opened 2026-10-01: Accountable reports Fordefi workspace default_action=block and m_threshold=4, with modified_at=2026-09-28T07:12:31.921000Z. Issuer documentation identifies Fordefi as MPC wallet infrastructure for all protocol funds and Accountable as the third-party reserve-monitoring platform. These are operational-policy observations, not a four-signature on-chain Safe or a verified total signer count. Legal segregation, bankruptcy treatment of individual strategy claims and off-chain custodial arrangements remain undisclosed. Reserves continue to be deployed into third-party yield strategies."
   }
 }

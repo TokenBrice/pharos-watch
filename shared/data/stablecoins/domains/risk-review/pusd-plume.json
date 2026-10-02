@@ -2,14 +2,19 @@
   "id": "pusd-plume",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: pUSD resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Verified Plume BoringVault: owner-authorized transfer hook",
+        "url": "https://explorer.plume.org/api/v2/smart-contracts/0xdddd73f5df1f0dc31373357beac77545dc5a6f3f"
+      }
+    ],
+    "evidence": "Pinned Plume block 96626677: the BoringVault owner remains the 3-of-6 Safe and hook() is zero. The verified source nevertheless permits the owner to setBeforeTransferHook(address) through requiresAuth; transfers and transferFrom invoke the configured hook's beforeTransfer(from), which can reject a holder's transfer. Yes denotes this configurable holder restriction, not an assertion that a blacklist hook is currently installed. Separate OFAC mint-gateway checks do not alone establish holder freezing.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurM16cNGN)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
-    "summary": "pUSD is documented as Plume's stablecoin and current materials describe direct mint/redeem and ecosystem use rather than a separate third-party bridge route. Pharos treats the route as native to its supported deployments.",
+    "summary": "The authored Ethereum and Plume pUSD rows are native BoringVault deployments owned by the same Plume/Nucleus Safe. Current issuer docs additionally describe bridge-and-mint with USDC and cross-chain redemption pending up to 12 hours. That operational path and legacy USDC.e held in the Plume vault are separate from a claim that pUSD itself is a third-party bridge representation. No exhaustive material wrapper/deployment census or bridge-role graph is established by the two token owner reads.",
     "reviewedAt": "2026-07-20",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
     "confidence": "probable",
@@ -21,6 +26,140 @@
       {
         "label": "Plume USD docs",
         "url": "https://docs.plume.org/plume/tokens/plume-usd"
+      }
+    ],
+    "controls": [
+      {
+        "id": "ethereum-teller-layerzero",
+        "routeRefs": ["ethereum:0xdddd73f5df1f0dc31373357beac77545dc5a6f3f"],
+        "capabilities": ["bridge-mint", "bridge-burn"],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x16424edf021697e34b800e1d98857536b0f2287b",
+        "label": "pUSD Ethereum Teller LayerZero credit and debit",
+        "authorityType": "contract",
+        "canRaiseCap": "unknown",
+        "failureDomainKeys": ["contract:ethereum:0x16424edf021697e34b800e1d98857536b0f2287b"],
+        "observedAt": "2026-10-01",
+        "observedBlock": 26098751,
+        "evidence": "At Ethereum block 26098751, vault() returns the pUSD BoringVault, canCall(Teller,vault,enter) is true and peers(30370) is the same Teller address on Plume. Verified _lzReceive calls vault.enter with zero collateral; bridge send calls vault.exit with zero collateral. Pinned effective ULN configs require all three DVNs 0x589dedbd617e0cbcb916a9223f4d1300c294236b, 0xa4fe5a5b9a846458a70cd0748228aed3bf65c2cd and 0xa59ba433ac34d2927232918ef5b2eaafcf130ba5, with zero optional DVNs, 15 send confirmations and 5 receive confirmations. Validator operator independence, message limits and in-flight supply reconciliation are not established. Native collateral deposits are assessed separately.",
+        "sources": [
+          {
+            "label": "Verified Ethereum Teller and cross-chain base",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x16424edf021697e34b800e1d98857536b0f2287b"
+          }
+        ]
+      },
+      {
+        "id": "plume-teller-layerzero",
+        "routeRefs": ["plume:0xdddd73f5df1f0dc31373357beac77545dc5a6f3f"],
+        "capabilities": ["bridge-mint", "bridge-burn"],
+        "controllerChain": "plume",
+        "controllerAddress": "0x16424edf021697e34b800e1d98857536b0f2287b",
+        "label": "pUSD Plume Teller LayerZero credit and debit",
+        "authorityType": "contract",
+        "canRaiseCap": "unknown",
+        "failureDomainKeys": ["contract:plume:0x16424edf021697e34b800e1d98857536b0f2287b"],
+        "observedAt": "2026-10-01",
+        "observedBlock": 96703539,
+        "evidence": "At Plume block 96703539, vault() returns the pUSD BoringVault, canCall(Teller,vault,enter) is true and peers(30101) is the same Teller address on Ethereum. Verified _lzReceive calls vault.enter with zero collateral; bridge send calls vault.exit with zero collateral. Pinned effective ULN configs require all three DVNs 0x395b14700812cccc38b8e64f0a06ce2045fe9ba3, 0x4208d6e27538189bb48e603d6123a94b8abe0a0b and 0x882a1ee8891c7d22310dedf032ef9653785532b8, with zero optional DVNs, 5 send confirmations and 15 receive confirmations. Validator operator independence, message limits and in-flight supply reconciliation are not established. Native collateral deposits are assessed separately.",
+        "sources": [
+          {
+            "label": "Verified Plume Teller and cross-chain base",
+            "url": "https://explorer.plume.org/api/v2/smart-contracts/0x16424edf021697e34b800e1d98857536b0f2287b"
+          }
+        ]
+      },
+      {
+        "id": "ethereum-nest-layerzero",
+        "routeRefs": ["ethereum:0xdddd73f5df1f0dc31373357beac77545dc5a6f3f"],
+        "capabilities": ["bridge-mint", "bridge-burn"],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xf6aada00bc2a206f06bce86ddd8348b70daa1059",
+        "label": "pUSD Ethereum NestVaultOFT credit and debit",
+        "authorityType": "contract",
+        "canRaiseCap": "unknown",
+        "failureDomainKeys": ["contract:ethereum:0xf6aada00bc2a206f06bce86ddd8348b70daa1059"],
+        "observedAt": "2026-10-01",
+        "observedBlock": 26098751,
+        "evidence": "At Ethereum block 26098751, share() returns the pUSD BoringVault, canCall(Nest,vault,enter) is true and peers(30370) is the same Nest address on Plume. Verified NestVaultOFT 0xd282fb66e56cf2873a75fbb2e15d785c5901c0b2 credits and debits LayerZero shares through zero-asset SHARE.enter/exit. Pinned effective ULN configs require all three DVNs 0x589dedbd617e0cbcb916a9223f4d1300c294236b, 0xa4fe5a5b9a846458a70cd0748228aed3bf65c2cd and 0xa59ba433ac34d2927232918ef5b2eaafcf130ba5, with zero optional DVNs, 15 send confirmations and 5 receive confirmations. Validator operator independence, message limits and whole-supply reconciliation remain unverified. Native ERC-4626 deposits are assessed separately.",
+        "sources": [
+          {
+            "label": "Verified Ethereum NestVaultOFT bridge implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd282fb66e56cf2873a75fbb2e15d785c5901c0b2"
+          }
+        ]
+      },
+      {
+        "id": "plume-nest-layerzero",
+        "routeRefs": ["plume:0xdddd73f5df1f0dc31373357beac77545dc5a6f3f"],
+        "capabilities": ["bridge-mint", "bridge-burn"],
+        "controllerChain": "plume",
+        "controllerAddress": "0xf6aada00bc2a206f06bce86ddd8348b70daa1059",
+        "label": "pUSD Plume NestVaultOFT credit and debit",
+        "authorityType": "contract",
+        "canRaiseCap": "unknown",
+        "failureDomainKeys": ["contract:plume:0xf6aada00bc2a206f06bce86ddd8348b70daa1059"],
+        "observedAt": "2026-10-01",
+        "observedBlock": 96703539,
+        "evidence": "At Plume block 96703539, share() returns the pUSD BoringVault, canCall(Nest,vault,enter) is true and peers(30101) is the same Nest address on Ethereum. Verified NestVaultOFT 0x5766a40abfb8802303235a2f5f12a71ed84d4700 credits and debits LayerZero shares through zero-asset SHARE.enter/exit. Pinned effective ULN configs require all three DVNs 0x395b14700812cccc38b8e64f0a06ce2045fe9ba3, 0x4208d6e27538189bb48e603d6123a94b8abe0a0b and 0x882a1ee8891c7d22310dedf032ef9653785532b8, with zero optional DVNs, 5 send confirmations and 15 receive confirmations. Validator operator independence, message limits and whole-supply reconciliation remain unverified. Native ERC-4626 deposits are assessed separately.",
+        "sources": [
+          {
+            "label": "Verified Plume NestVaultOFT bridge implementation",
+            "url": "https://explorer.plume.org/api/v2/smart-contracts/0x5766a40abfb8802303235a2f5f12a71ed84d4700"
+          }
+        ]
+      },
+      {
+        "id": "ethereum-layerzero-owner",
+        "routeRefs": ["ethereum:0xdddd73f5df1f0dc31373357beac77545dc5a6f3f"],
+        "capabilities": ["admin", "peer-config", "upgrade"],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xa08a0dc480bd60d1d56c8eec6c722125eafea982",
+        "label": "pUSD Ethereum bridge owner Safe",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "canRaiseCap": true,
+        "failureDomainKeys": ["ethereum:0xa08a0dc480bd60d1d56c8eec6c722125eafea982"],
+        "observedAt": "2026-10-01",
+        "observedBlock": 26098751,
+        "evidence": "The pinned owner getters on Teller, NestVaultOFT and Nest ProxyAdmin 0xcd36e49aaaea5af1683a122b44dd1f2f4c6e65da all return this 3-of-6 Safe. Verified owner/admin source permits peer configuration and immediate replacement of the Nest implementation, including its bridge-credit logic. This row covers bridge administration only; native enter and native-deposit upgrade powers remain in Mint Authority. No key-custody or DVN independence claim is made.",
+        "sources": [
+          {
+            "label": "Verified Ethereum Nest ProxyAdmin",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xcd36e49aaaea5af1683a122b44dd1f2f4c6e65da"
+          },
+          {
+            "label": "Verified Ethereum Teller",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x16424edf021697e34b800e1d98857536b0f2287b"
+          }
+        ]
+      },
+      {
+        "id": "plume-layerzero-owner",
+        "routeRefs": ["plume:0xdddd73f5df1f0dc31373357beac77545dc5a6f3f"],
+        "capabilities": ["admin", "peer-config", "upgrade"],
+        "controllerChain": "plume",
+        "controllerAddress": "0xa08a0dc480bd60d1d56c8eec6c722125eafea982",
+        "label": "pUSD Plume bridge owner Safe",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "canRaiseCap": true,
+        "failureDomainKeys": ["plume:0xa08a0dc480bd60d1d56c8eec6c722125eafea982"],
+        "observedAt": "2026-10-01",
+        "observedBlock": 96703539,
+        "evidence": "The pinned owner getters on Teller, NestVaultOFT and Nest ProxyAdmin 0xcd36e49aaaea5af1683a122b44dd1f2f4c6e65da all return this 3-of-6 Safe. Verified owner/admin source permits peer configuration and immediate replacement of the Nest implementation, including its bridge-credit logic. This row covers bridge administration only; native enter and native-deposit upgrade powers remain in Mint Authority. No key-custody or DVN independence claim is made.",
+        "sources": [
+          {
+            "label": "Verified Plume Nest ProxyAdmin",
+            "url": "https://explorer.plume.org/api/v2/smart-contracts/0xcd36e49aaaea5af1683a122b44dd1f2f4c6e65da"
+          },
+          {
+            "label": "Verified Plume Teller",
+            "url": "https://explorer.plume.org/api/v2/smart-contracts/0x16424edf021697e34b800e1d98857536b0f2287b"
+          }
+        ]
       }
     ],
     "routes": [

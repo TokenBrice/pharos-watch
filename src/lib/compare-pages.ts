@@ -446,7 +446,7 @@ export function buildComparisonFaqItems(page: StaticComparisonPage): ComparisonF
     },
     {
       question: `Which is safer: ${left.symbol} or ${right.symbol}?`,
-      answer: `Safety is not decided by ticker alone. Use this static page for the structural comparison, then open the live ${page.shortTitle} compare tool and Safety Scores page for current V9 Backing, Exit, and Economic Control pillars plus peg behavior, dependency exposure, evidence quality, and structural caps.`,
+      answer: `Safety is not decided by ticker alone. Use this static page for the structural comparison, then open the live ${page.shortTitle} compare tool and Safety Scores page for current V10 Backing, Exit, and Economic Control pillars plus peg behavior, dependency exposure, evidence quality, and structural caps.`,
     },
     {
       question: `Where can I compare current ${left.symbol} and ${right.symbol} data?`,

@@ -45,7 +45,7 @@
     "compositionBasis": "Lorenzo USD1+ OTF issuer launch publication dated 2025-07-21 and companion OTF guide; BSC underlying() call at block 0x6b4e24; Phemex Academy overview updated 2026-07-20",
     "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
-    "knownUnknownExposure": "The 100% strategy portfolio is not split among accepted USD1, USDT, and USDC deposits or the RWA, CeFi quantitative, and DeFi positions; no single-parent USD1 share is established.",
+    "knownUnknownExposure": "The 100% strategy portfolio is not split among accepted USD1, USDT, and USDC deposits or the RWA, CeFi quantitative, and DeFi positions; no single-parent USD1 share is established. Under owner ruling D26 reviewed on 2026-10-01, the USD1 brand and settlement relationship do not support favorable single-parent inheritance until a measured USD1 claim is proven.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -66,6 +66,14 @@
       {
         "name": "Undisclosed strategy execution and trading-team infrastructure running off-chain CeFi quant, RWA, and DeFi strategies",
         "role": "other"
+      },
+      {
+        "name": "Configured BSC funding destination 0x8fc570c84ee087c1102ed3f137db329980f08c4c (100% configured portfolio weight; empty bytecode, not a verified reserve-allocation weight)",
+        "role": "other"
+      },
+      {
+        "name": "Binance, Bybit and OKX exchange accounts identified in Lorenzo detailedTVL; partial coverage, one invalid Bybit API key",
+        "role": "other"
       }
     ],
     "segregation": "unknown",
@@ -82,8 +90,20 @@
       {
         "label": "Lorenzo documentation",
         "url": "https://lorenzo-protocol.gitbook.io/docs"
+      },
+      {
+        "label": "Lorenzo sUSD1+ redemption guide (2026-03-27)",
+        "url": "https://lorenzo-protocol.ghost.io/susd1-otf-redemption-guide/"
+      },
+      {
+        "label": "BSC pinned implementation, manager and Safe role reads (2026-10-01)",
+        "url": "https://api-bsc-mainnet-full.n.dwellir.com"
+      },
+      {
+        "label": "Lorenzo itemized exchange equity GraphQL API (2026-10-01)",
+        "url": "https://lorenzo-api.lorenzo-protocol.xyz/v1/graphql/otf"
       }
     ],
-    "uncertainty": "The OTF model is on-chain fundraising, off-chain execution, on-chain settlement: deposited funds leave the BNB Chain vault into strategy execution, and Lorenzo's own disclaimer states it 'does not manage user funds and is not responsible for the performance of any underlying strategy'. Who holds strategy assets off-chain (custodians, prime brokers, exchanges), whether accounts are segregated, and what insolvency treatment applies are all undisclosed, so segregation is unknown and no bankruptcy-remoteness structure is documented (recorded as none). Active deployment of vault assets into off-chain strategies is the disclosed design, recorded as permitted rehypothecation of the reserve. Separately, the sUSD1+ BSC proxy implementation is unverified and its upgrade authority unresolved (mintAuthority review, 2026-06-11). Withdrawals follow a 7-day minimum hold plus a biweekly settlement cycle, so exit liquidity depends on strategy settlement rather than instant on-chain redemption."
+    "uncertainty": "The OTF model is on-chain fundraising, off-chain execution, on-chain settlement: deposited funds leave the BNB Chain vault into strategy execution, and Lorenzo's own disclaimer states it 'does not manage user funds and is not responsible for the performance of any underlying strategy'. Current portfolios()/weights() reads identify one funding destination, and token-scoped detailedTVL identifies partial Binance, Bybit and OKX account equity. These are not a full asset-to-liability reconciliation or legal custody inventory; provider shares, account segregation, insolvency treatment and funding-wallet key custody remain undisclosed. Segregation remains unknown and no bankruptcy-remoteness structure is documented (recorded as none). Active deployment of vault assets into off-chain strategies is the disclosed design, recorded as permitted rehypothecation of the reserve. The prior June 2026 statement that the BSC implementation and upgrade authority were unresolved is superseded by the separate Mint Authority review: pinned 2026-10-01 reads identify implementation 0x972c27ee69b19d7648cef365700c22713a9a31fd, manager 0x507ec48ef26919a205a9f3b8aaf69532e20c0987 and the 2-of-3 Safe holding BOSS_ROLE, MANAGER_ROLE and CREATE_VAULT_ROLE. The March 2026 redemption guide now states a normal 3-6 day NAV settlement cycle, with possible extensions for large withdrawals or network congestion; the old 7-day minimum plus biweekly timing is not the current disclosed cadence."
   }
 }

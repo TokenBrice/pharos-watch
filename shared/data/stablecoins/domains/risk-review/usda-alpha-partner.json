@@ -4,16 +4,16 @@
     "reviewedStatus": true,
     "sources": [
       {
-        "label": "Docs",
-        "url": "https://ap-organization-1.gitbook.io/alpha-partners"
+        "label": "Sourcify matched USDAWithPremium source and ABI on BSC",
+        "url": "https://sourcify.dev/server/v2/contract/56/0x17EAfd08994305D8AcE37EfB82F1523177eC70EE?fields=abi,sources,proxyResolution"
       },
       {
         "label": "Website",
         "url": "https://alphapartner.vip/"
       }
     ],
-    "evidence": "Explicit Yes retained: reviewed metadata indicates a direct issuer, admin, proxy, pause, burn, or upgrade control surface beyond reserve-only exposure.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "The matched USDAWithPremium source defines addToBlacklist(address) and removeFromBlacklist(address), both restricted by onlyDefaultAdmin, and enforces BLACKLIST on transfer paths. At BSC block 125055866, hasRole(DEFAULT_ADMIN_ROLE, 0x14170c3332ccd96859c8fb5754a753e476d09751) returned true. This is explicit token-level censorship, independent of the undisclosed reserve backing.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA15PAXG)",
+    "reviewedAt": "2026-10-01"
   }
 }

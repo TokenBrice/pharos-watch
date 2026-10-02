@@ -17,7 +17,6 @@ describe("show-your-work formatters", () => {
     expect(historical.title).toMatch(/historical|retired/i);
     expect(historical.summary).toMatch(/retired|removed/i);
     expect(current.title).not.toMatch(/historical|retired/i);
-    expect(historical.detail).toMatch(/\bV9\b/);
     expect(historical.detail).not.toBe(current.detail);
   });
 
@@ -284,7 +283,6 @@ describe("show-your-work formatters", () => {
     expect(table.rows.find((r) => r.label === "Access")?.value).toBe("80");
     expect(table.rows.find((r) => r.label === "Fee (bps)")?.value).toBe("10");
     expect(table.formula).toContain("route score = weighted");
-    expect(table.formula).toContain("Safety Score V9");
     expect(table.formula).toContain("exact same-notional route evidence");
     expect(table.formula).toContain("physical-resource independence");
   });

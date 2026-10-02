@@ -5,6 +5,7 @@ import {
   compareText,
 } from "./safety-score-v9-fact-primitives";
 import { V9MechanismQualitySchema } from "./safety-score-v9-fact-input-primitives";
+import { StrictIsoDateSchema } from "./safety-schema-primitives";
 
 export type V9MechanismQualityLevel = z.infer<typeof V9MechanismQualitySchema>;
 
@@ -23,9 +24,26 @@ const V9MechanismFactV1Schema = z
     status: V9FactStatusV2Schema,
     quality: V9MechanismQualitySchema.nullable(),
     failureDomains: CanonicalFailureDomainsSchema,
+    scopedAssessments: z.array(z.object({
+      scopeId: z.string().min(1),
+      share: z.number().finite().positive().max(1),
+      quality: V9MechanismQualitySchema.nullable(),
+      status: V9FactStatusV2Schema,
+    }).strict()).min(1).optional(),
   })
   .strict()
   .superRefine((fact, ctx) => {
+    if (fact.scopedAssessments != null) {
+      const total = fact.scopedAssessments.reduce((sum, row) => sum + row.share, 0);
+      if (Math.abs(total - 1) > 1e-9 || new Set(fact.scopedAssessments.map(row => row.scopeId)).size !== fact.scopedAssessments.length) {
+        ctx.addIssue({ code: "custom", path: ["scopedAssessments"], message: "Scoped assurance must partition one component exactly once" });
+      }
+      for (const row of fact.scopedAssessments) {
+        if ((row.quality !== null) !== (row.status.observationState === "known") || (row.quality !== null && row.status.evidenceRefIds.length === 0)) {
+          ctx.addIssue({ code: "custom", path: ["scopedAssessments"], message: "Known assurance fragments require quality and evidence; unknown is not zero" });
+        }
+      }
+    }
     if (fact.status.applicability.state === "not-applicable" && fact.quality !== null) {
       ctx.addIssue({
         code: "custom",
@@ -49,9 +67,35 @@ const V9MechanismFactV1Schema = z
   });
 export type V9MechanismFactV1 = z.infer<typeof V9MechanismFactV1Schema>;
 
+const V9CollateralizationMeasurementSchema = z
+  .object({
+    status: V9FactStatusV2Schema,
+    ratio: z.number().finite().nonnegative(),
+    /** Date of the pinned measurement; null is unadmitted, not adverse evidence. */
+    measuredAt: StrictIsoDateSchema.nullable().default(null),
+    /** Identity of the measured subject and immutable pin, shared unchanged by wrappers. */
+    measurementId: z.string().trim().min(1),
+    sourceUrl: z.string().url(),
+  })
+  .strict()
+  .superRefine((measurement, ctx) => {
+    if (
+      measurement.status.observationState !== "known" ||
+      measurement.status.applicability.state !== "required" ||
+      measurement.status.evidenceRefIds.length === 0
+    ) {
+      ctx.addIssue({ code: "custom", path: ["status"], message: "Collateralization needs current measured evidence" });
+    }
+  });
+
+const COLLATERALIZATION_MEASUREMENT_FIELDS = {
+  collateralizationMeasurement: V9CollateralizationMeasurementSchema.nullable().optional(),
+};
+
 const V9FiatCashMechanismRiskReviewSchema = z
   .object({
     archetype: z.literal("fiat-cash"),
+    ...COLLATERALIZATION_MEASUREMENT_FIELDS,
     claimAndSegregation: V9MechanismFactV1Schema,
     custodyContinuity: V9MechanismFactV1Schema,
     assuranceAndReconciliation: V9MechanismFactV1Schema,
@@ -80,6 +124,7 @@ export type V9FiatCashMechanismRiskReview = z.infer<typeof V9FiatCashMechanismRi
 const V9CommodityClaimMechanismRiskReviewSchema = z
   .object({
     archetype: z.literal("commodity-claim"),
+    ...COLLATERALIZATION_MEASUREMENT_FIELDS,
     titleAndAllocation: V9MechanismFactV1Schema,
     custodyContinuity: V9MechanismFactV1Schema,
     assuranceAndReconciliation: V9MechanismFactV1Schema,
@@ -91,6 +136,7 @@ export type V9CommodityClaimMechanismRiskReview = z.infer<typeof V9CommodityClai
 const V9TbillMechanismRiskReviewSchema = z
   .object({
     archetype: z.literal("tbill"),
+    ...COLLATERALIZATION_MEASUREMENT_FIELDS,
     fundClaimAndSeniority: V9MechanismFactV1Schema,
     navValuation: V9MechanismFactV1Schema,
     durationAndLiquidity: V9MechanismFactV1Schema,
@@ -99,26 +145,55 @@ const V9TbillMechanismRiskReviewSchema = z
   .strict();
 export type V9TbillMechanismRiskReview = z.infer<typeof V9TbillMechanismRiskReviewSchema>;
 
-const V9CdpMetricApplicabilitySchema = z.discriminatedUnion("state", [
-  z.object({ state: z.literal("measured") }).strict(),
-  z
-    .object({
-      state: z.literal("not-applicable"),
-      rationale: z.string().trim().min(1),
-      evidenceRefIds: z.array(z.string().trim().min(1)).min(1),
-    })
-    .strict(),
-]);
+// These families have no launch-time applicability exemptions: unknown
+// conservation, collateral reuse and recovery must retain a priced component.
+const V9RequiredFamilyMechanismFactSchema = V9MechanismFactV1Schema.refine(
+  (fact) => fact.status.applicability.state !== "not-applicable",
+  { message: "Native family mechanism components cannot be not-applicable" },
+);
+
+const V9UcitsTrsFundMechanismRiskReviewSchema = z
+  .object({
+    archetype: z.literal("ucits-trs-fund"),
+    ...COLLATERALIZATION_MEASUREMENT_FIELDS,
+    fundClaimAndSegregation: V9RequiredFamilyMechanismFactSchema,
+    navAndReconciliation: V9RequiredFamilyMechanismFactSchema,
+    portfolioHedge: V9RequiredFamilyMechanismFactSchema,
+    counterpartyAndCollateral: V9RequiredFamilyMechanismFactSchema,
+    custodyContinuity: V9RequiredFamilyMechanismFactSchema,
+    defaultRecovery: V9RequiredFamilyMechanismFactSchema,
+  })
+  .strict();
+
+const V9SharedReserveMechanismRiskReviewSchema = z
+  .object({
+    archetype: z.literal("shared-reserve"),
+    ...COLLATERALIZATION_MEASUREMENT_FIELDS,
+    holderClaim: V9RequiredFamilyMechanismFactSchema,
+    liabilityConservation: V9RequiredFamilyMechanismFactSchema,
+    reserveCustody: V9RequiredFamilyMechanismFactSchema,
+    encumbranceAndAllocation: V9RequiredFamilyMechanismFactSchema,
+    defaultRecovery: V9RequiredFamilyMechanismFactSchema,
+  })
+  .strict();
+
+const V9ProtocolPositionMechanismRiskReviewSchema = z
+  .object({
+    archetype: z.literal("protocol-position"),
+    ...COLLATERALIZATION_MEASUREMENT_FIELDS,
+    holderClaim: V9RequiredFamilyMechanismFactSchema,
+    liabilityConservation: V9RequiredFamilyMechanismFactSchema,
+    positionCustody: V9RequiredFamilyMechanismFactSchema,
+    encumbranceAndAllocation: V9RequiredFamilyMechanismFactSchema,
+    defaultRecovery: V9RequiredFamilyMechanismFactSchema,
+  })
+  .strict();
 
 /**
- * Metric applicability for the sdn/rwa archetypes (owner ruling 2026-07-27,
- * wave-7 D2). Distinct from the CDP schema because these archetypes admit a
- * third state: `unavailable` — the metric structurally applies but the issuer
- * publishes no measurable value. An unavailable metric keeps its structural
- * penalty signal firing (unmeasured is never presumed adequate), while
- * `not-applicable` skips the signal with cited evidence. CDP keeps its
- * two-state schema: its collateralization banding needs a numeric ratio, so
- * an unavailable CR has no defined severity there.
+ * Sourced metric applicability for partial CDP, SDN, and RWA reviews.
+ * `unavailable` means the metric applies but has no authenticated numeric value;
+ * it does not imply structural absence or favourable mechanism quality. CDP
+ * skips numeric ratio signals, while SDN/RWA retain their structural treatment.
  */
 const V9MechanismMetricApplicabilitySchema = z.discriminatedUnion("state", [
   z.object({ state: z.literal("measured") }).strict(),
@@ -306,12 +381,13 @@ export type V9CdpStressCoverageFact = z.infer<typeof V9CdpStressCoverageFactSche
 const V9CdpMechanismRiskReviewSchema = z
   .object({
     archetype: z.literal("cdp"),
+    ...COLLATERALIZATION_MEASUREMENT_FIELDS,
     collateralizationRatio: z.number().finite().nonnegative().nullable(),
     liquidationCapacityRatio: z.number().finite().nonnegative().nullable(),
     metricApplicability: z
       .object({
-        collateralizationRatio: V9CdpMetricApplicabilitySchema,
-        liquidationCapacityRatio: V9CdpMetricApplicabilitySchema,
+        collateralizationRatio: V9MechanismMetricApplicabilitySchema,
+        liquidationCapacityRatio: V9MechanismMetricApplicabilitySchema,
       })
       .strict(),
     collateralizationParameters: V9MechanismFactV1Schema,
@@ -323,24 +399,7 @@ const V9CdpMechanismRiskReviewSchema = z
   })
   .strict()
   .superRefine((review, ctx) => {
-    for (const metric of ["collateralizationRatio", "liquidationCapacityRatio"] as const) {
-      const applicability = review.metricApplicability[metric];
-      const value = review[metric];
-      if (applicability.state === "measured" && value === null) {
-        ctx.addIssue({
-          code: "custom",
-          path: [metric],
-          message: `Measured ${metric} needs a numeric value`,
-        });
-      }
-      if (applicability.state === "not-applicable" && value !== null) {
-        ctx.addIssue({
-          code: "custom",
-          path: [metric],
-          message: `Not-applicable ${metric} must be null`,
-        });
-      }
-    }
+    refineMechanismMetricApplicability(review, ["collateralizationRatio", "liquidationCapacityRatio"], ctx);
   });
 export type V9CdpMechanismRiskReview = z.infer<typeof V9CdpMechanismRiskReviewSchema>;
 
@@ -355,6 +414,7 @@ const V9SyntheticVenueShareSchema = z
 const V9SyntheticDeltaNeutralMechanismRiskReviewSchema = z
   .object({
     archetype: z.literal("synthetic-delta-neutral"),
+    ...COLLATERALIZATION_MEASUREMENT_FIELDS,
     hedgeCoverageRatio: z.number().finite().nonnegative().nullable(),
     marginBufferPct: z.number().finite().nonnegative().nullable(),
     lossAbsorptionShare: z.number().finite().min(0).max(1).nullable(),
@@ -399,6 +459,7 @@ export type V9SyntheticDeltaNeutralMechanismRiskReview = z.infer<
 const V9AlgorithmicMechanismRiskReviewSchema = z
   .object({
     archetype: z.literal("algorithmic"),
+    ...COLLATERALIZATION_MEASUREMENT_FIELDS,
     exogenousBackingShare: z.number().finite().min(0).max(1),
     reflexiveBackingShare: z.number().finite().min(0).max(1),
     contractionCapacityRatio: z.number().finite().nonnegative(),
@@ -419,6 +480,7 @@ export type V9AlgorithmicMechanismRiskReview = z.infer<typeof V9AlgorithmicMecha
 const V9RwaCreditFundMechanismRiskReviewSchema = z
   .object({
     archetype: z.literal("rwa-credit-fund"),
+    ...COLLATERALIZATION_MEASUREMENT_FIELDS,
     weightedAverageMaturityDays: z.number().finite().nonnegative().nullable(),
     valuationCadenceDays: z.number().finite().nonnegative().nullable(),
     /** Absent = every metric is measured (legacy full-metric reviews). */
@@ -451,5 +513,15 @@ export const V9MechanismRiskReviewSchema = z.discriminatedUnion("archetype", [
   V9SyntheticDeltaNeutralMechanismRiskReviewSchema,
   V9AlgorithmicMechanismRiskReviewSchema,
   V9RwaCreditFundMechanismRiskReviewSchema,
-]);
+  V9UcitsTrsFundMechanismRiskReviewSchema,
+  V9SharedReserveMechanismRiskReviewSchema,
+  V9ProtocolPositionMechanismRiskReviewSchema,
+]).superRefine((review, ctx) => {
+  for (const [key, value] of Object.entries(review)) {
+    if (value != null && typeof value === "object" && "scopedAssessments" in value &&
+      (key !== "assuranceAndReconciliation" || (review.archetype !== "fiat-cash" && review.archetype !== "commodity-claim"))) {
+      ctx.addIssue({ code: "custom", path: [key, "scopedAssessments"], message: "Only eligible financial assurance components accept scoped assessments" });
+    }
+  }
+});
 export type V9MechanismRiskReview = z.infer<typeof V9MechanismRiskReviewSchema>;

@@ -52,5 +52,30 @@
         "rationale": "The BIMA WBTC wrapper is protocol collateral rather than a tracked stablecoin dependency."
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "BIMA TroveManager collateral contracts",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurM10USDM)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "BIMA DebtToken source: collateral deposits held by TroveManagers",
+        "url": "https://raw.githubusercontent.com/Bima-Labs/bima-v1-core/mainnet-v2/contracts/core/DebtToken.sol"
+      },
+      {
+        "label": "BIMA per-chain deployment and collateral registry",
+        "url": "https://raw.githubusercontent.com/Bima-Labs/bima-v1-core/mainnet-v2/docs/mainnet.md"
+      }
+    ],
+    "uncertainty": "This profile identifies the protocol collateral contracts, not a legal custodian or a current position allocation. The historical WBTC wrapper composition retains underlying WBTC custody exposure; no provider shares, segregation, bankruptcy remoteness, or rehypothecation terms are established. Current BIMA collar-financing documentation names Accountable and FalconX for a separate product and is not attributed to USBD backing."
   }
 }

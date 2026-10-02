@@ -16,7 +16,7 @@
   "detailProvider": "defillama",
   "geckoId": "schuman-europ",
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "attestation",
     "url": "https://schuman.io/reserve-attestations/",
     "provider": "KPMG",
     "attestorTier": "big4",
@@ -84,7 +84,10 @@
     {
       "chain": "xrpl",
       "address": "EUROP.rMkEuRii9w9uBMQDnWV5AA43gvYZR9JxVK",
-      "decimals": 6
+      "decimals": null,
+      "amountEncoding": {
+        "kind": "xrpl-issued-currency"
+      }
     },
     {
       "chain": "plasma",

@@ -50,10 +50,12 @@ describe("Safety Score v9 methodology policy", () => {
     // pathKinds is per-reason-code, so the rows cannot be admitted separately.
     // 9.8 adds the explicit unbounded delivery cap below the bounded physical
     // tier; releaseVersion remains metadata excluded from the digest.
+    // 10.0 adds the reviewed physical-to-USD Exit block (cost ceiling, modelled
+    // sale spreads, fee/logistics/tax fallbacks, timing vocabulary).
     // Rotate only with reviewed semantic changes; release history lives in
-    // shared/data/methodology-changelogs/safety-score/v9-activation.ts.
+    // shared/data/methodology-changelogs/safety-score/.
     expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toBe(
-      "55217d24772395557c900c403edb62fc7e0d993bf2502f23126d8026c7eeccd3",
+      "13d230d09c8502b1da457cf634bb44378b1cca9d037be5b9e885c7c85a355634",
     );
     expect(V9_CANDIDATE_POLICY_V1.policy.semantic.formula.withhold).toEqual({
       maxScoreExclusive: 55,
@@ -93,6 +95,16 @@ describe("Safety Score v9 methodology policy", () => {
     valid.semantic.exit.unboundedDeliveryCap = 54;
     expect(loadV9MethodologyPolicy(valid).policy.semantic.exit.unboundedDeliveryCap).toBe(54);
   });
+  it("validates and digests the curated residual admission threshold", () => {
+    const changed = candidateClone();
+    changed.semantic.backing.reserve.maxUnclassifiedCuratedResidualPct /= 2;
+    expect(loadV9MethodologyPolicy(changed).semanticDigest).not.toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
+    for (const invalid of [-0.001, 100.001, Number.NaN, Number.POSITIVE_INFINITY]) {
+      const policy = candidateClone();
+      policy.semantic.backing.reserve.maxUnclassifiedCuratedResidualPct = invalid;
+      expect(() => loadV9MethodologyPolicy(policy)).toThrow();
+    }
+  });
   it("pins public validation mirrors to parsed policy values", () => {
     const policy = V9_CANDIDATE_POLICY_V1.policy.semantic.formula;
     expect(C_MINUS_MIN_SCORE).toBe(
@@ -123,6 +135,8 @@ describe("Safety Score v9 methodology policy", () => {
       reviewedReserveClassificationMaxAgeSec: 365 * 86_400,
       reviewedReserveCompositionMaxAgeSec: 31 * 86_400,
       reviewedReserveCompositionGraceSec: 7 * 86_400,
+      onchainObservationMaxAgeSec: 4 * 60 * 60 * 1.2,
+      standingStructureMaxAgeSec: 90 * 86_400,
     });
   });
 
@@ -153,6 +167,12 @@ describe("Safety Score v9 methodology policy", () => {
     ["unknown reconciliation", (policy) => { policy.semantic.control.mintPostureQuality["unbounded-reconciliation-unknown"] = 36; }],
     ["collateral gated", (policy) => { policy.semantic.control.mintPostureQuality["collateral-gated"] = 51; }],
     ["seasoned credit ceiling", (policy) => { policy.semantic.control.mintPostureGrading.adverseSeasonedCreditCeiling = 40; }],
+    ["allocation required scope", (policy) => { policy.semantic.formula.wrapperAllocationScope.requiredScopes.privateCredit.leverage.push("immediate-custodian"); }],
+    ["allocation leverage assessment", (policy) => { policy.semantic.formula.wrapperAllocationScope.leverageAssessments["bounded-up-to-1.5x"] = "high"; }],
+    ["allocation custody assessment", (policy) => { policy.semantic.formula.wrapperAllocationScope.custodyAssessments["unsegregated"] = "critical"; }],
+    ["bounded liquid age", (policy) => { policy.semantic.backing.reserve.boundedFacts.currentLiquidFractionMaxAgeSec += 1; }],
+    ["bounded observed maturity quality", (policy) => { policy.semantic.backing.reserve.boundedFacts.observedMaturityQualityLevel = "adequate"; }],
+    ["bounded current availability quality", (policy) => { policy.semantic.backing.reserve.boundedFacts.currentAvailabilityQualityLevel = "adequate"; policy.semantic.backing.reserve.liquidityQuality["seven-days"] = 90; }],
   ];
   const evidenceExpiry = V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry;
   for (const field of Object.keys(evidenceExpiry) as (keyof typeof evidenceExpiry)[]) {
@@ -162,6 +182,17 @@ describe("Safety Score v9 methodology policy", () => {
     const policy = candidateClone();
     change(policy);
     expect(loadV9MethodologyPolicy(policy).semanticDigest).not.toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
+  });
+
+  it("canonicalizes bounded-fact vocabulary order but rejects informational stress protection", () => {
+    const reordered = candidateClone();
+    reordered.semantic.backing.reserve.boundedFacts.factKinds.reverse();
+    reordered.semantic.backing.reserve.boundedFacts.scopeKinds.reverse();
+    reordered.semantic.backing.reserve.boundedFacts.termUnits.reverse();
+    expect(loadV9MethodologyPolicy(reordered).semanticDigest).toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
+    const invalid = candidateClone();
+    invalid.semantic.backing.reserve.boundedFacts.currentAvailabilityQualityLevel = "strong";
+    expect(() => loadV9MethodologyPolicy(invalid)).toThrow();
   });
 
   it("pins the reviewed mint posture ladder keys and grading values", () => {
@@ -349,6 +380,20 @@ describe("Safety Score v9 methodology policy", () => {
     backingReweighted.semantic.backing.archetypes["fiat-cash"].componentWeights["claim-and-segregation"] = 0.17;
     backingReweighted.semantic.backing.archetypes["fiat-cash"].componentWeights["custody-continuity"] = 0.13;
     expect(loadV9MethodologyPolicy(backingReweighted).semanticDigest).not.toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
+  });
+
+  it("includes the parent-mechanism bypass decision in the semantic digest and rejects unbalanced native-family weights", () => {
+    const changed = candidateClone();
+    changed.semantic.backing.archetypes["protocol-position"].allowCompleteLiveParentMechanismBypass = true;
+    expect(loadV9MethodologyPolicy(changed).semanticDigest).not.toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
+    const unbalanced = candidateClone();
+    unbalanced.semantic.backing.archetypes["shared-reserve"].componentWeights["liability-conservation"] = 0;
+    expect(() => loadV9MethodologyPolicy(unbalanced)).toThrow();
+    const missing = candidateClone();
+    delete (missing.semantic.backing.archetypes["ucits-trs-fund"] as Partial<
+      typeof missing.semantic.backing.archetypes["ucits-trs-fund"]
+    >).allowCompleteLiveParentMechanismBypass;
+    expect(() => loadV9MethodologyPolicy(missing)).toThrow();
   });
 
   it("rejects malformed weights, bands, grades, and policy bypass fields", () => {

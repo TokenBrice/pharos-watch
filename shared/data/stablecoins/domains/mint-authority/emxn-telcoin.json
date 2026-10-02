@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "eMXN is issued by Telcoin under a Nebraska Digital Asset Depository charter on Polygon; the token is a TransparentUpgradeableProxy whose proxy admin and MINTER_ROLE/DEFAULT_ADMIN_ROLE are all held by Gnosis Safe multisigs with no modules or guards.",
+    "summary": "eMXN is issued by Telcoin LLC on Polygon under the eXYZ terms, separately from Telcoin Digital Asset Bank's eUSD. The token's proxy upgrade and mint roles are controlled by Safe multisigs; at the reviewed block the primary minter is 3-of-6, the default-admin/minter is 2-of-7, and the proxy-admin owner is 3-of-6.",
     "upgradeability": {
       "model": "transparent-proxy",
       "proxyAddresses": [
@@ -47,6 +47,8 @@
         "threshold": 3,
         "signerCount": 6,
         "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-01",
+        "observedBlock": 94755383,
         "safe": {
           "owners": [
             "0x0356d74be0010305fc0edc9aefdcc385c73f074f",
@@ -59,12 +61,13 @@
           "threshold": 3,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "fallbackHandler": null,
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
           "version": "1.4.1",
-          "observedBlock": 88324188,
+          "observedBlock": 94755383,
+          "observedAt": "2026-10-01",
           "source": "onchain"
         },
-        "evidence": "At Polygon block 88324188, hasRole(MINTER_ROLE, 0xa28b90d48101a19745c7e0f98dced6a3581b59aa) = true; masterCopy() = 0x29fcb43b46531bca003ddc8fcb67ffe91900c762 (Gnosis Safe L2 1.3.0); threshold() = 3; getOwners() returned 6 addresses; getModules returned 0; guard slot empty. No RoleRevoked events found.",
+        "evidence": "At Polygon block 94755383 on 2026-10-01, hasRole(MINTER_ROLE, 0xa28b90d48101a19745c7e0f98dced6a3581b59aa) returned true. VERSION() returned 1.4.1, getThreshold() returned 3, getOwners() returned the six recorded owners, getModulesPaginated returned an empty list, and the guard slot was zero. The fallback-handler slot returned 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99.",
         "sources": [
           {
             "label": "eMXN contract on Polygonscan",
@@ -81,10 +84,14 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "threshold": 2,
-        "signerCount": 5,
+        "signerCount": 7,
         "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-01",
+        "observedBlock": 94755383,
         "safe": {
           "owners": [
+            "0x728d9f079b6430fb5653197ab54c57d3215f18dd",
+            "0x1ead523d6f03f407ea6216421f6bbcc7a408d74b",
             "0xcecc70bd817e651465d8a99586e99da78e0a68fe",
             "0x0356d74be0010305fc0edc9aefdcc385c73f074f",
             "0xfecee4ab07127fff4ee4a3ba61df5fd7b906f84c",
@@ -94,12 +101,13 @@
           "threshold": 2,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "fallbackHandler": null,
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
           "version": "1.4.1",
-          "observedBlock": 88324188,
+          "observedBlock": 94755383,
+          "observedAt": "2026-10-01",
           "source": "onchain"
         },
-        "evidence": "At Polygon block 88324188, hasRole(DEFAULT_ADMIN_ROLE, 0xbf58e5b1ed34031579341c79913cdcb81f76415c) = true and hasRole(MINTER_ROLE, same) = true; masterCopy() = 0x29fcb43b46531bca003ddc8fcb67ffe91900c762 (Gnosis Safe L2 1.3.0); threshold() = 2; 5 owners; no modules; no guard.",
+        "evidence": "At Polygon block 94755383 on 2026-10-01, this Safe retained DEFAULT_ADMIN_ROLE and MINTER_ROLE. getThreshold() returned 2 and getOwners() returned seven owners, adding 0x728d9f079b6430fb5653197ab54c57d3215f18dd and 0x1ead523d6f03f407ea6216421f6bbcc7a408d74b to the previously recorded five. VERSION() returned 1.4.1; no enabled modules or guard were found; the fallback handler was 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. The stable control label retains its historical 5/2 annotation.",
         "sources": [
           {
             "label": "eMXN contract on Polygonscan",
@@ -118,6 +126,8 @@
         "threshold": 3,
         "signerCount": 6,
         "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-01",
+        "observedBlock": 94755383,
         "safe": {
           "owners": [
             "0xb315918fbe976e5493e65f3c64451311784b1193",
@@ -130,9 +140,10 @@
           "threshold": 3,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "fallbackHandler": null,
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
           "version": "1.3.0",
-          "observedBlock": 88324188,
+          "observedBlock": 94755383,
+          "observedAt": "2026-10-01",
           "source": "onchain"
         },
         "evidence": "Verified on-chain 2026-07-20: the eMXN TransparentUpgradeableProxy admin slot holds ProxyAdmin 0x3964801c5eeb37da8604e1cfaa996704200bd998, whose owner() is this Safe 0x6eaa439f204bfe1a4ca8a0b186a9930ca80d76a2 (getThreshold() = 3, getOwners() = 6).",

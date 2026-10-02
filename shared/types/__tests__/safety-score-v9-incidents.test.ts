@@ -49,14 +49,34 @@ const BASE_INCIDENT = {
 } as const;
 
 describe("Safety Score v9 reviewed incident schema", () => {
-  it("validates the reviewed registry and keeps its narrow domain vocabulary", () => {
+
+  it("admits only scoped, verified, non-realized informational vulnerability history", () => {
     const registry = V9ReviewedIncidentRegistrySchema.parse(incidentReviewsAsset);
-    expect(registry.incidents.map((incident) => incident.assetId)).toEqual([
-      "usdp-parallel",
-      "sdola-inverse-finance",
-      "zsd-zephyr-protocol",
-    ]);
-    expect(registry.incidents.every((incident) => incident.primarySources.length > 0)).toBe(true);
+    const history = registry.incidents.find((incident) => incident.assetId === "xaut-tether")!;
+    expect(history).toMatchObject({
+      domain: "security-history",
+      realization: "no-reported-exploit",
+      dateBasis: "public-disclosure",
+      resolutionDateBasis: "primary-confirmation",
+      posture: { treatment: "informational-only" },
+      scope: { kind: "contract-component" },
+    });
+    for (const overrides of [
+      { status: "active", resolvedAt: null },
+      { realization: "realized-exploit" },
+      { posture: { treatment: "mint-penalty" } },
+      { remediation: { ...history.remediation, state: "in-progress" } },
+      { scope: { kind: "root-claim" } },
+      { resolvedAt: null },
+      { occurredAt: "2023-04-05" },
+      { resolvedAt: "2023-05-28" },
+      { remediation: { ...history.remediation, lastVerifiedAt: "2023-05-26" } },
+    ]) {
+      expect(V9ReviewedIncidentSchema.safeParse({ ...history, ...overrides }).success).toBe(false);
+    }
+    expect(V9ReviewedIncidentSchema.safeParse({
+      ...BASE_INCIDENT, scope: history.scope,
+    }).success).toBe(false);
   });
 
   it("requires a resolution on or after occurrence for resolved incidents", () => {

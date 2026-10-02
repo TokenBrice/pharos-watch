@@ -27,7 +27,7 @@
     "sources": [
       {
         "label": "Noon USN and sUSN documentation",
-        "url": "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn/interoperability"
+        "url": "https://docs.noon.capital/2.-usdusn-and-usdsusn/cross-chain-interoperability"
       },
       {
         "label": "sUSN Ethereum vault",
@@ -75,11 +75,11 @@
     "sources": [
       {
         "label": "Noon sUSN staking terms (non-custodial platform; suspension and principal-reduction rights)",
-        "url": "https://docs.noon.capital/additional-resources/terms-and-policies/asset-terms-susn-staking-terms"
+        "url": "https://docs.noon.capital/7.-terms-and-policies/asset-terms-susn-staking-terms"
       },
       {
         "label": "Noon USN Terms of Service (Section 1 segregation; Section 6 unsecured redemption debt)",
-        "url": "https://docs.noon.capital/additional-resources/terms-and-policies/asset-terms-usn-terms-of-service"
+        "url": "https://docs.noon.capital/7.-terms-and-policies/asset-terms-usn-terms-of-service"
       },
       {
         "label": "sUSN staking vault 0xE24a3DC889621612422A64E6388927901608B91D on Etherscan",
@@ -91,9 +91,9 @@
       },
       {
         "label": "Noon custody documentation (upstream USN reserve custodians)",
-        "url": "https://docs.noon.capital/built-for-safety/1.-custody-you-can-trust"
+        "url": "https://docs.noon.capital/5.-the-security-framework/trusted-custody"
       }
     ],
-    "uncertainty": "Wrapper-layer custody is fully observable, so the undisclosed share is 0%: at Ethereum block 25,977,621 (2026-09-14T18:55:11Z) the vault's totalAssets() of 33,783,615.331659 USN equalled its USN balance to the wei, and the handler's 130,138.304265 USN equalled requests created minus requests claimed exactly; the same identities held at block 26,036,288. Segregation here means that staked USN sits in dedicated vault and escrow contracts rather than with Noon's corporate funds or the USN reserve wallets, and the sUSN staking terms describe the platform as non-custodial. It does not mean per-holder accounts: stakers hold pro-rata ERC-4626 claims on one pooled balance, and contract-level segregation is defeasible because the 3-of-6 Safe can pause the vault, call rescueToken, and grant itself the blacklist role with no timelock, while an armed upgrade to implementation 0xb9E5B8d826939580db142faBA61FcdEA9AAca6E7, scheduled 2026-06-10 and executable since 2026-06-12, has no expiry. Nothing is bankruptcy remote: USN Terms of Service Section 6 makes a redemption claim an unsecured debt of the issuer, and staking-terms Section 11 lets the operator freeze withdrawals and cut staked principal by the proportional loss if an exchange, custodial platform, or yield protocol used by the Noon treasury fails. Rehypothecation is conditional rather than permitted because the vault itself lends nothing and holds only idle USN, while the economic backing is redeployed by the issuer inside the disclosed ToS Section 5 category list. Provider shares below the vault layer are inherited from the parent custody profile and move with every USN deployment change."
+    "uncertainty": "Wrapper-layer custody is fully observable, so the undisclosed share is 0%: at Ethereum block 25,977,621 (2026-09-14T18:55:11Z) the vault's totalAssets() of 33,783,615.331659 USN equalled its USN balance to the wei, and the handler's 130,138.304265 USN equalled requests created minus requests claimed exactly; the same identities held at block 26,036,288. Segregation here means that staked USN sits in dedicated vault and escrow contracts rather than with Noon's corporate funds or the USN reserve wallets, and the sUSN staking terms describe the platform as non-custodial. It does not mean per-holder accounts: stakers hold pro-rata ERC-4626 claims on one pooled balance, and contract-level segregation is defeasible because the 3-of-6 Safe can pause the vault, call rescueToken, and grant itself the blacklist role with no timelock, while an armed upgrade to implementation 0xb9E5B8d826939580db142faBA61FcdEA9AAca6E7, scheduled 2026-06-10 and executable since 2026-06-12, has no expiry. Nothing is bankruptcy remote: USN Terms of Service Section 6 makes a redemption claim an unsecured debt of the issuer, and staking-terms Section 11 lets the operator freeze withdrawals and cut staked principal by the proportional loss if an exchange, custodial platform, or yield protocol used by the Noon treasury fails. Rehypothecation is conditional rather than permitted because the vault itself lends nothing and holds only idle USN, while the economic backing is redeployed by the issuer inside the disclosed ToS Section 5 category list. Provider shares below the vault layer are inherited from the parent custody profile and move with every USN deployment change. The sUSN Staking Terms last updated 31 July 2026 identify Noon Holdco Ltd. as organized under British Virgin Islands law in Section 2 but describe the Operator as organized under Panamanian law in Section 6.4; the conflicting operator-jurisdiction statements remain unresolved."
   }
 }

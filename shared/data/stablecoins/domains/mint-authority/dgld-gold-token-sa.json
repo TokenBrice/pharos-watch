@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "Gold Token SA's Mint Authority review covers two independent EVM native deployments on Ethereum and Base. On Ethereum the MINTER_ROLE and DEFAULT_ADMIN_ROLE are held by issuer EOA 0xb1c1bc081e49b8f4bb4e1960c2f7d9cd9dff8b9d, which also owns the Ethereum ProxyAdmin; on Base the corresponding roles and ProxyAdmin ownership are held by issuer EOA 0xe003a81a40803fedb701870c589c0a96d14544a0. Neither EVM native deployment has a contract-enforced aggregate supply ceiling or execution delay, so issuance remains unbounded subject to issuer-operated gold backing and reconciliation.",
+    "summary": "Gold Token SA's Mint Authority review covers independent native deployments on Ethereum, Base and Solana. On Ethereum the MINTER_ROLE and DEFAULT_ADMIN_ROLE are held by issuer EOA 0xb1c1bc081e49b8f4bb4e1960c2f7d9cd9dff8b9d, which also owns the Ethereum ProxyAdmin; on Base the corresponding roles and ProxyAdmin ownership are held by issuer EOA 0xe003a81a40803fedb701870c589c0a96d14544a0. Neither EVM native deployment has a contract-enforced aggregate supply ceiling or execution delay. The Solana Token-2022 mint names a separate mint-authority public key whose signing and custody arrangements are unresolved. Issuance remains subject to issuer-operated gold backing and reconciliation.",
     "controls": [
       {
         "label": "Gold Token SA issuance backend",
@@ -128,6 +128,27 @@
           }
         ],
         "evidence": "At Base block 49713744, the token EIP-1967 admin slot still resolved to ProxyAdmin 0x751e6245a88e4e367f3a6bee3cef9d558f95ad0a and owner() still returned this no-code EOA. The owner can replace Base DGLD mint logic without a timelock."
+      },
+      {
+        "chain": "solana",
+        "address": "6pxf2QMUHRSMyRnso6RyEMgSTkafjA6ptpxFVy3rWzVv",
+        "label": "DGLD Solana Token-2022 mint authority",
+        "role": "direct-minter",
+        "authorityType": "unknown",
+        "directMintAbility": "direct",
+        "deploymentRefs": [
+          "solana:dg1dmo6NZNagkwB6EAfUeaco6CFXFLRhb1KCrsqXTVz"
+        ],
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-01",
+        "observedBlock": 452214879,
+        "sources": [
+          {
+            "label": "DGLD Solana mint",
+            "url": "https://solscan.io/token/dg1dmo6NZNagkwB6EAfUeaco6CFXFLRhb1KCrsqXTVz"
+          }
+        ],
+        "evidence": "Finalized Solana getAccountInfo observation at context slot 452214879 on 2026-10-01 identifies Token-2022 mint dg1dmo6NZNagkwB6EAfUeaco6CFXFLRhb1KCrsqXTVz with 9 decimals and mintAuthority 6pxf2QMUHRSMyRnso6RyEMgSTkafjA6ptpxFVy3rWzVv. A follow-up getMultipleAccounts read at finalized slot 452214956 returned null for that authority account; this does not establish its key custody, signer threshold or controlling entity. Authority type therefore remains unknown."
       }
     ],
     "upgradeability": {

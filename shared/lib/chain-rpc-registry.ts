@@ -1,5 +1,8 @@
 // Data-only endpoint authority. Keep consumer profiles separate: consolidation must
 // not add providers or change the order of an existing resolved route.
+/** Reviewed public Aptos-framework REST endpoint for fungible-asset reads. */
+export const APTOS_PUBLIC_REST_URL = "https://api.mainnet.aptoslabs.com/v1";
+
 export const PUBLIC_RPC_URLS: Readonly<Record<string, string>> = {
   ethereum: "https://ethereum-rpc.publicnode.com",
   arbitrum: "https://arb1.arbitrum.io/rpc",
@@ -26,6 +29,7 @@ export const PUBLIC_RPC_URLS: Readonly<Record<string, string>> = {
   // Required for reviewed CHFAU native supply aggregation.
   tempo: "https://rpc.tempo.xyz",
   movement: "https://mainnet.movementnetwork.xyz/v1",
+  aptos: APTOS_PUBLIC_REST_URL,
   // Required for usd1-bundle-oracle multichain totalSupply() supply aggregation.
   plume: "https://rpc.plume.org",
   monad: "https://rpc.monad.xyz",
@@ -76,6 +80,7 @@ export const EXTRA_FALLBACK_RPC_URLS: Readonly<Record<string, readonly string[]>
 // Reviewed supply profile. These fallbacks intentionally differ from the Worker
 // profile (notably Monad and Blast); neither profile implicitly expands the other.
 export const SUPPLY_RPC_DEFAULTS = {
+  "aptos": { rpcUrl: APTOS_PUBLIC_REST_URL },
   "plume": { rpcUrl: PUBLIC_RPC_URLS["plume"], fallbackRpcUrl: "https://plume.drpc.org" },
   "plasma": { rpcUrl: PUBLIC_RPC_URLS["plasma"], fallbackRpcUrl: "https://plasma.drpc.org" },
   "monad": { rpcUrl: PUBLIC_RPC_URLS["monad"], fallbackRpcUrl: "https://rpc-mainnet.monadinfra.com" },

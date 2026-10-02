@@ -10,11 +10,19 @@
       {
         "label": "Website",
         "url": "https://www.cngn.co/"
+      },
+      {
+        "label": "Lisk pinned Cngn3 implementation: blacklist checks and owner seizure",
+        "url": "https://blockscout.lisk.com/api/v2/smart-contracts/0x50a1b2d9583cc12daaed29c91c2e767e4316fefd"
+      },
+      {
+        "label": "Lisk pinned Admin2 implementation: owner blacklist administration",
+        "url": "https://blockscout.lisk.com/api/v2/smart-contracts/0x86f1afdf772b85b2034fa06939391b60c4e55003"
       }
     ],
-    "evidence": "Explicit Yes retained: centralized governance metadata indicates issuer or admin control; registry links were reviewed for direct freeze, blacklist, pause, burn, or upgrade authority.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "Verified at Lisk block 38055293: the official cNGN proxy points to Cngn3 implementation 0x50a1b2d9583cc12daaed29c91c2e767e4316fefd, whose transfer and transferFrom reject blacklisted parties and whose owner can destroyBlackFunds. Its AdminOperations proxy 0xd7dc1fb7e1d7fad9a61c12f77647b4e26e852d8d points to Admin2 implementation 0x86f1afdf772b85b2034fa06939391b60c4e55003, whose owner can addBlackList and removeBlackList. Both proxy owners are Safe 0xffb0fa0d0be7c95dfe66cf59e24f4e2b56d650c6. Solana finalized slot 452219349 independently retains a freezeAuthority and permanentDelegate. The Yes verdict is retained on direct code and state evidence rather than governance inference.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurM16cNGN)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-lock-mint",
@@ -41,10 +49,6 @@
       }
     ],
     "sources": [
-      {
-        "label": "cNGN FAQ: Bantu native issuance and supported networks",
-        "url": "https://cngn.co/resource/the-most-asked-questions-about-cngn-stablecoin"
-      },
       {
         "label": "Bantu Foundation cNGN case study",
         "url": "https://bantufoundation.org/case-studies/cngn"
@@ -76,10 +80,6 @@
         "observedBlock": 25770803,
         "sources": [
           {
-            "label": "cNGN FAQ: Bantu native issuance",
-            "url": "https://cngn.co/resource/the-most-asked-questions-about-cngn-stablecoin"
-          },
-          {
             "label": "Bantu Foundation cNGN case study",
             "url": "https://bantufoundation.org/case-studies/cngn"
           },
@@ -105,10 +105,6 @@
         "observedAt": "2026-08-16",
         "observedBlock": 50066095,
         "sources": [
-          {
-            "label": "cNGN FAQ: Bantu native issuance",
-            "url": "https://cngn.co/resource/the-most-asked-questions-about-cngn-stablecoin"
-          },
           {
             "label": "Bantu Foundation cNGN case study",
             "url": "https://bantufoundation.org/case-studies/cngn"
@@ -136,10 +132,6 @@
         "observedBlock": 116357377,
         "sources": [
           {
-            "label": "cNGN FAQ: Bantu native issuance",
-            "url": "https://cngn.co/resource/the-most-asked-questions-about-cngn-stablecoin"
-          },
-          {
             "label": "Bantu Foundation cNGN case study",
             "url": "https://bantufoundation.org/case-studies/cngn"
           },
@@ -166,10 +158,6 @@
         "observedBlock": 92151009,
         "sources": [
           {
-            "label": "cNGN FAQ: Bantu native issuance",
-            "url": "https://cngn.co/resource/the-most-asked-questions-about-cngn-stablecoin"
-          },
-          {
             "label": "Bantu Foundation cNGN case study",
             "url": "https://bantufoundation.org/case-studies/cngn"
           },
@@ -195,10 +183,6 @@
         "observedAt": "2026-08-17",
         "observedBlock": 75053963,
         "sources": [
-          {
-            "label": "cNGN FAQ: Bantu native issuance",
-            "url": "https://cngn.co/resource/the-most-asked-questions-about-cngn-stablecoin"
-          },
           {
             "label": "Bantu Foundation cNGN case study",
             "url": "https://bantufoundation.org/case-studies/cngn"
@@ -325,13 +309,14 @@
           ],
           "threshold": 2,
           "enabledModules": [],
-          "guard": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
-          "fallbackHandler": "0x0000000000000000000000000000000000000000",
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
           "version": "1.3.0",
-          "observedBlock": 25571110,
+          "observedBlock": 26095941,
+          "observedAt": "2026-10-01",
           "source": "onchain"
         },
-        "modulesOrGuardsStatus": "present",
+        "modulesOrGuardsStatus": "none-detected",
         "canRaiseCap": true,
         "observedAt": "2026-07-20",
         "observedBlock": 25571110,
@@ -341,7 +326,7 @@
             "url": "https://etherscan.io/address/0x17cdb2a01e7a34cbb3dd4b83260b05d0274c8dab"
           }
         ],
-        "evidence": "Relocated from Mint Authority: at Ethereum block 25,571,110, owner() on the destination cNGN representation returned Safe 0x57da45ee907f9d58d781c6ed5abf730eb6673d80; getOwners() returned 0x7493c024aa7cc32cd87d265c7158dfa9e30ffc2f and 0x98cf8488fe12879ad6a99ddbbb7a2c8c122f178a, and getThreshold() returned 2. The 2/2 owner is the reviewed destination representation minter/admin failure domain; its ability to raise destination mint authorization is bridge risk, not native Bantu issuance. Safe modules were empty and guard 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4 per the fixed on-chain read."
+        "evidence": "Historical 2026-07-20 record: owner() returned Safe 0x57da45ee907f9d58d781c6ed5abf730eb6673d80 with the two listed owners and threshold 2; the guard field then recorded 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4. Fresh pinned Ethereum block 26095941 confirms the same token owner and 2-of-2 signer set, no enabled modules, zero guard storage, and fallback handler 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4. The structured Safe fields now distinguish the fallback handler from a transaction guard. Native Bantu issuance and AMTP validation are not settled by this destination Safe read."
       },
       {
         "id": "cngn-bsc-owner-safe",
@@ -368,13 +353,14 @@
           ],
           "threshold": 2,
           "enabledModules": [],
-          "guard": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
-          "fallbackHandler": "0x0000000000000000000000000000000000000000",
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
           "version": "1.3.0-L2",
-          "observedBlock": 111015741,
+          "observedBlock": 125060589,
+          "observedAt": "2026-10-01",
           "source": "onchain"
         },
-        "modulesOrGuardsStatus": "present",
+        "modulesOrGuardsStatus": "none-detected",
         "canRaiseCap": true,
         "observedAt": "2026-07-20",
         "observedBlock": 111015741,
@@ -384,7 +370,7 @@
             "url": "https://bscscan.com/address/0xa8aea66b361a8d53e8865c62d142167af28af058"
           }
         ],
-        "evidence": "Relocated from Mint Authority: at BSC block 111,015,741, owner() on the destination cNGN representation returned Safe 0x555ad4b8aacdb16afd2ed4d334f51614222a9f0b; getOwners() returned 0x7493c024aa7cc32cd87d265c7158dfa9e30ffc2f and 0x98cf8488fe12879ad6a99ddbbb7a2c8c122f178a, and getThreshold() returned 2. The same consortium Safe controls destination representation mint administration and can raise destination mint authorization; that is bridge risk, not native Bantu issuance. Safe modules were empty and guard 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4 per the fixed on-chain read."
+        "evidence": "Historical 2026-07-20 record: owner() returned Safe 0x555ad4b8aacdb16afd2ed4d334f51614222a9f0b with the two listed owners and threshold 2; the guard field then recorded 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4. Fresh pinned BSC block 125060589 confirms the 2-of-2 signer set, no enabled modules, zero guard storage, and fallback handler 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4. The structured Safe fields now distinguish the fallback handler from a transaction guard. owner() on the token also returned this Safe at block 125059627. AMTP validation and native Bantu issuance are not settled by this destination Safe read."
       },
       {
         "id": "cngn-base-owner-safe",
@@ -411,13 +397,14 @@
           ],
           "threshold": 2,
           "enabledModules": [],
-          "guard": "0x017062a1de2fe6b99be3d9d37841fed19f573804",
-          "fallbackHandler": "0x0000000000000000000000000000000000000000",
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x017062a1de2fe6b99be3d9d37841fed19f573804",
           "version": "1.3.0",
-          "observedBlock": 48863611,
+          "observedBlock": 52024977,
+          "observedAt": "2026-10-01",
           "source": "onchain"
         },
-        "modulesOrGuardsStatus": "present",
+        "modulesOrGuardsStatus": "none-detected",
         "canRaiseCap": true,
         "observedAt": "2026-07-20",
         "observedBlock": 48863611,
@@ -427,7 +414,7 @@
             "url": "https://basescan.org/address/0x46c85152bfe9f96829aa94755d9f915f9b10ef5f"
           }
         ],
-        "evidence": "Relocated from Mint Authority: at Base block 48,863,611, owner() on the destination cNGN representation returned Safe 0xc3ebca72b6e3c06833ba81c824de685eb2eff21e; getOwners() returned 0x7493c024aa7cc32cd87d265c7158dfa9e30ffc2f and 0x98cf8488fe12879ad6a99ddbbb7a2c8c122f178a, and getThreshold() returned 2. The Safe is the destination representation mint/admin failure domain and can raise destination mint authorization; this capability is bridge risk, not native Bantu issuance. Safe modules were empty and guard 0x017062a1de2fe6b99be3d9d37841fed19f573804 per the fixed on-chain read."
+        "evidence": "Historical 2026-07-20 record: owner() returned Safe 0xc3ebca72b6e3c06833ba81c824de685eb2eff21e with the two listed owners and threshold 2; the guard field then recorded 0x017062a1de2fe6b99be3d9d37841fed19f573804. Fresh pinned Base block 52024977 confirms the same token owner and 2-of-2 signer set, no enabled modules, zero guard storage, and fallback handler 0x017062a1de2fe6b99be3d9d37841fed19f573804. The structured Safe fields now distinguish the fallback handler from a transaction guard. The separately recorded Base ProxyAdmin remains owned by 0xdd3446ce5aa397fd957460ba03e4538caeeff22e at this block."
       },
       {
         "id": "cngn-polygon-owner-safe",
@@ -688,6 +675,100 @@
           }
         ],
         "evidence": "The reviewed Bantu Foundation case study and cNGN bridge API establish the Bantu AMTP lock-and-mint delivery architecture, and the six route rows identify the destination delivery contracts. The 2026-08-28 review found no primary source that discloses current AMTP validator/attestor membership, peer/remote bindings, rate-limit authority, or adapter identities. Polygon and Celo 2-of-2 Safe plus AdminOperations controls resolve destination cap administration, but those delivery and cap-admin identities cannot stand in for the AMTP validation domain; this common validation control remains unknown. Reclassified 2026-09-01 under AUTHORITY-LADDER 9.46: the controlling party for this control is the external Bantu AMTP validator/attestor validation quorum itself, a rotating protocol-scoped operator set with no single controllerAddress to record. Its authority model is therefore validator-quorum, known but weak, graded no higher than a named issuer backend and never above a named multisig, rather than unknown. The unresolved roster, quorum, override and peer facts recorded above are unchanged; only the authority classification moved."
+      },
+      {
+        "id": "cngn-lisk-owner-safe",
+        "label": "cNGN Lisk destination representation owner Safe",
+        "routeRefs": [
+          "lisk:0xc7ab2c35ea37236e644c24a4e4a1911c082887c0"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "admin"
+        ],
+        "controllerChain": "lisk",
+        "controllerAddress": "0xffb0fa0d0be7c95dfe66cf59e24f4e2b56d650c6",
+        "failureDomainKeys": [
+          "safe:lisk:0xffb0fa0d0be7c95dfe66cf59e24f4e2b56d650c6"
+        ],
+        "authorityType": "safe",
+        "threshold": 2,
+        "signerCount": 2,
+        "safe": {
+          "owners": [
+            "0x7493c024aa7cc32cd87d265c7158dfa9e30ffc2f",
+            "0x98cf8488fe12879ad6a99ddbbb7a2c8c122f178a"
+          ],
+          "threshold": 2,
+          "observedBlock": 38055293,
+          "source": "onchain"
+        },
+        "canRaiseCap": true,
+        "capDescription": "The Safe owns AdminOperations 0xd7dc1fb7e1d7fad9a61c12f77647b4e26e852d8d. Its verified Admin2 implementation permits the owner to assign an authorized minter an arbitrary uint256 mintAmount; the token requires that exact amount and revokes authorization after minting. This is destination authorization, not a native Bantu supply cap.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 38055293,
+        "sources": [
+          {
+            "label": "cNGN official deployment registry",
+            "url": "https://docs.cngn.co/guides/contract-addresses"
+          },
+          {
+            "label": "Lisk verified Cngn3 implementation",
+            "url": "https://blockscout.lisk.com/api/v2/smart-contracts/0x50a1b2d9583cc12daaed29c91c2e767e4316fefd"
+          },
+          {
+            "label": "Lisk verified Admin2 implementation",
+            "url": "https://blockscout.lisk.com/api/v2/smart-contracts/0x86f1afdf772b85b2034fa06939391b60c4e55003"
+          }
+        ],
+        "evidence": "Pinned Lisk block 38055293: owner() of both the official token and AdminOperations returned this Safe. getOwners() returned the two listed consortium signers and getThreshold() returned 2. The token EIP-1967 implementation was 0x50a1b2d9583cc12daaed29c91c2e767e4316fefd; storage slot 207 identified AdminOperations, whose implementation was 0x86f1afdf772b85b2034fa06939391b60c4e55003. Verified mint() checks canMint and mintAmount, and verified addMintAmount(address,uint256) is onlyOwner with no numeric maximum. AMTP validator, peer and reserve reconciliation evidence remains unresolved."
+      },
+      {
+        "id": "cngn-assetchain-owner-safe",
+        "label": "cNGN Asset Chain destination representation owner Safe",
+        "routeRefs": [
+          "assetchain:0x7923c0f6fa3d1ba6eafcaedaad93e737fd22fc4f"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "admin"
+        ],
+        "controllerChain": "assetchain",
+        "controllerAddress": "0xe0c474bc3442024bb161ce819d19f2254a14661d",
+        "failureDomainKeys": [
+          "safe:assetchain:0xe0c474bc3442024bb161ce819d19f2254a14661d"
+        ],
+        "authorityType": "safe",
+        "threshold": 2,
+        "signerCount": 2,
+        "safe": {
+          "owners": [
+            "0x7493c024aa7cc32cd87d265c7158dfa9e30ffc2f",
+            "0x98cf8488fe12879ad6a99ddbbb7a2c8c122f178a"
+          ],
+          "threshold": 2,
+          "observedBlock": 1952353,
+          "source": "onchain"
+        },
+        "canRaiseCap": true,
+        "capDescription": "The Safe owns AdminOperations 0xc930784d6e14e2fc2a1f49be1068dc40f24762d3. Its verified Admin2 implementation permits the owner to assign an authorized minter an arbitrary uint256 mintAmount; the token requires that exact amount and revokes authorization after minting. This is destination authorization, not a native Bantu supply cap.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 1952353,
+        "sources": [
+          {
+            "label": "cNGN official deployment registry",
+            "url": "https://docs.cngn.co/guides/contract-addresses"
+          },
+          {
+            "label": "Asset Chain verified Cngn3 implementation",
+            "url": "https://scan.assetchain.org/api/v2/smart-contracts/0x9c54ea48a14f3e4e670fa44bc1ebce3b590e82c8"
+          },
+          {
+            "label": "Asset Chain verified Admin2 implementation",
+            "url": "https://scan.assetchain.org/api/v2/smart-contracts/0x1bcb47411cd4df4f42911c946e01b912f57e0872"
+          }
+        ],
+        "evidence": "Pinned Asset Chain block 1952353: owner() of both the official token and AdminOperations returned this Safe. getOwners() returned the two listed consortium signers and getThreshold() returned 2. The token EIP-1967 implementation was 0x9c54ea48a14f3e4e670fa44bc1ebce3b590e82c8; storage slot 207 identified AdminOperations, whose implementation was 0x1bcb47411cd4df4f42911c946e01b912f57e0872. Verified mint() checks canMint and mintAmount, and verified addMintAmount(address,uint256) is onlyOwner with no numeric maximum. AMTP validator, peer and reserve reconciliation evidence remains unresolved."
       }
     ]
   }

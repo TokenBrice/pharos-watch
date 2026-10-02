@@ -47,7 +47,34 @@
     "compositionBasis": "Citrea and M0 extension documentation plus fixed-block ctUSD mToken, SwapFacility, total-supply, and M-balance reads",
     "compositionAsOf": "2026-08-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "No direct reserve asset remains unidentified: the full claim is the tracked m-m0 parent, whose collateral composition is reviewed separately. ctUSD-specific legal custody and provider allocations remain undisclosed.",
+    "knownUnknownExposure": "No direct reserve asset remains unidentified: the full claim is the tracked m-m0 parent, whose collateral composition is reviewed separately. MoonPay's published terms describe segregation for token holders, while product-specific custody-provider allocations, insolvency instruments, and rehypothecation controls remain unverified.",
     "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "MoonPay USA LLC (reserve management; underlying financial institutions unnamed)",
+        "role": "other",
+        "jurisdiction": "United States"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB14NUSD)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "MoonPay stablecoin terms: reserve management, section 5.1",
+        "url": "https://www.moonpay.com/legal/stablecoin_terms"
+      },
+      {
+        "label": "Citrea USD documentation: reserve and regulatory framework",
+        "url": "https://docs.citrea.xyz/developer-documentation/citrea-usd-ctusd"
+      }
+    ],
+    "uncertainty": "MoonPay's terms require reserves to be held for token holders in accounts segregated from corporate funds with regulated financial institutions, but do not name those institutions or allocate shares. MoonPay is recorded as reserve manager, not as a separately verified qualified custodian. Citrea asserts bankruptcy remoteness, but no product-specific insolvency instrument or anti-rehypothecation terms were verified. The direct on-chain ctUSD reserve claim is M; underlying reserve custody remains an inherited M0 exposure.",
+    "knownUnknownExposurePct": 100
   }
 }

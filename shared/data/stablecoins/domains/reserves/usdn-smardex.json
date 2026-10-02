@@ -59,5 +59,39 @@
         "rationale": "wstETH is liquid-staking crypto collateral rather than a tracked stablecoin dependency."
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "SMARDEX USDN protocol proxy (Ethereum, 0x656cb8c6d154aad29d8771384089be5b5141f01a)",
+        "role": "other"
+      },
+      {
+        "name": "Lido wstETH underlying staking protocol",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB28LUSD)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "SMARDEX USDN vault-side documentation",
+        "url": "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol/vault-side"
+      },
+      {
+        "label": "USDN protocol verified implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x271df5517a4daacb7cab988aa64d23debda4c498"
+      },
+      {
+        "label": "Lido wstETH contract documentation",
+        "url": "https://docs.lido.fi/contracts/wsteth/"
+      }
+    ],
+    "uncertainty": "At Ethereum block 26095801, protocol getAsset() returned canonical Lido wstETH 0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0. The on-chain vault and underlying staking exposure are identified; reviewed materials do not establish legal segregation, bankruptcy remoteness or reuse restrictions. No provider shares or fixed withdrawal bound are asserted.",
+    "knownUnknownExposurePct": 100
   }
 }

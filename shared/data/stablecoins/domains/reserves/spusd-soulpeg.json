@@ -42,7 +42,7 @@
         "url": "https://bsc-rpc.publicnode.com"
       }
     ],
-    "rationale": "SoulPeg documents SPUSD as a claim on soul-bound sUSDC, routed through a Venus USDC strategy on BSC using an 18-decimal USDC representation. The SPUSD overview identifies sUSDC 0x0e8fb2e774b827711e0f86069931c1321113238e. SPUSD asset() and underlying() reverted at BSC block 124853997 on 2026-09-30; sUSDC asset() and token() reverted at block 124854221. Earlier wrapper-layer coverage does not prove the underlying representation or its issuer escrow. The root USDC basket edge is withheld pending the exact sUSDC-to-vault-to-underlying identity join and independently verified bridge/custodian backing.",
+    "rationale": "SoulPeg documents SPUSD as a claim on soul-bound sUSDC, routed through a Venus USDC strategy on BSC using an 18-decimal USDC representation. The SPUSD overview identifies 0x0e8fb2e774b827711e0f86069931c1321113238e as StUSDCWrapper, not the sUSDC token. SPUSD asset() and underlying() reverted at BSC block 124853997 on 2026-09-30; the asset() and token() probes at block 124854221 therefore targeted the wrapper, not a verified sUSDC token. Earlier wrapper-layer coverage does not prove the underlying representation or its issuer escrow. The root USDC basket edge is withheld pending the exact sUSDC-to-vault-to-underlying identity join and independently verified bridge/custodian backing.",
     "compositionBasis": "SoulPeg issuer documentation accessed 2026-09-30; prior wrapper composition retained, canonical issuer dependency withheld",
     "compositionAsOf": "2026-09-21",
     "scope": "full-composition",

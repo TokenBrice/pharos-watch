@@ -12,7 +12,7 @@ import {
   canonicalExitRouteAssetKey,
   canonicalExitRouteChain,
   canonicalExitRouteScopedId,
-} from "@shared/lib/exit-route-identity";
+} from "@shared/types/exit-route-identity";
 import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type { ContractDeployment } from "@shared/types/core";
 import { batchExecute } from "../../lib/db";

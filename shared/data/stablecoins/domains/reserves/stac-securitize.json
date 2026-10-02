@@ -16,13 +16,12 @@
         "counterparty",
         "concentration"
       ],
-      "liquidityHorizon": "over-seven-days",
-      "maturityDaysMax": 5473
+      "liquidityHorizon": "over-seven-days"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-28",
-    "reviewer": "Codex Chronicle live-reserve identity review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (FixInv2)",
     "confidence": "verified",
     "sources": [
       {
@@ -34,15 +33,15 @@
         "url": "https://investors.securitize.io/news/news-details/2025/Securitize-Launches-Tokenized-AAA-CLO-Fund-with-Services-Provided-by-BNY-Bringing-Institutional-Structured-Credit-Onchain-10-29-2025/default.aspx"
       },
       {
-        "label": "Chronicle STAC Proof of Asset holdings dashboard (source date 2026-07-23; proof verified 2026-07-24)",
-        "url": "https://chroniclelabs.org/dashboard/proof-of-asset/securitize-stac"
+        "label": "Chronicle STAC content-addressed Proof of Asset (document and portfolio date 2026-09-29; retrieved 2026-10-01)",
+        "url": "https://chroniclelabs.org/api/ipfs/Qmedv33sWmMtXbho9dbZaXuFgsw7nL2c82UU6Rpt2aDY1J"
       }
     ],
-    "rationale": "Chronicle's independently verified holdings table identifies all 60 positions as of 2026-07-23: one $28.03 million PGIM AAA CLO ETF position and 59 individually identified CLO tranches, totaling $376.28 million of portfolio market value. The static reserve view aggregates those uniformly high-risk public-credit positions into one scoring bucket; the Chronicle source preserves every position identity, value, and disclosed maturity. On 2026-08-28, the configured chronicle-nav single-asset adapter was verified to emit the exact live identity Securitize Tokenized AAA CLO Fund NAV, so the reviewed public-credit slice uses that identity without presenting the older position table as a new composition.",
-    "compositionBasis": "Chronicle Proof of Asset position-level market values",
-    "compositionAsOf": "2026-07-23",
+    "rationale": "The September 29, 2026 Chronicle source payload directly identifies STAC fund NAV of $281,895,415.70 and 49 named CLO positions with aggregate portfolio market value $277,571,572.67, plus cash of $1,297,805.81 and other net assets/liabilities of $3,026,037.24. The static reserve row remains the single 100% fund-NAV identity emitted by the live chronicle-nav adapter; its high-risk public-credit classification describes the identified fund claim, not a claim that every underlying asset is a CLO tranche. No PGIM AAA CLO ETF appears in this dated portfolio. Chronicle technically verifies third-party source data and expressly disclaims underlying-data attestation or audit. The older July position census and its maturity maximum are not carried forward.",
+    "compositionBasis": "Chronicle September 29, 2026 dated fund-NAV proof and position census; single fund-share scoring bucket matching the live chronicle-nav adapter",
+    "compositionAsOf": "2026-09-29",
     "scope": "full-composition",
-    "knownUnknownExposure": "No unidentified position remains in the dated holdings table. Disclosed maturities cover 92.55% of market value and span 3,836 to 5,473 days from the source date; the 7.45% PGIM AAA CLO ETF position has no stated maturity. Chronicle reports $376.28 million of gross holdings against $353.79 million NAV, retained as a 1.0636 gross-holdings-to-NAV reference rather than a contractual collateralization ratio.",
+    "knownUnknownExposure": "The full reserve row identifies the STAC fund-NAV claim, so no reserve row is unidentified. Underlying cash counterparties, other net assets/liabilities, and fund legal terms are not disclosed by this proof; no gross unknown-exposure percentage is inferred from net balances. The 49 named CLO positions have individual maturities, but those dates do not establish a contractual maturity maximum for the fund share.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": []
   },

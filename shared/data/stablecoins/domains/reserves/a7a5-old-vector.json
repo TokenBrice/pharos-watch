@@ -81,8 +81,8 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-30",
-    "reviewer": "Kimi T48 safety-v9 unknown-reduction w2 (rejected-redo independent re-derivation)",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA27A7A5)",
     "confidence": "manual-review",
     "sources": [
       {
@@ -100,7 +100,7 @@
         "url": "https://docs.a7a5.io/additional/information-on-the-risks.md"
       }
     ],
-    "uncertainty": "A7A5 refers to fiat/overnight deposits and short-term assets at unnamed banks with a Kyrgyz-linked correspondent network but does not identify the institutions, asset custodians, jurisdictions, provider shares, segregation, bankruptcy remoteness, rehypothecation terms, or account restrictions. The risk page (re-opened 2026-07-30) acknowledges custodial risk generically without provider detail, and the former audit.pdf address no longer serves any assurance document.",
+    "uncertainty": "Re-reviewed 2026-10-01: the issuer introduction, Terms, risk page, transparency page, and complete 24-page documentation index identify no reserve-bank or asset-custodian allocation, provider jurisdictions or shares, segregated accounts, bankruptcy-remoteness terms, reuse restrictions, or continuity controls. The reserve basket remains unnamed bank deposits and short-term assets. The risk page acknowledges potential operational or systemic failures in fiat-deposit management; the former audit.pdf endpoint serves an application HTML shell. No reserve or composition date is refreshed by this negative search.",
     "knownUnknownExposurePct": 100
   }
 }

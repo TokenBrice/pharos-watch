@@ -11,12 +11,22 @@ const PAYLOAD = {"transparency": {"breakdown": {"updatedAtIso": "2026-09-01T23:5
 
 
 describe("adaptAvantReserves", () => {
-  it("publishes gross long slices with debt as separate totals, never netted", () => {
-    const result = adaptAvantReserves(structuredClone(PAYLOAD));
+  it("keeps leveraged holdings contextual and all whole-token backing unresolved", () => {
+    const result = adaptAvantReserves(capture.payload);
+    expect(result.slices).toEqual([{
+      name: "Unresolved whole-token reserve composition",
+      pct: 100,
+      risk: "high",
+    }]);
+    expect(result.metadata?.unknownExposurePct).toBe(100);
+    expect(result.metadata?.details).toMatchObject({
+      compositionBasis: "unresolved-whole-token",
+      contextualObservationsOnly: true,
+    });
+  });
 
-    expect(result.slices.reduce((sum, s) => sum + s.pct, 0)).toBeCloseTo(100, 6);
-    expect(result.slices.filter((slice) => slice.assetClass === "stablecoin").reduce((sum, slice) => sum + slice.pct, 0))
-      .toBeCloseTo(1_004_786_422.7190735 / 1_024_715_743.450049 * 100, 10);
+  it("publishes gross longs and debts only as contextual totals, never net backing", () => {
+    const result = adaptAvantReserves(structuredClone(PAYLOAD));
 
     expect(result.metadata).toMatchObject({
       referenceNavUsd: expect.closeTo(132_748_763.3728162, 4),
@@ -41,16 +51,24 @@ describe("adaptAvantReserves", () => {
     expect(result.warnings!.every((w) => w.effect === "info")).toBe(true);
   });
 
-  it("preserves source identities without treating labels as verified issuer claims", () => {
+  it("preserves observed holdings and debt labels outside the reserve composition", () => {
     const result = adaptAvantReserves(capture.payload);
-    const usde = result.slices.find((slice) => slice.sourceKey === "avant-reserves-api:stablecoin-long:usde")!;
-    expect(usde.pct).toBeCloseTo(749_916_919.3870683 / 1_013_103_133.459377 * 100, 12);
-    expect(usde.coinId).toBeUndefined();
-    expect(result.slices.find((slice) => slice.sourceKey === "avant-reserves-api:stablecoin-long:usdt")!.pct)
-      .toBeCloseTo(8.544364029792 / 1_013_103_133.459377 * 100, 15);
-    expect(result.slices.every((slice) => !slice.coinId)).toBe(true);
+    expect(result.metadata?.details?.entries).toContainEqual({
+      category: "Stablecoins",
+      name: "usde",
+      valueUsd: 749_916_919.3870683,
+      isDebt: false,
+    });
     expect(result.metadata?.referenceNavUsd).toBeCloseTo(125_674_691.9077302, 6);
-    expect(result.warnings?.some((warning) => warning.code === "unverified-avant-token-identities")).toBe(true);
+    expect(result.slices.every((slice) => !slice.coinId && !slice.depType)).toBe(true);
+  });
+
+  it("does not turn absent contextual location observations into zero", () => {
+    const payload = structuredClone(capture.payload);
+    payload.transparency.location.rows = [];
+    const result = adaptAvantReserves(payload);
+    expect(result.metadata?.details).toMatchObject({ bridgesUsd: null, pendingDeploymentUsd: null });
+    expect(result.metadata?.unknownExposurePct).toBe(100);
   });
 
   it("fails closed when the reserve snapshot timestamps disagree", () => {

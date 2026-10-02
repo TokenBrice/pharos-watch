@@ -158,10 +158,10 @@ const RUN_STATUS_LABELS: Readonly<Record<CronRunStatus, string>> = {
 };
 
 const NEUTRAL_SKIP_REASON_LABELS: Readonly<Record<string, string>> = {
-  "v9-slot-window-too-short": "Skipped: V9 window too short",
+  "v9-slot-window-too-short": "Skipped: V10 window too short",
   "v9-core-slot-not-ready": "Skipped: core slot not ready",
   "v9-competing-slot-active": "Skipped: competing slot active",
-  "v9-memory-lane-active": "Skipped: V9 memory lane active",
+  "v9-memory-lane-active": "Skipped: V10 memory lane active",
 };
 
 const BUDGET_TELEMETRY_LABELS: Readonly<Record<BudgetOnlySurfaceStatus["telemetryStatus"], string>> = {

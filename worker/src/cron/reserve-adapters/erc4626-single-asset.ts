@@ -56,6 +56,7 @@ interface SingleAssetSliceConfig {
   depType?: ReserveSlice["depType"];
   expectedAssetAddress?: string;
   deployedExposure?: LiveReserveAdapterParamsByKey["erc4626-single-asset"]["deployedExposure"];
+  pooledClaim?: LiveReserveAdapterParamsByKey["erc4626-single-asset"]["pooledClaim"];
   redemptionLiquidity?: Erc4626RedemptionLiquidityConfig;
   redemptionLock?: LiveReserveAdapterParamsByKey["erc4626-single-asset"]["redemptionLock"];
   redemptionRoute?: LiveReserveAdapterParamsByKey["erc4626-single-asset"]["redemptionRoute"];
@@ -74,6 +75,7 @@ function parseSliceConfig(config: LiveReservesConfig): SingleAssetSliceConfig {
       ? { expectedAssetAddress: params.slice.expectedAssetAddress.toLowerCase() }
       : {}),
     ...(params.deployedExposure ? { deployedExposure: params.deployedExposure } : {}),
+    ...(params.pooledClaim ? { pooledClaim: params.pooledClaim } : {}),
     ...(params.redemptionLiquidity ? { redemptionLiquidity: params.redemptionLiquidity } : {}),
     ...(params.redemptionLock ? { redemptionLock: params.redemptionLock } : {}),
     ...(params.redemptionRoute ? { redemptionRoute: params.redemptionRoute } : {}),
@@ -364,9 +366,21 @@ export async function fetchErc4626SingleAssetReserves(
   // unattributed.
   const reviewedDeployedExposure = idleUnderlyingBalanceRaw == null ? null : sliceConfig.deployedExposure ?? null;
   const deployedPct = Number((totalAssetsRaw - heldRaw) * 100_000_000_000_000n / totalAssetsRaw) / 1_000_000_000_000;
-  const unknownExposurePct = reviewedDeployedExposure ? 0 : 100 - idlePct;
+  const unknownExposurePct = sliceConfig.pooledClaim ? 100 : reviewedDeployedExposure ? 0 : 100 - idlePct;
   const slices: ReserveSlice[] = [];
-  if (reviewedDeployedExposure) {
+  if (sliceConfig.pooledClaim) {
+    slices.push({
+      sourceKey: `erc4626-single-asset:${primaryInput.chain}:${contractAddress.toLowerCase()}:pooled-claim`,
+      name: sliceConfig.name,
+      pct: 100,
+      risk: sliceConfig.risk,
+      assetClass: "protocol-position",
+    });
+    warnings.push(reserveInfoWarning(
+      "erc4626-opaque-pooled-claim",
+      "Whole-token pooled claim has unknown look-through; accounting asset and observed idle cash do not establish reserve allocation or token dependencies.",
+    ));
+  } else if (reviewedDeployedExposure) {
     slices.push({
       sourceKey: `erc4626-single-asset:${primaryInput.chain}:${assetAddress}`,
       name: sliceConfig.name,
@@ -422,6 +436,9 @@ export async function fetchErc4626SingleAssetReserves(
         proofKind: "erc4626-total-assets",
         ...(sliceConfig.redemptionRoute
           ? { redemptionMechanism: "async-request", settlementBoundReason: "Per-request withdrawal or receipt maturity; no global settlement bound observed" }
+          : {}),
+        ...(sliceConfig.pooledClaim
+          ? { compositionBasis: "opaque-pooled-claim", pooledClaimBasis: sliceConfig.pooledClaim.basis, contextualObservationsOnly: true }
           : {}),
         ...(assetAddress
           ? { assetAddressMatchesExpected: sliceConfig.expectedAssetAddress == null || assetAddress === sliceConfig.expectedAssetAddress }

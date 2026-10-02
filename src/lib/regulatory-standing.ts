@@ -122,7 +122,9 @@ export function formatReserveReportNote(
   if (!report) return undefined;
   const dates = [
     report.periodEnd ? `period end ${report.periodEnd}` : undefined,
-    report.publishedAt ? `published ${report.publishedAt}` : undefined,
+    report.publishedAt
+      ? `${report.publishedAtBasis === "signed-date-standin" ? "signed" : "published"} ${report.publishedAt}`
+      : undefined,
   ].filter(Boolean);
   const reference = report.reviewReference;
   const notes = [

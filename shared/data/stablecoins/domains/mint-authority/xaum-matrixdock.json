@@ -21,8 +21,9 @@
       ],
       "canChangeMintLogic": true,
       "controlRef": "Matrixdock token owner",
-      "observedAt": "2026-06-11",
-      "observedBlock": 25295020,
+      "delaySec": 14400,
+      "observedAt": "2026-10-01",
+      "observedBlock": 26095797,
       "sources": [
         {
           "label": "Matrixdock MToken implementation source (Blockscout)",
@@ -45,13 +46,15 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
-        "canRaiseCap": false,
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "Verified source allows operator mintTo only within mintBudget (read as 0 during the prior pass). The token owner EOA 0xb573c94260582f0715fc477928b04a2708dd36d7 (separate reviewed control) administers the operator and can raise mintBudget.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095797,
+        "capDescription": "mintTo is limited by mintBudget, observed as zero at Ethereum block 26095797. MTokenMain.increaseMintBudget is callable by the operator and checks usedReserve against the configured reserve feed. The owner can replace the operator or feeds through the delayed administration path.",
         "sources": [
           {
             "label": "Sourcify Matrixdock MToken source",
-            "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x3194e478b6d3ebee969470295f271727b62adf7b/sources/contracts/MToken.sol"
+            "url": "https://sourcify.dev/server/v2/contract/1/0x3194e478b6d3ebee969470295f271727b62adf7b?fields=sources,compilation,abi"
           },
           {
             "label": "Matrixdock XAUm",
@@ -72,11 +75,13 @@
         "directMintAbility": "cap-limited",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "Verified source allows mintTo by the operator or the configured receipt NFT contract only within mintBudget. The token owner EOA 0xb573c94260582f0715fc477928b04a2708dd36d7 (separate reviewed control) can raise mintBudget.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095797,
+        "capDescription": "mintTo is callable by the operator or configured nftContract, subject to the same mintBudget and delayed request. nftContract() at Ethereum block 26095797 returned this receipt NFT. The operator can increase the native mint budget subject to reserve-feed checks; the owner can replace operator, feeds and implementation through delayed paths.",
         "sources": [
           {
             "label": "Sourcify Matrixdock MToken source",
-            "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x3194e478b6d3ebee969470295f271727b62adf7b/sources/contracts/MToken.sol"
+            "url": "https://sourcify.dev/server/v2/contract/1/0x3194e478b6d3ebee969470295f271727b62adf7b?fields=sources,compilation,abi"
           }
         ],
         "evidence": "The verified MToken mintTo path permits calls from the configured NFT contract as well as the operator, subject to the same mintBudget accounting."
@@ -93,6 +98,9 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
+        "timelockDelaySec": 14400,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095797,
         "evidence": "At Ethereum block 25295020: eth_getCode on 0xb573c94260582f0715FC477928B04A2708dd36D7 returned 0x (EOA confirmed). This EOA controls setOperator() and reserve accounting. Same address owns both XAGm and XAUm MToken contracts."
       }
     ],
@@ -107,7 +115,7 @@
         },
         {
           "label": "Sourcify Matrixdock MToken source",
-          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x3194e478b6d3ebee969470295f271727b62adf7b/sources/contracts/MToken.sol"
+          "url": "https://sourcify.dev/server/v2/contract/1/0x3194e478b6d3ebee969470295f271727b62adf7b?fields=sources,compilation,abi"
         },
         {
           "label": "XAUm Ethereum token",
@@ -118,9 +126,9 @@
           "url": "https://www.prnewswire.com/apac/news-releases/reserve-transparency-built-through-continuous-operation-matrixdock-marks-two-years-of-independent-verification-302829449.html"
         }
       ],
-      "evidence": "At Ethereum block 25295020: proxy impl 0x3194e478... confirmed, owner() = EOA 0xb573c94..., operator() = 0x89Bb23E4... eth_getCode on owner = 0x (EOA). Sui State 0x9429033f... confirmed same owner/operator/mint_budget=0 via Sui fullnode. Economic-posture fields reviewed 2026-08-15: the owner EOA can raise mint budget, replace the operator, or upgrade mint logic without delay; the Bureau Veritas audit and Chainlink NAV feed are assets-only and do not reconcile liabilities across all deployments or establish supervision. Wave 2 external review 2026-08-15 resolved reconciliation as periodic and supervision as attestation-only: Matrixdock's fourth consecutive semi-annual Bureau Veritas cycle enumerated XAUm supply across EVM, Sui, Solana, and Stellar and stated that audited reserves matched circulating supply.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-4 (lead dai-makerdao); Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "evidence": "Historical Ethereum block 25295020 and Sui observations remain in the control evidence. At Ethereum block 26095797 on 2026-10-01, implementation 0x3194e478b6d3ebee969470295f271727b62adf7b, owner 0xb573c94260582f0715fc477928b04a2708dd36d7 (zero code), operator 0x89bb23e4a82e04a253d9f11767fedf321c127799, NFT 0x67dcc9c33363cc0e650738528fe4fef1d658c7ee and mintBudget zero were confirmed. delay() returned 14,400 seconds; verified source applies that delay to mint requests, operator/feed replacement and UUPS upgrades. increaseMintBudget is operator-only and checks the reserve feed; owner authority to replace the operator/feed/implementation remains. Both reserveFeed and fallbackFeed currently point to 0xb2624f7e72788f1ebf1c7877c646732957bbf72e. Bureau Veritas inspects physical inventory; the July token comparison is issuer-published, not an independent token-liability reconciliation.",
+      "reviewer": "Sol curation pass 2026-10-01 (CurA47sGHO)",
+      "reviewedAt": "2026-10-01"
     }
   }
 }

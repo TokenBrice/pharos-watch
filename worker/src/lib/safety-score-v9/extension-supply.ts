@@ -1,6 +1,6 @@
 import type { BridgeRouteRiskProfile } from "@shared/types/core";
 import { safetyScoreV9TransferDeploymentKey } from "@shared/types/safety-score-v9-transfer-overlays";
-import { resolveChainId } from "@shared/lib/chains";
+import { resolveChainId } from "@shared/types/chain-identity";
 import {
   V9_AMBIGUOUS_CHAIN_ROUTE_PREFIX,
   V9_REPRESENTATION_GROUP_ROUTE_PREFIX,
@@ -8,7 +8,8 @@ import {
 } from "@shared/lib/safety-score-v9/facts";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { compareText } from "@shared/lib/safety-score-v9/primitives";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRaw, getCirculatingRawOrNull } from "@shared/lib/supply";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { CURATED_NATIVE_SINGLE_ROUTE_SUPPLY_ATTRIBUTION } from "./curated-single-route-supply";
 import type { SafetyScoreV9FactSetExtensionV2 } from "./fact-set-schema";
 import type { V9ExtensionRegistryMeta } from "./extension-shared";
@@ -17,7 +18,9 @@ import {
   safetyScoreV9ChainRows,
   safetyScoreV9SupplyAttributionExpectedAssetIds,
 } from "./supply-attribution";
-import { normalizeReviewedDeploymentAddress } from "./supply-attribution-contract";
+import { normalizeReviewedDeploymentAddress, reviewedSupplyRouteKind, reviewedEconomicDeploymentAttributionValidationError, hasCompleteEligibleProviderSupply, REVIEWED_ECONOMIC_SUPPLY_PLANS, REVIEWED_ECONOMIC_SUPPLY_PLAN_QUARANTINES, REVIEWED_SUPPLY_ATTRIBUTION_ENVELOPE } from "./supply-attribution-contract";
+import { ReviewedProviderRowExclusionSchema } from "@shared/types/safety-score-v9-supply-attribution";
+import { createReviewedAssetRegistry } from "./extension-reviewed-registry";
 import {
   exactInputBoundTransferMaterialityPacket,
   type SafetyScoreV9TransferMaterialityGeneration,
@@ -31,10 +34,17 @@ type ExtensionAsset = SafetyScoreV9FactSetExtensionV2["assets"][number];
 type SupplyReview = NonNullable<ExtensionAsset["supplyReview"]>;
 const RAW_UNIT_SHARE_SCALE = 10n ** 18n;
 
-export const SAFETY_SCORE_V9_INDEPENDENT_LIABILITY_SUPPLY_ASSET_IDS = Object.freeze([
-  "sfrxusd-frax",
-  "wsrusd-reservoir",
-].sort(compareText));
+const SUPPLY_ATTRIBUTION_REVIEWS = REVIEWED_SUPPLY_ATTRIBUTION_ENVELOPE;
+const providerRowExclusionRegistry = createReviewedAssetRegistry({
+  rows: SUPPLY_ATTRIBUTION_REVIEWS.providerRowExclusionReviews ?? [],
+  schema: ReviewedProviderRowExclusionSchema,
+  path: "supplyAttribution.providerRowExclusionReviews",
+  keyOf: row => typeof row.providerChainLabel === "string" ? `${row.assetId}:${row.providerChainLabel}` : undefined,
+  keyPath: "providerChainLabel",
+});
+export const SAFETY_SCORE_V9_INDEPENDENT_LIABILITY_SUPPLY_ASSET_IDS = Object.freeze(
+  SUPPLY_ATTRIBUTION_REVIEWS.independentLiabilityAssetIds.sort(compareText),
+);
 const INDEPENDENT_LIABILITY_SUPPLY_ASSET_ID_SET = new Set(
   SAFETY_SCORE_V9_INDEPENDENT_LIABILITY_SUPPLY_ASSET_IDS,
 );
@@ -242,9 +252,7 @@ function buildReviewedDeploymentSupplyReview(
             supplyShare: deployment.currentSupplyUsd / totalUsd,
             reviewState: "selected-reviewed",
             reviewedRouteKind:
-              route.routeClass === "native" || route.issuanceModel === "native-issuance"
-                ? "native"
-                : "controlled",
+              route.routeClass === "native" || route.issuanceModel === "native-issuance" ? "native" : "controlled",
           }
         : {
             deploymentRouteKey: route.id,
@@ -509,6 +517,9 @@ function buildCuratedNativeSingleRouteSupplyReview(
 ): SupplyReview | null {
   const entry = CURATED_NATIVE_SINGLE_ROUTE_SUPPLY_ATTRIBUTION[assetId];
   if (entry === undefined || entry.assetId !== assetId || !profile) return null;
+  const reviewedAtSec = Date.parse(`${entry.reviewedAt}T00:00:00Z`) / 1000;
+  if (!Number.isFinite(reviewedAtSec) || reviewedAtSec > fixedInput.clockSec ||
+    fixedInput.clockSec - reviewedAtSec > V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.reviewMaxAgeDays * 86400) return null;
 
   const routes = profile.routes ?? [];
   if (routes.length !== 1) return null;
@@ -543,6 +554,50 @@ function buildCuratedNativeSingleRouteSupplyReview(
   });
 }
 
+function admittedProviderRowExclusions(
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
+  assetId: string,
+  review: SupplyReview,
+  profile: BridgeRouteRiskProfile | undefined,
+): SupplyReview["providerRowExclusions"] {
+  const entries = providerRowExclusionRegistry.getAll(assetId);
+  if (entries.length === 0) return undefined;
+  const rows = safetyScoreV9ChainRows(fixedInput, assetId);
+  const aggregate = getCirculatingRawOrNull(fixedInput.aggregateCirculatingById?.[assetId] ?? {});
+  const total = Object.values(rows).reduce((sum, row) => sum + row.current, 0);
+  const own = ACTIVE_META_BY_ID.get(assetId);
+  // Keep original rows and aggregate; only the policy's conservation budget
+  // admits their floating-point tails. No corrected or renormalised total.
+  if (aggregate === null || aggregate <= 0) return [];
+  const policy = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution;
+  if (Math.abs(total - aggregate) > Math.max(policy.conservationAbsoluteToleranceUsd,
+    aggregate * policy.conservationRelativeTolerance)) return [];
+  return entries.flatMap(record => {
+    const target = ACTIVE_META_BY_ID.get(record.belongsToAssetId);
+    if (record.reviewedAtSec > fixedInput.clockSec || record.expiresAtSec <= fixedInput.clockSec ||
+      record.provenance.providerAssetId !== own?.llamaId || own?.detailProvider !== "defillama" ||
+      !Object.prototype.hasOwnProperty.call(rows, record.providerChainLabel) || resolveChainId(record.providerChainLabel) !== record.chainId ||
+      !target?.contracts?.some(contract => contract.chain === record.chainId && contract.address === record.contractAddress) ||
+      !target.contracts.some(contract => contract.chain === record.provenance.remoteChainId && contract.address === record.provenance.remoteTokenAddress) ||
+      own.contracts?.some(contract => contract.chain === record.chainId && contract.address === record.contractAddress)) return [];
+    // Only the proven foreign surface is eligible: unmatched provider identity
+    // or an unresolved exact foreign-contract route, never another own liability.
+    const aliases = Object.keys(rows).filter(label => resolveChainId(label) === record.chainId);
+    const foreignDeploymentKey = `${record.chainId}:${record.contractAddress}`;
+    const foreignRoute = profile?.routes?.find(route => route.id === foreignDeploymentKey);
+    const exactForeignRoute = foreignRoute !== undefined && (foreignRoute.contractAddress === undefined ||
+      normalizeReviewedDeploymentAddress(record.chainId, foreignRoute.contractAddress) === record.contractAddress);
+    const row = review.selectedBridgeRoutes.find(candidate =>
+      candidate.supplyUsd === rows[record.providerChainLabel]!.current &&
+      ((candidate.reviewState === "unmatched" &&
+        candidate.deploymentRouteKey === `${V9_UNMATCHED_CHAIN_ROUTE_PREFIX}${assetId}:${record.chainId}`) ||
+        (candidate.reviewState === "selected-unresolved" && exactForeignRoute &&
+          candidate.deploymentRouteKey === foreignDeploymentKey)));
+    if (aliases.length !== 1 || !row || row.supplyUsd === null || row.supplyUsd > aggregate) return [];
+    return [{ review: record, deploymentRouteKey: row.deploymentRouteKey, supplyShare: row.supplyUsd / aggregate }];
+  });
+}
+
 /**
  * Reconciles the exact captured per-chain circulating supply against the
  * reviewed bridge-route rows. Chains without a unique reviewed route row stay
@@ -554,6 +609,13 @@ export function buildSafetyScoreV9SupplyReview(
   profile: BridgeRouteRiskProfile | undefined,
   options: BuildSafetyScoreV9SupplyReviewOptions = {},
 ): SupplyReview | null {
+  const quarantine = REVIEWED_ECONOMIC_SUPPLY_PLAN_QUARANTINES.get(assetId);
+  if (quarantine) throw quarantine;
+  providerRowExclusionRegistry.getAll(assetId);
+  const economicPacket = fixedInput.safetyScoreV9SupplyAttributionById?.[assetId];
+  if (economicPacket?.model === "reviewed-economic-deployment-partition-v1") {
+    return buildReviewedEconomicDeploymentSupplyReview(fixedInput, assetId, profile);
+  }
   const representationGroupReview =
     buildRepresentationGroupSupplyReview(
       fixedInput,
@@ -597,8 +659,15 @@ export function buildSafetyScoreV9SupplyReview(
 
   const chainRows = safetyScoreV9ChainRows(fixedInput, assetId);
   const chains = Object.keys(chainRows).sort(compareText);
-  const totalUsd = chains.reduce((sum, chain) => sum + chainRows[chain]!.current, 0);
-  if (chains.length === 0 || totalUsd <= 0) return null;
+  const hasEconomicSupplyPlan = REVIEWED_ECONOMIC_SUPPLY_PLANS.has(assetId);
+  // The full census contract belongs to the reviewed economic-supply lane.
+  // Existing captured chain partitions retain their original reconciliation.
+  const totalUsd = hasEconomicSupplyPlan
+    ? getCirculatingRawOrNull(fixedInput.aggregateCirculatingById[assetId] ?? {})
+    : chains.reduce((sum, chain) => sum + chainRows[chain]!.current, 0);
+  if (chains.length === 0 || totalUsd === null || totalUsd <= 0 ||
+    (hasEconomicSupplyPlan && !hasCompleteEligibleProviderSupply(fixedInput, assetId, options.meta ?
+      { contracts: options.meta.contracts, bridgeRouteRisk: profile } : undefined))) return null;
 
   const routes = profile?.routes ?? [];
   if (chains.length > 1 && profile === undefined) return null;
@@ -662,8 +731,9 @@ export function buildSafetyScoreV9SupplyReview(
             supplyUsd,
             supplyShare: supplyUsd / totalUsd,
             reviewState: "selected-reviewed",
-            reviewedRouteKind:
-              route.routeClass === "native" || route.issuanceModel === "native-issuance" ? "native" : "controlled",
+            reviewedRouteKind: hasEconomicSupplyPlan
+              ? reviewedSupplyRouteKind(route, profile)
+              : route.routeClass === "native" || route.issuanceModel === "native-issuance" ? "native" : "controlled",
           }
         : {
             deploymentRouteKey: route.id,
@@ -690,13 +760,15 @@ export function buildSafetyScoreV9SupplyReview(
     (sum, route) => sum + (route.reviewState === "selected-reviewed" ? route.supplyUsd : 0),
     0,
   );
-  return finalizeSupplyReview({
+  const review = finalizeSupplyReview({
     selectedBridgeRoutes,
     selectedRouteSupplyShare: reviewedSelectedUsd / totalUsd,
     unknownRouteSupplyShare: unknownUsd / totalUsd,
     unreviewedRouteSupplyShare: unreviewedUsd / totalUsd,
     failureDomains,
   });
+  const exclusions = admittedProviderRowExclusions(fixedInput, assetId, review, profile);
+  return exclusions?.length ? { ...review, providerRowExclusions: exclusions } : review;
 }
 
 /** Supply share reconciled to one reviewed route row, for control materiality. */
@@ -704,4 +776,46 @@ export function safetyScoreV9RouteSupplyShare(review: SupplyReview | null, deplo
   if (review === null) return null;
   const route = review.selectedBridgeRoutes.find((candidate) => candidate.deploymentRouteKey === deploymentRouteKey);
   return route?.supplyShare ?? null;
+}
+
+function buildReviewedEconomicDeploymentSupplyReview(
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>, assetId: string, profile: BridgeRouteRiskProfile | undefined,
+): SupplyReview | null {
+  const packet = fixedInput.safetyScoreV9SupplyAttributionById?.[assetId];
+  if (packet?.model !== "reviewed-economic-deployment-partition-v1" || !profile || !packet.quantitativeCompleteness ||
+    packet.aggregate.supplyUsd <= 0 || reviewedEconomicDeploymentAttributionValidationError({
+      assetId, attribution: packet, aggregateSupplyUsd: getCirculatingRawOrNull(fixedInput.aggregateCirculatingById[assetId] ?? {}) ?? NaN,
+      clockSec: fixedInput.clockSec, registryFingerprint: fixedInput.registryFingerprint,
+      baseInputGenerationId: fixedInput.baseInputGenerationId, sourceGeneration: fixedInput.sourceGeneration,
+      aggregateObservedAtSec: fixedInput.aggregateCirculatingById[assetId]?.observedAtSec ?? null,
+      referencePrice: fixedInput.navPriceById?.[assetId] ?? null,
+      chainRows: fixedInput.chainCirculatingById[assetId],
+    }) !== null) return null;
+  const totalUsd = packet.aggregate.supplyUsd;
+  const selectedBridgeRoutes: SupplyReview["selectedBridgeRoutes"] = [];
+  const failureDomains: SupplyReview["failureDomains"] = [];
+  let selectedUsd = 0, unknownUsd = packet.unattributedSupplyUsd, unreviewedUsd = 0;
+  for (const row of packet.deployments) {
+    const route = row.routeId === null ? undefined : profile.routes?.find(route => route.id === row.routeId);
+    const key = route?.id ?? `unmatched-economic:${assetId}:${row.deploymentKey}`;
+    if (route?.reviewDisposition === "reviewed") {
+      selectedUsd += row.currentSupplyUsd;
+      selectedBridgeRoutes.push({ deploymentRouteKey: key, supplyUsd: row.currentSupplyUsd, supplyShare: row.currentSupplyUsd / totalUsd,
+        reviewState: "selected-reviewed", reviewedRouteKind: reviewedSupplyRouteKind(route, profile) });
+    } else if (route) {
+      unreviewedUsd += row.currentSupplyUsd;
+      selectedBridgeRoutes.push({ deploymentRouteKey: key, supplyUsd: row.currentSupplyUsd, supplyShare: row.currentSupplyUsd / totalUsd, reviewState: "selected-unresolved" });
+    } else {
+      unknownUsd += row.currentSupplyUsd;
+      selectedBridgeRoutes.push({ deploymentRouteKey: key, supplyUsd: row.currentSupplyUsd, supplyShare: row.currentSupplyUsd / totalUsd, reviewState: "unmatched" });
+    }
+    for (const domain of route?.failureDomainKeys?.length ? route.failureDomainKeys : [key]) failureDomains.push({ kind: "bridge-route", key: domain });
+  }
+  if (packet.unattributedSupplyUsd > 0) {
+    const key = `unmatched-economic:${assetId}:in-flight`;
+    selectedBridgeRoutes.push({ deploymentRouteKey: key, supplyUsd: packet.unattributedSupplyUsd, supplyShare: packet.unattributedSupplyUsd / totalUsd, reviewState: "unmatched" });
+    failureDomains.push({ kind: "bridge-route", key });
+  }
+  return finalizeSupplyReview({ selectedBridgeRoutes, selectedRouteSupplyShare: selectedUsd / totalUsd,
+    unknownRouteSupplyShare: unknownUsd / totalUsd, unreviewedRouteSupplyShare: unreviewedUsd / totalUsd, failureDomains });
 }

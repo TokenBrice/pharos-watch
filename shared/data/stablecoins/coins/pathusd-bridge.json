@@ -37,10 +37,10 @@
   },
   "proofOfReserves": {
     "type": "self-reported",
-    "url": "https://apidocs.bridge.xyz/platform/issuance/faq",
-    "provider": "Bridge issuance FAQ (no published pathUSD reserve report; the FAQ's quarterly audit statement is forward-looking only - same posture as the corrected usdsui-sui record)",
+    "url": "https://transparency.bridge.xyz/v0/stablecoins/path_usd",
+    "provider": "Bridge public pathUSD transparency API (issuer-reported circulating supply, reserve amounts and collateralization; no pathUSD-specific independent assurance report verified)",
     "attestorTier": "self",
-    "cadence": "none",
+    "cadence": "real-time",
     "attestorJurisdiction": "United States"
   },
   "links": [

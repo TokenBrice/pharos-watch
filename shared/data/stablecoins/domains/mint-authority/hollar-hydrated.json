@@ -39,8 +39,21 @@
         "directMintAbility": "cap-limited",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "HOLLAR mints only against overcollateralized positions on Hydration's Aave-v3-forked (GHO-style) money market, subject to a per-asset supply cap; the launch supply cap was 2,000,000 HOLLAR.",
-        "evidence": "HOLLAR mints only against overcollateralized positions on Hydration's Aave-v3-forked (GHO-style) money market pallet with a per-asset supply cap (launch cap 2,000,000 HOLLAR); Hydration governance can raise the cap, so the bound is raiseable. The Hydration EVM contract at 0x531a654d1696ed52e7275a8cede955e82620f99a carries full deployed GhoToken bytecode with role-based mint, burn, and grantRole selectors, not a two-byte pallet shim; DEFAULT_ADMIN_ROLE is held by pallet-derived address 0xaa7e0000000000000000000000000000000aa7e, so the runtime/OpenGov authority conclusion stands.",
+        "capDescription": "The Hydration Market facilitator 0x8c0f3b9602374198974d2b2679d14a386f5b108e has a 13,000,000 HOLLAR bucket capacity at Hydration block 15249643. The launch borrowing cap was 2,000,000 HOLLAR; the current token also lists HOLLAR Stability Module, HOLLAR FlashMinter, GIGAHDX and BIL facilitators, each with its own capacity.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 15249643,
+        "address": "0x8c0f3b9602374198974d2b2679d14a386f5b108e",
+        "sources": [
+          {
+            "label": "Official pinned GhoToken source",
+            "url": "https://github.com/galacticcouncil/hollar/blob/7bbf3e1dc03313db72c1ad488aaa56c55b6e299c/src/contracts/gho/GhoToken.sol"
+          },
+          {
+            "label": "Hydration public RPC",
+            "url": "https://rpc.hydradx.cloud"
+          }
+        ],
+        "evidence": "Pinned Hydration block 15249643 on 2026-10-01: getFacilitator labels this address Hydration Market; getFacilitatorBucket returns capacity 13000000e18. GhoToken.mint enforces each facilitator's bucketCapacity, while BUCKET_MANAGER_ROLE can change capacities. getFacilitatorsList returns five facilitators, so the money market is not the sole mint path. hasRole(DEFAULT_ADMIN_ROLE, 0xaa7e0000000000000000000000000000000aa7e0) returns true.",
         "failureDomainKeys": [
           "module:hydration:aave-money-market"
         ]
@@ -87,6 +100,114 @@
         "failureDomainKeys": [
           "governance:hydration:opengov-root-track"
         ]
+      },
+      {
+        "chain": "hydration",
+        "address": "0x6d6f646c70792f68736d6f640000000000000000",
+        "label": "HOLLAR Stability Module facilitator",
+        "role": "direct-minter",
+        "authorityType": "unknown",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "At Hydration block 15249643, getFacilitatorBucket returns an 18,000,000 HOLLAR capacity for this facilitator; its own capacity-management authority was not independently resolved.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 15249643,
+        "failureDomainKeys": [
+          "protocol:hydration:hollar-stability-module"
+        ],
+        "sources": [
+          {
+            "label": "Official pinned GhoToken source",
+            "url": "https://github.com/galacticcouncil/hollar/blob/7bbf3e1dc03313db72c1ad488aaa56c55b6e299c/src/contracts/gho/GhoToken.sol"
+          },
+          {
+            "label": "Hydration public RPC",
+            "url": "https://rpc.hydradx.cloud"
+          }
+        ],
+        "evidence": "Pinned token reads on 2026-10-01 label this registered facilitator HOLLAR Stability Module and establish its current bucket capacity. eth_getCode returns no EVM bytecode at this address; that does not prove EOA control of a runtime-native facilitator. Its controller type and protective controls remain unknown. The GhoToken source permits facilitator minting within its bucket; these observations do not establish the HSM asset allocation or full collateral denominator."
+      },
+      {
+        "chain": "hydration",
+        "address": "0xb3282db2fb01a9305b753ecca09bf68c45428cf4",
+        "label": "HOLLAR FlashMinter facilitator",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "At Hydration block 15249643, this facilitator has a 100,000 HOLLAR bucket capacity and zero bucket level; flash-loan enforcement and its own capacity-management authority were not independently re-audited.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 15249643,
+        "failureDomainKeys": [
+          "contract:hydration:0xb3282db2fb01a9305b753ecca09bf68c45428cf4"
+        ],
+        "sources": [
+          {
+            "label": "Official pinned GhoToken source",
+            "url": "https://github.com/galacticcouncil/hollar/blob/7bbf3e1dc03313db72c1ad488aaa56c55b6e299c/src/contracts/gho/GhoToken.sol"
+          },
+          {
+            "label": "Hydration public RPC",
+            "url": "https://rpc.hydradx.cloud"
+          }
+        ],
+        "evidence": "Pinned token reads on 2026-10-01 label this registered facilitator HOLLAR FlashMinter and return capacity 100000e18 and level zero. A zero observed level does not prove that it lacks native mint authority."
+      },
+      {
+        "chain": "hydration",
+        "address": "0x116d7bb8e4e2a4c932b4d36c115d4122dc360462",
+        "label": "GIGAHDX HOLLAR facilitator",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "At Hydration block 15249643, this registered facilitator has capacity and bucket level of 533,333 HOLLAR; its collateral-gating and administration were not independently resolved.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 15249643,
+        "failureDomainKeys": [
+          "contract:hydration:0x116d7bb8e4e2a4c932b4d36c115d4122dc360462"
+        ],
+        "sources": [
+          {
+            "label": "Official pinned GhoToken source",
+            "url": "https://github.com/galacticcouncil/hollar/blob/7bbf3e1dc03313db72c1ad488aaa56c55b6e299c/src/contracts/gho/GhoToken.sol"
+          },
+          {
+            "label": "Hydration public RPC",
+            "url": "https://rpc.hydradx.cloud"
+          }
+        ],
+        "evidence": "Pinned token reads on 2026-10-01 label this registered facilitator GIGAHDX and return capacity and level 533333e18. The bucket observation identifies a native mint path, not the assets backing its liabilities."
+      },
+      {
+        "chain": "hydration",
+        "address": "0xef313c2baf19ce58eeb6df9c82ae41c7387afe3e",
+        "label": "BIL HOLLAR facilitator",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "At Hydration block 15249643, this registered facilitator has a 950,000 HOLLAR bucket capacity; its collateral-gating and administration were not independently resolved.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 15249643,
+        "failureDomainKeys": [
+          "contract:hydration:0xef313c2baf19ce58eeb6df9c82ae41c7387afe3e"
+        ],
+        "sources": [
+          {
+            "label": "Official pinned GhoToken source",
+            "url": "https://github.com/galacticcouncil/hollar/blob/7bbf3e1dc03313db72c1ad488aaa56c55b6e299c/src/contracts/gho/GhoToken.sol"
+          },
+          {
+            "label": "Hydration public RPC",
+            "url": "https://rpc.hydradx.cloud"
+          }
+        ],
+        "evidence": "Pinned token reads on 2026-10-01 label this registered facilitator BIL and return capacity 950000e18. The full collateral and administrative path remains unverified; no stronger protective-control claim is made."
       }
     ],
     "economicCapSemantics": "raiseable",
@@ -106,7 +227,7 @@
           "url": "https://docs.hydration.net/quick_start/hollar/"
         }
       ],
-      "sourceFreeRationale": "Aave-v3/GHO fork mint model and Hydration governance confirmed from coverage and docs. Live read via Hydration EVM RPC (https://rpc.hydradx.cloud, block 14207306) showed HOLLAR at 0x531a654d1696ed52e7275a8cede955e82620f99a carries full deployed GhoToken bytecode with role-based mint, burn, and grantRole selectors; DEFAULT_ADMIN_ROLE is held by pallet-derived address 0xaa7e0000000000000000000000000000000aa7e. Hydration's pinned runtime source configures HSM AuthorityOrigin as Root, EconomicParameters, or GeneralAdmin; the runtime composes OpenGov Referenda and a root track, confirming the runtime/OpenGov governance path rather than an EVM admin key."
+      "sourceFreeRationale": "Aave-v3/GHO fork mint design is documented by Hydration. Pinned Hydration block 15249643 on 2026-10-01 confirms DEFAULT_ADMIN_ROLE at 0xaa7e0000000000000000000000000000000aa7e0 and five facilitator entries: Hydration Market, HOLLAR FlashMinter, HOLLAR Stability Module, GIGAHDX and BIL. The previously recorded admin address omitted its final zero. The historical pinned runtime source records HSM AuthorityOrigin as Root, EconomicParameters or GeneralAdmin and a root referendum track. Current state_getRuntimeVersion returns hydradx specVersion 447; this version observation does not independently bind the historical source commit to current runtime code."
     }
   }
 }

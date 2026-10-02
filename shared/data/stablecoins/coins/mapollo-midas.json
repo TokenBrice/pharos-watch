@@ -19,7 +19,30 @@
     "url": "https://midas.app/transparency",
     "provider": "Midas transparency dashboard and issuer disclosures",
     "attestorTier": "self",
-    "cadence": "daily-nav"
+    "cadence": "daily-nav",
+    "latestReport": {
+      "publishedAt": "2026-09-30",
+      "publishedAtBasis": "explicit",
+      "assuranceMethod": "self-verification",
+      "scope": "unknown",
+      "liabilityReconciliation": "unknown",
+      "reviewer": "Sol NR wave 2026-10-02 (VNrMapollo)",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "mAPOLLO issuer SAVE checkpoint: ops NAV, mainnet oracle and coverage ratio; anchored 30 September 2026",
+          "url": "https://gateway.pinata.cloud/ipfs/QmVfj3qbuQ1AZadurvy67MiEGTAFoVQh7pT2ta3E9rSNma"
+        },
+        {
+          "label": "Midas Prod Verifier checkpoint with the same public key as the issuer",
+          "url": "https://gateway.pinata.cloud/ipfs/QmSxU3S6mCsCM5rXHzDFtgXDhpvhjhDqkccE7AcFTcbLkC"
+        },
+        {
+          "label": "Midas SAVE registry on Ethereum: proofId 0x1b9375422132ca573ec8343d9828d51ad384bfe3ccb803b61afac74fb3c629be",
+          "url": "https://etherscan.io/address/0x2D6e9F608807436DE5D9603B00Abe3FEd1Bc809d"
+        }
+      ]
+    }
   },
   "links": [
     {
@@ -42,7 +65,7 @@
   "jurisdiction": {
     "country": "Germany",
     "regulator": "Liechtenstein FMA (prospectus-approving authority only; issuer not FMA-licensed)",
-    "license": "EU-Prospectus-Regulation-approved tokenized debt instrument (blockchain-based certificate under German law); EEA-restricted, not available to U.S. retail persons"
+    "license": "Swiss-law ledger-based security (Registerwertrecht under article 973d of the Swiss Code of Obligations); prospectus approval is not issuer authorization"
   },
   "contracts": [
     {
@@ -97,13 +120,13 @@
   "launchDate": "2025-07-15",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex ARCH curation",
-    "rationale": "Midas's signed mAPOLLO final terms define the underlying as a crypto-denominated stablecoin-yield strategy that dynamically allocates to market-neutral opportunities across spot, lending, arbitrage, derivatives, and token rewards. That market-neutral mandate fits the synthetic-delta-neutral archetype.",
+    "reviewedAt": "2026-07-17",
+    "reviewer": "Sol NR wave 2026-10-02 (NrMapollo)",
+    "rationale": "The signed Final Terms dated 17 July 2026 identify ACM International Ltd as mAPOLLO's reference-portfolio manager and require the portfolio to remain delta-neutral. Permitted strategies include basis trading, market making, decentralized and centralized yield generation, and derivatives, with gross leverage capped at 8.0x. This supports the synthetic-delta-neutral archetype; the mandate does not establish observed hedge coverage or current reserve composition.",
     "sources": [
       {
-        "label": "Midas mAPOLLO final terms",
-        "url": "https://docs.midas.app/resources/legal-documents/prospectus-documents"
+        "label": "Signed mAPOLLO Final Terms dated 17 July 2026: manager, delta-neutral mandate and investment rules",
+        "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2F7sSYvDMJYrWvBsvKGQFI%2F20260714_mAPOLLO_FT_signed_final.pdf?alt=media"
       }
     ]
   }

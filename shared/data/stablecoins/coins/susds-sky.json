@@ -58,7 +58,7 @@
     }
   ],
   "collateralQuality": "rwa",
-  "custodyModel": "institutional-top",
+  "custodyModel": "onchain",
   "governanceQuality": "wrapper",
   "yieldConfig": {
     "yieldSource": "Sky Savings Rate (sUSDS)",
@@ -90,5 +90,5 @@
       }
     }
   },
-  "launchDate": "2024-09-18"
+  "launchDate": "2024-09-17"
 }

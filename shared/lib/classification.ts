@@ -1,4 +1,4 @@
-import type { DependencyType, GovernanceType, PegCurrency, ResearchReviewConfidence } from "../types";
+import type { CustodyModel, DependencyType, GovernanceType, MechanismArchetype, PegCurrency, ResearchReviewConfidence } from "../types";
 import type { V9DependencyEconomicRole } from "../types/dependency-types";
 import type { V9FailureDomainRef } from "../types/safety-score-v9-fact-primitives";
 import type { ContagionShock } from "../types/contagion";
@@ -15,12 +15,105 @@ export * from "./classification/risk";
 export * from "./classification/liquidity-concentration";
 export * from "./classification/control-posture";
 export * from "./classification/grades";
-export * from "./classification/mechanism-archetypes";
 export * from "./classification/resolve-mechanism-archetype";
 export * from "./classification/resolve-implementation-launch-date";
 export type { BadgeStyle } from "./classification/common";
 
 export const HERO_CHIP_PEG_LABELS = PEG_HERO_CHIP_LABELS;
+/** Reserve-access diagnostics never describe local holder-transfer restrictions. */
+export const ACCESS_LOOKTHROUGH_COVERAGE_LABELS: Record<string, string> = {
+  complete: "Complete reviewed reserve-access coverage (diagnostic)",
+  incomplete: "Incomplete reserve-access coverage (diagnostic)",
+};
+export const ACCESS_LOOKTHROUGH_CAPABILITY_LABELS: Record<string, string> = {
+  freeze: "Reserve freeze", seize: "Reserve seizure", pause: "Claim pause",
+};
+export const ACCESS_LOOKTHROUGH_REASON_LABELS: Record<string, string> = {
+  "issuer-undisclosed": "Issuer has not disclosed this branch",
+  "research-incomplete": "Access research incomplete",
+  "producer-missing": "Current observation unavailable",
+  "identity-unverified": "Exact claim identity unverified",
+  "scope-unreconciled": "Reserve-access scope unreconciled",
+  stale: "Review or composition stale",
+  "future-dated": "Review later than evaluation clock",
+  cycle: "Cyclic claim path",
+  overlap: "Position overlap unproven",
+  "deployment-mismatch": "Authority acts on another deployment",
+  "claim-inapplicable": "Current claim reach not admitted",
+};
+
+const MECHANISM_ARCHETYPE_DESCRIPTORS = {
+  "fiat-cash": { label: "Custodial Cash and Cash-Equivalents", shortLabel: "Custodial Cash", ctaNoun: "fiat-backed",
+    oneLiner: "Centralized issuers custody dollars in bank accounts and short-term Treasuries; tokens are minted and redeemed on demand.",
+  },
+  tbill: { label: "Tokenized Treasury", shortLabel: "Tokenized Treasury", ctaNoun: "tokenized Treasury",
+    oneLiner: "Regulated funds hold short-duration Treasuries; the token is a fund share that accretes NAV instead of trading exactly at $1.",
+  },
+  cdp: { label: "Crypto-Collateralized (CDP)", shortLabel: "Crypto CDP", ctaNoun: "CDP",
+    oneLiner: "Overcollateralized vaults issue stablecoin debt; positions liquidate when collateral falls below a safety ratio.",
+  },
+  "synthetic-delta-neutral": { label: "Hedged Synthetic Dollar", shortLabel: "Hedged Synthetic", ctaNoun: "delta-neutral",
+    oneLiner: "Offsetting economic exposures target a stable net value; implementations range from spot-plus-perp hedges to on-chain lending with matched borrow-and-stake legs.",
+  },
+  algorithmic: { label: "Reflexive / Unbacked", shortLabel: "Reflexive / Unbacked", ctaNoun: "algorithmic",
+    oneLiner: "The peg is held by protocol-level mint/burn rules and arbitrage incentives rather than by 1:1 reserves.",
+  },
+  "rwa-credit-fund": { label: "Tokenized Credit Fund", shortLabel: "Credit Fund", ctaNoun: "credit-fund",
+    oneLiner: "Regulated funds hold private credit, CLO tranches, or other non-Treasury debt; the token is a fund share whose NAV reflects credit losses and quarterly redemption gates.",
+  },
+  "commodity-claim": { label: "Allocated Commodity Claim", shortLabel: "Commodity Claim", ctaNoun: "commodity-backed",
+    oneLiner: "The token is a title claim on specific vaulted metal rather than on dollars; it tracks the commodity price and can usually be redeemed for physical delivery in whole-bar lots.",
+  },
+  "ucits-trs-fund": { label: "UCITS Physical Securities and TRS Fund", shortLabel: "UCITS / TRS Fund", ctaNoun: "UCITS / TRS fund",
+    oneLiner: "The token represents a proportional fund interest; physical securities and total-return swaps target the share class's return, with separate NAV, counterparty and recovery risks.",
+  },
+  "shared-reserve": { label: "Shared Reserve Liability", shortLabel: "Shared Reserve", ctaNoun: "shared-reserve",
+    oneLiner: "Several protocol-issued liabilities draw on one reserve pool; exchange rights do not establish exclusive allocation, legal priority or complete liability coverage.",
+  },
+  "protocol-position": { label: "Protocol Position Liability", shortLabel: "Protocol Position", ctaNoun: "protocol-position",
+    oneLiner: "Protocol-issued tokens rely on bridge, vault or module positions; the local claim and position continuity remain distinct from the underlying assets' backing.",
+  },
+};
+
+export const MECHANISM_ARCHETYPE_LABELS: Record<MechanismArchetype, string> =
+  projectDescriptors(MECHANISM_ARCHETYPE_DESCRIPTORS, (descriptor) => descriptor.label);
+
+/** Chip-length names for dense surfaces; values must fit pills without truncation. */
+export const MECHANISM_ARCHETYPE_SHORT_LABELS: Record<MechanismArchetype, string> =
+  projectDescriptors(MECHANISM_ARCHETYPE_DESCRIPTORS, (descriptor) => descriptor.shortLabel);
+
+const MECHANISM_ARCHETYPE_CTA_NOUNS: Record<MechanismArchetype, string> =
+  projectDescriptors(MECHANISM_ARCHETYPE_DESCRIPTORS, (descriptor) => descriptor.ctaNoun);
+
+export const MECHANISM_ARCHETYPE_ONE_LINERS: Record<MechanismArchetype, string> =
+  projectDescriptors(MECHANISM_ARCHETYPE_DESCRIPTORS, (descriptor) => descriptor.oneLiner);
+
+export function getMechanismArchetypeLabel(value: MechanismArchetype): string {
+  return MECHANISM_ARCHETYPE_LABELS[value];
+}
+
+export function getMechanismArchetypeCtaNoun(value: MechanismArchetype): string {
+  return MECHANISM_ARCHETYPE_CTA_NOUNS[value];
+}
+
+export function getMechanismArchetypeOneLiner(value: MechanismArchetype): string {
+  return MECHANISM_ARCHETYPE_ONE_LINERS[value];
+}
+
+export function getMechanismExplainerPath(value: MechanismArchetype): string {
+  return `/learn/mechanisms/${value}/`;
+}
+
+export const CUSTODY_MODEL_LABELS: Readonly<Record<CustodyModel, string>> = {
+  onchain: "On-chain",
+  "institutional-top": "Top-tier institution",
+  "institutional-regulated": "Regulated institution",
+  "institutional-unregulated": "Unregulated institution",
+  "institutional-sanctioned": "Sanctioned institution",
+  cex: "Exchange",
+  mixed: "Mixed custody",
+  unknown: "Unknown custody",
+};
 
 export const RESEARCH_REVIEW_CONFIDENCE_LABELS: Readonly<Record<ResearchReviewConfidence, string>> = {
   verified: "Verified",

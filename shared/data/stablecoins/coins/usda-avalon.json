@@ -7,8 +7,8 @@
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
   },
-  "collateral": "FBTC (tokenized BTC, Cobo-custodied) deposited as overcollateralized CDP; USDT/USDC can be deposited 1:1 (exempt from liquidation); protocol assets held with Cobo, Fireblocks, and Coinbase Prime custody and backed by multi-billion-dollar institutional balance sheets",
-  "pegMechanism": "1:1 USDT convertibility (redemptions require loan repayment or conversion to USDT); overcollateralized against FBTC priced by Redstone oracle; HFT liquidation algorithm sells collateral on centralized exchanges to restore target LTV; cross-chain via LayerZero OFT",
+  "collateral": "FBTC collateralized borrowing and 1:1 USDT minting; the USDa risk table also lists USDC and USDT at 100% maximum LTV with no liquidation. Avalon names Cobo, Fireblocks, and Coinbase Prime as custody solution providers and describes institutional balance-sheet access as a lending capital source. The reviewed disclosures do not quantify USDa reserve composition or establish an institutional guarantee of its liabilities.",
+  "pegMechanism": "The issuer documents 1:1 conversion to USDT through its Ethereum mainnet conversion vault, with USDT claimable in one business day; withdrawing all CDP collateral requires repayment of principal and interest; FBTC collateral is priced by RedStone and liquidated on centralized exchanges to restore target LTV; cross-chain transfers use LayerZero OFT",
   "mechanismArchetype": "cdp",
   "llamaId": "220",
   "detailProvider": "defillama",

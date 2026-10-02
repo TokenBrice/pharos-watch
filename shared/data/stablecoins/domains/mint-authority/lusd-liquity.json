@@ -34,6 +34,8 @@
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "BorrowerOperations opens and adjusts Troves; LUSD issuance is bounded by user collateralization and Liquity protocol rules.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095801,
         "sources": [
           {
             "label": "Liquity v1 resources",
@@ -44,7 +46,7 @@
             "url": "https://etherscan.io/address/0x5f98805A4E8be255a32880FDeC7F6728C6568bA0#code"
           }
         ],
-        "evidence": "Liquity v1 resources list BorrowerOperations at this address; minting occurs through Trove borrowing rather than privileged issuer operations."
+        "evidence": "At Ethereum block 26095801, LUSD.borrowerOperationsAddress() returned this address; owner() returned zero and the EIP-1967 implementation, admin and beacon slots were zero. Liquity V1 documentation identifies this immutable ETH-Trove borrowing path."
       },
       {
         "chain": "ethereum",
@@ -59,13 +61,15 @@
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "TroveManager enforces Trove state, liquidations, redemptions, and debt accounting for the immutable LUSD system.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095801,
         "sources": [
           {
             "label": "Liquity v1 resources",
             "url": "https://docs.liquity.org/liquity-v1/documentation/resources"
           }
         ],
-        "evidence": "Liquity v1 resources list TroveManager at this address as the core Trove accounting contract."
+        "evidence": "At Ethereum block 26095801, LUSD.troveManagerAddress() returned this address; owner() returned zero and the EIP-1967 implementation, admin and beacon slots were zero. Liquity V1 resources identify it as the core Trove accounting contract."
       }
     ],
     "economicCapSemantics": "bounded",

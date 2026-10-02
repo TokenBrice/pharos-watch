@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "wiTRY is Brix's yield-bearing staking wrapper over iTRY. The wiTRY wrapper owner and the underlying iTRY token owner are both Gnosis Safe v1.3.0 L2 multisigs (3-of-5 threshold, no modules, no guard) sharing the same 5 signers, confirming issuer-controlled mint authority.",
+    "summary": "wiTRY is Brix's yield-bearing staking wrapper over iTRY. At Ethereum block 26095937, the wrapper owner is contract 0x15bf1ac31c5b8c0e0960d656de02ba5593b19c47, whose owner is Brix Safe 0x7ac3bb10225a4ef27134bcf54454d545a1738662. The underlying iTRY owner remains Safe 0xbdb430adf64ff1c8201c10221ddb846fa62613b6. Both terminal Safes remain 3-of-5 with the same signer set. The wrapper's immediate owner is therefore not the Safe itself; issuer control remains concentrated through the intermediate contract.",
     "upgradeability": {
       "model": "custom",
       "deploymentRefs": [
@@ -45,7 +45,7 @@
     },
     "controls": [
       {
-        "label": "wiTRY staking wrapper owner (Brix Safe 3/5)",
+        "label": "wiTRY wrapper controller owner (Brix Safe 3/5)",
         "role": "minter-admin",
         "authorityType": "safe",
         "directMintAbility": "can-authorize",
@@ -56,6 +56,8 @@
         ],
         "threshold": 3,
         "signerCount": 5,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095937,
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
@@ -69,9 +71,10 @@
           "threshold": 3,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "fallbackHandler": null,
-          "version": "1.3.0 L2",
-          "observedBlock": 25295016,
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "version": "1.4.1",
+          "observedAt": "2026-10-01",
+          "observedBlock": 26095937,
           "source": "onchain"
         },
         "sources": [
@@ -80,7 +83,7 @@
             "url": "https://brix.money/itry"
           }
         ],
-        "evidence": "At Ethereum block 25295016: owner() on wiTRY (0xe346c29b5b60ef870b9724c57ccfbbc631e47dee) returned 0x7ac3bb10225a4ef27134bcf54454d545a1738662. masterCopy() = 0x41675c099f32341bf84bfc5382af534df5c7461a (Gnosis Safe v1.3.0 L2). getOwners() returned 5 signers. getThreshold() = 3. getModulesPaginated returned empty array. guard slot = 0x0 (no guard)."
+        "evidence": "At Ethereum block 25295016, wiTRY owner() returned Safe 0x7ac3bb10225a4ef27134bcf54454d545a1738662. At block 26095937 on 2026-10-01, wiTRY owner() instead returned contract 0x15bf1ac31c5b8c0e0960d656de02ba5593b19c47, whose owner() returned the same Brix Safe. Pinned Safe getOwners()/getThreshold() confirmed the recorded five signers and threshold 3; getModulesPaginated() returned an empty list with sentinel next pointer, the guard-manager slot was zero, VERSION() returned 1.4.1, and the fallback-handler slot returned 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99."
       },
       {
         "label": "iTRY underlying token owner (Brix Safe 3/5)",
@@ -94,6 +97,8 @@
         ],
         "threshold": 3,
         "signerCount": 5,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095937,
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
@@ -107,9 +112,10 @@
           "threshold": 3,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "fallbackHandler": null,
-          "version": "1.3.0 L2",
-          "observedBlock": 25295016,
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "version": "1.4.1",
+          "observedAt": "2026-10-01",
+          "observedBlock": 26095937,
           "source": "onchain"
         },
         "sources": [
@@ -118,7 +124,7 @@
             "url": "https://brix.money/itry"
           }
         ],
-        "evidence": "At Ethereum block 25295016: iTRY token at 0xb492b4afd9658093694cf9452d5c272e8230f3b0; owner() = 0xbdb430adf64ff1c8201c10221ddb846fa62613b6. masterCopy() = 0x41675c099f32341bf84bfc5382af534df5c7461a (Gnosis Safe v1.3.0 L2). getOwners() returned same 5 signers as wiTRY owner, threshold = 3. These Safe contracts share the same signer set confirming unified Brix issuer control."
+        "evidence": "Historical Ethereum block 25295016 identified iTRY owner Safe 0xbdb430adf64ff1c8201c10221ddb846fa62613b6 and its five signers with threshold 3. At block 26095937 on 2026-10-01, owner(), getOwners() and getThreshold() confirmed the same owner and signer set. getModulesPaginated() returned an empty list with sentinel next pointer, the guard-manager slot was zero, VERSION() returned 1.4.1, and the fallback-handler slot returned 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. Both terminal Safes still share the same signer set."
       }
     ],
     "economicCapSemantics": "unbounded",

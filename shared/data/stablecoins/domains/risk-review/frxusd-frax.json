@@ -800,7 +800,7 @@
           },
           {
             "label": "Frax frxUSD Fraxtal contract source",
-            "url": "https://github.com/FraxFinance/frax-tokens/blob/main/src/contracts/fraxtal/frxUSD/versioning/FrxUSD2.sol"
+            "url": "https://github.com/FraxFinance/frax-tokens/blob/master/src/contracts/fraxtal/frxUSD/versioning/FrxUSD2.sol"
           },
           {
             "label": "Fraxtal RPC",
@@ -994,6 +994,191 @@
             "url": "https://explore.tempo.xyz/token/0x20c0000000000000000000003554d28269e0f3c2"
           }
         ]
+      },
+      {
+        "id": "abstract:0xea77c590bb36c43ef7139ce649cfbcfd6163170d",
+        "destinationChain": "abstract",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xea77c590bb36c43ef7139ce649cfbcfd6163170d",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Pinned Abstract block 86415360: Frax USD/frxUSD, 18 decimals, OFT version 1.1.0, LayerZero endpoint 0x5c6cff4b7c49805f8295ff73c204ac83f3bc4ae7 and Fraxtal peer 0x96a394058e2b84a89bac9667b19661ed003cf5d4. EIP-1967 implementation 0x2587068f36f0fdfe8f014dab0f96104e6901ce49 and ProxyAdmin 0xe59dcae52a4ffa39be99588486c84bc2dc1ba52f; token owner and ProxyAdmin owner are the same 3-of-6 Safe. This is OFT representation issuance, not native custodian minting.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "abstract",
+        "controllerAddress": "0xcc20eae3cdc554e96291708b362df349cc443808",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:abstract:0xcc20eae3cdc554e96291708b362df349cc443808"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 86415360,
+        "sources": [
+          {
+            "label": "Issuer frxUSD deployment census",
+            "url": "https://docs.frax.com/frxusd/frxusd-contracts"
+          },
+          {
+            "label": "Issuer OFT and ProxyAdmin architecture",
+            "url": "https://docs.frax.com/protocol/crosschain/addresses"
+          },
+          {
+            "label": "Pinned Abstract RPC",
+            "url": "https://api.mainnet.abs.xyz"
+          }
+        ]
+      },
+      {
+        "id": "monad:0x58e3ee6accd124642ddb5d3f91928816be8d8ed3",
+        "destinationChain": "monad",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x58e3ee6accd124642ddb5d3f91928816be8d8ed3",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Pinned Monad block 109749485: Frax USD/frxUSD, 18 decimals, OFT version 1.1.0, endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b and Fraxtal peer 0x96a394058e2b84a89bac9667b19661ed003cf5d4. EIP-1967 implementation 0x50acd23158037e52df765557c4c1d21d67a9fba1 and ProxyAdmin 0xc2871eae630640ce1a16b39a17c498f22d76c21a; both token and ProxyAdmin are owned by the same 3-of-6 Safe. The issuer's exact Monad address differs from its semi-deterministic OFT address.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "monad",
+        "controllerAddress": "0x47ff5bbab981ff022743aa4281d4d6dd7fb1a4d0",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:monad:0x47ff5bbab981ff022743aa4281d4d6dd7fb1a4d0"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 109749485,
+        "sources": [
+          {
+            "label": "Issuer frxUSD deployment census",
+            "url": "https://docs.frax.com/frxusd/frxusd-contracts"
+          },
+          {
+            "label": "Issuer OFT and ProxyAdmin architecture",
+            "url": "https://docs.frax.com/protocol/crosschain/addresses"
+          },
+          {
+            "label": "Pinned Monad RPC",
+            "url": "https://api-monad-mainnet-full.n.dwellir.com"
+          }
+        ]
+      },
+      {
+        "id": "stable:0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "destinationChain": "stable",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Pinned Stable block 41488307: Frax USD/frxUSD, 18 decimals, OFT version 1.1.0, endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b and Fraxtal peer 0x96a394058e2b84a89bac9667b19661ed003cf5d4. EIP-1967 implementation 0x6a678cefca10d5bbe4638d27c671ce7d56865037 and ProxyAdmin 0x223a681fc5c5522c85c96157c0efa18cd6c5405c; token and ProxyAdmin share the 3-of-6 Frax Stable Safe. Minting is the OFT representation path, not native reserve issuance.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "stable",
+        "controllerAddress": "0x0c46f54bf9ef8fd58e2d294b8cea488204ecb3d8",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:stable:0x0c46f54bf9ef8fd58e2d294b8cea488204ecb3d8"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 41488307,
+        "sources": [
+          {
+            "label": "Issuer frxUSD deployment census",
+            "url": "https://docs.frax.com/frxusd/frxusd-contracts"
+          },
+          {
+            "label": "Issuer OFT and ProxyAdmin architecture",
+            "url": "https://docs.frax.com/protocol/crosschain/addresses"
+          },
+          {
+            "label": "Pinned Stable RPC",
+            "url": "https://api-stable-mainnet.n.dwellir.com"
+          }
+        ]
+      },
+      {
+        "id": "worldchain:0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "destinationChain": "worldchain",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Pinned World Chain block 35782393: Frax USD/frxUSD, 18 decimals, OFT version 1.1.0, endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b and Fraxtal peer 0x96a394058e2b84a89bac9667b19661ed003cf5d4. EIP-1967 implementation 0x6c7484758a2e972e06f01495050c795bee7a997b and ProxyAdmin 0x223a681fc5c5522c85c96157c0efa18cd6c5405c; their owner is the same 3-of-6 Safe. Issuer upgrade broadcast identifies this exact implementation as FrxUSDOFTUpgradeable.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "worldchain",
+        "controllerAddress": "0xf57d47c3ea11c12253dbc0beaf097d5c206e8773",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:worldchain:0xf57d47c3ea11c12253dbc0beaf097d5c206e8773"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 35782393,
+        "sources": [
+          {
+            "label": "Issuer frxUSD deployment census",
+            "url": "https://docs.frax.com/frxusd/frxusd-contracts"
+          },
+          {
+            "label": "Issuer OFT and ProxyAdmin architecture",
+            "url": "https://docs.frax.com/protocol/crosschain/addresses"
+          },
+          {
+            "label": "Pinned World Chain RPC",
+            "url": "https://api-worldchain-mainnet.n.dwellir.com"
+          }
+        ]
+      },
+      {
+        "id": "hyperevm:0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "destinationChain": "hyperevm",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Pinned HyperEVM block 47421301 on chain 999: Frax USD/frxUSD, 18 decimals, OFT version 1.1.0, endpoint 0x3a73033c0b1407574c76bdbac67f126f6b4a9aa9 and Fraxtal peer 0x96a394058e2b84a89bac9667b19661ed003cf5d4. EIP-1967 implementation 0x231788c09f3936cd343c4f1bded89f0fbe80719c and ProxyAdmin 0x223a681fc5c5522c85c96157c0efa18cd6c5405c share the 3-of-6 HyperEVM Safe owner. The provider uses its hyperliquid EVM adapter for this ERC-20; the captured Hyperliquid L1 label is not proof of a HyperCore token deployment and must not be joined to the non-EVM hyperliquid chain identity.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0x738ee62157f127c879ff5c4b7102eb0d166c7a6d",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:hyperevm:0x738ee62157f127c879ff5c4b7102eb0d166c7a6d"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 47421301,
+        "sources": [
+          {
+            "label": "Issuer frxUSD deployment census",
+            "url": "https://docs.frax.com/frxusd/frxusd-contracts"
+          },
+          {
+            "label": "Provider exact EVM token read",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/frax-usd/index.ts"
+          },
+          {
+            "label": "Pinned HyperEVM RPC",
+            "url": "https://api-hyperliquid-mainnet-evm.n.dwellir.com"
+          }
+        ]
       }
     ],
     "controls": [
@@ -1070,11 +1255,12 @@
         ],
         "routeChecks": {
           "lockboxOrEscrow": "Frax's Fraxtal transfer guide identifies this Ethereum contract as the canonical-side lockbox used by the Fraxtal route; it is bridge escrow/mint/burn machinery, not native frxUSD issuance authority.",
-          "trustedPeerOrRemote": "The lockbox's trusted peer, endpoint ID, and messaging configuration were not independently decoded.",
+          "trustedPeerOrRemote": "At Ethereum block 26095811, endpoint() returned LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c and token() returned canonical frxUSD. Trusted peers, DVNs, and enforced options remain unresolved.",
           "rateLimits": "The lockbox's rate-limit and supply-accounting configuration were not independently decoded.",
-          "pausersAdminsUpgraders": "The lockbox owner/admin, pause, and upgrade controls were not independently decoded; no governance or delay is inferred."
+          "pausersAdminsUpgraders": "At Ethereum block 26095811, owner() returned the frxUSD 4-of-7 Safe; EIP-1967 admin 0x223a681fc5c5522c85c96157c0efa18cd6c5405c returned owner() = the frxUSD upgrade timelock. That timelock returned delay() = 86400 and the same Safe as admin. Pause configuration remains unresolved."
         },
-        "observedAt": "2026-08-16",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095811,
         "sources": [
           {
             "label": "Transfer frxUSD with Fraxtal (lockbox hub)",
@@ -1085,7 +1271,7 @@
             "url": "https://docs.frax.com/frxusd/frxusd-contracts"
           }
         ],
-        "evidence": "Frax's published Fraxtal transfer flow names 0x566a6442a5a6e9895b9dca97cc7879d632c6e4b0 as the Ethereum-side lockbox for the canonical route. This row preserves the adverse bridge dependency while leaving its controller, upgrade, peer, and limit configuration unresolved."
+        "evidence": "At pinned Ethereum block 26095811 on 2026-10-01, owner() returned 0xffffff4f3bac444b2c0ecf2a1840d018be783937, endpoint() returned 0x1a44076050125825900e736c501f859c50fe728c, and token() returned canonical frxUSD 0xcacd6fd266af91b8aed52accc382b4e165586e29. Correct EIP-1967 slots returned implementation 0x175e4b98075c81511e476c0c5446dda95d9106c8 and admin 0x223a681fc5c5522c85c96157c0efa18cd6c5405c. ProxyAdmin owner() returned timelock 0xb898ad2976b4d8f2e21521c9db16b7497825e503; its delay() was 86400 and admin() was the same 4-of-7 Safe. Peers, limits, and pause configuration remain unresolved."
       },
       {
         "id": "fraxtal-frxusd-lockbox",
@@ -1109,12 +1295,12 @@
         ],
         "routeChecks": {
           "lockboxOrEscrow": "Frax's Fraxtal transfer guide identifies this Fraxtal contract as the canonical-side lockbox; at block 40053263 the native token's minters(lockbox) mapping returned true, so it can use the token's minter_mint() bridge path.",
-          "trustedPeerOrRemote": "The lockbox's trusted peer, endpoint ID, and messaging configuration were not independently decoded.",
+          "trustedPeerOrRemote": "At Fraxtal block 42013517, endpoint() returned LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c and token() returned native frxUSD. Trusted peers, DVNs, and enforced options remain unresolved.",
           "rateLimits": "The lockbox's rate-limit and supply-accounting configuration were not independently decoded.",
-          "pausersAdminsUpgraders": "The lockbox owner/admin, pause, and upgrade controls were not independently decoded; no governance or delay is inferred."
+          "pausersAdminsUpgraders": "At Fraxtal block 42013517, owner() returned 0x5f25218ed9474b721d6a38c115107428e832fa2e; EIP-1967 admin 0x223a681fc5c5522c85c96157c0efa18cd6c5405c returned owner() = 0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6. Effective upgrade delay and pause configuration remain unresolved."
         },
-        "observedAt": "2026-08-16",
-        "observedBlock": 40053263,
+        "observedAt": "2026-10-01",
+        "observedBlock": 42013517,
         "sources": [
           {
             "label": "Transfer frxUSD with Fraxtal (lockbox hub)",
@@ -1122,14 +1308,14 @@
           },
           {
             "label": "Frax frxUSD Fraxtal contract source",
-            "url": "https://github.com/FraxFinance/frax-tokens/blob/main/src/contracts/fraxtal/shared/ERC20PermitPermissionedOptiMintable.sol"
+            "url": "https://github.com/FraxFinance/frax-tokens/blob/master/src/contracts/fraxtal/shared/ERC20PermitPermissionedOptiMintable.sol"
           },
           {
             "label": "Fraxtal RPC",
             "url": "https://rpc.frax.com"
           }
         ],
-        "evidence": "Frax's published transfer flow names 0x96a394058e2b84a89bac9667b19661ed003cf5d4 as the Fraxtal-side lockbox. At Fraxtal block 40053263, minters(0x96a394058e2b84a89bac9667b19661ed003cf5d4) returned true on native frxUSD, confirming a bridge-capable mint path; lockbox governance, upgrade, peer, and limit state remains unresolved."
+        "evidence": "At pinned Fraxtal block 42013517 on 2026-10-01, native-token minters(lockbox) returned true. Lockbox owner() returned 0x5f25218ed9474b721d6a38c115107428e832fa2e, endpoint() returned 0x1a44076050125825900e736c501f859c50fe728c, and token() returned 0xfc00000000000000000000000000000000000001. Correct EIP-1967 slots returned implementation 0x8861ab8683cfd1fcc84327415888b870ab144f51 and admin 0x223a681fc5c5522c85c96157c0efa18cd6c5405c. ProxyAdmin owner() returned 0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6. Effective upgrade delay, peers, limits, and pause configuration remain unresolved."
       },
       {
         "id": "fraxtal-l2-standard-bridge",
@@ -1153,10 +1339,10 @@
           "lockboxOrEscrow": "The native frxUSD source defines an immutable BRIDGE() and the fixed-block read returned this Fraxtal L2 StandardBridge address; it can call the token's bridge mint/burn path but is not a native minter_mint() authority.",
           "trustedPeerOrRemote": "The bridge's cross-domain messenger and remote peer configuration were not independently decoded.",
           "rateLimits": "The bridge's rate limits and supply-accounting configuration were not independently decoded.",
-          "pausersAdminsUpgraders": "The bridge's owner/admin, pause, and upgrade controls were not independently decoded; no governance or delay is inferred."
+          "pausersAdminsUpgraders": "At Fraxtal block 42013517, EIP-1967 implementation was 0xf2c542d2f6bb8203bf0f1dc52b09f66a7a1a749c and admin was 0x4200000000000000000000000000000000000018; that ProxyAdmin owner() returned 0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6. Effective upgrade delay and pause configuration remain unresolved."
         },
-        "observedAt": "2026-08-16",
-        "observedBlock": 40053263,
+        "observedAt": "2026-10-01",
+        "observedBlock": 42013517,
         "sources": [
           {
             "label": "Fraxtal contract addresses",
@@ -1164,14 +1350,299 @@
           },
           {
             "label": "Permissioned OptiMintable source",
-            "url": "https://github.com/FraxFinance/frax-tokens/blob/main/src/contracts/fraxtal/shared/ERC20PermitPermissionedOptiMintable.sol"
+            "url": "https://github.com/FraxFinance/frax-tokens/blob/master/src/contracts/fraxtal/shared/ERC20PermitPermissionedOptiMintable.sol"
           },
           {
             "label": "Fraxtal RPC",
             "url": "https://rpc.frax.com"
           }
         ],
-        "evidence": "At Fraxtal block 40053263, BRIDGE() on native frxUSD returned 0x4200000000000000000000000000000000000010. The source separates this immutable bridge mint/burn path from owner-controlled minter_mint(); its messenger, limits, admin, and upgrade configuration remain unresolved."
+        "evidence": "At pinned Fraxtal block 42013517 on 2026-10-01, BRIDGE() on native frxUSD returned 0x4200000000000000000000000000000000000010. Correct EIP-1967 slots on that bridge returned implementation 0xf2c542d2f6bb8203bf0f1dc52b09f66a7a1a749c and admin 0x4200000000000000000000000000000000000018. ProxyAdmin owner() returned 0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6. The historical reviewed source separates this bridge path from owner-controlled minter_mint(); messenger, limits, and effective upgrade delay remain unresolved."
+      },
+      {
+        "id": "abstract-frxusd-oft-admin",
+        "label": "Abstract frxUSD OFT and ProxyAdmin owner Safe",
+        "routeRefs": [
+          "abstract:0xea77c590bb36c43ef7139ce649cfbcfd6163170d"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "abstract",
+        "controllerAddress": "0xcc20eae3cdc554e96291708b362df349cc443808",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "moduleGuard": null,
+          "fallbackHandler": "0x2f870a80647bbc554f3a0ebd093f11b4d2a7492a",
+          "observedBlock": 86415360,
+          "observedAt": "2026-10-02",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:abstract:0xcc20eae3cdc554e96291708b362df349cc443808"
+        ],
+        "canRaiseCap": true,
+        "routeChecks": {
+          "trustedPeerOrRemote": "peers(30255) returned Fraxtal lockbox 0x96a394058e2b84a89bac9667b19661ed003cf5d4; peers(30101) was zero. The reviewed path uses the Fraxtal hub, not a direct Ethereum peer.",
+          "pausersAdminsUpgraders": "Token owner() and EIP-1967 ProxyAdmin owner() returned this 3-of-6 Safe at the same pinned block. getModulesPaginated returned an empty module list with terminal sentinel; guard and module-guard slots were zero.",
+          "rateLimits": "No rate-limit or DVN certificate is asserted by this deployment-control review."
+        },
+        "observedAt": "2026-10-02",
+        "observedBlock": 86415360,
+        "sources": [
+          {
+            "label": "Issuer OFT controls and owner identities",
+            "url": "https://docs.frax.com/protocol/crosschain/addresses"
+          },
+          {
+            "label": "Pinned Abstract RPC",
+            "url": "https://api.mainnet.abs.xyz"
+          },
+          {
+            "label": "Issuer version 1.1.0 OFT source",
+            "url": "https://github.com/FraxFinance/frax-oft-upgradeable/blob/cd255428f60d776c9f04a7afc7af62884daf6dec/contracts/frxUsd/FrxUSDOFTUpgradeable.sol"
+          }
+        ],
+        "evidence": "At Abstract block 86415360, the issuer-listed frxUSD token and ProxyAdmin 0xe59dcae52a4ffa39be99588486c84bc2dc1ba52f both resolved to this Safe; getThreshold()=3 and getOwners() contained six owners. The OFT itself performs message-authorized mint/burn; this Safe administers peers and can replace its implementation through ProxyAdmin. Mint-control reach is limited to the referenced Abstract representation. The fallback handler is observed but no non-interference or key-custody assurance is claimed."
+      },
+      {
+        "id": "monad-frxusd-oft-admin",
+        "label": "Monad frxUSD OFT and ProxyAdmin owner Safe",
+        "routeRefs": [
+          "monad:0x58e3ee6accd124642ddb5d3f91928816be8d8ed3"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "monad",
+        "controllerAddress": "0x47ff5bbab981ff022743aa4281d4d6dd7fb1a4d0",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "moduleGuard": null,
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "observedBlock": 109749485,
+          "observedAt": "2026-10-02",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:monad:0x47ff5bbab981ff022743aa4281d4d6dd7fb1a4d0"
+        ],
+        "canRaiseCap": true,
+        "routeChecks": {
+          "trustedPeerOrRemote": "peers(30255) returned Fraxtal lockbox 0x96a394058e2b84a89bac9667b19661ed003cf5d4; peers(30101) was zero.",
+          "pausersAdminsUpgraders": "Token owner() and ProxyAdmin 0xc2871eae630640ce1a16b39a17c498f22d76c21a owner() returned this 3-of-6 Safe. Module enumeration terminated empty; guard and module-guard slots were zero.",
+          "rateLimits": "No rate-limit or DVN certificate is asserted by this deployment-control review."
+        },
+        "observedAt": "2026-10-02",
+        "observedBlock": 109749485,
+        "sources": [
+          {
+            "label": "Issuer OFT controls and owner identities",
+            "url": "https://docs.frax.com/protocol/crosschain/addresses"
+          },
+          {
+            "label": "Pinned Monad RPC",
+            "url": "https://api-monad-mainnet-full.n.dwellir.com"
+          },
+          {
+            "label": "Issuer version 1.1.0 OFT source",
+            "url": "https://github.com/FraxFinance/frax-oft-upgradeable/blob/cd255428f60d776c9f04a7afc7af62884daf6dec/contracts/frxUsd/FrxUSDOFTUpgradeable.sol"
+          }
+        ],
+        "evidence": "Pinned Monad block 109749485 binds the issuer's exact Monad token, EIP-1967 implementation 0x50acd23158037e52df765557c4c1d21d67a9fba1, ProxyAdmin and same Safe owner. getThreshold()=3; getOwners() contained six owners. OFT message credit mints representations and OFT debit burns them; this owner governs messaging/peers and can replace that mint/burn implementation. Reach is this Monad representation, not Ethereum native issuance. Fallback-handler non-interference and key custody are not certified."
+      },
+      {
+        "id": "stable-frxusd-oft-admin",
+        "label": "Stable frxUSD OFT and ProxyAdmin owner Safe",
+        "routeRefs": [
+          "stable:0x80eede496655fb9047dd39d9f418d5483ed600df"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "stable",
+        "controllerAddress": "0x0c46f54bf9ef8fd58e2d294b8cea488204ecb3d8",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "moduleGuard": null,
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "observedBlock": 41488307,
+          "observedAt": "2026-10-02",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:stable:0x0c46f54bf9ef8fd58e2d294b8cea488204ecb3d8"
+        ],
+        "canRaiseCap": true,
+        "routeChecks": {
+          "trustedPeerOrRemote": "peers(30255) returned Fraxtal lockbox 0x96a394058e2b84a89bac9667b19661ed003cf5d4; peers(30101) was zero.",
+          "pausersAdminsUpgraders": "Token owner() and ProxyAdmin 0x223a681fc5c5522c85c96157c0efa18cd6c5405c owner() returned this 3-of-6 Safe. Module enumeration terminated empty; guard and module-guard slots were zero.",
+          "rateLimits": "No rate-limit or DVN certificate is asserted by this deployment-control review."
+        },
+        "observedAt": "2026-10-02",
+        "observedBlock": 41488307,
+        "sources": [
+          {
+            "label": "Issuer OFT controls and owner identities",
+            "url": "https://docs.frax.com/protocol/crosschain/addresses"
+          },
+          {
+            "label": "Pinned Stable RPC",
+            "url": "https://api-stable-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Issuer version 1.1.0 OFT source",
+            "url": "https://github.com/FraxFinance/frax-oft-upgradeable/blob/cd255428f60d776c9f04a7afc7af62884daf6dec/contracts/frxUsd/FrxUSDOFTUpgradeable.sol"
+          }
+        ],
+        "evidence": "At Stable block 41488307, the exact issuer-listed frxUSD OFT and its ProxyAdmin shared this 3-of-6 Safe. The proxy's current implementation was 0x6a678cefca10d5bbe4638d27c671ce7d56865037; issuer deployment broadcast on chain 988 identifies it as FrxUSDOFTUpgradeable. Mint/burn is the representation OFT path; Safe peer configuration and implementation replacement govern this Stable route. Fallback-handler non-interference and key custody are not certified."
+      },
+      {
+        "id": "worldchain-frxusd-oft-admin",
+        "label": "World Chain frxUSD OFT and ProxyAdmin owner Safe",
+        "routeRefs": [
+          "worldchain:0x80eede496655fb9047dd39d9f418d5483ed600df"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "worldchain",
+        "controllerAddress": "0xf57d47c3ea11c12253dbc0beaf097d5c206e8773",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "moduleGuard": null,
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "observedBlock": 35782393,
+          "observedAt": "2026-10-02",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:worldchain:0xf57d47c3ea11c12253dbc0beaf097d5c206e8773"
+        ],
+        "canRaiseCap": true,
+        "routeChecks": {
+          "trustedPeerOrRemote": "peers(30255) returned Fraxtal lockbox 0x96a394058e2b84a89bac9667b19661ed003cf5d4; peers(30101) was zero.",
+          "pausersAdminsUpgraders": "Token owner() and ProxyAdmin 0x223a681fc5c5522c85c96157c0efa18cd6c5405c owner() returned this 3-of-6 Safe. Module enumeration terminated empty; guard and module-guard slots were zero.",
+          "rateLimits": "No rate-limit or DVN certificate is asserted by this deployment-control review."
+        },
+        "observedAt": "2026-10-02",
+        "observedBlock": 35782393,
+        "sources": [
+          {
+            "label": "Issuer OFT controls and owner identities",
+            "url": "https://docs.frax.com/protocol/crosschain/addresses"
+          },
+          {
+            "label": "Pinned World Chain RPC",
+            "url": "https://api-worldchain-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Issuer version 1.1.0 OFT source",
+            "url": "https://github.com/FraxFinance/frax-oft-upgradeable/blob/cd255428f60d776c9f04a7afc7af62884daf6dec/contracts/frxUsd/FrxUSDOFTUpgradeable.sol"
+          }
+        ],
+        "evidence": "Pinned World Chain block 35782393 returned this Safe from both OFT owner() and ProxyAdmin owner(), threshold 3 and six owners. Current implementation 0x6c7484758a2e972e06f01495050c795bee7a997b is the exact FrxUSDOFTUpgradeable deployment in the issuer's chain-480 upgrade broadcast. OFT message mint/burn and owner-controlled peer/upgrade paths apply locally to the referenced representation. Fallback-handler non-interference and key custody are not certified."
+      },
+      {
+        "id": "hyperevm-frxusd-oft-admin",
+        "label": "HyperEVM frxUSD OFT and ProxyAdmin owner Safe",
+        "routeRefs": [
+          "hyperevm:0x80eede496655fb9047dd39d9f418d5483ed600df"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "upgrade",
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0x738ee62157f127c879ff5c4b7102eb0d166c7a6d",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "moduleGuard": null,
+          "fallbackHandler": "0x017062a1de2fe6b99be3d9d37841fed19f573804",
+          "observedBlock": 47421301,
+          "observedAt": "2026-10-02",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:hyperevm:0x738ee62157f127c879ff5c4b7102eb0d166c7a6d"
+        ],
+        "canRaiseCap": true,
+        "routeChecks": {
+          "trustedPeerOrRemote": "peers(30255) returned Fraxtal lockbox 0x96a394058e2b84a89bac9667b19661ed003cf5d4; peers(30101) was zero.",
+          "pausersAdminsUpgraders": "Token owner() and ProxyAdmin 0x223a681fc5c5522c85c96157c0efa18cd6c5405c owner() returned this 3-of-6 Safe. Module enumeration terminated empty; guard and module-guard slots were zero.",
+          "rateLimits": "No rate-limit or DVN certificate is asserted by this deployment-control review."
+        },
+        "observedAt": "2026-10-02",
+        "observedBlock": 47421301,
+        "sources": [
+          {
+            "label": "Issuer OFT controls and owner identities",
+            "url": "https://docs.frax.com/protocol/crosschain/addresses"
+          },
+          {
+            "label": "Pinned HyperEVM RPC",
+            "url": "https://api-hyperliquid-mainnet-evm.n.dwellir.com"
+          },
+          {
+            "label": "Issuer version 1.1.0 OFT source",
+            "url": "https://github.com/FraxFinance/frax-oft-upgradeable/blob/cd255428f60d776c9f04a7afc7af62884daf6dec/contracts/frxUsd/FrxUSDOFTUpgradeable.sol"
+          }
+        ],
+        "evidence": "Pinned HyperEVM block 47421301 returned this 3-of-6 Safe from OFT owner() and ProxyAdmin owner(). Current implementation 0x231788c09f3936cd343c4f1bded89f0fbe80719c matches the issuer's chain-999 FrxUSDOFTUpgradeable upgrade broadcast. This controls the HyperEVM representation's OFT mint/burn, peers and upgrades, not a HyperCore native issuer. Fallback-handler non-interference and key custody are not certified."
       }
     ]
   }

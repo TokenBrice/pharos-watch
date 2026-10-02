@@ -8,7 +8,7 @@
     "pegCurrency": "AUD",
     "governance": "centralized"
   },
-  "collateral": "Australian dollar cash held 1:1 in segregated AUDM Trust accounts at a regulated Big 4 Australian ADI (National Australia Bank per public reporting); reserves are not lent, invested, or rehypothecated",
+  "collateral": "Australian dollar cash held 1:1 in the AUDM Trust Class A Reserve at Westpac Banking Corporation, as reported in Macropod's reserve verification as at 30 September 2026",
   "pegMechanism": "Approved Macropod clients deposit AUD into the reserve to mint AUDM and return AUDM to Macropod for 1:1 AUD redemption by bank transfer, subject to onboarding, KYC/AML, sanctions, and compliance checks",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "334",
@@ -16,24 +16,27 @@
   "geckoId": "macropod",
   "cmcSlug": "macropod",
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "self-reported",
     "url": "https://www.macropod.com/transparency",
-    "provider": "Hall Chadwick Melbourne Audit quarterly agreed-upon-procedures reports for Catena Digital Pty Ltd t/a Macropod Global (ASRS 4400, no opinion expressed and the report notes the firm was not required to be independent; monthly self-reports continue alongside)",
-    "attestorTier": "regional",
-    "cadence": "quarterly",
+    "provider": "Catena Digital Pty Ltd t/a Macropod Global issuer-signed monthly reserve verification. latestReport tracks the 30 September 2026 self-verification supporting the authored composition. Hall Chadwick Melbourne Audit separately issued a quarterly agreed-upon-procedures report covering 30 June 2026 on 5 August 2026 (ASRS 4400, no opinion expressed; independence was not required); that older engagement remains a source reference and does not attest the September composition.",
+    "attestorTier": "self",
+    "cadence": "monthly",
     "attestorJurisdiction": "Australia",
     "latestReport": {
-      "periodEnd": "2026-09-01",
-      "publishedAt": "2026-09-03",
+      "periodEnd": "2026-09-30",
       "assuranceMethod": "self-verification",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "Claude curation campaign 2026-09-21 (Resv25)",
+      "reviewer": "Sol decision wave 2026-10-02 (DwAudm): 30 September issuer composition and report; publication date undisclosed in the document; June Hall Chadwick AUP retained separately",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Macropod AUDM Reserve Verification Report as at 1 September 2026",
-          "url": "https://cdn.prod.website-files.com/69df87da28d300c1b443a0d6/6a9929b8226f390a1fcddc38_260901%20Catena%20Digital%20Pty%20Ltd%20Reserve%20Verification%20Report%20as%20at%201st%20September%202026.pdf"
+          "label": "Macropod AUDM Reserve Verification Report as at 30 September 2026",
+          "url": "https://cdn.prod.website-files.com/69df87da28d300c1b443a0d6/6abf4aae214c978251192bb2_261001%20Catena%20Digital%20Pty%20Ltd%20Reserve%20Verification%20Report%20as%20at%2030th%20Sept%202026.pdf"
+        },
+        {
+          "label": "Older Hall Chadwick AUDM agreed-upon-procedures report at 30 June 2026, issued 5 August 2026",
+          "url": "https://cdn.prod.website-files.com/69df87da28d300c1b443a0d6/6a72dd2b088312392d65d478_June%202026%20-%20Agreed-Upon%20Procedures%20Report.pdf"
         }
       ]
     }

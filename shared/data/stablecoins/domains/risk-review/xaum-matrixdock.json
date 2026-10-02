@@ -2,10 +2,15 @@
   "id": "xaum-matrixdock",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: XAUm resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Verified Ethereum MToken implementation",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x3194e478b6d3ebee969470295f271727b62adf7b?fields=sources,compilation,abi"
+      }
+    ],
+    "evidence": "At Ethereum block 26095797, the XAUm proxy still resolves to implementation 0x3194e478b6d3ebee969470295f271727b62adf7b. Its verified MToken source exposes operator-only addToBlockedList and removeFromBlockedList. transfer blocks a listed caller; transferFrom blocks a listed caller or sender. Receiving transfers and NFT pack/unpack bypass those checks by design, so this is a scoped outgoing-transfer freeze rather than a universal address lock.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA47sGHO)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
@@ -168,23 +173,28 @@
         ]
       },
       {
-        "id": "stellar:XAUM-CC2RBGYNCFBCVENIDL5BFBWPH4OUZM2UA3OD2K2N54GLMWCC4KWPVAGO",
+        "id": "stellar:CC2RBGYNCFBCVENIDL5BFBWPH4OUZM2UA3OD2K2N54GLMWCC4KWPVAGO",
         "destinationChain": "stellar",
-        "contractAddress": "XAUM-CC2RBGYNCFBCVENIDL5BFBWPH4OUZM2UA3OD2K2N54GLMWCC4KWPVAGO",
-        "protocol": "Matrixdock native issuance",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
-        "riskTier": "issuer-native-burn-mint",
-        "semantics": "native-mint",
-        "scope": "canonical",
-        "reviewDisposition": "reviewed",
-        "reviewNote": "native Stellar asset issued under Matrixdock's issuer account (in the asset id); XAUm is issuer-minted natively on this chain, not via a third-party bridge.",
+        "contractAddress": "CC2RBGYNCFBCVENIDL5BFBWPH4OUZM2UA3OD2K2N54GLMWCC4KWPVAGO",
+        "protocol": "Matrixdock Soroban token; issuance route unresolved",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Issuer documentation and Soroban ledger 64710820 identify the deployed XAUM contract, not a classic Stellar issuer account. Contract-instance metadata reports Matrixdock Gold, XAUM and 9 decimals. Storage identifies owner and operator accounts, but native-versus-bridge issuance and mint/upgrade capabilities remain unverified; the prior issuer-account/native-route rationale cannot establish this Soroban route.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-01",
+        "observedBlock": 64710820,
         "sources": [
           {
-            "label": "Matrixdock XAUm",
-            "url": "https://www.matrixdock.com/"
+            "label": "Matrixdock official XAUm Stellar contract address",
+            "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/smart-contract/contract-address"
+          },
+          {
+            "label": "Stellar mainnet Soroban RPC: contract instance at ledger 64710820",
+            "url": "https://soroban-rpc.mainnet.stellar.gateway.fm"
           }
         ]
       },

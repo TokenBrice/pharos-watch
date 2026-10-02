@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { CHAIN_META } from "@shared/lib/chains";
+import { CHAIN_META } from "@shared/types/chain-identity";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { buildChainRpcs, hasRegistryRpc } from "../../lib/chain-registry";

@@ -53,6 +53,9 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095812,
+        "capDescription": "At Ethereum block 26095812, globalDebtCeiling() is 100000000000000 raw units (100,000,000 ftUSD at 6 decimals); the minter owner remains the token's 3-of-5 Safe, and the previously reviewed owner-only ceiling setters remain raiseable.",
         "sources": [
           {
             "label": "Flying Tulip docs",
@@ -96,6 +99,8 @@
           "observedBlock": 25720088,
           "source": "safe-api"
         },
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095812,
         "sources": [
           {
             "label": "ftUSD owner Safe API",
@@ -108,9 +113,13 @@
           {
             "label": "Ethereum module-enabling transaction",
             "url": "https://etherscan.io/tx/0x8d38eadf5e68cfe1e4395c5f5360500dc17925b8c773e538dc95c0274ac51a22"
+          },
+          {
+            "label": "Verified Ethereum Allowance Module source and ABI",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xcfbfac74c26f8647cbdb8c5caf80bb5b32e43134"
           }
         ],
-        "evidence": "At Ethereum block 25720088, owner() and masterMinter() returned this Safe, which also owned the minter contract. The Safe API returned threshold 3 of 5, zero guard, and Allowance Module 0xCFbF...3134. The module reported signer 0xf9E5...9a10 as its sole delegate, with a 2 ETH weekly allowance, 0.1 ETH spent in the current period, and zero allowances for ftUSD, USDC, USDT, and WETH. Its transfer allowance does not establish a call path that can authorize or upgrade the ftUSD minter without the Safe threshold."
+        "evidence": "At Ethereum block 26095812, owner() and masterMinter() still returned this 3-of-5 Safe, which owned FtUSDCore. Pinned module pagination returned sole delegate 0xf9e5af16243041ce3141284d225cafc0fc749a10 and next=0. Its native-asset allowance was 2000000000000000000 wei, spent=0, resetTimeMin=10080; ftUSD, USDC, USDT, and WETH allowances were zero. Verified AllowanceModule transfer() executes only empty-data native transfers or ERC20 transfer(address,uint256), not arbitrary mint/admin calls. The historical block 25720088 review recorded 0.1 ETH spent; the current reset period has zero spent. Module presence is preserved as a bypass surface, but this transfer-only allowance does not establish an ftUSD minter-authorize or upgrade call path."
       },
       {
         "chain": "sonic",
@@ -124,6 +133,9 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-01",
+        "observedBlock": 80179134,
+        "capDescription": "At Sonic block 80179134, globalDebtCeiling() is 5000000000000 raw units (5,000,000 ftUSD at 6 decimals); the minter owner remains the token's 3-of-5 Safe, and the previously reviewed owner-only ceiling setters remain raiseable.",
         "sources": [
           {
             "label": "Flying Tulip contract addresses",
@@ -165,6 +177,8 @@
           "observedBlock": 77315268,
           "source": "safe-api"
         },
+        "observedAt": "2026-10-01",
+        "observedBlock": 80179134,
         "sources": [
           {
             "label": "ftUSD Sonic owner Safe API",

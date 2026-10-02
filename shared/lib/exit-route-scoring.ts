@@ -25,6 +25,10 @@
  *
  * Runtime-neutral: no worker, Next.js, or D1 imports.
  */
+import methodologyPolicy from "../data/safety-score-v9/methodology-policy-candidate-v1.json";
+
+/** Physical conversion policy has one curated authority, not a second table. */
+export const PHYSICAL_TO_USD_EXIT_POLICY = methodologyPolicy.semantic.exit.physicalToUsd;
 
 export type ExitAccessModel = "permissionless-onchain" | "whitelisted-onchain" | "issuer-api" | "manual";
 export type ExitSettlementModel = "atomic" | "immediate" | "same-day" | "days" | "queued";
@@ -39,6 +43,8 @@ export type ExitOutputAssetType =
 export type ExitHolderEligibility =
   | "any-holder"
   | "verified-customer"
+  // Physical-to-USD routes only: owner ruling grants verified customers no institutional discount.
+  | "verified-customer-neutral"
   | "whitelisted-primary"
   | "pre-incident-holder"
   | "issuer-discretionary"
@@ -227,6 +233,7 @@ export const EXIT_ROUTE_SCORING_TABLES = {
   holderEligibilityMultipliers: {
     "any-holder": 1,
     "verified-customer": 0.9,
+    "verified-customer-neutral": 1,
     "whitelisted-primary": 0.85,
     "pre-incident-holder": 0.85,
     "issuer-discretionary": 0.6,

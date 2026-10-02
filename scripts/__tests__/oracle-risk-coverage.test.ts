@@ -84,6 +84,48 @@ it("enforces missing profiles by default and exposes advisory backfill mode", ()
 });
 
 describe("analyzeOracleRiskCoverage", () => {
+  it("does not demand borrower branches from a reviewed allocation-only explicit inventory", () => {
+    const profile = reviewedMultiBranch({
+      branchModel: "single-path",
+      branches: undefined,
+      branchApplicability: { ...reviewedMultiBranch().branchApplicability!, disposition: "top-level-only" },
+      paths: [{
+        id: "allocation", chain: "ethereum", address: "0x1111111111111111111111111111111111111111",
+        pricingAuthority: "none",
+        applicability: {
+          disposition: "not-applicable", reviewedAt: "2026-07-13", reviewer: "test", confidence: "verified",
+          rationale: "The exact direct-allocation contract has no price-sensitive authority.",
+          sources: [{ label: "Deployed source", url: "https://example.com/allocation" }],
+        },
+      }],
+    });
+    const result = analyzeOracleRiskCoverage([makeCoin({ oracleRisk: profile })], { asOf: new Date("2026-08-01T00:00:00Z") });
+    expect(result.findings).toEqual([]);
+    expect(result.branchNotApplicable).toBe(1);
+    expect(result.branchesRequired).toBe(0);
+  });
+
+  it("does not inherit an allocation exception for an unreviewed new facilitator", () => {
+    const profile = reviewedMultiBranch({
+      paths: [{
+        id: "market", chain: "ethereum", address: "0x1111111111111111111111111111111111111111",
+        pricingAuthority: "external-price", branchId: "eth",
+        applicability: {
+          disposition: "branches-required", reviewedAt: "2026-07-13", reviewer: "test", confidence: "verified",
+          rationale: "The exact lending market consumes collateral prices.",
+          sources: [{ label: "Market source", url: "https://example.com/market" }],
+        },
+      }, {
+        id: "new-facilitator", chain: "ethereum", address: "0x2222222222222222222222222222222222222222",
+        pricingAuthority: "unknown",
+      }],
+    });
+    const result = analyzeOracleRiskCoverage([makeCoin({ oracleRisk: profile })], { asOf: new Date("2026-08-01T00:00:00Z") });
+    expect(result.branchApplicabilityUnresolved).toBe(1);
+    expect(result.reviewedBranchApplicability).toBe(0);
+    expect(result.findings).toEqual([expect.objectContaining({ kind: "branch-applicability-unresolved" })]);
+  });
+
   it("warns on active crypto-backed CDPs missing oracleRisk", () => {
     const result = analyzeOracleRiskCoverage([makeCoin()], { asOf: new Date("2026-06-12T00:00:00Z") });
 

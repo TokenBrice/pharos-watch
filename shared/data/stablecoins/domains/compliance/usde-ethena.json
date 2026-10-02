@@ -9,8 +9,8 @@
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/ARTZZ.csv"
       },
       {
-        "label": "Ethena USDe Terms and Conditions: EEA",
-        "url": "https://docs.ethena.fi/resources/usde-terms-and-conditions-eea"
+        "label": "BaFin: Ethena GmbH USDe ART authorisation procedure terminated and business winding-up ordered",
+        "url": "https://www.bafin.de/SharedDocs/Veroeffentlichungen/EN/Verbrauchermitteilung/weitere/2025/meldung_2025_04_15_Ethena_GmbH_en.html"
       },
       {
         "label": "ESMA MiCA Article 3 definitions",
@@ -21,11 +21,11 @@
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "USDe is a synthetic delta-neutral dollar with a nominal $1 redemption obligation but backed by crypto derivatives positions and liquid stablecoins rather than HQLA (cash, Fed balances, short-term Treasuries). The GENIUS Act requires payment stablecoins to maintain 1:1 HQLA reserves; USDe's synthetic mechanism likely disqualifies it from qualifying as a PPSI even if it nominally meets the definitional element of a fixed-value redemption obligation. The Act mandates a separate regulatory study on non-payment stablecoins, suggesting synthetic dollars occupy an unresolved category. Applicability is marked unclear pending that study and final rulemaking.",
+      "summary": "USDe issuer Ethena BVI limits direct redemption to approved Mint Users. Terms section 2 promises the pro rata reserve value in supported digital assets, capped at 1 USD notional per USDe and subject to fees and law; Holding Users have no direct redemption right. Section 23 separately refers to an eligible Mint User's right to redeem for USD. GENIUS section 2(22) requires a fixed monetary-value repayment obligation and separately excludes deposits and securities. These contractual provisions do not settle USDe's U.S. legal category. Applicability remains unclear pending qualified token-specific analysis of the holder contract and any exclusion; reserve eligibility and issuer authorization remain separate questions.",
       "references": [
         {
-          "label": "GENIUS Act statutory text (S.1582, 119th Congress)",
-          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+          "label": "GENIUS Act enacted statutory text (Public Law 119-27)",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
           "sourceKind": "statute"
         },
         {
@@ -37,12 +37,18 @@
           "label": "CLS Blue Sky: Closing the Stablecoin Yield Loophole in the Post-GENIUS Era",
           "url": "https://clsbluesky.law.columbia.edu/2026/01/23/closing-the-stablecoin-yield-loophole-in-the-post-genius-era/",
           "sourceKind": "news"
+        },
+        {
+          "label": "Ethena USDe terms and conditions",
+          "url": "https://docs.ethena.fi/resources/usde-terms-and-conditions",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-01"
         }
       ]
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
-    "issuerEntity": "Ethena (BVI) Limited",
+    "issuerEntity": "Ethena BVI Limited",
     "issuerDomicile": "British Virgin Islands",
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
@@ -50,8 +56,8 @@
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://app.ethena.fi/dashboards/transparency",
     "redemptionPolicyPresent": true,
-    "monthlyAttestationPresent": false,
-    "notes": "USDe is a synthetic dollar rather than a fiat reserve stablecoin; GENIUS payment-stablecoin applicability is unresolved pending final rulemaking and the mandated non-payment stablecoin study. Ethena is separately pursuing GENIUS-compliant issuance via USDtb (partnered with Anchorage Digital Bank): that is a distinct product issued by a separate entity (Pallas BVI Ltd / Anchorage Digital Bank). No GENIUS Act enforcement actions exist and the Act is not yet effective (effective date: 2027-01-18 at latest).",
+    "monthlyAttestationPresent": true,
+    "notes": "Historical compliance review dated 2026-06-18 recorded unresolved USDe GENIUS applicability, separate USDtb issuance discussions, and no located public USDe approval or action. The issuer terms retrieved 2026-10-01 describe restricted pro-rata redemption in supported digital assets, not an unrestricted fiat redemption right. The monthly custodian report published 2026-09-03 covers the 2026-08-26 snapshot and does not establish GENIUS authorisation. This validation does not establish updated token-specific U.S. approval, final implementing-rule effective dates, or the current legal issuer of USDtb; the historical negative review and authorization/enforcement fields are unchanged.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -61,10 +67,10 @@
         "accessedAt": "2026-06-07"
       },
       {
-        "label": "Ethena USDe docs",
-        "url": "https://docs.ethena.fi/solution-overview/usde-overview",
+        "label": "Ethena USDe terms and conditions",
+        "url": "https://docs.ethena.fi/resources/usde-terms-and-conditions",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-01"
       },
       {
         "label": "Ethena transparency dashboard",
@@ -78,6 +84,13 @@
         "sourceKind": "news",
         "sourceDate": "2025-07-24",
         "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "Ethena monthly custodian attestation report (August 2026)",
+        "url": "https://ethena.fi/blog/custodian-attestations-of-assets-backing-usde-august-3",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-09-03",
+        "accessedAt": "2026-10-01"
       }
     ],
     "negativeEvidenceReview": {

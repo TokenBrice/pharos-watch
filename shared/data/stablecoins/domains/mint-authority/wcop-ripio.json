@@ -68,7 +68,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "none-detected",
-        "evidence": "At Ethereum block 25295015, hasRole(DEFAULT_ADMIN_ROLE) and hasRole(MINTER_ROLE) both returned true. eth_getCode returned 0x (EOA). Same role confirmed via hasRole on Base, BSC, Polygon, Gnosis, and Worldchain at same block range."
+        "observedAt": "2026-10-01",
+        "evidence": "Re-read on 2026-10-01 at Ethereum block 26095942, Base 52024986, Worldchain 35751842, BSC 125059668, Polygon 94756122, and Gnosis 48529618: the issuer address holds DEFAULT_ADMIN_ROLE and MINTER_ROLE on each named WCOP token; eth_getCode on the issuer address is 0x on each chain. Historical block 25295015 observations are superseded for these role and account-code facts only; no economic cap or bridge capability is inferred."
       },
       {
         "chain": "ethereum",
@@ -121,7 +122,9 @@
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "none-detected",
-        "evidence": "At Ethereum block 25295015, hasRole(MINTER_ROLE) returned true on WCOP token. Contract is an AccessControl contract with DEFAULT_ADMIN_ROLE holders confirmed as 0x466c02e2 (EOA) and 0x2b839174 (Safe). Not deployed on other chains (eth_getCode = 0x on Base)."
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095942,
+        "evidence": "At Ethereum block 26095942 on 2026-10-01, hasRole(MINTER_ROLE, 0xd168cfbbe260d48cd119497a9a2ee8482080c5e7) returned true on WCOP and eth_getCode on the router returned nonempty bytecode. Historical review at block 25295015 additionally established AccessControl administration by issuer EOA 0x466c02e2 and Safe 0x2b839174, and no Base deployment; those historical details were not re-dated."
       }
     ],
     "economicCapSemantics": "unbounded",

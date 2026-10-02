@@ -6,6 +6,9 @@ import {
   SafetyScoreV9ResponseSchema,
 } from "../safety-score-v9-public";
 import { SafetyScoreV9BreakdownsSchema } from "../safety-score-v9-public-breakdowns";
+import { SafetyScoreV9AccessPostureSchema } from "../safety-score-v9-public-facts";
+import { evaluateV9AccessLookthrough } from "../../lib/safety-score-v9/access-lookthrough";
+import { makeAccessGraph } from "../../lib/__tests__/safety-score-v9-access-lookthrough.test-support";
 
 import { adjustedResponse, boundedResponse, breakdowns, currentResponse, deploymentResponse } from "./safety-score-v9-public.test-support";
 
@@ -373,5 +376,30 @@ describe("SafetyScoreV9ResponseSchema", () => {
     const invalidAccess = currentResponse();
     Object.assign(invalidAccess.cards[0].accessPosture, { governance: "unknown", unknownFields: [] });
     expect(() => SafetyScoreV9ResponseSchema.parse(invalidAccess)).toThrow(/unknown fields must exactly match/);
+  });
+});
+
+describe("public reserve-access look-through", () => {
+  it("distinguishes historical absence, explicit null, priced partial coverage and true zero", () => {
+    const posture = currentResponse().cards[0]!.accessPosture;
+    expect(SafetyScoreV9AccessPostureSchema.parse(posture).freezeLookthrough).toBeUndefined();
+    expect(SafetyScoreV9AccessPostureSchema.parse({ ...posture, freezeLookthrough: null }).freezeLookthrough).toBeNull();
+    const graph = makeAccessGraph();
+    graph.edges = graph.edges.filter((edge) => edge.toNodeKey !== "clean");
+    graph.partitions.find((p) => p.partitionKey === "root")!.complete = false;
+    const partial = evaluateV9AccessLookthrough(graph);
+    expect(SafetyScoreV9AccessPostureSchema.parse({ ...posture, freezeLookthrough: partial }).freezeLookthrough!.unresolvedCoverageShare).toBeCloseTo(0.3);
+    graph.authorities = [];
+    graph.nodes.find((node) => node.nodeKey === "token")!.noCurrentReach = true;
+    graph.edges.push(makeAccessGraph().edges.find((edge) => edge.toNodeKey === "clean")!);
+    graph.partitions.find((p) => p.partitionKey === "root")!.complete = true;
+    const zero = evaluateV9AccessLookthrough(graph);
+    expect(SafetyScoreV9AccessPostureSchema.parse({ ...posture, freezeLookthrough: zero }).freezeLookthrough!.knownAdverseReachShare).toBe(0);
+  });
+  it("rejects unreconciled fractions and false numeric completeness", () => {
+    const posture = currentResponse().cards[0]!.accessPosture;
+    const summary = evaluateV9AccessLookthrough(makeAccessGraph());
+    expect(SafetyScoreV9AccessPostureSchema.safeParse({ ...posture, freezeLookthrough: { ...summary, unresolvedCoverageShare: 0.2 } }).success).toBe(false);
+    expect(SafetyScoreV9AccessPostureSchema.safeParse({ ...posture, freezeLookthrough: { ...summary, knownAdverseReachShare: null, reviewedNoCurrentReachShare: null, unresolvedCoverageShare: null } }).success).toBe(false);
   });
 });

@@ -3,6 +3,7 @@
   "name": "Theo thUSD",
   "symbol": "THUSD",
   "oneLiner": "thUSD is Theo's dollar stablecoin, minted and redeemed 1:1 in USDC or USDT by whitelisted parties and backed by a delta-neutral gold carry trade and thBILL.",
+  "custodyModel": "mixed",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized",
@@ -79,7 +80,6 @@
     }
   ],
   "collateralQuality": "rwa",
-  "custodyModel": "institutional-regulated",
   "governanceQuality": "single-entity",
   "liveReservesConfig": {
     "adapter": "theo-thusd-redemption",
@@ -97,5 +97,5 @@
       }
     }
   },
-  "launchDate": "2026-04-27"
+  "launchDate": "2026-04-17"
 }

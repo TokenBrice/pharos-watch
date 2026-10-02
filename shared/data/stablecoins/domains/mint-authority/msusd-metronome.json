@@ -67,6 +67,8 @@
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "Native msUSD minting is accepted from registered Pool/DebtToken collateral paths (and the configured AMO auxiliary path) under governance-set collateral factors; the separate ProxyOFT caller is bridge issuance and is scored under Bridge Risk. There is no direct redemption and no off-protocol issuer minter in the native path.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095807,
         "sources": [
           {
             "label": "msUSD token on Etherscan",

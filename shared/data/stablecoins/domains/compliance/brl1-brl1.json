@@ -30,6 +30,7 @@
     "applicability": "apparent-payment-stablecoin",
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
+    "issuerEntity": "BRL1 CONSORTIUM S.A.",
     "issuerDomicile": "Brazil",
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
@@ -38,8 +39,14 @@
     "reserveDisclosureUrl": "https://brl1.io/como_funciona",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "notes": "BRL1 is a Brazilian-real payment stablecoin developed by a consortium and listed on OKX Europe, but public materials do not identify a single legal issuer or any U.S. GENIUS approval, official application, state qualification, or foreign-issuer registration as of 2026-08-14. The issuer/pathway and foreign-exception posture therefore remain unknown.",
+    "notes": "The reserve statement for 2026-08-01 identifies BRL1 CONSORTIUM S.A. as issuer and describes the MB, Bitso, Foxbit and Cainvest consortium. This establishes issuer identity, not any U.S. GENIUS authorization or EU offer scope. The existing no-public-authorization and foreign-exception review remains dated 2026-08-14; this pass does not refresh those negative findings.",
     "references": [
+      {
+        "label": "BRL1 issuer reserve self-report for 2026-08-01",
+        "url": "https://drive.google.com/uc?export=download&id=1xIHWuHqRiuNJNaBO4s-9xXbiiEp_24AD",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-01"
+      },
       {
         "label": "OCC GENIUS Act proposed rule (91 FR 10202)",
         "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",

@@ -28,6 +28,10 @@ export function defineBackstopRegistry(
     if (hasExistingConfig && !entry.overrideReason) {
       throw new Error(`Redemption backstop config "${entry.id}" is duplicated without an override reason.`);
     }
+    if (entry.config.routeSuspension &&
+        entry.config.routeSuspension.routeId !== `redemption:${entry.id}:${entry.config.routeFamily}`) {
+      throw new Error(`Redemption suspension for "${entry.id}" must name its exact configured route.`);
+    }
 
     configs[entry.id] = cloneRedemptionBackstopConfig(entry.config);
   }

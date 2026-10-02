@@ -2,14 +2,23 @@
   "id": "usdg-paxos",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: USDG resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Paxos USD Stablecoin Terms, section 3.5",
+        "url": "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions"
+      },
+      {
+        "label": "Paxos USDG asset-protection specification",
+        "url": "https://github.com/paxosglobal/usdg-contract"
+      }
+    ],
+    "evidence": "The Paxos terms jointly identify PDS and PIE as USDG issuers and section 3.5 gives Paxos freeze, seizure and destruction powers applying to all holders. The USDG contract specification states that ASSET_PROTECTION_ROLE can freeze or unfreeze any on-chain balance and wipe a frozen balance. This confirms the existing Yes verdict from primary evidence rather than from centralized classification.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA09USDG)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "USDG is Paxos-issued and Paxos's official USDG mainnet documentation lists native deployments on Ethereum, Solana, Ink, X Layer, Arbitrum, and Robinhood Chain, each with a Paxos-operated SupplyControl contract. USDG on Hyperliquid is USDG0, the omnichain representation issued by Paxos Labs over LayerZero OFT, not a native Paxos deployment. Native routes are reviewed as issuer-native multichain issuance/redemption; the Hyperliquid USDG0 route is reviewed as an issuer-affiliated LayerZero OFT representation. Pinned totalSupply reads on 2026-07-21 sum to 3,244,471,126.287402 USDG across Paxos's six official native deployments. X Layer holds 1,852,539,363.075967 USDG, or 57.09834642% of that native supply, so the chain:xlayer common-mode exposure is measured and remains above the 10% materiality threshold. USDG0 is excluded from this denominator because it is a representation rather than additional Paxos-native issuance.",
+    "summary": "USDG is Paxos-issued and Paxos's official USDG mainnet documentation lists native deployments on Ethereum, Solana, Ink, X Layer, Arbitrum, Robinhood Chain, and Mantle, each with a Paxos-operated SupplyControl contract. USDG on Hyperliquid is USDG0, the omnichain representation issued by Paxos Labs over LayerZero OFT, not a native Paxos deployment. Native routes are reviewed as issuer-native multichain issuance/redemption; the Hyperliquid USDG0 route is reviewed as an issuer-affiliated LayerZero OFT representation. Pinned totalSupply reads on 2026-07-21 sum to 3,244,471,126.287402 USDG across the six native deployments reviewed at that time. X Layer holds 1,852,539,363.075967 USDG, or 57.09834642% of that native supply, so the chain:xlayer common-mode exposure is measured and remains above the 10% materiality threshold. USDG0 is excluded from this denominator because it is a representation rather than additional Paxos-native issuance.",
     "reviewedAt": "2026-07-21",
     "reviewer": "Codex bridge route review; Kimi rescue lane 1c (2026-07-19); SOL-KEYSTONE supply attribution (2026-07-21)",
     "confidence": "verified",
@@ -247,6 +256,36 @@
           {
             "label": "Paxos USDG main network deployments (official native deployment list excludes Hyperliquid)",
             "url": "https://docs.paxos.com/guides/stablecoin/usdg/mainnet"
+          }
+        ]
+      },
+      {
+        "id": "mantle:0x063c1d1ef6e9099ce3e8e9ad5c6173d12c49c086",
+        "destinationChain": "mantle",
+        "contractAddress": "0x063c1d1ef6e9099ce3e8e9ad5c6173d12c49c086",
+        "protocol": "Paxos native USDG",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "The September 3, 2026 issuer announcement identifies native Mantle issuance. At Mantle block 101353694 on 2026-10-01, name() = Global Dollar, symbol() = USDG, decimals() = 6, supplyControl() = 0x9b6e43bac38c26b418331d93e8e7960c2b884e44, and token defaultAdmin()/SupplyControl owner() = 0xc23fdc608765fadb5a6caffd288226e1e6681f73. This is native issuance rather than an additional USDG0 representation; no supply-share or bridge-validator conclusion is inferred.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-01",
+        "observedBlock": 101353694,
+        "sources": [
+          {
+            "label": "Paxos USDG main network deployments",
+            "url": "https://docs.paxos.com/guides/stablecoin/usdg/mainnet"
+          },
+          {
+            "label": "Global Dollar native Mantle launch, September 3, 2026",
+            "url": "https://globaldollar.com/newsroom/mantle"
+          },
+          {
+            "label": "Mantle pinned RPC reads",
+            "url": "https://api-mantle-mainnet.n.dwellir.com"
           }
         ]
       }

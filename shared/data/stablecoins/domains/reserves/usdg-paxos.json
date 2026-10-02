@@ -120,16 +120,16 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "contractual-only",
     "rehypothecation": "conditional",
-    "reviewedAt": "2026-07-17",
-    "reviewer": "Kimi FIAT-CTRL R4 control-evidence review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA09USDG)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "KPMG USDG Redemption Assets Report - May 2026",
-        "url": "https://framerusercontent.com/assets/o61pz3wuO4LmxEuDTUxmINc09qc.pdf"
+        "label": "KPMG USDG Redemption Assets Report - August 2026",
+        "url": "https://framerusercontent.com/assets/Xn1UQwAte85FnsDveIMX0n1qtVM.pdf"
       },
       {
-        "label": "Paxos USD Stablecoin Terms and Conditions (last modified 2026-06-30)",
+        "label": "Paxos USD Stablecoin Terms and Conditions",
         "url": "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions"
       }
     ],

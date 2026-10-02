@@ -3,6 +3,7 @@ import { getRedemptionBackstopConfig, type RedemptionBackstopConfig } from "@sha
 import type { RedemptionBackstopEntry, RedemptionCapacityProfile } from "@shared/types/redemption";
 import {
   buildRedemptionExitRouteObservation,
+  buildPhysicalToUsdExitObservation,
   deriveSupplyModelExitRouteObservation,
 } from "../redemption-exit-route-observations";
 import { makeSupplyFullRedemption } from "./redemption-backstops-store.test-support";
@@ -18,6 +19,27 @@ const config: RedemptionBackstopConfig = {
   docs: [{ label: "Terms", url: "https://example.com/terms", supports: ["capacity", "fees", "settlement"] }],
   reviewedAt: "2026-07-01",
 };
+
+describe("physical-to-USD modelled capacity", () => {
+  it("caps every grid point at the documented window throughput or one conservative minimum lot", () => {
+    const clockSec = Date.UTC(2026, 9, 1, 12) / 1000;
+    const physicalConfig = structuredClone(getRedemptionBackstopConfig("paxg-paxos")!);
+    const terms = physicalConfig.physicalToUsd!;
+    terms.fees = { issuerFeeBps: 0, issuerFixedUsd: 0, deliveryUsdPerLot: 0, insuranceBps: 0, assayUsdPerLot: 0, taxBps: 0, conversionBps: 0 };
+    terms.settlementLegs = [{ leg: "issuer-release", maximumBusinessDays: 1 }];
+    delete terms.throughput;
+    const input = { assetId: "paxg-paxos", config: physicalConfig, supplyUsd: 500_000_000,
+      reference: { usdPerTroyOunce: 1000, observedAtSec: clockSec }, clockSec, routeOpen: true };
+    const undocumented = buildPhysicalToUsdExitObservation(input)!;
+    expect(undocumented.capacityCurve?.map((point) => point.executableUsd)).toEqual([0, 350_000, 350_000, 350_000]);
+    terms.throughput = { tokens: 700, periodSec: 15 * 86400,
+      evidence: { url: "https://example.com/terms", quote: "At most 700 tokens of delivered fine metal per fifteen calendar days." } };
+    const documented = buildPhysicalToUsdExitObservation(input)!;
+    expect(documented.capacityCurve?.map((point) => point.executableUsd)).toEqual([0, 700_000, 700_000, 700_000]);
+    expect(documented.physicalToUsd).toMatchObject({ grossUsd: 700_000, netUsd: 693_000, costBps: 100 });
+    expect(buildPhysicalToUsdExitObservation({ ...input, routeOpen: false })?.capacityCurve?.map((point) => point.executableUsd)).toEqual([0, 0, 0, 0]);
+  });
+});
 
 const profile: RedemptionCapacityProfile = {
   scoringUsd: 10_000_000,
@@ -352,6 +374,37 @@ describe("redemption same-notional route observations", () => {
     expect(build({ capacityProfile: undefined })).toBeNull();
     expect(build({ scoringCapacityUsd: null })).toBeNull();
   });
+
+  it("does not label a published formula as opaque or admit its unquantified execution cost", () => {
+    const observation = build({
+      config: {
+        ...config,
+        costModel: {
+          kind: "dynamic-or-unclear", confidence: "formula", feeModelKind: "formula",
+          feeDescription: "Early redemption fee declines linearly from 3.5% to 0.1%.",
+        },
+      },
+      resolvedFeeBps: null,
+    });
+    expect(observation).toMatchObject({ feeEvidence: "disclosed-unquantified", scoreEligible: false });
+    expect(observation).not.toHaveProperty("executionCostBps");
+  });
+
+  it("withholds executable capacity when a formula's resolved fee provably exceeds the cost budget", () => {
+    const observation = build({
+      config: {
+        ...config,
+        costModel: {
+          kind: "dynamic-or-unclear", confidence: "formula", feeModelKind: "formula",
+          feeDescription: "Observed coreRate plus 75 bps.",
+        },
+      },
+      resolvedFeeBps: 250,
+    });
+    expect(observation).toMatchObject({ executableUsd: 0, completionRatio: 0, scoreEligible: false });
+    expect(observation).not.toHaveProperty("feeEvidence");
+    expect(observation!.capacityCurve!.every((point) => point.executableUsd === 0)).toBe(true);
+  });
 });
 
 const supplyFullEntry: RedemptionBackstopEntry = makeSupplyFullRedemption();
@@ -384,7 +437,7 @@ describe("derived supply-model route observations", () => {
     }
   });
 
-  it("preserves reviewed capacity under the bounded-unknown fee ceiling", () => {
+  it("preserves reviewed capacity while distinguishing unquantified published fees", () => {
     const variable = deriveSupplyModelExitRouteObservation(
       { ...supplyFullEntry, feeModelKind: "documented-variable", feeBps: null },
       now,
@@ -395,6 +448,10 @@ describe("derived supply-model route observations", () => {
       completionRatio: 1,
       feeEvidence: "undisclosed-reviewed",
     });
+    const formula = deriveSupplyModelExitRouteObservation(
+      { ...supplyFullEntry, feeConfidence: "formula", feeModelKind: "formula", feeBps: null }, now,
+    );
+    expect(formula).toMatchObject({ feeEvidence: "disclosed-unquantified", scoreEligible: false });
     const overCost = deriveSupplyModelExitRouteObservation({ ...supplyFullEntry, feeBps: 250 }, now);
     expect(overCost).toMatchObject({ scoreEligible: false, executableUsd: 0 });
     expect(overCost).not.toHaveProperty("feeEvidence");

@@ -2,10 +2,19 @@
   "id": "usdc-circle",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: USDC resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Circle USDC Terms: Blocklisting",
+        "url": "https://www.circle.com/legal/usdc-terms"
+      },
+      {
+        "label": "Circle Blacklistable reference contract",
+        "url": "https://raw.githubusercontent.com/circlefin/stablecoin-evm/master/contracts/v1/Blacklistable.sol"
+      }
+    ],
+    "evidence": "Circle's USDC Terms reserve the right to block on-chain transfers under its blocklisting policy. At Ethereum block 26095807 on 2026-10-01, blacklister() returned 0x0a06be16275b95a7d2567fbdae118b36c7da78f9 and pauser() returned 0x4914f61d25e5c567143774b76edbf4d5109a8566; paused() was false. This establishes issuer freeze authority, not a current token-wide pause or the key-custody arrangement.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA02USDC)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
@@ -346,7 +355,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Circle discontinued USDC on TRON effective 2024-02-21: minting ceased immediately and Circle-supported redemption wound down through February 2025. Remaining supply is legacy Circle-issued TRC20 USDC with no active issuer mint/redemption channel; the deployment itself is Circle's official contract, not a bridge representation.",
+        "reviewNote": "Circle announced on February 21, 2024 that it would cease minting USDC on TRON immediately and support Circle Mint transfers or fiat redemptions through February 2025. This is the historical Circle-issued TRC20 deployment, not a bridge representation. The August 2026 USDC examination nevertheless includes TRON among approved blockchains and states that only redemptions are supported. The newer report does not establish current customer eligibility or an executable redemption route; the earlier categorical no-active-redemption inference is not retained.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-17",
         "sources": [
@@ -453,6 +462,7 @@
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-16",
+        "reviewNote": "October 1, 2026 Algonode indexer asset 31566704 read at returned current-round 65562546 reports name/unit-name USDC and decimals 6. This is a returned-current-round metadata snapshot, not an explicit historical-round controller or custody review.",
         "sources": [
           {
             "label": "Circle USDC mainnet contract addresses",
@@ -473,6 +483,7 @@
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-16",
+        "reviewNote": "October 1, 2026 Hedera public mirror-node token API returns token_id 0.0.456858, name USD Coin, symbol USDC and decimals 6. The current API snapshot does not establish a full token-key or signer-custody review.",
         "sources": [
           {
             "label": "Circle USDC mainnet contract addresses",
@@ -593,6 +604,7 @@
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-16",
+        "reviewNote": "October 1, 2026 XRPL account_info explicitly pinned to validated ledger 107354748 returns issuer account rGm7WCVp9gb4jZHWTEtGUr4dd74z2XuWhE. This account-state observation does not establish signer custody or complete issuance-control equivalence.",
         "sources": [
           {
             "label": "Circle USDC mainnet contract addresses",
@@ -725,6 +737,7 @@
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-16",
+        "reviewNote": "October 1, 2026 Stellar Horizon asset query returns USDC with issuer GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN. This unpinned asset snapshot does not establish signer custody or complete issuance-control equivalence.",
         "sources": [
           {
             "label": "Circle USDC mainnet contract addresses",
@@ -769,6 +782,7 @@
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-16",
+        "reviewNote": "October 1, 2026 Noble bank denom-metadata API returns base uusdc, description USD Coin and usdc exponent 6. The unpinned metadata snapshot does not establish current mint/burn/pause actors or signer custody.",
         "sources": [
           {
             "label": "Circle USDC mainnet contract addresses",
@@ -877,7 +891,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "IBC voucher path verified 2026-07-19: sha256(\"transfer/channel-750/uusdc\") equals this row's denom hash, matching the ACTIVE preferred Noble channel-1 to Osmosis channel-750 ics20-1 channel in the chain-registry. The controller is the Noble-side ICS-20 escrow account noble1kq2rzz6fq2q7fsu75a9g7cpzjeanmk68qxshr6, derived per ibc-go GetEscrowAddress(\"transfer\", \"channel-1\") and verified against live chain state: it holds 13,071,021.92 uusdc against an Osmosis voucher supply of 13,071,111.70 (99.9993% match; the small residual is vouchers in flight or forwarded onward from Osmosis).",
+        "reviewNote": "IBC voucher path verified 2026-07-19: sha256(\"transfer/channel-750/uusdc\") equals this row's denom hash, matching the ACTIVE preferred Noble channel-1 to Osmosis channel-750 ics20-1 channel in the chain-registry. The controller is the Noble-side ICS-20 escrow account noble1kq2rzz6fq2q7fsu75a9g7cpzjeanmk68qxshr6, derived per ibc-go GetEscrowAddress(\"transfer\", \"channel-1\") and verified against live chain state: it holds 13,071,021.92 uusdc against an Osmosis voucher supply of 13,071,111.70 (99.9993% match; the small residual is vouchers in flight or forwarded onward from Osmosis). October 1, 2026 Osmosis denom-trace API returns transfer/channel-750 and base_denom uusdc for this voucher hash. This unpinned provenance snapshot does not re-verify the historical escrow balance, current minter/controller custody or full IBC capability state.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "noble",
         "controllerAddress": "noble1kq2rzz6fq2q7fsu75a9g7cpzjeanmk68qxshr6",
@@ -962,6 +976,7 @@
           "contract:ethereum:0x8888888199b2df864bf678259607d6d5ebb4e3ce"
         ],
         "observedAt": "2026-07-19",
+        "reviewNote": "October 1, 2026 Koios asset_info returns policy 1f3aec8bfe7ea4fe14c5f121e2a92e301afe414147860d557cac7e34, asset-name hex 5553444378 (USDCx), and token-registry decimals 6. This unpinned asset snapshot does not attest current mint-policy actors, custody or delays.",
         "sources": [
           {
             "label": "Circle: USDCx on Cardano now available via Circle xReserve",
@@ -994,6 +1009,7 @@
           "contract:pulsechain:0x4fd0aaa7506f3d9cb8274bdb946ec42a1b8751ef"
         ],
         "observedAt": "2026-07-19",
+        "reviewNote": "October 1, 2026 pinned observation at pulsechain block 27684277 via rpc.pulsechain.com: name() = USD Coin from Ethereum; decimals() = 6; owner() = 0x4fd0aaa7506f3d9cb8274bdb946ec42a1b8751ef; masterMinter() did not return a value. These token-interface reads do not establish complete bridge minter permissions, proxy upgrade authority or signer custody. Existing route classification, controller and historical observedAt are retained.",
         "sources": [
           {
             "label": "PulseChain bridge",
@@ -1095,6 +1111,7 @@
           "protocol:agglayer"
         ],
         "observedAt": "2026-07-19",
+        "reviewNote": "October 1, 2026 pinned observation at katana block 44096967 via katana.gateway.tenderly.co: name() = Vault Bridge USDC; decimals() = 6; owner() did not return a value; masterMinter() did not return a value. These token-interface reads do not establish complete bridge minter permissions, proxy upgrade authority or signer custody. Existing route classification, controller and historical observedAt are retained.",
         "sources": [
           {
             "label": "Katana docs: Vault Bridge",
@@ -1163,6 +1180,7 @@
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-16",
+        "reviewNote": "October 1, 2026 Hyperliquid spotMeta returns canonical USDC token index 0 and tokenId 0x6d1e7cde53ba9467b783cb7c530ce054. This unpinned API metadata confirms token identity only; it does not attest bridge-validator custody or disable latent mint capabilities.",
         "sourceChain": "arbitrum",
         "canonicalChain": "arbitrum",
         "controllerChain": "arbitrum",
@@ -1268,7 +1286,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "DefiLlama labels this the Multichain USDC representation on Fantom; token owner() resolves to 0xc564ee9f21ed8a2d8e7e76c085740d5e4c5fafbe, which Multichain's own developer documentation lists as the bridge DepositAddress/DcrmAddress (MPC custody address), read at block 122576491, 2026-07-20. The Multichain MPC bridge ceased operations in July 2023 and its estate was ordered liquidated by the Singapore High Court, so this representation has no active issuer redemption path and trades de-pegged; Circle never shipped native USDC on Fantom Opera (the ecosystem's Circle-bridged-standard USDC.e over Wormhole NTT is a different token, and native USDC+CCTP launched on Sonic instead).",
+        "reviewNote": "DefiLlama labels this the Multichain USDC representation on Fantom; token owner() resolves to 0xc564ee9f21ed8a2d8e7e76c085740d5e4c5fafbe, which Multichain's own developer documentation lists as the bridge DepositAddress/DcrmAddress (MPC custody address), read at block 122576491, 2026-07-20. The Multichain MPC bridge ceased operations in July 2023 and its estate was ordered liquidated by the Singapore High Court, so this representation has no active issuer redemption path and trades de-pegged; Circle never shipped native USDC on Fantom Opera (the ecosystem's Circle-bridged-standard USDC.e over Wormhole NTT is a different token, and native USDC+CCTP launched on Sonic instead). October 1, 2026 pinned observation at fantom block 123505406 via fantom.drpc.org: name() = USD Coin; decimals() = 6; owner() = 0xc564ee9f21ed8a2d8e7e76c085740d5e4c5fafbe; masterMinter() did not return a value. These token-interface reads do not establish complete bridge minter permissions, proxy upgrade authority or signer custody. Existing route classification, controller and historical observedAt are retained.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "observedBlock": 122576491,
@@ -1347,6 +1365,7 @@
           "contract:stacks:SP120SBRBQJ00MCWS7TM5R8WJNTTKD5K0HFRC2CNE.usdcx-v1"
         ],
         "observedAt": "2026-07-19",
+        "reviewNote": "October 1, 2026 Hiro contract-interface API for SP120SBRBQJ00MCWS7TM5R8WJNTTKD5K0HFRC2CNE.usdcx exposes protocol-mint, protocol-burn, pause and unpause entry points. Interface presence does not identify current authorized protocol callers or establish custody and delay controls.",
         "sources": [
           {
             "label": "Circle blog: USDCx on Stacks now available via Circle xReserve",
@@ -1491,6 +1510,7 @@
         ],
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-19",
+        "reviewNote": "October 1, 2026 pinned observation at metis block 23225336 via andromeda.metis.io: name() = USDC Token; decimals() = 6; owner() did not return a value; masterMinter() did not return a value. These token-interface reads do not establish complete bridge minter permissions, proxy upgrade authority or signer custody. Existing route classification, controller and historical observedAt are retained.",
         "observedBlock": 22918902,
         "sources": [
           {
@@ -1666,6 +1686,7 @@
         ],
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-19",
+        "reviewNote": "October 1, 2026 pinned observation at soneium block 28852433 via rpc.soneium.org: name() = Bridged USDC (Soneium); decimals() = 6; owner() = 0x8be79275fcfd08a931087ecf70ba8a99aee3ac59; masterMinter() = 0x8be79275fcfd08a931087ecf70ba8a99aee3ac59. These token-interface reads do not establish complete bridge minter permissions, proxy upgrade authority or signer custody. Existing route classification, controller and historical observedAt are retained.",
         "observedBlock": 25657537,
         "sources": [
           {
@@ -1703,6 +1724,7 @@
         ],
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-19",
+        "reviewNote": "October 1, 2026 pinned observation at aurora block 218030396 via mainnet.aurora.dev: name() = Bridged USDC; decimals() = 6; owner() did not return a value; masterMinter() did not return a value. These token-interface reads do not establish complete bridge minter permissions, proxy upgrade authority or signer custody. Existing route classification, controller and historical observedAt are retained.",
         "observedBlock": 207613454,
         "sources": [
           {
@@ -1830,13 +1852,14 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "controllerChain": "iota-evm",
-        "controllerAddress": "0x8e8539e4cc69123c623a106773f2b0cbbc58746",
+        "controllerAddress": "0x8e8539e4ccd69123c623a106773f2b0cbbc58746",
         "failureDomainKeys": [
           "protocol:stargate-hydra-usdc",
-          "contract:iota-evm:0x8e8539e4cc69123c623a106773f2b0cbbc58746"
+          "contract:iota-evm:0x8e8539e4ccd69123c623a106773f2b0cbbc58746"
         ],
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-19",
+        "reviewNote": "October 1, 2026 at IOTA EVM block 12976801: Stargate’s deployment registry identifies adapter 0x8e8539e4ccd69123c623a106773f2b0cbbc58746; this token returns isMinter(adapter) = true, and adapter.token() returns 0xfbda5f676cb37624f28265a144a48b0d6e87d3b6. The prior controller address omitted one hex digit and has been corrected. Token owner() and masterMinter() both return 0xeff268107c0231e711cc847c0ed2d8b3974aec48, a distinct administration path; they do not replace the bridge-mint adapter identity.",
         "sources": [
           {
             "label": "Stargate v2 deployment registry (iota-mainnet StargateOFTUSDC 0x8e8539e4CcD69123c623a106773F2b0cbbc58746; on-chain token() = this USDC.e and isMinter(adapter) = true, observed 2026-07-19)",
@@ -1918,6 +1941,7 @@
         ],
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-19",
+        "reviewNote": "October 1, 2026 pinned observation at hemi block 5414408 via rpc.hemi.network: name() = Bridged USDC (Stargate); decimals() = 6; owner() = 0xf8513918fc689d0ab0c59d7e781f50edd1970e2c; masterMinter() = 0xf8513918fc689d0ab0c59d7e781f50edd1970e2c. These token-interface reads do not establish complete bridge minter permissions, proxy upgrade authority or signer custody. Existing route classification, controller and historical observedAt are retained.",
         "sources": [
           {
             "label": "Stargate v2 deployment registry (hemi-mainnet StargateOFTUSDC 0x45f1A95A4D3f3836523F5c83673c797f4d4d263B; on-chain token() = this USDC.e and isMinter(adapter) = true, observed 2026-07-19)",
@@ -1954,6 +1978,7 @@
         ],
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-19",
+        "reviewNote": "October 1, 2026 pinned observation at mode block 45336017 via mainnet.mode.network: name() = USD Coin; decimals() = 6; owner() did not return a value; masterMinter() did not return a value. These token-interface reads do not establish complete bridge minter permissions, proxy upgrade authority or signer custody. Existing route classification, controller and historical observedAt are retained.",
         "sources": [
           {
             "label": "DefiLlama pegged-assets USDC config (mode bridgedFromETH entry)",
@@ -1986,6 +2011,7 @@
         ],
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-19",
+        "reviewNote": "October 1, 2026 at Movement ledger version 220373839: the explicit-version resource query returns fungible-asset Metadata name/symbol USDC.e, decimals 6, and ObjectCore.owner 0x4d2969d384e440db9f1a51391cfc261d1ec08ee1bdf7b9711a6c05d485a4110a. This verifies the object identity and recorded owner, not a complete mint/burn/upgrade capability or signer-custody census; historical route classification and observedAt are retained.",
         "sources": [
           {
             "label": "Movement Network Foundation: public mainnet beta launches with the canonical Movement bridge powered by LayerZero (Mar 2025)",
@@ -2094,6 +2120,7 @@
         ],
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-19",
+        "reviewNote": "October 1, 2026 at MANTRA block 18489102: name() = USD Coin; decimals() = 6; owner() = 0x66b6ff38b988759e57509f00c7b9717b1a94da4d. These explicit-block interface reads do not establish complete bridge mint permissions, upgrade authority or signer custody. Existing route classification, controller and historical observedAt are retained.",
         "sources": [
           {
             "label": "MANTRA announcement: bridging USDC to MANTRA EVM via the Hyperlane Nexus bridge",
@@ -2165,6 +2192,7 @@
         ],
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-19",
+        "reviewNote": "October 1, 2026 pinned observation at viction block 114617829 via rpc.viction.xyz: name() = USD Coin; decimals() = 6; owner() and masterMinter() returned empty data (0x), not ABI-encoded addresses. These token-interface reads do not establish complete bridge minter permissions, proxy upgrade authority or signer custody. Existing route classification, controller and historical observedAt are retained.",
         "sources": [
           {
             "label": "Viction documentation: Viction Bridge (supports bridging USDC to Viction)",
@@ -2201,6 +2229,7 @@
         ],
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-19",
+        "reviewNote": "October 1, 2026 pinned observation at apechain block 50816325 via rpc.apechain.com: name() = Bridged USDC (Stargate); decimals() = 6; owner() = 0x1ba45d65782f69daa454c5ff4e773856926fdcf6; masterMinter() = 0x1ba45d65782f69daa454c5ff4e773856926fdcf6. These token-interface reads do not establish complete bridge minter permissions, proxy upgrade authority or signer custody. Existing route classification, controller and historical observedAt are retained.",
         "sources": [
           {
             "label": "Stargate v2 deployment registry (ape-mainnet StargateOFTUSDC 0x2086f755A6d9254045C257ea3d382ef854849B0f; on-chain token() = this USDC.e and isMinter(adapter) = true, observed 2026-07-19)",
@@ -2237,6 +2266,7 @@
         ],
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-19",
+        "reviewNote": "October 1, 2026 pinned observation at bitlayer block 26187414 via rpc.bitlayer.org: name() = USD Coin; decimals() = 6; owner() = 0x5fe4b0c4554bf68a1c99b1c0fc5ba1a5295cd4a1; masterMinter() = 0x0687175df0b510fdb2948b7bd2a078e3e6877629. These token-interface reads do not establish complete bridge minter permissions, proxy upgrade authority or signer custody. Existing route classification, controller and historical observedAt are retained.",
         "sources": [
           {
             "label": "Bitlayer announcement: USDC token contract swap to 0xf8c374ce88a3be3d374e8888349c7768b607c755 per Circle's protocol (bridged USDC standard), supported by the Bitlayer official bridge (Sep 2024)",
@@ -2273,6 +2303,7 @@
         ],
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-19",
+        "reviewNote": "October 1, 2026 pinned observation at bob block 38988815 via rpc.gobob.xyz: name() = Bridged USDC (BOB); decimals() = 6; owner() = 0x8ce3873bab5156dfb0410ab31da096583af062cd; masterMinter() = 0xbd48f362cf3f4cc08eb687f9b93fc80477fef04e. These token-interface reads do not establish complete bridge minter permissions, proxy upgrade authority or signer custody. Existing route classification, controller and historical observedAt are retained.",
         "sources": [
           {
             "label": "BOB announcement: USDC on BOB upgraded to Chainlink CCIP as canonical cross-chain infrastructure",
@@ -2301,7 +2332,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "The token is a FiatToken-style deployment (name USDC, 6 decimals) with a MasterMinter controller contract, matching the bridged USDC standard pattern used by the chain's official bridge; DefiLlama classifies it as bridged from Ethereum and the on-chain supply matches exactly. The MasterMinter's configured minter could not be enumerated (chain RPC blocks eth_getLogs), so the MasterMinter itself is recorded as the mint-permission controller.",
+        "reviewNote": "The token is a FiatToken-style deployment (name USDC, 6 decimals) with a MasterMinter controller contract, matching the bridged USDC standard pattern used by the chain's official bridge; DefiLlama classifies it as bridged from Ethereum and the on-chain supply matches exactly. The MasterMinter's configured minter could not be enumerated (chain RPC blocks eth_getLogs), so the MasterMinter itself is recorded as the mint-permission controller. October 1, 2026 pinned observation at bsquared block 38837916 via rpc.bsquared.network: name() = USDC; decimals() = 6; owner() = 0xd9f79f9e827389e02ffdd97023508f86e0d6cd67; masterMinter() = 0xb1ffa4e7a11988c7aa685b9c3e4ff8f159b62875. These token-interface reads do not establish complete bridge minter permissions, proxy upgrade authority or signer custody. Existing route classification, controller and historical observedAt are retained.",
         "controllerChain": "bsquared",
         "controllerAddress": "0xb1ffa4e7a11988c7aa685b9c3e4ff8f159b62875",
         "failureDomainKeys": [
@@ -2346,6 +2377,7 @@
         ],
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-19",
+        "reviewNote": "October 1, 2026 pinned observation at citrea block 13368566 via rpc.mainnet.citrea.xyz: name() = Bridged USDC (Citrea); decimals() = 6; owner() = 0xc85c827133913dda49f642ec9100f5b6b2cd2bb3; masterMinter() = 0x3b035a24c49bf7100897b3d0c0a6cee4044a8bee. These token-interface reads do not establish complete bridge minter permissions, proxy upgrade authority or signer custody. Existing route classification, controller and historical observedAt are retained.",
         "sources": [
           {
             "label": "Citrea documentation: Bridge to Citrea (USDC.e 0xE045e6c36cF77FAA2CfB54466D71A3aEF7bbE839 natively maintained by Citrea, bridged from Ethereum powered by LayerZero)",
@@ -2456,6 +2488,7 @@
         ],
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-19",
+        "reviewNote": "October 1, 2026 pinned observation at zircuit block 35451702 via mainnet.zircuit.com: name() = Bridged USDC (VIA Labs); decimals() = 6; owner() = 0x1cab1576350d745eb82a7c6bf94949869d1329c9; masterMinter() = 0x1cab1576350d745eb82a7c6bf94949869d1329c9. These token-interface reads do not establish complete bridge minter permissions, proxy upgrade authority or signer custody. Existing route classification, controller and historical observedAt are retained.",
         "sources": [
           {
             "label": "L2BEAT Zircuit TVS breakdown: Bridged USDC (VIA Labs) USDC.e 0x3b952c8C9C44e8Fe201e2b26F6B2200203214cfF, externally bridged (Proto-CCTP, not Circle), $282.8k",
@@ -2565,7 +2598,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "DefiLlama shows zero Polygon zkEVM USDC supply today (chain deprecated), but the bridged USDC.e contract is live on-chain (name USD Coin, 6 decimals, totalSupply 868,626.30 at 2026-07-19); supply being zero in DefiLlama today does not affect the join.",
+        "reviewNote": "DefiLlama shows zero Polygon zkEVM USDC supply today (chain deprecated), but the bridged USDC.e contract is live on-chain (name USD Coin, 6 decimals, totalSupply 868,626.30 at 2026-07-19); supply being zero in DefiLlama today does not affect the join. October 1, 2026 pinned observation at polygon-zkevm block 33391890 via zkevm-rpc.com: name() = USD Coin; decimals() = 6; owner() did not return a value; masterMinter() did not return a value. These token-interface reads do not establish complete bridge minter permissions, proxy upgrade authority or signer custody. Existing route classification, controller and historical observedAt are retained.",
         "controllerChain": "polygon-zkevm",
         "controllerAddress": "0x2a3dd3eb832af982ec71669e178424b10dca2ede",
         "failureDomainKeys": [
@@ -2643,6 +2676,28 @@
           {
             "label": "DefiLlama pegged-assets USDC config (arc issued entry)",
             "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/usd-coin/config.ts"
+          }
+        ]
+      },
+      {
+        "id": "plasma:0x2d661c89d812261039af9764eceaaee884f5f67f",
+        "destinationChain": "plasma",
+        "contractAddress": "0x2d661c89d812261039af9764eceaaee884f5f67f",
+        "protocol": "Circle native USDC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-01",
+        "observedBlock": 33897098,
+        "reviewNote": "Circle's mainnet directory identifies this native USDC deployment. Pinned calls at Plasma block 33897098 return name and symbol USDC and six decimals; owner and master-minter observations do not prove exhaustive issuance controls, key custody, or CCTP support.",
+        "sources": [
+          {
+            "label": "Circle USDC mainnet contract addresses",
+            "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
           }
         ]
       }

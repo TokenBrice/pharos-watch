@@ -2,10 +2,19 @@
   "id": "eurs-stasis",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: EURS resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Verified Ethereum EURSToken source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdb25f211ab05b1c97d595516f45794528a807ad8"
+      },
+      {
+        "label": "Ethereum owner Safe and setFlags simulation at block 26095802",
+        "url": "https://eth.blockscout.com/address/0xdb25f211ab05b1c97d595516f45794528a807ad8"
+      }
+    ],
+    "evidence": "At Ethereum block 26095802, storage slot 2 identifies owner Safe 0x1bee4f735062cd00841d6997964f187f5f5f5ac9, whose on-chain threshold is 3 with seven owners. An eth_call simulation of setFlags(address,uint256) from that Safe succeeded. The verified deployed token source restricts setFlags to owner and checks addressFlags against BLACK_LIST_FLAG in transfers, establishing individual-account restriction capability rather than inferring it from centralized governance. setDelegate and createTokens simulations from the same Safe also succeeded.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB20MUSD)",
+    "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",

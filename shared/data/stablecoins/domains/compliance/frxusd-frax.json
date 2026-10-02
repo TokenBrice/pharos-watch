@@ -25,10 +25,10 @@
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "authorizationStatus": "issuer-announced-intent",
-    "issuerPathway": "federal-qualified-nonbank",
+    "issuerPathway": "unknown",
     "issuerEntity": "Financial Reserves and Asset Exploration Inc. (dba FRAX Inc)",
     "issuerDomicile": "United States",
-    "licensingRegulator": "OCC (targeted; GENIUS Act nonbank PPSI pathway; no application on file as of 2026-06-07)",
+    "licensingRegulator": "Not established by the cited issuer proposals; OCC references describe the general proposed federal framework.",
     "foreignExceptionStatus": "not-applicable",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
@@ -36,7 +36,7 @@
     "reserveDisclosureUrl": "https://frax.com/transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "Frax governance passed FIP-430 (April 2025) and FIP-432 (July 2025) to prepare frxUSD for U.S. GENIUS Act payment-stablecoin charter compliance and formally transfer compliance and collateral management to FRAX Inc (formerly FinresPBC / Financial Reserves and Asset Exploration Inc.). The OCC digital-assets licensing application tracker (checked 2026-06-18) lists no pending application from Frax Finance, Financial Reserves and Asset Exploration Inc., or FRAX Inc. StableCharter.com categorizes status as 'PREPARING.' The GENIUS Act application framework itself remains in proposed-rule stage. authorizationStatus remains issuer-announced-intent: issuer intent is clear and well-documented but no official PPSI application has been filed. issuerPathway set to federal-qualified-nonbank reflecting the OCC nonbank PPSI route being pursued (not an IDI subsidiary, not foreign-registered); neither FIP explicitly names OCC but FRAX Inc. is a US nonbank entity with no state PPSI registration found, making the OCC federal nonbank pathway the only consistent federal route.",
+    "notes": "FIP-430 and FIP-432 state intent to pursue payment-stablecoin charter compliance and delegate issuer-level compliance/collateral management to FRAX Inc. FIP-432 gives its board and employees discretion to structure the business for the applicable U.S. license; neither proposal names an OCC or federal nonbank GENIUS pathway. The current or announced pathway remains unresolved. The 2026-06-18 no-application review is historical, not a current regulator-wide clearance. This 2026-10-01 review corrects the unsupported pathway inference only; issuer-announced-intent is retained.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -96,7 +96,7 @@
       "reviewer": "Pharos compliance research",
       "reviewedAt": "2026-06-18"
     },
-    "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewer": "Sol curation pass 2026-10-01 (ValA45M)",
+    "reviewedAt": "2026-10-01"
   }
 }

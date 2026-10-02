@@ -1,5 +1,6 @@
 import type { ContractDeployment, StablecoinMeta } from "@shared/types/core";
-import { CHAIN_META } from "@shared/lib/chains";
+import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
+import { CHAIN_META } from "@shared/types/chain-identity";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import {
   DEFAULT_MAX_RESERVE_SUPPLY_SKEW_SEC,
@@ -140,8 +141,8 @@ export async function aggregateMultichainErc20Supply(options: {
   );
 
   const successful = supplyReads.filter(
-    (entry): entry is { contract: ContractDeployment; raw: bigint; noRpc: boolean } =>
-      entry.raw != null && entry.raw > 0n,
+    (entry): entry is { contract: ContractDeployment & { decimals: number }; raw: bigint; noRpc: boolean } =>
+      entry.raw != null && entry.raw > 0n && isFixedDecimalDeployment(entry.contract),
   );
   const failed = supplyReads.filter((entry) => entry.raw == null && !entry.noRpc);
   const omittedNoRpcChains = supplyReads

@@ -42,48 +42,85 @@
   },
   "oracleRisk": {
     "tier": "single-source-or-laggy",
-    "summary": "COPm's live Celo USDm/COPm Broker exchange uses one SortedOracles reporter with a 360-second report-expiry window and minimumReports set to one; BreakerBox gates the swap but no second feed or failover path is configured.",
+    "summary": "At Celo block 78986505, COPm's Broker/BiPoolManager USDm/COPm ConstantSum exchange 0x1c9378bd0973ff313a599d3effc654ba759f8ccca655ab6d6ce5bd39a212943b uses COP/USD feed 0x0196d1f4fda21fa442e53eaf18bf31282f6139f1, one ChainlinkRelayerV1 reporter 0x783f947126adb7646c2a459b867f5b526d2e6603, and one configured Chainlink aggregator 0x97b770b0200cce161907a9cbe0c6b177679f8f7c. getRates and medianRate agree on 301200000000000000000/1e24; medianTimestamp is 1790887023. Effective report expiry and bucket reset are 360 seconds, minimumReports is 1, and spread is 0.3%. MedianDeltaBreaker is enabled at 4% with a 900-second reset cooldown; ValueDeltaBreaker is disabled. The sorted-list median of one relayer is not independent medianization or failover. Stale reports invalidate ConstantSum quotes; BreakerBox suspends execution rather than substituting a second source. This evidenced single-live-source topology retains the existing Mento single-source-or-laggy convention; it does not assert the pinned report was stale.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "top-level-only",
-      "reviewedAt": "2026-08-24",
-      "reviewer": "OpenAI Codex V9.17 oracle applicability review",
-      "rationale": "At Celo block 72127154 (2026-07-14T11:18:32Z), COPm broker() returned the Mento v2 Broker and BiPoolManager exposed one USDm/COPm mint/burn exchange using rate feed 0x0196D1F4FdA21fA442e53EaF18Bf31282F6139F1, minimumReports 1, and a 360-second reset/expiry window. SortedOracles had one reporter for that feed. The reviewed deployment and reserve evidence identified no live COPm borrower-specific CDP or liquidation branch, so the price-sensitive Broker conversion rate is scored as a top-level mint/redemption authority without branch rows.",
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol V10 MentoOracle primary-evidence review",
+      "rationale": "COPm is explicitly reserve-backed in the pinned issuer configuration, not one of the GBPm/CHFm/JPYm CDP assets. The enumerated pinned Broker mint/burn exchange has external price authority but no borrower-specific liquidation engine. Score this authority as coin-price-feed/top-level-only; branch rows and liquidationDelaySec are not applicable. A 900-second breaker reset cooldown or 360-second report expiry is not a liquidation delay. This review covers canonical Celo exchange pricing and does not classify separate bridge control or remote-chain liquidity.",
       "sources": [
         {
-          "label": "Celo block 72127154 (2026-07-14T11:18:32Z)",
-          "url": "https://celo.blockscout.com/block/72127154"
+          "label": "Celo block 78986505: 2026-10-01T20:41:03Z",
+          "url": "https://celo.blockscout.com/block/78986505"
         },
         {
-          "label": "Mento BiPoolManager source",
-          "url": "https://github.com/mento-protocol/mento-core/blob/develop/contracts/swap/BiPoolManager.sol"
+          "label": "Verified BiPoolManager implementation; pinned runtime exact match",
+          "url": "https://celo.blockscout.com/api/v2/smart-contracts/0xc016174b60519bdc24433d4ed2cff6c1efac7881"
         },
         {
-          "label": "Mento deployment addresses",
-          "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
-        },
-        {
-          "label": "Mento reserve analytics API",
-          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+          "label": "Mento explicit reserve/CDP backing configuration",
+          "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/stablecoin-backing.config.ts"
         }
       ]
     },
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex data review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol V10 MentoOracle primary-evidence review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Mento BiPoolManager source",
-        "url": "https://github.com/mento-protocol/mento-core/blob/develop/contracts/swap/BiPoolManager.sol"
+        "label": "Celo block 78986505: 2026-10-01T20:41:03Z",
+        "url": "https://celo.blockscout.com/block/78986505"
       },
       {
-        "label": "COPm on Celo Blockscout",
-        "url": "https://celo.blockscout.com/address/0x8a567e2ae79ca692bd748ab832081c45de4041ea"
+        "label": "Verified SortedOracles implementation; pinned runtime exact match",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x93da60dcdda3229246769cce307076c181f41f72"
       },
       {
-        "label": "COP/USD rate feed on Celo Blockscout",
-        "url": "https://celo.blockscout.com/address/0x0196D1F4FdA21fA442e53EaF18Bf31282F6139F1"
+        "label": "Verified BiPoolManager implementation; pinned runtime exact match",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0xc016174b60519bdc24433d4ed2cff6c1efac7881"
+      },
+      {
+        "label": "Mento explicit reserve/CDP backing configuration",
+        "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/stablecoin-backing.config.ts"
+      },
+      {
+        "label": "Verified COP/USD ChainlinkRelayerV1; pinned runtime exact match",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x783f947126adb7646c2a459b867f5b526d2e6603"
+      },
+      {
+        "label": "Verified MedianDeltaBreaker; pinned runtime exact match",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x49349f92d2b17d491e42c8fdb02d19f072f9b5d9"
+      }
+    ],
+    "paths": [
+      {
+        "id": "celo-mento-broker",
+        "chain": "celo",
+        "address": "0x777a8255ca72412f0d706dc03c9d1987306b4cad",
+        "pricingAuthority": "external-price",
+        "applicability": {
+          "disposition": "top-level-only",
+          "reviewedAt": "2026-10-01",
+          "reviewer": "Sol V10 MentoOracle verified per-path applicability",
+          "confidence": "verified",
+          "rationale": "At Celo block 78986505, Broker 0x777a8255ca72412f0d706dc03c9d1987306b4cad lists BiPoolManager 0x22d9db95e6ae61c104a7b6f6c78d7993b94ec901 as its exchange provider and exposes 1 reviewed ConstantSum mint/burn conversion path(s) involving COPm. These paths use external SortedOracles rates and reserve inventory, not borrower collateral positions or borrower liquidation. The pinned issuer configuration explicitly classifies this asset as reserve-backed. This exact local Broker pricing path is therefore top-level-only; no collateral-liquidation branch or liquidationDelaySec applies.",
+          "sources": [
+            {
+              "label": "Celo block 78986505: 2026-10-01T20:41:03Z",
+              "url": "https://celo.blockscout.com/block/78986505"
+            },
+            {
+              "label": "Verified BiPoolManager implementation; pinned runtime exact match",
+              "url": "https://celo.blockscout.com/api/v2/smart-contracts/0xc016174b60519bdc24433d4ed2cff6c1efac7881"
+            },
+            {
+              "label": "Mento explicit reserve/CDP backing configuration",
+              "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/stablecoin-backing.config.ts"
+            }
+          ]
+        }
       }
     ]
   },

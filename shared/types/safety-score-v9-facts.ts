@@ -1,12 +1,19 @@
 import { z } from "zod";
+import { RedemptionRouteSuspensionSchema } from "./redemption";
+import { V9ReserveBoundedFactSchema } from "./reserve-bounded-facts";
+import { ReserveScopedAdmissionSchema } from "./safety-score-v9-reserve-scope";
+import { AdmittedProviderRowExclusionSchema } from "./safety-score-v9-supply-attribution";
+import { V9AccessClaimGraphSchema, v9AccessClaimGraphStatuses } from "./safety-score-v9-access-lookthrough";
+import { V9ControlExecutionScopeSchema, V9ExactControlPolicySchema, V9WeightedQuorumSchema } from "./safety-score-v9-control-scope";
 import { ReserveIntermediarySchema } from "./reserves";
 import {
   DependencyTypeSchema,
   V9DependencyEconomicRoleSchema,
 } from "./dependency-types";
 import { V9PathKindSchema, V9ReasonCodeSchema, V9ReasonOwnerDomainSchema } from "./safety-score-v9";
-import { V9CdpStressCoverageFactSchema, V9MechanismRiskReviewSchema } from "./safety-score-v9-backing";
+import { V9CdpStressCoverageFactSchema, V9MechanismRiskReviewSchema, type V9MechanismFactV1 } from "./safety-score-v9-backing";
 import { V9OperationalResilienceFactSchema } from "./safety-score-v9-operational-resilience";
+import { V9AllocationScopeFactSchema } from "./safety-score-v9-allocation";
 import {
   V9WrapperLocalFactsSchema,
   type V9ApplicableWrapperLocalFacts,
@@ -16,6 +23,8 @@ import {
   ExitRouteEvidenceKindSchema,
   ExitRouteFamilySchema,
   ExitRouteObservationHistorySchema,
+  PhysicalToUsdTraceSchema,
+  ExitExecutionCertificateSchema,
 } from "./exit-route";
 import { RedemptionCapacityScoringHorizonSchema } from "./redemption";
 import { ReserveAssetClassSchema } from "./reserves";
@@ -376,6 +385,8 @@ const V9ReserveExposureFactV2Schema = z
     sourceGenerationId: CanonicalTextSchema,
     provenance: z.enum(["live", "curated", "curated-fallback", "audited-fallback"]),
     evidenceClass: z.enum(["independent", "issuer-attested", "static-validated"]).optional(),
+    sourceKind: z.enum(["standing-structure", "portfolio-observation", "financial-report", "onchain-observation"]).optional(),
+    scopeId: CanonicalTextSchema.optional(),
     status: V9FactStatusV2Schema,
     name: CanonicalTextSchema,
     weight: PositiveFractionSchema,
@@ -549,6 +560,7 @@ export const V9ExitRouteFactBaseSchema = z
   .object({
     routeId: CanonicalTextSchema,
     lane: V9RouteLaneSchema,
+    routeSuspension: RedemptionRouteSuspensionSchema.optional(),
     holderAccess: V9RouteHolderAccessSchema,
     executionModel: V9RouteExecutionModelSchema,
     executionCertainty: V9RouteExecutionCertaintySchema,
@@ -556,6 +568,8 @@ export const V9ExitRouteFactBaseSchema = z
     // conservatively; current compilers still materialize the normalized value
     // in their output.
     modelConfidence: z.enum(["high", "medium", "low"]).default("low"),
+    /** Reviewed fee disclosure without a same-notional execution cost bound. */
+    feeEvidence: z.enum(["undisclosed-reviewed", "disclosed-unquantified"]).optional(),
     coverageClass: V9RouteCoverageClassSchema,
     capacityScoringHorizon: RedemptionCapacityScoringHorizonSchema.optional(),
     settlementModel: V9RouteSettlementModelSchema,
@@ -575,9 +589,10 @@ const V9ExitRouteFactV2Schema = V9ExitRouteFactBaseSchema
     routeFamily: ExitRouteFamilySchema,
     observationConfidence: ExitRouteConfidenceSchema,
     observationHistory: ExitRouteObservationHistorySchema.nullable().optional(),
+    physicalToUsd: PhysicalToUsdTraceSchema.optional(),
+    executionModelId: CanonicalTextSchema.optional(),
+    executionCertificate: ExitExecutionCertificateSchema.optional(),
     evidenceKind: ExitRouteEvidenceKindSchema,
-    /** Carried from the route observation: the reviewed fee is undisclosed, so the modeled capacity has no cost bound. */
-    feeEvidence: z.literal("undisclosed-reviewed").optional(),
     /**
      * Carried from the route observation: the route is open but no evidence
      * bounds settlement completion, so capacity is a bounded evidence gap
@@ -593,6 +608,27 @@ const V9ExitRouteFactV2Schema = V9ExitRouteFactBaseSchema
   })
   .strict()
   .superRefine((route, ctx) => {
+    if (route.routeSuspension && (
+      route.lane !== "redemption" || route.routeSuspension.routeId !== route.routeId ||
+      route.scoreEligible || route.coverageClass !== "diagnostic" ||
+      route.request !== null || route.capacityCurve.length !== 0
+    )) {
+      ctx.addIssue({ code: "custom", path: ["routeSuspension"], message: "A suspension is exact-route diagnostic evidence, never executable capacity" });
+    }
+    if (route.executionModelId && route.scoreEligible && !route.executionCertificate) {
+      ctx.addIssue({ code: "custom", message: "Execution model lacks certificate" });
+    }
+    if (route.executionCertificate && route.scoreEligible) {
+      const certificate = route.executionCertificate;
+      if (certificate.modelId !== route.executionModelId ||
+          certificate.settlement.maximumCompletionSec !== route.settlementSlaSec ||
+          certificate.identity.outputAssetKeys.some((key) => !route.output.assetKeys.includes(key)) ||
+          route.capacityCurve.some((point) => !certificate.points.some((proof) =>
+            proof.requestedNotionalUsd === point.requestedNotionalUsd && proof.maxCostBps === point.maxCostBps &&
+            proof.executableUsd === point.executableUsd && proof.executionCostBps === point.executionCostBps))) {
+        ctx.addIssue({ code: "custom", message: "Compiled execution facts conflict with certificate" });
+      }
+    }
     const expectedKey = `${route.lane}:${route.sourceGenerationId}:${route.routeId}`;
     if (route.routeKey !== expectedKey) {
       ctx.addIssue({ code: "custom", path: ["routeKey"], message: `Canonical route key must be ${expectedKey}` });
@@ -685,8 +721,14 @@ const V9ControlAuthoritySchema = z
       .object({ required: z.number().int().positive(), total: z.number().int().positive() })
       .strict()
       .nullable(),
+    weightedQuorum: V9WeightedQuorumSchema.optional(),
   })
   .strict()
+  .superRefine((authority, ctx) => {
+    if (authority.weightedQuorum && (authority.model !== "multisig" || authority.threshold !== null || authority.authorityKey !== authority.weightedQuorum.deployment)) {
+      ctx.addIssue({ code: "custom", message: "Weighted authority conflicts with uniform quorum or exact deployment" });
+    }
+  })
   .nullable();
 
 /** Reviewed key-custody attestation for the authority holding this control. An
@@ -731,6 +773,11 @@ export const V9DeploymentControlFactBaseSchema = z
     scopedQuestionFresh: z.boolean().optional(),
     keyCustody: V9KeyCustodySchema,
     modulesOrGuards: V9ModulesOrGuardsSchema,
+    executionScope: V9ControlExecutionScopeSchema.optional(),
+    executionScopeContributors: z.array(z.object({ authorityKey: CanonicalTextSchema, scope: V9ControlExecutionScopeSchema.optional() }).strict()).min(1).optional(),
+    executionScopeComplete: z.boolean().optional(),
+    scopeDiagnostics: CanonicalStringArraySchema.optional(),
+    moduleImpact: V9ExactControlPolicySchema.shape.moduleImpactStates.element.optional(),
     incidentState: V9IncidentStateSchema,
     failureDomains: CanonicalFailureDomainsSchema,
   })
@@ -744,7 +791,7 @@ const V9DeploymentControlFactV2Schema = V9DeploymentControlFactBaseSchema
   .strict()
   .superRefine((control, ctx) => {
     if (control.authority?.model === "multisig") {
-      if (!control.authority.threshold || control.authority.threshold.required > control.authority.threshold.total) {
+      if (!control.authority.weightedQuorum && (!control.authority.threshold || control.authority.threshold.required > control.authority.threshold.total)) {
         ctx.addIssue({ code: "custom", path: ["authority", "threshold"], message: "Multisig threshold is invalid" });
       }
     } else if (control.authority?.threshold !== null && control.authority !== null) {
@@ -821,7 +868,7 @@ const V9MintMechanismReviewV2Schema = z
     controlKey: CanonicalTextSchema.nullable(),
     // MINT-LADDER 9.32 (2026-08-21): `none` records a reviewer-confirmed
     // absence of any reconciliation regime, distinct from unverified `unknown`.
-    reconciliation: z.enum(["continuous", "periodic", "none", "not-applicable", "unknown"]),
+    reconciliation: z.enum(["continuous", "periodic", "internal-ledger", "none", "not-applicable", "unknown"]),
     // Prudential supervision is a reviewed fact, never inferred. Under R3 a
     // reconciled unbounded mint emits no centralized-mint cap only when a
     // per-coin review establishes a prudential supervisory regime; unknown
@@ -873,8 +920,22 @@ const V9OracleControlReviewV2Schema = z
   .object({
     status: V9FactStatusV2Schema,
     tier: z.enum(ORACLE_RISK_TIER_VALUES).nullable(),
+    // Current verified topology of positively applicable paths, independent of
+    // unresolved sibling inventory. It cannot describe an unreviewed sibling.
+    knownPathTier: z.enum(ORACLE_RISK_TIER_VALUES).optional(),
     liquidationBranchesApplicable: z.boolean().optional(),
     branches: canonicalArrayBy(V9OracleBranchReviewV2Schema, (branch) => branch.branch),
+    paths: canonicalArrayBy(
+      z.object({
+        id: CanonicalTextSchema,
+        chain: CanonicalChainIdSchema,
+        address: CanonicalTextSchema,
+        branchId: CanonicalTextSchema.nullable(),
+        applicability: V9FactStatusV2Schema.shape.applicability,
+        observationState: V9ObservationStateSchema,
+      }).strict(),
+      (path) => path.id,
+    ).optional(),
     // Worst severity band contributed by weak market branches whose measured
     // debt share is below the deployment-materiality threshold. These branches
     // do not drive the (material-only) top-level tier; the control lane surfaces
@@ -884,6 +945,11 @@ const V9OracleControlReviewV2Schema = z
   })
   .strict()
   .superRefine((review, ctx) => {
+    if (review.knownPathTier !== undefined && !review.paths?.some((path) =>
+      path.applicability.state === "required" && path.observationState === "known",
+    )) {
+      ctx.addIssue({ code: "custom", path: ["knownPathTier"], message: "Known-path oracle tier requires a positively applicable reviewed path" });
+    }
     if (
       review.status.applicability.state === "not-applicable" &&
       (review.tier !== null || review.branches.length > 0)
@@ -1056,6 +1122,7 @@ export const V9AccessReviewV2Schema = z
       .object({
         status: V9FactStatusV2Schema,
         reviews: canonicalArrayBy(V9FreezeAccessReviewV2Schema, (review) => review.reviewKey),
+        claimGraph: V9AccessClaimGraphSchema.optional(),
         /**
          * Owner ruling 2026-07-27: a current, evidenced review whose honest
          * verdict is structural rather than boolean. `inherited-upstream` =
@@ -1207,6 +1274,7 @@ const V9SupplyFactV2Schema = z
     unknownRouteSupplyShare: FractionSchema.nullable(),
     unreviewedRouteSupplyShare: FractionSchema.nullable(),
     failureDomains: CanonicalFailureDomainsSchema,
+    providerRowExclusions: z.array(AdmittedProviderRowExclusionSchema).optional(),
   })
   .strict()
   .superRefine((supply, ctx) => {
@@ -1364,11 +1432,14 @@ const V9AssetFactsBaseFields = {
     (fact) => fact.factKey,
   ).optional(),
   cdpStressCoverage: V9CdpStressCoverageFactSchema.optional(),
+  allocationScopeFacts: canonicalArrayBy(V9AllocationScopeFactSchema, (fact) => fact.claimKey).optional(),
   // Retained V2 facts carry only serial/basket dependency roles. V3 overrides
   // this field with the role-aware edge contract below.
   dependencies: V9EffectiveDependenciesV2Schema,
   reserveStatus: V9FactStatusV2Schema,
   reserveExposures: canonicalArrayBy(V9ReserveExposureFactV2Schema, (exposure) => exposure.exposureKey),
+  reserveBoundFacts: canonicalArrayBy(V9ReserveBoundedFactSchema, (row) => row.fact.factKey).optional(),
+  reserveScopeAdmissions: z.array(ReserveScopedAdmissionSchema).optional(),
   exitStatus: V9FactStatusV2Schema,
   exitRoutes: canonicalArrayBy(V9ExitRouteFactV2Schema, (route) => route.routeKey),
   controlStatus: V9FactStatusV2Schema,
@@ -1441,6 +1512,14 @@ function validateAssetFacts(asset: V9AssetFactsValidationInput, ctx: z.Refinemen
         path: ["economicControlReview"],
         message: `${label} review references unknown control ${controlKey}`,
       });
+    }
+  }
+  for (const [index, fact] of (asset.allocationScopeFacts ?? []).entries()) {
+    const target = fact.target;
+    if (fact.admitted && fact.disposition === "inherited-parent" &&
+      (target?.kind !== "parent-claim" || !asset.dependencies.edges.some((edge) =>
+        edge.edgeKey === target.edgeKey && edge.upstreamAssetId === target.upstreamAssetId))) {
+      ctx.addIssue({ code: "custom", path: ["allocationScopeFacts", index, "target"], message: "Parent scope must match a real economic dependency" });
     }
   }
   // exitRoutes is deliberately absent: a reviewed-complete empty exit
@@ -1566,7 +1645,10 @@ function factStatuses(asset: V9AssetFactsBase): Array<{ label: string; status: V
   const mechanismStatuses = asset.mechanismRiskReview.review
     ? Object.entries(asset.mechanismRiskReview.review).flatMap(([key, value]) =>
         value !== null && typeof value === "object" && "status" in value
-          ? [{ label: `mechanism-review:${key}`, status: value.status as V9FactStatusV2 }]
+          ? [{ label: `mechanism-review:${key}`, status: value.status as V9FactStatusV2 },
+            ...((value as V9MechanismFactV1).scopedAssessments ?? []).map(fragment => ({
+              label: `mechanism-review:${key}:scope:${fragment.scopeId}`, status: fragment.status,
+            }))]
           : [],
       )
     : [];
@@ -1577,6 +1659,7 @@ function factStatuses(asset: V9AssetFactsBase): Array<{ label: string; status: V
     { label: "dependencies", status: asset.dependencies.status },
     { label: "reserve-envelope", status: asset.reserveStatus },
     ...asset.reserveExposures.map((fact) => ({ label: `reserve:${fact.exposureKey}`, status: fact.status })),
+    ...(asset.reserveBoundFacts ?? []).map((row) => ({ label: `reserve-bound:${row.fact.factKey}`, status: row.status })),
     { label: "exit-envelope", status: asset.exitStatus },
     ...asset.exitRoutes.flatMap((fact) => [
       { label: `route:${fact.routeKey}`, status: fact.status },
@@ -1597,6 +1680,7 @@ function factStatuses(asset: V9AssetFactsBase): Array<{ label: string; status: V
       label: `access:freeze:${review.reviewKey}`,
       status: review.status,
     })),
+    ...v9AccessClaimGraphStatuses(asset.accessReview.freeze.claimGraph),
     { label: "peg", status: asset.peg.status },
     { label: "supply", status: asset.supply.status },
   ];
@@ -1616,6 +1700,33 @@ function validateAssetReferences(
   const gapIds = new Set(asset.gaps.map((gap) => gap.gapId));
   const referencedEvidenceIds = new Set<string>();
   const referencedGapIds = new Set<string>();
+  for (const scope of asset.reserveScopeAdmissions ?? []) {
+    if (scope.admitted && scope.evidenceRefIds.length === 0) addIssue(ctx, ["assets", assetIndex, "reserveScopeAdmissions"], "Admitted reserve scopes require evidence");
+    for (const id of scope.evidenceRefIds) {
+      if (!evidenceIds.has(id)) addIssue(ctx, ["assets", assetIndex, "reserveScopeAdmissions"], "Reserve scope references missing evidence");
+      referencedEvidenceIds.add(id);
+    }
+  }
+  const claimGraph = asset.accessReview.freeze.claimGraph;
+  if (claimGraph) {
+    if (claimGraph.assetId !== asset.assetId || claimGraph.nodes.find((node) => node.nodeKey === claimGraph.rootNodeKey)?.assetId !== asset.assetId) {
+      addIssue(ctx, ["assets", assetIndex, "accessReview", "freeze", "claimGraph"], "Access graph receiving identity mismatch");
+    }
+    for (const edge of claimGraph.edges) {
+      if (edge.basis.kind === "reserve-position" && edge.weight !== null) {
+        const exposureKey = edge.basis.exposureKey;
+        if (!asset.reserveExposures.some((row) => row.exposureKey === exposureKey && row.status.observationState === "known")) {
+          addIssue(ctx, ["assets", assetIndex, "accessReview", "freeze", "claimGraph", "edges"], "Quantified graph edge requires an admitted reserve exposure");
+        }
+      }
+      if (edge.basis.kind === "serial-claim" && edge.basis.dependencyEdgeKey !== null && edge.weight !== null) {
+        const dependencyKey = edge.basis.dependencyEdgeKey;
+        if (!asset.dependencies.edges.some((row) => row.edgeKey === dependencyKey && row.economicRole === "serial-claim")) {
+          addIssue(ctx, ["assets", assetIndex, "accessReview", "freeze", "claimGraph", "edges"], "Serial graph edge requires an admitted dependency");
+        }
+      }
+    }
+  }
 
   const captureRefs = (label: string, evidenceRefIds: readonly string[], statusGapIds: readonly string[]) => {
     for (const evidenceId of evidenceRefIds) {
@@ -1702,11 +1813,27 @@ function validateAssetReferences(
   for (const fact of asset.mechanismExitFacts ?? []) {
     captureRefs(`mechanism-exit:${fact.factKey}`, fact.evidenceRefIds, []);
   }
+  for (const fact of asset.allocationScopeFacts ?? []) {
+    captureRefs(`allocation-scope:${fact.claimKey}`, fact.evidenceRefIds, []);
+    if (!fact.admitted) continue;
+    for (const evidenceId of fact.evidenceRefIds) {
+      const reference = evidenceById.get(evidenceId);
+      if (reference && (reference.sourceId !== "safety-score-v9.scoped-allocation-review" ||
+        reference.sourceGenerationId !== fact.sourceGenerationId || reference.observedAtSec !== fact.observedAtSec ||
+        !fact.sources.some((source) => source.url === reference.url))) {
+        addIssue(ctx, ["assets", assetIndex, "allocationScopeFacts", fact.claimKey, "evidenceRefIds"],
+          `Allocation scope evidence ${evidenceId} does not match its source/clock/generation`);
+      }
+    }
+  }
   const wrapperLocalFacts = asset.wrapperLocalFacts;
   if (wrapperLocalFacts?.applicability === "not-wrapper") {
     captureRefs("wrapper-local:not-wrapper", wrapperLocalFacts.evidenceRefIds, []);
   } else if (wrapperLocalFacts?.applicability === "wrapper") {
     captureRefs("wrapper-local:form", wrapperLocalFacts.formEvidenceRefIds, []);
+    if (wrapperLocalFacts.parentBackingInheritance) {
+      captureRefs("wrapper-local:parentBackingInheritance", wrapperLocalFacts.parentBackingInheritance.evidenceRefIds, []);
+    }
     for (const [factKey, fact] of Object.entries(wrapperLocalFacts.facts) as Array<
       [keyof V9ApplicableWrapperLocalFacts["facts"], V9ApplicableWrapperLocalFacts["facts"][keyof V9ApplicableWrapperLocalFacts["facts"]]]
     >) {
@@ -1871,6 +1998,10 @@ function validateFactSetCore(value: V9FactSetCoreV2 | V9FactSetCoreV3, ctx: z.Re
     addIssue(ctx, ["sourceFingerprints", "shockCoverage"], "Stress coverage requires a source fingerprint");
   }
   for (const [assetIndex, asset] of value.assets.entries()) {
+    const claimGraph = asset.accessReview.freeze.claimGraph;
+    if (claimGraph && (claimGraph.clockSec !== value.asOfSec || claimGraph.generationId !== value.baseInputGenerationId)) {
+      addIssue(ctx, ["assets", assetIndex, "accessReview", "freeze", "claimGraph"], "Access graph must match the admitted clock and input generation");
+    }
     for (const [evidenceIndex, evidence] of asset.evidence.entries()) {
       if (evidence.observedAtSec > value.asOfSec) {
         addIssue(
@@ -1961,6 +2092,18 @@ function validateFactSetCore(value: V9FactSetCoreV2 | V9FactSetCoreV3, ctx: z.Re
         );
       }
     }
+    for (const [boundIndex, bound] of (asset.reserveBoundFacts ?? []).entries()) {
+      const generation = bound.fact.provenance.kind === "producer-observation"
+        ? value.sourceFingerprints.liveReserves.generationId
+        : value.sourceFingerprints.researchOverlays.generationId;
+      const references = asset.evidence.filter((reference) => bound.status.evidenceRefIds.includes(reference.evidenceId));
+      if (bound.sourceGenerationId !== generation || references.some((reference) => reference.sourceGenerationId !== generation || reference.freshness.maxAgeSec !== bound.freshnessMaxAgeSec)) {
+        addIssue(ctx, ["assets", assetIndex, "reserveBoundFacts", boundIndex], "Bounded reserve generation or freshness budget is inconsistent");
+      }
+      if (bound.status.observationState === "known" && (bound.fact.asOfSec > value.asOfSec || value.asOfSec - bound.fact.asOfSec > bound.freshnessMaxAgeSec || references.some((reference) => reference.observedAtSec !== bound.fact.asOfSec || reference.freshness.state !== "current"))) {
+        addIssue(ctx, ["assets", assetIndex, "reserveBoundFacts", boundIndex], "Known bounded reserve facts require their own current snapshot");
+      }
+    }
     for (const [controlIndex, control] of asset.controls.entries()) {
       if (control.sourceGenerationId !== value.sourceFingerprints.researchOverlays.generationId) {
         addIssue(
@@ -2015,6 +2158,13 @@ export type CompiledV9FactSetV2 = z.infer<typeof CompiledV9FactSetV2Schema>;
 export const V9FactSetCoreV3Schema = V9FactSetCoreV3ObjectSchema.superRefine((value, ctx) =>
   validateFactSetCore(value, ctx),
 );
+
+/** Keep cohort/reference validation when a compiler has already admitted each asset. */
+export function createV9FactSetCoreV3Schema(assetSchema: z.ZodType<V9AssetFactsV3>) {
+  return z.object({ ...V9FactSetCoreV3Fields, assets: canonicalArrayBy(assetSchema, (asset) => asset.assetId) })
+    .strict()
+    .superRefine((value, ctx) => validateFactSetCore(value, ctx));
+}
 
 export const CompiledV9FactSetV3Schema = z
   .object({ ...V9FactSetCoreV3Fields, v9FactSetDigest: Sha256Schema })

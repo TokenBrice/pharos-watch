@@ -2,10 +2,19 @@
   "id": "axcnh-anchorx",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: AxCNH resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "evidence": "Pinned reads on 2026-10-01 confirmed blacklister() = 0x03ae531b3a95d69cd79aa6f7b3918fd37c67993c on Ethereum block 26095940 and 0x3c91914a901aa484eed7463e8d94d34575d29d82 on Conflux eSpace block 158032451. At each block, a read-only eth_call from the returned blacklister to blacklist(0x0000000000000000000000000000000000000001) succeeded. No transaction was submitted.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurM07yvUSDC1.AxReview)",
+    "reviewedAt": "2026-10-01",
+    "sources": [
+      {
+        "label": "Ethereum PublicNode RPC, pinned block 26095940",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Conflux eSpace RPC, pinned block 158032451",
+        "url": "https://evm.confluxrpc.com"
+      }
+    ]
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

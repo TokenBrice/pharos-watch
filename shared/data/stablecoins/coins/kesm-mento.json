@@ -12,28 +12,24 @@
   },
   "collateral": "Shared Mento Reserve: Mento's pinned analytics configuration classifies KESm as reserve-backed rather than CDP-backed. Its backing is the protocol's diversified, dynamically managed reserve, not USDm locked in a KESm-specific borrower trove.",
   "pegMechanism": "KESm is issued through Mento v2's USDm/KESm Broker and BiPoolManager exchange. A USDm-to-KESm swap burns incoming USDm and mints outgoing KESm; the reverse burns KESm and mints USDm. The virtual pool prices swaps from the KES/USD SortedOracles feed and applies spread, trading-limit, report-count, freshness, and BreakerBox checks.",
-  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetype": "shared-reserve",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-07-31",
-    "reviewer": "Claude owner-ruling R2 Mento archetype application",
-    "rationale": "Owner ruling 2026-07-31 places Mento's protocol-reserve-backed FX inventory under the fiat-cash archetype umbrella, following the reserve-backed USDm/EURm precedent already recorded on cusd-celo and ceur-celo. KESm is minted and burned as reserve-backed inventory against the shared Mento Reserve through the Mento Broker at oracle rates: there is no borrower trove, no position health factor, and no liquidation path, so cdp remains inapplicable. Under this ruling fiat-cash reads as reserve-backed cash-equivalent inventory issuance rather than strictly custodial off-chain cash.",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol V10 data curation 2026-10-01 (DataMento)",
+    "rationale": "At Celo block 78986505, KESm token 0x456a3d042c0dbd3db53d5489e98dfb038553b0d0 is bound to the Broker's USDm/KESm pool. Its nonzero reverse quote, reserve stable-asset membership and deployed mint/burn code establish a limited operational shared-reserve claim, subject to oracle and trading-limit checks. The pinned explicit backing configuration and MGP-18 confirm reserve backing rather than CDP ownership. Fiat legal priority, whole-pool reconciliation and default recovery remain unestablished.",
     "sources": [
       {
-        "label": "Pinned Mento stablecoin backing config",
-        "url": "https://github.com/mento-protocol/mento-analytics-api/blob/36441a61f7ad339fe4998596f6bbed1005342ba8/src/api/v2/config/stablecoin-backing.config.ts"
+        "label": "Explicit reserve backing at commit 53bfb26749fd99fc3bbd3c251064b5eaaa77717d",
+        "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/stablecoin-backing.config.ts"
       },
       {
-        "label": "Pinned Mento Broker source",
-        "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/swap/Broker.sol"
+        "label": "MGP-18: exact legacy FX pool and holder exit",
+        "url": "https://forum.mento.org/t/mgp-18-mento-v2-deprecation/137"
       },
       {
-        "label": "Mento V3 stable token docs",
-        "url": "https://docs.mento.org/mento-v3/build/smart-contracts/stabletoken"
-      },
-      {
-        "label": "Mento reserve model documentation",
-        "url": "https://docs.mento.org/mento-v3/dive-deeper/the-reserve"
+        "label": "Deployed Broker mint/burn source; runtime matched at Celo block 78986505",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x1b78f6acd05e7bcb00f74863bfd8a7c264143e37"
       }
     ]
   },

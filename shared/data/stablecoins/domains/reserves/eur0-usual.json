@@ -54,9 +54,9 @@
         "jurisdiction": "European Union"
       },
       {
-        "name": "Undisclosed euTBL fund depositary",
+        "name": "CACEIS Bank (Spiko SICAV depositary and custodian)",
         "role": "custodian",
-        "jurisdiction": "European Union"
+        "jurisdiction": "France"
       },
       {
         "name": "Usual EUR0 collateral treasury and mint engine contracts",
@@ -66,8 +66,8 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB17EURI)",
     "confidence": "probable",
     "sources": [
       {
@@ -81,8 +81,12 @@
       {
         "label": "EUR0 TokenMapping contract",
         "url": "https://etherscan.io/address/0xf20Ba8F5195fCC094d94a937F0d2719f6Da14A4a"
+      },
+      {
+        "label": "Spiko SICAV prospectus published 1 September 2026: depositary and custodian",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
       }
     ],
-    "uncertainty": "The deployed collateral mapping and published treasury identify the euTBL dependency, but the reviewed public sources do not establish legal segregation, fund-depositary insolvency treatment, or rehypothecation terms for the full EUR0 route."
+    "uncertainty": "The deployed collateral mapping and published treasury identify the euTBL dependency. The Spiko SICAV prospectus published 1 September 2026 names CACEIS Bank in France as the fund depositary and custodian, independent of the management company. That fund-level identification does not establish legal segregation, insolvency treatment, or rehypothecation terms for the full EUR0 protocol route; those safeguards remain unknown."
   }
 }

@@ -2,28 +2,39 @@
   "id": "reusd-re-protocol",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "unbounded-reconciled",
+    "authorityPosture": "unbounded-reconciliation-unknown",
     "confidence": "verified",
-    "summary": "Native Ethereum reUSD issuance is held by the collateral-backed InsuranceCapitalLayer; the immutable redemption contract retains a non-callable MINTER_ROLE assignment but has no ShareToken mint call. A two-day TimelockController holds the live UUPS upgrader role, while both it and a 3-of-5 Safe hold token DEFAULT_ADMIN_ROLE; the Safe can immediately authorize new native minters or upgraders. Chainlink CCIP pool authority is reviewed separately under Bridge Risk.",
+    "summary": "Native deposit ICLs on Ethereum, Avalanche, Arbitrum and Base hold MINTER_ROLE on their local reUSD token and remain upgradeable. Checked token admin/upgrader roles are held by each chain's two-day timelock, not the 3-of-5 Safe. The Avalanche and Arbitrum Safes additionally retain ICL DEFAULT_ADMIN_ROLE, an immediate authorization bypass; checked Ethereum and Base Safe ICL admin/upgrader roles are false. The Ethereum Safe's historical direct token-admin assignment was revoked on 2026-08-12. CCIP pool mint authority remains under Bridge Risk; the reviewed native paths retain unbounded economic-cap semantics and non-exhaustive role-inventory caveats.",
     "upgradeability": {
       "model": "uups",
       "deploymentRefs": [
-        "ethereum:0x5086bf358635b81d8c47c66d1c8b9e567db70c72"
+        "ethereum:0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+        "avalanche:0x180af87b47bf272b2df59dccf2d76a6eafa625bf",
+        "arbitrum:0x76ce01f0ef25aa66cc5f1e546a005e4a63b25609",
+        "base:0x7d214438d0f27afccc23b3d1e1a53906ace5cfea"
       ],
       "proxyAddresses": [
-        "0x5086bf358635b81d8c47c66d1c8b9e567db70c72"
+        "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+        "0x180af87b47bf272b2df59dccf2d76a6eafa625bf",
+        "0x76ce01f0ef25aa66cc5f1e546a005e4a63b25609",
+        "0x7d214438d0f27afccc23b3d1e1a53906ace5cfea"
       ],
       "implementationAddresses": [
-        "0xb5276c436f65913cd5332de745d04fedeb4a21d4"
+        "0xb5276c436f65913cd5332de745d04fedeb4a21d4",
+        "0x34bdd8d872f847bc8ca76e3a139604ba06fc7141",
+        "0x2828298ea649c18be72610a8772337673758c3e4",
+        "0xadc4794909605570d4c43040eb2bd5c0871fedda"
       ],
       "adminAddresses": [
         "0x69ddea332723cf5407151aaf68b9b076557fca93",
-        "0x8eec10616802ef639ca55c98ac856553fadefbad"
+        "0x99c83ef05f249247312e95653764794728c63467",
+        "0x98bdded5056c1aa6a2532f006a3c45986eaee9e9",
+        "0xce978312695c307a9810ad49ecc74a9743e8c605"
       ],
       "canChangeMintLogic": true,
-      "controlRef": "reUSD governance Safe (token DEFAULT_ADMIN)",
-      "observedAt": "2026-08-08",
-      "observedBlock": 25712112,
+      "controlRef": "reUSD token admin and UUPS upgrader timelock",
+      "observedAt": "2026-10-01",
+      "observedBlock": 26095799,
       "sources": [
         {
           "label": "Blockscout verified reUSD proxy",
@@ -34,8 +45,12 @@
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb5276c436f65913cd5332de745d04fedeb4a21d4"
         },
         {
-          "label": "Ethereum observation block 25712112",
-          "url": "https://eth.blockscout.com/block/25712112"
+          "label": "Ethereum observation block 26095799",
+          "url": "https://eth.blockscout.com/block/26095799"
+        },
+        {
+          "label": "Re Protocol: chain-specific native tokens, ICLs and timelocks",
+          "url": "https://docs.re.xyz/products/smart-contracts.md"
         }
       ]
     },
@@ -53,15 +68,15 @@
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "The verified InsuranceCapitalLayer mints reUSD shares only after supported collateral is transferred in and share conversion checks pass. Its own UUPS upgrader role is held by the same two-day timelock that controls reUSD.",
-        "observedAt": "2026-08-08",
-        "observedBlock": 25712112,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095799,
         "sources": [
           {
-            "label": "InsuranceCapitalLayer proxy",
-            "url": "https://etherscan.io/address/0x4691c475be804fa85f91c2d6d0adf03114de3093#code"
+            "label": "Verified InsuranceCapitalLayer implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x06d4acc104b974cd99bf22e4572f48a051e59670"
           }
         ],
-        "evidence": "The complete RoleGranted/RoleRevoked history plus hasRole() at Ethereum block 25712112 confirms this proxy still holds reUSD MINTER_ROLE. Verified InsuranceCapitalLayer source calls shareToken.mint() only in collateral-backed deposit flows; its live UPGRADER_ROLE is held by timelock 0x69ddea332723cf5407151aaf68b9b076557fca93."
+        "evidence": "At Ethereum block 26095799, hasRole(MINTER_ROLE) on reUSD is true for this ICL; its implementation slot resolves to verified InsuranceCapitalLayer 0x06d4acc104b974cd99bf22e4572f48a051e59670. The source transfers supported collateral before shareToken.mint(). Checked ICL UPGRADER_ROLE and DEFAULT_ADMIN_ROLE reads are true for the two-day timelock and false for the governance Safe. Current issuer documentation still describes a Safe ICL-admin bypass, which conflicts with these address-specific reads; no exhaustive current ICL role-holder inventory is asserted."
       },
       {
         "chain": "ethereum",
@@ -75,15 +90,15 @@
         "directMintAbility": "none",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-08",
-        "observedBlock": 25712112,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095799,
         "sources": [
           {
             "label": "reUSD InstantRedemption",
-            "url": "https://etherscan.io/address/0xa31deebb3680a3007120e74bcbdf4df36f042a40#code"
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa31deebb3680a3007120e74bcbdf4df36f042a40"
           }
         ],
-        "evidence": "hasRole(MINTER_ROLE) was true at Ethereum block 25712112, but the verified immutable InstantRedemption bytecode exposes redemption and burn flows and contains no call to ShareToken.mint(). The role assignment therefore is not a live callable mint surface in this implementation."
+        "evidence": "hasRole(MINTER_ROLE) is true at Ethereum block 26095799. The re-fetched verified immutable InstantRedemption source exposes redemption and burn flows and no ShareToken mint call. The role assignment therefore is not a callable mint surface in this implementation."
       },
       {
         "chain": "ethereum",
@@ -98,8 +113,8 @@
         "timelockDelaySec": 172800,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-08",
-        "observedBlock": 25712112,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095799,
         "sources": [
           {
             "label": "reUSD TimelockController",
@@ -107,10 +122,10 @@
           },
           {
             "label": "reUSD ShareToken implementation",
-            "url": "https://etherscan.io/address/0xb5276c436f65913cd5332de745d04fedeb4a21d4#code"
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb5276c436f65913cd5332de745d04fedeb4a21d4"
           }
         ],
-        "evidence": "At Ethereum block 25712112, this TimelockController remained a reUSD DEFAULT_ADMIN_ROLE holder and the sole current UPGRADER_ROLE holder; getMinDelay() returned 172800 seconds. The governance Safe is a second DEFAULT_ADMIN_ROLE holder, so the delay does not bound the Safe's ability to grant a new upgrader. Verified ShareToken source gates minting by MINTER_ROLE and UUPS replacement by UPGRADER_ROLE."
+        "evidence": "At Ethereum block 26095799, hasRole(DEFAULT_ADMIN_ROLE) and hasRole(UPGRADER_ROLE) are true for this timelock and false for the governance Safe; getMinDelay() is 172800 seconds. The indexed token RoleRevoked event at block 25739457 records removal of the Safe's DEFAULT_ADMIN_ROLE on 2026-08-12, and the indexed post-baseline RoleGranted query through block 26095799 contains no new grants. Verified ShareToken source gates role grants by DEFAULT_ADMIN_ROLE and UUPS replacement by UPGRADER_ROLE. This corrects the stale immediate token-admin bypass claim without asserting that every other native deployment or ICL path is fully reviewed."
       },
       {
         "chain": "ethereum",
@@ -118,12 +133,13 @@
         "deploymentRefs": [
           "ethereum:0x5086bf358635b81d8c47c66d1c8b9e567db70c72"
         ],
-        "label": "reUSD governance Safe (token DEFAULT_ADMIN)",
-        "role": "proxy-admin",
+        "label": "reUSD governance Safe (timelock proposer)",
+        "role": "governor",
         "authorityType": "safe",
         "directMintAbility": "can-authorize",
         "threshold": 3,
         "signerCount": 5,
+        "timelockDelaySec": 172800,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
@@ -140,12 +156,12 @@
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
           "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
-          "observedAt": "2026-08-08",
-          "observedBlock": 25712112,
+          "observedAt": "2026-10-01",
+          "observedBlock": 26095799,
           "source": "safe-api"
         },
-        "observedAt": "2026-08-08",
-        "observedBlock": 25712112,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095799,
         "sources": [
           {
             "label": "reUSD governance Safe",
@@ -156,11 +172,232 @@
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x69ddea332723cf5407151aaf68b9b076557fca93"
           }
         ],
-        "evidence": "At Ethereum block 25712112, Safe calls returned threshold 3 and five owners; Safe Transaction Service reported version 1.4.1, no modules, and zero guard. hasRole() also confirmed the Safe directly holds token DEFAULT_ADMIN_ROLE, so it can immediately grant MINTER_ROLE or UPGRADER_ROLE. It remains the sole TimelockController proposer, executor, and canceller."
+        "evidence": "At Ethereum block 26095799, Safe RPC calls return threshold 3, the same five owners, and no enabled modules; the Safe API confirms version 1.4.1 and zero guard. The Safe no longer holds token DEFAULT_ADMIN_ROLE or UPGRADER_ROLE. It holds the checked PROPOSER_ROLE, EXECUTOR_ROLE and CANCELLER_ROLE on timelock 0x69ddea332723cf5407151aaf68b9b076557fca93, whose delay is 172800 seconds, so its reviewed native token-authorization path is timelocked. The former direct admin assignment is retained in the review's historical explanation."
+      },
+      {
+        "chain": "avalanche",
+        "address": "0xb22a8533e6cd81598f82514a42f0b3161745fbe1",
+        "deploymentRefs": [
+          "avalanche:0x180af87b47bf272b2df59dccf2d76a6eafa625bf"
+        ],
+        "label": "reUSD Avalanche native deposit ICL",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-10-01",
+        "observedBlock": 96511192,
+        "sources": [
+          {
+            "label": "Re Protocol: local deposit ICLs",
+            "url": "https://docs.re.xyz/products/smart-contracts.md"
+          }
+        ],
+        "evidence": "The issuer identifies this address as the Avalanche deposit ICL. Pinned MINTER_ROLE is true on local reUSD. Its implementation slot is 0x981389b691e14659a334473379152d559c1cf990. Both the timelock and Safe hold ICL DEFAULT_ADMIN_ROLE; the timelock holds UPGRADER_ROLE. No economically binding total mint cap or exhaustive role-holder inventory is verified."
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x802edbb1ec20548a4388abc337e4011718eb0291",
+        "deploymentRefs": [
+          "arbitrum:0x76ce01f0ef25aa66cc5f1e546a005e4a63b25609"
+        ],
+        "label": "reUSD Arbitrum native deposit ICL",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-10-01",
+        "observedBlock": 510584234,
+        "sources": [
+          {
+            "label": "Re Protocol: local deposit ICLs",
+            "url": "https://docs.re.xyz/products/smart-contracts.md"
+          }
+        ],
+        "evidence": "The issuer identifies this address as the Arbitrum deposit ICL. Pinned MINTER_ROLE is true on local reUSD. Its implementation slot is 0xfb38c1cc24e4152a790c7c91fd39759a8a796002. Both the timelock and Safe hold ICL DEFAULT_ADMIN_ROLE; the timelock holds UPGRADER_ROLE. No economically binding total mint cap or exhaustive role-holder inventory is verified."
+      },
+      {
+        "chain": "base",
+        "address": "0xd75ea2fd3d00399df7b7241ab7a189085ab2ede9",
+        "deploymentRefs": [
+          "base:0x7d214438d0f27afccc23b3d1e1a53906ace5cfea"
+        ],
+        "label": "reUSD Base native deposit ICL",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-10-01",
+        "observedBlock": 52024126,
+        "sources": [
+          {
+            "label": "Re Protocol: local deposit ICLs",
+            "url": "https://docs.re.xyz/products/smart-contracts.md"
+          }
+        ],
+        "evidence": "The issuer identifies this address as the Base deposit ICL. Pinned MINTER_ROLE is true on local reUSD. Its implementation slot is 0x5f808941081f7c796240f7b17e9987f38808617c. The timelock holds ICL DEFAULT_ADMIN_ROLE and UPGRADER_ROLE; checked Safe reads for both are false. No economically binding total mint cap or exhaustive role-holder inventory is verified."
+      },
+      {
+        "chain": "avalanche",
+        "address": "0x99c83ef05f249247312e95653764794728c63467",
+        "deploymentRefs": [
+          "avalanche:0x180af87b47bf272b2df59dccf2d76a6eafa625bf"
+        ],
+        "label": "reUSD Avalanche token and ICL timelock",
+        "role": "proxy-admin",
+        "authorityType": "timelock",
+        "directMintAbility": "can-authorize",
+        "timelockDelaySec": 172800,
+        "canRaiseCap": true,
+        "observedAt": "2026-10-01",
+        "observedBlock": 96511192,
+        "sources": [
+          {
+            "label": "Re Protocol: native governance controllers",
+            "url": "https://docs.re.xyz/products/smart-contracts.md"
+          }
+        ],
+        "evidence": "Pinned getMinDelay() is 172800 seconds. DEFAULT_ADMIN_ROLE and UPGRADER_ROLE are true for this timelock on both the token and ICL. The token implementation slot is 0x34bdd8d872f847bc8ca76e3a139604ba06fc7141. The Safe's separate ICL admin assignment means this delay does not cover all ICL authorization paths."
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x98bdded5056c1aa6a2532f006a3c45986eaee9e9",
+        "deploymentRefs": [
+          "arbitrum:0x76ce01f0ef25aa66cc5f1e546a005e4a63b25609"
+        ],
+        "label": "reUSD Arbitrum token and ICL timelock",
+        "role": "proxy-admin",
+        "authorityType": "timelock",
+        "directMintAbility": "can-authorize",
+        "timelockDelaySec": 172800,
+        "canRaiseCap": true,
+        "observedAt": "2026-10-01",
+        "observedBlock": 510584234,
+        "sources": [
+          {
+            "label": "Re Protocol: native governance controllers",
+            "url": "https://docs.re.xyz/products/smart-contracts.md"
+          }
+        ],
+        "evidence": "Pinned getMinDelay() is 172800 seconds. DEFAULT_ADMIN_ROLE and UPGRADER_ROLE are true for this timelock on both the token and ICL. The token implementation slot is 0x2828298ea649c18be72610a8772337673758c3e4. The Safe's separate ICL admin assignment means this delay does not cover all ICL authorization paths."
+      },
+      {
+        "chain": "base",
+        "address": "0xce978312695c307a9810ad49ecc74a9743e8c605",
+        "deploymentRefs": [
+          "base:0x7d214438d0f27afccc23b3d1e1a53906ace5cfea"
+        ],
+        "label": "reUSD Base token and ICL timelock",
+        "role": "proxy-admin",
+        "authorityType": "timelock",
+        "directMintAbility": "can-authorize",
+        "timelockDelaySec": 172800,
+        "canRaiseCap": true,
+        "observedAt": "2026-10-01",
+        "observedBlock": 52024126,
+        "sources": [
+          {
+            "label": "Re Protocol: native governance controllers",
+            "url": "https://docs.re.xyz/products/smart-contracts.md"
+          }
+        ],
+        "evidence": "Pinned getMinDelay() is 172800 seconds. DEFAULT_ADMIN_ROLE and UPGRADER_ROLE are true for this timelock on both the token and ICL; checked Safe reads for both roles are false. The token implementation slot is 0xadc4794909605570d4c43040eb2bd5c0871fedda. No exhaustive current role-holder inventory is asserted."
+      },
+      {
+        "chain": "avalanche",
+        "address": "0x8eec10616802ef639ca55c98ac856553fadefbad",
+        "deploymentRefs": [
+          "avalanche:0x180af87b47bf272b2df59dccf2d76a6eafa625bf"
+        ],
+        "label": "reUSD Avalanche Safe ICL authorization bypass",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0x2a3ef2fed07d025b8b1f07d99c77471d11529db9",
+            "0x28d8af3cf7286bdc34ae80cb90093dfa4dbb0020",
+            "0x7dd97c12abd41c53b4f2b3df6b872753f9dabcaa",
+            "0x1f76cc0ef4605f57478f3044e703af6b0c57a297",
+            "0x0ae4eeaffda174f84c84c22f03a28f3aab02fbdc"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "observedAt": "2026-10-01",
+          "observedBlock": 96511192,
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": true,
+        "observedAt": "2026-10-01",
+        "observedBlock": 96511192,
+        "sources": [
+          {
+            "label": "Re Protocol: ICL administrator bypass disclosure",
+            "url": "https://docs.re.xyz/transparency-and-data-show-me-the-receipts/audits-attestations-custody-structure.md"
+          },
+          {
+            "label": "Verified SafeL2 source; deployed code matches on Avalanche and Arbitrum",
+            "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x29fcb43b46531bca003ddc8fcb67ffe91900c762"
+          }
+        ],
+        "evidence": "Pinned Safe calls return threshold 3, five owners, version 1.4.1 and an empty enabled-module list; the verified guard slot is zero. Both local SafeL2 mastercopies have matching deployed code. ICL DEFAULT_ADMIN_ROLE is true for the Safe while ICL UPGRADER_ROLE is false; token DEFAULT_ADMIN_ROLE and UPGRADER_ROLE are both false. The issuer describes ICL admin as capable of granting upgrade authority. This separate ICL authorization route is not protected by the token timelock."
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x8eec10616802ef639ca55c98ac856553fadefbad",
+        "deploymentRefs": [
+          "arbitrum:0x76ce01f0ef25aa66cc5f1e546a005e4a63b25609"
+        ],
+        "label": "reUSD Arbitrum Safe ICL authorization bypass",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0x2a3ef2fed07d025b8b1f07d99c77471d11529db9",
+            "0x28d8af3cf7286bdc34ae80cb90093dfa4dbb0020",
+            "0x7dd97c12abd41c53b4f2b3df6b872753f9dabcaa",
+            "0x1f76cc0ef4605f57478f3044e703af6b0c57a297",
+            "0x0ae4eeaffda174f84c84c22f03a28f3aab02fbdc"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "observedAt": "2026-10-01",
+          "observedBlock": 510584234,
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": true,
+        "observedAt": "2026-10-01",
+        "observedBlock": 510584234,
+        "sources": [
+          {
+            "label": "Re Protocol: ICL administrator bypass disclosure",
+            "url": "https://docs.re.xyz/transparency-and-data-show-me-the-receipts/audits-attestations-custody-structure.md"
+          },
+          {
+            "label": "Verified SafeL2 source; deployed code matches on Avalanche and Arbitrum",
+            "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x29fcb43b46531bca003ddc8fcb67ffe91900c762"
+          }
+        ],
+        "evidence": "Pinned Safe calls return threshold 3, five owners, version 1.4.1 and an empty enabled-module list; the verified guard slot is zero. Both local SafeL2 mastercopies have matching deployed code. ICL DEFAULT_ADMIN_ROLE is true for the Safe while ICL UPGRADER_ROLE is false; token DEFAULT_ADMIN_ROLE and UPGRADER_ROLE are both false. The issuer describes ICL admin as capable of granting upgrade authority. This separate ICL authorization route is not protected by the token timelock."
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "continuous",
+    "reconciliation": "unknown",
     "supervision": "attestation-only",
     "review": {
       "sources": [
@@ -181,8 +418,8 @@
           "url": "https://sourcify.dev/server/v2/contract/1/0x5086bf358635b81d8c47c66d1c8b9e567db70c72?fields=sources,abi"
         },
         {
-          "label": "Ethereum observation block 25712112",
-          "url": "https://eth.blockscout.com/block/25712112"
+          "label": "Ethereum observation block 26095799",
+          "url": "https://eth.blockscout.com/block/26095799"
         },
         {
           "label": "reUSD governance Safe state",
@@ -191,11 +428,23 @@
         {
           "label": "The Network Firm proof-of-reserves",
           "url": "https://www.thenetworkfirm.com/proof-of-reserves"
+        },
+        {
+          "label": "Indexed reUSD DEFAULT_ADMIN_ROLE revocation at block 25739457",
+          "url": "https://eth.blockscout.com/tx/0xf32e8caf752359a41803b0c3eadc793fc839d0af702223cd2212e087a99e34ae"
+        },
+        {
+          "label": "Re Protocol: current deployment and governance disclosure",
+          "url": "https://docs.re.xyz/products/smart-contracts.md"
+        },
+        {
+          "label": "The Network Firm AUP: historical supporting-asset scope",
+          "url": "https://storage.googleapis.com/foundation-files/AUP-Report-2025.pdf"
         }
       ],
-      "evidence": "A complete Blockscout RoleGranted/RoleRevoked replay through Ethereum block 25712112, followed by direct hasRole() checks, found the live native InsuranceCapitalLayer MINTER_ROLE holder, the non-calling InstantRedemption role assignment, two DEFAULT_ADMIN_ROLE holders, and one current UPGRADER_ROLE holder. The Ethereum CCIP pool is excluded from this native set because its MINTER_ROLE is exercised only through validated cross-chain releaseOrMint machinery and is recorded under Bridge Risk. Both timelock 0x69ddea332723cf5407151aaf68b9b076557fca93 and Safe 0x8eec10616802ef639ca55c98ac856553fadefbad hold DEFAULT_ADMIN_ROLE. Although the timelock's current upgrade actions wait 172800 seconds, the 3-of-5 Safe can immediately grant itself or another address native MINTER_ROLE or UPGRADER_ROLE. Verified implementations establish the native minter's collateral-backed callable behavior and the redemption contract's absence of a ShareToken mint call. The Network Firm attests the off-chain Regulation-114 trust/reinsurance balances daily and publishes the result to a live Chainlink proof-of-reserve feed, so supply is continuously reconciled. The reinsurer Cover Re SPC is CIMA-licensed, but the reUSD token issuer itself is an unregulated foundation, so supervision remains attestation-only. The native permissioned minter's encoding-derived cap does not bound issuance against reserves, so economic cap semantics remain unbounded.",
-      "reviewer": "Codex FIX-05 reUSD mint-authority migration",
-      "reviewedAt": "2026-08-16",
+      "evidence": "Historical Ethereum review through block 25712112 found the ICL and burn-only InstantRedemption roles plus a direct Safe token-admin assignment; indexed RoleRevoked at block 25739457 removed that Safe assignment. Pinned current reads verify native deposit ICL MINTER_ROLE on Ethereum, Avalanche, Arbitrum and Base. Each checked token admin/upgrader assignment is held by a two-day timelock, not the Safe. The Avalanche and Arbitrum Safes still hold ICL DEFAULT_ADMIN_ROLE, retaining the documented authorization bypass; checked Ethereum and Base Safe ICL admin/upgrader reads are false. Native controls and local proxy implementation slots are recorded above, but no exhaustive role-holder inventory, universal timelock protection or hard economic cap is claimed. Daily TNF observations cover aggregate offchain reserve balances; the historical 2025-10-31 full AUP expressly excludes token backing and NAV reconciliation. Those observations do not prove a reUSD-specific offchain denominator. The binding purchase agreement identifies Resilience (BVI) Ltd as token issuer, distinct from the Cayman foundation operating the protocol and the regulated reinsurer. Round-2 recheck at Avalanche block 96542871 reads Chainlink reader 0xc79a363a3f849d8b3f6a1932f748ea9d4fb2f607 as Re Offchain Reserves, decimals 8, answer 18318445738007966 ($183,184,457.38007966). Current issuer oracle documentation calls this an aggregate offchain reserve and Section 114 trust balance feed. Current metrics expose reusd/reusde onchain numerators but aggregate offchain capital. Neither the feed, metrics, current custody documentation nor the full AUP establishes a recurring reconciliation of reUSD liabilities to attributable backing; reconciliation remains unknown, not a positively established absence.",
+      "reviewer": "Sol curation pass 2026-10-01 (CurA41reUSD)",
+      "reviewedAt": "2026-10-01",
       "disposition": "scoreable"
     }
   }

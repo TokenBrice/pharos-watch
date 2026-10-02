@@ -230,6 +230,8 @@ function publicExitHolderEligibility(
       return "any-holder";
     case "institutional-eligible":
       return "verified-customer";
+    case "verified-customer-neutral":
+      return "verified-customer-neutral";
     case "allowlisted":
       return "whitelisted-primary";
     case "issuer-only":
@@ -738,6 +740,7 @@ function buildSafetyScoreV9CandidatePipeline(
     commonModeGroups: evaluatedSet.dependencyPlan.commonModeGroups,
     results: evaluatedSet.assets.map((asset) => ({
       trace: asset.trace,
+      ...(asset.providerRowExclusions?.length ? { providerRowExclusions: asset.providerRowExclusions } : {}),
       backingFromLiveReserves: scoreGradeLiveReserveIds.has(asset.assetId),
       ...dependencyMetadataByAssetId.get(asset.assetId),
       scoreInput: asset.scoreInput,

@@ -185,9 +185,13 @@ const NON_ACTIVE_LIFECYCLE_STATUSES = [
 ] as const;
 
 describe("Mint Authority / Bridge Risk ownership boundary", () => {
-  it.each(["usdai-usd-ai", "susdai-usd-ai"])(
-    "%s keeps canonical Arbitrum issuance in Mint Authority and satellite issuance in Bridge Risk",
-    (assetId) => {
+  it.each([
+    // Round-two R2F1 verification confirms Solana as a reviewed satellite OFT for both assets.
+    { assetId: "usdai-usd-ai", unresolvedChains: [] },
+    { assetId: "susdai-usd-ai", unresolvedChains: [] },
+  ])(
+    "$assetId keeps canonical Arbitrum issuance in Mint Authority and satellite issuance in Bridge Risk",
+    ({ assetId, unresolvedChains }) => {
       const meta = ACTIVE_META_BY_ID.get(assetId);
       if (!meta?.mintAuthority || !meta.bridgeRouteRisk?.routes) {
         throw new Error(`expected boundary metadata for ${assetId}`);
@@ -210,7 +214,33 @@ describe("Mint Authority / Bridge Risk ownership boundary", () => {
         (route) => route.issuanceModel !== "native-issuance",
       );
       expect(satelliteRoutes.length).toBeGreaterThan(0);
-      expect(satelliteRoutes.every((route) => route.controllerChain && route.controllerAddress)).toBe(true);
+      const reviewedSatelliteRoutes = satelliteRoutes.filter((route) => route.reviewDisposition === "reviewed");
+      expect(reviewedSatelliteRoutes.map((route) => route.destinationChain).sort()).toEqual([
+        "base", "ethereum", "plasma", "solana",
+      ]);
+      expect(reviewedSatelliteRoutes.every((route) => route.controllerChain && route.controllerAddress)).toBe(true);
+      const unresolvedRoutes = satelliteRoutes.filter((route) => route.reviewDisposition !== "reviewed");
+      expect(unresolvedRoutes).toEqual(
+        unresolvedChains.map((destinationChain) =>
+          expect.objectContaining({
+            destinationChain,
+            issuanceModel: "unknown",
+            routeClass: "unknown",
+            riskTier: "opaque-or-unknown",
+            semantics: "unknown",
+            scope: "unknown",
+            reviewDisposition: "unresolved",
+          }),
+        ),
+      );
+      for (const unresolvedRoute of unresolvedRoutes) {
+        expect(unresolvedRoute).not.toHaveProperty("controllerAddress");
+      }
+      expect(
+        meta.mintAuthority.controls?.some((control) =>
+          control.deploymentRefs?.some((ref) => satelliteRoutes.some((route) => route.id === ref)),
+        ),
+      ).toBe(false);
 
       const violations = validateMintBridgeOwnership(meta);
       expect(violations.filter((violation) => violation.severity === "error")).toEqual([]);

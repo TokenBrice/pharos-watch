@@ -124,6 +124,33 @@ const MATRIX: Record<MechanismArchetype, Record<MatrixCol, string>> = {
     oracleDep: "—",
     jurisdictionDep: "High",
   },
+  "ucits-trs-fund": {
+    collateralLocation: "Physical securities + TRS",
+    redemptionRight: "Fund share at NAV; gates",
+    yieldSource: "Portfolio / swap return",
+    primaryFailureMode: "Hedge / counterparty loss",
+    governanceDep: "Medium",
+    oracleDep: "Administrator NAV",
+    jurisdictionDep: "High",
+  },
+  "shared-reserve": {
+    collateralLocation: "Common reserve pool",
+    redemptionRight: "Protocol exchange; liquidity gates",
+    yieldSource: "Reserve income, if passed on",
+    primaryFailureMode: "Shared liability deficit",
+    governanceDep: "High",
+    oracleDep: "High",
+    jurisdictionDep: "Varies",
+  },
+  "protocol-position": {
+    collateralLocation: "Bridge / vault / module",
+    redemptionRight: "Operational position claim; gates",
+    yieldSource: "Underlying position, if passed on",
+    primaryFailureMode: "Position / withdrawal failure",
+    governanceDep: "High",
+    oracleDep: "Varies",
+    jurisdictionDep: "Varies",
+  },
 };
 
 export function MechanismComparisonMatrix() {

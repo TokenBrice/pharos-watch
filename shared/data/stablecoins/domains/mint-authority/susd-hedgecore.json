@@ -16,6 +16,8 @@
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "MAX_SUPPLY is a Solidity constant (≈1B tokens); issueFromWrapper() requires MINTER_ROLE and checks MAX_SUPPLY.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 125059790,
         "sources": [
           {
             "label": "HedgeCore hUSDC wrapper docs",
@@ -37,6 +39,8 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 125059790,
         "sources": [
           {
             "label": "sUSD contract (BscScan)",

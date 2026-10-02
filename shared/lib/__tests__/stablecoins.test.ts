@@ -412,6 +412,7 @@ describe("tracked stablecoin metadata", () => {
       "susn-noon",
       "syzusd-yuzu",
       "usdsc-startale",
+      "ctusd-citrea",
       "wm-m0",
       "usdnr-nerona",
       "pusd-plume",
@@ -660,6 +661,64 @@ describe("tracked stablecoin metadata", () => {
         "stale-known-unknown-pct.json",
       ),
     ).toThrowError(/knownUnknownExposurePct must equal the total pct of unresolved dispositions/);
+  });
+
+  it("keeps adapter-owned composition and report dates independent, without changing assurance scope", () => {
+    const reserveReview = {
+      reviewedAt: "2026-07-13",
+      reviewer: "test",
+      confidence: "verified",
+      sources: [{ label: "Live composition", url: "https://example.com/live" }],
+      rationale: "Adapter snapshot has its own observed date.",
+      compositionBasis: "Live adapter snapshot",
+      compositionAsOf: "2026-07-12",
+      compositionSource: "live-adapter",
+      scope: "full-composition",
+      knownUnknownExposure: "None",
+      knownUnknownExposurePct: 0,
+    };
+    const latestReport = {
+      periodEnd: "2026-06-30",
+      publishedAt: "2026-07-10",
+      assuranceMethod: "unknown",
+      scope: "unknown",
+      liabilityReconciliation: "unknown",
+      reviewer: "test",
+      confidence: "verified",
+      sources: [{ label: "Monthly report", url: "https://example.com/monthly" }],
+    };
+    const asset = makeStablecoinAsset({
+      reserves: [{ name: "Cash", pct: 100, risk: "very-low" }],
+      reserveReview,
+      proofOfReserves: { type: "real-time", url: "https://example.com/live", latestReport },
+      liveReservesConfig: {
+        adapter: "ethena", version: 1, semantics: "collateral-mix",
+        inputs: { primary: { kind: "http-json", url: "https://example.com/live" } },
+      },
+    });
+    const parsed = parseStablecoinMetaAssets([asset], "adapter-independent-dates.json")[0]!;
+    expect(parsed.reserveReview?.compositionAsOf).toBe("2026-07-12");
+    expect(parsed.proofOfReserves?.latestReport).toEqual(latestReport);
+    for (const overrides of [
+      { liveReservesConfig: undefined },
+      { reserveReview: { ...reserveReview, compositionSource: undefined } },
+      { reserveReview: { ...reserveReview, confidence: "unknown" } },
+      { proofOfReserves: { type: "real-time", url: "https://example.com/live", latestReport: { ...latestReport, publishedAt: undefined } } },
+      { proofOfReserves: { type: "real-time", url: "https://example.com/live", latestReport: { ...latestReport, confidence: "unknown" } } },
+    ]) {
+      expect(() => parseStablecoinMetaAssets([{ ...asset, ...overrides }], "invalid-independent-dates.json"))
+        .toThrowError(/lockstep|requires liveReservesConfig/);
+    }
+    const curated = { ...asset, liveReservesConfig: undefined, reserveReview: {
+      ...reserveReview, compositionSource: undefined, compositionAsOf: latestReport.periodEnd,
+    } };
+    expect(parseStablecoinMetaAssets([curated], "curated-lockstep.json")[0]?.reserveReview?.compositionAsOf)
+      .toBe(latestReport.periodEnd);
+  });
+
+  it.each(["mixed", "unknown"])("preserves the conservative whole-book custody value %s", (custodyModel) => {
+    expect(parseStablecoinMetaAssets([makeStablecoinAsset({ custodyModel })], "custody-coverage.json")[0]?.custodyModel)
+      .toBe(custodyModel);
   });
 
   it("accepts structured reserve facts and validates latest assurance reports", () => {
@@ -934,7 +993,7 @@ describe("tracked stablecoin metadata", () => {
         coinId: "pyusd-paypal",
         depType: "collateral",
         assetClass: "stablecoin",
-        issuerOrObligor: "Paxos Trust Company, LLC / PayPal, Inc.",
+        issuerOrObligor: "Paxos Trust Company, N.A. (PYUSD issuer; PayPal brand)",
         riskFactors: ["counterparty", "custody", "smart-contract", "liquidity"],
         liquidityHorizon: "immediate",
       },

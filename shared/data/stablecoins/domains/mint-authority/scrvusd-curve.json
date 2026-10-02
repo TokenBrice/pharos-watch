@@ -13,11 +13,14 @@
         "label": "scrvUSD ERC-4626 wrapper",
         "role": "wrapper",
         "authorityType": "contract",
+        "deploymentRefs": [
+          "ethereum:0x0655977feb2f289a4ab78af67bab0d17aab84367"
+        ],
         "directMintAbility": "none",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-20",
-        "observedBlock": 25573289,
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095892,
         "sources": [
           {
             "label": "scrvUSD token",
@@ -28,7 +31,7 @@
             "url": "https://docs.curve.finance/developer/crvusd/overview"
           }
         ],
-        "evidence": "At Ethereum block 25573289, asset() returned crvUSD 0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E. EIP-1967 implementation, admin, and beacon slots were all zero and owner() reverted, leaving no local upgrade-admin or privileged share-mint surface. Wrapper accounting cannot mint crvUSD; durable base authority remains inherited from the reviewed parent."
+        "evidence": "At Ethereum block 26095892, asset() returned crvUSD 0xf939e0a03fb07f59a73314e73794be0e57ac1b4e and totalDebt() was zero. Runtime bytecode is an EIP-1167 clone with fixed Yearn V3 implementation 0xd8063123bba3b480569244ae66bfe72b6c84b00d; zero EIP-1967 slots alone do not establish immutability. role_manager() is 0x40907540d8a6c65c637785e8f8b742ae6b0b9968, and the Yearn implementation exposes role-controlled strategy, accountant, deposit-limit, and withdrawal-limit management. Both limit modules and the accountant are currently zero. These vault-management powers cannot mint the underlying crvUSD; durable base issuance remains inherited from the reviewed parent."
       }
     ],
     "economicCapSemantics": "bounded",
@@ -36,10 +39,16 @@
     "supervision": "none",
     "upgradeability": {
       "model": "immutable",
+      "proxyAddresses": [
+        "0x0655977feb2f289a4ab78af67bab0d17aab84367"
+      ],
+      "implementationAddresses": [
+        "0xd8063123bba3b480569244ae66bfe72b6c84b00d"
+      ],
       "canChangeMintLogic": false,
       "controlRef": "scrvUSD ERC-4626 wrapper",
-      "observedAt": "2026-07-20",
-      "observedBlock": 25573289,
+      "observedAt": "2026-10-01",
+      "observedBlock": 26095892,
       "sources": [
         {
           "label": "scrvUSD token",
@@ -54,9 +63,9 @@
           "url": "https://etherscan.io/address/0x0655977feb2f289a4ab78af67bab0d17aab84367#readContract"
         }
       ],
-      "evidence": "Re-reviewed at Ethereum block 25573289: asset() is crvUSD 0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E; standard EIP-1967 implementation, admin, and beacon slots are zero; and owner() reverts. The fixed deposit/share wrapper has no local privileged mint or upgrade path, so its economic cap is deposit-backed and no external supply-versus-reserve reconciliation or named prudential supervisor applies to the wrapper itself. Durable crvUSD authority remains inherited from the reviewed parent profile.",
-      "reviewer": "P2 mint-free cohort",
-      "reviewedAt": "2026-07-20",
+      "evidence": "Pinned Ethereum block 26095892 confirms a fixed EIP-1167 Yearn V3 clone over crvUSD, zero strategy debt, empty default strategy queue, and zero deposit/withdrawal limit modules and accountant. The fixed implementation cannot be changed through an EIP-1967 administrator. Vault management is not absent: role_manager() resolves to Curve's governance address 0x40907540d8a6c65c637785e8f8b742ae6b0b9968, which can assign the implementation's management roles. Ordinary deposit/share accounting and management of vault assets do not create durable crvUSD liabilities; underlying issuance remains inherited. This review concerns the canonical Ethereum vault, not bridged representations documented by Curve.",
+      "reviewer": "Sol curation pass 2026-10-01 (CurB43scrvUSD)",
+      "reviewedAt": "2026-10-01",
       "disposition": "scoreable"
     }
   }

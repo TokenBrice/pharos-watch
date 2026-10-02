@@ -53,30 +53,19 @@
     "reviewedAt": "2026-07-30"
   },
   "bridgeRouteRisk": {
-    "tier": "liquidity-or-intent-route",
-    "summary": "sdUSD is a staked wrapper around dTRINITY dUSD with deployments on Ethereum and Fraxtal. L2BEAT candidate data points to Across-style route liquidity for this family, and no issuer-native bridge-control document was verified, so the wrapper is conservatively scored as a liquidity/intent route.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
-    "confidence": "probable",
-    "protocols": [
-      {
-        "source": "l2beat",
-        "name": "Across",
-        "slug": "across",
-        "url": "https://l2beat.com/interop/protocols/across",
-        "bridgeTypes": [
-          "nonMinting"
-        ]
-      }
-    ],
+    "tier": "single-chain-or-native",
+    "summary": "sdUSD is a chain-isolated dSTAKE ERC-4626 receipt on Ethereum and Fraxtal. Official dTRINITY documentation states that these deployments are non-fungible across chains and cannot be natively bridged. Users can swap into intermediary assets before bridging and swap back on the destination chain; that is not an sdUSD bridge mint path.",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (CurB21YUSD)",
+    "confidence": "verified",
     "sources": [
       {
         "label": "dTRINITY sdUSD docs",
         "url": "https://docs.dtrinity.org/protocol-components/sdusd"
       },
       {
-        "label": "L2BEAT Across",
-        "url": "https://l2beat.com/interop/protocols/across"
+        "label": "dTRINITY FAQ: chain isolation and bridging",
+        "url": "https://docs.dtrinity.org/informational/faq"
       }
     ],
     "routes": [
@@ -103,7 +92,7 @@
           },
           {
             "label": "dTRINITY docs",
-            "url": "https://docs.dtrinity.com/"
+            "url": "https://docs.dtrinity.org/protocol-components/sdusd"
           }
         ]
       },
@@ -131,7 +120,7 @@
           },
           {
             "label": "dTRINITY docs",
-            "url": "https://docs.dtrinity.com/"
+            "url": "https://docs.dtrinity.org/protocol-components/sdusd"
           }
         ]
       }

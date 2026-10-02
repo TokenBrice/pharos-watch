@@ -43,6 +43,8 @@
         ],
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095930,
         "capDescription": "PHT mints through the Maker-style Vat CDP engine. At 2026-08-16 the Vat reads Line()=250,000,000 rad (global debt ceiling), ilk USDT-A line=500,000,000 rad, and Art=6,939.383963243451574983 wad; the ward mapping is not enumerable, so the ability to change those ceilings remains unresolved.",
         "sources": [
           {
@@ -50,7 +52,7 @@
             "url": "https://etherscan.io/address/0xEE0CDe42Bb6841736d809d2Bb63EbF59dB6E336c"
           }
         ],
-        "evidence": "At Ethereum block 25770390 (2026-08-16): Vat 0xEE0CDe42Bb6841736d809d2Bb63EbF59dB6E336c live=1; Line()=250,000,000 rad; ilks(USDT-A).line=500,000,000 rad; Art=6,939.383963243451574983 wad. rely() simulations and wards() reads for the identified deployment-related addresses returned not-authorized/zero, but wards is a non-enumerable mapping, so those probes cannot establish that no other live ward can change the ceilings.",
+        "evidence": "At Ethereum block 26095930 on 2026-10-01, Vat live()=1, Line()=250,000,000 rad, and USDT-A retained positive normalized debt and a 500,000,000 rad ceiling. The prior block 25770390 review recorded Art=6,939.383963243451574983 wad. Current wards() reads for DaiJoin, the Ethereum OFT adapter, and the Polygon/adapter owner returned zero. The ward mapping is non-enumerable, so these probes cannot establish that no other live ward can change ceilings.",
         "chain": "ethereum",
         "address": "0xEE0CDe42Bb6841736d809d2Bb63EbF59dB6E336c"
       },
@@ -64,6 +66,8 @@
         ],
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095930,
         "capDescription": "DaiJoin.exit() mints PHT permissionlessly when a user withdraws collateral-backed credit from the Vat; supply is bounded by the Vat's per-ilk debt ceilings set by Vat wards.",
         "sources": [
           {
@@ -71,7 +75,7 @@
             "url": "https://etherscan.io/address/0x4bd328FD071b03e157d0a89dE199d9E005D71057"
           }
         ],
-        "evidence": "At Ethereum block 25770390: PHT token (dai.sol fork, AGPL-3.0) wards(DaiJoin 0x4bd328fd071b03e157d0a89de199d9e005d71057)=1 (warded). DaiJoin.exit() calls dai.mint(usr, wad) permissionlessly based on Vat internal state; the live Vat is the CDP engine and its debt ceilings bound the collateral-backed path. DaiJoin.dai()=0xbe370ad45d44eb45174c4ec60b88839fef32c077 (confirmed PHT token).",
+        "evidence": "At Ethereum block 26095930 on 2026-10-01, PHT wards(DaiJoin 0x4bd328fd071b03e157d0a89de199d9e005d71057)=1; DaiJoin live()=1, dai()=0xbe370ad45d44eb45174c4ec60b88839fef32c077, and vat()=0xee0cde42bb6841736d809d2bb63ebf59db6e336c. The prior verified DaiJoin.exit() path calls dai.mint(usr, wad) based on Vat internal credit. This read confirms the addressed adapter and its authorization, not an exhaustive census of all PHT wards.",
         "chain": "ethereum",
         "address": "0x4bd328FD071b03e157d0a89dE199d9E005D71057"
       },
@@ -85,13 +89,15 @@
         ],
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095930,
         "sources": [
           {
             "label": "Etherscan Vat CDP engine",
             "url": "https://etherscan.io/address/0xEE0CDe42Bb6841736d809d2Bb63EbF59dB6E336c"
           }
         ],
-        "evidence": "At Ethereum block 25770390, rely() on the Vat reverted with 'Vat/not-authorized' from the identified deployment-related addresses and wards() reads returned zero for each. Because wards is a non-enumerable mapping, these probes do not resolve an unknown ward that could change debt ceilings or risk parameters.",
+        "evidence": "At Ethereum block 26095930 on 2026-10-01, Vat wards() returned zero for DaiJoin 0x4bd328fd071b03e157d0a89de199d9e005d71057, OFT adapter 0x567a173bb4baf009d13222759330c1a84b667bd2, and owner 0xc6f1cfa1b5840e5afe56f7b7ef3c52c3bcda06c5. Line() remained 250,000,000 rad and live()=1. Because wards is a non-enumerable mapping, these probes do not resolve every administrator that could change debt ceilings or risk parameters.",
         "chain": "ethereum",
         "address": "0xEE0CDe42Bb6841736d809d2Bb63EbF59dB6E336c"
       }

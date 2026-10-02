@@ -9,7 +9,7 @@
     "rwa": true
   },
   "collateral": "Cash and cash equivalents, primarily 1 to 3 month U.S. Treasury bills held at global tier-1 financial institutions",
-  "pegMechanism": "Direct 1:1 redemption through Hex Trust",
+  "pegMechanism": "Direct 1:1 redemption through Hex Trust for approved parties",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "263",
   "detailProvider": "defillama",

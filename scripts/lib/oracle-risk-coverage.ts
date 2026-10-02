@@ -122,6 +122,24 @@ function dispositionKey(id: string, branchId: string, field: string): string {
   return `${id}\0${branchId}\0${field}`;
 }
 
+function inventoryDisposition(profile: OracleRiskProfile, asOf: Date, staleDays: number) {
+  if (!profile.paths) return profile.branchApplicability?.disposition;
+  for (const path of profile.paths) {
+    const review = path.applicability;
+    const reviewedAt = parseReviewDate(review?.reviewedAt);
+    if (
+      !review || !reviewedAt || reviewedAt > asOf || daysBetween(asOf, reviewedAt) > staleDays ||
+      review.disposition === "unresolved" || review.confidence === "unknown" || review.confidence === "limited" ||
+      path.pricingAuthority === "unknown" ||
+      (review.disposition === "not-applicable" && (review.confidence !== "verified" || path.pricingAuthority !== "none"))
+    ) return "unresolved";
+  }
+  if (profile.paths.every((path) => path.applicability!.disposition === "not-applicable")) return "not-applicable";
+  return profile.paths.some((path) => path.applicability!.disposition === "branches-required")
+    ? "branches-required"
+    : "top-level-only";
+}
+
 export function analyzeOracleRiskCoverage(
   coins: readonly StablecoinMeta[],
   options: OracleRiskCoverageOptions = {},
@@ -164,8 +182,8 @@ export function analyzeOracleRiskCoverage(
       });
     }
 
-    const branchApplicability = profile.branchApplicability;
-    if (!branchApplicability) {
+    const disposition = inventoryDisposition(profile, asOf, staleDays);
+    if (!disposition) {
       findings.push({
         id: coin.id,
         symbol: coin.symbol,
@@ -173,23 +191,36 @@ export function analyzeOracleRiskCoverage(
         kind: "missing-branch-applicability",
         detail: "oracleRisk has no reviewed branch applicability disposition",
       });
-    } else if (branchApplicability.disposition === "unresolved") {
+    } else if (disposition === "unresolved") {
       findings.push({
         id: coin.id,
         symbol: coin.symbol,
         name: coin.name,
         kind: "branch-applicability-unresolved",
-        detail: `branch applicability remains unresolved: ${branchApplicability.rationale}`,
+        detail: profile.paths
+          ? "At least one identified path lacks current reviewed pricing applicability"
+          : `branch applicability remains unresolved: ${profile.branchApplicability!.rationale}`,
       });
     }
 
-    if (branchApplicability?.disposition === "branches-required" && !profile.branches?.length) {
+    if (disposition === "branches-required" && !profile.branches?.length) {
       findings.push({
         id: coin.id,
         symbol: coin.symbol,
         name: coin.name,
         kind: "missing-branches",
         detail: "branch-required oracleRisk profile has no branch rows",
+      });
+    }
+    for (const path of profile.paths ?? []) {
+      if (path.applicability?.disposition !== "branches-required") continue;
+      if (path.branchId && profile.branches?.some((branch) => branch.id === path.branchId)) continue;
+      findings.push({
+        id: coin.id,
+        symbol: coin.symbol,
+        name: coin.name,
+        kind: "missing-branches",
+        detail: `${path.id} lending path has no reviewed oracle branch`,
       });
     }
 
@@ -308,15 +339,19 @@ export function analyzeOracleRiskCoverage(
   // why the field is blank, which is a different statement from having the
   // evidence. Count them apart so the report can say both things.
   for (const key of reviewedInoperableBranchKeys) incompleteBranchKeys.add(key);
-  const reviewedBranchApplicability = inScope.filter((coin) => coin.oracleRisk?.branchApplicability != null).length;
-  const branchesRequired = inScope.filter(
-    (coin) => coin.oracleRisk?.branchApplicability?.disposition === "branches-required",
+  const reviewedBranchApplicability = inScope.filter((coin) =>
+    coin.oracleRisk?.paths
+      ? coin.oracleRisk.paths.every((path) => path.applicability != null)
+      : coin.oracleRisk?.branchApplicability != null,
   ).length;
-  const branchNotApplicable = inScope.filter(
-    (coin) => coin.oracleRisk?.branchApplicability?.disposition === "not-applicable",
+  const branchesRequired = inScope.filter((coin) =>
+    coin.oracleRisk && inventoryDisposition(coin.oracleRisk, asOf, staleDays) === "branches-required",
   ).length;
-  const branchApplicabilityUnresolved = inScope.filter(
-    (coin) => coin.oracleRisk?.branchApplicability?.disposition === "unresolved",
+  const branchNotApplicable = inScope.filter((coin) =>
+    coin.oracleRisk && inventoryDisposition(coin.oracleRisk, asOf, staleDays) === "not-applicable",
+  ).length;
+  const branchApplicabilityUnresolved = inScope.filter((coin) =>
+    coin.oracleRisk && inventoryDisposition(coin.oracleRisk, asOf, staleDays) === "unresolved",
   ).length;
 
   return {

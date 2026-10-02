@@ -1,11 +1,10 @@
-import {
-  CG_CHAIN_MAP,
-  resolveChainId,
-} from "@shared/lib/chains";
+import { CG_CHAIN_MAP } from "@shared/lib/chains";
+import { resolveChainId } from "@shared/types/chain-identity";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import { getCirculatingRaw } from "@shared/lib/supply";
+import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import { throwIfAborted } from "../abort";
 import { hasPublishableCurrentPrice } from "../price-publication-state";
 import type { PricingProviderDiagnosticSource } from "../pricing-provider-diagnostics";
@@ -220,8 +219,9 @@ function buildAssetDeployments(asset: AddressPriceAssetLike): Array<{
   const meta = ACTIVE_META_BY_ID.get(asset.id);
   return [
     ...addAssetAddressDeployments(asset),
-    ...(meta?.contracts ?? []).map((deployment) => ({ ...deployment, origin: "contracts" as const })),
-    ...(meta?.tradedContracts ?? []).map((deployment) => ({ ...deployment, origin: "tradedContracts" as const })),
+    // Native XRPL amounts and unknown decimals cannot enter fixed-decimal address pricing.
+    ...(meta?.contracts ?? []).filter(isFixedDecimalDeployment).map((deployment) => ({ ...deployment, origin: "contracts" as const })),
+    ...(meta?.tradedContracts ?? []).filter(isFixedDecimalDeployment).map((deployment) => ({ ...deployment, origin: "tradedContracts" as const })),
   ];
 }
 

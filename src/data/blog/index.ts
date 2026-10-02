@@ -28,6 +28,16 @@ export interface BlogPost {
 
 export const BLOG_POSTS: readonly BlogPost[] = [
   {
+    slug: "safety-score-v10",
+    title: "Safety Score V10: Same Pillars, Sharper Measurements",
+    description:
+      "V10 keeps Backing, Control and Exit and sharpens what feeds them: the weakest mint route, issuer-set prices, shared reserves, and gold redeemed into dollars.",
+    datePublished: "2026-10-02",
+    coverImage: "/blog/safety-score-v10-cover.png",
+    coverAlt:
+      "The circular Pharos mark at the centre of a finely ticked dial on a dark background, ringed by three arcs sized to the pillar weights, “Backing 40%”, “Exit 35%” and “Control 25%”, with the Exit arc lit in frost blue and marked “Gold → USD”, beside the headline “Safety Score V10” and “Same pillars. Sharper measurements.”",
+  },
+  {
     slug: "api-access-free-grades-supporter-keys",
     title: "API Access: Free Grades, Supporter Keys",
     description:

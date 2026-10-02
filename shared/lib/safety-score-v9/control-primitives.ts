@@ -68,6 +68,7 @@ export interface V9EconomicControlAssetFacts {
     | "selectedRouteSupplyShare"
     | "unknownRouteSupplyShare"
     | "unreviewedRouteSupplyShare"
+    | "providerRowExclusions"
   >;
 }
 
@@ -123,17 +124,7 @@ export interface V9CompactControlReason {
   controlKey: string | null;
 }
 
-export interface V9ControlStructuralFailure {
-  kind: Extract<
-    V9StructuralSignalKind,
-    | "centralized-mint"
-    | "unreviewed-upgrade"
-    | "material-bridge"
-    | "peripheral-bridge"
-    | "weak-oracle-branch"
-    | "active-control-incident"
-  >;
-  severity: V9Severity;
+interface V9ControlStructuralFailureDetails {
   binding: boolean;
   reason: string;
   materialSharePct: number | null;
@@ -141,15 +132,68 @@ export interface V9ControlStructuralFailure {
   failureDomains: readonly V9FailureDomainRef[];
 }
 
+export type V9ControlStructuralFailure = V9ControlStructuralFailureDetails & ({
+  kind: "weak-oracle-branch";
+  severity: Exclude<V9Severity, "critical">;
+} | {
+  kind: Extract<
+    V9StructuralSignalKind,
+    | "centralized-mint"
+    | "unreviewed-upgrade"
+    | "material-bridge"
+    | "peripheral-bridge"
+    | "active-control-incident"
+  >;
+  severity: V9Severity;
+});
+
 export interface V9EconomicControlResult {
   score: number | null;
+  /** Proportional unresolved-deployment pricing, before resilience and dependency adjustments. */
+  unresolvedDeploymentAdjustment?: { scoreBefore: number; scoreAfter: number };
+  /** Admitted full unresolved cohort share used by the composite ceiling band. */
+  unresolvedDeploymentShare?: number;
   state: "rated" | "not-rated";
   oracleApplicability: V9FactStatusV2["applicability"]["state"];
   components: readonly V9ControlComponent[];
+  /** Compiler facts used only for truthful public authority diagnostics. */
+  controlFacts?: readonly V9DeploymentControlFactV2[];
   reasons: readonly V9CompactControlReason[];
   structuralFailures: readonly V9ControlStructuralFailure[];
   failureDomains: readonly V9FailureDomainRef[];
 }
+/** Derive posture from recorded semantics; aggregate review confidence cannot clear an adverse fact. */
+export function deriveV9MintPosture(
+  control: V9DeploymentControlFactV2 | null,
+  mint: V9MintMechanismReview,
+  immutableMechanism: boolean,
+): V9MintPosture {
+  if (control?.incidentState === "active") return "unbounded-or-compromised";
+  if (!control) return immutableMechanism ? "none-resolved" : "unknown";
+  if (control.economicLossScope === "unknown") return "unknown";
+  if (control.capSemantics.kind === "unbounded" || control.claimImpairment === "unbounded") {
+    if (
+      mint.reconciliation === "continuous" ||
+      mint.reconciliation === "periodic" ||
+      mint.supervision === "prudential"
+    ) return "unbounded-reconciled";
+    // An internal ledger process resolves the mint-process question, not
+    // reserve reconciliation: retain the unverified rung without supervision.
+    if (mint.reconciliation === "unknown" || mint.reconciliation === "internal-ledger") {
+      return "unbounded-reconciliation-unknown";
+    }
+    return "unbounded-or-compromised";
+  }
+  if (control.capSemantics.kind === "unknown" || control.claimImpairment === "unknown") return "unknown";
+  if (control.claimImpairment === "none") return "none-resolved";
+  if (control.capSemantics.kind === "collateral-gated") return "collateral-gated";
+  if (control.capSemantics.kind === "raiseable" || mint.reconciliation === "periodic") {
+    return "partially-bounded-admin";
+  }
+  if (control.capSemantics.kind === "bounded") return "bounded-admin";
+  return "concentrated-admin";
+}
+
 export function isKnownRequired(status: V9FactStatusV2): boolean {
   return status.applicability.state === "required" && status.observationState === "known";
 }

@@ -24,6 +24,7 @@
     "latestReport": {
       "periodEnd": "2026-08-31",
       "publishedAt": "2026-09-07",
+      "publishedAtBasis": "signed-date-standin",
       "assuranceMethod": "audit",
       "scope": "assets-only",
       "liabilityReconciliation": "none",

@@ -17,25 +17,28 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://app.falcon.finance/transparency",
-    "provider": "ht.digital (Harris & Trotter digital) quarterly assurance reports alongside weekly self-published reserve reports; the quarterly series has a confirmed gap - the newest assurance report remains period 2026-04-30 (published 2026-06-19, full registry extracted 2026-08-08) while weekly self-published reserve reports run through 2026-08-07, so latestReport tracks the weekly series the composition review is anchored on",
+    "provider": "HT Digital Ltd weekly collateral-review letters alongside quarterly reasonable-assurance reports. The transparency registry fetched on 2026-10-01 lists a weekly letter covering 2026-09-28; its newest quarterly assurance report still covers 2026-04-30 and is signed 2026-06-19. The weekly letter does not state a formal assurance standard or liability-verification procedures. latestReport retains the reviewed issuer-API snapshot of 2026-08-07 that supports the authored composition; newer coarse collateral letters and live API snapshots are references, not evidence for re-dating those rows.",
     "attestorTier": "niche",
     "cadence": "weekly",
     "latestReport": {
       "periodEnd": "2026-08-07",
-      "publishedAt": "2026-08-07",
-      "assuranceMethod": "self-verification",
-      "scope": "assets-and-liabilities",
-      "liabilityReconciliation": "full",
-      "reviewer": "PoR verification sweep 2026-08 (aligned to the transparency-API snapshot the composition review is built on; the quarterly ht.digital assurance series has a confirmed gap - newest remains period 2026-04-30 published 2026-06-19, while weekly self-published reserve reports run through 2026-08-07)",
+      "assuranceMethod": "unknown",
+      "scope": "unknown",
+      "liabilityReconciliation": "unknown",
+      "reviewer": "Sol curation pass 2026-10-01 (FixInv4): retained historical issuer-API observation matching the 2026-08-07 composition; newer HT Digital letter remains a separate reference and does not establish the historical snapshot's assurance scope",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Falcon transparency (weekly reserve reports and live API)",
-          "url": "https://app.falcon.finance/transparency"
+          "label": "Falcon transparency API; historical 2026-08-07 snapshot retained by the authored reserve review",
+          "url": "https://api.falcon.finance/api/v1/transparency"
         },
         {
           "label": "HT Digital independent assurance report on Falcon USDf reserves - April 30, 2026",
           "url": "https://falcon.finance/api/media/file/Final%20Falcon%20assurance%20report%20and%20opinion%20-%20signed%20final%2030%20April%202026.pdf?prefix=media"
+        },
+        {
+          "label": "Newer HT Digital collateral letter - 28 September 2026; composition not re-curated to this letter",
+          "url": "https://falcon.finance/api/media/file/Falcon%20Letter%20-%2028%20September%202026.pdf?prefix=media"
         }
       ]
     }

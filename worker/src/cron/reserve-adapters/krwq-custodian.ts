@@ -1,6 +1,7 @@
 import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
-import { CHAIN_META } from "@shared/lib/chains";
+import { CHAIN_META } from "@shared/types/chain-identity";
+import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import type { ContractDeployment, ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import type { EvmMulticall3Result } from "../../lib/evm-rpc";
@@ -171,6 +172,7 @@ async function aggregateKrwqSupply(
 
   const reads = await Promise.all(
     evmContracts.map(async (contract) => {
+      if (!isFixedDecimalDeployment(contract)) return { contract, raw: null };
       const raw = await fetchErc20TotalSupply(
         { kind: "onchain-evm", chain: contract.chain, rpcMode: "public-rpc" },
         contract.address,
@@ -183,7 +185,7 @@ async function aggregateKrwqSupply(
 
   return {
     contributions: reads
-      .filter((entry): entry is { contract: ContractDeployment; raw: bigint } => entry.raw != null)
+      .filter((entry): entry is { contract: ContractDeployment & { decimals: number }; raw: bigint } => entry.raw != null && isFixedDecimalDeployment(entry.contract))
       .map((entry) => ({
         chain: entry.contract.chain,
         tokenAddress: entry.contract.address,

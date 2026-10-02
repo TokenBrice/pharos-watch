@@ -1,8 +1,5 @@
 {
   "id": "ussd-sonic-labs",
-  "mica": {
-    "status": "out-of-scope"
-  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
@@ -10,16 +7,14 @@
     },
     "authorizationStatus": "issuer-announced-intent",
     "issuerPathway": "unknown",
-    "issuerEntity": "Sonic Labs / Sonic USA LLC (Delaware)",
-    "issuerDomicile": "United States",
-    "foreignExceptionStatus": "not-applicable",
+    "issuerEntity": "Frax Inc.",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://facts.frax.finance/frxusd/balance-sheet",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "Sonic Labs publicly markets USSD as 'fully compatible with the GENIUS Act' and has established Sonic USA LLC (Delaware) for U.S. regulatory engagement. No PPSI application, OCC/FDIC/Federal Reserve filing, or state-qualified authorization has been found. The GENIUS Act rulemaking remains in proposed-rules phase with no PPSI approvals granted to any issuer as of 2026-06-18. Foreign exception status updated to not-applicable as the issuer is U.S.-domiciled.",
+    "notes": "Reviewed on 2026-10-01: Sonic markets USSD on GENIUS-compatible frxUSD infrastructure. The linked USSD disclaimer states that Frax Inc. and its affiliates deploy USSD and that Sonic does not issue, administer, or control it. USSD wraps frxUSD, whose reserves, custody, redemption, and compliance are managed by Frax Inc. and its service providers. The issuer pages and OCC sources reviewed did not establish token-specific GENIUS authorization; this limited review does not determine all federal/state filings or Frax Inc.'s domicile.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -44,23 +39,15 @@
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act rulemaking bulletin and public releases (bulletin-2026-3)",
-        "Sonic Labs USSD product page (soniclabs.com/ussd)",
-        "Sonic Labs USSD docs (docs.soniclabs.com/sonic/ussd)",
-        "Sonic Labs blog (blog.soniclabs.com: CLARITY Act post)",
-        "Web search: Sonic Labs USSD GENIUS Act compliance 2026",
-        "Web search: Sonic Labs USSD PPSI OCC federal regulator authorization 2026",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "https://docs.soniclabs.com/sonic/ussd",
+        "https://www.soniclabs.com/ussd",
+        "USSD disclaimer linked by the Sonic USSD documentation",
+        "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html"
       ],
-      "summary": "No token-specific PPSI approval, state-qualified approval, official GENIUS Act application filing, or comparable foreign-issuer exception was located for USSD or Sonic Labs / Sonic USA LLC in any federal or state regulatory database. Sonic Labs' GENIUS compatibility claims are issuer marketing, not regulatory disclosures.",
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "summary": "No token-specific USSD authorization or token-issuer application mapping was established in these issuer disclosures and OCC sources. The disclaimer identifies Frax Inc. and its affiliates, not Sonic, as USSD deployers. This limited search is not a conclusion about all federal or state databases.",
+      "reviewer": "Sol validation pass 2026-10-01 (ValB06GBPSAFO)",
+      "reviewedAt": "2026-10-01"
     },
     "reviewer": "Pharos compliance research",
     "reviewedAt": "2026-06-18"

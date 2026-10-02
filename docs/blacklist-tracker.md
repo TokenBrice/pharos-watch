@@ -83,6 +83,13 @@ blacklistable seed set. A declared parent takes precedence and keeps its
 unchanged either way — the freeze facts stay `bounded-unknown`, and the disposition only changes how
 the gap is attributed.
 
+The reserve-slice fallback applies only when no compiled reviewed access claim graph exists.
+With a [reviewed look-through graph](./access-lookthrough.md), graph authority/path diagnostics
+take precedence: raw registry slices cannot fill partial, stale or unresolved graph branches or add
+a second reserve failure-domain attribution. Independently reviewed declared-parent and local
+facts remain. Without a graph, the largest qualifying reserve share wins, with lexicographic asset
+id breaking ties; the existing structural disposition and bounded scoring state are preserved.
+
 When the same current `inherited` verdict names **no** tracked upstream, the review is retained with
 `structuralDisposition: "inherited-untracked-upstream"`: no `upstreamAssetId` and no failure domain
 are asserted (the branch verifies neither), the freeze review keeps its `possible` reach, and the gap

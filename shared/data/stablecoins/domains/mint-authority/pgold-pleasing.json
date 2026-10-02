@@ -16,7 +16,9 @@
         "deploymentRefs": [
           "arbitrum:0x3e76bb02286bfeaa89dd35f11253f2cbce634f91"
         ],
-        "evidence": "At Arbitrum block 472413865, owner() on proxy 0x3e76bb02286bfeaa89dd35f11253f2cbce634f91 returned 0x142a96da210dec495a76e56058563549ac12bab4; eth_getCode returns 0x (EOA). The implementation at 0xd81ea1e2179c983a45aa95929f189c2bd59788d7 exposes a plain mint(address,uint256) gated only by Ownable, so the owner EOA can mint directly.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 510584516,
+        "evidence": "At Arbitrum block 510584516, owner() on proxy 0x3e76bb02286bfeaa89dd35f11253f2cbce634f91 returned 0x142a96da210dec495a76e56058563549ac12bab4 and eth_getCode on that owner returned 0x. The EIP-1967 implementation remained 0xd81ea1e2179c983a45aa95929f189c2bd59788d7. A pinned eth_call of mint(address,uint256) from the owner succeeded, while the identical call from an unrelated address reverted with Ownable: caller is not the owner. These simulations do not submit transactions or alter supply.",
         "sources": [
           {
             "label": "PGOLD Arbitrum proxy",
@@ -34,9 +36,9 @@
         "deploymentRefs": [
           "arbitrum:0x3e76bb02286bfeaa89dd35f11253f2cbce634f91"
         ],
-        "observedAt": "2026-07-13",
-        "observedBlock": 483549717,
-        "evidence": "At Arbitrum block 472413865, EIP-1967 proxy-admin slot on 0x3e76bb returned 0x50ead2d211d84d111c692b86e02a489d3aa2e9ce (a ProxyAdmin contract, 3368 bytes). owner() on the ProxyAdmin returned 0x7e5cc9bb562eae2356fae7c59ea04c4677f73986; eth_getCode returns 0x (EOA). A different EOA from the token owner.",
+        "observedAt": "2026-10-01",
+        "observedBlock": 510584516,
+        "evidence": "At Arbitrum block 510584516, the corrected EIP-1967 admin slot on proxy 0x3e76bb02286bfeaa89dd35f11253f2cbce634f91 returned ProxyAdmin 0x50ead2d211d84d111c692b86e02a489d3aa2e9ce. owner() on that ProxyAdmin returned 0x7e5cc9bb562eae2356fae7c59ea04c4677f73986, and eth_getCode on the owner returned 0x. The implementation remained 0xd81ea1e2179c983a45aa95929f189c2bd59788d7. The upgrade owner is distinct from the token's direct-mint owner.",
         "sources": [
           {
             "label": "PGOLD Arbitrum proxy-admin",
@@ -96,8 +98,8 @@
       "canChangeMintLogic": true,
       "delaySec": 0,
       "controlRef": "Proxy-admin upgrade authority — Arbitrum",
-      "observedAt": "2026-07-13",
-      "observedBlock": 483549717,
+      "observedAt": "2026-10-01",
+      "observedBlock": 510584516,
       "sources": [
         {
           "label": "PGOLD Arbitrum proxy-admin",

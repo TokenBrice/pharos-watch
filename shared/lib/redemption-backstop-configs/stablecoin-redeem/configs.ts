@@ -119,6 +119,42 @@ const RESERVOIR_REDEEM_CONFIGS = defineConfigFamily(
 );
 
 const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
+  "onyc-onre": defineStablecoinRedeemConfig({
+    outputAssets: ["usdg-paxos"],
+    capacityModel: { kind: "fixed-usd", amountUsd: 0, confidence: "dynamic" },
+    accessModel: "whitelisted-onchain",
+    settlementModel: "atomic",
+    executionModel: "deterministic-onchain",
+    outputAssetType: "stable-single",
+    costModel: {
+      ...documentedVariableFee(
+        "OnRe charges a 25 bps service fee plus a state-dependent convex liquidity haircut; quote_swap_sell gives the executable USDG output",
+        "formula",
+      ),
+      feeBpsMin: 25,
+    },
+    v9RouteReviewTerms: {
+      settlementModel: "atomic",
+      settlementDelaySec: 0,
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "cost"],
+      rationale: "The current primary channel settles atomically to USDG, but neither its available vault balance nor the same-notional liquidity haircut is measured by this reviewed documentation. The 15% management liquidity target is not executable capacity.",
+      reviewedAt: "2026-10-02",
+      docs: [
+        sourceRef("OnRe current redemption and liquidity mechanics", "https://docs.onre.finance/technical-resources/redemptions-and-onchain-liquidity", ["route", "access", "settlement", "fees"]),
+      ],
+    },
+    reviewedAt: "2026-10-02",
+    docs: [
+      sourceRef("OnRe current redemption and liquidity mechanics", "https://docs.onre.finance/technical-resources/redemptions-and-onchain-liquidity", ["route", "access", "settlement", "fees"]),
+    ],
+    notes: [
+      "Observed 2026-10-02: OnRe states that the current deployment processes redemptions entirely onchain without a backend queue. Verified holders receive a USDG quote and a single atomic burn-and-payout transaction with a minimum-output constraint.",
+      "The prior monthly 2.5%-of-NAV capacity and 30-day queue terms are not the current primary channel. The approximately 15% capital liquidity reserve is a changeable management target, not an executable capacity bound.",
+      "Current quotes depend on vault balance, pressure-adjusted liquidity and demand. Global kill switch, offer/pair enablement and sufficient vault liquidity must be checked; no favorable capacity or all-in cost is inferred without that read.",
+      "Zero modeled capacity is a conservative lower bound while executable USDG liquidity is unmeasured, not an observed empty vault; the OnRe holdings adapter has no redeemable-capacity telemetry.",
+    ],
+  }),
   "usd3-3jane": erc4626InstantConfig({
     symbol: "USDC",
     fallback: { basis: "live-direct-telemetry" },
@@ -451,15 +487,19 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   }),
   "scrvusd-curve": erc4626InstantConfig({
     symbol: "crvUSD",
-    reviewedAt: "2026-05-17",
+    outputAssets: ["crvusd-curve"],
+    reviewedAt: "2026-10-01",
     feeDescription:
       "Curve docs describe scrvUSD as a Yearn V3 vault with idle crvUSD always available for redemption; yield accrues through share price rather than a separate exit fee.",
     docs: [
       sourceRefRouteCapacity("Curve scrvUSD month-in-review", "https://news.curve.finance/savings-crvusd-a-month-in-review/"),
-      sourceRef("Curve resources", "https://resources.curve.finance/", ["route"]),
+      sourceRefFull(
+        "Curve direct scrvUSD withdrawal guide",
+        "https://docs.curve.finance/docs/user/yield/guides/withdraw-scrvusd.md",
+      ),
     ],
     notes: [
-      "scrvUSD is Curve's savings wrapper over crvUSD and exits into the underlying at the live vault exchange rate",
+      "Output reviewed 2026-10-01: Curve's direct withdrawal guide states that the vault pays underlying crvUSD, with no delays or lock-ups on Ethereum. This is a single crvUSD output at the vault exchange rate, not fiat or a collateral basket; cross-chain market swaps are separate routes.",
       "Fresh ERC-4626 reserve telemetry reads the vault's idle crvUSD balance as current direct wrapper capacity; actual par-exit quality then depends on the underlying crvUSD redemption and peg-defense surface.",
     ],
   }),
@@ -537,7 +577,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     executionModel: "rules-based-nav",
     capacityModel: { kind: "supply-ratio", ratio: 0.15, confidence: "heuristic" },
     costModel: undisclosedReviewedFee(
-      "Noon's fees page states the dApp charges no fees, but the binding USN Terms of Service Section 7 reserve the right to charge minting and redemption fees with current fees 'published on the Website' — no fee schedule is published today and any increase takes effect no sooner than 14 days after publication, while Sections 2 and 6 pay redemptions 'less any applicable fees (including applicable swap fees)'",
+      "Noon's current Mint & Redeem and Fees pages publish zero protocol fees, excluding gas. Binding USN Terms of Service Sections 2 and 6 still allow applicable swap fees, and Section 7 permits fee increases with fourteen days' publication notice; a complete all-in redemption cost ceiling is not established.",
     ),
     reviewedAt: REVIEWED_NOON_USN_TERMS_AT,
     v9RouteReviewTerms: {
@@ -547,7 +587,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       docs: [
         sourceRef(
           "Noon USN Terms of Service",
-          "https://docs.noon.capital/additional-resources/terms-and-policies/asset-terms-usn-terms-of-service",
+          "https://docs.noon.capital/7.-terms-and-policies/asset-terms-usn-terms-of-service.md",
           ["route", "settlement"],
         ),
       ],
@@ -555,34 +595,42 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     docs: [
       sourceRefRouteCapacity(
         "Noon USN documentation",
-        "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn/return-generation",
+        "https://docs.noon.capital/3.-the-yield-engine/return-generation.md",
       ),
-      sourceRef("Noon smart contract audits", "https://docs.noon.capital/built-for-safety/smart-contract-audits", [
+      sourceRef("Noon smart contract audits", "https://docs.noon.capital/5.-the-security-framework/smart-contract-security-and-audits.md", [
         "route",
         "access",
       ]),
       sourceRef("Noon Accountable dashboard", "https://noon.accountable.capital/", ["capacity"]),
       sourceRef(
         "Noon USN Terms of Service",
-        "https://docs.noon.capital/additional-resources/terms-and-policies/asset-terms-usn-terms-of-service",
+        "https://docs.noon.capital/7.-terms-and-policies/asset-terms-usn-terms-of-service.md",
         ["route", "access", "fees", "settlement"],
       ),
       sourceRef(
         "Noon fees and other charges",
-        "https://docs.noon.capital/built-for-high-yields/fees-and-other-charges",
+        "https://docs.noon.capital/2.-usdusn-and-usdsusn/fees.md",
         ["fees"],
       ),
-      sourceRef("Noon liquidity", "https://docs.noon.capital/noon-the-basics/liquidity", [
+      sourceRef("Noon liquidity", "https://docs.noon.capital/2.-usdusn-and-usdsusn/liquidity.md", [
         "route",
         "capacity",
+        "settlement",
+      ]),
+      sourceRef("Noon mint and redeem", "https://docs.noon.capital/2.-usdusn-and-usdsusn/mint-and-redeem.md", [
+        "route",
+        "access",
+        "capacity",
+        "fees",
         "settlement",
       ]),
     ],
     notes: [
       "Direct mint and redemption are issuer-processed off-chain through the Company's designated interface for KYC-verified users only: ToS Section 6 commits to 1:1 redemption less applicable fees within five Business Days while reserving the right to delay redemptions, Section 29 reserves absolute and unfettered discretion to gate redemptions, and a submitted redemption request is unsecured debt owed by the Company",
-      "The reviewed reserve mix is majority Fasanara FTAC private credit with a three-month redemption window (61.9% of the 2026-09-22 Accountable attestation), with delta-neutral funding-rate arbitrage a listed ToS Section 5 reserve category but a 13.40% minority slice ($5.37M HYPE book), so the reviewed route keeps a conservative 15% immediate-capacity bound instead of scoring against full supply",
+      "The reviewed reserve mix is majority Fasanara FTAC private credit with a three-month redemption window (61.9% of the 2026-09-22 Accountable attestation), with delta-neutral funding-rate arbitrage a listed ToS Section 5 reserve category but a 13.40% minority slice ($5.37M HYPE book). The 15% capacity ratio remains a historical heuristic estimate, not an observed immediate buffer or an issuer-guaranteed floor.",
       "Noon's published liquidity waterfall (20% of TVL same-day, 60% at T+3, 100% at T+5) is non-binding: it is stated in calendar days against the ToS Business-Day SLA and rests on an undisclosed multi-party PLMS facility, so it is not credited as settlement or capacity evidence",
       "The published collateral wallets are not read as live capacity: their balances are transient ($3.05M of USDC/USDT at the cited 2026-09-14 block fell to $0.57M by 2026-09-22), one listed wallet is a plain EOA ops account, and they do not reconcile with Accountable's Undeployed bucket",
+      "The recovered operational mint/redeem documentation states a TVL-relative redemption quota, not a fixed USD amount. No same-run protocol TVL measurement or equivalence to circulating USN supply is established, so dailyLimitUsd remains unconfigured; the exact published percentage is recorded in the redemption-backstops documentation. Operational same-day settlement does not supersede the binding five-Business-Day terms and extraordinary gating.",
     ],
   }),
   "aid-gaib": defineReviewedStablecoinRedeemConfig(REVIEWED_DIRECT_REDEMPTION_AT, {
@@ -884,16 +932,41 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   }),
   "apxusd-apyx": defineReviewedStablecoinRedeemConfig(REVIEWED_DIRECT_REDEMPTION_AT, {
     accessModel: "whitelisted-onchain",
+    outputAssetType: "stable-single",
+    outputAssets: ["usdc-circle"],
+    executionModel: "rules-based-nav",
+    reviewedAt: "2026-10-01",
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["settlement"],
+      rationale:
+        "The apxUSD product docs explicitly identify USDC settlement after preferred-share liquidation at Redemption Value, but do not establish an atomic payout or a finite completion SLA.",
+      reviewedAt: "2026-10-01",
+      docs: [
+        sourceRef(
+          "Apyx apxUSD redemption output",
+          "https://docs.apyx.fi/product-overview/apxusd-overview",
+          ["route", "settlement"],
+        ),
+      ],
+    },
     costModel: documentedVariableFee(
       "Apyx docs describe mint and redeem against approved assets for whitelisted participants, with offchain execution spreads and expenses reflected in the price rather than a fixed protocol fee",
     ),
     docs: [
+      sourceRef(
+        "Apyx apxUSD redemption output",
+        "https://docs.apyx.fi/product-overview/apxusd-overview",
+        ["route", "settlement"],
+      ),
       sourceRef("How to Buy apxUSD", "https://docs.apyx.fi/app-guide/how-to-buy-apxusd", ["route", "access"]),
       sourceRefRouteCapacityFees("How Apyx Works", "https://docs.apyx.fi/apyx-overview/how-apyx-works"),
       sourceRefRouteCapacity("Peg Stability Model", "https://docs.apyx.fi/solution-overview/peg-stability-model"),
     ],
     notes: [
       "Retail users primarily access apxUSD via the Curve pool, while direct minting and redemption are reserved for whitelisted participants who rebalance the market",
+      "Output reviewed 2026-10-01: the product docs state 'the protocol liquidates preferred shares to USDC to settle redemption obligations; holders do not receive preferred shares directly.' The direct payout is USDC, not the reserve share basket or an assumed USDC/USDT choice. No basket weights are required.",
+      "Redemption occurs at Redemption Value. Preferred-share liquidation does not establish immediate atomic settlement, so V9 retains an explicit settlement terms gap rather than promoting the output identity into a guaranteed execution SLA.",
     ],
   }),
   "pusd-polymarket": defineStablecoinRedeemConfig({
@@ -1221,28 +1294,82 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Fresh ERC-4626 reserve telemetry measures Yearn V3 default-queue withdrawable capacity from total idle BOLD plus each funded strategy's maxRedeem(vault) value; if the live snapshot is unavailable, the route is left unrated instead of falling back to full NAV.",
     ],
   }),
-  "yusd-yieldfi": erc4626InstantConfig({
-    symbol: "USDC",
-    fallback: { fallbackRatio: 0.1, confidence: "documented-bound", basis: "strategy-buffer" },
-    reviewedAt: REVIEWED_STABLECOIN_AUDIT_AT,
-    settlementModel: "queued",
-    feeDescription:
-      "YieldFi yUSD token terms list no redemption fee other than network gas; requests still settle after the documented cooldown/keeper process.",
+  "nusd-neutrl": defineStablecoinRedeemConfig({
+    outputAssets: ["usdc-circle"],
+    capacityModel: { kind: "fixed-usd", amountUsd: 0, confidence: "documented-bound" },
+    accessModel: "permissionless-onchain",
+    holderEligibility: "issuer-discretionary",
+    settlementModel: "atomic",
+    executionModel: "deterministic-onchain",
+    reviewedAt: "2026-10-02",
+    costModel: fixedFee(
+      4900,
+      "The September 17 Neutrl redemption programme pays 0.51 USDC per NUSD: redemptionRate() = 510000000000000000 and quoteRedeem(1e18) = 510000 USDC units at Ethereum block 26105308 on 2026-10-02, a measured 4,900 bps discount to the $1 target rather than a separate transaction fee",
+    ),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity"],
+      rationale:
+        "The programme's USDC payout and fixed rate are verified, but no raw programme capacity bound is established. Its measured 4,900 bps cost yields zero executable capacity within the policy request budget; this is not a zero-reserve claim. The frontend agreement makes funding and issuer-imposed caps discretionary, so raw capacity remains unknown and cannot grant route credit.",
+      reviewedAt: "2026-10-02",
+      docs: [
+        sourceRef(
+          "Neutrl redemption programme agreement, Sections III(D) and VI",
+          "https://redeem.neutrl.finance/",
+          ["route", "access"],
+        ),
+      ],
+    },
     docs: [
-      sourceRefRouteCapacityFees("YieldFi yUSD token terms", "https://docs.yield.fi/legal-documents/token-terms/yusd"),
       sourceRef(
-        "YieldFi smart contract interaction",
-        "https://docs.yield.fi/technical-docs/smart-contract-interaction",
-        ["route", "capacity", "access", "settlement"],
+        "Neutrl September 17 fixed-rate USDC redemption programme announcement",
+        "https://x.com/Neutrl/status/2100614848241414280",
+        ["route", "fees", "access"],
       ),
-      sourceRef("YieldFi fees", "https://docs.yield.fi/fees", ["fees"]),
+      sourceRef(
+        "Neutrl NusdRedemption verified contract; pinned Ethereum block 26105308",
+        "https://eth.blockscout.com/address/0xb3f07d3392102fc23264a78e2a1a8b6421123828?tab=contract",
+        ["route", "fees", "settlement", "access"],
+      ),
+      sourceRef(
+        "Neutrl redemption frontend and holder release agreement",
+        "https://redeem.neutrl.finance/",
+        ["route", "fees", "settlement", "access"],
+      ),
     ],
     notes: [
-      "yUSD is an ERC-4626 vault over USDC; redemption burns shares immediately but underlying USDC is delivered through a queued request after the cooldown period.",
-      "Because yUSD allocates into delta-neutral and private-credit strategy positions, the reviewed route uses the documented queued route with a conservative 10% strategy-buffer capacity instead of scoring against full supply.",
-      "Fresh ERC-4626 reserve telemetry reads the vault's idle USDC balance as the current redeemable bound while the queued request flow still governs settlement; the reviewed 10% strategy-buffer ratio is retained only as fallback when live metadata is unavailable.",
+      "The issuer route is the separate redemption programme at 0xb3f07d3392102fc23264a78e2a1a8b6421123828, not the historical KYC-gated instant/queued par route. NUSD() and USDC() at block 26105308 bind the tracked NUSD token and Ethereum USDC; paused() and isRedeemWhitelistEnforced() both returned false.",
+      "The frontend requires the holder's wallet to sign the current onchain acknowledgement and release of claims before redeeming. The agreement requires legal/beneficial ownership, legal capacity and age of majority, excludes sanctioned/restricted persons, and permits issuer refusal, delay, blocking or freezing; permissionless contract access does not imply universal holder eligibility.",
+      "Section III(D) makes programme availability contingent on USDC and issuer discretion, including aggregate/per-holder caps. Raw programme capacity remains a bounded-terms gap. The fixed-usd zero represents only executable capacity within the policy cost budget, because the measured payout cost is 4,900 bps; no zero reserves, full-supply obligation or live reserve balance is inferred.",
     ],
   }),
+  "yusd-yieldfi": {
+    ...erc4626InstantConfig({
+      symbol: "USDC",
+      fallback: { fallbackRatio: 0.1, confidence: "documented-bound", basis: "strategy-buffer" },
+      reviewedAt: "2026-10-02",
+      settlementModel: "queued",
+      feeDescription:
+        "YieldFi yUSD token terms list no redemption fee other than network gas; requests still settle after the documented cooldown/keeper process.",
+      docs: [
+        sourceRef("YieldFi v2 yUSD pause banner observed 2026-10-02", "https://v2.yield.fi/yusd", ["route"]),
+        sourceRefRouteCapacityFees("YieldFi yUSD token terms", "https://docs.yield.fi/legal-documents/token-terms/yusd"),
+        sourceRef(
+          "YieldFi smart contract interaction",
+          "https://docs.yield.fi/technical-docs/smart-contract-interaction",
+          ["route", "capacity", "access", "settlement"],
+        ),
+        sourceRef("YieldFi fees", "https://docs.yield.fi/fees", ["fees"]),
+      ],
+      notes: [
+        "Route status is unknown: on 2026-10-02 the v2.yield.fi/yusd frontend displayed \"Mint and Redeem operations for yUSD and vyUSD are paused until we seek remediation from SAGA as per the contractual agreement with them.\" The observation establishes no pause start date, loss amount, suspension record or cessation of independent DEX exits.",
+        "The historical yUSD route is an ERC-4626 vault over USDC; redemption burns shares immediately but underlying USDC is delivered through a queued request after the cooldown period. These terms and the reserve telemetry below do not establish that redemption is currently open.",
+        "Because yUSD allocates into delta-neutral and private-credit strategy positions, the reviewed route uses the documented queued route with a conservative 10% strategy-buffer capacity instead of scoring against full supply.",
+        "Fresh ERC-4626 reserve telemetry reads the vault's idle USDC balance as the current redeemable bound while the queued request flow still governs settlement; the reviewed 10% strategy-buffer ratio is retained only as fallback when live metadata is unavailable.",
+      ],
+    }),
+    routeStatus: "unknown",
+  },
   "said-gaib": erc4626InstantConfig({
     symbol: "AID",
     outputAssets: ["aid-gaib"],

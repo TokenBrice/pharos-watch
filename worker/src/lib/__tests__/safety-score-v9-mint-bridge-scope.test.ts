@@ -9,6 +9,10 @@ import type {
   MintAuthorityProfile,
 } from "@shared/types/core";
 import { v9RepresentationGroupRouteKey } from "@shared/lib/safety-score-v9/facts";
+import { evaluateV9EconomicControlAssetFacts } from "@shared/lib/safety-score-v9/control";
+import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
+import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { reviewedScope, SCOPE_CLOCK, weightedQuorum } from "@shared/lib/__tests__/safety-score-v9-control-scope.test-support";
 import { describe, expect, it } from "vitest";
 import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9/fact-set";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
@@ -185,6 +189,43 @@ function compileFixture(
   return { extension, compiled };
 }
 
+function scopedMintReachMeta({ complete = false, unknownReach = true } = {}) {
+  const control = mintControl();
+  const scope = reviewedScope({
+    controllerDeployment: `${control.chain}:${control.address}`,
+    inventory: complete ? "complete" : "partial",
+    confidence: complete ? "verified" : "partial",
+    closure: {
+      entrypoints: complete, mutableTargets: complete, delegateAndFallback: complete,
+      permissions: complete, upgrades: complete, bypasses: complete, liabilityInventory: complete,
+    },
+  });
+  scope.paths[0] = {
+    ...scope.paths[0]!,
+    capSemantics: { kind: "unbounded", bound: null },
+    claimImpairment: "unbounded",
+    reach: unknownReach ? "unknown" : "root",
+    economicLossScope: unknownReach ? "unknown" : "global-claim",
+  };
+  return meta("fixture-scoped-mint-reach", {
+    mintAuthority: mintProfile({
+      controls: [{ ...control, executionScope: scope }, mintControl({
+        address: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        label: "Verified sibling minter",
+      })],
+      review: {
+        sources: [SOURCE], evidence: "The active mint path is reviewed independently of its economic reach.",
+        reviewer: "Fixture reviewer", reviewedAt: "2026-10-01", disposition: "scoreable",
+        scopedQuestions: [{
+          controlRef: `${control.chain}:${control.address}`,
+          question: "Which liability can this active mint path affect?",
+          reviewedAt: "2026-10-01", reviewer: "Fixture reviewer", sources: [SOURCE],
+        }],
+      },
+    }),
+  });
+}
+
 function controlsFor(
   compiled: ReturnType<typeof compileFixture>["compiled"],
   assetId: string,
@@ -297,9 +338,13 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     expect(controlsFor(compiled, contaminatedMeta.id)).toEqual([]);
   });
 
-  it.each(["usdai-usd-ai", "susdai-usd-ai"])(
-    "%s compiles Arbitrum mint controls separately from satellite bridge controls",
-    (assetId) => {
+  it.each([
+    // R2F1, independently confirmed in r2/verify/usdai-usd-ai.json, resolves the Solana OFT route.
+    { assetId: "usdai-usd-ai", unresolvedChains: [] },
+    { assetId: "susdai-usd-ai", unresolvedChains: [] },
+  ])(
+    "$assetId compiles Arbitrum mint controls separately from satellite bridge controls",
+    ({ assetId, unresolvedChains }) => {
       const metadata = ACTIVE_META_BY_ID.get(assetId);
       if (!metadata?.mintAuthority || !metadata.bridgeRouteRisk?.routes) {
         throw new Error(`expected boundary metadata for ${assetId}`);
@@ -321,8 +366,11 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
           .filter((route) => route.issuanceModel === "native-issuance")
           .map((route) => route.id),
       );
-      const satelliteAuthorityKeys = satelliteRoutes.map(
-        (route) => `${route.controllerChain}:${route.controllerAddress!.toLowerCase()}`,
+      const satelliteAuthorityKeys = satelliteRoutes.map((route) =>
+        route.controllerAddress
+          // r2/data/results/{usdai-usd-ai,susdai-usd-ai}.json pins case-sensitive Solana execution identities.
+          ? `${route.controllerChain}:${route.controllerChain === "solana" ? route.controllerAddress : route.controllerAddress.toLowerCase()}`
+          : `bridge-route:${route.id}`,
       );
 
       expect(mintControls).toHaveLength(metadata.mintAuthority.controls?.length ?? 0);
@@ -338,47 +386,126 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
       expect(bridgeControls.map((control) => control.deploymentKey).sort()).toEqual(
         satelliteRoutes.map((route) => route.id).sort(),
       );
-      expect(bridgeControls.every((control) => control.capabilities.includes("bridge-mint"))).toBe(true);
+      const reviewedBridgeControls = bridgeControls.filter((control) =>
+        satelliteRoutes.some((route) => route.id === control.deploymentKey && route.reviewDisposition === "reviewed"),
+      );
+      expect(reviewedBridgeControls.map((control) => control.deploymentKey).sort()).toEqual(
+        satelliteRoutes.filter((route) => route.reviewDisposition === "reviewed").map((route) => route.id).sort(),
+      );
+      expect(reviewedBridgeControls.every((control) => control.capabilities.includes("bridge-mint"))).toBe(true);
+      const unresolvedRoutes = satelliteRoutes.filter((route) => route.reviewDisposition !== "reviewed");
+      expect(unresolvedRoutes.map((route) => route.destinationChain)).toEqual(unresolvedChains);
+      for (const unresolvedRoute of unresolvedRoutes) {
+        const unresolvedControl = bridgeControls.find((control) => control.deploymentKey === unresolvedRoute.id);
+        expect(unresolvedControl).toMatchObject({
+          capabilities: [],
+          authority: { authorityKey: `bridge-route:${unresolvedRoute.id}`, model: "unknown" },
+          capSemantics: { kind: "unknown" },
+          claimImpairment: "unknown",
+          incidentState: "unknown",
+        });
+        expect(unresolvedControl!.status.observationState).not.toBe("known");
+        expect(
+          asset.gaps
+            .filter((gap) => unresolvedControl!.status.gapIds.includes(gap.gapId))
+            .map((gap) => gap.reasonCode),
+        ).toContain("unresolved-control-identity");
+      }
       expect(bridgeControls.map((control) => control.authority?.authorityKey).sort()).toEqual(
         satelliteAuthorityKeys.sort(),
       );
     },
   );
 
-  it("emits a deployment-bound authority with its real key, non-root reach, and reconciled share", () => {
-    const routes = [route(ARBITRUM_ROUTE), route(BASE_ROUTE)];
-    const metadata = meta("fixture-issuer-native", {
+  it("keeps durable native mint binding asset-wide despite satellite supply", () => {
+    const routes = [route(ARBITRUM_ROUTE), representationRoute(BASE_ROUTE)];
+    const metadata = meta("fixture-root-mint", {
       mintAuthority: mintProfile({
         controls: [mintControl({ deploymentRefs: [ARBITRUM_ROUTE] })],
+        upgradeability: { model: "immutable", canChangeMintLogic: false, sources: [] },
       }),
-      bridgeRouteRisk: bridgeProfile(routes, {
+      bridgeRouteRisk: bridgeProfile(routes),
+    });
+    const partition = supplyByRoute(routes);
+    partition.arbitrum!.current = 95_610_000;
+    partition.base!.current = 4_390_000;
+    const { compiled } = compileFixture(metadata, { chainSupplyByChain: partition });
+    const asset = compiled.assets[0]!;
+    const mint = asset.controls.find((control) => control.capabilities.includes("mint"))!;
+    expect(mint).toMatchObject({
+      scope: "global",
+      economicLossScope: "global-claim",
+      materialSupplyShare: null,
+    });
+    const result = evaluateV9EconomicControlAssetFacts(
+      asset, { assetId: asset.assetId, ...asset.economicControlReview }, V9_CANDIDATE_POLICY_V1,
+    );
+    expect(result.components.find((component) => component.kind === "mint")).toMatchObject({
+      binding: true, posture: "unbounded-or-compromised", score: 25,
+    });
+    expect(result.structuralFailures).toContainEqual(expect.objectContaining({
+      kind: "centralized-mint", binding: true, materialSharePct: null,
+    }));
+  });
+
+  it("retains distinct same-controller permissions without hiding an unbounded mint path", () => {
+    const metadata = meta("fixture-shared-controller-permissions", {
+      mintAuthority: mintProfile({
         controls: [
-          bridgeControl({
-            id: "issuer-native-transfer-pool",
-            routeRefs: [BASE_ROUTE],
-            capabilities: ["bridge-burn", "bridge-mint", "rate-limit", "peer-config"],
-          }),
+          mintControl({ label: "Capped issuance permission", directMintAbility: "cap-limited", canRaiseCap: true }),
+          mintControl({ label: "Unbounded issuance permission" }),
+        ],
+        upgradeability: { model: "immutable", canChangeMintLogic: false, sources: [] },
+      }),
+      bridgeRouteRisk: bridgeProfile([route(ARBITRUM_ROUTE)]),
+    });
+    for (const reverse of [false, true]) {
+      const input = structuredClone(metadata);
+      if (reverse) input.mintAuthority!.controls!.reverse();
+      const asset = compileFixture(input).compiled.assets[0]!;
+      expect(asset.controls.filter((control) => control.capabilities.includes("mint")).map((control) => control.capSemantics.kind).sort())
+        .toEqual(["raiseable", "unbounded"]);
+      const result = evaluateV9EconomicControlAssetFacts(
+        asset, { assetId: asset.assetId, ...asset.economicControlReview }, V9_CANDIDATE_POLICY_V1,
+      );
+      expect(result.components.find((component) => component.kind === "mint")).toMatchObject({
+        binding: true, posture: "unbounded-or-compromised", score: 25,
+      });
+    }
+  });
+
+  it("prices the worst same-address native Safe rather than its first deployment", () => {
+    const routes = [route(BASE_ROUTE), route(ETHEREUM_ROUTE), route(ARBITRUM_ROUTE)];
+    const metadata = meta("fixture-split-native-safe", {
+      mintAuthority: mintProfile({
+        reconciliation: "periodic",
+        supervision: "attestation-only",
+        upgradeability: { model: "immutable", canChangeMintLogic: false, sources: [] },
+        controls: [
+          mintControl({ deploymentRefs: [BASE_ROUTE], authorityType: "multisig", threshold: 3, signerCount: 5 }),
+          mintControl({ deploymentRefs: [ETHEREUM_ROUTE], authorityType: "multisig", threshold: 2, signerCount: 5 }),
+          mintControl({ deploymentRefs: [ARBITRUM_ROUTE], authorityType: "multisig", threshold: 3, signerCount: 5 }),
         ],
       }),
+      bridgeRouteRisk: bridgeProfile(routes),
     });
-    const { compiled } = compileFixture(metadata);
-    const controls = controlsFor(compiled, metadata.id);
-    const mint = controls.find((control) => control.controlKey.startsWith("mint-meta:"));
-    const bridge = controls.find((control) => control.controlKey.startsWith("bridge-meta:"));
-
-    expect(mint).toMatchObject({
-      deploymentKey: ARBITRUM_ROUTE,
-      scope: "deployment",
-      economicLossScope: "deployment",
-      materialSupplyShare: 0.5,
-      capabilities: ["mint"],
-    });
-    expect(bridge).toMatchObject({
-      deploymentKey: BASE_ROUTE,
-      capabilities: ["bridge-mint", "burn", "parameter-change"],
-    });
-    expect(controls).toHaveLength(2);
-    expect(bridge!.capabilities).not.toContain("mint");
+    const partition = supplyByRoute(routes);
+    partition.base!.current = 3_040_000;
+    partition.ethereum!.current = 81_920_000;
+    partition.arbitrum!.current = 15_040_000;
+    for (const reverse of [false, true]) {
+      const input = structuredClone(metadata);
+      if (reverse) input.mintAuthority!.controls!.reverse();
+      const asset = compileFixture(input, { chainSupplyByChain: partition }).compiled.assets[0]!;
+      const result = evaluateV9EconomicControlAssetFacts(
+        asset, { assetId: asset.assetId, ...asset.economicControlReview }, V9_CANDIDATE_POLICY_V1,
+      );
+      const weak = asset.controls.find((control) => control.authority?.threshold?.required === 2)!;
+      expect(result.components.find((component) => component.kind === "mint")).toMatchObject({
+        binding: true, controlKeys: [weak.controlKey],
+      });
+      expect(result.score).toBeLessThan(70);
+    }
   });
 
   it("keeps a deployment-bound authority global when the supply partition does not reconcile", () => {
@@ -605,6 +732,63 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
       threshold: null,
     });
   });
+
+  it("selects the weaker effective signature requirement when a weighted bridge quorum joins a uniform multisig", () => {
+    const weighted = overlayEntry("weighted", { kind: "not-applicable", bound: null });
+    weighted.overlay.authority = {
+      authorityKey: "weighted-controller", model: "multisig", threshold: null,
+      weightedQuorum: weightedQuorum([1, 1, 1], 2),
+    };
+    const uniform = overlayEntry("uniform", { kind: "not-applicable", bound: null });
+    uniform.overlay.authority = {
+      authorityKey: "uniform-controller", model: "multisig", threshold: { required: 3, total: 5 },
+    };
+    expect(mergedBridgeAuthority([weighted, uniform], BASE_ROUTE)).toEqual(weighted.overlay.authority);
+    expect(mergedBridgeAuthority([uniform, weighted], BASE_ROUTE)).toEqual(weighted.overlay.authority);
+  });
+
+  it("uses complete bridge execution paths instead of coarse upgrade claims and preserves the unavoidable delay", () => {
+    const scope = reviewedScope();
+    Object.assign(scope.paths[0]!, {
+      capabilities: ["bridge-mint"], economicLossScope: "deployment", reach: "deployment",
+      affectedDeployments: [BASE_ROUTE], unavoidableDelaySec: 3_600,
+    });
+    const metadata = meta("alpha", {
+      bridgeRouteRisk: bridgeProfile([representationRoute(BASE_ROUTE)], {
+        reviewedAt: "2026-10-01",
+        controls: [bridgeControl({
+          controllerChain: "ethereum", controllerAddress: ETHEREUM_ROUTE.split(":")[1],
+          capabilities: ["bridge-mint", "upgrade"], executionScope: scope, timelockDelaySec: 0,
+        })],
+      }),
+    });
+    const adapted = adaptBridgeFixture(metadata, null, undefined, SCOPE_CLOCK);
+    expect(adapted.controls).toEqual([expect.objectContaining({
+      deploymentKey: BASE_ROUTE,
+      capabilities: ["bridge-mint"],
+      capSemantics: { kind: "bounded", bound: { amount: 1, unit: "supply-fraction" } },
+      claimImpairment: "bounded",
+      delaySec: 3_600,
+      executionScopeComplete: true,
+    })]);
+  });
+
+  it.each(["missing", "stale"] as const)(
+    "does not certify a multichain bridge inventory with %s review evidence",
+    (state) => {
+      const metadata = meta("alpha", state === "missing" ? {} : {
+        bridgeRouteRisk: bridgeProfile([representationRoute(BASE_ROUTE)], { controls: [] }),
+      });
+      const adapted = adaptBridgeFixture(
+        metadata, null, { ethereum: { current: 80 }, base: { current: 20 } }, SCOPE_CLOCK,
+      );
+      expect(adapted.review.status).toMatchObject({
+        applicability: { state: "required" }, observationState: state,
+      });
+      expect(adapted.review.routes).toEqual([]);
+      expect(adapted.controls).toEqual([]);
+    },
+  );
 
   describe("AUTHORITY-LADDER 9.46: the external validator-quorum rung", () => {
     const dvnControl = (routeRefs: readonly string[]) =>
@@ -978,6 +1162,127 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
 
     expect(unresolved).toHaveLength(1);
     expect(unresolved[0]!.scopedQuestionFresh).not.toBe(true);
+  });
+
+  it.each(["reach", "activation", "economic-loss"] as const)("keeps partial unknown %s bounded without a redundant scoped question", (unknownField) => {
+    const metadata = scopedMintReachMeta();
+    const profile = metadata.mintAuthority!;
+    profile.controls = [profile.controls![0]!];
+    profile.economicCapSemantics = "bounded";
+    profile.upgradeability = { model: "immutable", canChangeMintLogic: false, sources: [] };
+    delete profile.review.scopedQuestions;
+    const path = profile.controls[0]!.executionScope!.paths[0]!;
+    path.reach = unknownField === "reach" ? "unknown" : "root";
+    path.activation = unknownField === "activation" ? "unknown" : "active";
+    path.economicLossScope = unknownField === "economic-loss" ? "unknown" : "global-claim";
+    path.affectedLiabilityIds = unknownField === "reach" ? [] : [metadata.id];
+    const { compiled } = compileFixture(metadata, { clockSec: SCOPE_CLOCK });
+    const asset = compiled.assets[0]!;
+    const control = asset.controls[0]!;
+    expect(control).toMatchObject({
+      status: { observationState: "bounded-unknown" }, economicLossScope: "unknown",
+      capSemantics: { kind: "bounded" }, claimImpairment: "bounded",
+    });
+    const result = evaluateV9EconomicControlAssetFacts(asset, { assetId: asset.assetId, ...asset.economicControlReview }, V9_CANDIDATE_POLICY_V1);
+    expect(result.components.find((component) => component.kind === "mint")?.posture).toBe("unknown");
+    expect(result.structuralFailures.some((failure) => failure.kind === "centralized-mint")).toBe(false);
+    expect(result.reasons.map((reason) => reason.code)).toContain("unresolved-mint-authority");
+  });
+
+  it("keeps an investigated unknown mint reach bounded without erasing verified adverse mint power", () => {
+    const { compiled } = compileFixture(scopedMintReachMeta(), { clockSec: SCOPE_CLOCK });
+    const asset = compiled.assets[0]!;
+    const control = asset.controls.find((row) => row.scopedQuestionFresh)!;
+    expect(control).toMatchObject({
+      status: { observationState: "bounded-unknown" },
+      economicLossScope: "unknown", incidentState: "unknown",
+      capSemantics: { kind: "unbounded" }, claimImpairment: "unbounded",
+    });
+    expect(asset.controlStatus.observationState).toBe("bounded-unknown");
+    expect(asset.gaps.find((gap) => gap.gapId === control.status.gapIds[0])?.reasonCode).toBe("scoped-control-question");
+    const result = evaluateV9EconomicControlAssetFacts(
+      asset, { assetId: asset.assetId, ...asset.economicControlReview }, V9_CANDIDATE_POLICY_V1,
+    );
+    expect(result.reasons.map((reason) => reason.code)).toContain("scoped-control-question");
+    expect(result.reasons.map((reason) => reason.code)).not.toContain("unresolved-control-identity");
+    expect(evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!.scoreInput.pillars.control.evidenceLevel).toBe("limited");
+  });
+
+  it("does not soften a single authority's established adverse mint path when unknown reach is added", () => {
+    const metadata = scopedMintReachMeta({ unknownReach: false });
+    const profile = metadata.mintAuthority!;
+    profile.controls = [profile.controls![0]!];
+    profile.reconciliation = "none";
+    profile.upgradeability = { model: "immutable", canChangeMintLogic: false, sources: [] };
+    const before = compileFixture(metadata, { clockSec: SCOPE_CLOCK }).compiled.assets[0]!;
+    const scope = profile.controls[0]!.executionScope!;
+    scope.paths.push({
+      ...scope.paths[0]!, id: "unresolved-mint-tail",
+      reach: "unknown", economicLossScope: "unknown", affectedLiabilityIds: [],
+    });
+    const after = compileFixture(metadata, { clockSec: SCOPE_CLOCK }).compiled.assets[0]!;
+    expect(after.controls).toHaveLength(1);
+    const beforeResult = evaluateV9EconomicControlAssetFacts(
+      before, { assetId: before.assetId, ...before.economicControlReview }, V9_CANDIDATE_POLICY_V1,
+    );
+    const afterResult = evaluateV9EconomicControlAssetFacts(
+      after, { assetId: after.assetId, ...after.economicControlReview }, V9_CANDIDATE_POLICY_V1,
+    );
+    expect(afterResult.components.find((component) => component.kind === "mint")).toMatchObject({
+      binding: true, posture: "unbounded-or-compromised", score: 25,
+      controlKeys: [after.controls[0]!.controlKey],
+    });
+    expect(afterResult.components).toEqual(beforeResult.components);
+    expect(afterResult.structuralFailures).toContainEqual(expect.objectContaining({
+      kind: "centralized-mint", severity: "high", binding: true,
+      controlKeys: [after.controls[0]!.controlKey],
+    }));
+    expect(afterResult.structuralFailures).toEqual(beforeResult.structuralFailures);
+    expect(afterResult.score).toBe(beforeResult.score);
+  });
+
+  it("does not add a charge for a custody-only question on a partial scope with verified reach", () => {
+    const metadata = scopedMintReachMeta({ unknownReach: false });
+    metadata.mintAuthority!.review.scopedQuestions![0]!.question = "Which custody provider protects this exact signer key?";
+    const after = compileFixture(metadata, { clockSec: SCOPE_CLOCK }).compiled.assets[0]!;
+    delete metadata.mintAuthority!.review.scopedQuestions;
+    const before = compileFixture(metadata, { clockSec: SCOPE_CLOCK }).compiled.assets[0]!;
+    expect(after.controlStatus.observationState).toBe("known");
+    expect(after.controls.map((row) => row.status.observationState)).toEqual(["known", "known"]);
+    expect(after.gaps.map((gap) => ({ reasonCode: gap.reasonCode, path: gap.path })))
+      .toEqual(before.gaps.map((gap) => ({ reasonCode: gap.reasonCode, path: gap.path })));
+    const beforeResult = evaluateV9EconomicControlAssetFacts(
+      before, { assetId: before.assetId, ...before.economicControlReview }, V9_CANDIDATE_POLICY_V1,
+    );
+    const afterResult = evaluateV9EconomicControlAssetFacts(
+      after, { assetId: after.assetId, ...after.economicControlReview }, V9_CANDIDATE_POLICY_V1,
+    );
+    expect(afterResult.score).toBe(beforeResult.score);
+    expect(afterResult.reasons).toEqual(beforeResult.reasons);
+  });
+
+  it("leaves a complete closure-proven scope unchanged by a scoped question", () => {
+    const metadata = scopedMintReachMeta({ complete: true, unknownReach: false });
+    const after = compileFixture(metadata, { clockSec: SCOPE_CLOCK }).compiled.assets[0]!;
+    delete metadata.mintAuthority!.review.scopedQuestions;
+    const before = compileFixture(metadata, { clockSec: SCOPE_CLOCK }).compiled.assets[0]!;
+    expect(after.controls.map((row) => ({
+      status: row.status.observationState, cap: row.capSemantics, claim: row.claimImpairment,
+      loss: row.economicLossScope, incident: row.incidentState,
+    }))).toEqual(before.controls.map((row) => ({
+      status: row.status.observationState, cap: row.capSemantics, claim: row.claimImpairment,
+      loss: row.economicLossScope, incident: row.incidentState,
+    })));
+    expect(after.controls.every((row) => row.status.observationState === "known")).toBe(true);
+  });
+
+  it("keeps verified sibling controls known beside a named unresolved mint reach", () => {
+    const { compiled } = compileFixture(scopedMintReachMeta(), { clockSec: SCOPE_CLOCK });
+    const sibling = compiled.assets[0]!.controls.find((row) => !row.scopedQuestionFresh)!;
+    expect(sibling).toMatchObject({
+      status: { observationState: "known" }, economicLossScope: "global-claim",
+      incidentState: "none", capSemantics: { kind: "unbounded" }, claimImpairment: "unbounded",
+    });
   });
 
   it("marks a control named by a fresh scoped question and routes its gaps to scoped-control-question", () => {

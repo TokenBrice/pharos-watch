@@ -1,4 +1,4 @@
-import { resolveChainId } from "@shared/lib/chains";
+import { resolveChainId } from "@shared/types/chain-identity";
 import {
   createV9EvidenceReference,
   createV9FactStatus,
@@ -32,7 +32,15 @@ export interface AssetBuildContext {
 }
 
 export function projectResearchOverlayPayload(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(projectResearchOverlayPayload);
+  if (Array.isArray(value)) {
+    let projected: unknown[] | undefined;
+    for (let index = 0; index < value.length; index++) {
+      const entry = projectResearchOverlayPayload(value[index]);
+      if (entry !== value[index]) projected ??= value.slice();
+      if (projected) projected[index] = entry;
+    }
+    return projected ?? value;
+  }
   if (value === null || typeof value !== "object") return value;
   const record = value as Record<string, unknown>;
   if ("applicability" in record && "observationState" in record && "evidenceRefIds" in record && "gapIds" in record) {
@@ -46,11 +54,18 @@ export function projectResearchOverlayPayload(value: unknown): unknown {
       observationState: record.observationState,
     };
   }
-  return Object.fromEntries(
-    Object.entries(record)
-      .filter(([key]) => key !== "cdpStressCoverage")
-      .map(([key, entry]) => [key, projectResearchOverlayPayload(entry)]),
-  );
+  let projected: Record<string, unknown> | undefined;
+  for (const key of Object.keys(record)) {
+    if (key === "cdpStressCoverage") {
+      projected ??= { ...record };
+      delete projected[key];
+      continue;
+    }
+    const entry = projectResearchOverlayPayload(record[key]);
+    if (entry !== record[key]) projected ??= { ...record };
+    if (projected) projected[key] = entry;
+  }
+  return projected ?? value;
 }
 
 export function stableFailureDomains(domains: readonly V9FailureDomainRef[]): V9FailureDomainRef[] {
@@ -64,16 +79,34 @@ export function stableFailureDomains(domains: readonly V9FailureDomainRef[]): V9
 }
 
 export function normalizeCompiledFailureDomains<T>(value: T): T {
-  if (Array.isArray(value)) return value.map((entry) => normalizeCompiledFailureDomains(entry)) as T;
+  if (Array.isArray(value)) {
+    let normalized: unknown[] | undefined;
+    for (let index = 0; index < value.length; index++) {
+      const entry = normalizeCompiledFailureDomains(value[index]);
+      if (entry !== value[index]) normalized ??= value.slice();
+      if (normalized) normalized[index] = entry;
+    }
+    return (normalized ?? value) as T;
+  }
   if (value === null || typeof value !== "object") return value;
-  return Object.fromEntries(
-    Object.entries(value).map(([key, entry]) => [
-      key,
-      key === "failureDomains" && Array.isArray(entry)
-        ? stableFailureDomains(entry as V9FailureDomainRef[])
-        : normalizeCompiledFailureDomains(entry),
-    ]),
-  ) as T;
+  const record = value as Record<string, unknown>;
+  let normalized: Record<string, unknown> | undefined;
+  for (const key of Object.keys(record)) {
+    const current = record[key];
+    let entry: unknown;
+    if (key === "failureDomains" && Array.isArray(current)) {
+      const domains = current as V9FailureDomainRef[];
+      const canonical = stableFailureDomains(domains);
+      entry = domains.length === canonical.length && domains.every((domain, index) =>
+        domain.kind === canonical[index]!.kind && domain.key === canonical[index]!.key)
+        ? current : canonical;
+    } else {
+      entry = normalizeCompiledFailureDomains(current);
+    }
+    if (entry !== current) normalized ??= { ...record };
+    if (normalized) normalized[key] = entry;
+  }
+  return (normalized ?? value) as T;
 }
 
 export function addEvidence(context: AssetBuildContext, evidence: V9EvidenceReferenceV2): string {

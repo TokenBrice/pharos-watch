@@ -19,7 +19,7 @@
   "geckoId": "cad-digital",
   "governanceQuality": "regulated-entity",
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "attestation",
     "url": "https://tetradg.com/cadd-reserve-attestations/",
     "provider": "Baker Tilly WM LLP (Vancouver)",
     "attestorTier": "regional",
