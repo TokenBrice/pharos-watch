@@ -14,9 +14,10 @@ import type { StatusForCoin } from "./telegram-webhook-status";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../lib/dex-liquidity";
 import { loadPublishedStressSignalGeneration } from "../lib/stress-signals-current-rows";
 import {
-  loadActiveSafetyScoreSource,
-  type ActiveSafetyScoreSource,
-} from "../lib/safety-score-active-source";
+  loadActiveSafetyScoreIndex,
+  type ActiveSafetyScoreIndex,
+} from "../lib/safety-score-index";
+import { loadActiveSafetyScoreSource } from "../lib/safety-score-active-source";
 
 const TOP_LIMIT = 5;
 const TOP_VIEWS = TOP_VIEW_NAMES;
@@ -32,7 +33,7 @@ function truncate(text: string, max = 220): string {
 }
 
 function expectedV9UnavailableText(
-  activeSource: ActiveSafetyScoreSource,
+  activeSource: ActiveSafetyScoreIndex,
 ): string {
   return activeSource.kind === "error"
     ? `expected model V9, ${activeSource.reason.replace(/-/g, " ")}`
@@ -183,7 +184,7 @@ export async function buildTopMessage(db: D1Database, view: string): Promise<str
     }
     case "yield":
     case "yields": {
-      const activeSource = await loadActiveSafetyScoreSource(db);
+      const activeSource = await loadActiveSafetyScoreIndex(db);
       const pysAvailable = false;
       const orderBy = pysAvailable
         ? "pharos_yield_score DESC, apy_30d DESC"
@@ -247,7 +248,7 @@ export async function buildTopMessage(db: D1Database, view: string): Promise<str
       );
     }
     case "chains": {
-      const activeSource = await loadActiveSafetyScoreSource(db);
+      const activeSource = await loadActiveSafetyScoreIndex(db);
       const stablecoinsResult = await loadStablecoinsCache(db, { mode: "strict" });
       if (stablecoinsResult.kind !== "ok") return "Chain rankings are temporarily unavailable.";
       const safetyScores: Record<string, number> = {};
@@ -278,7 +279,7 @@ export async function buildTopMessage(db: D1Database, view: string): Promise<str
         : `${message}\n${escapeHtml(`Chain health unavailable; ${expectedV9UnavailableText(activeSource)}.`)}`;
     }
     case "safety": {
-      const source = await loadActiveSafetyScoreSource(db);
+      const source = await loadActiveSafetyScoreIndex(db);
       if (source.kind === "error") {
         return "Safety scores are temporarily unavailable.";
       }

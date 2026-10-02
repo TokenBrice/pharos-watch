@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { mockRegistry } from "../../test-helpers/cron";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
-import * as activeSafetyScoreSource from "../../lib/safety-score-active-source";
+import * as activeSafetyScoreSource from "../../lib/safety-score-index";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../../lib/safety-score-v9/consumer-freshness";
 import {
   makeWorkerReportCardsV9Response,
@@ -138,7 +138,7 @@ describe("handleChains", () => {
   });
 
   it("sorts chains and derives health only from the canonical V9 publication", async () => {
-    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource").mockResolvedValue(activeV9());
+    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex").mockResolvedValue(activeV9());
     const db = mockD1([
       stablecoinsCache([
         asset("usdt-tether", { Ethereum: { current: 500 }, Tron: { current: 100 } }),
@@ -164,7 +164,7 @@ describe("handleChains", () => {
   });
 
   it("publishes chain-detail coin rows from the same chain-local aggregate", async () => {
-    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource").mockResolvedValue(activeV9());
+    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex").mockResolvedValue(activeV9());
     const db = mockD1([
       stablecoinsCache([
         asset("usdc-circle", { Ethereum: { current: 100 } }, {
@@ -231,7 +231,7 @@ describe("handleChains", () => {
   });
 
   it("rejects an unknown chain detail scope", async () => {
-    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource").mockResolvedValue(activeV9());
+    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex").mockResolvedValue(activeV9());
     const db = mockD1([stablecoinsCache([asset("usdc-circle", { Ethereum: { current: 100 } })])]);
 
     const response = await handleChains(db, new URL("https://pharos.watch/api/chains?chain=not-a-chain"));
@@ -240,7 +240,7 @@ describe("handleChains", () => {
   });
 
   it("fails closed when the canonical V9 publication is unavailable", async () => {
-    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource").mockResolvedValue({
+    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex").mockResolvedValue({
       kind: "error",
       reason: "v9-snapshot-unavailable",
       snapshot: null,
@@ -280,7 +280,7 @@ describe("handleChains", () => {
       "stale-cache",
     ],
   ])("withholds health from a %s V9 publication", async (_label, source, status, reason) => {
-    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource").mockResolvedValue(source);
+    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex").mockResolvedValue(source);
     const db = mockD1([stablecoinsCache([asset("usdc-circle", { Ethereum: { current: 100 } })])]);
 
     const response = await handleChains(db);
@@ -300,7 +300,7 @@ describe("handleChains", () => {
   ] as const)("discloses strict snapshot bands at age %s independently of current V9 safety", async (age, status) => {
     const clock = vi.spyOn(Date, "now").mockReturnValue(1_800_000_000_000);
     try {
-      vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource").mockResolvedValue(activeV9());
+      vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex").mockResolvedValue(activeV9());
       const db = mockD1([
         stablecoinsCache([asset("usdc-circle", { Ethereum: { current: 100 } })], age),
       ]);
@@ -323,7 +323,7 @@ describe("handleChains", () => {
   });
 
   it("excludes frozen and non-active assets from live aggregation", async () => {
-    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource").mockResolvedValue(activeV9());
+    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex").mockResolvedValue(activeV9());
     const db = mockD1([
       stablecoinsCache([
         asset("usdc-circle", { Ethereum: { current: 100 } }),

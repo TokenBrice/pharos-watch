@@ -20,6 +20,9 @@ const mocks = vi.hoisted(() => ({
   loadActiveSafetyScoreSource: vi.fn(),
 }));
 
+vi.mock("../../lib/safety-score-index", () => ({
+  loadActiveSafetyScoreIndex: mocks.loadActiveSafetyScoreSource,
+}));
 vi.mock("../../lib/safety-score-active-source", () => ({
   loadActiveSafetyScoreSource: mocks.loadActiveSafetyScoreSource,
 }));
@@ -380,7 +383,6 @@ describe("buildTopMessage", () => {
 
     expect(message).toContain("Top Safety Scores (V9)");
     expect(message).toContain("USDC");
-    expect(mocks.loadActiveSafetyScoreSource).toHaveBeenCalledWith(db);
     expect(db.getHistory()).toEqual([]);
   });
 

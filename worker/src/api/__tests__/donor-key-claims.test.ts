@@ -7,7 +7,7 @@ import { evaluateAccessGate, evaluateCachedPublicApiReadFastGate } from "../../h
 import { rotateApiKey } from "../../lib/api-key-admin";
 import { authenticateApiKey } from "../../lib/api-key-auth";
 import { resetApiKeyStateForTests } from "../../lib/api-keys";
-import { loadActiveSafetyScoreSource } from "../../lib/safety-score-active-source";
+import { loadActiveSafetyScoreIndex } from "../../lib/safety-score-index";
 import { makeJsonRequest } from "../../test-helpers/__shared/auth";
 import { createWorkerEnv } from "../../test-helpers/__shared/worker-env";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
@@ -15,8 +15,8 @@ import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { makeReportCardsV9Response, makeWorkerV9Card } from "../../test-helpers/report-cards-v9";
 import { handleDonorKeyClaim } from "../donor-key-claims";
 
-vi.mock("../../lib/safety-score-active-source", () => ({
-  loadActiveSafetyScoreSource: vi.fn(),
+vi.mock("../../lib/safety-score-index", () => ({
+  loadActiveSafetyScoreIndex: vi.fn(),
 }));
 
 const claimSwitch = vi.hoisted(() => ({ open: true }));
@@ -169,7 +169,7 @@ function countApiKeys(): number {
 beforeEach(() => {
   claimSwitch.open = true;
   resetApiKeyStateForTests();
-  vi.mocked(loadActiveSafetyScoreSource).mockReset().mockResolvedValue({
+  vi.mocked(loadActiveSafetyScoreIndex).mockReset().mockResolvedValue({
     kind: "v9",
     snapshot: makeReportCardsV9Response({ cards: [makeWorkerV9Card({ id: "usdc-circle", grade: "B" })] }),
   });
@@ -199,7 +199,7 @@ describe("POST /api/donor-key-claims", () => {
     [belowThresholdAccount, 403, "ineligible"],
     [poolAccount, 403, "ineligible"],
   ] as const)("distinguishes unavailable grades from insufficient donations for %s", async (account, status, reason) => {
-    vi.mocked(loadActiveSafetyScoreSource).mockResolvedValue({
+    vi.mocked(loadActiveSafetyScoreIndex).mockResolvedValue({
       kind: "v9",
       snapshot: makeReportCardsV9Response({ cards: [] }),
     });
@@ -264,7 +264,7 @@ describe("POST /api/donor-key-claims", () => {
   });
 
   it.each(["C", "NR"] as const)("excludes donations when the current grade is %s", async (grade) => {
-    vi.mocked(loadActiveSafetyScoreSource).mockResolvedValue({
+    vi.mocked(loadActiveSafetyScoreIndex).mockResolvedValue({
       kind: "v9",
       snapshot: makeReportCardsV9Response({
         cards: [makeWorkerV9Card({ id: "usdc-circle", grade })],
@@ -278,7 +278,7 @@ describe("POST /api/donor-key-claims", () => {
   });
 
   it.each(["held", "error"] as const)("fails closed when current grades are %s", async (kind) => {
-    vi.mocked(loadActiveSafetyScoreSource).mockResolvedValue(kind === "held" ? {
+    vi.mocked(loadActiveSafetyScoreIndex).mockResolvedValue(kind === "held" ? {
       kind, reason: "v9-publication-held", detail: "held", snapshot: makeReportCardsV9Response(),
     } : {
       kind, reason: "v9-snapshot-unavailable", detail: "unavailable", snapshot: null,
@@ -293,17 +293,17 @@ describe("POST /api/donor-key-claims", () => {
 
   it("preserves issued access and terminal replay after a grade downgrade", async () => {
     const payload = DonorKeyClaimResponseSchema.parse(await (await claim(claimMessage(donorAccount))).json());
-    vi.mocked(loadActiveSafetyScoreSource).mockClear().mockResolvedValue({
+    vi.mocked(loadActiveSafetyScoreIndex).mockClear().mockResolvedValue({
       kind: "v9",
       snapshot: makeReportCardsV9Response({ cards: [makeWorkerV9Card({ id: "usdc-circle", grade: "C" })] }),
     });
 
     await expect(authenticateApiKey(db, payload.token, PEPPER)).resolves.toMatchObject({ kind: "valid" });
     expect((await claim(claimMessage(donorAccount, { nonce: "downgradereplay1" }))).status).toBe(409);
-    expect(loadActiveSafetyScoreSource).not.toHaveBeenCalled();
+    expect(loadActiveSafetyScoreIndex).not.toHaveBeenCalled();
     sqlite.exec("UPDATE api_keys SET is_active = 0");
     expect((await claim(claimMessage(donorAccount, { nonce: "downgradereplay2" }))).status).toBe(403);
-    expect(loadActiveSafetyScoreSource).not.toHaveBeenCalled();
+    expect(loadActiveSafetyScoreIndex).not.toHaveBeenCalled();
   });
 
   it("enforces the issued donor key's ten-request minute quota through the access gate", async () => {
@@ -617,7 +617,7 @@ describe("POST /api/donor-key-claims", () => {
     expect(response.status).toBe(413);
     await expect(response.json()).resolves.toMatchObject({ reason: "body_invalid" });
     expect(countApiKeys()).toBe(0);
-    expect(loadActiveSafetyScoreSource).not.toHaveBeenCalled();
+    expect(loadActiveSafetyScoreIndex).not.toHaveBeenCalled();
   });
 
   it("answers 429 when the IP rate limiter denies the claim", async () => {

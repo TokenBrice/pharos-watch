@@ -36,7 +36,7 @@ import {
   SafetyScorePublicationIdentitySchema,
   type SafetyScorePublicationIdentity,
 } from "@shared/types/safety-score-publication";
-import { loadActiveSafetyScoreSource } from "../lib/safety-score-active-source";
+import { loadActiveSafetyScoreIndex } from "../lib/safety-score-index";
 import {
   aggregateFlowCacheKey,
   aggregateHourlyRowsByChain,
@@ -96,7 +96,7 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
   let classification:
     { kind: "ok"; classification: FlightToQualityClassification } | { kind: "unavailable"; reason: string };
   try {
-    const active = await loadActiveSafetyScoreSource(db);
+    const active = await loadActiveSafetyScoreIndex(db);
     if (active.kind !== "error") {
       classification =
         buildFlightToQualityClassificationFromV9Snapshot(
@@ -263,7 +263,7 @@ async function reconcileCachedAggregateSafetyResponse(
   let reason: string | null = cachedIdentity ? null : "identity-missing";
   if (cachedIdentity) {
     try {
-      const active = await loadActiveSafetyScoreSource(db);
+      const active = await loadActiveSafetyScoreIndex(db);
       if (active.kind !== "error") {
           const current =
             buildFlightToQualityClassificationFromV9Snapshot(

@@ -296,9 +296,10 @@ A missing input-bound attribution generation is diagnosed separately from an RPC
 Canonical accepted state is stored in:
 
 - `report-cards:v9`
+- `report-cards:v9:score-index`
 - `report-cards:v9:publication-health`
 
-Both rows carry matching model, schema, methodology, policy, evaluation-build, base-input, and publication identities. The canonical writer accepts only newer publications and commits an accepted publication with its current health atomically.
+The publication envelope and compact score index bind the same publication generation, result digest and full Safety Score identity. Health names the accepted generation and timestamp. The canonical writer commits all three rows in one atomic, newer-publication-fenced batch; held attempts retain both accepted data rows. The index includes NR/null entries, evidence/publication clocks and expected card count, so score-only readers need no decompression or dependency graph. See [request memory and rollout](./worker-and-api-limits.md#safety-score-production-budgets).
 
 Canonical arrays and digest inputs use the same locale-independent code-unit comparator throughout compilation and publication assessment. Replaying identical facts therefore cannot select a different equal-scoring route, reorder a dependency path, or hash a different reviewed-transfer sequence solely because the runtime locale changed.
 

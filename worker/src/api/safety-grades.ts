@@ -1,9 +1,9 @@
-import { projectSafetyGrades } from "@shared/types/report-cards-v9";
+import type { SafetyGradesResponse } from "@shared/types/report-cards-v9";
 import {
-  errorResponse,
+  jsonResponse,
   jsonSafetyScoreSnapshotResponse,
 } from "../lib/api-response";
-import { loadActiveSafetyScoreSource } from "../lib/safety-score-active-source";
+import { loadActiveSafetyScoreIndex } from "../lib/safety-score-index";
 
 /**
  * Free lane (no `X-API-Key`): grade-only projection of the same accepted V9
@@ -11,13 +11,18 @@ import { loadActiveSafetyScoreSource } from "../lib/safety-score-active-source";
  * uncached, exactly like the full report cards.
  */
 export const handleSafetyGrades = async (db: D1Database): Promise<Response> => {
-  const active = await loadActiveSafetyScoreSource(db);
+  const active = await loadActiveSafetyScoreIndex(db);
   if (active.kind === "error") {
-    return errorResponse(503, active.detail);
+    return jsonResponse({ error: active.detail, reason: active.reason }, { status: 503, noStore: true });
   }
   const snapshot = active.snapshot;
-  return jsonSafetyScoreSnapshotResponse(
-    snapshot,
-    projectSafetyGrades(snapshot),
-  );
+  const body: SafetyGradesResponse = {
+    model: "v9",
+    methodologyVersion: snapshot.methodology.version,
+    asOfSec: snapshot.asOfSec,
+    updatedAt: snapshot.updatedAt,
+    publicationStatus: snapshot.publicationHealth.status,
+    grades: snapshot.cards,
+  };
+  return jsonSafetyScoreSnapshotResponse(snapshot, body);
 };

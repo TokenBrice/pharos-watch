@@ -1,136 +1,95 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { makeReportCardsV9Response, makeWorkerSafetyScoreV9Publication } from "../../test-helpers/report-cards-v9";
-import { mockD1 } from "@shared/test-utils/mock-d1";
-import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
+import { afterEach, describe, expect, it } from "vitest";
+import { z } from "zod";
+import { SafetyScoreIndexSchema } from "@shared/types/safety-score-index";
+import { V9PublicationHealthSchema } from "@shared/types/report-cards-v9";
+import { DatabaseSync } from "node:sqlite";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { makeWorkerSafetyScoreV9Publication } from "../../test-helpers/report-cards-v9";
+import { currentInput } from "./safety-score-v9-publication-store.test-support";
+import { persistSafetyScoreV9Publication, SAFETY_SCORE_V9_CACHE_KEYS } from "../safety-score-v9/publication-store";
+import { loadActiveSafetyScoreIdentity } from "../safety-score-active-source";
+import { loadActiveSafetyScoreIndex } from "../safety-score-index";
+import { computeSafetyScoresSnapshot } from "../safety-scores";
 
-const mockLoadPublication = vi.fn();
-const mockLoadPublicationHealth = vi.fn();
+const databases: DatabaseSync[] = [];
+afterEach(() => { for (const db of databases.splice(0)) db.close(); });
 
-vi.mock("../safety-score-v9/publication-store", () => ({
-  loadSafetyScoreV9Publication: mockLoadPublication,
-  loadSafetyScoreV9PublicationHealth: mockLoadPublicationHealth,
-}));
-
-const { loadActiveSafetyScoreIdentity } = await import(
-  "../safety-score-active-source"
-);
-
-function matchingHealth(publication: SafetyScoreV9CurrentResponse) {
-  return {
-    ...makeReportCardsV9Response().publicationHealth,
-    acceptedPublicationGenerationId: publication.publicationGenerationId,
-    acceptedAtSec: publication.publishedAtSec,
-  };
+async function accepted() {
+  const sqlite = createLatestSchemaSqlite().sqlite;
+  databases.push(sqlite);
+  const db = createSqliteD1(sqlite);
+  const publication = makeWorkerSafetyScoreV9Publication();
+  await persistSafetyScoreV9Publication(db, currentInput(publication));
+  return { sqlite, db, publication };
 }
 
-/**
- * The identity-only loader is what the yield publish-time guard reads, so its
- * three states have to match `loadActiveSafetyScoreSource` exactly: only `v9`
- * lets the guard compare identities, and every unavailable or incompatible
- * publication has to fail closed to `error` instead of throwing.
- */
-describe("active Safety Score identity", () => {
-  beforeEach(() => {
-    mockLoadPublication.mockReset();
-    mockLoadPublicationHealth.mockReset();
+function mutateRow<T>(sqlite: DatabaseSync, key: string, schema: z.ZodType<T>, mutate: (value: T) => void) {
+  const row = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(key) as { value: string };
+  const value = schema.parse(JSON.parse(row.value));
+  mutate(value);
+  sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(stableJsonStringifyV1(value), key);
+}
+
+describe("generation-bound Safety Score index", () => {
+  it("serves only the identity of the matching accepted publication", async () => {
+    const { db, publication } = await accepted();
+    const identity = await loadActiveSafetyScoreIdentity(db);
+    expect(identity).toMatchObject({ kind: "v9", safetyScoreIdentity: {
+      publicationGenerationId: publication.publicationGenerationId,
+      policyDigest: publication.policy.semanticDigest,
+    } });
+    const scores = await computeSafetyScoresSnapshot(db);
+    expect([...scores.scores]).toEqual(publication.cards.filter(card => card.score !== null)
+      .map(card => [card.id, { score: card.score, grade: card.grade }]));
   });
 
-  it("resolves the canonical publication identity without the cards", async () => {
-    const publication = makeWorkerSafetyScoreV9Publication();
-    mockLoadPublication.mockResolvedValue(publication);
-    mockLoadPublicationHealth.mockResolvedValue(matchingHealth(publication));
-
-    await expect(loadActiveSafetyScoreIdentity(mockD1())).resolves.toEqual({
-      kind: "v9",
-      safetyScoreIdentity: {
-        model: "v9",
-        schemaVersion: 1,
-        methodologyVersion: publication.policyVersion,
-        policyId: publication.policy.id,
-        policyDigest: publication.policy.semanticDigest,
-        evaluationBuildDigest: publication.evaluationBuildDigest,
-        baseInputGenerationId: publication.baseInputGenerationId,
-        publicationGenerationId: publication.publicationGenerationId,
-      },
+  it("retains the accepted identity and ratings on a held attempt", async () => {
+    const { db, publication } = await accepted();
+    const input = currentInput(publication);
+    await persistSafetyScoreV9Publication(db, {
+      publicationClockSec: publication.publishedAtSec + 1,
+      publicationHealth: { ...input.publicationHealth, status: "held", attemptedAtSec: publication.publishedAtSec + 1,
+        heldSinceSec: publication.publishedAtSec + 1, reasons: [{ code: "dex-stale" }] },
+      publicationAttempt: { ...input.publicationAttempt, outcome: "held", publicationGenerationId: null, attemptedAtSec: publication.publishedAtSec + 1 },
     });
+    expect(await loadActiveSafetyScoreIdentity(db)).toMatchObject({ kind: "held", safetyScoreIdentity: {
+      publicationGenerationId: publication.publicationGenerationId,
+    } });
+    expect(await computeSafetyScoresSnapshot(db)).toMatchObject({ kind: "degraded", reason: "v9-publication-held",
+      publicationGenerationId: publication.publicationGenerationId, coveredCount: 1 });
   });
 
-  it("reports a held publication as held and still carries its identity", async () => {
-    const publication = makeWorkerSafetyScoreV9Publication();
-    mockLoadPublication.mockResolvedValue(publication);
-    mockLoadPublicationHealth.mockResolvedValue({
-      ...matchingHealth(publication),
-      status: "held",
-      heldSinceSec: publication.publishedAtSec + 1_800,
-      reasons: [{ code: "dex-stale" }],
+  it.each([
+    ["generation", "safety-score-index-publication-mismatch"],
+    ["digest", "safety-score-index-publication-mismatch"],
+    ["health", "safety-score-index-health-mismatch"],
+    ["missing", "safety-score-index-missing"],
+    ["invalid", "safety-score-index-invalid"],
+  ] as const)("rejects %s mismatch without ratings or a positive identity", async (failure, reason) => {
+    const { sqlite, db } = await accepted();
+    if (failure === "missing") sqlite.prepare("DELETE FROM cache WHERE key = ?").run(SAFETY_SCORE_V9_CACHE_KEYS.scoreIndex);
+    else if (failure === "health") mutateRow(sqlite, SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth, V9PublicationHealthSchema,
+      health => { health.acceptedPublicationGenerationId = "report-cards:v9:other"; });
+    else mutateRow(sqlite, SAFETY_SCORE_V9_CACHE_KEYS.scoreIndex, SafetyScoreIndexSchema, index => {
+      if (failure === "generation") index.safetyScoreIdentity.publicationGenerationId = "report-cards:v9:other";
+      if (failure === "digest") index.publicationResultDigest = "f".repeat(64);
+      if (failure === "invalid") index.scores = {};
     });
-
-    await expect(loadActiveSafetyScoreIdentity(mockD1())).resolves.toMatchObject({
-      kind: "held",
-      safetyScoreIdentity: {
-        publicationGenerationId: publication.publicationGenerationId,
-      },
-    });
+    expect(await loadActiveSafetyScoreIndex(db)).toMatchObject({ kind: "error", reason, snapshot: null });
+    expect(await loadActiveSafetyScoreIdentity(db)).toEqual({ kind: "error", safetyScoreIdentity: null });
+    expect(await computeSafetyScoresSnapshot(db)).toMatchObject({ kind: "degraded", reason,
+      scores: new Map(), safetyScoreIdentity: null, publishedAt: null });
   });
 
-  it("holds when health points at another generation", async () => {
-    const publication = makeWorkerSafetyScoreV9Publication();
-    mockLoadPublication.mockResolvedValue(publication);
-    mockLoadPublicationHealth.mockResolvedValue({
-      ...makeReportCardsV9Response().publicationHealth,
-      acceptedPublicationGenerationId: "report-cards:v9:other",
-      acceptedAtSec: publication.publishedAtSec + 1,
-    });
-
-    await expect(loadActiveSafetyScoreIdentity(mockD1())).resolves.toMatchObject({
-      kind: "held",
-    });
-  });
-
-  it("fails closed to error when the publication row is missing", async () => {
-    mockLoadPublication.mockResolvedValue(null);
-    mockLoadPublicationHealth.mockResolvedValue(
-      makeReportCardsV9Response().publicationHealth,
-    );
-
-    await expect(loadActiveSafetyScoreIdentity(mockD1())).resolves.toEqual({
-      kind: "error",
-      safetyScoreIdentity: null,
-    });
-  });
-
-  it("fails closed to error when the health row is missing", async () => {
-    const publication = makeWorkerSafetyScoreV9Publication();
-    mockLoadPublication.mockResolvedValue(publication);
-    mockLoadPublicationHealth.mockResolvedValue(null);
-
-    await expect(loadActiveSafetyScoreIdentity(mockD1())).resolves.toEqual({
-      kind: "error",
-      safetyScoreIdentity: null,
-    });
-  });
-
-  it("fails closed to error when a load rejects instead of propagating", async () => {
-    mockLoadPublication.mockRejectedValue(new Error("D1 unavailable"));
-    mockLoadPublicationHealth.mockResolvedValue(
-      makeReportCardsV9Response().publicationHealth,
-    );
-
-    await expect(loadActiveSafetyScoreIdentity(mockD1())).resolves.toEqual({
-      kind: "error",
-      safetyScoreIdentity: null,
-    });
-  });
-
-  it("fails closed to error when the stored publication is incompatible", async () => {
-    mockLoadPublication.mockResolvedValue({ publicationGenerationId: "only-a-fragment" });
-    mockLoadPublicationHealth.mockResolvedValue(
-      makeReportCardsV9Response().publicationHealth,
-    );
-
-    await expect(loadActiveSafetyScoreIdentity(mockD1())).resolves.toEqual({
-      kind: "error",
-      safetyScoreIdentity: null,
-    });
+  it("rolls back the publication when the score-index write loses its fence", async () => {
+    const { sqlite, db, publication } = await accepted();
+    sqlite.prepare("UPDATE cache SET updated_at = ? WHERE key = ?").run(200, SAFETY_SCORE_V9_CACHE_KEYS.scoreIndex);
+    await expect(persistSafetyScoreV9Publication(db, currentInput(makeWorkerSafetyScoreV9Publication({
+      publicationGenerationId: "report-cards:v9:new", publishedAtSec: 120,
+    })))).rejects.toThrow();
+    expect(sqlite.prepare("SELECT json_extract(value, '$.identity.publicationGenerationId') AS generation FROM cache WHERE key = ?")
+      .get(SAFETY_SCORE_V9_CACHE_KEYS.publication)?.generation).toBe(publication.publicationGenerationId);
   });
 });

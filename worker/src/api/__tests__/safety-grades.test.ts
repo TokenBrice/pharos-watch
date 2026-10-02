@@ -6,8 +6,8 @@ import { mockD1 } from "@shared/test-utils/mock-d1";
 
 const mockLoadActiveSafetyScoreSource = vi.fn();
 
-vi.mock("../../lib/safety-score-active-source", () => ({
-  loadActiveSafetyScoreSource: mockLoadActiveSafetyScoreSource,
+vi.mock("../../lib/safety-score-index", () => ({
+  loadActiveSafetyScoreIndex: mockLoadActiveSafetyScoreSource,
 }));
 
 const { handleSafetyGrades } = await import("../safety-grades");
@@ -18,7 +18,9 @@ describe("handleSafetyGrades", () => {
 
   it("serves a grade-only projection of the current V9 publication without a key", async () => {
     const snapshot = makeReportCardsV9Response();
-    mockLoadActiveSafetyScoreSource.mockResolvedValue({ kind: "v9", snapshot });
+    mockLoadActiveSafetyScoreSource.mockResolvedValue({ kind: "v9", snapshot: {
+      ...snapshot, cards: snapshot.cards.map(({ id, score, grade }) => ({ id, score, grade })),
+    } });
 
     const response = await handleSafetyGrades(mockD1([], { requireMatch: true }));
 
