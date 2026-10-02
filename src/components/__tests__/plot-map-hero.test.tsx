@@ -90,9 +90,9 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-function renderHero() {
+function renderHero(heroRows = rows, heroAsOf = asOf, heroLayout = layout) {
   const view = render(
-    <PlotMapHero rows={rows} asOf={asOf} atlas={atlas} layout={layout} portraitAspectRatio="292 / 1100">
+    <PlotMapHero rows={heroRows} asOf={heroAsOf} atlas={atlas} layout={heroLayout} portraitAspectRatio="292 / 1100">
       <header data-plot-head>
         <h1 id="cemetery-title">Stablecoin Cemetery</h1>
         <a href="#methodology">Methodology</a>
@@ -223,7 +223,25 @@ describe("PlotMapHero pinning", () => {
 
 describe("PlotMapHero section zoom", () => {
   it("zooms a section from its signpost: toolbar row, header hidden, partial view stated; Esc returns", () => {
-    const { hero } = renderHero();
+    // Keep the partial-view case independent of the growing production catalog.
+    const zoomRows = buildCemeteryRegisterRows(
+      Array.from({ length: 18 }, (_, index) => ({
+        id: `zoom-${index}`,
+        name: `Zoom Coin ${index}`,
+        symbol: `Z${index}`,
+        pegCurrency: "USD",
+        causeOfDeath: "algorithmic-failure" as const,
+        deathDate: `${index < 5 ? 2014 + index : 2022 + ((index - 5) % 5)}-01`,
+        peakMcap: 20_000_000,
+        epitaph: "A fixture grave.",
+        obituary: "A fixture record for section navigation.",
+      })),
+    );
+    const zoomAsOf = "2026-01";
+    const zoomMap = buildCemeteryPlotMap(toPlotMapInput(zoomRows), { asOf: zoomAsOf, preset: "desktop" });
+    // A short desktop viewport forces a partial section instead of fitting all 18 graves.
+    window.innerHeight = 450;
+    const { hero } = renderHero(zoomRows, zoomAsOf, desktopPlotLayout(zoomMap));
     fireEvent.click(within(hero).getByRole("button", { name: /Algorithmic Failure: 18 graves/ }));
 
     expect(hero.getAttribute("data-zooming")).toBe("true");

@@ -1,3 +1,5 @@
+import { realpathSync, symlinkSync } from "node:fs";
+import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { checkArchitectureBoundaries } from "./check-architecture-boundaries";
 import { createTempRepoTracker } from "../__tests__/helpers/test-state";
@@ -21,6 +23,20 @@ const ANALYTICS = "src/components/google-analytics.tsx";
 const LIGHT = "src/lib/api-query-domains/stability-light.ts";
 
 describe("resolved architecture boundaries", () => {
+  it("enforces route boundaries with canonical diagnostics through a symlinked repository root", () => {
+    const root = fixture();
+    const linkedRoot = join(makeRoot(), "repository");
+    symlinkSync(root, linkedRoot, "junction");
+    writeText(root, "src/components/card.ts", 'export { value } from "@shared/lib/content";');
+    writeText(root, "shared/lib/content.ts", 'export { value } from "../../src/app/learn/content";');
+    writeText(root, "src/app/learn/content.ts", "export const value = 1;");
+    const expected = [
+      "frontend-routes: src/components/card.ts -> shared/lib/content.ts -> src/app/learn/content.ts: forbidden dependency",
+    ];
+    expect(checkArchitectureBoundaries(realpathSync(root), ["frontend-routes"])).toEqual(expected);
+    expect(checkArchitectureBoundaries(linkedRoot, ["frontend-routes"])).toEqual(expected);
+  });
+
   it("rejects a nested adapter's aliased transport re-export but permits the approved request gateway", () => {
     const root = fixture();
     writeText(root, ADAPTER, 'export { request } from "./nested/helper";');
