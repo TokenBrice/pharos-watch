@@ -412,6 +412,7 @@ describe("tracked stablecoin metadata", () => {
       "susn-noon",
       "syzusd-yuzu",
       "usdsc-startale",
+      "ctusd-citrea",
       "wm-m0",
       "usdnr-nerona",
       "pusd-plume",

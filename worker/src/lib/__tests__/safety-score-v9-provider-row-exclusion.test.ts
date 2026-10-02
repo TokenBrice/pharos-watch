@@ -1,10 +1,9 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import reviews from "@shared/data/safety-score-v9/supply-attribution-reviews-v1.json";
 import { ReviewedProviderRowExclusionSchema } from "@shared/types/safety-score-v9-supply-attribution";
 import { unresolvedDeploymentCohort } from "@shared/lib/safety-score-v9/control-bridge-join";
 import type { V9EconomicControlAssetFacts } from "@shared/lib/safety-score-v9/control-primitives";
 import type { BridgeRouteRiskProfile } from "@shared/types/core";
-import { buildSafetyScoreV9SupplyReview } from "../safety-score-v9/extension-supply";
 import type { SafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
 import type { SafetyScoreV9FactSetExtensionV2 } from "../safety-score-v9/fact-set-schema";
 import { evaluateV9EconomicControlAssetFacts } from "@shared/lib/safety-score-v9/control";
@@ -14,7 +13,13 @@ import { adaptBridgeReview } from "../safety-score-v9/extension-bridge";
 import { ReviewEvidenceBuilder, type V9ExtensionRegistryMeta } from "../safety-score-v9/extension-shared";
 
 const original = structuredClone(reviews.providerRowExclusionReviews);
-afterEach(() => { reviews.providerRowExclusionReviews = structuredClone(original); });
+const registryPath = "@shared/data/safety-score-v9/supply-attribution-reviews-v1.json";
+let authoredExclusions = structuredClone(original);
+afterEach(() => {
+  authoredExclusions = structuredClone(original);
+  vi.doUnmock(registryPath);
+  vi.resetModules();
+});
 const profile = { routes: [{ id: "ethereum:native", reviewDisposition: "reviewed", routeClass: "native", issuanceModel: "native-issuance" }] } as unknown as BridgeRouteRiskProfile;
 function input() {
   return {
@@ -23,7 +28,13 @@ function input() {
     chainCirculatingById: { "frax-frax": { Ethereum: { current: 70 }, Fraxtal: { current: 10 }, Optimism: { current: 20 } } },
   } as unknown as SafetyScoreV9CompilerInput;
 }
-function build(fixedInput = input(), risk = profile) { return buildSafetyScoreV9SupplyReview(fixedInput, "frax-frax", risk)!; }
+async function build(fixedInput = input(), risk = profile) {
+  vi.resetModules();
+  vi.doMock(registryPath, () => ({ default: { ...reviews, providerRowExclusionReviews: authoredExclusions } }));
+  // Cold-import each registry fixture: a static import would retain the previously admitted evidence.
+  const { buildSafetyScoreV9SupplyReview } = await import("../safety-score-v9/extension-supply");
+  return buildSafetyScoreV9SupplyReview(fixedInput, "frax-frax", risk)!;
+}
 function cohort(review: NonNullable<SafetyScoreV9FactSetExtensionV2["assets"][number]["supplyReview"]>) {
   return unresolvedDeploymentCohort({ assetId: "frax-frax", supply: {
     ...review, status: { applicability: { state: "required" }, observationState: "known" },
@@ -31,13 +42,13 @@ function cohort(review: NonNullable<SafetyScoreV9FactSetExtensionV2["assets"][nu
 }
 
 describe("reviewed attribution-only provider-row exclusion", () => {
-  it("admits verified FRAX identity and removes only its unresolved numerator over the unchanged aggregate", () => {
+  it("admits verified FRAX identity and removes only its unresolved numerator over the unchanged aggregate", async () => {
     expect(ReviewedProviderRowExclusionSchema.safeParse(original[0]).success).toBe(true);
     const fixed = input();
     const snapshot = JSON.stringify(fixed);
-    const admitted = build(fixed);
-    reviews.providerRowExclusionReviews = [];
-    const baseline = build(fixed);
+    const admitted = await build(fixed);
+    authoredExclusions = [];
+    const baseline = await build(fixed);
     expect(cohort(baseline)).toBeCloseTo(0.3);
     expect(cohort(admitted)).toBeCloseTo(0.2);
     const { providerRowExclusions, ...unchanged } = admitted;
@@ -48,10 +59,10 @@ describe("reviewed attribution-only provider-row exclusion", () => {
     expect(admitted.selectedBridgeRoutes.find(row => row.deploymentRouteKey.endsWith(":optimism"))!.supplyShare).toBe(0.2);
   });
 
-  it("uses the admitted cohort consistently through the asset control evaluator across the full-ceiling threshold", () => {
+  it("uses the admitted cohort consistently through the asset control evaluator across the full-ceiling threshold", async () => {
     const fixed = input();
     fixed.chainCirculatingById["frax-frax"] = { Ethereum: { current: 80 }, Fraxtal: { current: 10 }, Optimism: { current: 10 } };
-    const supply = build(fixed);
+    const supply = await build(fixed);
     const controls = supply.selectedBridgeRoutes.filter(row => row.reviewState === "unmatched").map(row =>
       makeDeploymentControl(`bridge:${row.deploymentRouteKey}`, "bridge", {
         deploymentKey: row.deploymentRouteKey, scope: "deployment", economicLossScope: "deployment",
@@ -72,7 +83,7 @@ describe("reviewed attribution-only provider-row exclusion", () => {
     expect(admitted.controlFacts).toEqual(baseline.controlFacts);
   });
 
-  it.each([false, true])("excludes foreign supply from bridge numerators, retaining genuine rows (unreviewed route: %s)", (unreviewed) => {
+  it.each([false, true])("excludes foreign supply from bridge numerators, retaining genuine rows (unreviewed route: %s)", async (unreviewed) => {
     const fixed = input();
     const foreignUsd = unreviewed ? 16 : 10.09;
     fixed.chainCirculatingById["frax-frax"] = { Ethereum: { current: 98 - foreignUsd }, Fraxtal: { current: foreignUsd }, Optimism: { current: 2 } };
@@ -82,7 +93,7 @@ describe("reviewed attribution-only provider-row exclusion", () => {
         reviewDisposition: "unreviewed", routeClass: "canonical", issuanceModel: "bridge-representation", riskTier: "opaque-or-unknown",
       }] : []),
     ] } as BridgeRouteRiskProfile;
-    const supply = build(fixed, risk);
+    const supply = await build(fixed, risk);
     const { providerRowExclusions: _exclusions, ...baselineSupply } = supply;
     const meta = { id: "frax-frax", bridgeRouteRisk: risk } as V9ExtensionRegistryMeta;
     const adapt = (review: NonNullable<SafetyScoreV9FactSetExtensionV2["assets"][number]["supplyReview"]>) =>
@@ -117,42 +128,49 @@ describe("reviewed attribution-only provider-row exclusion", () => {
     ["label mismatch", { providerChainLabel: "fraxtal" }],
     ["target mismatch", { belongsToAssetId: "usdc-circle" }],
     ["contract mismatch", { contractAddress: "0xff000000000000000000000000000000000001fd" }],
-    ["malformed proof", { reviewer: "" }],
     ["future review", { reviewedAtSec: original[0]!.reviewedAtSec + 2 }],
     ["expired review", { expiresAtSec: original[0]!.reviewedAtSec + 1 }],
-  ])("ignores %s with a byte-identical absent-record outcome", (_name, patch) => {
-    Object.assign(reviews.providerRowExclusionReviews[0]!, patch);
-    const rejected = JSON.stringify(build());
-    reviews.providerRowExclusionReviews = [];
-    expect(rejected).toBe(JSON.stringify(build()));
+  ])("ignores %s with a byte-identical absent-record outcome", async (_name, patch) => {
+    Object.assign(authoredExclusions[0]!, patch);
+    const rejected = JSON.stringify(await build());
+    authoredExclusions = [];
+    expect(rejected).toBe(JSON.stringify(await build()));
   });
 
-  it("does not renormalise a provider partition that differs from the aggregate", () => {
+  it("quarantines malformed proof with the exact evidence path", async () => {
+    authoredExclusions[0]!.reviewer = "";
+    await expect(build()).rejects.toMatchObject({
+      name: "ReviewedRegistryEntryError",
+      path: "supplyAttribution.providerRowExclusionReviews.0.reviewer",
+    });
+  });
+
+  it("does not renormalise a provider partition that differs from the aggregate", async () => {
     const fixed = input();
     fixed.aggregateCirculatingById["frax-frax"] = { circulating: { peggedUSD: 120 }, observedAtSec: null };
-    const rejected = JSON.stringify(build(fixed));
-    reviews.providerRowExclusionReviews = [];
-    expect(rejected).toBe(JSON.stringify(build(fixed)));
+    const rejected = JSON.stringify(await build(fixed));
+    authoredExclusions = [];
+    expect(rejected).toBe(JSON.stringify(await build(fixed)));
     expect(fixed.aggregateCirculatingById["frax-frax"]).toEqual({ circulating: { peggedUSD: 120 }, observedAtSec: null });
   });
 
-  it("admits a policy-tolerated conservation tail without renormalising facts or the aggregate denominator", () => {
+  it("admits a policy-tolerated conservation tail without renormalising facts or the aggregate denominator", async () => {
     const fixed = input();
     const aggregate = 100 + 1e-8;
     fixed.aggregateCirculatingById["frax-frax"] = { circulating: { peggedUSD: aggregate }, observedAtSec: null };
     const captured = JSON.stringify(fixed);
-    const admitted = build(fixed);
+    const admitted = await build(fixed);
     expect(cohort(admitted)).toBeCloseTo(0.2);
     expect(admitted.providerRowExclusions![0]!.supplyShare).toBe(10 / aggregate);
     const { providerRowExclusions: _exclusions, ...unchanged } = admitted;
-    reviews.providerRowExclusionReviews = [];
-    expect(unchanged).toEqual(build(fixed));
+    authoredExclusions = [];
+    expect(unchanged).toEqual(await build(fixed));
     expect(JSON.stringify(fixed)).toBe(captured);
   });
 
-  it("retains an asset's own same-chain legacy deployment instead of excluding its route", () => {
+  it("retains an asset's own same-chain legacy deployment instead of excluding its route", async () => {
     const legacyProfile = { routes: [...profile.routes!, { id: "fraxtal:0xff000000000000000000000000000000000001fd", reviewDisposition: "unreviewed", routeClass: "canonical", issuanceModel: "bridge-representation" }] } as unknown as BridgeRouteRiskProfile;
-    const retained = build(input(), legacyProfile);
+    const retained = await build(input(), legacyProfile);
     expect(retained.providerRowExclusions).toBeUndefined();
     expect(cohort(retained)).toBeCloseTo(0.3);
     expect(retained.selectedBridgeRoutes.find(row => row.deploymentRouteKey.includes("0xff"))).toMatchObject({ supplyUsd: 10, supplyShare: 0.1, reviewState: "selected-unresolved" });
