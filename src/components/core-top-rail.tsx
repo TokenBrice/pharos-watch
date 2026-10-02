@@ -21,10 +21,8 @@ export function CoreTopRail() {
   }
   const mobileDisplayClass = pathname === "/" ? "contents" : "hidden";
 
-  // `relative z-40` keeps the tape's own z-50 inside this stacking context so
-  // the top nav's z-50 menus still paint over it.
   return (
-    <div className={`${mobileDisplayClass} lg:relative lg:z-40 lg:block`}>
+    <div className={`${mobileDisplayClass} lg:block`}>
       <HomepageTape placement="top" />
     </div>
   );

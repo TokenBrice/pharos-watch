@@ -89,7 +89,7 @@ function TapeStatChip({ label, value }: { label: string; value: number }) {
 // down, which Lighthouse attributes as the top homepage layout shift.
 const TAPE_SHELL_CLASS: Record<HomepageTapePlacement, string> = {
   inline: "pharos-tape-shell relative -mx-3 min-h-[46px] overflow-hidden border-y border-border/60 bg-card/40 sm:-mx-4",
-  top: "pharos-tape-shell relative z-50 min-h-[46px] w-full overflow-hidden border-b border-border/70 bg-card dark:bg-[color:color-mix(in_oklab,var(--background)_30%,var(--card))]",
+  top: "pharos-tape-shell relative min-h-[46px] w-full overflow-hidden border-b border-border/70 bg-card dark:bg-[color:color-mix(in_oklab,var(--background)_30%,var(--card))]",
 };
 
 function resolveEventLogoId(event: TapeEvent, logos: Record<string, string>): string | null {
