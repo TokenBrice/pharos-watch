@@ -82,7 +82,18 @@ export const ReserveSliceSchema = z.object({
   liquidityHorizon: ReserveLiquidityHorizonSchema.optional(),
   maturityDaysMax: z.number().finite().int().nonnegative().optional(),
   boundedFacts: z.array(ReserveBoundedFactSchema).optional(),
+  /** Producer-declared unknown quantity, not an adverse asset classification. */
+  unclassifiedResidual: z.literal(true).optional(),
+  residualReason: z.literal("insufficient-evidence").optional(),
 }).strict().superRefine((slice, ctx) => {
+  if ((slice.unclassifiedResidual && !slice.residualReason) ||
+    (slice.residualReason && !slice.unclassifiedResidual)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "unclassified residual requires an explicit marker and reason",
+      path: ["unclassifiedResidual"],
+    });
+  }
   if (slice.pct === 0 && !slice.sourceKey) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,

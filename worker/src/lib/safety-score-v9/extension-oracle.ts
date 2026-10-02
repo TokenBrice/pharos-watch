@@ -47,10 +47,7 @@ const ORACLE_BRANCH_MATERIAL_SHARE_PCT = V9_CANDIDATE_POLICY_V1.policy.semantic.
 const ORACLE_SUB_MATERIAL_MODERATE_MIN_SHARE_PCT = 5;
 
 function isWeakOracleTier(tier: OracleRiskTier): boolean {
-  return (
-    tier === "single-source-or-laggy" ||
-    tier === "opaque-or-unknown"
-  );
+  return tier === "single-source-or-laggy";
 }
 
 export function deriveOracleBranchMateriality(
@@ -67,7 +64,12 @@ export function deriveOracleBranchMateriality(
     materialTiers.length === 0
       ? authoredTier
       : materialTiers.reduce((worst, candidate) =>
-          tierQuality[candidate] < tierQuality[worst] ? candidate : worst,
+          tierQuality[candidate] < tierQuality[worst] ||
+          (tierQuality[candidate] === tierQuality[worst] &&
+            ((isWeakOracleTier(candidate) && !isWeakOracleTier(worst)) ||
+              (isWeakOracleTier(candidate) === isWeakOracleTier(worst) && candidate < worst)))
+            ? candidate
+            : worst,
         );
   const subMaterialWeak = branches.filter(
     (branch) => branch.debtSharePct !== undefined && !isMaterial(branch) && isWeakOracleTier(branch.tier),

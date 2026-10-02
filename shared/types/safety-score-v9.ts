@@ -72,6 +72,7 @@ export const V9_REASON_CODES = [
   "nonmaterial-bridge-supply-unmatched",
   "nonmaterial-dependency-unavailable",
   "no-viable-exit-path",
+  "oracle-topology-undisclosed",
   "parent-cycle",
   "partial-reserve-review",
   "stale-audited-reserve-composition",

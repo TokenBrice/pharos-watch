@@ -1294,28 +1294,82 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Fresh ERC-4626 reserve telemetry measures Yearn V3 default-queue withdrawable capacity from total idle BOLD plus each funded strategy's maxRedeem(vault) value; if the live snapshot is unavailable, the route is left unrated instead of falling back to full NAV.",
     ],
   }),
-  "yusd-yieldfi": erc4626InstantConfig({
-    symbol: "USDC",
-    fallback: { fallbackRatio: 0.1, confidence: "documented-bound", basis: "strategy-buffer" },
-    reviewedAt: REVIEWED_STABLECOIN_AUDIT_AT,
-    settlementModel: "queued",
-    feeDescription:
-      "YieldFi yUSD token terms list no redemption fee other than network gas; requests still settle after the documented cooldown/keeper process.",
+  "nusd-neutrl": defineStablecoinRedeemConfig({
+    outputAssets: ["usdc-circle"],
+    capacityModel: { kind: "fixed-usd", amountUsd: 0, confidence: "documented-bound" },
+    accessModel: "permissionless-onchain",
+    holderEligibility: "issuer-discretionary",
+    settlementModel: "atomic",
+    executionModel: "deterministic-onchain",
+    reviewedAt: "2026-10-02",
+    costModel: fixedFee(
+      4900,
+      "The September 17 Neutrl redemption programme pays 0.51 USDC per NUSD: redemptionRate() = 510000000000000000 and quoteRedeem(1e18) = 510000 USDC units at Ethereum block 26105308 on 2026-10-02, a measured 4,900 bps discount to the $1 target rather than a separate transaction fee",
+    ),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity"],
+      rationale:
+        "The programme's USDC payout and fixed rate are verified, but no raw programme capacity bound is established. Its measured 4,900 bps cost yields zero executable capacity within the policy request budget; this is not a zero-reserve claim. The frontend agreement makes funding and issuer-imposed caps discretionary, so raw capacity remains unknown and cannot grant route credit.",
+      reviewedAt: "2026-10-02",
+      docs: [
+        sourceRef(
+          "Neutrl redemption programme agreement, Sections III(D) and VI",
+          "https://redeem.neutrl.finance/",
+          ["route", "access"],
+        ),
+      ],
+    },
     docs: [
-      sourceRefRouteCapacityFees("YieldFi yUSD token terms", "https://docs.yield.fi/legal-documents/token-terms/yusd"),
       sourceRef(
-        "YieldFi smart contract interaction",
-        "https://docs.yield.fi/technical-docs/smart-contract-interaction",
-        ["route", "capacity", "access", "settlement"],
+        "Neutrl September 17 fixed-rate USDC redemption programme announcement",
+        "https://x.com/Neutrl/status/2100614848241414280",
+        ["route", "fees", "access"],
       ),
-      sourceRef("YieldFi fees", "https://docs.yield.fi/fees", ["fees"]),
+      sourceRef(
+        "Neutrl NusdRedemption verified contract; pinned Ethereum block 26105308",
+        "https://eth.blockscout.com/address/0xb3f07d3392102fc23264a78e2a1a8b6421123828?tab=contract",
+        ["route", "fees", "settlement", "access"],
+      ),
+      sourceRef(
+        "Neutrl redemption frontend and holder release agreement",
+        "https://redeem.neutrl.finance/",
+        ["route", "fees", "settlement", "access"],
+      ),
     ],
     notes: [
-      "yUSD is an ERC-4626 vault over USDC; redemption burns shares immediately but underlying USDC is delivered through a queued request after the cooldown period.",
-      "Because yUSD allocates into delta-neutral and private-credit strategy positions, the reviewed route uses the documented queued route with a conservative 10% strategy-buffer capacity instead of scoring against full supply.",
-      "Fresh ERC-4626 reserve telemetry reads the vault's idle USDC balance as the current redeemable bound while the queued request flow still governs settlement; the reviewed 10% strategy-buffer ratio is retained only as fallback when live metadata is unavailable.",
+      "The issuer route is the separate redemption programme at 0xb3f07d3392102fc23264a78e2a1a8b6421123828, not the historical KYC-gated instant/queued par route. NUSD() and USDC() at block 26105308 bind the tracked NUSD token and Ethereum USDC; paused() and isRedeemWhitelistEnforced() both returned false.",
+      "The frontend requires the holder's wallet to sign the current onchain acknowledgement and release of claims before redeeming. The agreement requires legal/beneficial ownership, legal capacity and age of majority, excludes sanctioned/restricted persons, and permits issuer refusal, delay, blocking or freezing; permissionless contract access does not imply universal holder eligibility.",
+      "Section III(D) makes programme availability contingent on USDC and issuer discretion, including aggregate/per-holder caps. Raw programme capacity remains a bounded-terms gap. The fixed-usd zero represents only executable capacity within the policy cost budget, because the measured payout cost is 4,900 bps; no zero reserves, full-supply obligation or live reserve balance is inferred.",
     ],
   }),
+  "yusd-yieldfi": {
+    ...erc4626InstantConfig({
+      symbol: "USDC",
+      fallback: { fallbackRatio: 0.1, confidence: "documented-bound", basis: "strategy-buffer" },
+      reviewedAt: "2026-10-02",
+      settlementModel: "queued",
+      feeDescription:
+        "YieldFi yUSD token terms list no redemption fee other than network gas; requests still settle after the documented cooldown/keeper process.",
+      docs: [
+        sourceRef("YieldFi v2 yUSD pause banner observed 2026-10-02", "https://v2.yield.fi/yusd", ["route"]),
+        sourceRefRouteCapacityFees("YieldFi yUSD token terms", "https://docs.yield.fi/legal-documents/token-terms/yusd"),
+        sourceRef(
+          "YieldFi smart contract interaction",
+          "https://docs.yield.fi/technical-docs/smart-contract-interaction",
+          ["route", "capacity", "access", "settlement"],
+        ),
+        sourceRef("YieldFi fees", "https://docs.yield.fi/fees", ["fees"]),
+      ],
+      notes: [
+        "Route status is unknown: on 2026-10-02 the v2.yield.fi/yusd frontend displayed \"Mint and Redeem operations for yUSD and vyUSD are paused until we seek remediation from SAGA as per the contractual agreement with them.\" The observation establishes no pause start date, loss amount, suspension record or cessation of independent DEX exits.",
+        "The historical yUSD route is an ERC-4626 vault over USDC; redemption burns shares immediately but underlying USDC is delivered through a queued request after the cooldown period. These terms and the reserve telemetry below do not establish that redemption is currently open.",
+        "Because yUSD allocates into delta-neutral and private-credit strategy positions, the reviewed route uses the documented queued route with a conservative 10% strategy-buffer capacity instead of scoring against full supply.",
+        "Fresh ERC-4626 reserve telemetry reads the vault's idle USDC balance as the current redeemable bound while the queued request flow still governs settlement; the reviewed 10% strategy-buffer ratio is retained only as fallback when live metadata is unavailable.",
+      ],
+    }),
+    routeStatus: "unknown",
+  },
   "said-gaib": erc4626InstantConfig({
     symbol: "AID",
     outputAssets: ["aid-gaib"],

@@ -118,6 +118,151 @@ function reviewedMeta(
   };
 }
 
+describe("reviewed live unknown residuals", () => {
+  const known: ReserveSlice = {
+    sourceKey: "fixture:known", name: "Measured adverse credit", pct: 60, risk: "very-high",
+    assetClass: "private-credit", issuerOrObligor: "borrower:known", riskFactors: ["credit"],
+    liquidityHorizon: "unknown",
+  };
+  const unknown: ReserveSlice = {
+    sourceKey: "fixture:unknown", name: "Unitemized tail", pct: 40, risk: "high",
+    assetClass: "other", issuerOrObligor: "issuer:unknown", riskFactors: ["credit"],
+    liquidityHorizon: "unknown",
+    unclassifiedResidual: true,
+    residualReason: "insufficient-evidence",
+  };
+
+  function metaFor(rows: ReserveSlice[] = [known, unknown]) {
+    return reviewedMeta(rows, {
+      knownUnknownExposure: "Unknown tail",
+      knownUnknownExposurePct: 40,
+      nonLinkDispositions: [{
+        reserveIndex: 1, reserveName: unknown.name, pct: 40,
+        disposition: "insufficient-evidence", rationale: "No instrument itemization",
+      }],
+    });
+  }
+
+  function compile(rows: ReserveSlice[], meta: V9ExtensionRegistryMeta) {
+    const base = makeV9TwoAssetFixedInput({ clockSec: CLOCK_SEC });
+    const {
+      schemaVersion: _schemaVersion, dexPayloadFingerprint: _dexPayloadFingerprint,
+      redemptionPayloadFingerprint: _redemptionPayloadFingerprint, registryFingerprint: _registryFingerprint,
+      inputMethodologyVersions: _inputMethodologyVersions, baseInputGenerationId: _baseInputGenerationId,
+      ...draft
+    } = base;
+    const fixed = createReportCardsFixedInput({
+      ...draft, liveReserveMap: { ...base.liveReserveMap, alpha: rows },
+    });
+    const extension = buildSafetyScoreV9BaselineExtension(fixed, {
+      metaById: new Map([["alpha", { ...meta, mechanismArchetype: "fiat-cash", launchDate: "2020-01-01" }],
+        ["beta", { id: "beta", mechanismArchetype: "fiat-cash", launchDate: "2020-01-01" }]]),
+    });
+    const alpha = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets.find(row => row.assetId === "alpha")!;
+    return { alpha, result: evaluateV9ReserveExposures({ ...alpha, resolvedUpstreamExposures: [] }, V9_CANDIDATE_POLICY_V1) };
+  }
+
+  it("charges the live tail once, with live weights, while retaining measured adverse credit", () => {
+    const { alpha, result } = compile([{ ...known, pct: 63 }, { ...unknown, pct: 37 }], metaFor());
+    expect(alpha.reserveExposures.map(row => row.weight)).toEqual([0.63]);
+    const residuals = result.contributions.filter(row => row.componentKey === "reserve:unclassified-residual");
+    expect(residuals).toHaveLength(1);
+    expect(residuals[0]).toMatchObject({
+      normalizedWeight: 0.37, observationState: "bounded-unknown",
+      score: V9_CANDIDATE_POLICY_V1.policy.semantic.backing.boundedUnknownQuality,
+      failureDomains: [],
+    });
+    expect(result.unresolved).toContainEqual(expect.objectContaining({
+      pathKey: "reserve:unclassified-residual", code: "material-unknown-reserve-exposure", treatment: "ceiling",
+    }));
+    expect(result.structuralReasons.some(row => row.responsibility === "measured-adverse")).toBe(true);
+    expect(result.structuralReasons.some(row => row.pathKey.includes("fixture:unknown"))).toBe(false);
+  });
+
+  it.each([false, true])("keeps a wholly unknown book bounded, including an empty known category (%s)", (zeroKnown) => {
+    const meta = metaFor();
+    const rows = zeroKnown ? [{ ...known, pct: 0 }, { ...unknown, pct: 100 }] : [{ ...unknown, pct: 100 }];
+    const { alpha, result } = compile(rows, meta);
+    expect(alpha.reserveStatus.observationState).toBe("bounded-unknown");
+    expect(alpha.reserveExposures).toEqual([]);
+    expect(result.contributions.filter(row => row.componentKey === "reserve:unclassified-residual")).toEqual([
+      expect.objectContaining({
+        normalizedWeight: 1, observationState: "bounded-unknown",
+        score: V9_CANDIDATE_POLICY_V1.policy.semantic.backing.boundedUnknownQuality,
+      }),
+    ]);
+    expect(result.structuralReasons).toEqual([]);
+    expect(result.rateability).toBe("rateable");
+  });
+
+  it.each(["missing-live", "missing-reviewed", "different-key", "duplicate-live", "duplicate-reviewed", "duplicate-disposition"] as const)(
+    "does not turn %s identity into an unclassified residual",
+    (kind) => {
+      const rows = [known, { ...unknown }];
+      const meta = metaFor([known, { ...unknown }]);
+      if (kind === "missing-live") delete rows[1]!.sourceKey;
+      if (kind === "missing-reviewed") delete meta.reserves![1]!.sourceKey;
+      if (kind === "different-key") rows[1]!.sourceKey = "fixture:different";
+      if (kind === "duplicate-live") rows.push({ ...unknown, pct: 0 });
+      if (kind === "duplicate-reviewed") meta.reserves!.push({ ...unknown, pct: 0 });
+      if (kind === "duplicate-disposition") meta.reserveReview!.nonLinkDispositions!.push({ ...meta.reserveReview!.nonLinkDispositions![0]! });
+      const { alpha, result } = compile(rows, meta);
+      expect(alpha.reserveExposures.reduce((sum, row) => sum + row.weight, 0)).toBe(1);
+      expect(result.contributions.some(row => row.componentKey === "reserve:unclassified-residual")).toBe(false);
+    },
+  );
+
+  it("leaves undisposed and other-disposition classifications byte-identical", () => {
+    const meta = metaFor();
+    const withoutDisposition = { ...meta, reserveReview: { ...meta.reserveReview!, nonLinkDispositions: undefined } };
+    const classes = buildReviewedReserveClassifications([known, unknown], withoutDisposition, CLOCK_SEC);
+    expect(classes.every(row => row.unclassifiedResidual === undefined)).toBe(true);
+    const other = metaFor();
+    other.reserveReview!.nonLinkDispositions![0]!.disposition = "untracked-exogenous-asset";
+    const { alpha, result } = compile([known, unknown], other);
+    expect(alpha.reserveExposures.map(row => row.weight).sort()).toEqual([0.4, 0.6]);
+    expect(result.contributions.some(row => row.componentKey === "reserve:unclassified-residual")).toBe(false);
+    expect(classes).toEqual(buildSafetyScoreV9ReserveClassifications([known, unknown]));
+  });
+
+  it("keeps an unmarked exact joined insufficient-evidence slice unchanged", () => {
+    const { unclassifiedResidual: _marker, residualReason: _reason, ...unmarked } = unknown;
+    const meta = metaFor();
+    const classifications = buildReviewedReserveClassifications([known, unmarked], meta, CLOCK_SEC);
+    expect(classifications.every(row => row.unclassifiedResidual === undefined)).toBe(true);
+    const { alpha, result } = compile([known, unmarked], meta);
+    expect(alpha.reserveExposures.map(row => row.weight).sort()).toEqual([0.4, 0.6]);
+    expect(result.contributions.some(row => row.componentKey === "reserve:unclassified-residual")).toBe(false);
+  });
+
+  const classifiedShapes: Partial<ReserveSlice>[] = [
+    { assetClass: "private-credit", issuerOrObligor: "Measured defaulting borrower", risk: "very-high" },
+    { assetClass: "private-credit", issuerOrObligor: "Measured borrower" },
+    { risk: "very-high", issuerOrObligor: "Measured adverse obligor" },
+    { coinId: "beta" },
+    { depType: "collateral" },
+  ];
+  for (const shapeOwner of ["live", "reviewed"] as const) {
+    it.each(classifiedShapes)(`does not soften a ${shapeOwner} classified exposure marked unknown (%j)`, (shape) => {
+      const adverse = { ...unknown, ...shape };
+      const liveRows = [known, shapeOwner === "live" ? adverse : unknown];
+      const meta = metaFor([known, shapeOwner === "reviewed" ? adverse : unknown]);
+      const classifications = buildReviewedReserveClassifications(liveRows, meta, CLOCK_SEC);
+      expect(classifications.every(row => row.unclassifiedResidual === undefined)).toBe(true);
+      const { alpha, result } = compile(liveRows, meta);
+      expect(alpha.reserveExposures.find(row => row.name === unknown.name)).toMatchObject({
+        weight: 0.4, status: { observationState: "known" },
+      });
+      expect(result.contributions.some(row => row.componentKey === "reserve:unclassified-residual")).toBe(false);
+      if (shapeOwner === "live" && shape.assetClass === "private-credit") {
+        expect(alpha.reserveExposures.find(row => row.name === unknown.name)).toMatchObject({
+          assetClass: "private-credit", issuerOrObligorKey: shape.issuerOrObligor,
+        });
+      }
+    });
+  }
+});
+
 describe("reviewed curated reserve admission", () => {
   const opaqueRows: ReserveSlice[] = [
     { name: "Opaque basket", pct: 40, risk: "medium" },

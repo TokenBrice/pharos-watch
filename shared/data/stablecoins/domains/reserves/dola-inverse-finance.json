@@ -19,8 +19,8 @@
     },
     {
       "sourceKey": "dola-inverse:unattributed",
-      "name": "Unattributed non-FiRM issuance",
-      "pct": 34,
+      "name": "Unclassified non-FiRM issuance residual (excluding verified Frontier bad debt)",
+      "pct": 31.456297,
       "risk": "high",
       "assetClass": "other",
       "issuerOrObligor": "Inverse Finance issuance outside measured FiRM debt",
@@ -140,11 +140,25 @@
       ],
       "liquidityHorizon": "immediate",
       "sourceKey": "dola-inverse:btc"
+    },
+    {
+      "sourceKey": "dola-inverse:frontier-bad-debt",
+      "name": "Verified Frontier bad debt (October 2, 2026)",
+      "pct": 2.543703,
+      "risk": "very-high",
+      "assetClass": "private-credit",
+      "issuerOrObligor": "Inverse Finance deprecated Frontier lending protocol bad debt",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "liquidity"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-30",
-    "reviewer": "Pharos dependency map reserve review",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol owner-session-4 reserve decisions 2026-10-02 (ReserveDecisions)",
     "confidence": "probable",
     "sources": [
       {
@@ -158,14 +172,22 @@
       {
         "label": "Inverse Finance transparency documentation",
         "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/about/transparency"
+      },
+      {
+        "label": "Inverse Finance official bad-debt API; Frontier-specific balance at block 26104682 (October 2, 2026)",
+        "url": "https://www.inverse.finance/api/transparency/repayments-v2?v=3"
+      },
+      {
+        "label": "Inverse Finance Fed overview API (fetched October 2, 2026; distinct Frontier supply and borrow counters)",
+        "url": "https://www.inverse.finance/api/transparency/fed-overview"
       }
     ],
-    "rationale": "The saved 2026-09-29 issuer payload reports direct sUSDe debt of $422,722.29957580566, versus $56,003,176.34275359 secured by DOLA-sUSDe LPs and Yearn LP vaults. LP totalDebt remains an undecomposed protocol position without coinId or depType. This illustrative dated composition runs the corrected adapter over the saved issuer payload with the earlier captured live supply of $108,602,244.08936833; these two observations are temporally mixed and are not a synchronized reserve valuation. Runtime percentages remain producer-owned. Existing one-decimal rounding omits DAI dust; no new dust policy is introduced.",
-    "compositionBasis": "FiRM totalDebt by direct collateral or undecomposed LP identity; 2026-09-29 issuer capture and earlier 2026-09-29 Pharos live circulating-supply capture, normalized with the existing adapter policy",
+    "rationale": "Owner ruling 7 splits the original 34% unattributed non-FiRM issuance without asserting the entire tail is measured unsafe. Official repayments-v2 API fetched October 2 reports Frontier-specific bad debt 2,762,518.5942272837 DOLA at block 26104682 (timestamp 1790944612564), distinct from the Fed overview's Frontier circulating borrow counter 2,761,767.883082971. Dividing verified Frontier bad debt by the retained $108,602,244.08936833 September 29 supply denominator gives 2.543703%; the remaining 31.456297% is unclassified unknown. The retained FiRM slices come from the saved September 29 issuer payload; the freshly fetched fixed-markets API also reports current FiRM debt but does not identify this non-FiRM tail. This temporally mixed illustrative catalog split is not a synchronized current reserve valuation or a supply override. The October 2 review date records the bad-debt read, not a refresh of September 29 composition. LP debt remains undecomposed and no external stablecoin constituents are inferred. Only the verified Frontier slice supports measured unsafe attribution; the unidentified remainder must be bounded-unknown.",
+    "compositionBasis": "Retained September 29 FiRM debt and $108,602,244.08936833 supply denominator; original 34% non-FiRM tail split using October 2 official Frontier bad debt, with explicit temporal mismatch",
     "compositionAsOf": "2026-09-29",
     "scope": "full-composition",
-    "knownUnknownExposure": "64.3% is undecomposed LP-secured debt and 34.0% is unattributed non-FiRM issuance. No constituent backing shares are inferred from LP debt or names.",
-    "knownUnknownExposurePct": 98.3,
+    "knownUnknownExposure": "64.3% remains undecomposed LP-secured debt; 31.456297% is unclassified non-FiRM issuance after separating 2.543703% verified Frontier bad debt. No favourable backing or measured danger is inferred for the unknown residual.",
+    "knownUnknownExposurePct": 95.756297,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
@@ -176,10 +198,10 @@
       },
       {
         "reserveIndex": 1,
-        "reserveName": "Unattributed non-FiRM issuance",
-        "pct": 34,
+        "reserveName": "Unclassified non-FiRM issuance residual (excluding verified Frontier bad debt)",
+        "pct": 31.456297,
         "disposition": "insufficient-evidence",
-        "rationale": "Captured circulating supply exceeds measured FiRM debt; the residual has no measured collateral breakdown."
+        "rationale": "Original 34% tail less the separately verified Frontier bad-debt slice; no measured collateral breakdown exists for the remainder, which must be charged as bounded-unknown, not measured unsafe."
       },
       {
         "reserveIndex": 2,
@@ -222,6 +244,13 @@
         "pct": 0.2,
         "disposition": "untracked-exogenous-asset",
         "rationale": "This directly identified cryptoasset category is not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 9,
+        "reserveName": "Verified Frontier bad debt (October 2, 2026)",
+        "pct": 2.543703,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Official API independently identifies this Frontier bad-debt amount; this measured adverse credit exposure is not a tracked stablecoin dependency and is not the entire original non-FiRM tail."
       }
     ]
   }

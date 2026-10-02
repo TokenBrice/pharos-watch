@@ -583,7 +583,69 @@ describe("buildSafetyScoreV9MechanismReview", () => {
     expect(review.liquidationMechanics.status.applicability.state).toBe("not-applicable");
   });
 
-  it("expands partial sdn/rwa overlays with unavailable metrics and rejects CDP unavailability", () => {
+  it("admits unavailable CDP metrics without adverse signals or favourable credit", () => {
+    const sourceUrl = "https://example.com/cdp-evidence";
+    const unavailable = { state: "unavailable" as const, rationale: "Current funded metrics cannot be authenticated.", sourceUrl };
+    const overlay = MechanismReviewOverlaySchema.parse({
+      assetId: "cdp-unavailable",
+      archetype: "cdp",
+      reviewedAt: "2026-07-27",
+      sources: [{ label: "Protocol evidence", url: sourceUrl }],
+      notes: "Unknown ratios are not measured zeroes or structural absence.",
+      metrics: { collateralizationRatio: null, liquidationCapacityRatio: null },
+      metricApplicability: { collateralizationRatio: unavailable, liquidationCapacityRatio: unavailable },
+      components: {
+        collateralizationParameters: { applicability: "unavailable", rationale: unavailable.rationale, sourceUrl },
+        liquidationMechanics: { applicability: "unavailable", rationale: unavailable.rationale, sourceUrl },
+        structuralRedemption: { quality: "adequate" },
+      },
+    });
+    const review = expandOverlayReview(overlay);
+    if (review.archetype !== "cdp") throw new Error("Expected CDP review");
+    const input = backingAsset([exposure({ key: "collateral", weight: 1 })]);
+    const result = evaluateV9Backing(input, review, V9_CANDIDATE_POLICY_V1);
+    expect(result.rateability).toBe("rateable");
+    expect(result.structuralReasons).toEqual([]);
+    for (const [metric, component] of [
+      ["collateralizationRatio", "collateralization-parameters"],
+      ["liquidationCapacityRatio", "liquidation-mechanics"],
+    ] as const) {
+      expect(review.metricApplicability[metric]).toMatchObject({
+        state: "unavailable", rationale: unavailable.rationale,
+        evidenceRefIds: [`extension-evidence:mechanism:${metric.replace(/[A-Z]/g, (char) => `-${char.toLowerCase()}`)}`],
+      });
+      expect(result.contributions.find((row) => row.componentKey === `mechanism:${component}`)).toMatchObject({
+        observationState: "bounded-unknown",
+        score: V9_CANDIDATE_POLICY_V1.policy.semantic.backing.boundedUnknownQuality,
+        evidenceRefIds: [`extension-evidence:mechanism:${component}`],
+      });
+      expect(result.contributions.find((row) => row.componentKey === `mechanism:${component}`)!.effectiveWeight).toBeGreaterThan(0);
+    }
+    // Metric uncertainty does not erase independently evidenced mechanism quality.
+    expect(result.contributions.find((row) => row.componentKey === "mechanism:structural-redemption")?.score)
+      .toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.backing.componentQuality.adequate);
+    const knownDesign = expandOverlayReview({
+      ...overlay, components: { ...overlay.components, collateralizationParameters: { quality: "strong" } },
+    });
+    if (knownDesign.archetype !== "cdp") throw new Error("Expected CDP review");
+    expect(evaluateV9Backing(input, knownDesign, V9_CANDIDATE_POLICY_V1).contributions
+      .find((row) => row.componentKey === "mechanism:collateralization-parameters")?.score)
+      .toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.backing.componentQuality.strong);
+    const measured = expandOverlayReview({
+      ...overlay,
+      metrics: { collateralizationRatio: 0.5, liquidationCapacityRatio: 0 },
+      metricApplicability: { collateralizationRatio: { state: "measured" }, liquidationCapacityRatio: { state: "measured" } },
+    });
+    expect(evaluateV9Backing(input, measured, V9_CANDIDATE_POLICY_V1).structuralReasons).toEqual(expect.arrayContaining([
+      expect.objectContaining({ pathKey: "mechanism:collateralization-parameters", severity: "critical" }),
+      expect.objectContaining({ pathKey: "mechanism:liquidation-mechanics" }),
+    ]));
+    expect(() => expandOverlayReview({
+      ...overlay, metrics: { collateralizationRatio: 0.5, liquidationCapacityRatio: null },
+    })).toThrow();
+  });
+
+  it("expands partial sdn/rwa overlays with unavailable metrics", () => {
     const sourceUrl = "https://example.com/transparency";
     // usdf-falcon-shaped: loss absorption measured, hedge/margin honestly unavailable.
     const sdnOverlay = MechanismReviewOverlaySchema.parse({
@@ -645,24 +707,6 @@ describe("buildSafetyScoreV9MechanismReview", () => {
     expect(rwaReview.weightedAverageMaturityDays).toBeNull();
     expect(rwaReview.valuationCadenceDays).toBe(30);
     expect(rwaReview.metricApplicability?.weightedAverageMaturityDays.state).toBe("unavailable");
-
-    // CDP has no defined severity for an unavailable ratio.
-    expect(() =>
-      expandOverlayReview(
-        MechanismReviewOverlaySchema.parse({
-          assetId: "cdp-unavailable",
-          archetype: "cdp",
-          reviewedAt: "2026-07-27",
-          sources: [{ label: "Protocol design", url: sourceUrl }],
-          notes: "CDP metrics cannot be marked unavailable.",
-          metrics: { collateralizationRatio: null, liquidationCapacityRatio: 1 },
-          metricApplicability: {
-            collateralizationRatio: { state: "unavailable", rationale: "Unpublished.", sourceUrl },
-          },
-          components: { structuralRedemption: { quality: "adequate" } },
-        }),
-      ),
-    ).toThrow(/CDP admits only measured or not-applicable metrics/);
 
     // Unavailable metric sourceUrl must match an overlay source.
     expect(() =>

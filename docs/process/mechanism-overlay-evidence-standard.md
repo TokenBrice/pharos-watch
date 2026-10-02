@@ -25,10 +25,9 @@ are now admissible only under the rules below.
   `supported` exit fact at the same quality, an `unavailable` component projects an
   `issuer-undisclosed` exit fact, and a `not-applicable` component projects nothing — a
   structurally absent redemption right is not evidence that an exit route exists.
-- The `not-applicable` / `unavailable` component-applicability states and the
-  corresponding metric-applicability states on cdp (two-state: `measured` /
-  `not-applicable`), synthetic-delta-neutral, and rwa-credit-fund overlays; wave-7
-  decision D2 ratified the three-state sdn / rwa schema.
+- Component and metric applicability on cdp, synthetic-delta-neutral and rwa-credit-fund
+  overlays supports `measured`, `not-applicable` and `unavailable`; wave-7 decision D2
+  ratified sdn/rwa, and V10 extends sourced unavailable metrics to cdp.
 - Native `ucits-trs-fund`, `shared-reserve`, and `protocol-position` reviews in unreleased
   methodology 10.0 use the [native-family contract](#native-family-admission-and-grading)
   below. Every component remains applicable; no generic PoR or audit metadata auto-grades
@@ -112,8 +111,14 @@ Wave-6 packet research produced the canonical negative examples; they remain the
   issuer-undisclosed rather than measured-adverse: an absent value is never converted into
   a measured finding. Use this state honestly — it records nondisclosure, it does not clear
   it.
-- CDP metrics never use `unavailable` (the collateralization banding needs a numeric
-  ratio); the adapter rejects it with a directed error.
+- CDP `unavailable` requires a null value, nonempty rationale and cited evidence. It
+  creates neither numeric adverse signals nor favorable credit. Applicable components
+  without authenticated quality stay bounded-unknown with their policy charge and
+  evidence trace; independently evidenced component quality remains intact.
+
+Owner ruling 12 removes measured adversity from unauthenticated BUCK liquidation and
+dormant FXD funded-backing claims. suiUSDe's July upstream measurements are analogous
+context, not direct coverage; these scope corrections do not refresh evidence dates.
 
 ## Measured collateralization
 

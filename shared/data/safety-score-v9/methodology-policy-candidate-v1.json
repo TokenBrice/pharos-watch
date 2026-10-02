@@ -1226,7 +1226,7 @@
           "low": null,
           "moderate": 74,
           "high": 59,
-          "critical": 39
+          "critical": null
         },
         "active-control-incident": {
           "low": 84,
@@ -1882,6 +1882,23 @@
       "defaultTreatment": "ceiling",
       "releaseSeverity": "review-required",
       "publicLabel": "Oracle and liquidation profile is missing",
+      "auditClassification": "missing-data",
+      "ceilingRule": {
+        "source": "named-ceiling",
+        "key": "oracle-unverified"
+      }
+    },
+    {
+      "code": "oracle-topology-undisclosed",
+      "ownerDomain": "control",
+      "archetypes": ["*"],
+      "pathKinds": ["local-component"],
+      "defaultFactClass": "missing-global-bounded",
+      "boundedness": "globally-bounded",
+      "permittedTreatments": ["ceiling"],
+      "defaultTreatment": "ceiling",
+      "releaseSeverity": "review-required",
+      "publicLabel": "The issuer has not disclosed the oracle topology",
       "auditClassification": "missing-data",
       "ceilingRule": {
         "source": "named-ceiling",

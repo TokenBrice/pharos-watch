@@ -211,6 +211,27 @@ describe("Safety Score V9 wrapper fact dispositions", () => {
     });
   });
 
+  it.each([
+    ["opaque-or-unknown", "issuer-undisclosed", null],
+    ["single-source-or-laggy", "reviewed", "high"],
+    ["privileged-internal-pricing", "reviewed", "high"],
+  ] as const)("attributes %s NAV pricing without mistaking non-disclosure for measured weakness", (tier, disposition, assessment) => {
+    const { fixed, extension, asset } = wrapperFacts("strategy-vault");
+    const context = createAssetBuildContext(
+      fixed, extension, extension.assets.find((candidate) => candidate.assetId === "alpha")!, "a".repeat(64),
+    );
+    const facts = buildWrapperLocalFacts(context, {
+      ...asset,
+      peg: { ...asset.peg, referenceKind: "nav" },
+      economicControlReview: {
+        ...asset.economicControlReview,
+        oracle: { ...asset.economicControlReview.oracle, tier },
+      },
+    });
+    if (facts.applicability !== "wrapper") throw new Error("Expected wrapper-local facts");
+    expect(facts.facts.shareAccountingNavOracle).toMatchObject({ disposition, assessment });
+  });
+
   it("deduplicates repeated leverage findings across distinct reserve slices", () => {
     const { fixed, extension, asset } = wrapperFacts("strategy-vault");
     const context = createAssetBuildContext(

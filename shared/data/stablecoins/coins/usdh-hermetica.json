@@ -64,17 +64,17 @@
     "attestorTier": "self",
     "cadence": "monthly",
     "latestReport": {
-      "periodEnd": "2026-08-20",
-      "publishedAt": "2026-08-26",
+      "periodEnd": "2026-09-30",
+      "publishedAt": "2026-10-01",
       "assuranceMethod": "attestation",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "partial",
-      "reviewer": "Pharos reserve research",
+      "reviewer": "Sol owner-session-4 reserve decisions 2026-10-02 (ReserveDecisions)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Hermetica August 2026 custodian attestation",
-          "url": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-august-2026"
+          "label": "Hermetica September 2026 report with scoped Copper custody attestation",
+          "url": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026"
         },
         {
           "label": "Hermetica USDh backing design",

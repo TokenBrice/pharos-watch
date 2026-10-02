@@ -5,6 +5,7 @@ import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import type { V9EconomicControlResult } from "@shared/lib/safety-score-v9/control-primitives";
 import { OracleRiskProfileSchema } from "@shared/types/stablecoin-meta-control-schemas";
 import ghoRiskReview from "@shared/data/stablecoins/domains/risk-review/gho-aave.json";
+import phtRiskReview from "@shared/data/stablecoins/domains/risk-review/pht-pht.json";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
 import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
 import { makeV9FixedInput, V9_EVALUATION_TEST_TIMEOUT_MS } from "../../test-helpers/v9-fixed-input";
@@ -107,6 +108,48 @@ describe("reviewed per-path oracle applicability", { timeout: V9_EVALUATION_TEST
     expect(trace.caps).toContainEqual(expect.objectContaining({ kind: "reason:unresolved-oracle-branch-applicability", limit: 55 }));
   });
 
+  it("charges opaque topology as bounded issuer uncertainty, never measured danger", () => {
+    const profile = internalPriceMeta().oracleRisk!;
+    profile.tier = "opaque-or-unknown";
+    profile.paths = [path("opaque-minter", "top-level-only", "0x4444444444444444444444444444444444444444")];
+    const { control, trace } = evaluate(profile);
+    expect(control.components.find((component) => component.kind === "oracle")).toMatchObject({
+      posture: "opaque-or-unknown", score: V9_CANDIDATE_POLICY_V1.policy.semantic.control.oracleTierQuality["opaque-or-unknown"],
+    });
+    expect(control.structuralFailures.filter((failure) => failure.kind === "weak-oracle-branch")).toEqual([]);
+    expect(trace.adverseAttribution.filter((item) => item.path.startsWith("structural:weak-oracle-branch"))).toEqual([]);
+    expect(trace.finalGrade).not.toBe("F");
+    expect(trace.unresolvedFacts).toContainEqual(expect.objectContaining({
+      code: "oracle-topology-undisclosed", responsibility: "issuer-undisclosed",
+    }));
+    expect(trace.caps.filter((cap) => cap.kind.startsWith("signal:weak-oracle-branch"))).toEqual([]);
+  });
+
+  it("retains PHT's verified manual feeds as single-source measured-adverse evidence", () => {
+    const { control, trace } = evaluate(OracleRiskProfileSchema.parse(phtRiskReview.oracleRisk), Date.parse("2026-10-01T12:00:00Z") / 1000);
+    expect(control.components.find((component) => component.kind === "oracle")).toMatchObject({
+      posture: "single-source-or-laggy", score: 45,
+    });
+    expect(trace.adverseAttribution).toContainEqual(expect.objectContaining({
+      path: "structural:weak-oracle-branch:high", responsibility: "measured-adverse",
+    }));
+    expect(oracleReasons(control).some((reason) => reason.code === "oracle-topology-undisclosed")).toBe(false);
+  });
+
+  it("retains adverse attribution and the single-source ceiling for verified owner-set pricing", () => {
+    const profile = internalPriceMeta().oracleRisk!;
+    profile.tier = "single-source-or-laggy";
+    profile.paths = [path("owner-set-minter", "top-level-only", "0x4444444444444444444444444444444444444444")];
+    const { control, trace } = evaluate(profile);
+    expect(control.components.find((component) => component.kind === "oracle")).toMatchObject({
+      posture: "single-source-or-laggy", score: 45,
+    });
+    expect(trace.caps).toContainEqual(expect.objectContaining({ kind: "signal:weak-oracle-branch:high", limit: 59 }));
+    expect(trace.adverseAttribution).toContainEqual(expect.objectContaining({
+      path: "structural:weak-oracle-branch:high", responsibility: "measured-adverse",
+    }));
+  });
+
   it.each([
     { tier: "single-source-or-laggy" as const, lending: false },
     { tier: "opaque-or-unknown" as const, lending: false },
@@ -122,7 +165,7 @@ describe("reviewed per-path oracle applicability", { timeout: V9_EVALUATION_TEST
     const after = evaluate(profile);
     const weakSignals = (result: V9EconomicControlResult) => result.structuralFailures.filter((signal) => signal.kind === "weak-oracle-branch");
     expect(weakSignals(after.control)).toEqual(weakSignals(before.control));
-    expect(weakSignals(after.control)).toHaveLength(1);
+    expect(weakSignals(after.control)).toHaveLength(tier === "opaque-or-unknown" ? 0 : 1);
     expect(oracleReasons(after.control)).toContainEqual(expect.objectContaining({ code: "unresolved-oracle-branch-applicability" }));
     expect(after.trace.caps.filter((cap) => cap.kind.startsWith("signal:weak-oracle-branch"))).toEqual(
       before.trace.caps.filter((cap) => cap.kind.startsWith("signal:weak-oracle-branch")),

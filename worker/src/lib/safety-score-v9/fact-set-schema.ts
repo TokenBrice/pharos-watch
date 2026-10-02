@@ -127,6 +127,8 @@ const ReserveClassificationSchema = z
     failureDomains: CanonicalFailureDomainsSchema,
     trackedAssetId: CanonicalTextSchema.nullable().optional(),
     trackedAssetDisposition: z.enum(["source", "reviewed-non-link"]).optional(),
+    /** Exact reviewed source identity whose amount remains unclassified. */
+    unclassifiedResidual: z.literal(true).optional(),
   })
   .strict();
 

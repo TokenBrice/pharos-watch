@@ -705,21 +705,6 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       "Outside-settlement redemption is limited to free USDRIF, so immediate capacity is not modeled until live Rootstock telemetry exposes free redeemable amount, queue depth, and current system state",
     ],
   }),
-  "nusd-neutrl": defineReviewedQueueRedeemConfig(REVIEWED_QUEUE_REDEMPTION_AT, {
-    outputAssets: ["usdc-circle"],
-    accessModel: "whitelisted-onchain",
-    costModel: undisclosedReviewedFee(
-      "Neutrl redemption is available to whitelisted KYC participants and supports instant or queued execution depending on AssetReserve liquidity; public fee schedule is not disclosed",
-    ),
-    docs: [
-      sourceRefRouteCapacity("Neutrl minting", "https://docs.neutrl.finance/protocol-mechanics/minting"),
-      sourceRefRouteCapacityAccess("Neutrl redemption", "https://docs.neutrl.finance/protocol-mechanics/redemption"),
-      sourceRef("Neutrl transparency", "https://docs.neutrl.finance/protocol-design/transparency", ["capacity"]),
-    ],
-    notes: [
-      "Neutrl docs establish a dual-path redemption system with instant execution when AssetReserve liquidity is available and an onchain queued fallback when it is not; current model scores eventual redeemability rather than a separately measured live instant buffer",
-    ],
-  }),
   "apyusd-apyx": erc4626ReserveTelemetryQueueConfig({
     reviewedAt: REVIEWED_YIELD_COVERAGE_WAVE_AT,
     accessModel: "whitelisted-onchain",

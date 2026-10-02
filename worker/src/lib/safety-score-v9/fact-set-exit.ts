@@ -331,7 +331,15 @@ function buildRoute(
     const cost = costByKey.get(canonicalV9ExecutionCostKey(point));
     if (!cost) throw new Error(`Missing execution cost for ${context.asset.assetId}:${routeKey}`);
     costByKey.delete(canonicalV9ExecutionCostKey(point));
-    return { ...point, executionCostBps: cost.executionCostBps };
+    // Curated terms can supersede the captured quote's cost. Re-apply the
+    // request budget without claiming the underlying route has no liquidity.
+    const withinBudget = cost.executionCostBps <= point.maxCostBps;
+    return {
+      ...point,
+      executableUsd: withinBudget ? point.executableUsd : 0,
+      completionRatio: withinBudget ? point.completionRatio : 0,
+      executionCostBps: cost.executionCostBps,
+    };
   });
   if (costByKey.size > 0) throw new Error(`Unmatched execution costs for ${context.asset.assetId}:${routeKey}`);
 

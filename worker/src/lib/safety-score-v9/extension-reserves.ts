@@ -229,6 +229,11 @@ export function dependencyReserveSlices(
   return { slices, rejectionReasons };
 }
 
+function hasUnclassifiedResidualShape(row: ReserveSlice): boolean {
+  return (row.assetClass == null || row.assetClass === "other") &&
+    row.coinId == null && row.depType == null && row.risk !== "very-high";
+}
+
 /**
  * Bridges reviewed registry classifications onto live reserve identities.
  * Explicit source keys match exactly and fail closed; only full-composition
@@ -248,6 +253,7 @@ export function buildReviewedReserveClassifications(
   );
   const reviewedByExposureKey = new Map<string, { reviewed: ReserveSlice; reviewedNonLink: boolean }>();
   const liveByExposureKey = new Map(liveReserves.map((live) => [computeSafetyScoreV9ReserveExposureKey(live), live]));
+  const unclassifiedExposureKeys = new Set<string>();
 
   for (const match of reviewedReserveMatches(liveReserves, meta, clockSec, classificationMaxAgeSec)) {
     const exposureKey = computeSafetyScoreV9ReserveExposureKey(liveReserves[match.liveIndex]!);
@@ -255,13 +261,26 @@ export function buildReviewedReserveClassifications(
       reviewed: match.reviewed,
       reviewedNonLink: nonLinkReviewedIndexes.has(match.reviewedIndex),
     });
+    // Only a producer-declared unknown can change live exposure treatment.
+    // Classification-only non-link reviews without that marker stay unchanged.
+    const live = liveReserves[match.liveIndex]!;
+    const dispositions = review.nonLinkDispositions?.filter(
+      (row) => row.reserveIndex === match.reviewedIndex,
+    ) ?? [];
+    if (live.unclassifiedResidual && live.residualReason === "insufficient-evidence" &&
+      live.sourceKey && live.sourceKey === match.reviewed.sourceKey &&
+      hasUnclassifiedResidualShape(live) && hasUnclassifiedResidualShape(match.reviewed) &&
+      dispositions.length === 1 && dispositions[0]!.disposition === "insufficient-evidence" &&
+      dispositions[0]!.reserveName === match.reviewed.name) {
+      unclassifiedExposureKeys.add(exposureKey);
+    }
   }
 
   const reviewKey = domainDigest("safety-score-v9.reserve-classification-review.v1", review).slice(0, 16);
   return classifications.map((classification) => {
     const live = liveByExposureKey.get(classification.exposureKey);
     const match = reviewedByExposureKey.get(classification.exposureKey);
-    return live && match
+    const reviewedClassification = live && match
       ? overlayReviewedReserveClassification(
           classification,
           live,
@@ -271,6 +290,9 @@ export function buildReviewedReserveClassifications(
           review.scope === "full-composition",
         )
       : classification;
+    return unclassifiedExposureKeys.has(classification.exposureKey)
+      ? { ...reviewedClassification, unclassifiedResidual: true }
+      : reviewedClassification;
   });
 }
 

@@ -169,6 +169,7 @@ export const V9_LEGACY_RESPONSIBILITY_BY_REASON = {
   "missing-latest-assurance-report": "issuer-undisclosed",
   "missing-mint-authority": "issuer-undisclosed",
   "missing-oracle-profile": "issuer-undisclosed",
+  "oracle-topology-undisclosed": "issuer-undisclosed",
   "missing-parent-score": "integration-missing",
   "missing-peg-input": "producer-failed",
   "peg-price-unavailable-adverse-history": "measured-adverse",

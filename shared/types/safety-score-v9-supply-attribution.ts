@@ -152,15 +152,16 @@ export const ReviewedEconomicSupplyPlanFileSchema = uniqueKeyedCollectionSchema(
   independentLiabilityAssetIds: z.array(CanonicalTextSchema).superRefine((ids, ctx) => {
     if (new Set(ids).size !== ids.length) ctx.addIssue({ code: "custom", message: "Duplicate independent-liability eligibility" });
   }),
-  // Validate attributed envelopes here; malformed evidence is ignored per asset by the consumer.
+  // Full-file authoring validation; runtime evidence and collisions are asset-local.
   providerRowExclusionReviews: z.array(z.object({ assetId: CanonicalTextSchema }).passthrough()).superRefine((rows, ctx) => {
     const keys = rows.map(row => `${row.assetId}:${String(row.providerChainLabel)}`);
     if (new Set(keys).size !== keys.length) ctx.addIssue({ code: "custom", message: "Duplicate provider-row exclusion review" });
   }).optional(),
 });
-/** Global attribution is strict; score-bearing plan evidence is asset-local (R8). */
-export const ReviewedEconomicSupplyPlanEnvelopeSchema = ReviewedEconomicSupplyPlanFileSchema.omit({ reviews: true }).extend({
+/** Only envelope structure and attribution are global; plan evidence and provider-row collisions are asset-local (R8). */
+export const ReviewedEconomicSupplyPlanEnvelopeSchema = ReviewedEconomicSupplyPlanFileSchema.omit({ reviews: true, providerRowExclusionReviews: true }).extend({
   reviews: z.array(z.object({ assetId: CanonicalTextSchema }).passthrough()),
+  providerRowExclusionReviews: z.array(z.object({ assetId: CanonicalTextSchema }).passthrough()).optional(),
 });
 export type ReviewedEconomicSupplyPlan = z.infer<typeof ReviewedEconomicSupplyPlanSchema>;
 const EconomicSupplyObservationSchema = z.strictObject({

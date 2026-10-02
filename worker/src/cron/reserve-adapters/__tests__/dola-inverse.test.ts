@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { mockD1Strict } from "@shared/test-utils/mock-d1";
+import { DASHBOARD_SOURCE_MAX_AGE_SEC } from "@shared/types/live-reserve-adapter-policy";
 import firmMarketsCapture from "./fixtures/dola-fixed-markets-2026-09-29.json";
 import {
   resolveBaseSymbol,
@@ -26,6 +27,7 @@ const SUPPLY_SELECTOR = "0x047fc9aa";
 const SELL_FEE_BPS_SELECTOR = "0x23cbe1f3";
 const MAX_WITHDRAW_DATA = `0xce96cb77${PSM_ADDRESS.slice(2).padStart(64, "0")}`;
 const DOLA_ENDPOINT = "https://www.inverse.finance/api/f2/fixed-markets";
+const REPAYMENTS_ENDPOINT = "https://www.inverse.finance/api/transparency/repayments-v2?v=3";
 const DOLA_LIVE_CONFIG = {
   adapter: "dola-inverse",
   version: 1,
@@ -44,6 +46,7 @@ function dolaNetwork(options: {
   supply?: bigint | null;
   maxWithdraw?: bigint | null;
   sellFeeBps?: bigint | null;
+  repayments?: unknown;
 } = {}) {
   return installAdapterNetwork({
     chains: { ethereum: "https://rpc.example" },
@@ -51,6 +54,11 @@ function dolaNetwork(options: {
       [DOLA_ENDPOINT]: {
         markets: [makeMarket("wstETH", 1_000_000)],
         timestamp: 1_776_330_494,
+      },
+      [REPAYMENTS_ENDPOINT]: options.repayments ?? {
+        timestamp: 1_776_330_494,
+        lastBlock: 23_000_000,
+        badDebts: { DOLA: { frontierBadDebtBalance: 100_000 } },
       },
     },
     rpc: {
@@ -203,8 +211,34 @@ describe("adaptFirmMarkets", () => {
   it("includes non-FiRM issuance in unknown exposure rather than normalizing it away", () => {
     const result = adaptFirmMarkets({ markets: [makeMarket("wstETH", 60)], timestamp: 1000 }, 100);
     expect(result.metadata?.unknownExposurePct).toBe(40);
-    expect(result.slices).toContainEqual({ sourceKey: "dola-inverse:unattributed", name: "Unattributed non-FiRM issuance", pct: 40, risk: "high" });
+    expect(result.metadata?.frontierBadDebtUsd).toBeNull();
+    expect(result.slices.find(row => row.sourceKey === "dola-inverse:unattributed")?.pct).toBe(40);
+    expect(result.slices.some(row => row.sourceKey === "dola-inverse:frontier-bad-debt")).toBe(false);
   });
+
+  it("splits only measured Frontier bad debt against the same supply denominator", () => {
+    const result = adaptFirmMarkets({ markets: [makeMarket("wstETH", 60)], timestamp: 1000 }, 100, 7);
+    expect(result.slices.find(row => row.sourceKey === "dola-inverse:frontier-bad-debt")).toMatchObject({
+      pct: 7, risk: "very-high", assetClass: "private-credit",
+    });
+    expect(result.slices.find(row => row.sourceKey === "dola-inverse:unattributed")).toMatchObject({
+      unclassifiedResidual: true, residualReason: "insufficient-evidence",
+    });
+    expect(result.slices.find(row => row.sourceKey === "dola-inverse:unattributed")?.pct).toBe(33);
+    expect(result.metadata?.unknownExposurePct).toBe(33);
+    expect(result.metadata?.unclassifiedResidualDisposition).toBe("insufficient-evidence");
+  });
+
+  it.each([null, -1, Number.NaN, Number.POSITIVE_INFINITY, 41])(
+    "keeps the whole non-FiRM tail unknown for an invalid or unreconciled debt balance (%s)",
+    (balance) => {
+      const result = adaptFirmMarkets({ markets: [makeMarket("wstETH", 60)], timestamp: 1000 }, 100, balance);
+      expect(result.metadata?.frontierBadDebtUsd).toBeNull();
+      expect(result.metadata?.unknownExposurePct).toBe(40);
+      expect(result.slices.find(row => row.sourceKey === "dola-inverse:unattributed")?.pct).toBe(40);
+      expect(result.slices.some(row => row.sourceKey === "dola-inverse:frontier-bad-debt")).toBe(false);
+    },
+  );
 
   it("filters out zero-debt markets", () => {
     const result = adaptFirmMarkets({
@@ -368,8 +402,24 @@ describe("fetchDolaInverseReserves PSM redemption telemetry", () => {
 
     expect(result.warnings ?? []).not.toContainEqual(expect.objectContaining({ code: "dola-supply-unavailable" }));
     expect(result.metadata).toMatchObject({ supplyUsd: 1_500_000 });
-    expect(result.slices.find((slice) => slice.sourceKey === "dola-inverse:unattributed")?.pct).toBeCloseTo(33.3, 1);
+    expect(result.slices.find((slice) => slice.sourceKey === "dola-inverse:unattributed")?.pct).toBeCloseTo(26.7, 1);
+    expect(result.slices.find((slice) => slice.sourceKey === "dola-inverse:frontier-bad-debt")?.pct).toBeCloseTo(6.7, 1);
     expectValidAdapterOutput("dola-inverse", result);
+  });
+
+  it.each([
+    { status: 503, body: "" },
+    { timestamp: 1_776_330_494, lastBlock: 23_000_000, badDebts: { DOLA: { frontierBadDebtBalance: 500_001 } } },
+    { timestamp: 1_776_330_494 - DASHBOARD_SOURCE_MAX_AGE_SEC - 1, lastBlock: 23_000_000, badDebts: { DOLA: { frontierBadDebtBalance: 100_000 } } },
+    { timestamp: 1_776_330_495, lastBlock: 23_000_000, badDebts: { DOLA: { frontierBadDebtBalance: 100_000 } } },
+    { timestamp: 1_776_330_494, badDebts: { DOLA: { frontierBadDebtBalance: 100_000 } } },
+  ])("fails closed to the whole unknown tail for an unusable repayments response %#", async (repayments) => {
+    const { result } = await runDola({ repayments }, dolaCacheDb(1_500_000));
+    expect(result.metadata?.frontierBadDebtUsd).toBeNull();
+    expect(result.slices.some(row => row.sourceKey === "dola-inverse:frontier-bad-debt")).toBe(false);
+    expect(result.metadata?.unknownExposurePct).toBeCloseTo(100 / 3);
+    expect(result.slices.find(row => row.sourceKey === "dola-inverse:unattributed")?.pct).toBeCloseTo(33.3, 1);
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "dola-frontier-bad-debt-unavailable" }));
   });
 
   it("withholds the whole redemption block when supply() cannot be read", async () => {

@@ -189,26 +189,11 @@ const V9ProtocolPositionMechanismRiskReviewSchema = z
   })
   .strict();
 
-const V9CdpMetricApplicabilitySchema = z.discriminatedUnion("state", [
-  z.object({ state: z.literal("measured") }).strict(),
-  z
-    .object({
-      state: z.literal("not-applicable"),
-      rationale: z.string().trim().min(1),
-      evidenceRefIds: z.array(z.string().trim().min(1)).min(1),
-    })
-    .strict(),
-]);
-
 /**
- * Metric applicability for the sdn/rwa archetypes (owner ruling 2026-07-27,
- * wave-7 D2). Distinct from the CDP schema because these archetypes admit a
- * third state: `unavailable` — the metric structurally applies but the issuer
- * publishes no measurable value. An unavailable metric keeps its structural
- * penalty signal firing (unmeasured is never presumed adequate), while
- * `not-applicable` skips the signal with cited evidence. CDP keeps its
- * two-state schema: its collateralization banding needs a numeric ratio, so
- * an unavailable CR has no defined severity there.
+ * Sourced metric applicability for partial CDP, SDN, and RWA reviews.
+ * `unavailable` means the metric applies but has no authenticated numeric value;
+ * it does not imply structural absence or favourable mechanism quality. CDP
+ * skips numeric ratio signals, while SDN/RWA retain their structural treatment.
  */
 const V9MechanismMetricApplicabilitySchema = z.discriminatedUnion("state", [
   z.object({ state: z.literal("measured") }).strict(),
@@ -401,8 +386,8 @@ const V9CdpMechanismRiskReviewSchema = z
     liquidationCapacityRatio: z.number().finite().nonnegative().nullable(),
     metricApplicability: z
       .object({
-        collateralizationRatio: V9CdpMetricApplicabilitySchema,
-        liquidationCapacityRatio: V9CdpMetricApplicabilitySchema,
+        collateralizationRatio: V9MechanismMetricApplicabilitySchema,
+        liquidationCapacityRatio: V9MechanismMetricApplicabilitySchema,
       })
       .strict(),
     collateralizationParameters: V9MechanismFactV1Schema,
@@ -414,24 +399,7 @@ const V9CdpMechanismRiskReviewSchema = z
   })
   .strict()
   .superRefine((review, ctx) => {
-    for (const metric of ["collateralizationRatio", "liquidationCapacityRatio"] as const) {
-      const applicability = review.metricApplicability[metric];
-      const value = review[metric];
-      if (applicability.state === "measured" && value === null) {
-        ctx.addIssue({
-          code: "custom",
-          path: [metric],
-          message: `Measured ${metric} needs a numeric value`,
-        });
-      }
-      if (applicability.state === "not-applicable" && value !== null) {
-        ctx.addIssue({
-          code: "custom",
-          path: [metric],
-          message: `Not-applicable ${metric} must be null`,
-        });
-      }
-    }
+    refineMechanismMetricApplicability(review, ["collateralizationRatio", "liquidationCapacityRatio"], ctx);
   });
 export type V9CdpMechanismRiskReview = z.infer<typeof V9CdpMechanismRiskReviewSchema>;
 

@@ -33,7 +33,7 @@
     "reviewedAt": "2026-08-08"
   },
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
+    "tier": "single-source-or-laggy",
     "summary": "Five debt-bearing Ethereum ilks were retained. Three divide a Chainlink stablecoin/USD numerator by an owner-set APACX PHP/USD denominator without contract-enforced freshness, while two zero-ceiling legacy ilks with outstanding debt use owner-set APACX feeds directly; liquidation is immediate through independent Dutch auctions.",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
@@ -110,7 +110,7 @@
       {
         "id": "pht-usdt-a",
         "label": "USDT-A",
-        "tier": "opaque-or-unknown",
+        "tier": "single-source-or-laggy",
         "summary": "Debt-bearing USDT branch dividing a Chainlink USDT/USD numerator by an owner-set APACX PHP/USD denominator; neither the ratio feed nor Pip enforces source freshness.",
         "collateralAssets": [
           "USDT"
@@ -183,7 +183,7 @@
       {
         "id": "pht-cphp-a",
         "label": "cPHP-A",
-        "tier": "opaque-or-unknown",
+        "tier": "single-source-or-laggy",
         "summary": "Debt-bearing zero-ceiling cPHP legacy branch using an owner-set APACX data feed with no external source, freshness check, or fallback.",
         "collateralAssets": [
           "cPHP"
@@ -244,7 +244,7 @@
       {
         "id": "pht-apcxusdt-a",
         "label": "ApcxUSDT-A",
-        "tier": "opaque-or-unknown",
+        "tier": "single-source-or-laggy",
         "summary": "Debt-bearing apcxUSDT branch dividing a Chainlink USDT/USD numerator by an owner-set APACX PHP/USD denominator; neither the ratio feed nor Pip enforces source freshness.",
         "collateralAssets": [
           "apcxUSDT"
@@ -317,7 +317,7 @@
       {
         "id": "pht-demousdt-a",
         "label": "demoUSDT-A",
-        "tier": "opaque-or-unknown",
+        "tier": "single-source-or-laggy",
         "summary": "Debt-bearing zero-ceiling demoUSDT legacy branch using an owner-set APACX data feed with no external source, freshness check, or fallback.",
         "collateralAssets": [
           "demoUSDT"
@@ -378,7 +378,7 @@
       {
         "id": "pht-usdc-a",
         "label": "USDC-A",
-        "tier": "opaque-or-unknown",
+        "tier": "single-source-or-laggy",
         "summary": "Debt-bearing USDC branch dividing a Chainlink USDC/USD numerator by an owner-set APACX PHP/USD denominator; neither the ratio feed nor Pip enforces source freshness.",
         "collateralAssets": [
           "USDC"

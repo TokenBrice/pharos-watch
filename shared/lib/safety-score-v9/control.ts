@@ -614,13 +614,13 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
         controlKeys: linkedControls.map((control) => control.controlKey).sort(compareText),
         failureDomains,
       });
-      if (
-        oracleTier === "single-source-or-laggy" ||
-        oracleTier === "opaque-or-unknown"
-      ) {
+      if (oracleTier === "opaque-or-unknown") {
+        // A reviewed inventory can establish non-disclosure, not unsafe topology.
+        addReason("oracle-topology-undisclosed", "local-component", "oracle:topology");
+      } else if (oracleTier === "single-source-or-laggy") {
         addStructuralFailure({
           kind: "weak-oracle-branch",
-          severity: oracleTier === "opaque-or-unknown" ? "critical" : "high",
+          severity: "high",
           binding: true,
           reason: `Oracle control topology is ${oracleTier}.`,
           materialSharePct: null,

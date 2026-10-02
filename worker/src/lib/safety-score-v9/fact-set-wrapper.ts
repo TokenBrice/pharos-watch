@@ -605,22 +605,27 @@ function buildWrapperStructuralDimensions(
     const oracleTier = input.economicControlReview.oracle.tier;
     const weakOracle =
       oracleTier === "privileged-internal-pricing" ||
-      oracleTier === "single-source-or-laggy" ||
-      oracleTier === "opaque-or-unknown";
-    shareAccountingNavOracle = reviewedWrapperFact(
-      context,
-      weakOracle ? "high" : "moderate",
-      [
-        `wrapper-share-form:${context.asset.variantKind}`,
-        `wrapper-share-reference-kind:${input.peg.referenceKind}`,
-        `wrapper-share-oracle-tier:${oracleTier ?? "not-applicable"}`,
-      ],
-      uniqueEvidenceRefIds([
-        ...reviewedFormEvidence,
-        ...input.peg.status.evidenceRefIds,
-        ...input.economicControlReview.oracle.status.evidenceRefIds,
-      ]),
-    );
+      oracleTier === "single-source-or-laggy";
+    shareAccountingNavOracle = oracleTier === "opaque-or-unknown"
+      ? unavailableWrapperFact(
+          "issuer-undisclosed",
+          "wrapper-share-oracle-topology-undisclosed",
+          input.economicControlReview.oracle.status.evidenceRefIds,
+        )
+      : reviewedWrapperFact(
+          context,
+          weakOracle ? "high" : "moderate",
+          [
+            `wrapper-share-form:${context.asset.variantKind}`,
+            `wrapper-share-reference-kind:${input.peg.referenceKind}`,
+            `wrapper-share-oracle-tier:${oracleTier ?? "not-applicable"}`,
+          ],
+          uniqueEvidenceRefIds([
+            ...reviewedFormEvidence,
+            ...input.peg.status.evidenceRefIds,
+            ...input.economicControlReview.oracle.status.evidenceRefIds,
+          ]),
+        );
   } else {
     shareAccountingNavOracle = unavailableWrapperFact(
       wrapperFactDisposition(

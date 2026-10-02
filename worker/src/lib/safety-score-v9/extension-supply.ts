@@ -20,7 +20,7 @@ import {
 } from "./supply-attribution";
 import { normalizeReviewedDeploymentAddress, reviewedSupplyRouteKind, reviewedEconomicDeploymentAttributionValidationError, hasCompleteEligibleProviderSupply, REVIEWED_ECONOMIC_SUPPLY_PLANS, REVIEWED_ECONOMIC_SUPPLY_PLAN_QUARANTINES, REVIEWED_SUPPLY_ATTRIBUTION_ENVELOPE } from "./supply-attribution-contract";
 import { ReviewedProviderRowExclusionSchema } from "@shared/types/safety-score-v9-supply-attribution";
-import supplyAttributionReviews from "@shared/data/safety-score-v9/supply-attribution-reviews-v1.json";
+import { createReviewedAssetRegistry } from "./extension-reviewed-registry";
 import {
   exactInputBoundTransferMaterialityPacket,
   type SafetyScoreV9TransferMaterialityGeneration,
@@ -35,6 +35,13 @@ type SupplyReview = NonNullable<ExtensionAsset["supplyReview"]>;
 const RAW_UNIT_SHARE_SCALE = 10n ** 18n;
 
 const SUPPLY_ATTRIBUTION_REVIEWS = REVIEWED_SUPPLY_ATTRIBUTION_ENVELOPE;
+const providerRowExclusionRegistry = createReviewedAssetRegistry({
+  rows: SUPPLY_ATTRIBUTION_REVIEWS.providerRowExclusionReviews ?? [],
+  schema: ReviewedProviderRowExclusionSchema,
+  path: "supplyAttribution.providerRowExclusionReviews",
+  keyOf: row => typeof row.providerChainLabel === "string" ? `${row.assetId}:${row.providerChainLabel}` : undefined,
+  keyPath: "providerChainLabel",
+});
 export const SAFETY_SCORE_V9_INDEPENDENT_LIABILITY_SUPPLY_ASSET_IDS = Object.freeze(
   SUPPLY_ATTRIBUTION_REVIEWS.independentLiabilityAssetIds.sort(compareText),
 );
@@ -553,8 +560,8 @@ function admittedProviderRowExclusions(
   review: SupplyReview,
   profile: BridgeRouteRiskProfile | undefined,
 ): SupplyReview["providerRowExclusions"] {
-  const entries = supplyAttributionReviews.providerRowExclusionReviews ?? [];
-  if (!entries.some(entry => entry.assetId === assetId)) return undefined;
+  const entries = providerRowExclusionRegistry.getAll(assetId);
+  if (entries.length === 0) return undefined;
   const rows = safetyScoreV9ChainRows(fixedInput, assetId);
   const aggregate = getCirculatingRawOrNull(fixedInput.aggregateCirculatingById?.[assetId] ?? {});
   const total = Object.values(rows).reduce((sum, row) => sum + row.current, 0);
@@ -565,10 +572,7 @@ function admittedProviderRowExclusions(
   const policy = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution;
   if (Math.abs(total - aggregate) > Math.max(policy.conservationAbsoluteToleranceUsd,
     aggregate * policy.conservationRelativeTolerance)) return [];
-  return entries.filter(entry => entry.assetId === assetId).flatMap(entry => {
-    const parsed = ReviewedProviderRowExclusionSchema.safeParse(entry);
-    if (!parsed.success) return [];
-    const record = parsed.data;
+  return entries.flatMap(record => {
     const target = ACTIVE_META_BY_ID.get(record.belongsToAssetId);
     if (record.reviewedAtSec > fixedInput.clockSec || record.expiresAtSec <= fixedInput.clockSec ||
       record.provenance.providerAssetId !== own?.llamaId || own?.detailProvider !== "defillama" ||
@@ -607,6 +611,7 @@ export function buildSafetyScoreV9SupplyReview(
 ): SupplyReview | null {
   const quarantine = REVIEWED_ECONOMIC_SUPPLY_PLAN_QUARANTINES.get(assetId);
   if (quarantine) throw quarantine;
+  providerRowExclusionRegistry.getAll(assetId);
   const economicPacket = fixedInput.safetyScoreV9SupplyAttributionById?.[assetId];
   if (economicPacket?.model === "reviewed-economic-deployment-partition-v1") {
     return buildReviewedEconomicDeploymentSupplyReview(fixedInput, assetId, profile);

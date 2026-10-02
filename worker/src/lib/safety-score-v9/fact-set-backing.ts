@@ -535,6 +535,7 @@ export function buildReserves(context: AssetBuildContext): {
   const exposures: V9ReserveExposureFactV2[] = [];
   const envelopeGapIds: string[] = [];
   const envelopeEvidenceIds: string[] = [];
+  let unclassifiedResidualWeight = 0;
   if (
     reviewedStatic &&
     !context.asset.componentEvidence.some((binding) => binding.componentKey === "reviewed-static-reserves")
@@ -567,6 +568,14 @@ export function buildReserves(context: AssetBuildContext): {
     const evidenceIds = reviewedStatic
       ? reviewedStaticEvidenceIds
       : [reserveSourceEvidence(context, exposureKey, groupedSlices)];
+    if (classification?.unclassifiedResidual) {
+      // Keep the original notional denominator: omitting only this exposure
+      // makes appendReserveResidual charge its exact share once, as unknown.
+      // Source evidence stays attached; no favourable class/domain is invented.
+      envelopeEvidenceIds.push(...evidenceIds);
+      unclassifiedResidualWeight += weight;
+      continue;
+    }
     const reviewedNonLink = classification?.trackedAssetDisposition === "reviewed-non-link";
     const trackedAssetId = reviewedNonLink
       ? null
@@ -674,6 +683,22 @@ export function buildReserves(context: AssetBuildContext): {
     );
   }
   const envelopeEvidenceRefIds = [...new Set(envelopeEvidenceIds)];
+  if (exposures.length === 0 && unclassifiedResidualWeight > 0) {
+    return {
+      reserveStatus: missingLocalFact(context, {
+        componentKey: "reserve-composition",
+        reasonCode: "partial-reserve-review",
+        ownerDomain: "backing",
+        policyRuleId: "v9.backing.reserve-composition",
+        responsibility: "issuer-undisclosed",
+        observationState: "bounded-unknown",
+        message: "The measured reserve quantities are wholly unclassified under the exact reviewed source identities.",
+        evidenceRefIds: envelopeEvidenceRefIds,
+      }).status,
+      reserveExposures: [],
+      reserveBoundFacts: compileSafetyScoreV9ReserveBoundFacts(context),
+    };
+  }
   if (envelopeGapIds.length === 0) {
     assertKnownComponentEvidenceCurrent(context, "reserve-composition", envelopeEvidenceRefIds);
   }

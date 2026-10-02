@@ -11303,17 +11303,20 @@
           "url": "https://ethereum-rpc.publicnode.com"
         }
       ],
-      "notes": "suiUSDe is an Ethena Whitelabel deployment on Sui; Ethena's own whitelabel documentation states partner stablecoins are backed by USDe, USDtb, or other approved stablecoins, and names suiUSDe as backed by USDe and USDC, with Ethena operating issuance, backing, custody, and reserve management under the same custody and reserve-verification arrangements as USDe. Measurement (fetched 2026-07-20 ~06:08 UTC): the issuer's whitelabel transparency API reported totalBacking $13,114,642.843253 against totalSupply 13,096,208.621346 suiUSDe (collateralizationRatio 1.001408), composed of $12,157,307.860536 USDe (92.7%) and $957,334.982717 USDC (7.3%) at named custodians. I independently re-verified the dominant wallet on-chain via eth_call at Ethereum block 25572107: the Coinbase 2 wallet 0x79f876Ea018F82Ecf557F40D0d9dA1E007711704 held exactly 12,157,307.860536 USDe and 651,751.839511 USDC, matching the API to the cent. marginBufferPct = (backing/supply - 1) = 0.140760, i.e. the whitelabel layer's own overcollateralization. hedgeCoverageRatio = 1.0: the suiUSDe backing contains zero unhedged volatile assets (100% USDe + USDC per the issuer API), and at the underlying USDe layer Ethena documents that every volatile backing asset is paired with a short futures position of approximately equal notional while stable assets need no hedge; Ethena's weekly proof-of-reserves feed shows three independent providers (HarrisAndTrotter, Chainlink, LlamaRisk) confirming deltaNeutral=true and overCollateralized=true in every weekly report from launch through the latest at 2026-07-17. lossAbsorptionShare = 0.015484, measured as Ethena's Reserve Fund balance ($62,103,625.90808107 per the collateralization status API at 2026-07-20 06:00 UTC) over total USDe supply ($4,010,772,366.2827363); this is the documented loss-absorbing tranche behind the USDe that constitutes 92.7% of suiUSDe backing, absorbed pro rata with all other USDe exposure rather than as a suiUSDe-segregated fund. Quality rationale: venueAndCustody adequate - custodians named in the issuer API (Anchorage on Sui, Coinbase Prime, Coinbase Ethereum wallet) plus Ethena's documented off-exchange-settlement model, with the dominant wallet independently verified on-chain this session, but account-level legal segregation terms unpublished. hedgeReconciliation adequate - weekly three-provider PoR at the USDe layer plus exact on-chain reconciliation of 97.7% of suiUSDe backing. fundingBasisStress adequate - funding-risk design, dynamic allocation, and Reserve Fund absorption documented at the USDe layer whose crypto-basis leg is only 1.0% of current backing per the collateral breakdown API (45.4% liquid stables, 35.0% DeFi lending, 12.5% RWA, 6.1% institutional lending), keeping residual funding exposure small. lossAbsorption adequate - Reserve Fund design documented and its balance independently measurable, though it currently receives 0% of protocol revenue and is not suiUSDe-segregated. marginAndLiquidation limited - the whitelabel layer's own buffer is a thin self-reported 0.14%, USDe-layer liquidation design (minimal leverage, maintenance-margin management, Reserve Fund deployment) is documented but no suiUSDe-specific margin or liquidation framework is published. unwindCapacity limited - Ethena advertises unified partner liquidity through USDe and the API shows a Sui mint/redeem wallet, but no suiUSDe redemption SLA, queue mechanics, or capacity data is published. NOT established: suiUSDe-specific redemption terms and unwind capacity data; suiUSDe-specific margin/liquidation rules; any legal documentation of holder claims, segregation, or bankruptcy treatment at the whitelabel layer; independent attestation covering the suiUSDe backing itself (the three PoR providers attest to USDe, not to this partner deployment - the suiUSDe backing figures are issuer self-reported, with only the dominant Ethereum wallet independently verified here); the Sui-side Anchorage and mint/redeem wallet balances were taken from the issuer API without independent on-chain re-verification.",
+      "notes": "July 20, 2026 historical review; no evidence date has been advanced. suiUSDe is an Ethena Whitelabel deployment backed by USDe and USDC. The July whitelabel snapshot reported backing $13,114,642.843253 against 13,096,208.621346 suiUSDe, with 92.7% USDe and 7.3% USDC. The former hedgeCoverageRatio 1.0 and lossAbsorptionShare 0.015484 describe analogous upstream USDe hedge arrangements and the upstream Reserve Fund divided by USDe supply, not direct dedicated suiUSDe coverage. The former marginBufferPct 0.14076 is the whitelabel excess-backing percentage, not measured venue maintenance margin. These historical values remain only in analogousMetrics; direct local hedge, margin and first-loss metrics are unavailable. The July custody shares and qualitative mechanism review remain unchanged, with no current scoped metric refresh or new protective-credit claim.",
       "metrics": {
-        "hedgeCoverageRatio": 1,
-        "marginBufferPct": 0.14076,
-        "lossAbsorptionShare": 0.015484
+        "hedgeCoverageRatio": null,
+        "marginBufferPct": null,
+        "lossAbsorptionShare": null
       },
       "analogousMetrics": {
         "suiUsdeBackingRatio": 1.001408,
         "suiUsdeBackingUsd": 13114642.843253,
         "ethenaReserveFundUsd": 62103625.90808107,
-        "usdeShareOfBacking": 0.927001
+        "usdeShareOfBacking": 0.927001,
+        "upstreamUsdeHedgeCoverageRatioJuly2026": 1,
+        "suiUsdeExcessBackingPctJuly2026": 0.14076,
+        "upstreamUsdeReserveFundShareJuly2026": 0.015484
       },
       "venueShares": [
         {
@@ -11377,6 +11380,23 @@
         },
         "lossAbsorption": {
           "quality": "adequate"
+        }
+      },
+      "metricApplicability": {
+        "hedgeCoverageRatio": {
+          "state": "unavailable",
+          "rationale": "July 20, 2026 values are analogous context: upstream USDe hedge/Reserve Fund coverage or whitelabel excess backing, not a directly measured suiUSDe hedge, exchange-maintenance-margin buffer, or dedicated first-loss tranche. No direct local metric is established.",
+          "sourceUrl": "https://docs.ethena.fi/overview/ethena-whitelabel"
+        },
+        "marginBufferPct": {
+          "state": "unavailable",
+          "rationale": "July 20, 2026 values are analogous context: upstream USDe hedge/Reserve Fund coverage or whitelabel excess backing, not a directly measured suiUSDe hedge, exchange-maintenance-margin buffer, or dedicated first-loss tranche. No direct local metric is established.",
+          "sourceUrl": "https://docs.ethena.fi/overview/ethena-whitelabel"
+        },
+        "lossAbsorptionShare": {
+          "state": "unavailable",
+          "rationale": "July 20, 2026 values are analogous context: upstream USDe hedge/Reserve Fund coverage or whitelabel excess backing, not a directly measured suiUSDe hedge, exchange-maintenance-margin buffer, or dedicated first-loss tranche. No direct local metric is established.",
+          "sourceUrl": "https://docs.ethena.fi/overview/ethena-whitelabel"
         }
       }
     },
@@ -14219,44 +14239,51 @@
     {
       "assetId": "usdh-hermetica",
       "archetype": "synthetic-delta-neutral",
-      "reviewedAt": "2026-07-20",
+      "reviewedAt": "2026-09-30",
       "sources": [
         {
-          "label": "Hermetica USDh backing and attestation index",
-          "url": "https://docs.hermetica.fi/usdh/how-it-works/backing"
+          "label": "Hermetica September 2026 report; snapshot September 30, published October 1",
+          "url": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026"
         },
         {
-          "label": "Hermetica USDh stability and hedge reconciliation design",
-          "url": "https://docs.hermetica.fi/usdh/how-it-works/stability"
-        },
-        {
-          "label": "Hermetica USDh custody and off-exchange settlement design",
-          "url": "https://docs.hermetica.fi/usdh/how-it-works/security"
-        },
-        {
-          "label": "Hermetica Reserve Fund design",
-          "url": "https://docs.hermetica.fi/usdh/hermetica-reserve-fund"
-        },
-        {
-          "label": "Hermetica March 2026 custodian attestation disclosure",
-          "url": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-march-2026"
+          "label": "Hermetica STRCx credit-instrument backing integration",
+          "url": "https://blog.hermetica.fi/p/strcx-direct-tokenized-strc-exposure-for-usdh"
         }
       ],
-      "notes": "Reviewed from Hermetica issuer documentation and its March 2026 custodian-attestation disclosure. At 2026-03-19 15:00 UTC the issuer reported $9,443,392.57 of backing assets against $9,441,388.43 of USDh supply, giving marginBufferPct 0.021227. It reported $6,891,105.93 at Copper, $2,411,932.27 at Ceffu, $136,764.24 in the Stacks redeeming reserve, and $3,590.12 in the Ethereum redeeming reserve. For lossAbsorptionShare, this review conservatively uses the page narrative's $100,148.12 Reserve Fund balance, yielding 0.0106073509; the same page's summary table instead says $104,531.76, but the lower narrative figure is the one that reconciles backing plus Reserve Fund to the issuer's published 101.08% total coverage. hedgeCoverageRatio 1 is a documented-policy figure, not an observed position-level measurement: Hermetica states that it maintains a short perpetual position fully hedging BTC and runs parallel risk engines every 100 milliseconds to reconcile liabilities, assets, and futures positions. It documents Copper/Ceffu off-exchange custody, diversification across five derivatives venues, Approved Participant mint/redemption, and a Reserve Fund intended to cover negative funding and exchange-failure PnL. Every component remains limited because the disclosure is issuer-authored and does not expose position notionals, venue weights, margin or liquidation state, or a binding Reserve Fund waterfall. NOT established: actual spot and short notionals or net delta at the attestation time, venue-level hedge allocation, leverage, initial/maintenance margin or liquidation thresholds, independent assurance methodology over the figures, committed redemption and unwind capacity, custody agreements and bankruptcy-remoteness enforceability, a binding loss waterfall, or the exact Reserve Fund balance because the issuer page contains the noted internal discrepancy.",
+      "notes": "Scoped current backing review: September30 14:00UTC report published October1. STRCx is tokenized Strategy STRC preferred-stock / credit-instrument backing, $1,396,969.74 (67.103949% of stated assets), not spot BTC assumed delta-hedged. Copper aggregate BTC/USDT/USDC is $472,573.22; Ceffu $0; Ethereum Settlement Wallet is now 0x1046a6AD45B60264c83A4b93F6D2c6078C73c1d5. Total stated backing $2,081,799.60; supply $1,981,448.18. Reserve Fund USDC $100,148.12 is included in total assets and must not be counted twice as additional loss protection. Location totals differ by one cent. March venue shares, margin buffer, loss-buffer ratio and design-target hedgeCoverageRatio=1 are retired as current facts. Existing synthetic archetype remains the documented mixed mechanism; no exact cutover date or current BTC/perpetual notional is established. Unitemized settlement, Copper and Stacks exposures total28.085400%; venue balances do not establish hedge reconciliation, stressed liquidity, legal segregation or recovery. No invented hedge, margin or loss-absorption metrics.",
       "metrics": {
-        "hedgeCoverageRatio": 1,
-        "marginBufferPct": 0.021227174529037107,
-        "lossAbsorptionShare": 0.01060735089362275
+        "hedgeCoverageRatio": null,
+        "marginBufferPct": null,
+        "lossAbsorptionShare": null
+      },
+      "metricApplicability": {
+        "hedgeCoverageRatio": {
+          "state": "unavailable",
+          "rationale": "STRCx credit exposure is not a BTC hedge; current spot and short perpetual notionals for the remaining book are unitemized.",
+          "sourceUrl": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026"
+        },
+        "marginBufferPct": {
+          "state": "unavailable",
+          "rationale": "Backing minus supply is not measured margin collateral or a liquidation buffer; venue leverage and margin requirements are undisclosed.",
+          "sourceUrl": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026"
+        },
+        "lossAbsorptionShare": {
+          "state": "unavailable",
+          "rationale": "Reserve Fund USDC is disclosed inside total backing, but current loss waterfall and ring-fenced incremental coverage are not established.",
+          "sourceUrl": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026"
+        }
       },
       "analogousMetrics": {
-        "backingAssetsUsd": 9443392.57,
-        "usdhSupplyUsd": 9441388.43,
-        "conservativeReserveFundUsd": 100148.12
+        "backingAssetsUsd": 2081799.6,
+        "usdhSupplyUsd": 1981448.18,
+        "strcxCreditInstrumentUsd": 1396969.74,
+        "reserveFundUsdcUsd": 100148.12,
+        "copperCustodiedAssetsUsd": 472573.22
       },
       "venueShares": [
         {
           "venueKey": "copper-custody",
-          "share": 0.72972778362427,
+          "share": 0.22700226,
           "failureDomains": [
             {
               "kind": "reserve-custodian",
@@ -14265,18 +14292,18 @@
           ]
         },
         {
-          "venueKey": "ceffu-custody",
-          "share": 0.2554095101015164,
+          "venueKey": "ethereum-settlement-wallet",
+          "share": 0.72103087,
           "failureDomains": [
             {
-              "kind": "reserve-custodian",
-              "key": "ceffu"
+              "kind": "chain",
+              "key": "ethereum"
             }
           ]
         },
         {
           "venueKey": "stacks-redeeming-reserve",
-          "share": 0.014482532520619333,
+          "share": 0.00386036,
           "failureDomains": [
             {
               "kind": "chain",
@@ -14285,8 +14312,8 @@
           ]
         },
         {
-          "venueKey": "ethereum-redeeming-reserve",
-          "share": 0.0003801726946526803,
+          "venueKey": "ethereum-reserve-fund",
+          "share": 0.04810651,
           "failureDomains": [
             {
               "kind": "chain",
@@ -14297,22 +14324,33 @@
       ],
       "components": {
         "venueAndCustody": {
+          "applicability": "measured",
           "quality": "limited"
         },
         "hedgeReconciliation": {
-          "quality": "limited"
+          "applicability": "unavailable",
+          "rationale": "Report contains STRCx credit-instrument backing and unitemized Copper positions, without current spot/short reconciliation.",
+          "sourceUrl": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026"
         },
         "fundingBasisStress": {
-          "quality": "limited"
+          "applicability": "unavailable",
+          "rationale": "Current BTC basis allocation, funding stress and hedge limits are not disclosed for the reported mixed book.",
+          "sourceUrl": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026"
         },
         "marginAndLiquidation": {
-          "quality": "limited"
+          "applicability": "unavailable",
+          "rationale": "Report provides no venue margin, leverage, liquidation headroom or credit-instrument stressed realization bound.",
+          "sourceUrl": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026"
         },
         "unwindCapacity": {
-          "quality": "limited"
+          "applicability": "unavailable",
+          "rationale": "Reported custody balances are not an executable stressed-unwind depth or time bound.",
+          "sourceUrl": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026"
         },
         "lossAbsorption": {
-          "quality": "limited"
+          "applicability": "unavailable",
+          "rationale": "Reserve Fund USDC alone does not establish current ring-fenced first-loss coverage or a loss waterfall.",
+          "sourceUrl": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026"
         }
       }
     },
@@ -15909,9 +15947,9 @@
           "url": "https://github.com/Fathom-Fi/fathom-stablecoin-smart-contracts/blob/f63393d6a57c1f2364f7daa2ec1bb35e24fd55e4/contracts/main/stablecoin-core/ShowStopper.sol"
         }
       ],
-      "notes": "Measured on-chain 2026-07-27 at XDC block 105423347 (reads at 2026-07-27T16:57Z; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/fxd-fathom/2026-07-27-block-105423347.json). Collateral per pool is CollateralTokenAdapter.totalShare (1:1 token accounting per the pinned source): WXDC 8,708,677.226086548 at the delayed feed's $0.0274276, CGO 0.069533 at $130.553, and psXDC 25,407,276.93102121 priced 1:1 as XDC by the protocol, totaling $935,727.82. System debt is the per-pool totalDebtShare times debtAccumulatedRate sum of 891,664.94 FXD (WXDC 255,886.96, CGO 1.01, psXDC 635,776.98), giving a collateralizationRatio of 1.049 against debt (1.184 against the FXD totalSupply of 790,345.25). liquidationCapacityRatio is not-applicable: Fathom has no committed stability pool — fixed-spread liquidations rely on whitelisted external liquidators and the uncommitted SystemDebtEngine surplus. Per-pool MCRs of 133%/117.6%/200% (WXDC/CGO/psXDC) with close factors and incentives verified on-chain at block 104920353 and unchanged in current config reads grade collateralizationParameters adequate; fixed-spread liquidation executable only by whitelisted liquidators on 15-minute-delayed single-node price feeds with a 1-hour staleness bound grades liquidationMechanics limited; no committed pool, with SystemDebtEngine surplus 423,345.83 versus recorded bad debt 322,052.37 FXD at block 104920353 (2026-07-14, point-in-time only), grades backstop limited. Three pools share BookKeeper, SystemDebtEngine, and the FXD claim, so bad debt socializes system-wide (branchIsolation limited). The pinned ShowStopper — per-pool cage on a healthy feed, 1-13-week cooldown, pro-rata FXD collateral claims, surplus settling min(surplus, bad debt) — grades shutdownAndBadDebt adequate; no protocol-value redemption in normal operation, only post-shutdown pro-rata claims plus the StableSwapModule swap path, grades structuralRedemption limited.",
+      "notes": "Historical July 27, 2026 funded-book snapshot; original review date retained. At XDC block 107914458 on October 2, 2026, BookKeeper reports zero debt shares for CGO and WXDC, positive debt shares only for psXDC. Dormant CGO collateral does not establish current measured unsafe funded backing. The July aggregate collateralization ratio included a different funded book and is historical only; no current coherent funded-book collateralization ratio is verified, and the active psXDC 200% minimum is a parameter, not a measured aggregate solvency ratio. Original historical review: Measured on-chain 2026-07-27 at XDC block 105423347 (reads at 2026-07-27T16:57Z; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/fxd-fathom/2026-07-27-block-105423347.json). Collateral per pool is CollateralTokenAdapter.totalShare (1:1 token accounting per the pinned source): WXDC 8,708,677.226086548 at the delayed feed's $0.0274276, CGO 0.069533 at $130.553, and psXDC 25,407,276.93102121 priced 1:1 as XDC by the protocol, totaling $935,727.82. System debt is the per-pool totalDebtShare times debtAccumulatedRate sum of 891,664.94 FXD (WXDC 255,886.96, CGO 1.01, psXDC 635,776.98), giving a collateralizationRatio of 1.049 against debt (1.184 against the FXD totalSupply of 790,345.25). liquidationCapacityRatio is not-applicable: Fathom has no committed stability pool — fixed-spread liquidations rely on whitelisted external liquidators and the uncommitted SystemDebtEngine surplus. Per-pool MCRs of 133%/117.6%/200% (WXDC/CGO/psXDC) with close factors and incentives verified on-chain at block 104920353 and unchanged in current config reads grade collateralizationParameters adequate; fixed-spread liquidation executable only by whitelisted liquidators on 15-minute-delayed single-node price feeds with a 1-hour staleness bound grades liquidationMechanics limited; no committed pool, with SystemDebtEngine surplus 423,345.83 versus recorded bad debt 322,052.37 FXD at block 104920353 (2026-07-14, point-in-time only), grades backstop limited. Three pools share BookKeeper, SystemDebtEngine, and the FXD claim, so bad debt socializes system-wide (branchIsolation limited). The pinned ShowStopper — per-pool cage on a healthy feed, 1-13-week cooldown, pro-rata FXD collateral claims, surplus settling min(surplus, bad debt) — grades shutdownAndBadDebt adequate; no protocol-value redemption in normal operation, only post-shutdown pro-rata claims plus the StableSwapModule swap path, grades structuralRedemption limited.",
       "metrics": {
-        "collateralizationRatio": 1.049,
+        "collateralizationRatio": null,
         "liquidationCapacityRatio": null
       },
       "metricApplicability": {
@@ -15919,6 +15957,11 @@
           "state": "not-applicable",
           "rationale": "No committed stability pool exists; fixed-spread liquidations rely on whitelisted external liquidators and the uncommitted SystemDebtEngine surplus, so there is no measurable committed-capital pool.",
           "sourceUrl": "https://github.com/Fathom-Fi/fathom-stablecoin-smart-contracts/blob/f63393d6a57c1f2364f7daa2ec1bb35e24fd55e4/contracts/main/stablecoin-core/liquidation-strategies/FixedSpreadLiquidationStrategy.sol"
+        },
+        "collateralizationRatio": {
+          "state": "unavailable",
+          "rationale": "At XDC block 107914458 on October 2, 2026, BookKeeper reports zero debt shares for CGO and WXDC, positive debt shares only for psXDC. Dormant CGO collateral does not establish current measured unsafe funded backing. The July aggregate collateralization ratio included a different funded book and is historical only; no current coherent funded-book collateralization ratio is verified, and the active psXDC 200% minimum is a parameter, not a measured aggregate solvency ratio.",
+          "sourceUrl": "https://rpc.xinfin.network"
         }
       },
       "components": {
@@ -15940,6 +15983,9 @@
         "structuralRedemption": {
           "quality": "limited"
         }
+      },
+      "analogousMetrics": {
+        "historicalFundedBookCollateralizationRatioJuly2026": 1.049
       }
     },
     {
@@ -16091,17 +16137,19 @@
           "url": "https://hermes.pyth.network/v2/updates/price/latest"
         }
       ],
-      "notes": "Measured 2026-07-27 against the Sui mainnet fullnode pinned at checkpoint 303739938 (2026-07-27T22:52:41Z); journaled evidence: agents/safety-score-v9/data-coverage-wave8-2026-07-27/mech2-drafts/journals/2026-07-27-checkpoint-303739938.json. BUCK total supply 25,965,531.068 (TreasuryCap inside the shared BucketProtocol object 0x9e3dab...d3df; exact match to DefiLlama stablecoin 154). Bucket is in legacy wind-down: the current docs document the v2 USDB system as flagship with Tank and Recovery Mode removed and a 1:1 BUCK->USDB migration; on-chain the v2 PSM Pool<BUCK> (0x4fef507f...e321, 0% swap fees both ways) holds 2,312,140.37 surrendered BUCK, and the USDB Treasury reports 11,577,418.36 USDB across its mint modules. collateralizationRatio 0.146773 is measured on the COMBINED Bucket system because the PSM rail makes BUCK a 1:1 claim on it: (v1 CDP collateral $205,174.97 + v1 reservoir stable pools $69,775.39 + v2 CDP collateral $4,870,747.37 + v2 PSM stable pools $25,223.77) / (BUCK supply net of the migration-pool inventory + USDB supply = 35,230,809.07). v1 reservoir LP tokens (face $3,074,810.29: BUCKETUS/CETABLE Cetus stable LPs, BLUEFIN_STABLE_LP, SCABLE Scallop stable LP) are BUCK-paired and their exogenous content was not established, so they are excluded; the ratio is a measured lower bound (v1-only basis 0.010589; gross-liability basis 0.137733). liquidationCapacityRatio 0.038733 = total v1 Tank BUCK reserves 5,851.78 / v1 CDP debt 151,078.09 (0.000247 against the 23.65M floating BUCK liability). Component grades: collateralizationParameters LIMITED - per-branch MCR 105-150%, recovery thresholds 110-150%, mint ceilings and bottle tables are all documented and read on-chain across 40 buckets (issuer data corroborated by on-chain anchor), but the parameters are currently unenforceable because every oracle is frozen. liquidationMechanics WEAK - measured deficiency: all 40 v1 SingleOracles are stale beyond their 30s tolerance (latest update 2026-07-03, many months older), so v1 price-dependent liquidations fail closed while a measured 22,077.77 BUCK of branch bad debt (WAL 19,601; StakedHouse SUI 1,464; SCA 924; SCALLOP_SCA 88; STSUI 0.4) sits unprocessable. backstop WEAK - measured Tank reserves cover only 3.9% of v1 CDP debt and 26.5% of the measured branch bad debt; the docs' Insurance Fund (funded from protocol revenue) publishes no balance and was not counted. branchIsolation LIMITED - each of the 40 collateral branches has its own Bucket, Tank, SingleOracle and mint ceiling (measured), but all branches share the same threshold-1 Supra/whitelisted-rule oracle pattern, the same admin EOA and package UpgradeCap, and the common BUCK liability. shutdownAndBadDebt WEAK - measured unprocessed bad debt with a frozen liquidation engine and no documented unconditional recapitalization; the v2 migration docs offer position migration, not a residual-deficit settlement path for legacy branches. structuralRedemption WEAK - measured exit depth: v1 reservoir discharge holds ~$69.8k of stablecoins (USDC 59,526; AUSD 7,308; wUSDC 1,592; others ~1.2k), the BUCK->USDB rail is deep but yields USDB (not a USD-stable exit), and the USDB->stable PSM pools hold only USDC 19,914.77 + USDSUI 5,307.90 + USDT 0, so immediate stablecoin exit liquidity is ~$95k against a 23.65M floating BUCK liability; v1 redemption-for-collateral additionally requires the frozen oracles. NOT established: the exogenous (non-BUCK) content of the reservoir LP tokens and of the v2 LP-mint modules (cetus 1.94M, bluefin 1.80M, and smaller modules that minted USDB against LP deposits); any published Insurance Fund balance; any issuer aggregate backing dashboard or stats API (none found at app.bucketprotocol.io); and the identity/timing of any further wind-down steps for the 23.65M floating BUCK.",
+      "notes": "Measured 2026-07-27 against the Sui mainnet fullnode pinned at checkpoint 303739938 (2026-07-27T22:52:41Z); journaled evidence: agents/safety-score-v9/data-coverage-wave8-2026-07-27/mech2-drafts/journals/2026-07-27-checkpoint-303739938.json. BUCK total supply 25,965,531.068 (TreasuryCap inside the shared BucketProtocol object 0x9e3dab...d3df; exact match to DefiLlama stablecoin 154). Bucket is in legacy wind-down: the current docs document the v2 USDB system as flagship with Tank and Recovery Mode removed and a 1:1 BUCK->USDB migration; on-chain the v2 PSM Pool<BUCK> (0x4fef507f...e321, 0% swap fees both ways) holds 2,312,140.37 surrendered BUCK, and the USDB Treasury reports 11,577,418.36 USDB across its mint modules. collateralizationRatio 0.146773 is measured on the COMBINED Bucket system because the PSM rail makes BUCK a 1:1 claim on it: (v1 CDP collateral $205,174.97 + v1 reservoir stable pools $69,775.39 + v2 CDP collateral $4,870,747.37 + v2 PSM stable pools $25,223.77) / (BUCK supply net of the migration-pool inventory + USDB supply = 35,230,809.07). v1 reservoir LP tokens (face $3,074,810.29: BUCKETUS/CETABLE Cetus stable LPs, BLUEFIN_STABLE_LP, SCABLE Scallop stable LP) are BUCK-paired and their exogenous content was not established, so they are excluded; the ratio is a measured lower bound (v1-only basis 0.010589; gross-liability basis 0.137733). liquidationCapacityRatio 0.038733 = total v1 Tank BUCK reserves 5,851.78 / v1 CDP debt 151,078.09 (0.000247 against the 23.65M floating BUCK liability). Component grades: collateralizationParameters LIMITED - per-branch MCR 105-150%, recovery thresholds 110-150%, mint ceilings and bottle tables are all documented and read on-chain across 40 buckets (issuer data corroborated by on-chain anchor), but the parameters are currently unenforceable because every oracle is frozen. Historical July liquidationMechanics assertion (withdrawn as attributable measured adversity): all 40 v1 SingleOracles are stale beyond their 30s tolerance (latest update 2026-07-03, many months older), so v1 price-dependent liquidations fail closed while a measured 22,077.77 BUCK of branch bad debt (WAL 19,601; StakedHouse SUI 1,464; SCA 924; SCALLOP_SCA 88; STSUI 0.4) sits unprocessable. backstop WEAK - measured Tank reserves cover only 3.9% of v1 CDP debt and 26.5% of the measured branch bad debt; the docs' Insurance Fund (funded from protocol revenue) publishes no balance and was not counted. branchIsolation LIMITED - each of the 40 collateral branches has its own Bucket, Tank, SingleOracle and mint ceiling (measured), but all branches share the same threshold-1 Supra/whitelisted-rule oracle pattern, the same admin EOA and package UpgradeCap, and the common BUCK liability. shutdownAndBadDebt WEAK - measured unprocessed bad debt with a frozen liquidation engine and no documented unconditional recapitalization; the v2 migration docs offer position migration, not a residual-deficit settlement path for legacy branches. structuralRedemption WEAK - measured exit depth: v1 reservoir discharge holds ~$69.8k of stablecoins (USDC 59,526; AUSD 7,308; wUSDC 1,592; others ~1.2k), the BUCK->USDB rail is deep but yields USDB (not a USD-stable exit), and the USDB->stable PSM pools hold only USDC 19,914.77 + USDSUI 5,307.90 + USDT 0, so immediate stablecoin exit liquidity is ~$95k against a 23.65M floating BUCK liability; v1 redemption-for-collateral additionally requires the frozen oracles. NOT established: the exogenous (non-BUCK) content of the reservoir LP tokens and of the v2 LP-mint modules (cetus 1.94M, bluefin 1.80M, and smaller modules that minted USDB against LP deposits); any published Insurance Fund balance; any issuer aggregate backing dashboard or stats API (none found at app.bucketprotocol.io); and the identity/timing of any further wind-down steps for the 23.65M floating BUCK. Owner ruling 12: The extra liquidation-semantics adverse claim lacks authenticated deployed V1 implementation evidence; stored oracle age, interface signatures and Tank balances alone do not prove executable fee/bad-debt semantics or the asserted liquidation capacity. Keep independently verified control and MCR facts; unknown liquidation effectiveness remains bounded rather than measured-adverse. The July Tank coverage number is retained only as analogous history; review dates and all independently verified controls/MCR facts remain unchanged.",
       "metrics": {
         "collateralizationRatio": 0.146773,
-        "liquidationCapacityRatio": 0.038733
+        "liquidationCapacityRatio": null
       },
       "components": {
         "collateralizationParameters": {
           "quality": "limited"
         },
         "liquidationMechanics": {
-          "quality": "weak"
+          "applicability": "unavailable",
+          "rationale": "The extra liquidation-semantics adverse claim lacks authenticated deployed V1 implementation evidence; stored oracle age, interface signatures and Tank balances alone do not prove executable fee/bad-debt semantics or the asserted liquidation capacity. Keep independently verified control and MCR facts; unknown liquidation effectiveness remains bounded rather than measured-adverse.",
+          "sourceUrl": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
         },
         "backstop": {
           "quality": "weak"
@@ -16114,6 +16162,16 @@
         },
         "structuralRedemption": {
           "quality": "weak"
+        }
+      },
+      "analogousMetrics": {
+        "historicalTankCoverageRatioJuly2026": 0.038733
+      },
+      "metricApplicability": {
+        "liquidationCapacityRatio": {
+          "state": "unavailable",
+          "rationale": "The extra liquidation-semantics adverse claim lacks authenticated deployed V1 implementation evidence; stored oracle age, interface signatures and Tank balances alone do not prove executable fee/bad-debt semantics or the asserted liquidation capacity. Keep independently verified control and MCR facts; unknown liquidation effectiveness remains bounded rather than measured-adverse.",
+          "sourceUrl": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
         }
       }
     },

@@ -389,12 +389,6 @@ export function expandOverlayReview(
     for (const metricKey of metricKeys) {
       const value = metrics[metricKey];
       const applicability = overlay.metricApplicability?.[metricKey] ?? { state: "measured" as const };
-      if (applicability.state === "unavailable" && overlay.archetype === "cdp") {
-        // CDP collateralization banding needs a numeric ratio, so an
-        // unavailable CDP metric has no defined severity; use not-applicable
-        // for structural absence or leave the overlay out.
-        throw new Error(`Overlay ${overlay.assetId} marks ${metricKey} unavailable; CDP admits only measured or not-applicable metrics`);
-      }
       if (applicability.state === "measured" && value == null) {
         throw new Error(`Overlay ${overlay.assetId} has measured ${metricKey} without a numeric value`);
       }

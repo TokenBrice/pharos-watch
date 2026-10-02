@@ -124,23 +124,28 @@ export interface V9CompactControlReason {
   controlKey: string | null;
 }
 
-export interface V9ControlStructuralFailure {
-  kind: Extract<
-    V9StructuralSignalKind,
-    | "centralized-mint"
-    | "unreviewed-upgrade"
-    | "material-bridge"
-    | "peripheral-bridge"
-    | "weak-oracle-branch"
-    | "active-control-incident"
-  >;
-  severity: V9Severity;
+interface V9ControlStructuralFailureDetails {
   binding: boolean;
   reason: string;
   materialSharePct: number | null;
   controlKeys: readonly string[];
   failureDomains: readonly V9FailureDomainRef[];
 }
+
+export type V9ControlStructuralFailure = V9ControlStructuralFailureDetails & ({
+  kind: "weak-oracle-branch";
+  severity: Exclude<V9Severity, "critical">;
+} | {
+  kind: Extract<
+    V9StructuralSignalKind,
+    | "centralized-mint"
+    | "unreviewed-upgrade"
+    | "material-bridge"
+    | "peripheral-bridge"
+    | "active-control-incident"
+  >;
+  severity: V9Severity;
+});
 
 export interface V9EconomicControlResult {
   score: number | null;

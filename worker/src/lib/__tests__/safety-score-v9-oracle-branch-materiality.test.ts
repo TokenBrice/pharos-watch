@@ -56,6 +56,19 @@ describe("deriveOracleBranchMateriality", () => {
     });
   });
 
+  it("retains a verified material weak branch alongside MAI-shaped opacity independently of inventory order", () => {
+    const branches = [
+      branch("opaque", "opaque-or-unknown", 71.72),
+      branch("verified-weak", "single-source-or-laggy", 14.57),
+      branch("standard", "standard-external", 13.71),
+    ];
+    for (const ordered of [branches, [...branches].reverse(), [branches[1]!, branches[0]!, branches[2]!]]) {
+      expect(deriveOracleBranchMateriality(ordered, "opaque-or-unknown")).toEqual({
+        tier: "single-source-or-laggy",
+      });
+    }
+  });
+
   it("treats a 9.33% weak branch as sub-material (just below the 10% floor) -> moderate", () => {
     const branches = [
       branch("safe", "standard-external", 80),
@@ -84,6 +97,13 @@ describe("deriveOracleBranchMateriality", () => {
     ], "privileged-internal-pricing")).toEqual({
       tier: share === 9.99 ? "standard-external" : "privileged-internal-pricing",
     });
+  });
+
+  it.each([4.99, 9.99])("does not turn opaque sub-material topology at share %s into a measured weak branch", (share) => {
+    expect(deriveOracleBranchMateriality([
+      branch("safe", "standard-external", 90),
+      branch("unknown", "opaque-or-unknown", share),
+    ], "opaque-or-unknown")).toEqual({ tier: "standard-external" });
   });
 
   it("bands a sub-material weak branch below 5% as a low diagnostic only", () => {

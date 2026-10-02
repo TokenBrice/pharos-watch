@@ -39,7 +39,7 @@ describe("owner Control rules", () => {
     expect(scored.bindingCap).toBeNull();
   });
 
-  it.each(["single-source-or-laggy", "opaque-or-unknown"] as const)(
+  it.each(["single-source-or-laggy"] as const)(
     "retains local and common-mode ceilings for %s", (tier) => {
       const result = evaluateV9EconomicControl(args({ oracle: {
         status: requiredKnown("oracle"), tier, liquidationBranchesApplicable: false, branches: [],
@@ -56,7 +56,7 @@ describe("owner Control rules", () => {
         expect.objectContaining({ kind: "signal:common-mode-oracle", limit: policy.policy.semantic.structural.commonModeOracleLimit }),
       );
       expect(resolveV9StructuralCaps(signals, policy)).toContainEqual(
-        expect.objectContaining({ kind: `signal:weak-oracle-branch:${tier === "opaque-or-unknown" ? "critical" : "high"}` }),
+        expect.objectContaining({ kind: "signal:weak-oracle-branch:high", limit: 59 }),
       );
     },
   );

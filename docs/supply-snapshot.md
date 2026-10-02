@@ -202,6 +202,8 @@ Do not assume `18` decimals, or even one fixed decimal count per token across al
 
 Economic accounting rejects duplicate exclusion balances and exclusion/escrow overlap. All joined EVM chain-state quantities on a chain require one block-number/hash/time tuple; reviewed state and identity reads, including no-Multicall3 fallback, require EIP-1898 `requireCanonical` hash pins without numbered-state fallback. Eligible provider aliases sum canonically before reconciliation; negative/nonfinite amounts reject. Plan evidence admits per asset behind attributable quarantine; registry envelopes stay globally strict. Solana economic mint chronology requires a produced block at the exact account context slot, never an earlier timestamp proxy. Economic capture/publication-base handoff remains owner-deferred and must be resolved before activating plans.
 
+Economic plans and provider-row exclusion evidence/key collisions admit per asset with exact-field quarantine paths: malformed attributable evidence cannot abort module import. Native single-route tables consume the admitted registry envelope without revalidating unrelated economic plans. Healthy assets and valid registry digests are preserved.
+
 ---
 
 ## API Endpoints

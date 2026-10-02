@@ -159,7 +159,7 @@
     "jupusd-jupiter": "core-stablecoin",
     "usdm-mega": "cash-equivalent",
     "usdsc-startale": "stablecoin-variant",
-    "ctusd-citrea": "core-stablecoin",
+    "ctusd-citrea": "stablecoin-variant",
     "wm-m0": "stablecoin-variant",
     "usdnr-nerona": "stablecoin-variant",
     "usdat-saturn": "core-stablecoin",

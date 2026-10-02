@@ -64,6 +64,7 @@ export const V9_BOUNDED_ATTRIBUTION_REASON_CODES = [
   "unproven-settlement-bound",
   "missing-upgrade-control",
   "missing-upgradeability-review",
+  "oracle-topology-undisclosed",
   "partial-reserve-review",
   "stale-audited-reserve-composition",
   "peg-price-unavailable-adverse-history",

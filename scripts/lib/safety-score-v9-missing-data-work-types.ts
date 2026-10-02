@@ -403,7 +403,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     completionCriteria: "The oracle economic-control review compiles as known or reviewed not-applicable and the profile gapId is absent.", recommendedSkill: null, likelyRepoAreas: ["shared/data/stablecoins/domains/risk-review/", "shared/data/stablecoins/coins/"], cautions: ["Use the live stabilization path, not only the token contract, to determine oracle applicability."],
     ownerDomain: "control",
     defaultResolutionMode: "agent-curation",
-    ...workReasons({ ORCL: ["missing-oracle-profile", "unreviewed-oracle-profile"] }),
+    ...workReasons({ ORCL: ["missing-oracle-profile", "oracle-topology-undisclosed", "unreviewed-oracle-profile"] }),
     context: (asset) => asset.economicControlReview.oracle,
     touchpoints: (source) => unique([risk(source)]),
   },

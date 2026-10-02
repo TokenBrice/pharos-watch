@@ -20,7 +20,10 @@ import { scoreV9EvaluatedAsset } from "@shared/lib/safety-score-v9/score";
 import { rebuildFixed } from "./safety-score-v9-fact-set.test-support";
 import {
   compileSafetyScoreV9FactSetFromFixedInput,
+  compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension,
+  materializeSafetyScoreV9FactSetExtension,
 } from "../safety-score-v9/fact-set";
+import { normalizeSafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
 import {
   buildSafetyScoreV9RetainedRedemptionRoutes,
   buildSafetyScoreV9RouteReviews,
@@ -35,6 +38,55 @@ import {
 } from "../../test-helpers/v9-fixed-input";
 
 describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage", { timeout: V9_EVALUATION_TEST_TIMEOUT_MS }, () => {
+  it.each([201, 4900])("re-admits a reviewed %s bps cost as zero within the request budget without quarantine", (costBps) => {
+    const fixed = queuedRedemptionFixedInput();
+    const reviewed = structuredClone(extension());
+    reviewed.registryFingerprint = fixed.registryFingerprint;
+    reviewed.assets[0]!.routeReviews = buildSafetyScoreV9RouteReviews(fixed, "alpha");
+    const redemptionReview = reviewed.assets[0]!.routeReviews.find((route) => route.lane === "redemption")!;
+    redemptionReview.executionCosts = redemptionReview.executionCosts.map((point) => ({
+      ...point, executionCostBps: costBps,
+    }));
+    const normalized = normalizeSafetyScoreV9CompilerInput(fixed);
+    const admitted = materializeSafetyScoreV9FactSetExtension(normalized, reviewed);
+    const compiled = compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(normalized, admitted);
+    expect(compiled.quarantines).toEqual([]);
+    const route = compiled.factSet.assets[0]!.exitRoutes.find((entry) => entry.lane === "redemption")!;
+    expect(route.capacityCurve).toEqual([
+      { requestedNotionalUsd: 100_000, maxCostBps: 200, executableUsd: 0, completionRatio: 0, executionCostBps: costBps },
+      { requestedNotionalUsd: 1_000_000, maxCostBps: 200, executableUsd: 0, completionRatio: 0, executionCostBps: costBps },
+    ]);
+    expect(fixed.redemptionBackstopMap.alpha!.capacityProfile!.exitRouteObservations![0]!.executableUsd).toBe(1_000_000);
+  });
+
+  it.each([199, 200])("preserves executable capacity for a reviewed %s bps cost within the request budget", (costBps) => {
+    const fixed = queuedRedemptionFixedInput();
+    const reviewed = structuredClone(extension());
+    reviewed.registryFingerprint = fixed.registryFingerprint;
+    reviewed.assets[0]!.routeReviews = buildSafetyScoreV9RouteReviews(fixed, "alpha");
+    const redemptionReview = reviewed.assets[0]!.routeReviews.find((route) => route.lane === "redemption")!;
+    redemptionReview.executionCosts = redemptionReview.executionCosts.map((point) => ({
+      ...point, executionCostBps: costBps,
+    }));
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewed);
+    expect(compiled.assets[0]!.exitRoutes.find((entry) => entry.lane === "redemption")!.capacityCurve).toEqual([
+      { requestedNotionalUsd: 100_000, maxCostBps: 200, executableUsd: 100_000, completionRatio: 1, executionCostBps: costBps },
+      { requestedNotionalUsd: 1_000_000, maxCostBps: 200, executableUsd: 1_000_000, completionRatio: 1, executionCostBps: costBps },
+    ]);
+  });
+
+  it("retains the production curve when no reviewed cost overrides its realized costs", () => {
+    const draft = structuredClone(queuedRedemptionFixedInput());
+    const observation = draft.redemptionBackstopMap.alpha!.capacityProfile!.exitRouteObservations![0]!;
+    observation.capacityCurve = observation.capacityCurve!.map((point) => ({ ...point, executionCostBps: 7 }));
+    const fixed = rebuildFixed(draft);
+    const reviewed = structuredClone(extension());
+    reviewed.registryFingerprint = fixed.registryFingerprint;
+    reviewed.assets[0]!.routeReviews = buildSafetyScoreV9RouteReviews(fixed, "alpha");
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewed);
+    expect(compiled.assets[0]!.exitRoutes.find((entry) => entry.lane === "redemption")!.capacityCurve).toEqual(observation.capacityCurve);
+  });
+
   it.each([false, true])("bounds unavailable live-only redemption with an observed DEX route (empty DEX: %s)", (emptyDex) => {
     const fixed = structuredClone(queuedRedemptionFixedInput());
     const redemption = fixed.redemptionBackstopMap.alpha!;

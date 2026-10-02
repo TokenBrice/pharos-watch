@@ -189,6 +189,10 @@ Malformed captured observation envelopes retain a typed `reserveObservationFailu
 
 `ReserveSlice.boundedFacts` optionally carries independently scoped contractual maxima, dated observed maturity, enforceable eligibility, current native-asset availability, applicability, or stressed realization facts. Producer observations must match metadata/provenance `boundedFactsGeneration` (`sourceGenerationId`, `observedAtSec`, `maxAgeSec`); consumers retain independent status and the stricter fact/run freshness budget. Origin attaches same-block idle USDC / total vault USDC to its existing source key; redemption capacity remains idle-only. Its separately exported API observer checks the cache timestamp before/after itemized retrieval and returns `diagnostic-unreconciled`; cross-chain strategy liquidity grants no vault credit without scope/denominator reconciliation. See [bounded reserve maturity and liquidity facts](./process/mechanism-overlay-evidence-standard.md#bounded-reserve-maturity-and-liquidity-facts).
 
+A live quantity is an unclassified residual only with an explicit producer marker and a unique exact-source-key review confirming insufficient evidence. Unmarked classification-only slices retain their exposure treatment. Marked unknown quantities keep original weights, receive the policy residual charge once and stay bounded even when the whole book is unknown.
+
+DOLA separates attributable Frontier bad debt from unknown non-FiRM issuance using same-denominator live attribution. USDh's September 30 scoped custody report and STRCx credit exposure replace unsupported March synthetic metrics; cNGN's December 2025 allocation remains historical evidence, never a refreshed composition.
+
 Common metadata fields:
 
 | Field                                                                                                                        | Meaning                                                                                                                                     |

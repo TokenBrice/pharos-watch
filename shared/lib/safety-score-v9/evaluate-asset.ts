@@ -225,7 +225,15 @@ function structuralSignalFromBacking(reason: V9BackingResult["structuralReasons"
   return {
     kind: reason.kind,
     severity: reason.severity,
-    reason: `${reason.kind} condition at ${reason.pathKey}.`,
+    reason: reason.kind !== "speculative-credit"
+      ? `${reason.kind} condition at ${reason.pathKey}.`
+      : reason.pathKey === "mechanism:maturity-and-liquidity"
+        ? reason.metricApplicability === "unavailable"
+          ? "The issuer has not disclosed the maturity of its holdings."
+          : "Long-dated or illiquid holdings create a maturity/liquidity mismatch."
+        : reason.pathKey === "mechanism:credit-quality"
+          ? "The reviewed credit-quality condition is weak."
+          : "Material private-credit holdings create credit exposure.",
     responsibility: reason.responsibility,
     ...(reason.materialShare === null ? {} : { materialSharePct: clampShare(reason.materialShare) * 100 }),
     economicLossScope: "reserve-claim",

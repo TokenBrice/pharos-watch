@@ -683,6 +683,32 @@ describe("Safety Score v9 archetype backing adapters", () => {
     ).toThrow();
   });
 
+  it.each(["collateralizationRatio", "liquidationCapacityRatio"] as const)(
+    "rejects malformed CDP unavailable applicability for %s",
+    (metric) => {
+      const unavailable = {
+        state: "unavailable", rationale: "Current aggregate metric is unverified.",
+        evidenceRefIds: [`evidence:${metric}`],
+      };
+      const review = {
+        ...reviews.cdp,
+        [metric]: null,
+        metricApplicability: { ...reviews.cdp.metricApplicability, [metric]: unavailable },
+      };
+      expect(V9MechanismRiskReviewSchema.safeParse(review).success).toBe(true);
+      for (const malformed of [
+        { ...review, [metric]: 0 },
+        { ...review, [metric]: undefined },
+        { ...review, metricApplicability: { ...review.metricApplicability, [metric]: { ...unavailable, rationale: " " } } },
+        { ...review, metricApplicability: { ...review.metricApplicability, [metric]: { ...unavailable, evidenceRefIds: [] } } },
+        { ...review, metricApplicability: { ...review.metricApplicability, [metric]: { ...unavailable, evidenceRefIds: [" "] } } },
+        { ...review, metricApplicability: { ...review.metricApplicability, [metric]: { state: "measured" } } },
+      ]) {
+        expect(V9MechanismRiskReviewSchema.safeParse(malformed).success).toBe(false);
+      }
+    },
+  );
+
   it("fires structural signals for unavailable sdn/rwa metrics and skips evidenced N/A ones", () => {
     const sdnBase = reviews["synthetic-delta-neutral"];
     const rwaBase = reviews["rwa-credit-fund"];

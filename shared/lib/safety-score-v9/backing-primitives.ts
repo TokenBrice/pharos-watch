@@ -17,7 +17,7 @@ import type {
 } from "../../types/safety-score-v9";
 import type { MechanismArchetype } from "../../types/stablecoin-taxonomy";
 export type { V9MechanismFactV1 } from "../../types/safety-score-v9-backing";
-import type { V9MechanismFactV1 } from "../../types/safety-score-v9-backing";
+import type { V9MechanismFactV1, V9MechanismMetricApplicability } from "../../types/safety-score-v9-backing";
 import { assertV9ValidatedPolicyEnvelope } from "./policy";
 import { projectGapReasons, type V9GapIndex } from "./gap-index";
 
@@ -116,6 +116,7 @@ export interface V9BackingStructuralReason {
   readonly severity: V9Severity;
   readonly responsibility: V9EvidenceResponsibility;
   readonly pathKey: string;
+  readonly metricApplicability?: V9MechanismMetricApplicability["state"];
   readonly materialShare: number | null;
   readonly ceiling: number;
   readonly evidenceRefIds: readonly string[];

@@ -23,11 +23,11 @@
  *   4. the published aggregate supply is a finite positive USD number.
  * When any gate fails, behavior is exactly the pre-existing null-share posture.
  */
-import supplyAttributionReviews from "@shared/data/safety-score-v9/supply-attribution-reviews-v1.json";
-import { ReviewedEconomicSupplyPlanFileSchema, type CuratedNativeSingleRouteSupplyAttribution } from "@shared/types/safety-score-v9-supply-attribution";
+import type { CuratedNativeSingleRouteSupplyAttribution } from "@shared/types/safety-score-v9-supply-attribution";
+import { REVIEWED_SUPPLY_ATTRIBUTION_ENVELOPE } from "./supply-attribution-contract";
 
 export const CURATED_NATIVE_SINGLE_ROUTE_SUPPLY_ATTRIBUTION: Readonly<Record<string, CuratedNativeSingleRouteSupplyAttribution>> = Object.freeze(
-  Object.fromEntries(ReviewedEconomicSupplyPlanFileSchema.parse(supplyAttributionReviews).nativeSingleRouteReviews.map(review => [
+  Object.fromEntries(REVIEWED_SUPPLY_ATTRIBUTION_ENVELOPE.nativeSingleRouteReviews.map(review => [
     review.assetId, Object.freeze(review),
   ])),
 );

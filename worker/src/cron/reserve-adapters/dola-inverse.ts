@@ -3,10 +3,12 @@ import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../lib/sta
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
+import { DASHBOARD_SOURCE_MAX_AGE_SEC } from "@shared/types/live-reserve-adapter-policy";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   decimalNumberFromBigInt,
   fetchJsonAdapterInput,
+  fetchJsonWithRetry,
   makeOnchainCallers,
   parseTimestampLikeToUnixSeconds,
   requireJsonInputFromConfig,
@@ -109,7 +111,11 @@ function lpSymbol(market: FirmMarket): string | null {
   return symbol.replace(/^yv-/, "").replace(/ (?:clp|lp)$/, "");
 }
 
-export function adaptFirmMarkets(payload: FirmMarketsResponse, supplyUsd?: number): AdapterResult {
+export function adaptFirmMarkets(
+  payload: FirmMarketsResponse,
+  supplyUsd?: number,
+  frontierBadDebtBalance?: number | null,
+): AdapterResult {
   const sourceTimestamp = parseTimestampLikeToUnixSeconds(payload.timestamp);
   const {
     bucketTotals,
@@ -142,9 +148,27 @@ export function adaptFirmMarkets(payload: FirmMarketsResponse, supplyUsd?: numbe
   }
   const trackedStableTotal = Array.from(trackedStableValues.values()).reduce((sum, value) => sum + value, 0);
   const unattributedUsd = supplyUsd != null ? Math.max(0, supplyUsd - totalDebt) : 0;
+  const frontierBadDebtUsd = frontierBadDebtBalance != null && Number.isFinite(frontierBadDebtBalance)
+    && frontierBadDebtBalance >= 0 && supplyUsd != null && frontierBadDebtBalance <= unattributedUsd
+    ? frontierBadDebtBalance : null;
+  const unclassifiedResidualUsd = unattributedUsd - (frontierBadDebtUsd ?? 0);
 
   const slices = slicesFromValues([
-    { sourceKey: "dola-inverse:unattributed", name: "Unattributed non-FiRM issuance", value: unattributedUsd, risk: "high" },
+    {
+      sourceKey: "dola-inverse:unattributed",
+      name: "Unclassified non-FiRM issuance residual",
+      value: unclassifiedResidualUsd,
+      risk: "high",
+      assetClass: "other",
+    },
+    {
+      sourceKey: "dola-inverse:frontier-bad-debt",
+      name: "Verified Frontier bad debt",
+      value: frontierBadDebtUsd ?? 0,
+      risk: "very-high",
+      assetClass: "private-credit",
+      issuerOrObligor: "Inverse Finance deprecated Frontier lending protocol bad debt",
+    },
     ...Array.from(lpValues, ([symbol, value]) => ({
       sourceKey: `dola-inverse:lp:${sourceKeySlug(symbol)}`,
       name: `${symbol} LP-secured debt (undecomposed)`,
@@ -193,6 +217,11 @@ export function adaptFirmMarkets(payload: FirmMarketsResponse, supplyUsd?: numbe
       risk: "high",
     },
   ]);
+  const residual = slices.find(row => row.sourceKey === "dola-inverse:unattributed");
+  if (residual) {
+    residual.unclassifiedResidual = true;
+    residual.residualReason = "insufficient-evidence";
+  }
 
   const activeMarkets = payload.markets.filter((m) => m.totalDebt > 0).length;
 
@@ -212,8 +241,11 @@ export function adaptFirmMarkets(payload: FirmMarketsResponse, supplyUsd?: numbe
           )),
       totalReserveUsd: totalDebt,
       ...(supplyUsd != null ? { supplyUsd } : {}),
+      frontierBadDebtUsd,
+      unclassifiedResidualUsd: supplyUsd == null ? null : unclassifiedResidualUsd,
+      unclassifiedResidualDisposition: "insufficient-evidence",
       unknownExposurePct: supplyUsd != null
-        ? (unknownDebt + unattributedUsd) / Math.max(totalDebt, supplyUsd) * 100
+        ? (unknownDebt + unclassifiedResidualUsd) / Math.max(totalDebt, supplyUsd) * 100
         : 100,
     },
   };
@@ -325,6 +357,28 @@ async function probeInversePsmSellFeeBps(signal: AbortSignal, ctx?: AdapterConte
   }
 }
 
+
+const FRONTIER_REPAYMENTS_URL = "https://www.inverse.finance/api/transparency/repayments-v2?v=3";
+
+interface FrontierRepaymentsResponse {
+  timestamp?: number | string;
+  lastBlock?: number;
+  badDebts?: { DOLA?: { frontierBadDebtBalance?: number } };
+}
+
+async function readFrontierBadDebt(
+  signal: AbortSignal,
+  ctx?: AdapterContext,
+): Promise<FrontierRepaymentsResponse | null> {
+  try {
+    return await fetchJsonWithRetry<FrontierRepaymentsResponse>(
+      FRONTIER_REPAYMENTS_URL, signal, 12_000, ctx, { maxRetries: 0 },
+    );
+  } catch (error) {
+    rethrowIfAborted(error, signal);
+    return null;
+  }
+}
 export async function fetchDolaInverseReserves(
   coin: StablecoinMeta,
   config: LiveReservesConfig,
@@ -337,6 +391,16 @@ export async function fetchDolaInverseReserves(
     probeInversePsm(signal, ctx),
     probeInversePsmSellFeeBps(signal, ctx),
   ]);
+  // Finish consuming FiRM and RPC response bodies before adding another request
+  // to the trigger-wide connection budget.
+  const repayments = await readFrontierBadDebt(signal, ctx);
+  const repaymentTimestamp = parseTimestampLikeToUnixSeconds(repayments?.timestamp);
+  const nowSec = ctx?.nowSec ?? Math.floor(Date.now() / 1000);
+  const maxRepaymentAgeSec = config.scoring?.maxSourceAgeSec
+    ?? DASHBOARD_SOURCE_MAX_AGE_SEC;
+  const frontierBadDebtBalance = repaymentTimestamp != null && repaymentTimestamp <= nowSec
+    && nowSec - repaymentTimestamp <= maxRepaymentAgeSec && Number.isSafeInteger(repayments?.lastBlock)
+    && repayments!.lastBlock! > 0 ? repayments?.badDebts?.DOLA?.frontierBadDebtBalance : null;
   const cached = ctx?.db ? await loadStablecoinsCache(ctx.db, { mode: "lenient", contract: "critical-fields" }) : null;
   const supplyCoin = cached && hasUsableStablecoinsPayload(cached)
     && cached.updatedAt != null && (ctx?.nowSec ?? Math.floor(Date.now() / 1000)) - cached.updatedAt <= 7200
@@ -344,13 +408,19 @@ export async function fetchDolaInverseReserves(
     : undefined;
   const circulatingUsd = supplyCoin ? getCirculatingRaw(supplyCoin) : 0;
   const supplyUsd = Number.isFinite(circulatingUsd) && circulatingUsd > 0 ? circulatingUsd : undefined;
-  const adapted = adaptFirmMarkets(payload, supplyUsd);
+  const adapted = adaptFirmMarkets(payload, supplyUsd, frontierBadDebtBalance);
   const warnings: LiveReserveWarning[] = listUnexpectedDolaAssets(payload).map((asset) => reserveDegradedWarning(
     "unknown-asset",
     `DOLA FiRM asset bucketed into other: ${asset}`,
   ));
   if (supplyUsd == null) {
     warnings.push(reserveDegradedWarning("dola-supply-unavailable", "Fresh circulating supply unavailable; non-FiRM exposure cannot be measured"));
+  }
+  if (supplyUsd != null && adapted.metadata?.frontierBadDebtUsd == null) {
+    warnings.push(reserveInfoWarning(
+      "dola-frontier-bad-debt-unavailable",
+      "Frontier repayments did not yield a fresh finite balance within non-FiRM issuance; the whole residual remains insufficient-evidence",
+    ));
   }
   if (psm == null) {
     warnings.push(
@@ -366,6 +436,9 @@ export async function fetchDolaInverseReserves(
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       ...adapted.metadata,
+      ...(adapted.metadata?.frontierBadDebtUsd != null
+        ? { frontierBadDebtTimestamp: repaymentTimestamp, frontierBadDebtBlock: repayments?.lastBlock }
+        : {}),
       ...(psm != null
         ? {
             psmSupplyRaw: psm.supplyRaw,
