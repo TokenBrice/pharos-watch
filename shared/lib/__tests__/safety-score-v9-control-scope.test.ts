@@ -80,7 +80,63 @@ describe("V10 exact authority scope", () => {
     const relevant = compile(scope);
     expect(applyMergedMintSignals(70, { ...control, moduleImpact: relevant.moduleImpact }, undefined, policy)).toBeLessThan(70);
     scope.extensions!.exhaustive = false;
+    expect(compile(scope).moduleImpact).toBe("relevant");
+  });
+
+  it("recognizes proven module reach before partial inventory and mutable-closure guards", () => {
+    const scope = reviewedScope({ inventory: "partial", confidence: "partial" });
+    scope.closure.mutableTargets = false;
+    scope.extensions = {
+      exhaustive: false, paginationEnd: null, sourceRuntimeCorrespondence: false,
+      entries: [
+        { deployment: "ethereum:0x2222222222222222222222222222222222222222", runtimeIdentity: "unsearched-module-runtime", kind: "module", pathRefs: [], mutableReachClosed: false },
+        { deployment: "ethereum:0x3333333333333333333333333333333333333333", runtimeIdentity: "proven-module-runtime", kind: "module", pathRefs: ["issuance"], mutableReachClosed: false },
+      ],
+    };
+    const proof = compile(scope);
+    expect(proof.complete).toBe(false);
+    expect(proof.moduleImpact).toBe("relevant");
+    const control = makeDeploymentControl("mint", "mint", { executionScope: scope, executionScopeComplete: proof.complete, moduleImpact: proof.moduleImpact, modulesOrGuards: "present" });
+    expect(applyMergedMintSignals(70, control, undefined, policy)).toBeLessThan(applyMergedMintSignals(70, { ...control, modulesOrGuards: "unknown" }, undefined, policy));
+    expect(applyMergedMintSignals(70, control, undefined, policy)).toBe(applyMergedMintSignals(70, { ...control, moduleImpact: "unresolved" }, undefined, policy));
+    expect(compile(scope, SCOPE_CONTROLLER, Date.parse("2026-11-01") / 1000).moduleImpact).toBe("unresolved");
+    expect(compile(scope, SCOPE_CONTROLLER, Date.parse("2026-09-30") / 1000).moduleImpact).toBe("unresolved");
+    expect(compile(scope, SCOPE_CONTROLLER.replace("ethereum", "arbitrum")).moduleImpact).toBe("unresolved");
+    for (const changed of [{ runtimeIdentity: "runtime-b" }, { signerIdentity: "signers-b" }]) {
+      expect(compile({ ...scope, observedState: { ...scope.observedState, ...changed } }).moduleImpact).toBe("unresolved");
+    }
+  });
+
+  it("keeps partial inventories without positively proven module reach unresolved and score-neutral", () => {
+    const scope = reviewedScope({ inventory: "partial", confidence: "partial" });
+    scope.extensions!.entries = [{ deployment: "ethereum:0x2222222222222222222222222222222222222222", runtimeIdentity: "module-runtime", kind: "module", pathRefs: ["issuance"], mutableReachClosed: false }];
+    const path = scope.paths[0]!;
+    for (const reach of ["unknown", "other-liability"] as const) {
+      path.reach = reach; path.affectedLiabilityIds = ["beta"];
+      const proof = compile(scope);
+      expect(proof.moduleImpact).toBe("unresolved");
+      const legacy = makeDeploymentControl("mint", "mint", { modulesOrGuards: "unknown" });
+      expect(applyMergedMintSignals(70, { ...legacy, executionScope: scope, executionScopeComplete: proof.complete, moduleImpact: proof.moduleImpact }, undefined, policy)).toBe(applyMergedMintSignals(70, legacy, undefined, policy));
+    }
+    path.reach = "root"; path.activation = "unknown";
     expect(compile(scope).moduleImpact).toBe("unresolved");
+    path.activation = "disabled-final";
+    expect(compile(scope).moduleImpact).toBe("unresolved");
+    path.activation = "active"; scope.confidence = "unknown";
+    expect(compile(scope).moduleImpact).toBe("unresolved");
+    scope.extensions!.entries = [];
+    expect(compile(scope).moduleImpact).toBe("unresolved");
+  });
+
+  it("does not mistake unknown transitive reach for positive module proof", () => {
+    const scope = reviewedScope({ inventory: "partial", confidence: "partial" });
+    const other = { ...scope.paths[0]!, id: "other-product", reach: "other-liability" as const, affectedLiabilityIds: ["beta"], upgradeRefs: ["issuance"] };
+    scope.paths.push(other);
+    scope.extensions!.entries = [{ deployment: "ethereum:0x2222222222222222222222222222222222222222", runtimeIdentity: "module-runtime", kind: "module", pathRefs: [other.id], mutableReachClosed: false }];
+    scope.paths[0]!.reach = "unknown";
+    expect(compile(scope).moduleImpact).toBe("unresolved");
+    scope.paths[0]!.reach = "root";
+    expect(compile(scope).moduleImpact).toBe("relevant");
   });
 
   it("does not let a friendly reviewed mint authority erase another unreviewed authority on the deployment", () => {

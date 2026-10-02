@@ -72,13 +72,25 @@
       {
         "label": "Ethereum mainnet RPC used for fixed-block reads",
         "url": "https://ethereum.publicnode.com"
+      },
+      {
+        "label": "Verified pool implementation and LP-share redemption accounting",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5a5fff6f753d7c11a56a52fe47a177a87e431655"
+      },
+      {
+        "label": "Chainlink Ethereum mainnet directory identifying DAI/USDC/USDT USD feeds",
+        "url": "https://reference-data-directory.vercel.app/feeds-mainnet.json"
+      },
+      {
+        "label": "Synapse intermediate-token registry (explicitly potentially incomplete)",
+        "url": "https://docs.synapseprotocol.com/docs/Contracts/Intermediate-Tokens"
       }
     ],
     "rationale": "At Ethereum block 25,796,911 (2026-08-20T14:24:59Z), the official Synapse NexusPool getToken/getTokenBalance reads returned 503,142.624149574142632353 DAI, 486,329.990751 USDC, and 1,294,754.683135 USDT; getToken(3) reverted Out of range, confirming the pool has exactly these three assets. Normalizing those same-notional balances produces 22.026820/21.290788/56.682392%.",
     "compositionBasis": "Fixed-block getToken and getTokenBalance reads from the official Ethereum Synapse NexusPool",
     "compositionAsOf": "2026-08-20",
     "scope": "selected-slices",
-    "knownUnknownExposure": "The three Ethereum pool token identities are known, but their nominal balance normalization is a historical pool-only observation, not a priced whole-token NAV or reconciliation of all NUSD claims. D24 therefore withholds full-composition admission; no current weights or composition date are inferred from the selected balances.",
+    "knownUnknownExposure": "The historical nominal pool-balance normalization is not a priced whole-token NAV or reconciliation of all NUSD claims. Fresh research on 2026-10-02 at Ethereum block 26101011 priced the three getTokenBalance LP-book balances using same-block Chainlink DAI/USD, USDC/USD and USDT/USD reads: LP-book NAV was $1973933.2599537845 against 1971838.9737393188931238 Ethereum LP tokens, or $1.0010620979919542 per LP. This is a local diagnostic, not full-composition admission. The bridge holds 1935319.378494324130853933 of those LP tokens; those escrowed shares and satellite representations cannot be counted twice. Actual ERC20 pool balances additionally include amounts outside the LP book, so branch balances are not interchangeable with redeemable LP assets. The issuer registry warns that its deployment list may be incomplete; pinned GitHub deployment manifests additionally identify Canto, DFK and zkEVM nUSD. No complete satellite-supply, fee, escrow and in-flight burn/mint reconciliation at matched chain checkpoints was established. D24 full-claim valuation remains researched-unknown; no current weights or composition date are inferred and the historical compositionAsOf is unchanged.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {

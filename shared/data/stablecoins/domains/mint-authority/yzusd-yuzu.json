@@ -57,7 +57,7 @@
         "label": "yzUSD collateral-funded issuance contract",
         "role": "direct-minter",
         "authorityType": "contract",
-        "directMintAbility": "none",
+        "directMintAbility": "cap-limited",
         "chain": "plasma",
         "address": "0x6695c0f8706c5ace3bdf8995073179cca47926dc",
         "deploymentRefs": [

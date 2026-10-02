@@ -29,7 +29,7 @@ export function controlPathIsReachable(path: V9ControlExecutionScope["paths"][nu
   return !complete || path.activation !== "disabled-final";
 }
 
-function controlPathAffectsLiability(path: V9ControlExecutionScope["paths"][number], scope: V9ControlExecutionScope, assetId: string): boolean {
+function controlPathAffectsLiability(path: V9ControlExecutionScope["paths"][number], scope: V9ControlExecutionScope, assetId: string, provenOnly = false): boolean {
   const pending = [path];
   const visited = new Set<string>();
   while (pending.length > 0) {
@@ -37,10 +37,14 @@ function controlPathAffectsLiability(path: V9ControlExecutionScope["paths"][numb
     if (visited.has(current.id)) continue;
     visited.add(current.id);
     if (!controlPathIsReachable(current, true)) continue;
+    if (provenOnly && (current.reach === "unknown" || current.activation === "unknown")) continue;
     if (current.reach !== "other-liability" || current.affectedLiabilityIds.includes(assetId)) return true;
     for (const ref of [...current.controlRefs, ...current.reactivationRefs, ...current.permissionChangeRefs, ...current.upgradeRefs, ...current.bypassRefs]) {
       const target = scope.paths.find((candidate) => candidate.id === ref);
-      if (!target) return true;
+      if (!target) {
+        if (!provenOnly) return true;
+        continue;
+      }
       pending.push(target);
     }
   }
@@ -59,11 +63,22 @@ export function compileReviewedControlScope(scope: V9ControlExecutionScope | und
   if (scope.inventory !== "complete" || scope.confidence !== "verified" || Object.values(scope.closure).some((closed) => !closed)) diagnostics.push("execution-inventory-incomplete");
   const complete = diagnostics.length === 0;
   const paths = scope.paths.filter((path) => controlPathIsReachable(path, complete) && (!complete || controlPathAffectsLiability(path, scope, assetId)));
-  return { complete, reviewed: diagnostics.every((code) => code === "execution-inventory-incomplete"), paths, diagnostics, moduleImpact: deriveReviewedModuleImpact(scope, assetId, complete) };
+  const reviewedScope = diagnostics.every((code) => code === "execution-inventory-incomplete");
+  return { complete, reviewed: reviewedScope, paths, diagnostics, moduleImpact: deriveReviewedModuleImpact(reviewedScope ? scope : undefined, assetId, complete) };
 }
 export function deriveReviewedModuleImpact(scope: V9ControlExecutionScope | undefined, assetId: string, complete: boolean): V9ModuleImpact {
   const inventory = scope?.extensions;
-  if (!complete || !inventory || !inventory.exhaustive || !inventory.paginationEnd || !inventory.sourceRuntimeCorrespondence) return "unresolved";
+  if (!scope || !inventory) return "unresolved";
+  // A dated, runtime-bound path proves presence independently of inventory closure.
+  if (scope.confidence !== "unknown") {
+    for (const extension of inventory.entries) {
+      for (const ref of extension.pathRefs) {
+        const path = scope.paths.find((candidate) => candidate.id === ref);
+        if (path && controlPathAffectsLiability(path, scope, assetId, true)) return "relevant";
+      }
+    }
+  }
+  if (!complete || !inventory.exhaustive || !inventory.paginationEnd || !inventory.sourceRuntimeCorrespondence) return "unresolved";
   if (inventory.entries.length === 0) return "not-applicable";
   for (const extension of inventory.entries) {
     if (!extension.mutableReachClosed || extension.pathRefs.length === 0) return "unresolved";

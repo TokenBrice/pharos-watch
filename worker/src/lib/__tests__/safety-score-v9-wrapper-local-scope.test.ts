@@ -131,7 +131,7 @@ describe("wrapper-local loss absorption and custody scope", () => {
     expect(compile(fixture).facts.facts.lossAbsorptionEmergencyControls).toMatchObject({ disposition: "not-applicable", assessment: null });
   });
 
-  it("retains the addressed stkGHO slashing owner and unknown role holders through existing control intake", () => {
+  it("retains the addressed stkGHO slashing owner and reviewed role holders through existing control intake", () => {
     const fixture = wrapperFixture("risk-absorption");
     const profile = structuredClone(stkGhoAuthority.mintAuthority) as MintAuthorityProfile;
     profile.inheritedFrom = "beta";
@@ -148,7 +148,7 @@ describe("wrapper-local loss absorption and custody scope", () => {
     expect(owner.capabilities).not.toContain("mint");
     expect(facts.facts.lossAbsorptionEmergencyControls).toMatchObject({ disposition: "reviewed" });
     expect(["moderate", "high", "critical"]).toContain(facts.facts.lossAbsorptionEmergencyControls.assessment);
-    expect(asset.gaps).toContainEqual(expect.objectContaining({ reasonCode: "unresolved-control-identity" }));
+    expect(asset.gaps).not.toContainEqual(expect.objectContaining({ reasonCode: "unresolved-control-identity" }));
   });
 
   it("does not duplicate upstream-only custody uncertainty in a reviewed direct single-parent allocation", () => {

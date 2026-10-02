@@ -163,6 +163,8 @@ export const CHAIN_META: Record<string, ChainMeta> = {
   // deployments read "no registered token-pool provider supports this chain"
   // rather than claiming a query that cannot run.
   arc:            { name: "Arc",             explorerUrl: "https://arc.etherscan.io",                       evmChainId: 5042,     type: "evm",   logoPath: "/chains/arc.png"              },
+  // Scilla ZRC-2 scope, not Zilliqa's separate EVM interface. No pool provider.
+  zilliqa:        { name: "Zilliqa",         explorerUrl: "https://viewblock.io/zilliqa",                   evmChainId: null,     type: "other", logoPath: "/chains/zilliqa.png"          },
 };
 
 /**
@@ -195,6 +197,9 @@ export type ChainResilienceTier = 1 | 2 | 3;
 const CHAIN_RESILIENCE_TIER: Partial<Record<string, ChainResilienceTier>> = {
   // Tier 1 — gold standard for decentralization & censorship resistance
   ethereum: 1,
+
+  // Established non-EVM settlement chain; Scilla deployments use native readers.
+  zilliqa: 2,
 
   // Tier 3 — known issues, high centralization, or unproven security
   pulsechain: 3,

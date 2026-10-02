@@ -96,6 +96,11 @@
       "amountEncoding": {
         "kind": "xrpl-issued-currency"
       }
+    },
+    {
+      "chain": "zilliqa",
+      "address": "zil1zu72vac254htqpg3mtywdcfm84l3dfd9qzww8t",
+      "decimals": 6
     }
   ],
   "collateralQuality": "rwa",

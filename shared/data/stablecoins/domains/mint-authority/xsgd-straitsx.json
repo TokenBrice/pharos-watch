@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
-    "summary": "XSGD has issuer-native issuance on all eight authored deployments. Ethereum has two allowance-capped minter multisigs, a 3-of-5 MasterMinter Safe that can change those allowances, a separate 3-of-5 token-owner Safe, and a 2-of-5 legacy multisig controlling proxy upgrades; Polygon, Arbitrum, Avalanche, and Base have their own native FiatToken minters and issuer controls; Hedera has a 2-of-5 supply key; XRPL has its issuer account; and Solana has a direct 3-of-11 SPL multisig at finalized slot 452222569. Overall issuance is economically unbounded but periodically reconciled. Bridge representations and cross-chain machinery are not included in this Mint Authority profile.",
+    "summary": "XSGD has issuer-native issuance on all nine authored deployments. Ethereum has two allowance-capped minter multisigs, a 3-of-5 MasterMinter Safe that can change those allowances, a separate 3-of-5 token-owner Safe, and a 2-of-5 legacy multisig controlling proxy upgrades; Polygon, Arbitrum, Avalanche, and Base have their own native FiatToken minters and issuer controls; Hedera has a 2-of-5 supply key; XRPL has its issuer account; and Solana has a direct 3-of-11 SPL multisig at finalized slot 452222569. Zilliqa has separate 3-of-5 proxy-admin, owner, and master-minter wallets and five allowance minters with 2-of-10, 2-of-5, 2-of-7, 2-of-9, and 2-of-6 thresholds, observed in latest native state on 2026-10-02, not historically pinned. Overall issuance is economically unbounded but periodically reconciled. Bridge representations and cross-chain machinery are not included in this Mint Authority profile.",
     "upgradeability": {
       "model": "transparent-proxy",
       "deploymentRefs": [
@@ -897,6 +897,259 @@
           }
         ],
         "evidence": "At validated XRPL ledger 107363456 on 2026-10-01, account_info reports disableMasterKey=false and no RegularKey for the issuer identified in StraitsX's XRPL launch announcement. account_objects at the same ledger returns one signer list with quorum 2 and four entries weighted 1, 2, 1, 1; the weight-2 signer can independently meet quorum, and the enabled master key remains an independent signing path. This is not a mandatory multi-party mint quorum. Operational key custody is not established by these ledger observations."
+      },
+      {
+        "chain": "zilliqa",
+        "address": "0x2f604cbd408e2c8b7442b1b629a1288c44945130",
+        "deploymentRefs": [
+          "zilliqa:zil1zu72vac254htqpg3mtywdcfm84l3dfd9qzww8t"
+        ],
+        "label": "Zilliqa XSGD proxy upgrade admin",
+        "role": "proxy-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "upgrade-only",
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "sources": [
+          {
+            "label": "StraitsX exact XSGD deployment list",
+            "url": "https://support.straitsx.com/support/solutions/articles/157000365664-how-do-i-add-the-xsgd-token-to-my-eth-polygon-avalanche-arbitrum-zilliqa-xrp-ledger-hedera-sol"
+          },
+          {
+            "label": "Zilliqa native RPC current-state observation (not historical)",
+            "url": "https://api.zilliqa.com"
+          },
+          {
+            "label": "StraitsX bank-funded native mint guide",
+            "url": "https://www.straitsx.com/blog-post/mint-xsgd-bank-blockchain-address"
+          }
+        ],
+        "evidence": "Latest-state reads at 2026-10-02T00:44:31.906Z–2026-10-02T00:44:43.959Z, bracketed by GetLatestTxBlock heights 37133765–37133775; these heights bound the observation interval, not historical state pins. Current native Scilla RPC, not a historical block pin: proxy admin, implementation owner and masterMinter identities read explicitly; deployed Wallet source enforces required_signatures from immutable initialization; required_signatures=3 and five owner entries. Proxy UpgradeTo is admin-gated; owner replaces masterMinter; masterMinter increases individual mint allowances. No system-wide hard issuance cap."
+      },
+      {
+        "chain": "zilliqa",
+        "address": "0xac8edde66d3c6c48ed64a35ec2dd82faa09aa6f6",
+        "deploymentRefs": [
+          "zilliqa:zil1zu72vac254htqpg3mtywdcfm84l3dfd9qzww8t"
+        ],
+        "label": "Zilliqa XSGD owner",
+        "role": "minter-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "sources": [
+          {
+            "label": "StraitsX exact XSGD deployment list",
+            "url": "https://support.straitsx.com/support/solutions/articles/157000365664-how-do-i-add-the-xsgd-token-to-my-eth-polygon-avalanche-arbitrum-zilliqa-xrp-ledger-hedera-sol"
+          },
+          {
+            "label": "Zilliqa native RPC current-state observation (not historical)",
+            "url": "https://api.zilliqa.com"
+          },
+          {
+            "label": "StraitsX bank-funded native mint guide",
+            "url": "https://www.straitsx.com/blog-post/mint-xsgd-bank-blockchain-address"
+          }
+        ],
+        "evidence": "Latest-state reads at 2026-10-02T00:44:31.906Z–2026-10-02T00:44:43.959Z, bracketed by GetLatestTxBlock heights 37133765–37133775; these heights bound the observation interval, not historical state pins. Current native Scilla RPC, not a historical block pin: proxy admin, implementation owner and masterMinter identities read explicitly; deployed Wallet source enforces required_signatures from immutable initialization; required_signatures=3 and five owner entries. Proxy UpgradeTo is admin-gated; owner replaces masterMinter; masterMinter increases individual mint allowances. No system-wide hard issuance cap."
+      },
+      {
+        "chain": "zilliqa",
+        "address": "0xf18cd5b7f914866b9c71ff99bfdf5a877f556f61",
+        "deploymentRefs": [
+          "zilliqa:zil1zu72vac254htqpg3mtywdcfm84l3dfd9qzww8t"
+        ],
+        "label": "Zilliqa XSGD master minter",
+        "role": "minter-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "sources": [
+          {
+            "label": "StraitsX exact XSGD deployment list",
+            "url": "https://support.straitsx.com/support/solutions/articles/157000365664-how-do-i-add-the-xsgd-token-to-my-eth-polygon-avalanche-arbitrum-zilliqa-xrp-ledger-hedera-sol"
+          },
+          {
+            "label": "Zilliqa native RPC current-state observation (not historical)",
+            "url": "https://api.zilliqa.com"
+          },
+          {
+            "label": "StraitsX bank-funded native mint guide",
+            "url": "https://www.straitsx.com/blog-post/mint-xsgd-bank-blockchain-address"
+          }
+        ],
+        "evidence": "Latest-state reads at 2026-10-02T00:44:31.906Z–2026-10-02T00:44:43.959Z, bracketed by GetLatestTxBlock heights 37133765–37133775; these heights bound the observation interval, not historical state pins. Current native Scilla RPC, not a historical block pin: proxy admin, implementation owner and masterMinter identities read explicitly; deployed Wallet source enforces required_signatures from immutable initialization; required_signatures=3 and five owner entries. Proxy UpgradeTo is admin-gated; owner replaces masterMinter; masterMinter increases individual mint allowances. No system-wide hard issuance cap."
+      },
+      {
+        "chain": "zilliqa",
+        "address": "0x2f59d18da27fcf63470995140cdc38989b72dcd6",
+        "deploymentRefs": [
+          "zilliqa:zil1zu72vac254htqpg3mtywdcfm84l3dfd9qzww8t"
+        ],
+        "label": "Zilliqa XSGD allowance minter 0x2f59d18da27fcf63470995140cdc38989b72dcd6",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "threshold": 2,
+        "signerCount": 10,
+        "canRaiseCap": false,
+        "capDescription": "Current remaining allowance 100000000000000 raw six-decimal units, not an immutable economic cap; masterMinter can increase it.",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "sources": [
+          {
+            "label": "StraitsX exact XSGD deployment list",
+            "url": "https://support.straitsx.com/support/solutions/articles/157000365664-how-do-i-add-the-xsgd-token-to-my-eth-polygon-avalanche-arbitrum-zilliqa-xrp-ledger-hedera-sol"
+          },
+          {
+            "label": "Zilliqa native RPC current-state observation (not historical)",
+            "url": "https://api.zilliqa.com"
+          },
+          {
+            "label": "StraitsX bank-funded native mint guide",
+            "url": "https://www.straitsx.com/blog-post/mint-xsgd-bank-blockchain-address"
+          }
+        ],
+        "evidence": "Latest-state reads at 2026-10-02T00:44:31.906Z–2026-10-02T00:44:43.959Z, bracketed by GetLatestTxBlock heights 37133765–37133775; these heights bound the observation interval, not historical state pins. Current non-historical GetSmartContractSubState minterAllowances lists Some allowance for this exact contract. GetSmartContractCode identifies deployed Wallet multisig and immutable GetSmartContractInit required_signatures=2; Mint checks initiator allowance and decrements it. Historical-pinned state remains unavailable through this API."
+      },
+      {
+        "chain": "zilliqa",
+        "address": "0x6fcef492bb0584b2e21f982caf9067b737daac9c",
+        "deploymentRefs": [
+          "zilliqa:zil1zu72vac254htqpg3mtywdcfm84l3dfd9qzww8t"
+        ],
+        "label": "Zilliqa XSGD allowance minter 0x6fcef492bb0584b2e21f982caf9067b737daac9c",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "threshold": 2,
+        "signerCount": 5,
+        "canRaiseCap": false,
+        "capDescription": "Current remaining allowance 5853431250000 raw six-decimal units, not an immutable economic cap; masterMinter can increase it.",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "sources": [
+          {
+            "label": "StraitsX exact XSGD deployment list",
+            "url": "https://support.straitsx.com/support/solutions/articles/157000365664-how-do-i-add-the-xsgd-token-to-my-eth-polygon-avalanche-arbitrum-zilliqa-xrp-ledger-hedera-sol"
+          },
+          {
+            "label": "Zilliqa native RPC current-state observation (not historical)",
+            "url": "https://api.zilliqa.com"
+          },
+          {
+            "label": "StraitsX bank-funded native mint guide",
+            "url": "https://www.straitsx.com/blog-post/mint-xsgd-bank-blockchain-address"
+          }
+        ],
+        "evidence": "Latest-state reads at 2026-10-02T00:44:31.906Z–2026-10-02T00:44:43.959Z, bracketed by GetLatestTxBlock heights 37133765–37133775; these heights bound the observation interval, not historical state pins. Current non-historical GetSmartContractSubState minterAllowances lists Some allowance for this exact contract. GetSmartContractCode identifies deployed Wallet multisig and immutable GetSmartContractInit required_signatures=2; Mint checks initiator allowance and decrements it. Historical-pinned state remains unavailable through this API."
+      },
+      {
+        "chain": "zilliqa",
+        "address": "0x8ec6e964d83478f4962df91084f4564eec82af59",
+        "deploymentRefs": [
+          "zilliqa:zil1zu72vac254htqpg3mtywdcfm84l3dfd9qzww8t"
+        ],
+        "label": "Zilliqa XSGD allowance minter 0x8ec6e964d83478f4962df91084f4564eec82af59",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "threshold": 2,
+        "signerCount": 7,
+        "canRaiseCap": false,
+        "capDescription": "Current remaining allowance 100858000000000 raw six-decimal units, not an immutable economic cap; masterMinter can increase it.",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "sources": [
+          {
+            "label": "StraitsX exact XSGD deployment list",
+            "url": "https://support.straitsx.com/support/solutions/articles/157000365664-how-do-i-add-the-xsgd-token-to-my-eth-polygon-avalanche-arbitrum-zilliqa-xrp-ledger-hedera-sol"
+          },
+          {
+            "label": "Zilliqa native RPC current-state observation (not historical)",
+            "url": "https://api.zilliqa.com"
+          },
+          {
+            "label": "StraitsX bank-funded native mint guide",
+            "url": "https://www.straitsx.com/blog-post/mint-xsgd-bank-blockchain-address"
+          }
+        ],
+        "evidence": "Latest-state reads at 2026-10-02T00:44:31.906Z–2026-10-02T00:44:43.959Z, bracketed by GetLatestTxBlock heights 37133765–37133775; these heights bound the observation interval, not historical state pins. Current non-historical GetSmartContractSubState minterAllowances lists Some allowance for this exact contract. GetSmartContractCode identifies deployed Wallet multisig and immutable GetSmartContractInit required_signatures=2; Mint checks initiator allowance and decrements it. Historical-pinned state remains unavailable through this API."
+      },
+      {
+        "chain": "zilliqa",
+        "address": "0xb7b2237c49a07ddccc0e4e23c72c02267934caa3",
+        "deploymentRefs": [
+          "zilliqa:zil1zu72vac254htqpg3mtywdcfm84l3dfd9qzww8t"
+        ],
+        "label": "Zilliqa XSGD allowance minter 0xb7b2237c49a07ddccc0e4e23c72c02267934caa3",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "threshold": 2,
+        "signerCount": 9,
+        "canRaiseCap": false,
+        "capDescription": "Current remaining allowance 100857999999984000000 raw six-decimal units, not an immutable economic cap; masterMinter can increase it.",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "sources": [
+          {
+            "label": "StraitsX exact XSGD deployment list",
+            "url": "https://support.straitsx.com/support/solutions/articles/157000365664-how-do-i-add-the-xsgd-token-to-my-eth-polygon-avalanche-arbitrum-zilliqa-xrp-ledger-hedera-sol"
+          },
+          {
+            "label": "Zilliqa native RPC current-state observation (not historical)",
+            "url": "https://api.zilliqa.com"
+          },
+          {
+            "label": "StraitsX bank-funded native mint guide",
+            "url": "https://www.straitsx.com/blog-post/mint-xsgd-bank-blockchain-address"
+          }
+        ],
+        "evidence": "Latest-state reads at 2026-10-02T00:44:31.906Z–2026-10-02T00:44:43.959Z, bracketed by GetLatestTxBlock heights 37133765–37133775; these heights bound the observation interval, not historical state pins. Current non-historical GetSmartContractSubState minterAllowances lists Some allowance for this exact contract. GetSmartContractCode identifies deployed Wallet multisig and immutable GetSmartContractInit required_signatures=2; Mint checks initiator allowance and decrements it. Historical-pinned state remains unavailable through this API."
+      },
+      {
+        "chain": "zilliqa",
+        "address": "0xd39b87d8a05651d51c5cc93382f4edcc96761537",
+        "deploymentRefs": [
+          "zilliqa:zil1zu72vac254htqpg3mtywdcfm84l3dfd9qzww8t"
+        ],
+        "label": "Zilliqa XSGD allowance minter 0xd39b87d8a05651d51c5cc93382f4edcc96761537",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "threshold": 2,
+        "signerCount": 6,
+        "canRaiseCap": false,
+        "capDescription": "Current remaining allowance 99999900000000 raw six-decimal units, not an immutable economic cap; masterMinter can increase it.",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "sources": [
+          {
+            "label": "StraitsX exact XSGD deployment list",
+            "url": "https://support.straitsx.com/support/solutions/articles/157000365664-how-do-i-add-the-xsgd-token-to-my-eth-polygon-avalanche-arbitrum-zilliqa-xrp-ledger-hedera-sol"
+          },
+          {
+            "label": "Zilliqa native RPC current-state observation (not historical)",
+            "url": "https://api.zilliqa.com"
+          },
+          {
+            "label": "StraitsX bank-funded native mint guide",
+            "url": "https://www.straitsx.com/blog-post/mint-xsgd-bank-blockchain-address"
+          }
+        ],
+        "evidence": "Latest-state reads at 2026-10-02T00:44:31.906Z–2026-10-02T00:44:43.959Z, bracketed by GetLatestTxBlock heights 37133765–37133775; these heights bound the observation interval, not historical state pins. Current non-historical GetSmartContractSubState minterAllowances lists Some allowance for this exact contract. GetSmartContractCode identifies deployed Wallet multisig and immutable GetSmartContractInit required_signatures=2; Mint checks initiator allowance and decrements it. Historical-pinned state remains unavailable through this API."
       }
     ],
     "economicCapSemantics": "unbounded",

@@ -579,11 +579,11 @@
         ],
         "authorityType": "eoa",
         "routeChecks": {
-          "lockboxOrEscrow": "The canonical-side CCIP LockReleaseTokenPool is 0x8FcC42c414E29e8e3dBFa1628CF45E8ed80C999D and holds the bridge escrow path for native savUSD.",
-          "pausersAdminsUpgraders": "At Avalanche block 96511220, pool owner() returned EOA 0xd4d23209aae8630bf386b7393763a5b7865e57cb. This supersedes the recorded block-92981175 owner 0xf4c7e640eda248ef95972845a62bdc74237805db. Other pool admin, upgrade, router, and rate-limit surfaces are not settled by this owner read."
+          "lockboxOrEscrow": "At Avalanche block 96564955, the issuer-listed canonical-side CCIP LockReleaseTokenPool 0x8fcc42c414e29e8e3dbfa1628cf45e8ed80c999d returned getToken() = native savUSD 0x06d47f3fb376649c3a9dafe069b3d6e35572219e. Its native savUSD balance was 64677582312824165851788634 raw shares. The producer's savUSD unattributed CCIP escrow row is this balance minus configured destination representations, not a separate unidentified token deployment.",
+          "pausersAdminsUpgraders": "At Avalanche block 96564955, owner() returned EOA 0xd4d23209aae8630bf386b7393763a5b7865e57cb (eth_getCode = 0x), getRouter() returned 0xf4c7e640eda248ef95972845a62bdc74237805db and getRmnProxy() returned 0xcbd48a8eb077381c3c4eb36b402d7283ab2b11bc. getRateLimitAdmin() and getRebalancer() returned the zero address; canAcceptLiquidity() returned true. These identity reads do not establish router/RMN ultimate authority or complete remote-pool/in-flight reconciliation."
         },
-        "observedAt": "2026-10-01",
-        "observedBlock": 96511220,
+        "observedAt": "2026-10-02",
+        "observedBlock": 96564955,
         "sources": [
           {
             "label": "Avant contract addresses",
@@ -598,7 +598,7 @@
             "url": "https://docs.chain.link/ccip"
           }
         ],
-        "evidence": "At Avalanche block 96511220 on 2026-10-01, the canonical savUSD CCIP pool 0x8fcc42c414e29e8e3dbfa1628cf45e8ed80c999d returned getToken() = 0x06d47f3fb376649c3a9dafe069b3d6e35572219e, typeAndVersion() = LockReleaseTokenPool 1.5.1 and owner() = 0xd4d23209aae8630bf386b7393763a5b7865e57cb. eth_getCode at the owner returned 0x (EOA). The prior block-92981175 observation of owner 0xf4c7e640eda248ef95972845a62bdc74237805db is historical; bridge escrow remains separate from canonical native share issuance."
+        "evidence": "Pinned Avalanche block 96564955 (0x5c176db), read 2026-10-02: the issuer-listed savUSD pool 0x8fcc42c414e29e8e3dbfa1628cf45e8ed80c999d returned getToken() = 0x06d47f3fb376649c3a9dafe069b3d6e35572219e, typeAndVersion() = LockReleaseTokenPool 1.5.1, owner() = 0xd4d23209aae8630bf386b7393763a5b7865e57cb (code 0x), getRouter() = 0xf4c7e640eda248ef95972845a62bdc74237805db and getRmnProxy() = 0xcbd48a8eb077381c3c4eb36b402d7283ab2b11bc. Rate-limit admin and rebalancer were zero; liquidity acceptance was enabled. getSupportedChains() returned nine selectors. Native savUSD balanceOf(pool) was 64677582312824165851788634 raw shares. The producer explicitly subtracts configured representation supply from this escrow balance to publish the synthetic unattributed row. Its remaining receipt destinations and pending claims are not fully observed, but its lockbox identity and owner are known; no canonical mint authority is inferred. The recorded block-92981175 owner observation is retained as historical, not revalidated."
       },
       {
         "id": "avalanche-layerzero-oft-adapter",

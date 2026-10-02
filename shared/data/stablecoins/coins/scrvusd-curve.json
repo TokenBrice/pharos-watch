@@ -70,6 +70,21 @@
       "chain": "avalanche",
       "address": "0xA3ea433509F7941df3e33857D9c9f212Ad4A4e64",
       "decimals": 18
+    },
+    {
+      "chain": "xdc",
+      "address": "0x3d8eadb739d1ef95dd53d718e4810721837c69c1",
+      "decimals": 18
+    },
+    {
+      "chain": "sonic",
+      "address": "0x8fb3ec8f2d1dc089e70cd61f1e49496d443b2124",
+      "decimals": 18
+    },
+    {
+      "chain": "etherlink",
+      "address": "0xe35a879e5efb4f1bb7f70dcf3250f2e19f096bd8",
+      "decimals": 18
     }
   ],
   "collateralQuality": "alt-lst-bridged-or-mixed",

@@ -114,7 +114,7 @@
         "threshold": 2,
         "modulesOrGuardsStatus": "present",
         "canRaiseCap": false,
-        "evidence": "At Ethereum block 26095831, Vault strategistAddr() remains 0x4ff1b9d9ba8558f5eafcec096318ea0d8b541971. The Safe has eight current owners, threshold 2, a zero guard storage slot, and five enabled modules: 0x6241f5e4ad5af39ef3ae54801e0ae431e0b70369, 0x6320db7a3c1b95fd5684dc725c2cda9b82fa20fa, 0x90d588fc0ec3db9c4b417db4537fe08e063d2ae5, 0x1b84e64279d63f48ddd88b9b2a7871e817152a44, 0x630c1763d38abe76301f58909fa174e7b84a7ecd. This contradicts the earlier no-enabled-modules observation; module capabilities were not inferred from their addresses.",
+        "evidence": "At Ethereum block 26101011 (2026-10-02), Vault strategistAddr() remains this Safe, with eight owners, threshold 2, five enabled modules and zero guard. All five module runtimes exactly match their Blockscout verified deployed bytecode. AutoWithdrawalModule 0x90d588fc0ec3db9c4b417db4537fe08e063d2ae5 has immutable OUSD Vault/USDC/Safe targets and an external EOA operator 0x739212d5bafe6aac8be49a60b7d003bd41dbf38b. The operator can bypass the Safe's two-signature transaction flow for withdrawFromStrategy(address,address[],uint256[]) (0xae69f3cb), moving supported-strategy USDC back into the Vault to fund its withdrawal queue, bounded dynamically by min(queue shortfall, strategy balance). A pinned one-USDC eth_call as the Safe succeeds. This is verified reserve-transfer reach, not noninterference; it does not itself expose OUSD mint or upgrade selectors, arbitrary recipients, or delegatecall. Other modules automate mutable bribe targets, strategy rewards and OETH bridging; their complete transitive OUSD reach is not certified. No module-presence waiver, unbounded-loss claim or backing-horizon change is authored.",
         "safe": {
           "owners": [
             "0x052c01a2a88fa6cba8fc2dbef39a442a140a35e3",
@@ -137,16 +137,16 @@
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0x2f55e8b20d0b9fefa187aa7d00b6cbe563605bf5",
           "version": "1.4.1",
-          "observedBlock": 26099921,
+          "observedBlock": 26101011,
           "source": "onchain",
-          "observedAt": "2026-10-01"
+          "observedAt": "2026-10-02"
         },
         "executionScope": {
           "controllerDeployment": "ethereum:0x4ff1b9d9ba8558f5eafcec096318ea0d8b541971",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
+          "reviewedAt": "2026-10-02",
+          "observedAt": "2026-10-02",
           "expiresAt": "2026-10-31",
-          "reviewer": "DataMisc07",
+          "reviewer": "DataCOusdNexus",
           "confidence": "partial",
           "sources": [
             {
@@ -156,19 +156,27 @@
             {
               "label": "Safe 1.4.1 module execution and pagination semantics",
               "url": "https://raw.githubusercontent.com/safe-global/safe-smart-account/v1.4.1/contracts/base/ModuleManager.sol"
+            },
+            {
+              "label": "Pinned OUSD Vault implementation: governor-or-strategist withdrawal to the Vault only",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x82948060c4b72684bededec342350ab344975145"
+            },
+            {
+              "label": "Verified Curve bribe module: operator-mutable targets and Safe-funded ETH calls",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6320db7a3c1b95fd5684dc725c2cda9b82fa20fa"
             }
           ],
           "pin": {
-            "position": "26099921",
-            "hash": "0x6a7be0a36f0c3df35c9c12347c7b3a509803e0e2fb6f9384fbeb10c3194c355d",
+            "position": "26101011",
+            "hash": "0x1c0b72d2454ec2d73c0893fa1932cae8c9bfa8aa98b07a896b5953c2003452cd",
             "runtimeIdentity": "sha256-rpc-code-text:c7404fa90f9417f24a7f3e1ee736d3f7843f419188a98921fa385dac0e8a693b",
-            "signerIdentity": "getOwners/getThreshold:8-owners:2-signatures:block-26099921"
+            "signerIdentity": "getOwners/getThreshold:8-owners:2-signatures:block-26101011"
           },
           "observedState": {
-            "position": "26099921",
-            "hash": "0x6a7be0a36f0c3df35c9c12347c7b3a509803e0e2fb6f9384fbeb10c3194c355d",
+            "position": "26101011",
+            "hash": "0x1c0b72d2454ec2d73c0893fa1932cae8c9bfa8aa98b07a896b5953c2003452cd",
             "runtimeIdentity": "sha256-rpc-code-text:c7404fa90f9417f24a7f3e1ee736d3f7843f419188a98921fa385dac0e8a693b",
-            "signerIdentity": "getOwners/getThreshold:8-owners:2-signatures:block-26099921"
+            "signerIdentity": "getOwners/getThreshold:8-owners:2-signatures:block-26101011"
           },
           "inventory": "partial",
           "closure": {
@@ -190,12 +198,12 @@
               "capabilities": ["custody-transfer"],
               "capSemantics": {"kind": "unknown", "bound": null},
               "claimImpairment": "unknown",
-              "economicLossScope": "unknown",
-              "unavoidableDelaySec": null,
+              "economicLossScope": "reserve-claim",
+              "unavoidableDelaySec": 0,
               "activation": "active",
               "affectedLiabilityIds": ["ousd-origin-protocol"],
-              "affectedDeployments": [],
-              "reach": "unknown",
+              "affectedDeployments": ["ethereum:0xe75d77b1865ae93c7eaa3040b038d7aa7bc02f70"],
+              "reach": "root",
               "controlRefs": [],
               "reactivationRefs": [],
               "permissionChangeRefs": [],
@@ -259,8 +267,8 @@
             "url": "https://eth.blockscout.com/address/0x4ff1b9d9ba8558f5eafcec096318ea0d8b541971"
           }
         ],
-        "observedAt": "2026-10-01",
-        "observedBlock": 26095831
+        "observedAt": "2026-10-02",
+        "observedBlock": 26101011
       }
     ],
     "economicCapSemantics": "raiseable",

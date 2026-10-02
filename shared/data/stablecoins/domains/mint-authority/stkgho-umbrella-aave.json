@@ -65,8 +65,9 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-01",
-        "observedBlock": 26095800,
+        "timelockDelaySec": 86400,
+        "observedAt": "2026-10-02",
+        "observedBlock": 26101008,
         "sources": [
           {
             "label": "Aave address book",
@@ -75,9 +76,13 @@
           {
             "label": "ProxyAdmin on Etherscan",
             "url": "https://etherscan.io/address/0xde9f8379a5a972100d0373103a849e8abdf56a9a#readContract"
+          },
+          {
+            "label": "Verified Aave PayloadsController timelock enforcement",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x7222182cb9c5320587b5148bf03eee107ad64578?fields=sources,abi"
           }
         ],
-        "evidence": "At Ethereum block 25295167: stkGHO EIP-1967 proxy admin slot = ProxyAdmin 0xDE9F8379a5a972100d0373103a849E8ABdf56a9a. ProxyAdmin.owner() = 0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A, the Aave Governance V3 Level-1 Executor. Implementation upgrades require Aave on-chain governance; this is a bounded admin path."
+        "evidence": "At Ethereum block 26101008, ProxyAdmin.owner() remains Aave Governance V3 Level-1 Executor 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a. Executor.owner() is PayloadsController 0xdabad81af85554e9ae636395611c58f7ec1aaec5; getExecutorSettingsByAccessControl(1) returns this executor and an 86400-second delay, enforced by executePayload. The executor retains Umbrella DEFAULT_ADMIN, PAUSE_GUARDIAN, COVERAGE_MANAGER and RESCUE_GUARDIAN roles. This governance delay does not bind the separately authorized 3-of-5 DEFAULT_ADMIN Safe or 4-of-7 pause Safe."
       },
       {
         "chain": "ethereum",
@@ -88,8 +93,8 @@
         "directMintAbility": "parameter-only",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-01",
-        "observedBlock": 26098867,
+        "observedAt": "2026-10-02",
+        "observedBlock": 26101008,
         "sources": [
           {
             "label": "Verified deployed stkGHO implementation",
@@ -98,25 +103,115 @@
           {
             "label": "Verified deployed Umbrella implementation",
             "url": "https://sourcify.dev/server/v2/contract/1/0x929e21d24d3f2a529621adc248d227012b72646d?fields=sources,abi"
+          },
+          {
+            "label": "Verified Umbrella rewards-only configuration permissions",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x85c3371044e49782dbe3dc23de1d77a078afb5d0?fields=sources,abi"
           }
         ],
-        "evidence": "At Ethereum block 26098867, stkGHO.owner() is Umbrella 0xd400fc38ed4732893174325693a63c30ee3881a8 and the GHO slashing configuration targets this stake token in the Ethereum Core Pool. Deployed stkGHO source restricts slash, pause and cooldown/unstake-window changes to its owner; Umbrella executes deficit-conditioned slashing and exposes role-gated pause and configuration methods. These powers impair local receipt principal or access; they do not mint durable GHO. Current role-holder identity and configuration-change delays are not established by the owner() read."
+        "evidence": "At Ethereum block 26101008, stkGHO.owner() is Umbrella 0xd400fc38ed4732893174325693a63c30ee3881a8 and its GHO slashing config targets stkGHO with oracle 0xd110cac5d8682a3b045d5524a9903e031d70fccd and liquidationFee 0. StakeToken restricts slash, pause and cooldown/unstake-window changes to its owner. Umbrella.slash is permissionless, conditioned on a configured reserve deficit; the deployed ABI/source has no SLASH_MANAGER role. DEFAULT_ADMIN controls slashing configurations, pricing oracle, fee (at most 100%), deficit offset, cooldown/unstake window and role grants. Complete RoleGranted/RoleRevoked history from block 0 through the pin plus hasRole reads identifies Aave's executor and the 3-of-5 Safe below as admins, and the executor plus the 4-of-7 Safe below as pause guardians. Powers affect the local stkGHO receipt's principal or access, not durable GHO mint authority. RewardsController admin is the executor, with rewards-only configuration also delegated to 0x2759de67ad133c747c9f41d56f1b8a343ce679a1; these incentive powers do not provide a principal-slashing or GHO-mint entrypoint."
       },
       {
         "chain": "ethereum",
-        "label": "Umbrella slashing configuration and pause role holders (unresolved)",
+        "address": "0x53cb4bb8f61fa45405dc75f476fadad801e653d9",
+        "label": "Umbrella DEFAULT_ADMIN_ROLE Safe (3-of-5)",
         "role": "governor",
-        "authorityType": "unknown",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "timelockDelaySec": 0,
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0x5063b3d23c3640d51c9e2aef41063b1d482c70ff",
+            "0x4f96743057482a2e10253afdacda3fd9cf2c1dc9",
+            "0x3cd9a21c32ea7caef54fdef3ea690a9981a83703",
+            "0x2fe367d6f8a755ca22efae7f29004f9b5fa868e8",
+            "0x985f3290d7971a840152e46d00b5ceb60a56f235"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "moduleGuard": null,
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
+          "observedBlock": 26101008,
+          "observedAt": "2026-10-02",
+          "source": "onchain"
+        },
         "directMintAbility": "parameter-only",
         "canRaiseCap": false,
-        "observedAt": "2026-10-01",
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "No GHO mint or proxy-upgrade authority. DEFAULT_ADMIN can change local receipt slashing configuration, oracle, liquidation fee (0-100%), deficit offset and exit timing, and grant/revoke all Umbrella roles; loss exposure is stkGHO deposited principal, not parent GHO issuance.",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26101008,
         "sources": [
           {
             "label": "Verified Umbrella role-gated configuration and emergency methods",
             "url": "https://sourcify.dev/server/v2/contract/1/0x929e21d24d3f2a529621adc248d227012b72646d?fields=sources,abi"
+          },
+          {
+            "label": "Verified DEFAULT_ADMIN Safe proxy",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x53cb4bb8f61fa45405dc75f476fadad801e653d9?fields=sources,abi"
+          },
+          {
+            "label": "Verified Safe 1.4.1 execution logic",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x41675c099f32341bf84bfc5382af534df5c7461a?fields=sources,abi"
           }
         ],
-        "evidence": "UmbrellaConfiguration.updateSlashingConfigs/removeSlashingConfigs and UmbrellaStkManager.setCooldownStk/setUnstakeWindowStk require DEFAULT_ADMIN_ROLE; pauseStk/unpauseStk require PAUSE_GUARDIAN_ROLE. The reviewed owner and slashing-config reads do not enumerate the current role holders or establish an independent delay on configuration changes. Retain unknown authority rather than infer the active role census from initialization or proxy-admin ownership."
+        "evidence": "At Ethereum block 26101008, full Umbrella RoleGranted/RoleRevoked history includes the executor's DEFAULT_ADMIN grant at 22481753 and this Safe's grant at 25037701, with no revocations or other admin grants. hasRole(DEFAULT_ADMIN_ROLE,Safe) is true. Pinned Safe reads show five owners, threshold 3, masterCopy and VERSION 1.4.1; module pagination ends empty at sentinel 0x1 and guard/module-guard slots are zero. Safe.execTransaction and Umbrella's admin entrypoints contain no timelock. A pinned eth_call from this Safe to setCooldownStk([(stkGHO,1728000)]) succeeds immediately; the same call from an unprivileged address reverts AccessControlUnauthorizedAccount. Admin can grant itself pause/rescue roles, but cannot upgrade the proxy or directly mint GHO."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x2cfe3ec4d5a6811f4b8067f0de7e47dfa938aa30",
+        "label": "Umbrella PAUSE_GUARDIAN_ROLE Safe (4-of-7)",
+        "role": "other",
+        "authorityType": "safe",
+        "threshold": 4,
+        "signerCount": 7,
+        "timelockDelaySec": 0,
+        "safe": {
+          "version": "1.3.0",
+          "owners": [
+            "0x3fa960f8355d00874d9c7e3350147f5e94859bc2",
+            "0xa2dcdd6e0b5e0d118e2fa8922552ac0fe26efe58",
+            "0xb291232f480f41c75802c4a60f1d2ac03404afef",
+            "0xe6838d834674ec35edd53d485770baa10bdd6aae",
+            "0xc2674c1a1af0557e1d217ff4f13df44a637c7c13",
+            "0x4ab2bed1d667260db34244ba412817651c2dd52b",
+            "0xd4af2e86a27f8f77b0556e081f97b215c9ca8f2e"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": null,
+          "moduleGuard": null,
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "masterCopy": "0xd9db270c1b5e3bd161e8c8503c55ceabee709552",
+          "observedBlock": 26101008,
+          "observedAt": "2026-10-02",
+          "source": "onchain"
+        },
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "Access-only pause/unpause of Umbrella stake tokens. This role does not grant principal slashing, slashing configuration, cooldown/unstake-window configuration, role administration, proxy upgrade or GHO mint authority.",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26101008,
+        "sources": [
+          {
+            "label": "Verified Umbrella pause role entrypoints",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x929e21d24d3f2a529621adc248d227012b72646d?fields=sources,abi"
+          },
+          {
+            "label": "Verified pause guardian Safe proxy",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x2cfe3ec4d5a6811f4b8067f0de7e47dfa938aa30?fields=sources,abi"
+          },
+          {
+            "label": "Verified Safe 1.3.0 execution logic",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xd9db270c1b5e3bd161e8c8503c55ceabee709552?fields=sources,abi"
+          }
+        ],
+        "evidence": "At Ethereum block 26101008, full RoleGranted/RoleRevoked history identifies the executor's PAUSE_GUARDIAN grant at 22481753 and this Safe's grant at 25840198, with no revocations. hasRole confirms the active grant. Safe reads show seven owners, threshold 4, VERSION 1.3.0 and masterCopy 0xd9db270c1b5e3bd161e8c8503c55ceabee709552; modules are empty and guard/module-guard slots zero. pauseStk/unpauseStk have only the role gate, not a delay; a pinned eth_call from this Safe to pauseStk(stkGHO) succeeds. Pausing blocks deposits, withdrawals, transfers, cooldown and slashing while preserving the receipt's principal accounting."
       }
     ],
     "economicCapSemantics": "raiseable",

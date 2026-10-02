@@ -10,7 +10,7 @@ Safety Score V10 is the sole active stablecoin safety model. It publishes eviden
 - **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v10.0`<!-- GENERATED-END: methodology-version-safety-score -->
 - Public response schema: report v6 with score trace v3; report v5 publications remain readable
 - Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`, parsed and digested by `shared/lib/safety-score-v9/policy.ts`
-- **Evaluation build:** `dbce63b0e13d19c117ecb8159f2b55c9a40022176ee73d85c3d87a9bc2166365` (`SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST`), generated from the evaluator and fact-producer source manifest. The manifest's evaluator closure includes the policy's reviewed chain-maturity registry, so score-bearing source edits rotate the identity used by replay and publication comparability.
+- **Evaluation build:** `1eaf7c3acd1ed7f2f1fc6b29e95c16d79964fc3dad8ab1dfe951b135be4de7ac` (`SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST`), generated from the evaluator and fact-producer source manifest. The manifest's evaluator closure includes the policy's reviewed chain-maturity registry, so score-bearing source edits rotate the identity used by replay and publication comparability.
 - Implementation: `shared/lib/safety-score-v9/`
 - Structured changelog: `shared/data/methodology-changelogs/safety-score/`
 - Public methodology: `/methodology/#safety-scores-methodology`
@@ -46,7 +46,7 @@ Financial report coverage and independently dated reserve observations use [sepa
 
 Reviewed receipt/bridge graphs expose originating reserve-access authorities and explicit unknown remainder through diagnostic-only `accessPosture.freezeLookthrough`, with no new freeze penalty. Holder-transfer posture is independent; [reserve-access look-through](./access-lookthrough.md) owns exact deployment, denominator and evidence admission.
 
-Verified wave B adds USDtb/QCAD/VCHF scoped reports, xDAI/LVUSD bounded observations, HLSCOPE standing feeder identity, CASH/STAC/OUSD maturity/liquidity facts and Nexus NUSD/NXUSD/yzUSD/syzUSD access graphs. Scopes without a current partition remain monotonic and diagnostic under the owning contracts above.
+Verified data waves B and C author these facts from primary sources (coins listed in the scoring changelog). Facts still unknown after exhaustive research keep their charges; scopes without a current partition stay diagnostic. Proven Safe-module reach counts even in a partial inventory.
 
 Configured open live-only redemption routes whose producer reports missing capacity remain explicit producer-failed diagnostic facts. The existing missing-same-notional bounded-uncertainty treatment applies even when a small DEX route is observed; failed telemetry cannot certify that no viable redemption path exists. No stale capacity is credited, and absent, paused, or degraded redemption routes retain their existing treatment.
 

@@ -1372,6 +1372,447 @@
           ]
         }
       ]
+    },
+    {
+      "scopeKind": "whole-allocation",
+      "assetId": "sdola-inverse-finance",
+      "reviewedAt": "2026-10-02",
+      "expiresAt": "2026-11-01",
+      "reviewer": "DataCWrapperLocal: exact verified source and pinned allocation census",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "none",
+      "rationale": "The immutable canonical Ethereum sDOLA holds all principal as its balanceOf claim in the immutable DolaSavings account, whose actual DOLA balance equals totalSupply and the wrapper stake exactly; the wrapper has zero idle DOLA. The exhaustive principal allocation roster is this one fixed savings account. Deposits and DBR-auction DOLA inflows stake there; withdrawals unstake; the account transfers principal only to the withdrawing stake owner. No strategy registry, external principal loan, borrowing function or arbitrary call exists. DBR rewards are minted then auctioned for additional DOLA, not financed by lending deposits. Governance/operator settings change reward budgets, auction K and role assignments. Savings governance may sweep only DOLA above totalSupply, independently confirmed by a simulated 1 DOLA sweep reverting CANNOT SWEEP USER DOLA. Wrapper governance can sweep non-DBR idle tokens (including donated idle DOLA); this power is retained, not described as legal segregation. Historical CCIP receipt liabilities and governance re-enable powers remain bridge/control risks; this review concerns the canonical principal book and does not clear them or claim remote supply is zero. Parent DOLA backing remains inherited.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0xb45ad160634c528cc3d2926d9807104fa3157305",
+          "function": "asset()",
+          "value": "0x000000000000000000000000865377367054516e17014ccded1e7d814edc9ce4",
+          "block": 26101009
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xb45ad160634c528cc3d2926d9807104fa3157305",
+          "function": "savings()",
+          "value": "0x000000000000000000000000e5f24791e273cb96a1f8e5b67bc2397f0ad9b8b4",
+          "block": 26101009
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xb45ad160634c528cc3d2926d9807104fa3157305",
+          "function": "dbr()",
+          "value": "0x000000000000000000000000ad038eb671c44b853887a7e32528fab35dc5d710",
+          "block": 26101009
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xb45ad160634c528cc3d2926d9807104fa3157305",
+          "function": "gov()",
+          "value": "0x000000000000000000000000926df14a23be491164dcf93f4c468a50ef659d5b",
+          "block": 26101009
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xb45ad160634c528cc3d2926d9807104fa3157305",
+          "function": "operator()",
+          "value": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "block": 26101009
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xb45ad160634c528cc3d2926d9807104fa3157305",
+          "function": "totalAssets()",
+          "value": "0x0000000000000000000000000000000000000000000e89c96766fd6bb88b5385",
+          "block": 26101009
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xb45ad160634c528cc3d2926d9807104fa3157305",
+          "function": "totalSupply()",
+          "value": "0x0000000000000000000000000000000000000000000a3ceb9f1cf6584e0e97ae",
+          "block": 26101009
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xe5f24791e273cb96a1f8e5b67bc2397f0ad9b8b4",
+          "function": "dola()",
+          "value": "0x000000000000000000000000865377367054516e17014ccded1e7d814edc9ce4",
+          "block": 26101009
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xe5f24791e273cb96a1f8e5b67bc2397f0ad9b8b4",
+          "function": "gov()",
+          "value": "0x000000000000000000000000926df14a23be491164dcf93f4c468a50ef659d5b",
+          "block": 26101009
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xe5f24791e273cb96a1f8e5b67bc2397f0ad9b8b4",
+          "function": "operator()",
+          "value": "0x0000000000000000000000008f97cca30dbe80e7a8b462f1dd1a51c32accdfc8",
+          "block": 26101009
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xe5f24791e273cb96a1f8e5b67bc2397f0ad9b8b4",
+          "function": "totalSupply()",
+          "value": "0x0000000000000000000000000000000000000000000e8de59a550b0a11b9b367",
+          "block": 26101009
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xe5f24791e273cb96a1f8e5b67bc2397f0ad9b8b4",
+          "function": "balanceOf(address) args 000000000000000000000000b45ad160634c528cc3d2926d9807104fa3157305",
+          "value": "0x0000000000000000000000000000000000000000000e8de59a550b0a11b9b367",
+          "block": 26101009
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x865377367054516e17014ccded1e7d814edc9ce4",
+          "function": "balanceOf(address) args 000000000000000000000000e5f24791e273cb96a1f8e5b67bc2397f0ad9b8b4",
+          "value": "0x0000000000000000000000000000000000000000000e8de59a550b0a11b9b367",
+          "block": 26101009
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x865377367054516e17014ccded1e7d814edc9ce4",
+          "function": "balanceOf(address) args 000000000000000000000000b45ad160634c528cc3d2926d9807104fa3157305",
+          "value": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "block": 26101009
+        }
+      ],
+      "sources": [
+        {
+          "label": "ethereum:sdola exact-match verified source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xb45ad160634c528cc3d2926d9807104fa3157305?fields=compilation,sources,proxyResolution"
+        },
+        {
+          "label": "ethereum:savings exact-match verified source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xe5f24791e273cb96a1f8e5b67bc2397f0ad9b8b4?fields=compilation,sources,proxyResolution"
+        }
+      ]
+    },
+    {
+      "scopeKind": "whole-allocation",
+      "assetId": "susdd-tron-dao-reserve",
+      "reviewedAt": "2026-10-02",
+      "expiresAt": "2026-11-01",
+      "reviewer": "DataCWrapperLocal: exact verified source and pinned allocation census",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "none",
+      "rationale": "Ethereum and BNB Chain SavingsUsdd are immutable, one-parent savings claims. The exhaustive source-defined route is wrapper -> UsddJoin -> Vat/Pot: Join burns deposited parent USDD and credits internal Vat USDD; Pot holds internal Vat balances and records pie. Withdrawals reverse Pot/Vat movements and Join mints parent USDD. Both wrappers and Joins have zero token USDD at the pinned blocks; each wrapper totalSupply equals its Pot pie and the Pot aggregate Pie. Neither wrapper nor Pot has an allocator, strategy list, lending approval, borrowing function or arbitrary call surface. Pot administrators may change dsr/vow, authorize wards or cage; Join may authorize wards or cage, and Vat retains parent protocol issuance/CDP powers. These powers and global Smart Allocator cash-reserve investments remain parent/control exposure, not a local reinvestment of savings-token principal. No legal segregation or bankruptcy protection is asserted.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0xc5d6a7b61d18afa11435a889557b068bb9f29930",
+          "function": "asset()",
+          "value": "0x0000000000000000000000004f8e5de400de08b164e7421b3ee387f461becd1a",
+          "block": 26101009
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xc5d6a7b61d18afa11435a889557b068bb9f29930",
+          "function": "vat()",
+          "value": "0x000000000000000000000000ff77f6209239deb2c076179499f2346b0032097f",
+          "block": 26101009
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xc5d6a7b61d18afa11435a889557b068bb9f29930",
+          "function": "usddJoin()",
+          "value": "0x000000000000000000000000983dfef6d71862d809e239845da5a959492f63b8",
+          "block": 26101009
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xc5d6a7b61d18afa11435a889557b068bb9f29930",
+          "function": "pot()",
+          "value": "0x000000000000000000000000e789578252cc026ffb3413a1104ba223fdeca500",
+          "block": 26101009
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xc5d6a7b61d18afa11435a889557b068bb9f29930",
+          "function": "totalSupply()",
+          "value": "0x00000000000000000000000000000000000000000095073959c6fa7971e1fccf",
+          "block": 26101009
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xc5d6a7b61d18afa11435a889557b068bb9f29930",
+          "function": "totalAssets()",
+          "value": "0x0000000000000000000000000000000000000000009f1aa7f08a665b530d6de0",
+          "block": 26101009
+        },
+        {
+          "chain": "bsc",
+          "address": "0x8ba9da757d1d66c58b1ae7e2ed6c04087348a82d",
+          "function": "asset()",
+          "value": "0x00000000000000000000000045e51bc23d592eb2dba86da3985299f7895d66ba",
+          "block": 125195290
+        },
+        {
+          "chain": "bsc",
+          "address": "0x8ba9da757d1d66c58b1ae7e2ed6c04087348a82d",
+          "function": "vat()",
+          "value": "0x00000000000000000000000041f1402ab4d900115d1f16a14a3cf4bdf2f2705c",
+          "block": 125195290
+        },
+        {
+          "chain": "bsc",
+          "address": "0x8ba9da757d1d66c58b1ae7e2ed6c04087348a82d",
+          "function": "usddJoin()",
+          "value": "0x0000000000000000000000006b00039d76795fd59baf17e0c9c6d87011e7edac",
+          "block": 125195290
+        },
+        {
+          "chain": "bsc",
+          "address": "0x8ba9da757d1d66c58b1ae7e2ed6c04087348a82d",
+          "function": "pot()",
+          "value": "0x000000000000000000000000f0c506e48383c1925c025ec9f4a9e1dd94ff8b18",
+          "block": 125195290
+        },
+        {
+          "chain": "bsc",
+          "address": "0x8ba9da757d1d66c58b1ae7e2ed6c04087348a82d",
+          "function": "totalSupply()",
+          "value": "0x0000000000000000000000000000000000000000000a4790f5936a7f05aba708",
+          "block": 125195290
+        },
+        {
+          "chain": "bsc",
+          "address": "0x8ba9da757d1d66c58b1ae7e2ed6c04087348a82d",
+          "function": "totalAssets()",
+          "value": "0x0000000000000000000000000000000000000000000ae5baa791e9328a481020",
+          "block": 125195290
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x4f8e5de400de08b164e7421b3ee387f461becd1a",
+          "function": "balanceOf(address) args 000000000000000000000000c5d6a7b61d18afa11435a889557b068bb9f29930",
+          "value": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "block": 26101009
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x4f8e5de400de08b164e7421b3ee387f461becd1a",
+          "function": "balanceOf(address) args 000000000000000000000000983dfef6d71862d809e239845da5a959492f63b8",
+          "value": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "block": 26101009
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xe789578252cc026ffb3413a1104ba223fdeca500",
+          "function": "pie(address) args 000000000000000000000000c5d6a7b61d18afa11435a889557b068bb9f29930",
+          "value": "0x00000000000000000000000000000000000000000095073959c6fa7971e1fccf",
+          "block": 26101009
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xe789578252cc026ffb3413a1104ba223fdeca500",
+          "function": "Pie()",
+          "value": "0x00000000000000000000000000000000000000000095073959c6fa7971e1fccf",
+          "block": 26101009
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xe789578252cc026ffb3413a1104ba223fdeca500",
+          "function": "chi()",
+          "value": "0x000000000000000000000000000000000000000003731ac122d429b8edb82823",
+          "block": 26101009
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xe789578252cc026ffb3413a1104ba223fdeca500",
+          "function": "vat()",
+          "value": "0x000000000000000000000000ff77f6209239deb2c076179499f2346b0032097f",
+          "block": 26101009
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xe789578252cc026ffb3413a1104ba223fdeca500",
+          "function": "vow()",
+          "value": "0x000000000000000000000000f085edd75c1ab4fda0c3bd49b264a4a113d06f3b",
+          "block": 26101009
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xe789578252cc026ffb3413a1104ba223fdeca500",
+          "function": "live()",
+          "value": "0x0000000000000000000000000000000000000000000000000000000000000001",
+          "block": 26101009
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xff77f6209239deb2c076179499f2346b0032097f",
+          "function": "usdd(address) args 000000000000000000000000e789578252cc026ffb3413a1104ba223fdeca500",
+          "value": "0x0000000000000000000202177dfb3524b891832466b41b13b86625a7392de84d",
+          "block": 26101009
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xff77f6209239deb2c076179499f2346b0032097f",
+          "function": "usdd(address) args 000000000000000000000000c5d6a7b61d18afa11435a889557b068bb9f29930",
+          "value": "0x0000000000000000000000000000000000000161f6be38710b4cc5193d168577",
+          "block": 26101009
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x983dfef6d71862d809e239845da5a959492f63b8",
+          "function": "vat()",
+          "value": "0x000000000000000000000000ff77f6209239deb2c076179499f2346b0032097f",
+          "block": 26101009
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x983dfef6d71862d809e239845da5a959492f63b8",
+          "function": "usdd()",
+          "value": "0x0000000000000000000000004f8e5de400de08b164e7421b3ee387f461becd1a",
+          "block": 26101009
+        },
+        {
+          "chain": "bsc",
+          "address": "0x45e51bc23d592eb2dba86da3985299f7895d66ba",
+          "function": "balanceOf(address) args 0000000000000000000000008ba9da757d1d66c58b1ae7e2ed6c04087348a82d",
+          "value": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "block": 125195290
+        },
+        {
+          "chain": "bsc",
+          "address": "0x45e51bc23d592eb2dba86da3985299f7895d66ba",
+          "function": "balanceOf(address) args 0000000000000000000000006b00039d76795fd59baf17e0c9c6d87011e7edac",
+          "value": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "block": 125195290
+        },
+        {
+          "chain": "bsc",
+          "address": "0xf0c506e48383c1925c025ec9f4a9e1dd94ff8b18",
+          "function": "pie(address) args 0000000000000000000000008ba9da757d1d66c58b1ae7e2ed6c04087348a82d",
+          "value": "0x0000000000000000000000000000000000000000000a4790f5936a7f05aba708",
+          "block": 125195290
+        },
+        {
+          "chain": "bsc",
+          "address": "0xf0c506e48383c1925c025ec9f4a9e1dd94ff8b18",
+          "function": "Pie()",
+          "value": "0x0000000000000000000000000000000000000000000a4790f5936a7f05aba708",
+          "block": 125195290
+        },
+        {
+          "chain": "bsc",
+          "address": "0xf0c506e48383c1925c025ec9f4a9e1dd94ff8b18",
+          "function": "chi()",
+          "value": "0x0000000000000000000000000000000000000000036ce50e01871a6c21b39675",
+          "block": 125195290
+        },
+        {
+          "chain": "bsc",
+          "address": "0xf0c506e48383c1925c025ec9f4a9e1dd94ff8b18",
+          "function": "vat()",
+          "value": "0x00000000000000000000000041f1402ab4d900115d1f16a14a3cf4bdf2f2705c",
+          "block": 125195290
+        },
+        {
+          "chain": "bsc",
+          "address": "0xf0c506e48383c1925c025ec9f4a9e1dd94ff8b18",
+          "function": "vow()",
+          "value": "0x0000000000000000000000001c9a9d6ee4b5bffdacdad6cfb396a337f311c5b7",
+          "block": 125195290
+        },
+        {
+          "chain": "bsc",
+          "address": "0xf0c506e48383c1925c025ec9f4a9e1dd94ff8b18",
+          "function": "live()",
+          "value": "0x0000000000000000000000000000000000000000000000000000000000000001",
+          "block": 125195290
+        },
+        {
+          "chain": "bsc",
+          "address": "0x41f1402ab4d900115d1f16a14a3cf4bdf2f2705c",
+          "function": "usdd(address) args 000000000000000000000000f0c506e48383c1925c025ec9f4a9e1dd94ff8b18",
+          "value": "0x000000000000000000002336169cf9bf14fe33146ad623b863eb784dfdea06a8",
+          "block": 125195290
+        },
+        {
+          "chain": "bsc",
+          "address": "0x41f1402ab4d900115d1f16a14a3cf4bdf2f2705c",
+          "function": "usdd(address) args 0000000000000000000000008ba9da757d1d66c58b1ae7e2ed6c04087348a82d",
+          "value": "0x0000000000000000000000000000000000000069f6bc6bea3a1df9a59a80d7f0",
+          "block": 125195290
+        },
+        {
+          "chain": "bsc",
+          "address": "0x6b00039d76795fd59baf17e0c9c6d87011e7edac",
+          "function": "vat()",
+          "value": "0x00000000000000000000000041f1402ab4d900115d1f16a14a3cf4bdf2f2705c",
+          "block": 125195290
+        },
+        {
+          "chain": "bsc",
+          "address": "0x6b00039d76795fd59baf17e0c9c6d87011e7edac",
+          "function": "usdd()",
+          "value": "0x00000000000000000000000045e51bc23d592eb2dba86da3985299f7895d66ba",
+          "block": 125195290
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xff77f6209239deb2c076179499f2346b0032097f",
+          "function": "can(address,address) args 000000000000000000000000c5d6a7b61d18afa11435a889557b068bb9f29930000000000000000000000000e789578252cc026ffb3413a1104ba223fdeca500",
+          "value": "0x0000000000000000000000000000000000000000000000000000000000000001",
+          "block": 26101009
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xff77f6209239deb2c076179499f2346b0032097f",
+          "function": "can(address,address) args 000000000000000000000000c5d6a7b61d18afa11435a889557b068bb9f29930000000000000000000000000983dfef6d71862d809e239845da5a959492f63b8",
+          "value": "0x0000000000000000000000000000000000000000000000000000000000000001",
+          "block": 26101009
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xff77f6209239deb2c076179499f2346b0032097f",
+          "function": "can(address,address) args 000000000000000000000000e789578252cc026ffb3413a1104ba223fdeca500000000000000000000000000983dfef6d71862d809e239845da5a959492f63b8",
+          "value": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "block": 26101009
+        }
+      ],
+      "sources": [
+        {
+          "label": "bsc:usddJoin exact-match verified source",
+          "url": "https://sourcify.dev/server/v2/contract/56/0x6b00039d76795fd59baf17e0c9c6d87011e7edac?fields=compilation,sources,proxyResolution"
+        },
+        {
+          "label": "bsc:pot exact-match verified source",
+          "url": "https://sourcify.dev/server/v2/contract/56/0xf0c506e48383c1925c025ec9f4a9e1dd94ff8b18?fields=compilation,sources,proxyResolution"
+        },
+        {
+          "label": "bsc:vat exact-match verified source",
+          "url": "https://sourcify.dev/server/v2/contract/56/0x41f1402ab4d900115d1f16a14a3cf4bdf2f2705c?fields=compilation,sources,proxyResolution"
+        },
+        {
+          "label": "ethereum:usddJoin exact-match verified source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x983dfef6d71862d809e239845da5a959492f63b8?fields=compilation,sources,proxyResolution"
+        },
+        {
+          "label": "ethereum:pot exact-match verified source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xe789578252cc026ffb3413a1104ba223fdeca500?fields=compilation,sources,proxyResolution"
+        },
+        {
+          "label": "ethereum:vat exact-match verified source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xff77f6209239deb2c076179499f2346b0032097f?fields=compilation,sources,proxyResolution"
+        },
+        {
+          "label": "ethereum:wrapper exact-match verified source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xc5d6a7b61d18afa11435a889557b068bb9f29930?fields=compilation,sources,proxyResolution"
+        },
+        {
+          "label": "bsc:wrapper exact-match verified source",
+          "url": "https://sourcify.dev/server/v2/contract/56/0x8ba9da757d1d66c58b1ae7e2ed6c04087348a82d?fields=compilation,sources,proxyResolution"
+        }
+      ]
     }
   ]
 }
