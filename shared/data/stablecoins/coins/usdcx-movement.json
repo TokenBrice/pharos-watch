@@ -7,6 +7,33 @@
     "backing": "rwa-backed",
     "governance": "centralized-dependent"
   },
+  "variantOf": "usdc-circle",
+  "variantKind": "pure-wrapper",
+  "pegReferenceId": "usdc-circle",
+  "dependencyReview": {
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Unknown wave W1R84",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Circle exact Movement USDCx launch and 1:1 backing",
+        "url": "https://www.circle.com/blog/usdcx-on-movement-now-available-via-circle-xreserve"
+      },
+      {
+        "label": "Circle xReserve technical guide",
+        "url": "https://developers.circle.com/xreserve/concepts/technical-guide"
+      }
+    ],
+    "rationale": "Circle identifies the exact Movement token as fully backed 1:1 by USDC held in xReserve. Deposit and withdrawal attestations conserve a fixed USDC claim rather than a yield-bearing NAV or local loss-absorption position. USDC is the serial parent; Movement minting, cross-chain attesters, contract control and redemption fees remain local risks, not inherited protective controls.",
+    "relationships": [
+      {
+        "id": "usdc-circle",
+        "weight": 1,
+        "type": "wrapper",
+        "reason": "Issuer-documented fixed 1:1 USDC representation; xReserve/Movement bridge and deployment controls remain local."
+      }
+    ]
+  },
   "collateral": "1:1 USDC held in a Circle-deployed xReserve smart contract; the underlying reserve is Circle USDC, whose backing is short-duration U.S. Treasuries and cash held by regulated custodians.",
   "pegMechanism": "Users mint USDCx on Movement by depositing USDC into Circle's xReserve smart contract, which issues USDCx 1:1; redemption burns USDCx and releases the underlying USDC back to the user. xReserve also enables 1:1 transfers between USDCx and USDC across supported chains via Circle CCTP and Gateway without third-party bridges.",
   "mechanismArchetype": "fiat-cash",

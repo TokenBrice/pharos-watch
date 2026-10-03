@@ -29234,6 +29234,610 @@
         "https://docs.iron.xyz/"
       ],
       "rationale": "The issuer withdrawal schedule, bounded settlement SLA and current minimum are undisclosed. Terms specify customer onboarding, one-for-one USD redemption and no current issuer fee, but invoke an unpublished redemption schedule and changeable minimum. Generic M0 swapOutM permissions do not establish MoonPay fiat settlement; no instant/permissionless full-holder exit is inferred."
+    },
+    {
+      "id": "uw-tgbp-tokenised-774ec4c11f0ac912",
+      "assetId": "tgbp-tokenised",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:1682e4b3f3e78e540101414c",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:36Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R84)",
+      "sources": [
+        {
+          "url": "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Page 2 reserve table, visually inspected",
+          "excerpt": "Cash Accounts\nBonds\nMoney Market Funds",
+          "assertion": "Latest report publishes three class totals, but no bank/bond obligor/fund roster, contractual maximum maturity or realization horizon."
+        },
+        {
+          "url": "https://www.tokenisedgbp.com/terms",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": "2026-01-06",
+          "location": "Section 6 reserves",
+          "excerpt": "We hold the backing reserve in liquid assets, such as Money Market Funds, UK Treasuries and bank deposits, as permitted and in accordance with the FCA\u2019s rules and requirements as enforced time to time.",
+          "assertion": "Eligible classes and liquidity descriptions do not identify current obligors, numeric maturities or cash-realization windows."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.tokenisedgbp.com/",
+        "https://www.tokenisedgbp.com/transparency",
+        "https://www.tokenisedgbp.com/terms",
+        "https://www.tokenisedgbp.com/blog",
+        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
+        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-04-30.pdf"
+      ],
+      "rationale": "August reserve table and April report disclose cash accounts, bonds and money-market fund aggregate balances only. Issuer site, archive and terms do not identify current bank/obligor/fund keys, contractual maximum maturities or slice-specific cash-realization windows. Generic eligible UK Treasuries and liquid assets cannot establish current bond identity, maturity or immediate realization."
+    },
+    {
+      "id": "uw-tgbp-tokenised-4996309e83798727",
+      "assetId": "tgbp-tokenised",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:1682e4b3f3e78e540101414c",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:36Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R84)",
+      "sources": [
+        {
+          "url": "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Page 2 reserve table, visually inspected",
+          "excerpt": "Cash Accounts\nBonds\nMoney Market Funds",
+          "assertion": "Latest report publishes three class totals, but no bank/bond obligor/fund roster, contractual maximum maturity or realization horizon."
+        },
+        {
+          "url": "https://www.tokenisedgbp.com/terms",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": "2026-01-06",
+          "location": "Section 6 reserves",
+          "excerpt": "We hold the backing reserve in liquid assets, such as Money Market Funds, UK Treasuries and bank deposits, as permitted and in accordance with the FCA\u2019s rules and requirements as enforced time to time.",
+          "assertion": "Eligible classes and liquidity descriptions do not identify current obligors, numeric maturities or cash-realization windows."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.tokenisedgbp.com/",
+        "https://www.tokenisedgbp.com/transparency",
+        "https://www.tokenisedgbp.com/terms",
+        "https://www.tokenisedgbp.com/blog",
+        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
+        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-04-30.pdf"
+      ],
+      "rationale": "August reserve table and April report disclose cash accounts, bonds and money-market fund aggregate balances only. Issuer site, archive and terms do not identify current bank/obligor/fund keys, contractual maximum maturities or slice-specific cash-realization windows. Generic eligible UK Treasuries and liquid assets cannot establish current bond identity, maturity or immediate realization."
+    },
+    {
+      "id": "uw-tgbp-tokenised-64aa015773ccce0a",
+      "assetId": "tgbp-tokenised",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:1682e4b3f3e78e540101414c",
+        "factorKey": "obligorConcentration",
+        "pillar": "backing",
+        "requiredDatum": "issuerOrObligorKey",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:36Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R84)",
+      "sources": [
+        {
+          "url": "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Page 2 reserve table, visually inspected",
+          "excerpt": "Cash Accounts\nBonds\nMoney Market Funds",
+          "assertion": "Latest report publishes three class totals, but no bank/bond obligor/fund roster, contractual maximum maturity or realization horizon."
+        },
+        {
+          "url": "https://www.tokenisedgbp.com/terms",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": "2026-01-06",
+          "location": "Section 6 reserves",
+          "excerpt": "We hold the backing reserve in liquid assets, such as Money Market Funds, UK Treasuries and bank deposits, as permitted and in accordance with the FCA\u2019s rules and requirements as enforced time to time.",
+          "assertion": "Eligible classes and liquidity descriptions do not identify current obligors, numeric maturities or cash-realization windows."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.tokenisedgbp.com/",
+        "https://www.tokenisedgbp.com/transparency",
+        "https://www.tokenisedgbp.com/terms",
+        "https://www.tokenisedgbp.com/blog",
+        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
+        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-04-30.pdf"
+      ],
+      "rationale": "August reserve table and April report disclose cash accounts, bonds and money-market fund aggregate balances only. Issuer site, archive and terms do not identify current bank/obligor/fund keys, contractual maximum maturities or slice-specific cash-realization windows. Generic eligible UK Treasuries and liquid assets cannot establish current bond identity, maturity or immediate realization."
+    },
+    {
+      "id": "uw-tgbp-tokenised-5ffc3ffcd7cdabce",
+      "assetId": "tgbp-tokenised",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:363268f8b18b7767c6181786",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:36Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R84)",
+      "sources": [
+        {
+          "url": "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Page 2 reserve table, visually inspected",
+          "excerpt": "Cash Accounts\nBonds\nMoney Market Funds",
+          "assertion": "Latest report publishes three class totals, but no bank/bond obligor/fund roster, contractual maximum maturity or realization horizon."
+        },
+        {
+          "url": "https://www.tokenisedgbp.com/terms",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": "2026-01-06",
+          "location": "Section 6 reserves",
+          "excerpt": "We hold the backing reserve in liquid assets, such as Money Market Funds, UK Treasuries and bank deposits, as permitted and in accordance with the FCA\u2019s rules and requirements as enforced time to time.",
+          "assertion": "Eligible classes and liquidity descriptions do not identify current obligors, numeric maturities or cash-realization windows."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.tokenisedgbp.com/",
+        "https://www.tokenisedgbp.com/transparency",
+        "https://www.tokenisedgbp.com/terms",
+        "https://www.tokenisedgbp.com/blog",
+        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
+        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-04-30.pdf"
+      ],
+      "rationale": "August reserve table and April report disclose cash accounts, bonds and money-market fund aggregate balances only. Issuer site, archive and terms do not identify current bank/obligor/fund keys, contractual maximum maturities or slice-specific cash-realization windows. Generic eligible UK Treasuries and liquid assets cannot establish current bond identity, maturity or immediate realization."
+    },
+    {
+      "id": "uw-tgbp-tokenised-52b5fe382ef54e1e",
+      "assetId": "tgbp-tokenised",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:363268f8b18b7767c6181786",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:36Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R84)",
+      "sources": [
+        {
+          "url": "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Page 2 reserve table, visually inspected",
+          "excerpt": "Cash Accounts\nBonds\nMoney Market Funds",
+          "assertion": "Latest report publishes three class totals, but no bank/bond obligor/fund roster, contractual maximum maturity or realization horizon."
+        },
+        {
+          "url": "https://www.tokenisedgbp.com/terms",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": "2026-01-06",
+          "location": "Section 6 reserves",
+          "excerpt": "We hold the backing reserve in liquid assets, such as Money Market Funds, UK Treasuries and bank deposits, as permitted and in accordance with the FCA\u2019s rules and requirements as enforced time to time.",
+          "assertion": "Eligible classes and liquidity descriptions do not identify current obligors, numeric maturities or cash-realization windows."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.tokenisedgbp.com/",
+        "https://www.tokenisedgbp.com/transparency",
+        "https://www.tokenisedgbp.com/terms",
+        "https://www.tokenisedgbp.com/blog",
+        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
+        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-04-30.pdf"
+      ],
+      "rationale": "August reserve table and April report disclose cash accounts, bonds and money-market fund aggregate balances only. Issuer site, archive and terms do not identify current bank/obligor/fund keys, contractual maximum maturities or slice-specific cash-realization windows. Generic eligible UK Treasuries and liquid assets cannot establish current bond identity, maturity or immediate realization."
+    },
+    {
+      "id": "uw-tgbp-tokenised-94da9ee9d9af4968",
+      "assetId": "tgbp-tokenised",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:363268f8b18b7767c6181786",
+        "factorKey": "obligorConcentration",
+        "pillar": "backing",
+        "requiredDatum": "issuerOrObligorKey",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:36Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R84)",
+      "sources": [
+        {
+          "url": "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Page 2 reserve table, visually inspected",
+          "excerpt": "Cash Accounts\nBonds\nMoney Market Funds",
+          "assertion": "Latest report publishes three class totals, but no bank/bond obligor/fund roster, contractual maximum maturity or realization horizon."
+        },
+        {
+          "url": "https://www.tokenisedgbp.com/terms",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": "2026-01-06",
+          "location": "Section 6 reserves",
+          "excerpt": "We hold the backing reserve in liquid assets, such as Money Market Funds, UK Treasuries and bank deposits, as permitted and in accordance with the FCA\u2019s rules and requirements as enforced time to time.",
+          "assertion": "Eligible classes and liquidity descriptions do not identify current obligors, numeric maturities or cash-realization windows."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.tokenisedgbp.com/",
+        "https://www.tokenisedgbp.com/transparency",
+        "https://www.tokenisedgbp.com/terms",
+        "https://www.tokenisedgbp.com/blog",
+        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
+        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-04-30.pdf"
+      ],
+      "rationale": "August reserve table and April report disclose cash accounts, bonds and money-market fund aggregate balances only. Issuer site, archive and terms do not identify current bank/obligor/fund keys, contractual maximum maturities or slice-specific cash-realization windows. Generic eligible UK Treasuries and liquid assets cannot establish current bond identity, maturity or immediate realization."
+    },
+    {
+      "id": "uw-tgbp-tokenised-377fa69708c3ef09",
+      "assetId": "tgbp-tokenised",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:d6d53f52dd022a95bfdead6c",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:36Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R84)",
+      "sources": [
+        {
+          "url": "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Page 2 reserve table, visually inspected",
+          "excerpt": "Cash Accounts\nBonds\nMoney Market Funds",
+          "assertion": "Latest report publishes three class totals, but no bank/bond obligor/fund roster, contractual maximum maturity or realization horizon."
+        },
+        {
+          "url": "https://www.tokenisedgbp.com/terms",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": "2026-01-06",
+          "location": "Section 6 reserves",
+          "excerpt": "We hold the backing reserve in liquid assets, such as Money Market Funds, UK Treasuries and bank deposits, as permitted and in accordance with the FCA\u2019s rules and requirements as enforced time to time.",
+          "assertion": "Eligible classes and liquidity descriptions do not identify current obligors, numeric maturities or cash-realization windows."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.tokenisedgbp.com/",
+        "https://www.tokenisedgbp.com/transparency",
+        "https://www.tokenisedgbp.com/terms",
+        "https://www.tokenisedgbp.com/blog",
+        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
+        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-04-30.pdf"
+      ],
+      "rationale": "August reserve table and April report disclose cash accounts, bonds and money-market fund aggregate balances only. Issuer site, archive and terms do not identify current bank/obligor/fund keys, contractual maximum maturities or slice-specific cash-realization windows. Generic eligible UK Treasuries and liquid assets cannot establish current bond identity, maturity or immediate realization."
+    },
+    {
+      "id": "uw-tgbp-tokenised-b4626eff14609e01",
+      "assetId": "tgbp-tokenised",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:d6d53f52dd022a95bfdead6c",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:36Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R84)",
+      "sources": [
+        {
+          "url": "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Page 2 reserve table, visually inspected",
+          "excerpt": "Cash Accounts\nBonds\nMoney Market Funds",
+          "assertion": "Latest report publishes three class totals, but no bank/bond obligor/fund roster, contractual maximum maturity or realization horizon."
+        },
+        {
+          "url": "https://www.tokenisedgbp.com/terms",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": "2026-01-06",
+          "location": "Section 6 reserves",
+          "excerpt": "We hold the backing reserve in liquid assets, such as Money Market Funds, UK Treasuries and bank deposits, as permitted and in accordance with the FCA\u2019s rules and requirements as enforced time to time.",
+          "assertion": "Eligible classes and liquidity descriptions do not identify current obligors, numeric maturities or cash-realization windows."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.tokenisedgbp.com/",
+        "https://www.tokenisedgbp.com/transparency",
+        "https://www.tokenisedgbp.com/terms",
+        "https://www.tokenisedgbp.com/blog",
+        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
+        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-04-30.pdf"
+      ],
+      "rationale": "August reserve table and April report disclose cash accounts, bonds and money-market fund aggregate balances only. Issuer site, archive and terms do not identify current bank/obligor/fund keys, contractual maximum maturities or slice-specific cash-realization windows. Generic eligible UK Treasuries and liquid assets cannot establish current bond identity, maturity or immediate realization."
+    },
+    {
+      "id": "uw-tgbp-tokenised-356b662e6e189ffd",
+      "assetId": "tgbp-tokenised",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:d6d53f52dd022a95bfdead6c",
+        "factorKey": "obligorConcentration",
+        "pillar": "backing",
+        "requiredDatum": "issuerOrObligorKey",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:36Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R84)",
+      "sources": [
+        {
+          "url": "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Page 2 reserve table, visually inspected",
+          "excerpt": "Cash Accounts\nBonds\nMoney Market Funds",
+          "assertion": "Latest report publishes three class totals, but no bank/bond obligor/fund roster, contractual maximum maturity or realization horizon."
+        },
+        {
+          "url": "https://www.tokenisedgbp.com/terms",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": "2026-01-06",
+          "location": "Section 6 reserves",
+          "excerpt": "We hold the backing reserve in liquid assets, such as Money Market Funds, UK Treasuries and bank deposits, as permitted and in accordance with the FCA\u2019s rules and requirements as enforced time to time.",
+          "assertion": "Eligible classes and liquidity descriptions do not identify current obligors, numeric maturities or cash-realization windows."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.tokenisedgbp.com/",
+        "https://www.tokenisedgbp.com/transparency",
+        "https://www.tokenisedgbp.com/terms",
+        "https://www.tokenisedgbp.com/blog",
+        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
+        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-04-30.pdf"
+      ],
+      "rationale": "August reserve table and April report disclose cash accounts, bonds and money-market fund aggregate balances only. Issuer site, archive and terms do not identify current bank/obligor/fund keys, contractual maximum maturities or slice-specific cash-realization windows. Generic eligible UK Treasuries and liquid assets cannot establish current bond identity, maturity or immediate realization."
+    },
+    {
+      "id": "uw-tgbp-tokenised-47fe386911993e96",
+      "assetId": "tgbp-tokenised",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:tgbp-tokenised:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:36Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R84)",
+      "sources": [
+        {
+          "url": "https://www.tokenisedgbp.com/terms",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": "2026-01-06",
+          "location": "Section 3 issuance/redemption",
+          "excerpt": "We reserve the right to impose limits or fees on issuance and redemption transactions.",
+          "assertion": "Direct redemption is disclosed, but no numeric all-in fee schedule or finite completion SLA for eligible direct customers."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.tokenisedgbp.com/",
+        "https://www.tokenisedgbp.com/terms",
+        "https://www.tokenisedgbp.com/transparency",
+        "https://www.tokenisedgbp.com/blog",
+        "https://stableregistry.com/contracts/tgbp-on-ethereum/"
+      ],
+      "rationale": "BCP direct redemption's numeric all-in fee and finite settlement bound are not published in issuer terms/site/archive. Buying or receiving free is not redeeming free. StableRegistry's 0 bps/5-business-day claims have no cited primary tariff/SLA and cannot override BCP terms allowing fees, delays and limits. Archax OTC is a different cohort."
+    },
+    {
+      "id": "uw-tgbp-tokenised-6dd6a11335f00e03",
+      "assetId": "tgbp-tokenised",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:tgbp-tokenised:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:36Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R84)",
+      "sources": [
+        {
+          "url": "https://www.tokenisedgbp.com/terms",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": "2026-01-06",
+          "location": "Section 3 issuance/redemption",
+          "excerpt": "We reserve the right to impose limits or fees on issuance and redemption transactions.",
+          "assertion": "Direct redemption is disclosed, but no numeric all-in fee schedule or finite completion SLA for eligible direct customers."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.tokenisedgbp.com/",
+        "https://www.tokenisedgbp.com/terms",
+        "https://www.tokenisedgbp.com/transparency",
+        "https://www.tokenisedgbp.com/blog",
+        "https://stableregistry.com/contracts/tgbp-on-ethereum/"
+      ],
+      "rationale": "BCP direct redemption's numeric all-in fee and finite settlement bound are not published in issuer terms/site/archive. Buying or receiving free is not redeeming free. StableRegistry's 0 bps/5-business-day claims have no cited primary tariff/SLA and cannot override BCP terms allowing fees, delays and limits. Archax OTC is a different cohort."
+    },
+    {
+      "id": "uw-zarsc-supercoin-e01ef9de488ded93",
+      "assetId": "zarsc-supercoin",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:36Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R84)",
+      "sources": [
+        {
+          "url": "https://cdn.prod.website-files.com/6a43ab66ff171ec1aca79e9b/6a47cf673480e0371e2fc333_White_Paper_Supercoin_2026.pdf",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": null,
+          "location": "Page 12 reserve backing",
+          "excerpt": "Every token in circulation is matched 1:1 by fiat held in segregated accounts, reconciled regularly, with independent third-party attestation by Moore.",
+          "assertion": "Regular reconciliation claimed without a fixed whole-issued-supply cadence/exception-control regime. AUP uses management-defined noncirculating exclusions."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.supercoin.co.za/",
+        "https://www.supercoin.co.za/terms-of-service",
+        "https://www.supercoin.co.za/assurance-reports",
+        "https://www.supercoin.co.za/compliance",
+        "https://cdn.prod.website-files.com/6a43ab66ff171ec1aca79e9b/6a47cf673480e0371e2fc333_White_Paper_Supercoin_2026.pdf",
+        "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6aab8e272c83908780b26065_ZARSC%20AUG%202026%20Stablecoin%20Attestation%2031082026%20FINAL.pdf"
+      ],
+      "rationale": "Whitepaper claims regular circulation reconciliation but does not disclose a periodic whole-issued-supply reserve reconciliation cadence and exception/remediation controls. August Moore procedures compare a dated snapshot after management-defined treasury exclusions; ISRS 4400 expressly provides no assurance. Those disclosed neighboring checks do not establish the missing whole-supply operating regime."
+    },
+    {
+      "id": "uw-zarsc-supercoin-1f55ded07b0dc087",
+      "assetId": "zarsc-supercoin",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:44c84df45350c23e37c8746c",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:36Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R84)",
+      "sources": [
+        {
+          "url": "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6aab8e272c83908780b26065_ZARSC%20AUG%202026%20Stablecoin%20Attestation%2031082026%20FINAL.pdf",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Procedure 1(d)",
+          "excerpt": "the reserve assets comprised liquid cash reserves held in a current account with Absa Bank Limited and denominated in South African Rand.",
+          "assertion": "Current-account custody identified without the actual governing account contract or a contractual maximum maturity."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.supercoin.co.za/",
+        "https://www.supercoin.co.za/assurance-reports",
+        "https://www.supercoin.co.za/terms-of-service",
+        "https://www.supercoin.co.za/compliance",
+        "https://cdn.prod.website-files.com/6a43ab66ff171ec1aca79e9b/6a47cf673480e0371e2fc333_White_Paper_Supercoin_2026.pdf",
+        "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6aab8e272c83908780b26065_ZARSC%20AUG%202026%20Stablecoin%20Attestation%2031082026%20FINAL.pdf"
+      ],
+      "rationale": "Admitted class is bank-deposit, not maturity-inapplicable cash. Terms, whitepaper and bank-account AUP disclose Absa current-account custody but no actual account agreement or contractual maximum maturity. Generic current-account conventions cannot supply a numeric maturity bound for this account."
+    },
+    {
+      "id": "uw-wars-argentine-peso-58c362d6b754b3af",
+      "assetId": "wars-argentine-peso",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:wars-argentine-peso:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:36Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R84)",
+      "sources": [
+        {
+          "url": "https://www.ripio.com/en/wfiat",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": null,
+          "location": "Redemption flow",
+          "excerpt": "Burn the token and receive local currency in your bank account. No delays, no hidden fees.",
+          "assertion": "Fiat redemption disclosed without a numeric all-in direct wARS issuer/B2B tariff."
+        },
+        {
+          "url": "https://docs.ripio.com/crypto-as-a-service/reusable-quotes/create-reusable-quote",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": null,
+          "location": "Quote workflow",
+          "excerpt": "Please note that these rates are subject to change depending on the amount of base/quote currency the end user is willing to trade.",
+          "assertion": "B2B quote-dependent prices, not a complete public wARS direct redemption fee formula."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.ripio.com/en/wfiat",
+        "https://action.ripio.com/en/wfiat-attestations",
+        "https://terms.ripio.com/ar/wallet",
+        "https://docs.ripio.com/llms.txt",
+        "https://docs.ripio.com/crypto-as-a-service/reusable-quotes/create-reusable-quote",
+        "https://docs.ripio.com/crypto-as-a-service/fiat-withdrawals/create-fiat-withdrawal"
+      ],
+      "rationale": "No complete numeric/evaluable tariff for the direct wARS issuer/B2B redemption cohort is published across product, legal and API surfaces. Public 0.5% retail wallet buy/sell commissions are a different cohort/operation; no-hidden-fees is not zero-fees. API quotes expose changing rates, not a direct redemption tariff."
+    },
+    {
+      "id": "uw-usdcx-movement-dd74c0be5c6ccf7f",
+      "assetId": "usdcx-movement",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:3b16c86206e97f9f7d0e29bc",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:36Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R84)",
+      "sources": [
+        {
+          "url": "https://developers.circle.com/xreserve/concepts/technical-guide",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": null,
+          "location": "Dual attestation model",
+          "excerpt": "xReserve and remote blockchains operate independent attesters, creating a dual-attestation model that ensures both sides must validate before any funds move.",
+          "assertion": "USDC collateral identified; remote burn, attestations and release have no published finite realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.circle.com/blog/usdcx-on-movement-now-available-via-circle-xreserve",
+        "https://developers.circle.com/xreserve/concepts/technical-guide",
+        "https://developers.circle.com/xreserve/concepts/how-xreserve-works",
+        "https://developers.circle.com/api-reference/xreserve/all/prepare-withdrawal",
+        "https://developers.circle.com/xreserve/references/fees",
+        "https://console.circle.com/legal/developer-terms",
+        "https://raw.githubusercontent.com/circlefin/evm-xreserve-contracts/master/src/modules/x-reserve/Withdrawal.sol"
+      ],
+      "rationale": "Collateral is liquid USDC, but USDCx holders realize it through remote burn intents, independent attestations and release. Technical/API/code/legal/fee documents give the sequence, not a maximum end-to-end realization window. Underlying USDC immediacy cannot be copied onto the cross-chain escrow slice."
     }
   ]
 }

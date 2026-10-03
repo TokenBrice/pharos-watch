@@ -12794,6 +12794,138 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "usdcx-movement",
+      "reviewedAt": "2026-10-03T23:15:36Z",
+      "expiresAt": "2027-10-03T23:05:51Z",
+      "reviewer": "Unknown wave W1R84",
+      "notes": "Exact Movement deployment launch on March 25, 2026 establishes six full months of issuer-reported live history. Eligibility only; no independently verified performance, throughput, reconciliation continuity or incident-free history asserted.",
+      "sources": [
+        {
+          "sourceId": "circle-movement-launch",
+          "label": "USDCx on Movement now available via Circle xReserve",
+          "publisher": "Circle",
+          "publishedAt": "2026-03-25",
+          "url": "https://www.circle.com/blog/usdcx-on-movement-now-available-via-circle-xreserve",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 6,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "circle-movement-launch"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "tgbp-tokenised",
+      "reviewedAt": "2026-10-03T23:15:36Z",
+      "expiresAt": "2027-10-03T23:05:51Z",
+      "reviewer": "Unknown wave W1R84",
+      "notes": "Issuer's dated June 3, 2025 launch article establishes 16 full months of live operation. Eligibility only; no throughput, assurance, uninterrupted reconciliation or incident absence claimed.",
+      "sources": [
+        {
+          "sourceId": "tgbp-launch",
+          "label": "tGBP Press Momentum",
+          "publisher": "Tokenised GBP / BCP Technologies",
+          "publishedAt": "2025-06-03",
+          "url": "https://tgbp-blog.ghost.io/tgbp-press-momentum-featured-in-coindesk-and-leading-finance-media/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 16,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "tgbp-launch"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "zarsc-supercoin",
+      "reviewedAt": "2026-10-03T23:15:36Z",
+      "expiresAt": "2027-10-03T23:05:51Z",
+      "reviewer": "Unknown wave W1R84",
+      "notes": "Moore's dated report records exact mint initialization on August 19, 2025, establishing 13 full months. Source conservatively issuer-reported: ISRS 4400 AUP expressly gives no assurance. No throughput, continuous reconciliation, or incident absence claimed.",
+      "sources": [
+        {
+          "sourceId": "moore-august-report",
+          "label": "Moore ZARsc August 2026 agreed-upon procedures report",
+          "publisher": "Moore Blockchain and Digital Assets JHB",
+          "publishedAt": "2026-09-16",
+          "url": "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6aab8e272c83908780b26065_ZARSC%20AUG%202026%20Stablecoin%20Attestation%2031082026%20FINAL.pdf",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 13,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "moore-august-report"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "wars-argentine-peso",
+      "reviewedAt": "2026-10-03T23:15:36Z",
+      "expiresAt": "2027-10-03T23:05:51Z",
+      "reviewer": "Unknown wave W1R84",
+      "notes": "Ripio's exact wARS first-mint entry dated May 21, 2025 establishes 16 full months, not Ripio company age. Eligibility only; throughput, financial assurance continuity and incident history remain unreviewed.",
+      "sources": [
+        {
+          "sourceId": "ripio-first-wars-mint",
+          "label": "Ripio wFIAT release history: wARS first mint",
+          "publisher": "Ripio",
+          "publishedAt": "2025-05-21",
+          "url": "https://www.ripio.com/en/wfiat",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 16,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "ripio-first-wars-mint"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }
