@@ -106,8 +106,8 @@
     ]
   },
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "Vault share NAV uses internal asset/share accounting; underlying active Morpho borrower markets require collateral pricing. Exact market/oracle identities and LLTVs are inventoried, including nonzero dust; underlying feed administrators, update/staleness safeguards and complete fallback topology remain unverified. API type names alone do not establish oracle quality. Historical zero-supply positions are excluded from this current-exposure review.",
+    "tier": "single-source-or-laggy",
+    "summary": "Exact Arc borrower pricing uses one BTC/USD EACAggregatorProxy through MorphoChainlinkOracleV2, with no quote feed or vault conversion. Matched deployed runtimes prove the adapter ignores round timestamps and supplies no independent fallback. At block 24129915 the feed's updatedAt was 70884 seconds before the block. Both feed proxy and DualAggregator have owner 0x73877fe34aa2b162430cef680fea268b8ec1c4f1; owner can replace/configure pricing. Internal vault NAV accounting does not remove this borrower-price dependence.",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
@@ -151,9 +151,21 @@
       ]
     },
     "reviewedAt": "2026-10-03",
-    "reviewer": "Sol refinement 2026-10-03 (Refine09)",
-    "confidence": "probable",
+    "reviewer": "W2R06 exact Arc oracle runtime and fixed-block review",
+    "confidence": "verified",
     "sources": [
+      {
+        "label": "Exact Arc MorphoChainlinkOracleV2 source and runtime",
+        "url": "https://explorer.arc.io/api/v2/smart-contracts/0x2aa87ff48933ce6aba240bee916fc2e6ec1e51ab"
+      },
+      {
+        "label": "Exact Arc EACAggregatorProxy source and runtime",
+        "url": "https://explorer.arc.io/api/v2/smart-contracts/0x7777547914e03bcbb04ae034942765a0dbb26ae3"
+      },
+      {
+        "label": "Exact current DualAggregator source and runtime",
+        "url": "https://explorer.arc.io/api/v2/smart-contracts/0x733fe1ba02ea9003c3cfbf5dcc41cf685ff64362"
+      },
       {
         "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
         "url": "https://blue-api.morpho.org/graphql"
@@ -191,8 +203,8 @@
       {
         "id": "market-c2db905f174e5defcce01d321b09f15f78856a36a21b90cc7e1abbc29225815d",
         "label": "cirBTC / USDC",
-        "tier": "opaque-or-unknown",
-        "summary": "Morpho API identifies cirBTC collateral 0x171a4217b86a807a64eb94757db6849fb4bdbaa0, market 0xc2db905f174e5defcce01d321b09f15f78856a36a21b90cc7e1abbc29225815d, oracle 0x2aa87ff48933ce6aba240bee916fc2e6ec1e51ab, type ChainlinkOracleV2. Current nonzero supply exposure is established; upstream feed/admin/staleness and per-oracle fallback controls remain unverified. Independently read Morpho 0x34cd04070dd72b14e241112f6d83812df5af7fcd idToMarketParams(bytes32) at block 24012549 confirmed the exact oracle and LLTV; price() returned raw 847123832884500000000000000000000000000. A returned price proves callability of pricing at this block, not feed freshness, liquidator execution or safe topology. Current Morpho oracleByAddress publishes baseFeedOne=0x7777547914e03bcbb04ae034942765a0dbb26ae3. This improves the exact feed inventory; heartbeat/staleness enforcement, conversion-leg controls and complete privileged/manual update powers have not been established.",
+        "tier": "single-source-or-laggy",
+        "summary": "At Arc block 24129915 (0xd755d2e123d1f69118ad86c43f110c35afb1fc518a73c4a909d409fe26c00702), exact MorphoChainlinkOracleV2, feed proxy and current DualAggregator runtimes equal explorer source-bound deployed bytecode. The immutable borrower adapter has only BASE_FEED_1=0x7777547914e03bcbb04ae034942765a0dbb26ae3; other feeds/vaults are zero. ChainlinkDataFeedLib reads answer and ignores updatedAt, with no adapter fallback or staleness rejection. Proxy latestRoundData updatedAt=1791000284 versus block timestamp=1791071168. The proxy and aggregator owner is 0x73877fe34aa2b162430cef680fea268b8ec1c4f1. The aggregator's secondary-report logic is not an independent valuation feed; no redundant-with-failover protection is asserted.",
         "collateralAssets": [
           "cirBTC"
         ],
@@ -209,14 +221,14 @@
             "observedBlock": 24012549
           },
           {
-            "provider": "Chainlink-compatible composite leg (provider/admin/update policy unverified)",
+            "provider": "BTC/USD EACAggregatorProxy to owner-controlled DualAggregator",
             "path": "baseFeedOne of 0x2aa87ff48933ce6aba240bee916fc2e6ec1e51ab ; API decimals=8",
             "address": "0x7777547914e03bcbb04ae034942765a0dbb26ae3",
             "chain": "arc",
             "observedAt": "2026-10-03"
           }
         ],
-        "fallbackBehavior": "Morpho core invokes the configured market oracle price(); no alternate core oracle is selected. Any fallback or staleness rejection inside this exact oracle remains unverified.",
+        "fallbackBehavior": "Exact deployed Morpho adapter has a single BTC/USD feed and no independent fallback. ChainlinkDataFeedLib checks only nonnegative answer, not timestamp freshness. EACAggregatorProxy delegates to owner-replaceable DualAggregator; its primary/secondary report handling is not proof of independent price sources.",
         "collateralParameters": [
           {
             "asset": "cirBTC",
@@ -232,6 +244,18 @@
           {
             "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
             "url": "https://blue-api.morpho.org/graphql"
+          },
+          {
+            "label": "Exact adapter source: immutable feed inputs and ChainlinkDataFeedLib",
+            "url": "https://explorer.arc.io/api/v2/smart-contracts/0x2aa87ff48933ce6aba240bee916fc2e6ec1e51ab"
+          },
+          {
+            "label": "Exact owner-controlled BTC/USD feed proxy",
+            "url": "https://explorer.arc.io/api/v2/smart-contracts/0x7777547914e03bcbb04ae034942765a0dbb26ae3"
+          },
+          {
+            "label": "Current DualAggregator executable source",
+            "url": "https://explorer.arc.io/api/v2/smart-contracts/0x733fe1ba02ea9003c3cfbf5dcc41cf685ff64362"
           },
           {
             "label": "Morpho market oracle interface, immutable market oracle identity and source selection",
