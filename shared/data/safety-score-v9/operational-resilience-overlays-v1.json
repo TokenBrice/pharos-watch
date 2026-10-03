@@ -13199,6 +13199,171 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "chfau-allunity",
+      "reviewedAt": "2026-10-03T22:45:26Z",
+      "expiresAt": "2027-10-03T22:45:26Z",
+      "reviewer": "W1R25 primary-source unknown resolver",
+      "notes": "Dated exact-token live operation establishes only a lower bound of live history. No independently verified redemption throughput, stress recovery, reconciliation continuity, or incident absence is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Dated exact-token live operation announcement",
+          "publisher": "AllUnity",
+          "publishedAt": "2026-02-26",
+          "url": "https://allunity.com/news/allunity-launches-the-first-fully-reserved-micar-compliant-swiss-franc-stablecoin-chfau/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 7,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "eurau-allunity",
+      "reviewedAt": "2026-10-03T22:45:26Z",
+      "expiresAt": "2027-10-03T22:45:26Z",
+      "reviewer": "W1R25 primary-source unknown resolver",
+      "notes": "Dated exact-token live operation establishes only a lower bound of live history. No independently verified redemption throughput, stress recovery, reconciliation continuity, or incident absence is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Dated exact-token live operation announcement",
+          "publisher": "AllUnity",
+          "publishedAt": "2025-07-31",
+          "url": "https://allunity.com/news/allunity-launches-eurau-germanys-first-fully-reserved-micar-compliant-euro-stablecoin",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 14,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "iusd-infinifi",
+      "reviewedAt": "2026-10-03T22:45:26Z",
+      "expiresAt": "2027-10-03T22:45:26Z",
+      "reviewer": "W1R25 primary-source unknown resolver",
+      "notes": "Dated exact-token live operation establishes only a lower bound of live history. No independently verified redemption throughput, stress recovery, reconciliation continuity, or incident absence is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Dated exact-token live operation announcement",
+          "publisher": "infiniFi Labs",
+          "publishedAt": "2025-05-27",
+          "url": "https://docs.infinifi.xyz/dev-docs/changelog.md",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 16,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "europ-schuman",
+      "reviewedAt": "2026-10-03T22:45:26Z",
+      "expiresAt": "2027-10-03T22:45:26Z",
+      "reviewer": "W1R25 primary-source unknown resolver",
+      "notes": "Dated exact-token live operation establishes only a lower bound of live history. No independently verified redemption throughput, stress recovery, reconciliation continuity, or incident absence is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Dated exact-token live operation announcement",
+          "publisher": "Schuman Financial",
+          "publishedAt": "2025-05-22",
+          "url": "https://schuman.io/blog/schuman-financials-europ-becomes-first-mica-compliant-euro-stablecoin-integrated-on-the-xrp-ledger/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 16,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "ylds-figure",
+      "reviewedAt": "2026-10-03T22:45:26Z",
+      "expiresAt": "2027-10-03T22:45:26Z",
+      "reviewer": "W1R25 primary-source unknown resolver",
+      "notes": "Dated exact-token live operation establishes only a lower bound of live history. No independently verified redemption throughput, stress recovery, reconciliation continuity, or incident absence is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Dated exact-token live operation announcement",
+          "publisher": "Figure",
+          "publishedAt": "2025-02-20",
+          "url": "https://www.figure.com/newsroom/announcement/figure-markets-announces-ylds-first-yield-bearing-stablecoin/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 19,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }
