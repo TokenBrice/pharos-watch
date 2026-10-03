@@ -13364,6 +13364,39 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "acred-apollo-securitize",
+      "reviewedAt": "2026-10-03T23:52:54Z",
+      "expiresAt": "2027-10-03T23:59:59Z",
+      "reviewer": "W2R08 primary-source research",
+      "notes": "Dated exact ACRED feeder launch supplies only a conservative calendar-age eligibility lower bound. The undated current offering is not given a fabricated publication date. No uninterrupted service, independent performance, throughput, reconciliation continuity or incident-free claim is made.",
+      "sources": [
+        {
+          "sourceId": "acred-exact-launch",
+          "label": "Securitize ACRED exact feeder launch",
+          "publisher": "Securitize",
+          "publishedAt": "2025-01-30",
+          "url": "https://securitize.io/learn/press/apollo-and-securitize-announce-partnership-and-launch-tokenized-access-to-credit-fund",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 20,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "acred-exact-launch"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }
