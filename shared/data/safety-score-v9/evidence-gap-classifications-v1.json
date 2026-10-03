@@ -12127,6 +12127,77 @@
         "https://docs.solomonlabs.org/usdv/transparency-and-risk"
       ],
       "rationale": "Exact replacement mint is identified in the issuer docs. The acquisition/redemption terms describe venues and conditional institutional access but no guaranteed full-position realization horizon for OnRe\u2019s held USDv. Liquid/composable marketing is not a maximum time bound."
+    },
+    {
+      "id": "uw-fpi-frax-118cc1b45dbc5ce3",
+      "assetId": "fpi-frax",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:57:06Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R48)",
+      "sources": [
+        {
+          "url": "https://docs.frax.finance/frax-price-index/fpi-controller-pool",
+          "observedAt": "2026-10-03T22:57:06Z",
+          "datumAsOf": null,
+          "location": "Mint/backing mechanism documentation",
+          "excerpt": "Users can mint FPI with FRAX or redeem FPI for FRAX.",
+          "assertion": "Discloses mint/backing mechanics, not a whole-supply liability-to-backing reconciliation procedure and cadence."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frax.finance/frax-price-index/overview-cpi-peg-and-mechanics",
+        "https://docs.frax.finance/other/audits",
+        "https://api.frax.finance/v2/fpifpis/fpi-collateral",
+        "https://frax.com/transparency",
+        "https://eth.blockscout.com/address/0x5ca135b8527d76e932f34b5145575f9d8cbe08e?tab=contract",
+        "https://docs.frax.finance/frax-price-index/fpi-controller-pool"
+      ],
+      "rationale": "No published whole-supply reconciliation procedure/cadence covering all authorized mint paths and economic backing was located. Onchain balances, collateral/debt dashboards and code-security audits do not establish that exact datum. Existing explicit reconciliation unknown remains unchanged."
+    },
+    {
+      "id": "uw-usg-tangent-91596f2f7822e39b",
+      "assetId": "usg-tangent",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:57:06Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R48)",
+      "sources": [
+        {
+          "url": "https://docs.tangent.finance/docs/usg/Markets/hec_markets.md",
+          "observedAt": "2026-10-03T22:57:06Z",
+          "datumAsOf": null,
+          "location": "Mint/backing mechanism documentation",
+          "excerpt": "On these markets, it is possible to borrow interest-free in exchange for a portion of the collateral's rewards, while `USG` is above a predefined *price threshold*.",
+          "assertion": "Discloses mint/backing mechanics, not a whole-supply liability-to-backing reconciliation procedure and cadence."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.tangent.finance/",
+        "https://docs.tangent.finance/docs/usg/overview_usg",
+        "https://docs.tangent.finance/docs/faq/audits.md",
+        "https://docs.tangent.finance/docs/faq/contracts.md",
+        "https://docs.tangent.finance/docs/usg/financial_flows.md",
+        "https://docs.tangent.finance/docs/faq/history.md",
+        "https://docs.tangent.finance/docs/usg/Markets/hec_markets.md"
+      ],
+      "rationale": "No published whole-supply reconciliation procedure/cadence covering all authorized mint paths and economic backing was located. Onchain balances, collateral/debt dashboards and code-security audits do not establish that exact datum. Existing explicit reconciliation unknown remains unchanged."
     }
   ]
 }

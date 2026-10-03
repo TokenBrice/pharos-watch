@@ -4341,6 +4341,44 @@
           "url": "https://rpc.gnosischain.com"
         }
       ]
+    },
+    {
+      "assetId": "sfrax-frax",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2026-11-03",
+      "reviewer": "W1R48 exact deployed source and pinned allocation review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "none",
+      "rationale": "At Ethereum block 26114907, StakedFrax asset is legacy FRAX; totalAssets=65181542209162932058274118, FRAX balance=65471813491358408066746865, totalSupply=56157359111526963884410628. The 290271282195476008472747 surplus is undistributed rewards under the exact LinearRewardsErc4626 accounting, not an external strategy. Full verified StakedFrax, LinearRewardsErc4626, Solmate ERC4626/ERC20 and Timelock2Step source review exposes only deposit/mint, redeem/withdraw, rewards synchronization/distribution, reward-rate cap and timelock reassignment: no borrowing, asset deployment, approval-to-strategy, generic call, delegatecall or replacement surface. Pinned eth_getCode equals Blockscout verified deployed bytecode (SHA256 of hex string plus newline 398187323db319ac3539f506a4db9d4923246d0bfa44ed7f1662fe3928eae76a). This is wrapper-local only; no parent custody, legal priority or upstream FRAX reuse protection is asserted.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0xa663b02cf0a4b149d2ad41910cb81e23e1c41c32",
+          "function": "asset()/totalAssets()/totalSupply()/FRAX.balanceOf(vault)",
+          "value": "asset=0x853d955acef822db058eb8505911ed77f175b99e; totalAssets=65181542209162932058274118; totalSupply=56157359111526963884410628; FRAX.balanceOf(vault)=65471813491358408066746865; blockHash=0x7f33133774074a121916fa9e9ddcede35487abb9e56e39884209aefe8320af6f",
+          "block": 26114907
+        }
+      ],
+      "sources": [
+        {
+          "label": "Exact verified StakedFrax and every inherited source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa663b02cf0a4b149d2ad41910cb81e23e1c41c32"
+        },
+        {
+          "label": "sFRAX wrapper mechanics",
+          "url": "https://docs.frax.finance/frax-v3-100-cr-and-more/sfrax"
+        },
+        {
+          "label": "Pinned Ethereum block",
+          "url": "https://etherscan.io/block/26114907"
+        },
+        {
+          "label": "Pinned read provider",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
     }
   ]
 }

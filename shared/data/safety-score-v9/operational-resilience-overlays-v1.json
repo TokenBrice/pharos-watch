@@ -5627,6 +5627,138 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "fpi-frax",
+      "reviewedAt": "2026-10-03T22:47:01Z",
+      "expiresAt": "2027-10-03T22:47:01Z",
+      "reviewer": "W1R48 primary-source unknown resolver",
+      "notes": "Exact-token deployment/initial issuance or issuer launch establishes a conservative full-calendar-month history lower bound only. No continuous uptime, stress throughput, financial reconciliation or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-token-inception",
+          "label": "Exact-token creation and initial mint",
+          "publisher": "Ethereum explorer",
+          "publishedAt": "2022-03-29",
+          "url": "https://eth.blockscout.com/api/v2/transactions/0x86b955b0167af0695ccce22150ca2bbe55724c1f8dc7396b790ba21db5cb4ae0",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 54,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-token-inception"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "sfrax-frax",
+      "reviewedAt": "2026-10-03T22:47:01Z",
+      "expiresAt": "2027-10-03T22:47:01Z",
+      "reviewer": "W1R48 primary-source unknown resolver",
+      "notes": "Exact-token deployment/initial issuance or issuer launch establishes a conservative full-calendar-month history lower bound only. No continuous uptime, stress throughput, financial reconciliation or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-token-inception",
+          "label": "Exact-token creation and initial mint",
+          "publisher": "Ethereum explorer",
+          "publishedAt": "2023-10-18",
+          "url": "https://eth.blockscout.com/api/v2/transactions/0xecd4ab27bc3b4c300b11405fc6a156ee316ad3f4c24f63130cbcbc49ae6bef55",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 35,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-token-inception"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usg-tangent",
+      "reviewedAt": "2026-10-03T22:47:01Z",
+      "expiresAt": "2027-10-03T22:47:01Z",
+      "reviewer": "W1R48 primary-source unknown resolver",
+      "notes": "Exact-token deployment/initial issuance or issuer launch establishes a conservative full-calendar-month history lower bound only. No continuous uptime, stress throughput, financial reconciliation or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-token-inception",
+          "label": "Exact-token creation and initial mint",
+          "publisher": "Ethereum explorer",
+          "publishedAt": "2026-02-12",
+          "url": "https://eth.blockscout.com/api/v2/transactions/0xeae86c6a45b049ab20cb3d7e13b6dcd39e2a5b4b47ac05d79a35cf7c2018a1ed",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 7,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-token-inception"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "frxusd-frax",
+      "reviewedAt": "2026-10-03T22:47:01Z",
+      "expiresAt": "2027-10-03T22:47:01Z",
+      "reviewer": "W1R48 primary-source unknown resolver",
+      "notes": "Exact-token deployment/initial issuance or issuer launch establishes a conservative full-calendar-month history lower bound only. No continuous uptime, stress throughput, financial reconciliation or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-token-inception",
+          "label": "Frax issuer launch release",
+          "publisher": "Frax",
+          "publishedAt": "2025-01-02",
+          "url": "https://www.prnewswire.com/news-releases/frax-launches-frxusd-stablecoin-backed-by-the-blackrocks-usd-institutional-digital-liquidity-fund-buidl-tokenized-by-securitize-302341497.html",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 21,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-token-inception"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }
