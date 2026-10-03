@@ -6254,6 +6254,138 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "xaum-matrixdock",
+      "reviewedAt": "2026-10-03T22:46:42Z",
+      "expiresAt": "2027-10-03T22:46:42Z",
+      "reviewer": "W1R64 primary-source unknown-wave review",
+      "notes": "Issuer-dated exact-token live operation establishes only a conservative lower bound of live history. No redemption throughput, stress recovery, independent reconciliation continuity, or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-token-evidence",
+          "label": "Matrixdock XAUm launch",
+          "publisher": "Matrixdock",
+          "publishedAt": "2024-09-16",
+          "url": "https://www.matrixdock.com/blog/announcements/gold-token-xaum",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 24,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-token-evidence"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "xagm-matrixdock",
+      "reviewedAt": "2026-10-03T22:46:42Z",
+      "expiresAt": "2027-10-03T22:46:42Z",
+      "reviewer": "W1R64 primary-source unknown-wave review",
+      "notes": "Issuer-dated exact-token live operation establishes only a conservative lower bound of live history. No redemption throughput, stress recovery, independent reconciliation continuity, or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-token-evidence",
+          "label": "Matrixdock XAGm launch",
+          "publisher": "Matrixdock",
+          "publishedAt": "2026-03-17",
+          "url": "https://www.matrixdock.com/blog/announcements/matrixdock-launches-xagm-bringing-lbma-good-delivery-silver-on-chain",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 6,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-token-evidence"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "stbt-matrixdock",
+      "reviewedAt": "2026-10-03T22:46:42Z",
+      "expiresAt": "2027-10-03T22:46:42Z",
+      "reviewer": "W1R64 primary-source unknown-wave review",
+      "notes": "Issuer-dated exact-token live operation establishes only a conservative lower bound of live history. No redemption throughput, stress recovery, independent reconciliation continuity, or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-token-evidence",
+          "label": "Matrixdock STBT live supply and PoR integration",
+          "publisher": "Matrixdock",
+          "publishedAt": "2023-07-26",
+          "url": "https://www.matrixdock.com/blog/announcements/matrixdock-integrates-chainlink-proof-of-reserve",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 38,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-token-evidence"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usdb-blast",
+      "reviewedAt": "2026-10-03T22:46:42Z",
+      "expiresAt": "2027-10-03T22:46:42Z",
+      "reviewer": "W1R64 primary-source unknown-wave review",
+      "notes": "Issuer-dated exact-token live operation establishes only a conservative lower bound of live history. No redemption throughput, stress recovery, independent reconciliation continuity, or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-token-evidence",
+          "label": "Blast Phase 2 live USDB balances",
+          "publisher": "Blast Foundation",
+          "publishedAt": "2024-07-02",
+          "url": "https://blog.blast.io/phase-2-users/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 27,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-token-evidence"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

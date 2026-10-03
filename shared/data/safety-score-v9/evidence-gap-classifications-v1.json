@@ -12845,6 +12845,308 @@
         "https://midas.app/transparency?token=mapollo"
       ],
       "rationale": "The retrieved signed July 2026 mAPOLLO terms disclose realisation, redemption gates and deferred-price holdback, not an end-to-end maximum for fully paid proceeds. The conditional position-exit mandate also is not the tokenholder settlement SLA. The successfully read governing terms support the non-disclosure finding; failed access to the dynamic site is not used as evidence of silence."
+    },
+    {
+      "id": "uw-xaum-matrixdock-45d5ede3b65a1192",
+      "assetId": "xaum-matrixdock",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:physical-to-usd:xaum-matrixdock"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:35Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R64)",
+      "sources": [
+        {
+          "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/minting-and-redeeming.md",
+          "observedAt": "2026-10-03T22:53:35Z",
+          "datumAsOf": null,
+          "location": "Official documentation",
+          "excerpt": "Customer picks up or receives the gold via secured delivery.",
+          "assertion": "Physical delivery procedure names pickup/delivery but specifies no final completion maximum."
+        },
+        {
+          "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/minting-and-redeeming.md",
+          "observedAt": "2026-10-03T22:53:35Z",
+          "datumAsOf": null,
+          "location": "Official documentation",
+          "excerpt": "The stablecoins will be sent within T+3.",
+          "assertion": "This is after execution; it does not bound pre-execution or physical-release-to-USD legs."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.matrixdock.com/xaum",
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/faq.md",
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/minting-and-redeeming.md",
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/physical-gold-vault-audit.md",
+        "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2Foa3Zaj3t7Mic13UuT1ph%2FXAUm%20Token%20Terms%20and%20Conditions.docx.pdf?alt=media&token=3cad87ae-7846-4bfe-ba2e-411fbf166f60",
+        "https://matrixdock.gitbook.io/matrixdock-docs/llms.txt"
+      ],
+      "rationale": "No end-to-end maximum is disclosed for the physical-delivery or composed physical-to-USD route. T+3 is only the executed-order-to-stablecoin leg; out-of-slippage requests may be cancelled/requoted, and physical pickup/release time must be arranged. It is not a whole-route SLA."
+    },
+    {
+      "id": "uw-xaum-matrixdock-6ea8bd953797842e",
+      "assetId": "xaum-matrixdock",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:xaum-matrixdock:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:35Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R64)",
+      "sources": [
+        {
+          "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/minting-and-redeeming.md",
+          "observedAt": "2026-10-03T22:53:35Z",
+          "datumAsOf": null,
+          "location": "Official documentation",
+          "excerpt": "Customer picks up or receives the gold via secured delivery.",
+          "assertion": "Physical delivery procedure names pickup/delivery but specifies no final completion maximum."
+        },
+        {
+          "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/minting-and-redeeming.md",
+          "observedAt": "2026-10-03T22:53:35Z",
+          "datumAsOf": null,
+          "location": "Official documentation",
+          "excerpt": "The stablecoins will be sent within T+3.",
+          "assertion": "This is after execution; it does not bound pre-execution or physical-release-to-USD legs."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.matrixdock.com/xaum",
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/faq.md",
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/minting-and-redeeming.md",
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/physical-gold-vault-audit.md",
+        "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2Foa3Zaj3t7Mic13UuT1ph%2FXAUm%20Token%20Terms%20and%20Conditions.docx.pdf?alt=media&token=3cad87ae-7846-4bfe-ba2e-411fbf166f60",
+        "https://matrixdock.gitbook.io/matrixdock-docs/llms.txt"
+      ],
+      "rationale": "No end-to-end maximum is disclosed for the physical-delivery or composed physical-to-USD route. T+3 is only the executed-order-to-stablecoin leg; out-of-slippage requests may be cancelled/requoted, and physical pickup/release time must be arranged. It is not a whole-route SLA."
+    },
+    {
+      "id": "uw-xaum-matrixdock-aec9e7e30b7a8a2f",
+      "assetId": "xaum-matrixdock",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:885860b7b2ea721ed8aca049",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:35Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R64)",
+      "sources": [
+        {
+          "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/faq.md",
+          "observedAt": "2026-10-03T22:53:35Z",
+          "datumAsOf": null,
+          "location": "Official documentation",
+          "excerpt": "Available bars to be redeemed will be provided upon request and subject to inventory availability.",
+          "assertion": "Inventory-dependent redemption does not establish a maximum liquidation horizon for the entire physical reserve slice."
+        },
+        {
+          "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2Foa3Zaj3t7Mic13UuT1ph%2FXAUm%20Token%20Terms%20and%20Conditions.docx.pdf?alt=media&token=3cad87ae-7846-4bfe-ba2e-411fbf166f60",
+          "observedAt": "2026-10-03T22:53:35Z",
+          "datumAsOf": "2025-10-21",
+          "location": "Terms section 7.14",
+          "excerpt": "do not guarantee the existence of a market or a buyer or seller for your LBMA Gold or XAUm Tokens.",
+          "assertion": "Terms disclose delivery/market conditions, not a whole-slice realizability maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.matrixdock.com/xaum",
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/faq.md",
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/minting-and-redeeming.md",
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/physical-gold-vault-audit.md",
+        "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2Foa3Zaj3t7Mic13UuT1ph%2FXAUm%20Token%20Terms%20and%20Conditions.docx.pdf?alt=media&token=3cad87ae-7846-4bfe-ba2e-411fbf166f60",
+        "https://matrixdock.gitbook.io/matrixdock-docs/llms.txt"
+      ],
+      "rationale": "Physical gold/silver category and custody are disclosed, but no maximum time for liquidating the entire scoped reserve position is stated. T+3 after execution concerns an individual issuer cash-out, not whole-book sale availability or physical delivery. No bucket is inferred from bullion transferability."
+    },
+    {
+      "id": "uw-xagm-matrixdock-b9f9012d8de66b21",
+      "assetId": "xagm-matrixdock",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:physical-to-usd:xagm-matrixdock"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:35Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R64)",
+      "sources": [
+        {
+          "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/minting-and-redeeming.md",
+          "observedAt": "2026-10-03T22:53:35Z",
+          "datumAsOf": null,
+          "location": "Official documentation",
+          "excerpt": "Customer picks up or receives the gold via secured delivery.",
+          "assertion": "Physical delivery procedure names pickup/delivery but specifies no final completion maximum."
+        },
+        {
+          "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/minting-and-redeeming.md",
+          "observedAt": "2026-10-03T22:53:35Z",
+          "datumAsOf": null,
+          "location": "Official documentation",
+          "excerpt": "The stablecoins will be sent within T+3.",
+          "assertion": "This is after execution; it does not bound pre-execution or physical-release-to-USD legs."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.matrixdock.com/xagm",
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/faq.md",
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/minting-and-redeeming.md",
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/physical-silver-vault-audit.md",
+        "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FTRQNUC7Hw1k5EyWrxUrR%2FMatrixdock%20Silver%20XAGm%20Whitepaper.pdf?alt=media&token=cad709b6-47f1-427d-ad14-443fa5cd76e1",
+        "https://matrixdock.gitbook.io/matrixdock-docs/llms.txt"
+      ],
+      "rationale": "No end-to-end maximum is disclosed for the physical-delivery or composed physical-to-USD route. T+3 is only the executed-order-to-stablecoin leg; out-of-slippage requests may be cancelled/requoted, and physical pickup/release time must be arranged. It is not a whole-route SLA."
+    },
+    {
+      "id": "uw-xagm-matrixdock-e0c224347a0c1ecd",
+      "assetId": "xagm-matrixdock",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:xagm-matrixdock:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:35Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R64)",
+      "sources": [
+        {
+          "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/minting-and-redeeming.md",
+          "observedAt": "2026-10-03T22:53:35Z",
+          "datumAsOf": null,
+          "location": "Official documentation",
+          "excerpt": "Customer picks up or receives the gold via secured delivery.",
+          "assertion": "Physical delivery procedure names pickup/delivery but specifies no final completion maximum."
+        },
+        {
+          "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/minting-and-redeeming.md",
+          "observedAt": "2026-10-03T22:53:35Z",
+          "datumAsOf": null,
+          "location": "Official documentation",
+          "excerpt": "The stablecoins will be sent within T+3.",
+          "assertion": "This is after execution; it does not bound pre-execution or physical-release-to-USD legs."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.matrixdock.com/xagm",
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/faq.md",
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/minting-and-redeeming.md",
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/physical-silver-vault-audit.md",
+        "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FTRQNUC7Hw1k5EyWrxUrR%2FMatrixdock%20Silver%20XAGm%20Whitepaper.pdf?alt=media&token=cad709b6-47f1-427d-ad14-443fa5cd76e1",
+        "https://matrixdock.gitbook.io/matrixdock-docs/llms.txt"
+      ],
+      "rationale": "No end-to-end maximum is disclosed for the physical-delivery or composed physical-to-USD route. T+3 is only the executed-order-to-stablecoin leg; out-of-slippage requests may be cancelled/requoted, and physical pickup/release time must be arranged. It is not a whole-route SLA."
+    },
+    {
+      "id": "uw-xagm-matrixdock-0432b296a881a366",
+      "assetId": "xagm-matrixdock",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:a1ccefc38affeb9df80b395d",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:35Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R64)",
+      "sources": [
+        {
+          "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/faq.md",
+          "observedAt": "2026-10-03T22:53:35Z",
+          "datumAsOf": null,
+          "location": "Official documentation",
+          "excerpt": "Available bars to be redeemed will be provided upon request and subject to inventory availability.",
+          "assertion": "Inventory-dependent redemption does not establish a maximum liquidation horizon for the entire physical reserve slice."
+        },
+        {
+          "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FTRQNUC7Hw1k5EyWrxUrR%2FMatrixdock%20Silver%20XAGm%20Whitepaper.pdf?alt=media&token=cad709b6-47f1-427d-ad14-443fa5cd76e1",
+          "observedAt": "2026-10-03T22:53:35Z",
+          "datumAsOf": "2026-03-17",
+          "location": "Whitepaper redemption execution",
+          "excerpt": "When redeeming into a physical LBMA silver bar, a request has to be made to the Matrixdock Silver operator to seek confirmation on the time, location of collection and other relevant details.",
+          "assertion": "Terms disclose delivery/market conditions, not a whole-slice realizability maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.matrixdock.com/xagm",
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/faq.md",
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/minting-and-redeeming.md",
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/physical-silver-vault-audit.md",
+        "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FTRQNUC7Hw1k5EyWrxUrR%2FMatrixdock%20Silver%20XAGm%20Whitepaper.pdf?alt=media&token=cad709b6-47f1-427d-ad14-443fa5cd76e1",
+        "https://matrixdock.gitbook.io/matrixdock-docs/llms.txt"
+      ],
+      "rationale": "Physical gold/silver category and custody are disclosed, but no maximum time for liquidating the entire scoped reserve position is stated. T+3 after execution concerns an individual issuer cash-out, not whole-book sale availability or physical delivery. No bucket is inferred from bullion transferability."
+    },
+    {
+      "id": "uw-stbt-matrixdock-df198d8379510285",
+      "assetId": "stbt-matrixdock",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:35Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R64)",
+      "sources": [
+        {
+          "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/treasury-bill-token-stbt/token-features.md",
+          "observedAt": "2026-10-03T22:53:35Z",
+          "datumAsOf": null,
+          "location": "Official documentation",
+          "excerpt": "we may also upload certain Underlying Assets reporting documents for review on the Matrixdock Platform which can be viewed through its hash.",
+          "assertion": "Optional underlying asset reports and visible mint/burn records are disclosed, not a current whole-supply common-clock reconciliation cadence."
+        },
+        {
+          "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FzHip8cJaP5aud3KfdVud%2FSTBT%20Token%C2%A0Terms%20and%20Conditions.pdf?alt=media&token=79d5fd49-deae-41b4-a809-9e1afaa02f32",
+          "observedAt": "2026-10-03T22:53:35Z",
+          "datumAsOf": "2025-01-20",
+          "location": "Terms section 8.2",
+          "excerpt": "The net asset value of the STBT Token Reserves Account is expected to be published on a daily basis on U.S. Treasury market trading days.",
+          "assertion": "Daily NAV publication is not reconciliation of all STBT liabilities, mint/burn/register movements and affiliated reserve accounts."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/treasury-bill-token-stbt/token-features.md",
+        "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FzHip8cJaP5aud3KfdVud%2FSTBT%20Token%C2%A0Terms%20and%20Conditions.pdf?alt=media&token=79d5fd49-deae-41b4-a809-9e1afaa02f32",
+        "https://www.matrixdock.com/stbt",
+        "https://stbt.matrixdock.com/transparency?tabState=assets",
+        "https://www.matrixdock.com/blog/announcements/matrixdock-integrates-chainlink-proof-of-reserve",
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/announcements/other-announcements/notice-regarding-stbt-daily-asset-statement.md",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xe7efc5060b6ad57b68f5911eca6c5cd1952da152"
+      ],
+      "rationale": "Current whole-supply STBT liability-to-affiliate-backing reconciliation procedure and cadence are not published in the reviewed surfaces. The 2023 PoR integration announcement is historical; daily reserve NAV, asset statements, mutable reserve-feed mint ceilings and on-chain issuance records do not supply a dated current common-clock whole-liability reconciliation. Bullion audit does not cover STBT."
     }
   ]
 }
