@@ -2426,6 +2426,138 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "hollar-hydrated",
+      "reviewedAt": "2026-10-03T22:46:24Z",
+      "expiresAt": "2027-10-03T22:46:24Z",
+      "reviewer": "Unknown-wave W1R34",
+      "notes": "Dated exact-asset live-operation or deployment evidence establishes only a conservative full-calendar-month history lower bound as of 2026-10-03. No independently verified operational continuity, redemption throughput, stress recovery, reserve reconciliation or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "hydration-launch",
+          "label": "Executed HOLLAR launch referendum",
+          "publisher": "Hydration governance",
+          "publishedAt": "2025-09-22",
+          "url": "https://hydration.subsquare.io/referenda/182",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 12,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "hydration-launch"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usdaf-asymmetry",
+      "reviewedAt": "2026-10-03T22:46:24Z",
+      "expiresAt": "2027-10-03T22:46:24Z",
+      "reviewer": "Unknown-wave W1R34",
+      "notes": "Dated exact-asset live-operation or deployment evidence establishes only a conservative full-calendar-month history lower bound as of 2026-10-03. No independently verified operational continuity, redemption throughput, stress recovery, reserve reconciliation or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "usdaf-live-page",
+          "label": "Dated USDaf live operating product page",
+          "publisher": "Asymmetry Finance",
+          "publishedAt": "2026-08-25",
+          "url": "https://home.asymmetry.finance/usdaf",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 1,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "usdaf-live-page"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "gusd-gate",
+      "reviewedAt": "2026-10-03T22:46:24Z",
+      "expiresAt": "2027-10-03T22:46:24Z",
+      "reviewer": "Unknown-wave W1R34",
+      "notes": "Dated exact-asset live-operation or deployment evidence establishes only a conservative full-calendar-month history lower bound as of 2026-10-03. No independently verified operational continuity, redemption throughput, stress recovery, reserve reconciliation or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "gate-gusd-live",
+          "label": "GUSD minting and redemption help article",
+          "publisher": "Gate",
+          "publishedAt": "2025-08-29",
+          "url": "https://miniapp.gate.com/help/lend/staking/46831",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 13,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "gate-gusd-live"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "zkusd-goal3",
+      "reviewedAt": "2026-10-03T22:46:24Z",
+      "expiresAt": "2027-10-03T22:46:24Z",
+      "reviewer": "Unknown-wave W1R34",
+      "notes": "Dated exact-asset live-operation or deployment evidence establishes only a conservative full-calendar-month history lower bound as of 2026-10-03. No independently verified operational continuity, redemption throughput, stress recovery, reserve reconciliation or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "zkusd-creation",
+          "label": "Exact zkUSD contract creation transaction",
+          "publisher": "ZKsync Era explorer",
+          "publishedAt": "2023-04-04",
+          "url": "https://block-explorer-api.mainnet.zksync.io/transactions/0x51383570ed4cd59383e3df3ebd30f4864b2648811913ebdf2267d563e950fe78",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 41,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "zkusd-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

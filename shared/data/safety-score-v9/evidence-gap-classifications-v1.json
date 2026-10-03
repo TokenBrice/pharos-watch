@@ -5335,6 +5335,147 @@
           "assertion": "W15: applicable account/vendor/fee-token formula is public, but the Pharos route does not evaluate calculateCommissionsWithPrices and current MoCInrate/vendor inputs for the stress notional."
         }
       ]
+    },
+    {
+      "id": "uw-gusd-gate-7c52e9253eeffdb8",
+      "assetId": "gusd-gate",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:49:08Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R34)",
+      "sources": [
+        {
+          "url": "https://miniapp.gate.com/gusd",
+          "observedAt": "2026-10-03T22:49:08Z",
+          "datumAsOf": null,
+          "location": "What is GUSD?",
+          "excerpt": "GUSD is a principal-protected flexible earn product, with returns generated from Gate ecosystem revenue, treasury RWAs, and high-quality stablecoin-backed yield assets.",
+          "assertion": "Discloses categories and product mechanics, not dated GUSD-specific holdings or recurring whole-supply/backing reconciliation."
+        },
+        {
+          "url": "https://miniapp.gate.com/proof-of-reserves",
+          "observedAt": "2026-10-03T22:49:08Z",
+          "datumAsOf": null,
+          "location": "How do we maintain 100% reserves?",
+          "excerpt": "If the total number of tokens managed by the exchange on the blockchain meets or exceeds the aggregate balance of all user accounts, as captured in a snapshot, the platform maintains 100% reserves for those tokens.",
+          "assertion": "Exchange-custody customer-account snapshots do not establish the backing composition of issued GUSD or its treasury asset/liability reconciliation."
+        },
+        {
+          "url": "https://miniapp.gate.com/help/annlist/others/101701",
+          "observedAt": "2026-10-03T22:49:08Z",
+          "datumAsOf": "2026-08-15",
+          "location": "GUSD Reaches an All-Time High",
+          "excerpt": "Gate GUSD funds reached a record high of $257 million on August 15, marking the highest level since the product\u2019s launch.",
+          "assertion": "GUSD subscription/funds total is disclosed separately from aggregate exchange reserve coverage; no product-specific backing schedule is supplied."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://miniapp.gate.com/gusd",
+        "https://miniapp.gate.com/earn/staking/GUSD",
+        "https://miniapp.gate.com/help/lend/staking/46831",
+        "https://miniapp.gate.com/proof-of-reserves",
+        "https://miniapp.gate.com/legal/user-agreement",
+        "https://miniapp.gate.com/help/annlist/others/101701",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xaf6186b3521b60e27396b5d23b48abc34bf585c5"
+      ],
+      "rationale": "No dated recurring procedure or report reconciling all issued native and represented GUSD liabilities and mint/burn movements to GUSD-specific backing at a common clock is disclosed. Product minting claims, $257m funds and exchange customer-token custody PoR are distinct lookalikes, not GUSD treasury reconciliation."
+    },
+    {
+      "id": "uw-gusd-gate-5fdecad8aca8e38c",
+      "assetId": "gusd-gate",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:49:08Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R34)",
+      "sources": [
+        {
+          "url": "https://miniapp.gate.com/gusd",
+          "observedAt": "2026-10-03T22:49:08Z",
+          "datumAsOf": null,
+          "location": "What is GUSD?",
+          "excerpt": "GUSD is a principal-protected flexible earn product, with returns generated from Gate ecosystem revenue, treasury RWAs, and high-quality stablecoin-backed yield assets.",
+          "assertion": "Discloses categories and product mechanics, not dated GUSD-specific holdings or recurring whole-supply/backing reconciliation."
+        },
+        {
+          "url": "https://miniapp.gate.com/proof-of-reserves",
+          "observedAt": "2026-10-03T22:49:08Z",
+          "datumAsOf": null,
+          "location": "How do we maintain 100% reserves?",
+          "excerpt": "If the total number of tokens managed by the exchange on the blockchain meets or exceeds the aggregate balance of all user accounts, as captured in a snapshot, the platform maintains 100% reserves for those tokens.",
+          "assertion": "Exchange-custody customer-account snapshots do not establish the backing composition of issued GUSD or its treasury asset/liability reconciliation."
+        },
+        {
+          "url": "https://miniapp.gate.com/help/annlist/others/101701",
+          "observedAt": "2026-10-03T22:49:08Z",
+          "datumAsOf": "2026-08-15",
+          "location": "GUSD Reaches an All-Time High",
+          "excerpt": "Gate GUSD funds reached a record high of $257 million on August 15, marking the highest level since the product\u2019s launch.",
+          "assertion": "GUSD subscription/funds total is disclosed separately from aggregate exchange reserve coverage; no product-specific backing schedule is supplied."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://miniapp.gate.com/gusd",
+        "https://miniapp.gate.com/earn/staking/GUSD",
+        "https://miniapp.gate.com/help/lend/staking/46831",
+        "https://miniapp.gate.com/proof-of-reserves",
+        "https://miniapp.gate.com/legal/user-agreement",
+        "https://miniapp.gate.com/help/annlist/others/101701",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xaf6186b3521b60e27396b5d23b48abc34bf585c5"
+      ],
+      "rationale": "No current GUSD-specific whole-book reserve holdings schedule, allocation weights or complete backing denominator is disclosed. Product/help/hub pages name Treasury RWAs and stablecoin-backed yield categories; the transparency report reports product funds and exchange-wide ratios rather than constituent backing amounts."
+    },
+    {
+      "id": "uw-gusd-gate-797713cfb2d334c2",
+      "assetId": "gusd-gate",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:gusd-gate:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:49:08Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R34)",
+      "sources": [
+        {
+          "url": "https://miniapp.gate.com/announcements/article/100710",
+          "observedAt": "2026-10-03T22:49:08Z",
+          "datumAsOf": "2026-07-16",
+          "location": "How the Fee-Free Redemption Quota Works, item 3",
+          "excerpt": "Redemptions within this quota incur zero fees. For any amount exceeding the quota, standard redemption fees will apply only to the excess portion.",
+          "assertion": "A customer-specific fee-free quota formula is public, but the standard fee rate charged above quota or for spot-acquired GUSD is not quantified."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://miniapp.gate.com/gusd",
+        "https://miniapp.gate.com/earn/staking/GUSD",
+        "https://miniapp.gate.com/help/lend/staking/46831",
+        "https://miniapp.gate.com/proof-of-reserves",
+        "https://miniapp.gate.com/legal/user-agreement",
+        "https://miniapp.gate.com/help/annlist/others/101701",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xaf6186b3521b60e27396b5d23b48abc34bf585c5",
+        "https://miniapp.gate.com/announcements/article/100710"
+      ],
+      "rationale": "Gate publishes the per-currency historical mint-minus-redemption fee-free quota formula and zero fees inside quota. The exact standard redemption rate/formula outside quota, including a holder acquiring GUSD on spot, is not disclosed on product/help/legal/announcement surfaces; the final confirmation screen is referenced. Do not apply subscriber zero fees to an arbitrary same-notional holder or classify the quota formula as a complete public fee schedule."
     }
   ]
 }
