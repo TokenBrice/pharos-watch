@@ -58,6 +58,7 @@
       "pct": 13.4,
       "risk": "high",
       "assetClass": "hedged-crypto",
+      "issuerOrObligor": "Hyperliquid HYPE spot and HYPE/USDC perpetual market counterparties",
       "riskFactors": [
         "basis",
         "market",
@@ -115,10 +116,14 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-30",
-    "reviewer": "Pharos dependency-map review 2026-09-30",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Unknown wave W1R66 primary-source reserve identity review",
     "confidence": "verified",
     "sources": [
+      {
+        "label": "Noon HYPE funding-rate arbitrage: Hyperliquid spot and HYPE/USDC perpetual",
+        "url": "https://docs.noon.capital/3.-the-yield-engine/yield-strategies/funding-rate-arbitrage-perps"
+      },
       {
         "label": "Noon CLO strategy: Janus Henderson JAAA ETF and Dinari deployment (accessed 2026-09-30)",
         "url": "https://docs.noon.capital/3.-the-yield-engine/yield-strategies/clos.md"
@@ -180,7 +185,7 @@
     "compositionBasis": "Accountable Noon deployment snapshot at data timestamp 1790109063926, normalized by the current one-decimal Accountable deployment adapter, with custodian attribution taken from the same payload's reserves_split",
     "compositionAsOf": "2026-09-22",
     "scope": "full-composition",
-    "knownUnknownExposure": "FTAC borrower identities, terms, seniority and the fund's own custody arrangements; Morpho and Euler vault addresses, current pool weights and borrowers; HYPE execution venues, hedge notional, margin and tri-party settlement counterparties; and the specific ForDefi wallets behind the Undeployed bucket, which does not reconcile with the two published collateral wallets, all remain undisclosed. The $1.02 Funding Rate Arb (BTC) balance is below the adapter's one-decimal emission threshold and is not a separate static row. A second Dinari USD+ contract 0x98C6616F1CC0D3E938A16200830DD55663dd7DD3, holding 7,718,967.41 units and dormant since 2026-01-28, maps to no Accountable bucket and is not counted in this composition.",
+    "knownUnknownExposure": "FTAC borrower identities, terms, seniority and the fund's own custody arrangements; Morpho and Euler vault addresses, current pool weights and borrowers; HYPE hedge notional, margin and settlement counterparties beyond the disclosed Hyperliquid HYPE spot and HYPE/USDC perpetual markets; and the specific ForDefi wallets behind the Undeployed bucket, which does not reconcile with the two published collateral wallets, remain undisclosed. The $1.02 Funding Rate Arb (BTC) balance is below the adapter's one-decimal emission threshold and is not a separate static row. A second Dinari USD+ contract 0x98C6616F1CC0D3E938A16200830DD55663dd7DD3, holding 7,718,967.41 units and dormant since 2026-01-28, maps to no Accountable bucket and is not counted in this composition.",
     "knownUnknownExposurePct": 85.6,
     "nonLinkDispositions": [
       {
@@ -209,7 +214,7 @@
         "reserveName": "Funding Rate Arb (HYPE)",
         "pct": 13.4,
         "disposition": "insufficient-evidence",
-        "rationale": "Accountable identifies the HYPE funding-arbitrage strategy and attributes its collateral to the ForDefi bucket, and Noon documents the generic cash-and-carry structure, but current venues, hedge notional, margin, and tri-party settlement counterparties are not published."
+        "rationale": "Accountable identifies the HYPE funding-arbitrage strategy and attributes its collateral to the ForDefi bucket. Noon's current strategy page identifies Hyperliquid HYPE spot and HYPE/USDC perpetual markets, but current hedge notional, margin and any additional settlement counterparties are not published."
       },
       {
         "reserveIndex": 4,

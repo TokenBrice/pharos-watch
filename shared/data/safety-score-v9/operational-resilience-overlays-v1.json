@@ -10154,6 +10154,138 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "usn-noon",
+      "reviewedAt": "2026-10-03T23:06:44Z",
+      "expiresAt": "2027-10-03T23:00:00Z",
+      "reviewer": "Unknown wave W1R66",
+      "notes": "Exact canonical contract creation is a conservative implementation-history lower bound only. No uninterrupted service, throughput, stress performance, reserve reconciliation or incident absence is asserted.",
+      "sources": [
+        {
+          "sourceId": "canonical-contract-creation",
+          "label": "Canonical USN creation transaction",
+          "publisher": "Ethereum explorer",
+          "publishedAt": "2024-10-03",
+          "url": "https://eth.blockscout.com/tx/0x7908af928fd47358bdebb80ce89e37f488eaf4271736ec91f2d23bce29e97906",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 24,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "canonical-contract-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "susn-noon",
+      "reviewedAt": "2026-10-03T23:06:44Z",
+      "expiresAt": "2027-10-03T23:00:00Z",
+      "reviewer": "Unknown wave W1R66",
+      "notes": "Exact wrapper contract creation is a conservative implementation-history lower bound only; parent history is not copied. No uninterrupted service, throughput, stress performance, reserve reconciliation or incident absence is asserted.",
+      "sources": [
+        {
+          "sourceId": "canonical-contract-creation",
+          "label": "Canonical sUSN creation transaction",
+          "publisher": "Ethereum explorer",
+          "publishedAt": "2024-11-06",
+          "url": "https://eth.blockscout.com/tx/0xd9cb351d31042f2c9db8da2dd5c0a65d7c4390fe428b38873eb0970127821777",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 22,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "canonical-contract-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "uty-xsy",
+      "reviewedAt": "2026-10-03T23:06:44Z",
+      "expiresAt": "2027-10-03T23:00:00Z",
+      "reviewer": "Unknown wave W1R66",
+      "notes": "Exact current Base UTY contract verified on April 12 establishes five full months of implementation history, not predecessor Avalanche beta history. No performance, reconciliation or incident absence is asserted.",
+      "sources": [
+        {
+          "sourceId": "base-uty-verification",
+          "label": "Exact Base UTY verified contract metadata",
+          "publisher": "Base Blockscout",
+          "publishedAt": "2026-04-12",
+          "url": "https://base.blockscout.com/api/v2/smart-contracts/0xba515304d8153c4b162dc79f867e152df9c127eb",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 5,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "base-uty-verification"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "cjpy-yamato",
+      "reviewedAt": "2026-10-03T23:06:44Z",
+      "expiresAt": "2027-10-03T23:00:00Z",
+      "reviewer": "Unknown wave W1R66",
+      "notes": "Exact CJPY canonical creation establishes 38 full months of implementation history. No independent service continuity, throughput, stress performance, reserve reconciliation or incident absence is asserted.",
+      "sources": [
+        {
+          "sourceId": "canonical-contract-creation",
+          "label": "Canonical CJPY creation transaction",
+          "publisher": "Ethereum explorer",
+          "publishedAt": "2023-07-27",
+          "url": "https://eth.blockscout.com/tx/0xfe33ca934206f13ede6a4dfde34288bc5c70e5fc48f157f9c0993c69bc69d3fb",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 38,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "canonical-contract-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

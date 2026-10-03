@@ -22380,6 +22380,305 @@
         "https://eth.blockscout.com/api/v2/smart-contracts/0x82948060c4b72684bededec342350ab344975145"
       ],
       "rationale": "Exact aggregate USDC protocol-position slice spans Morpho and Curve strategies. Official docs disclose utilization-dependent withdrawals and a buffer-based holder redemption process; itemized API discloses only current partial liquidity. No fixed horizon for realizing the entire aggregate reserve basket is published. Do not substitute the 10-minute/24-hour holder processing statement or onchain execution speed for full-slice liquidity."
+    },
+    {
+      "id": "uw-usn-noon-1d0dcf83f4438985",
+      "assetId": "usn-noon",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:878aaf9408af28c9ce0d9622",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:10:27Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R66)",
+      "sources": [
+        {
+          "url": "https://docs.noon.capital/llms-full.txt",
+          "observedAt": "2026-10-03T23:02:55Z",
+          "datumAsOf": null,
+          "location": "Private Credit, fund duration disclosure",
+          "excerpt": "The average maturity runs around 126 days, which keeps the book short and continuously re-underwritten.",
+          "assertion": "Publishes average maturity, not a maximum term for Noon's F-TAC claim or every underlying loan."
+        },
+        {
+          "url": "https://forum.noon.capital/t/risk-assessment-f-tac-private-credit/52",
+          "observedAt": "2026-10-03T23:09:34Z",
+          "datumAsOf": "2025-06-25",
+          "location": "Post 3, issuer response",
+          "excerpt": "We receive and review this on a monthly basis.",
+          "assertion": "Issuer receives detailed private fund reports; public assessment supplies no hard maximum maturity."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.noon.capital/llms-full.txt",
+        "https://forum.noon.capital/t/risk-assessment-f-tac-private-credit/52",
+        "https://cache.accountable.capital/dashboard/noon",
+        "https://docs.noon.capital/7.-terms-and-policies/asset-terms-usn-terms-of-service.md",
+        "https://www.fasanara.com/"
+      ],
+      "rationale": "Noon names F-TAC, discloses a 126-day average and quarterly normal redemption, and says it receives detailed monthly reports. The public strategy assessment, legal terms and Accountable allocation do not disclose the maximum maturity of this fund claim or an exhaustive all-loans bound. Average maturity and PLMS liquidity are not that datum."
+    },
+    {
+      "id": "uw-usn-noon-d514d979f7e860ef",
+      "assetId": "usn-noon",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:27f47e2d69b2ec93f82f0157",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:10:27Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R66)",
+      "sources": [
+        {
+          "url": "https://docs.dinari.com/docs/what-is-usd.md",
+          "observedAt": "2026-10-03T23:05:24Z",
+          "datumAsOf": null,
+          "location": "USD+ description and redemption",
+          "excerpt": "Redemptions settle in 0\u20133 days depending on size.",
+          "assertion": "Redeemability and short-term Treasury backing are disclosed; no terminal maturity of the USD+ claim is stated."
+        },
+        {
+          "url": "https://www.janushenderson.com/en-us/advisor/product/jaaa-aaa-clo-etf/",
+          "observedAt": "2026-10-03T23:09:41Z",
+          "datumAsOf": "2026-10-01",
+          "location": "Portfolio characteristics",
+          "excerpt": "Weighted Average Maturity",
+          "assertion": "Underlying ETF publishes weighted average and holdings; this is not the maturity maximum of Noon's Dinari tokenized ETF share claim."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.noon.capital/llms-full.txt",
+        "https://cache.accountable.capital/dashboard/noon",
+        "https://docs.noon.capital/7.-terms-and-policies/asset-terms-usn-terms-of-service.md",
+        "https://docs.dinari.com/llms.txt",
+        "https://docs.dinari.com/docs/what-is-usd.md",
+        "https://usd.dinari.com/transparency",
+        "https://www.janushenderson.com/en-us/advisor/product/jaaa-aaa-clo-etf/"
+      ],
+      "rationale": "These slices are Dinari USD+ and tokenized JAAA shares, not direct dated bonds. Public product, allocation, legal and underlying fund disclosures provide redemption windows, holdings and average duration but no hard terminal maturity for these exact token claims. Underlying bond maxima cannot be substituted for share-claim maturity."
+    },
+    {
+      "id": "uw-usn-noon-b41518b68c665835",
+      "assetId": "usn-noon",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:fe16475caece8845570d092c",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:10:27Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R66)",
+      "sources": [
+        {
+          "url": "https://docs.dinari.com/docs/what-is-usd.md",
+          "observedAt": "2026-10-03T23:05:24Z",
+          "datumAsOf": null,
+          "location": "USD+ description and redemption",
+          "excerpt": "Redemptions settle in 0\u20133 days depending on size.",
+          "assertion": "Redeemability and short-term Treasury backing are disclosed; no terminal maturity of the USD+ claim is stated."
+        },
+        {
+          "url": "https://www.janushenderson.com/en-us/advisor/product/jaaa-aaa-clo-etf/",
+          "observedAt": "2026-10-03T23:09:41Z",
+          "datumAsOf": "2026-10-01",
+          "location": "Portfolio characteristics",
+          "excerpt": "Weighted Average Maturity",
+          "assertion": "Underlying ETF publishes weighted average and holdings; this is not the maturity maximum of Noon's Dinari tokenized ETF share claim."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.noon.capital/llms-full.txt",
+        "https://cache.accountable.capital/dashboard/noon",
+        "https://docs.noon.capital/7.-terms-and-policies/asset-terms-usn-terms-of-service.md",
+        "https://docs.dinari.com/llms.txt",
+        "https://docs.dinari.com/docs/what-is-usd.md",
+        "https://usd.dinari.com/transparency",
+        "https://www.janushenderson.com/en-us/advisor/product/jaaa-aaa-clo-etf/"
+      ],
+      "rationale": "These slices are Dinari USD+ and tokenized JAAA shares, not direct dated bonds. Public product, allocation, legal and underlying fund disclosures provide redemption windows, holdings and average duration but no hard terminal maturity for these exact token claims. Underlying bond maxima cannot be substituted for share-claim maturity."
+    },
+    {
+      "id": "uw-uty-xsy-4f6cf7bdcc8b1490",
+      "assetId": "uty-xsy",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:1da542f24809a6dfd64a6927",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:10:27Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R66)",
+      "sources": [
+        {
+          "url": "https://xsy-1.gitbook.io/xsy-main/llms-full.txt",
+          "observedAt": "2026-10-03T23:05:24Z",
+          "datumAsOf": null,
+          "location": "Protocol Mechanics, Strategy modules",
+          "excerpt": "These modules are rules-driven and can be updated through governance and risk review as new opportunities or venues emerge.",
+          "assertion": "Mixed strategy families are disclosed without instrument roster or hard per-chain maximum maturity."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.yieldpoint.io/llms-full.txt",
+        "https://xsy-1.gitbook.io/xsy-main/llms-full.txt",
+        "https://cache.accountable.capital/dashboard/xsy",
+        "https://base.blockscout.com/api/v2/smart-contracts/0xba515304d8153c4b162dc79f867e152df9c127eb",
+        "https://xsy-1.gitbook.io/xsy-main/risks"
+      ],
+      "rationale": "Accountable chain allocations identify Ethereum/Base/Avalanche buckets, not exhaustive instruments. Both issuer doc corpora disclose managed custody and derivatives, lending and structured modules but no all-in-scope maturity maximum for any chain bucket. The UTY redemption cooldown does not establish the backing instruments' maturity."
+    },
+    {
+      "id": "uw-uty-xsy-8f707a3cf4a3d261",
+      "assetId": "uty-xsy",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:acf62e89a3ea38f7893c34f9",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:10:27Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R66)",
+      "sources": [
+        {
+          "url": "https://xsy-1.gitbook.io/xsy-main/llms-full.txt",
+          "observedAt": "2026-10-03T23:05:24Z",
+          "datumAsOf": null,
+          "location": "Protocol Mechanics, Strategy modules",
+          "excerpt": "These modules are rules-driven and can be updated through governance and risk review as new opportunities or venues emerge.",
+          "assertion": "Mixed strategy families are disclosed without instrument roster or hard per-chain maximum maturity."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.yieldpoint.io/llms-full.txt",
+        "https://xsy-1.gitbook.io/xsy-main/llms-full.txt",
+        "https://cache.accountable.capital/dashboard/xsy",
+        "https://base.blockscout.com/api/v2/smart-contracts/0xba515304d8153c4b162dc79f867e152df9c127eb",
+        "https://xsy-1.gitbook.io/xsy-main/risks"
+      ],
+      "rationale": "Accountable chain allocations identify Ethereum/Base/Avalanche buckets, not exhaustive instruments. Both issuer doc corpora disclose managed custody and derivatives, lending and structured modules but no all-in-scope maturity maximum for any chain bucket. The UTY redemption cooldown does not establish the backing instruments' maturity."
+    },
+    {
+      "id": "uw-uty-xsy-74ab90dbabfaaeb8",
+      "assetId": "uty-xsy",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:e5505e912713faf4de2cb15b",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:10:27Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R66)",
+      "sources": [
+        {
+          "url": "https://xsy-1.gitbook.io/xsy-main/llms-full.txt",
+          "observedAt": "2026-10-03T23:05:24Z",
+          "datumAsOf": null,
+          "location": "Protocol Mechanics, Strategy modules",
+          "excerpt": "These modules are rules-driven and can be updated through governance and risk review as new opportunities or venues emerge.",
+          "assertion": "Mixed strategy families are disclosed without instrument roster or hard per-chain maximum maturity."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.yieldpoint.io/llms-full.txt",
+        "https://xsy-1.gitbook.io/xsy-main/llms-full.txt",
+        "https://cache.accountable.capital/dashboard/xsy",
+        "https://base.blockscout.com/api/v2/smart-contracts/0xba515304d8153c4b162dc79f867e152df9c127eb",
+        "https://xsy-1.gitbook.io/xsy-main/risks"
+      ],
+      "rationale": "Accountable chain allocations identify Ethereum/Base/Avalanche buckets, not exhaustive instruments. Both issuer doc corpora disclose managed custody and derivatives, lending and structured modules but no all-in-scope maturity maximum for any chain bucket. The UTY redemption cooldown does not establish the backing instruments' maturity."
+    },
+    {
+      "id": "uw-uty-xsy-cc5f8b73500b96ea",
+      "assetId": "uty-xsy",
+      "scope": {
+        "componentKey": "economic-control:oracle",
+        "exposureId": null,
+        "factorKey": "tier",
+        "pillar": "control",
+        "requiredDatum": "tier",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:10:27Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R66)",
+      "sources": [
+        {
+          "url": "https://xsy-1.gitbook.io/xsy-main/llms-full.txt",
+          "observedAt": "2026-10-03T23:05:24Z",
+          "datumAsOf": null,
+          "location": "Risks, Liquidation Risk",
+          "excerpt": "XSY uses assets to back short perpetual futures positions.",
+          "assertion": "Managed hedge pricing is material; exact feed topology, freshness and fallback controllers are not disclosed."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.yieldpoint.io/llms-full.txt",
+        "https://xsy-1.gitbook.io/xsy-main/llms-full.txt",
+        "https://cache.accountable.capital/dashboard/xsy",
+        "https://base.blockscout.com/api/v2/smart-contracts/0xba515304d8153c4b162dc79f867e152df9c127eb"
+      ],
+      "rationale": "The vault's fixed USDC accounting does not identify the offchain managed hedge pricing authority. Architecture, integration, risks, security and public allocation surfaces do not publish the exact strategy feed/provider census, staleness and fallback topology needed to establish a nonopaque tier. No oracleless exemption is inferred from fixed mint parity."
+    },
+    {
+      "id": "uw-uty-xsy-1c6a68b33ccd42b2",
+      "assetId": "uty-xsy",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:uty-xsy:queue-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:10:27Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R66)",
+      "sources": [
+        {
+          "url": "https://docs.yieldpoint.io/llms-full.txt",
+          "observedAt": "2026-10-03T23:02:55Z",
+          "datumAsOf": null,
+          "location": "Core flows, UTY redemption",
+          "excerpt": "Once the bonding period elapses, you call `redeemById(requestId)` to receive USDC from the vault's on-chain buffer.",
+          "assertion": "Seven days is an unlock minimum; final claim still depends on funded buffer."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.yieldpoint.io/llms-full.txt",
+        "https://xsy-1.gitbook.io/xsy-main/llms-full.txt",
+        "https://docs.yieldpoint.io/protocol/integration/base-operations",
+        "https://docs.yieldpoint.io/protocol/integration/gotchas",
+        "https://base.blockscout.com/api/v2/smart-contracts/0xba515304d8153c4b162dc79f867e152df9c127eb"
+      ],
+      "rationale": "Issuer publishes a seven-day bonding minimum and buffer-dependent claim, but no guaranteed funding or end-to-end final delivery deadline for the queue route. The full contract architecture and integration corpus contain no maximum funded settlement SLA. Do not turn an unlock minimum into a completion maximum."
     }
   ]
 }

@@ -21,10 +21,14 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
-    "reviewer": "SOL-III Safety Score V9 reserve review",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Unknown wave W1R66 pinned wrapper-backing review",
     "confidence": "verified",
     "sources": [
+      {
+        "label": "Ethereum PublicNode: exact sUSN asset, totalAssets and USN balance at block 26114984",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
       {
         "label": "Noon USN and sUSN documentation",
         "url": "https://docs.noon.capital/2.-usdusn-and-usdsusn/cross-chain-interoperability"
@@ -38,9 +42,9 @@
         "url": "https://noon.accountable.capital/"
       }
     ],
-    "rationale": "sUSN is a staking-vault share over USN. The exact direct reserve is one protocol position; USN portfolio, custody, market, and redemption risks remain inherited through the tracked wrapper dependency.",
-    "compositionBasis": "Exact live ERC-4626 single-asset row, sUSN vault, and Noon product documentation",
-    "compositionAsOf": "2026-07-15",
+    "rationale": "At Ethereum block 26114984, asset() returns USN 0xda67b4284609d2d48e5d10cfac411572727dc1ed and totalAssets() equals USN.balanceOf(sUSN) exactly. This establishes the whole direct wrapper backing as USN at this checkpoint, not current parent portfolio weights or a USD exit measurement. Parent risks remain inherited.",
+    "compositionBasis": "Pinned sUSN asset()/totalAssets() and USN.balanceOf(vault), Ethereum block 26114984; whole direct wrapper asset denominator",
+    "compositionAsOf": "2026-10-03",
     "scope": "full-composition",
     "knownUnknownExposure": "No additional direct sUSN reserve slice is identified; upstream USN strategy allocations are tracked on the parent asset.",
     "knownUnknownExposurePct": 0
@@ -69,6 +73,7 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "none",
     "rehypothecation": "conditional",
+    "knownUnknownExposurePct": 0,
     "reviewedAt": "2026-09-22",
     "reviewer": "Codex Noon reserve and custody re-review 2026-09-22 (USN listing-feedback verification)",
     "confidence": "verified",
