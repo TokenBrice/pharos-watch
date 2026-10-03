@@ -482,6 +482,8 @@ describe("buildStatusMessage canonical safety provenance", () => {
     const source = baseStatus({
       safety: {
         grade: "A",
+        ratingStatus: "rated",
+        partialEvidence: null,
         score: 90,
         model: "v9",
         methodologyVersion: "9.0",
@@ -494,6 +496,33 @@ describe("buildStatusMessage canonical safety provenance", () => {
     expect(
       buildStatusMessage("USDC", baseStatus({ safetyUnavailableReason: "canonical-snapshot-unavailable" })),
     ).toContain("Safety: temporarily unavailable");
+  });
+
+  it.each(["pipeline-gap", "rated", "not-rated"] as const)("keeps %s availability distinct from its grade", (ratingStatus) => {
+    const status = baseStatus({ safety: {
+      grade: ratingStatus === "pipeline-gap" ? null : ratingStatus === "not-rated" ? "NR" : "A",
+      score: ratingStatus === "rated" ? 80 : null,
+      ratingStatus,
+      partialEvidence: ratingStatus === "not-rated" ? null : {
+        reasonCode: "partial-evidence-pipeline-gap",
+        excludedPillars: ratingStatus === "pipeline-gap" ? ["backing", "exit"] : ["exit"],
+        causes: ["A"],
+      },
+      model: "v9", methodologyVersion: "10.01", publicationGenerationId: "test",
+      publishedAt: 1_700_000_000, recordedAt: 1_700_000_000,
+    } });
+    const message = buildStatusMessage("USDC", status);
+    if (ratingStatus === "pipeline-gap") {
+      expect(message).toContain("Safety: Pipeline gap — Unavailable");
+      expect(message).not.toContain("Safety: NR");
+      expect(message).not.toContain("Safety: null");
+      expect(message).not.toContain("(0)");
+    } else if (ratingStatus === "rated") {
+      expect(message).toContain("Safety: A (80) — Partial evidence: pipeline gap");
+    } else {
+      expect(message).toContain("Safety: NR");
+      expect(message).not.toContain("Pipeline gap");
+    }
   });
 });
 

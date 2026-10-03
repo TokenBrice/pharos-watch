@@ -1,3 +1,4 @@
+import type { V9CompactPartialEvidence } from "@shared/types/safety-score-v9-causes";
 import { logWorkerEvent, logWorkerEventArgs } from "../lib/structured-log";
 import * as React from "react";
 import satori, { init as initSatori } from "satori/standalone";
@@ -117,7 +118,8 @@ function ogDataNotYetAvailable(): Response {
 
 interface OgSafetyScoreEntry {
   score: number | null;
-  grade: string;
+  grade: string | null;
+  partialEvidence: V9CompactPartialEvidence | null;
 }
 
 type OgSafetyScoreSource =
@@ -156,7 +158,7 @@ async function loadOgSafetyScoreSource(db: D1Database): Promise<OgSafetyScoreSou
     scores: Object.fromEntries(
       active.snapshot.cards.map((card) => [
         card.id,
-        { score: card.score, grade: card.grade },
+        { score: card.score, grade: card.grade, partialEvidence: card.partialEvidence },
       ]),
     ),
   };
@@ -288,7 +290,7 @@ export function deriveStablecoinOgCardData({
   return {
     name: coin.name,
     symbol: coin.symbol,
-    grade: grade ?? "NR",
+    grade: grade ?? "Unavailable",
     pegPrice,
     pegPriceIsNominal: pegPrice != null && coin.priceObservedAtMode === "nominal_reference",
     dewsBand: dewsBand ?? null,
@@ -445,7 +447,7 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
       coin,
       dexLiquidityScore: liq?.liquidityScore ?? null,
       dewsBand: dewsRow?.band,
-      grade: reportCardRow?.grade,
+      grade: reportCardRow ? reportCardRow.grade ?? "Pipeline gap" : "Unavailable",
       sparklineRows: sparklineRows.results ?? [],
       hasActiveDepeg: activeDepegRow !== null,
       mintBurn7d: flowRow && flowRow.bucket_count > 0
@@ -465,7 +467,9 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
       isFrozen,
     }),
     safetyModel: safetySource.kind === "ok" ? safetySource.model : null,
-    lastUpdated: safetyPresentation.lastUpdated,
+    lastUpdated: reportCardRow?.partialEvidence && reportCardRow.grade !== null
+      ? `${safetyPresentation.lastUpdated} · Partial evidence: pipeline gap`
+      : safetyPresentation.lastUpdated,
   };
 
   const png = await renderPng(<StablecoinCard data={data} />);
@@ -512,6 +516,7 @@ async function handleSafetyScoresOg(db: D1Database): Promise<Response> {
   if (safetySource.kind === "ok") {
     for (const [id, entry] of Object.entries(safetySource.scores)) {
       const grade = entry.grade;
+      if (grade === null) continue;
       if (grade in gradeDistribution) {
         gradeDistribution[grade]++;
       } else {

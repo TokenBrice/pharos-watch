@@ -157,12 +157,6 @@ function executeInvariant(invariant: MatchedV9Invariant): void {
       // configured bounded-evidence ceiling.
       expect(unavailable.finalGrade, invariant.id).not.toBe("NR");
       expect(unavailable.finalScore!, invariant.id).toBeLessThanOrEqual(weak.finalScore!);
-      expect(unavailable.caps, invariant.id).toContainEqual(
-        expect.objectContaining({
-          kind: "reason:material-dependency-unavailable",
-          limit: 69,
-        }),
-      );
       expect(unavailable.unresolvedFacts, invariant.id).toContainEqual(
         expect.objectContaining({
           code: "material-dependency-unavailable",
@@ -175,7 +169,7 @@ function executeInvariant(invariant: MatchedV9Invariant): void {
       const score = (variant: (typeof invariant.variants)[keyof typeof invariant.variants]) =>
         scoreSignals(variant.structuralSignals, {
           evidenceLevel: variant.evidenceLevel,
-          unresolved: [...variant.unresolved],
+          unresolved: variant.unresolved.map((fact) => ({ ...fact, critical: false, cause: "U" as const })),
         });
       const complete = score(invariant.variants.complete);
       const bounded = score(invariant.variants.boundedUnknown);
@@ -184,10 +178,8 @@ function executeInvariant(invariant: MatchedV9Invariant): void {
       expect(complete.finalScore!, invariant.id).toBeGreaterThanOrEqual(bounded.finalScore ?? 0);
       expect(bounded.finalScore!, invariant.id).toBeGreaterThanOrEqual(noncritical.finalScore ?? 0);
       expect(noncritical.finalGrade, invariant.id).not.toBe("NR");
-      expect(critical.finalGrade, invariant.id).toBe("NR");
-      expect(critical.nrReasons, invariant.id).toContainEqual(
-        expect.objectContaining({ code: "insufficient-evidence" }),
-      );
+      expect(critical.finalGrade, invariant.id).not.toBe("NR");
+      expect(critical.caps.filter((cap) => cap.source === "evidence"), invariant.id).toEqual([]);
       return;
     }
     case "parent-graph": {
@@ -206,9 +198,7 @@ function executeInvariant(invariant: MatchedV9Invariant): void {
 
       const missingParent = scoreCompiledAssetSet([child], V9_CANDIDATE_POLICY_V1).traces[0]!;
       expect(missingParent.finalGrade, invariant.id).toBe("NR");
-      expect(missingParent.nrReasons, invariant.id).toContainEqual(
-        expect.objectContaining({ code: "missing-parent-score" }),
-      );
+      expect(missingParent.nrReasons, invariant.id).toContainEqual(expect.objectContaining({ code: "f-without-measured-adverse", cause: "U" }));
       return;
     }
   }

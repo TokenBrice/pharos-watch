@@ -345,6 +345,27 @@ The cron reports `setup`, `syncing`, and `finalizing` progress. Budget exhaustio
 
 Artifact cleanup remains best-effort, but the cron metadata now records `artifactCleanup` delete counts, `artifactCleanupWarningCount`, and structured `artifactCleanupWarnings` when cleanup fails. `/status` and the admin status dashboard summarize non-zero cleanup deletes and cleanup warning counts so ghost-artifact cleanup regressions do not require log scraping.
 
+### Deploy-time configuration recovery
+
+In `WORKER_RESERVE_RECOVERY_MODE=recover`, the existing five-minute lane checks active retained snapshots against the deployed semantic config fingerprint before replaying interrupted checkpoint suffixes. A proven mismatch triggers a targeted fresh read through the same primary/fallback adapter runner, output validation, authoritative attempt CAS, and snapshot admission used by the four-hourly producer. **Old mismatched evidence remains rejected throughout**; changing display/scoring policy alone does not change this fingerprint. Missing or legacy-unfingerprinted snapshots remain the regular producer's responsibility.
+
+`worker/src/cron/reserve-recovery-config.ts` caps this phase at six coins and two minutes, admitting another coin only with the normal 20-second adapter window, 30-second D1 finalization reserve, and five-second margin available. Coins are serialized; shared transport helpers consume/cancel response bodies inside the same two-operation adapter I/O limiter. The lane retains its declared `2/6` connection peak and `reserve-recovery-chain` group. Per-coin request/result caches are discarded before the next coin, and the fleet scan reads fingerprints rather than composition payloads.
+During checkpoint replay in this five-minute lane, Kinesis runs after the reserve head rather than beside it, preserving the declared `2/6` peak. Normal four-hourly invocations retain the independent parallel Kinesis chain and their `3/6` budget; failures of the head still do not suppress Kinesis recovery.
+
+The scheduled recovery fence and lease remain in place. The targeted phase additionally takes the existing `sync-live-reserves` lease, with heartbeat renewal and parent cancellation; contention skips without changing snapshot authority and records `config-recovery-skipped` / `sync-live-reserves-lease-held`. Success/failure writes retain attempt-ID and absolute-deadline fences. Cancellation after fetch is checked before authoritative finalization.
+
+A successful matching snapshot removes itself from the next scan. Failure retains the rejected old snapshot and records the attempted deployed fingerprint; retries for that fingerprint wait ten minutes from the latest attempt, while a newly deployed fingerprint is immediately due. Existing source circuit breakers remain binding. Oldest-attempt-first ordering prevents failed assets from starving an untouched deploy cohort. `reserve-recovery` metadata includes `configRecovery` with attempted/healed/failed IDs and disjoint suspended, missing-fetcher, backoff and due counts covering every mismatch; due work is split into attempted and deferred counts. Suspended assets are not reported as backoff.
+
+A missing registered fetcher quarantines only that asset: its old snapshot stays rejected, a structured `config-recovery-missing-fetcher` warning identifies it, and the lane returns `config-recovery-partial` with the warning in `configRecovery.warnings`. Covered assets continue to refresh. Missing fetchers and failed/deferred targeted work degrade the recovery result without preventing checkpoint replay. The read-only operator CLI still fails on missing fetchers so release coverage gaps are visible before deployment.
+
+The offline release visibility CLI requires an explicit deployed release ref or PR merge base, lists changed active config fingerprints in the working-tree diff, and fails if a required recovery fetcher is missing. It shares the pure `selectConfigRecoveryTargets` selector with the recovery lane. `worker/src/cron/__tests__/reserve-recovery-release.test.ts` tests that selector with isolated fixtures (changed/unchanged semantics, new/removed/legacy rows and missing fetchers); tests never inspect git history.
+
+```bash
+npm run audit:live-reserve-config-changes -- --base <base-ref>
+```
+
+Six healthy, timely changed feeds can heal in one recovery run; a deferred tail is checked on the next tick. This is not an availability guarantee for failing upstreams or contended producer leases, nor does it move the later Safety Score publication cadence. After deployment, inspect the first relevant recovery execution and its newly admitted snapshots; a green deploy alone is not proof of healing.
+
 ---
 
 ## Storage Model

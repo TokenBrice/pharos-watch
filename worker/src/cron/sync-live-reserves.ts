@@ -361,7 +361,7 @@ function observeSharedAdapterResult(
   );
 }
 
-function createReserveAdapterRunner(args: {
+export function createReserveAdapterRunner(args: {
   signal: AbortSignal;
   adapterCtx: AdapterContext;
   adapterTimeoutMs: number;

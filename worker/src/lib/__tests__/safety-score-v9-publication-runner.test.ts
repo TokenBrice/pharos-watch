@@ -8,8 +8,11 @@ import { V9AssetEvaluationError } from "@shared/lib/safety-score-v9/evaluate-set
 import * as fixedInputCodec from "../report-cards-fixed-input-cache-codec";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { currentInput } from "./safety-score-v9-publication-store.test-support";
-import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY } from "../safety-score-v9/publication-codec";
+import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, parseSafetyScoreV9Publication } from "../safety-score-v9/publication-codec";
 import type * as PublicationStore from "../safety-score-v9/publication-store";
+import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { loadActiveSafetyScoreIndex } from "../safety-score-index";
+import { loadPublishedReportCardsV9Snapshot } from "../report-cards-v9-cache";
 
 const mocks = vi.hoisted(() => ({
   assess: vi.fn(),
@@ -35,7 +38,8 @@ vi.mock("../safety-score-v9/publication-assessment", async (importOriginal) => (
   >(),
   assessV9Publication: mocks.assess,
 }));
-vi.mock("../safety-score-v9/publication-store", () => ({
+vi.mock("../safety-score-v9/publication-store", async (importOriginal) => ({
+  ...await importOriginal<typeof PublicationStore>(),
   loadSafetyScoreV9Publication: mocks.loadPublication,
   loadSafetyScoreV9PublicationHealth: mocks.loadHealth,
   persistSafetyScoreV9Publication: mocks.persist,
@@ -91,6 +95,56 @@ describe("Safety Score V9 publication runner", () => {
     mocks.persistAlertEnvelope.mockReset().mockResolvedValue(undefined);
   });
 
+  it("publishes schema 6 over stored schema 5 without upgrading it at read time", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
+    const prior = makeWorkerSafetyScoreV9Publication({ publishedAtSec: fixedInput.clockSec - 100 });
+    try {
+      await store.persistSafetyScoreV9Publication(db, currentInput(prior));
+      sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(
+        stableJsonStringifyV1({ ...prior, schemaVersion: 5 }), store.SAFETY_SCORE_V9_CACHE_KEYS.publication,
+      );
+      const index = JSON.parse(sqlite.prepare("SELECT value FROM cache WHERE key = ?")
+        .get(store.SAFETY_SCORE_V9_CACHE_KEYS.scoreIndex)!.value as string);
+      sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(
+        stableJsonStringifyV1({ ...index, schemaVersion: 1 }), store.SAFETY_SCORE_V9_CACHE_KEYS.scoreIndex,
+      );
+      const priorHealth = stableJsonStringifyV1({
+        ...currentInput(prior).publicationHealth, schemaVersion: 1,
+      });
+      sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(
+        priorHealth, store.SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth,
+      );
+      await expect(store.loadSafetyScoreV9PublicationHealth(db)).rejects.toThrow("publication-schema-cutover-pending");
+      expect(sqlite.prepare("SELECT value FROM cache WHERE key = ?")
+        .get(store.SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth)?.value).toBe(priorHealth);
+      mocks.loadPublication.mockImplementation(store.loadSafetyScoreV9Publication);
+      mocks.loadHealth.mockImplementation(store.loadSafetyScoreV9PublicationHealth);
+      mocks.persist.mockImplementation(store.persistSafetyScoreV9Publication);
+      await expect(loadPublishedReportCardsV9Snapshot(db)).rejects.toThrow("publication-schema-cutover-pending");
+      await expect(loadActiveSafetyScoreIndex(db)).resolves.toMatchObject({
+        kind: "error", reason: "publication-schema-cutover-pending", snapshot: null,
+      });
+      const result = await runSafetyScoreV9Publication({ db, fixedInput, nowSec: fixedInput.clockSec });
+      expect(result).toMatchObject({ status: "published", schemaCutoverReason: "schema-cutover-5-to-6" });
+      await expect(store.loadSafetyScoreV9Publication(db)).resolves.toMatchObject({ schemaVersion: 6 });
+      await expect(store.loadSafetyScoreV9PublicationHealth(db)).resolves.toMatchObject({ schemaVersion: 2 });
+      await expect(loadPublishedReportCardsV9Snapshot(db)).resolves.toMatchObject({ schemaVersion: 7 });
+      await expect(loadActiveSafetyScoreIndex(db)).resolves.toMatchObject({ kind: "v9" });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it.each([4, 7])("does not bypass an unknown predecessor schema %s", async schema => {
+    mocks.loadPublication.mockImplementation(() => parseSafetyScoreV9Publication(
+      stableJsonStringifyV1({ ...makeWorkerSafetyScoreV9Publication(), schemaVersion: schema }),
+    ));
+    const result = await runSafetyScoreV9Publication({ db: {} as D1Database, fixedInput, nowSec: fixedInput.clockSec });
+    expect(result).toMatchObject({ status: "failed", message: expect.stringContaining("Unsupported") });
+    expect(mocks.build).not.toHaveBeenCalled();
+    expect(mocks.persist).not.toHaveBeenCalled();
+  });
   it("publishes an accepted canonical candidate", async () => {
     const result = await runSafetyScoreV9Publication({
       db: {} as D1Database,
@@ -164,7 +218,6 @@ describe("Safety Score V9 publication runner", () => {
           cards: expect.arrayContaining([
             expect.objectContaining({
               id: accepted.cards[0]!.id,
-              producerFailedBindings: expect.any(Array),
             }),
           ]),
         }),
@@ -614,7 +667,7 @@ describe("Safety Score V9 publication runner", () => {
     });
     mocks.loadPublication.mockResolvedValue(accepted);
     mocks.loadHealth.mockResolvedValue({
-      schemaVersion: 1,
+      schemaVersion: 2,
       status: "current",
       acceptedPublicationGenerationId: accepted.publicationGenerationId,
       acceptedAtSec: accepted.publishedAtSec,

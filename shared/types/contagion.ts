@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { V9GradeSchema } from "./safety-score-v9";
+import { V9RatingStatusSchema, V9CompactPartialEvidenceSchema, refineV9RatingStatusFields } from "./safety-score-v9-causes";
 
 /** Explicit experiment assumptions, not parameters of the scoring policy.
  * Duration does not fabricate historical peg performance or a collateral haircut.
@@ -21,10 +23,24 @@ export const ContagionResultSchema = z.object({
   schemaVersion: z.literal(1), hypothetical: z.literal(true),
   provenance: z.object({ origin: z.literal("scenario-assumptions"), scenario: ContagionScenarioSchema }),
   identity: z.object({ publicationGenerationId: z.string().min(1), policyDigest: z.string(), evaluationBuildDigest: z.string(), factSetDigest: z.string(), asOfSec: z.number().int() }),
-  manifest: z.object({ evaluated: z.number().int(), unchanged: z.number().int(), nr: z.number().int(), failed: z.number().int() }),
+  manifest: z.object({ evaluated: z.number().int(), unchanged: z.number().int(), nr: z.number().int(), pipelineGap: z.number().int(), failed: z.number().int() }),
   rows: z.array(z.object({
-    coinId: z.string(), baselineScore: z.number().nullable(), baselineGrade: z.string(), scenarioScore: z.number().nullable(), scenarioGrade: z.string(), delta: z.number().nullable(), shortestHop: z.number().int().nullable(),
+    coinId: z.string(), baselineScore: z.number().nullable(), baselineGrade: V9GradeSchema.nullable(),
+    baselineRatingStatus: V9RatingStatusSchema, baselinePartialEvidence: V9CompactPartialEvidenceSchema.nullable(),
+    scenarioScore: z.number().nullable(), scenarioGrade: V9GradeSchema.nullable(),
+    scenarioRatingStatus: V9RatingStatusSchema.nullable(), scenarioPartialEvidence: V9CompactPartialEvidenceSchema.nullable(),
+    delta: z.number().nullable(), shortestHop: z.number().int().nullable(),
     changedDimensions: z.array(z.enum(["final", "backing", "exit", "control"])), bindingCause: z.string().nullable(), nr: z.boolean(), failure: z.string().nullable(),
+  }).superRefine((row, ctx) => {
+    refineV9RatingStatusFields({ score: row.baselineScore, grade: row.baselineGrade, ratingStatus: row.baselineRatingStatus, partialEvidence: row.baselinePartialEvidence }, ctx);
+    if (row.failure !== null) {
+      if (row.scenarioScore !== null || row.scenarioGrade !== null || row.scenarioRatingStatus !== null) ctx.addIssue({ code: "custom", message: "Failed scenarios cannot fabricate ratings" });
+    } else if (row.scenarioRatingStatus === null) {
+      ctx.addIssue({ code: "custom", message: "Successful scenarios must retain rating status" });
+    } else {
+      refineV9RatingStatusFields({ score: row.scenarioScore, grade: row.scenarioGrade, ratingStatus: row.scenarioRatingStatus, partialEvidence: row.scenarioPartialEvidence }, ctx);
+    }
+    if (row.delta !== (row.baselineScore === null || row.scenarioScore === null ? null : row.scenarioScore - row.baselineScore)) ctx.addIssue({ code: "custom", message: "Scenario delta must preserve unavailable scores" });
   })),
 }).strict();
 export type V9ContagionScenarioResult = z.output<typeof ContagionResultSchema>;

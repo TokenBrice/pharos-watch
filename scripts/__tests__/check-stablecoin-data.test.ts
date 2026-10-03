@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { StablecoinMeta } from "@shared/types";
 import {
   getAuthoredDefaultFlagIssues,
   getCommodityProtocolSlugIssue,
@@ -7,6 +8,7 @@ import {
   getReservePublicLabelIssues,
   getReserveDependencyTypeLinkIssues,
   getLiveReserveDependencyTypeLinkIssues,
+  getListingGovernanceIssues,
 } from "../ci/check-stablecoin-data";
 
 describe("authored linked reserve type gate", () => {
@@ -236,5 +238,68 @@ describe("reserve public-label guard", () => {
     expect(issues).toHaveLength(1);
     expect(issues[0]).toContain("is 161 characters");
     expect(issues[0]).toContain("capped at 160 characters");
+  });
+});
+
+describe("listing class during unresolved mechanism review", () => {
+  const coin: StablecoinMeta = {
+    id: "fixture-usd",
+    name: "Fixture USD",
+    symbol: "FUSD",
+    flags: {
+      backing: "crypto-backed",
+      governance: "centralized-dependent",
+      pegCurrency: "USD",
+      yieldBearing: false,
+      rwa: false,
+      navToken: false,
+    },
+  };
+  const decisions = {
+    schemaVersion: 1,
+    policyVersion: "fixture",
+    listingClassById: { "fixture-usd": "stable-value-investment" },
+  };
+  const review: NonNullable<StablecoinMeta["mechanismArchetypeReview"]> = {
+    disposition: "unresolved",
+    reviewedAt: "2026-10-03",
+    reviewer: "Fixture reviewer",
+    rationale: "Exact-token identity and holder claim remain unverified.",
+    sources: [{ label: "Issuer disclosure", url: "https://example.com/token" }],
+  };
+
+  it("holds the non-core ledger class while a sourced dated review is unresolved", () => {
+    expect(getListingGovernanceIssues([{ ...coin, mechanismArchetypeReview: review }], decisions)).toEqual([]);
+  });
+
+  it("resumes normal core precedence once the review is resolved without an archetype", () => {
+    const resolvedCoin = { ...coin, mechanismArchetypeReview: { ...review, disposition: "resolved" as const } };
+    expect(getListingGovernanceIssues([resolvedCoin], decisions)).toEqual([
+      'listing-decisions.json class for "fixture-usd" is stable-value-investment; expected core-stablecoin',
+    ]);
+    expect(getListingGovernanceIssues([resolvedCoin], {
+      ...decisions, listingClassById: { "fixture-usd": "core-stablecoin" },
+    })).toEqual([]);
+  });
+
+  it.each([
+    { ...review, reviewedAt: "not-a-date" },
+    { ...review, sources: [] },
+    { ...review, sources: [{ label: "Invalid source", url: "not-a-url" }] },
+  ])("does not hold a class on invalid review provenance", (invalidReview) => {
+    expect(getListingGovernanceIssues([{ ...coin, mechanismArchetypeReview: invalidReview }], decisions)).toEqual([
+      'listing-decisions.json class for "fixture-usd" is stable-value-investment; expected core-stablecoin',
+    ]);
+  });
+
+  it("keeps delisting precedence and does not admit active excluded rows through the hold", () => {
+    expect(getListingGovernanceIssues([{
+      ...coin, status: "delisted", mechanismArchetypeReview: review,
+    }], { ...decisions, listingClassById: { "fixture-usd": "excluded" } })).toEqual([]);
+    expect(getListingGovernanceIssues([{
+      ...coin, mechanismArchetypeReview: review,
+    }], { ...decisions, listingClassById: { "fixture-usd": "excluded" } })).toContain(
+      'listing-decisions.json marks non-delisted "fixture-usd" as excluded',
+    );
   });
 });

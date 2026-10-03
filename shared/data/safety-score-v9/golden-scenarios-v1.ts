@@ -297,9 +297,11 @@ export const GOLDEN_SCENARIOS: Scenario[] = [
     trackRecordMonths: 24,
     structuralCaps: [],
     expected: {
-      allowedGrades: ["NR"],
+      allowedGrades: ["D", "C-"],
+      minScore: 35,
+      maxScore: 55,
       expectedBindingCapKind: null,
-      expectedRated: false,
+      expectedRated: true,
     },
   },
   {
@@ -537,9 +539,11 @@ export const GOLDEN_SCENARIOS: Scenario[] = [
     trackRecordMonths: 18,
     structuralCaps: [],
     expected: {
-      allowedGrades: ["NR"],
+      allowedGrades: ["D", "C-"],
+      minScore: 35,
+      maxScore: 55,
       expectedBindingCapKind: null,
-      expectedRated: false,
+      expectedRated: true,
     },
   },
   {

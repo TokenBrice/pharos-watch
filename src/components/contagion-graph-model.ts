@@ -76,8 +76,8 @@ const DEPENDENCY_TYPE_RANK = new Map<ContagionEdgeRelationship, number>(
 // Pure helpers
 // ---------------------------------------------------------------------------
 
-export function gradeColor(grade: V9Grade): string {
-  return GRADE_RADAR_COLORS[gradeRange(grade)] ?? GRADE_RADAR_COLORS.NR;
+export function gradeColor(grade: V9Grade | null): string {
+  return grade === null ? "var(--color-muted-foreground)" : GRADE_RADAR_COLORS[gradeRange(grade)];
 }
 
 export function compareDependencyTypes(a: ContagionEdgeRelationship, b: ContagionEdgeRelationship): number {

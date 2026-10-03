@@ -38,7 +38,7 @@ function fixture() {
     contracts: plan.deployments.filter(row => row.holdingKind !== "native-gas").map(row => ({ chain: row.chainId, address: row.address!, decimals: row.decimals })),
   } as StablecoinMeta : undefined);
   const chainRpcs = new Map<string, ChainRpcConfig>();
-  return { plan, fixedInput, assetId: "alpha", chainRpcs, run(signal?: AbortSignal) { return observeReviewedEconomicDeploymentPartitionAttempt({ assetId: "alpha", fixedInput, chainRpcs, signal }); } };
+  return { plan, fixedInput, assetId: "alpha", chainRpcs, scoringClockSec: CLOCK, run(signal?: AbortSignal, scoringClockSec = CLOCK) { return observeReviewedEconomicDeploymentPartitionAttempt({ assetId: "alpha", fixedInput, chainRpcs, signal, scoringClockSec }); } };
 }
 
 beforeEach(() => {
@@ -59,6 +59,29 @@ describe("reviewed economic supply observation", () => {
     expect(result.attribution.observations).toEqual([expect.objectContaining({ deploymentKey: f.plan.deployments[0]!.deploymentKey, amount: "100000000", anchor: "100", anchorHash: HASH, observedAtSec: CLOCK - 60 })]);
     expect(result.attribution.deployments[0]!.currentSupplyUsd).toBe(100);
     expect(result.attribution.unattributedSupplyUsd).toBe(0);
+  });
+
+  it("admits pre-capture state newer than the previous source clock without redating its source", async () => {
+    const f = fixture();
+    vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) =>
+      ({ number: number === "finalized" ? 100 : number, timestamp: CLOCK + 599, hash: HASH }));
+    const result = await f.run(undefined, CLOCK + 600);
+    expect(result).toMatchObject({ status: "accepted", attribution: {
+      baseInputGenerationId: f.fixedInput.baseInputGenerationId, sourceGeneration: "source",
+      scoringClockSec: CLOCK + 600, aggregate: { observedAtSec: CLOCK - 60, sourceGeneration: "source" },
+      observations: [expect.objectContaining({ observedAtSec: CLOCK + 599, anchorHash: HASH })],
+    } });
+  });
+
+  it.each([CLOCK - 1, NaN, CLOCK + 0.5])("rejects an inadmissible capture clock %s", async scoringClockSec => {
+    const f = fixture();
+    expect(await f.run(undefined, scoringClockSec)).toMatchObject({ status: "rejected", rejectionCode: "packet-reconciliation-failed" });
+  });
+
+  it("fails closed when a reviewed deployment observer throws", async () => {
+    const f = fixture();
+    vi.mocked(evmRpc.fetchEvmBlockNumber).mockRejectedValue(new Error("RPC unavailable"));
+    expect(await f.run()).toEqual({ status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: f.plan.deployments[0]!.deploymentKey });
   });
 
   it.each(["hash", "timestamp", "missing"])("rejects a changed %s on the pinned block recheck", async change => {

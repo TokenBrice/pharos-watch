@@ -1,5 +1,4 @@
 import {
-  V9ScoringInputSchema,
   type V9AssetPremiumPolicy,
   type V9EvidenceLevel,
   type V9QualityPillar,
@@ -8,8 +7,10 @@ import {
   type V9UnresolvedFact,
   type V9ValidatedPolicyEnvelope,
 } from "../../types/safety-score-v9";
+import type { V9EvidenceCause, V9PartialEvidence, V9RatingStatus } from "../../types/safety-score-v9-causes";
 import {
   applyV9AssetPremium,
+  parseV9ScoringInput,
   scoreV9Input,
   type V9AdverseAttribution,
   type V9AggregationStrategy,
@@ -23,9 +24,10 @@ import {
 } from "./formula";
 import type { V9OperationalResilienceResult } from "./operational-resilience";
 import type { V9WrapperParentLimit } from "./wrapper-risk";
-import { assertV9ValidatedPolicyEnvelope, resolveV9ReasonPolicy } from "./policy";
+import { assertV9ValidatedPolicyEnvelope, resolveV9ReasonTreatment } from "./policy";
 import {
   canonicalUniqueBy,
+  V9_EMPTY_ARRAY,
   compareText,
   parentAttributionFields,
   propagateParentAttribution,
@@ -39,8 +41,23 @@ export type V9PillarReason = V9PublicReason;
 
 export interface V9PillarEvaluation {
   score: number | null;
+  aggregationDisposition: "included" | "excluded-a-b";
+  causeGapIds: readonly string[];
+  limitedEvidenceCauses: readonly V9EvidenceCause[];
+  /** Exact witnesses of the reason-based pillar limitation, not all diagnostic gaps. */
+  limitingCauseGapIds?: readonly string[];
+  supportedComponentKeys: readonly string[];
+  excludedComponentKeys?: readonly string[];
+  excludedCauseGapIds?: readonly string[];
+  excludedCauses?: readonly ("A" | "B")[];
   evidenceLevel: V9EvidenceLevel;
   reasons: readonly V9PillarReason[];
+  /** Real scored C/U components; their bounds need not pull the whole pillar below C-. */
+  boundedComponents?: readonly {
+    reason: V9PillarReason;
+    score: number;
+    effectiveScoringWeight: number;
+  }[];
   structuralSignals: readonly V9StructuralSignal[];
   adverseAttribution?: readonly V9PillarAdverseAttribution[];
 }
@@ -74,6 +91,10 @@ export interface V9ProductionScoreInput {
   parent: {
     required: boolean;
     score: number | null;
+    ratingStatus?: V9RatingStatus;
+    causeGapIds?: readonly string[];
+    limitedEvidenceCauses?: readonly V9EvidenceCause[];
+    partialEvidence?: V9PartialEvidence | null;
     propagatedReasons: readonly V9NRReason[];
     propagatedAdverseAttribution?: readonly V9ParentAdverseAttribution[];
     propagatedBoundedUncertaintyAttribution?:
@@ -245,7 +266,7 @@ export function projectV9ScoringInput(
     "parentRequired" | "parentScore" | "structuralSignals" | "unresolved"
   >,
 ): V9ScoringInput {
-  return V9ScoringInputSchema.parse({
+  return parseV9ScoringInput({
     assetId: input.assetId,
     pillars: {
       backing: input.pillars.backing.score,
@@ -262,19 +283,35 @@ export function projectV9ScoringInput(
   });
 }
 
-function normalizeReasonList(reasons: readonly V9PillarReason[], envelope: V9ValidatedPolicyEnvelope) {
+function normalizeReasonList(
+  reasons: readonly V9PillarReason[],
+  envelope: V9ValidatedPolicyEnvelope,
+  cache: WeakMap<V9PillarReason, V9UnresolvedFact>,
+) {
   return canonicalizeV9PublicReasons(reasons, {
     dedupeSourceGapIds: true,
     conflictSubject: "unresolved fact",
-  })
-    .map((reason) => ({
+  }).map((reason) => {
+    const cached = cache.get(reason);
+    if (cached !== undefined) return cached;
+    const ids = reason.causeGapIds ?? (reason.sourceGapId == null ? V9_EMPTY_ARRAY : [reason.sourceGapId]);
+    const fact: V9UnresolvedFact = {
       code: reason.code,
       path: reason.path,
       reason: reason.message,
-      critical: resolveV9ReasonPolicy(envelope, reason.code).critical,
-      responsibility: reason.responsibility,
+      critical: resolveV9ReasonTreatment(envelope, reason.code, reason.cause ?? "U").critical,
+      responsibility: reason.cause === "A" ? reason.responsibility
+        : reason.cause === "B" ? "public-data-uncurated" as const
+          : reason.cause === "C" ? "issuer-undisclosed" as const
+            : reason.cause === "D" ? "measured-adverse" as const : "unresearched" as const,
+      cause: reason.cause ?? "U",
+      causeGapIds: ids.length === 0 ? V9_EMPTY_ARRAY : ids as string[],
+      scoringDisposition: resolveV9ReasonTreatment(envelope, reason.code, reason.cause ?? "U").scoringDisposition,
       ...(reason.sourceGapId == null ? {} : { sourceGapId: reason.sourceGapId }),
-    }));
+    };
+    cache.set(reason, fact);
+    return fact;
+  });
 }
 
 function scoreBearingReasons(
@@ -287,7 +324,7 @@ function scoreBearingReasons(
     ...input.dependencyReasons,
     ...(input.methodologyReasons ?? []),
     ...(input.unresolvedEvidence ?? []).filter(
-      (reason) => resolveV9ReasonPolicy(envelope, reason.code).critical,
+      (reason) => resolveV9ReasonTreatment(envelope, reason.code, reason.cause ?? "U").critical,
     ),
   ];
 }
@@ -348,15 +385,17 @@ function wrapperLocalAttribution(limit: V9WrapperParentLimit | null | undefined)
   if (fallbackDeterminesDiscount) {
     return {
       adverse: [],
-      bounded: limit.missingFacts.map((fact) => ({
+      bounded: limit.missingFacts.filter((fact) => fact.cause === "C" || fact.cause === "U").map((fact) => ({
         source: "wrapper-local",
         code: "bounded-mechanism-review",
         path: `wrapper-local:${fact.factClass}`,
         message:
           `Wrapper-local ${fact.factClass} is ${fact.disposition}; ` +
           `the ${limit.form} fallback discount bounds the unresolved local layer.`,
-        responsibility: fact.disposition,
+        responsibility: fact.cause === "C" ? "issuer-undisclosed" : "unresearched",
         boundedness: "exposure-bounded",
+        cause: fact.cause === "C" ? "C" : "U",
+        causeGapIds: fact.causeGapIds,
       })),
     };
   }
@@ -452,7 +491,8 @@ function resolveV9AssetPremium(
   const requiredEvidenceRank = evidenceRank[premium.requiredEvidenceLevel];
   if (
     PILLAR_KEYS.some(
-      (pillar) => evidenceRank[input.pillars[pillar].evidenceLevel] > requiredEvidenceRank,
+      (pillar) => input.pillars[pillar].aggregationDisposition !== "included" ||
+        evidenceRank[input.pillars[pillar].evidenceLevel] > requiredEvidenceRank,
     )
   ) {
     return null;
@@ -497,24 +537,66 @@ export function scoreV9EvaluatedAsset(
     ...PILLAR_KEYS.flatMap((pillar) => input.pillars[pillar].structuralSignals),
     ...input.dependencyStructuralSignals,
   ];
-  // Thread the per-pillar `limited` count so the scorer can widen the withhold
-  // (Lever 1): only the rolled-up worst evidence level is otherwise visible.
-  const limitedPillarCount = PILLAR_KEYS.filter(
-    (pillar) => input.pillars[pillar].evidenceLevel === "limited",
-  ).length;
-  // The withhold only fires when the BACKING pillar itself is unverifiable:
-  // a strong-backing asset is assessable (we know it is backed) even if exit
-  // and control are limited, so it must be scored, never withheld to NR.
-  const backingLimited = input.pillars.backing.evidenceLevel === "limited";
+  const includedPillars = PILLAR_KEYS.filter((pillar) => input.pillars[pillar].aggregationDisposition === "included");
+  const excludedPillars = PILLAR_KEYS.filter((pillar) => !includedPillars.includes(pillar)).sort(compareText);
+  const limitingPillars = includedPillars.flatMap((pillar) => {
+    const evaluation = input.pillars[pillar];
+    // A diagnostic cause does not make an otherwise assessable pillar unverifiable.
+    if (evaluation.evidenceLevel !== "limited" && evaluation.evidenceLevel !== "insufficient") return [];
+    const causes = evaluation.limitedEvidenceCauses.filter((cause) => cause === "C" || cause === "U" || cause === "D");
+    const excluded = new Set(evaluation.excludedCauseGapIds ?? []);
+    const witnessIds = (evaluation.limitingCauseGapIds ?? evaluation.causeGapIds).filter((id) => !excluded.has(id));
+    return causes.length === 0 || witnessIds.length === 0 ? [] : [{ pillar, causes, causeGapIds: witnessIds }];
+  });
+  const excludedConstraints = [...input.peg.reasons, ...(input.methodologyReasons ?? [])].flatMap((reason) => {
+    const cause = reason.cause;
+    return cause === "A" || cause === "B" ? [{
+      cause, causeGapIds: reason.causeGapIds ?? (reason.sourceGapId == null ? [] : [reason.sourceGapId]),
+      componentKey: reason.path,
+    }] : [];
+  });
+  const excludedWrapperFacts = input.parent.wrapperParentLimit?.missingFacts.flatMap((fact) =>
+    fact.cause === "A" || fact.cause === "B" ? [{
+      cause: fact.cause, causeGapIds: fact.causeGapIds, componentKey: `wrapper-local:${fact.factClass}`,
+    }] : [],
+  ) ?? [];
+  const parentExclusions = input.parent.partialEvidence?.causes.map((cause) => ({
+    cause, causeGapIds: input.parent.partialEvidence!.causeGapIds, componentKey: "dependency:parent",
+  })) ?? [];
+  const exclusions = [...excludedConstraints, ...excludedWrapperFacts, ...parentExclusions];
+  const excludedCauseGapIds = [...new Set([
+    ...PILLAR_KEYS.flatMap((pillar) => input.pillars[pillar].excludedCauseGapIds ?? []),
+    ...exclusions.flatMap((item) => item.causeGapIds),
+  ])].sort(compareText);
+  const excludedCauses = [...new Set([
+    ...PILLAR_KEYS.flatMap((pillar) => input.pillars[pillar].excludedCauses ?? []),
+    ...exclusions.map((item) => item.cause),
+  ])].sort(compareText);
+  const excludedComponentKeys = [...new Set([
+    ...PILLAR_KEYS.flatMap((pillar) => input.pillars[pillar].excludedComponentKeys ?? []),
+    ...exclusions.map((item) => item.componentKey),
+  ])].sort(compareText);
+  if (excludedPillars.length > 0 && (excludedCauseGapIds.length === 0 || excludedCauses.length === 0)) {
+    throw new Error("Safety Score v9 excluded pillars lack A/B cause coverage");
+  }
+  const partialEvidence: V9PartialEvidence | null = excludedCauseGapIds.length === 0 ? null : {
+    reasonCode: "partial-evidence-pipeline-gap", excludedPillars, excludedComponentKeys,
+    causeGapIds: excludedCauseGapIds, causes: excludedCauses,
+  };
   const baseScoreBearingReasons = scoreBearingReasons(input, envelope);
-  const normalizedScoreBearingReasons = normalizeReasonList(baseScoreBearingReasons, envelope);
-  const pillarReasonProvenance: V9PillarReasonProvenance[] = PILLAR_KEYS.flatMap(
-    (pillar) =>
-      normalizeReasonList(input.pillars[pillar].reasons, envelope).map((fact) => ({
-        pillar,
-        fact,
+  const normalizedReasons = new WeakMap<V9PillarReason, V9UnresolvedFact>();
+  const normalizedScoreBearingReasons = normalizeReasonList(baseScoreBearingReasons, envelope, normalizedReasons);
+  const pillarReasonProvenance: V9PillarReasonProvenance[] = PILLAR_KEYS.flatMap((pillar) => [
+    ...normalizeReasonList(input.pillars[pillar].reasons, envelope, normalizedReasons).map((fact) => ({
+      pillar,
+      fact,
+    })),
+    ...(input.pillars[pillar].boundedComponents ?? []).flatMap((component) =>
+      normalizeReasonList([component.reason], envelope, normalizedReasons).map((fact) => ({
+        pillar, fact, componentScore: component.score, effectiveScoringWeight: component.effectiveScoringWeight,
       })),
-  );
+    ),
+  ]);
   const measuredPillarAdverseAttribution = PILLAR_KEYS.flatMap(
     (pillar) => input.pillars[pillar].adverseAttribution ?? [],
   );
@@ -533,8 +615,8 @@ export function scoreV9EvaluatedAsset(
     scoringInput,
     envelope,
     input.parent.propagatedReasons,
-    limitedPillarCount,
-    backingLimited,
+    limitingPillars.length,
+    limitingPillars.some((item) => item.pillar === "backing"),
     input.parent.propagatedAdverseAttribution ?? [],
     measuredPillarAdverseAttribution,
     input.parent.propagatedBoundedUncertaintyAttribution ?? [],
@@ -542,30 +624,47 @@ export function scoreV9EvaluatedAsset(
     wrapperAttribution.bounded,
     pillarReasonProvenance,
     aggregationStrategy,
+    { includedPillars, partialEvidence, limitingPillars, parentStatus: input.parent.ratingStatus },
   );
   const premium = resolveV9AssetPremium(input, ordinaryTrace, envelope);
   const trace =
     premium === null
       ? ordinaryTrace
       : applyV9AssetPremium(ordinaryTrace, premium, envelope);
+  const componentReasonKeys = new Set(PILLAR_KEYS.flatMap((pillar) =>
+    (input.pillars[pillar].boundedComponents ?? []).map(({ reason }) => `${reason.code}\u0000${reason.path}`),
+  ));
+  const isComponentAttribution = (item: V9BoundedUncertaintyAttribution) =>
+    item.source === "reason" && componentReasonKeys.has(`${item.code}\u0000${item.path}`);
+  // Component proofs participate in D eligibility before this publication cut.
+  // Other grades (and D cards with another proof) do not need the extra payload.
+  const emitComponentProofs = trace.finalGrade === "D" && trace.ratingStatus === "rated" &&
+    trace.adverseAttribution.length === 0 &&
+    !trace.boundedUncertaintyAttribution.some((item) => !isComponentAttribution(item));
+  const boundedUncertaintyAttribution = emitComponentProofs ? trace.boundedUncertaintyAttribution
+    : trace.boundedUncertaintyAttribution.filter((item) => !isComponentAttribution(item));
+  const emissionReasons = emitComponentProofs ? baseScoreBearingReasons
+    : baseScoreBearingReasons.filter((reason) => !componentReasonKeys.has(`${reason.code}\u0000${reason.path}`));
+  const emissionFacts = emitComponentProofs ? normalizedScoreBearingReasons
+    : normalizedScoreBearingReasons.filter((fact) => !componentReasonKeys.has(`${fact.code}\u0000${fact.path}`));
   return {
     ...trace,
+    boundedUncertaintyAttribution,
     operationalResilience: input.operationalResilience ?? null,
     wrapperParentLimit: input.parent.wrapperParentLimit ?? null,
     unresolvedFacts: reconcileBoundedAttributionFacts(
       normalizeReasonList(
-        [...baseScoreBearingReasons, ...(input.unresolvedEvidence ?? [])],
+        [...emissionReasons, ...(input.unresolvedEvidence ?? [])],
         envelope,
+        normalizedReasons,
       ),
-      normalizedScoreBearingReasons,
-      trace.boundedUncertaintyAttribution,
+      emissionFacts,
+      boundedUncertaintyAttribution,
     ),
     factSetDigest: input.identity.factSetDigest,
     baseInputGenerationId: input.identity.baseInputGenerationId,
     evaluationBuildDigest: input.identity.evaluationBuildDigest,
     asOfSec: input.identity.asOfSec,
-    sourceGenerations: Object.fromEntries(
-      Object.entries(input.identity.sourceGenerations).sort(([a], [b]) => compareText(a, b)),
-    ),
+    sourceGenerations: input.identity.sourceGenerations,
   };
 }

@@ -1,3 +1,4 @@
+import type { V9RatingStatus, V9CompactPartialEvidence } from "@shared/types/safety-score-v9-causes";
 import {
   TELEGRAM_CONTEXT_BUDGET_SEC,
   assessTelegramContextClock,
@@ -44,7 +45,9 @@ export interface StatusForCoin {
   supplyCurrent: boolean;
   dews: { band: string; score: number; computedAt: number } | null;
   safety: {
-    grade: string;
+    grade: string | null;
+    ratingStatus: V9RatingStatus;
+    partialEvidence: V9CompactPartialEvidence | null;
     score: number | null;
     model: "v9";
     methodologyVersion: string;
@@ -232,6 +235,8 @@ export async function loadStatusForCoin(db: D1Database, stablecoinId: string): P
         ? {
             grade: safetyCard.grade,
             score: safetyCard.score,
+            ratingStatus: safetyCard.ratingStatus,
+            partialEvidence: safetyCard.partialEvidence,
             model: safetyState.source.snapshot.safetyScoreIdentity.model,
             methodologyVersion: safetyState.source.snapshot.safetyScoreIdentity.methodologyVersion,
             publicationGenerationId:

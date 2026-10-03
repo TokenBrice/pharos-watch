@@ -50,14 +50,16 @@ export function buildStablecoinSafetyScoreV9Presentation(
   card: SafetyScoreV9CurrentCard,
 ): StablecoinSafetyScoreV9Presentation {
   const hasIncompleteDexCoverage = card.scoreTrace.evidenceResponsibility.summaries.some(
-    (summary) => summary.reasonCodes.includes("incomplete-dex-route-coverage"),
+    (summary) => summary.reasonCodes?.includes("incomplete-dex-route-coverage"),
   );
   return {
     traceParts: buildSafetyScoreV9TraceParts(card),
     ...buildSafetyScoreV9Attribution(card),
     pillars: PILLARS.map(([key, label]) => {
       const pillar = card.pillars[key];
-      const baseEvidenceSummary = isUnknownSafetyScoreV9Value(pillar.freshness)
+      const baseEvidenceSummary = pillar.aggregationDisposition === "excluded-a-b"
+        ? "excluded — pipeline gap / awaiting curation · 0% effective weight"
+        : isUnknownSafetyScoreV9Value(pillar.freshness)
         ? `${humanizeSafetyScoreV9Value(pillar.evidenceLevel)} evidence`
         : `${humanizeSafetyScoreV9Value(pillar.evidenceLevel)} evidence · ${humanizeSafetyScoreV9Value(pillar.freshness)}`;
       const evidenceSummary = key === "exit"

@@ -1,3 +1,4 @@
+import { makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { describe, expect, it } from "vitest";
 import {
@@ -204,6 +205,26 @@ describe("buildDispatchSnapshotState", () => {
       state.safeDewsSnapshot,
       () => "USDC",
     )).toHaveLength(1);
+  });
+
+  it.each(["entering", "recovering"] as const)("suppresses %s pipeline-gap grade alerts", (transition) => {
+    const rated = makeWorkerReportCardsV9Response({
+      updatedAt: nowSec - 60, asOfSec: nowSec - 120,
+      cards: [makeWorkerV9Card({ id: "usdc-circle", grade: "D", score: 44 })],
+    });
+    const gap = makeWorkerReportCardsV9Response({
+      updatedAt: nowSec - 60, asOfSec: nowSec - 120,
+      cards: [makeReportCardsV9PipelineGapCard("control", "A", { id: "usdc-circle" })],
+    });
+    const previous = buildActiveAlertSafetyV9SourceEnvelope(transition === "entering" ? rated : gap)!;
+    const current = transition === "entering" ? gap : rated;
+    const state = buildDispatchSnapshotState(sourceData({
+      safetyCache: cache(previous),
+      safetySourceAssessment: assessActiveAlertSafetySource({ kind: "v9", snapshot: current }, { nowSec }),
+    }), nowSec);
+    expect(state.safetySnapshotNeedsSeed).toBe(false);
+    expect(state.currentSafetySnapshot?.["usdc-circle"]?.ratingStatus).toBe(transition === "entering" ? "pipeline-gap" : "rated");
+    expect(buildSafetyChanges(state.currentSafetySnapshot, state.safeSafetySnapshot, () => "USDC").changes).toEqual([]);
   });
 
   it("compares consecutive canonical V9 publications", () => {

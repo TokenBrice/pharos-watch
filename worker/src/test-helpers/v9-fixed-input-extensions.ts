@@ -27,7 +27,7 @@ function v9MechanismReview() {
 // Extension
 // --------------------------------------------------------------------------
 
-/** The reviewed V2 extension that pairs with `makeV9FixedInput()`. */
+/** The reviewed current extension that pairs with `makeV9FixedInput()`. */
 export function makeV9Extension(
   options: {
     assetId?: string;
@@ -41,7 +41,7 @@ export function makeV9Extension(
   const clockSec = options.clockSec ?? V9_FIXTURE_CLOCK_SEC;
   const observedAtSec = options.observedAtSec ?? clockSec - 100;
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     registryFingerprint: options.registryFingerprint ?? computeReportCardsRegistryFingerprint(),
     compiledAtSec: clockSec + 1,
     sources: {

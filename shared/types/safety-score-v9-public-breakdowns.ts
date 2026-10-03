@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ExitExecutionPublicCertificateSchema, ExitRouteFamilySchema, PhysicalToUsdTraceSchema } from "./exit-route";
+import { ExitExecutionPublicCertificateSchema, ExitRouteFamilySchema, ExitRouteCapacityEvidenceTierSchema, PhysicalToUsdTraceSchema } from "./exit-route";
 import { RedemptionCapacityScoringHorizonSchema, RedemptionRouteSuspensionSchema } from "./redemption";
 import { V9ReasonCodeSchema } from "./safety-score-v9";
 import { V9DeploymentControlFactBaseSchema } from "./safety-score-v9-facts";
@@ -11,6 +11,7 @@ import {
   V9_NEUTRAL_CONTROL_SCORE,
   ScoreSchema,
 } from "./safety-score-v9-public-facts";
+import { V9CauseContributionShape, V9BreakdownCauseShape, V9ConfidenceDimensionsSchema, refineV9CauseContribution, resolveV9EffectiveScoringWeight } from "./safety-score-v9-public-causes";
 
 const SafetyScoreV9PillarAdjustmentSchema = z
   .object({
@@ -51,20 +52,31 @@ export type SafetyScoreV9PillarAdjustment = z.infer<
 >;
 
 const SafetyScoreV9BreakdownPillarBaseShape = {
-  evaluatedScore: ScoreSchema,
-  publishedScore: ScoreSchema,
+  evaluatedScore: ScoreSchema.nullable(),
+  publishedScore: ScoreSchema.nullable(),
+  ...V9BreakdownCauseShape,
   aggregationWeight: z.number().finite().min(0).max(1),
   adjustments: z.array(SafetyScoreV9PillarAdjustmentSchema).max(3),
 } as const;
 
 function refineBreakdownAdjustments(
   breakdown: {
-    evaluatedScore: number;
-    publishedScore: number;
+    evaluatedScore: number | null;
+    publishedScore: number | null;
     adjustments: readonly SafetyScoreV9PillarAdjustment[];
+    aggregationDisposition?: "included" | "excluded-a-b"; aggregationWeight: number;
+    causeGapRefs?: readonly number[]; limitedEvidenceCauses?: readonly string[];
   },
   ctx: z.RefinementCtx,
 ): void {
+  if (breakdown.aggregationDisposition === "excluded-a-b" && (breakdown.evaluatedScore !== null ||
+      breakdown.publishedScore !== null || breakdown.aggregationWeight !== 0 || (breakdown.causeGapRefs?.length ?? 0) === 0 ||
+      (breakdown.limitedEvidenceCauses?.length ?? 0) > 0)) {
+    ctx.addIssue({ code: "custom", message: "Excluded pillars preserve null diagnostic scores and zero aggregate weight" });
+  }
+  if (breakdown.evaluatedScore === null && breakdown.adjustments.length > 0) {
+    ctx.addIssue({ code: "custom", path: ["adjustments"], message: "Excluded diagnostic pillars cannot receive score adjustments" });
+  }
   const kinds = breakdown.adjustments.map((adjustment) => adjustment.kind);
   const canonicalKinds = [
     "unresolved-deployment-share",
@@ -109,23 +121,30 @@ const SafetyScoreV9BackingBreakdownSchema = z
         .object({
           key: z.enum(["reserves", "mechanism"]),
           label: z.string().min(1).max(120),
-          score: ScoreSchema,
-          effectiveWeight: z.number().finite().min(0).max(1),
+          score: ScoreSchema.nullable(),
+          ...V9CauseContributionShape,
         })
-        .strict(),
+        .strict().superRefine(refineV9CauseContribution),
     ),
     components: z.array(
       z
         .object({
           key: z.string().min(1),
           label: z.string().min(1).max(160),
-          source: z.enum(["reserve-exposure", "reserve-concentration", "mechanism"]),
-          score: ScoreSchema,
-          effectiveWeight: z.number().finite().min(0).max(1),
+          source: z.enum(["reserve-exposure", "reserve-residual", "reserve-concentration", "mechanism"]),
+          score: ScoreSchema.nullable(),
+          ...V9CauseContributionShape,
+          wholeAssetWeight: z.number().finite().min(0).max(1).nullable().optional().describe("Defaults to the effective scoring weight; null remains unavailable"),
           weightedContribution: ScoreSchema,
           observationState: z.enum(["known", "missing", "stale", "unsupported", "bounded-unknown"]),
+          factors: z.array(z.object({
+            componentKey: z.string().min(1),
+            score: ScoreSchema.nullable(),
+            normalizedWeight: z.number().finite().min(0).max(1).optional().describe("Defaults to zero"),
+            ...V9CauseContributionShape,
+          }).strict().superRefine(refineV9CauseContribution)).optional(),
         })
-        .strict(),
+        .strict().superRefine(refineV9CauseContribution),
     ),
   })
   .strict()
@@ -154,7 +173,7 @@ const SafetyScoreV9BackingBreakdownSchema = z
       });
     }
     const totalWeight = breakdown.components.reduce(
-      (sum, component) => sum + component.effectiveWeight,
+      (sum, component) => sum + resolveV9EffectiveScoringWeight(component),
       0,
     );
     const totalContribution = breakdown.components.reduce(
@@ -162,8 +181,8 @@ const SafetyScoreV9BackingBreakdownSchema = z
       0,
     );
     if (
-      !numbersAgree(totalWeight, 1) ||
-      !numbersAgree(totalContribution, breakdown.evaluatedScore)
+      !numbersAgree(totalWeight, breakdown.evaluatedScore === null ? 0 : 1) ||
+      !numbersAgree(totalContribution, breakdown.evaluatedScore ?? 0)
     ) {
       ctx.addIssue({
         code: "custom",
@@ -172,10 +191,14 @@ const SafetyScoreV9BackingBreakdownSchema = z
       });
     }
     breakdown.components.forEach((component, index) => {
+      if (component.score === null && (resolveV9EffectiveScoringWeight(component) !== 0 ||
+          component.weightedContribution !== 0 || !["excluded-pipeline", "excluded-uncurated", "not-applicable"].includes(component.scoringDisposition ?? "included"))) {
+        ctx.addIssue({ code: "custom", path: ["components", index], message: "Excluded reserve factors must remain null and zero-weight diagnostics" });
+      }
       if (
         !numbersAgree(
           component.weightedContribution,
-          component.score * component.effectiveWeight,
+          (component.score ?? 0) * resolveV9EffectiveScoringWeight(component),
         )
       ) {
         ctx.addIssue({
@@ -216,7 +239,7 @@ const SafetyScoreV9ExitBreakdownSchema = z
         label: z.string().min(1).max(160),
         routeFamily: ExitRouteFamilySchema,
         feeEvidence: z.enum(["undisclosed-reviewed", "disclosed-unquantified"]).optional(),
-        score: ScoreSchema,
+        score: ScoreSchema.nullable(),
         physicalToUsd: PhysicalToUsdTraceSchema.optional(),
         executionCertificate: ExitExecutionPublicCertificateSchema.optional(),
         components: z.array(
@@ -224,13 +247,18 @@ const SafetyScoreV9ExitBreakdownSchema = z
             .object({
               key: z.enum(EXIT_COMPONENT_KEYS),
               label: z.string().min(1).max(120),
-              score: ScoreSchema,
+              score: ScoreSchema.nullable(),
+              ...V9CauseContributionShape,
               weight: z.number().finite().min(0).max(1),
               weightedContribution: ScoreSchema,
             })
-            .strict(),
+            .strict().superRefine(refineV9CauseContribution),
         ).length(EXIT_COMPONENT_KEYS.length),
         confidenceFactor: z.number().finite().min(0).max(1),
+        confidenceDimensions: V9ConfidenceDimensionsSchema,
+        capacityEvidenceTier: ExitRouteCapacityEvidenceTierSchema,
+        rawSameNotionalCostBps: z.number().finite().nonnegative().nullable(),
+        supportedComponentCeiling: ScoreSchema.nullable(),
         eligibilityMultiplier: z.number().finite().min(0).max(1),
         capsApplied: z.array(z.string().min(1)),
         capacity: z
@@ -239,7 +267,7 @@ const SafetyScoreV9ExitBreakdownSchema = z
             requestedNotionalUsd: z.number().finite().positive(),
             completionRatio: z.number().finite().min(0).max(1),
             maxCostBps: z.number().finite().nonnegative(),
-            executionCostBps: z.number().finite().nonnegative(),
+            executionCostBps: z.number().finite().nonnegative().nullable(),
             settlementDelaySec: z.number().finite().nonnegative(),
             capacityScoringHorizon: RedemptionCapacityScoringHorizonSchema,
             chain: z.string().min(1).nullable(),
@@ -275,6 +303,9 @@ const SafetyScoreV9ExitBreakdownSchema = z
           routeSuspension: RedemptionRouteSuspensionSchema.optional(),
           executionCertificate: ExitExecutionPublicCertificateSchema.optional(),
           confidenceFactor: z.number().finite().min(0).max(1).nullable().optional(),
+          confidenceDimensions: V9ConfidenceDimensionsSchema.nullable(),
+          capacityEvidenceTier: ExitRouteCapacityEvidenceTierSchema,
+          rawSameNotionalCostBps: z.number().finite().nonnegative().nullable(),
           capacityScoringHorizon: RedemptionCapacityScoringHorizonSchema.optional(),
           settlementDelaySec: z.number().finite().nonnegative().optional(),
           capacity: z
@@ -303,10 +334,10 @@ const SafetyScoreV9ExitBreakdownSchema = z
       });
     }
     const totalWeight = breakdown.primaryRoute.components.reduce(
-      (sum, component) => sum + component.weight,
+      (sum, component) => sum + resolveV9EffectiveScoringWeight(component),
       0,
     );
-    if (!numbersAgree(totalWeight, 1)) {
+    if (!numbersAgree(totalWeight, breakdown.primaryRoute.score === null ? 0 : 1)) {
       ctx.addIssue({
         code: "custom",
         path: ["primaryRoute", "components"],
@@ -314,7 +345,7 @@ const SafetyScoreV9ExitBreakdownSchema = z
       });
     }
     breakdown.primaryRoute.components.forEach((component, index) => {
-      if (!numbersAgree(component.weightedContribution, component.score * component.weight)) {
+      if (!numbersAgree(component.weightedContribution, (component.score ?? 0) * resolveV9EffectiveScoringWeight(component))) {
         ctx.addIssue({
           code: "custom",
           path: ["primaryRoute", "components", index, "weightedContribution"],
@@ -329,10 +360,26 @@ const SafetyScoreV9ExitBreakdownSchema = z
         message: "V9 primary-route caps must be unique and sorted",
       });
     }
+    if (breakdown.primaryRoute.score === null) {
+      if (breakdown.evaluatedScore !== null || breakdown.diversification !== null ||
+          breakdown.primaryRoute.supportedComponentCeiling !== null) {
+        ctx.addIssue({ code: "custom", path: ["primaryRoute"], message: "Excluded route diagnostics cannot publish a score, ceiling or diversification credit" });
+      }
+      return;
+    }
     const weightedComponentScore = breakdown.primaryRoute.components.reduce(
       (sum, component) => sum + component.weightedContribution,
       0,
     );
+    if (breakdown.primaryRoute.supportedComponentCeiling === null) {
+      ctx.addIssue({ code: "custom", path: ["primaryRoute", "supportedComponentCeiling"], message: "A scored route requires its supported-component ceiling" });
+      return;
+    }
+    const confidence = Math.min(...Object.values(breakdown.primaryRoute.confidenceDimensions).map((value) => value.factor));
+    if (!numbersAgree(confidence, breakdown.primaryRoute.confidenceFactor) ||
+        !numbersAgree(weightedComponentScore, breakdown.primaryRoute.supportedComponentCeiling)) {
+      ctx.addIssue({ code: "custom", path: ["primaryRoute"], message: "Route confidence dimensions and supported-component ceiling must reconcile" });
+    }
     const preCapRouteScore =
       weightedComponentScore *
       breakdown.primaryRoute.confidenceFactor *
@@ -349,8 +396,8 @@ const SafetyScoreV9ExitBreakdownSchema = z
       });
     }
     const expectedEvaluatedScore =
-      breakdown.primaryRoute.score + (breakdown.diversification?.bonus ?? 0);
-    if (Math.abs(breakdown.evaluatedScore - expectedEvaluatedScore) > EXIT_SCORE_TOLERANCE) {
+      Math.min(100, breakdown.primaryRoute.score + (breakdown.diversification?.bonus ?? 0));
+    if (breakdown.evaluatedScore === null || Math.abs(breakdown.evaluatedScore - expectedEvaluatedScore) > EXIT_SCORE_TOLERANCE) {
       ctx.addIssue({
         code: "custom",
         path: ["evaluatedScore"],
@@ -379,8 +426,9 @@ const SafetyScoreV9ControlBreakdownSchema = z
         .object({
           key: z.string().min(1),
           label: z.string().min(1).max(160),
-          kind: z.enum(["mint", "oracle", "bridge"]),
-          score: ScoreSchema,
+          kind: z.enum(["mint", "oracle", "bridge", "inventory"]),
+          score: ScoreSchema.nullable(),
+          ...V9CauseContributionShape,
           binding: z.boolean(),
           posture: z.string().min(1).max(120),
           controlDetails: z.array(z.object({
@@ -396,7 +444,12 @@ const SafetyScoreV9ControlBreakdownSchema = z
             })),
           }).strict()).optional(),
         })
-        .strict(),
+        .strict().superRefine((component, ctx) => {
+          refineV9CauseContribution(component, ctx);
+          if (component.score === null && component.binding) {
+            ctx.addIssue({ code: "custom", message: "Excluded control diagnostics cannot be binding" });
+          }
+        }),
     ),
   })
   .strict()
@@ -410,12 +463,12 @@ const SafetyScoreV9ControlBreakdownSchema = z
         message: "V9 control components must be unique and sorted",
       });
     }
-    const binding = breakdown.components.filter((component) => component.binding);
+    const binding = breakdown.components.filter((component) => component.binding && component.score !== null);
     const bindingScoreReconciles =
       binding.length === 0
-        ? numbersAgree(breakdown.evaluatedScore, V9_NEUTRAL_CONTROL_SCORE)
+        ? numbersAgree(breakdown.evaluatedScore, breakdown.aggregationDisposition === "excluded-a-b" ? null : V9_NEUTRAL_CONTROL_SCORE)
         : numbersAgree(
-            Math.min(...binding.map((component) => component.score)),
+            Math.min(...binding.map((component) => component.score!)),
             breakdown.evaluatedScore,
           );
     if (!bindingScoreReconciles) {

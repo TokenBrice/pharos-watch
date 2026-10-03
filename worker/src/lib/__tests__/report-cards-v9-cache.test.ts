@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeReportCardsV9Response, makeWorkerSafetyScoreV9Publication, makeWorkerV9Card } from "../../test-helpers/report-cards-v9";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import { ReportCardsV9ResponseSchema, ReportCardsV9DependencyGraphSchema, buildReportCardsV9DependencyGraph } from "@shared/types/report-cards-v9";
+import { ReportCardsV9DependencyGraphSchema, buildReportCardsV9DependencyGraph } from "@shared/types/report-cards-v9";
 
 const mockLoadPublication = vi.fn();
 const mockLoadPublicationHealth = vi.fn();
@@ -23,7 +23,7 @@ describe("canonical V9 report-card cache", () => {
     mockLoadPublicationHealth.mockReset();
   });
 
-  it("projects the evaluator publication into the active report-v6 contract", () => {
+  it("projects the evaluator publication into the active report-v7 contract", () => {
     const publication = makeWorkerSafetyScoreV9Publication();
     const health = makeReportCardsV9Response().publicationHealth;
 
@@ -31,7 +31,7 @@ describe("canonical V9 report-card cache", () => {
       projectSafetyScoreV9PublicationToPublicSnapshot(publication, health),
     ).toMatchObject({
       model: "v9",
-      schemaVersion: 6,
+      schemaVersion: 7,
       lifecycle: "active",
       safetyScoreIdentity: {
         publicationGenerationId: publication.publicationGenerationId,
@@ -39,15 +39,6 @@ describe("canonical V9 report-card cache", () => {
     });
   });
 
-  it("retains pre-field v5 publications without fabricating supply or coverage", () => {
-    const legacy = makeReportCardsV9Response({ schemaVersion: 5 });
-    for (const card of legacy.cards) {
-      delete card.supply;
-      delete card.sharedBookId;
-      delete card.dependencyCoverage;
-    }
-    expect(ReportCardsV9ResponseSchema.parse(legacy)).toEqual(legacy);
-  });
 
   it("rejects duplicated or unsorted graph edges", () => {
     const edge = { from: "alpha", to: "beta", kind: "basket" as const, materiality: "basket-weighted" as const, weight: 0.4, upstreamScore: 80 };
@@ -60,7 +51,7 @@ describe("canonical V9 report-card cache", () => {
     const provenance = { source: "live-reserve" as const, evidenceAsOf: "2026-09-29", intermediary: { kind: "bridge" as const, label: "Issuer bridge", verified: false } };
     const card = makeWorkerV9Card({
       id: "dependent",
-      dependencies: { serial: [{ upstreamAssetId: "parent", score: 80, blocked: false, dependencyType: "wrapper", wrapperForm: "strategy-vault", provenance }], basket: [], roles: [], cycleBlocked: false, reasonCodes: [] },
+      dependencies: { serial: [{ upstreamAssetId: "parent", score: 80, ratingStatus: "rated", partialEvidence: null, causeGapRefs: [], limitedEvidenceCauses: [], blocked: false, dependencyType: "wrapper", wrapperForm: "strategy-vault", provenance }], basket: [], roles: [], cycleBlocked: false, reasonCodes: [] },
       dependencyCoverage: [{ upstreamLabel: "Withheld coin", upstreamAssetId: null, share: 0.2, reason: "no-match", sourceAsOf: null, identityVerified: false }],
     });
     expect(buildReportCardsV9DependencyGraph([card]).edges).toEqual([{

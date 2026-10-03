@@ -70,10 +70,7 @@ function summarizeHoldReasons(
       if (reason.code === "coverage-floor-failed") {
         return `${reason.code}:${reason.floorIds.join("|")}`;
       }
-      if (
-        reason.code === "producer-failed-downgrade" ||
-        reason.code === "producer-failed-nr"
-      ) {
+      if (reason.code === "producer-failed-pipeline-gap") {
         return `${reason.code}:${reason.assetId}:${reason.reasonCode}:${reason.effect}`;
       }
       if (reason.code === "assessment-failed") {

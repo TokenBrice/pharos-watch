@@ -203,7 +203,7 @@ describe("buildCoverageMatrixModel", () => {
               id: "dai-makerdao",
               score: 80,
               dependencies: {
-                serial: [{ upstreamAssetId: "usdc-circle", score: 90, blocked: false }],
+                serial: [{ upstreamAssetId: "usdc-circle", score: 90, ratingStatus: 90 === null ? "not-rated" as const : "rated" as const, partialEvidence: null, causeGapRefs: [], limitedEvidenceCauses: 90 === null ? ["U" as const] : [], blocked: false }],
                 basket: [],
                 cycleBlocked: false,
                 reasonCodes: [],
@@ -214,7 +214,7 @@ describe("buildCoverageMatrixModel", () => {
               score: 85,
               dependencies: {
                 serial: [],
-                basket: [{ upstreamAssetId: "untracked", weight: 0.2, score: null, boundedUnknown: true }],
+                basket: [{ upstreamAssetId: "untracked", weight: 0.2, score: null, ratingStatus: null === null ? "not-rated" as const : "rated" as const, partialEvidence: null, causeGapRefs: [], limitedEvidenceCauses: null === null ? ["U" as const] : [], boundedUnknown: true }],
                 cycleBlocked: false,
                 reasonCodes: [],
               },

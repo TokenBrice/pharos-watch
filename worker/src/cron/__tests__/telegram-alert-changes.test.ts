@@ -8,8 +8,8 @@ describe("telegram alert change builders", () => {
       "emits a real grade transition with %s methodology",
       (methodology) => {
         expect(buildSafetyChanges(
-          { alpha: { grade: "B", score: 72, methodologyVersion: methodology === "missing-current" ? null : "9.0" } },
-          { alpha: { grade: "A", score: 85, methodologyVersion: methodology === "missing-previous" ? null : "9.0" } },
+          { alpha: { grade: "B", score: 72, ratingStatus: "rated", partialEvidence: null, methodologyVersion: methodology === "missing-current" ? null : "9.0" } },
+          { alpha: { grade: "A", score: 85, ratingStatus: "rated", partialEvidence: null, methodologyVersion: methodology === "missing-previous" ? null : "9.0" } },
           (id) => id === "alpha" ? "ALPHA" : "WRONG",
         )).toEqual({
           changes: [{ stablecoinId: "alpha", symbol: "ALPHA", oldGrade: "A", newGrade: "B", oldScore: 85, newScore: 72 }],
@@ -20,14 +20,14 @@ describe("telegram alert change builders", () => {
 
     it("does not turn score-only movement or a new coin into a grade transition", () => {
       expect(buildSafetyChanges(
-        { alpha: { grade: "A", score: 89, methodologyVersion: null }, newcomer: { grade: "B", score: 70, methodologyVersion: null } },
-        { alpha: { grade: "A", score: 85, methodologyVersion: null } },
+        { alpha: { grade: "A", score: 89, ratingStatus: "rated", partialEvidence: null, methodologyVersion: null }, newcomer: { grade: "B", score: 70, ratingStatus: "rated", partialEvidence: null, methodologyVersion: null } },
+        { alpha: { grade: "A", score: 85, ratingStatus: "rated", partialEvidence: null, methodologyVersion: null } },
         () => "ALPHA",
       )).toEqual({ changes: [], suppressedMethodologyChanges: 0 });
     });
 
     it("emits nothing when the current snapshot is unavailable", () => {
-      expect(buildSafetyChanges(null, { alpha: { grade: "A", score: 85, methodologyVersion: null } }, () => "ALPHA"))
+      expect(buildSafetyChanges(null, { alpha: { grade: "A", score: 85, ratingStatus: "rated", partialEvidence: null, methodologyVersion: null } }, () => "ALPHA"))
         .toEqual({ changes: [], suppressedMethodologyChanges: 0 });
     });
     it("suppresses methodology-version-only grade changes", () => {
@@ -35,6 +35,8 @@ describe("telegram alert change builders", () => {
         "usdc-circle": {
           grade: "C+",
           score: 61,
+          ratingStatus: "rated",
+          partialEvidence: null,
           methodologyVersion: "9.0",
         },
       };
@@ -42,6 +44,8 @@ describe("telegram alert change builders", () => {
         "usdc-circle": {
           grade: "B",
           score: 72,
+          ratingStatus: "rated",
+          partialEvidence: null,
           methodologyVersion: "9.1",
         },
       };
@@ -64,6 +68,8 @@ describe("telegram alert change builders", () => {
           alpha: {
             grade: currentAffected ? "NR" : "A",
             score: currentAffected ? null : 85,
+            ratingStatus: currentAffected ? "not-rated" : "rated",
+            partialEvidence: null,
             methodologyVersion: "9.0",
             operationallyAffected: currentAffected,
           },
@@ -72,6 +78,8 @@ describe("telegram alert change builders", () => {
           alpha: {
             grade: previousAffected ? "NR" : "A",
             score: previousAffected ? null : 85,
+            ratingStatus: previousAffected ? "not-rated" : "rated",
+            partialEvidence: null,
             methodologyVersion: "9.0",
             operationallyAffected: previousAffected,
           },
@@ -83,6 +91,24 @@ describe("telegram alert change builders", () => {
         changes: [],
         suppressedMethodologyChanges: 0,
       });
+    });
+
+    it.each(["entering", "recovering"] as const)("uses an %s pipeline gap as a silent baseline", (transition) => {
+      const rated: SafetySnapshot[string] = { grade: "A", score: 85, ratingStatus: "rated", partialEvidence: null, methodologyVersion: "10.01" };
+      const gap: SafetySnapshot[string] = { grade: null, score: null, ratingStatus: "pipeline-gap", methodologyVersion: "10.01",
+        partialEvidence: { reasonCode: "partial-evidence-pipeline-gap", excludedPillars: ["backing", "exit"], causes: ["A"] } };
+      expect(buildSafetyChanges(
+        { alpha: transition === "entering" ? gap : rated },
+        { alpha: transition === "entering" ? rated : gap },
+        () => "ALPHA",
+      )).toEqual({ changes: [], suppressedMethodologyChanges: 0 });
+    });
+
+    it("suppresses a null grade even when its status is inconsistent", () => {
+      const previous: SafetySnapshot = { alpha: { grade: "B", score: 72, ratingStatus: "rated", partialEvidence: null, methodologyVersion: null } };
+      const current: SafetySnapshot = { alpha: { ...previous.alpha, grade: null } };
+      expect(buildSafetyChanges(current, previous, () => "ALPHA").changes).toEqual([]);
+      expect(buildSafetyChanges(previous, current, () => "ALPHA").changes).toEqual([]);
     });
   });
 

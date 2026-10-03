@@ -97,7 +97,7 @@ function GradeFilterButtons({
               gradeFilter === grade && "pharos-control-pill-active",
             )}
           >
-            {grade} ({count})
+            {grade === "pipeline-gap" ? "Pipeline gap" : grade} ({count})
           </Button>
         );
       })}
@@ -224,20 +224,20 @@ function V9Controls({
 }
 
 function GradeSectionHeader({ grade, count }: { grade: string; count: number }) {
-  const metadata = getSafetyGradeMetadata(grade as V9ConsumerCard["grade"]);
+  const metadata = grade === "pipeline-gap" ? null : getSafetyGradeMetadata(grade as NonNullable<V9ConsumerCard["grade"]>);
   return (
     <div className="pharos-section-enter col-span-full flex items-center gap-3 pt-4 first:pt-0">
       <span
         className={cn(
           "flex h-8 w-8 items-center justify-center rounded-lg font-mono text-sm font-bold text-white",
-          metadata.sectionSwatchClassName,
+          metadata?.sectionSwatchClassName ?? "bg-muted text-foreground",
         )}
       >
-        {grade}
+        {grade === "pipeline-gap" ? "—" : grade}
       </span>
       <div className="min-w-0">
         <span className="text-sm font-medium">{count} {count === 1 ? "coin" : "coins"}</span>
-        <span className="ml-2 text-xs text-muted-foreground">{metadata.sectionDescription}</span>
+        <span className="ml-2 text-xs text-muted-foreground">{metadata?.sectionDescription ?? "Pipeline gap · fewer than two available pillars; no rating"}</span>
       </div>
       <div className="flex-1 border-t border-border/40" />
     </div>
@@ -324,10 +324,14 @@ export function ReportCardsV9Client() {
       <SafetyScoresHero
         stats={headlineStats}
         gradeCounts={gradeCounts}
-        totalCards={totalCards}
+        totalCards={totalCards - gradeCounts["pipeline-gap"]}
       />
 
       <SafetyPillarExplainer />
+      <p className="text-xs text-muted-foreground">
+        Pipeline unavailable (A) and public data awaiting curation (B) do not score. Partial ratings exclude those components;
+        fewer than two available pillars means Pipeline gap, not Not Rated.
+      </p>
 
       <V9Controls
         gradeFilter={gradeFilter}

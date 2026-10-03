@@ -4,6 +4,8 @@ import { REPORT_CARD_GRADE_RANK } from "@shared/lib/report-card-core";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { V9Grade } from "@shared/types/safety-score-v9";
+import { V9GradeSchema } from "@shared/types/safety-score-v9";
+import { V9RatingStatusSchema } from "@shared/types/safety-score-v9-causes";
 import {
   buildSafetyScoreV9BaselineExtension,
   type V9ExtensionRegistryMeta,
@@ -53,7 +55,8 @@ const ReplaySchema = z
                 .object({
                   id: z.string(),
                   score: z.number().finite().nullable(),
-                  grade: z.string(),
+                  grade: V9GradeSchema.nullable(),
+                  ratingStatus: V9RatingStatusSchema,
                   bindingCap: z
                     .object({ kind: z.string() })
                     .loose()
@@ -232,6 +235,7 @@ export function buildLiveWithheldCounterfactualReport(
     }
 
     const liveCard = cardForAsset(candidate.cards, assetId);
+    if (liveCard.ratingStatus === "pipeline-gap" || liveCard.grade === null) continue;
     const counterfactual = buildCounterfactualPipeline(
       replay,
       withLiveReserveWithheld(fixedInput, assetId),
@@ -240,10 +244,11 @@ export function buildLiveWithheldCounterfactualReport(
     );
     const fallbackCard = counterfactual.candidate.cards.find((card) => card.id === assetId);
     if (!fallbackCard) throw new Error(`Counterfactual candidate has no card for active asset ${assetId}`);
+    if (fallbackCard.ratingStatus === "pipeline-gap" || fallbackCard.grade === null) continue;
     const extensionAsset = counterfactual.extension.assets.find((asset) => asset.assetId === assetId);
     const admission = fallbackTier(extensionAsset?.reviewedStaticReserveRows ?? null);
-    const liveGrade = liveCard.grade as V9Grade;
-    const fallbackGrade = fallbackCard.grade as V9Grade;
+    const liveGrade = liveCard.grade;
+    const fallbackGrade = fallbackCard.grade;
     if (REPORT_CARD_GRADE_RANK[fallbackGrade] >= REPORT_CARD_GRADE_RANK[liveGrade]) continue;
 
     rows.push({

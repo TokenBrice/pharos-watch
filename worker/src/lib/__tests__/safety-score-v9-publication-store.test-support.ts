@@ -7,7 +7,7 @@ export function currentInput(publication: SafetyScoreV9CurrentResponse): Publica
   return {
     publication,
     publicationHealth: {
-      schemaVersion: 1,
+      schemaVersion: 2,
       status: "current",
       acceptedPublicationGenerationId: publication.publicationGenerationId,
       acceptedAtSec: publication.publishedAtSec,

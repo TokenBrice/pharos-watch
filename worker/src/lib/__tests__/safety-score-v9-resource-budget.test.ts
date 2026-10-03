@@ -17,13 +17,25 @@ import {
 const ROOT = resolve(import.meta.dirname, "../../../..");
 const TEST_DIRECTORY = resolve(import.meta.dirname);
 const HEAP_LIMIT_MIB = 128;
+// The 6.75 MB ceiling preserves readable lossless tuples and at least15% raw headroom under8 MB.
+// The compile memory probe is the true gate, not a tighter incidental JSON ratio.
+const PUBLICATION_BYTE_BUDGET = 6_750_000;
+// Frozen pre-Phase-2 BASE from 335ecb0f5, smoke-out/base-20261003-0149.json
+// .pipeline.candidate encoded with stableJsonStringifyV1 and gzipCanonicalJson;
+// uncompressedBytes/contentSha256 below are the persisted pre-gzip bytes.
+const FROZEN_BASE = {
+  path: "agents/2026-10-01-curation-pass/nr/smoke-out/base-20261003-0149.json",
+  bytes: 5_253_316,
+  digest: "2a2c21583cc6f8c5469824042e06af590d8d73e6c6d07b552c6982a455463a93",
+  inputGenerationId: "report-cards-input:v1:ffa7cce9ff70b8c7fc050d715ae47d89026e224cc22fb5929e86f978ba230fe8",
+} as const;
 // Node regression bound only. Gate 0 does not establish 128 MB Worker-isolate safety.
 const CONTAGION_HEAP_LIMIT_MIB = 256;
 let temporaryDirectory = "";
 let bundledProbe = "";
 
 describe("Safety Score V9 canonical publication resource budget", {
-  timeout: 60_000,
+  timeout: 120_000,
 }, () => {
   beforeAll(() => {
     temporaryDirectory = mkdtempSync(join(tmpdir(), "pharos-v9-resource-"));
@@ -31,6 +43,7 @@ describe("Safety Score V9 canonical publication resource budget", {
     buildSync({
       stdin: {
         contents: `
+          import { readFileSync } from "node:fs";
           import { normalizeFixedInput } from "../report-cards-fixed-input.ts";
           import { buildSafetyScoreV9PublicationFromNormalizedInput } from "../safety-score-v9/candidate.ts";
           import { parseSafetyScoreV9Publication, serializeSafetyScoreV9Publication } from "../safety-score-v9/publication-codec.ts";
@@ -47,7 +60,11 @@ describe("Safety Score V9 canonical publication resource budget", {
           import { buildSafetyScoreV9PegProvenanceSummary, projectSafetyScoreV9PegScoreResult } from "../safety-score-v9/peg-provenance.ts";
           import { computePegScore } from "@shared/lib/peg-score";
 
-          const input = normalizeFixedInput(createSafetyScoreV9FullRegistryInput());
+          const capturePath = process.env.SAFETY_SCORE_V9_RESOURCE_CAPTURE;
+          const input = capturePath
+            ? JSON.parse(readFileSync(capturePath, "utf8")).fixedInput
+            : normalizeFixedInput(createSafetyScoreV9FullRegistryInput());
+          if (!capturePath) {
           input.evidenceJournalById = Object.fromEntries(input.activeAssetIds.slice(0, 250).map(assetId => [
             assetId, [0, 1].map(index => createReportCardEvidenceJournalV1({
               schemaVersion: 1, lane: "reserve", assetId, attemptId: "resource-reserve:" + index,
@@ -76,7 +93,8 @@ describe("Safety Score V9 canonical publication resource budget", {
               expectedLegacyInclusive: projectSafetyScoreV9PegScoreResult(computePegScore([], input.clockSec - 180 * 86400, input.clockSec)),
             }),
           ]));
-          let extension = buildSafetyScoreV9BaselineExtensionFromNormalizedInput(input);
+          }
+          let extension = buildSafetyScoreV9BaselineExtensionFromNormalizedInput(input, { allowRegistryMismatch: Boolean(capturePath) });
           if (process.env.CONTAGION_MATRIX === "1") {
             const compiled = compileSafetyScoreV9FactSetFromNormalizedInput(input, extension);
             const { v9FactSetDigest, ...rawCompileInput } = compiled;
@@ -106,10 +124,19 @@ describe("Safety Score V9 canonical publication resource budget", {
           }
           const fixtureMetrics = {
             extensionAssets: extension.assets.length,
-            extensionBytes: stableJsonStringifyV1(extension).length,
             researchEvidenceCount: extension.assets.reduce((count, asset) => count + asset.researchEvidence.length, 0),
             componentEvidenceCount: extension.assets.reduce((count, asset) => count + asset.componentEvidence.length, 0),
           };
+          if (capturePath) {
+            const result = buildSafetyScoreV9PublicationFromNormalizedInput({
+              fixedInput: input, extension, publishedAtSec: input.clockSec,
+            });
+            const stored = await serializeSafetyScoreV9Publication(result.candidate);
+            const metadata = JSON.parse(stored);
+            process.stdout.write(JSON.stringify({ baseInputGenerationId: result.candidate.baseInputGenerationId,
+              candidateBytes: metadata.uncompressedBytes, compressedBytes: metadata.compressedBytes }));
+            process.exit(0);
+          }
           let prior = buildSafetyScoreV9PublicationFromNormalizedInput({
             fixedInput: input,
             extension,
@@ -140,6 +167,7 @@ describe("Safety Score V9 canonical publication resource budget", {
           const metadata = JSON.parse(stored);
           process.stdout.write(JSON.stringify({
             ...fixtureMetrics,
+            baseInputGenerationId: result.candidate.baseInputGenerationId,
             expected: input.activeAssetIds.length,
             cards: result.candidate.cards.length,
             rated: result.candidate.completeness.ratedCount,
@@ -148,11 +176,9 @@ describe("Safety Score V9 canonical publication resource budget", {
             acceptedBaselineBytes: new TextEncoder().encode(
               JSON.stringify(acceptedBaseline),
             ).byteLength,
-            candidateBytes: new TextEncoder().encode(
-              JSON.stringify(result.candidate),
-            ).byteLength,
+            candidateBytes: metadata.uncompressedBytes,
             compressedBytes: metadata.compressedBytes,
-            storedBytes: stored.length,
+            storedBytes: new TextEncoder().encode(stored).byteLength,
             replayCaptureStoredBytes: capture.storedBytes,
             replayCaptureUncompressedBytes: capture.uncompressedBytes,
             replayCaptureCpuMs: (captureCpu.user + captureCpu.system) / 1000,
@@ -193,6 +219,7 @@ describe("Safety Score V9 canonical publication resource budget", {
         cwd: ROOT,
         encoding: "utf8",
         timeout: 45_000,
+        env: { ...process.env, SAFETY_SCORE_V9_RESOURCE_CAPTURE: "" },
       },
     );
     expect(result.error).toBeUndefined();
@@ -210,12 +237,10 @@ describe("Safety Score V9 canonical publication resource budget", {
       storedBytes: number;
       replayCaptureUncompressedBytes: number;
       extensionAssets: number;
-      extensionBytes: number;
       researchEvidenceCount: number;
       componentEvidenceCount: number;
     };
     expect(output.extensionAssets).toBeGreaterThan(300);
-    expect(output.extensionBytes).toBeGreaterThan(6_500_000);
     expect(output.researchEvidenceCount).toBeGreaterThan(5_000);
     expect(output.componentEvidenceCount).toBeGreaterThan(3_000);
     expect(output.expected).toBeGreaterThan(300);
@@ -225,17 +250,33 @@ describe("Safety Score V9 canonical publication resource budget", {
     expect(output.factDigest).toMatch(/^[a-f0-9]{64}$/);
     expect(output.resultDigest).toMatch(/^[a-f0-9]{64}$/);
     expect(output.acceptedBaselineBytes).toBeLessThan(500_000);
-    expect(output.candidateBytes).toBeLessThan(8_000_000);
+    expect(output.candidateBytes).toBeLessThanOrEqual(PUBLICATION_BYTE_BUDGET);
     expect(output.compressedBytes).toBeLessThan(1_350_000);
     expect(output.storedBytes).toBeGreaterThan(0);
+  });
+
+  // Byte-size measurement only: 256 MiB makes no compile/Worker memory claim.
+  // The independent full-registry regression above continues to require 128 MiB.
+  it.skipIf(!process.env.SAFETY_SCORE_V9_RESOURCE_CAPTURE)("keeps the frozen same-capture production envelope within both byte budgets", () => {
+    const result = spawnSync(process.execPath, [
+      `--max-old-space-size=${CONTAGION_HEAP_LIMIT_MIB}`, "--expose-gc", bundledProbe,
+    ], { cwd: ROOT, encoding: "utf8", timeout: 60_000 });
+    expect(result.status, result.stderr).toBe(0);
+    const output = JSON.parse(result.stdout) as { candidateBytes: number; baseInputGenerationId: string };
+    expect(output.baseInputGenerationId).toBe(FROZEN_BASE.inputGenerationId);
+    expect(output.candidateBytes).toBeLessThanOrEqual(PUBLICATION_BYTE_BUDGET);
+    console.info({ basePath: FROZEN_BASE.path, baseDigest: FROZEN_BASE.digest, baseBytes: FROZEN_BASE.bytes,
+      candidateBytes: output.candidateBytes, deltaBytes: output.candidateBytes - FROZEN_BASE.bytes });
   });
 
   it(`evaluates a bounded nine-scenario matrix within ${CONTAGION_HEAP_LIMIT_MIB} MiB of old-space`, () => {
     const result = spawnSync(process.execPath, [
       `--max-old-space-size=${CONTAGION_HEAP_LIMIT_MIB}`, "--expose-gc", bundledProbe,
     ], {
-      cwd: ROOT, encoding: "utf8", timeout: 45_000,
-      env: { ...process.env, CONTAGION_MATRIX: "1" },
+      // Wall-clock guard only (memory is the asserted bound): v10.01 cause
+      // tracing raises evaluation CPU, and shared CI runners exceeded 45s.
+      cwd: ROOT, encoding: "utf8", timeout: 100_000,
+      env: { ...process.env, CONTAGION_MATRIX: "1", SAFETY_SCORE_V9_RESOURCE_CAPTURE: "" },
     });
     expect(result.error).toBeUndefined();
     expect(result.status, result.stderr).toBe(0);

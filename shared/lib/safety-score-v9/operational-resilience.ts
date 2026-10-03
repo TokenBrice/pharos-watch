@@ -234,6 +234,7 @@ export function evaluateV9OperationalResilience(
   policy: V9OperationalResiliencePolicy,
   blockers: V9OperationalResilienceBlockers,
   implementationHistory: V9OperationalResilienceImplementationHistory | null = null,
+  supportedPillars: readonly V9QualityPillar[] = ["backing", "exit", "control"],
 ): V9OperationalResilienceResult {
   const overlayEligibility = eligibilityTrace(fact, policy);
   const depthEligibility = implementationEligibilityTrace(implementationHistory, policy);
@@ -245,7 +246,7 @@ export function evaluateV9OperationalResilience(
   if (
     (!overlayEligibility.satisfied &&
       !(measuredMarketDepth !== null && depthEligibility.satisfied)) ||
-    blockerCodes.length > 0
+    blockerCodes.length > 0 || supportedPillars.length < 2
   ) {
     return {
       eligible: false,
@@ -265,6 +266,7 @@ export function evaluateV9OperationalResilience(
     confidence: V9OperationalResilienceContributionConfidence,
     evidenceRefIds: readonly string[],
   ) => {
+    if (!supportedPillars.includes(pillar)) return;
     const canonicalIds = canonicalEvidence(evidenceRefIds);
     const multiplier = confidenceMultiplier(confidence, policy);
     const points = roundCredit(basePoints * multiplier);

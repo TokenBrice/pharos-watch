@@ -407,7 +407,7 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
     });
   });
 
-  it("withholds XAUT when no reconciled V2 supply packet can establish global chain supply", () => {
+  it("retains missing XAUT global supply without inferring producer failure or a direct missing-data NR", () => {
     const fixed = xautFactSetFixedInput({
       chainSupplyByChain: {},
       omitLiveReserve: true,
@@ -424,7 +424,8 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
       expect.objectContaining({
         reasonCode: "missing-pillar-evidence",
         ownerDomain: "evidence",
-        responsibility: "producer-failed",
+        responsibility: "unresearched",
+        causeProof: { cause: "U", reason: "not-yet-researched", evidenceRefIds: [] },
         path: {
           kind: "local-component",
           componentKey: "chain-supply",
@@ -436,19 +437,12 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
       compiled,
       V9_CANDIDATE_POLICY_V1,
     ).assets[0]!;
-    expect(evaluated.trace.finalScore).toBeNull();
-    expect(evaluated.trace.finalGrade).toBe("NR");
-    expect(evaluated.trace.nrReasons).toContainEqual(
-      expect.objectContaining({
-        code: "missing-pillar-evidence",
-        responsibility: "producer-failed",
-      }),
-    );
     expect(evaluated.trace.unresolvedFacts).toContainEqual(
       expect.objectContaining({
         code: "missing-pillar-evidence",
-        critical: true,
-        responsibility: "producer-failed",
+        critical: false,
+        responsibility: "unresearched",
+        cause: "U",
       }),
     );
   });
@@ -500,19 +494,19 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
       compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline),
       V9_CANDIDATE_POLICY_V1,
     ).assets[0]!;
-    // Measured exposure alone does not establish deployment-local loss scope.
-    // This group still has unknown economic semantics, so the smooth band
-    // cannot discharge the material bridge-supply ceiling.
+    // The measured denominator does not establish deployment-local loss scope.
+    // Keep the unresolved material semantics bounded in Control, without
+    // reintroducing a missing-data whole-coin ceiling.
     expect(evaluated.scoreInput.pillars.control.reasons.map(
       (reason) => reason.code,
     )).toContain("material-bridge-supply-unmatched");
-    expect(evaluated.trace.bindingCap).toMatchObject({
-      kind: "reason:material-bridge-supply-unmatched", limit: 55, source: "evidence",
-    });
-    expect(evaluated.trace.finalScore).toBeLessThanOrEqual(55);
+    expect(evaluated.trace.caps.map((cap) => cap.kind)).not.toContain("reason:material-bridge-supply-unmatched");
+    expect(evaluated.control.components).toContainEqual(expect.objectContaining({
+      cause: "U", scoringDisposition: "bounded-uncertainty",
+    }));
   });
 
-  it("restores the bridge-materiality cap when the wM packet is absent", () => {
+  it("retains bridge-materiality diagnostics without a ceiling when the wM packet is absent", () => {
     const fixed = wmFixedInput();
     const { compiled, wm } = compileWm(fixed);
 
@@ -520,7 +514,8 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
     expect(wm.supply.status.observationState).toBe("bounded-unknown");
     expect(wm.gaps).toContainEqual(expect.objectContaining({
       reasonCode: "runtime-bridge-materiality-unavailable",
-      responsibility: "producer-failed",
+      responsibility: "unresearched",
+      causeProof: { cause: "U", reason: "not-yet-researched", evidenceRefIds: [] },
     }));
     expect(wm.evidence).toContainEqual(expect.objectContaining({
       evidenceId: "wm-m0:supply-review-outcome",
@@ -544,7 +539,8 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
       evaluated.scoreInput.pillars.control.reasons.find(
         (reason) => reason.code === "runtime-bridge-materiality-unavailable",
       ),
-    ).toMatchObject({ responsibility: "producer-failed" });
+    ).toMatchObject({ responsibility: "unresearched", cause: "U" });
+    expect(evaluated.trace.caps.map((cap) => cap.kind)).not.toContain("reason:runtime-bridge-materiality-unavailable");
   });
 
   it("uses the latest rejected attribution record in hashed outcome diagnostics", () => {
@@ -593,19 +589,19 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
       {
         name: "missing-profile",
         extension: { bridge: "missing" as const },
-        responsibility: "integration-missing" as const,
+        responsibility: "unresearched" as const,
         observationState: "bounded-unknown" as const,
       },
       {
         name: "ambiguous-route-join",
         extension: { bridge: "required" as const },
-        responsibility: "integration-missing" as const,
+        responsibility: "unresearched" as const,
         observationState: "bounded-unknown" as const,
       },
       {
         name: "stale-review",
         extension: { bridge: "required" as const, chainSupplyObservedAtSec: AS_OF_SEC - 501 },
-        responsibility: "producer-failed" as const,
+        responsibility: "unresearched" as const,
         observationState: "stale" as const,
       },
     ];
@@ -636,6 +632,7 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
         responsibility,
         observationState,
         evidenceRefIds: ["alpha:chain-supply", "alpha:supply-review-outcome"],
+        causeProof: { cause: "U", reason: "not-yet-researched", evidenceRefIds: [] },
       });
       expect(alpha.supply.selectedBridgeRoutes).toEqual([]);
     }
@@ -672,13 +669,14 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
         .assets[0]!.scoreInput.pillars.exit.reasons.map((reason) => reason.code),
     ).not.toContain("missing-same-notional-route");
 
-    // A producer that owed a measured partition and did not deliver one still
-    // bounds materiality; methodology 9.99 uses only the current amount for Exit.
+    // Missing a captured packet retains uncertainty but does not prove a
+    // runtime A failure; cause classification requires a generation-bound attempt.
     const { wm } = compileWm(wmFixedInput());
     expect(wm.supply.status.observationState).toBe("bounded-unknown");
     expect(wm.gaps).toContainEqual(expect.objectContaining({
       reasonCode: "runtime-bridge-materiality-unavailable",
-      responsibility: "producer-failed",
+      responsibility: "unresearched",
+      causeProof: { cause: "U", reason: "not-yet-researched", evidenceRefIds: [] },
     }));
 
     // A join that did run over real per-chain rows and failed also stays bounded.

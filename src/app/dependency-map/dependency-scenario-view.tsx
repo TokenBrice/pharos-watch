@@ -51,8 +51,9 @@ export function DependencyScenarioChange({ selection, assetId }: { selection: De
   if (failure) return <span>Modeled unavailable ({failure.code})</span>;
   const row = selection.scenario?.results.find(row => row.assetId === assetId);
   if (!row) return <span>No modeled change stored</span>;
-  if (row.modeledGrade === "NR" || row.modeledScore === null) return <span>Modeled NR · change unavailable</span>;
-  return <span>Modeled {row.modeledGrade} · {row.deltaScore === null ? "change unavailable" : `${row.deltaScore > 0 ? "+" : ""}${row.deltaScore.toFixed(2)} points`}</span>;
+  if (row.modeledRatingStatus === "pipeline-gap") return <span>Modeled Pipeline gap · {row.modeledPartialEvidence?.excludedPillars.length === 3 ? "all pillars unavailable" : "fewer than two pillars available"} · change unavailable{row.modeledPartialEvidence && ` · ${row.modeledPartialEvidence.causes.map(cause => cause === "A" ? "pipeline unavailable (A)" : "public data awaiting curation (B)").join("; ")}`}</span>;
+  if (row.modeledRatingStatus === "not-rated") return <span>Modeled NR · change unavailable</span>;
+  return <span>Modeled {row.modeledGrade} · {row.deltaScore === null ? "change unavailable" : `${row.deltaScore > 0 ? "+" : ""}${row.deltaScore.toFixed(2)} points`}{row.modeledPartialEvidence && ` · Partial evidence: pipeline gap · ${row.modeledPartialEvidence.causes.map(cause => cause === "A" ? "pipeline unavailable (A)" : "public data awaiting curation (B)").join("; ")}`}</span>;
 }
 
 export function DependencyScenarioView({ response, roots, selection, selectedId, onSelect, label }: {
@@ -74,7 +75,12 @@ export function DependencyScenarioView({ response, roots, selection, selectedId,
         <TableHeader><TableRow rowIntent="static"><TableHead className="p-2">Coin</TableHead><TableHead className="p-2">Published → modeled grade</TableHead><TableHead className="p-2">Modeled Safety Score change</TableHead></TableRow></TableHeader>
         <TableBody>{selection.scenario?.results.map(row => <TableRow rowIntent="static" className="border-t border-border" key={row.assetId}>
           <TableCell className="p-2">{label(row.assetId)}{row.assetId === selection.scenario?.rootId ? " (upstream root)" : ""}</TableCell>
-          <TableCell className="p-2">{row.publishedGrade} → {row.modeledScore === null ? "NR" : row.modeledGrade}</TableCell>
+          <TableCell className="p-2">
+            <span>{row.publishedRatingStatus === "pipeline-gap" ? "Pipeline gap" : row.publishedGrade} → {row.modeledRatingStatus === "pipeline-gap" ? "Pipeline gap" : row.modeledGrade}</span>
+            {row.publishedPartialEvidence && <span className="block text-xs">
+              Published: {row.publishedRatingStatus === "rated" ? "Partial evidence: pipeline gap" : row.publishedPartialEvidence.excludedPillars.length === 3 ? "all pillars unavailable" : "fewer than two pillars available"} · {row.publishedPartialEvidence.causes.map(cause => cause === "A" ? "pipeline unavailable (A)" : "public data awaiting curation (B)").join("; ")}
+            </span>}
+          </TableCell>
           <TableCell className="p-2"><DependencyScenarioChange selection={selection} assetId={row.assetId} /></TableCell>
         </TableRow>)}</TableBody>
       </TableFrame>}

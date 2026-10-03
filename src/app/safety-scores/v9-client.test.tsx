@@ -4,6 +4,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanupFrontendTest, createNextLinkMock } from "@/test-utils/frontend";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
+import { makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 
 const mocks = vi.hoisted(() => ({
   useReportCardsV9: vi.fn(),
@@ -75,6 +76,20 @@ describe("ReportCardsV9Client", () => {
     fireEvent.click(screen.getAllByRole("button", { name: "A (1)" })[0]);
     expect(screen.getAllByTestId("v9-card")).toHaveLength(1);
     expect(screen.getByTestId("v9-card").textContent).toBe("asset-a");
+  });
+  it("filters technical gaps separately from NR while retaining rated partial cards", () => {
+    mocks.useReportCardsV9.mockReturnValue(query(makeReportCardsV9Response({ cards: [
+      makeReportCardsV9PartialCard("exit", "B", { id: "partial", score: 75 }),
+      makeReportCardsV9PipelineGapCard("control", "A", { id: "gap" }),
+      makeV9Card({ id: "nr", score: null, grade: "NR" }),
+    ] })));
+    render(<ReportCardsV9Client />);
+    fireEvent.click(screen.getAllByRole("button", { name: "Pipeline gap (1)" })[0]);
+    expect(screen.getByTestId("v9-card").textContent).toBe("gap");
+    fireEvent.click(screen.getAllByRole("button", { name: "NR (1)" })[0]);
+    expect(screen.getByTestId("v9-card").textContent).toBe("nr");
+    fireEvent.click(screen.getAllByRole("button", { name: "B (1)" })[0]);
+    expect(screen.getByTestId("v9-card").textContent).toBe("partial");
   });
 
   it("filters the card grid by consolidated peg groups", () => {

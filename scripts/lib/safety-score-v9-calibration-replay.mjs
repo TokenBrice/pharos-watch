@@ -68,6 +68,7 @@ const COMPILER_PROFILES = [
       identity.evaluationBuildDigest === EXPECTED_BASELINE_BINDINGS.candidateIdentity.evaluationBuildDigest,
     capabilities: ["canonical-chain-supply-distribution.v1"],
     fixedInputSchemaVersion: 3,
+    factExtensionSchemaVersion: 2,
     compiledFactSchemaVersion: 2,
     compilerAdapter: "exact-fixed-input-to-v9-facts.v1",
     routeAdapterVersion: "v1",
@@ -85,18 +86,19 @@ const COMPILER_PROFILES = [
       "canonical-chain-supply-distribution.v1",
       "canonical-lock-mint-supply-attribution.v1",
       "exit-route-modeled-confidence.v1",
-      "fact-gap-responsibility.v1",
+      "fact-gap-cause-proofs.v1",
       "journaled-cdp-shock-coverage.v1",
       "reviewed-deployment-unit-supply-attribution.v1",
       "reviewed-transfer-deployments.v1",
       "wrapper-local-facts.v1",
     ],
     fixedInputSchemaVersion: [3, 4],
-    compiledFactSchemaVersion: 3,
-    compilerAdapter: "exact-fixed-input-to-v9-facts.v2",
+    factExtensionSchemaVersion: 3,
+    compiledFactSchemaVersion: 4,
+    compilerAdapter: "exact-fixed-input-to-v9-facts.v3",
     routeAdapterVersion: "v2",
     chainSupplyAdapter: "fixed-input.usd-circulating-supply.v4",
-    researchOverlaysAdapter: "v9-fact-extension.review-overlays.v3",
+    researchOverlaysAdapter: "v9-fact-extension.review-overlays.v4",
     includesReviewedTransfers: true,
     includesShockCoverage: true,
   },
@@ -111,6 +113,7 @@ const COMPILER_PROFILES = [
       "reviewed-transfer-deployments.v1",
     ],
     fixedInputSchemaVersion: 3,
+    factExtensionSchemaVersion: 2,
     compiledFactSchemaVersion: 2,
     compilerAdapter: "exact-fixed-input-to-v9-facts.v1",
     routeAdapterVersion: "v2",
@@ -129,6 +132,7 @@ const COMPILER_PROFILES = [
       "reviewed-transfer-deployments.v1",
     ],
     fixedInputSchemaVersion: 3,
+    factExtensionSchemaVersion: 2,
     compiledFactSchemaVersion: 2,
     compilerAdapter: "exact-fixed-input-to-v9-facts.v1",
     routeAdapterVersion: "v2",
@@ -142,6 +146,7 @@ const COMPILER_PROFILES = [
     matches: () => true,
     capabilities: ["canonical-chain-supply-distribution.v1", "exit-route-modeled-confidence.v1"],
     fixedInputSchemaVersion: 3,
+    factExtensionSchemaVersion: 2,
     compiledFactSchemaVersion: 2,
     compilerAdapter: "exact-fixed-input-to-v9-facts.v1",
     routeAdapterVersion: "v2",
@@ -174,7 +179,7 @@ function assertCompilerIdentity(value, label) {
   if (
     identity.schemaVersion !== 1 ||
     !fixedInputSchemaVersions.includes(identity.fixedInputSchemaVersion) ||
-    identity.factExtensionSchemaVersion !== 2 ||
+    identity.factExtensionSchemaVersion !== compilerProfile.factExtensionSchemaVersion ||
     identity.compiledFactSchemaVersion !== compilerProfile.compiledFactSchemaVersion ||
     stableStringify(identity.compiledFactSchemaCapabilities) !== stableStringify(compilerProfile.capabilities) ||
     identity.compilerAdapter !== compilerProfile.compilerAdapter
@@ -249,7 +254,7 @@ function assertProducerIdentity(value, label, compilerProfile) {
   if (
     identity.schemaVersion !== 1 ||
     contracts.fixedInput !== compilerProfile.fixedInputSchemaVersion ||
-    contracts.factExtension !== 2 ||
+    contracts.factExtension !== compilerProfile.factExtensionSchemaVersion ||
     stableStringify(adapters) !== stableStringify(expectedAdapters)
   ) {
     throw new Error(`${label} producer identity does not match its closed production profile`);

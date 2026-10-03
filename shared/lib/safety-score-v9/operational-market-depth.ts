@@ -14,7 +14,7 @@ import type {
   V9OperationalResilienceMeasuredMarketDepth,
   V9OperationalResilienceResult,
 } from "./operational-resilience";
-import { resolveV9ReasonPolicy } from "./policy";
+import { resolveV9ReasonTreatment } from "./policy";
 import { uniqueSorted } from "./primitives";
 import type {
   V9PillarEvaluation,
@@ -29,7 +29,7 @@ function measuredOperationalMarketDepth(
   envelope: V9ValidatedPolicyEnvelope,
 ): V9OperationalResilienceMeasuredMarketDepth | null {
   const request = exit.stressRequest;
-  if (request === null) return null;
+  if (request === null || exit.aggregationDisposition !== "included") return null;
   const measuredRoutes = asset.exitRoutes.filter(
     (route) =>
       route.lane === "dex" &&
@@ -91,12 +91,12 @@ function operationalResilienceBlockers(
     ...methodologyReasons,
   ];
   const issuerOpacity = scoreBearingReasons.some((reason) => {
-    if (reason.responsibility !== "issuer-undisclosed") return false;
+    if (reason.cause !== "C" && reason.cause !== "U") return false;
     // Visibility-only diagnostics do not reduce a pillar, impose a ceiling, or
     // make the score unavailable. Treating one as material issuer opacity
     // would let an immaterial disclosure gap erase independently documented
     // operating history. Pillar, ceiling, and NR reasons remain blockers.
-    return resolveV9ReasonPolicy(envelope, reason.code).reason.defaultTreatment !== "diagnostic";
+    return resolveV9ReasonTreatment(envelope, reason.code, reason.cause).treatment !== "diagnostic";
   });
   const globalReserveImpairment = pillarSignals.some(
     (signal) =>
@@ -125,26 +125,26 @@ function applyOperationalResilienceCredits(
   pillars: Readonly<Record<"backing" | "exit" | "control", V9PillarEvaluation>>,
   result: V9OperationalResilienceResult | null,
 ): V9ProductionScoreInput["pillars"] {
-  if (result === null) return pillars;
+  if (result === null || !result.eligible) return pillars;
   return {
     backing: {
       ...pillars.backing,
       score:
-        pillars.backing.score === null
+        pillars.backing.aggregationDisposition !== "included" || pillars.backing.score === null
           ? null
           : Math.min(100, pillars.backing.score + result.pillarCredits.backing),
     },
     exit: {
       ...pillars.exit,
       score:
-        pillars.exit.score === null
+        pillars.exit.aggregationDisposition !== "included" || pillars.exit.score === null
           ? null
           : Math.min(100, pillars.exit.score + result.pillarCredits.exit),
     },
     control: {
       ...pillars.control,
       score:
-        pillars.control.score === null
+        pillars.control.aggregationDisposition !== "included" || pillars.control.score === null
           ? null
           : Math.min(100, pillars.control.score + result.pillarCredits.control),
     },

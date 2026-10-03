@@ -1,3 +1,8 @@
+import { makeReportCardsV9PartialCard } from "@shared/test-utils/report-cards-v9";
+import { mockD1 } from "@shared/test-utils/mock-d1";
+import { makeAsset } from "../../test-helpers/__shared/fixtures";
+import type { CollectorContext } from "../daily-digest/collectors-shared";
+import { makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   makeReportCardsV9Response,
@@ -52,6 +57,25 @@ describe("snapshotSafetyGradeHistory", () => {
     mockGetCache.mockReset().mockResolvedValue(null);
     mockSetCache.mockReset().mockResolvedValue(undefined);
     mockDeleteCache.mockReset().mockResolvedValue(undefined);
+  });
+
+  it("preserves the last grade across an asset pipeline gap without seeding NR or F", async () => {
+    const current = makeReportCardsV9Response({
+      updatedAt: Math.floor(Date.now() / 1000),
+      cards: [makeWorkerV9Card({ id: "usdc-circle", grade: "A", score: 90 })],
+    });
+    const { db, sqlite } = fixtures.open();
+    mockLoadActiveSafetyScoreSource.mockResolvedValue({ kind: "v9", snapshot: current });
+    await snapshotSafetyGradeHistory(db);
+    const previousRows = sqlite.prepare("SELECT * FROM safety_score_history_v2").all();
+    mockFetchLatestSafetyScoreHistoryV2Rows.mockResolvedValue(previousRows);
+    const gap = makeReportCardsV9PipelineGapCard("control", "A", { id: "usdc-circle" });
+    const unseededGap = makeReportCardsV9PipelineGapCard(null, "A", { id: "usdt-tether" });
+    mockLoadActiveSafetyScoreSource.mockResolvedValue({
+      kind: "v9", snapshot: makeReportCardsV9Response({ updatedAt: current.updatedAt, cards: [gap, unseededGap] }),
+    });
+    expect(await snapshotSafetyGradeHistory(db)).toMatchObject({ itemCount: 0 });
+    expect(sqlite.prepare("SELECT * FROM safety_score_history_v2").all()).toEqual(previousRows);
   });
 
   it("skips history writes while the canonical V9 publication is held", async () => {
@@ -424,3 +448,52 @@ describe("snapshotSafetyGradeHistory", () => {
     expect(sqlite.prepare("SELECT * FROM safety_score_history_v2").all()).toEqual([]);
   });
 });
+
+describe("digest grade availability", () => {
+  it("excludes technical gaps from grade cohorts and transitions while retaining partial-rated metadata", async () => {
+    // Load after the source/history mock bindings initialize, as the history entrypoint does.
+    const { collectSafetyScores, collectGradeTransitions } = await import("../daily-digest/collectors-risk");
+    const nowSec = Math.floor(Date.now() / 1000);
+    const snapshot = makeReportCardsV9Response({
+      updatedAt: nowSec,
+      cards: [
+        makeReportCardsV9PipelineGapCard("control", "A", { id: "gap" }),
+        makeReportCardsV9PartialCard("exit", "B", { id: "partial" }),
+      ],
+    });
+    mockLoadActiveSafetyScoreSource.mockResolvedValue({ kind: "v9", snapshot });
+    const assets = [makeAsset({ id: "gap", symbol: "GAP", circulating: { peggedUSD: 20_000_000 } }),
+      makeAsset({ id: "partial", symbol: "PARTIAL", circulating: { peggedUSD: 20_000_000 } })];
+    const identity = snapshot.safetyScoreIdentity;
+    const ctx: CollectorContext = {
+      db: mockD1([
+        { match: "GROUP BY recorded_at", rows: [] },
+        { match: "ORDER BY ABS", rows: [{
+          history_id: "prior-gap-change", stablecoin_id: "gap", recorded_at: nowSec - 3600,
+          model: identity.model, identity_schema_version: identity.schemaVersion,
+          methodology_version: identity.methodologyVersion, policy_id: identity.policyId,
+          policy_digest: identity.policyDigest, evaluation_build_digest: identity.evaluationBuildDigest,
+          base_input_generation_id: identity.baseInputGenerationId, model_publication_generation_id: identity.publicationGenerationId,
+          transition_kind: "organic-grade-change", grade: "F", score: 20, prev_grade: "A", prev_score: 90,
+        }] },
+      ], { requireMatch: true }),
+      trackedStablecoinAssets: assets, trackedStablecoinIds: new Set(assets.map((asset) => asset.id)),
+      coreAggregateStablecoinAssets: assets, coreAggregateStablecoinIds: new Set(assets.map((asset) => asset.id)),
+      stablecoinAssetById: new Map(assets.map((asset) => [asset.id, asset])),
+      mcapById: new Map(assets.map((asset) => [asset.id, 20_000_000])),
+      stablecoinsCacheIsFresh: true, nowSec, todayTs: nowSec, yesterdayTs: nowSec - 86400,
+    };
+    const collected = await collectSafetyScores(ctx, new Set(["GAP", "PARTIAL"]));
+    expect(collected.degradedReasons).toEqual([]);
+    expect(collected.value.safetyGrades?.map((row) => row.id)).toEqual(["partial"]);
+    expect(collected.value.safetyScores?.mentionedCoins).toEqual([
+      expect.objectContaining({ symbol: "PARTIAL", ratingStatus: "rated", partialEvidence: {
+        reasonCode: "partial-evidence-pipeline-gap", excludedPillars: ["exit"], causes: ["B"],
+      } }),
+    ]);
+    expect(collected.value.safetyScores?.model === "v9" ? collected.value.safetyScores.gradeDistribution : null).not.toHaveProperty("NR");
+    const transitions = await collectGradeTransitions(ctx, collected.value.safetyGrades, collected.value.safetyIdentity);
+    expect(transitions).toEqual({ value: undefined, degradedReasons: [] });
+  });
+});
+

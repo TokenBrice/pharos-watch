@@ -1,3 +1,4 @@
+import { makeReportCardsV9PipelineGapCard, makeReportCardsV9PartialCard } from "@shared/test-utils/report-cards-v9";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { findD1HistoryEntry } from "@shared/test-utils/mock-d1";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
@@ -423,6 +424,13 @@ describe("snapshotPublicDataset", () => {
 
   it("writes the complete active V9 publication with model-aware methodology metadata", async () => {
     const source = activeV9();
+    source.snapshot = makeWorkerReportCardsV9Response({
+      updatedAt: NOW_SEC, asOfSec: NOW_SEC - 60,
+      cards: [
+        makeReportCardsV9PartialCard("exit", "B", { id: "usdc-circle" }),
+        makeReportCardsV9PipelineGapCard("control", "A", { id: "usdt-tether" }),
+      ],
+    });
     vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource")
       .mockResolvedValue(source);
     const db = buildDb();
@@ -434,13 +442,16 @@ describe("snapshotPublicDataset", () => {
     const envelope = JSON.parse(await gunzipToText(binds?.[1] as Uint8Array)) as {
       methodologyVersions: { reportCard: string };
       safetyScoreIdentity: { model: string; publicationGenerationId: string };
-      reportCards: { lifecycle: string; cards: Array<{ id: string }> };
+      reportCards: { schemaVersion: number; lifecycle: string; cards: Array<{ id: string; grade: string | null; score: number | null; ratingStatus: string; partialEvidence: unknown }> };
     };
     expect(envelope.methodologyVersions.reportCard).toBe(
       source.snapshot.safetyScoreIdentity.methodologyVersion,
     );
     expect(envelope.safetyScoreIdentity).toEqual(source.snapshot.safetyScoreIdentity);
     expect(envelope.reportCards.lifecycle).toBe("active");
+    expect(envelope.reportCards.schemaVersion).toBe(7);
+    expect(envelope.reportCards.cards.find((card) => card.id === "usdt-tether")).toMatchObject({ grade: null, score: null, ratingStatus: "pipeline-gap" });
+    expect(envelope.reportCards.cards.find((card) => card.id === "usdc-circle")).toMatchObject({ ratingStatus: "rated", partialEvidence: { excludedPillars: ["exit"], causes: ["B"] } });
     expect(envelope.reportCards.cards.map((card) => card.id)).toEqual([
       "usdc-circle",
       "usdt-tether",

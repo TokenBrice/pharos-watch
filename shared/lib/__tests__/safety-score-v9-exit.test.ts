@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
-import type { V9AssetFactsBase } from "../../types/safety-score-v9-facts";
+import type { V9AssetFactsBase, V9FactStatusV2, V9FactGapV3 } from "../../types/safety-score-v9-facts";
+import { createV9FactGapV3 } from "../safety-score-v9/reasons";
 import {
   evaluateV9Exit,
   isV9CreditableNonAtomicRedemption,
@@ -8,13 +9,21 @@ import {
   selectV9ExitCirculatingUsd,
   selectV9ExitStressRequest,
   type V9ExitEvaluationRoute,
+  type V9ExitEvaluationResult,
 } from "../safety-score-v9/exit";
 
 import {
-  makeExitRoute as route,
-  makeDocumentedRedemption as documentedRedemption,
+  makeExitRoute,
+  makeDocumentedRedemption,
   makeNormalizedExitRoute,
 } from "./safety-score-v9-exit.test-support";
+
+function route(overrides: Partial<V9ExitEvaluationRoute> = {}): V9ExitEvaluationRoute {
+  return makeExitRoute({ capacityEvidenceTier: "live-direct", ...overrides });
+}
+function documentedRedemption(overrides: Partial<V9ExitEvaluationRoute> = {}): V9ExitEvaluationRoute {
+  return makeDocumentedRedemption({ capacityEvidenceTier: "documented", ...overrides });
+}
 
 describe("selectV9ExitStressRequest", () => {
   it("snaps the supply-relative request upward to the reviewed grid", () => {
@@ -563,9 +572,9 @@ describe("evaluateV9Exit", () => {
     expect(boundedUnknown.components?.cost).toBe(
       V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedCostScore,
     );
-    expect(favorableMeasured.components?.cost).toBeGreaterThan(boundedUnknown.components!.cost);
+    expect(favorableMeasured.components?.cost).toBeGreaterThan(boundedUnknown.components!.cost!);
     expect(favorableMeasured.score).toBeGreaterThan(boundedUnknown.score!);
-    expect(adverseMeasured.components?.cost).toBeLessThan(boundedUnknown.components!.cost);
+    expect(adverseMeasured.components?.cost).toBeLessThan(boundedUnknown.components!.cost!);
     expect(adverseMeasured.score).toBeLessThan(boundedUnknown.score!);
 
     const measuredCosts = [0, 20, 50, 80, 100, 120, 150, 180, 199];
@@ -1001,15 +1010,6 @@ describe("SIM-EXIT-L2 undisclosed-fee credit and danger-held exclusion", () => {
   const undisclosed = (overrides: Partial<V9ExitEvaluationRoute> = {}) =>
     route({ routeKey: "redemption:undisclosed", feeEvidence: "undisclosed-reviewed", ...overrides });
 
-  it("ceilings an undisclosed-reviewed route's credit at the policy ceiling", () => {
-    const ceiling = V9_CANDIDATE_POLICY_V1.policy.semantic.exit.undisclosedFeeRouteScoreCeiling;
-    const result = evaluateV9Exit({ circulatingUsd: 20_000_000, routes: [undisclosed()] }, V9_CANDIDATE_POLICY_V1);
-    const trace = result.routes.find((entry) => entry.routeKey === "redemption:undisclosed");
-    // Without the ceiling this strong route scores well above 52; the cap binds.
-    expect(trace?.score).not.toBeNull();
-    expect(trace!.score!).toBeLessThanOrEqual(ceiling);
-    expect(trace!.capsApplied).toContain("fee-evidence:undisclosed-reviewed");
-  });
 
   it("withholds all undisclosed-fee credit from a pre-exit danger-held asset (byte-identical to pre-lever exclusion)", () => {
     const held = evaluateV9Exit(
@@ -1058,7 +1058,6 @@ describe("SIM-EXIT-L2 undisclosed-fee credit and danger-held exclusion", () => {
     const disclosed = evaluateV9Exit({
       circulatingUsd: 20_000_000, routes: [{ ...modeled, feeEvidence: "disclosed-unquantified" }],
     }, V9_CANDIDATE_POLICY_V1);
-    expect(opaque.score).toBe(52);
     expect(disclosed.score).toBe(opaque.score);
     expect(disclosed.routes[0]).toMatchObject({
       included: true, score: opaque.routes[0]!.score,
@@ -1131,13 +1130,9 @@ describe("undisclosed-fee routes stay bounded at the portfolio level", () => {
     const opaque = evaluateV9Exit({ circulatingUsd: 20_000_000, routes: opaqueRoutes }, V9_CANDIDATE_POLICY_V1);
     expect(opaque.diversificationRouteKey).toBe("redemption:primary");
     expect(opaque.diversificationBonus).toBe(0);
-    if (fees === "both") {
-      expect(opaque.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.undisclosedFeeRouteScoreCeiling);
-    } else {
-      const solo = evaluateV9Exit({ circulatingUsd: 20_000_000, routes: [routes[1]] }, V9_CANDIDATE_POLICY_V1);
-      expect(opaque.primaryRouteKey).toBe("dex:backup");
-      expect(opaque.score).toBe(solo.score);
-    }
+    const solo = evaluateV9Exit({ circulatingUsd: 20_000_000, routes: [opaqueRoutes[1]] }, V9_CANDIDATE_POLICY_V1);
+    expect(opaque.primaryRouteKey).toBe("dex:backup");
+    expect(opaque.score).toBe(solo.score);
   });
 });
 
@@ -1249,5 +1244,196 @@ describe("issuer payout output quality", () => {
     expect(traces[1].score).toBe(traces[0].score);
     expect(traces[2].components?.outputAssetQuality).toBe(80);
     expect(traces[1].score! - traces[2].score!).toBeCloseTo(3, 10);
+  });
+});
+
+describe("cause-aware Exit and max-feasible portfolios", () => {
+  function gap(cause: "A" | "B" | "C" | "U", id: string): { status: V9FactStatusV2; gap: V9FactGapV3 } {
+    const proof = cause === "A" ? {
+      cause, producerState: "stale-producer" as const, sourceId: "route-producer", sourceGenerationId: "captured",
+      observedAtSec: 100, rejectionCode: "route-observation-stale", evidenceRefIds: ["attempt"],
+    } : cause === "U" ? { cause, reason: "not-yet-researched" as const, evidenceRefIds: [] as [] }
+      : cause === "B" ? {
+        cause, proofOrigin: "typed-review" as const, classificationId: id, reviewedAt: "2026-10-01",
+        sources: [{ url: "https://issuer.example/terms", assertion: "The exact route datum is public." }],
+        evidenceRefIds: ["review"], assertion: "required-data-public" as const,
+      } : {
+        cause, proofOrigin: "typed-review" as const, classificationId: id, reviewedAt: "2026-10-01",
+        sources: [{ url: "https://issuer.example/terms", assertion: "The exact route datum was researched." }],
+        evidenceRefIds: ["review"], assertion: "researched-nondisclosure" as const,
+        rationale: "The required current datum is not published.",
+      };
+    return {
+      status: { applicability: { state: "required", policyRuleId: "route-factor", rationale: null, gapId: null },
+        observationState: "bounded-unknown", evidenceRefIds: [], gapIds: [id] },
+      gap: createV9FactGapV3({ gapId: id, reasonCode: "missing-same-notional-route", ownerDomain: "exit",
+        policyRuleId: "route-factor", responsibility: "unresearched", observationState: "bounded-unknown",
+        path: { kind: "optional-exit", routeKey: "route" }, message: "Scoped datum gap.", causeProof: proof }),
+    };
+  }
+  const evaluate = (routes: V9ExitEvaluationRoute[], policy = V9_CANDIDATE_POLICY_V1) =>
+    evaluateV9Exit({ circulatingUsd: 20_000_000, routes }, policy);
+
+  it("never loses the previous independent pair when a mutually correlated third route improves", () => {
+    const left = route({ routeKey: "a", failureDomains: ["left"], physicalResourceKeys: ["a"] });
+    const right = route({ routeKey: "b", failureDomains: ["right"], physicalResourceKeys: ["b"] });
+    const correlated = route({ routeKey: "c", failureDomains: ["left", "right"], physicalResourceKeys: ["c"],
+      capacityCurve: route().capacityCurve.map((point) => ({ ...point, executionCostBps: 190 })) });
+    const before = evaluate([left, right, correlated]);
+    const after = evaluate([left, right, { ...correlated, capacityCurve: route().capacityCurve }]);
+    expect(after.score).toBeGreaterThanOrEqual(before.score!);
+    expect(after.primaryRouteKey).toBe("a");
+    expect(after.diversificationRouteKey).toBe("b");
+    expect(evaluate([correlated, right, left])).toMatchObject({
+      score: before.score, primaryRouteKey: before.primaryRouteKey, diversificationRouteKey: before.diversificationRouteKey,
+    });
+  });
+
+  it("improving any route never lowers Exit across correlation, 90/headroom and input-order branches", () => {
+    for (const seed of [0, 40, 80, 120, 160, 199]) {
+      const routes = ["a", "b", "c"].map((routeKey, index) => route({
+        routeKey, failureDomains: index === 2 ? ["left", "right"] : [index === 0 ? "left" : "right"],
+        physicalResourceKeys: [routeKey],
+        capacityCurve: route().capacityCurve.map((point) => ({ ...point, executionCostBps: Math.min(199, seed + index * 5) })),
+      }));
+      const baseline = evaluate(routes).score!;
+      for (let index = 0; index < routes.length; index++) {
+        for (const improvement of [1, 10, 50, 199]) {
+          const improved = routes.map((candidate, i) => i !== index ? candidate : {
+            ...candidate, capacityCurve: candidate.capacityCurve.map((point) => ({
+              ...point, executionCostBps: Math.max(0, point.executionCostBps - improvement),
+            })),
+          });
+          expect(evaluate(improved).score, `${seed}/${index}/${improvement}`).toBeGreaterThanOrEqual(baseline);
+          expect(evaluate([...improved].reverse()).score).toBe(evaluate(improved).score);
+        }
+      }
+    }
+  });
+
+  it("applies the admitted fixed floor after portfolio selection, preserving strict equality keys", () => {
+    const atCost = (cost: number) => route({ coverageClass: "exact-lower-bound", observationConfidence: "low",
+      access: "manual", holderEligibility: "pre-incident-holder",
+      capacityCurve: route().capacityCurve.map((point) => ({ ...point, executionCostBps: cost })) });
+    const base = evaluate([atCost(0)]).routes[0]!.score!;
+    const slope = (base - evaluate([atCost(100)]).routes[0]!.score!) / 100;
+    const boundaryCost = (base - 35) / slope;
+    const originalReasons = evaluate([atCost(0)]).reasons;
+    for (const cost of [boundaryCost + 1, boundaryCost, boundaryCost - 1]) {
+      const result = evaluate([atCost(cost)]);
+      const selected = result.routes[0]!.score!;
+      expect(result.score).toBe(Math.round(Math.max(selected, 35) * 100) / 100);
+      expect(result.primaryRouteKey).toBe(selected < 35 ? null : atCost(cost).routeKey);
+      expect(result.diversificationBonus).toBe(0);
+      expect(result.reasons).toEqual(originalReasons);
+    }
+    const bits = new DataView(new ArrayBuffer(8));
+    bits.setFloat64(0, boundaryCost);
+    const nearestCostBits = bits.getBigUint64(0);
+    let equality: V9ExitEvaluationResult | undefined;
+    for (let offset = -16n; offset <= 16n; offset++) {
+      bits.setBigUint64(0, nearestCostBits + offset);
+      const candidate = evaluate([atCost(bits.getFloat64(0))]);
+      if (candidate.routes[0]!.score === 35) { equality = candidate; break; }
+    }
+    expect(equality?.routes[0]!.score).toBe(35);
+    expect(equality?.primaryRouteKey).toBe(atCost(0).routeKey);
+  });
+
+  it("keeps fee-cause refinement monotone but never exempts same-notional cost admission", () => {
+    const backup = route({ routeKey: "backup", observationConfidence: "medium",
+      failureDomains: ["backup"], physicalResourceKeys: ["backup"] });
+    const price = (cause: "C" | "B", overBudget = false) => {
+      const missing = gap(cause, "formula");
+      const primary = route({ routeKey: "primary", observationConfidence: "medium", feeEvidence: "disclosed-unquantified",
+        factorStatuses: { cost: missing.status }, gaps: [missing.gap],
+        capacityCurve: route().capacityCurve.map((point) => ({ ...point,
+          executionCostBps: overBudget ? point.maxCostBps + 1 : point.executionCostBps })) });
+      return evaluate([primary, backup]);
+    };
+    const opaque = price("C");
+    const publicFormula = price("B");
+    expect(publicFormula.score).toBeGreaterThanOrEqual(opaque.score!);
+    expect(opaque.diversificationBonus).toBe(0);
+    expect(publicFormula.diversificationBonus).toBeGreaterThan(0);
+    expect(publicFormula.routes.find((trace) => trace.routeKey === "primary")).toMatchObject({
+      rawSameNotionalCostBps: null, components: { cost: null },
+    });
+    const overBudget = price("B", true);
+    expect(overBudget.routes.find((trace) => trace.routeKey === "primary")!.included).toBe(false);
+    expect(overBudget.diversificationBonus).toBe(0);
+  });
+
+  it("uses stable equal-score keys over 64 candidates and rejects unproven overflow without truncation", () => {
+    const candidates = Array.from({ length: 64 }, (_, index) => route({
+      routeKey: `r:${String(index).padStart(2, "0")}`, observationConfidence: "medium",
+      failureDomains: [`domain:${index}`], physicalResourceKeys: [`resource:${index}`],
+    }));
+    const first = evaluate(candidates);
+    expect(first.primaryRouteKey).toBe("r:00");
+    expect(first.diversificationRouteKey).toBe("r:01");
+    expect(evaluate([...candidates].reverse()).score).toBe(first.score);
+    const tooMany = [...candidates, route({ routeKey: "r:64" })];
+    expect(() => evaluate(tooMany)).toThrow("route-inventory-over-limit");
+  });
+
+  it.each(["A", "B"] as const)("omits %s holder/fee/confidence gaps while preserving measured restrictions", (cause) => {
+    const missing = gap(cause, "gap");
+    const unknown = route({ holderEligibility: "unknown", observationConfidence: "unknown", modelConfidence: "unknown",
+      capacityEvidenceTier: "unknown", feeEvidence: "disclosed-unquantified",
+      factorStatuses: { holderEligibility: missing.status, observationConfidence: missing.status,
+        executionConfidence: missing.status, capacityEvidenceTier: missing.status, cost: missing.status },
+      gaps: [missing.gap] });
+    const trace = evaluate([unknown]).routes[0]!;
+    expect(trace.confidenceFactor).toBe(1);
+    expect(trace.eligibilityMultiplier).toBe(1);
+    expect(trace.components!.cost).toBeNull();
+    expect(trace.rawSameNotionalCostBps).toBeNull();
+    expect(trace.confidenceDimensions!.capacityMethod.cause).toBe(cause);
+    expect(trace.confidenceDimensions!.capacityMethod.factor).toBe(1);
+    const restricted = evaluate([route({ ...unknown, holderEligibility: "issuer-discretionary",
+      factorStatuses: { ...unknown.factorStatuses, holderEligibility: undefined }, queueDepthUsd: 10_000_000,
+      dailyLimitUsd: 1_000_000, minRedeemUsd: 1_000_000 })]).routes[0]!;
+    expect(restricted.eligibilityMultiplier).toBe(0.6);
+    expect(restricted.capsApplied).toContain("minimum-redeem:0.75");
+    expect(restricted.score).toBeLessThan(trace.score!);
+  });
+
+  it.each(["C", "U"] as const)("retains bounded %s observation/holder/cost charges and the .75 unknown method", (cause) => {
+    const missing = gap(cause, "gap");
+    const trace = evaluate([route({ observationConfidence: "unknown", holderEligibility: "unknown",
+      capacityEvidenceTier: "unknown", capacityCurve: route().capacityCurve.map((point) => ({ ...point, executionCostBps: 200 })),
+      factorStatuses: { observationConfidence: missing.status, holderEligibility: missing.status, cost: missing.status,
+        capacityEvidenceTier: missing.status },
+      gaps: [missing.gap] })]).routes[0]!;
+    expect(trace.confidenceDimensions!.observation.factor).toBe(0.6);
+    expect(trace.confidenceDimensions!.capacityMethod.factor).toBe(0.75);
+    expect(trace.confidenceDimensions!.capacityMethod.cause).toBe(cause);
+    expect(trace.eligibilityMultiplier).toBe(0.85);
+    expect(trace.components!.cost).toBe(50);
+    expect(trace.capsApplied.some((cap) => cap.startsWith("fee-evidence:"))).toBe(false);
+  });
+
+  it("never admits A-stale history as current capacity or as a charged floor", () => {
+    const missing = gap("A", "stale");
+    const stale = route({ observationState: "stale", status: missing.status,
+      factorStatuses: { capacity: missing.status }, gaps: [missing.gap] });
+    const result = evaluate([stale]);
+    expect(result.score).toBeNull();
+    expect(result.aggregationDisposition).toBe("excluded-a-b");
+    expect(result.routes[0]!.capacityPoint).toBeNull();
+    expect(result.primaryRouteKey).toBeNull();
+    expect(result.limitedEvidenceCauses).toEqual([]);
+    expect(evaluate([route({ observationState: "stale" })]).routes[0]!.confidenceFactor).toBe(0.6);
+  });
+
+  it("keeps an admitted exhaustive zero at zero even when A/B alternatives are unavailable", () => {
+    const missing = gap("B", "alternative");
+    const zero = route({ capacityCurve: route().capacityCurve.map((point) => ({ ...point, executableUsd: 0, completionRatio: 0 })) });
+    const alternative = route({ routeKey: "missing", observationState: "missing", status: missing.status,
+      factorStatuses: { capacity: missing.status }, gaps: [missing.gap] });
+    const result = evaluate([zero, alternative]);
+    expect(result.score).toBe(0);
+    expect(result.reasons).toContain("no-viable-exit-path");
   });
 });

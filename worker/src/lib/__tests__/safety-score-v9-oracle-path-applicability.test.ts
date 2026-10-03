@@ -82,7 +82,7 @@ describe("reviewed per-path oracle applicability", { timeout: V9_EVALUATION_TEST
       expect.objectContaining({ code: "incomplete-oracle-liquidation-branch", path: expect.stringContaining("oracle:feed") }),
     ]);
     expect(control.components.find((component) => component.kind === "oracle")).toMatchObject({ posture: "standard-external", score: 70 });
-    expect(trace.caps).toContainEqual(expect.objectContaining({ kind: "reason:incomplete-oracle-liquidation-branch", limit: 55 }));
+    expect(trace.caps.map((cap) => cap.kind)).not.toContain("reason:incomplete-oracle-liquidation-branch");
   });
 
   it("does not score an evidenced allocation-only path or emit incomplete-liquidation reasons", () => {
@@ -105,7 +105,7 @@ describe("reviewed per-path oracle applicability", { timeout: V9_EVALUATION_TEST
     expect(oracle.paths).toContainEqual(expect.objectContaining({ id: "new-facilitator", observationState: "missing" }));
     expect(oracleReasons(control)).toContainEqual(expect.objectContaining({ code: "unresolved-oracle-branch-applicability" }));
     expect(control.components.find((component) => component.kind === "oracle")).toMatchObject({ posture: "opaque-or-unknown", score: 45 });
-    expect(trace.caps).toContainEqual(expect.objectContaining({ kind: "reason:unresolved-oracle-branch-applicability", limit: 55 }));
+    expect(trace.caps.map((cap) => cap.kind)).not.toContain("reason:unresolved-oracle-branch-applicability");
   });
 
   it("charges opaque topology as bounded issuer uncertainty, never measured danger", () => {
@@ -120,7 +120,7 @@ describe("reviewed per-path oracle applicability", { timeout: V9_EVALUATION_TEST
     expect(trace.adverseAttribution.filter((item) => item.path.startsWith("structural:weak-oracle-branch"))).toEqual([]);
     expect(trace.finalGrade).not.toBe("F");
     expect(trace.unresolvedFacts).toContainEqual(expect.objectContaining({
-      code: "oracle-topology-undisclosed", responsibility: "issuer-undisclosed",
+      code: "oracle-topology-undisclosed", responsibility: "unresearched", cause: "U",
     }));
     expect(trace.caps.filter((cap) => cap.kind.startsWith("signal:weak-oracle-branch"))).toEqual([]);
   });

@@ -1,7 +1,6 @@
 import type { DependencyRejectionReason } from "@shared/lib/dependency-derivation";
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
-import { SCORE_EPSILON } from "@shared/lib/safety-score-v9/backing-primitives";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { hasIndependentLiveCompositionDates, hasIndependentReserveObservationDates } from "@shared/lib/report-card-policy";
 import { admitV10ReserveReportScope, admitV10ReserveObservation, shouldApplyV10ReserveReportScope, resolveV10ReserveObservationDeploymentRefs } from "@shared/lib/safety-score-v9/reserve-scope";
@@ -46,6 +45,7 @@ export function buildSafetyScoreV9ReserveClassifications(slices: readonly Reserv
         maturityDaysMax: slice.maturityDaysMax ?? null,
         failureDomains: issuerOrObligorKey ? [{ kind: "reserve-issuer" as const, key: issuerOrObligorKey }] : [],
         trackedAssetId: slice.coinId ?? null,
+        ...(slice.unclassifiedResidual ? { unclassifiedResidual: true } : {}),
       };
     });
 }
@@ -245,7 +245,9 @@ export function buildReviewedReserveClassifications(
   clockSec: number,
   classificationMaxAgeSec = REVIEWED_RESERVE_CLASSIFICATION_MAX_AGE_SEC,
 ): ReserveClassification[] {
-  const classifications = buildSafetyScoreV9ReserveClassifications(liveReserves);
+  const classifications: ReserveClassification[] = buildSafetyScoreV9ReserveClassifications(liveReserves).map(
+    ({ unclassifiedResidual: _unclassifiedResidual, ...classification }) => classification,
+  );
   const review = meta.reserveReview;
   if (!review) return classifications;
   const nonLinkReviewedIndexes = new Set(
@@ -306,8 +308,8 @@ const CORROBORATING_ASSURANCE_METHODS = new Set([
   "attestation",
 ]);
 const DIRECT_RESERVE_ASSURANCE_METHODS = new Set(["audit", "examination"]);
-const ISSUER_ATTESTED_RESERVE_MAX_AGE_SEC =
-  V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.issuerAttestedReserveMaxAgeSec;
+const NAMED_FIRM_RESERVE_REPORT_MAX_AGE_SEC =
+  V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.namedFirmReserveReportMaxAgeSec;
 const REVIEWED_RESERVE_COMPOSITION_MAX_AGE_SEC =
   V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.reviewedReserveCompositionMaxAgeSec;
 const REVIEWED_RESERVE_COMPOSITION_GRACE_SEC =
@@ -326,16 +328,15 @@ function normalizeReviewedStaticReserveRows(rows: readonly ReserveSlice[]): Rese
   );
   const totalPct = sorted.reduce((sum, row) => sum + row.pct, 0);
   if (totalPct === 100) return sorted;
-  if (Math.abs(totalPct - 100) > RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT) {
-    throw new Error("Issuer-attested reserve normalization exceeded the approved composition tolerance");
+  if (Math.abs(totalPct - 100) > RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT || totalPct <= 0) {
+    throw new Error("Reviewed reserve normalization exceeded the approved composition tolerance");
   }
-  const scale = 100 / totalPct;
-  let normalizedPct = 0;
-  return sorted.map((row, index) => {
-    const pct = index === sorted.length - 1 ? 100 - normalizedPct : row.pct * scale;
-    normalizedPct += pct;
-    return { ...row, pct };
-  });
+  // Reconcile only rounding noise in one positive row; never erase a dust holding.
+  const correction = 100 - totalPct;
+  let last = sorted.length - 1;
+  while (last >= 0 && (sorted[last]!.pct <= 0 || sorted[last]!.pct + correction <= 0)) last--;
+  if (last < 0) throw new Error("Reviewed reserve rounding has no nonnegative reconciliation row");
+  return sorted.map((row, index) => index === last ? { ...row, pct: row.pct + correction } : row);
 }
 
 function reportScopeApplies(
@@ -375,6 +376,30 @@ function hasDirectIndependentReserveAssurance(meta: V9ExtensionRegistryMeta, clo
   );
 }
 
+function hasNamedReportFirm(meta: V9ExtensionRegistryMeta): boolean {
+  const proof = meta.proofOfReserves;
+  const report = proof?.latestReport;
+  const provider = proof?.provider?.trim();
+  if (!provider || !report || !["attestation", "independent-audit"].includes(proof!.type) ||
+    !["big4", "regional", "niche"].includes(proof!.attestorTier ?? "")) return false;
+  const normalizeName = (value: string) => value.normalize("NFKD").replace(/\p{M}/gu, "");
+  // A provider may name the actual firm after an issuer-led assurance description.
+  const describedFirmNames = Array.from(provider.matchAll(
+    /(?:attestations?|audits?|assurance|examinations?)\s*\(([^)]+)\)/giu), match => match[1]!);
+  const firmNames = describedFirmNames.length > 0 ? describedFirmNames : [provider];
+  const firmPatterns = firmNames.map(name => {
+    const token = normalizeName(name.trim().split(/\s/, 1)[0]!);
+    // eslint-disable-next-line security/detect-non-literal-regexp -- token comes from reviewed registry metadata and is escaped before interpolation.
+    return new RegExp(`(?:^|[^\\p{L}\\p{N}])${token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:$|[^\\p{L}\\p{N}])`, "iu");
+  });
+  return report.sources.some(source => {
+    // A proof URL can itself be the signed report PDF, rather than an issuer index.
+    const reportSource = source.url !== proof!.url || /\.pdf(?:[?#]|$)/i.test(source.url);
+    return reportSource && firmPatterns.some(pattern =>
+      pattern.test(normalizeName(source.label)) || pattern.test(normalizeName(report.reviewer ?? "")));
+  });
+}
+
 interface IndependentlyAttestedCompositionAdmission {
   normalizedRows: ReserveSlice[];
   sourceRows: ReserveSlice[];
@@ -402,8 +427,7 @@ function independentlyAttestedComposition(
   const report = proof?.latestReport;
   const compositionRows = compositionRowsWithUnknownResidual(meta);
   if (reportScopeApplies(meta, clockSec, fixedInput)) return null;
-  const attestorIndependent =
-    proof?.attestorTier === "big4" || proof?.attestorTier === "regional" || proof?.attestorTier === "niche";
+  const attestorIndependent = hasNamedReportFirm(meta);
   const reviewAtSec = review ? conservativeDateEndSec(review.reviewedAt, clockSec) : null;
   const compositionAtSec = conservativeDateEndSec(review?.compositionAsOf, clockSec);
   // Explicit publication and marked signed-date stand-ins share chronology/freshness gates.
@@ -419,9 +443,7 @@ function independentlyAttestedComposition(
     compositionAtSec === null ||
     reviewAtSec < compositionAtSec ||
     !validateReserveCompositionTotal(rows, "full") ||
-    // Audit-grade admission is fail-closed: AUP and independent attestation
-    // types remain outside this path.
-    proof?.type !== "independent-audit" ||
+    (proof?.type !== "independent-audit" && proof?.type !== "attestation") ||
     !attestorIndependent ||
     !proof.provider?.trim() ||
     report === undefined ||
@@ -436,13 +458,13 @@ function independentlyAttestedComposition(
     return null;
   }
   return {
-    normalizedRows: review.knownUnknownExposurePct === 0 ? normalizeReviewedStaticReserveRows(compositionRows) : compositionRows,
+    normalizedRows: normalizeReviewedStaticReserveRows(compositionRows),
     sourceRows: rows,
     review,
     proof,
     report,
     freshness:
-      clockSec - compositionAtSec > ISSUER_ATTESTED_RESERVE_MAX_AGE_SEC
+      clockSec - Date.parse(`${report.periodEnd}T00:00:00Z`) / 1_000 > NAMED_FIRM_RESERVE_REPORT_MAX_AGE_SEC
         ? "expired"
         : "fresh",
   };
@@ -477,7 +499,7 @@ export function buildSafetyScoreV9ReviewedStaticReserveRows(
  * composition whatsoever, which is a worse claim than the evidence supports and
  * let a single stale upstream feed erase an entire backing pillar. It enters as
  * `static-validated`, one rung down, so it earns reduced credit under the
- * shorter composition freshness bound and degrades as it ages.
+ * same report-period freshness window without promotion to audit-grade strength.
  *
  * Never returns `independent`: direct assurance describes the reserves and must
  * not lift an unsupervised issuer back to full strength through this path. The
@@ -496,49 +518,47 @@ export function buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(
 }
 
 /**
- * An explicitly unidentified tail stays outside classified exposures so the
- * evaluator charges its existing bounded-unknown residual, not `other` credit.
- * Normalize only the identified subtotal, keeping the authored unknown share.
+ * One whole-book admission retains original identified weights and separately
+ * marked disjoint tails. The compiler resolves each tail's exact cause.
  */
 function compositionRowsWithUnknownResidual(meta: V9ExtensionRegistryMeta): ReserveSlice[] | null {
   const rows = meta.reserves ?? [];
   const review = meta.reserveReview;
   const residualPct = review?.knownUnknownExposurePct;
-  if (residualPct === 0) return review?.nonLinkDispositions?.some(disposition =>
-    UNRESOLVED_CURATED_RESERVE_DISPOSITIONS.has(disposition.disposition)) ? null : rows;
-  if (residualPct == null || !Number.isFinite(residualPct) || residualPct / 100 <= SCORE_EPSILON ||
-    residualPct > V9_CANDIDATE_POLICY_V1.policy.semantic.backing.reserve.maxUnclassifiedCuratedResidualPct ||
-    !review || review.confidence !== "verified" || review.scope !== "full-composition" ||
-    review.sources.length === 0 || !validateReserveCompositionTotal(rows, "full")) return null;
-
+  if (!review || review.scope !== "full-composition" || review.confidence === "unknown" ||
+    review.sources.length === 0 || residualPct == null || !Number.isFinite(residualPct) ||
+    residualPct < 0 || residualPct > 100 || !validateReserveCompositionTotal(rows, "full") ||
+    rows.some(row => !Number.isFinite(row.pct) || row.pct < 0)) return null;
+  const identities = rows.map(computeSafetyScoreV9ReserveExposureKey);
+  if (new Set(identities).size !== rows.length) return null;
   const residualIndexes = new Set<number>();
-  let recordedResidualPct = 0;
+  const dispositionIndexes = new Set<number>();
+  let recordedUnresolvedPct = 0;
+  let unidentifiedPct = 0;
   for (const disposition of review.nonLinkDispositions ?? []) {
-    if (!UNRESOLVED_CURATED_RESERVE_DISPOSITIONS.has(disposition.disposition)) continue;
     const row = rows[disposition.reserveIndex];
-    if (disposition.disposition !== "insufficient-evidence" || !row ||
-      residualIndexes.has(disposition.reserveIndex) || row.pct <= 0 ||
-      row.name !== disposition.reserveName || row.pct !== disposition.pct ||
-      (row.assetClass != null && row.assetClass !== "other") || row.coinId != null || row.depType != null) return null;
+    if (!row || dispositionIndexes.has(disposition.reserveIndex) ||
+      row.name !== disposition.reserveName || row.pct !== disposition.pct) return null;
+    dispositionIndexes.add(disposition.reserveIndex);
+    if (!UNRESOLVED_CURATED_RESERVE_DISPOSITIONS.has(disposition.disposition)) continue;
+    recordedUnresolvedPct += row.pct;
+    // A known class stays identified even if its obligor/look-through is unknown.
+    if (row.assetClass != null && !row.unclassifiedResidual) continue;
+    if (!hasUnclassifiedResidualShape(row) || row.pct <= 0 || row.coinId != null || row.depType != null) return null;
     residualIndexes.add(disposition.reserveIndex);
-    recordedResidualPct += row.pct;
+    unidentifiedPct += row.pct;
   }
-  if (residualIndexes.size === 0 || Math.abs(recordedResidualPct - residualPct) > 1e-9) return null;
-  const identifiedRows = rows.filter((_, index) => !residualIndexes.has(index)).sort(
-    (left, right) => compareText(computeSafetyScoreV9ReserveExposureKey(left), computeSafetyScoreV9ReserveExposureKey(right)) ||
-      compareText(stableJsonStringifyV1(left), stableJsonStringifyV1(right)),
-  );
-  const identifiedPct = identifiedRows.reduce((sum, row) => sum + row.pct, 0);
-  if (identifiedPct <= 0) return null;
-  const targetPct = 100 - residualPct;
-  let normalizedPct = 0;
-  const admittedRows = identifiedRows.map((row, index) => {
-    const pct = index === identifiedRows.length - 1 ? targetPct - normalizedPct : row.pct * targetPct / identifiedPct;
-    normalizedPct += pct;
-    return { ...row, pct };
+  if (Math.abs(recordedUnresolvedPct - residualPct) > 1e-9 && residualPct > 0) return null;
+  if (unidentifiedPct > residualPct + 1e-9 || rows.some((row, index) => row.unclassifiedResidual && !residualIndexes.has(index))) return null;
+  return rows.map((row, index) => {
+    if (residualIndexes.has(index)) return { ...row, unclassifiedResidual: true, residualReason: "insufficient-evidence" as const };
+    const disposition = review.nonLinkDispositions?.find(item => item.reserveIndex === index);
+    if (disposition?.disposition === "basket-needs-split") {
+      const { coinId: _coinId, depType: _depType, intermediary: _intermediary, ...classified } = row;
+      return classified;
+    }
+    return row;
   });
-  // The evaluator's actual floating-point residual must also remain chargeable.
-  return 1 - admittedRows.reduce((sum, row) => sum + row.pct / 100, 0) > SCORE_EPSILON ? admittedRows : null;
 }
 
 /**
@@ -557,11 +577,17 @@ function buildSafetyScoreV9ReviewedCuratedReserveRows(
   const curatedRows = compositionRowsWithUnknownResidual(meta);
   if (review?.observations?.some(row => (row.kind === "standing-structure" || row.kind === "portfolio-observation") &&
     row.obligations.some(obligation => obligation.disposition !== "included"))) return null;
+  const namedAdmission = independentlyAttestedComposition(meta, clockSec, fixedInput);
+  if (namedAdmission?.freshness === "expired") return null;
+  const compositionMaxAgeSec = namedAdmission !== null
+    ? NAMED_FIRM_RESERVE_REPORT_MAX_AGE_SEC : REVIEWED_RESERVE_COMPOSITION_ADMISSION_MAX_AGE_SEC;
+  // A named report's age cannot be bypassed through the generic curated lane.
+  if (hasNamedReportFirm(meta) && meta.proofOfReserves?.latestReport?.periodEnd === review?.compositionAsOf &&
+    namedAdmission === null) return null;
   if ((review?.knownUnknownExposurePct ?? 0) > 0) {
     const reviewAtSec = conservativeDateEndSec(review?.reviewedAt, clockSec);
     const compositionAtSec = conservativeDateEndSec(review?.compositionAsOf, clockSec);
-    if (reviewAtSec === null || compositionAtSec === null || reviewAtSec < compositionAtSec ||
-      clockSec - compositionAtSec > REVIEWED_RESERVE_COMPOSITION_ADMISSION_MAX_AGE_SEC) return null;
+    if (reviewAtSec === null || compositionAtSec === null || reviewAtSec < compositionAtSec) return null;
   }
   const observationRefs = review?.observations?.length ? resolveV10ReserveObservationDeploymentRefs(meta) : [];
   const separate = review?.observations?.find(row =>
@@ -605,13 +631,13 @@ function buildSafetyScoreV9ReviewedCuratedReserveRows(
       conservativeDateEndSec(reportPeriodEnd, clockSec) === null ||
       conservativeDateEndSec(meta.proofOfReserves?.latestReport?.publishedAt, clockSec) === null
     )) ||
-    clockSec - compositionAtSec > REVIEWED_RESERVE_COMPOSITION_ADMISSION_MAX_AGE_SEC ||
+    clockSec - compositionAtSec > compositionMaxAgeSec ||
     !validateReserveCompositionTotal(rows, "full")
   ) {
     return null;
   }
   return {
-    rows: review.knownUnknownExposurePct === 0 ? normalizeReviewedStaticReserveRows(rows) : curatedRows,
+    rows: normalizeReviewedStaticReserveRows(curatedRows),
     evidenceClass: "static-validated",
     provenance,
   };
@@ -689,11 +715,12 @@ export function addReviewedStaticReserveEvidence(
         reserves: sourceRows,
         proofOfReserves: proof,
       },
-      maxAgeSec: ISSUER_ATTESTED_RESERVE_MAX_AGE_SEC,
+      maxAgeSec: NAMED_FIRM_RESERVE_REPORT_MAX_AGE_SEC,
     });
     return;
   }
-  if (admitted.provenance === "audited-fallback" && report) {
+  const namedAdmission = independentlyAttestedComposition(meta, clockSec);
+  if (namedAdmission !== null && report) {
     // The composition carries a named independent report, so it must keep the
     // issuer attribution and the report's own dates. Emitting it as an
     // anonymous standalone review would discard the publisher and, once the
@@ -720,9 +747,7 @@ export function addReviewedStaticReserveEvidence(
         provenance: admitted.provenance,
         proofOfReserves: meta.proofOfReserves,
       },
-      // The shorter composition bound, so the rung degrades as it ages instead
-      // of riding the 365-day audit window it was admitted under.
-      maxAgeSec: REVIEWED_RESERVE_COMPOSITION_ADMISSION_MAX_AGE_SEC,
+      maxAgeSec: NAMED_FIRM_RESERVE_REPORT_MAX_AGE_SEC,
     });
     return;
   }
@@ -773,7 +798,7 @@ export function addReviewedStaticReserveEvidence(
       evidenceClass: admitted.evidenceClass,
       provenance: admitted.provenance,
     },
-    maxAgeSec: ISSUER_ATTESTED_RESERVE_MAX_AGE_SEC,
+    maxAgeSec: NAMED_FIRM_RESERVE_REPORT_MAX_AGE_SEC,
   });
 }
 

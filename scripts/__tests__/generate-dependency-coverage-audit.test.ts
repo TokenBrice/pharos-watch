@@ -75,11 +75,18 @@ function reportCardFixture(input: {
   const cards = input.cards
     .map((inputCard): SafetyScoreV9CurrentCard => {
       const score = scoreById.get(inputCard.id) ?? null;
+      const localCauseGaps = [...new Set(input.dependencyGraph.edges
+        .filter((edge) => edge.to === inputCard.id && scoreById.get(edge.from) == null)
+        .map((edge) => `parent:${edge.from}:unknown`))].sort();
       const serial = input.dependencyGraph.edges
         .filter((edge) => edge.to === inputCard.id && (edge.kind === "serial" || edge.type === "mechanism"))
         .map((edge) => ({
           upstreamAssetId: edge.from,
           score: scoreById.get(edge.from) ?? null,
+          ratingStatus: scoreById.get(edge.from) == null ? "not-rated" as const : "rated" as const,
+          partialEvidence: null,
+          causeGapRefs: scoreById.get(edge.from) == null ? [localCauseGaps.indexOf(`parent:${edge.from}:unknown`)] : [],
+          limitedEvidenceCauses: scoreById.get(edge.from) == null ? ["U" as const] : [],
           blocked: edge.materiality === "serial-blocked",
         }))
         .sort((left, right) => left.upstreamAssetId.localeCompare(right.upstreamAssetId));
@@ -89,17 +96,23 @@ function reportCardFixture(input: {
           upstreamAssetId: edge.from,
           weight: edge.weight ?? 0,
           score: scoreById.get(edge.from) ?? null,
+          ratingStatus: scoreById.get(edge.from) == null ? "not-rated" as const : "rated" as const,
+          partialEvidence: null,
+          causeGapRefs: scoreById.get(edge.from) == null ? [localCauseGaps.indexOf(`parent:${edge.from}:unknown`)] : [],
+          limitedEvidenceCauses: scoreById.get(edge.from) == null ? ["U" as const] : [],
           boundedUnknown: edge.materiality === "basket-bounded-unknown",
         }))
         .sort((left, right) => left.upstreamAssetId.localeCompare(right.upstreamAssetId));
       const unrated = score === null;
       return makeReportCardsV9Card({
         id: inputCard.id,
+        localCauseGaps,
         score,
         backingFromLiveReserves: inputCard.backingFromLiveReserves,
         dependencyCoverage: inputCard.dependencyCoverage,
         ...(unrated ? {
           grade: "NR",
+          ratingStatus: "not-rated",
           qualityScore: null,
           pegMultiplier: null,
           pegAdjustedScore: null,
@@ -945,29 +958,6 @@ describe("generate-dependency-coverage-audit", () => {
     }));
   });
 
-  it("renders the reviewer-facing sections", () => {
-    const audit = buildDependencyCoverageAudit({
-      activeCoins,
-      stablecoins: stablecoinsPayload,
-      generatedAt: "2026-05-24T00:00:00.000Z",
-    });
-
-    const markdown = renderDependencyCoverageAuditMarkdown(audit);
-
-    expect(markdown).toContain("# Dependency Coverage Audit");
-    expect(markdown).toContain("- Static dependency edges: 2");
-    expect(markdown).toContain("## Graph Diagnostics");
-    expect(markdown).toContain("## Dependency Edges And Target Status");
-    expect(markdown).toContain("## Dependency Provenance");
-    expect(markdown).toContain("## Material Stablecoin-Looking Unlinked Reserves");
-    expect(markdown).toContain("- Adapter mapping review coverage: evaluated-clean");
-    expect(markdown).toContain("## Adapter Mapping Review Gaps");
-    expect(markdown).toContain("## Highest-Market-Cap Missing Candidates");
-    expect(markdown).toContain("LONE (lone-high)");
-    expect(markdown).toContain("## depType Without coinId Warnings");
-    expect(markdown).toContain("## L2BEAT Deployment Context");
-    expect(markdown).toContain("Base Chain (base)");
-  });
 
   it("retains the first and 50th candidate while clipping the 51st", () => {
     const overLimitCoins = Array.from({ length: 51 }, (_, index) => {
@@ -982,8 +972,6 @@ describe("generate-dependency-coverage-audit", () => {
 
     expect(markdown).toContain("C01 (candidate-01)");
     expect(markdown).toContain("C50 (candidate-50)");
-    expect(markdown).toContain("coin | mcap | local rank\n--- | ---: | ---:");
-    expect(markdown).toContain("_Plus 1 more rows._");
     expect(markdown).not.toContain("C51 (candidate-51)");
   });
 

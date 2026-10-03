@@ -14,10 +14,12 @@ import type { DependencyType, V9DependencyEconomicRole } from "../../types/depen
 import { V9_REASON_CODES, type V9ReasonCode } from "../../types/safety-score-v9";
 import { sha256HexFromUtf8Chunks } from "../sha256";
 import { stableJsonStringifyChunksV1 } from "../stable-json";
+import { V9_UNRESEARCHED_CAUSE_PROOF } from "../../types/safety-score-v9-causes";
 
+import { findV9CauseEvidenceBindingIssues } from "./evidence";
 const V9_FACT_SET_DIGEST_DOMAINS = {
   2: "safety-score-v9.normalized-facts.v2",
-  3: "safety-score-v9.normalized-facts.v3",
+  4: "safety-score-v9.normalized-facts.v4",
 } as const;
 
 /**
@@ -124,9 +126,7 @@ function assertV9FactSetDigest(factSet: CompiledV9FactSet): void {
   }
 }
 
-// Test seam (keep exported): the only path returning the *retained V2 shape*.
-// `readCompiledV9FactSetForEvaluation` upgrades V2 to V3, so the frozen-capture
-// byte-stability round-trip and the digest-tamper refusal have no public route.
+/** Explicit historical V2 reader; never upgrades old bytes into current proof-bearing facts. */
 export function parseCompiledV9FactSetV2(input: unknown): CompiledV9FactSetV2 {
   const factSet = CompiledV9FactSetV2Schema.parse(input);
   assertV9FactSetDigest(factSet);
@@ -136,6 +136,10 @@ export function parseCompiledV9FactSetV2(input: unknown): CompiledV9FactSetV2 {
 // Test seam (keep exported): V3 digest-tamper refusal, paired with the V2 form.
 export function parseCompiledV9FactSetV3(input: unknown): CompiledV9FactSetV3 {
   const factSet = CompiledV9FactSetV3Schema.parse(input);
+  for (const asset of factSet.assets) {
+    const issues = findV9CauseEvidenceBindingIssues(asset);
+    if (issues.length > 0) throw new Error(`Invalid cause proof for ${asset.assetId}: ${issues.map((issue) => issue.message).join("; ")}`);
+  }
   assertV9FactSetDigest(factSet);
   return factSet;
 }
@@ -212,37 +216,34 @@ export const V9_LEGACY_RESPONSIBILITY_BY_REASON = {
   "unreviewed-dependency-relationships": "integration-missing",
   "unreviewed-oracle-profile": "integration-missing",
   "unreviewed-reserve-envelope": "issuer-undisclosed",
+  "partial-evidence-pipeline-gap": "unresearched",
+  "single-pillar-pipeline-gap": "unresearched",
+  "all-pillars-pipeline-gap": "unresearched",
+  "f-without-measured-adverse": "unresearched",
 } as const satisfies Record<V9ReasonCode, V9EvidenceResponsibility>;
 
 if (Object.keys(V9_LEGACY_RESPONSIBILITY_BY_REASON).length !== V9_REASON_CODES.length) {
   throw new Error("Safety Score v9 legacy responsibility map is not exhaustive");
 }
 
-// Test seam (keep exported): per-gap V2->V3 responsibility mapping, asserted in
-// isolation because a whole-fact-set upgrade cannot isolate one legacy reason.
+/** Explicit historical normalization: legacy labels never certify A/B/C relief. */
 export function upgradeV9FactGapV2(gap: V9FactGapV2) {
-  const responsibility: V9EvidenceResponsibility =
-    gap.observationState === "stale"
-      ? "producer-failed"
-      : gap.observationState === "unsupported"
-        ? "method-unsupported"
-        : V9_LEGACY_RESPONSIBILITY_BY_REASON[gap.reasonCode];
-  return { ...gap, responsibility };
+  return { ...gap, responsibility: "unresearched" as const, causeProof: V9_UNRESEARCHED_CAUSE_PROOF };
 }
 
 export interface V9EvaluationFactSetRead {
-  sourceSchemaVersion: 3;
+  sourceSchemaVersion: 4;
   sourceFactSetDigest: string;
   factSet: CompiledV9FactSetV3;
 }
 
-/** Strict V3 reader for the responsibility-bearing evaluator contract. */
+/** Strict current reader. Recompile historical captures through the cause resolver. */
 export function readCompiledV9FactSetForEvaluation(input: unknown): V9EvaluationFactSetRead {
-  const schemaVersion =
-    input !== null && typeof input === "object" ? (input as { schemaVersion?: unknown }).schemaVersion : undefined;
-  if (schemaVersion !== 3) {
-    throw new Error(`Unsupported Safety Score v9 fact-set schema version: ${String(schemaVersion)}; expected 3`);
+  const schemaVersion = input !== null && typeof input === "object" && "schemaVersion" in input
+    ? input.schemaVersion : undefined;
+  if (schemaVersion !== 4) {
+    throw new Error(`Unsupported Safety Score v9 fact-set schema version: ${String(schemaVersion)}; expected 4`);
   }
   const factSet = parseCompiledV9FactSetV3(input);
-  return { sourceSchemaVersion: 3, sourceFactSetDigest: factSet.v9FactSetDigest, factSet };
+  return { sourceSchemaVersion: 4, sourceFactSetDigest: factSet.v9FactSetDigest, factSet };
 }

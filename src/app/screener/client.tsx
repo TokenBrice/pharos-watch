@@ -63,6 +63,9 @@ const EXPORT_COLUMNS: CsvColumn<ScreenerRow>[] = [
   { header: "liquidity_score", accessor: (row) => row.liquidityScore ?? "" },
   { header: "safety_grade", accessor: (row) => row.safetyGrade ?? "" },
   { header: "safety_score", accessor: (row) => row.safetyScore ?? "" },
+  { header: "safety_rating_status", accessor: (row) => row.ratingStatus ?? "" },
+  { header: "safety_partial_evidence", accessor: (row) => row.partialEvidence ? "Partial evidence: pipeline gap" : "" },
+  { header: "safety_gap_causes", accessor: (row) => row.partialEvidence?.causes.map(cause => cause === "A" ? "pipeline unavailable (A)" : "public data awaiting curation (B)").join("; ") ?? "" },
   { header: "safety_backing", accessor: (row) => row.safetyBackingScore ?? "" },
   { header: "safety_exit", accessor: (row) => row.safetyExitScore ?? "" },
   { header: "safety_control", accessor: (row) => row.safetyControlScore ?? "" },
@@ -205,15 +208,19 @@ export function ScreenerClient() {
         liquidityScore: dexData?.[meta.id]?.liquidityScore ?? null,
         safetyGrade: safety?.grade ?? null,
         safetyScore: safety?.score ?? null,
+        ratingStatus: safety?.ratingStatus ?? null,
+        partialEvidence: safety?.partialEvidence ?? null,
         safetyBackingScore: safety?.pillars.backing.score ?? null,
         safetyExitScore: safety?.pillars.exit.score ?? null,
         safetyControlScore: safety?.pillars.control.score ?? null,
         safetyEvidence:
-          safety?.grade === "NR"
-            ? "nr"
-            : safety?.evidence.level === "insufficient"
-              ? "limited"
-              : safety?.evidence.level ?? "nr",
+          safety?.ratingStatus === "pipeline-gap"
+            ? "pipeline-gap"
+            : safety?.ratingStatus === "not-rated"
+              ? "nr"
+              : safety?.evidence.level === "insufficient"
+                ? "limited"
+                : safety?.evidence.level ?? null,
         safetyWeakestPillar: safety?.weakestPillar?.pillar ?? null,
         safetyWeakestScore: safety?.weakestPillar?.score ?? null,
         safetyBindingCapReason: safety?.bindingCapReason ?? null,

@@ -10,7 +10,6 @@ import {
 } from "../lib/cli-args.mjs";
 import { z } from "zod";
 import {
-  aggregateV9GeneralizedMean,
   aggregateV9SmoothBoundedHeadroom,
   type V9AggregationStrategy,
 } from "@shared/lib/safety-score-v9/aggregation";
@@ -25,6 +24,7 @@ import {
   V9StructuralSignalSchema,
 } from "@shared/types/safety-score-v9";
 import { V9EvidenceResponsibilitySchema } from "@shared/types/safety-score-v9-fact-primitives";
+import { V9PillarCauseShape } from "@shared/types/safety-score-v9-causes";
 
 const PillarReasonSchema = z.object({
   code: V9ReasonCodeSchema,
@@ -34,6 +34,7 @@ const PillarReasonSchema = z.object({
 }).passthrough();
 
 const ReplayPillarSchema = z.object({
+  ...V9PillarCauseShape,
   score: z.number().nullable(),
   evidenceLevel: V9EvidenceLevelSchema,
   reasons: z.array(PillarReasonSchema).default([]),
@@ -94,7 +95,7 @@ const ReplaySchema = z.object({
           scoreInput: ReplayScoreInputSchema,
           trace: z.object({
             finalScore: z.number().nullable(),
-            finalGrade: z.string(),
+            finalGrade: z.string().nullable(),
           }).passthrough(),
         }),
       ),
@@ -102,70 +103,20 @@ const ReplaySchema = z.object({
   }).passthrough(),
 }).passthrough();
 
-const POLICY_CONTROL_HEADROOM =
-  V9_CANDIDATE_POLICY_V1.policy.semantic.formula.controlCompensabilityHeadroom;
-
 interface Candidate {
   id: string;
   aggregate: V9AggregationStrategy;
 }
 
 const CANDIDATES: readonly Candidate[] = [
-  {
-    id: "smooth-bounded-headroom:policy",
-    aggregate: aggregateV9SmoothBoundedHeadroom,
-  },
-  {
-    id: "smooth-bounded-headroom:legacy-control-selector",
-    aggregate: (pillars, weights, policyHeadroom) =>
-      aggregateV9SmoothBoundedHeadroom(
-        pillars,
-        weights,
-        pillars.control < pillars.backing && pillars.control < pillars.exit
-          ? POLICY_CONTROL_HEADROOM
-          : policyHeadroom,
-      ),
-  },
-  {
-    id: "smooth-bounded-headroom:h20",
-    aggregate: (pillars, weights) => aggregateV9SmoothBoundedHeadroom(pillars, weights, 20),
-  },
-  {
-    id: "smooth-bounded-headroom:h30",
-    aggregate: (pillars, weights) => aggregateV9SmoothBoundedHeadroom(pillars, weights, 30),
-  },
-  {
-    id: "smooth-bounded-headroom:h45",
-    aggregate: (pillars, weights) => aggregateV9SmoothBoundedHeadroom(pillars, weights, 45),
-  },
-  {
-    id: "smooth-bounded-headroom:h45-control30",
-    aggregate: (pillars, weights) =>
-      aggregateV9SmoothBoundedHeadroom(
-        pillars,
-        weights,
-        pillars.control < pillars.backing && pillars.control < pillars.exit ? 30 : 45,
-      ),
-  },
-  {
-    id: "smooth-bounded-headroom:h60",
-    aggregate: (pillars, weights) => aggregateV9SmoothBoundedHeadroom(pillars, weights, 60),
-  },
-  {
-    id: "generalized-mean:p-2",
-    aggregate: (pillars, weights) => aggregateV9GeneralizedMean(pillars, weights, -2),
-  },
-  {
-    id: "generalized-mean:p-4",
-    aggregate: (pillars, weights) => aggregateV9GeneralizedMean(pillars, weights, -4),
-  },
+  { id: "smooth-bounded-headroom:policy", aggregate: aggregateV9SmoothBoundedHeadroom },
 ];
 
-function histogram(rows: readonly { grade: string }[]): Record<string, number> {
+function histogram(rows: readonly { grade: string | null }[]): Record<string, number> {
   return Object.fromEntries(
-    ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F", "NR"].map((grade) => [
+    ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F", "NR", "pipeline-gap"].map((grade) => [
       grade,
-      rows.filter((row) => row.grade === grade).length,
+      rows.filter((row) => grade === "pipeline-gap" ? row.grade === null : row.grade === grade).length,
     ]),
   );
 }
@@ -195,6 +146,8 @@ export function buildV9AggregationCounterfactual(input: unknown, inputPath = "<m
         baselineGrade: asset.trace.finalGrade,
         score: trace.finalScore,
         grade: trace.finalGrade,
+        ratingStatus: trace.ratingStatus,
+        partialEvidence: trace.partialEvidence,
         aggregation: trace.aggregation,
         baseAssetScore: trace.baseAssetScore,
         deploymentAdjustedScore: trace.deploymentAdjustedScore,
@@ -205,6 +158,9 @@ export function buildV9AggregationCounterfactual(input: unknown, inputPath = "<m
     return {
       candidateId: candidate.id,
       ratedCount: rated.length,
+      notRatedCount: assets.filter((asset) => asset.ratingStatus === "not-rated").length,
+      pipelineGapCount: assets.filter((asset) => asset.ratingStatus === "pipeline-gap").length,
+      partialRatedCount: assets.filter((asset) => asset.ratingStatus === "rated" && asset.partialEvidence !== null).length,
       histogram: histogram(assets),
       exactScorePileups: exactScorePileups(assets).slice(0, 20),
       assets,

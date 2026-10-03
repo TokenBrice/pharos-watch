@@ -136,7 +136,8 @@ async function main(): Promise<void> {
     if (mismatches.length > 0) throw new Error(`Capture replay does not match accepted publication identity: ${mismatches.join("; ")}`);
     for (const card of source.cards) {
       const baseline = candidate.cards.find(row => row.id === card.id);
-      if (!baseline || baseline.score !== card.score || baseline.grade !== card.grade) throw new Error(`Published baseline mismatch: ${card.id}`);
+      if (!baseline || baseline.score !== card.score || baseline.grade !== card.grade ||
+        baseline.ratingStatus !== card.ratingStatus || stableJsonStringifyV1(baseline.partialEvidence) !== stableJsonStringifyV1(card.partialEvidence)) throw new Error(`Published baseline mismatch: ${card.id}`);
     }
     writeFileSync(sourcePath, JSON.stringify(source));
   }
@@ -162,14 +163,17 @@ async function main(): Promise<void> {
       const id = `${rootId}:${shock.kind}`;
       const result = evaluateV9ContagionScenario({ rawCompileInput, policy, clock: fixedInput.clockSec, publicationGenerationId: candidate.publicationGenerationId }, { id, shocks: [shock] });
       const assumptions = shock.kind === "score-limit" ? ["Root downstream-consumed final projection is limited to 40; its published headline score is not overwritten."] : shock.kind === "depeg" ? ["Active depeg of 1,000 bps for one day; captured historical peg performance and exit facts are held fixed."] : ["Root mint authority is compromised; missing mint control is modeled as global unbounded EOA minting with zero delay."];
-      scenarios.push({ id, rootId, shock, assumptions, results: result.rows.filter(row => row.coinId === rootId || row.changedDimensions.length > 0).map(row => ({
-        assetId: row.coinId, publishedScore: row.baselineScore, publishedGrade: row.baselineGrade as DependencyScenarioArtifact["scenarios"][number]["results"][number]["publishedGrade"],
-        modeledScore: row.scenarioScore, modeledGrade: row.scenarioGrade as DependencyScenarioArtifact["scenarios"][number]["results"][number]["modeledGrade"], deltaScore: row.delta, minHop: row.shortestHop,
+      scenarios.push({ id, rootId, shock, assumptions, results: result.rows.filter(row => row.failure === null && (row.coinId === rootId || row.changedDimensions.length > 0)).map(row => ({
+        assetId: row.coinId, publishedScore: row.baselineScore, publishedGrade: row.baselineGrade,
+        publishedRatingStatus: row.baselineRatingStatus, publishedPartialEvidence: row.baselinePartialEvidence,
+        modeledScore: row.scenarioScore, modeledGrade: row.scenarioGrade,
+        modeledRatingStatus: row.scenarioRatingStatus!, modeledPartialEvidence: row.scenarioPartialEvidence,
+        deltaScore: row.delta, minHop: row.shortestHop,
         roles: [...new Set((byId.get(row.coinId)?.dependencies.roles ?? []).map(role => role.role))].sort(),
       })), failures: result.rows.filter(row => row.failure !== null).map(row => ({ assetId: row.coinId, code: row.failure! })) });
     }
   }
-  const artifact = DependencyScenarioArtifactSchema.parse({ schemaVersion: 1, sourcePublicationGenerationId: candidate.publicationGenerationId, sourceBaseInputGenerationId: candidate.baseInputGenerationId, methodologyVersion: source?.methodology.version ?? candidate.policyVersion, evaluationBuildDigest: candidate.evaluationBuildDigest, computedAtSec: Math.floor(Date.now() / 1000), cohort: { rootIds: hubs.map(hub => hub.hubId), selection: "Top 15 hubs by A1 direct exposure USD using source-publication supply and published dependencies; shared books counted once. Unknown supply or shares excluded, not zero." }, scenarios });
+  const artifact = DependencyScenarioArtifactSchema.parse({ schemaVersion: 2, sourcePublicationGenerationId: candidate.publicationGenerationId, sourceBaseInputGenerationId: candidate.baseInputGenerationId, methodologyVersion: source?.methodology.version ?? candidate.policyVersion, evaluationBuildDigest: candidate.evaluationBuildDigest, computedAtSec: Math.floor(Date.now() / 1000), cohort: { rootIds: hubs.map(hub => hub.hubId), selection: "Top 15 hubs by A1 direct exposure USD using source-publication supply and published dependencies; shared books counted once. Unknown supply or shares excluded, not zero." }, scenarios });
   const bytes = JSON.stringify(artifact);
   writeFileSync(artifactPath, bytes);
   if (source) writeFileSync(stampPath, `${verificationStamp(source, bytes)}\n`);

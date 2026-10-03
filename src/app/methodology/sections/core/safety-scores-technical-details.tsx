@@ -22,11 +22,14 @@ export function SafetyScoresTechnicalDetails() {
     <>
       <MethodologyDetails summary="Current V10 technical contract" primary>
         <p>
-          The checked policy uses Backing {formula.pillarWeights.backing * 100}%, Exit{" "}
-          {formula.pillarWeights.exit * 100}%, and Economic Control {formula.pillarWeights.control * 100}%. It first
-          computes their weighted quality, then limits compensation above the weakest material pillar with smooth
-          bounded headroom. Peg behavior applies with exponent {formula.pegExponent}; dependencies, evidence rules,
-          track-record ceilings, wrapper-local risks, and structural caps can constrain but never invent evidence.
+          The checked policy normally uses Backing {formula.pillarWeights.backing * 100}%, Exit{" "}
+          {formula.pillarWeights.exit * 100}%, and Economic Control {formula.pillarWeights.control * 100}%.
+          Use the weights of included pillars only, renormalized to sum to one. With at least two included pillars,
+          weighted quality cannot exceed the strongest measured support, and the score receives at most bounded
+          headroom above the weakest included pillar. Exactly one excluded pillar produces a labelled two-pillar
+          partial rating; fewer than two means Pipeline gap with no aggregate or grade. Peg behavior applies with
+          exponent {formula.pegExponent}; positively evidenced method, parent, history and structural constraints
+          remain without missing-data ceilings.
         </p>
         <p>
           Since methodology v9.22 every score-bearing gate is part of the versioned policy asset
@@ -39,20 +42,20 @@ export function SafetyScoresTechnicalDetails() {
           active values did not change when this landed: the release rotated provenance, not scores.
         </p>
         <p className="pharos-numeric">
-          candidate = weakest + {formula.compensabilityHeadroom} × tanh((weightedQuality − weakest) /{" "}
+          candidate = weakestIncluded + {formula.compensabilityHeadroom} × tanh((renormalizedWeightedQuality − weakestIncluded) /{" "}
           {formula.compensabilityHeadroom})
         </p>
         <MethodologyFacts
           facts={[
-            { label: "Pillar weights", value: "Backing 40% · Exit 35% · Economic Control 25%" },
+            { label: "Pillar weights", value: "40/35/25 normally; renormalized over included pillars" },
             { label: "Peg adjustment", value: `(pegScore / 100)^${formula.pegExponent}` },
             { label: "Active-depeg caps", value: activeDepegCaps },
             { label: "Track-record ceilings", value: trackRecordCeilings },
             { label: "Rounding", value: rounding },
             { label: "Equal-cap priority", value: formula.capTiePriority.join(" → ") },
             { label: "Grade thresholds", value: gradeThresholds },
-            { label: "Insufficient evidence", value: "NR unless an explicit bounded policy keeps it rateable" },
-            { label: "Publication", value: "Global failure holds; attributable local failures quarantine to NR at ≥90% healthy" },
+            { label: "Insufficient evidence", value: "C/U/D-only causal gates; A/B never NR" },
+            { label: "Publication", value: "Global failures hold; proven local technical gaps preserve pipeline-gap status" },
             {
               label: "Policy provenance",
               value: `Score-bearing gates digest-bound since v${releaseVersion}; withhold below ${formula.withhold.maxScoreExclusive}, F-gate peg floor ${formula.danger.fGatePegMultiplierFloor}, material-bridge share ${semantic.control.materialBridgeHighShareThreshold * 100}%`,

@@ -56,7 +56,9 @@ export async function loadActiveSafetyScoreIndex(db: D1Database, signal?: AbortS
     if (row.score_index === null) return unavailable("safety-score-index-missing");
     let index;
     try {
-      index = SafetyScoreIndexSchema.parse(JSON.parse(row.score_index));
+      const storedIndex = JSON.parse(row.score_index);
+      if (storedIndex?.schemaVersion === 1) return unavailable("publication-schema-cutover-pending");
+      index = SafetyScoreIndexSchema.parse(storedIndex);
       if (stableJsonStringifyV1(index) !== row.score_index) return unavailable("safety-score-index-invalid");
     } catch {
       return unavailable("safety-score-index-invalid");
@@ -70,7 +72,9 @@ export async function loadActiveSafetyScoreIndex(db: D1Database, signal?: AbortS
       return unavailable("safety-score-index-publication-mismatch");
     }
     if (row.health === null) return unavailable("safety-score-index-health-unavailable");
-    const health = V9PublicationHealthSchema.parse(JSON.parse(row.health));
+    const storedHealth = JSON.parse(row.health);
+    if (storedHealth?.schemaVersion === 1) return unavailable("publication-schema-cutover-pending");
+    const health = V9PublicationHealthSchema.parse(storedHealth);
     if (stableJsonStringifyV1(health) !== row.health || row.health_updated_at !== health.attemptedAtSec) {
       return unavailable("safety-score-index-health-unavailable");
     }

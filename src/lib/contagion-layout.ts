@@ -30,7 +30,8 @@ export type ContagionEdgeRelationship = "collateral" | "wrapper";
 export interface ContagionGraphCard {
   id: string;
   symbol: string;
-  grade: V9Grade;
+  grade: V9Grade | null;
+  partialEvidence?: { causes: readonly ("A" | "B")[]; excludedPillars: readonly string[] } | null;
   isDefunct?: boolean;
   sharedBookId?: string | null;
 }
@@ -38,7 +39,8 @@ export interface ContagionGraphCard {
 export interface GraphNode extends SimulationNodeDatum {
   id: string;
   symbol: string;
-  grade: V9Grade;
+  grade: V9Grade | null;
+  partialEvidence?: ContagionGraphCard["partialEvidence"];
   mcap: number | null;
   r: number;
 }
@@ -307,7 +309,7 @@ export function buildGraphData(
     const card = cardMap.get(id)!;
     const mcap = mcapMap.get(id) ?? null;
     const r = mcap === null ? MIN_RADIUS : MIN_RADIUS + Math.sqrt(mcap / maxMcap) * (MAX_RADIUS - MIN_RADIUS);
-    return { id, symbol: card.symbol, grade: card.grade, mcap, r };
+    return { id, symbol: card.symbol, grade: card.grade, partialEvidence: card.partialEvidence, mcap, r };
   });
 
   const graphLinks: GraphLink[] = selectedLinks;

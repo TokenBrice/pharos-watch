@@ -9,8 +9,8 @@ import { evaluateV9ReserveExposures } from "@shared/lib/safety-score-v9/backing"
 import type {
   V9BackingAssetInput,
   V9ResolvedUpstreamExposure,
+  ReserveEvaluation,
 } from "@shared/lib/safety-score-v9/backing-primitives";
-import { V9_LEGACY_RESPONSIBILITY_BY_REASON } from "@shared/lib/safety-score-v9/facts";
 import { scoreV9Input } from "@shared/lib/safety-score-v9/formula";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import type { V9FactStatusV2, V9ReserveExposureFactV2 } from "@shared/types/safety-score-v9-facts";
@@ -171,7 +171,7 @@ function reserveAsset(
   };
 }
 
-function scoreBacking(result: ReturnType<typeof evaluateV9ReserveExposures>) {
+function scoreBacking(result: ReserveEvaluation) {
   const evidenceLevel = result.unresolved.some((reason) => reason.treatment !== "diagnostic")
     ? ("limited" as const)
     : ("strong" as const);
@@ -198,7 +198,8 @@ function scoreBacking(result: ReturnType<typeof evaluateV9ReserveExposures>) {
         code: reason.code,
         reason: `${reason.code} at ${reason.pathKey}`,
         critical: false,
-        responsibility: V9_LEGACY_RESPONSIBILITY_BY_REASON[reason.code],
+        cause: reason.cause ?? "U",
+        responsibility: reason.responsibility ?? "unresearched",
       })),
     },
     V9_CANDIDATE_POLICY_V1,
@@ -239,7 +240,7 @@ describe("VERITAS-II finding named rows evade same-issuer speculative-credit mat
 });
 
 describe("VERITAS-II finding exact threshold disagrees on dependency treatment and structural cap", () => {
-  it("classifies an exact 10% unavailable upstream consistently across projection and backing", () => {
+  it("keeps an exact 10% unavailable upstream material without inventing an adverse cap", () => {
     const weights = [0.001, 0.009, 0.09];
     expect(weights.reduce((sum, weight) => sum + weight, 0)).toBeLessThan(0.1);
     const tracked = weights.map((weight, index) =>
@@ -267,14 +268,13 @@ describe("VERITAS-II finding exact threshold disagrees on dependency treatment a
     );
     const trace = scoreBacking(result);
 
-    expect(result.structuralReasons).toContainEqual(
-      expect.objectContaining({ kind: "unsafe-backing", severity: "high", ceiling: 59 }),
-    );
+    expect(result.structuralReasons).toEqual([]);
     expect(result.unresolved).toContainEqual(
-      expect.objectContaining({ code: "material-dependency-unavailable", treatment: "ceiling" }),
+      expect.objectContaining({ code: "material-dependency-unavailable", treatment: "pillar", cause: "U" }),
     );
-    expect(trace.finalScore).toBe(59);
-    expect(trace.finalGrade).toBe("C");
-    expect(trace.caps).toContainEqual(expect.objectContaining({ source: "evidence", limit: 69 }));
+    expect(trace.finalGrade).not.toBe("NR");
+    expect(trace.finalGrade).not.toBe("F");
+    expect(trace.adverseAttribution).toEqual([]);
+    expect(trace.caps.filter((cap) => cap.source === "evidence")).toEqual([]);
   });
 });

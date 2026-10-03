@@ -28,6 +28,10 @@ import {
   XautRepresentationGroupSupplyAttributionV2Schema,
   xautRepresentationGroupAttributionValidationError,
 } from "./safety-score-v9/xaut-supply-attribution-contract";
+import {
+  PipelineGapByAssetIdSchema, assertPipelineGapCapture, normalizePipelineGapByAssetId,
+  type PipelineGapByAssetId,
+} from "@shared/lib/report-cards-fixed-input-identity";
 
 const FreshnessEntrySchema = z.object({
   updatedAt: z.number().finite().nonnegative().nullable(),
@@ -161,6 +165,8 @@ export function createFixedInputPayloadFields<
     // Both journals are diagnostic-only and excluded from base-input identity.
     evidenceJournalById: ReportCardEvidenceJournalByIdV1Schema.default({}),
     supplyAttributionJournalById: SupplyAttributionJournalByIdV1Schema.default({}),
+    // Optional only for proof-free historical captures. Never enrich this at compute time.
+    pipelineGapByAssetId: PipelineGapByAssetIdSchema.optional(),
     pegProvenanceById: z
       .record(z.string(), SafetyScoreV9PegProvenanceSummarySchema)
       .default({}),
@@ -206,6 +212,7 @@ interface CommonFixedInput {
   safetyScoreV9SupplyAttributionById: Record<string, SafetyScoreV9SupplyAttribution>;
   evidenceJournalById: Record<string, Array<{ completedAtSec: number }>>;
   supplyAttributionJournalById: Record<string, Array<{ completedAtSec: number }>>;
+  pipelineGapByAssetId?: PipelineGapByAssetId;
   pegProvenanceById: Record<string, z.infer<typeof SafetyScoreV9PegProvenanceSummarySchema>>;
   pegDataById: Record<string, z.infer<typeof PegSummaryCoinSchema>>;
 }
@@ -245,6 +252,9 @@ export function assertCommonFixedInputConsistency(
   }
 
   if (options.phase === "evidence") {
+    if (input.pipelineGapByAssetId !== undefined) {
+      assertPipelineGapCapture(input.pipelineGapByAssetId, input.activeAssetIds, input.clockSec);
+    }
     for (const [assetId, attribution] of Object.entries(input.safetyScoreV9SupplyAttributionById)) {
       if (!input.activeAssetIds.includes(assetId)) {
         throw new Error(`V9 supply attribution targets inactive asset ${assetId}`);
@@ -403,6 +413,7 @@ interface CommonNormalizationInput {
   safetyScoreV9SupplyAttributionById: Record<string, SafetyScoreV9SupplyAttribution>;
   evidenceJournalById: Record<string, unknown>;
   supplyAttributionJournalById: Record<string, unknown>;
+  pipelineGapByAssetId?: PipelineGapByAssetId;
   pegProvenanceById: Record<string, unknown>;
   dexDeploymentSupplyCoverageById: Record<string, unknown>;
   liveToFallbackCoins: string[];
@@ -444,6 +455,9 @@ export function normalizeCommonFixedInputRecords<T extends CommonNormalizationIn
     ),
     evidenceJournalById: input.evidenceJournalById,
     supplyAttributionJournalById: input.supplyAttributionJournalById,
+    ...(input.pipelineGapByAssetId === undefined ? {} : {
+      pipelineGapByAssetId: normalizePipelineGapByAssetId(input.pipelineGapByAssetId),
+    }),
     pegProvenanceById: sortedInputRecord(input.pegProvenanceById),
     dexDeploymentSupplyCoverageById: sortedInputRecord(input.dexDeploymentSupplyCoverageById),
     liveToFallbackCoins: [...input.liveToFallbackCoins].sort(),

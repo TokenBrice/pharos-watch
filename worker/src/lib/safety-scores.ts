@@ -71,7 +71,7 @@ export async function computeSafetyScoresSnapshot(
   const identity = active.snapshot.safetyScoreIdentity;
   const scores = new Map<string, SafetyResult>();
   for (const card of active.snapshot.cards) {
-    if (card.score !== null) {
+    if (card.ratingStatus === "rated" && card.score !== null && card.grade !== null) {
       scores.set(card.id, { score: card.score, grade: card.grade });
     }
   }

@@ -2,26 +2,17 @@ import { describe, expect, it } from "vitest";
 import type { DepegEvent } from "../../types/market";
 import { computePegScore, PEG_SCORE_LOOKBACK_SEC } from "../peg-score";
 import { DAY_SECONDS } from "../time-constants";
+import { deriveV9WindowedPegScore } from "../safety-score-v9/formula";
+import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 
-/**
- * D7 (2026-07-17) dropped the provisional D3 band-aware peg ruling. These
- * tests retain only the critical trust-boundary regression: the public V8 peg
- * computation and its adverse MIM/EURS outputs remain byte-identical.
- *
- * CRITICAL TRUST BOUNDARY: the public V8 peg computation
- * (`shared/lib/peg-score.ts`) must remain byte-identical — band awareness
- * exists only in the V9 adapter path. The ACTIVE block is that regression: it
- * pins full `computePegScore` outputs for fixed histories. Band-aware behavior
- * is intentionally absent from the V9 engine under D7.
- */
+/** Public four-year peg history stays separate from the V9-only window proxy. */
 
 const NOW = 1_800_000_000;
-const TRACKING_START = NOW - Math.ceil(2 * 365.25 * DAY_SECONDS); // 1736884800
+const TRACKING_START = NOW - PEG_SCORE_LOOKBACK_SEC;
 
-let nextId = 1;
 function event(peakDeviationBps: number, startedDaysAgo: number, durationDays: number | null): DepegEvent {
   return {
-    id: nextId++,
+    id: 1,
     stablecoinId: "fixture-coin",
     symbol: "FIX",
     pegType: "USD",
@@ -41,89 +32,37 @@ function event(peakDeviationBps: number, startedDaysAgo: number, durationDays: n
   };
 }
 
-/** LUSD-shaped: short deviations inside a 100bps redemption band. */
-const IN_BAND: DepegEvent[] = [event(-62, 40, 2), event(-85, 200, 3), event(95, 500, 3)];
-/** Band-breaks: peaks far outside any documented band. */
-const BAND_BREAK: DepegEvent[] = [event(-320, 30, 2), event(780, 100, 4)];
-/** MIM-shaped: active deep depeg, no documented band. */
-const MIM_SHAPED: DepegEvent[] = [event(-7800, 10, null)];
-/** EURS-shaped: persistent ~41% deviation, no documented band. */
-const EURS_SHAPED: DepegEvent[] = [event(-4100, 400, null)];
 
-describe("D3 trust boundary — V8 public peg output is byte-identical (active regression)", () => {
-  it("keeps the public 4-year lookback constant", () => {
-    expect(PEG_SCORE_LOOKBACK_SEC).toBe(Math.ceil(4 * 365.25 * DAY_SECONDS));
+describe("public peg history and V9 window trust boundary", () => {
+  it("retains a closed incident beyond the V9 window without leaking its quiet-history floor into public scoring", () => {
+    const history = [event(-9000, Math.floor(3.5 * 365.25), 90)];
+    const publicScore = computePegScore(history, TRACKING_START, NOW);
+    const { pegHistoryWindowSec, pegQuietHistoryFloor } = V9_CANDIDATE_POLICY_V1.policy.semantic.formula;
+    const adapted = deriveV9WindowedPegScore({
+      pegScore: publicScore.pegScore,
+      activeDepeg: publicScore.activeDepeg,
+      lastEventAt: publicScore.lastEventAt,
+      clockSec: NOW,
+      windowSec: pegHistoryWindowSec,
+      quietHistoryFloor: pegQuietHistoryFloor,
+    });
+    expect(publicScore.scoredEventCount).toBe(1);
+    expect(publicScore.pegScore).toBeLessThan(pegQuietHistoryFloor);
+    expect(adapted).toBe(pegQuietHistoryFloor);
+    expect(computePegScore(history, TRACKING_START, NOW).pegScore).toBe(publicScore.pegScore);
   });
 
-  it("reproduces the exact V8 result for an in-band-shaped history", () => {
-    expect(computePegScore(IN_BAND, TRACKING_START, NOW)).toEqual({
-      pegScore: 99,
-      pegPct: 98.90485968514716,
-      severityScore: 99.8677190692657,
-      spreadPenalty: 0.20724381776062706,
-      eventCount: 3,
-      scoredEventCount: 3,
-      excludedEventCount: 0,
-      lowConfidenceEventCount: 0,
-      qualityAdjusted: false,
-      worstDeviationBps: 95,
-      activeDepeg: false,
-      lastEventAt: 1796544000,
-      trackingSpanDays: 730,
-    });
-  });
-
-  it("reproduces the exact V8 result for a band-break history", () => {
-    expect(computePegScore(BAND_BREAK, TRACKING_START, NOW)).toEqual({
-      pegScore: 96,
-      pegPct: 99.17864476386036,
-      severityScore: 98.98639468350825,
-      spreadPenalty: 3.45,
-      eventCount: 2,
-      scoredEventCount: 2,
-      excludedEventCount: 0,
-      lowConfidenceEventCount: 0,
-      qualityAdjusted: false,
-      worstDeviationBps: 780,
-      activeDepeg: false,
-      lastEventAt: 1797408000,
-      trackingSpanDays: 730,
-    });
-  });
-
-  it("reproduces the exact V8 result for a MIM-shaped active depeg", () => {
-    expect(computePegScore(MIM_SHAPED, TRACKING_START, NOW)).toEqual({
-      pegScore: 37,
-      pegPct: 98.63107460643394,
-      severityScore: 74.69287141905397,
-      spreadPenalty: 0,
-      eventCount: 1,
-      scoredEventCount: 1,
-      excludedEventCount: 0,
-      lowConfidenceEventCount: 0,
-      qualityAdjusted: false,
-      worstDeviationBps: -7800,
-      activeDepeg: true,
-      lastEventAt: 1799136000,
-      trackingSpanDays: 730,
-    });
-  });
-
-  it("reproduces the exact V8 result for an EURS-shaped persistent deviation", () => {
-    expect(computePegScore(EURS_SHAPED, TRACKING_START, NOW)).toEqual({
-      pegScore: 0,
-      pegPct: 45.242984257357975,
-      severityScore: 41.29271479908527,
-      spreadPenalty: 0,
-      eventCount: 1,
-      scoredEventCount: 1,
-      excludedEventCount: 0,
-      lowConfidenceEventCount: 0,
-      qualityAdjusted: false,
-      worstDeviationBps: -4100,
-      activeDepeg: true,
-      lastEventAt: 1765440000,
-      trackingSpanDays: 730,
-    });
+  it.each([[-7800, 10], [-4100, 400]])("preserves a legacy-open %i bps incident without inventing %i days of trusted duration", (peak, days) => {
+    const history = [event(peak, days, null)];
+    const publicScore = computePegScore(history, TRACKING_START, NOW);
+    expect(publicScore.activeDepeg).toBe(true);
+    expect(publicScore.worstDeviationBps).toBe(peak);
+    expect(publicScore.unknownCoverageSeconds).toBe(days * DAY_SECONDS);
+    const onlyBlindHistory = computePegScore(history, history[0]!.startedAt, NOW);
+    expect(onlyBlindHistory.pegPct).toBeNull();
+    expect(onlyBlindHistory.pegScore).toBeNull();
+    const later = computePegScore(history, history[0]!.startedAt, NOW + DAY_SECONDS);
+    expect(later.pegPct).toBeNull();
+    expect(later.unknownCoverageSeconds).toBe((days + 1) * DAY_SECONDS);
   });
 });

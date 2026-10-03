@@ -13,7 +13,7 @@ import {
 const USAGE = `Usage: npx tsx scripts/maintenance/generate-safety-score-v9-evidence-gap-queue.ts [options]
 
 Options:
-  --fact-set <path>       Compiled V3 or retained V2 fact-set JSON (required)
+  --fact-set <path>       Compiled schema-4 fact-set JSON (required; recompile older captures)
   --policy <path>         Explicit V9 methodology policy JSON (required)
   --output <path>         Strict evidence-gap queue JSON (required)
   --require-clear         Exit nonzero after writing when work remains

@@ -310,18 +310,6 @@ export function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
     pegScore !== null &&
     activeDepeg &&
     activeDepegBps !== null;
-  // Owner ruling 2026-07-27: a deviation withheld solely by the $1M supply
-  // floor is deliberate methodology (deviation fails closed on thin supply),
-  // not a failed feed. The ceiling treatment is byte-identical to
-  // missing-peg-input (same peg-unverified named cap), so only the public
-  // classification changes: measured-structural instead of missing data.
-  const supplyFloorWithheld =
-    reference !== null &&
-    !unresolvedReference &&
-    pegScore !== null &&
-    peg.currentDeviationBps === null &&
-    peg.depegEventCoverageLimited === true &&
-    !activeDepeg;
   // Owner ruling 2026-07-29 (P4, nxusd-nereus): when the producer reports that
   // no usable price observation exists AND the asset's tracked record already
   // holds adverse peg evidence, the null deviation is neither a feed failure
@@ -354,26 +342,22 @@ export function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
       reasonCode:
         reference === null || unresolvedReference
           ? "missing-applicable-peg"
-          : supplyFloorWithheld
-            ? "peg-supply-floor-withheld"
-            : priceUnavailableWithAdverseRecord
-              ? "peg-price-unavailable-adverse-history"
-              : "missing-peg-input",
+          : priceUnavailableWithAdverseRecord
+            ? "peg-price-unavailable-adverse-history"
+            : "missing-peg-input",
       ownerDomain: "peg",
       responsibility:
         reference === null || unresolvedReference
           ? "integration-missing"
-          : supplyFloorWithheld || priceUnavailableWithAdverseRecord
+          : priceUnavailableWithAdverseRecord
             ? "measured-adverse"
             : "producer-failed",
       policyRuleId: "v9.peg.current",
-      message: supplyFloorWithheld
-        ? "Peg deviation is withheld by the $1M supply floor: below it, deviation fails closed by methodology design."
-        : priceUnavailableWithAdverseRecord
-          ? "No usable price observation exists for this asset and its tracked peg record is adverse, so the current deviation is unobservable rather than at peg."
-          : unresolvedReference
-            ? `The configured peg reference ${reference?.referenceKey ?? "unknown"} could not be resolved; child peg metrics are withheld.`
-            : "The peg row lacks an explicit reference, score, deviation, or active-depeg peak.",
+      message: priceUnavailableWithAdverseRecord
+        ? "No usable price observation exists for this asset and its tracked peg record is adverse, so the current deviation is unobservable rather than at peg."
+        : unresolvedReference
+          ? `The configured peg reference ${reference?.referenceKey ?? "unknown"} could not be resolved; child peg metrics are withheld.`
+          : "The peg row lacks an explicit reference, score, deviation, or active-depeg peak.",
       observationState: "bounded-unknown",
       evidenceRefIds: [evidenceId],
     }).status;

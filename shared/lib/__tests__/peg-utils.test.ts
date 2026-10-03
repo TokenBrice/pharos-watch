@@ -83,11 +83,11 @@ describe("mergeDepegSeconds", () => {
       expected: 0,
     },
     {
-      name: "treats active events as ending at now",
+      name: "does not invent the end of an uninstrumented active interval",
       events: [{ startedAt: 800, endedAt: null }],
       windowStart: 0,
       now: 1000,
-      expected: 200,
+      expected: 0,
     },
   ];
 

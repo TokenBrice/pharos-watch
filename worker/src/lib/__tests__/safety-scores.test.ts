@@ -18,6 +18,7 @@ describe("canonical published safety scores", () => {
         makeWorkerV9Card({ id: "rated", score: 80, grade: "A-" }),
         makeWorkerV9Card({ id: "zero", score: 0, grade: "F" }),
         makeWorkerV9Card({ id: "unrated", score: null, grade: "NR" }),
+        makeWorkerV9Card({ id: "pipeline-gap", score: null, grade: null, ratingStatus: "pipeline-gap" }),
       ],
     });
     mockLoadActiveSafetyScoreSource.mockResolvedValue({
@@ -32,8 +33,8 @@ describe("canonical published safety scores", () => {
       source: "safety-score-v9-publication",
       safetyScoreIdentity: snapshot.safetyScoreIdentity,
       coveredCount: 2,
-      trackedCount: 3,
-      coverageRatio: 2 / 3,
+      trackedCount: 4,
+      coverageRatio: 1 / 2,
     });
     expect([...result.scores]).toEqual([
       ["rated", { score: 80, grade: "A-" }],

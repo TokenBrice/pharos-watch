@@ -14,8 +14,8 @@ import type {
 } from "../../types/safety-score-v9";
 import { resolveChainId } from "../../types/chain-identity";
 import { clampShare } from "../math";
-import { sha256Hex } from "../sha256";
-import { stableJsonStringifyV1 } from "../stable-json";
+import { sha256HexFromUtf8Chunks } from "../sha256";
+import { stableJsonStringifyChunksV1 } from "../stable-json";
 import { isV9MaterialShare, v9StructuralSignalSharePct } from "./backing-primitives";
 import { assertV9FactSetCompiledInProcess } from "./compile";
 import {
@@ -40,7 +40,6 @@ import {
   deploymentRiskEventKey,
   evaluateV9Asset,
   projectV9EffectiveBackingPillarScore,
-  projectV9ResolvedBackingExposure,
   resolveV9WrapperStrategyTier,
   upstreamExitAccessScore,
   upstreamOracleNavScore,
@@ -63,7 +62,6 @@ import { computeV9ResultDigest } from "./trace";
 
 export {
   projectV9EffectiveBackingPillarScore,
-  projectV9ResolvedBackingExposure,
   resolveV9WrapperStrategyTier,
 };
 export type { V9EvaluatedAsset };
@@ -109,6 +107,13 @@ function evaluationFieldPath(error: unknown): string | null {
     "",
   );
 }
+function upstreamPillarCause(result: V9EvaluatedAsset, pillar: "backing" | "exit" | "control") {
+  const input = result.scoreInput.pillars[pillar];
+  if (input.aggregationDisposition === "excluded-a-b") return input.excludedCauses?.[0] ?? "U";
+  return input.limitedEvidenceCauses.find((cause) => cause === "C" || cause === "U")
+    ?? (input.reasons.some((reason) => reason.cause === "D") ? "D" : null);
+}
+
 
 export class V9AssetEvaluationError extends Error {
   readonly assetId: string;
@@ -131,7 +136,7 @@ export class V9AssetEvaluationError extends Error {
 function marketRankByAsset(
   assets: readonly V9AssetFactsV3[],
   activeAssetIds: readonly string[],
-): ReadonlyMap<string, number> {
+): Map<string, number> {
   const active = new Set(activeAssetIds);
   const ranked = assets
     .filter(
@@ -852,7 +857,7 @@ function commonModeSignalsByAsset(
   plan: V9DependencyEvaluationPlan,
   envelope: V9ValidatedPolicyEnvelope,
   assetsById: ReadonlyMap<string, V9AssetFactsV3>,
-): ReadonlyMap<string, readonly V9StructuralSignal[]> {
+): Map<string, readonly V9StructuralSignal[]> {
   const materiality = envelope.policy.semantic.materiality;
   const contextByAsset = new Map<string, V9CommonModeContext>();
   const contextFor = (assetId: string): V9CommonModeContext => {
@@ -1137,13 +1142,18 @@ export interface V9SetEvaluationInterventions {
   onAssetError?: (assetId: string, error: unknown) => void;
 }
 
+/** Private ownership holder: releasing this root never mutates the compiled facts. */
+type V9WorkingFactSetRead = Omit<V9EvaluationFactSetRead, "factSet"> & {
+  factSet: V9EvaluationFactSetRead["factSet"] | null;
+};
+
 function evaluateV9FactSetRead(
-  factSetRead: V9EvaluationFactSetRead,
+  factSetRead: V9WorkingFactSetRead,
   envelope: V9ValidatedPolicyEnvelope,
   interventions?: V9SetEvaluationInterventions,
 ): Readonly<V9EvaluatedSet> {
   assertV9ValidatedPolicyEnvelope(envelope);
-  const factSet = factSetRead.factSet;
+  let factSet: V9EvaluationFactSetRead["factSet"] | null = factSetRead.factSet!;
   const assetsById = new Map(factSet.assets.map((asset) => [asset.assetId, asset]));
   const marketRanks = marketRankByAsset(factSet.assets, factSet.activeAssetIds);
   const dependencyPlan = buildV9DependencyEvaluationPlan({
@@ -1168,6 +1178,8 @@ function evaluateV9FactSetRead(
     asOfSec: factSet.asOfSec,
     sourceGenerations: sourceGenerations(factSet),
   };
+  factSetRead.factSet = null;
+  factSet = null;
 
   for (const assetId of dependencyPlan.topologicalOrder) {
     const asset = assetsById.get(assetId);
@@ -1179,6 +1191,7 @@ function evaluateV9FactSetRead(
       rolePillarProjections: projectV9RoleDependencyPillarLimits(unresolved, {
         unresolvedMaterialityThreshold:
           envelope.policy.semantic.backing.structural.materialExposureShare,
+        boundedUnknownQuality: { exit: envelope.policy.semantic.exit.boundedUnknownScore, control: envelope.policy.semantic.control.boundedUnknownQuality },
       }),
     };
 
@@ -1197,9 +1210,30 @@ function evaluateV9FactSetRead(
     if (downstreamEvaluatedById !== evaluatedById) {
       downstreamEvaluatedById.set(assetId, interventions!.projectEvaluatedUpstream!(evaluatedAsset));
     }
+    const semanticNrCauses = evaluatedAsset.trace.nrReasons.flatMap((reason) =>
+      reason.cause === "C" || reason.cause === "U" || reason.cause === "D" ? [reason.cause] : []);
+    const finalCause = evaluatedAsset.trace.ratingStatus === "pipeline-gap"
+      ? evaluatedAsset.trace.partialEvidence?.causes[0] ?? "U"
+      : evaluatedAsset.trace.limitedEvidenceCauses[0] ?? semanticNrCauses[0]
+        ?? (evaluatedAsset.trace.adverseAttribution.length > 0 ? "D" : null);
     const upstream: V9UpstreamResult = {
       assetId: evaluatedAsset.assetId,
       score: projectV9DependencyScore(evaluatedAsset.trace),
+      ratingStatus: evaluatedAsset.trace.ratingStatus,
+      partialEvidence: evaluatedAsset.trace.partialEvidence,
+      causeGapIds: evaluatedAsset.trace.ratingStatus === "pipeline-gap" ? evaluatedAsset.trace.causeGapIds
+        : evaluatedAsset.trace.causeGapIds.filter((id) => !evaluatedAsset.trace.partialEvidence?.causeGapIds.includes(id)),
+      limitedEvidenceCauses: evaluatedAsset.trace.limitedEvidenceCauses.length > 0
+        ? evaluatedAsset.trace.limitedEvidenceCauses : [...new Set(semanticNrCauses)].sort(compareText),
+      cause: finalCause,
+      dimensionCauses: {
+        final: finalCause,
+        backing: upstreamPillarCause(evaluatedAsset, "backing"),
+        exit: upstreamPillarCause(evaluatedAsset, "exit"),
+        access: upstreamPillarCause(evaluatedAsset, "exit"),
+        control: upstreamPillarCause(evaluatedAsset, "control"),
+        "oracle-nav": evaluatedAsset.control.components.find((component) => component.kind === "oracle")?.cause ?? null,
+      },
       backingScore: projectV9EffectiveBackingPillarScore(evaluatedAsset),
       exitScore: evaluatedAsset.scoreInput.pillars.exit.score,
       accessScore: upstreamExitAccessScore(evaluatedAsset.exit),
@@ -1223,27 +1257,35 @@ function evaluateV9FactSetRead(
       throw error instanceof V9AssetEvaluationError
         ? error
         : new V9AssetEvaluationError(assetId, error);
+    } finally {
+      assetsById.delete(assetId);
+      commonSignals.delete(assetId);
     }
   }
 
   const assets = [...evaluatedById.values()].sort((left, right) => compareText(left.assetId, right.assetId));
+  evaluatedById.clear();
+  if (downstreamEvaluatedById !== evaluatedById) downstreamEvaluatedById.clear();
+  upstreamResultsById.clear();
+  unavailabilityRootsById.clear();
+  marketRanks.clear();
   const core: Omit<V9EvaluatedSet, "evaluatedSetDigest"> = {
     schemaVersion: 1,
-    factSetDigest: factSetRead.sourceFactSetDigest,
-    baseInputGenerationId: factSet.baseInputGenerationId,
+    factSetDigest: identity.factSetDigest,
+    baseInputGenerationId: identity.baseInputGenerationId,
     policyId: envelope.policy.policyId,
     policyDigest: envelope.semanticDigest,
     chainMaturityPolicy: resolveV9PolicyChainMaturityIdentity(envelope),
     evaluationBuildDigest: SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST,
-    asOfSec: factSet.asOfSec,
+    asOfSec: identity.asOfSec,
     sourceGenerations: identity.sourceGenerations,
     dependencyPlan,
     evaluationOrder: dependencyPlan.topologicalOrder,
     assets,
     scoreResultDigest: computeV9ResultDigest(assets.map((asset) => asset.trace)),
   };
-  const evaluatedSetDigest = sha256Hex(
-    stableJsonStringifyV1({ domain: V9_EVALUATED_SET_DIGEST_DOMAIN, result: evaluatedSetDigestPayload(core) }),
+  const evaluatedSetDigest = sha256HexFromUtf8Chunks(
+    stableJsonStringifyChunksV1({ domain: V9_EVALUATED_SET_DIGEST_DOMAIN, result: evaluatedSetDigestPayload(core) }),
   );
   return deepFreeze({ ...core, evaluatedSetDigest }) as Readonly<V9EvaluatedSet>;
 }
@@ -1252,8 +1294,14 @@ function evaluateV9FactSetRead(
 export function evaluateV9FactSet(
   input: CompiledV9FactSetV3,
   envelope: V9ValidatedPolicyEnvelope,
+): Readonly<V9EvaluatedSet>;
+export function evaluateV9FactSet(
+  input: CompiledV9FactSetV3 | null,
+  envelope: V9ValidatedPolicyEnvelope,
 ): Readonly<V9EvaluatedSet> {
-  return evaluateV9FactSetRead(readCompiledV9FactSetForEvaluation(input), envelope);
+  const read: V9WorkingFactSetRead = { ...readCompiledV9FactSetForEvaluation(input!) };
+  input = null;
+  return evaluateV9FactSetRead(read, envelope);
 }
 
 /**
@@ -1265,15 +1313,18 @@ export function evaluateValidatedV9FactSet(
   factSet: CompiledV9FactSetV3,
   envelope: V9ValidatedPolicyEnvelope,
   interventions?: V9SetEvaluationInterventions,
+): Readonly<V9EvaluatedSet>;
+export function evaluateValidatedV9FactSet(
+  factSet: CompiledV9FactSetV3 | null,
+  envelope: V9ValidatedPolicyEnvelope,
+  interventions?: V9SetEvaluationInterventions,
 ): Readonly<V9EvaluatedSet> {
-  assertV9FactSetCompiledInProcess(factSet);
-  return evaluateV9FactSetRead(
-    {
-      sourceSchemaVersion: 3,
-      sourceFactSetDigest: factSet.v9FactSetDigest,
-      factSet,
-    },
-    envelope,
-    interventions,
-  );
+  assertV9FactSetCompiledInProcess(factSet!);
+  const read: V9WorkingFactSetRead = {
+    sourceSchemaVersion: 4,
+    sourceFactSetDigest: factSet!.v9FactSetDigest,
+    factSet,
+  };
+  factSet = null;
+  return evaluateV9FactSetRead(read, envelope, interventions);
 }

@@ -6,7 +6,9 @@ import {
   diffReplayArtifacts,
   extractCardGrades,
   runSafetyScoreV9DiffCli,
+  categorizeReplayChanges,
 } from "../diff-safety-score-v9-replays";
+import { collectMovers } from "../../../scripts/maintenance/diff-safety-score-v9-movers";
 
 // Minimal artifact shape. The card array lives at `pipeline.candidate.cards`
 // (`SafetyScoreV9CandidatePipelineResult.candidate` is the
@@ -71,19 +73,6 @@ describe("diffReplayArtifacts", () => {
     ]);
   });
 
-  it("extractCardGrades keys every card by id", () => {
-    const grades = extractCardGrades(artifact([{ id: "frax", grade: "C", score: 55 }]));
-    expect(grades.get("frax")).toEqual({ grade: "C", score: 55 });
-  });
-
-  it("extractCardGrades keeps a not-rated card with a null score", () => {
-    const grades = extractCardGrades(artifact([{ id: "frax", grade: "NR", score: null }]));
-    expect(grades.get("frax")).toEqual({ grade: "NR", score: null });
-  });
-
-  it("extractCardGrades returns an empty map when the card path is absent", () => {
-    expect(extractCardGrades({ pipeline: {} }).size).toBe(0);
-  });
 
   it.each([
     "publishedAt", "safetyScoreIdentity", "baseInputGenerationId", "publicationGenerationId",
@@ -143,6 +132,41 @@ describe("diffReplayArtifacts", () => {
     const result = diffReplayArtifacts(baseline, drifted);
     expect(result.equal).toBe(false);
     expect(result.entries.some((entry) => entry.path.includes("grade"))).toBe(true);
+  });
+
+  it("retains pipeline-gap null grades separately from historical NR", () => {
+    const baseline = artifact([{ id: "asset", grade: "NR", score: null }]);
+    const candidate = artifact([{ id: "asset", grade: null, score: null, ratingStatus: "pipeline-gap" }]);
+    expect(extractCardGrades(baseline).get("asset")).toMatchObject({ grade: "NR", ratingStatus: "not-rated" });
+    expect(extractCardGrades(candidate).get("asset")).toMatchObject({ grade: null, score: null, ratingStatus: "pipeline-gap" });
+    expect(categorizeReplayChanges(baseline, candidate).availability).toEqual([
+      expect.objectContaining({ assetId: "asset", path: "cards[asset].ratingStatus", candidate: "pipeline-gap" }),
+    ]);
+  });
+
+  it("separates unknown credit, removed caps, reserve admission, routes, causes and schema diagnostics", () => {
+    const a = { id: "asset", grade: "C", score: 55, schemaVersion: 3, caps: [{ kind: "missing-data", source: "evidence", limit: 55 }],
+      breakdowns: { backing: { contributions: [{ key: "reserve:one", observationState: "missing", score: 25, wholeAssetWeight: 0.5 }] }, control: { components: [{ key: "mint", posture: "unknown", score: 35 }] } },
+      scoreTrace: { primaryRouteKey: "old" } };
+    const b = { ...a, schemaVersion: 4, caps: [], breakdowns: {
+      backing: { contributions: [{ key: "reserve:one", observationState: "missing", score: 25, wholeAssetWeight: 0.8, cause: "U" }] },
+      control: { components: [{ key: "mint", posture: "unknown", score: 50 }] },
+    }, scoreTrace: { primaryRouteKey: "new" } };
+    const categories = categorizeReplayChanges(artifact([a]), artifact([b]));
+    expect(categories["unknown-credit-raises"]).toEqual([expect.objectContaining({ baseline: 35, candidate: 50 })]);
+    expect(categories["cap-removal"]).toEqual([expect.objectContaining({ path: "cards[asset].caps" })]);
+    expect(categories["reserve-admission"]).toEqual([expect.objectContaining({ baseline: 0.5, candidate: 0.8 })]);
+    expect(categories["route-selection"]).toEqual([expect.objectContaining({ baseline: "old", candidate: "new" })]);
+    expect(categories["cause-classification"]).toEqual([expect.objectContaining({ candidate: "U" })]);
+    expect(categories.schema).toEqual([expect.objectContaining({ baseline: 3, candidate: 4 })]);
+  });
+
+  it("retains status-only and diagnostic-only movers without inventing numeric deltas", () => {
+    const before = new Map([["gap", { id: "gap", grade: "NR", score: null }], ["rated", { id: "rated", grade: "C", score: 55, bindingCap: { kind: "missing", limit: 55 } }]]);
+    const after = new Map([["gap", { id: "gap", grade: null, score: null, ratingStatus: "pipeline-gap" as const }], ["rated", { id: "rated", grade: "C", score: 55, bindingCap: null }]]);
+    const result = collectMovers(before, after, null);
+    expect(result.movers.find(row => row.id === "gap")).toMatchObject({ scoreDelta: null, gradeAfter: null, ratingStatusBefore: "not-rated", ratingStatusAfter: "pipeline-gap", ratingStatusChanged: true });
+    expect(result.movers.find(row => row.id === "rated")).toMatchObject({ scoreDelta: 0, gradeFlipped: false, categories: { "cap-removal": [expect.objectContaining({ candidate: null })] } });
   });
 });
 

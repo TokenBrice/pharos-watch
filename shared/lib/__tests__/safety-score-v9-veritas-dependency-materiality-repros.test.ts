@@ -63,7 +63,7 @@ import { unresolvedArchetype } from "./safety-score-v9-facts.test-support";
       weight,
       trackedAssetId,
       assetClass: trackedAssetId ? "stablecoin" : "cash",
-      issuerOrObligorKey: null,
+      issuerOrObligorKey: `issuer:${trackedAssetId ?? key}`,
       riskFactors: [],
       liquidityHorizon: "immediate",
       maturityDaysMax: null,
@@ -95,6 +95,8 @@ import { unresolvedArchetype } from "./safety-score-v9-facts.test-support";
       upstreamAssetId,
       score: null,
       evidenceLevel: "insufficient",
+      cause: "U",
+      causeGapIds: [],
       reasonCodes: [code],
       failureDomains: [],
     };
@@ -156,12 +158,15 @@ import { unresolvedArchetype } from "./safety-score-v9-facts.test-support";
         V9_CANDIDATE_POLICY_V1,
       );
 
-      expect(single.structuralReasons).toContainEqual(
-        expect.objectContaining({ kind: "unsafe-backing", severity: "high", ceiling: 59 }),
-      );
-      expect(split.structuralReasons).toContainEqual(
-        expect.objectContaining({ kind: "unsafe-backing", severity: "high", ceiling: 59 }),
-      );
+      for (const result of [single, split]) {
+        expect(result.unresolved).toContainEqual(expect.objectContaining({
+          code: "material-dependency-unavailable", cause: "U",
+        }));
+        expect(result.structuralReasons).not.toContainEqual(expect.objectContaining({
+          kind: "unsafe-backing",
+        }));
+      }
+      expect(split.score).toBeCloseTo(single.score!, 12);
     });
   });
 }
@@ -299,7 +304,7 @@ import { unresolvedArchetype } from "./safety-score-v9-facts.test-support";
             assetId: "veritas-2-partition",
             reserveStatus: knownStatus("evidence:reserve-envelope"),
             reserveExposures: [
-              exposure("cash", (99 - totalPercent) / 100, null),
+              exposure("cash", (100 - totalPercent) / 100, null),
               exposure(baselineKey, totalPercent / 100, "shared-upstream"),
             ],
             gaps: [],
@@ -317,7 +322,7 @@ import { unresolvedArchetype } from "./safety-score-v9-facts.test-support";
               {
                 assetId: "veritas-2-partition",
                 reserveStatus: knownStatus("evidence:reserve-envelope"),
-                reserveExposures: [exposure("cash", (99 - totalPercent) / 100, null), ...upstreamExposures],
+                reserveExposures: [exposure("cash", (100 - totalPercent) / 100, null), ...upstreamExposures],
                 gaps: [],
                 resolvedUpstreamExposures: upstreamExposures.map((entry) =>
                   unavailable(entry.exposureKey, code, "shared-upstream"),
@@ -334,7 +339,7 @@ import { unresolvedArchetype } from "./safety-score-v9-facts.test-support";
             expect(
               result.structuralReasons.some((entry) => entry.kind === "unsafe-backing" && entry.severity === "high"),
               `${totalPercent}:${partition.join("+")}`,
-            ).toBe(material);
+            ).toBe(false);
             expect(
               result.contributions
                 .filter((entry) => entry.source === "reserve-exposure")
@@ -349,7 +354,7 @@ import { unresolvedArchetype } from "./safety-score-v9-facts.test-support";
 }
 
 describe("VERITAS-II finding VER2-001: transitive wrapper splits evade aggregate materiality", () => {
-  it("propagates the shared failed root through serial wrappers into basket materiality", () => {
+  it("preserves unresolved serial-wrapper backing under an equivalent basket split", () => {
     function evaluate(split: boolean) {
       const root = minimalAsset("root") as unknown as V9AssetFactsV2;
       unresolvedArchetype(root, "root:missing-archetype");
@@ -404,21 +409,23 @@ describe("VERITAS-II finding VER2-001: transitive wrapper splits evade aggregate
 
     const splitSet = evaluate(true);
     const directSet = evaluate(false);
+    // v10.01: an unresearched archetype is bounded U uncertainty, not automatic
+    // NR, so the precondition is the unresolved backing review itself.
     for (const id of ["root", "wrapper-a", "wrapper-b"]) {
-      expect(splitSet.assets.find((asset) => asset.assetId === id)?.trace.finalGrade, id).toBe("NR");
+      expect(splitSet.assets.find((asset) => asset.assetId === id)?.backing.unresolved, id).toContainEqual(
+        expect.objectContaining({ code: "missing-archetype", cause: "U" }),
+      );
     }
     const split = splitSet.assets.find((asset) => asset.assetId === "child")!;
     const direct = directSet.assets.find((asset) => asset.assetId === "child")!;
     for (const child of [direct, split]) {
-      expect(child.backing.structuralReasons).toContainEqual(expect.objectContaining({
-        kind: "unsafe-backing", severity: "high", ceiling: 59,
+      expect(child.backing.structuralReasons).not.toContainEqual(expect.objectContaining({
+        kind: "unsafe-backing",
       }));
       expect(child.backing.unresolved).toContainEqual(expect.objectContaining({
-        code: "material-dependency-unavailable",
+        code: "missing-archetype", cause: "U",
       }));
-      expect(child.trace.caps).toContainEqual(expect.objectContaining({
-        kind: "reason:material-dependency-unavailable", limit: 69,
-      }));
+      expect(child.trace.caps.map((cap) => cap.kind)).not.toContain("reason:material-dependency-unavailable");
       // Reserve-claim risk is already priced in backing, not a second whole-asset cap.
       expect(child.trace.caps.map((cap) => cap.kind)).not.toContain("signal:unsafe-backing:high");
     }

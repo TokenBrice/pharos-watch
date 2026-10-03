@@ -7,6 +7,7 @@ import type {
 } from "@shared/types";
 import { formatV9PresentationUsd as compactUsd } from "@shared/lib/format";
 import { formatWholeUnitDurationSeconds } from "@shared/lib/relative-time";
+import { resolveV9EffectiveScoringWeight } from "@shared/types/safety-score-v9-public-causes";
 import { humanizeSafetyScoreV9Value } from "@/lib/stablecoin-safety-score-v9-presentation-helpers";
 
 export type StablecoinSafetyScoreV9Card = SafetyScoreV9CurrentCard;
@@ -29,7 +30,8 @@ const MIN_COMPOSITE_ROWS = 2;
 
 export type StablecoinSafetyScoreV9RowTone = "neutral" | "warn" | "critical";
 
-function scoreTone(score: number): StablecoinSafetyScoreV9RowTone {
+function scoreTone(score: number | null): StablecoinSafetyScoreV9RowTone {
+  if (score === null) return "neutral";
   if (score < CRITICAL_BELOW_SCORE) return "critical";
   if (score < WARN_BELOW_SCORE) return "warn";
   return "neutral";
@@ -38,7 +40,7 @@ function scoreTone(score: number): StablecoinSafetyScoreV9RowTone {
 export interface StablecoinSafetyScoreV9BreakdownRow {
   key: string;
   label: string;
-  score: number;
+  score: number | null;
   weight: number | null;
   status: string | null;
   tone: StablecoinSafetyScoreV9RowTone;
@@ -62,7 +64,7 @@ export interface StablecoinSafetyScoreV9BreakdownGroup {
 function makeRow(row: {
   key: string;
   label: string;
-  score: number;
+  score: number | null;
   weight?: number | null;
   status?: string | null;
   detail?: string | null;
@@ -93,7 +95,7 @@ function groupWithTail(
   rows: StablecoinSafetyScoreV9BreakdownRow[],
 ): StablecoinSafetyScoreV9BreakdownGroup {
   const sorted = [...rows].sort((left, right) => (right.weight ?? 0) - (left.weight ?? 0));
-  const tailRows = sorted.filter((row) => row.weight !== null && row.weight < TAIL_WEIGHT_FLOOR);
+  const tailRows = sorted.filter((row) => row.score !== null && row.weight !== null && row.weight > 0 && row.weight < TAIL_WEIGHT_FLOOR);
   if (tailRows.length < MIN_TAIL_ROWS) {
     return { key, label, score, weight, rows: sorted, tail: null };
   }
@@ -128,7 +130,7 @@ export interface StablecoinSafetyScoreV9Alternative {
 
 export interface StablecoinSafetyScoreV9ExitHighlight {
   primaryRouteLabel: string;
-  primaryRouteScore: number;
+  primaryRouteScore: number | null;
   redundancyCredit: number;
   capacityLine: string | null;
 }
@@ -152,6 +154,22 @@ function percentLabel(value: number): string {
 function multiplierLabel(value: number): string {
   return value.toFixed(value === 1 ? 0 : 2);
 }
+
+function causeLabel(cause: "A" | "B" | "C" | "U" | "D" | null | undefined): string | null {
+  switch (cause) {
+    case "A": return "excluded — pipeline gap";
+    case "B": return "excluded — awaiting curation";
+    case "C": return "Issuer does not disclose";
+    case "U": return "Not yet researched";
+    case "D": return "Measured and adverse";
+    case null: case undefined: return null;
+  }
+}
+
+function costLabel(cost: number | null): string {
+  return cost === null ? "cost not evaluated" : `${cost.toFixed(0)} bps`;
+}
+
 
 function adjustmentContext(
   adjustments: readonly SafetyScoreV9PillarAdjustment[],
@@ -205,8 +223,17 @@ function backingGroups(
       key: component.key,
       label: component.label,
       score: component.score,
-      weight: component.effectiveWeight,
-      status: humanizeSafetyScoreV9Value(component.observationState),
+      weight: resolveV9EffectiveScoringWeight(component),
+      status: causeLabel(component.cause) ?? humanizeSafetyScoreV9Value(component.observationState),
+      detail: component.wholeAssetWeight === null ? null : `${percentLabel(component.wholeAssetWeight ?? resolveV9EffectiveScoringWeight(component))} of whole asset`,
+      children: (component.factors ?? []).map((factor) => makeRow({
+        key: factor.componentKey,
+        label: humanizeSafetyScoreV9Value(factor.componentKey),
+        score: factor.score,
+        weight: resolveV9EffectiveScoringWeight(factor),
+        status: causeLabel(factor.cause),
+        detail: `${percentLabel(factor.normalizedWeight ?? 0)} normalized factor weight`,
+      })),
     });
     const existing = rowsByGroup.get(groupKey);
     if (existing) existing.push(row);
@@ -219,7 +246,7 @@ function backingGroups(
       group.key,
       group.label,
       group.score,
-      group.effectiveWeight,
+      resolveV9EffectiveScoringWeight(group),
       rowsByGroup.get(group.key) ?? [],
     ));
 
@@ -275,12 +302,19 @@ function alternativeRouteDetail(
         ? "24h/eventual redemption horizon"
         : `${formatWholeUnitDurationSeconds(alternative.settlementDelaySec, { minUnit: "minute" })} redemption horizon`;
   const parts: string[] = [];
+  if (alternative.rawSameNotionalCostBps !== null) parts.push(`${costLabel(alternative.rawSameNotionalCostBps)} raw same-notional cost`);
   if (alternative.capacity) {
     parts.push(
       `${fullUsd(alternative.capacity.executableUsd)} of ${fullUsd(alternative.capacity.requestedNotionalUsd)} executable`,
     );
   }
   if (redemptionHorizon) parts.push(redemptionHorizon);
+  parts.push(`capacity method: ${humanizeSafetyScoreV9Value(alternative.capacityEvidenceTier)}`);
+  if (alternative.confidenceDimensions) {
+    for (const [dimension, confidence] of Object.entries(alternative.confidenceDimensions)) {
+      if (confidence.cause !== null) parts.push(`${humanizeSafetyScoreV9Value(dimension)}: ${causeLabel(confidence.cause)}`);
+    }
+  }
   // A complete-confidence observation is still evidence. Show it for excluded
   // routes instead of silently dropping the factor and making a measured zero
   // look like an unobserved route.
@@ -325,7 +359,7 @@ function parseExitBreakdown(
 ): StablecoinSafetyScoreV9PillarBreakdown {
   const primaryRoute = breakdown.primaryRoute;
   const context: StablecoinSafetyScoreV9BreakdownMeta[] = primaryRoute === null
-    ? [{ key: "primary-route", label: "Primary route", value: "No eligible route" }]
+    ? [{ key: "primary-route", label: "Primary route", value: breakdown.aggregationDisposition === "excluded-a-b" ? "excluded — pipeline gap / awaiting curation" : "No eligible route" }]
     : [];
   const bestObservedAlternative = primaryRoute === null
     ? breakdown.alternatives.find((route) => route.capacity != null)
@@ -365,6 +399,14 @@ function parseExitBreakdown(
       value: `${multiplierLabel(primaryRoute.confidenceFactor)}x`,
     });
   }
+  if (primaryRoute !== null) {
+    for (const [key, dimension] of Object.entries(primaryRoute.confidenceDimensions)) {
+      context.push({ key: `confidence-${key}`, label: `Confidence — ${humanizeSafetyScoreV9Value(key)}`,
+        value: `${multiplierLabel(dimension.factor)}x${dimension.cause == null ? "" : ` · ${causeLabel(dimension.cause)}`}` });
+    }
+    context.push({ key: "capacity-method", label: "Capacity evidence tier", value: humanizeSafetyScoreV9Value(primaryRoute.capacityEvidenceTier) });
+    context.push({ key: "raw-cost", label: "Raw same-notional cost", value: costLabel(primaryRoute.rawSameNotionalCostBps) });
+  }
   if (primaryRoute !== null && Math.abs(primaryRoute.eligibilityMultiplier - 1) >= 0.005) {
     context.push({
       key: "eligibility",
@@ -391,7 +433,7 @@ function parseExitBreakdown(
       {
         key: "selected-route-bound",
         label: "Horizon / execution cost",
-        value: `${formatWholeUnitDurationSeconds(capacity.settlementDelaySec, { minUnit: "minute" })} / ${capacity.executionCostBps.toFixed(0)} bps observed / ${capacity.maxCostBps.toFixed(0)} bps bound`,
+        value: `${formatWholeUnitDurationSeconds(capacity.settlementDelaySec, { minUnit: "minute" })} / ${costLabel(capacity.executionCostBps)} observed / ${capacity.maxCostBps.toFixed(0)} bps bound`,
       },
     );
     if (capacity.chain !== null || capacity.poolId !== null) {
@@ -433,7 +475,7 @@ function parseExitBreakdown(
               primaryRoute.capacity.settlementDelaySec === 0
                 ? "immediately"
                 : `within ${formatWholeUnitDurationSeconds(primaryRoute.capacity.settlementDelaySec, { minUnit: "minute" })}`
-            } · ${primaryRoute.capacity.executionCostBps.toFixed(0)} bps`,
+            } · ${costLabel(primaryRoute.capacity.executionCostBps)}`,
       };
 
   return {
@@ -458,7 +500,8 @@ function parseExitBreakdown(
           ? "Capacity score — selected route"
           : component.label,
         score: component.score,
-        weight: component.weight,
+        weight: resolveV9EffectiveScoringWeight(component),
+        status: causeLabel(component.cause),
       })),
       tail: null,
     }],
@@ -485,14 +528,15 @@ function parseControlBreakdown(
     key: component.key,
     label: component.kind === "mint" ? "Mint authority" : component.label,
     score: component.score,
-    status: component.binding ? "Binding" : "Diagnostic",
+    weight: resolveV9EffectiveScoringWeight(component),
+    status: causeLabel(component.cause) ?? (component.binding ? "Binding" : "Diagnostic"),
   });
 
   // The pillar scores on the lowest binding control, so binding rows lead,
   // cheapest first: the row that sets the score is always the first one read.
   const binding = breakdown.components.filter((component) => component.binding);
   const rows = [...binding]
-    .sort((left, right) => left.score - right.score)
+    .sort((left, right) => (left.score ?? Infinity) - (right.score ?? Infinity))
     .map(toRow);
 
   // Non-binding bridges are the bulk of the noise — 48 of usdc-circle's 50
@@ -501,12 +545,12 @@ function parseControlBreakdown(
   // binding bridge stays above as its own row; on 37 assets a bridge is the
   // lowest binding control and must never be folded away.
   const loose = breakdown.components.filter((component) => !component.binding);
-  const looseBridges = loose.filter((component) => component.kind === "bridge");
-  const otherLoose = loose.filter((component) => component.kind !== "bridge");
+  const looseBridges = loose.filter((component) => component.kind === "bridge" && component.score !== null);
+  const otherLoose = loose.filter((component) => component.kind !== "bridge" || component.score === null);
   rows.push(...otherLoose.map(toRow));
 
   if (looseBridges.length >= MIN_COMPOSITE_ROWS) {
-    const scores = looseBridges.map((component) => component.score);
+    const scores = looseBridges.flatMap((component) => component.score === null ? [] : [component.score]);
     const worst = Math.min(...scores);
     const best = Math.max(...scores);
     rows.push(makeRow({
@@ -518,7 +562,7 @@ function parseControlBreakdown(
         ? `All ${looseBridges.length} at ${worst.toFixed(0)} · not binding`
         : `Worst of ${looseBridges.length} · range ${worst.toFixed(0)}–${best.toFixed(0)} · not binding`,
       children: [...looseBridges]
-        .sort((left, right) => left.score - right.score)
+        .sort((left, right) => (left.score ?? Infinity) - (right.score ?? Infinity))
         .map(toRow),
     }));
   } else {

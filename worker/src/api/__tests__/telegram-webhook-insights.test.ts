@@ -1,3 +1,4 @@
+import { makeReportCardsV9PipelineGapCard, makeReportCardsV9PartialCard } from "@shared/test-utils/report-cards-v9";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
@@ -431,8 +432,8 @@ describe("buildTopMessage", () => {
       pillars: makeWorkerV9Pillars({ backing: null, exit: 30, control: 12 }),
       caps: [{ kind: "structural", limit: 80, source: "structural", reason: "reviewed limit", binding: true }],
       dependencies: {
-        serial: [{ upstreamAssetId: "usdt-tether", score: 80, blocked: false }],
-        basket: [{ upstreamAssetId: "dai-makerdao", weight: 0.5, score: 70, boundedUnknown: false }],
+        serial: [{ upstreamAssetId: "usdt-tether", score: 80, ratingStatus: "rated", partialEvidence: null, causeGapRefs: [], limitedEvidenceCauses: [], blocked: false }],
+        basket: [{ upstreamAssetId: "dai-makerdao", weight: 0.5, score: 70, ratingStatus: "rated", partialEvidence: null, causeGapRefs: [], limitedEvidenceCauses: [], boundedUnknown: false }],
         cycleBlocked: false, reasonCodes: [],
       },
     });
@@ -480,5 +481,21 @@ describe("buildCoverageMessage", () => {
     );
     expect(message).not.toContain('<a href="https://attacker.example/phish">');
     expect(message).not.toContain("<i>boost</i>");
+  });
+});
+
+describe("Safety Score availability explanations", () => {
+  it("explains technical gaps separately from NR and labels partial ratings", async () => {
+    const snapshot = makeWorkerReportCardsV9Response({ cards: [
+      makeReportCardsV9PipelineGapCard("control", "A", { id: "gap" }),
+      makeReportCardsV9PartialCard("exit", "B", { id: "partial" }),
+    ] });
+    mocks.loadActiveSafetyScoreSource.mockResolvedValue({ kind: "v9", snapshot });
+    const gapMessage = await buildWhyMessage(mockD1([]), "gap");
+    expect(gapMessage).toContain("pipeline gap");
+    expect(gapMessage).not.toContain("Overall: NR");
+    expect(gapMessage).not.toContain("Overall: null");
+    const partialMessage = await buildWhyMessage(mockD1([]), "partial");
+    expect(partialMessage).toContain("Partial evidence: pipeline gap");
   });
 });

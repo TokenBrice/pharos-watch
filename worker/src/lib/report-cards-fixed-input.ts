@@ -10,6 +10,7 @@ import {
   normalizeFixedRedemptionBackstopMap,
   normalizeReportCardsFixedInputMethodologyVersions,
   projectReportCardsFixedInputMethodologyVersions,
+  bindPipelineGapBaseInputIdentity,
 } from "@shared/lib/report-cards-fixed-input-identity";
 import { SafetyScoreV8PublicationIdentitySchema } from "@shared/types/safety-score-publication";
 import { BaseInputGenerationIdSchema, Sha256Schema } from "@shared/types/safety-schema-primitives";
@@ -183,7 +184,9 @@ function assertFixedInputConsistency(
   // claims to identify. Skipped only when this same call just derived the id
   // from the identical payload, where the comparison is true by construction.
   if (options.verifyBaseInputGenerationId) {
-    const expectedBaseInputGenerationId = deriveReportCardsBaseInputGenerationId(input);
+    const expectedBaseInputGenerationId = bindPipelineGapBaseInputIdentity(
+      deriveReportCardsBaseInputGenerationId(input), input.pipelineGapByAssetId,
+    );
     if (input.baseInputGenerationId !== expectedBaseInputGenerationId) {
       throw new Error(
         `Fixed input base generation ${input.baseInputGenerationId} does not match payload ${expectedBaseInputGenerationId}`,
@@ -219,7 +222,9 @@ export function normalizeFixedInput(value: unknown, navAssetIds?: ReadonlySet<st
   const normalized: ReportCardsFixedInput = {
     ...normalizedPayload,
     baseInputGenerationId:
-      suppliedBaseInputGenerationId ?? deriveReportCardsBaseInputGenerationId(normalizedPayload),
+      suppliedBaseInputGenerationId ?? bindPipelineGapBaseInputIdentity(
+        deriveReportCardsBaseInputGenerationId(normalizedPayload), normalizedPayload.pipelineGapByAssetId,
+      ),
   };
   assertFixedInputConsistency(normalized, {
     verifyBaseInputGenerationId: suppliedBaseInputGenerationId !== undefined,

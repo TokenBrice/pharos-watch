@@ -12,6 +12,8 @@ import { V9AccessPrimaryExitSchema, V9AccessTransferSchema } from "./safety-scor
 
 import { V9_GRADE_THRESHOLDS } from "./safety-score-v9-grade";
 import { V9AccessLookthroughSummarySchema } from "./safety-score-v9-access-lookthrough";
+import { causeGapRefs, V9EvidenceCauseSchema, V9PillarCauseShape, V9ScoringDispositionSchema } from "./safety-score-v9-public-causes";
+import methodologyPolicy from "../data/safety-score-v9/methodology-policy-candidate-v1.json";
 
 // Canonical ordering is a determinism-digest input; it has one definition.
 import { BaseInputGenerationIdSchema, ScoreSchema, Sha256Schema } from "./safety-schema-primitives";
@@ -34,56 +36,14 @@ if (cMinusThreshold === undefined) {
 }
 export const C_MINUS_MIN_SCORE = cMinusThreshold.min;
 // Validation-only mirror of policy.semantic.formula.danger.adverseAttributionPegMultiplierFloor.
-// This remains a validation-only mirror; scoring reads the canonical danger floor from the parsed
-// policy envelope, while shared/types stays independent of shared/lib policy loading.
+// This remains validation-only; score calculation reads the canonical danger floor.
 export const DANGER_PEG_MULTIPLIER_FLOOR = 0.9;
-export const V9_BOUNDED_ATTRIBUTION_REASON_CODES = [
-  "bounded-mechanism-review",
-  "bounded-unknown-reserve-exposure",
-  "incomparable-route-requests",
-  "incomplete-dex-route-coverage",
-  "incomplete-oracle-liquidation-branch",
-  "material-bridge-supply-unmatched",
-  "material-dependency-unavailable",
-  "material-reserve-slice-unstructured",
-  "material-unknown-reserve-exposure",
-  "mint-control-question",
-  "missing-applicable-peg",
-  "missing-bridge-route-rows",
-  "missing-bridge-routes",
-  "missing-custody-profile",
-  "missing-implementation-date",
-  "missing-latest-assurance-report",
-  "missing-mint-authority",
-  "missing-oracle-profile",
-  "missing-peg-input",
-  "missing-required-oracle-branches",
-  "missing-reserve-composition",
-  "missing-runtime-route-evidence",
-  "missing-same-notional-route",
-  "unproven-settlement-bound",
-  "missing-upgrade-control",
-  "missing-upgradeability-review",
-  "oracle-topology-undisclosed",
-  "partial-reserve-review",
-  "stale-audited-reserve-composition",
-  "peg-price-unavailable-adverse-history",
-  "peg-supply-floor-withheld",
-  "runtime-bridge-materiality-unavailable",
-  "scoped-control-question",
-  "selected-bridge-route-missing",
-  "selected-bridge-route-unresolved",
-  "unknown-control-cap-authority",
-  "unknown-control-mint-ability",
-  "unknown-upgrade-authority",
-  "unresolved-control-identity",
-  "unresolved-mint-authority",
-  "unresolved-oracle-branch-applicability",
-  "unsupported-same-notional-route",
-  "unreviewed-dependency-relationships",
-  "unreviewed-oracle-profile",
-  "unreviewed-reserve-envelope",
-] as const satisfies readonly V9ReasonCode[];
+// C/U treatment is numeric unless the registered reason is diagnostic; the
+// minimum-track-record exception remains a ceiling. Read the registry authority,
+// not the retired evidence-cap classification, without importing shared/lib.
+const V9_BOUNDED_ATTRIBUTION_REASON_CODES = methodologyPolicy.reasonRegistry
+  .filter((reason) => reason.defaultTreatment !== "diagnostic" || reason.ceilingRule?.source === "minimum-track-record")
+  .map((reason) => V9ReasonCodeSchema.parse(reason.code));
 export const V9_BOUNDED_ATTRIBUTION_REASON_CODE_SET =
   new Set<V9ReasonCode>(V9_BOUNDED_ATTRIBUTION_REASON_CODES);
 
@@ -108,6 +68,9 @@ const SafetyScoreV9PublicReasonSchema = z
     code: V9ReasonCodeSchema,
     message: z.string().min(1),
     path: z.string().min(1).nullable(),
+    cause: V9EvidenceCauseSchema.nullable().optional(),
+    causeGapRefs: causeGapRefs().optional(),
+    scoringDisposition: V9ScoringDispositionSchema.optional(),
   })
   .strict();
 export type SafetyScoreV9PublicReason = z.infer<typeof SafetyScoreV9PublicReasonSchema>;
@@ -135,6 +98,8 @@ export const SafetyScoreV9NrReasonSchema = z
     message: z.string().min(1),
     field: z.string().min(1).nullable(),
     origin: z.enum(["asset", "upstream"]),
+    causes: z.array(V9EvidenceCauseSchema.extract(["C", "U", "D"])).optional(),
+    causeGapRefs: causeGapRefs().optional(),
   })
   .strict();
 export type SafetyScoreV9NrReason = z.infer<typeof SafetyScoreV9NrReasonSchema>;
@@ -144,6 +109,7 @@ export type SafetyScoreV9EvidenceFreshness = z.infer<typeof SafetyScoreV9Evidenc
 
 export const SafetyScoreV9PillarSchema = z
   .object({
+    ...V9PillarCauseShape,
     score: ScoreSchema.nullable(),
     evidenceLevel: V9EvidenceLevelSchema,
     freshness: SafetyScoreV9EvidenceFreshnessSchema,
@@ -152,6 +118,14 @@ export const SafetyScoreV9PillarSchema = z
   })
   .strict()
   .superRefine((pillar, ctx) => {
+    if ((pillar.aggregationDisposition === "excluded-a-b") !== (pillar.score === null) &&
+        pillar.aggregationDisposition === "excluded-a-b") {
+      ctx.addIssue({ code: "custom", path: ["score"], message: "Excluded pillars must have null score" });
+    }
+    if (pillar.aggregationDisposition === "excluded-a-b" &&
+        ((pillar.causeGapRefs?.length ?? 0) === 0 || (pillar.limitedEvidenceCauses?.length ?? 0) > 0 || pillar.supportedComponentKeys.length > 0)) {
+      ctx.addIssue({ code: "custom", message: "Excluded pillars require A/B gaps, no scoreable support and no limiting C/U/D" });
+    }
     if (!isUniqueSorted(pillar.components)) {
       ctx.addIssue({ code: "custom", path: ["components"], message: "V9 pillar components must be unique and sorted" });
     }

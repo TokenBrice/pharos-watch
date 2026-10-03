@@ -12,12 +12,11 @@ import {
 } from "../safety-score-v9/dependencies";
 import {
   commonModeSignalSeverity,
-  projectV9EffectiveBackingPillarScore,
-  projectV9ResolvedBackingExposure,
   type V9CommonModeContext,
-  type V9EvaluatedAsset,
 } from "../safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
+import { evaluateV9ReserveExposures } from "../safety-score-v9/backing";
+import { asset as reserveAsset, exposure } from "./safety-score-v9-backing.test-support";
 
 const domain = (kind: "reserve-custodian" | "mint-control", key: string) => ({ kind, key }) as const;
 
@@ -82,14 +81,6 @@ function roleEdge(
 }
 
 describe("buildV9DependencyEvaluationPlan", () => {
-  it("inherits the post-credit backing pillar rather than the raw backing result", () => {
-    const upstream = {
-      backing: { score: 72 },
-      scoreInput: { pillars: { backing: { score: 78 } } },
-    } as unknown as Pick<V9EvaluatedAsset, "backing" | "scoreInput">;
-
-    expect(projectV9EffectiveBackingPillarScore(upstream)).toBe(78);
-  });
 
   it("orders upstreams before serial and basket consumers", () => {
     const plan = buildV9DependencyEvaluationPlan({
@@ -170,10 +161,10 @@ describe("buildV9DependencyEvaluationPlan", () => {
       { assetId: "parent", score: null, backingScore: 82 },
     ]);
 
-    expect(resolved.find((item) => item.assetId === "serial")?.serial).toEqual([
+    expect(resolved.find((item) => item.assetId === "serial")?.serial).toMatchObject([
       { upstreamAssetId: "parent", score: null, blocked: true },
     ]);
-    expect(resolved.find((item) => item.assetId === "basket")?.basket).toEqual([
+    expect(resolved.find((item) => item.assetId === "basket")?.basket).toMatchObject([
       { upstreamAssetId: "parent", weight: 1, score: 82, boundedUnknown: false },
     ]);
   });
@@ -193,7 +184,7 @@ describe("buildV9DependencyEvaluationPlan", () => {
     ]);
 
     expect(resolved.find((item) => item.assetId === "parent")?.serial[0]?.score).toBe(90);
-    expect(resolved.find((item) => item.assetId === "child")?.serial).toEqual([
+    expect(resolved.find((item) => item.assetId === "child")?.serial).toMatchObject([
       { upstreamAssetId: "parent", score: 84, blocked: false },
     ]);
   });
@@ -370,7 +361,7 @@ describe("buildV9DependencyEvaluationPlan", () => {
     ]).find((input) => input.assetId === "child")!;
 
     expect(resolved.cycleBlocked).toBe(false);
-    expect(resolved.roleInputs).toEqual([
+    expect(resolved.roleInputs).toMatchObject([
       {
         assetId: "child",
         upstreamAssetId: "parent",
@@ -390,13 +381,13 @@ describe("buildV9DependencyEvaluationPlan", () => {
       },
     ]);
     expect(projectV9RoleDependencyPillarLimits(resolved).exit).toMatchObject({
-      limit: null,
+      limit: 74,
       knownLossPoints: 0,
       unresolvedExposureShare: 0.4,
     });
   });
 
-  it("bounds sub-material unknown role exposure and withholds only at the material threshold", () => {
+  it("bounds C/U role exposure numerically on both sides of the material threshold", () => {
     const resolveUnknownExit = (weight: number) => {
       const plan = buildV9DependencyEvaluationPlan({
         activeAssetIds: ["child", "parent"],
@@ -415,8 +406,8 @@ describe("buildV9DependencyEvaluationPlan", () => {
         unresolvedMaterialityThreshold: 0.1,
       }).exit,
     ).toMatchObject({
-      limit: 99,
-      boundedUnknownLossPoints: 1,
+      limit: 99.35,
+      boundedUnknownLossPoints: 0.65,
       unresolvedExposureShare: 0.01,
       materialUnresolvedExposure: false,
     });
@@ -425,8 +416,8 @@ describe("buildV9DependencyEvaluationPlan", () => {
         unresolvedMaterialityThreshold: 0.1,
       }).exit,
     ).toMatchObject({
-      limit: null,
-      boundedUnknownLossPoints: 10,
+      limit: 93.5,
+      boundedUnknownLossPoints: 6.5,
       unresolvedExposureShare: 0.1,
       materialUnresolvedExposure: true,
     });
@@ -712,44 +703,6 @@ describe("buildV9DependencyEvaluationPlan", () => {
   });
 });
 
-describe("dimension-aware backing projection", () => {
-  it("carries only the upstream backing evidence and failure domains", () => {
-    const backingDomain = domain("reserve-custodian", "bank-a");
-    const upstream = {
-      backing: {
-        failureDomains: [backingDomain],
-      },
-      scoreInput: {
-        pillars: {
-          backing: {
-            evidenceLevel: "adequate",
-            reasons: [
-              { code: "bounded-unknown-reserve-exposure" },
-              { code: "bounded-unknown-reserve-exposure" },
-            ],
-          },
-        },
-      },
-    } as unknown as Pick<V9EvaluatedAsset, "backing" | "scoreInput">;
-
-    expect(
-      projectV9ResolvedBackingExposure(
-        "reserve:parent",
-        { upstreamAssetId: "parent", weight: 1, score: 82, boundedUnknown: false },
-        upstream,
-        ["parent"],
-      ),
-    ).toEqual({
-      exposureKey: "reserve:parent",
-      upstreamAssetId: "parent",
-      score: 82,
-      evidenceLevel: "adequate",
-      reasonCodes: ["bounded-unknown-reserve-exposure"],
-      failureDomains: [backingDomain],
-      failureRootAssetIds: ["parent"],
-    });
-  });
-});
 
 describe("commonModeSignalSeverity proportional materiality", () => {
   const materiality = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality;
@@ -1042,5 +995,48 @@ describe("commonModeSignalSeverity proportional materiality", () => {
     // 2026-09-23 re-review holds block-production-finality pending on unverified SR independence.
     expect(materiality.matureChains).toEqual(["base", "ethereum", "hedera"]);
     expect(materiality.commonModeSignal).toEqual({ kind: "critical-dependency", severity: "high" });
+  });
+});
+
+describe("cause-aware reserve look-through", () => {
+  it.each(["A", "B", "C", "U"] as const)("keeps upstream cause %s distinct from measured backing quality", (cause) => {
+    const reserve = exposure({ key: "parent-holding", weight: 1, assetClass: "stablecoin", trackedAssetId: "parent", issuer: "issuer" });
+    const result = evaluateV9ReserveExposures({
+      ...reserveAsset([reserve]), resolvedUpstreamExposures: [{
+        exposureKey: reserve.exposureKey, upstreamAssetId: "parent", score: null, cause,
+        ratingStatus: cause === "A" || cause === "B" ? "pipeline-gap" : "not-rated",
+        causeGapIds: [`parent:${cause}`], limitedEvidenceCauses: cause === "C" || cause === "U" ? [cause] : [],
+        reasons: [], failureDomains: [],
+        evidenceLevel: "limited", reasonCodes: [],
+      }],
+    }, V9_CANDIDATE_POLICY_V1);
+    const inherited = result.contributions.find((row) => row.source === "reserve-exposure")!;
+    if (cause === "A" || cause === "B") {
+      expect(inherited.score).toBeNull();
+      expect(inherited.effectiveScoringWeight).toBe(0);
+      expect(result.score).toBeNull();
+      expect(inherited.scoringDisposition).toBe(cause === "A" ? "excluded-pipeline" : "excluded-uncurated");
+    } else {
+      expect(inherited.score).toBe(35);
+      expect(result.score).not.toBeNull();
+      expect(inherited.cause).toBe(cause);
+    }
+    expect(inherited.causeGapIds).toContain(`parent:${cause}`);
+  });
+
+  it("retains admitted local adverse backing even when an upstream reader is unavailable", () => {
+    const reserve = exposure({ key: "impaired-local", weight: 1, assetClass: "private-credit", trackedAssetId: "parent", issuer: "issuer" });
+    reserve.liquidityHorizon = "over-seven-days";
+    reserve.maturityDaysMax = 730;
+    const result = evaluateV9ReserveExposures({
+      ...reserveAsset([reserve]), resolvedUpstreamExposures: [{
+        exposureKey: reserve.exposureKey, upstreamAssetId: "parent", score: null, cause: "A",
+        ratingStatus: "pipeline-gap", causeGapIds: ["parent:A"], limitedEvidenceCauses: [], reasons: [], failureDomains: [],
+        evidenceLevel: "limited", reasonCodes: [],
+      }],
+    }, V9_CANDIDATE_POLICY_V1);
+    expect(result.contributions.find((row) => row.source === "reserve-exposure")).toMatchObject({ cause: "D", scoringDisposition: "measured-adverse" });
+    expect(result.score).not.toBeNull();
+    expect(result.score!).toBeLessThanOrEqual(V9_CANDIDATE_POLICY_V1.policy.semantic.backing.structural.unsafeExposureQuality);
   });
 });

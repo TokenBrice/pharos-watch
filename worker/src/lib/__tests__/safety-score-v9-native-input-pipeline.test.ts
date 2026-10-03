@@ -9,8 +9,10 @@ import { buildSafetyScoreV9Candidate, type SafetyScoreV9CandidatePipelineResult 
 // for two full-registry compile/evaluate passes without repeating the native pass.
 const V9_EVALUATION_TEST_TIMEOUT_MS = 60_000;
 
-function cardsById(candidate: { cards: readonly { id: string; grade: string; score: number | null }[] }) {
-  return new Map(candidate.cards.map((card) => [card.id, { grade: card.grade, score: card.score }]));
+function cardsById(candidate: SafetyScoreV9CandidatePipelineResult["candidate"]) {
+  return new Map(candidate.cards.map((card) => [card.id, {
+    grade: card.grade, score: card.score, ratingStatus: card.ratingStatus, partialEvidence: card.partialEvidence,
+  }]));
 }
 
 describe("native v4 input through the V9 candidate pipeline", { timeout: V9_EVALUATION_TEST_TIMEOUT_MS }, () => {

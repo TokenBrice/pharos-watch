@@ -13,8 +13,8 @@ it("withdraws cached current numbers at the artifact budget before the next fetc
   vi.useFakeTimers();
   vi.setSystemTime(1_000_000);
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const data: DependencyScenariosResponse = { artifact: { schemaVersion: 1, sourcePublicationGenerationId: "pub", sourceBaseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`, methodologyVersion: "9.98", evaluationBuildDigest: "b".repeat(64), computedAtSec: 990, cohort: { rootIds: [], selection: "Top direct exposure" }, scenarios: [] }, freshness: { status: "current", reason: null, ageSec: 10, budgetSec: 7200, sourcePublicationGenerationId: "pub", acceptedPublicationGenerationId: "pub" } };
-  client.setQueryData(["dependency-scenarios", "v1"], data);
+  const data: DependencyScenariosResponse = { artifact: { schemaVersion: 2, sourcePublicationGenerationId: "pub", sourceBaseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`, methodologyVersion: "10.01", evaluationBuildDigest: "b".repeat(64), computedAtSec: 990, cohort: { rootIds: [], selection: "Top direct exposure" }, scenarios: [] }, freshness: { status: "current", reason: null, ageSec: 10, budgetSec: 7200, sourcePublicationGenerationId: "pub", acceptedPublicationGenerationId: "pub" } };
+  client.setQueryData(["dependency-scenarios", "v2"], data);
   function Wrapper({ children }: { children: ReactNode }) { return <QueryClientProvider client={client}>{children}</QueryClientProvider>; }
   const { result } = renderHook(() => {
     const query = useDependencyScenarios();

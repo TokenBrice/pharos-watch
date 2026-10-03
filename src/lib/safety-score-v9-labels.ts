@@ -14,12 +14,14 @@ import type { V9EvidenceResponsibility } from "@shared/types/safety-score-v9-fac
  * point of the attribution split.
  */
 const RESPONSIBILITY_LABELS = {
-  "issuer-undisclosed": "The issuer has not disclosed this",
+  "issuer-undisclosed": "Issuer does not disclose",
   "producer-failed": "Our data collection failed",
   "integration-missing": "We have not built this integration yet",
   "method-unsupported": "The method cannot evaluate this shape",
   "measured-adverse": "Measured and adverse",
   "published-evidence-expired": "This was published, but our copy is out of date",
+  "unresearched": "Not yet researched",
+  "public-data-uncurated": "Awaiting curation",
 } satisfies Record<V9EvidenceResponsibility, string>;
 
 export const SAFETY_SCORE_V9_RESPONSIBILITY_LABELS: Readonly<Record<string, string>> =
@@ -28,6 +30,8 @@ export const SAFETY_SCORE_V9_RESPONSIBILITY_LABELS: Readonly<Record<string, stri
 /** Display order for responsibility groups; unlisted keys follow, first seen first. */
 export const SAFETY_SCORE_V9_RESPONSIBILITY_ORDER: readonly string[] = [
   "issuer-undisclosed",
+  "unresearched",
+  "public-data-uncurated",
   "published-evidence-expired",
   "producer-failed",
   "integration-missing",

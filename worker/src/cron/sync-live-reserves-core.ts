@@ -604,6 +604,7 @@ export async function syncReserveCoin(args: {
     let failureAlreadyRecorded = false;
     const finalizeStartedMs = Date.now();
     try {
+      throwIfAborted(args.signal);
       const finalizeResult = await timeStage("authoritativeWrite", () => raceWithTimeout(
         finalizeReserveSyncSuccess(
           db,

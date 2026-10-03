@@ -7,7 +7,7 @@ import { SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC } from "@shared/lib/cr
 
 describe("Safety Score V9 consumer freshness", () => {
   const currentHealth = {
-    schemaVersion: 1 as const,
+    schemaVersion: 2 as const,
     status: "current" as const,
     acceptedPublicationGenerationId: "v9:test",
     acceptedAtSec: 1_800_000_000,

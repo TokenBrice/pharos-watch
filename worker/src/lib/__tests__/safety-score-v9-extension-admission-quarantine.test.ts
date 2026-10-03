@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import type { SafetyScoreV9Card } from "@shared/types/safety-score-v9-public";
 import {
   buildSafetyScoreV9Candidate,
   type SafetyScoreV9CandidatePipelineResult,
@@ -78,19 +79,33 @@ function assess(result: Readonly<SafetyScoreV9CandidatePipelineResult>) {
   });
 }
 
+// Attribution copy counts cohort members; it is not asset-local financial state.
+function cardFinancialState(card: SafetyScoreV9Card) {
+  return {
+    ...card,
+    scoreTrace: {
+      ...card.scoreTrace,
+      adverseAttribution: {
+        ...card.scoreTrace.adverseAttribution,
+        items: card.scoreTrace.adverseAttribution.items.map(({ message: _message, ...item }) => item),
+      },
+    },
+  };
+}
+
 function expectUnaffectedCardsIdentical(
   clean: Readonly<SafetyScoreV9CandidatePipelineResult>,
   isolated: Readonly<SafetyScoreV9CandidatePipelineResult>,
   affectedAssetIds: readonly string[],
 ) {
-  const cleanById = new Map(clean.candidate.cards.map((card) => [card.id, stableJsonStringifyV1(card)]));
+  const cleanById = new Map(clean.candidate.cards.map((card) => [card.id, stableJsonStringifyV1(cardFinancialState(card))]));
   expect(isolated.candidate.cards.map((card) => card.id)).toEqual(fixedInput.activeAssetIds);
   for (const card of isolated.candidate.cards) {
     if (affectedAssetIds.includes(card.id)) {
-      expect(card).toMatchObject({ grade: "NR", score: null });
+      expect(card).toMatchObject({ ratingStatus: "pipeline-gap", grade: null, score: null });
       continue;
     }
-    expect(stableJsonStringifyV1(card)).toBe(cleanById.get(card.id));
+    expect(stableJsonStringifyV1(cardFinancialState(card))).toBe(cleanById.get(card.id));
   }
 }
 
@@ -138,7 +153,7 @@ describe("Safety Score v9 extension admission quarantine", { timeout: V9_EVALUAT
     expect(assessment.reasons).toEqual(
       expect.arrayContaining(
         ["alpha", "beta", "gamma-01"].map((assetId) =>
-          expect.objectContaining({ code: "producer-failed-nr", assetId, effect: "not-rated" }),
+          expect.objectContaining({ code: "producer-failed-pipeline-gap", assetId, effect: "pipeline-gap" }),
         ),
       ),
     );

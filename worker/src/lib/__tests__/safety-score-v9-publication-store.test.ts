@@ -1,4 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
+import { createHash } from "node:crypto";
+import { gzipSync } from "node:zlib";
 import { afterEach, describe, expect, it } from "vitest";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { makeWorkerSafetyScoreV9Publication } from "../../test-helpers/report-cards-v9";
@@ -15,7 +17,9 @@ import {
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { currentInput } from "./safety-score-v9-publication-store.test-support";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { bytesToBase64 } from "@shared/lib/base64";
 import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY } from "../safety-score-v9/publication-codec";
+import { handleReportCardsV9 } from "../../api/report-cards-v9";
 
 const databases: DatabaseSync[] = [];
 
@@ -102,7 +106,7 @@ describe("Safety Score V9 publication store", () => {
 
     await expect(persistSafetyScoreV9Publication(db, {
       publicationHealth: {
-        schemaVersion: 1,
+        schemaVersion: 2,
         status: "held",
         acceptedPublicationGenerationId: null,
         acceptedAtSec: null,
@@ -125,7 +129,7 @@ describe("Safety Score V9 publication store", () => {
     );
   });
 
-  it("requires per-fact disclosure paths on post-9.19 writes", async () => {
+  it("rejects current publication writes missing per-fact disclosure paths", async () => {
     const { db } = database();
     const publication = makeWorkerSafetyScoreV9Publication({
       policyVersion: "9.19",
@@ -137,7 +141,10 @@ describe("Safety Score V9 publication store", () => {
     delete trace.evidenceResponsibility.facts;
 
     await expect(persistSafetyScoreV9Publication(db, currentInput(publication)))
-      .rejects.toThrow(/v9\.19\+ publications require per-fact disclosure paths/);
+      .rejects.toMatchObject({ issues: expect.arrayContaining([
+        expect.objectContaining({ path: ["cards", 0, "scoreTrace", "evidenceResponsibility", "facts"] }),
+      ]) });
+    await expect(loadSafetyScoreV9Publication(db)).resolves.toBeNull();
   });
 
   it("replaces an older publication that the current reader cannot parse", async () => {
@@ -173,7 +180,7 @@ describe("Safety Score V9 publication store", () => {
   it("supports the initial held bootstrap before a publication exists", async () => {
     const { db } = database();
     const health = {
-      schemaVersion: 1 as const,
+      schemaVersion: 2 as const,
       status: "held" as const,
       acceptedPublicationGenerationId: null,
       acceptedAtSec: null,
@@ -200,6 +207,76 @@ describe("Safety Score V9 publication store", () => {
       health,
     );
   });
+
+  it.each(["dex-stale", "coverage-floor-failed", "assessment-failed"] as const)(
+    "persists a first held %s over schema-1 health without exposing the retired publication",
+    async code => {
+      const { sqlite, db } = database();
+      const publication = makeWorkerSafetyScoreV9Publication({ publishedAtSec: 100 });
+      await persistSafetyScoreV9Publication(db, currentInput(publication));
+      const row = sqlite.prepare("SELECT value FROM cache WHERE key = ?")
+        .get(SAFETY_SCORE_V9_CACHE_KEYS.publication) as { value: string };
+      const payload = Buffer.from(stableJsonStringifyV1({ ...publication, schemaVersion: 5 }));
+      const compressed = gzipSync(payload);
+      const legacyPublication = stableJsonStringifyV1({
+        ...JSON.parse(row.value),
+        payloadSha256: createHash("sha256").update(payload).digest("hex"),
+        uncompressedBytes: payload.byteLength,
+        compressedBytes: compressed.byteLength,
+        payload: bytesToBase64(compressed),
+      });
+      sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?")
+        .run(legacyPublication, SAFETY_SCORE_V9_CACHE_KEYS.publication);
+      const legacyHealth = { ...currentInput(publication).publicationHealth, schemaVersion: 1 };
+      sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?")
+        .run(stableJsonStringifyV1(legacyHealth), SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth);
+
+      const health = {
+        ...currentInput(publication).publicationHealth,
+        status: "held" as const,
+        attemptedAtSec: 120,
+        heldSinceSec: 120,
+        reasons: code === "coverage-floor-failed" ? [{ code, floorIds: ["active-assets"] }]
+          : code === "assessment-failed" ? [{ code, detail: "Capture assessment failed." }]
+            : [{ code }],
+      };
+      const heldInput = {
+        publicationHealth: health,
+        publicationAttempt: {
+          schemaVersion: 1 as const, attemptedAtSec: 120, outcome: "held" as const,
+          publicationGenerationId: null, quarantines: [], affectedAssetIds: [],
+        },
+        publicationClockSec: 120,
+      };
+      await expect(persistSafetyScoreV9Publication(db, {
+        ...heldInput,
+        publicationHealth: { ...health, attemptedAtSec: 100, heldSinceSec: 100 },
+        publicationAttempt: { ...heldInput.publicationAttempt, attemptedAtSec: 100 },
+        publicationClockSec: 100,
+      })).rejects.toThrow(/health cutover/);
+      await persistSafetyScoreV9Publication(db, heldInput);
+      await expect(loadSafetyScoreV9PublicationHealth(db)).resolves.toEqual(health);
+      await expect(loadSafetyScoreV9PublicationAttempt(db)).resolves.toMatchObject({
+        attemptedAtSec: 120, outcome: "held",
+      });
+      expect(sqlite.prepare("SELECT value FROM cache WHERE key = ?")
+        .get(SAFETY_SCORE_V9_CACHE_KEYS.publication)?.value).toBe(legacyPublication);
+      const heldResponse = await handleReportCardsV9(db);
+      expect(heldResponse.status).toBe(503);
+      expect(await heldResponse.json()).toMatchObject({ reason: "publication-schema-cutover-pending" });
+
+      const replacement = makeWorkerSafetyScoreV9Publication({
+        publishedAtSec: 130, publicationGenerationId: "report-cards:v9:first-current",
+      });
+      await persistSafetyScoreV9Publication(db, currentInput(replacement));
+      const currentResponse = await handleReportCardsV9(db);
+      expect(currentResponse.status).toBe(200);
+      expect(await currentResponse.json()).toMatchObject({
+        safetyScoreIdentity: { publicationGenerationId: replacement.publicationGenerationId },
+        publicationHealth: { schemaVersion: 2, status: "current" },
+      });
+    },
+  );
 
   it("conflicts when a current publication commits between a held read and final batch", async () => {
     const { sqlite, db } = database();
@@ -252,7 +329,7 @@ describe("Safety Score V9 publication store", () => {
 
     await expect(persistSafetyScoreV9Publication(racingDb, {
       publicationHealth: {
-        schemaVersion: 1,
+        schemaVersion: 2,
         status: "held",
         acceptedPublicationGenerationId: older.publicationGenerationId,
         acceptedAtSec: older.publishedAtSec,

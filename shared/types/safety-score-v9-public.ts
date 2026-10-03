@@ -29,6 +29,8 @@ import { SafetyScoreV9ScoreTraceSchema } from "./safety-score-v9-public-trace";
 import { V9WrapperFormSchema } from "./safety-score-v9-wrapper";
 import { V9EffectiveDependenciesV3Schema } from "./safety-score-v9-facts";
 import { ReserveSliceSchema } from "./reserves";
+import { causeGapRefs, V9RatingStatusSchema, V9PartialEvidenceSchema, V9DependencyCauseShape, refineV9RatingStatusFields, refineV9PublicGapReferences, refineV9PublicGapContext } from "./safety-score-v9-public-causes";
+import { canonicalTextArray } from "./safety-score-v9-fact-primitives";
 
 export const SafetyScoreV9DependencyProvenanceSchema = z.object({
   source: V9EffectiveDependenciesV3Schema.shape.source,
@@ -108,18 +110,26 @@ const SafetyScoreV9SerialDependencySchema = z
   .object({
     upstreamAssetId: z.string().min(1),
     score: ScoreSchema.nullable(),
+    ...V9DependencyCauseShape,
     blocked: z.boolean(),
     dependencyType: DependencyTypeSchema.optional(),
     wrapperForm: V9WrapperFormSchema.nullable().optional(),
     provenance: SafetyScoreV9DependencyProvenanceSchema.optional(),
   })
-  .strict();
+  .strict().superRefine((parent, ctx) => {
+    if ((parent.ratingStatus === "rated") !== (parent.score !== null) ||
+        (parent.ratingStatus === "pipeline-gap" && parent.blocked) ||
+        (parent.ratingStatus === "not-rated" && (parent.limitedEvidenceCauses?.length ?? 0) === 0)) {
+      ctx.addIssue({ code: "custom", message: "Serial parent availability must preserve its actual status and cause, not inherit technical NR" });
+    }
+  });
 
 const SafetyScoreV9BasketDependencySchema = z
   .object({
     upstreamAssetId: z.string().min(1),
     weight: z.number().finite().min(0).max(1),
     score: ScoreSchema.nullable(),
+    ...V9DependencyCauseShape,
     boundedUnknown: z.boolean(),
     dependencyType: DependencyTypeSchema.optional(),
     wrapperForm: z.null().optional(),
@@ -146,6 +156,7 @@ const SafetyScoreV9RoleDependencySchema = z
     inheritedDimensions: z.array(z.enum(["final", "backing", "exit", "access", "control", "oracle-nav"])),
     unavailableDimensions: z.array(z.enum(["final", "backing", "exit", "access", "control", "oracle-nav"])),
     score: ScoreSchema.nullable(),
+    ...V9DependencyCauseShape,
     boundedUnknown: z.boolean(),
     cycleBlocked: z.boolean(),
     evidenceRefIds: z.array(z.string().min(1)),
@@ -242,6 +253,8 @@ export const SafetyScoreV9EvidenceSummarySchema = z
   .strict();
 const SafetyScoreV9CardShape = {
   id: z.string().min(1),
+  localCauseGaps: canonicalTextArray(),
+  foreignCauseGapRefs: causeGapRefs(),
   /**
    * True when the exact V9 fact set compiled this asset's Backing reserve
    * exposures from an accepted live-reserve snapshot. Optional only so a new
@@ -256,7 +269,9 @@ const SafetyScoreV9CardShape = {
   sharedBookId: z.string().min(1).nullable().optional(),
   dependencyCoverage: z.array(SafetyScoreV9DependencyCoverageSchema).optional(),
   score: ScoreSchema.nullable(),
-  grade: V9GradeSchema,
+  grade: V9GradeSchema.nullable(),
+  ratingStatus: V9RatingStatusSchema,
+  partialEvidence: V9PartialEvidenceSchema.nullable(),
   qualityScore: ScoreSchema.nullable(),
   pegMultiplier: z.number().finite().min(0).max(1).nullable(),
   pegAdjustedScore: ScoreSchema.nullable(),
@@ -282,8 +297,21 @@ function refineCardBase(
   card: SafetyScoreV9CardBase,
   ctx: { addIssue: (issue: { code: "custom"; path?: PropertyKey[]; message: string }) => void },
 ): void {
-  if ((card.score === null) !== (card.grade === "NR")) {
-    ctx.addIssue({ code: "custom", path: ["grade"], message: "NR grade and null score must agree" });
+  refineV9PublicGapReferences(card, ctx);
+  refineV9RatingStatusFields(card, ctx);
+  const excludedPillars = (["backing", "exit", "control"] as const).filter((pillar) => card.pillars[pillar].aggregationDisposition === "excluded-a-b").sort();
+  if (JSON.stringify(excludedPillars) !== JSON.stringify(card.partialEvidence?.excludedPillars ?? [])) {
+    ctx.addIssue({ code: "custom", path: ["partialEvidence"], message: "Partial evidence must reconcile excluded pillars" });
+  }
+  if (excludedPillars.some((pillar) => card.pillars[pillar].causeGapRefs?.some((ref) => !card.partialEvidence?.causeGapRefs.includes(ref)))) {
+    ctx.addIssue({ code: "custom", path: ["partialEvidence"], message: "Excluded pillar gaps must remain visible in partial evidence" });
+  }
+  if (card.ratingStatus === "pipeline-gap") {
+    const reason = excludedPillars.length === 3 ? "all-pillars-pipeline-gap" : "single-pillar-pipeline-gap";
+    if (!card.reasonCodes.includes(reason) || card.nrReasons.length > 0 ||
+        card.qualityScore !== null || card.pegAdjustedScore !== null || card.pegMultiplier !== null || card.weakestPillar !== null) {
+      ctx.addIssue({ code: "custom", message: "Pipeline gaps require their distinct availability reason and null card score stages, never NR" });
+    }
   }
   if (card.score !== null && card.grade !== scoreToGrade(card.score)) {
     ctx.addIssue({
@@ -292,8 +320,8 @@ function refineCardBase(
       message: "V9 numeric score and grade band must agree",
     });
   }
-  if (card.score !== null && Object.values(card.pillars).some((pillar) => pillar.score === null)) {
-    ctx.addIssue({ code: "custom", path: ["pillars"], message: "A rated result requires all three pillars" });
+  if (card.ratingStatus === "rated" && Object.values(card.pillars).filter((pillar) => pillar.aggregationDisposition !== "excluded-a-b" && pillar.score !== null).length < 2) {
+    ctx.addIssue({ code: "custom", path: ["pillars"], message: "A rated result requires at least two included pillars" });
   }
   if (
     card.score !== null &&
@@ -305,7 +333,7 @@ function refineCardBase(
       message: "A rated result requires quality and peg-adjusted scores",
     });
   }
-  if (card.score === null && card.nrReasons.length === 0) {
+  if (card.ratingStatus === "not-rated" && card.nrReasons.length === 0) {
     ctx.addIssue({ code: "custom", path: ["nrReasons"], message: "An NR result requires an explicit reason" });
   }
   if (card.score !== null && card.nrReasons.length > 0) {
@@ -357,7 +385,12 @@ export const SafetyScoreV9CurrentCardSchema = SafetyScoreV9CurrentCardBaseSchema
   .superRefine((card, ctx) => {
     refineCardBase(card, ctx);
     refineCard(card, ctx);
-    if ((card.breakdowns === null) !== (card.grade === "NR")) {
+    if (card.ratingStatus === "pipeline-gap" && (card.scoreTrace.aggregation !== null ||
+        Object.values(card.scoreTrace.stages).some((value) => value !== null) ||
+        card.scoreTrace.scoreAdjustments.length > 0 || card.bindingCap !== null)) {
+      ctx.addIssue({ code: "custom", path: ["scoreTrace"], message: "Pipeline gaps cannot publish an aggregate, grade stage, adjustment or binding cap" });
+    }
+    if ((card.breakdowns === null) !== (card.ratingStatus === "not-rated")) {
       ctx.addIssue({
         code: "custom",
         path: ["breakdowns"],
@@ -366,6 +399,10 @@ export const SafetyScoreV9CurrentCardSchema = SafetyScoreV9CurrentCardBaseSchema
     }
     if (card.breakdowns !== null) {
       for (const pillar of ["backing", "exit", "control"] as const) {
+        if ((card.breakdowns[pillar].aggregationDisposition ?? "included") !== (card.pillars[pillar].aggregationDisposition ?? "included") ||
+            !numbersAgree(card.breakdowns[pillar].aggregationWeight, card.scoreTrace.aggregation?.effectiveScoringWeights[pillar] ?? 0)) {
+          ctx.addIssue({ code: "custom", path: ["breakdowns", pillar], message: "Diagnostic breakdown dispositions and included aggregate weights must agree" });
+        }
         if (
           !numbersAgree(card.breakdowns[pillar].publishedScore, card.pillars[pillar].score)
         ) {
@@ -388,14 +425,20 @@ export const SafetyScoreV9CompletenessSchema = z
     ratedCount: z.number().int().nonnegative(),
     notRatedCount: z.number().int().nonnegative(),
     notRatedIds: z.array(z.string().min(1)),
+    pipelineGapCount: z.number().int().nonnegative(),
+    pipelineGapIds: z.array(z.string().min(1)),
   })
   .strict()
   .superRefine((value, ctx) => {
-    if (value.expectedCount !== value.ratedCount + value.notRatedCount) {
+    if (value.expectedCount !== value.ratedCount + value.notRatedCount + value.pipelineGapCount) {
       ctx.addIssue({ code: "custom", message: "V9 completeness counts do not reconcile" });
     }
     if (value.notRatedIds.length !== value.notRatedCount || !isUniqueSorted(value.notRatedIds)) {
       ctx.addIssue({ code: "custom", path: ["notRatedIds"], message: "V9 not-rated IDs do not reconcile" });
+    }
+    if (value.pipelineGapIds.length !== value.pipelineGapCount || !isUniqueSorted(value.pipelineGapIds) ||
+        value.pipelineGapIds.some((id) => value.notRatedIds.includes(id))) {
+      ctx.addIssue({ code: "custom", path: ["pipelineGapIds"], message: "Pipeline-gap and NR membership must reconcile disjointly" });
     }
   });
 
@@ -414,6 +457,7 @@ const SafetyScoreV9ResponseShape = {
   asOfSec: z.number().int().nonnegative(),
   publishedAtSec: z.number().int().nonnegative(),
   completeness: SafetyScoreV9CompletenessSchema,
+  foreignCauseGaps: canonicalTextArray(),
   commonModeGroups: SafetyScoreV9CommonModeGroupsSchema.optional(),
 } as const;
 function refineResponse(
@@ -422,9 +466,11 @@ function refineResponse(
     publishedAtSec: number;
     completeness: z.infer<typeof SafetyScoreV9CompletenessSchema>;
     cards: readonly SafetyScoreV9CurrentCard[];
+    foreignCauseGaps: readonly string[];
   },
   ctx: { addIssue: (issue: { code: "custom"; path?: PropertyKey[]; message: string }) => void },
 ): void {
+  refineV9PublicGapContext(response, ctx);
   if (response.publishedAtSec < response.asOfSec) {
     ctx.addIssue({ code: "custom", path: ["publishedAtSec"], message: "Publication cannot predate evidence" });
   }
@@ -439,7 +485,12 @@ function refineResponse(
   if (JSON.stringify(notRatedIds) !== JSON.stringify(response.completeness.notRatedIds)) {
     ctx.addIssue({ code: "custom", path: ["completeness"], message: "V9 NR membership does not reconcile" });
   }
-  for (const issue of findSafetyScoreV9ParentAttributionIssues(response.cards)) {
+  const pipelineGapIds = response.cards.filter((card) => card.ratingStatus === "pipeline-gap").map((card) => card.id);
+  if (JSON.stringify(pipelineGapIds) !== JSON.stringify(response.completeness.pipelineGapIds) ||
+      response.cards.filter((card) => card.ratingStatus === "rated").length !== response.completeness.ratedCount) {
+    ctx.addIssue({ code: "custom", path: ["completeness"], message: "V9 rated and pipeline-gap membership does not reconcile" });
+  }
+  for (const issue of findSafetyScoreV9ParentAttributionIssues(response)) {
     ctx.addIssue({
       code: "custom",
       path: ["cards"],
@@ -448,18 +499,15 @@ function refineResponse(
   }
 }
 
-/** Current V9 envelope. Schema v5 adds compact component breakdowns. */
+/** Current schema-6 envelope: explicit proof-derived availability and partial evidence. */
 export const SafetyScoreV9CurrentResponseSchema = z
   .object({
     ...SafetyScoreV9ResponseShape,
-    schemaVersion: z.literal(5),
+    schemaVersion: z.literal(6),
     cards: z.array(SafetyScoreV9CurrentCardSchema),
   })
   .strict()
   .superRefine((response, ctx) => refineResponse(response, ctx));
 export type SafetyScoreV9CurrentResponse = z.infer<typeof SafetyScoreV9CurrentResponseSchema>;
 
-// Arms v1–v4 were deleted on 2026-08-10 after retained-store evidence showed
-// only v5 publications and component breakdowns on every V9 snapshot; see
-// agents/legacy-cleanup-wave3/gate-evidence.md (G4–G5).
 export const SafetyScoreV9ResponseSchema = SafetyScoreV9CurrentResponseSchema;

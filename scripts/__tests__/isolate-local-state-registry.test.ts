@@ -6,7 +6,6 @@ import {
 } from "../lib/isolate-local-state-registry-check";
 import {
   ISOLATE_LOCAL_STATE_REGISTRY,
-  renderIsolateLocalStateDocumentation,
 } from "@shared/lib/isolate-local-state-registry";
 import { createTempRepoTracker } from "./helpers/test-state";
 
@@ -64,10 +63,7 @@ describe("isolate-local state registry", () => {
   });
 
   it("covers all real Worker and Pages isolate-local module state", () => {
-    expect(() => assertIsolateLocalStateRegistryComplete(ISOLATE_LOCAL_STATE_REGISTRY, { root })).not.toThrow();
+    expect(findUnregisteredIsolateLocalState(ISOLATE_LOCAL_STATE_REGISTRY, { root })).toEqual([]);
   }, 15_000);
 
-  it("renders the checked Worker Infrastructure section", () => {
-    expect(renderIsolateLocalStateDocumentation()).toContain("| Source | State | Owner | TTL / reset semantics | Durable truth |");
-  });
 });

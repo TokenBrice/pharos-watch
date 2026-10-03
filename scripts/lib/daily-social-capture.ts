@@ -118,13 +118,14 @@ export function buildStabilitySocial(events: readonly DepegEvent[], base: Base):
 export function buildSafetySocial(data: ReportCardsV9Response, assets: readonly StablecoinData[], base: Base): DailySocialSnapshot {
   if (data.publicationHealth.status !== "current" || !fresh(data.asOfSec, base.capturedAt)) throw new Error("Safety publication is held or stale");
   const eligible = new Map(eligibleSocialAssets(assets, base.capturedAt).filter((asset) => getCirculatingRaw(asset) >= 10_000_000).map((asset) => [asset.id, asset]));
-  const cards = data.cards.filter((card) => eligible.has(card.id) && card.score != null && card.grade !== "NR")
-    .sort((a, b) => b.score! - a.score! || a.id.localeCompare(b.id)).slice(0, 5);
+  const cards = data.cards.filter((card): card is typeof card & { score: number; grade: NonNullable<typeof card.grade> } =>
+    eligible.has(card.id) && card.ratingStatus === "rated" && card.score !== null && card.grade !== null && card.grade !== "NR")
+    .sort((a, b) => b.score - a.score || a.id.localeCompare(b.id)).slice(0, 5);
   return finish({ ...base, asOf: Math.min(base.asOf, data.asOfSec), safetyAsOf: data.asOfSec,
     safetyPublicationId: data.safetyScoreIdentity.publicationGenerationId }, { topic: "safety", title: "The current Safety Score board", subtitle: `Published letter grades · $10M+ market cap · methodology ${data.methodology.version}`, unit: "score",
-    rows: cards.map((card) => ({ id: card.id, name: eligible.get(card.id)!.name, symbol: eligible.get(card.id)!.symbol, value: card.score!,
-      safetyGrade: card.grade, context: card.weakestPillar ? `Weakest pillar: ${card.weakestPillar.pillar}` : "Current published Safety Score" })),
-    methodology: "Current published scores, not weekly movers or guarantees. Sparse grade-change history cannot prove exact seven-day score deltas. Rated tracked assets with $10M+ market cap only; ties broken by asset ID.", source: "Pharos · Safety Score V9" });
+    rows: cards.map((card) => ({ id: card.id, name: eligible.get(card.id)!.name, symbol: eligible.get(card.id)!.symbol, value: card.score,
+      safetyGrade: card.grade, context: `${card.partialEvidence ? "Partial evidence · " : ""}${card.weakestPillar ? `Weakest pillar: ${card.weakestPillar.pillar}` : "Current published Safety Score"}` })),
+    methodology: "Current published scores, not weekly movers or guarantees. Sparse grade-change history cannot prove exact seven-day score deltas. Rated tracked assets with $10M+ market cap only, including visibly flagged partial cards; pipeline gaps are unavailable and excluded from ranking. Ties broken by asset ID.", source: "Pharos · Safety Score V9" });
 }
 
 /** Grades are joined by stablecoin ID from one current publication, never inferred from score or symbol. */
@@ -132,12 +133,17 @@ export function attachDailySocialGrades(snapshot: DailySocialSnapshot, data: Rep
   if (data.publicationHealth.status !== "current" || !fresh(data.asOfSec, snapshot.capturedAt)) {
     throw new Error("Safety publication is held or stale");
   }
-  const grades = new Map(data.cards.map((card) => [card.id, card.grade]));
+  const cards = new Map(data.cards.map((card) => [card.id, card]));
   const rows = snapshot.rows.map((row) => {
-    const grade = row.symbol ? grades.get(row.id) : undefined;
-    return grade != null ? { ...row, safetyGrade: grade } : row;
+    const card = row.symbol ? cards.get(row.id) : undefined;
+    if (!card) return row;
+    if (card.ratingStatus === "pipeline-gap") {
+      const { safetyGrade: _previousGrade, ...withoutGrade } = row;
+      return { ...withoutGrade, context: `${row.context} · Safety Score: Pipeline gap` };
+    }
+    return { ...row, safetyGrade: card.grade!, context: `${row.context}${card.partialEvidence ? " · Partial evidence" : ""}` };
   });
-  if (!rows.some((row) => row.safetyGrade != null)) return snapshot;
+  if (rows.every((row, index) => row === snapshot.rows[index])) return snapshot;
   return DailySocialSnapshotSchema.parse({ ...snapshot, rows, asOf: Math.min(snapshot.asOf, data.asOfSec),
     safetyAsOf: data.asOfSec, safetyPublicationId: data.safetyScoreIdentity.publicationGenerationId,
     source: `${snapshot.source} + Safety Score V9` });

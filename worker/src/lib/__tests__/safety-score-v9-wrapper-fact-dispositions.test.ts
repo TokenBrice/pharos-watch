@@ -4,7 +4,7 @@ import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import lorenzoMeta from "@shared/data/stablecoins/coins/susd1plus-lorenzo.json";
 import { ParentBackingInheritanceSchema } from "@shared/types/stablecoin-meta-schemas";
 import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
-import { createAssetBuildContext } from "../safety-score-v9/fact-set-context";
+import { createAssetBuildContext, createRuntimeGapVerdict } from "../safety-score-v9/fact-set-context";
 import { buildWrapperLocalFacts } from "../safety-score-v9/fact-set-wrapper";
 import {
   makeV9CohortFixedInput,
@@ -12,6 +12,7 @@ import {
   makeV9TwoAssetFixedInput,
   type V9ExtensionDependencyEdge,
 } from "../../test-helpers/v9-fixed-input";
+import { normalizeFixedInput } from "../report-cards-fixed-input";
 
 function fixedInputWithTrackedParent() {
   return makeV9TwoAssetFixedInput();
@@ -116,9 +117,6 @@ describe("Safety Score V9 wrapper fact dispositions", () => {
         leverage: { disposition: "not-applicable" },
         rehypothecationCorrelation: { disposition: "not-applicable" },
       });
-      expect(facts.facts.custodyEscrow.disposition).not.toBe("issuer-undisclosed");
-      expect(facts.facts.leverage.disposition).not.toBe("issuer-undisclosed");
-      expect(facts.facts.rehypothecationCorrelation.disposition).not.toBe("issuer-undisclosed");
     }
   });
 
@@ -140,43 +138,13 @@ describe("Safety Score V9 wrapper fact dispositions", () => {
       const asset = compiled.assets.find((asset) => asset.assetId === "alpha")!;
       if (asset.wrapperLocalFacts?.applicability !== "wrapper") throw new Error("Expected wrapper-local facts");
       expect(asset.wrapperLocalFacts.facts).toMatchObject({
-        custodyEscrow: { disposition: "issuer-undisclosed", assessment: null },
-        rehypothecationCorrelation: { disposition: "issuer-undisclosed", assessment: null },
+        custodyEscrow: { assessment: null },
+        rehypothecationCorrelation: { assessment: null },
       });
+      expect(asset.wrapperLocalFacts.facts.custodyEscrow.status?.observationState).not.toBe("known");
     },
   );
 
-  it.each([
-    "cex",
-    "institutional-top",
-    "institutional-regulated",
-    "institutional-unregulated",
-    "institutional-sanctioned",
-    "mixed",
-    "unknown",
-  ] as const)(
-    "keeps an incomplete %s custody profile issuer-undisclosed for a direct wrapper",
-    (custodyModel) => {
-      const fixed = fixedInputWithTrackedParent();
-      const extension = wrapperExtension(fixed, "savings-passthrough");
-      extension.assets.find((asset) => asset.assetId === "alpha")!.wrapperCustodyReview = {
-        custodyModel,
-        providers: [{ providerKey: "custody-provider", role: "custodian", shareFraction: null }],
-        segregation: "unknown",
-        bankruptcyRemoteness: "unknown",
-        rehypothecation: "unknown",
-        knownUnknownExposureShare: null,
-      };
-
-      const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension);
-      const asset = compiled.assets.find((asset) => asset.assetId === "alpha")!;
-      if (asset.wrapperLocalFacts?.applicability !== "wrapper") throw new Error("Expected wrapper-local facts");
-      expect(asset.wrapperLocalFacts.facts).toMatchObject({
-        custodyEscrow: { disposition: "issuer-undisclosed", assessment: null },
-        rehypothecationCorrelation: { disposition: "issuer-undisclosed", assessment: null },
-      });
-    },
-  );
 
   it.each([
     ["strategy-vault", true],
@@ -197,22 +165,14 @@ describe("Safety Score V9 wrapper fact dispositions", () => {
     const asset = compiled.assets.find((asset) => asset.assetId === "alpha")!;
     if (asset.wrapperLocalFacts?.applicability !== "wrapper") throw new Error("Expected wrapper-local facts");
     expect(asset.wrapperLocalFacts.facts).toMatchObject({
-      custodyEscrow: { disposition: "issuer-undisclosed", assessment: null },
-      rehypothecationCorrelation: { disposition: "issuer-undisclosed", assessment: null },
+      custodyEscrow: { assessment: null },
+      rehypothecationCorrelation: { assessment: null },
     });
+    expect(asset.wrapperLocalFacts.facts.custodyEscrow.status?.observationState).not.toBe("known");
   });
 
-  it("keeps an applicable strategy-vault custody review issuer-undisclosed when no profile is published", () => {
-    const { facts } = wrapperFacts("strategy-vault");
-
-    expect(facts.facts.custodyEscrow).toMatchObject({
-      disposition: "issuer-undisclosed",
-      assessment: null,
-    });
-  });
 
   it.each([
-    ["opaque-or-unknown", "issuer-undisclosed", null],
     ["single-source-or-laggy", "reviewed", "high"],
     ["privileged-internal-pricing", "reviewed", "high"],
   ] as const)("attributes %s NAV pricing without mistaking non-disclosure for measured weakness", (tier, disposition, assessment) => {
@@ -316,7 +276,46 @@ describe("Safety Score V9 wrapper fact dispositions", () => {
     });
   });
 
-  it("fails closed to issuer-undisclosed when the tracked parent edge is absent", () => {
+  it.each([
+    { state: "current", reviewedAt: "2026-10-01", expiresAt: "2026-11-01", admitted: true },
+    { state: "expired", reviewedAt: "2026-09-01", expiresAt: "2026-10-01", admitted: false },
+    { state: "future", reviewedAt: "2026-10-03", expiresAt: "2026-11-01", admitted: false },
+  ])("$state whole-allocation review resolves U custody/reuse only when date-admitted", ({ reviewedAt, expiresAt, admitted }) => {
+    const fixed = makeV9TwoAssetFixedInput({ clockSec: Date.parse("2026-10-02T00:00:00Z") / 1000 });
+    const extension = wrapperExtension(fixed, "strategy-vault");
+    extension.assets.find((asset) => asset.assetId === "alpha")!.wrapperAllocationReview = {
+      assetId: "alpha", scopeKind: "whole-allocation", reviewedAt, expiresAt, reviewer: "test-fixture",
+      custody: "fully-onchain-no-offchain-custodian", localLeverage: "no-borrowing-surface", capitalReuse: "none",
+      rationale: "The complete allocation has no offchain custody, local borrowing or capital reuse.",
+      observations: [{
+        chain: "ethereum", address: "0x0000000000000000000000000000000000000001",
+        function: "fixture()", value: "none", block: 1,
+      }],
+      sources: [{ label: "Fixture allocation", url: "https://example.com/allocation" }],
+    };
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension);
+    const asset = compiled.assets.find((asset) => asset.assetId === "alpha")!;
+    if (asset.wrapperLocalFacts?.applicability !== "wrapper") throw new Error("Expected wrapper-local facts");
+    const facts = asset.wrapperLocalFacts.facts;
+    const limit = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets
+      .find((asset) => asset.assetId === "alpha")!.trace.wrapperParentLimit!;
+    for (const factKey of ["custodyEscrow", "rehypothecationCorrelation"] as const) {
+      if (admitted) {
+        expect(facts[factKey]).toMatchObject(factKey === "custodyEscrow"
+          ? { disposition: "not-applicable" }
+          : { disposition: "reviewed", assessment: "none" });
+        expect(limit.missingFacts.some((fact) => fact.factClass === factKey)).toBe(false);
+      } else {
+        expect(facts[factKey]).toMatchObject({ disposition: "unresearched", assessment: null });
+        const gap = asset.gaps.find((gap) => gap.gapId === facts[factKey].status?.gapIds[0])!;
+        expect(gap.causeProof.cause).toBe("U");
+        expect(limit.missingFacts).toContainEqual(expect.objectContaining({ factClass: factKey, cause: "U" }));
+        expect(limit.fallbackDiscount).toBe(10);
+      }
+    }
+  });
+
+  it("retains independently compiled supply when a tracked parent edge is absent", () => {
     // Without a serial parent edge we cannot prove the wrapper is a direct
     // pass-through, so the conservative dispositions must survive. Compilation
     // must also still succeed: a missing edge is a registry-completeness
@@ -338,5 +337,34 @@ describe("Safety Score V9 wrapper fact dispositions", () => {
     // The rest of the asset still compiled.
     expect(asset.supply).toBeDefined();
     expect(asset.assetId).toBe("alpha");
+  });
+});
+
+describe("v10.01 wrapper scoped causes", () => {
+  it("excludes only the missing local datum without fabricating loss-absorption credit", () => {
+    const base = fixedInputWithTrackedParent();
+    const failure = createRuntimeGapVerdict({
+      assetId: "alpha", scope: { pillar: "backing", componentKey: "wrapper-local",
+        factorKey: "custodyEscrow", routeKey: null, exposureId: null, requiredDatum: "custodyEscrow" },
+      sourceId: "fixture-custody-reader", sourceGenerationId: "attempt:wrapper-local",
+      observedAtSec: base.clockSec, asOfSec: base.clockSec, producerState: "producer-failed",
+      rejectionCode: "custody-read-failed", reason: "The custody reader failed.",
+    });
+    const fixed = normalizeFixedInput({ ...base, baseInputGenerationId: undefined,
+      pipelineGapByAssetId: { alpha: [failure] } });
+    const extension = wrapperExtension(fixed, "strategy-vault");
+    extension.assets[0]!.wrapperCustodyReview = {
+      custodyModel: "unknown", providers: [{ providerKey: "reviewed-provider", role: "other", shareFraction: 1 }],
+      segregation: "unknown", bankruptcyRemoteness: "unknown", rehypothecation: "permitted", knownUnknownExposureShare: 0,
+    };
+    const asset = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets[0]!;
+    const facts = asset.wrapperLocalFacts;
+    if (facts?.applicability !== "wrapper") throw new Error("Expected wrapper-local facts");
+    const gap = asset.gaps.find((row) => row.gapId === facts.facts.custodyEscrow.status?.gapIds[0])!;
+    expect(gap.causeProof.cause).toBe("A");
+    expect(facts.facts.custodyEscrow.assessment).toBeNull();
+    expect(facts.facts.rehypothecationCorrelation).toMatchObject({ disposition: "reviewed", assessment: "high" });
+    expect(facts.riskTransfer.maximumParentLossAbsorptionPoints).toBe(0);
+    expect(asset.dependencies.edges[0]!.upstreamAssetId).toBe("beta");
   });
 });

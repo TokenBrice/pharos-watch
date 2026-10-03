@@ -11,6 +11,7 @@ import {
   createV9FactStatus,
   notApplicableV9Fact,
   requiredV9Applicability,
+  resolveV9EvidenceCause,
 } from "../safety-score-v9/evidence";
 import {
   canonicalV9RouteKey,
@@ -74,6 +75,35 @@ function notApplicableStatus(policyRuleId: string) {
     evidenceRefIds: [BASE_EVIDENCE_ID],
   });
 }
+function researchedOpacityGap(asset: V9AssetFactsV3, args: Parameters<typeof createV9FactGapV3>[0]) {
+  const reviewedAt = new Date((AS_OF_SEC - 200) * 1_000).toISOString().replace(".000Z", "Z");
+  const url = "https://fixture.example/disclosures";
+  const scope = {
+    pillar: "backing" as const,
+    componentKey: args.path.kind === "local-component" ? args.path.componentKey : args.policyRuleId,
+    factorKey: null, routeKey: null, exposureId: null, requiredDatum: args.policyRuleId,
+  };
+  const resolved = resolveV9EvidenceCause({
+    assetId: asset.assetId, scope, asOfSec: AS_OF_SEC,
+    sourceGenerationId: BASE_INPUT_GENERATION_ID, evidenceReferences: asset.evidence,
+    classification: {
+      id: `fixture:${args.gapId}`, assetId: asset.assetId, scope,
+      cause: "C", reviewedAt, reviewer: "fixture reviewer",
+      assertion: "researched-nondisclosure", searchedSurfaces: [url],
+      rationale: "The reviewed issuer disclosure omits the required fixture datum.",
+      sources: [{
+        url, observedAt: reviewedAt, datumAsOf: null, location: "Fixture disclosure",
+        excerpt: "The required datum is not disclosed.", assertion: "Scoped researched absence.",
+      }],
+    },
+  });
+  asset.evidence = [...resolved.evidenceReferences];
+  return createV9FactGapV3({
+    ...args, causeScope: scope, causeProof: resolved.causeProof,
+    evidenceRefIds: resolved.causeProof.evidenceRefIds,
+  });
+}
+
 
 function mechanismFact() {
   return {
@@ -120,6 +150,8 @@ function measuredRoute({
     holderAccess: "permissionless",
     executionModel: "market-depth",
     executionCertainty: "bounded",
+    capacityEvidenceTier: "live-direct",
+    factorStatuses: {},
     modelConfidence: "high",
     observationConfidence: "high",
     observationHistory: {
@@ -223,7 +255,7 @@ function compiledFactSet(routes: readonly V9ExitRouteFactV2[]): CompiledV9FactSe
   const baseEvidence = evidence(BASE_EVIDENCE_ID);
   const routeEvidence = routes.map((route) => evidence(route.status.evidenceRefIds[0]!, DEX_GENERATION_ID));
   return compileV9FactSetV3({
-    schemaVersion: 3,
+    schemaVersion: 4,
     baseInputGenerationId: BASE_INPUT_GENERATION_ID,
     asOfSec: AS_OF_SEC,
     compiledAtSec: AS_OF_SEC,
@@ -234,6 +266,7 @@ function compiledFactSet(routes: readonly V9ExitRouteFactV2[]): CompiledV9FactSe
         assetId: "fixture-asset",
         archetype: "algorithmic",
         evidence: [baseEvidence, ...routeEvidence],
+        reserveResiduals: [],
         gaps: [],
         wrapperLocalFacts: {
           schemaVersion: 1,
@@ -401,9 +434,6 @@ describe("Safety Score v9 operational-resilience full-pipeline integration", () 
 
     const sharedRoutes = structuredClone(factSet.assets[0]!.exitRoutes);
     sharedRoutes[1]!.physicalResourceKeys = ["pool:route-a"];
-    // Shared score-bearing resources are rejected before resilience evaluation.
-    expect(() => compiledFactSet(sharedRoutes)).toThrow();
-    sharedRoutes[1]!.scoreEligible = false;
     const shared = compiledFactSet(sharedRoutes);
     const evaluatedShared = evaluatedAsset(shared);
     expect(evaluatedShared.operationalResilience?.eligible).toBe(true);
@@ -486,7 +516,7 @@ describe("Safety Score v9 operational-resilience full-pipeline integration", () 
     expect(persistentMarketDepthContribution(evaluatedAsset(base))).toBeDefined();
 
     const ordinaryOpacity = mutateFactSet(base, (asset) => {
-      const gap = createV9FactGapV3({
+      const gap = researchedOpacityGap(asset, {
         gapId: "gap:ordinary-opacity",
         reasonCode: "bounded-mechanism-review",
         ownerDomain: "backing",
@@ -497,7 +527,7 @@ describe("Safety Score v9 operational-resilience full-pipeline integration", () 
         message: "The issuer has not disclosed an ordinary mechanism component.",
         evidenceRefIds: [BASE_EVIDENCE_ID],
       });
-      asset.gaps.push(gap);
+      asset.gaps = [...asset.gaps, gap];
       if (asset.mechanismRiskReview.review?.archetype !== "algorithmic") {
         throw new Error("Expected algorithmic fixture");
       }
@@ -516,7 +546,7 @@ describe("Safety Score v9 operational-resilience full-pipeline integration", () 
     });
 
     const pegOpacity = mutateFactSet(base, (asset) => {
-      const gap = createV9FactGapV3({
+      const gap = researchedOpacityGap(asset, {
         gapId: "gap:peg-opacity",
         reasonCode: "missing-peg-input",
         ownerDomain: "peg",
@@ -527,7 +557,7 @@ describe("Safety Score v9 operational-resilience full-pipeline integration", () 
         message: "The issuer has not disclosed the applicable peg input.",
         evidenceRefIds: [BASE_EVIDENCE_ID],
       });
-      asset.gaps.push(gap);
+      asset.gaps = [...asset.gaps, gap];
       asset.peg.status = createV9FactStatus({
         applicability: requiredV9Applicability("peg.current"),
         observationState: "bounded-unknown",

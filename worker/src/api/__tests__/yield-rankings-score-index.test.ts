@@ -3,6 +3,7 @@ import { DatabaseSync } from "node:sqlite";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { makeYieldRanking, makeYieldProvenance } from "@shared/test-utils/yield-ranking-fixtures";
+import { makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 import type { YieldRankingsResponse } from "@shared/types/yield";
 import { makeWorkerSafetyScoreV9Publication, makeWorkerV9Card } from "../../test-helpers/report-cards-v9";
 import { currentInput } from "../../lib/__tests__/safety-score-v9-publication-store.test-support";
@@ -17,13 +18,15 @@ const NOW = Date.parse("2026-04-23T12:00:00Z") / 1000;
 const databases: DatabaseSync[] = [];
 afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers(); for (const db of databases.splice(0)) db.close(); });
 
-async function fixture(held = false) {
+async function fixture(held = false, pipelineGap = false) {
   vi.useFakeTimers(); vi.setSystemTime(NOW * 1000);
   const sqlite = createLatestSchemaSqlite().sqlite;
   databases.push(sqlite);
   const db = createSqliteD1(sqlite);
   const publication = makeWorkerSafetyScoreV9Publication({ asOfSec: NOW - 30, publishedAtSec: NOW,
-    cards: [makeWorkerV9Card({ id: "usdc-circle", score: 80, grade: "A-" }),
+    cards: [pipelineGap
+      ? makeReportCardsV9PipelineGapCard("control", "A", { id: "usdc-circle" })
+      : makeWorkerV9Card({ id: "usdc-circle", score: 80, grade: "A-" }),
       makeWorkerV9Card({ id: "usdt-tether", score: null, grade: "NR", qualityScore: null, pegMultiplier: null,
         nrReasons: [{ code: "missing-reserve-composition", field: "pillars.backing", origin: "asset", message: "Reserve composition is unavailable." }] })],
   });
@@ -56,6 +59,22 @@ async function fixture(held = false) {
 }
 
 describe("rankings score-index hydration", () => {
+  it("keeps an asset pipeline gap null rather than substituting default safety or NR", async () => {
+    const { db, sqlite } = await fixture(false, true);
+    // The hot read cannot fall back to full cards even though the cached
+    // yield publication still has a previously rated score.
+    sqlite.prepare("UPDATE cache SET value = json_set(value, '$.payload', 'invalid-gzip-payload') WHERE key = ?")
+      .run(SAFETY_SCORE_V9_CACHE_KEYS.publication);
+    const response = await handleYieldRankings(db);
+    expect(response.status).toBe(200);
+    const body = await response.json() as YieldRankingsResponse;
+    expect(body.rankings.find((row) => row.id === "usdc-circle")).toMatchObject({
+      safetyScore: null, safetyGrade: null, pharosYieldScore: null,
+      safetyReason: "safety-snapshot-unavailable", yieldToRisk: null,
+      provenance: { usedDefaultSafety: false, safetyProvenance: "safety-snapshot-unavailable" },
+    });
+    expect(body.provenance?.liveSafetyHydration?.coveredCount).toBe(0);
+  });
   it.each([false, true])("is byte-identical to full-publication hydration (held=%s)", async held => {
     const { db } = await fixture(held);
     const indexed = await handleYieldRankings(db);
@@ -84,7 +103,7 @@ describe("rankings score-index hydration", () => {
     const body = await response.json() as YieldRankingsResponse;
     const row = body.rankings.find(row => row.id === "usdc-circle")!;
     expect(row.safetyScore).toBeNull();
-    expect(row.safetyGrade).toBe("NR");
+    expect(row.safetyGrade).toBeNull();
     expect(row.pharosYieldScore).toBeNull();
     const reason = failure === "missing" ? "safety-score-index-missing" : "safety-score-index-publication-mismatch";
     expect(body.provenance?.liveSafetyHydration?.reason).toContain(reason);

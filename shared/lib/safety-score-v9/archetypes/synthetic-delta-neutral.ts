@@ -20,10 +20,7 @@ export function evaluateV9SyntheticDeltaNeutralBacking(
 ): V9BackingResult {
   const backing = policy.policy.semantic.backing;
   const structuralReasons: V9BackingStructuralReason[] = [];
-  // Owner ruling 2026-07-27 (wave-7 D2): an `unavailable` metric keeps its
-  // structural signal firing — unmeasured is never presumed adequate — while
-  // an evidenced `not-applicable` metric skips it. Absent applicability means
-  // the metric is measured (legacy full-metric reviews).
+  // Unavailable hedge/insurance metrics are bounded uncertainty, not adversity.
   const hedgeApplicability = resolveV9MetricApplicability(
     review.metricApplicability?.hedgeCoverageRatio,
     review.hedgeReconciliation.status,
@@ -33,10 +30,11 @@ export function evaluateV9SyntheticDeltaNeutralBacking(
     review.lossAbsorption.status,
   );
   if (
-    hedgeApplicability.unavailable ||
-    (hedgeApplicability.state === "measured" &&
-      review.hedgeCoverageRatio !== null &&
-      review.hedgeCoverageRatio < backing.structural.synthetic.minimumHedgeCoverageRatio)
+    hedgeApplicability.state === "measured" &&
+    review.hedgeReconciliation.status.observationState === "known" &&
+    review.hedgeReconciliation.status.evidenceRefIds.length > 0 &&
+    review.hedgeCoverageRatio !== null &&
+    review.hedgeCoverageRatio < backing.structural.synthetic.minimumHedgeCoverageRatio
   ) {
     structuralReasons.push(
       createV9BackingStructuralReason(policy, backing.structural.synthetic.hedgeSignal, {
@@ -49,10 +47,11 @@ export function evaluateV9SyntheticDeltaNeutralBacking(
     );
   }
   if (
-    lossAbsorptionApplicability.unavailable ||
-    (lossAbsorptionApplicability.state === "measured" &&
-      review.lossAbsorptionShare !== null &&
-      review.lossAbsorptionShare < backing.structural.synthetic.minimumLossAbsorptionShare)
+    lossAbsorptionApplicability.state === "measured" &&
+    review.lossAbsorption.status.observationState === "known" &&
+    review.lossAbsorption.status.evidenceRefIds.length > 0 &&
+    review.lossAbsorptionShare !== null &&
+    review.lossAbsorptionShare < backing.structural.synthetic.minimumLossAbsorptionShare
   ) {
     structuralReasons.push(
       createV9BackingStructuralReason(policy, backing.structural.synthetic.lossAbsorptionSignal, {
@@ -65,7 +64,8 @@ export function evaluateV9SyntheticDeltaNeutralBacking(
     );
   }
   for (const venue of [...review.venueShares].sort((left, right) => compareText(left.venueKey, right.venueKey))) {
-    if (venue.share < backing.structural.commonModeShare) continue;
+    if (venue.share < backing.structural.commonModeShare || review.venueAndCustody.status.observationState !== "known" ||
+      review.venueAndCustody.status.evidenceRefIds.length === 0) continue;
     structuralReasons.push(
       createV9BackingStructuralReason(policy, backing.structural.commonModeSignal, {
         responsibility: v9StructuralResponsibilityForStatus(review.venueAndCustody.status),

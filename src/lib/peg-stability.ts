@@ -6,7 +6,7 @@ import { WEEK_SECONDS } from "@shared/lib/time-constants";
 
 interface PegStabilityMetrics {
   /** Percentage of tracked history at peg (0–100) */
-  pegPct: number;
+  pegPct: number | null;
   /** Human-readable tracking span (e.g. "3y 8m") */
   trackingSpan: string;
   /** Whether tracking history is < 7 days */

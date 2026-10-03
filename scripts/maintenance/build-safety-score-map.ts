@@ -191,7 +191,9 @@ const LOGO_DARK_PLATE = "#111a29";
 const RENDERABLE_TEXT = /^[\x20-\x7e·–—°€£¥]*$/;
 const unsupportedGlyphs = new Set<string>();
 
-type MapReportCard = Pick<ReportCardsV9CurrentResponse["cards"][number], "id" | "score" | "grade">;
+type MapReportCard = Pick<ReportCardsV9CurrentResponse["cards"][number], "id" | "score"> & {
+  grade: NonNullable<ReportCardsV9CurrentResponse["cards"][number]["grade"]>;
+};
 type MapStablecoin = Pick<StablecoinListResponse["peggedAssets"][number], "id" | "symbol" | "circulating">;
 type MapPsiCurrent = Pick<StabilityIndexCurrent, "score" | "band" | "avg24h" | "avg24hBand" | "computedAt">;
 
@@ -298,7 +300,9 @@ export function parseMapReportCards(payload: unknown): {
   const cards = response.cards.map((card) => {
     if (ids.has(card.id)) throw new Error(`Duplicate report-card id "${card.id}" — refusing to build an ambiguous map`);
     ids.add(card.id);
-    if (!VALID_CARD_GRADES.has(card.grade)) {
+    // Technical gaps have no grade; they cannot enter any rendered grade band.
+    if (card.ratingStatus === "pipeline-gap") return null;
+    if (card.grade === null || !VALID_CARD_GRADES.has(card.grade)) {
       throw new Error(`Unknown grade "${card.grade}" for ${card.id} — the tier map (${TIER_ORDER.join("/")}) is out of date`);
     }
     if (card.grade === "NR") {
@@ -313,7 +317,7 @@ export function parseMapReportCards(payload: unknown): {
       }
     }
     return { id: card.id, score: card.score, grade: card.grade };
-  });
+  }).filter((card): card is MapReportCard => card !== null);
 
   return {
     cards,

@@ -71,8 +71,10 @@ export { getV9GradeRiskBucket, type V9GradeRiskBucket };
 export interface V9SafetyTableRow {
   id: string;
   score: number | null;
-  grade: V9Grade;
-  riskBucket: V9GradeRiskBucket;
+  grade: V9Grade | null;
+  ratingStatus: SafetyScoreV9Card["ratingStatus"];
+  partialEvidence: SafetyScoreV9Card["partialEvidence"];
+  riskBucket: V9GradeRiskBucket | null;
   pillars: SafetyScoreV9Card["pillars"];
   evidence: SafetyScoreV9Card["evidence"];
   weakestPillar: SafetyScoreV9Card["weakestPillar"];
@@ -92,7 +94,7 @@ export interface V9SafetyTableRow {
 export function readV9CardMintComponent(card: SafetyScoreV9Card): PublishedMintComponent | null {
   const breakdowns = "breakdowns" in card ? card.breakdowns : null;
   const component = breakdowns?.control?.components.find((entry) => entry.kind === "mint");
-  return component ? { score: component.score, posture: component.posture } : null;
+  return component && component.score !== null ? { score: component.score, posture: component.posture } : null;
 }
 
 export function buildV9SafetyTableRows(
@@ -107,7 +109,9 @@ export function buildV9SafetyTableRows(
       id: card.id,
       score: card.score,
       grade: card.grade,
-      riskBucket: getV9GradeRiskBucket(card.grade),
+      ratingStatus: card.ratingStatus,
+      partialEvidence: card.partialEvidence,
+      riskBucket: card.grade === null ? null : getV9GradeRiskBucket(card.grade),
       pillars: card.pillars,
       evidence: card.evidence,
       weakestPillar: card.weakestPillar,
@@ -155,10 +159,12 @@ function mapV9FreezeStatus(card: SafetyScoreV9Card): V9FreezeStatus {
 }
 
 export interface V9PortfolioProjection {
-  aggregateLabel: "weighted-safety-aggregate";
-  score: number;
+  aggregateLabel: "weighted-safety-aggregate" | "known-only-weighted-safety-aggregate";
+  score: number | null;
   assetGrade: null;
-  pillars: Record<"backing" | "exit" | "control", number>;
+  pillars: Record<"backing" | "exit" | "control", number | null>;
+  partialEvidence: boolean;
+  coverageUsd: { total: number; score: number; pillars: Record<"backing" | "exit" | "control", number> };
   dependencyExposure: Array<{
     upstreamAssetId: string;
     dependentAssetId: string;
@@ -184,25 +190,26 @@ export function buildV9PortfolioProjection(
   const cardById = new Map(response.value.cards.map((card) => [card.id, card]));
   let weightedScore = 0;
   const weightedPillars = { backing: 0, exit: 0, control: 0 };
+  let scoredUsd = 0;
+  let partialEvidence = false;
+  const pillarUsd = { backing: 0, exit: 0, control: 0 };
   let totalUsd = 0;
 
   for (const holding of positiveHoldings) {
     const card = cardById.get(holding.coinId);
     if (!card) return { status: "unavailable", reason: "portfolio-card-unavailable" };
-    if (
-      card.score === null ||
-      card.grade === "NR" ||
-      card.pillars.backing.score === null ||
-      card.pillars.exit.score === null ||
-      card.pillars.control.score === null
-    ) {
-      return { status: "unavailable", reason: "portfolio-card-not-rated" };
-    }
     totalUsd += holding.amount;
+    partialEvidence ||= card.partialEvidence !== null || card.ratingStatus !== "rated";
+    if (card.ratingStatus === "not-rated") return { status: "unavailable", reason: "portfolio-card-not-rated" };
+    if (card.ratingStatus === "pipeline-gap" || card.score === null) continue;
+    scoredUsd += holding.amount;
     weightedScore += card.score * holding.amount;
-    weightedPillars.backing += card.pillars.backing.score * holding.amount;
-    weightedPillars.exit += card.pillars.exit.score * holding.amount;
-    weightedPillars.control += card.pillars.control.score * holding.amount;
+    for (const pillar of ["backing", "exit", "control"] as const) {
+      const value = card.pillars[pillar];
+      if (value.aggregationDisposition !== "included" || value.score === null) continue;
+      weightedPillars[pillar] += value.score * holding.amount;
+      pillarUsd[pillar] += holding.amount;
+    }
   }
 
   const amountByCardId = new Map(positiveHoldings.map((holding) => [holding.coinId, holding.amount]));
@@ -222,13 +229,15 @@ export function buildV9PortfolioProjection(
     status: "available",
     identity: response.identity,
     value: {
-      aggregateLabel: "weighted-safety-aggregate",
-      score: Math.round(weightedScore / totalUsd),
+      aggregateLabel: partialEvidence ? "known-only-weighted-safety-aggregate" : "weighted-safety-aggregate",
+      score: scoredUsd > 0 ? Math.round(weightedScore / scoredUsd) : null,
       assetGrade: null,
+      partialEvidence,
+      coverageUsd: { total: totalUsd, score: scoredUsd, pillars: pillarUsd },
       pillars: {
-        backing: Math.round(weightedPillars.backing / totalUsd),
-        exit: Math.round(weightedPillars.exit / totalUsd),
-        control: Math.round(weightedPillars.control / totalUsd),
+        backing: pillarUsd.backing > 0 ? Math.round(weightedPillars.backing / pillarUsd.backing) : null,
+        exit: pillarUsd.exit > 0 ? Math.round(weightedPillars.exit / pillarUsd.exit) : null,
+        control: pillarUsd.control > 0 ? Math.round(weightedPillars.control / pillarUsd.control) : null,
       },
       dependencyExposure,
     },

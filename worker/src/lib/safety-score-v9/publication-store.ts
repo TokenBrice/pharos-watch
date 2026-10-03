@@ -18,9 +18,11 @@ import {
   SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY,
   SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY,
   serializeSafetyScoreV9Publication,
+  SafetyScoreV9SchemaCutoverPendingError,
 } from "./publication-codec";
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
 import { SafetyScoreIndexSchema } from "@shared/types/safety-score-index";
+import { projectV9CompactPartialEvidence } from "@shared/types/safety-score-v9-causes";
 
 export const SAFETY_SCORE_V9_CACHE_KEYS = {
   publication: "report-cards:v9",
@@ -198,11 +200,16 @@ export async function loadSafetyScoreV9PublicationHealth(
 ): Promise<V9PublicationHealth | null> {
   const row = await getCache(db, SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth, signal);
   if (!row) return null;
-  const health = parseCanonicalJson(
-    row.value,
-    V9PublicationHealthSchema,
-    "Safety Score v9 publication health",
-  );
+  const parsed = parseJson(row.value);
+  if (!parsed.ok) throw new Error(`Malformed Safety Score v9 publication health JSON: ${parsed.message}`);
+  if (parsed.value !== null && typeof parsed.value === "object" &&
+      "schemaVersion" in parsed.value && parsed.value.schemaVersion === 1) {
+    throw new SafetyScoreV9SchemaCutoverPendingError("health", row.updatedAt);
+  }
+  const health = V9PublicationHealthSchema.parse(parsed.value);
+  if (stableJsonStringifyV1(health) !== row.value) {
+    throw new Error("Safety Score v9 publication health JSON is not canonical");
+  }
   if (row.updatedAt !== health.attemptedAtSec) {
     throw new Error(
       "Safety Score v9 publication health cache timestamp mismatch",
@@ -473,7 +480,7 @@ export async function persistSafetyScoreV9Publication(
       input.signal,
     );
     scoreIndexValue = stableJsonStringifyV1(SafetyScoreIndexSchema.parse({
-      schemaVersion: 1,
+      schemaVersion: 2,
       safetyScoreIdentity: {
         model: "v9",
         schemaVersion: 1,
@@ -489,7 +496,10 @@ export async function persistSafetyScoreV9Publication(
       publishedAtSec: publication.publishedAtSec,
       expectedCount: publication.completeness.expectedCount,
       scores: Object.fromEntries(publication.cards.map(card => [
-        card.id, { score: card.score, grade: card.grade },
+        card.id, {
+          score: card.score, grade: card.grade, ratingStatus: card.ratingStatus,
+          partialEvidence: projectV9CompactPartialEvidence(card.partialEvidence),
+        },
       ])),
     }));
   } else if (input.publication !== undefined) {
@@ -503,7 +513,15 @@ export async function persistSafetyScoreV9Publication(
   const existingHealth = await loadSafetyScoreV9PublicationHealth(
     db,
     input.signal,
-  );
+  ).catch((error: unknown) => {
+    if (!(error instanceof SafetyScoreV9SchemaCutoverPendingError) ||
+        error.source !== "health") throw error;
+    // Compare the old row clock without interpreting its retired health payload.
+    if (error.storedUpdatedAt === null || health.attemptedAtSec <= error.storedUpdatedAt) {
+      throw new SafetyScoreV9PublicationConflictError("Stale or conflicting Safety Score v9 publication health cutover");
+    }
+    return null;
+  });
   if (
     existingHealth !== null &&
     stableJsonStringifyV1(existingHealth) !== healthValue &&

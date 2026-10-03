@@ -14,7 +14,7 @@ import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
 import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "../safety-score-v9/extension";
 import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
-import { makeV9FixedInput, makeV9Extension } from "../../test-helpers/v9-fixed-input";
+import { makeV9FixedInput, makeV9Extension, makeV9QueuedRedemptionFixedInput } from "../../test-helpers/v9-fixed-input";
 import { rebuildFixed } from "./safety-score-v9-fact-set.test-support";
 import {
   buildSafetyScoreV9RetainedRedemptionRoutes,
@@ -1673,5 +1673,22 @@ describe("Theo executed eligible-cohort rail", () => {
     expect(review.output).toMatchObject({ kind: "tracked-stablecoin", assetKeys: ["usdc-circle", "usdt-tether"] });
     expect(review.executionCosts).toContainEqual({ requestedNotionalUsd: 10_000_000, maxCostBps: 200, executionCostBps: feeBps });
     expect(getRedemptionBackstopConfig("thusd-theo")?.v9RouteReviewTerms?.scoringDisposition).toBeUndefined();
+  });
+});
+
+describe("explicit holder restrictions remain separate from route evidence", () => {
+  it.each([
+    ["verified-customer", "institutional-eligible"],
+    ["whitelisted-primary", "allowlisted"],
+    ["issuer-discretionary", "issuer-only"],
+    ["unknown", "unknown"],
+  ] as const)("preserves %s access instead of inferring permissionless eligibility", (eligibility, holderAccess) => {
+    const fixed = makeV9QueuedRedemptionFixedInput(300, true);
+    fixed.redemptionBackstopMap.alpha!.holderEligibility = eligibility;
+    const review = buildSafetyScoreV9RouteReviews(fixed, "alpha").find((route) => route.lane === "redemption")!;
+    expect(review.holderAccess).toBe(holderAccess);
+    expect(review.queueDepthUsd).toBe(1_500_000);
+    expect(review.dailyLimitUsd).toBe(1_000_000);
+    expect(review.minRedeemUsd).toBe(1_000_000);
   });
 });

@@ -7,6 +7,9 @@ import {
   SafetyScoreV9OperationalResilienceOverlayFileSchema,
   SafetyScoreV9OperationalResilienceOverlaySchema,
 } from "../safety-score-v9/extension-operational-resilience";
+import { createAssetBuildContext, createRuntimeGapVerdict } from "../safety-score-v9/fact-set-context";
+import { buildOperationalResilienceFact } from "../safety-score-v9/fact-set-operational-resilience";
+import { makeV9Extension, makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
 
 const REVIEWED_AT_SEC = Date.parse("2026-07-23T12:37:19Z") / 1_000;
 const CURRENT_CLOCK_SEC = Date.parse("2026-07-24T00:00:00Z") / 1_000;
@@ -164,5 +167,27 @@ describe("Safety Score v9 operational-resilience overlays", () => {
     expect(() => getSafetyScoreV9OperationalResilienceOverlay("usdt-tether", Number.NaN)).toThrow(
       /clock must be finite/,
     );
+  });
+});
+
+describe("v10.01 operational evidence causes", () => {
+  it("does not turn proven reader failure into positive eligibility or measured adversity", () => {
+    const fixed = makeV9FixedInput();
+    const failure = createRuntimeGapVerdict({
+      assetId: "alpha", scope: { pillar: "control", componentKey: "operational-resilience",
+        factorKey: "eligibility", routeKey: null, exposureId: null, requiredDatum: "operational-resilience-review" },
+      sourceId: "fixture-operational-reader", sourceGenerationId: "attempt:operational",
+      observedAtSec: fixed.clockSec, asOfSec: fixed.clockSec, producerState: "producer-failed",
+      rejectionCode: "reader-unavailable", reason: "The reader was unavailable.",
+    });
+    const extension = makeV9Extension({ registryFingerprint: fixed.registryFingerprint });
+    const context = createAssetBuildContext({
+      ...fixed, pipelineGapByAssetId: { alpha: [failure] },
+    }, extension, extension.assets[0]!, "c".repeat(64));
+    expect(buildOperationalResilienceFact(context)).toBeNull();
+    const gap = context.gaps.get("alpha:gap:operational-resilience")!;
+    expect(gap.causeProof.cause).toBe("A");
+    expect(gap.causeScope).toEqual(failure.verdict.scope);
+    expect([...context.gaps.values()].some((row) => row.causeProof.cause === "D")).toBe(false);
   });
 });

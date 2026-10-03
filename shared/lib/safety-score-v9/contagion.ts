@@ -4,8 +4,10 @@ import type { V9ValidatedPolicyEnvelope } from "../../types/safety-score-v9";
 import { compileV9FactSetV3 } from "./compile";
 import { evaluateValidatedV9FactSet, projectV9EffectiveBackingPillarScore, type V9EvaluatedAsset } from "./evaluate-set";
 
+import { projectV9CompactPartialEvidence } from "../../types/safety-score-v9-causes";
+import { stableJsonStringifyV1 } from "../stable-json";
 export interface V9ContagionInput {
-  /** Raw V3 compiler core, never a serialized compiled fact set. */
+  /** Raw schema-4 compiler core, never a serialized compiled fact set. */
   rawCompileInput: V9FactSetCoreV3;
   policy: V9ValidatedPolicyEnvelope;
   clock: number;
@@ -31,10 +33,14 @@ export function evaluateV9ContagionScenario(input: V9ContagionInput, definition:
       assets: result.assets.map((asset) => ({
         assetId: asset.assetId, score: asset.trace.finalScore,
         grade: asset.trace.finalGrade, dimensions: dimensions(asset),
+        ratingStatus: asset.trace.ratingStatus,
+        partialEvidence: projectV9CompactPartialEvidence(asset.trace.partialEvidence),
       })),
     };
   })();
-  const raw = structuredClone(input.rawCompileInput);
+  // Facts are a validated JSON DTO. Break interned aliases before mutations:
+  // structuredClone preserves shared arrays across assets and fact fields.
+  const raw: V9FactSetCoreV3 = JSON.parse(JSON.stringify(input.rawCompileInput));
   for (const shock of scenario.shocks) {
     const asset = raw.assets.find((row) => row.assetId === shock.assetId)!;
     if (shock.kind === "score-limit") continue;
@@ -135,19 +141,27 @@ export function evaluateV9ContagionScenario(input: V9ContagionInput, definition:
     const old = before.dimensions;
     const next = current ? dimensions(current) : null;
     const changedDimensions = (Object.keys(old) as Array<keyof typeof old>).filter((key) => next === null || old[key] !== next[key]);
+    const partialEvidence = projectV9CompactPartialEvidence(current?.trace.partialEvidence ?? null);
+    if (!changedDimensions.includes("final") && (
+      before.ratingStatus !== current?.trace.ratingStatus ||
+      stableJsonStringifyV1(before.partialEvidence) !== stableJsonStringifyV1(partialEvidence)
+    )) changedDimensions.unshift("final");
     const score = current?.trace.finalScore ?? null;
     return {
       coinId: before.assetId, baselineScore: before.score, baselineGrade: before.grade,
-      scenarioScore: score, scenarioGrade: current?.trace.finalGrade ?? "NR",
+      baselineRatingStatus: before.ratingStatus, baselinePartialEvidence: before.partialEvidence,
+      scenarioScore: score, scenarioGrade: current ? current.trace.finalGrade : null,
+      scenarioRatingStatus: current?.trace.ratingStatus ?? null,
+      scenarioPartialEvidence: partialEvidence,
       delta: score === null || before.score === null ? null : score - before.score,
       shortestHop: hops.get(before.assetId) ?? null, changedDimensions,
       bindingCause: failures.get(before.assetId) ?? current?.trace.bindingCap?.kind ?? null,
-      nr: score === null, failure: failures.get(before.assetId) ?? null,
+      nr: current?.trace.ratingStatus === "not-rated", failure: failures.get(before.assetId) ?? null,
     };
   });
   return {
     schemaVersion: 1, hypothetical: true, provenance: { origin: "scenario-assumptions", scenario },
     identity: { publicationGenerationId: input.publicationGenerationId, policyDigest: baseline.policyDigest, evaluationBuildDigest: baseline.evaluationBuildDigest, factSetDigest: baseline.factSetDigest, asOfSec: input.clock },
-    manifest: { evaluated: evaluated.assets.length, unchanged: rows.filter((row) => !row.failure && row.changedDimensions.length === 0).length, nr: rows.filter((row) => row.nr && !row.failure).length, failed: failures.size }, rows,
+    manifest: { evaluated: evaluated.assets.length, unchanged: rows.filter((row) => !row.failure && row.changedDimensions.length === 0).length, nr: rows.filter((row) => row.nr && !row.failure).length, pipelineGap: rows.filter((row) => row.scenarioRatingStatus === "pipeline-gap" && !row.failure).length, failed: failures.size }, rows,
   };
 }

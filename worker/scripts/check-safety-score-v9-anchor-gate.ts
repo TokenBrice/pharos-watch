@@ -51,7 +51,7 @@ export function parseSafetyScoreV9AnchorGateCards(input: unknown): V9AnchorGateC
     if (archetype === undefined) {
       throw new Error(`Anchor gate card ${card.id} has no compiled-facts archetype entry`);
     }
-    return { id: card.id, score: card.score, grade: card.grade, archetype };
+    return { id: card.id, score: card.score, grade: card.grade, ratingStatus: card.ratingStatus, archetype };
   });
 }
 

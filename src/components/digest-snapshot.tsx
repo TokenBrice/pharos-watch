@@ -444,11 +444,17 @@ export function DigestSnapshot({ date }: { date: string }) {
                     {inputData.safetyScores.mentionedCoins.map((coin) => (
                       <li key={coin.symbol} className="text-xs text-foreground/90">
                         <span className="font-medium">{coin.symbol}</span>:{" "}
-                        <span className="font-medium">{coin.grade}</span>{" "}
+                        <span className="font-medium">{coin.grade === null ? "Pipeline gap" : coin.grade}</span>{" "}
                         <span className="text-muted-foreground">
-                          ({coin.score ?? "NR"}; backing={coin.pillars.backing.score ?? "NR"},{" "}
-                          exit={coin.pillars.exit.score ?? "NR"}, control={coin.pillars.control.score ?? "NR"})
+                          ({coin.score ?? "—"}; backing={coin.pillars.backing.score ?? "—"},{" "}
+                          exit={coin.pillars.exit.score ?? "—"}, control={coin.pillars.control.score ?? "—"})
                         </span>
+                        {coin.partialEvidence ? (
+                          <span className="block text-muted-foreground">
+                            Partial evidence: pipeline gap · {coin.partialEvidence.causes.map((cause) =>
+                              cause === "A" ? "A — pipeline unavailable" : "B — public data awaiting curation").join(" · ")}
+                          </span>
+                        ) : null}
                         {coin.bindingCap && (
                           <span className="block text-muted-foreground">
                             Cap {coin.bindingCap.kind} at {coin.bindingCap.limit}: {coin.bindingCap.reason}

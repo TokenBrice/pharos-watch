@@ -28,6 +28,7 @@ import {
 import { PEG_METADATA } from "@shared/lib/classification";
 import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import type { MintAuthorityCoverageSummary } from "@shared/types/stablecoin-client-meta";
+import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 import { CUSTODY_MODEL_VALUES } from "@shared/types/core";
 import {
   type CustodyModel,
@@ -263,10 +264,12 @@ export interface ScreenerRow {
   safetyGrade: ReportCardGrade | null;
   /** Safety overall score (0–100). null = unrated. */
   safetyScore: number | null;
+  ratingStatus: SafetyScoreV9CurrentCard["ratingStatus"] | null;
+  partialEvidence: SafetyScoreV9CurrentCard["partialEvidence"];
   safetyBackingScore: number | null;
   safetyExitScore: number | null;
   safetyControlScore: number | null;
-  safetyEvidence: SafetyEvidenceValue;
+  safetyEvidence: SafetyEvidenceValue | "pipeline-gap" | null;
   safetyWeakestPillar: V9QualityPillar | null;
   safetyWeakestScore: number | null;
   safetyBindingCapReason: string | null;
@@ -414,7 +417,7 @@ export function applyFilters(rows: readonly ScreenerRow[], filters: ScreenerFilt
     if (!passesMinimum(row.safetyBackingScore, filters.safetyBackingMin)) return false;
     if (!passesMinimum(row.safetyExitScore, filters.safetyExitMin)) return false;
     if (!passesMinimum(row.safetyControlScore, filters.safetyControlMin)) return false;
-    if (safetyEvidenceSet && !safetyEvidenceSet.has(row.safetyEvidence)) return false;
+    if (safetyEvidenceSet && (row.safetyEvidence === null || row.safetyEvidence === "pipeline-gap" || !safetyEvidenceSet.has(row.safetyEvidence))) return false;
     if (!passesMinimum(row.pegScore, filters.pegScoreMin)) return false;
     if (!passesMinimum(row.liquidityScore, filters.liquidityScoreMin)) return false;
     if (custodyModelSet && !custodyModelSet.has(row.custodyModel)) return false;

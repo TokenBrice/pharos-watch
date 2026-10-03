@@ -146,7 +146,7 @@ describe("computePegStability", () => {
     expect(result!.trackingSpan).toBe("6mo");
   });
 
-  it("handles fully depegged scenario (depeg spans entire window)", () => {
+  it("keeps wholly unobserved open history unavailable instead of calling it fully depegged", () => {
     const earliestDate = NOW - 100 * DAY_SECONDS;
     const events = [
       makeEvent({
@@ -157,7 +157,7 @@ describe("computePegStability", () => {
     ];
     const result = computeStability(events, earliestDate);
     expect(result).not.toBeNull();
-    expect(result!.pegPct).toBeCloseTo(0, 0);
+    expect(result!.pegPct).toBeNull();
     expect(result!.depeggedNow).toBe(true);
   });
 

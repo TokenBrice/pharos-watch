@@ -166,6 +166,13 @@ describe("compareDepegTrackerRows — currentDeviationBps", () => {
 });
 
 describe("compareDepegTrackerRows — pegPct", () => {
+  it.each(["asc", "desc"] as const)("sorts unknown occupancy last in %s order without equating it to zero", (direction) => {
+    const unknown = makeRow({ pegPct: null });
+    const zero = makeRow({ pegPct: 0 });
+    const perfect = makeRow({ pegPct: 100 });
+    expect(compareDepegTrackerRows(unknown, zero, sort("pegPct", direction))).toBeGreaterThan(0);
+    expect(compareDepegTrackerRows(unknown, perfect, sort("pegPct", direction))).toBeGreaterThan(0);
+  });
   it("sorts by peg percentage", () => {
     const high = makeRow({ pegPct: 98 });
     const low = makeRow({ pegPct: 75 });

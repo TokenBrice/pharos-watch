@@ -135,7 +135,7 @@ function StatDetail({ model }: { model: DataCoverageModel }) {
   const rows = [
     {
       label: "Assets scored",
-      detail: `${formatCount(model.ratedCount)} rated · ${formatCount(model.notRatedCount)} not rated`,
+      detail: `${formatCount(model.ratedCount)} rated (${formatCount(model.partialRatedCount)} partial) · ${formatCount(model.notRatedCount)} not rated · ${formatCount(model.pipelineGapCount)} pipeline gap`,
     },
     {
       label: "Inputs evaluated",

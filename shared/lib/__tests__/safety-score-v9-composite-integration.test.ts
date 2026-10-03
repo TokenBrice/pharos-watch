@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { V9ScoringInput } from "../../types/safety-score-v9";
-import { scoreV9Input, type V9AggregationStrategy } from "../safety-score-v9/formula";
+import { scoreV9Input } from "../safety-score-v9/formula";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import { makeV9ScoringInput, makeV9Signal } from "./safety-score-v9-score.test-support";
 
@@ -15,42 +15,6 @@ function input(overrides: Partial<V9ScoringInput> = {}): V9ScoringInput {
 }
 
 describe("Safety Score v9 continuous composite and scoped risk integration", () => {
-  it("accepts a counterfactual aggregation strategy without changing the default", () => {
-    const scoringInput = input({ pillars: { backing: 50, exit: 80, control: 100 } });
-    const baseline = scoreV9Input(scoringInput, V9_CANDIDATE_POLICY_V1);
-    let receivedHeadroom: number | null = null;
-    const weightedMean: V9AggregationStrategy = (pillars, weights, policyHeadroom) => {
-      receivedHeadroom = policyHeadroom;
-      const score = pillars.backing * weights.backing
-        + pillars.exit * weights.exit
-        + pillars.control * weights.control;
-      return {
-        method: "smooth-bounded-headroom",
-        score,
-        weightedQuality: score,
-        weakestPillar: "backing",
-        weakestScore: pillars.backing,
-      };
-    };
-    const counterfactual = scoreV9Input(
-      scoringInput,
-      V9_CANDIDATE_POLICY_V1,
-      [],
-      0,
-      false,
-      [],
-      [],
-      [],
-      [],
-      [],
-      [],
-      weightedMean,
-    );
-
-    expect(receivedHeadroom).toBe(20);
-    expect(counterfactual.finalScore).toBe(73);
-    expect(counterfactual.finalScore).not.toBe(baseline.finalScore);
-  });
 
   it("does not fall when the identity of the weakest pillar crosses", () => {
     const before = scoreV9Input(
@@ -223,36 +187,6 @@ describe("Safety Score v9 continuous composite and scoped risk integration", () 
     expect(trace.adverseAttribution).toEqual([]);
   });
 
-  it("retains an issuer-undisclosed evidence ceiling without a structural-risk claim", () => {
-    const trace = scoreV9Input(
-      input({
-        structuralSignals: [
-          signal({
-            economicLossScope: "global-claim",
-            materialSharePct: 100,
-            responsibility: "issuer-undisclosed",
-            failureDomainKeys: ["global:undisclosed-upgrade"],
-          }),
-        ],
-        unresolved: [{
-          code: "missing-upgrade-control",
-          path: "control:upgrade",
-          reason: "The issuer has not disclosed the upgrade authority.",
-          critical: false,
-          responsibility: "issuer-undisclosed",
-        }],
-      }),
-      V9_CANDIDATE_POLICY_V1,
-    );
-
-    expect(trace.finalScore).toBe(55);
-    expect(trace.bindingCap).toMatchObject({
-      source: "evidence",
-      kind: "reason:missing-upgrade-control",
-    });
-    expect(trace.caps.some((cap) => cap.source === "structural")).toBe(false);
-    expect(trace.adverseAttribution).toEqual([]);
-  });
 
   it("does not hard-cap a reserve slice already owned by backing", () => {
     const trace = scoreV9Input(

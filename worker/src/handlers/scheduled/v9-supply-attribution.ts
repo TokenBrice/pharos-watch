@@ -24,13 +24,14 @@ export function buildV9SupplyAttributionSlotGroups(runtime: ScheduledRuntimeCont
             lane: "sync-v9-supply-attribution",
             currentSlotKey: runtime.scheduleKey,
           },
-          (windowSignal) =>
+          (windowSignal, window) =>
             import("../../cron/sync-v9-supply-attribution").then(
               ({ syncSafetyScoreV9SupplyAttribution }) =>
                 syncSafetyScoreV9SupplyAttribution(
                   runtime.db,
                   runtime.chainRpcs,
                   windowSignal,
+                  window,
                 ),
             ),
         ),

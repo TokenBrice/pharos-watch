@@ -1,4 +1,3 @@
-import type { V9ExitEvaluationRoute } from "./exit";
 
 /**
  * Per-asset stress state retained alongside an evaluated asset.
@@ -10,15 +9,14 @@ import type { V9ExitEvaluationRoute } from "./exit";
  * The published `stressStateDigest` and the what-if evaluator that consumed this
  * state (`evaluateV9StressState`, `V9SupportedStressShock`) were removed under
  * decision D11 — the digest had no reader and cost one canonicalize+sha256 per
- * asset per publication. Without a digest there is nothing to keep canonical
- * here either, so the payload is assembled as-is.
+ * asset per publication. Only the supply-weighting summary is retained; route
+ * projections are transient evaluation inputs, not diagnostic state.
  */
 export interface V9RetainedStressState {
   schemaVersion: 1;
   exitPortfolio: {
     circulatingUsd: number | null;
     portfolioStatus: "reviewed-complete" | "incomplete";
-    routes: readonly V9ExitEvaluationRoute[];
   } | null;
 }
 

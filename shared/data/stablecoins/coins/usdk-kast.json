@@ -66,5 +66,12 @@
       }
     }
   },
-  "launchDate": "2025-04-08"
+  "launchDate": "2025-04-08",
+  "notices": [
+    {
+      "type": "info",
+      "title": "Pure-wrapper verification unresolved",
+      "message": "Reviewed 2026-10-02 UTC, finalized Solana slot 452745510: USDK supply was 23,939,622.844939; the vault held 24,401,073.878254 indexed M units. State decoded as NoYield and the USDK multiplier was 1. Extension extaykYu5AQcDm3qZAbiDN3yp6skqn6Nssj7veUUGZw remains upgradeable; executable SHA-256 is 1cb25a14dc8ad22bccbf9012de130044e6404eb4260780b98151bcd8517b55a6. https://verify.osec.io/status/extaykYu5AQcDm3qZAbiDN3yp6skqn6Nssj7veUUGZw reports 'On chain program not verified'. Funded custody and NoYield state do not prove source/executable equivalence or exclude other mint/strategy paths. No pure-wrapper classification is applied until a matching reproducible build proves the complete fixed-unit M claim. RPC read: https://solana-mainnet.g.alchemy.com . Published-source intent, not deployed equivalence: https://github.com/m0-foundation/solana-m-extensions/tree/b69d1f8d8be34f34aaac4d1060cec37f81dba0af/programs/m_ext/src/instructions (wrap.rs transfers M before minting; unwrap.rs burns before releasing M, both permissioned)."
+    }
+  ]
 }

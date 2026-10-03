@@ -10,6 +10,10 @@ import { deriveEffectiveDependencySet } from "@shared/lib/dependency-derivation"
 import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
 import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
 import { makeV9TwoAssetFixedInput } from "../../test-helpers/v9-fixed-input";
+import usdyCoin from "@shared/data/stablecoins/coins/usdy-ondo-finance.json";
+import usdyReserveEnvelope from "@shared/data/stablecoins/domains/reserves/usdy-ondo-finance.json";
+import dusdCoin from "@shared/data/stablecoins/coins/dusd-alto.json";
+import dusdReserveEnvelope from "@shared/data/stablecoins/domains/reserves/dusd-alto.json";
 
 const CLOCK_SEC = Date.UTC(2026, 9, 1) / 1_000;
 const REVIEWED_ROWS: ReserveSlice[] = [
@@ -50,8 +54,13 @@ function classificationMeta(): V9ExtensionRegistryMeta {
   };
 }
 
-function compiledFixture(meta: V9ExtensionRegistryMeta, liveRows: ReserveSlice[]) {
-  const base = makeV9TwoAssetFixedInput({ clockSec: CLOCK_SEC });
+function compiledFixture(
+  meta: V9ExtensionRegistryMeta,
+  liveRows: ReserveSlice[],
+  clockSec = CLOCK_SEC,
+  liveFallbackAllowed = false,
+) {
+  const base = makeV9TwoAssetFixedInput({ clockSec });
   const {
     schemaVersion: _schemaVersion, dexPayloadFingerprint: _dexPayloadFingerprint,
     redemptionPayloadFingerprint: _redemptionPayloadFingerprint, registryFingerprint: _registryFingerprint,
@@ -60,6 +69,7 @@ function compiledFixture(meta: V9ExtensionRegistryMeta, liveRows: ReserveSlice[]
   } = base;
   const fixed = createReportCardsFixedInput({
     ...draft, liveReserveMap: { ...base.liveReserveMap, alpha: liveRows },
+    ...(liveFallbackAllowed ? { liveToFallbackCoins: ["alpha"] } : {}),
   });
   const extension = buildSafetyScoreV9BaselineExtension(fixed, {
     metaById: new Map([
@@ -91,8 +101,9 @@ describe("classification-qualified reserve reviews", () => {
       source: "live-unmapped", mappedLiveReserveWeight: 0, edges: [],
       rejectionReasons: [{ sliceIndex: 0, reason: "non-link" }, { sliceIndex: 1, reason: "non-link" }],
     });
-    expect(asset.gaps.map((gap) => gap.reasonCode)).not.toContain("material-reserve-slice-unstructured");
-    expect(meta.reserveReview!.knownUnknownExposurePct).toBe(100);
+    for (const exposure of asset.reserveExposures) {
+      expect(exposure.factorStatuses?.assetClass).toMatchObject({ observationState: "known", gapIds: [] });
+    }
 
     // Resolving identities cannot make the pooled reviewed percentages usable
     // as standalone composition when the live observation disappears.
@@ -154,5 +165,29 @@ describe("classification-qualified reserve reviews", () => {
     const withoutLive = compiledFixture(meta, []);
     expect(withoutLive.reserveStatus.observationState).toBe("missing");
     expect(withoutLive.dependencies.edges).toEqual([]);
+  });
+
+  it("admits USDY's current LLC holdings without attributing its exact excluded BVI/timing tail", () => {
+    const meta = { ...usdyCoin, ...usdyReserveEnvelope, id: "alpha" } as unknown as V9ExtensionRegistryMeta;
+    const usdyClockSec = Date.UTC(2026, 9, 2) / 1_000;
+    const asset = compiledFixture(meta, [], usdyClockSec, true);
+    const tail = 5.9490355116630695 / 100;
+    expect(asset.reserveExposures.reduce((sum, row) => sum + row.weight, 0)).toBeCloseTo(1 - tail, 12);
+    expect(asset.reserveResiduals.reduce((sum, row) => sum + row.weight, 0)).toBeCloseTo(tail, 12);
+    expect(asset.reserveExposures.some(row => row.name.includes("BVI"))).toBe(false);
+    expect(asset.reserveResiduals.every(row => row.status.gapIds.length === 1)).toBe(true);
+    expect(asset.dependencies.edges).toEqual([]);
+    for (const identified of meta.reserves!.filter(row => !row.name.includes("BVI"))) {
+      expect(asset.reserveExposures.find(row => row.name === identified.name)!.weight)
+        .toBeCloseTo(identified.pct / 100, 12);
+    }
+  });
+
+  it("never promotes Alto DUSD's selected-slice evidence into an unobserved whole reserve book", () => {
+    const meta = { ...dusdCoin, ...dusdReserveEnvelope, id: "alpha" } as unknown as V9ExtensionRegistryMeta;
+    const asset = compiledFixture(meta, []);
+    expect(asset.reserveExposures).toEqual([]);
+    expect(asset.reserveStatus.observationState).toBe("missing");
+    expect(asset.dependencies.edges).toEqual([]);
   });
 });

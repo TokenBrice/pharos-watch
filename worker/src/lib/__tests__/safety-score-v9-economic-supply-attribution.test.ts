@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { BridgeRouteRiskProfile, StablecoinMeta } from "@shared/types/core";
-import { ReviewedEconomicSupplyPlanFileSchema, ReviewedEconomicSupplyPlanSchema, type ReviewedEconomicSupplyPlan, type EconomicSupplyObservation } from "@shared/types/safety-score-v9-supply-attribution";
+import { ReviewedEconomicSupplyPlanFileSchema, ReviewedEconomicSupplyPlanSchema, type ReviewedEconomicSupplyPlan, type ReviewedEconomicDeploymentPartition, type EconomicSupplyReference, type EconomicSupplyObservation } from "@shared/types/safety-score-v9-supply-attribution";
 import type { SafetyScoreV9ReviewedTransferFact } from "@shared/types/safety-score-v9-transfer-overlays";
 import reviewRegistry from "@shared/data/safety-score-v9/supply-attribution-reviews-v1.json";
 import { deriveReviewedEconomicDeploymentPartition, buildReviewedEconomicDeploymentInventory, hasCompleteEligibleProviderSupply, loadReviewedEconomicSupplyPlans, REVIEWED_ECONOMIC_SUPPLY_PLANS, REVIEWED_ECONOMIC_SUPPLY_PLAN_QUARANTINES, reviewedEconomicDeploymentAttributionValidationError, reviewedSupplyRouteKind } from "../safety-score-v9/supply-attribution-contract";
@@ -12,12 +12,33 @@ import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
 import type * as SupplyAttributionContract from "../safety-score-v9/supply-attribution-contract";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { chainRpcs } from "./safety-score-v9-supply-observation.test-support";
+import { createSupplyAttributionJournalV1 } from "@shared/lib/safety-score-v9-supply-attribution-journal";
+import { sha256Hex } from "@shared/lib/sha256";
+import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import type { SafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
+import type * as SupplyAttributionGeneration from "../safety-score-v9/supply-attribution-generation";
+import { normalizeFixedInput } from "../report-cards-fixed-input";
 
 const CLOCK = 1790850000;
 const CANONICAL = `ethereum:0x${"1".repeat(40)}`;
 const REMOTE = `base:0x${"2".repeat(40)}`;
 const pendingSource = { sourceId: "pending", url: "https://issuer.example/pending", amountPath: ["amount"], observedAtPath: ["observedAt"], generationPath: ["generation"] };
-function fixture() {
+
+interface EconomicFixture {
+  plan: ReviewedEconomicSupplyPlan;
+  meta: Pick<StablecoinMeta, "contracts" | "bridgeRouteRisk">;
+  baseInputGenerationId: string;
+  sourceGeneration: string;
+  registryFingerprint: string;
+  clockSec: number;
+  aggregate: ReviewedEconomicDeploymentPartition["aggregate"];
+  referencePrice: EconomicSupplyReference;
+  conversions: EconomicSupplyReference[];
+  observations: EconomicSupplyObservation[];
+  inFlight: EconomicSupplyObservation[];
+}
+
+function fixture(): EconomicFixture {
   const plan: ReviewedEconomicSupplyPlan = {
     assetId: "alpha", reviewer: "reviewer", reviewedAtSec: CLOCK - 86400, expiresAtSec: CLOCK + 86400,
     evidenceUrls: ["https://issuer.example/accounting"], economicScope: "All circulating holder claims; excludes the listed treasury and duplicate backing",
@@ -376,5 +397,171 @@ describe("economic materiality consumers", () => {
       fixed.clockSec = Date.parse(entry.reviewedAt) / 1000 - 1;
       expect(buildSafetyScoreV9SupplyReview(fixed, entry.assetId, meta.bridgeRouteRisk)).toBeNull();
     }
+  });
+});
+
+function rebindHandoffInput(fixedInput: SafetyScoreV9CompilerInput) {
+  const { baseInputGenerationId: _baseInputGenerationId, ...payload } = fixedInput;
+  return normalizeFixedInput({ ...payload, inputFreshness: {
+    ...payload.inputFreshness, dexLiquidity: { ...payload.inputFreshness.dexLiquidity,
+      ageSeconds: payload.clockSec - payload.inputFreshness.dexLiquidity.updatedAt! },
+  } }, new Set(["alpha"]));
+}
+
+async function withEconomicHandoff(
+  input: EconomicFixture,
+  run: (context: {
+    source: SafetyScoreV9CompilerInput;
+    consumer: SafetyScoreV9CompilerInput;
+    generation: SupplyAttributionGeneration.SafetyScoreV9SupplyAttributionGeneration;
+    apply: typeof SupplyAttributionGeneration.applySafetyScoreV9SupplyAttributionGeneration;
+  }) => void,
+) {
+  vi.resetModules();
+  // Test module loading: plan membership is captured on import, so static
+  // imports cannot exercise a different admitted registry in this test.
+  vi.doMock("../safety-score-v9/supply-attribution-contract", async (importOriginal) => {
+    const original = await importOriginal<typeof SupplyAttributionContract>();
+    const plans = new Map([[input.plan.assetId, input.plan]]);
+    vi.spyOn(original.REVIEWED_ECONOMIC_SUPPLY_PLANS, "get").mockImplementation(id => plans.get(id));
+    const registry = await import("@shared/lib/stablecoins/registry");
+    const get = registry.ACTIVE_META_BY_ID.get.bind(registry.ACTIVE_META_BY_ID);
+    vi.spyOn(registry.ACTIVE_META_BY_ID, "get").mockImplementation(id => id === "alpha" ? input.meta as StablecoinMeta : get(id));
+    const find = registry.ACTIVE_STABLECOINS.find.bind(registry.ACTIVE_STABLECOINS);
+    const meta = { ...registry.ACTIVE_STABLECOINS[0]!, ...input.meta, id: "alpha",
+      flags: { ...registry.ACTIVE_STABLECOINS[0]!.flags, navToken: true } };
+    vi.spyOn(registry.ACTIVE_STABLECOINS, "find").mockImplementation(predicate =>
+      predicate(meta, 0, registry.ACTIVE_STABLECOINS) ? meta : find(predicate));
+    return { ...original, REVIEWED_ECONOMIC_SUPPLY_PLANS: plans };
+  });
+  try {
+    const { createSafetyScoreV9SupplyAttributionGeneration: create, applySafetyScoreV9SupplyAttributionGeneration: apply } =
+      await import("../safety-score-v9/supply-attribution-generation");
+    const source = makeV9FixedInput({ assetId: "alpha", clockSec: CLOCK });
+    Object.assign(source, { baseInputGenerationId: input.baseInputGenerationId, sourceGeneration: input.sourceGeneration,
+      registryFingerprint: input.registryFingerprint, chainCirculatingById: {},
+      aggregateCirculatingById: { alpha: { circulating: { peggedUSD: input.aggregate.supplyUsd }, observedAtSec: input.aggregate.observedAtSec } },
+      navPriceById: { alpha: { sourceId: "reference", priceUsd: 1, observedAtSec: CLOCK - 60, confidence: "high" } } });
+    const packet = deriveReviewedEconomicDeploymentPartition(input)!;
+    const journal = createSupplyAttributionJournalV1({
+      schemaVersion: 1, lane: "supply-attribution", assetId: "alpha", attemptId: "supply-attribution:economic-handoff",
+      sourceId: V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.journalSourceId,
+      sourceOriginClass: "issuer-disclosure-plus-onchain", baseInputGenerationId: source.baseInputGenerationId,
+      sourceGeneration: source.sourceGeneration, registryFingerprint: source.registryFingerprint,
+      routeInventoryDigest: packet.routeInventoryDigest, attemptCode: "supply-attribution.collector.attempted",
+      admissionCode: "supply-attribution.admission.accepted", fallbackCode: "supply-attribution.fallback.not-used",
+      attemptedAtSec: CLOCK, completedAtSec: CLOCK + 1, scoringClockSec: input.clockSec,
+      sourceObservedAtSec: packet.observedAtSec, failedRouteId: null, contentSha256: sha256Hex(stableJsonStringifyV1(packet)),
+    });
+    const generation = create({ fixedInput: source, capturedAtSec: Math.max(input.clockSec, CLOCK + 1),
+      capture: { attributionById: { alpha: packet }, captureClockSec: input.clockSec, expectedAssetIds: ["alpha"], journalRecords: [journal] } });
+    const consumer = structuredClone(source);
+    Object.assign(consumer, { clockSec: CLOCK + 600, sourceGeneration: "consumer-source" });
+    consumer.aggregateCirculatingById.alpha = { circulating: { peggedUSD: 200 }, observedAtSec: CLOCK + 600 };
+    consumer.navPriceById!.alpha = { sourceId: "reference", priceUsd: 2, observedAtSec: CLOCK + 600, confidence: "high" };
+    const applyConsumer: typeof apply = (fixedInput, captured) => {
+      const normalized = rebindHandoffInput(fixedInput);
+      Object.assign(fixedInput, normalized);
+      return apply(normalized, captured);
+    };
+    Object.assign(consumer, rebindHandoffInput(consumer));
+    run({ source, consumer, generation, apply: applyConsumer });
+  } finally {
+    vi.doUnmock("../safety-score-v9/supply-attribution-contract");
+    vi.resetModules();
+  }
+}
+
+describe("economic capture handoff", () => {
+  it("re-derives raw observations against the exact consumer base, source, aggregate and price", async () => {
+    await withEconomicHandoff(fixture(), ({ consumer, generation, apply }) => {
+      const result = apply(consumer, generation);
+      expect(result).toMatchObject({ status: "applied", acceptedAssetIds: ["alpha"], invalidAssetIds: [] });
+      const packet = result.fixedInput.safetyScoreV9SupplyAttributionById.alpha!;
+      if (packet.model !== "reviewed-economic-deployment-partition-v1") throw new Error("Expected economic packet");
+      expect(packet).toMatchObject({ baseInputGenerationId: consumer.baseInputGenerationId, sourceGeneration: "consumer-source",
+        scoringClockSec: consumer.clockSec, aggregate: { supplyUsd: 200, observedAtSec: CLOCK + 600, sourceGeneration: "consumer-source" },
+        referencePrice: { value: "2", observedAtSec: CLOCK + 600, sourceGeneration: "consumer-source" },
+        observedAtSec: CLOCK - 60 });
+      expect(Object.fromEntries(packet.deployments.map(row => [row.deploymentKey, row.currentSupplyUsd]))).toEqual({
+        [CANONICAL]: 160, [REMOTE]: 40,
+      });
+      const stored = generation.attributionById.alpha!;
+      if (stored.model !== "reviewed-economic-deployment-partition-v1") throw new Error("Expected economic capture");
+      expect(Object.fromEntries(packet.observations.map(row => [row.id, row])))
+        .toEqual(Object.fromEntries(stored.observations.map(row => [row.id, row])));
+    });
+  });
+
+  it.each(["base", "source", "clock", "aggregate"])("rejects a stale or forged capture %s binding", async binding => {
+    await withEconomicHandoff(fixture(), ({ consumer, generation, apply }) => {
+      const packet = generation.attributionById.alpha!;
+      if (packet.model !== "reviewed-economic-deployment-partition-v1") throw new Error("Expected economic packet");
+      if (binding === "base") packet.baseInputGenerationId = consumer.baseInputGenerationId;
+      if (binding === "source") packet.sourceGeneration = consumer.sourceGeneration;
+      if (binding === "clock") packet.scoringClockSec++;
+      if (binding === "aggregate") packet.aggregate.sourceGeneration = consumer.sourceGeneration;
+      expect(apply(consumer, generation)).toMatchObject({ status: "applied", acceptedAssetIds: [], invalidAssetIds: ["alpha"] });
+    });
+  });
+
+  it("admits the capture clock, but never consumes a post-publication capture or stale raw state", async () => {
+    const input = fixture(); input.clockSec = CLOCK + 300;
+    input.observations.forEach(row => row.observedAtSec = CLOCK + 299);
+    input.inFlight.forEach(row => row.observedAtSec = CLOCK + 299);
+    await withEconomicHandoff(input, ({ consumer, generation, apply }) => {
+      expect(apply(consumer, generation)).toMatchObject({ status: "applied", acceptedAssetIds: ["alpha"] });
+      expect(apply({ ...consumer, clockSec: CLOCK + 299 }, generation)).toMatchObject({ status: "incompatible", reason: "capture-clock-after-consumer" });
+      consumer.clockSec = CLOCK + 2100;
+      consumer.aggregateCirculatingById.alpha!.observedAtSec = consumer.clockSec;
+      consumer.navPriceById!.alpha!.observedAtSec = consumer.clockSec;
+      expect(apply(consumer, generation)).toMatchObject({ status: "applied", acceptedAssetIds: [], invalidAssetIds: ["alpha"] });
+    });
+  });
+
+  it("rebuilds input-derived provider quantities instead of stamping captured provider rows with a new generation", async () => {
+    const input = fixture();
+    input.plan.accountingFamily = "independent-liability"; input.plan.escrows = []; input.inFlight = [];
+    input.plan.deployments.forEach(row => { row.read = { kind: "provider-chain", sourceChain: row.chainId }; row.amountBasis = "circulating-usd"; row.decimals = null; });
+    input.observations = input.observations.slice(0, 2);
+    input.meta.contracts!.forEach(contract => contract.decimals = null);
+    input.observations[0]!.amount = "80"; input.observations[1]!.amount = "20";
+    await withEconomicHandoff(input, ({ consumer, generation, apply }) => {
+      consumer.aggregateCirculatingById.alpha!.circulating.peggedUSD = 210;
+      const history = { circulatingPrevDay: 0, circulatingPrevWeek: 0, circulatingPrevMonth: 0 };
+      consumer.chainCirculatingById.alpha = { ethereum: { ...history, current: 150 }, base: { ...history, current: 50 } };
+      const result = apply(consumer, generation);
+      expect(result).toMatchObject({ status: "applied", acceptedAssetIds: ["alpha"], invalidAssetIds: [] });
+      expect(result.fixedInput.safetyScoreV9SupplyAttributionById.alpha).toMatchObject({
+        deployments: expect.arrayContaining([expect.objectContaining({ deploymentKey: CANONICAL, currentSupplyUsd: 150 }),
+          expect.objectContaining({ deploymentKey: REMOTE, currentSupplyUsd: 50 })]), unattributedSupplyUsd: 10,
+        observations: expect.arrayContaining([expect.objectContaining({ deploymentKey: CANONICAL, amount: "150", anchor: "consumer-source", observedAtSec: CLOCK + 600 }),
+          expect.objectContaining({ deploymentKey: REMOTE, amount: "50", anchor: "consumer-source", observedAtSec: CLOCK + 600 })]),
+      });
+    });
+  });
+
+  it("recomputes native aggregate-derived units from the actual consumer aggregate and reference price", async () => {
+    const input = fixture(), nativeKey = "ethereum:native:ether";
+    input.plan.accountingFamily = "independent-liability"; input.plan.escrows = []; input.inFlight = [];
+    Object.assign(input.plan.deployments[0]!, { deploymentKey: nativeKey, holdingKind: "native-gas", amountBasis: "native-ledger",
+      address: "ether", decimals: null, routeId: null, read: { kind: "native-from-aggregate", safeBlockLag: 2 } });
+    input.meta.contracts!.shift(); input.meta.bridgeRouteRisk!.routes!.shift();
+    input.observations = input.observations.slice(0, 2);
+    Object.assign(input.observations[0]!, { id: nativeKey, deploymentKey: nativeKey, amount: "100", anchor: "attributed:source" });
+    await withEconomicHandoff(input, ({ consumer, generation, apply }) => {
+      consumer.aggregateCirculatingById.alpha!.circulating.peggedUSD = 300;
+      consumer.clockSec = CLOCK + 60;
+      consumer.aggregateCirculatingById.alpha!.observedAtSec = CLOCK + 60;
+      consumer.navPriceById!.alpha!.observedAtSec = CLOCK + 60;
+      const result = apply(consumer, generation);
+      expect(result).toMatchObject({ status: "applied", acceptedAssetIds: ["alpha"], invalidAssetIds: [] });
+      const packet = result.fixedInput.safetyScoreV9SupplyAttributionById.alpha!;
+      if (packet.model !== "reviewed-economic-deployment-partition-v1") throw new Error("Expected economic packet");
+      expect(packet.observations.find(row => row.id === nativeKey)).toMatchObject({
+        amount: "150", anchor: "attributed:consumer-source", observedAtSec: CLOCK + 60,
+      });
+      expect(packet.deployments.find(row => row.deploymentKey === nativeKey)!.currentSupplyUsd).toBeCloseTo(300 * 150 / 170);
+    });
   });
 });

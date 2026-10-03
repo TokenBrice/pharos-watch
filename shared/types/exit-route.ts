@@ -35,6 +35,9 @@ const RedemptionExitEvidenceKindSchema = z.enum([
 export const ExitRouteConfidenceSchema = z.enum(["high", "medium", "low", "unknown"]);
 export type ExitRouteConfidence = z.infer<typeof ExitRouteConfidenceSchema>;
 
+export const ExitRouteCapacityEvidenceTierSchema = z.enum(["live-direct", "live-queue-proxy", "documented", "heuristic", "unknown"]);
+export type ExitRouteCapacityEvidenceTier = z.infer<typeof ExitRouteCapacityEvidenceTierSchema>;
+
 export const ExitRouteScopeSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("chain-contract"),
@@ -416,6 +419,7 @@ const ExitRouteObservationBaseSchema = z.object({
   /** Confidence in the route execution model, distinct from observation freshness/confidence. */
   modelConfidence: z.enum(["high", "medium", "low"]).optional(),
   confidence: ExitRouteConfidenceSchema,
+  capacityEvidenceTier: ExitRouteCapacityEvidenceTierSchema.optional(),
   scoreEligible: z.boolean(),
   observedAt: z.number().int().nonnegative(),
   freshnessSeconds: z.number().int().nonnegative(),

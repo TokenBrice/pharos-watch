@@ -19,7 +19,7 @@ const SIZE_CLASSES: Record<SafetyGradeBadgeSize, string> = {
 };
 
 interface SafetyGradeBadgeProps extends Omit<ComponentProps<typeof Badge>, "children" | "variant"> {
-  grade: ReportCardGrade;
+  grade: ReportCardGrade | null;
   score?: number | null;
   showScore?: boolean;
   size?: SafetyGradeBadgeSize;
@@ -79,11 +79,11 @@ export function SafetyGradeBadge({
       )}
       style={mergedStyle}
       tabIndex={tabIndex}
-      aria-label={ariaLabel ?? `Safety grade ${grade}${scoreLabel}`}
+      aria-label={ariaLabel ?? (grade === null ? "Safety Score pipeline gap" : `Safety grade ${grade}${scoreLabel}`)}
       {...props}
     >
-      {grade}
-      {showScore && score !== null ? (
+      {grade === null ? "Pipeline gap" : grade}
+      {grade !== null && showScore && score !== null ? (
         <span className="ml-1 opacity-70" aria-hidden="true">
           ({score})
         </span>

@@ -24,6 +24,9 @@ import {
   createReportCardsFixedInput,
 } from "../../test-helpers/report-cards-fixed-input";
 
+import { createRuntimeGapVerdict } from "../safety-score-v9/fact-set-context";
+import { createReportCardEvidenceJournalV1 } from "@shared/lib/report-card-evidence-journal";
+import { captureReservePipelineGaps } from "../safety-score-v9/capture";
 const CLOCK_SEC = 1_783_891_200;
 const DEX_UPDATED_AT = 1_783_891_100;
 const SOURCE_GENERATION = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${CLOCK_SEC}`;
@@ -90,6 +93,50 @@ function nativeInput(overrides: Record<string, unknown> = {}): NativeSafetyScore
 }
 
 describe("native Safety Score V9 input", () => {
+  it("v10.01 captures actual failed attempts but not missing configuration or superseded failures", () => {
+    const rejected = createReportCardEvidenceJournalV1({
+      schemaVersion: 1, lane: "reserve", assetId: "usdc-circle", attemptId: "attempt:failed", sourceId: "fixture:reserves",
+      sourceOriginClass: "onchain-observation", attemptCode: "reserve.collector.attempted",
+      admissionCode: "reserve.admission.rejected-upstream", fallbackCode: "reserve.fallback.unavailable",
+      attemptedAtSec: CLOCK_SEC - 20, completedAtSec: CLOCK_SEC - 10,
+      sourceTimestampSec: null, sourceBlock: null, contentSha256: null, sidecarMaterializationSha256: null,
+    });
+    const { journalId: _journalId, ...payload } = rejected;
+    const absentConfiguration = createReportCardEvidenceJournalV1({
+      ...payload, attemptId: "attempt:no-config", attemptCode: "reserve.collector.not-configured",
+      admissionCode: "reserve.admission.not-evaluated",
+    });
+    const accepted = createReportCardEvidenceJournalV1({
+      ...payload, attemptId: "attempt:accepted", completedAtSec: CLOCK_SEC - 5,
+      admissionCode: "reserve.admission.accepted", fallbackCode: "reserve.fallback.not-used",
+      contentSha256: "a".repeat(64),
+    });
+    const failures = captureReservePipelineGaps({ "usdc-circle": [rejected] }, new Map(), CLOCK_SEC);
+    expect(failures["usdc-circle"]![0]!.verdict.proof).toMatchObject({
+      cause: "A", sourceGenerationId: rejected.attemptId, observedAtSec: rejected.completedAtSec,
+    });
+    expect(captureReservePipelineGaps({ "usdc-circle": [absentConfiguration] }, new Map(), CLOCK_SEC)).toEqual({});
+    expect(captureReservePipelineGaps({ "usdc-circle": [rejected, accepted] }, new Map(), CLOCK_SEC)).toEqual({});
+    expect(captureReservePipelineGaps({ "usdc-circle": [rejected] }, new Map([["usdc-circle", []]]), CLOCK_SEC)).toEqual({});
+  });
+  it("v10.01 binds producer proof bytes into native identity and rejects forged capture clocks", () => {
+    const failure = createRuntimeGapVerdict({
+      assetId: "usdc-circle", scope: { pillar: "backing", componentKey: "reserve-composition",
+        factorKey: null, routeKey: null, exposureId: null, requiredDatum: "reserve-composition" },
+      sourceId: "fixture-reserve-reader", sourceGenerationId: "attempt:1", producerState: "producer-failed",
+      observedAtSec: CLOCK_SEC, asOfSec: CLOCK_SEC, rejectionCode: "reader-failed", reason: "The reader failed.",
+    });
+    const baseline = nativeInput();
+    expect(baseline.pipelineGapByAssetId).toBeUndefined();
+    const captured = nativeInput({ pipelineGapByAssetId: { "usdc-circle": [failure] } });
+    expect(captured.baseInputGenerationId).not.toBe(baseline.baseInputGenerationId);
+    const changed = structuredClone(captured);
+    changed.pipelineGapByAssetId!["usdc-circle"]![0]!.evidence.rejection!.reason = "Different captured failure.";
+    expect(() => normalizeNativeV9Input(changed)).toThrow(/does not match payload/);
+    const wrongClock = structuredClone(failure);
+    wrongClock.evidence.freshness.ageSec++;
+    expect(() => nativeInput({ pipelineGapByAssetId: { "usdc-circle": [wrongClock] } })).toThrow(/freshness clock/);
+  });
   it("rejects independently mismatched writer identities", async () => {
     const input = nativeInput();
     const identity = buildSafetyScoreV9InputIdentity({

@@ -284,7 +284,7 @@ describe("writeSnapshots", () => {
       dews: {},
       dewsAlertable: {},
       depeg: {},
-      safety: { generation: "test", snapshot: { "usdc-circle": { grade: "A", score: 90, methodologyVersion: "v1" } } },
+      safety: { generation: "test", snapshot: { "usdc-circle": { grade: "A", score: 90, ratingStatus: "rated", partialEvidence: null, methodologyVersion: "v1" } } },
       launch: [],
       reserveDispatched: [],
     });

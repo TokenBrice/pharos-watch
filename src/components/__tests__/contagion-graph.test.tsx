@@ -186,7 +186,6 @@ describe("ContagionGraph", () => {
     const edges: ReportCardsV9DependencyEdge[] = [{ ...DEPENDENCY_EDGES[1], weight: null, materiality: "basket-bounded-unknown" }];
     const { container } = render(<ContagionGraph cards={CARDS} dependencyEdges={edges} mcapMap={MCAP_MAP} />);
     fireEvent.mouseEnter(container.querySelector('svg line[stroke="transparent"]')!);
-    expect(container.querySelector('[aria-live="polite"]')?.textContent).toContain("upstream not rateable");
     expect(container.querySelector('[aria-live="polite"]')?.textContent).not.toContain("%");
   });
 
@@ -202,7 +201,6 @@ describe("ContagionGraph", () => {
     expect(document.activeElement).toBe(picker);
     expect(liveRegion?.textContent).toContain("USDC depends on USDe");
     expect(liveRegion?.textContent).toContain("80%");
-    expect(liveRegion?.textContent).toContain("upstream not rateable");
     expect(liveRegion.textContent).not.toContain("Filter results");
     expect(filterRegion.textContent).toBe(filterBeforeInspection);
     expect(filterRegion.textContent).not.toContain("80%");

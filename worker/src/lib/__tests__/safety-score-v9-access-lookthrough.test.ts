@@ -10,6 +10,7 @@ import { alphaMeta, metaMap } from "./safety-score-v9-fact-set.test-support";
 import { computeSafetyScoreV9ReserveExposureKey } from "../safety-score-v9/fact-set-schema";
 import { buildV9EvidenceGapQueue } from "@shared/lib/safety-score-v9/evidence-gap-queue";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { resolveCauseGapId } from "@shared/types/safety-score-v9-public-cause-gaps";
 
 function compiledGraph(clockSec: number, reviewedAt: string) {
   return buildSafetyScoreV9AccessClaimGraph({ assetId: "alpha", clockSec, generationId: "fixture-generation", evidence: new ReviewEvidenceBuilder("alpha", clockSec), review: makeAccessReview("alpha", reviewedAt) })!;
@@ -46,12 +47,21 @@ describe("access claim graph compiler", () => {
     const old = before.candidate.cards[0]!, card = after.candidate.cards[0]!;
     expect(old.score).not.toBeNull();
     expect(card.score).toBe(old.score);
-    expect(card.pillars).toEqual(old.pillars);
+    for (const pillar of ["backing", "exit", "control"] as const) {
+      const { causeGapRefs: _newRefs, ...actual } = card.pillars[pillar];
+      const { causeGapRefs: _oldRefs, ...expected } = old.pillars[pillar];
+      expect(actual).toEqual(expected);
+      expect((card.pillars[pillar].causeGapRefs ?? []).map((ref) => resolveCauseGapId(after.candidate, card, ref)))
+        .toEqual((old.pillars[pillar].causeGapRefs ?? []).map((ref) => resolveCauseGapId(before.candidate, old, ref)));
+    }
     expect(card.bindingCap).toEqual(old.bindingCap);
     expect(card.accessPosture).toMatchObject({ transfer: "permissionless", freezeExposure: "upstream", freezeLookthrough: { diagnosticOnly: true, coverageState: "incomplete", knownAdverseReachShare: null, unresolvedCoverageShare: null } });
     expect(card.accessPosture.freezeLookthrough!.authorities[0]!.authorityKey).toBe("origin:freeze");
     const queue = buildV9EvidenceGapQueue({ factSet: after.compiledFacts, policy: V9_CANDIDATE_POLICY_V1 });
-    expect(queue.entries.find((entry) => entry.gapId.includes("origin-disclosure"))!.responsibility).toBe("issuer-undisclosed");
+    expect(queue.entries.find((entry) => entry.gapId.includes("origin-disclosure"))).toMatchObject({
+      responsibility: "unresearched",
+    });
+    expect(after.compiledFacts.assets[0]!.gaps.find((gap) => gap.gapId.includes("origin-disclosure"))!.causeProof.cause).toBe("U");
   });
   it("quantifies only a matched admitted current portfolio, not standing structure or a mismatched position", () => {
     const rows = makeV9FixedInput().liveReserveMap.alpha!;

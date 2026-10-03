@@ -1,8 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { buildV9RadarDataset } from "@/components/radar-chart-v9";
 import { makeReportCardsV9Response, makeV9Card, makeV9Pillars } from "@/test/fixtures/safety-score-v9";
+import { makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 
 describe("V9 radar cohorts", () => {
+  it("does not plot excluded pillars or surviving diagnostics as zero scores", () => {
+    const identity = makeReportCardsV9Response().safetyScoreIdentity;
+    for (const card of [makeReportCardsV9PartialCard("exit", "B"), makeReportCardsV9PipelineGapCard("control", "A")]) {
+      expect(buildV9RadarDataset([{ card, identity, color: "#123456" }]))
+        .toEqual({ status: "unavailable", reason: "card-unavailable" });
+    }
+  });
   it("builds exactly three pillars and a same-identity cohort median", () => {
     const response = makeReportCardsV9Response();
     const series = [

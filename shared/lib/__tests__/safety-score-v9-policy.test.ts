@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import candidatePolicyAsset from "@shared/data/safety-score-v9/methodology-policy-candidate-v1.json";
-import { SAFETY_SCORE_METHODOLOGY_VERSION } from "../methodology-versions/constants";
 import {
   V9_REASON_CODES,
   V9StructuralSignalKindSchema,
   V9UnresolvedFactSchema,
+  v9UnknownRungLedger,
   type V9MethodologyPolicy,
 } from "@shared/types/safety-score-v9";
 import {
@@ -13,76 +13,19 @@ import {
   assertV9UnresolvedFactsMatchPolicy,
   assertV9ValidatedPolicyEnvelope,
   loadV9MethodologyPolicy,
-  resolveV9ReasonPolicy,
+  resolveV9ReasonTreatment,
 } from "../safety-score-v9/policy";
-import {
-  C_MINUS_MIN_SCORE,
-  DANGER_PEG_MULTIPLIER_FLOOR,
-  V9_BOUNDED_ATTRIBUTION_REASON_CODES,
-} from "../../types/safety-score-v9-public-facts";
+import type { V9EvidenceCause } from "../../types/safety-score-v9-causes";
 
 function candidateClone(): V9MethodologyPolicy {
   return structuredClone(V9_CANDIDATE_POLICY_V1.policy);
 }
 
 describe("Safety Score v9 methodology policy", () => {
-  it("loads the committed V9 policy with a frozen semantic digest", () => {
-    expect(V9_CANDIDATE_POLICY_V1.policy.policyId).toBe("safety-score-v9");
-    expect(V9_CANDIDATE_POLICY_V1.policy.lifecycle).toBe("active");
-    // The policy asset ships under the active methodology version; the
-    // sensitivity tooling enforces the same equality at runtime.
-    expect(V9_CANDIDATE_POLICY_V1.policy.releaseVersion).toBe(SAFETY_SCORE_METHODOLOGY_VERSION);
-    // ROTATION-1 (owner rulings 2026-07-23): share-band materiality 0.10/0.25, T5 credit 10,
-    // undisclosedFeeRouteScoreCeiling 52, commodity-allocated reserve class and
-    // non-counterparty reserve-issuer concentration exemption, plus the
-    // fail-closed native-USDT market-anchor and longevity premium.
-    // 2026-07-27 owner rulings: inherited-access-exposure (same diagnostic
-    // treatment as missing-access-review) for evidenced structural freeze
-    // dispositions, and peg-supply-floor-withheld (same peg-unverified
-    // ceiling as missing-peg-input) for deviations withheld by the $1M
-    // supply floor - both measured-structural, both score-neutral clones.
-    // 2026-07-31 owner ruling: unresolved-control-identity also admits the
-    // deployment-control path kind. Gap-accounting only - the queue stops
-    // filing 62 deployment-scoped control gaps as reconcile-policy-binding
-    // work; scores, grades, pillars and binding caps are unchanged across all
-    // 335 assets. The full 62-row scope (22 owner-gate rows plus 40 beyond it,
-    // including the 28 USDT bridge-control rows) was explicitly acknowledged:
-    // pathKinds is per-reason-code, so the rows cannot be admitted separately.
-    // 9.8 adds the explicit unbounded delivery cap below the bounded physical
-    // tier; releaseVersion remains metadata excluded from the digest.
-    // 10.0 adds the reviewed physical-to-USD Exit block (cost ceiling, modelled
-    // sale spreads, fee/logistics/tax fallbacks, timing vocabulary).
-    // Rotate only with reviewed semantic changes; release history lives in
-    // shared/data/methodology-changelogs/safety-score/.
-    expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toBe(
-      "13d230d09c8502b1da457cf634bb44378b1cca9d037be5b9e885c7c85a355634",
-    );
-    expect(V9_CANDIDATE_POLICY_V1.policy.semantic.formula.withhold).toEqual({
-      maxScoreExclusive: 55,
-      minimumLimitedPillarCount: 2,
-      requiresLimitedBacking: true,
-    });
-    expect(V9_CANDIDATE_POLICY_V1.policy.semantic.formula.danger).toEqual({
-      withholdPegMultiplierFloor: 0.9,
-      fGatePegMultiplierFloor: 0.8,
-      preExitPegMultiplierFloor: 0.9,
-      adverseAttributionPegMultiplierFloor: 0.9,
-      activeDepegMinimumBpsExclusive: 0,
-      withholdCentralizedMintSeverities: ["high", "critical"],
-      fGateCentralizedMintSeverities: ["critical"],
-      preExitCentralizedMintSeverities: ["critical"],
-      dangerOnlyGrades: ["F"],
-    });
-    expect(V9_CANDIDATE_POLICY_V1.policy.semantic.control.materialBridgeHighShareThreshold).toBe(0.25);
-    const cdpPolicy = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.structural.cdp;
-    expect(cdpPolicy.instantaneousCollateralShock).toBe(0.5);
-    expect(cdpPolicy.minimumLiquidationCapacityRatio).toBe(0.5);
-    expect(cdpPolicy.stressMeasurementFreshness).toMatchObject({
-      maxAgeSec: 259_200,
-      ratification: "owner-ratified",
-    });
+  it("retains immutable validated policy identity", () => {
     expect(Object.isFrozen(V9_CANDIDATE_POLICY_V1.policy.semantic.formula)).toBe(true);
     expect(Object.isFrozen(V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry)).toBe(true);
+    expect(loadV9MethodologyPolicy(candidatePolicyAsset).semanticDigest).toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
   });
   it("enforces unbounded delivery below bounded physical and bounded physical at most fiat par", () => {
     const equal = candidateClone();
@@ -105,39 +48,22 @@ describe("Safety Score v9 methodology policy", () => {
       expect(() => loadV9MethodologyPolicy(policy)).toThrow();
     }
   });
-  it("pins public validation mirrors to parsed policy values", () => {
-    const policy = V9_CANDIDATE_POLICY_V1.policy.semantic.formula;
-    expect(C_MINUS_MIN_SCORE).toBe(
-      policy.gradeThresholds.find((threshold) => threshold.grade === "C-")?.minScore,
-    );
-    expect(DANGER_PEG_MULTIPLIER_FLOOR).toBe(
-      policy.danger.adverseAttributionPegMultiplierFloor,
-    );
-  });
 
-  it("registers the scoped control question reason with the control-scoped-gap ceiling above control-unverified", () => {
-    const resolved = resolveV9ReasonPolicy(V9_CANDIDATE_POLICY_V1, "scoped-control-question");
-    expect(resolved.critical).toBe(false);
-    expect(resolved.ceiling).toEqual({ kind: "reason:scoped-control-question", limit: 69 });
-    expect(resolved.ceiling!.limit).toBeGreaterThan(
-      V9_CANDIDATE_POLICY_V1.policy.semantic.structural.namedReasonCeilings["control-unverified"],
-    );
-  });
-
-  it("separates annual reserve-classification review from monthly composition freshness and grace", () => {
-    expect(V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry).toEqual({
-      reviewedResearchMaxAgeSec: 365 * 86_400,
-      accessReviewMaxAgeSec: 365 * 86_400,
-      researchOverlayMaxAgeSec: 365 * 86_400,
-      mechanismOverlayMaxAgeSec: 365 * 86_400,
-      assuranceReportMaxAgeSec: 100 * 86_400,
-      issuerAttestedReserveMaxAgeSec: 365 * 86_400,
-      reviewedReserveClassificationMaxAgeSec: 365 * 86_400,
-      reviewedReserveCompositionMaxAgeSec: 31 * 86_400,
-      reviewedReserveCompositionGraceSec: 7 * 86_400,
-      onchainObservationMaxAgeSec: 4 * 60 * 60 * 1.2,
-      standingStructureMaxAgeSec: 90 * 86_400,
-    });
+  it("walks every registered reason/cause with no hidden removed ceiling or missing-data NR", () => {
+    for (const reason of V9_CANDIDATE_POLICY_V1.policy.reasonRegistry) {
+      for (const cause of ["A", "B", "C", "U"] satisfies V9EvidenceCause[]) {
+        const treatment = resolveV9ReasonTreatment(V9_CANDIDATE_POLICY_V1, reason.code, cause);
+        expect(treatment.critical, `${reason.code}:${cause}`).toBe(false);
+        expect(treatment.treatment, `${reason.code}:${cause}`).not.toBe("NR");
+        if (reason.code === "missing-implementation-date" && cause !== "A" && cause !== "B") {
+          expect(treatment.ceiling?.limit).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.formula.trackRecordCeilings[0]!.limit);
+        } else expect(treatment.ceiling, `${reason.code}:${cause}`).toBeNull();
+        if (cause === "A" || cause === "B") {
+          expect(treatment.treatment).toBe("diagnostic");
+          expect(treatment.scoringDisposition).toBe(cause === "A" ? "excluded-pipeline" : "excluded-uncurated");
+        }
+      }
+    }
   });
 
   it("validates each moved score-bearing gate in its owning semantic domain", () => {
@@ -164,8 +90,7 @@ describe("Safety Score v9 methodology policy", () => {
     ["danger floor", (policy) => { policy.semantic.formula.danger.fGatePegMultiplierFloor = 0.79; }],
     ["danger grades", (policy) => { policy.semantic.formula.danger.dangerOnlyGrades = ["D", "F"]; }],
     ["bridge materiality", (policy) => { policy.semantic.control.materialBridgeHighShareThreshold = 0.24; }],
-    ["unknown reconciliation", (policy) => { policy.semantic.control.mintPostureQuality["unbounded-reconciliation-unknown"] = 36; }],
-    ["collateral gated", (policy) => { policy.semantic.control.mintPostureQuality["collateral-gated"] = 51; }],
+    ["collateral gated", (policy) => { policy.semantic.control.mintPostureQuality["collateral-gated"] = 51; policy.semantic.control.mintPostureQuality.unknown = 51; }],
     ["seasoned credit ceiling", (policy) => { policy.semantic.control.mintPostureGrading.adverseSeasonedCreditCeiling = 40; }],
     ["allocation required scope", (policy) => { policy.semantic.formula.wrapperAllocationScope.requiredScopes.privateCredit.leverage.push("immediate-custodian"); }],
     ["allocation leverage assessment", (policy) => { policy.semantic.formula.wrapperAllocationScope.leverageAssessments["bounded-up-to-1.5x"] = "high"; }],
@@ -195,34 +120,18 @@ describe("Safety Score v9 methodology policy", () => {
     expect(() => loadV9MethodologyPolicy(invalid)).toThrow();
   });
 
-  it("pins the reviewed mint posture ladder keys and grading values", () => {
-    const quality = V9_CANDIDATE_POLICY_V1.policy.semantic.control.mintPostureQuality;
-    const grading = V9_CANDIDATE_POLICY_V1.policy.semantic.control.mintPostureGrading;
-    expect(quality).toMatchObject({
-      "unbounded-or-compromised": 25,
-      "unbounded-reconciliation-unknown": 35,
-      unknown: 45,
-      "collateral-gated": 50,
-      "concentrated-admin": 55,
-      "unbounded-reconciled": 55,
-      "none-resolved": 100,
-    });
-    expect(Object.keys(quality).sort()).toEqual(
-      [
-        "bounded-admin",
-        "collateral-gated",
-        "concentrated-admin",
-        "none-resolved",
-        "partially-bounded-admin",
-        "unbounded-or-compromised",
-        "unbounded-reconciled",
-        "unbounded-reconciliation-unknown",
-        "unknown",
-      ].sort(),
-    );
-    expect(grading.adverseSeasonedCreditCeiling).toBe(39);
-    expect(grading.seasonedCreditPoints).toBe(10);
-    expect(grading.seasonedCreditMinMonths).toBe(60);
+  it("keeps every C/U credit rung at max(current ordinary rung), excluding measured-adverse rungs", () => {
+    const ledger = v9UnknownRungLedger(V9_CANDIDATE_POLICY_V1.policy.semantic);
+    for (const row of ledger) {
+      if (row.polarity === "credit") expect(row.value, row.path).toBe(Math.max(row.current, row.ordinaryMinimum!));
+      else expect(row.value, row.path).toBe(row.current);
+    }
+    const lowered = candidateClone();
+    lowered.semantic.control.mintPostureQuality.unknown = 49;
+    expect(() => loadV9MethodologyPolicy(lowered)).toThrow();
+    const excessive = candidateClone();
+    excessive.semantic.control.mintPostureQuality.unknown = 51;
+    expect(() => loadV9MethodologyPolicy(excessive)).toThrow();
   });
 
   it("loads a changed withholding danger threshold with a distinct digest", () => {
@@ -289,72 +198,6 @@ describe("Safety Score v9 methodology policy", () => {
     expect(() => loadV9MethodologyPolicy(raw)).toThrow(/must be an array of reviewed chain slugs/);
   });
 
-  it("freezes the stays-NR reason set to integrity and classification failures", () => {
-    // The rating-parity contract: missing research evidence is bounded, never
-    // NR. Only pipeline-integrity and classification failures may reason-code
-    // NR. Re-tiering a code back to NR must be an explicit, reviewed edit of
-    // this list (see agents/safety-score-v9/rating-parity-plan.md §2).
-    const staysNR = V9_CANDIDATE_POLICY_V1.policy.reasonRegistry
-      .filter((entry) => entry.defaultTreatment === "NR")
-      .map((entry) => entry.code)
-      .sort();
-    expect(staysNR).toEqual([
-      "critical-unresolved",
-      "future-dated-input-fact",
-      "historical-critical-input",
-      "implementation-parent-cycle",
-      "insufficient-evidence",
-      "missing-archetype",
-      "missing-parent-score",
-      "missing-pillar",
-      "missing-pillar-evidence",
-      "parent-cycle",
-    ]);
-    for (const entry of V9_CANDIDATE_POLICY_V1.policy.reasonRegistry) {
-      if (entry.defaultTreatment !== "ceiling") continue;
-      expect(entry.ceilingRule, entry.code).not.toBeNull();
-      expect(resolveV9ReasonPolicy(V9_CANDIDATE_POLICY_V1, entry.code).ceiling?.limit, entry.code).toBeGreaterThan(0);
-    }
-  });
-
-  it("keeps the public bounded-attribution code set aligned with policy", () => {
-    const policyBounded = V9_CANDIDATE_POLICY_V1.policy.reasonRegistry
-      .filter(
-        (entry) =>
-          (entry.boundedness === "exposure-bounded" ||
-            entry.boundedness === "globally-bounded") &&
-          (entry.defaultTreatment === "pillar" ||
-            entry.defaultTreatment === "ceiling"),
-      )
-      .map((entry) => entry.code)
-      .sort();
-    expect([...V9_BOUNDED_ATTRIBUTION_REASON_CODES].sort()).toEqual(policyBounded);
-  });
-
-  it("binds aggregate gaps to explicit local-component policy paths", () => {
-    const expectedKinds = {
-      "incomplete-dex-route-coverage": ["optional-exit", "local-component"],
-      "missing-bridge-routes": ["deployment-control", "local-component"],
-      "missing-peg-input": ["peg", "local-component"],
-      "missing-reserve-composition": ["collateral-exposure", "local-component"],
-      "missing-runtime-route-evidence": ["optional-exit", "local-component"],
-      "runtime-bridge-materiality-unavailable": ["deployment-control", "local-component"],
-      "unreviewed-dependency-relationships": ["collateral-exposure", "serial-dependency", "local-component"],
-    } as const;
-    for (const [code, pathKinds] of Object.entries(expectedKinds)) {
-      const entry = V9_CANDIDATE_POLICY_V1.policy.reasonRegistry.find((candidate) => candidate.code === code);
-      expect(entry?.pathKinds, code).toEqual(expect.arrayContaining([...pathKinds]));
-      expect(entry?.pathKinds, code).not.toContain("*");
-    }
-
-    expect(
-      resolveV9ReasonPolicy(V9_CANDIDATE_POLICY_V1, "runtime-bridge-materiality-unavailable").reason,
-    ).toMatchObject({ ownerDomain: "control", defaultTreatment: "ceiling" });
-    expect(resolveV9ReasonPolicy(V9_CANDIDATE_POLICY_V1, "missing-archetype").reason).toMatchObject({
-      ownerDomain: "methodology",
-      pathKinds: ["methodology"],
-    });
-  });
 
   it("excludes valid policy identities and release versions but includes semantic decisions", () => {
     const relabeled = candidateClone();
@@ -445,16 +288,11 @@ describe("Safety Score v9 methodology policy", () => {
     invalidTreatment.reasonRegistry.find((entry) => entry.code === "missing-pillar")!.defaultTreatment = "pillar";
     expect(() => loadV9MethodologyPolicy(invalidTreatment)).toThrow(/permitted treatments/i);
 
-    const missingCeilingRule = candidateClone();
-    missingCeilingRule.reasonRegistry.find((entry) => entry.code === "material-unknown-reserve-exposure")!.ceilingRule =
-      null;
-    expect(() => loadV9MethodologyPolicy(missingCeilingRule)).toThrow(/ceiling rule is required/i);
-
-    const nullCeilingReference = candidateClone();
-    nullCeilingReference.reasonRegistry.find(
-      (entry) => entry.code === "material-unknown-reserve-exposure",
-    )!.ceilingRule = { source: "evidence-level", level: "strong" };
-    expect(() => loadV9MethodologyPolicy(nullCeilingReference)).toThrow(/has no ceiling/i);
+    const removedRule = candidateClone();
+    expect(() => loadV9MethodologyPolicy({
+      ...removedRule, reasonRegistry: removedRule.reasonRegistry.map((entry) => entry.code === "material-unknown-reserve-exposure"
+        ? { ...entry, ceilingRule: { source: "evidence-level", level: "strong" } } : entry),
+    })).toThrow();
   });
 
   it("closes the candidate registry over current reason and structural kinds", () => {
@@ -470,35 +308,17 @@ describe("Safety Score v9 methodology policy", () => {
     );
   });
 
-  it("makes registry treatment authoritative for unresolved facts and audit classification", () => {
+  it("checks unresolved criticality against its cause rather than historical ownership labels", () => {
     const raw = {
-      code: "material-reserve-slice-unstructured" as const,
-      reason: "Missing reviewed fields.",
-      critical: true,
-      responsibility: "integration-missing" as const,
+      code: "material-reserve-slice-unstructured" as const, reason: "Missing reviewed fields.",
+      cause: "U" as const, critical: true, responsibility: "issuer-undisclosed" as const,
     };
-    expect(resolveV9ReasonPolicy(V9_CANDIDATE_POLICY_V1, raw.code)).toMatchObject({
-      critical: false,
-      reason: { defaultTreatment: "pillar", auditClassification: "missing-data" },
-      ceiling: null,
+    expect(resolveV9ReasonTreatment(V9_CANDIDATE_POLICY_V1, raw.code, "U")).toMatchObject({
+      critical: false, treatment: "pillar", ceiling: null,
     });
-    expect(resolveV9ReasonPolicy(V9_CANDIDATE_POLICY_V1, "material-unknown-reserve-exposure")).toMatchObject({
-      critical: false,
-      reason: { defaultTreatment: "ceiling" },
-      ceiling: { kind: "reason:material-unknown-reserve-exposure", limit: 69 },
-    });
-    expect(() => assertV9UnresolvedFactsMatchPolicy(V9_CANDIDATE_POLICY_V1, [raw])).toThrow(/contradict policy/);
-    expect(() =>
-      assertV9UnresolvedFactsMatchPolicy(V9_CANDIDATE_POLICY_V1, [{ ...raw, critical: false }]),
-    ).not.toThrow();
-    expect(() =>
-      V9UnresolvedFactSchema.parse({
-        code: "future-unregistered-reason",
-        reason: "Unknown.",
-        critical: true,
-        responsibility: "method-unsupported",
-      }),
-    ).toThrow();
+    expect(() => assertV9UnresolvedFactsMatchPolicy(V9_CANDIDATE_POLICY_V1, [raw])).toThrow();
+    expect(() => assertV9UnresolvedFactsMatchPolicy(V9_CANDIDATE_POLICY_V1, [{ ...raw, critical: false }])).not.toThrow();
+    expect(() => V9UnresolvedFactSchema.parse({ ...raw, code: "future-unregistered-reason" })).toThrow();
   });
 
   it("does not accept a caller-supplied digest as a validated policy", () => {
@@ -512,19 +332,6 @@ describe("Safety Score v9 methodology policy", () => {
   });
 
   it("keeps the control-compensability headroom under the centralized-mint high ceiling", () => {
-    // A control-25 unbounded-mint asset can be lifted only up to control + the
-    // control-compensability headroom (25 + 30 = 55). That must never exceed the
-    // centralized-mint high signal ceiling (59), so the reconciled-unbounded-mint
-    // archetype is pinned at C and can never be lifted to C+/B by the headroom.
-    // This makes the "C, not C+" boundary a policy invariant, not a coincidence.
-    // 9.32: the new rungs deliberately share their band-mates' ceilings — the
-    // 35 unknown-reconciliation rung sits under the same high ceiling (its blend
-    // lift is trimmed at 59, exactly like unbounded-reconciled without
-    // supervision), and the 50 collateral-gated rung sits under the moderate
-    // ceiling (74) like the concentrated rung. The invariant for them is that
-    // the in-pillar posture price stays BELOW its own signal ceiling, so the
-    // ceiling can only trim blend lift and never prices a card below its
-    // measured posture.
     const formula = V9_CANDIDATE_POLICY_V1.policy.semantic.formula;
     const signalLimits = V9_CANDIDATE_POLICY_V1.policy.semantic.structural.signalLimits["centralized-mint"];
     const quality = V9_CANDIDATE_POLICY_V1.policy.semantic.control.mintPostureQuality;

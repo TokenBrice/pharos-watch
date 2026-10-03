@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { deriveReportCardsBaseInputGenerationId } from "@shared/lib/report-cards-base-input-identity";
+import { REPORT_CARD_GRADE_RANK } from "@shared/lib/report-card-core";
+import { makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 import { buildSafetyScoreV9BaselineExtension, type V9ExtensionRegistryMeta } from "../../src/lib/safety-score-v9/extension";
 import { buildSafetyScoreV9Candidate } from "../../src/lib/safety-score-v9/candidate";
 import { eligibleReserveMeta } from "../../src/lib/__tests__/safety-score-v9-reserve-admission.test-support";
@@ -21,9 +23,10 @@ function fixtureMeta(id: string, overrides: Partial<V9ExtensionRegistryMeta> = {
   });
 }
 
-function healthyReplay() {
+function healthyReplay(alreadyFallback: string[] = []) {
   const base = makeV9TwoAssetFixedInput({ clockSec: v9TestClockSec() });
   const fixed = structuredClone(base);
+  fixed.liveToFallbackCoins = alreadyFallback;
   fixed.liveReserveMap.beta = structuredClone(fixed.liveReserveMap.alpha);
   fixed.liveReserveProvenanceMap.beta = {
     source: "fixture-reserve-api",
@@ -61,8 +64,8 @@ function healthyReplay() {
 }
 
 describe("buildLiveWithheldCounterfactualReport", () => {
-  it("reports a live-backed grade drop with fallback details and omits a held grade", () => {
-    const { replay, metaById } = healthyReplay();
+  it("reports worse fallback ratings while omitting assets already using fallback evidence", () => {
+    const { replay, metaById } = healthyReplay(["beta"]);
     const alpha = replay.pipeline.evaluatedSet.assets.find((asset) => asset.assetId === "alpha");
     if (!alpha?.stressState?.exitPortfolio) throw new Error("Fixture has no alpha exit portfolio");
     alpha.stressState.exitPortfolio.circulatingUsd = null;
@@ -73,15 +76,22 @@ describe("buildLiveWithheldCounterfactualReport", () => {
       expect.objectContaining({
         assetId: "alpha",
         supplyUsd: 0,
-        liveGrade: "C",
-        fallbackScore: null,
-        fallbackGrade: "NR",
         fallbackTier: "none",
         fallbackEvidenceCeiling: null,
         fallbackBindingCapKind: null,
       }),
     ]);
-    expect(rows[0]!.fallbackGrade).not.toBe(rows[0]!.liveGrade);
+    expect(REPORT_CARD_GRADE_RANK[rows[0]!.fallbackGrade]).toBeLessThan(REPORT_CARD_GRADE_RANK[rows[0]!.liveGrade]);
     expect(rows.some((row) => row.assetId === "beta")).toBe(false);
+  });
+
+  it("does not classify a pipeline-gap observation as a grade downgrade", () => {
+    const { replay, metaById } = healthyReplay(["beta"]);
+    const gap = makeReportCardsV9PipelineGapCard(null, "A", { id: "alpha" });
+    replay.pipeline.candidate.cards = replay.pipeline.candidate.cards.map((card) =>
+      card.id === "alpha" ? gap : card,
+    );
+
+    expect(buildLiveWithheldCounterfactualReport(replay, metaById)).toEqual([]);
   });
 });

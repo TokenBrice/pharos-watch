@@ -239,6 +239,7 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
       agreeSources: asset?.agreeSources,
       primaryTrust,
       pegPct: pegData.pegPct,
+      ...(pegData.unknownCoverageSeconds != null ? { unknownCoverageSeconds: pegData.unknownCoverageSeconds } : {}),
       severityScore: pegData.severityScore,
       spreadPenalty: pegData.spreadPenalty,
       eventCount: pegData.eventCount,

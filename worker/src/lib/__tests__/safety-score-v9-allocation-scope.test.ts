@@ -97,7 +97,7 @@ describe("dimension-scoped allocation consumer boundaries", () => {
     const result = compile(input);
     expect(result.asset.allocationScopeFacts).toContainEqual(expect.objectContaining({ claimKey: "contract-borrowing", admitted: true, assessment: "none" }));
     expect(result.asset.allocationScopeFacts).toContainEqual(expect.objectContaining({ claimKey: "required:leverage:borrower-spv", admitted: false, rejectionReason: "required-scope-unresolved", disposition: "integration-missing" }));
-    expect(wrapperFacts(result).facts.leverage.disposition).toBe("issuer-undisclosed");
+    expect(wrapperFacts(result).facts.leverage.disposition).toBe("unresearched");
     expect(wrapperFacts(result).facts.strategyComplexity).toMatchObject({ assessment: "high" });
     expect(result.card.trace.wrapperParentLimit?.missingFacts).toContainEqual(expect.objectContaining({ factClass: "leverage" }));
   });
@@ -111,7 +111,7 @@ describe("dimension-scoped allocation consumer boundaries", () => {
     });
     const result = compile(input);
     expect(wrapperFacts(result).facts.strategyComplexity).toMatchObject({ disposition: "reviewed", assessment: "high" });
-    expect(wrapperFacts(result).facts.custodyEscrow.disposition).toBe("issuer-undisclosed");
+    expect(wrapperFacts(result).facts.custodyEscrow.disposition).toBe("unresearched");
     expect(result.card.trace.wrapperParentLimit?.missingFacts).toContainEqual(expect.objectContaining({ factClass: "leverage" }));
   });
   it("resolves a complete mixed leverage dimension at the worst entity assessment", () => {
@@ -121,7 +121,7 @@ describe("dimension-scoped allocation consumer boundaries", () => {
     const result = compile(input);
     expect(wrapperFacts(result).facts.leverage).toMatchObject({ disposition: "reviewed", assessment: "critical" });
     expect(result.card.trace.wrapperParentLimit?.adjustments).toContainEqual(expect.objectContaining({ factKey: "leverage", assessment: "critical", discountPoints: 4 }));
-    expect(wrapperFacts(result).facts.custodyEscrow.disposition).toBe("issuer-undisclosed");
+    expect(wrapperFacts(result).facts.custodyEscrow.disposition).toBe("unresearched");
   });
   it("preserves known adverse reserve leverage when complete scoped evidence says no local borrowing", () => {
     const input = fixture();
@@ -162,7 +162,7 @@ describe("dimension-scoped allocation consumer boundaries", () => {
     const fact = result.asset.allocationScopeFacts!.find((row) => row.claimKey === input.claim.claimKey)!;
     expect(fact.admitted).toBe(false);
     expect(fact.assessment).toBeNull();
-    expect(wrapperFacts(result).facts.leverage.disposition).toBe("issuer-undisclosed");
+    expect(wrapperFacts(result).facts.leverage.disposition).toBe("unresearched");
     expect(result.asset.allocationScopeFacts).toContainEqual(expect.objectContaining({ claimKey: "required:leverage:contract", disposition: "integration-missing" }));
     expect(result.card.trace.wrapperParentLimit?.missingFacts).toContainEqual(expect.objectContaining({ factClass: "leverage" }));
   });
@@ -190,7 +190,7 @@ describe("dimension-scoped allocation consumer boundaries", () => {
     if (fault === "block") current.block++;
     const result = compile(input);
     expect(result.asset.allocationScopeFacts).toContainEqual(expect.objectContaining({ claimKey: input.claim.claimKey, admitted: false, assessment: null, rejectionReason: "identity-unmatched" }));
-    expect(wrapperFacts(result).facts.leverage.disposition).toBe("issuer-undisclosed");
+    expect(wrapperFacts(result).facts.leverage.disposition).toBe("unresearched");
     expect(result.card.trace.wrapperParentLimit?.missingFacts).toContainEqual(expect.objectContaining({ factClass: "leverage" }));
   });
 
@@ -206,7 +206,7 @@ describe("dimension-scoped allocation consumer boundaries", () => {
       claimKey: input.claim.claimKey, admitted: false, assessment: null,
       rejectionReason: "identity-unmatched", evidenceRefIds: [],
     }));
-    expect(wrapperFacts(result).facts.leverage.disposition).toBe("issuer-undisclosed");
+    expect(wrapperFacts(result).facts.leverage.disposition).toBe("unresearched");
     expect(result.asset.allocationScopeFacts).toContainEqual(expect.objectContaining({
       claimKey: "required:leverage:contract", rejectionReason: "required-scope-unresolved",
     }));
@@ -229,7 +229,7 @@ describe("dimension-scoped allocation consumer boundaries", () => {
     if (input.asset.wrapperAllocationReview?.scopeKind !== "per-dimension") throw new Error("Expected scopes");
     input.asset.wrapperAllocationReview.claims.push({ ...input.claim, claimKey: "duplicate-book-proof" });
     const result = compile(input);
-    expect(wrapperFacts(result).facts.leverage.disposition).toBe("issuer-undisclosed");
+    expect(wrapperFacts(result).facts.leverage.disposition).toBe("unresearched");
     expect(result.asset.allocationScopeFacts).toContainEqual(expect.objectContaining({ claimKey: "contract-borrowing", rejectionReason: "overlapping-scope" }));
   });
   it("admits non-wrapper parent basket context without manufacturing a wrapper or a second penalty", () => {
@@ -260,7 +260,7 @@ describe("dimension-scoped allocation consumer boundaries", () => {
     input.claim.target.idleCustodyProof = { mechanism: "burn-parent-mint-parent", upstreamAssetId: "beta", parentTokenAddress: "0x4444444444444444444444444444444444444444", burnSourceUrl: "https://example.com/code", mintSourceUrl: "https://example.com/code" };
     const after = compile(input);
     expect(after.asset.allocationScopeFacts).toContainEqual(expect.objectContaining({ claimKey: "contract-borrowing", admitted: true, disposition: "not-applicable" }));
-    expect(wrapperFacts(after).facts.custodyEscrow.disposition).toBe("issuer-undisclosed");
+    expect(wrapperFacts(after).facts.custodyEscrow.disposition).toBe("unresearched");
     expect(wrapperFacts(after).facts.measuredUnwind).toEqual(wrapperFacts(before).facts.measuredUnwind);
     expect(after.card.trace.wrapperParentLimit?.limit).toBe(before.card.trace.wrapperParentLimit?.limit);
     input.claim.target.idleCustodyProof.parentTokenAddress = "0x5555555555555555555555555555555555555555";
@@ -272,7 +272,7 @@ describe("dimension-scoped allocation consumer boundaries", () => {
     };
     const nrParent = compile(input);
     expect(nrParent.card.trace.finalScore).toBeNull();
-    expect(wrapperFacts(nrParent).facts.custodyEscrow.disposition).toBe("issuer-undisclosed");
+    expect(wrapperFacts(nrParent).facts.custodyEscrow.disposition).toBe("unresearched");
   });
   it("quarantines malformed claim bytes per asset while valid peers remain evaluated", () => {
     const input = fixture();

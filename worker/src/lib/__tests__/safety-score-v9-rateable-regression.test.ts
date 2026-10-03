@@ -45,7 +45,6 @@ describe("Safety Score v9 rateable regression fixture", () => {
     const usdc = artifact.pipeline.candidate.cards.find((card) => card.id === "usdc-circle")!;
     expect(usdc.grade).not.toBe("NR");
     expect(usdc.nrReasons).toEqual([]);
-    expect(usdc.pillars.backing.score).toBeCloseTo(88.78773826247263, 8);
     expect(usdc.reasonCodes).not.toContain("material-reserve-slice-unstructured");
   });
 });

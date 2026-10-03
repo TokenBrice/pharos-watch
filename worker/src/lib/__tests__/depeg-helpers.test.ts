@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import {
   classifyPrimaryDepegTrust,
@@ -8,6 +8,8 @@ import {
 import {
   buildInsertDepegEventStmt,
   collectDexProtocolCorroborations,
+  rowPriceCoverage,
+  serializeDepegPriceCoverage,
   rowToDepegEvent,
   type DepegRow,
 } from "../depeg-helpers";
@@ -203,6 +205,30 @@ describe("buildInsertDepegEventStmt + rowToDepegEvent provenance", () => {
     confirmation_sources: null,
     pending_reason: null,
   } satisfies DepegRow;
+
+  it.each(["invalid-json", '{"intervals":[[200,100]]}', "null"])("treats malformed stored coverage as unknown: %s", (malformed) => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const events = [
+        { ...baseDepegRow, price_coverage_json: malformed },
+        { ...baseDepegRow, id: 2, price_coverage_json: '{"intervals":[[100,200]]}', last_trusted_price_at: 200 },
+      ].map(rowToDepegEvent);
+      expect(events[0]!.priceCoverage).toBeNull();
+      expect(events[1]!.priceCoverage?.intervals).toEqual([[100, 200]]);
+      expect(rowPriceCoverage({ ...baseDepegRow, price_coverage_json: malformed })).toBeNull();
+      expect(warn.mock.calls.map(([line]) => JSON.parse(String(line))).some((record) =>
+        record.level === "warn" && record.metadata?.eventId === 1,
+      )).toBe(true);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("rejects invalid producer coverage on the write path", () => {
+    expect(() => serializeDepegPriceCoverage({
+      intervals: [[200, 100]], lastTrustedObservationAt: 200, gapStartedAt: null,
+    })).toThrow();
+  });
 
   it("buildInsertDepegEventStmt binds confirmation_sources and pending_reason", () => {
     const bindCalls: unknown[][] = [];

@@ -5,6 +5,7 @@ import {
   normalizeSafetyScoreV9CompilerInput,
   withNormalizedV9JournalProjections,
 } from "../safety-score-v9/native-input";
+import { createRuntimeGapVerdict } from "../safety-score-v9/fact-set-context";
 
 /**
  * The publication runner skips the full input re-normalization when
@@ -15,6 +16,24 @@ import {
  * shortcut needs; the journal projections must still be validated.
  */
 describe("Safety Score V9 prepared-input normalization", () => {
+  it("v10.01 preserves generation-bound reader proofs through journal-only preparation", () => {
+    const base = normalizeSafetyScoreV9CompilerInput(createSafetyScoreV9FullRegistryInput());
+    const failure = createRuntimeGapVerdict({
+      assetId: "usdc-circle", scope: { pillar: "backing", componentKey: "reserve-composition",
+        factorKey: null, routeKey: null, exposureId: null, requiredDatum: "reserve-composition" },
+      sourceId: "fixture-reserves", sourceGenerationId: "attempt:prepared-base",
+      observedAtSec: base.clockSec, asOfSec: base.clockSec, producerState: "producer-failed",
+      rejectionCode: "read-failed", reason: "The captured reader failed.",
+    });
+    const captured = normalizeSafetyScoreV9CompilerInput({
+      ...base, baseInputGenerationId: undefined, pipelineGapByAssetId: { "usdc-circle": [failure] },
+    });
+    const prepared = withNormalizedV9JournalProjections({ ...captured, evidenceJournalById: {} });
+    expect(prepared.pipelineGapByAssetId).toEqual(captured.pipelineGapByAssetId);
+    expect(prepared.baseInputGenerationId).toBe(captured.baseInputGenerationId);
+    expect(prepared.baseInputGenerationId).not.toBe(base.baseInputGenerationId);
+    expect(normalizeSafetyScoreV9CompilerInput(prepared)).toEqual(prepared);
+  });
   it("yields byte-identical compiler input to the full re-normalization path", () => {
     const base = normalizeSafetyScoreV9CompilerInput(createSafetyScoreV9FullRegistryInput());
     const prepared = {

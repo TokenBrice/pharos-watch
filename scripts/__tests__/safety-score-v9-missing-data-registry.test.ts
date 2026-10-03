@@ -21,7 +21,6 @@ import {
   generateV9MissingDataRegistry,
   classifyV9ScoreProjectionWorkType,
   likelyTouchpoints,
-  mechanismOverlayCaptureDayWarnings,
   mechanismResolutionMode,
   scoreProjectionResolutionMode,
   type V9MissingDataWorkType,
@@ -83,7 +82,7 @@ function generateExitProjectionFixture(
         compiledFacts,
         candidate: {
           model: "v9-critical-path",
-          schemaVersion: 5,
+          schemaVersion: 6,
           lifecycle: "active",
           candidateId: "safety-score-v9:fixture",
           policyVersion: policy.policy.releaseVersion,
@@ -104,7 +103,10 @@ function generateExitProjectionFixture(
             ratedCount: 1,
             notRatedCount: 0,
             notRatedIds: [],
+            pipelineGapCount: 0,
+            pipelineGapIds: [],
           },
+          foreignCauseGaps: [],
           cards: [card],
         },
       },
@@ -118,16 +120,6 @@ function generateExitProjectionFixture(
   });
 }
 
-describe("Safety Score v9 mechanism-overlay capture-day warnings", () => {
-  it("warns for reviews dated on the capture UTC day", () => {
-    const captureClockSec = Date.UTC(2026, 8, 21, 7, 55) / 1_000;
-    const warning =
-      "mechanism review dated 2026-09-21 is inadmissible until the next UTC day at this capture clock; assets: susn-noon";
-
-    expect(mechanismOverlayCaptureDayWarnings(captureClockSec)).toEqual([warning]);
-    expect(mechanismOverlayCaptureDayWarnings(Date.UTC(2099, 0, 1) / 1_000)).toEqual([]);
-  });
-});
 
 describe("Safety Score v9 missing-data work routing", () => {
   it.each([

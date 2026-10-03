@@ -1,10 +1,12 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PortfolioClient } from "./client";
 import type { ReportCardsV9Response } from "@shared/types";
+import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
+import { makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 
 let portfolioState: {
   holdings: Array<{ coinId: string; amount: number }>;
@@ -125,6 +127,7 @@ describe("PortfolioClient URL sync", () => {
 
   beforeEach(() => {
     portfolioState = basePortfolioState();
+    reportCardsState.data = undefined;
     window.history.replaceState(null, "", "/portfolio/");
   });
 
@@ -164,5 +167,31 @@ describe("PortfolioClient URL sync", () => {
     await waitFor(() => {
       expect(window.location.search).toBe("?p=usdc-circle%3A25");
     });
+  });
+  it("labels partial score and pillar averages by their own known-only holding coverage", () => {
+    portfolioState = { ...basePortfolioState(), holdings: [{ coinId: "usdc-circle", amount: 100 }, { coinId: "usdt-tether", amount: 300 }] };
+    const complete = makeV9Card({ id: "usdc-circle", score: 80, pillars: {
+      ...makeV9Card().pillars, backing: { ...makeV9Card().pillars.backing, score: 80 }, exit: { ...makeV9Card().pillars.exit, score: 60 }, control: { ...makeV9Card().pillars.control, score: 80 },
+    } });
+    const partialPillars = makeReportCardsV9PartialCard("exit", "B").pillars;
+    const partial = makeReportCardsV9PartialCard("exit", "B", { id: "usdt-tether", score: 90,
+      pillars: { ...partialPillars, backing: { ...partialPillars.backing, score: 90 }, control: { ...partialPillars.control, score: 90 } } });
+    reportCardsState.data = makeReportCardsV9Response({ cards: [complete, partial] });
+    render(<PortfolioClient />);
+    expect(screen.getByText("Known-only weighted V10 safety subtotal")).toBeTruthy();
+    expect(screen.getByText("exit · known-only subtotal").parentElement?.textContent).toContain("60/100");
+    expect(screen.getByText("exit · known-only subtotal").parentElement?.textContent).toContain("100 USD of 400 USD");
+    expect(screen.getByText(/public data awaiting curation \(B\)/)).toBeTruthy();
+    expect(screen.queryByText("15/100")).toBeNull();
+  });
+
+  it("does not manufacture a grade or aggregate when every holding has a Pipeline gap", () => {
+    portfolioState = { ...basePortfolioState(), holdings: [{ coinId: "usdc-circle", amount: 100 }] };
+    reportCardsState.data = makeReportCardsV9Response({ cards: [makeReportCardsV9PipelineGapCard("control", "A", { id: "usdc-circle" })] });
+    render(<PortfolioClient />);
+    expect(screen.getByText("Pipeline gap")).toBeTruthy();
+    expect(screen.getAllByText("Unavailable")).toHaveLength(3);
+    expect(screen.getByText(/Pipeline gap · fewer than two pillars available/)).toBeTruthy();
+    expect(screen.queryByText(/NR|0\/100|100\/100/)).toBeNull();
   });
 });

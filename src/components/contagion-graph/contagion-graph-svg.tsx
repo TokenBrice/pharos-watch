@@ -315,7 +315,7 @@ const ContagionGraphNode = memo(function ContagionGraphNode({
   const tickerFontSize = HUB_LABEL_FONT_SIZE * nodeScale;
   const labelGap = showTickerLabels ? tickerFontSize * 0.7 : isCoreHub ? 12 : 10;
   const labelY = Math.max(PAD + 10, Math.min(HEIGHT - PAD - 2, position.y + visualR + labelGap));
-  const labelText = showTickerLabels ? graphNodeLabel(node) : `${graphNodeLabel(node)} · ${node.grade}`;
+  const labelText = showTickerLabels ? graphNodeLabel(node) : `${graphNodeLabel(node)} · ${node.grade === null ? "Pipeline gap" : node.grade}`;
   return (
     <g
       key={node.id}
@@ -323,7 +323,7 @@ const ContagionGraphNode = memo(function ContagionGraphNode({
       data-node-id={node.id}
       data-pinned={isPinnedPosition ? "true" : undefined}
       role="button"
-      aria-label={`${graphNodeLabel(node)}, Grade ${node.grade}, ${node.mcap === null ? "mcap n/a" : `market cap ${formatCurrency(node.mcap)}`}${pinnedSelectionId === node.id ? ", Selected" : ", Trace"}${isPinnedPosition ? ", Pinned position" : ""}`}
+      aria-label={`${graphNodeLabel(node)}, ${node.grade === null ? "Pipeline gap" : `Grade ${node.grade}`}, ${node.mcap === null ? "mcap n/a" : `market cap ${formatCurrency(node.mcap)}`}${pinnedSelectionId === node.id ? ", Selected" : ", Trace"}${isPinnedPosition ? ", Pinned position" : ""}`}
       style={{ cursor: nodeCursor }}
       onPointerDown={(event) => onPointerDown(event, node.id)}
       onMouseEnter={() => onMouseEnter(node.id)}

@@ -13,6 +13,7 @@ import { ReviewedEconomicSupplyPlanEnvelopeSchema, ReviewedEconomicSupplyPlanSch
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { normalizeDeploymentId } from "@shared/types/deployment-id";
 import { createReviewedAssetRegistry, ReviewedRegistryEntryError } from "./extension-reviewed-registry";
+import type { SafetyScoreV9SupplyAttributionInput } from "./supply-attribution-source";
 
 const REVIEWED_DEPLOYMENT_SUPPLY_MAX_AGE_SEC = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxAgeSec;
 const REVIEWED_DEPLOYMENT_SUPPLY_MAX_SKEW_SEC = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxSkewSec;
@@ -981,6 +982,48 @@ function addEconomicUnits(a: EconomicFraction, b: EconomicFraction, subtract = f
   while (y !== 0n) { const remainder = x % y; x = y; y = remainder; }
   const leftScale = b.d / x, rightScale = a.d / x;
   return { n: a.n * leftScale + (subtract ? -b.n : b.n) * rightScale, d: a.d * leftScale };
+}
+
+/** These quantities come from the admitted input, not a reusable chain-state read. */
+export function economicSupplyInputReferencePrice(
+  fixedInput: Readonly<SafetyScoreV9SupplyAttributionInput>,
+  assetId: string,
+): EconomicSupplyReference | null {
+  const price = fixedInput.navPriceById?.[assetId];
+  return price ? { sourceId: price.sourceId, value: String(price.priceUsd),
+    sourceGeneration: fixedInput.sourceGeneration, observedAtSec: price.observedAtSec,
+    responseSha256: sha256Hex(stableJsonStringifyV1(price)) } : null;
+}
+
+export function economicSupplyInputDeploymentObservation(input: {
+  fixedInput: Readonly<SafetyScoreV9SupplyAttributionInput>;
+  plan: ReviewedEconomicSupplyPlan;
+  row: ReviewedEconomicSupplyPlan["deployments"][number];
+  referencePrice: EconomicSupplyReference;
+}): EconomicSupplyObservation | null {
+  const { fixedInput, plan, row, referencePrice } = input;
+  const aggregate = fixedInput.aggregateCirculatingById[plan.assetId];
+  const aggregateUsd = getCirculatingRawOrNull(aggregate ?? {});
+  if (aggregateUsd === null || aggregate?.observedAtSec == null) return null;
+  if (row.read.kind === "provider-chain") {
+    const amount = fixedInput.chainCirculatingById[plan.assetId]?.[row.read.sourceChain]?.current;
+    if (plan.deployments.filter(other => other.chainId === row.chainId).length !== 1 ||
+      row.amountBasis !== "circulating-usd" || amount === undefined) return null;
+    return { id: row.deploymentKey, deploymentKey: row.deploymentKey, amount: String(amount),
+      observedAtSec: aggregate.observedAtSec, anchor: fixedInput.sourceGeneration,
+      anchorHash: sha256Hex(stableJsonStringifyV1(fixedInput.chainCirculatingById[plan.assetId])),
+      responseSha256: sha256Hex(stableJsonStringifyV1({ sourceChain: row.read.sourceChain, amount })) };
+  }
+  if (row.read.kind === "native-from-aggregate" && row.holdingKind === "native-gas" && row.amountBasis === "native-ledger") {
+    const amount = aggregateUsd / Number(referencePrice.value);
+    if (!Number.isFinite(amount) || amount < 0) return null;
+    const digest = sha256Hex(stableJsonStringifyV1({ aggregate, referencePrice }));
+    return { id: row.deploymentKey, deploymentKey: row.deploymentKey,
+      amount: amount.toLocaleString("en-US", { useGrouping: false, maximumFractionDigits: 20 }),
+      observedAtSec: Math.min(aggregate.observedAtSec, referencePrice.observedAtSec),
+      anchor: `attributed:${fixedInput.sourceGeneration}`, anchorHash: digest, responseSha256: digest };
+  }
+  return null;
 }
 
 /** Recomputes every USD row; a conserved caller-supplied array alone is never proof. */

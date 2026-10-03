@@ -532,7 +532,7 @@ export function CompareClient() {
                       <div key={card.id} className="flex items-center gap-1.5 text-sm">
                         <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
                         <span>
-                          {stablecoinLabel({ id: card.id, symbol })}: {card.grade}
+                          {stablecoinLabel({ id: card.id, symbol })}: {card.grade === null ? "Pipeline gap" : card.grade}
                         </span>
                       </div>
                     ))}

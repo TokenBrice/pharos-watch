@@ -1,5 +1,4 @@
 import { base64ToBytes, bytesToBase64 } from "@shared/lib/base64";
-import { compareMethodologyVersions } from "@shared/lib/methodology-versions/base";
 import { stableJsonStringifyChunksV1, stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import {
   SafetyScoreV9CurrentResponseSchema,
@@ -15,8 +14,6 @@ import { parseJson } from "../json-parse";
 
 const PUBLICATION_STORAGE_KIND = "safety-score-v9-publication";
 const STORAGE_SCHEMA_VERSION = 1;
-const EVIDENCE_RESPONSIBILITY_FACTS_POLICY_VERSION = "9.19";
-const PUBLISHED_EVIDENCE_EXPIRED_POLICY_VERSION = "9.4";
 
 // One retained accepted generation for offline scenario replay. Both rows
 // advance with the canonical publication batch (or neither does).
@@ -26,6 +23,16 @@ export const SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY = "report-cards:v
 const SAFETY_SCORE_V9_PUBLICATION_MAX_STORED_BYTES = 1_900_000;
 const SAFETY_SCORE_V9_PUBLICATION_MAX_COMPRESSED_BYTES = 1_350_000;
 const SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES = 8_000_000;
+
+export class SafetyScoreV9SchemaCutoverPendingError extends Error {
+  readonly code = "publication-schema-cutover-pending";
+  constructor(readonly source: "publication" | "health" = "publication", readonly storedUpdatedAt: number | null = null) {
+    super(source === "health"
+      ? "publication-schema-cutover-pending: stored health schema 1 awaits health schema 2"
+      : "publication-schema-cutover-pending: stored schema 5 awaits a schema 6 publication");
+    this.name = "SafetyScoreV9SchemaCutoverPendingError";
+  }
+}
 
 const CacheIdentitySchema = z
   .object({
@@ -125,70 +132,19 @@ function parsePublicationPayload(
   if (!options?.skipCanonicalityCheck && stableJsonStringifyV1(parsed.value) !== raw) {
     throw new Error(`${label} JSON is not canonical`);
   }
-  return SafetyScoreV9CurrentResponseSchema.parse(
-    normalizeRetiredCardFields(parsed.value),
-  );
-}
-
-/**
- * Methodology 9.15 retired `stressStateDigest`, and 9.35 stopped publishing a
- * binding cap on NR cards, without changing the V5 envelope version. Keep the
- * storage reader able to cross those card-field boundaries so a new candidate
- * can compare with and replace the last accepted publication. Integrity checks
- * still cover the original stored bytes; only the already-authenticated payload
- * is normalized for the current schema.
- */
-function normalizeRetiredCardFields(value: unknown): unknown {
-  if (value === null || typeof value !== "object" || Array.isArray(value)) {
-    return value;
+  const value = parsed.value;
+  if (value !== null && typeof value === "object" && "schemaVersion" in value && value.schemaVersion === 5) {
+    throw new SafetyScoreV9SchemaCutoverPendingError();
   }
-  const publication = value as Record<string, unknown>;
-  if (!Array.isArray(publication.cards)) return value;
-  let changed = false;
-  const cards = publication.cards.map((card) => {
-    if (card === null || typeof card !== "object" || Array.isArray(card)) {
-      return card;
-    }
-    const record = card as Record<string, unknown>;
-    let currentCard = record;
-    if ("stressStateDigest" in currentCard) {
-      const digest = currentCard.stressStateDigest;
-      if (
-        digest !== null &&
-        (typeof digest !== "string" || !/^[a-f0-9]{64}$/.test(digest))
-      ) {
-        throw new Error("Retired Safety Score v9 stress state digest is invalid");
-      }
-      const { stressStateDigest: _retired, ...withoutStressStateDigest } = currentCard;
-      currentCard = withoutStressStateDigest;
-      changed = true;
-    }
-
-    if (
-      currentCard.score === null &&
-      (currentCard.bindingCap !== null ||
-        (Array.isArray(currentCard.caps) &&
-          currentCard.caps.some(
-            (cap) => cap !== null && typeof cap === "object" && !Array.isArray(cap) && cap.binding === true,
-          )))
-    ) {
-      currentCard = {
-        ...currentCard,
-        bindingCap: null,
-        caps: Array.isArray(currentCard.caps)
-          ? currentCard.caps.map((cap) =>
-              cap !== null && typeof cap === "object" && !Array.isArray(cap)
-                ? { ...cap, binding: false }
-                : cap,
-            )
-          : currentCard.caps,
-      };
-      changed = true;
-    }
-    return currentCard;
-  });
-  return changed ? { ...publication, cards } : value;
+  if (value === null || typeof value !== "object" || Array.isArray(value) ||
+      !("schemaVersion" in value) || value.schemaVersion !== 6) {
+    const version = value !== null && typeof value === "object" && "schemaVersion" in value
+      ? value.schemaVersion : "missing";
+    throw new Error(`Unsupported Safety Score publication schema ${version}; active reader requires schema 6 and never infers evidence causes from legacy gaps`);
+  }
+  return SafetyScoreV9CurrentResponseSchema.parse(value);
 }
+
 
 function compressedStorageCandidate(value: unknown): boolean {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
@@ -206,36 +162,6 @@ export async function serializeSafetyScoreV9Publication(
 ): Promise<string> {
   throwIfAborted(signal);
   const publication = SafetyScoreV9CurrentResponseSchema.parse(value);
-  if (
-    compareMethodologyVersions(
-      publication.policyVersion,
-      EVIDENCE_RESPONSIBILITY_FACTS_POLICY_VERSION,
-    ) >= 0 &&
-    publication.cards.some(
-      (card) =>
-        card.scoreTrace.evidenceResponsibility.facts === undefined,
-    )
-  ) {
-    throw new Error(
-      "Safety Score v9.19+ publications require per-fact disclosure paths",
-    );
-  }
-  if (
-    compareMethodologyVersions(
-      publication.policyVersion,
-      PUBLISHED_EVIDENCE_EXPIRED_POLICY_VERSION,
-    ) >= 0 &&
-    publication.cards.some(
-      (card) =>
-        !card.scoreTrace.evidenceResponsibility.summaries.some(
-          (summary) => summary.responsibility === "published-evidence-expired",
-        ),
-    )
-  ) {
-    throw new Error(
-      "Safety Score v9.4+ publications require every evidence responsibility owner",
-    );
-  }
   const compressed = await gzipCanonicalJson(stableJsonStringifyChunksV1(publication), {
     label: "Safety Score v9 publication",
     maximumCompressedBytes:

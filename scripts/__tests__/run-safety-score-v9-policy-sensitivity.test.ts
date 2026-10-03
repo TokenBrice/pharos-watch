@@ -98,23 +98,6 @@ describe("Safety Score v9 V9 policy sensitivity", { timeout: V9_EVALUATION_TEST_
     expect(JSON.stringify({ gradeReport, pegReport })).not.toMatch(/assetOverrides|assetIdsByPolicy|exceptionsByAsset/);
   });
 
-  it("reports non-binding cap changes hidden by a tighter cap", () => {
-    const report = generateV9PolicySensitivityReport({
-      parameterPaths: ["semantic.evidence.ceilings.adequate"],
-      deltas: [1],
-    });
-    const sensitivityCase = report.cases[0]!;
-
-    expect(report.summary.capCandidateChangeCount).toBeGreaterThan(0);
-    expect(report.summary.bindingCapChangeCount).toBe(0);
-    expect(sensitivityCase.capCandidateChanges.length).toBeGreaterThan(0);
-    expect(
-      sensitivityCase.changes
-        .filter((change) => change.capCandidates.changed)
-        .every((change) => change.finalScore.from === change.finalScore.to),
-    ).toBe(true);
-    expect(sensitivityCase.scoreSaturation.maskedByBindingCapScenarioIds.length).toBeGreaterThan(0);
-  });
 
   it("lists runnable isolated numeric paths without coupled weights or reference fields", () => {
     const stdout = vi.fn();

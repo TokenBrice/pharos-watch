@@ -1,4 +1,8 @@
 import type { V9ReserveBoundedFact } from "../../types/reserve-bounded-facts";
+import type { V9EvidenceCause, V9RatingStatus, V9ScoringDisposition } from "../../types/safety-score-v9-causes";
+import type { V9ReserveResidualFact } from "../../types/safety-score-v9-fact-primitives";
+import { gapsForV9Ids } from "./gap-index";
+import { uniqueSorted, V9_EMPTY_ARRAY } from "./primitives";
 import type {
   V9AssetFactsBase,
   V9EvidenceResponsibility,
@@ -26,6 +30,10 @@ export interface V9ResolvedUpstreamExposure {
   readonly exposureKey: string;
   readonly upstreamAssetId: string;
   readonly score: number | null;
+  readonly cause?: V9EvidenceCause | null;
+  readonly ratingStatus?: V9RatingStatus;
+  readonly causeGapIds?: readonly string[];
+  readonly limitedEvidenceCauses?: readonly V9EvidenceCause[];
   readonly evidenceLevel: V9EvidenceLevel;
   readonly reasonCodes: readonly V9ReasonCode[];
   /**
@@ -39,6 +47,10 @@ export interface V9ResolvedUpstreamExposure {
     /** Stable upstream score path used to distinguish mixed causal roots. */
     readonly path?: string;
     readonly responsibility: V9EvidenceResponsibility;
+    readonly cause?: V9EvidenceCause | null;
+    readonly ratingStatus?: V9RatingStatus;
+    readonly causeGapIds?: readonly string[];
+    readonly limitedEvidenceCauses?: readonly V9EvidenceCause[];
   }[];
   readonly failureDomains: readonly V9FailureDomainRef[];
   /**
@@ -64,6 +76,9 @@ export interface V9InheritedStablecoinBacking {
   readonly parentAssetId: string;
   /** The parent's raw backing pillar score (pre composite caps). */
   readonly parentBackingScore: number;
+  /** Controlling provenance of the parent's backing score, not a local owner label. */
+  readonly cause?: Exclude<V9EvidenceCause, "A" | "B"> | null;
+  readonly causeGapIds?: readonly string[];
   /** Mapped weight of the single collateral/wrapper edge (≈1). */
   readonly weight: number;
   /**
@@ -80,6 +95,9 @@ export interface V9BackingAssetInput {
   readonly assetId: string;
   readonly reserveStatus: V9AssetFactsBase["reserveStatus"];
   readonly reserveExposures: readonly V9ReserveExposureFactV2[];
+  readonly reserveResiduals?: readonly V9ReserveResidualFact[];
+  readonly reserveCompositionEvidenceClass?: V9ReserveExposureFactV2["evidenceClass"];
+  readonly reserveCompositionProvenance?: V9ReserveExposureFactV2["provenance"];
   readonly reserveBoundFacts?: readonly V9ReserveBoundedFact[];
   readonly gaps: readonly (V9FactGapV2 | V9FactGapV3)[];
   readonly gapIndex?: V9GapIndex;
@@ -131,10 +149,20 @@ export function v9StructuralResponsibilityForStatus(
     : "integration-missing";
 }
 
+export interface V9BackingFactorContribution {
+  readonly componentKey: string;
+  readonly score: number | null;
+  readonly normalizedWeight: number;
+  readonly effectiveScoringWeight: number;
+  readonly cause: V9EvidenceCause | null;
+  readonly causeGapIds: readonly string[];
+  readonly scoringDisposition: V9ScoringDisposition;
+}
+
 export interface V9BackingContribution {
   readonly componentKey: string;
   readonly source: "reserve-exposure" | "reserve-concentration" | "mechanism";
-  readonly score: number;
+  readonly score: number | null;
   readonly normalizedWeight: number;
   readonly weightedScore: number;
   readonly observationState: V9FactStatusV2["observationState"];
@@ -142,10 +170,21 @@ export interface V9BackingContribution {
   readonly evidenceRefIds: readonly string[];
   readonly failureDomains: readonly V9FailureDomainRef[];
   readonly upstreamAssetId: string | null;
+  readonly cause?: V9EvidenceCause | null;
+  readonly causeGapIds?: readonly string[];
+  readonly scoringDisposition?: V9ScoringDisposition;
+  readonly wholeAssetWeight?: number | null;
+  readonly effectiveScoringWeight?: number;
+  readonly factors?: readonly V9BackingFactorContribution[];
 }
 
 export interface V9EffectiveBackingContribution extends V9BackingContribution {
   readonly effectiveWeight: number;
+  readonly cause: V9EvidenceCause | null;
+  readonly causeGapIds: readonly string[];
+  readonly scoringDisposition: V9ScoringDisposition;
+  readonly wholeAssetWeight: number | null;
+  readonly effectiveScoringWeight: number;
 }
 
 export interface V9BackingUnresolvedReason {
@@ -153,6 +192,8 @@ export interface V9BackingUnresolvedReason {
   readonly pathKey: string;
   readonly gapIds: readonly string[];
   readonly treatment: "pillar" | "ceiling" | "NR" | "diagnostic";
+  readonly cause?: V9EvidenceCause | null;
+  readonly causeGapIds?: readonly string[];
   /** Explicit causal owner for synthetic or propagated reasons without a local gap. */
   readonly responsibility?: V9EvidenceResponsibility;
   /** Stable source identity when several synthetic reasons share one public base path. */
@@ -176,6 +217,10 @@ export interface V9BackingResult {
   readonly policySemanticDigest: string;
   readonly rateability: "rateable" | "NR";
   readonly score: number | null;
+  readonly aggregationDisposition: "included" | "excluded-a-b";
+  readonly causeGapIds: readonly string[];
+  readonly limitedEvidenceCauses: readonly V9EvidenceCause[];
+  readonly supportedComponentKeys: readonly string[];
   readonly pillarCeiling: number | null;
   readonly contributions: readonly V9EffectiveBackingContribution[];
   readonly structuralReasons: readonly V9BackingStructuralReason[];
@@ -235,7 +280,7 @@ export function gapReasons(
   gapIds: readonly string[],
   pathKey: string,
   fallbackCode: V9ReasonCode,
-  treatmentFor: (code: V9ReasonCode) => V9BackingUnresolvedReason["treatment"],
+  treatmentFor: (code: V9ReasonCode, cause: V9EvidenceCause) => V9BackingUnresolvedReason["treatment"],
 ): V9BackingUnresolvedReason[] {
   return projectGapReasons({
     index,
@@ -273,4 +318,43 @@ export interface ReserveEvaluation {
   readonly structuralReasons: readonly V9BackingStructuralReason[];
   readonly unresolved: readonly V9BackingUnresolvedReason[];
   readonly rateability: "rateable" | "NR";
+}
+
+/** Legacy construction sites are normalized once; missing labels never authorize relief. */
+export function normalizeV9BackingContribution<T extends V9BackingContribution>(
+  row: T,
+): T & Pick<V9EffectiveBackingContribution,
+  "cause" | "causeGapIds" | "scoringDisposition" | "wholeAssetWeight" | "effectiveScoringWeight"> {
+  const cause = row.cause === undefined ? (row.observationState === "known" ? null : "U") : row.cause;
+  return {
+    ...row,
+    cause,
+    causeGapIds: row.causeGapIds ?? V9_EMPTY_ARRAY,
+    scoringDisposition: row.scoringDisposition ?? (cause === null ? "included" : cause === "D"
+      ? "measured-adverse" : cause === "A" ? "excluded-pipeline" : cause === "B"
+        ? "excluded-uncurated" : "bounded-uncertainty"),
+    wholeAssetWeight: row.wholeAssetWeight === undefined
+      ? row.source === "reserve-exposure" ? row.normalizedWeight : null : row.wholeAssetWeight,
+    effectiveScoringWeight: row.effectiveScoringWeight ?? (row.score === null ? 0 : row.normalizedWeight),
+  };
+}
+
+export function v9BackingStatusCause(
+  status: V9FactStatusV2,
+  index: V9GapIndex,
+  missing = status.observationState !== "known" || status.applicability.state === "unresolved",
+): { cause: V9EvidenceCause | null; causeGapIds: readonly string[]; scoringDisposition: V9ScoringDisposition } {
+  if (status.applicability.state === "not-applicable") {
+    return { cause: null, causeGapIds: V9_EMPTY_ARRAY, scoringDisposition: "not-applicable" };
+  }
+  if (!missing) return { cause: null, causeGapIds: V9_EMPTY_ARRAY, scoringDisposition: "included" };
+  const gaps = gapsForV9Ids(index, status.gapIds);
+  const causes = gaps.map(gap => "causeProof" in gap ? gap.causeProof.cause : "U");
+  const cause = (["D", "C", "U", "A", "B"] as const).find(candidate => causes.includes(candidate)) ?? "U";
+  const ids = status.gapIds;
+  const causeGapIds = ids.length === 0 ? V9_EMPTY_ARRAY
+    : ids.every((id, index) => index === 0 || id > ids[index - 1]!) ? ids : uniqueSorted(ids);
+  return { cause, causeGapIds,
+    scoringDisposition: cause === "A" ? "excluded-pipeline" : cause === "B" ? "excluded-uncurated"
+      : cause === "D" ? "measured-adverse" : "bounded-uncertainty" };
 }

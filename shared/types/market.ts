@@ -677,6 +677,26 @@ export type DepegEventCloseReason = z.infer<typeof DepegEventCloseReasonSchema>;
 
 const DepegTimestampSchema = z.number().int().nonnegative();
 
+/** Trusted off-peg/at-par intervals; the remaining event span is unknown. */
+export const DepegPriceCoverageSchema = z.object({
+  intervals: z.array(z.tuple([DepegTimestampSchema, DepegTimestampSchema])),
+  atParIntervals: z.array(z.tuple([DepegTimestampSchema, DepegTimestampSchema])).optional(),
+  lastObservationKind: z.enum(["trusted-off-peg", "trusted-at-par", "blind"]).optional(),
+  lastTrustedObservationAt: DepegTimestampSchema.nullable(),
+  gapStartedAt: DepegTimestampSchema.nullable(),
+}).strict().superRefine((coverage, ctx) => {
+  for (const intervals of [coverage.intervals, coverage.atParIntervals ?? []]) {
+    let previousEnd = -1;
+    for (const [start, end] of intervals) {
+      if (end < start || start < previousEnd || coverage.lastTrustedObservationAt == null || end > coverage.lastTrustedObservationAt) {
+        ctx.addIssue({ code: "custom", message: "Trusted price intervals must be ordered and bounded by the last observation" });
+      }
+      previousEnd = end;
+    }
+  }
+});
+export type DepegPriceCoverage = z.infer<typeof DepegPriceCoverageSchema>;
+
 /**
  * Chronology invariant shared by the public depeg surfaces and the V9
  * peg-provenance parser: a closed event must end after it starts. Negative
@@ -714,6 +734,7 @@ const DepegEventObjectSchema = z.object({
   confirmationSources: z.string().nullable().optional().default(null),
   pendingReason: z.string().nullable().optional().default(null),
   closeReason: DepegEventCloseReasonSchema.nullable().optional().default(null),
+  priceCoverage: DepegPriceCoverageSchema.nullable().optional(),
   provenance: z
     .object({
       sourceKind: z.string().nullable().optional(),
@@ -829,9 +850,9 @@ export const PegSummaryCoinSchema = z.object({
    */
   currentPriceUnavailable: z.boolean().optional(),
   /**
-   * True when the coin's current circulating supply is unavailable (asset absent or buckets
-   * absent/empty/invalid), so the live-event supply floor cannot be assessed. The deviation is
-   * withheld, but this is not a below-floor claim: `depegEventCoverageLimited` stays false.
+   * True when current circulating supply is unavailable, so the live-event supply floor
+   * cannot be assessed. Observed current deviation is independent of that floor;
+   * `depegEventCoverageLimited` stays false for unknown supply.
    */
   currentSupplyUnavailable: z.boolean().optional(),
   depegEventCoverageLimited: z.boolean().optional(),
@@ -846,7 +867,7 @@ export const PegSummaryCoinSchema = z.object({
   consensusSources: z.array(z.string()).optional(),
   agreeSources: z.array(z.string()).optional(),
   primaryTrust: DepegPrimaryTrustSchema.optional(),
-  pegPct: z.number(),
+  pegPct: z.number().nullable(),
   severityScore: z.number(),
   spreadPenalty: z.number(),
   eventCount: z.number(),
@@ -854,6 +875,8 @@ export const PegSummaryCoinSchema = z.object({
   activeDepeg: z.boolean(),
   lastEventAt: z.number().nullable(),
   trackingSpanDays: z.number(),
+  /** Blind time within scored events, excluded from both off-peg time and the known-time denominator. */
+  unknownCoverageSeconds: z.number().finite().nonnegative().optional(),
   historyCoverage: z
     .object({
       startedAt: z.number().int().nonnegative(),
@@ -867,7 +890,7 @@ export const PegSummaryCoinSchema = z.object({
       windowDays: z.literal(90),
       observedDays: z.number().nonnegative(),
       coverageLimited: z.boolean(),
-      pegPct: z.number().min(0).max(100),
+      pegPct: z.number().min(0).max(100).nullable(),
       incidentCount: z.number().int().nonnegative(),
       thresholdCrossingCount: z.number().int().nonnegative(),
       worstDeviationBps: z.number().nullable(),

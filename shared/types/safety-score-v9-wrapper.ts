@@ -3,6 +3,7 @@ import {
   canonicalTextArray,
   compareText,
   V9WrapperRiskAssessmentSchema,
+  V9FactStatusV2Schema,
 } from "./safety-score-v9-fact-primitives";
 import { V9IncidentScopeSchema } from "./safety-score-v9-incidents";
 import { CanonicalTextSchema } from "./safety-schema-primitives";
@@ -17,6 +18,7 @@ export const V9WrapperFactDispositionSchema = z.enum([
   "integration-missing",
   "producer-failed",
   "method-unsupported",
+  "unresearched", "public-data-uncurated",
 ]);
 export type V9WrapperFactDisposition = z.infer<typeof V9WrapperFactDispositionSchema>;
 
@@ -54,6 +56,7 @@ const V9WrapperLocalDimensionFactSchema = z
     assessment: V9WrapperRiskAssessmentSchema.nullable(),
     signals: canonicalTextArray(1, "value"),
     evidenceRefIds: canonicalTextArray(0, "value"),
+    status: V9FactStatusV2Schema.optional(),
     incidentPostures: z
       .array(V9WrapperIncidentPostureSchema)
       .superRefine((postures, ctx) => {
@@ -124,6 +127,7 @@ const V9WrapperRiskTransferFactSchema = z
     maximumParentLossAbsorptionPoints: z.number().finite().min(0).max(100),
     signals: canonicalTextArray(1, "value"),
     evidenceRefIds: canonicalTextArray(0, "value"),
+    status: V9FactStatusV2Schema.optional(),
   })
   .strict()
   .superRefine((fact, ctx) => {
@@ -173,6 +177,7 @@ const V9ApplicableWrapperLocalFactsSchema = z
     formDisposition: V9WrapperFactDispositionSchema,
     formSignals: canonicalTextArray(1, "value"),
     formEvidenceRefIds: canonicalTextArray(0, "value"),
+    formStatus: V9FactStatusV2Schema.optional(),
     // A reviewed withholding is an override, not positive evidence of a parent
     // claim. Absence retains the evaluator's existing measured-exposure gates.
     parentBackingInheritance: z.object({

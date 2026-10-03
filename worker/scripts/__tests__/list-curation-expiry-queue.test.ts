@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { eligibleReserveMeta } from "../../src/lib/__tests__/safety-score-v9-reserve-admission.test-support";
 import type { StablecoinMeta } from "@shared/types/core";
-import { buildCurationExpiryQueue, renderCurationExpiryQueue } from "../list-curation-expiry-queue";
+import { buildCurationExpiryQueue } from "../list-curation-expiry-queue";
 
 // 2026-08-20T13:17:29Z, the clock of the incident capture this queue was built for.
 const CLOCK_SEC = 1_787_231_849;
@@ -38,6 +38,7 @@ function auditedMeta(id: string, compositionAsOf: string): StablecoinMeta {
         ...eligibleReserveMeta().proofOfReserves!.latestReport!,
         periodEnd: compositionAsOf,
         publishedAt: isoDaysAfter(compositionAsOf, 1),
+        sources: [{ label: "Independent LLP signed report", url: "https://example.com/report.pdf" }],
       },
     },
   });
@@ -134,10 +135,10 @@ describe("buildCurationExpiryQueue", () => {
     expect(rows.every((row) => row.adapterState === "none")).toBe(true);
   });
 
-  it("keeps audited fallback admitted at the 38-day evidence transition, but lists loss of admission and excludes gated assets", () => {
+  it("keeps named-firm fallback admitted before 120 days and lists only newly expired eligible reports", () => {
     const auditedNearEvidenceBound = auditedMeta("audited-near-evidence-bound", isoDaysAgo(36));
-    const auditedNearAdmissionBound = auditedMeta("audited-near-admission-bound", isoDaysAgo(360));
-    const excludedFromFallback = auditedMeta("excluded-from-fallback", isoDaysAgo(360));
+    const auditedNearAdmissionBound = auditedMeta("audited-near-admission-bound", isoDaysAgo(115));
+    const excludedFromFallback = auditedMeta("excluded-from-fallback", isoDaysAgo(115));
     const rows = buildCurationExpiryQueue(
       replayFixture({
         liveToFallbackCoins: ["audited-near-evidence-bound", "audited-near-admission-bound"],
@@ -154,27 +155,9 @@ describe("buildCurationExpiryQueue", () => {
         ["excluded-from-fallback", excludedFromFallback],
       ]),
     );
-    // The 38-day evidence transition changes strength/ceiling but does not
-    // remove audited admission; the counterfactual report owns that signal.
+    // The named firm's original report remains admitted through 120 days.
+    // The configured live lane still requires captured fallback permission.
     expect(rows.map((row) => row.assetId)).toEqual(["audited-near-admission-bound"]);
   });
 
-  it("renders the documented column set and an explicit empty state", () => {
-    const markdown = renderCurationExpiryQueue(
-      buildCurationExpiryQueue(
-        replayFixture({ supplyById: { solo: 1_234 } }),
-        10,
-        new Map([["solo", curatedMeta("solo", isoDaysAgo(29))]]),
-      ),
-      10,
-    );
-    expect(markdown).toContain(
-      "| Asset | Supply (USD) | compositionAsOf | Age (d) | Dependency links | Adapter |",
-    );
-    expect(markdown).toContain("| solo | 1,234 |");
-
-    expect(renderCurationExpiryQueue([], 10)).toContain(
-      "No admitted curated composition expires within the lookahead window.",
-    );
-  });
 });

@@ -456,6 +456,121 @@ describe("buildSafetyScoreV9SupplyReview", () => {
     expect(review!.unknownRouteSupplyShare).toBe(1);
   });
 
+  it("resolves an exact canonical native partition like the same reviewed asset without rows", () => {
+    const clockSec = v9TestClockSec();
+    const bridgeRouteRisk = {
+      tier: "single-chain-or-native",
+      reviewedAt: new Date(clockSec * 1000).toISOString().slice(0, 10),
+      confidence: "verified",
+      routes: [],
+      sources: [],
+    } as unknown as BridgeRouteRiskProfile;
+    const meta = {
+      id: "alpha",
+      bridgeRouteRisk,
+      contracts: [{ chain: "ethereum", address: "0x01" }],
+    } as unknown as V9ExtensionRegistryMeta;
+    const rows = { Ethereum: { current: 100 } };
+    const review = buildSafetyScoreV9SupplyReview(fixedInputStub(rows), "alpha", bridgeRouteRisk, { meta })!;
+    const exact = adaptBridgeReview(meta, review, 1, new ReviewEvidenceBuilder("alpha", clockSec), clockSec, rows);
+    const absent = adaptBridgeReview(meta, null, 1, new ReviewEvidenceBuilder("alpha", clockSec), clockSec);
+
+    expect(review).toMatchObject({
+      selectedRouteSupplyShare: 1,
+      unknownRouteSupplyShare: 0,
+      unreviewedRouteSupplyShare: 0,
+      selectedBridgeRoutes: [{ supplyUsd: 100, supplyShare: 1, reviewState: "selected-reviewed", reviewedRouteKind: "native" }],
+    });
+    expect(exact.review.status.applicability.state).toBe("not-applicable");
+    expect(exact.review.status.applicability.state).toBe(absent.review.status.applicability.state);
+    expect(exact.controls).toEqual([]);
+    expect(exact.review.diagnostics?.reviewedNativeCoverage.complete).toBe(true);
+
+    const foreign = buildSafetyScoreV9SupplyReview(fixedInputStub({ Base: { current: 100 } }), "alpha", bridgeRouteRisk, { meta })!;
+    const foreignBridge = adaptBridgeReview(meta, foreign, 1, new ReviewEvidenceBuilder("alpha", clockSec), clockSec);
+    expect(foreign.unknownRouteSupplyShare).toBe(1);
+    expect(foreignBridge.controls).toMatchObject([{ deploymentKey: "unmatched-chain:alpha:base", materialSupplyShare: 1 }]);
+    expect(foreignBridge.review.status.applicability.state).toBe("required");
+  });
+
+  it("attributes same-chain reviewed native share classes without inventing a within-chain split", () => {
+    const clockSec = v9TestClockSec();
+    const bridgeRouteRisk = {
+      ...profile([
+        { ...ETH_ROUTE, semantics: "native-mint" },
+        { ...ETH_ROUTE, id: "ethereum:class-i", semantics: "native-mint" },
+      ]),
+      reviewedAt: new Date(clockSec * 1000).toISOString().slice(0, 10),
+      confidence: "verified",
+      sources: [],
+    } as BridgeRouteRiskProfile;
+    const rows = { Ethereum: { current: 100 } };
+    const review = buildSafetyScoreV9SupplyReview(fixedInputStub(rows), "alpha", bridgeRouteRisk)!;
+    const meta = { id: "alpha", bridgeRouteRisk } as unknown as V9ExtensionRegistryMeta;
+    const bridge = adaptBridgeReview(meta, review, 1, new ReviewEvidenceBuilder("alpha", clockSec), clockSec, rows);
+
+    expect(review.selectedBridgeRoutes).toMatchObject([
+      { supplyUsd: 100, supplyShare: 1, reviewState: "selected-reviewed", reviewedRouteKind: "native" },
+    ]);
+    expect(review.unknownRouteSupplyShare).toBe(0);
+    expect(review.selectedRouteSupplyShare).toBe(1);
+    expect(safetyScoreV9RouteSupplyShare(review, "ethereum:native")).toBeNull();
+    expect(safetyScoreV9RouteSupplyShare(review, "ethereum:class-i")).toBeNull();
+    expect(bridge.review.status.applicability.state).toBe("not-applicable");
+    expect(bridge.controls).toEqual([]);
+    expect(bridge.review.diagnostics?.reviewedNativeCoverage.complete).toBe(true);
+  });
+
+  it.each(["bridge", "unreviewed"] as const)(
+    "keeps a material same-chain aggregate unknown when one candidate is %s",
+    (candidateKind) => {
+      const clockSec = v9TestClockSec();
+      const candidate = candidateKind === "bridge"
+        ? { ...ETH_ROUTE, id: "ethereum:bridge", routeClass: "third-party", issuanceModel: "wrapped-representation", semantics: "lock-mint", riskTier: "external-lock-mint" }
+        : { ...ETH_ROUTE, id: "ethereum:unreviewed", semantics: "native-mint", reviewDisposition: "unreviewed" };
+      const bridgeRouteRisk = {
+        ...profile([{ ...ETH_ROUTE, semantics: "native-mint" }, candidate] as BridgeRoutes),
+        reviewedAt: new Date(clockSec * 1000).toISOString().slice(0, 10),
+        confidence: "verified",
+        sources: [],
+      } as BridgeRouteRiskProfile;
+      const review = buildSafetyScoreV9SupplyReview(fixedInputStub({ Ethereum: { current: 100 } }), "alpha", bridgeRouteRisk)!;
+      const meta = { id: "alpha", bridgeRouteRisk } as unknown as V9ExtensionRegistryMeta;
+      const bridge = adaptBridgeReview(meta, review, 1, new ReviewEvidenceBuilder("alpha", clockSec), clockSec);
+
+      expect(review.unknownRouteSupplyShare).toBe(1);
+      expect(review.selectedBridgeRoutes).toEqual([
+        { deploymentRouteKey: "ambiguous-chain:alpha:ethereum", supplyUsd: 100, supplyShare: 1, reviewState: "unmatched" },
+      ]);
+      expect(bridge.controls).toContainEqual(expect.objectContaining({
+        deploymentKey: "ambiguous-chain:alpha:ethereum",
+        materialSupplyShare: 1,
+        authority: expect.objectContaining({ model: "unknown" }),
+      }));
+      expect(bridge.review.status.applicability.state).toBe("required");
+      expect(bridge.review.status.observationState).toBe("bounded-unknown");
+    },
+  );
+
+  it("does not use native share-class labels to erase a referenced bridge control", () => {
+    const bridgeRouteRisk = {
+      ...profile([
+        { ...ETH_ROUTE, semantics: "native-mint" },
+        { ...ETH_ROUTE, id: "ethereum:class-i", semantics: "native-mint" },
+      ]),
+      controls: [{ routeRefs: ["ethereum:class-i"], capabilities: ["bridge-mint"] }],
+    } as unknown as BridgeRouteRiskProfile;
+    const review = buildSafetyScoreV9SupplyReview(
+      fixedInputStub({ Ethereum: { current: 100 } }), "alpha", bridgeRouteRisk,
+    )!;
+
+    expect(review.selectedBridgeRoutes).toEqual([
+      { deploymentRouteKey: "ambiguous-chain:alpha:ethereum", supplyUsd: 100, supplyShare: 1, reviewState: "unmatched" },
+    ]);
+    expect(review.selectedRouteSupplyShare).toBe(0);
+    expect(review.unknownRouteSupplyShare).toBe(1);
+  });
+
   it("pools uncanonicalized labels and scopes unmatched failure domains to the asset", () => {
     const fixed = fixedInputStub({
       ethereum: { current: 80 },

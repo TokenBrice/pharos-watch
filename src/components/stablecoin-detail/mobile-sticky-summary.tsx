@@ -95,6 +95,11 @@ export function MobileStickySummary({
           versionVariant="tooltip-only"
         />
       ) : null}
+      {reportCard?.partialEvidence ? (
+        <span className="text-[10px] text-muted-foreground">
+          Partial evidence: pipeline gap · {reportCard.partialEvidence.causes.join("/")}
+        </span>
+      ) : null}
     </div>
   );
 }

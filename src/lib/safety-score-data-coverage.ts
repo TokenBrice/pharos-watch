@@ -100,6 +100,10 @@ const REASON_CODE_LABELS = {
   "unreviewed-dependency-relationships": "Dependency relationships not reconciled with reserves",
   "unreviewed-oracle-profile": "Oracle setup not reviewed",
   "unreviewed-reserve-envelope": "Reserve scope not reviewed",
+  "partial-evidence-pipeline-gap": "Partial evidence: pipeline gap",
+  "single-pillar-pipeline-gap": "Only one pillar available — pipeline gap",
+  "all-pillars-pipeline-gap": "No pillars available — pipeline gap",
+  "f-without-measured-adverse": "Score below the F threshold without a measured adverse fact",
 } satisfies Record<string, string>;
 
 /** Compile-time guard: every live reason code must carry a label. */
@@ -112,8 +116,8 @@ const _liveReasonCodeLabels: Record<V9ReasonCode, string> = REASON_CODE_LABELS;
 const GAP_OWNERS = [
   {
     responsibility: "issuer-undisclosed",
-    label: "Issuer has not disclosed it",
-    detail: "The data exists but is not published by the issuer.",
+    label: "Issuer does not disclose",
+    detail: "Research found the issuer does not publish the required datum.",
   },
   {
     responsibility: "integration-missing",
@@ -132,9 +136,18 @@ const GAP_OWNERS = [
   },
   {
     responsibility: "published-evidence-expired",
-    label: "Issuer's newest report predates our window",
-    detail:
-      "The issuer or its parent published this evidence, but nothing newer exists: the reporting cadence is slower than the freshness window.",
+    label: "Published evidence is out of date",
+    detail: "Freshness is separate from cause: an expired copy does not prove issuer non-disclosure.",
+  },
+  {
+    responsibility: "unresearched",
+    label: "Not yet researched",
+    detail: "The required datum has not yet been researched; this is not a claim of issuer silence.",
+  },
+  {
+    responsibility: "public-data-uncurated",
+    label: "Awaiting curation",
+    detail: "The required datum is public but has not yet been curated.",
   },
 ] as const satisfies ReadonlyArray<{
   responsibility: V9EvidenceResponsibility;
@@ -167,6 +180,8 @@ export interface DataCoverageModel {
   assetCount: number;
   ratedCount: number;
   notRatedCount: number;
+  pipelineGapCount: number;
+  partialRatedCount: number;
   inputsEvaluated: number;
   inputsByPillar: Array<{ key: "backing" | "exit" | "control"; label: string; count: number }>;
   backingKnownCount: number;
@@ -200,7 +215,7 @@ export function describeDataCoverageHoldCauses(
   const producerAssetIds = [
     ...new Set(
       reasons.flatMap((reason) =>
-        reason.code === "producer-failed-downgrade" || reason.code === "producer-failed-nr"
+        reason.code === "producer-failed-pipeline-gap"
           ? [reason.assetId]
           : [],
       ),
@@ -266,14 +281,14 @@ export function buildDataCoverageModel(
     // inventory reports assets, not gaps.
     const missingCodesForAsset = new Set<V9ReasonCode>();
     for (const summary of responsibility.summaries) {
-      criticalGapCount += summary.criticalFactCount;
+      criticalGapCount += summary.criticalFactCount ?? 0;
       gapCountByOwner.set(
         summary.responsibility,
-        (gapCountByOwner.get(summary.responsibility) ?? 0) + summary.factCount,
+        (gapCountByOwner.get(summary.responsibility) ?? 0) + (summary.factCount ?? 0),
       );
       if (!missingResponsibilities.has(summary.responsibility)) continue;
-      openGapCount += summary.factCount;
-      for (const code of summary.reasonCodes) missingCodesForAsset.add(code);
+      openGapCount += summary.factCount ?? 0;
+      for (const code of summary.reasonCodes ?? []) missingCodesForAsset.add(code);
     }
     for (const code of missingCodesForAsset) {
       assetCountByCode.set(code, (assetCountByCode.get(code) ?? 0) + 1);
@@ -299,6 +314,8 @@ export function buildDataCoverageModel(
     assetCount: response.completeness.expectedCount,
     ratedCount: response.completeness.ratedCount,
     notRatedCount: response.completeness.notRatedCount,
+    pipelineGapCount: response.completeness.pipelineGapCount,
+    partialRatedCount: response.cards.filter((card) => card.ratingStatus === "rated" && card.partialEvidence !== null).length,
     inputsEvaluated: inputsByPillar.backing + inputsByPillar.exit + inputsByPillar.control,
     inputsByPillar: PILLAR_LABELS.map(([key, label]) => ({ key, label, count: inputsByPillar[key] })),
     backingKnownCount,

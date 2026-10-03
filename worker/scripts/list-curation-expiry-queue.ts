@@ -1,14 +1,7 @@
-// Lists active assets whose reviewed reserve composition is still admitted for
-// scoring today but crosses an admission gate within the lookahead window —
-// the preventive complement to the curation worklist, which already owns every
-// currently-inadmissible composition. Admission is evaluated with the same
-// gates production scoring uses (`buildSafetyScoreV9ReviewedStaticReserveRows`,
-// `buildSafetyScoreV9ReviewedAuditedFallbackReserveRows`,
-// `buildSafetyScoreV9ReviewedCuratedFallbackReserveRows`, and
-// `buildSafetyScoreV9ReviewedStandaloneReserveRows`), re-run at
-// `clockSec + lookahead`: composition age is the only time-dependent input, so
-// the queue cannot drift from the 31-day composition window plus its 7-day
-// reporting grace, the one-year audited path, or the D6 prudential path.
+// Lists reserve disclosures that are admitted now but lose admission within the
+// lookahead window. The production reserve resolver is rerun at both clocks:
+// its current source-strength, 120-day evidence and whole-asset denominator
+// rules remain authoritative. Availability labels are not reserve facts.
 //
 // Usage:
 //   npm run safety-score-v9:expiry-queue -- \

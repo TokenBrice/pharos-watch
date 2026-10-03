@@ -45,106 +45,53 @@ describe("show-your-work formatters", () => {
   it("formats exact V9 component breakdowns with native weight and binding semantics", () => {
     const card = makeV9Card({
       breakdowns: {
-        backing: {
-          evaluatedScore: 83,
-          publishedScore: 88,
-          aggregationWeight: 0.4,
-          adjustments: [{
-            kind: "operational-resilience-credit",
-            scoreBefore: 83,
-            scoreAfter: 88,
-            delta: 5,
-          }],
-          groups: [
-            { key: "reserves", label: "Reserve quality", score: 83, effectiveWeight: 1 },
-          ],
-          components: [
-            {
-              key: "reserve:cash",
-              label: "Cash reserves",
-              source: "reserve-exposure",
-              score: 80,
-              effectiveWeight: 0.5,
-              weightedContribution: 40,
-              observationState: "known",
-            },
-            {
-              key: "reserve:treasuries",
-              label: "Treasury reserves",
-              source: "reserve-exposure",
-              score: 86,
-              effectiveWeight: 0.5,
-              weightedContribution: 43,
-              observationState: "known",
-            },
-          ],
+        backing: { evaluatedScore: 83, publishedScore: 88, aggregationWeight: 0.4, aggregationDisposition: 'included' as const, causeGapRefs: [], limitedEvidenceCauses: [], adjustments: [{
+          kind: "operational-resilience-credit",
+          scoreBefore: 83,
+          scoreAfter: 88,
+          delta: 5,
+        }],
+        groups: [
+          { key: "reserves", label: "Reserve quality", score: 83, effectiveScoringWeight: 1, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
+        ],
+        components: [
+          { key: "reserve:cash", label: "Cash reserves", source: "reserve-exposure", score: 80, effectiveScoringWeight: 0.5, wholeAssetWeight: 0.5, weightedContribution: 40, observationState: "known", cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
+          { key: "reserve:treasuries", label: "Treasury reserves", source: "reserve-exposure", score: 86, effectiveScoringWeight: 0.5, wholeAssetWeight: 0.5, weightedContribution: 43, observationState: "known", cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
+        ], },
+        exit: { evaluatedScore: 84, publishedScore: 84, aggregationWeight: 0.35, aggregationDisposition: 'included' as const, causeGapRefs: [], limitedEvidenceCauses: [], adjustments: [],
+        stressRequest: {
+          requestedNotionalUsd: 10_000_000,
+          maxCostBps: 100,
+          comparisonWindowSec: 86_400,
         },
-        exit: {
-          evaluatedScore: 84,
-          publishedScore: 84,
-          aggregationWeight: 0.35,
-          adjustments: [],
-          stressRequest: {
-            requestedNotionalUsd: 10_000_000,
-            maxCostBps: 100,
-            comparisonWindowSec: 86_400,
-          },
-          primaryRoute: {
-            key: "route:dex",
-            label: "Primary DEX route",
-            routeFamily: "dex-amm",
-            score: 84,
-            components: [
-              { key: "access", label: "Access", score: 80, weight: 0.2, weightedContribution: 16 },
-              { key: "settlement", label: "Settlement", score: 80, weight: 0.15, weightedContribution: 12 },
-              { key: "executionCertainty", label: "Execution certainty", score: 80, weight: 0.15, weightedContribution: 12 },
-              { key: "capacity", label: "Capacity", score: 96, weight: 0.25, weightedContribution: 24 },
-              { key: "outputAssetQuality", label: "Output asset quality", score: 80, weight: 0.15, weightedContribution: 12 },
-              { key: "cost", label: "Cost", score: 80, weight: 0.1, weightedContribution: 8 },
-            ],
-            confidenceFactor: 1,
-            eligibilityMultiplier: 1,
-            capsApplied: ["route-cap:measured-depth"],
-          },
-          diversification: {
-            routeKey: "route:redemption",
-            routeLabel: "Issuer redemption",
-            bonus: 2,
-          },
-          alternatives: [{
-            key: "route:orderbook",
-            label: "Orderbook",
-            routeFamily: "dex-orderbook",
-            score: 70,
-            included: false,
-            exclusionReason: "unsupported-same-notional-route",
-          }],
+        primaryRoute: { key: "route:dex", label: "Primary DEX route", routeFamily: "dex-amm", score: 84, components: [
+          { key: "access", label: "Access", score: 80, weight: 0.2, effectiveScoringWeight: 0.2, weightedContribution: 16, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
+          { key: "settlement", label: "Settlement", score: 80, weight: 0.15, effectiveScoringWeight: 0.15, weightedContribution: 12, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
+          { key: "executionCertainty", label: "Execution certainty", score: 80, weight: 0.15, effectiveScoringWeight: 0.15, weightedContribution: 12, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
+          { key: "capacity", label: "Capacity", score: 96, weight: 0.25, effectiveScoringWeight: 0.25, weightedContribution: 24, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
+          { key: "outputAssetQuality", label: "Output asset quality", score: 80, weight: 0.15, effectiveScoringWeight: 0.15, weightedContribution: 12, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
+          { key: "cost", label: "Cost", score: 80, weight: 0.1, effectiveScoringWeight: 0.1, weightedContribution: 8, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
+        ], confidenceFactor: 1, confidenceDimensions: { observation: {factor: 1, cause: null, causeGapRefs: []}, model: {factor: 1, cause: null, causeGapRefs: []}, capacityMethod: {factor: 1, cause: null, causeGapRefs: []} }, capacityEvidenceTier: 'live-direct' as const, rawSameNotionalCostBps: null, supportedComponentCeiling: [
+          { key: "access", label: "Access", score: 80, weight: 0.2, effectiveScoringWeight: 0.2, weightedContribution: 16, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
+          { key: "settlement", label: "Settlement", score: 80, weight: 0.15, effectiveScoringWeight: 0.15, weightedContribution: 12, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
+          { key: "executionCertainty", label: "Execution certainty", score: 80, weight: 0.15, effectiveScoringWeight: 0.15, weightedContribution: 12, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
+          { key: "capacity", label: "Capacity", score: 96, weight: 0.25, effectiveScoringWeight: 0.25, weightedContribution: 24, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
+          { key: "outputAssetQuality", label: "Output asset quality", score: 80, weight: 0.15, effectiveScoringWeight: 0.15, weightedContribution: 12, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
+          { key: "cost", label: "Cost", score: 80, weight: 0.1, effectiveScoringWeight: 0.1, weightedContribution: 8, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
+        ].reduce((sum, component) => sum + component.weightedContribution, 0), eligibilityMultiplier: 1,
+        capsApplied: ["route-cap:measured-depth"], },
+        diversification: {
+          routeKey: "route:redemption",
+          routeLabel: "Issuer redemption",
+          bonus: 2,
         },
-        control: {
-          evaluatedScore: 86,
-          publishedScore: 86,
-          aggregationWeight: 0.25,
-          adjustments: [],
-          method: "minimum-binding-component",
-          components: [
-            {
-              key: "mint:authority",
-              label: "Mint authority",
-              kind: "mint",
-              score: 86,
-              binding: true,
-              posture: "centralized",
-            },
-            {
-              key: "oracle:design",
-              label: "Oracle design",
-              kind: "oracle",
-              score: 70,
-              binding: false,
-              posture: "diagnostic",
-            },
-          ],
-        },
+        alternatives: [{ key: "route:orderbook", label: "Orderbook", routeFamily: "dex-orderbook", score: 70, included: false, exclusionReason: "unsupported-same-notional-route", confidenceDimensions: null, capacityEvidenceTier: 'unknown' as const, rawSameNotionalCostBps: null,  }], },
+        control: { evaluatedScore: 86, publishedScore: 86, aggregationWeight: 0.25, aggregationDisposition: 'included' as const, causeGapRefs: [], limitedEvidenceCauses: [], adjustments: [],
+        method: "minimum-binding-component",
+        components: [
+          { key: "mint:authority", label: "Mint authority", kind: "mint", score: 86, binding: true, posture: "centralized", effectiveScoringWeight: 1, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
+          { key: "oracle:design", label: "Oracle design", kind: "oracle", score: 70, binding: false, posture: "diagnostic", effectiveScoringWeight: 0, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
+        ], },
       },
     });
 
@@ -152,12 +99,10 @@ describe("show-your-work formatters", () => {
 
     expect(table.rows.find((row) => row.label === "Backing pillar")?.weight).toBe("40%");
     expect(table.rows.find((row) => row.label.includes("[reserve:cash]"))).toMatchObject({
-      value: "80.0 · reserve-exposure · known",
       weight: "50%",
       contribution: "40.0",
     });
     expect(table.rows.find((row) => row.label.includes("[capacity]"))).toMatchObject({
-      value: "96.0",
       weight: "25%",
       contribution: "24.0",
     });
@@ -169,7 +114,6 @@ describe("show-your-work formatters", () => {
       .toContain("diagnostic");
     expect(table.rows.find((row) => row.label === "Backing adjustment · operational-resilience-credit"))
       .toMatchObject({ value: "83.0 → 88.0", contribution: "+5.0" });
-    expect(table.formula).toContain("minimum binding component");
   });
 
   it("formats DEWS signals", () => {

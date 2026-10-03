@@ -203,7 +203,9 @@ export async function handleDonorKeyClaim(
   if (activeScores.kind !== "v9") {
     return claimError(503, UNAVAILABLE_MESSAGE, "safety_scores_unavailable");
   }
-  const grades = new Map(activeScores.snapshot.cards.map((card) => [card.id, card.grade]));
+  const grades = new Map(activeScores.snapshot.cards.flatMap((card) =>
+    card.ratingStatus === "pipeline-gap" || card.grade === null ? [] : [[card.id, card.grade] as const],
+  ));
   const summary = summarizeDonorKeyEligibility(address, donationsLedger.donations, grades);
   const totals = new Map([[address, summary.qualifyingUsd]]);
   if (!isEligibleDonor(address, totals, DONOR_API_KEY_MIN_USD)) {

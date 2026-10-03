@@ -4,7 +4,7 @@ import { getCirculatingRaw } from "@shared/lib/supply";
 import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
 
 export type V9SortKey = "overall" | "backing" | "exit" | "control" | "mcap";
-export type GradeFilter = "all" | "A" | "B" | "C" | "D" | "F" | "NR";
+export type GradeFilter = "all" | "A" | "B" | "C" | "D" | "F" | "NR" | "pipeline-gap";
 export type PegFilter = "all" | "usd" | "fiat-non-usd" | "commodities";
 export const GRADE_RANGES: Exclude<GradeFilter, "all">[] = [
   "A",
@@ -13,14 +13,20 @@ export const GRADE_RANGES: Exclude<GradeFilter, "all">[] = [
   "D",
   "F",
   "NR",
+  "pipeline-gap",
 ];
 
-const GRADE_ORDER: Exclude<GradeFilter, "all">[] = ["A", "B", "C", "D", "F", "NR"];
+const GRADE_ORDER: Exclude<GradeFilter, "all">[] = ["A", "B", "C", "D", "F", "NR", "pipeline-gap"];
 const PILLAR_LABELS = {
   backing: "Backing",
   exit: "Exit",
   control: "Economic Control",
 } as const;
+
+function cardGroup(card: V9ConsumerCard): Exclude<GradeFilter, "all"> {
+  if (card.ratingStatus === "pipeline-gap" || card.grade === null) return "pipeline-gap";
+  return gradeRange(card.grade);
+}
 
 export function buildV9GradeCounts(
   cards: readonly V9ConsumerCard[] | undefined,
@@ -32,9 +38,10 @@ export function buildV9GradeCounts(
     D: 0,
     F: 0,
     NR: 0,
+    "pipeline-gap": 0,
   };
   for (const card of cards ?? []) {
-    counts[gradeRange(card.grade)] += 1;
+    counts[cardGroup(card)] += 1;
   }
   return counts;
 }
@@ -46,6 +53,7 @@ function getSortScore(
 ): number | null {
   if (key === "overall") return card.score;
   if (key === "mcap") return mcapMap.get(card.id) ?? 0;
+  if (card.ratingStatus !== "rated") return null;
   return card.pillars[key].score;
 }
 
@@ -67,7 +75,7 @@ export function filterAndSortV9Cards(
 ): V9ConsumerCard[] {
   const gradeFiltered = gradeFilter === "all"
     ? cards
-    : cards.filter((card) => gradeRange(card.grade) === gradeFilter);
+    : cards.filter((card) => cardGroup(card) === gradeFilter);
   const filtered = pegFilter === "all"
     ? gradeFiltered
     : gradeFiltered.filter((card) => pegMatchesFilter(pegTypeMap.get(card.id), pegFilter));
@@ -102,7 +110,7 @@ export function groupV9CardsByGrade(
 ): Array<{ grade: string; cards: V9ConsumerCard[] }> {
   const groups = new Map<string, V9ConsumerCard[]>();
   for (const card of cards) {
-    const grade = gradeRange(card.grade);
+    const grade = cardGroup(card);
     groups.set(grade, [...(groups.get(grade) ?? []), card]);
   }
   return GRADE_ORDER.flatMap((grade) => {
@@ -115,16 +123,16 @@ export function buildV9HeadlineStats(
   cards: readonly V9ConsumerCard[],
   mcapMap: ReadonlyMap<string, number>,
 ): Array<{ label: string; value: string; detail: string }> {
-  const ratedCards = cards.filter((card) => card.score !== null);
+  const ratedCards = cards.filter((card): card is V9ConsumerCard & { score: number } => card.ratingStatus === "rated" && card.score !== null);
   if (ratedCards.length === 0) return [];
 
   const averageScore = Math.round(
-    ratedCards.reduce((sum, card) => sum + (card.score ?? 0), 0) / ratedCards.length,
+    ratedCards.reduce((sum, card) => sum + card.score, 0) / ratedCards.length,
   );
   const totalSupply = ratedCards.reduce((sum, card) => sum + (mcapMap.get(card.id) ?? 0), 0);
   const abSupply = ratedCards
     .filter((card) => {
-      const grade = gradeRange(card.grade);
+      const grade = cardGroup(card);
       return grade === "A" || grade === "B";
     })
     .reduce((sum, card) => sum + (mcapMap.get(card.id) ?? 0), 0);
@@ -159,7 +167,7 @@ export function buildV9HeadlineStats(
     },
     {
       label: "Weakest pillar",
-      value: weakestPillar ? PILLAR_LABELS[weakestPillar.pillar] : "NR",
+      value: weakestPillar ? PILLAR_LABELS[weakestPillar.pillar] : "Unavailable",
       detail: weakestPillar ? `avg ${Math.round(weakestPillar.average)}` : "no rated pillars",
     },
   ];

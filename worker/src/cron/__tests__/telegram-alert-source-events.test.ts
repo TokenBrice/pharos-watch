@@ -157,7 +157,7 @@ describe("Telegram alert source-event resolution", () => {
           generation: "safety-8.0-test-alert-source-v1",
           safetyScoreIdentity: V8_IDENTITY,
           snapshot: {
-            "usdc-circle": { grade: "A", score: 91, methodologyVersion: "8.0-test" },
+            "usdc-circle": { grade: "A", score: 91, ratingStatus: "rated", partialEvidence: null, methodologyVersion: "8.0-test" },
           },
         },
       },
@@ -165,10 +165,10 @@ describe("Telegram alert source-event resolution", () => {
     });
 
     const reconciled = suppressIncomparableTelegramSafetySourceEvent(source, {
-      generation: "safety-v9-candidate-v9.0-alert-source-v1",
+      generation: "safety-v9-alert-source-v2",
       safetyScoreIdentity: V9_IDENTITY,
       snapshot: {
-        "usdc-circle": { grade: "B-", score: 80, methodologyVersion: "candidate-v9.0" },
+        "usdc-circle": { grade: "B-", score: 80, ratingStatus: "rated", partialEvidence: null, methodologyVersion: "candidate-v9.0" },
       },
     });
 

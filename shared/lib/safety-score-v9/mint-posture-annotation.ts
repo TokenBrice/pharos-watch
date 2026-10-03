@@ -1,4 +1,5 @@
 import type { MintAuthorityPosture } from "../../types/core";
+import type { V9RatingStatus } from "../../types/safety-score-v9-causes";
 import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
 import { compareText, deepFreeze } from "./primitives";
@@ -9,7 +10,7 @@ import {
   type V9MintPostureBand,
 } from "./mint-posture";
 
-const V9_CURATED_MINT_POSTURE_QUEUE_DIGEST_DOMAIN = "safety-score-v9.curated-mint-posture-queue.v1";
+const V9_CURATED_MINT_POSTURE_QUEUE_DIGEST_DOMAIN = "safety-score-v9.curated-mint-posture-queue.v2";
 
 /**
  * Safety 9.1 demoted the curated `mintAuthority.authorityPosture` field to a
@@ -38,7 +39,7 @@ export interface V9CuratedMintPostureQueueEntry {
 }
 
 export interface V9CuratedMintPostureQueue {
-  schemaVersion: 1;
+  schemaVersion: 2;
   kind: "safety-score-v9-curated-mint-posture-queue";
   reviewedAssetCount: number;
   entries: readonly V9CuratedMintPostureQueueEntry[];
@@ -50,6 +51,8 @@ export interface V9CuratedMintPostureQueue {
    * for an NR card is to close its rating gap, not to re-curate its posture.
    */
   nrCards: readonly string[];
+  /** Technical gaps are diagnostic availability, never issuer NR. */
+  pipelineGapCards: readonly string[];
   queueDigest: string;
 }
 
@@ -64,6 +67,7 @@ export interface V9CuratedMintPostureInput {
    * true so a caller that only has postures keeps the previous behaviour.
    */
   publishesBreakdowns?: boolean;
+  ratingStatus?: V9RatingStatus;
 }
 
 const BAND_RANK = new Map<V9MintPostureBand, number>(
@@ -106,7 +110,12 @@ export function buildV9CuratedMintPostureQueue(
 ): V9CuratedMintPostureQueue {
   const entries: V9CuratedMintPostureQueueEntry[] = [];
   const nrCards: string[] = [];
+  const pipelineGapCards: string[] = [];
   for (const input of inputs) {
+    if (input.ratingStatus === "pipeline-gap") {
+      pipelineGapCards.push(input.assetId);
+      continue;
+    }
     // An NR card derives no posture because nothing was rated. Treating that
     // absence as `derived-unresolved` blamed curation for a rating gap and
     // inflated the disagreement count.
@@ -135,12 +144,14 @@ export function buildV9CuratedMintPostureQueue(
   }
   entries.sort((left, right) => compareText(left.assetId, right.assetId));
   nrCards.sort(compareText);
+  pipelineGapCards.sort(compareText);
   const core = {
-    schemaVersion: 1 as const,
+    schemaVersion: 2 as const,
     kind: "safety-score-v9-curated-mint-posture-queue" as const,
     reviewedAssetCount: inputs.length,
     entries,
     nrCards,
+    pipelineGapCards,
   };
   return deepFreeze({ ...core, queueDigest: sha256Hex(`${V9_CURATED_MINT_POSTURE_QUEUE_DIGEST_DOMAIN}:${stableJsonStringifyV1(core)}`) });
 }

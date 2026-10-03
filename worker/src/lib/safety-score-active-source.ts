@@ -24,7 +24,7 @@ export type ActiveSafetyScoreSource =
     }
   | {
       kind: "error";
-      reason: "v9-snapshot-unavailable";
+      reason: "v9-snapshot-unavailable" | "publication-schema-cutover-pending";
       detail: string;
       snapshot: null;
     };
@@ -53,7 +53,8 @@ export async function loadActiveSafetyScoreSource(
           },
     (error): ActiveSafetyScoreSource => ({
       kind: "error",
-      reason: "v9-snapshot-unavailable",
+      reason: error instanceof Error && error.message.includes("publication-schema-cutover-pending")
+        ? "publication-schema-cutover-pending" : "v9-snapshot-unavailable",
       detail:
         error instanceof Error
           ? error.message

@@ -82,6 +82,13 @@ describe("getDeviationBarWidthPercent", () => {
 });
 
 describe("DepegControlBoard", () => {
+  it("renders unknown peg occupancy as unavailable rather than zero or perfect stability", () => {
+    renderBoard([makeRow({ pegScore: null, pegPct: null })]);
+    const row = screen.getByRole("button", { name: /open susd depeg detail/i });
+    expect(within(row).getByText("- at peg")).toBeTruthy();
+    expect(within(row).queryByText("0.0% at peg")).toBeNull();
+    expect(within(row).queryByText("100.0% at peg")).toBeNull();
+  });
   it("renders full-row severity without side-stripe classes and keeps units explicit", () => {
     renderBoard([makeRow()]);
 

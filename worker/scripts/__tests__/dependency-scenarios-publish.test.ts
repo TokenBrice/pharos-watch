@@ -65,7 +65,7 @@ function setup() {
   db.prepare("INSERT INTO cache VALUES (?, ?, ?)").run("report-cards:v9", "untouched-canonical", 1000);
   db.close();
   const source = makeReportCardsV9Response();
-  const bytes = JSON.stringify({ schemaVersion: 1, sourcePublicationGenerationId: source.safetyScoreIdentity.publicationGenerationId, sourceBaseInputGenerationId: source.safetyScoreIdentity.baseInputGenerationId, evaluationBuildDigest: source.safetyScoreIdentity.evaluationBuildDigest, methodologyVersion: source.methodology.version, computedAtSec: 10_000, cohort: { rootIds: [], selection: "Publisher storage fixture" }, scenarios: [] });
+  const bytes = JSON.stringify({ schemaVersion: 2, sourcePublicationGenerationId: source.safetyScoreIdentity.publicationGenerationId, sourceBaseInputGenerationId: source.safetyScoreIdentity.baseInputGenerationId, evaluationBuildDigest: source.safetyScoreIdentity.evaluationBuildDigest, methodologyVersion: source.methodology.version, computedAtSec: 10_000, cohort: { rootIds: [], selection: "Publisher storage fixture" }, scenarios: [] });
   writeFileSync(resolve(directory, "artifact.json"), bytes);
   writeFileSync(resolve(directory, "publication.json"), JSON.stringify(source));
   const stamp = createHash("sha256").update(stableJsonStringifyV1({
@@ -83,7 +83,7 @@ function setup() {
 function prepareComputeFixture(directory: string) {
   const input = createReplayFixedInput(1_800_000_000);
   const candidate = buildSafetyScoreV9ReplayArtifact({ fixedInput: input, publishedAtSec: input.clockSec }).pipeline.candidate;
-  const source = projectSafetyScoreV9PublicationToPublicSnapshot(candidate, { schemaVersion: 1, status: "current", acceptedPublicationGenerationId: candidate.publicationGenerationId, acceptedAtSec: candidate.publishedAtSec, attemptedAtSec: candidate.publishedAtSec, heldSinceSec: null, reasons: [] });
+  const source = projectSafetyScoreV9PublicationToPublicSnapshot(candidate, { schemaVersion: 2, status: "current", acceptedPublicationGenerationId: candidate.publicationGenerationId, acceptedAtSec: candidate.publishedAtSec, attemptedAtSec: candidate.publishedAtSec, heldSinceSec: null, reasons: [] });
   writeFileSync(resolve(directory, "capture.json"), JSON.stringify(input));
   writeFileSync(resolve(directory, "publication.json"), JSON.stringify(source));
 }
@@ -106,7 +106,7 @@ describe("dependency scenario accepted-publication verification stamp", () => {
       safetyScoreV9SupplyAttributionById: { "xaut-tether": attribution },
     });
     const candidate = buildSafetyScoreV9ReplayArtifact({ fixedInput, publishedAtSec: base.clockSec }).pipeline.candidate;
-    const source = projectSafetyScoreV9PublicationToPublicSnapshot(candidate, { schemaVersion: 1, status: "current", acceptedPublicationGenerationId: candidate.publicationGenerationId, acceptedAtSec: candidate.publishedAtSec, attemptedAtSec: candidate.publishedAtSec, heldSinceSec: null, reasons: [] });
+    const source = projectSafetyScoreV9PublicationToPublicSnapshot(candidate, { schemaVersion: 2, status: "current", acceptedPublicationGenerationId: candidate.publicationGenerationId, acceptedAtSec: candidate.publishedAtSec, attemptedAtSec: candidate.publishedAtSec, heldSinceSec: null, reasons: [] });
     const invoke = () => spawnSync(process.execPath, ["--import", "tsx", "worker/scripts/compute-dependency-scenarios.ts", "--mode", "compute", "--input", resolve(fixture.directory, "capture.json"), "--publication", resolve(fixture.directory, "publication.json"), "--out-dir", fixture.directory], { encoding: "utf8", timeout: 30_000 });
     writeFileSync(resolve(fixture.directory, "publication.json"), JSON.stringify(source));
     writeFileSync(resolve(fixture.directory, "capture.json"), JSON.stringify(base));

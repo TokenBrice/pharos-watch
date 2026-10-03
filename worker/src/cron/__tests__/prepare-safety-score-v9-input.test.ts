@@ -68,6 +68,10 @@ vi.mock("../../lib/safety-score-v9/transfer-materiality-observer", () => ({
   observeSafetyScoreV9TransferMaterialityGeneration: mockObserveTransferMateriality,
 }));
 
+vi.mock("../../lib/report-card-evidence-journal-store", () => ({
+  loadReportCardEvidenceJournalByIdV1: async () => ({}),
+}));
+
 const {
   prepareSafetyScoreV9Input,
   V9_INPUT_STABLECOINS_SETTLE_MAX_WAIT_MS,

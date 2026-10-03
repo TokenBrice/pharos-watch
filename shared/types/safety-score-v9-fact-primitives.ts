@@ -107,6 +107,37 @@ export const V9FactStatusV2Schema = z
   });
 export type V9FactStatusV2 = z.infer<typeof V9FactStatusV2Schema>;
 
+/** Atomic subfields carry gap references, never copied proof graphs. */
+export const V9ReserveFactorStatusesSchema = z.object({
+  assetClass: V9FactStatusV2Schema.optional(),
+  liquidity: V9FactStatusV2Schema.optional(),
+  maturity: V9FactStatusV2Schema.optional(),
+  obligorConcentration: V9FactStatusV2Schema.optional(),
+}).strict();
+export const V9ExitFactorStatusesSchema = z.object({
+  access: V9FactStatusV2Schema.optional(),
+  holderEligibility: V9FactStatusV2Schema.optional(),
+  executionConfidence: V9FactStatusV2Schema.optional(),
+  observationConfidence: V9FactStatusV2Schema.optional(),
+  capacityEvidenceTier: V9FactStatusV2Schema.optional(),
+  capacity: V9FactStatusV2Schema.optional(),
+  output: V9FactStatusV2Schema.optional(),
+  cost: V9FactStatusV2Schema.optional(),
+  settlement: V9FactStatusV2Schema.optional(),
+}).strict();
+export const V9ControlFactorStatusesSchema = z.record(CanonicalTextSchema, V9FactStatusV2Schema);
+
+export const V9ReserveResidualFactSchema = z.object({
+  residualId: CanonicalTextSchema,
+  weight: z.number().finite().positive().max(1),
+  status: V9FactStatusV2Schema,
+}).strict().superRefine((residual, ctx) => {
+  if (residual.status.applicability.state !== "required" || residual.status.gapIds.length !== 1) {
+    ctx.addIssue({ code: "custom", message: "Each disjoint reserve remainder requires exactly one causal gap" });
+  }
+});
+export type V9ReserveResidualFact = z.infer<typeof V9ReserveResidualFactSchema>;
+
 const V9FailureDomainKindSchema = z.enum([
   "reserve-issuer",
   "reserve-custodian",

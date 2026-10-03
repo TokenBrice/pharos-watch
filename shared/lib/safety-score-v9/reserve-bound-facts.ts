@@ -54,8 +54,8 @@ function observedDays(fact: Extract<ReserveBoundedFact, { kind: "observed-portfo
   if (fact.instruments.length === 0 || fact.instruments.some((row) => row.maturityAtSec === null || row.maturityAtSec <= fact.asOfSec)) return null;
   return Math.max(fact.observedMaximumDays ?? 0, ...fact.instruments.map((row) => Math.ceil((row.maturityAtSec! - fact.asOfSec) / 86400)));
 }
-export function resolveV9ReserveFactorBounds(exposure: V9ReserveExposureFactV2, rows: readonly V9ReserveBoundedFact[], policy: V9BackingSemanticPolicy, clockSec: number, baseline: { liquidity: number; maturity: number }): { liquidity: number; maturity: number; evidenceRefIds: string[]; contradiction: boolean } {
-  if (rows.length === 0) return { ...baseline, evidenceRefIds: [], contradiction: false };
+export function resolveV9ReserveFactorBounds(exposure: V9ReserveExposureFactV2, rows: readonly V9ReserveBoundedFact[], policy: V9BackingSemanticPolicy, clockSec: number, baseline: { liquidity: number; maturity: number }): { liquidity: number; maturity: number; liquidityCoveredShare: number; maturityCoveredShare: number; liquidityCoveredQuality: number | null; maturityCoveredQuality: number | null; evidenceRefIds: string[]; contradiction: boolean } {
+  if (rows.length === 0) return { ...baseline, liquidityCoveredShare: 0, maturityCoveredShare: 0, liquidityCoveredQuality: null, maturityCoveredQuality: null, evidenceRefIds: [], contradiction: false };
   const facts = coherentFacts(rows, clockSec).filter((row) => row.fact.scope.kind !== "reserve-envelope" && row.fact.scope.exposureKey === exposure.exposureKey);
   const contracts = facts.filter((row) => row.fact.kind === "contractual-maturity-maximum" && row.fact.legallyBinding && row.fact.allInScope);
   const observations = facts.filter((row) => row.fact.kind === "observed-portfolio-maturity");
@@ -65,16 +65,22 @@ export function resolveV9ReserveFactorBounds(exposure: V9ReserveExposureFactV2, 
     const days = observedDays(observation.fact);
     return days !== null && days > reserveBoundTermDays(contract.fact.maximumTerm);
   }));
-  const liquidity: number[] = [], maturity: number[] = [], refs: string[] = [];
+  const liquidity: { quality: number; share: number; coveredQuality: number | null }[] = [], maturity: { quality: number; share: number; coveredQuality: number | null }[] = [], refs: string[] = [];
+  const classKnown = (exposure.factorStatuses?.assetClass ?? exposure.status).observationState === "known";
+  const maturityKnown = (exposure.factorStatuses?.maturity ?? exposure.status).observationState === "known";
+  const liquidityKnown = (exposure.factorStatuses?.liquidity ?? exposure.status).observationState === "known";
+  const missingMaturity = exposure.maturityDaysMax === null || !maturityKnown;
+  const missingLiquidity = exposure.liquidityHorizon === null || exposure.liquidityHorizon === "unknown" || !liquidityKnown;
   for (const row of facts) {
-    const fact = row.fact, share = coverage(fact);
+    const fact = row.fact;
+    let share = coverage(fact);
     if (share === 0) continue;
     let quality: number | null = null, factor: "liquidity" | "maturity" = "maturity";
     if (fact.kind === "contractual-maturity-maximum" && fact.legallyBinding && fact.allInScope && !contradiction) quality = maturityQuality(reserveBoundTermDays(fact.maximumTerm), policy);
     if (fact.kind === "observed-portfolio-maturity") {
       const days = observedDays(fact);
-      if (days !== null && (exposure.maturityDaysMax === null || days > exposure.maturityDaysMax)) {
-        quality = exposure.maturityDaysMax === null
+      if (days !== null && (missingMaturity || days > exposure.maturityDaysMax!)) {
+        quality = missingMaturity
           ? Math.min(maturityQuality(days, policy), policy.componentQuality[policy.reserve.boundedFacts.observedMaturityQualityLevel])
           : maturityQuality(days, policy);
       }
@@ -82,7 +88,10 @@ export function resolveV9ReserveFactorBounds(exposure: V9ReserveExposureFactV2, 
     if (fact.kind === "maturity-applicability" && fact.allInScope) quality = 100;
     if (fact.kind === "currently-liquid-fraction") {
       factor = "liquidity";
-      if (exposure.liquidityHorizon === null || exposure.liquidityHorizon === "unknown") quality = baseline.liquidity + fact.currentlyWithdrawable / fact.totalHeld * (policy.componentQuality[policy.reserve.boundedFacts.currentAvailabilityQualityLevel] - baseline.liquidity);
+      if (missingLiquidity) {
+        share *= fact.currentlyWithdrawable / fact.totalHeld;
+        quality = policy.componentQuality[policy.reserve.boundedFacts.currentAvailabilityQualityLevel];
+      }
     }
     if (fact.kind === "stressed-realization-bound" && fact.realizationStage === "final-cash-settlement" && fact.settlementAsset === "fiat:USD") {
       factor = "liquidity";
@@ -90,17 +99,26 @@ export function resolveV9ReserveFactorBounds(exposure: V9ReserveExposureFactV2, 
     }
     if (quality === null) continue;
     // Known classification survives favorable incomplete snapshots. Adverse tenor is retained.
-    if (factor === "maturity" && exposure.assetClass !== null && policy.reserve.maturityNotApplicableClasses.includes(exposure.assetClass)) continue;
-    if (factor === "maturity" && exposure.maturityDaysMax !== null && quality > baseline.maturity) continue;
-    if (factor === "liquidity" && exposure.liquidityHorizon !== null && exposure.liquidityHorizon !== "unknown" && quality > baseline.liquidity) continue;
-    (factor === "liquidity" ? liquidity : maturity).push(baseline[factor] + share * (quality - baseline[factor]));
+    if (factor === "maturity" && classKnown && exposure.assetClass !== null && policy.reserve.maturityNotApplicableClasses.includes(exposure.assetClass)) continue;
+    if (factor === "maturity" && !missingMaturity && quality > baseline.maturity) continue;
+    if (factor === "liquidity" && !missingLiquidity && quality > baseline.liquidity) continue;
+    (factor === "liquidity" ? liquidity : maturity).push({ quality: baseline[factor] + share * (quality - baseline[factor]), share, coveredQuality: quality });
     refs.push(...row.status.evidenceRefIds);
   }
   // Independent positive bounds establish at least the strongest lower bound,
   // never the sum of possibly overlapping coverage. Any adverse bound still binds.
+  const selected = (candidates: readonly { quality: number; share: number; coveredQuality: number | null }[], baselineQuality: number) => {
+    const adverse = candidates.some(row => row.quality < baselineQuality);
+    return candidates.reduce((best, row) =>
+      (adverse ? row.quality < best.quality : row.quality > best.quality) ||
+        (row.quality === best.quality && row.share > best.share) ? row : best,
+    { quality: baselineQuality, share: 0, coveredQuality: null });
+  };
+  const liquid = selected(liquidity, baseline.liquidity), mature = selected(maturity, baseline.maturity);
   return {
-    liquidity: liquidity.some((quality) => quality < baseline.liquidity) ? Math.min(...liquidity) : Math.max(baseline.liquidity, ...liquidity),
-    maturity: maturity.some((quality) => quality < baseline.maturity) ? Math.min(...maturity) : Math.max(baseline.maturity, ...maturity),
+    liquidity: liquid.quality, maturity: mature.quality,
+    liquidityCoveredShare: liquid.share, maturityCoveredShare: mature.share,
+    liquidityCoveredQuality: liquid.coveredQuality, maturityCoveredQuality: mature.coveredQuality,
     evidenceRefIds: [...new Set(refs)].sort(),
     contradiction,
   };
@@ -112,7 +130,7 @@ export function evaluateV9ReserveEligibilityEnvelope(rows: readonly V9ReserveBou
     const fact = row.fact;
     if (fact.kind !== "eligibility-envelope" || !fact.legallyBinding || !fact.exhaustive) return [];
     const weights = policy.reserve.factorWeights, total = weights.assetQuality + weights.liquidity + weights.maturity;
-    const allocations = fact.allocations.map((entry) => ({ ...entry, quality: (policy.reserve.assetClassQuality[entry.assetClass] * weights.assetQuality + policy.boundedUnknownQuality * weights.liquidity + (policy.reserve.maturityNotApplicableClasses.includes(entry.assetClass) ? 100 : entry.maximumTerm === null ? policy.boundedUnknownQuality : maturityQuality(reserveBoundTermDays(entry.maximumTerm), policy)) * weights.maturity) / total })).sort((a, b) => a.quality - b.quality || a.assetClass.localeCompare(b.assetClass));
+    const allocations = fact.allocations.map((entry) => ({ ...entry, quality: (policy.reserve.assetClassQuality[entry.assetClass] * weights.assetQuality + policy.reserve.liquidityQuality.unknown * weights.liquidity + (policy.reserve.maturityNotApplicableClasses.includes(entry.assetClass) ? 100 : entry.maximumTerm === null ? policy.reserve.maturityUnknownQuality : maturityQuality(reserveBoundTermDays(entry.maximumTerm), policy)) * weights.maturity) / total })).sort((a, b) => a.quality - b.quality || a.assetClass.localeCompare(b.assetClass));
     let remaining = 1 - allocations.reduce((sum, entry) => sum + entry.minShare, 0);
     let quality = allocations.reduce((sum, entry) => sum + entry.minShare * entry.quality, 0);
     for (const entry of allocations) { const share = Math.min(remaining, entry.maxShare - entry.minShare); quality += share * entry.quality; remaining -= share; }

@@ -9,6 +9,7 @@ import {
 } from "@shared/lib/safety-score-v9-supply-attribution-journal";
 import { rethrowIfAborted } from "../abort";
 import type { ChainRpcConfig } from "../chain-registry";
+import type { V9ExecutionWindow } from "../v9-slot-window";
 import type { SafetyScoreV9CompilerInput } from "./native-input";
 import {
   CENTRIFUGE_BURN_MINT_ASSET_IDS,
@@ -59,6 +60,7 @@ export interface SafetyScoreV9SupplyAttributionCapture {
 export interface SafetyScoreV9SupplyAttributionCaptureOptions {
   clockMode: "source" | "wall";
   notBeforeSec?: number;
+  executionWindow?: V9ExecutionWindow;
 }
 
 export function aggregateSupplyUsd(
@@ -166,6 +168,7 @@ interface SupplyAttributionAssetDescriptor {
     scoringClockSec: number;
     chainRpcs: Map<string, ChainRpcConfig>;
     signal?: AbortSignal;
+    executionWindow?: V9ExecutionWindow;
   }) => Promise<SupplyAttributionObservationAttempt>;
 }
 
@@ -203,14 +206,6 @@ function supplyAttributionAssetDescriptors():
         () => buildXautRepresentationGroupInventory()?.digest ?? null,
       observe: observeXautRepresentationGroupSupplyAttributionAttempt,
     },
-    {
-      assetId: "wm-m0",
-      sourceId: SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_SOURCE_ID_BY_ASSET["wm-m0"],
-      sourceOriginClass: "onchain-observation",
-      routeInventoryDigest:
-        () => buildReviewedDeploymentRouteInventory("wm-m0")?.digest ?? null,
-      observe: observeWmReviewedDeploymentUnitPartitionAttempt,
-    },
     ...CENTRIFUGE_BURN_MINT_ASSET_IDS.map(
       (assetId): SupplyAttributionAssetDescriptor => ({
         assetId,
@@ -230,8 +225,16 @@ function supplyAttributionAssetDescriptors():
       assetId, sourceId: V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.journalSourceId,
       sourceOriginClass: "issuer-disclosure-plus-onchain",
       routeInventoryDigest: () => buildReviewedEconomicDeploymentInventory(assetId)?.digest ?? null,
-      observe: ({ fixedInput, chainRpcs, signal }) => observeReviewedEconomicDeploymentPartitionAttempt({ assetId, fixedInput, chainRpcs, signal }),
+      observe: ({ fixedInput, scoringClockSec, chainRpcs, signal }) => observeReviewedEconomicDeploymentPartitionAttempt({ assetId, fixedInput, scoringClockSec, chainRpcs, signal }),
     })),
+    {
+      assetId: "wm-m0",
+      sourceId: SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_SOURCE_ID_BY_ASSET["wm-m0"],
+      sourceOriginClass: "onchain-observation",
+      routeInventoryDigest:
+        () => buildReviewedDeploymentRouteInventory("wm-m0")?.digest ?? null,
+      observe: observeWmReviewedDeploymentUnitPartitionAttempt,
+    },
   ];
 }
 
@@ -294,6 +297,7 @@ async function runSupplyAttributionAssetCapture(input: {
   fixedInput: Readonly<SafetyScoreV9SupplyAttributionInput>;
   chainRpcs?: Map<string, ChainRpcConfig>;
   signal?: AbortSignal;
+  executionWindow?: V9ExecutionWindow;
   observationClockSec: (attemptedAtSec: number) => number;
   attributionById: V9SupplyAttributionById;
   journalRecords: SupplyAttributionJournalV1[];
@@ -315,6 +319,7 @@ async function runSupplyAttributionAssetCapture(input: {
             scoringClockSec,
             chainRpcs: input.chainRpcs,
             signal: input.signal,
+            executionWindow: input.executionWindow,
           })
         : {
             status: "rejected",
@@ -418,6 +423,7 @@ export async function captureSafetyScoreV9SupplyAttribution(
       fixedInput,
       chainRpcs,
       signal,
+      executionWindow: options.executionWindow,
       observationClockSec,
       attributionById,
       journalRecords,

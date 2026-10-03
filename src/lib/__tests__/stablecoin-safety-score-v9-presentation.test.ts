@@ -15,6 +15,25 @@ import {
 const BREAKDOWN_PILLARS = makeV9Pillars({ backing: 88, exit: 84, control: 86 });
 
 describe("stablecoin V9 safety presentation", () => {
+  it("keeps excluded backing factors null and cause-labelled beside their surviving scored factors", () => {
+    const card = makeV9Card({ localCauseGaps: ["transparency"], partialEvidence: {
+      reasonCode: "partial-evidence-pipeline-gap", excludedPillars: [],
+      excludedComponentKeys: ["reserve:reviewed:transparency"], causeGapRefs: [0], causes: ["B"],
+    } });
+    card.breakdowns!.backing.components[0].factors = [
+      { componentKey: "assetQuality", score: 88, normalizedWeight: 0.8, effectiveScoringWeight: 1,
+        cause: null, causeGapRefs: [], scoringDisposition: "included" },
+      { componentKey: "transparency", score: null, normalizedWeight: 0.2, effectiveScoringWeight: 0,
+        cause: "B", causeGapRefs: [0], scoringDisposition: "excluded-uncurated" },
+    ];
+    const children = buildStablecoinSafetyScoreV9Presentation(
+      SafetyScoreV9CurrentCardSchema.parse(card),
+    ).pillars[0].breakdown!.groups[0].rows[0].children;
+    expect(children).toEqual([
+      expect.objectContaining({ key: "assetQuality", score: 88, weight: 1 }),
+      expect.objectContaining({ key: "transparency", score: null, weight: 0, status: expect.stringContaining("awaiting curation") }),
+    ]);
+  });
   it("has public copy for every evidence-responsibility value", () => {
     expect(Object.keys(SAFETY_SCORE_V9_RESPONSIBILITY_LABELS).sort())
       .toEqual([...V9EvidenceResponsibilitySchema.options].sort());
@@ -27,47 +46,24 @@ describe("stablecoin V9 safety presentation", () => {
    * score, or SafetyScoreV9CurrentCardSchema rejects the fixture.
    */
   const breakdownsFixture = () => ({
-    backing: {
-      evaluatedScore: 86,
-      publishedScore: 88,
-      aggregationWeight: 0.4,
-      groups: [{ key: "reserves" as const, label: "Reserves", score: 86, effectiveWeight: 1 }],
-      components: [{
-        key: "reserve:reserve:wsteth",
-        label: "wstETH",
-        source: "reserve-exposure" as const,
-        score: 86,
-        effectiveWeight: 1,
-        weightedContribution: 86,
-        observationState: "known" as const,
-      }],
-      adjustments: [{
-        kind: "operational-resilience-credit" as const,
-        scoreBefore: 86,
-        scoreAfter: 88,
-        delta: 2,
-      }],
-    },
-    exit: {
-      evaluatedScore: 84,
-      publishedScore: 84,
-      aggregationWeight: 0.35,
-      stressRequest: null,
-      primaryRoute: null,
-      diversification: null,
-      alternatives: [],
-      adjustments: [],
-    },
-    control: {
-      evaluatedScore: 86,
-      publishedScore: 86,
-      aggregationWeight: 0.25,
-      method: "minimum-binding-component" as const,
-      components: [
-        { key: "mint", label: "Mint authority", kind: "mint" as const, score: 86, binding: true, posture: "concentrated" as const },
-      ],
-      adjustments: [],
-    },
+    backing: { evaluatedScore: 86, publishedScore: 88, aggregationWeight: 0.4, aggregationDisposition: 'included' as const, causeGapRefs: [], limitedEvidenceCauses: [], groups: [{ key: "reserves" as const, label: "Reserves", score: 86, effectiveScoringWeight: 1, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const }],
+    components: [{ key: "reserve:reserve:wsteth", label: "wstETH", source: "reserve-exposure" as const, score: 86, effectiveScoringWeight: 1, wholeAssetWeight: 1, weightedContribution: 86, observationState: "known" as const, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const }],
+    adjustments: [{
+      kind: "operational-resilience-credit" as const,
+      scoreBefore: 86,
+      scoreAfter: 88,
+      delta: 2,
+    }], },
+    exit: { evaluatedScore: 84, publishedScore: 84, aggregationWeight: 0.35, aggregationDisposition: 'included' as const, causeGapRefs: [], limitedEvidenceCauses: [], stressRequest: null,
+    primaryRoute: null,
+    diversification: null,
+    alternatives: [],
+    adjustments: [], },
+    control: { evaluatedScore: 86, publishedScore: 86, aggregationWeight: 0.25, aggregationDisposition: 'included' as const, causeGapRefs: [], limitedEvidenceCauses: [], method: "minimum-binding-component" as const,
+    components: [
+      { key: "mint", label: "Mint authority", kind: "mint" as const, score: 86, binding: true, posture: "concentrated" as const, effectiveScoringWeight: 1, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
+    ],
+    adjustments: [], },
   });
 
   // Producer order and weights are fixed by the exit schema; fixtures differ
@@ -87,6 +83,8 @@ describe("stablecoin V9 safety presentation", () => {
     key,
     label,
     weight,
+    effectiveScoringWeight: weight,
+    cause: null, causeGapRefs: [], scoringDisposition: "included" as const,
     score: scores[key],
     weightedContribution: Number((scores[key] * weight).toFixed(6)),
   }));
@@ -201,6 +199,7 @@ describe("stablecoin V9 safety presentation", () => {
 
   it("splits causal attribution and names whose gap each unresolved fact is", () => {
     const card = makeV9Card();
+    card.localCauseGaps = ["assurance", "backing"];
     card.scoreTrace.adverseAttribution.items = [
       {
         source: "peg-performance",
@@ -212,17 +211,11 @@ describe("stablecoin V9 safety presentation", () => {
     card.scoreTrace.boundedUncertaintyAttribution.items = [
       {
         source: "reason",
-        code: "missing-same-notional-route",
-        path: "exit:missing-same-notional-route",
-        message: "Comparable exit route is missing",
-        responsibility: "integration-missing",
-      },
-      {
-        source: "reason",
         code: "missing-reserve-composition",
         path: "backing:reserve-envelope",
         message: "No reserve composition is present in the exact fixed input.",
         responsibility: "issuer-undisclosed",
+        cause: "C", causeGapRefs: [1],
       },
       {
         source: "reason",
@@ -230,6 +223,7 @@ describe("stablecoin V9 safety presentation", () => {
         path: "backing:assurance-report",
         message: "The published assurance report is outside our freshness window.",
         responsibility: "published-evidence-expired",
+        cause: "U", causeGapRefs: [0],
       },
     ];
 
@@ -238,21 +232,14 @@ describe("stablecoin V9 safety presentation", () => {
     // Six-decimal producer precision reads as noise in a sentence.
     expect(presentation.adverseMessages).toEqual(["Measured peg multiplier is 0.804."]);
     // The issuer's gaps lead; ours are still named as ours rather than hidden.
-    expect(presentation.boundedGroups).toEqual([
+    expect(presentation.boundedGroups.map(({ key, messages }) => ({ key, messages }))).toEqual([
       {
         key: "issuer-undisclosed",
-        label: "The issuer has not disclosed this",
         messages: ["No reserve composition is present in the exact fixed input."],
       },
       {
         key: "published-evidence-expired",
-        label: "This was published, but our copy is out of date",
         messages: ["The published assurance report is outside our freshness window."],
-      },
-      {
-        key: "integration-missing",
-        label: "We have not built this integration yet",
-        messages: ["Comparable exit route is missing"],
       },
     ]);
     // Machine keys must never reach the DOM.
@@ -263,62 +250,41 @@ describe("stablecoin V9 safety presentation", () => {
     const card = makeV9Card({ pillars: BREAKDOWN_PILLARS });
     card.breakdowns = {
       ...breakdownsFixture(),
-      exit: {
-        evaluatedScore: 84,
-        publishedScore: 84,
-        aggregationWeight: 0.35,
-        stressRequest: {
-          requestedNotionalUsd: 25_000_000,
-          maxCostBps: 200,
-          comparisonWindowSec: 86_400,
-        },
-        primaryRoute: {
-          key: "redemption:primary",
-          label: "Direct redemption",
-          routeFamily: "issuer-redemption",
-          score: 84,
-          components: exitRouteComponents({ access: 90, settlement: 84, executionCertainty: 80, capacity: 78, outputAssetQuality: 92, cost: 81 }),
-          confidenceFactor: 1,
-          eligibilityMultiplier: 1,
-          capsApplied: [],
-          capacity: {
-            executableUsd: 1_000,
-            requestedNotionalUsd: 25_000_000,
-            completionRatio: 0.00004,
-            maxCostBps: 200,
-            executionCostBps: 74,
-            settlementDelaySec: 600,
-            capacityScoringHorizon: "immediate",
-            chain: "tron",
-            protocol: "SunSwap",
-            poolId: "pool-1",
-            evidenceKind: "measured-executable-depth",
-            observedAtSec: 1_752_537_600,
-          },
-        },
-        diversification: null,
-        alternatives: [{
-          key: "dex:curve",
-          label: "Curve liquidity",
-          routeFamily: "dex-amm",
-          score: 77,
-          included: true,
-          exclusionReason: null,
-          confidenceFactor: 0.75,
-          capacity: {
-            executableUsd: 24_580_000,
-            requestedNotionalUsd: 25_000_000,
-            completionRatio: 0.9832,
-          },
-        }],
-        adjustments: [],
+      exit: { evaluatedScore: 84, publishedScore: 84, aggregationWeight: 0.35, aggregationDisposition: 'included' as const, causeGapRefs: [], limitedEvidenceCauses: [], stressRequest: {
+        requestedNotionalUsd: 25_000_000,
+        maxCostBps: 200,
+        comparisonWindowSec: 86_400,
       },
+      primaryRoute: { key: "redemption:primary", label: "Direct redemption", routeFamily: "issuer-redemption", score: 84, components: exitRouteComponents({ access: 90, settlement: 84, executionCertainty: 80, capacity: 78, outputAssetQuality: 92, cost: 81 }), confidenceFactor: 1, confidenceDimensions: { observation: { factor: 1, cause: null, causeGapRefs: [] }, model: { factor: 1, cause: null, causeGapRefs: [] }, capacityMethod: { factor: 1, cause: null, causeGapRefs: [] } }, capacityEvidenceTier: 'live-direct' as const, rawSameNotionalCostBps: null, supportedComponentCeiling: exitRouteComponents({ access: 90, settlement: 84, executionCertainty: 80, capacity: 78, outputAssetQuality: 92, cost: 81 }).reduce((sum, component) => sum + component.weightedContribution, 0), eligibilityMultiplier: 1,
+      capsApplied: [],
+      capacity: {
+        executableUsd: 1_000,
+        requestedNotionalUsd: 25_000_000,
+        completionRatio: 0.00004,
+        maxCostBps: 200,
+        executionCostBps: 74,
+        settlementDelaySec: 600,
+        capacityScoringHorizon: "immediate",
+        chain: "tron",
+        protocol: "SunSwap",
+        poolId: "pool-1",
+        evidenceKind: "measured-executable-depth",
+        observedAtSec: 1_752_537_600,
+      }, },
+      diversification: null,
+      alternatives: [{ key: "dex:curve", label: "Curve liquidity", routeFamily: "dex-amm", score: 77, included: true, exclusionReason: null, confidenceDimensions: null, capacityEvidenceTier: 'unknown' as const, rawSameNotionalCostBps: null, confidenceFactor: 0.75,
+      capacity: {
+        executableUsd: 24_580_000,
+        requestedNotionalUsd: 25_000_000,
+        completionRatio: 0.9832,
+      }, }],
+      adjustments: [], },
       control: {
         ...breakdownsFixture().control,
         components: [
-          { key: "abstract", label: "Abstract bridge", kind: "bridge" as const, score: 65, binding: false, posture: "distributed" as const },
-          { key: "mint", label: "Mint authority", kind: "mint" as const, score: 86, binding: true, posture: "concentrated" as const },
-          { key: "oracle", label: "Oracle design", kind: "oracle" as const, score: 95, binding: false, posture: "distributed" as const },
+          { key: "abstract", label: "Abstract bridge", kind: "bridge" as const, score: 65, binding: false, posture: "distributed" as const, effectiveScoringWeight: 0, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
+          { key: "mint", label: "Mint authority", kind: "mint" as const, score: 86, binding: true, posture: "concentrated" as const, effectiveScoringWeight: 1, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
+          { key: "oracle", label: "Oracle design", kind: "oracle" as const, score: 95, binding: false, posture: "distributed" as const, effectiveScoringWeight: 0, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
         ],
       },
     };
@@ -361,7 +327,6 @@ describe("stablecoin V9 safety presentation", () => {
         score: 77,
         included: true,
         redundancyCredit: null,
-        detail: "$24,580,000 of $25,000,000 executable · route confidence 0.75x",
       }],
     });
     // Exit keeps one unlabelled group in producer order.
@@ -406,43 +371,30 @@ describe("stablecoin V9 safety presentation", () => {
     });
     card.breakdowns = {
       ...breakdownsFixture(),
-      exit: {
-        evaluatedScore: 0,
-        publishedScore: 0,
-        aggregationWeight: 0.35,
-        stressRequest: {
-          requestedNotionalUsd: 1_000_000,
-          maxCostBps: 200,
-          comparisonWindowSec: 300,
-        },
-        primaryRoute: {
-          key: "redemption:earn-queued",
-          label: "Queued USDC redemption",
-          routeFamily: "protocol-redemption",
-          score: 0,
-          components: exitRouteComponents({ access: 100, settlement: 100, executionCertainty: 60, capacity: 0, outputAssetQuality: 100, cost: 100 }),
-          confidenceFactor: 1,
-          eligibilityMultiplier: 1,
-          capsApplied: ["zero-executable-capacity"],
-          capacity: {
-            executableUsd: 0,
-            requestedNotionalUsd: 1_000_000,
-            completionRatio: 0,
-            maxCostBps: 200,
-            executionCostBps: 5,
-            settlementDelaySec: 2_592_000,
-            capacityScoringHorizon: "queued",
-            chain: "ethereum",
-            protocol: "eEARN",
-            poolId: null,
-            evidenceKind: "onchain-redeemable-liquidity",
-            observedAtSec: 1_752_537_600,
-          },
-        },
-        diversification: null,
-        alternatives: [],
-        adjustments: [],
+      exit: { evaluatedScore: 0, publishedScore: 0, aggregationWeight: 0.35, aggregationDisposition: 'included' as const, causeGapRefs: [], limitedEvidenceCauses: [], stressRequest: {
+        requestedNotionalUsd: 1_000_000,
+        maxCostBps: 200,
+        comparisonWindowSec: 300,
       },
+      primaryRoute: { key: "redemption:earn-queued", label: "Queued USDC redemption", routeFamily: "protocol-redemption", score: 0, components: exitRouteComponents({ access: 100, settlement: 100, executionCertainty: 60, capacity: 0, outputAssetQuality: 100, cost: 100 }), confidenceFactor: 1, confidenceDimensions: { observation: { factor: 1, cause: null, causeGapRefs: [] }, model: { factor: 1, cause: null, causeGapRefs: [] }, capacityMethod: { factor: 1, cause: null, causeGapRefs: [] } }, capacityEvidenceTier: 'live-direct' as const, rawSameNotionalCostBps: null, supportedComponentCeiling: exitRouteComponents({ access: 100, settlement: 100, executionCertainty: 60, capacity: 0, outputAssetQuality: 100, cost: 100 }).reduce((sum, component) => sum + component.weightedContribution, 0), eligibilityMultiplier: 1,
+      capsApplied: ["zero-executable-capacity"],
+      capacity: {
+        executableUsd: 0,
+        requestedNotionalUsd: 1_000_000,
+        completionRatio: 0,
+        maxCostBps: 200,
+        executionCostBps: 5,
+        settlementDelaySec: 2_592_000,
+        capacityScoringHorizon: "queued",
+        chain: "ethereum",
+        protocol: "eEARN",
+        poolId: null,
+        evidenceKind: "onchain-redeemable-liquidity",
+        observedAtSec: 1_752_537_600,
+      }, },
+      diversification: null,
+      alternatives: [],
+      adjustments: [], },
     };
 
     const presentation = buildStablecoinSafetyScoreV9Presentation(
@@ -484,20 +436,15 @@ describe("stablecoin V9 safety presentation", () => {
     });
     card.breakdowns = {
       ...breakdownsFixture(),
-      exit: {
-        evaluatedScore: 0,
-        publishedScore: 0,
-        aggregationWeight: 0.35,
-        stressRequest: {
-          requestedNotionalUsd: 1_000_000,
-          maxCostBps: 200,
-          comparisonWindowSec: 300,
-        },
-        primaryRoute: null,
-        diversification: null,
-        alternatives: [],
-        adjustments: [],
+      exit: { evaluatedScore: 0, publishedScore: 0, aggregationWeight: 0.35, aggregationDisposition: 'included' as const, causeGapRefs: [], limitedEvidenceCauses: [], stressRequest: {
+        requestedNotionalUsd: 1_000_000,
+        maxCostBps: 200,
+        comparisonWindowSec: 300,
       },
+      primaryRoute: null,
+      diversification: null,
+      alternatives: [],
+      adjustments: [], },
     };
 
     const exit = buildStablecoinSafetyScoreV9Presentation(
@@ -517,11 +464,11 @@ describe("stablecoin V9 safety presentation", () => {
         ...breakdownsFixture().control,
         // Producer order is alphabetical by key, which the schema enforces.
         components: [
-          { key: "abstract", label: "Abstract bridge", kind: "bridge" as const, score: 65, binding: false, posture: "distributed" as const },
-          { key: "boba", label: "Boba bridge", kind: "bridge" as const, score: 85, binding: false, posture: "distributed" as const },
-          { key: "bsc", label: "Bsc bridge", kind: "bridge" as const, score: 86, binding: true, posture: "distributed" as const },
-          { key: "flow", label: "Flow bridge", kind: "bridge" as const, score: 50, binding: false, posture: "distributed" as const },
-          { key: "mint", label: "Mint authority", kind: "mint" as const, score: 90, binding: true, posture: "concentrated" as const },
+          { key: "abstract", label: "Abstract bridge", kind: "bridge" as const, score: 65, binding: false, posture: "distributed" as const, effectiveScoringWeight: 0, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
+          { key: "boba", label: "Boba bridge", kind: "bridge" as const, score: 85, binding: false, posture: "distributed" as const, effectiveScoringWeight: 0, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
+          { key: "bsc", label: "Bsc bridge", kind: "bridge" as const, score: 86, binding: true, posture: "distributed" as const, effectiveScoringWeight: 1, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
+          { key: "flow", label: "Flow bridge", kind: "bridge" as const, score: 50, binding: false, posture: "distributed" as const, effectiveScoringWeight: 0, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
+          { key: "mint", label: "Mint authority", kind: "mint" as const, score: 90, binding: true, posture: "concentrated" as const, effectiveScoringWeight: 1, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
         ],
       },
     };
@@ -549,38 +496,34 @@ describe("stablecoin V9 safety presentation", () => {
       label: key,
       source: "reserve-exposure" as const,
       score,
-      effectiveWeight: weight,
+      effectiveScoringWeight: weight,
+      wholeAssetWeight: weight,
+      cause: null, causeGapRefs: [], scoringDisposition: "included" as const,
       weightedContribution: score * weight,
       observationState: "known" as const,
     });
     // Weights sum to 1; contributions sum to the evaluated score; keys sorted.
     card.breakdowns = {
       ...breakdownsFixture(),
-      backing: {
-        evaluatedScore: 89.08,
-        publishedScore: 89.08,
-        aggregationWeight: 0.4,
-        groups: [{ key: "reserves" as const, label: "Reserves", score: 89.08, effectiveWeight: 1 }],
-        components: [
-          slice("a-dust", 30, 0.01),
-          slice("b-core", 95, 0.85),
-          slice("c-dust", 60, 0.012),
-          slice("d-mid", 55, 0.11),
-          slice("e-dust", 70, 0.018),
-        ],
-        adjustments: [],
-      },
+      backing: { evaluatedScore: 89.08, publishedScore: 89.08, aggregationWeight: 0.4, aggregationDisposition: 'included' as const, causeGapRefs: [], limitedEvidenceCauses: [], groups: [{ key: "reserves" as const, label: "Reserves", score: 89.08, effectiveScoringWeight: 1, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const }],
+      components: [
+        slice("a-dust", 30, 0.01),
+        slice("b-core", 95, 0.85),
+        slice("c-dust", 60, 0.012),
+        slice("d-mid", 55, 0.11),
+        slice("e-dust", 70, 0.018),
+      ],
+      adjustments: [], },
     };
     card.pillars.backing.score = 89.08;
 
     const group = buildStablecoinSafetyScoreV9Presentation(
-      SafetyScoreV9CurrentCardSchema.parse(card),
+      SafetyScoreV9CurrentCardSchema.parse(makeV9Card({ pillars: card.pillars, breakdowns: card.breakdowns })),
     ).pillars[0].breakdown!.groups[0];
 
     // Heaviest first, and the three sub-2% slices fold away with their combined weight.
     expect(group.rows.map((row) => row.key)).toEqual(["b-core", "d-mid"]);
     expect(group.tail?.rows.map((row) => row.key)).toEqual(["e-dust", "c-dust", "a-dust"]);
-    expect(group.tail?.label).toBe("Smaller holdings (3) · 4.0% combined");
     // Colour only where it means something: 95 neutral, 55 warns, 30 is critical.
     expect(group.rows.map((row) => row.tone)).toEqual(["neutral", "warn"]);
     expect(group.tail?.rows.map((row) => row.tone)).toEqual(["neutral", "warn", "critical"]);

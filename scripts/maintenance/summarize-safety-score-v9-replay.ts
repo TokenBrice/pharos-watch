@@ -5,7 +5,9 @@ import { readFileSync } from "node:fs";
 
 interface ReplayCard {
   id: string;
-  grade: string;
+  grade: string | null;
+  ratingStatus?: "rated" | "not-rated" | "pipeline-gap";
+  partialEvidence?: { reasonCode: string; excludedPillars: string[]; causes: string[] } | null;
   score?: number | null;
   bindingCap?: { kind?: string | null } | null;
   nrReasons?: Array<{ code: string }>;
@@ -45,16 +47,22 @@ const supplyById = new Map(
   assets.map((asset) => [asset.assetId, asset.stressState?.exitPortfolio?.circulatingUsd ?? 0]),
 );
 
-const rated = cards.filter((card) => card.grade !== "NR");
+const rated = cards.filter((card): card is ReplayCard & { score: number } =>
+  card.score != null && (card.ratingStatus === "rated" ||
+    (card.ratingStatus === undefined && card.grade !== null && card.grade !== "NR")));
+const pipelineGaps = cards.filter((card) => card.ratingStatus === "pipeline-gap");
 const totalSupply = cards.reduce((sum, card) => sum + (supplyById.get(card.id) ?? 0), 0);
 const ratedSupply = rated.reduce((sum, card) => sum + (supplyById.get(card.id) ?? 0), 0);
 
-console.log(`cards: ${cards.length}  rateable: ${rated.length}`);
+console.log(`cards: ${cards.length}  rateable: ${rated.length}  partial: ${rated.filter(card => card.partialEvidence != null).length}  not-rated: ${cards.length - rated.length - pipelineGaps.length}  pipeline-gap: ${pipelineGaps.length}`);
 if (totalSupply > 0) {
   console.log(`supply weight rated: ${((ratedSupply / totalSupply) * 100).toFixed(2)}%`);
 }
-for (const card of [...rated].sort((a, b) => (b.score ?? 0) - (a.score ?? 0))) {
-  console.log(`  ${card.id}  ${card.grade}  ${card.score}  bindingCap=${card.bindingCap?.kind ?? "none"}`);
+for (const card of [...rated].sort((a, b) => b.score - a.score)) {
+  console.log(`  ${card.id}  ${card.grade}  ${card.score}  bindingCap=${card.bindingCap?.kind ?? "none"}${card.partialEvidence ? `  Partial evidence (${card.partialEvidence.causes.join("/")}; excluded: ${card.partialEvidence.excludedPillars.join(",")})` : ""}`);
+}
+for (const card of pipelineGaps) {
+  console.log(`  ${card.id}  Pipeline gap  score=unavailable  grade=unavailable  excluded=${card.partialEvidence?.excludedPillars.join(",") ?? "see diagnostics"}`);
 }
 
 const pillarBlockers = new Map<string, number>();

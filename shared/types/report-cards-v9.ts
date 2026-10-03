@@ -9,12 +9,17 @@ import {
   type SafetyScoreV9CurrentCard,
 } from "./safety-score-v9-public";
 import { V9GradeSchema, V9ReasonCodeSchema } from "./safety-score-v9";
-import { compareText } from "./safety-score-v9-fact-primitives";
+import { compareText, canonicalTextArray } from "./safety-score-v9-fact-primitives";
 import { Sha256Schema } from "./safety-schema-primitives";
 import { V9WrapperFormSchema } from "./safety-score-v9-wrapper";
 import { DependencyTypeSchema } from "./dependency-types";
+import {
+  V9RatingStatusSchema, V9CompactPartialEvidenceSchema, refineV9RatingStatusFields,
+  projectV9CompactPartialEvidence,
+} from "./safety-score-v9-causes";
+import { refineV9PublicGapContext } from "./safety-score-v9-public-causes";
 
-export const REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION = 6;
+export const REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION = 7;
 
 export const V9_PUBLICATION_HOLD_REASON_CODES = [
   "dex-stale",
@@ -24,8 +29,7 @@ export const V9_PUBLICATION_HOLD_REASON_CODES = [
   "live-reserves-unavailable",
   "live-reserves-coverage-below-floor",
   "coverage-floor-failed",
-  "producer-failed-downgrade",
-  "producer-failed-nr",
+  "producer-failed-pipeline-gap",
   "assessment-failed",
 ] as const;
 
@@ -51,12 +55,12 @@ const V9PublicationCoverageHoldReasonSchema = z
 
 const V9PublicationProducerHoldReasonSchema = z
   .object({
-    code: z.enum(["producer-failed-downgrade", "producer-failed-nr"]),
+    code: z.literal("producer-failed-pipeline-gap"),
     assetId: z.string().min(1),
     source: z.enum(["parent-score", "reason", "wrapper-local"]),
     reasonCode: V9ReasonCodeSchema,
     path: z.string().min(1).max(240),
-    effect: z.enum(["score-or-grade-downgrade", "not-rated"]),
+    effect: z.literal("pipeline-gap"),
   })
   .strict();
 
@@ -77,7 +81,7 @@ export type V9PublicationHoldReason = z.infer<typeof V9PublicationHoldReasonSche
 
 export const V9PublicationHealthSchema = z
   .object({
-    schemaVersion: z.literal(1),
+    schemaVersion: z.literal(2),
     status: z.enum(["current", "held"]),
     acceptedPublicationGenerationId: z.string().min(1).nullable(),
     acceptedAtSec: z.number().int().nonnegative().nullable(),
@@ -283,15 +287,14 @@ function refineReportCardsV9Response(
     updatedAt: number;
     completeness: z.infer<typeof SafetyScoreV9CompletenessSchema>;
     cards: readonly SafetyScoreV9CurrentCard[];
+    foreignCauseGaps: readonly string[];
     schemaVersion?: number;
     commonModeGroups?: z.infer<typeof SafetyScoreV9CommonModeGroupsSchema>;
     dependencyGraph: ReportCardsV9DependencyGraph;
   },
   ctx: z.RefinementCtx,
 ): void {
-  if (response.schemaVersion === 5 && response.commonModeGroups !== undefined) {
-    ctx.addIssue({ code: "custom", path: ["commonModeGroups"], message: "Report v5 does not publish common-mode groups" });
-  }
+  refineV9PublicGapContext(response, ctx);
   const cardsById = new Map(response.cards.map((card) => [card.id, card]));
   response.commonModeGroups?.forEach((group, groupIndex) => {
     if (group.memberAssetIds.some((id) => !cardsById.has(id))) {
@@ -338,6 +341,11 @@ function refineReportCardsV9Response(
       message: "V9 public NR membership must match completeness",
     });
   }
+  const pipelineGapIds = response.cards.filter((card) => card.ratingStatus === "pipeline-gap").map((card) => card.id);
+  if (!sameJson(pipelineGapIds, response.completeness.pipelineGapIds) ||
+      response.cards.filter((card) => card.ratingStatus === "rated").length !== response.completeness.ratedCount) {
+    ctx.addIssue({ code: "custom", path: ["completeness"], message: "Pipeline-gap/rated membership must match disjoint completeness" });
+  }
   const expectedGraph = buildReportCardsV9DependencyGraph(response.cards);
   if (!sameJson(response.dependencyGraph, expectedGraph)) {
     ctx.addIssue({
@@ -346,7 +354,7 @@ function refineReportCardsV9Response(
       message: "V9 dependency graph must exactly project the V9 card dependency summaries",
     });
   }
-  for (const issue of findSafetyScoreV9ParentAttributionIssues(response.cards)) {
+  for (const issue of findSafetyScoreV9ParentAttributionIssues(response)) {
     ctx.addIssue({
       code: "custom",
       path: ["cards"],
@@ -355,14 +363,15 @@ function refineReportCardsV9Response(
   }
 }
 
-/** Report-v6 adds evaluation supply, dependency provenance and coverage. V5 remains readable during rollout. */
+/** Report7 is the current cause-aware publication; old envelopes require explicit historical dispatch. */
 export const ReportCardsV9CurrentResponseSchema = z
   .object({
     ...ReportCardsV9ResponseShape,
     lifecycle: z.literal("active"),
-    schemaVersion: z.union([z.literal(5), z.literal(REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION)]),
+    schemaVersion: z.literal(REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION),
     publicationHealth: V9PublicationHealthSchema,
     cards: z.array(SafetyScoreV9CurrentCardSchema),
+    foreignCauseGaps: canonicalTextArray(),
   })
   .strict()
   .superRefine(refineReportCardsV9Response);
@@ -380,6 +389,7 @@ export type ReportCardsV9Response = ReportCardsV9CurrentResponse;
  */
 export const SafetyGradesResponseSchema = z
   .object({
+    schemaVersion: z.literal(1),
     model: z.literal("v9"),
     methodologyVersion: z.string().trim().min(1),
     asOfSec: z.number().int().nonnegative(),
@@ -390,21 +400,29 @@ export const SafetyGradesResponseSchema = z
         .object({
           id: z.string().min(1),
           score: z.number().min(0).max(100).nullable(),
-          grade: V9GradeSchema,
+          grade: V9GradeSchema.nullable(),
+          ratingStatus: V9RatingStatusSchema,
+          partialEvidence: V9CompactPartialEvidenceSchema.nullable(),
         })
         .strict(),
     ),
   })
-  .strict();
+  .strict().superRefine((response, ctx) => {
+    for (const row of response.grades) refineV9RatingStatusFields(row, ctx);
+  });
 export type SafetyGradesResponse = z.infer<typeof SafetyGradesResponseSchema>;
 
 export function projectSafetyGrades(snapshot: ReportCardsV9CurrentResponse): SafetyGradesResponse {
   return {
+    schemaVersion: 1,
     model: "v9",
     methodologyVersion: snapshot.methodology.version,
     asOfSec: snapshot.asOfSec,
     updatedAt: snapshot.updatedAt,
     publicationStatus: snapshot.publicationHealth.status,
-    grades: snapshot.cards.map((card) => ({ id: card.id, score: card.score, grade: card.grade })),
+    grades: snapshot.cards.map((card) => ({
+      id: card.id, score: card.score, grade: card.grade, ratingStatus: card.ratingStatus,
+      partialEvidence: projectV9CompactPartialEvidence(card.partialEvidence),
+    })),
   };
 }

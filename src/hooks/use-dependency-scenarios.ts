@@ -13,7 +13,7 @@ export function useDependencyScenarios(enabled = true) {
     return () => window.clearInterval(timer);
   }, []);
   const query = useQuery(createApiPollingQueryOptions<DependencyScenariosResponse>(
-    ["dependency-scenarios", "v1"],
+    ["dependency-scenarios", "v2"],
     API_PATHS.dependencyScenarios(),
     DEPENDENCY_SCENARIOS_INTERVAL_MS,
     { schema: DependencyScenariosResponseSchema, enabled },

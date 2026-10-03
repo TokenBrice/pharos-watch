@@ -5,9 +5,9 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { makeReportCardsV9Card } from "@shared/test-utils/report-cards-v9";
+import { makeReportCardsV9Card, makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 import { scoreToGrade } from "@shared/lib/report-card-core";
-import { runSafetyScoreMapCli } from "../maintenance/build-safety-score-map";
+import { runSafetyScoreMapCli, parseMapReportCards } from "../maintenance/build-safety-score-map";
 import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 import {
   makeSafetyMapPsiPayload,
@@ -16,6 +16,16 @@ import {
   makeSafetyMapStablecoinsPayload,
   withSafetyMapAdverseAttribution,
 } from "./build-safety-score-map.test-support";
+
+describe("Safety map availability semantics", () => {
+  it("omits technical nulls without moving them into NR and preserves partial rated stones", () => {
+    const partial = makeReportCardsV9PartialCard("backing", "B", { id: "partial" });
+    const gap = makeReportCardsV9PipelineGapCard(null, "A", { id: "gap" });
+    const response = makeSafetyMapReportCardsResponse({ cards: [gap, partial], fixtureId: "availability", methodologyVersion: "10.01", defaultUpdatedAt: 1790972280, asOfSec: 1790972280 });
+    const result = parseMapReportCards(response);
+    expect(result.cards.map(card => ({ id: card.id, grade: card.grade, score: card.score }))).toEqual([{ id: "partial", grade: partial.grade, score: partial.score }]);
+  });
+});
 
 /**
  * Publication-safety guards for the Safety Score map generator (plan §11.2b).
@@ -69,13 +79,14 @@ function reportCardsPayload(): unknown {
         id: card.id,
         score: null,
         grade: card.grade as SafetyScoreV9CurrentCard["grade"],
+        ratingStatus: "not-rated",
         qualityScore: null,
         pegMultiplier: null,
         pegAdjustedScore: null,
         pillars: {
-          backing: { score: null, evidenceLevel: "insufficient", freshness: "unknown", components: [], reasons: [] },
-          exit: { score: null, evidenceLevel: "insufficient", freshness: "unknown", components: [], reasons: [] },
-          control: { score: null, evidenceLevel: "insufficient", freshness: "unknown", components: [], reasons: [] },
+          backing: { score: null, aggregationDisposition: "included", causeGapRefs: [], limitedEvidenceCauses: ["U"], supportedComponentKeys: [], evidenceLevel: "insufficient", freshness: "unknown", components: [], reasons: [] },
+          exit: { score: null, aggregationDisposition: "included", causeGapRefs: [], limitedEvidenceCauses: ["U"], supportedComponentKeys: [], evidenceLevel: "insufficient", freshness: "unknown", components: [], reasons: [] },
+          control: { score: null, aggregationDisposition: "included", causeGapRefs: [], limitedEvidenceCauses: ["U"], supportedComponentKeys: [], evidenceLevel: "insufficient", freshness: "unknown", components: [], reasons: [] },
         },
         weakestPillar: null,
         nrReasons: [{ code: "missing-pillar", message: "Fixture is not rated.", field: null, origin: "asset" }],

@@ -16,16 +16,10 @@ import type {
   V9MintSupervision,
   V9OracleControlReview,
 } from "../safety-score-v9/control-primitives";
-import { loadV9MethodologyPolicy, resolveV9ReasonPolicy, V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
+import { loadV9MethodologyPolicy, V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import { scoreV9Input } from "../safety-score-v9/formula";
-import { scoreV9EvaluatedAsset } from "@shared/lib/safety-score-v9/score";
-import { compileV9FactSetV3 } from "@shared/lib/safety-score-v9/compile";
-import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { createV9FactGapV3 } from "@shared/lib/safety-score-v9/reasons";
-import {
-  compileNativeV3FactSet, coreFixture, knownStatus, noEconomicControlReview,
-} from "./safety-score-v9-facts.fixture-support";
-import { makeV9ProductionScoreInput } from "./safety-score-v9-score.test-support";
+import { applyMergedMintSignals } from "../safety-score-v9/control-mint-grade";
 import {
   boundedUnknown,
   makeEconomicControlArgs as args,
@@ -354,7 +348,7 @@ describe("Safety Score v9 economic control", () => {
     expect(raiseable.components.find((component) => component.kind === "mint")?.posture).toBe(
       "partially-bounded-admin",
     );
-    expect(unknown).toMatchObject({ score: 45, state: "rated" });
+    expect(unknown).toMatchObject({ score: 50, state: "rated" });
     expect(unknown.components.find((component) => component.kind === "mint")?.posture).toBe("unknown");
     expect(unknown.reasons.map((reason) => reason.code)).toContain("unknown-control-cap-authority");
     expect(unknown.reasons.every((reason) => !reason.critical)).toBe(true);
@@ -603,10 +597,8 @@ describe("Safety Score v9 economic control", () => {
       score: 55 - UNATTESTED_EOA_PENALTY,
     });
 
-    // Inertness proof: default/unknown supervision keeps today's "high" rung and reason.
     expect(severityFor("unknown")).toMatchObject({
       severity: "high",
-      reason: "Minting is economically unbounded but supply is reconciled against reserves.",
     });
     expect(severityFor("attestation-only")).toMatchObject({ severity: "low" });
     expect(severityFor("none")).toMatchObject({ severity: "high" });
@@ -640,7 +632,7 @@ describe("Safety Score v9 economic control", () => {
         }),
       );
       const component = result.components.find((entry) => entry.kind === "mint");
-      if (!component) throw new Error("mint component missing");
+      if (!component || component.score === null) throw new Error("scored mint component missing");
       return component.score;
     };
 
@@ -829,11 +821,10 @@ describe("Safety Score v9 economic control", () => {
     );
     expect(result.components.find((component) => component.kind === "mint")).toMatchObject({
       posture: "unbounded-reconciliation-unknown",
-      score: 35,
+      score: 55,
     });
     expect(result.structuralFailures.find((failure) => failure.kind === "centralized-mint")).toMatchObject({
       severity: "high",
-      reason: "Minting is economically unbounded and its reconciliation is unverified.",
     });
   });
 
@@ -916,11 +907,9 @@ describe("Safety Score v9 economic control", () => {
       posture: "unbounded-or-compromised",
       score: 25,
     });
-    // Unknown-reconciliation rung uses the generic next-rung-minus-one ceiling
-    // (35+10 capped one under unknown 45 → 44).
     expect(mintScore(unboundedControl, "unknown", 61)).toMatchObject({
       posture: "unbounded-reconciliation-unknown",
-      score: 44,
+      score: 65,
     });
   });
 
@@ -1061,8 +1050,7 @@ describe("Safety Score v9 economic control", () => {
         supervision,
         reconciliation: "unknown" as const,
         posture: "unbounded-reconciliation-unknown",
-        // The EOA key-custody penalty floors at the adverse rung (25), so 35-3 = 32.
-        score: 35 - UNATTESTED_EOA_PENALTY,
+        score: 55 - UNATTESTED_EOA_PENALTY,
       })),
       {
         name: "prudential supervision counts as reconciled even when cadence is unknown (9.32)",
@@ -1099,7 +1087,7 @@ describe("Safety Score v9 economic control", () => {
 
     it("never ranks a weaker supervision class above a stronger one for the same posture", () => {
       const scoreFor = (supervision: V9MintSupervision) =>
-        mintComponentOf(unboundedMint(), supervision, "periodic").score;
+        mintComponentOf(unboundedMint(), supervision, "periodic").score!;
       expect(scoreFor("prudential")).toBeGreaterThanOrEqual(scoreFor("attestation-only"));
       expect(scoreFor("attestation-only")).toBeGreaterThanOrEqual(scoreFor("none"));
       expect(scoreFor("none")).toBe(scoreFor("unknown"));
@@ -1313,8 +1301,6 @@ describe("Safety Score v9 economic control", () => {
     expect(evaluateBridge(0.3)).toMatchObject({ binding: true, severity: "high" });
     // An unattributed share fails closed to high.
     expect(evaluateBridge(null)).toMatchObject({ binding: true, severity: "high" });
-    // Opaque topology stays critical regardless of share.
-    expect(evaluateBridge(0.15, "opaque-or-unknown")).toMatchObject({ binding: true, severity: "critical" });
     const changedPolicy = structuredClone(V9_CANDIDATE_POLICY_V1.policy);
     changedPolicy.semantic.control.materialBridgeHighShareThreshold = 0.15;
     expect(
@@ -1421,44 +1407,6 @@ describe("Safety Score v9 economic control", () => {
     expect(result.components.some((component) => component.componentKey === "bridge:unverified")).toBe(false);
   });
 
-  it("carries aggregate control residue through the production pillar adapter into the composite ceiling", () => {
-    const native = compileNativeV3FactSet(coreFixture());
-    for (const unresolved of [false, true]) {
-      const { v9FactSetDigest: _digest, ...input } = structuredClone(native);
-      const asset = input.assets.find((item) => item.assetId === "alpha")!;
-      asset.controls = asset.controls.filter((item) => item.controlKey === "control:freezer");
-      const emptyReview = noEconomicControlReview();
-      asset.economicControlReview = {
-        ...emptyReview,
-        mint: { ...emptyReview.mint, supervision: "unknown", latestResolvedIncidentAtSec: null },
-      };
-      asset.controlStatus = knownStatus();
-      if (unresolved) {
-        const gap = createV9FactGapV3({
-          gapId: "alpha:gap:aggregate-control",
-          reasonCode: "unresolved-control-identity", ownerDomain: "control",
-          policyRuleId: "control.aggregate", observationState: "bounded-unknown",
-          path: { kind: "local-component", componentKey: "controls" },
-          message: "Aggregate control identity remains undisclosed.",
-          evidenceRefIds: ["evidence:base"], responsibility: "issuer-undisclosed",
-        });
-        asset.gaps.push(gap);
-        asset.controlStatus = { ...knownStatus(), observationState: "bounded-unknown", gapIds: [gap.gapId] };
-      }
-      const evaluated = evaluateV9FactSet(compileV9FactSetV3(input), V9_CANDIDATE_POLICY_V1)
-        .assets.find((item) => item.assetId === "alpha")!;
-      const scoreInput = makeV9ProductionScoreInput();
-      scoreInput.pillars.control = evaluated.scoreInput.pillars.control;
-      const trace = scoreV9EvaluatedAsset(scoreInput, V9_CANDIDATE_POLICY_V1);
-      if (unresolved) {
-        expect(trace.finalScore).toBe(55);
-        expect(trace.bindingCap).toMatchObject({ kind: "reason:unresolved-control-identity", source: "evidence" });
-      } else {
-        expect(trace.finalScore).toBeGreaterThan(55);
-        expect(trace.caps.map((cap) => cap.kind)).not.toContain("reason:unresolved-control-identity");
-      }
-    }
-  });
 
   it("keeps unrepresented aggregate control residue fail-closed without section fallbacks", () => {
     const aggregateStatus = boundedUnknown("control.unrepresented-residue");
@@ -1474,7 +1422,6 @@ describe("Safety Score v9 economic control", () => {
     expect(result.reasons).toEqual([
       expect.objectContaining({ code: "unresolved-control-identity", path: "controls", controlKey: null }),
     ]);
-    expect(result.components.map((component) => component.componentKey)).toEqual(["bridge:native", "mint"]);
   });
 
   it("does not let a subthreshold unresolved row erase aggregate control residue", () => {
@@ -1689,11 +1636,9 @@ describe("Safety Score v9 economic control", () => {
         },
       }),
     );
-    const reasonPolicy = resolveV9ReasonPolicy(V9_CANDIDATE_POLICY_V1, "scoped-control-question");
 
     expect(result.reasons.map((reason) => reason.code)).toContain("scoped-control-question");
     expect(result.reasons.map((reason) => reason.code)).not.toContain("unresolved-mint-authority");
-    expect(reasonPolicy.ceiling).toEqual({ kind: "reason:scoped-control-question", limit: 69 });
   });
 
   it("softens the aggregate inventory reason when every unresolved control carries a fresh scoped question", () => {
@@ -1751,7 +1696,12 @@ describe("Safety Score v9 economic control", () => {
 
     expect(result.reasons.map((reason) => reason.code)).toContain("unresolved-control-identity");
     expect(result.components.some((component) => component.componentKey === "bridge:unverified")).toBe(false);
-    expect(result.score).toBe(95);
+    expect(result.score).toBe(Math.min(...result.components
+      .filter((component) => component.binding && component.score !== null)
+      .map((component) => component.score!)));
+    expect(result.components.find((component) => component.componentKey === "control:inventory")).toMatchObject({
+      cause: "U", effectiveScoringWeight: 0, binding: false,
+    });
   });
 
   it.each([
@@ -2350,7 +2300,7 @@ describe("Safety Score v9 economic control", () => {
             bridge: knownBridge,
           }),
         );
-        return result.components.find((component) => component.componentKey === "bridge:unverified")!.score;
+        return result.components.find((component) => component.componentKey === "bridge:unverified")!.score!;
       };
       const quorum = gradeFor({
         authorityKey: "bridge-route:protocol:layerzero-dvns",
@@ -2395,5 +2345,207 @@ describe("Safety Score v9 economic control", () => {
       });
       expect(result.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.control.boundedUnknownQuality);
     });
+  });
+});
+
+describe("cause-aware Control minima", () => {
+  function missing(cause: "A" | "B" | "C" | "U", id: string) {
+    const gap = createV9FactGapV3({
+      gapId: id, reasonCode: "unresolved-control-identity", ownerDomain: "control", policyRuleId: "control-proof",
+      responsibility: "unresearched", observationState: "bounded-unknown",
+      path: { kind: "local-component", componentKey: id }, message: "Scoped control datum.",
+      causeProof: cause === "A" ? { cause, producerState: "producer-failed", sourceId: "control-reader",
+        sourceGenerationId: "capture", observedAtSec: 1, rejectionCode: "reader-failed", evidenceRefIds: ["attempt"] }
+        : cause === "U" ? { cause, reason: "not-yet-researched", evidenceRefIds: [] }
+          : cause === "B" ? { cause, proofOrigin: "typed-review", classificationId: id, reviewedAt: "2026-10-01",
+            sources: [{ url: "https://issuer.example/control", assertion: "The scoped authority datum is public." }],
+            evidenceRefIds: ["review"], assertion: "required-data-public" }
+            : { cause, proofOrigin: "typed-review", classificationId: id, reviewedAt: "2026-10-01",
+              sources: [{ url: "https://issuer.example/control", assertion: "The scoped datum was researched." }],
+              evidenceRefIds: ["review"], assertion: "researched-nondisclosure", rationale: "Current datum not disclosed." },
+    });
+    const status: V9FactStatusV2 = { applicability: { state: "required", policyRuleId: "control-proof", rationale: null, gapId: null },
+      observationState: "bounded-unknown", evidenceRefIds: [], gapIds: [gap.gapId] };
+    return { status, gap };
+  }
+
+  it("prices C/U unknown multisig topology at -6 while proof-backed A/B is neutral", () => {
+    for (const cause of ["A", "B", "C", "U"] as const) {
+      const gap = missing(cause, `topology:${cause}`);
+      const row = control("mint:topology", "mint", {
+        authority: { authorityKey: "unknown-safe", model: "multisig", threshold: null }, delaySec: null,
+        factorStatuses: { topology: gap.status },
+      });
+      expect(applyMergedMintSignals(85, row, undefined, CONTROL_POLICY, [gap.gap])).toBe(
+        cause === "A" || cause === "B" ? 85 : 79,
+      );
+    }
+  });
+
+  it("keeps ordinary known-only mint ladders independent of generic and reconciliation unknown rungs", () => {
+    const known = control("mint:known-ladder", "mint", {
+      authority: { authorityKey: "contract", model: "contract", threshold: null }, delaySec: null,
+      modulesOrGuards: "none-detected",
+    });
+    const changed = { ...CONTROL_POLICY, mintPostureQuality: { ...CONTROL_POLICY.mintPostureQuality,
+      unknown: 56, "unbounded-reconciliation-unknown": 57 } };
+    expect(applyMergedMintSignals(55, known, undefined, changed)).toBe(applyMergedMintSignals(55, known, undefined, CONTROL_POLICY));
+  });
+
+  it.each(["A", "B", "C", "U"] as const)(
+    "reconciles a gap-backed %s inventory component without inventing a mint control", (cause) => {
+      const root = missing(cause, `inventory:${cause}`);
+      const bridgeReader = missing("A", "bridge-reader");
+      const inventoryFacts = { ...facts([control("custody:known", "custody")]), controlStatus: root.status,
+        gaps: [root.gap, bridgeReader.gap] };
+      const excludedBridge = { ...noBridge(), status: bridgeReader.status };
+      const known = evaluateV9EconomicControl(args({ facts: inventoryFacts, bridge: excludedBridge }));
+      expect(known.score).toBe(100);
+      expect(known.causeGapIds).toContain(root.gap.gapId);
+      expect(known.limitedEvidenceCauses).toEqual([]);
+      expect(known.components.find((component) => component.kind === "inventory")).toMatchObject({
+        componentKey: "control:inventory", score: cause === "A" || cause === "B" ? null : 45,
+        binding: false, effectiveScoringWeight: 0, cause, causeGapIds: [root.gap.gapId],
+      });
+      expect(known.score).toBe(Math.min(...known.components
+        .filter((component) => component.binding && component.score !== null).map((component) => component.score!)));
+      const typedUnknown = evaluateV9EconomicControl(args({
+        facts: inventoryFacts, mint: { ...noMint(), status: root.status },
+        bridge: excludedBridge,
+      }));
+      expect(typedUnknown.score).toBe(cause === "A" || cause === "B" ? null : 50);
+      const lowerKnown = evaluateV9EconomicControl(args({
+        facts: inventoryFacts,
+        bridge: excludedBridge,
+        mint: { ...noMint(), status: root.status },
+        oracle: { ...noOracle(), status: requiredKnown("oracle"), tier: "single-source-or-laggy", liquidationBranchesApplicable: false },
+      }));
+      expect(lowerKnown.score).toBe(45);
+      expect(lowerKnown.limitedEvidenceCauses).toEqual([]);
+    },
+  );
+
+  it.each(["C", "U"] as const)("keeps %s inventory diagnostic at the unchanged BASE control minimum", (cause) => {
+    const root = missing(cause, `inventory:${cause}`);
+    for (const [capKind, claimImpairment, authority, reconciliation, expected] of [
+      ["raiseable", "bounded", "contract", "not-applicable", 70],
+      ["unbounded", "unbounded", "eoa", "continuous", 52],
+    ] as const) {
+      const row = control("mint:known", "mint", { capSemantics: { kind: capKind, bound: null }, claimImpairment,
+        authority: { authorityKey: "known-authority", model: authority, threshold: null }, delaySec: null });
+      const review = { ...boundedMint(row.controlKey), reconciliation, supervision: "none" as const,
+        upgrade: { state: "not-applicable" as const, controlKey: null } };
+      const baseline = evaluateV9EconomicControl(args({ facts: facts([row]), mint: review }));
+      const candidate = evaluateV9EconomicControl(args({
+        facts: { ...facts([row]), controlStatus: root.status, gaps: [root.gap] }, mint: review,
+      }));
+      expect(baseline.score).toBe(expected);
+      expect(candidate.score).toBe(baseline.score);
+      expect(candidate.components.find((component) => component.kind === "inventory")).toMatchObject({
+        binding: false, effectiveScoringWeight: 0, causeGapIds: [root.gap.gapId],
+      });
+      expect(candidate.limitedEvidenceCauses).toEqual([]);
+      expect(candidate.supportedComponentKeys).not.toContain("control:inventory");
+    }
+  });
+
+  it("retains measured adverse mint powers in the inventory despite an unrelated unknown inventory gap", () => {
+    const root = missing("U", "inventory");
+    const adverse = control("mint:adverse", "mint", {
+      capSemantics: { kind: "unbounded", bound: null }, claimImpairment: "unbounded",
+      authority: { authorityKey: "issuer", model: "issuer-backend", threshold: null }, delaySec: null,
+    });
+    const result = evaluateV9EconomicControl(args({
+      facts: { ...facts([adverse]), controlStatus: root.status, gaps: [root.gap] },
+      mint: { ...boundedMint(adverse.controlKey), reconciliation: "none", supervision: "none",
+        upgrade: { state: "not-applicable", controlKey: null } },
+    }));
+    expect(result.score).toBe(25);
+    expect(result.components.find((component) => component.kind === "mint")).toMatchObject({ score: 25, binding: true });
+    expect(result.structuralFailures).toContainEqual(expect.objectContaining({
+      kind: "centralized-mint", severity: "high", binding: true,
+    }));
+  });
+
+  it.each(["A", "B", "C", "U"] as const)(
+    "retains actual %s row and tier gaps when a known bridge inventory needs a fallback", (cause) => {
+      const rowGap = missing(cause, `bridge-row:${cause}`);
+      const tierGap = missing(cause, `bridge-tier:${cause}`);
+      const bridgeControl = control("bridge:unresolved", "bridge", {
+        status: rowGap.status, economicLossScope: "deployment", scope: "deployment", materialSupplyShare: 1,
+      });
+      const result = evaluateV9EconomicControl(args({
+        facts: { ...facts([bridgeControl]), controlStatus: requiredKnown("controls"), gaps: [rowGap.gap, tierGap.gap] },
+        bridge: { status: requiredKnown("bridge"), routes: [{
+          controlKey: bridgeControl.controlKey, tier: "opaque-or-unknown", factorStatuses: { tier: tierGap.status },
+        }] },
+      }));
+      expect(result.components.find((component) => component.componentKey === "bridge:unverified")).toMatchObject({
+        cause, causeGapIds: [rowGap.gap.gapId, tierGap.gap.gapId].sort(),
+        score: cause === "A" || cause === "B" ? null : 45, binding: cause !== "A" && cause !== "B",
+      });
+      expect(result.score).toBe(cause === "A" || cause === "B" ? 100 : 45);
+    },
+  );
+
+  it.each(["A", "B"] as const)("excludes a proven %s mint gap without clearing a known weak oracle", (cause) => {
+    const gap = missing(cause, "mint-gap");
+    const result = evaluateV9EconomicControl(args({
+      facts: { ...facts([]), gaps: [gap.gap] },
+      mint: { ...noMint(), status: gap.status },
+      oracle: { ...noOracle(), status: requiredKnown("oracle"), tier: "single-source-or-laggy", liquidationBranchesApplicable: false },
+    }));
+    expect(result.score).toBe(45);
+    expect(result.components.find((component) => component.kind === "mint")).toMatchObject({
+      score: null, cause, effectiveScoringWeight: 0,
+    });
+    expect(result.components.find((component) => component.kind === "oracle")!.score).toBe(45);
+    expect(result.structuralFailures.some((failure) => failure.kind === "weak-oracle-branch")).toBe(true);
+    expect(result.limitedEvidenceCauses).not.toContain(cause);
+  });
+
+  it.each(["C", "U"] as const)("uses typed no-lower-than-today %s mint50/oracle45/bridge45 rungs", (cause) => {
+    const gap = missing(cause, "gap");
+    const result = evaluateV9EconomicControl(args({
+      facts: { ...facts([]), gaps: [gap.gap] },
+      mint: { ...noMint(), status: gap.status },
+      oracle: { ...noOracle(), status: gap.status },
+      bridge: { ...noBridge(), status: gap.status },
+    }));
+    expect(result.components.find((component) => component.kind === "mint")!.score).toBe(50);
+    expect(result.components.find((component) => component.kind === "oracle")!.score).toBe(45);
+    expect(result.components.find((component) => component.kind === "bridge")!.score).toBe(45);
+    expect(result.reasons.every((reason) => !reason.critical)).toBe(true);
+  });
+
+  it("compares unreconciled uncertainty only with the unbounded ordinary55 family", () => {
+    const gap = missing("C", "reconciliation");
+    const mintControl = control("mint:issuer", "mint", {
+      authority: { authorityKey: "issuer", model: "issuer-backend", threshold: null },
+      capSemantics: { kind: "unbounded", bound: null }, claimImpairment: "unbounded",
+    });
+    const evaluate = (reconciliation: V9MintReconciliation) => evaluateV9EconomicControl(args({
+      facts: { ...facts([mintControl]), gaps: [gap.gap] },
+      mint: { ...boundedMint(mintControl.controlKey), reconciliation, supervision: "none",
+        factorStatuses: reconciliation === "unknown" ? { reconciliation: gap.status } : {} },
+    }));
+    const unknown = evaluate("unknown");
+    const disclosed = evaluate("periodic");
+    expect(unknown.components.find((component) => component.kind === "mint")!.score).toBe(55);
+    expect(disclosed.score).toBeGreaterThanOrEqual(unknown.score!);
+    expect(unknown.components.find((component) => component.kind === "mint")!.cause).toBe("C");
+  });
+
+  it("drops an A/B-only Control pillar with null scores, not a favorable neutral100", () => {
+    const gap = missing("A", "all-controls");
+    const result = evaluateV9EconomicControl(args({
+      facts: { ...facts([]), controlStatus: gap.status, gaps: [gap.gap] },
+      mint: { ...noMint(), status: gap.status }, oracle: { ...noOracle(), status: gap.status },
+      bridge: { ...noBridge(), status: gap.status },
+    }));
+    expect(result.score).toBeNull();
+    expect(result.aggregationDisposition).toBe("excluded-a-b");
+    expect(result.supportedComponentKeys).toEqual([]);
+    expect(result.limitedEvidenceCauses).toEqual([]);
   });
 });

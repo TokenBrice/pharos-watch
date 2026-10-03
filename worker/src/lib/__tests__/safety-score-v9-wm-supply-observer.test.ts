@@ -176,6 +176,38 @@ async function observe(overrides: ReturnType<typeof dependencies> = dependencies
   );
 }
 
+function lineaSkewFixture(repairedTimeSec: number, initialTimeSec = CLOCK_SEC - 154) {
+  const metaById = ACTIVE_META_BY_ID as Map<string, StablecoinMeta>;
+  const reviewed = metaById.get("wm-m0")!;
+  const extraChains = ["linea", "monad"];
+  metaById.set("wm-m0", { ...reviewed,
+    contracts: [...reviewed.contracts!, ...currentWm.contracts.filter(row => extraChains.includes(row.chain))],
+    bridgeRouteRisk: { ...reviewed.bridgeRouteRisk!,
+      routes: [...reviewed.bridgeRouteRisk!.routes!, ...currentWmRisk.bridgeRouteRisk.routes.filter(row => extraChains.includes(row.destinationChain))] },
+  } as StablecoinMeta);
+  const deps = dependencies();
+  const originalHead = deps.fetchEvmBlockNumber.getMockImplementation()!;
+  const originalHeader = deps.fetchEvmBlockHeader.getMockImplementation()!;
+  const originalCalls = deps.fetchEvmMulticall3Aggregate3AtBlock.getMockImplementation()!;
+  let lineaReads = 0;
+  deps.fetchEvmBlockNumber.mockImplementation(async chain =>
+    chain === "linea" ? 1000 + (++lineaReads - 1) * 4 : chain === "monad" ? 2000 : originalHead(chain));
+  deps.fetchEvmBlockHeader.mockImplementation(async (chain, number, options) =>
+    extraChains.includes(chain) && typeof number === "number"
+      ? { number, timestamp: chain === "linea" ? lineaReads === 1 ? initialTimeSec : repairedTimeSec : CLOCK_SEC - 3,
+          hash: `0x${(chain === "linea" && lineaReads > 1 ? "b" : "a").repeat(64)}` as const }
+      : originalHeader(chain, number, options));
+  deps.fetchEvmMulticall3Aggregate3AtBlock.mockImplementation(async (chain, calls, block) =>
+    chain && extraChains.includes(chain)
+      ? calls.map(call => ({ label: call.label, success: true,
+          returnData: call.label === "total-supply" ? uint256(chain === "linea" && lineaReads > 1 ? 2_000_000n : 1_000_000n)
+            : call.label === "decimals" ? uint256(6n)
+              : addressWord(call.label === "m-token" ? "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b" : "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd") }))
+      : originalCalls(chain, calls, block));
+  deps.fetchSolanaObservation.mockResolvedValueOnce({ ...solanaObservation(), blockTimeSec: CLOCK_SEC - 9 }).mockResolvedValue(null);
+  return { metaById, reviewed, deps };
+}
+
 describe("wM reviewed deployment observer", () => {
   it("includes every expanded deployment in the atomic supply partition", async () => {
     const metaById = ACTIVE_META_BY_ID as Map<string, StablecoinMeta>;
@@ -325,6 +357,142 @@ describe("wM reviewed deployment observer", () => {
       rejectionCode: "deployment-observation-skew",
       failedRouteId: solana.routeId,
     });
+  });
+
+  it("waits only for the short maturity deficit while keeping the original clock and sibling snapshots", async () => {
+    vi.useFakeTimers();
+    const f = lineaSkewFixture(CLOCK_SEC - 90), startedAtMs = Date.now();
+    try {
+      const pending = observeWmReviewedDeploymentUnitPartitionAttempt({
+        aggregateSupplyUsd: AGGREGATE_SUPPLY_USD, registryFingerprint: REGISTRY_FINGERPRINT,
+        scoringClockSec: CLOCK_SEC, chainRpcs: chainRpcs(Object.keys(RUNTIME_CODE_BY_CHAIN)),
+        executionWindow: { deadlineMs: startedAtMs + 180_000, minimumRemainingMs: 60_000 },
+      }, f.deps);
+      await vi.advanceTimersByTimeAsync(46_000);
+      const attempt = await pending;
+      expect(Date.now() - startedAtMs).toBe(46_000);
+      expect(attempt.status).toBe("accepted");
+      if (attempt.status !== "accepted") throw new Error("Expected repaired wM attribution");
+      expect(attempt.attribution.deployments.find(row => row.chainId === "linea")).toMatchObject({
+        blockNumberOrSlot: "992", blockTimeSec: CLOCK_SEC - 90, blockHash: `0x${"b".repeat(64)}`, rawSupply: "2000000",
+      });
+      expect(attempt.attribution.deployments.find(row => row.chainId === "ethereum")).toMatchObject({
+        blockTimeSec: TIME_BY_CHAIN.ethereum, rawSupply: RAW_BY_CHAIN.ethereum!.toString(),
+      });
+      expect(attempt.attribution.deployments.find(row => row.chainId === "solana")).toMatchObject({ blockTimeSec: CLOCK_SEC - 9 });
+      expect(attempt.attribution.captureEndedAtSec - attempt.attribution.captureStartedAtSec).toBeLessThanOrEqual(120);
+    } finally {
+      f.metaById.set("wm-m0", f.reviewed);
+      vi.useRealTimers();
+    }
+  });
+
+  it("fails closed after its single bounded repair if Linea's safe head remains too old", async () => {
+    vi.useFakeTimers();
+    const f = lineaSkewFixture(CLOCK_SEC - 154);
+    try {
+      const pending = observeWmReviewedDeploymentUnitPartitionAttempt({
+        aggregateSupplyUsd: AGGREGATE_SUPPLY_USD, registryFingerprint: REGISTRY_FINGERPRINT,
+        scoringClockSec: CLOCK_SEC, chainRpcs: chainRpcs(Object.keys(RUNTIME_CODE_BY_CHAIN)),
+        executionWindow: { deadlineMs: Date.now() + 180_000, minimumRemainingMs: 60_000 },
+      }, f.deps);
+      await vi.advanceTimersByTimeAsync(46_000);
+      expect(await pending).toEqual({ status: "rejected", rejectionCode: "deployment-observation-skew",
+        failedRouteId: "monad:0x437cc33344a0b27a429f795ff6b469c72698b291" });
+    } finally {
+      f.metaById.set("wm-m0", f.reviewed);
+      vi.useRealTimers();
+    }
+  });
+
+  it("reserves sixty seconds of the slot by bounding the wait at 120s and refusing larger maturity deficits", async () => {
+    vi.useFakeTimers();
+    const f = lineaSkewFixture(CLOCK_SEC - 90, CLOCK_SEC - 236);
+    try {
+      const pending = observeWmReviewedDeploymentUnitPartitionAttempt({
+        aggregateSupplyUsd: AGGREGATE_SUPPLY_USD, registryFingerprint: REGISTRY_FINGERPRINT,
+        scoringClockSec: CLOCK_SEC, chainRpcs: chainRpcs(Object.keys(RUNTIME_CODE_BY_CHAIN)),
+        executionWindow: { deadlineMs: Date.now() + 180_000, minimumRemainingMs: 60_000 },
+      }, f.deps);
+      await vi.advanceTimersByTimeAsync(120_000);
+      expect(await pending).toMatchObject({ status: "accepted" });
+      const header = f.deps.fetchEvmBlockHeader.getMockImplementation()!;
+      f.deps.fetchEvmBlockHeader.mockImplementation(async (chain, number, options) =>
+        chain === "linea" && typeof number === "number"
+          ? { number, timestamp: CLOCK_SEC - 251, hash: `0x${"a".repeat(64)}` as const }
+          : header(chain, number, options));
+      expect(await observeWmReviewedDeploymentUnitPartitionAttempt({
+        aggregateSupplyUsd: AGGREGATE_SUPPLY_USD, registryFingerprint: REGISTRY_FINGERPRINT,
+        scoringClockSec: CLOCK_SEC, chainRpcs: chainRpcs(Object.keys(RUNTIME_CODE_BY_CHAIN)),
+        executionWindow: { deadlineMs: Date.now() + 180_000, minimumRemainingMs: 60_000 },
+      }, { ...f.deps, fetchSolanaObservation: async () => ({ ...solanaObservation(), blockTimeSec: CLOCK_SEC - 9 }) }))
+        .toEqual({ status: "rejected", rejectionCode: "deployment-observation-window-insufficient",
+          failedRouteId: "monad:0x437cc33344a0b27a429f795ff6b469c72698b291" });
+    } finally {
+      f.metaById.set("wm-m0", f.reviewed);
+      vi.useRealTimers();
+    }
+  });
+
+
+  it.each([105_999, undefined])("refuses a repair without sleeping when the remaining budget is %s", async remainingMs => {
+    vi.useFakeTimers();
+    const f = lineaSkewFixture(CLOCK_SEC - 90), startedAtMs = Date.now();
+    try {
+      const attempt = await observeWmReviewedDeploymentUnitPartitionAttempt({
+        aggregateSupplyUsd: AGGREGATE_SUPPLY_USD, registryFingerprint: REGISTRY_FINGERPRINT,
+        scoringClockSec: CLOCK_SEC, chainRpcs: chainRpcs(Object.keys(RUNTIME_CODE_BY_CHAIN)),
+        executionWindow: remainingMs === undefined ? undefined :
+          { deadlineMs: startedAtMs + remainingMs, minimumRemainingMs: 60_000 },
+      }, f.deps);
+      expect(attempt).toEqual({ status: "rejected", rejectionCode: "deployment-observation-window-insufficient",
+        failedRouteId: "monad:0x437cc33344a0b27a429f795ff6b469c72698b291" });
+      expect(Date.now()).toBe(startedAtMs);
+    } finally {
+      f.metaById.set("wm-m0", f.reviewed);
+      vi.useRealTimers();
+    }
+  });
+
+  it("charges elapsed initial RPC work against the remaining repair budget", async () => {
+    vi.useFakeTimers();
+    const f = lineaSkewFixture(CLOCK_SEC - 90), startedAtMs = Date.now();
+    const head = f.deps.fetchEvmBlockNumber.getMockImplementation()!;
+    f.deps.fetchEvmBlockNumber.mockImplementation(async chain => {
+      if (chain === "linea") vi.setSystemTime(startedAtMs + 20_000);
+      return head(chain);
+    });
+    try {
+      const attempt = await observeWmReviewedDeploymentUnitPartitionAttempt({
+        aggregateSupplyUsd: AGGREGATE_SUPPLY_USD, registryFingerprint: REGISTRY_FINGERPRINT,
+        scoringClockSec: CLOCK_SEC, chainRpcs: chainRpcs(Object.keys(RUNTIME_CODE_BY_CHAIN)),
+        executionWindow: { deadlineMs: startedAtMs + 125_999, minimumRemainingMs: 60_000 },
+      }, f.deps);
+      expect(attempt).toMatchObject({ status: "rejected", rejectionCode: "deployment-observation-window-insufficient" });
+      expect(Date.now() - startedAtMs).toBe(20_000);
+    } finally {
+      f.metaById.set("wm-m0", f.reviewed);
+      vi.useRealTimers();
+    }
+  });
+
+  it("propagates cancellation during the maturity wait without publishing a rejection packet", async () => {
+    vi.useFakeTimers();
+    const f = lineaSkewFixture(CLOCK_SEC - 90), controller = new AbortController();
+    try {
+      const pending = observeWmReviewedDeploymentUnitPartitionAttempt({
+        aggregateSupplyUsd: AGGREGATE_SUPPLY_USD, registryFingerprint: REGISTRY_FINGERPRINT,
+        scoringClockSec: CLOCK_SEC, chainRpcs: chainRpcs(Object.keys(RUNTIME_CODE_BY_CHAIN)), signal: controller.signal,
+        executionWindow: { deadlineMs: Date.now() + 180_000, minimumRemainingMs: 60_000 },
+      }, f.deps);
+      const cancelled = expect(pending).rejects.toMatchObject({ name: "AbortError" });
+      await vi.advanceTimersByTimeAsync(1);
+      controller.abort();
+      await cancelled;
+    } finally {
+      f.metaById.set("wm-m0", f.reviewed);
+      vi.useRealTimers();
+    }
   });
 
   it("walks back from a head newer than the fixed scoring clock", async () => {

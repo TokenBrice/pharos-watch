@@ -27,6 +27,41 @@ import {
   type NativeSafetyScoreV9Input,
 } from "./native-input";
 import type { SafetyScoreV9PegProvenanceSource } from "./peg-provenance";
+import { loadReportCardEvidenceJournalByIdV1 } from "../report-card-evidence-journal-store";
+import { createRuntimeGapVerdict } from "./fact-set-context";
+import type { PipelineGapByAssetId } from "@shared/lib/report-cards-fixed-input-identity";
+import type { ReportCardEvidenceJournalByIdV1 } from "@shared/lib/report-card-evidence-journal";
+import { compareCodeUnits } from "@shared/lib/compare";
+
+/** Freeze actual failed attempts; a configured/missing row alone is not a failure proof. */
+export function captureReservePipelineGaps(
+  journal: ReportCardEvidenceJournalByIdV1,
+  liveReserveMap: ReadonlyMap<string, unknown>, clockSec: number,
+): PipelineGapByAssetId {
+  const rows: PipelineGapByAssetId = {};
+  for (const [assetId, attempts] of Object.entries(journal)) {
+    if (liveReserveMap.has(assetId)) continue;
+    let latest: typeof attempts[number] | undefined;
+    for (const attempt of attempts) {
+      if (!latest || attempt.completedAtSec > latest.completedAtSec ||
+          (attempt.completedAtSec === latest.completedAtSec && compareCodeUnits(attempt.attemptId, latest.attemptId) < 0)) latest = attempt;
+    }
+    if (!latest || latest.attemptCode !== "reserve.collector.attempted" ||
+        !latest.admissionCode.startsWith("reserve.admission.rejected-")) continue;
+    rows[assetId] = [createRuntimeGapVerdict({
+      assetId, scope: { pillar: "backing", componentKey: "reserve-composition", factorKey: null,
+        routeKey: null, exposureId: null, requiredDatum: "reserve-composition" },
+      sourceId: latest.sourceId, sourceGenerationId: latest.attemptId,
+      observedAtSec: latest.completedAtSec, asOfSec: clockSec,
+      producerState: latest.admissionCode === "reserve.admission.rejected-sidecar-mismatch" ? "config-mismatch"
+        : latest.admissionCode === "reserve.admission.rejected-stale" ? "stale-producer" : "producer-failed",
+      rejectionCode: latest.admissionCode, reason: latest.admissionCode,
+      contentSha256: latest.admissionCode === "reserve.admission.rejected-sidecar-mismatch"
+        ? latest.sidecarMaterializationSha256 : latest.contentSha256,
+    })];
+  }
+  return rows;
+}
 
 export interface BuildNativeSafetyScoreV9CaptureOptions {
   /**
@@ -180,6 +215,8 @@ export async function buildNativeSafetyScoreV9Capture(
   // guard that used to compare them, and the always-empty `missing` list it
   // reported, were tautologies left over from the V8-shaped bridge.
   const activeAssetIds = ACTIVE_STABLECOINS.map((coin) => coin.id).sort();
+  const reserveJournal = await loadReportCardEvidenceJournalByIdV1(db, activeAssetIds, clockSec);
+  const pipelineGapByAssetId = captureReservePipelineGaps(reserveJournal, liveReserveMap, clockSec);
 
   // Collateral drift itself keeps running in the reserve/status lane; only the
   // capture of its diagnostic output drops. The fallback list stays: the V9
@@ -219,6 +256,7 @@ export async function buildNativeSafetyScoreV9Capture(
     redemptionBackstopMap,
     liveReserveMap: Object.fromEntries(liveReserveMap),
     liveReserveProvenanceMap: Object.fromEntries(liveReserveProvenanceMap),
+    pipelineGapByAssetId,
     chainCirculatingById: Object.fromEntries(
       peggedAssets.map((asset) => [
         asset.id,

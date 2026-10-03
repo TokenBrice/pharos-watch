@@ -24,6 +24,9 @@ import {
   V9_BOUNDED_ATTRIBUTION_REASON_CODE_SET,
 } from "./safety-score-v9-public-facts";
 import { V9BoundedEvidenceResponsibilitySchema } from "./safety-score-v9-vocabulary";
+import { causeGapRefs, V9EvidenceCauseSchema, V9ScoringDispositionSchema } from "./safety-score-v9-public-causes";
+import { canonicalTextArray } from "./safety-score-v9-fact-primitives";
+import { iterateEvidenceResponsibilityFacts, V9PublicEvidencePathSchema, refineEvidenceFactPathPrefixes } from "./safety-score-v9-public-evidence-facts";
 
 const SafetyScoreV9AggregationTraceSchema = z
   .object({
@@ -33,9 +36,24 @@ const SafetyScoreV9AggregationTraceSchema = z
     weakestPillar: V9QualityPillarSchema,
     weakestScore: ScoreSchema,
     headroom: z.number().finite().positive().max(100),
+    includedPillars: canonicalTextArray(2).pipe(z.array(V9QualityPillarSchema).max(3)),
+    excludedPillars: canonicalTextArray().pipe(z.array(V9QualityPillarSchema).max(1)),
+    effectiveScoringWeights: z.object({
+      backing: z.number().finite().min(0).max(1), exit: z.number().finite().min(0).max(1),
+      control: z.number().finite().min(0).max(1),
+    }).strict(),
+    supportCeiling: ScoreSchema,
   })
   .strict()
   .superRefine((aggregation, ctx) => {
+    if (aggregation.includedPillars.length + aggregation.excludedPillars.length !== 3 ||
+        aggregation.includedPillars.some((pillar) => aggregation.excludedPillars.includes(pillar)) ||
+        !aggregation.includedPillars.includes(aggregation.weakestPillar) ||
+        aggregation.excludedPillars.some((pillar) => aggregation.effectiveScoringWeights[pillar] !== 0) ||
+        Math.abs(Object.values(aggregation.effectiveScoringWeights).reduce((sum, weight) => sum + weight, 0) - 1) > 1e-9 ||
+        !numbersAgree(aggregation.supportCeiling, aggregation.weightedPillarMean)) {
+      ctx.addIssue({ code: "custom", message: "Aggregation coverage, zero excluded weights and support ceiling must reconcile" });
+    }
     if (
       aggregation.weakestScore > aggregation.weightedPillarMean + SCORE_TOLERANCE ||
       aggregation.score < aggregation.weakestScore - SCORE_TOLERANCE ||
@@ -213,6 +231,8 @@ const SafetyScoreV9BoundedUncertaintyAttributionItemSchema = z
     path: z.string().min(1),
     message: z.string().min(1),
     responsibility: V9BoundedEvidenceResponsibilitySchema,
+    cause: V9EvidenceCauseSchema.extract(["C", "U"]),
+    causeGapRefs: causeGapRefs(1),
   })
   .strict()
   .superRefine((item, ctx) => {
@@ -267,20 +287,20 @@ const SafetyScoreV9BoundedUncertaintyAttributionTraceSchema = z
 const SafetyScoreV9EvidenceResponsibilityItemSchema = z
   .object({
     responsibility: V9EvidenceResponsibilitySchema,
-    factCount: z.number().int().nonnegative(),
-    criticalFactCount: z.number().int().nonnegative(),
-    reasonCodes: z.array(V9ReasonCodeSchema),
+    factCount: z.number().int().nonnegative().optional().describe("Defaults to zero"),
+    criticalFactCount: z.number().int().nonnegative().optional().describe("Defaults to zero"),
+    reasonCodes: z.array(V9ReasonCodeSchema).optional().describe("Defaults to no reason codes"),
   })
   .strict()
   .superRefine((summary, ctx) => {
-    if (summary.criticalFactCount > summary.factCount) {
+    if ((summary.criticalFactCount ?? 0) > (summary.factCount ?? 0)) {
       ctx.addIssue({
         code: "custom",
         path: ["criticalFactCount"],
         message: "V9 critical responsibility count cannot exceed its fact count",
       });
     }
-    if (!isUniqueSorted(summary.reasonCodes)) {
+    if (summary.reasonCodes !== undefined && !isUniqueSorted(summary.reasonCodes)) {
       ctx.addIssue({
         code: "custom",
         path: ["reasonCodes"],
@@ -289,62 +309,45 @@ const SafetyScoreV9EvidenceResponsibilityItemSchema = z
     }
   });
 
-const SafetyScoreV9EvidenceResponsibilityFactSchema = z
-  .object({
-    reasonCode: V9ReasonCodeSchema,
-    exactFactPath: z.string().min(1),
-    sourceGapId: z.string().min(1).nullable(),
-    responsibility: V9EvidenceResponsibilitySchema,
-    critical: z.boolean(),
-  })
-  .strict();
+const SafetyScoreV9EvidenceResponsibilityFactSchema = z.tuple([
+  V9ReasonCodeSchema, V9PublicEvidencePathSchema, z.number().int().nonnegative().nullable(),
+  V9EvidenceResponsibilitySchema, z.boolean(), V9EvidenceCauseSchema, causeGapRefs(),
+]).superRefine(([, path, sourceGapRef, responsibility, critical, cause, refs], ctx) => {
+  if (Array.isArray(path) && path.length === 1 && sourceGapRef === null && refs.length === 0) {
+    ctx.addIssue({ code: "custom", message: "Causal fact path requires a source or causal reference" });
+  }
+  const owner = cause === "B" ? "public-data-uncurated" : cause === "C" ? "issuer-undisclosed"
+    : cause === "U" ? "unresearched" : cause === "D" ? "measured-adverse" : null;
+  if ((owner !== null && responsibility !== owner) ||
+      (cause === "A" && !["producer-failed", "integration-missing", "method-unsupported"].includes(responsibility)) ||
+      ((cause === "A" || cause === "B") && critical) ||
+      (sourceGapRef !== null && !refs.includes(sourceGapRef))) {
+    ctx.addIssue({ code: "custom", message: "Evidence fact cause, responsibility and causal gap identity must agree" });
+  }
+});
 
-const SafetyScoreV9EvidenceResponsibilityTraceSchema = z
-  .object({
-    semantics: z.literal("limiting-fact-owner-v1"),
-    totalFactCount: z.number().int().nonnegative(),
-    // Publications written before methodology 9.19 do not carry the
-    // per-fact disclosure paths. Keep the reader compatible with those
-    // already-authenticated last-known-good snapshots; newly generated
-    // publications always include this field.
-    facts: z.array(SafetyScoreV9EvidenceResponsibilityFactSchema).optional(),
-    summaries: z
-      .array(SafetyScoreV9EvidenceResponsibilityItemSchema)
-      .min(RESPONSIBILITIES.length - 1)
-      .max(RESPONSIBILITIES.length),
-  })
-  .strict()
-  .superRefine((evidence, ctx) => {
-    const actualResponsibilities = evidence.summaries.map((summary) => summary.responsibility);
-    // Two independent compatibility dimensions, deliberately not conflated:
-    // per-fact disclosure paths arrived in 9.19, and the sixth owner
-    // (`published-evidence-expired`) arrived in 9.4. A stored publication can
-    // therefore carry per-fact paths and still predate the sixth owner, so the
-    // legacy order stays readable whatever `facts` says. Newly written
-    // publications are held to the full order by the codec's version gate,
-    // which is where a write-time contract belongs.
-    const legacyResponsibilities = RESPONSIBILITIES.slice(0, -1);
-    const supportedResponsibilities = [legacyResponsibilities, RESPONSIBILITIES];
-    if (
-      !supportedResponsibilities.some(
-        (expected) => JSON.stringify(actualResponsibilities) === JSON.stringify(expected),
-      )
-    ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["summaries"],
-        message: "V9 evidence responsibility summaries must preserve a supported canonical owner order",
-      });
-    }
-    const expectedTotal = evidence.summaries.reduce((sum, summary) => sum + summary.factCount, 0);
-    if (evidence.totalFactCount !== expectedTotal) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["totalFactCount"],
-        message: "V9 evidence responsibility total must reconcile its summaries",
-      });
-    }
-  });
+const SafetyScoreV9EvidenceResponsibilityTraceSchema = z.object({
+  semantics: z.literal("limiting-fact-cause-v2"),
+  totalFactCount: z.number().int().nonnegative(),
+  facts: z.array(SafetyScoreV9EvidenceResponsibilityFactSchema),
+  factPathPrefixes: canonicalTextArray().optional().describe("No interned fact prefixes when omitted"),
+  summaries: z.array(SafetyScoreV9EvidenceResponsibilityItemSchema).length(RESPONSIBILITIES.length),
+}).strict().superRefine((evidence, ctx) => {
+  if (!refineEvidenceFactPathPrefixes(evidence, ctx)) return;
+  if (JSON.stringify(evidence.summaries.map((summary) => summary.responsibility)) !== JSON.stringify(RESPONSIBILITIES)) {
+    ctx.addIssue({ code: "custom", path: ["summaries"], message: "V9 evidence responsibility summaries must preserve a supported canonical owner order" });
+  }
+  const factCounts = new Uint32Array(RESPONSIBILITIES.length), criticalCounts = new Uint32Array(RESPONSIBILITIES.length);
+  for (const fact of iterateEvidenceResponsibilityFacts(evidence)) {
+    const index = RESPONSIBILITIES.indexOf(fact[3]);
+    factCounts[index]!++;
+    if (fact[4]) criticalCounts[index]!++;
+  }
+  if (evidence.facts.length !== evidence.totalFactCount || evidence.summaries.some((summary, index) =>
+      (summary.factCount ?? 0) !== factCounts[index] || (summary.criticalFactCount ?? 0) !== criticalCounts[index])) {
+    ctx.addIssue({ code: "custom", path: ["facts"], message: "Cause facts and critical counts must reconcile; A/B never directly withholds" });
+  }
+});
 
 const SafetyScoreV9WrapperMissingFactClassSchema = z.union([
   V9WrapperLocalFactKeySchema,
@@ -375,6 +378,9 @@ const SafetyScoreV9WrapperParentLimitSchema = z
         .object({
           factClass: SafetyScoreV9WrapperMissingFactClassSchema,
           disposition: V9WrapperFactDispositionSchema.exclude(["reviewed", "not-applicable"]),
+          cause: V9EvidenceCauseSchema.nullable().optional(),
+          causeGapRefs: causeGapRefs().optional(),
+          scoringDisposition: V9ScoringDispositionSchema.optional(),
         })
         .strict(),
     ),
@@ -386,6 +392,9 @@ const SafetyScoreV9WrapperParentLimitSchema = z
           assessment: V9WrapperRiskAssessmentSchema.nullable(),
           maximumDiscountPoints: z.number().finite().positive().max(100),
           discountPoints: z.number().finite().min(0).max(100),
+          cause: V9EvidenceCauseSchema.nullable().optional(),
+          causeGapRefs: causeGapRefs().optional(),
+          scoringDisposition: V9ScoringDispositionSchema.optional(),
         })
         .strict(),
     ),
@@ -674,8 +683,8 @@ function refineBoundedUncertaintyTrace(
     const summary = responsibilityByName.get(item.responsibility);
     if (
       summary === undefined ||
-      summary.factCount === 0 ||
-      !summary.reasonCodes.includes(item.code)
+      (summary.factCount ?? 0) === 0 ||
+      !summary.reasonCodes?.includes(item.code)
     ) {
       ctx.addIssue({
         code: "custom",
@@ -687,11 +696,11 @@ function refineBoundedUncertaintyTrace(
   }
 }
 
-/** Current trace. Schema v3 adds explicit policy-defined score adjustments. */
+/** Current trace4 carries explicit causal coverage and effective scoring weights. */
 export const SafetyScoreV9ScoreTraceSchema =
   SafetyScoreV9AdjustedScoreTraceCommonSchema
     .extend({
-      schemaVersion: z.literal(3),
+      schemaVersion: z.literal(4),
       boundedUncertaintyAttribution:
         SafetyScoreV9BoundedUncertaintyAttributionTraceSchema,
       providerRowExclusions: z.array(AdmittedProviderRowExclusionSchema).min(1).optional(),

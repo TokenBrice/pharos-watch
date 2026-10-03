@@ -81,7 +81,7 @@ describe("owner Control rules", () => {
       expect(after.score).toBe(before.score);
       expect(after.components.find((row) => row.kind === "mint")).toMatchObject({
         posture: supervision === "prudential" ? "unbounded-reconciled" : "unbounded-reconciliation-unknown",
-        score: supervision === "prudential" ? 55 : 35,
+        score: 55,
       });
       const compromised = evaluateV9EconomicControl(args({ facts: facts([{ ...mintControl, incidentState: "active" }]),
         mint: makeReviewedMintInput(mintControl.controlKey, { reconciliation: "internal-ledger", supervision }),
@@ -140,7 +140,7 @@ describe("owner Control rules", () => {
       expect(unresolved.score).toBe(measured.score);
       expect(unresolved.components.find((row) => row.kind === "mint")).toMatchObject({
         posture: reconciliation === "unknown" ? "unbounded-reconciliation-unknown" : "unbounded-or-compromised",
-        score: reconciliation === "unknown" ? 44 : 35,
+        score: reconciliation === "unknown" ? 65 : 35,
       });
       expect(unresolved.reasons).toContainEqual(expect.objectContaining({ code: "unresolved-mint-authority" }));
       expect(unresolved.structuralFailures).toContainEqual(expect.objectContaining({ kind: "centralized-mint", severity: "high" }));
@@ -170,7 +170,7 @@ describe("owner Control rules", () => {
     const result = evaluateV9EconomicControl(args({ facts: facts([mintControl]),
       mint: makeReviewedMintInput(mintControl.controlKey, { status: boundedUnknown("mint") }),
     }));
-    expect(result.components.find((row) => row.kind === "mint")).toMatchObject({ posture: "unknown", score: 45 });
+    expect(result.components.find((row) => row.kind === "mint")).toMatchObject({ posture: "unknown", score: 50 });
     expect(result.reasons).toContainEqual(expect.objectContaining({ code: "unresolved-mint-authority" }));
   });
 
@@ -199,7 +199,7 @@ describe("owner Control rules", () => {
     const result = evaluateV9EconomicControl(args({ facts: facts([mintControl]),
       mint: makeReviewedMintInput(mintControl.controlKey, { status: boundedUnknown("mint") }),
     }));
-    expect(result.components.find((row) => row.kind === "mint")).toMatchObject({ posture: "unknown", score: 45 });
+    expect(result.components.find((row) => row.kind === "mint")).toMatchObject({ posture: "unknown", score: 50 });
     expect(result.structuralFailures.some((failure) => failure.kind === "centralized-mint")).toBe(false);
   });
 

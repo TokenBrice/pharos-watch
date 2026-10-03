@@ -49,7 +49,21 @@ export function scoreV9ResearchScenarioInput(
     ...cap,
     responsibility: "measured-adverse",
   }));
-  return scoreV9InputWithScenarioCaps(rawInput, policy, attributedCaps);
+  const missingPillars = V9_QUALITY_PILLARS.filter((pillar) => rawInput.pillars[pillar] === null);
+  const unknownQuality = policy.policy.semantic.backing.boundedUnknownQuality;
+  const input: V9ScoringInput = {
+    ...rawInput,
+    pillars: {
+      backing: rawInput.pillars.backing ?? unknownQuality,
+      exit: rawInput.pillars.exit ?? policy.policy.semantic.exit.boundedUnknownScore,
+      control: rawInput.pillars.control ?? policy.policy.semantic.control.boundedUnknownQuality,
+    },
+    parentScore: rawInput.parentRequired && rawInput.parentScore === null ? unknownQuality : rawInput.parentScore,
+  };
+  return scoreV9InputWithScenarioCaps(input, policy, attributedCaps, {
+    includedPillars: V9_QUALITY_PILLARS, partialEvidence: null, parentStatus: "rated",
+    limitingPillars: missingPillars.map((pillar) => ({ pillar, causes: ["U"], causeGapIds: [] })),
+  });
 }
 
 function scoringInputFromCompiled(
@@ -91,10 +105,28 @@ export function scoreCompiledAsset(
       `Compiled Safety Score v9 input ${input.assetId} expects parent ${input.parent?.assetId ?? "none"}, not ${parentTrace.assetId}`,
     );
   }
+  const required = input.parent?.required ?? false;
+  const pipelineParent = required && parentTrace?.ratingStatus === "pipeline-gap";
+  let scoringInput = scoringInputFromCompiled(input,
+    required && parentTrace === null ? policy.policy.semantic.backing.boundedUnknownQuality : parentTrace?.finalScore ?? null,
+    policy);
+  const includedPillars = pipelineParent ? ["control"] as const : V9_QUALITY_PILLARS;
+  if (pipelineParent) scoringInput = { ...scoringInput, pillars: { ...scoringInput.pillars, backing: null, exit: null } };
+  const parentPartial = parentTrace?.partialEvidence;
   return scoreV9Input(
-    scoringInputFromCompiled(input, parentTrace?.finalScore ?? null, policy),
-    policy,
-    parentTrace?.nrReasons ?? [],
+    scoringInput, policy, parentTrace?.nrReasons ?? [], 0, false, [], [], [], [], [], [], undefined,
+    {
+      includedPillars,
+      partialEvidence: pipelineParent && parentPartial ? {
+        ...parentPartial, excludedPillars: ["backing", "exit"],
+        excludedComponentKeys: ["dependency:serial:backing", "dependency:serial:exit"],
+      } : null,
+      limitingPillars: required && parentTrace === null ? [
+        { pillar: "backing", causes: ["U"], causeGapIds: [] },
+        { pillar: "exit", causes: ["U"], causeGapIds: [] },
+      ] : [],
+      parentStatus: parentTrace?.ratingStatus ?? "rated",
+    },
   );
 }
 
@@ -103,7 +135,7 @@ export interface V9CompiledAssetSetResult {
   evaluatedOrder: readonly string[];
 }
 
-/** Deterministic parent-first evaluation with explicit cycle and missing-parent NR traces. */
+/** Deterministic parent-first evaluation with conservative unresolved-parent quality. */
 export function scoreCompiledAssetSet(
   rawInputs: readonly CompiledV9AssetInput[],
   policy: V9ValidatedPolicyEnvelope,
@@ -137,14 +169,10 @@ export function scoreCompiledAssetSet(
         const trace = scoreCompiledAsset(cycleInput, policy);
         traces.set(cycleId, {
           ...trace,
-          caps: trace.caps.map((cap) => ({ ...cap, binding: false })),
-          bindingCap: null,
-          finalScore: null,
-          finalGrade: "NR",
-          nrReasons: [
-            ...trace.nrReasons.filter((reason) => reason.code !== "missing-parent-score"),
-            { code: "parent-cycle", field: "parent.assetId", message: `Parent cycle includes ${cycleLabel}.` },
-          ],
+          unresolvedFacts: [...trace.unresolvedFacts, {
+            code: "parent-cycle", path: "parent.assetId", reason: `Parent cycle includes ${cycleLabel}.`,
+            critical: false, responsibility: "unresearched", cause: "U", causeGapIds: [],
+          }],
           propagatedParentReasons: [],
         });
         evaluatedOrder.push(cycleId);

@@ -10,6 +10,7 @@ import {
   addEvidence,
   assertKnownComponentEvidenceCurrent,
   timestampSec,
+  missingLocalFact,
   type AssetBuildContext,
 } from "./fact-set-context";
 import { parseBoundedDateSec } from "./extension-shared";
@@ -39,7 +40,16 @@ function operationalResilienceConfidence(
 
 export function buildOperationalResilienceFact(context: AssetBuildContext): V9OperationalResilienceFact | null {
   const overlay = context.asset.operationalResilience ?? null;
-  if (overlay === null) return null;
+  if (overlay === null) {
+    missingLocalFact(context, {
+      componentKey: "operational-resilience", reasonCode: "missing-pillar-evidence", ownerDomain: "evidence",
+      responsibility: "unresearched", policyRuleId: "v9.control.operational-resilience",
+      message: "Operational-resilience eligibility and performance have not been established.",
+      causeScope: { pillar: "control", componentKey: "operational-resilience", factorKey: "eligibility",
+        routeKey: null, exposureId: null, requiredDatum: "operational-resilience-review" },
+    });
+    return null;
+  }
   const sourceGenerationId = context.extension.sources.researchOverlays.generationId;
   const evidenceIdBySourceId = new Map(
     overlay.sources.map((source) => {

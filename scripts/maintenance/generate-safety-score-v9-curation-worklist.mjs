@@ -21,57 +21,57 @@ const STREAMS = [
   {
     key: "CTRL",
     title: "Control — mint / upgrade / control identity",
-    ceiling: "control-unverified (55)",
+    ceiling: "cause-scoped control components; no missing-data cap",
     fix: "Resolve the asset's mintAuthority block in shared/data/stablecoins/coins/<id>.json: mint path, authority type + threshold, cap semantics, upgradeability model and controlRef, per-control evidence with sources. Mostly deterministic explorer/RPC reads (proxy admin slots, owner()/minters(), multisig thresholds); RPC endpoints and structural-blocker notes are in the mint-authority verified-campaign memory. Multichain assets need every deployment's authority graph.",
   },
   {
     key: "ORCL",
     title: "Oracle — profile and CDP branch reviews",
-    ceiling: "oracle-unverified (55)",
+    ceiling: "cause-scoped oracle components; no missing-data cap",
     fix: "Populate/complete the oracleRisk block (tier, branch applicability disposition, per-branch feed/collateral-parameter/liquidation/backstop/shutdown reviews) in the coin JSON. CDP-family assets need the branch-applicability ruling; non-oracle designs need an explicit not-applicable review.",
   },
   {
     key: "BRDG",
     title: "Bridge — route reviews and supply materiality",
-    ceiling: "control-unverified (55)",
+    ceiling: "cause-scoped bridge components; no missing-data cap",
     fix: "Review the runtime-selected bridge routes (bridgeRoutes rows: route kind, verification model, controls) so selected routes resolve and bridged supply matches reviewed rows. The static P7 route research queue feeds this; only runtime-selected scoring routes matter here.",
   },
   {
     key: "RESV",
     title: "Backing — reserve envelope, composition, assurance",
-    ceiling: "backing-unverified (60)",
-    fix: "Author or refresh the structured reserve evidence. For a missing or incomplete envelope, populate reserves[] slices with assetClass, issuerOrObligor, liquidityHorizon, maturityDaysMax, plus reserveReview, custodyProfile, and proofOfReserves.latestReport. For stale-audited-reserve-composition, refresh reserves[] and compositionAsOf from the newest independent attestation; if the issuer has not published a newer composition, record the blocker and accept the audited-fallback adequate ceiling rather than restating expired evidence. Use the reserve-research skill; envelope refresh recipes are in the V9 topic memory.",
+    ceiling: "identified reserves plus cause-bearing remainder",
+    fix: "Author or refresh structured whole-asset reserve evidence from current primary sources: identified holdings, independently established denominator, reserveReview and named-firm reports (admissible up to 120 days at their actual strength). Keep the unidentified remainder with its exact cause. Never restate expired evidence or infer current composition from selected slices.",
   },
   {
     key: "MECH",
     title: "Mechanism — curated overlay for measured-ratio archetypes",
     archetypes: ["cdp", "synthetic-delta-neutral", "algorithmic", "rwa-credit-fund"],
-    ceiling: "component floor boundedUnknownQuality (35)",
+    ceiling: "comparable ordinary-family uncertainty credit; proven A/B excluded",
     fix: "Author a sourced overlay in shared/data/safety-score-v9/mechanism-review-overlays-v1.json (archetype-specific components + REQUIRED measured metrics, e.g. CDP collateralizationRatio/liquidationCapacityRatio). NO FABRICATION: only author when an honest live source exists (bold-liquity via api.liquity.org is the template). CONFIRMED BLOCKED (2026-07-13 + independently re-verified by mechanism batch 01, 2026-07-14 — do not re-research): DAI/USDS (auction Hole limits are governance caps, not committed liquidation capital; no reproducible system CR), USDe (reserve fund observable, hedge notional/margin buffers not public), USDD (vault-only CR must not be applied to total supply; non-vault issuance routes), USDf-Falcon (insurance fund observable, empty venue map, no hedge measurements), crvUSD (PegKeeper share needs decomposition), LUSD (needs on-chain TCR read — the one actionable path). Expect most of this stream to stay blocked until issuers publish ratios or on-chain readers are built.",
   },
   {
     key: "EXIT",
     title: "Exit — same-notional route evidence",
-    ceiling: "exit-unverified (65)",
+    ceiling: "cause-scoped route factors; no missing-data cap",
     fix: "Best lever per asset: (a) a resolved redemption row (redemption methodology v4.18 derives a bounded exit observation from a supply-full row with documented fixed-bps fee), (b) unresolved-exit-output routes: set `outputAssets` on the asset's entry in shared/lib/redemption-backstop-configs/ — tracked stablecoin ids for stable-single/stable-basket, canonical asset:<symbol> keys for collateral; ONLY when the documented rail names the output (config notes/docs are the source; schema validates shape), (c) exact DEX capacity where the pool archetype is supported (raydium CP, balancer weighted). Captures with producer-embedded observations pick up outputAssets on the next production capture. CL-pool exact capacity is producer tick-data work, not per-asset curation — do not grind unsupported pools by hand.",
   },
   {
     key: "PEG",
     title: "Peg — missing peg rows",
-    ceiling: "peg-unverified (60)",
+    ceiling: "measured deviation and bounded uncertainty; no missing-data cap",
     fix: "Ensure the asset has a peg row (pegCurrency resolvable, price feed tracked) or a reviewed NAV/not-applicable ruling (flags.navToken for pure NAV designs). OTHER-peg assets need the peg building blocks first — check the GELT/OTHER-peg parked memory before grinding.",
   },
   {
     key: "DEP",
     title: "Dependencies — unreviewed relationship sets",
-    ceiling: "evidence:limited (69)",
+    ceiling: "actual upstream status and cause; no missing-data cap",
     fix: "Review the effective dependency set (collateral mapping to reserve exposures must be exact; serial wrapper/mechanism edges explicit). material-dependency-unavailable clears when the upstream asset becomes rateable — check the upstream first.",
   },
   {
     key: "ARCH",
-    title: "Archetype — unresolved classification (hard NR)",
-    ceiling: "NR (stays-NR set)",
-    fix: "Assign a mechanism archetype (resolve-mechanism-archetype path / resilience-classify skill). These are the only assets NR by classification; everything else in this file is score-improvement, not rateability.",
+    title: "Archetype — unresolved classification",
+    ceiling: "classification and cause-aware rateability",
+    fix: "Assign a sourced mechanism archetype through resilience-classify. A classification gap does not prove a pipeline or public-curation cause; use the compiled exact gap scope and evidence proof.",
   },
 ];
 
@@ -163,7 +163,7 @@ for (const warning of registry.summary.warnings) {
 }
 if (registry.summary.warnings.length > 0) lines.push("");
 lines.push(`Generated from \`${replayPath.split("/").pop()}\` (${cards.length} cards, ` +
-  `${cards.filter((card) => card.grade !== "NR").length} rateable). ` +
+  `${cards.filter((card) => card.ratingStatus === "rated").length} rated, ${cards.filter((card) => card.ratingStatus === "pipeline-gap").length} pipeline-gap). ` +
   "Regenerate after every merged batch:");
 lines.push("");
 lines.push("```bash");
@@ -183,12 +183,12 @@ lines.push("6. **Re-measure** (coordinator, periodically — not per item): regi
 lines.push("");
 lines.push("Item ID format: `STREAM-assetId`. An item is DONE when none of its listed reason codes appear for the asset in a fresh replay.");
 lines.push("");
-lines.push("**Where to spend hours** (measured 2026-07-14): CTRL, RESV, ORCL, and BRDG batches clear items reliably and CTRL is the biggest single-score lever (~8-12 pts per asset). MECH is mostly an evidence wall (5/5 majors blocked on unpublishable ratios) — do not grind it; it moves via on-chain reads or issuer transparency changes. EXIT largely waits on the next deploy+capture (embedded producer observations) plus `outputAssets` config curation.");
+lines.push("**Cause protocol:** A requires captured failed-producer evidence; B requires a reviewed exact public datum; C requires researched non-disclosure; U requires research before attribution. A/B gaps are excluded, not favorable facts. C/U stay bounded without missing-data caps. Resolve the exact gap scope, not the display responsibility label.");
 lines.push("");
 
 lines.push("## Summary");
 lines.push("");
-lines.push("| Stream | Items | Ceiling released |");
+lines.push("| Stream | Items | Scoring scope |");
 lines.push("|---|---|---|");
 for (const stream of STREAMS) {
   const count = [...items.values()].filter((item) => item.streamKey === stream.key).length;
@@ -208,15 +208,15 @@ for (const stream of STREAMS) {
     });
   lines.push(`## ${stream.key} — ${stream.title} (${streamItems.length})`);
   lines.push("");
-  lines.push(`**Releases:** ${stream.ceiling}. **How to fix:** ${stream.fix}`);
+  lines.push(`**Scoring scope:** ${stream.ceiling}. **How to fix:** ${stream.fix}`);
   lines.push("");
   if (streamItems.length === 0) {
     lines.push("_No open items._");
     lines.push("");
     continue;
   }
-  lines.push("| ☐ | ID | Pri | Supply | V9 | Codes (paths) |");
-  lines.push("|---|---|---|---|---|---|");
+  lines.push("| ☐ | ID | Pri | Supply | V9 status | Causes and gap IDs | Codes (paths) |");
+  lines.push("|---|---|---|---|---|---|---|");
   for (const item of streamItems) {
     const supply = supplyOf(item.assetId);
     const card = cards.find((entry) => entry.id === item.assetId);
@@ -227,9 +227,12 @@ for (const stream of STREAMS) {
         return paths.size > 0 ? `${code} (${list}${extra})` : code;
       })
       .join("; ");
+    const causeRows = registry.stablecoins.find((asset) => asset.assetId === item.assetId)?.missingItems ?? [];
+    const causes = causeRows.filter(row => row.cause !== undefined)
+      .map(row => `${row.cause}: ${row.gapId}`).join("; ") || "U: score-projection-only (research required)";
     lines.push(
       `| ☐ | ${stream.key}-${item.assetId} | ${priorityBand(item.critical, supply)} | ${money(supply)} | ` +
-        `${card.grade}/${card.score ?? "—"} | ${codes} |`,
+        `${card.ratingStatus === "pipeline-gap" ? "Pipeline gap" : card.grade}/${card.score ?? "—"} | ${causes} | ${codes} |`,
     );
   }
   lines.push("");

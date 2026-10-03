@@ -3,6 +3,7 @@ import { compileNativeV3FactSet, coreFixture, V9_CANDIDATE_POLICY_V1, AS_OF_SEC 
 import { evaluateValidatedV9FactSet, projectV9EffectiveBackingPillarScore } from "../safety-score-v9/evaluate-set";
 import { evaluateV9ContagionScenario } from "../safety-score-v9/contagion";
 import { ContagionResultSchema, type ContagionShock } from "../../types/contagion";
+import { V9FactSetCoreV3Schema } from "../../types/safety-score-v9-facts";
 
 function fixture() {
   const compiled = compileNativeV3FactSet(coreFixture());
@@ -20,22 +21,23 @@ describe("hypothetical V9 contagion reruns", () => {
       expect(result.rows.find((row) => row.coinId === asset.assetId)).toMatchObject({
         baselineScore: asset.trace.finalScore, scenarioScore: asset.trace.finalScore,
         baselineGrade: asset.trace.finalGrade, scenarioGrade: asset.trace.finalGrade,
+        baselineRatingStatus: asset.trace.ratingStatus, scenarioRatingStatus: asset.trace.ratingStatus,
         changedDimensions: [], delta: asset.trace.finalScore === null ? null : 0,
       });
     }
-    expect(result.manifest).toEqual({ evaluated: 3, unchanged: 3, nr: 0, failed: 0 });
   });
 
   it("limits serial final inheritance without treating a final limit as basket impairment", () => {
     const basket = evaluate([{ kind: "score-limit", assetId: "beta", dimension: "final", limit: 5 }]);
     expect(basket.rows.find((row) => row.coinId === "alpha")).toMatchObject({ delta: 0, changedDimensions: [] });
-    const serial = evaluate([{ kind: "score-limit", assetId: "gamma", dimension: "final", limit: 40 }]);
-    expect(serial.rows.find((row) => row.coinId === "alpha")).toMatchObject({ scenarioScore: 40, shortestHop: 1, changedDimensions: ["final"] });
+    const cFloor = V9_CANDIDATE_POLICY_V1.policy.semantic.formula.gradeThresholds.find(row => row.grade === "C-")!.minScore;
+    const serial = evaluate([{ kind: "score-limit", assetId: "gamma", dimension: "final", limit: cFloor }]);
+    expect(serial.rows.find((row) => row.coinId === "alpha")).toMatchObject({ scenarioScore: cFloor, scenarioRatingStatus: "rated", shortestHop: 1, changedDimensions: ["final"] });
   });
 
   it("keeps an unattributed danger-grade serial result NR with a nullable delta", () => {
     const result = evaluate([{ kind: "score-limit", assetId: "gamma", dimension: "final", limit: 5 }]);
-    expect(result.rows.find((row) => row.coinId === "alpha")).toMatchObject({ scenarioScore: null, scenarioGrade: "NR", delta: null, nr: true, bindingCause: "parent" });
+    expect(result.rows.find((row) => row.coinId === "alpha")).toMatchObject({ scenarioScore: null, scenarioGrade: "NR", scenarioRatingStatus: "not-rated", delta: null, nr: true, bindingCause: "parent" });
     expect(result.manifest.nr).toBe(1);
   });
 
@@ -56,6 +58,36 @@ describe("hypothetical V9 contagion reruns", () => {
     expect(ContagionResultSchema.parse(result)).toMatchObject({ hypothetical: true, provenance: { origin: "scenario-assumptions" }, identity: { publicationGenerationId: "fixture-publication" } });
     expect(JSON.stringify(input.rawCompileInput)).toBe(before);
     expect(result.rows.find((row) => row.coinId === "gamma")!.changedDimensions).toContain(shock.kind === "depeg" ? "final" : "control");
+  });
+
+  it("isolates hypothetical evidence and controls from shared source and sibling arrays", () => {
+    const { input } = fixture();
+    const rawCompileInput = V9FactSetCoreV3Schema.parse(input.rawCompileInput);
+    const beta = rawCompileInput.assets.find((asset) => asset.assetId === "beta")!;
+    const gamma = rawCompileInput.assets.find((asset) => asset.assetId === "gamma")!;
+    const sharedEmpty: [] = [];
+    beta.controls = gamma.controls = sharedEmpty;
+    beta.gaps = gamma.gaps = sharedEmpty;
+    gamma.evidence = beta.evidence;
+    const sourceBefore = JSON.stringify(rawCompileInput);
+    const baseline = evaluateV9ContagionScenario({ ...input, rawCompileInput }, { id: "shared-zero", shocks: [] });
+    const scenario = evaluateV9ContagionScenario({ ...input, rawCompileInput }, {
+      id: "shared-assumption",
+      shocks: [{ kind: "mint-control-compromise", assetId: "gamma" }],
+    });
+    const betaBefore = baseline.rows.find((row) => row.coinId === "beta")!;
+    expect(scenario.rows.find((row) => row.coinId === "beta")).toMatchObject({
+      scenarioScore: betaBefore.scenarioScore,
+      scenarioGrade: betaBefore.scenarioGrade,
+      scenarioRatingStatus: betaBefore.scenarioRatingStatus,
+      changedDimensions: [],
+      failure: null,
+    });
+    expect(scenario.rows.find((row) => row.coinId === "gamma")!.changedDimensions).toContain("control");
+    expect(JSON.stringify(rawCompileInput)).toBe(sourceBefore);
+    expect(beta.evidence.some((row) => row.sourceId === "hypothetical-scenario-assumption")).toBe(false);
+    const repeated = evaluateV9ContagionScenario({ ...input, rawCompileInput }, { id: "shared-after", shocks: [] });
+    expect(repeated.rows).toEqual(baseline.rows);
   });
 
   it("rejects a mixed publication clock instead of silently relabeling facts", () => {

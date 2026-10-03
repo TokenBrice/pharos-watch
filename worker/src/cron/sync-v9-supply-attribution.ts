@@ -2,6 +2,7 @@ import type { ChainRpcConfig } from "../lib/chain-registry";
 import type { CronResult } from "../lib/cron-logger";
 import { createCronResult } from "../lib/cron-result";
 import { throwIfAborted } from "../lib/abort";
+import type { V9ExecutionWindow } from "../lib/v9-slot-window";
 import {
   getCaches,
   setCacheIfNewer,
@@ -44,6 +45,7 @@ export async function syncSafetyScoreV9SupplyAttribution(
   db: D1Database,
   chainRpcs?: Map<string, ChainRpcConfig>,
   signal?: AbortSignal,
+  executionWindow?: V9ExecutionWindow,
 ): Promise<CronResult> {
   const startedAtSec = Math.floor(Date.now() / 1_000);
   throwIfAborted(signal);
@@ -162,6 +164,7 @@ export async function syncSafetyScoreV9SupplyAttribution(
     {
       clockMode: "wall",
       notBeforeSec: startedAtSec,
+      executionWindow,
     },
   );
   throwIfAborted(signal);

@@ -29,6 +29,10 @@ vi.mock("./mini-app-api", async (importOriginal) => ({
   postMiniAppPortability: apiMocks.postMiniAppPortability,
 }));
 
+// Load the Worker boundary before timed test execution; the persisted scenarios
+// still exercise its real mutations against an isolated current-schema database.
+const persistedMutationModule = await vi.importActual("../../../../worker/src/api/telegram-mini-app-mutations");
+
 function makeSnapshot(state: TelegramMiniAppState = baseState): TelegramMiniAppClientSnapshot {
   return { state, stateRevision: "state-v1-test" };
 }
@@ -69,13 +73,13 @@ async function persistedMutations() {
   } as const;
   // Runtime-load the Worker test boundary: its Cloudflare ambient types belong
   // to worker/tsconfig.json, not the frontend TypeScript compilation.
-  const { applyTelegramMiniAppMutation } = await vi.importActual<{
+  const { applyTelegramMiniAppMutation } = persistedMutationModule as {
     applyTelegramMiniAppMutation: (
       database: typeof db,
       context: typeof auth,
       operation: TelegramMiniAppOperation,
     ) => Promise<TelegramMiniAppClientSnapshot["undo"] | void>;
-  }>("../../../../worker/src/api/telegram-mini-app-mutations");
+  };
   sqlite.prepare("INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at) VALUES ('42', ?, ?)").run(now, now);
   sqlite.prepare(`
     INSERT INTO telegram_subscriptions (

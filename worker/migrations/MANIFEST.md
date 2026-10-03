@@ -40,6 +40,7 @@
 | 0252     | `0252_depeg_audit_verdict_vocabulary.sql`                 | Add insert/update vocabulary guards rejecting unknown non-null audit verdicts; preserve stored archives and existing DDR invalidation authorization triggers. |
 | 0253     | `0253_supply_history_price_observed_at.sql`               | Add the nullable actual observation clock of `supply_history.price` (NULL = unknown: legacy, prior-Worker and admin-backfill rows); mint/burn event-time valuation admits only snapshot prices whose clock is within ±24h of the event. |
 | 0254     | `0254_blacklist_transaction_index.sql`                      | Add nullable confirmed within-block Tron transaction position; legacy rows remain unknown until bounded cron enrichment. |
+| 0255     | `0255_depeg_trusted_price_coverage.sql`                     | Add nullable trusted off-peg intervals, last trusted price clock, and current coverage-gap clock; legacy boundaries remain unknown and old Workers keep using named columns. |
 
 ## Squashed Individual Migrations (absorbed into the 0000 baseline on 2026-07-30)
 
@@ -283,6 +284,8 @@ Duplicate numeric prefixes 0056 and 0061 existed in the squashed range (0001–0
 Migration `0252` is pre-Worker compatible: existing writers emit the five known verdicts or NULL. It preserves archived values and adds no data mutation. Record the pre-window D1 Time Travel bookmark, migration ledger, and Worker version before rollout; a Worker rollback leaves the additive guards in place. Schema restoration requires the separately verified bookmark, not an automatic rollback.
 
 Migration `0254` adds a nullable event column only; old-Worker inserts and reads remain valid. Capture the pre-window Time Travel bookmark, migration ledger, and Worker version before applying it, then deploy the Worker. A Worker-only rollback leaves positions in place and restores conservative ambiguity handling; no D1 restore is needed for a code-only rollback.
+
+Migration `0255` adds nullable columns only, with no row mutation or backfill. Old Workers continue named-column inserts, peak/recovery updates, and event reads unchanged. `EXPECTED_SCHEMA.txt` inventories object names, so its regenerated contents are intentionally unchanged. Before rollout retain the Time Travel bookmark, exact migration ledger and deployed Worker version; apply migration before Worker activation. A Worker-only rollback leaves coverage records in place but suspends their producer updates; on reactivation a gap over 1200 seconds starts a new interval rather than joining across rollback. Restore D1 only for unexpected schema/data mutation, using the verified bookmark.
 
 ## Recent Migration Rollback Notes
 

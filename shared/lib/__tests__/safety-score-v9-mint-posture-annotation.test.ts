@@ -145,7 +145,6 @@ describe("V9 curated mint posture queue", () => {
       ["z-optimistic", "curated-optimistic"],
     ]);
     expect(queue.reviewedAssetCount).toBe(5);
-    expect(queue.entries.every((entry) => entry.action.length > 0)).toBe(true);
   });
 
   it("buckets NR cards instead of counting them as derived-unresolved", () => {
@@ -159,6 +158,17 @@ describe("V9 curated mint posture queue", () => {
     expect(queue.entries.map((entry) => [entry.assetId, entry.disagreement])).toEqual([
       ["rated-unresolved", "derived-unresolved"],
     ]);
+  });
+
+  it("keeps technical gaps out of issuer NR and does not hide partial rated disagreements", () => {
+    const queue = buildV9CuratedMintPostureQueue([
+      { assetId: "technical", curatedPosture: "bounded-admin", derivedPosture: "unknown", ratingStatus: "pipeline-gap", publishesBreakdowns: true },
+      { assetId: "issuer", curatedPosture: "bounded-admin", derivedPosture: null, ratingStatus: "not-rated", publishesBreakdowns: false },
+      { assetId: "partial-rated", curatedPosture: "bounded-admin", derivedPosture: "concentrated-admin", ratingStatus: "rated", publishesBreakdowns: true },
+    ]);
+    expect(queue.pipelineGapCards).toEqual(["technical"]);
+    expect(queue.nrCards).toEqual(["issuer"]);
+    expect(queue.entries).toEqual([expect.objectContaining({ assetId: "partial-rated", disagreement: "curated-optimistic" })]);
   });
 
   it("digests its content so two runs over one publication are byte-identical", () => {

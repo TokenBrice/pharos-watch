@@ -1,4 +1,8 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { projectV9CompactPartialEvidence } from "@shared/types/safety-score-v9-causes";
+import { makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
+import { makeWorkerReportCardsV9Response } from "../../test-helpers/report-cards-v9";
 import {
   createTelegramFetchSpy,
   makeTelegramUpdateRequest,
@@ -104,6 +108,45 @@ describe("Telegram inline status cards", () => {
     expect(usageRows[0]?.binds).not.toContain("USDC");
     expect(usageRows[0]?.binds).not.toContain("inline-query-id");
     expect(usageRows[0]?.binds).not.toContain(123456);
+  });
+
+  it("renders a canonical pipeline gap in the inline article without fabricating NR or zero", async () => {
+    const card = makeReportCardsV9PipelineGapCard();
+    const snapshot = makeWorkerReportCardsV9Response({ cards: [card] });
+    const identity = snapshot.safetyScoreIdentity;
+    const index = {
+      schemaVersion: 2, safetyScoreIdentity: identity, publicationResultDigest: snapshot.source.resultDigest,
+      asOfSec: snapshot.asOfSec, publishedAtSec: snapshot.updatedAt, expectedCount: 1,
+      scores: { [card.id]: {
+        grade: card.grade, score: card.score, ratingStatus: card.ratingStatus,
+        partialEvidence: projectV9CompactPartialEvidence(card.partialEvidence),
+      } },
+    };
+    const db = mockD1([
+      ...inlineReadLimitRows(),
+      { match: "FROM cache p", rows: [], first: {
+        score_index: stableJsonStringifyV1(index), index_updated_at: snapshot.updatedAt,
+        health: stableJsonStringifyV1(snapshot.publicationHealth), health_updated_at: snapshot.publicationHealth.attemptedAtSec,
+        publication_identity: JSON.stringify({
+          candidateId: snapshot.source.candidateId, policyVersion: identity.methodologyVersion,
+          publicationGenerationId: identity.publicationGenerationId, baseInputGenerationId: identity.baseInputGenerationId,
+          factSetDigest: snapshot.source.factSetDigest, policyId: identity.policyId, policyDigest: identity.policyDigest,
+          evaluationBuildDigest: identity.evaluationBuildDigest, resultDigest: snapshot.source.resultDigest,
+        }),
+        result_digest: snapshot.source.resultDigest, publication_updated_at: snapshot.updatedAt,
+      } },
+      { match: "FROM price_cache WHERE asset_id = ?", rows: [] },
+      { match: "FROM stress_signals", rows: [] },
+      { match: "FROM depeg_events WHERE stablecoin_id = ? AND ended_at IS NULL", rows: [] },
+    ]);
+    const response = await handleTelegramWebhook(db, makeInlineQueryRequest("USDC"), "test-secret", "bot-token");
+    expect(response.status).toBe(200);
+    const message = inlineAnswerBody().results[0]?.input_message_content.message_text;
+    expect(message).toContain("Safety: Pipeline gap — Unavailable");
+    expect(message).not.toContain("Safety: NR");
+    expect(message).not.toContain("Safety: null");
+    expect(message).not.toContain("Safety: F");
+    expect(message).not.toContain("(0)");
   });
 
   it.each([

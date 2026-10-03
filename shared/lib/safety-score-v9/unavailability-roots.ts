@@ -10,26 +10,37 @@ export function canonicalReasons(reasons: readonly V9PillarReason[]): V9PillarRe
   return canonicalizeV9PublicReasons(reasons);
 }
 
-export function projectV9ResolvedBackingExposure(
+function projectV9ResolvedBackingExposure(
   exposureKey: string,
   dependency: V9ResolvedDependencyInputs["basket"][number],
   upstream: Pick<V9EvaluatedAsset, "backing" | "scoreInput"> | undefined,
   failureRootAssetIds: readonly string[],
 ): V9ResolvedUpstreamExposure {
   const backingReasons = canonicalReasons(upstream?.scoreInput.pillars.backing.reasons ?? []);
+  const pillar = upstream?.scoreInput.pillars.backing;
+  const knownCause = pillar?.limitedEvidenceCauses.find((cause) => cause === "C" || cause === "U")
+    ?? (backingReasons.some((reason) => reason.cause === "D") ? "D" : null);
   const reasons =
     backingReasons.length > 0 &&
     backingReasons.every((reason) => reason.responsibility !== undefined)
-      ? backingReasons.map(({ code, path, responsibility }) => ({
+      ? backingReasons.map(({ code, path, responsibility, cause, causeGapIds }) => ({
           code,
           path,
           responsibility,
+          cause: cause ?? "U",
+          causeGapIds: causeGapIds ?? [],
         }))
       : undefined;
   return {
     exposureKey,
     upstreamAssetId: dependency.upstreamAssetId,
     score: dependency.score,
+    cause: dependency.score !== null ? knownCause : pillar?.aggregationDisposition === "excluded-a-b"
+      ? (pillar.excludedCauses?.[0] ?? "U")
+      : (knownCause ?? "U"),
+    ratingStatus: dependency.score !== null ? "rated" : upstream?.scoreInput.pillars.backing.aggregationDisposition === "excluded-a-b" ? "pipeline-gap" : "not-rated",
+    causeGapIds: upstream?.scoreInput.pillars.backing.causeGapIds ?? [],
+    limitedEvidenceCauses: upstream?.scoreInput.pillars.backing.limitedEvidenceCauses ?? ["U"],
     evidenceLevel: upstream?.scoreInput.pillars.backing.evidenceLevel ?? "insufficient",
     reasonCodes: uniqueSorted(backingReasons.map((reason) => reason.code)),
     ...(reasons === undefined ? {} : { reasons }),

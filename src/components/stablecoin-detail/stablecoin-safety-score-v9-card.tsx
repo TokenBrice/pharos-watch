@@ -138,16 +138,22 @@ export function StablecoinSafetyScoreV9Card({
               getSafetyGradeMetadata(card.grade).pulse.accentClassName,
             )}
           >
-            {card.grade}
+            {card.grade === null ? "Pipeline gap" : card.grade}
           </span>
           {card.score !== null ? (
             <span className="pharos-numeric text-4xl font-extrabold leading-none tracking-tight text-foreground">
               {card.score.toFixed(0)} <span className="text-2xl font-bold text-muted-foreground">/ 100</span>
             </span>
           ) : (
-            <span className="text-sm font-medium text-muted-foreground">Not rated</span>
+            <span className="text-sm font-medium text-muted-foreground">{card.ratingStatus === "pipeline-gap" ? "No Safety Score published" : "Not rated"}</span>
           )}
         </div>
+        {card.partialEvidence !== null ? (
+          <p role="status" className="mt-2 text-xs font-medium text-muted-foreground">
+            Partial evidence: pipeline gap · {card.partialEvidence.causes.map((cause) =>
+              cause === "A" ? "A — pipeline unavailable" : "B — public data awaiting curation").join(" · ")}
+          </p>
+        ) : null}
         <p className="mt-2 flex flex-wrap gap-x-2 gap-y-1 text-xs text-muted-foreground">
           <span>{presentation.evidenceSummary}</span>
         </p>

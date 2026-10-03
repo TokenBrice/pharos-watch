@@ -51,6 +51,13 @@ export function ReportCardMiniV9({
             versionVariant="tooltip-only"
             versionInteractive={false}
           />
+          {card.partialEvidence !== null ? (
+            <p role="status" className="text-center text-xs text-muted-foreground">
+              Partial evidence: pipeline gap · {card.partialEvidence.causes.map((cause) =>
+                cause === "A" ? "A — pipeline unavailable" : "B — public data awaiting curation").join(" · ")}
+              {card.partialEvidence.excludedPillars.length > 0 ? ` · Excluded: ${card.partialEvidence.excludedPillars.join(", ")}` : ""}
+            </p>
+          ) : null}
 
           <div className="w-full max-w-[11rem]">
             <CompareRadarV9

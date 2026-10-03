@@ -20,6 +20,7 @@ describe("DependencyContextDetails", () => {
       propagationEventInheritedScore: null, propagationEventModeledLossPoints: null,
       inheritedDimensions: ["exit"], unavailableDimensions: [], score: 84,
       boundedUnknown: false, cycleBlocked: false, evidenceRefIds: [], failureDomains: [],
+      ratingStatus: "rated", partialEvidence: null, causeGapRefs: [], limitedEvidenceCauses: [],
     }];
     render(<DependencyContextDetails card={card} context={EMPTY_CONTEXT} marketCapAsOf={null} />);
     const roles = screen.getByRole("region", { name: "Scored role dependencies (not drawn)" });

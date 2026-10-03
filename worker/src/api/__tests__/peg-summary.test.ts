@@ -137,6 +137,20 @@ function makeCachedPegCoin(overrides: Partial<PegSummaryCoin> = {}): PegSummaryC
 }
 
 describe("handlePegSummary", () => {
+  it("publishes wholly unknown legacy-open coverage as unavailable, not zero or perfect occupancy", async () => {
+    const db = makePegSummaryDb(
+      [makeAsset({ id: "usdt-tether", symbol: "USDT", price: null })],
+      undefined,
+      [makeDepegEventRow({ started_at: nowSec - 6 * 365 * 86400, ended_at: null })],
+    );
+    const response = await handlePegSummary(db);
+    const body = await response.json() as { coins: PegSummaryCoin[] };
+    const coin = body.coins.find((row) => row.id === "usdt-tether")!;
+    expect(coin.pegScore).toBeNull();
+    expect(coin.pegPct).toBeNull();
+    expect(coin.unknownCoverageSeconds).toBeGreaterThan(3 * 365 * 86400);
+    expect(coin.recent90d).toMatchObject({ pegPct: null, observedDays: 0, coverageLimited: true });
+  });
   it("uses the exhaustive canonical currency-to-peg-type vocabulary", () => {
     const expected: Record<PegCurrency, string | undefined> = {
       USD: "peggedUSD",
@@ -528,7 +542,7 @@ describe("handlePegSummary", () => {
         id: string;
         currentDeviationBps: number | null;
         pegScore: number | null;
-        pegPct: number;
+        pegPct: number | null;
         severityScore: number;
         spreadPenalty: number;
         activeDepeg: boolean;
@@ -542,7 +556,7 @@ describe("handlePegSummary", () => {
     expect(fpi).toMatchObject({
       currentDeviationBps: null,
       pegScore: null,
-      pegPct: 100,
+      pegPct: null,
       severityScore: 100,
       spreadPenalty: 0,
       activeDepeg: false,

@@ -57,7 +57,7 @@ describe("DependencyMapClient", () => {
             dependencies: {
               serial: [],
               basket: [
-                { upstreamAssetId: "usdc-circle", weight: 0.4, score: 84, boundedUnknown: false },
+                { upstreamAssetId: "usdc-circle", weight: 0.4, score: 84, boundedUnknown: false, ratingStatus: "rated", partialEvidence: null, causeGapRefs: [], limitedEvidenceCauses: [] },
               ],
               cycleBlocked: false,
               reasonCodes: [],

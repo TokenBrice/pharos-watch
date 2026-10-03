@@ -2,8 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import type { DexLiquidityMap, DexLiquidityHistoryPoint, DepegEvent } from "@shared/types/market";
 import type { YieldRankingsResponse } from "@shared/types/yield";
-import type { ReportCardsV9Response } from "@shared/types/report-cards-v9";
-import { attachDailySocialGrades, buildMarketSocial, buildLiquiditySocial, buildStabilitySocial, buildYieldSocial, captureDailySocial } from "../lib/daily-social-capture";
+import { makeReportCardsV9Card, makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
+import { makeSafetyMapReportCardsResponse } from "./build-safety-score-map.test-support";
+import { attachDailySocialGrades, buildSafetySocial, buildMarketSocial, buildLiquiditySocial, buildStabilitySocial, buildYieldSocial, captureDailySocial } from "../lib/daily-social-capture";
 
 const now = Date.parse("2026-09-10T12:00:00Z") / 1000;
 const base = { editionDate: "2026-09-10", scheduledAt: now, capturedAt: now, asOf: now - 30 };
@@ -25,18 +26,32 @@ describe("daily social source arithmetic", () => {
   });
   it("joins published grades by ID rather than inferring from numeric scores or symbols", () => {
     const snapshot = buildMarketSocial("market-growth", [asset("a", 30e6, 10e6), asset("b", 20e6, 10e6)], base);
-    const publication = { asOfSec: now - 100, publicationHealth: { status: "current" },
-      safetyScoreIdentity: { publicationGenerationId: "current-publication" },
-      cards: [{ id: "a", grade: "B", score: 99 }, { id: "other-id", grade: "A", score: 95 }],
-    } as unknown as ReportCardsV9Response;
+    const publication = makeSafetyMapReportCardsResponse({
+      cards: [makeReportCardsV9Card({ id: "a", score: 73, grade: "B" }), makeReportCardsV9Card({ id: "other-id", score: 85, grade: "A" })],
+      fixtureId: "current-publication", methodologyVersion: "10.01", defaultUpdatedAt: now - 100, asOfSec: now - 100,
+    });
     const result = attachDailySocialGrades(snapshot, publication);
     expect(result.rows[0].safetyGrade).toBe("B");
     expect(result.rows[1].safetyGrade).toBeUndefined();
     expect(result.safetyAsOf).toBe(now - 100);
     expect(result.asOf).toBe(now - 100);
-    expect(result.safetyPublicationId).toBe("current-publication");
+    expect(result.safetyPublicationId).toBe(publication.safetyScoreIdentity.publicationGenerationId);
     expect(() => attachDailySocialGrades(snapshot, { ...publication, asOfSec: now - 7201 })).toThrow();
-    expect(() => attachDailySocialGrades(snapshot, { ...publication, publicationHealth: { status: "held" } } as unknown as ReportCardsV9Response)).toThrow();
+    expect(() => attachDailySocialGrades(snapshot, { ...publication, publicationHealth: { ...publication.publicationHealth, status: "held" } })).toThrow();
+  });
+  it("excludes technical gaps from safety ranking and keeps partial ratings visibly flagged", () => {
+    const partial = makeReportCardsV9PartialCard("backing", "A", { id: "partial" });
+    const gap = makeReportCardsV9PipelineGapCard("control", "B", { id: "gap" });
+    const publication = makeSafetyMapReportCardsResponse({ cards: [gap, partial], fixtureId: "availability", methodologyVersion: "10.01", defaultUpdatedAt: now, asOfSec: now });
+    const assets = [asset("gap", 30e6, 10e6), asset("partial", 20e6, 10e6)];
+    const board = buildSafetySocial(publication, assets, base);
+    expect(board.rows).toEqual([expect.objectContaining({ id: "partial", value: partial.score, safetyGrade: partial.grade, context: expect.stringContaining("Partial evidence") })]);
+    const market = buildMarketSocial("market-growth", assets, base);
+    market.rows[0]!.safetyGrade = "A";
+    const joined = attachDailySocialGrades(market, publication);
+    expect(joined.rows.find(row => row.id === "gap")).toMatchObject({ context: expect.stringContaining("Pipeline gap") });
+    expect(joined.rows.find(row => row.id === "gap")?.safetyGrade).toBeUndefined();
+    expect(joined.rows.find(row => row.id === "partial")).toMatchObject({ safetyGrade: partial.grade, context: expect.stringContaining("Partial evidence") });
   });
   it("keeps fresh market data without inventing a rating when optional safety capture fails", async () => {
     vi.stubEnv("PHAROS_API_KEY", "fixture");

@@ -154,7 +154,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     defaultResolutionMode: "agent-curation",
     ...workReasons({
       ARCH: ["missing-archetype"],
-      "non-curation": ["insufficient-evidence", "missing-pillar", "critical-unresolved"],
+      "non-curation": ["insufficient-evidence", "missing-pillar", "critical-unresolved", "partial-evidence-pipeline-gap", "single-pillar-pipeline-gap", "all-pillars-pipeline-gap", "f-without-measured-adverse"],
     }),
     context: (asset) => ({
       archetype: asset.archetype,

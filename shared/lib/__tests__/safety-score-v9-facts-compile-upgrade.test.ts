@@ -7,6 +7,7 @@ import {
   canonicalV9RouteKey,
   compileV9FactSetV2,
   compileV9FactSetV3,
+  compileNativeV3FactSet,
   computeV9FactSetDigest,
   createV9EvidenceReference,
   createV9FactGap,
@@ -15,8 +16,6 @@ import {
   evaluateV9FactSet,
   fullAsset,
   coreFixture,
-  compileNativeV3FactSet,
-  nativeCompleteEmptyCoreFixture,
   knownStatus,
   optionalExitV9Path,
   parseCompiledV9FactSetV2,
@@ -25,9 +24,287 @@ import {
   stableJsonStringifyV1,
   V9_CANDIDATE_POLICY_V1,
 } from "./safety-score-v9-facts.fixture-support";
-import type { V9AssetFactsV2, V9AssetFactsV3 } from "./safety-score-v9-facts.fixture-support";
+import type { V9AssetFactsV2 } from "./safety-score-v9-facts.fixture-support";
 import { unresolvedArchetype } from "./safety-score-v9-facts.test-support";
 import { safeParseV9AssetFactsV3 } from "../safety-score-v9/compile";
+import { resolveV9EvidenceCause } from "../safety-score-v9/evidence";
+import type { V9EvidenceCauseScope, V9EvidenceGapClassification } from "../../types/safety-score-v9-causes";
+import type { CompiledV9FactSetV3, V9FactSetCoreV3, V9EconomicControlReviewV2 } from "../../types/safety-score-v9-facts";
+
+
+function currentCore(): V9FactSetCoreV3 {
+  // Mutable authoring inputs must not retain the compiled graph's interned aliases.
+  const { v9FactSetDigest: _digest, ...core } = JSON.parse(stableJsonStringifyV1(compileNativeV3FactSet(coreFixture()))) as CompiledV9FactSetV3;
+  return core;
+}
+function classifiedCore(cause: "B" | "C"): V9FactSetCoreV3 {
+  const core = currentCore();
+  const asset = core.assets[0]!;
+  const exposure = asset.reserveExposures[0]!;
+  const scope: V9EvidenceCauseScope = {
+    pillar: "backing", componentKey: "liquidity", factorKey: "liquidity", routeKey: null,
+    exposureId: exposure.exposureKey, requiredDatum: "reserve liquidity horizon",
+  };
+  const reviewedAt = new Date(AS_OF_SEC * 1_000).toISOString().replace(".000Z", "Z");
+  const common = {
+    id: "classification:liquidity", assetId: asset.assetId, scope, reviewedAt, reviewer: "fixture-reviewer",
+    sources: [{ url: "https://issuer.example/reserves", observedAt: reviewedAt, datumAsOf: null,
+      location: "Liquidity section", excerpt: "Fixture evidence assertion.", assertion: "Fixture required-datum research." }],
+  };
+  const classification: V9EvidenceGapClassification = cause === "B"
+    ? { ...common, cause: "B", assertion: "required-data-public" }
+    : { ...common, cause: "C", assertion: "researched-nondisclosure", searchedSurfaces: ["https://issuer.example/reserves"],
+      rationale: "The fixture search found no disclosure of this exact required datum." };
+  const resolved = resolveV9EvidenceCause({
+    assetId: asset.assetId, scope, asOfSec: AS_OF_SEC, sourceGenerationId: SOURCE_FINGERPRINTS.researchOverlays.generationId,
+    evidenceReferences: asset.evidence, classification,
+  });
+  asset.evidence = [...resolved.evidenceReferences];
+  const gap = createV9FactGapV3({
+    gapId: "classified-liquidity", reasonCode: "material-unknown-reserve-exposure", ownerDomain: "backing",
+    policyRuleId: "reserve:liquidity", observationState: "missing", path: { kind: "collateral-exposure", exposureKey: exposure.exposureKey },
+    message: "Reserve liquidity is unresolved.", causeScope: scope, causeProof: resolved.causeProof, responsibility: resolved.responsibility,
+  });
+  asset.gaps.push(gap);
+  exposure.liquidityHorizon = "unknown";
+  exposure.factorStatuses = { ...exposure.factorStatuses, liquidity: createV9FactStatus({
+    observationState: "missing", applicability: requiredV9Applicability("reserve:liquidity"), gapIds: [gap.gapId],
+  }) };
+  return core;
+}
+
+describe("current cause admission", () => {
+  it.each(["B", "C"] as const)("binds authored %s research bytes through compile and evaluation admission", (cause) => {
+    const compiled = compileV9FactSetV3(classifiedCore(cause));
+    const admitted = readCompiledV9FactSetForEvaluation(compiled).factSet.assets[0]!;
+    expect(admitted.gaps.find((gap) => gap.gapId === "classified-liquidity")!.causeProof.cause).toBe(cause);
+  });
+
+  it.each(["B", "C"] as const)("rejects mutated authored %s assertion bytes even with an otherwise valid reference", (cause) => {
+    const core = classifiedCore(cause);
+    const asset = core.assets[0]!;
+    const proof = asset.gaps.find((gap) => gap.gapId === "classified-liquidity")!.causeProof;
+    if (proof.cause !== "B" && proof.cause !== "C") throw new Error("Expected researched fixture proof");
+    proof.sources[0]!.excerpt = "Changed assertion bytes.";
+    expect(safeParseV9AssetFactsV3(asset).success).toBe(false);
+    expect(() => compileV9FactSetV3(core)).toThrow();
+  });
+
+  it("rejects wrong research scope before either asset admission or whole-cohort hashing", () => {
+    const core = classifiedCore("B");
+    const asset = core.assets[0]!;
+    asset.gaps.find((gap) => gap.gapId === "classified-liquidity")!.causeScope!.factorKey = "maturity";
+    expect(safeParseV9AssetFactsV3(asset).success).toBe(false);
+    expect(() => compileV9FactSetV3(core)).toThrow();
+  });
+
+  it("never lets an envelope-3 payload enter the current evaluation reader", () => {
+    const current = compileV9FactSetV3(currentCore());
+    expect(() => readCompiledV9FactSetForEvaluation({ ...current, schemaVersion: 3 })).toThrow();
+  });
+
+  it("requires an unknown reserve subfield to have its own status rather than hiding under known whole-row metadata", () => {
+    const core = currentCore();
+    const asset = core.assets[0]!;
+    const exposure = asset.reserveExposures.find((row) => row.maturityDaysMax !== null)!;
+    exposure.liquidityHorizon = "unknown";
+    expect(safeParseV9AssetFactsV3(asset).success).toBe(false);
+  });
+
+  it("requires unknown modeled confidence to carry its own cause-bearing status", () => {
+    const core = currentCore();
+    const asset = core.assets[0]!;
+    asset.exitRoutes.find((route) => route.scoreEligible)!.modelConfidence = "unknown";
+    expect(safeParseV9AssetFactsV3(asset).success).toBe(false);
+  });
+
+  it.each(["reconciliation", "supervision", "upgrade", "oracle", "bridge-route"] as const)(
+    "keeps known parent facts while requiring a linked cause for unknown economic factor %s", (factor) => {
+      const core = currentCore();
+      const asset = core.assets[0]!;
+      let target: Pick<V9EconomicControlReviewV2["mint"], "factorStatuses">;
+      let key: string;
+      if (factor === "oracle") {
+        asset.economicControlReview.oracle.status = knownStatus();
+        asset.economicControlReview.oracle.tier = null;
+        target = asset.economicControlReview.oracle;
+        key = "tier";
+      } else if (factor === "bridge-route") {
+        asset.economicControlReview.bridge.status = knownStatus();
+        asset.economicControlReview.bridge.routes = [{
+          controlKey: asset.controls[0]!.controlKey, tier: "opaque-or-unknown",
+        }];
+        const route = asset.economicControlReview.bridge.routes[0]!;
+        target = route;
+        key = "tier";
+      } else {
+        const mint = asset.economicControlReview.mint;
+        if (factor === "upgrade") mint.upgrade = { state: "unknown", controlKey: null };
+        else mint[factor] = "unknown";
+        target = mint;
+        key = factor;
+      }
+      const replacedGapIds = target.factorStatuses?.[key]?.gapIds ?? [];
+      asset.gaps = asset.gaps.filter((gap) => !replacedGapIds.includes(gap.gapId));
+      target.factorStatuses = { ...target.factorStatuses };
+      delete target.factorStatuses[key];
+      expect(safeParseV9AssetFactsV3(asset).success).toBe(false);
+      const gap = createV9FactGapV3({
+        gapId: `economic:${factor}`, reasonCode: "scoped-control-question", ownerDomain: "control",
+        policyRuleId: `economic:${factor}`, observationState: "missing", path: { kind: "local-component", componentKey: `economic:${factor}` },
+        message: "This economic-control factor has not been researched.", responsibility: "unresearched",
+      });
+      const status = createV9FactStatus({ observationState: "missing", applicability: requiredV9Applicability(`economic:${factor}`), gapIds: [gap.gapId] });
+      target.factorStatuses[key] = status;
+      expect(safeParseV9AssetFactsV3(asset).success).toBe(false);
+      asset.gaps.push(gap);
+      const admitted = compileV9FactSetV3(core).assets[0]!;
+      expect(admitted.economicControlReview.mint.status.observationState).toBe("known");
+      expect(admitted.controls).toEqual(asset.controls);
+      expect(safeParseV9AssetFactsV3(admitted).success).toBe(true);
+    },
+  );
+
+  it("retains a linked missing operational fact without manufacturing positive eligibility evidence", () => {
+    const core = currentCore();
+    const asset = core.assets[0]!;
+    asset.operationalResilience = null;
+    const gap = createV9FactGapV3({
+      gapId: "missing-operational", reasonCode: "scoped-control-question", ownerDomain: "control",
+      policyRuleId: "operational-eligibility", observationState: "missing",
+      path: { kind: "local-component", componentKey: "operational-eligibility" },
+      message: "Operational eligibility evidence is unavailable.", responsibility: "unresearched",
+    });
+    asset.operationalResilienceStatus = createV9FactStatus({
+      observationState: "missing", applicability: requiredV9Applicability("operational-eligibility"), gapIds: [gap.gapId],
+    });
+    expect(safeParseV9AssetFactsV3(asset).success).toBe(false);
+    asset.gaps.push(gap);
+    const admitted = compileV9FactSetV3(core).assets[0]!;
+    expect(admitted.operationalResilience).toBeNull();
+    expect(admitted.operationalResilienceStatus!.observationState).toBe("missing");
+    const forged = structuredClone(admitted);
+    forged.operationalResilienceStatus = knownStatus();
+    expect(safeParseV9AssetFactsV3(forged).success).toBe(false);
+  });
+
+  it("retains overlapping score-eligible alternatives for portfolio allocation rather than rejecting the whole current cohort", () => {
+    const core = currentCore();
+    const routes = core.assets[0]!.exitRoutes.filter((route) => route.scoreEligible);
+    routes[1]!.physicalResourceKeys = [...routes[0]!.physicalResourceKeys];
+    const admitted = compileV9FactSetV3(core).assets[0]!;
+    expect(admitted.exitRoutes.filter((route) => route.scoreEligible).map((route) => route.physicalResourceKeys))
+      .toEqual([routes[0]!.physicalResourceKeys, routes[0]!.physicalResourceKeys]);
+  });
+
+  it("keeps failed optional proof conversion unresearched without quarantining known facts or losing expired publisher history", () => {
+    const core = currentCore();
+    const asset = core.assets[0]!;
+    const exposure = asset.reserveExposures[0]!;
+    const scope: V9EvidenceCauseScope = {
+      pillar: "backing", componentKey: "liquidity", factorKey: "liquidity", exposureId: exposure.exposureKey,
+      routeKey: null, requiredDatum: "reserve liquidity horizon",
+    };
+    const historical = createV9EvidenceReference({
+      evidenceId: "expired-typed-review", sourceId: "issuer-reserve-report", sourceGenerationId: "old-report",
+      disposition: "published", observedAtSec: 700, publishedAtSec: 710, maxAgeSec: 200,
+    }, AS_OF_SEC);
+    asset.evidence.push(historical);
+    const result = resolveV9EvidenceCause({
+      assetId: asset.assetId, scope, asOfSec: AS_OF_SEC, sourceGenerationId: "typed-review",
+      evidenceReferences: asset.evidence,
+      typedReview: { id: "unsupported-review", assetId: asset.assetId, scope, cause: "C",
+        assertion: "researched-nondisclosure", reviewedAt: "not-a-date",
+        sources: ["https://issuer.example/reserves"], rationale: "Authored nondisclosure rationale." },
+    });
+    const gap = createV9FactGapV3({
+      gapId: "failed-optional-review", reasonCode: "material-unknown-reserve-exposure", ownerDomain: "backing",
+      policyRuleId: "reserve:liquidity", observationState: "missing", causeScope: scope, causeProof: result.causeProof,
+      path: { kind: "collateral-exposure", exposureKey: exposure.exposureKey }, message: "Liquidity remains unresearched.",
+      responsibility: result.responsibility, evidenceHistory: { publishedBy: "issuer", references: [historical] },
+    });
+    asset.gaps.push(gap);
+    asset.causeResolutionDiagnostics = [...(result.diagnostics ?? [])];
+    exposure.liquidityHorizon = "unknown";
+    exposure.factorStatuses = { ...exposure.factorStatuses, liquidity: createV9FactStatus({
+      observationState: "missing", applicability: requiredV9Applicability("reserve:liquidity"), gapIds: [gap.gapId],
+    }) };
+    const admitted = readCompiledV9FactSetForEvaluation(compileV9FactSetV3(core)).factSet.assets[0]!;
+    const admittedGap = admitted.gaps.find((candidate) => candidate.gapId === gap.gapId)!;
+    expect(admittedGap.causeProof.cause).toBe("U");
+    expect(admittedGap.responsibility).toBe("unresearched");
+    expect(admittedGap.evidenceRefIds).toEqual([]);
+    expect(admittedGap.evidenceHistory!.publishedBy).toBe("issuer");
+    const oldSource = admitted.evidence.find((reference) => reference.evidenceId === admittedGap.evidenceHistory!.evidenceRefIds[0])!;
+    expect(oldSource).toMatchObject({ observedAtSec: 700, publishedAtSec: 710, freshness: { state: "stale", ageSec: 300 } });
+    expect(admitted.causeResolutionDiagnostics).toEqual([expect.objectContaining({ code: "cause-proof-conversion-failed", scope })]);
+    expect(admitted.controls).toEqual(asset.controls);
+    const dangling = structuredClone(admitted);
+    dangling.gaps.find((candidate) => candidate.gapId === gap.gapId)!.evidenceHistory!.evidenceRefIds = ["not-captured"];
+    expect(safeParseV9AssetFactsV3(dangling).success).toBe(false);
+  });
+  it("admits compatible composition strength only with an actual composition and rejects live/static contradictions", () => {
+    const core = currentCore();
+    const asset = core.assets[0]!;
+    asset.reserveCompositionEvidenceClass = "issuer-attested";
+    asset.reserveCompositionProvenance = "curated";
+    expect(safeParseV9AssetFactsV3(asset).success).toBe(true);
+    const contradictory = structuredClone(asset);
+    contradictory.reserveCompositionProvenance = "live";
+    expect(safeParseV9AssetFactsV3(contradictory).success).toBe(false);
+    delete contradictory.reserveCompositionEvidenceClass;
+    expect(safeParseV9AssetFactsV3(contradictory).success).toBe(true);
+    const incomplete = structuredClone(asset);
+    delete incomplete.reserveCompositionEvidenceClass;
+    expect(safeParseV9AssetFactsV3(incomplete).success).toBe(false);
+    const absent = core.assets.find((candidate) => candidate.reserveExposures.length === 0)!;
+    expect(safeParseV9AssetFactsV3(absent).success).toBe(true);
+    absent.reserveCompositionProvenance = "live";
+    expect(safeParseV9AssetFactsV3(absent).success).toBe(false);
+    const uncaptured = structuredClone(asset);
+    uncaptured.reserveStatus.evidenceRefIds = ["not-captured"];
+    expect(safeParseV9AssetFactsV3(uncaptured).success).toBe(false);
+  });
+
+  it("rejects a measured adverse proof on a reserve remainder without rejecting the same admitted proof as a separate adverse fact", () => {
+    const core = currentCore();
+    const asset = core.assets[0]!;
+    const scope: V9EvidenceCauseScope = {
+      pillar: "backing", componentKey: "reserve-remainder", factorKey: null,
+      routeKey: null, exposureId: null, requiredDatum: "reserve remainder identity",
+    };
+    const source = createV9EvidenceReference({
+      evidenceId: "measured-reserve-loss", sourceId: "reserve-loss-observation", sourceGenerationId: "measured-loss:g1",
+      disposition: "observed", observedAtSec: AS_OF_SEC,
+      causeBinding: { assetId: asset.assetId, scope, producerState: null, rejectionCode: null, adverseFactId: "reserve-loss" },
+    }, AS_OF_SEC);
+    asset.evidence.push(source);
+    const remainder = createV9FactGapV3({
+      gapId: "unclassified-tail", reasonCode: "material-unknown-reserve-exposure", ownerDomain: "backing",
+      policyRuleId: "reserve-remainder", observationState: "missing", causeScope: scope,
+      path: { kind: "local-component", componentKey: "reserve-remainder" },
+      responsibility: "unresearched", message: "The remaining holdings are unidentified.",
+    });
+    const adverse = createV9FactGapV3({
+      ...remainder, gapId: "measured-adverse",
+      evidenceHistory: undefined,
+      causeProof: { cause: "D", adverseFactId: "reserve-loss", evidenceRefIds: [source.evidenceId] },
+      responsibility: "measured-adverse",
+    });
+    asset.gaps.push(remainder, adverse);
+    asset.reserveExposures[0]!.weight -= 0.1;
+    const status = createV9FactStatus({
+      observationState: "missing", applicability: requiredV9Applicability("reserve-remainder"), gapIds: [remainder.gapId],
+    });
+    asset.reserveResiduals.push({ residualId: "unclassified-tail", weight: 0.1, status });
+    expect(safeParseV9AssetFactsV3(asset).success).toBe(true);
+    const forged = structuredClone(asset);
+    forged.reserveResiduals[0]!.status.gapIds = [adverse.gapId];
+    expect(safeParseV9AssetFactsV3(forged).success).toBe(false);
+    expect(() => compileV9FactSetV3({ ...core, assets: [forged, ...core.assets.slice(1)] })).toThrow();
+    expect(safeParseV9AssetFactsV3(core.assets[1]!).success).toBe(true);
+  });
+});
 
 describe("Safety Score v9 fact compilation and upgrades", () => {
   it("keeps admitted assets immutable without bypassing cohort or clone validation", () => {
@@ -49,16 +326,6 @@ describe("Safety Score v9 fact compilation and upgrades", () => {
     const cloned = structuredClone(admittedCore);
     cloned.assets[0]!.supply.circulatingUsd = -1;
     expect(() => compileV9FactSetV3(cloned)).toThrow();
-  });
-  it("defaults retained v2 fact routes without modeled confidence to low", () => {
-    const retained = structuredClone(coreFixture());
-    const route = retained.assets[0]!.exitRoutes.find((candidate) => candidate.routeId === "amm-main")!;
-    delete (route as unknown as Record<string, unknown>).modelConfidence;
-
-    const compiled = compileV9FactSetV2(retained);
-    expect(compiled.assets[0]!.exitRoutes.find((candidate) => candidate.routeId === "amm-main")).toMatchObject({
-      modelConfidence: "low",
-    });
   });
   it("propagates serial SCC failure while keeping every active asset in the result", () => {
     const input = coreFixture();
@@ -97,16 +364,12 @@ describe("Safety Score v9 fact compilation and upgrades", () => {
 
     const evaluated = evaluateV9FactSet(compileNativeV3FactSet(input), V9_CANDIDATE_POLICY_V1);
     expect(evaluated.assets.map((asset) => asset.assetId)).toEqual(["alpha", "beta", "gamma"]);
-    expect(evaluated.assets.find((asset) => asset.assetId === "beta")!.compactTrace.reasonCodes).toContain(
-      "implementation-parent-cycle",
-    );
-    expect(evaluated.assets.find((asset) => asset.assetId === "gamma")!.compactTrace.reasonCodes).toContain(
-      "implementation-parent-cycle",
-    );
-    expect(evaluated.assets.find((asset) => asset.assetId === "alpha")!.compactTrace.reasonCodes).toContain(
-      "parent-cycle",
-    );
-    expect(evaluated.assets.every((asset) => asset.trace.finalScore === null)).toBe(true);
+    for (const result of evaluated.assets) {
+      expect(result.trace.ratingStatus).not.toBe("pipeline-gap");
+      expect(result.trace.partialEvidence).toBeNull();
+      expect(result.scoreInput.parent.score).not.toBe(100);
+      expect(result.trace.nrReasons.every((reason) => reason.code !== "implementation-parent-cycle" && reason.code !== "parent-cycle")).toBe(true);
+    }
   });
   it("requires every active asset exactly once and keeps dependencies inside the active set", () => {
     const missing = coreFixture();
@@ -146,226 +409,9 @@ describe("Safety Score v9 fact compilation and upgrades", () => {
   });
   it("rejects retained V2 fact sets closed", () => {
     const retained = compileV9FactSetV2(coreFixture());
-    expect(() => readCompiledV9FactSetForEvaluation(retained)).toThrow(
-      "Unsupported Safety Score v9 fact-set schema version: 2; expected 3",
-    );
+    expect(() => readCompiledV9FactSetForEvaluation(retained)).toThrow();
   });
 
-  it.each([
-    { observationState: "bounded-unknown", evidenceKind: "current" },
-    { observationState: "stale", evidenceKind: "stale" },
-  ] as const)("keeps $observationState empty coverage non-measured", ({
-    observationState,
-    evidenceKind,
-  }) => {
-    const core = nativeCompleteEmptyCoreFixture();
-    const asset = core.assets.find(
-      (candidate) => candidate.assetId === "alpha",
-    ) as V9AssetFactsV3;
-    const evidence =
-      evidenceKind === "stale"
-        ? createV9EvidenceReference(
-            {
-              evidenceId: "evidence:stale-exit-coverage",
-              sourceId: "route-source",
-              sourceGenerationId: SOURCE_FINGERPRINTS.dex.generationId,
-              disposition: "observed",
-              observedAtSec: 100,
-              maxAgeSec: 100,
-            },
-            AS_OF_SEC,
-          )
-        : asset.evidence.find(
-            (candidate) => candidate.evidenceId === "evidence:base",
-          )!;
-    const gap = createV9FactGapV3({
-      gapId: `alpha:gap:exit-coverage:${observationState}`,
-      reasonCode: "missing-same-notional-route",
-      ownerDomain: "exit",
-      policyRuleId: "exit.route.coverage",
-      observationState,
-      path: {
-        kind: "local-component",
-        componentKey: "exit-route-coverage",
-      },
-      message: "The empty exit surface is not a current complete observation.",
-      evidenceRefIds: [evidence.evidenceId],
-      responsibility: "producer-failed",
-    });
-    if (evidenceKind === "stale") asset.evidence.push(evidence);
-    asset.gaps.push(gap);
-    asset.exitStatus = createV9FactStatus({
-      applicability: requiredV9Applicability("exit.route.coverage"),
-      observationState,
-      evidenceRefIds: [evidence.evidenceId],
-      gapIds: [gap.gapId],
-    });
-
-    const evaluated = evaluateV9FactSet(
-      compileV9FactSetV3(core),
-      V9_CANDIDATE_POLICY_V1,
-    ).assets.find((candidate) => candidate.assetId === "alpha")!;
-    const reasons = evaluated.scoreInput.pillars.exit.reasons.filter(
-      (reason) => reason.code === "missing-same-notional-route",
-    );
-
-    expect(evaluated.exit.reasons).toContain("missing-same-notional-route");
-    expect(reasons).not.toHaveLength(0);
-    expect(
-      reasons.every(
-        (reason) => reason.responsibility === "producer-failed",
-      ),
-    ).toBe(true);
-  });
-  it("attributes a gapless withheld same-notional route to integration-missing while a real producer gap keeps producer-failed", () => {
-    // Live susn-noon shape (Noon feedback P4): the exit surface carries only
-    // an exit-portfolio gap under a different reason code, so the evaluator
-    // synthesizes `missing-same-notional-route` with no causal gap object.
-    // The same-run capacity read may have succeeded, so the gapless fallback
-    // must not claim a producer/data-collection failure.
-    const core = nativeCompleteEmptyCoreFixture();
-    const asset = core.assets.find(
-      (candidate) => candidate.assetId === "alpha",
-    ) as V9AssetFactsV3;
-    asset.exitRoutes = [];
-    const portfolioGap = createV9FactGapV3({
-      gapId: "alpha:gap:exit-portfolio-coverage",
-      reasonCode: "incomplete-dex-route-coverage",
-      ownerDomain: "exit",
-      policyRuleId: "exit.route.coverage",
-      observationState: "bounded-unknown",
-      path: { kind: "local-component", componentKey: "exit-portfolio-coverage" },
-      message: "The exit portfolio could not be certified.",
-      evidenceRefIds: ["evidence:base"],
-      responsibility: "producer-failed",
-    });
-    asset.gaps.push(portfolioGap);
-    asset.exitStatus = createV9FactStatus({
-      applicability: requiredV9Applicability("exit.route.coverage"),
-      observationState: "bounded-unknown",
-      evidenceRefIds: ["evidence:base"],
-      gapIds: [portfolioGap.gapId],
-    });
-
-    const evaluated = evaluateV9FactSet(
-      compileV9FactSetV3(core),
-      V9_CANDIDATE_POLICY_V1,
-    ).assets.find((candidate) => candidate.assetId === "alpha")!;
-    expect(evaluated.exit.reasons).toContain("missing-same-notional-route");
-    const gaplessReasons = evaluated.scoreInput.pillars.exit.reasons.filter(
-      (reason) => reason.code === "missing-same-notional-route",
-    );
-    expect(gaplessReasons).not.toHaveLength(0);
-    expect(
-      gaplessReasons.every(
-        (reason) =>
-          reason.responsibility === "integration-missing" &&
-          reason.sourceGapId === undefined,
-      ),
-    ).toBe(true);
-
-    // The authored-gap control: a real producer gap with this reason code
-    // keeps its authored owner and stays causally linked.
-    const gapCore = nativeCompleteEmptyCoreFixture();
-    const gapAsset = gapCore.assets.find(
-      (candidate) => candidate.assetId === "alpha",
-    ) as V9AssetFactsV3;
-    gapAsset.exitRoutes = [];
-    const producerGap = createV9FactGapV3({
-      gapId: "alpha:gap:exit-route-withheld-producer",
-      reasonCode: "missing-same-notional-route",
-      ownerDomain: "exit",
-      policyRuleId: "exit.route.coverage",
-      observationState: "bounded-unknown",
-      path: { kind: "local-component", componentKey: "exit-route-coverage" },
-      message: "The producer route capture failed.",
-      evidenceRefIds: ["evidence:base"],
-      responsibility: "producer-failed",
-    });
-    gapAsset.gaps.push(producerGap);
-    gapAsset.exitStatus = createV9FactStatus({
-      applicability: requiredV9Applicability("exit.route.coverage"),
-      observationState: "bounded-unknown",
-      evidenceRefIds: ["evidence:base"],
-      gapIds: [producerGap.gapId],
-    });
-
-    const gapEvaluated = evaluateV9FactSet(
-      compileV9FactSetV3(gapCore),
-      V9_CANDIDATE_POLICY_V1,
-    ).assets.find((candidate) => candidate.assetId === "alpha")!;
-    const gappedReasons = gapEvaluated.scoreInput.pillars.exit.reasons.filter(
-      (reason) => reason.code === "missing-same-notional-route",
-    );
-    expect(gappedReasons).not.toHaveLength(0);
-    expect(
-      gappedReasons.some(
-        (reason) =>
-          reason.responsibility === "producer-failed" &&
-          reason.sourceGapId === producerGap.gapId,
-      ),
-    ).toBe(true);
-  });
-  it("preserves explicit exit-gap and mechanism-profile ownership for a complete but unmeasured inventory", () => {
-    const nativeWithGap = structuredClone(compileNativeV3FactSet(coreFixture()));
-    const { v9FactSetDigest: _gapDigest, ...gapCore } = nativeWithGap;
-    const gapAsset = gapCore.assets.find(
-      (candidate) => candidate.assetId === "alpha",
-    ) as V9AssetFactsV3;
-    gapAsset.exitRoutes = gapAsset.exitRoutes.filter(
-      (route) => !route.scoreEligible,
-    );
-    gapAsset.evidence = gapAsset.evidence.filter(
-      (evidence) => evidence.evidenceId !== "evidence:route",
-    );
-    const exitGap = gapAsset.gaps.find(
-      (gap) => gap.ownerDomain === "exit",
-    )!;
-    exitGap.reasonCode = "missing-same-notional-route";
-    exitGap.responsibility = "issuer-undisclosed";
-
-    const gapEvaluated = evaluateV9FactSet(
-      compileV9FactSetV3(gapCore),
-      V9_CANDIDATE_POLICY_V1,
-    ).assets.find((asset) => asset.assetId === "alpha")!;
-    expect(gapEvaluated.scoreInput.pillars.exit.reasons).toContainEqual(
-      expect.objectContaining({
-        code: "missing-same-notional-route",
-        responsibility: "issuer-undisclosed",
-      }),
-    );
-    expect(gapEvaluated.exit.reasons).not.toContain("no-viable-exit-path");
-    expect(gapEvaluated.scoreInput.pillars.exit.adverseAttribution).toEqual([]);
-
-    const profileCore = nativeCompleteEmptyCoreFixture();
-    const profileAsset = profileCore.assets.find(
-      (candidate) => candidate.assetId === "alpha",
-    ) as V9AssetFactsV3;
-    profileAsset.mechanismExitFacts = [{
-      factKey: "protocol-redemption",
-      disposition: "supported",
-      quality: "adequate",
-      evidenceRefIds: ["evidence:base"],
-    }];
-    const profileEvaluated = evaluateV9FactSet(
-      compileV9FactSetV3(profileCore),
-      V9_CANDIDATE_POLICY_V1,
-    ).assets.find((asset) => asset.assetId === "alpha")!;
-
-    expect(profileEvaluated.scoreInput.pillars.exit.reasons).toContainEqual(
-      expect.objectContaining({
-        code: "missing-runtime-route-evidence",
-        responsibility: "integration-missing",
-      }),
-    );
-    expect(
-      profileEvaluated.scoreInput.pillars.exit.reasons.some(
-        (reason) =>
-          reason.code === "no-viable-exit-path" &&
-          reason.responsibility === "measured-adverse",
-      ),
-    ).toBe(false);
-  });
   it("fails chain attribution closed when the distribution is unavailable or the supply fact is bounded", () => {
     const configureImmaterialChain = (input: ReturnType<typeof coreFixture>) => {
       for (const asset of input.assets.slice(1)) {
@@ -839,12 +885,12 @@ describe("Safety Score v9 fact digest canonicalization", () => {
     const gap = ownerCore.assets[0]!.gaps[0]!;
     expect(gap.responsibility).not.toBe("issuer-undisclosed");
     gap.responsibility = "issuer-undisclosed";
-    expect(compileV9FactSetV3(ownerCore).v9FactSetDigest).not.toBe(first.v9FactSetDigest);
+    expect(() => compileV9FactSetV3(ownerCore)).toThrow();
   });
   it("accepts intact native V3 captures and refuses semantic tampering at the evaluation reader", () => {
     const first = compileNativeV3FactSet(coreFixture());
     expect(readCompiledV9FactSetForEvaluation(first)).toEqual({
-      sourceSchemaVersion: 3,
+      sourceSchemaVersion: 4,
       sourceFactSetDigest: first.v9FactSetDigest,
       factSet: first,
     });

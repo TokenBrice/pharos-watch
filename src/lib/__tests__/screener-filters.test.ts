@@ -31,6 +31,8 @@ function makeRow(overrides: Partial<ScreenerRow> = {}): ScreenerRow {
     liquidityScore: 85,
     safetyGrade: "A",
     safetyScore: 90,
+    ratingStatus: "rated",
+    partialEvidence: null,
     safetyBackingScore: 92,
     safetyExitScore: 88,
     safetyControlScore: 84,

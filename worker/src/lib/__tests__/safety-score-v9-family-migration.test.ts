@@ -82,7 +82,7 @@ describe("native-family identity and evidence admission", () => {
       expect(getSafetyScoreV9MechanismReviewedUnavailableComponents(meta.id, "protocol-position", clock).map((row) => row.componentKey)).toEqual(["encumbranceAndAllocation", "liabilityConservation"]);
     }
     expect(getSafetyScoreV9MechanismReviewGapDisposition(meta.id, "protocol-position", clockSec - 1)?.responsibility).toBe("method-unsupported");
-    expect(getSafetyScoreV9MechanismReviewedUnavailableComponents(meta.id, "protocol-position", reviewDay + maxAge)).toEqual([]);
+    expect(getSafetyScoreV9MechanismReviewedUnavailableComponents(meta.id, "protocol-position", reviewDay + maxAge).map((row) => row.componentKey)).toEqual(["encumbranceAndAllocation", "liabilityConservation"]);
     expect(buildSafetyScoreV9MechanismReview(input(), { ...meta, mechanismArchetype: "shared-reserve" }, "protocol-position")).toBeNull();
   });
 

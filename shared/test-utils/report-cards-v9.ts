@@ -4,7 +4,7 @@ import {
   type ReportCardsV9Response,
 } from "@shared/types/report-cards-v9";
 import { V9EvidenceResponsibilitySchema } from "@shared/types/safety-score-v9-fact-primitives";
-import { scoreToGrade } from "@shared/types/safety-score-v9-grade";
+import { scoreToGrade, V9_PILLAR_WEIGHTS } from "@shared/types/safety-score-v9-grade";
 import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 
 type V9PillarKey = keyof SafetyScoreV9CurrentCard["pillars"];
@@ -41,49 +41,59 @@ const EXIT_COMPONENTS = [
 function buildBreakdowns(
   score: number | null,
   pillars: SafetyScoreV9CurrentCard["pillars"],
+  exclusionCause: "A" | "B" = "A",
 ): V9Breakdowns | null {
-  if (
-    score === null ||
-    pillars.backing.score === null ||
-    pillars.exit.score === null ||
-    pillars.control.score === null
-  ) {
-    return null;
-  }
+  const included = (Object.keys(pillars) as V9PillarKey[]).filter((key) => pillars[key].aggregationDisposition === "included");
+  const totalWeight = included.reduce((sum, key) => sum + V9_PILLAR_WEIGHTS[key], 0);
+  const base = (key: V9PillarKey) => ({
+    aggregationDisposition: pillars[key].aggregationDisposition,
+    causeGapRefs: pillars[key].causeGapRefs,
+    limitedEvidenceCauses: pillars[key].limitedEvidenceCauses,
+    aggregationWeight: score === null || !included.includes(key) ? 0 : V9_PILLAR_WEIGHTS[key] / totalWeight,
+  });
+  const contribution = (key: V9PillarKey, weight = 1) => ({
+    cause: pillars[key].aggregationDisposition === "excluded-a-b" ? exclusionCause : null,
+    causeGapRefs: pillars[key].causeGapRefs,
+    scoringDisposition: pillars[key].aggregationDisposition === "excluded-a-b"
+      ? exclusionCause === "A" ? "excluded-pipeline" as const : "excluded-uncurated" as const
+      : "included" as const,
+    effectiveScoringWeight: pillars[key].aggregationDisposition === "excluded-a-b" ? 0 : weight,
+  });
 
   return {
     backing: {
       evaluatedScore: pillars.backing.score,
       publishedScore: pillars.backing.score,
-      aggregationWeight: 0.4,
+      ...base("backing"),
       adjustments: [],
       groups: [{
         key: "reserves",
         label: "Reserves",
         score: pillars.backing.score,
-        effectiveWeight: 1,
+        ...contribution("backing"),
       }],
       components: [{
         key: "reserve:reviewed",
         label: "Reviewed reserves",
         source: "reserve-exposure",
         score: pillars.backing.score,
-        effectiveWeight: 1,
-        weightedContribution: pillars.backing.score,
+        ...contribution("backing"),
+        wholeAssetWeight: 1,
+        weightedContribution: pillars.backing.score ?? 0,
         observationState: "known",
       }],
     },
     exit: {
       evaluatedScore: pillars.exit.score,
       publishedScore: pillars.exit.score,
-      aggregationWeight: 0.35,
+      ...base("exit"),
       adjustments: [],
       stressRequest: {
         requestedNotionalUsd: 1_000_000,
         maxCostBps: 200,
         comparisonWindowSec: 86_400,
       },
-      primaryRoute: {
+      primaryRoute: pillars.exit.score === null ? null : {
         key: "redemption:reviewed",
         label: "Protocol redemption",
         routeFamily: "protocol-redemption",
@@ -93,9 +103,18 @@ function buildBreakdowns(
           label,
           score: pillars.exit.score!,
           weight,
+          ...contribution("exit", weight),
           weightedContribution: pillars.exit.score! * weight,
         })),
         confidenceFactor: 1,
+        confidenceDimensions: {
+          observation: { factor: 1, cause: null, causeGapRefs: [] },
+          model: { factor: 1, cause: null, causeGapRefs: [] },
+          capacityMethod: { factor: 1, cause: null, causeGapRefs: [] },
+        },
+        capacityEvidenceTier: "live-direct",
+        rawSameNotionalCostBps: 0,
+        supportedComponentCeiling: pillars.exit.score,
         eligibilityMultiplier: 1,
         capsApplied: [],
       },
@@ -105,7 +124,7 @@ function buildBreakdowns(
     control: {
       evaluatedScore: pillars.control.score,
       publishedScore: pillars.control.score,
-      aggregationWeight: 0.25,
+      ...base("control"),
       adjustments: [],
       method: "minimum-binding-component",
       components: [{
@@ -114,7 +133,8 @@ function buildBreakdowns(
         kind: "mint",
         posture: "distributed",
         score: pillars.control.score,
-        binding: true,
+        binding: pillars.control.score !== null,
+        ...contribution("control"),
       }],
     },
   } satisfies V9Breakdowns;
@@ -128,6 +148,10 @@ export function makeReportCardsV9Pillars(scores: {
 }): SafetyScoreV9CurrentCard["pillars"] {
   const pillar = (score: number | null) => ({
     score,
+    aggregationDisposition: "included" as const,
+    supportedComponentKeys: score === null ? [] : [...PILLAR_COMPONENTS],
+    causeGapRefs: [],
+    limitedEvidenceCauses: [],
     evidenceLevel: "adequate" as const,
     freshness: "current" as const,
     components: [...PILLAR_COMPONENTS],
@@ -144,34 +168,26 @@ export function makeReportCardsV9Card(
   overrides: Partial<SafetyScoreV9CurrentCard> = {},
 ): SafetyScoreV9CurrentCard {
   const score = overrides.score === undefined ? DEFAULT_SCORE : overrides.score;
-  const grade = overrides.grade ?? scoreToGrade(score);
-  const reviewedPillarScores = overrides.pillars === undefined
-    ? []
-    : Object.values(overrides.pillars)
-        .map((pillar) => pillar.score)
-        .filter((pillarScore): pillarScore is number => pillarScore !== null);
-  const qualityScore = overrides.qualityScore === undefined
-    ? reviewedPillarScores.length > 0
-      ? reviewedPillarScores.reduce((sum, pillarScore) => sum + pillarScore, 0) /
-        reviewedPillarScores.length
-      : DEFAULT_QUALITY_SCORE
-    : overrides.qualityScore;
+  const ratingStatus = overrides.ratingStatus ?? (score === null ? "not-rated" : "rated");
+  const grade = overrides.grade !== undefined ? overrides.grade : ratingStatus === "pipeline-gap" ? null : scoreToGrade(score);
+  const initialQuality = overrides.qualityScore === undefined ? DEFAULT_QUALITY_SCORE : overrides.qualityScore;
   const pegMultiplier =
-    overrides.pegMultiplier === undefined ? DEFAULT_PEG_MULTIPLIER : overrides.pegMultiplier;
+    ratingStatus === "pipeline-gap" ? null : overrides.pegMultiplier === undefined ? DEFAULT_PEG_MULTIPLIER : overrides.pegMultiplier;
   const pegAdjustedScore =
-    overrides.pegAdjustedScore === undefined ? score : overrides.pegAdjustedScore;
-  const pillar = (pillarScore: number | null) => ({
-    score: pillarScore,
-    evidenceLevel: "adequate" as const,
-    freshness: "current" as const,
-    components: [...PILLAR_COMPONENTS],
-    reasons: [],
+    ratingStatus === "pipeline-gap" ? null : overrides.pegAdjustedScore === undefined ? score : overrides.pegAdjustedScore;
+  const pillars = overrides.pillars ?? makeReportCardsV9Pillars({
+    backing: initialQuality === null ? null : Math.max(0, initialQuality - 2),
+    exit: initialQuality,
+    control: initialQuality === null ? null : Math.min(100, initialQuality + 2),
   });
-  const pillars = overrides.pillars ?? {
-    backing: pillar(qualityScore === null ? null : Math.max(0, qualityScore - 2)),
-    exit: pillar(qualityScore),
-    control: pillar(qualityScore === null ? null : Math.min(100, qualityScore + 2)),
-  };
+  const includedPillars = (Object.keys(pillars) as V9PillarKey[]).filter((key) => pillars[key].aggregationDisposition === "included").sort();
+  const excludedPillars = (Object.keys(pillars) as V9PillarKey[]).filter((key) => pillars[key].aggregationDisposition === "excluded-a-b").sort();
+  const weightSum = includedPillars.reduce((sum, key) => sum + V9_PILLAR_WEIGHTS[key], 0);
+  const effectiveScoringWeights = Object.fromEntries((Object.keys(pillars) as V9PillarKey[]).map((key) => [
+    key, includedPillars.includes(key) && weightSum > 0 ? V9_PILLAR_WEIGHTS[key] / weightSum : 0,
+  ])) as Record<V9PillarKey, number>;
+  const qualityScore = ratingStatus !== "rated" || initialQuality === null ? null
+    : includedPillars.reduce((sum, key) => sum + (pillars[key].score ?? 0) * effectiveScoringWeights[key], 0);
   const weakest = (
     Object.entries(pillars) as Array<[V9PillarKey, (typeof pillars)["backing"]]>
   )
@@ -179,14 +195,18 @@ export function makeReportCardsV9Card(
     .sort((left, right) => left[1].score! - right[1].score!)[0];
   const weakestPillar = overrides.weakestPillar !== undefined
     ? overrides.weakestPillar
-    : qualityScore === null || weakest === undefined
+    : ratingStatus === "pipeline-gap" || qualityScore === null || weakest === undefined
       ? null
       : { pillar: weakest[0], score: weakest[1].score! };
   const breakdowns = overrides.breakdowns !== undefined
     ? overrides.breakdowns
-    : buildBreakdowns(score, pillars);
+    : ratingStatus === "not-rated" ? null : buildBreakdowns(score, pillars, overrides.partialEvidence?.causes[0]);
   const card = {
     id: "usdc-circle",
+    localCauseGaps: [],
+    foreignCauseGapRefs: [],
+    ratingStatus,
+    partialEvidence: null,
     supply: { circulatingUsdAtEvaluation: null, asOfSec: null, generationId: null },
     sharedBookId: null,
     dependencyCoverage: [],
@@ -225,7 +245,7 @@ export function makeReportCardsV9Card(
   return {
     ...card,
     scoreTrace: overrides.scoreTrace ?? {
-      schemaVersion: 3,
+      schemaVersion: 4,
       legacyAliases: {
         qualityScore: "weighted-pillar-mean",
         pegAdjustedScore: "post-deployment-pre-cap-score",
@@ -239,6 +259,10 @@ export function makeReportCardsV9Card(
             weakestPillar: card.weakestPillar!.pillar,
             weakestScore: card.weakestPillar!.score,
             headroom: 20,
+            includedPillars,
+            excludedPillars,
+            effectiveScoringWeights,
+            supportCeiling: card.qualityScore!,
           }
         : null,
       stages: {
@@ -266,7 +290,7 @@ export function makeReportCardsV9Card(
         items: [],
       },
       evidenceResponsibility: {
-        semantics: "limiting-fact-owner-v1",
+        semantics: "limiting-fact-cause-v2",
         totalFactCount: 0,
         facts: [],
         summaries: [...V9EvidenceResponsibilitySchema.options]
@@ -282,6 +306,48 @@ export function makeReportCardsV9Card(
       wrapperParentLimit: null,
     },
   };
+}
+
+/** Cause-proven excluded pillars retain their measured siblings without inventing a grade. */
+export function makeReportCardsV9PartialCard(
+  excludedPillar: V9PillarKey = "exit",
+  cause: "A" | "B" = "A",
+  overrides: Partial<SafetyScoreV9CurrentCard> = {},
+): SafetyScoreV9CurrentCard {
+  const pillars = makeReportCardsV9Pillars({ backing: 80, exit: 80, control: 80 });
+  pillars[excludedPillar] = { ...pillars[excludedPillar], score: null, aggregationDisposition: "excluded-a-b",
+    supportedComponentKeys: [], causeGapRefs: [0], limitedEvidenceCauses: [] };
+  return makeReportCardsV9Card({
+    score: 80, pegMultiplier: 1, pillars,
+    localCauseGaps: [excludedPillar],
+    partialEvidence: { reasonCode: "partial-evidence-pipeline-gap", excludedPillars: [excludedPillar],
+      excludedComponentKeys: [`${excludedPillar}:reviewed`], causeGapRefs: [0], causes: [cause] },
+    ...overrides,
+  });
+}
+
+/** One or zero included pillars is technical unavailability, not NR. */
+export function makeReportCardsV9PipelineGapCard(
+  survivingPillar: V9PillarKey | null = "control",
+  cause: "A" | "B" = "A",
+  overrides: Partial<SafetyScoreV9CurrentCard> = {},
+): SafetyScoreV9CurrentCard {
+  const pillars = makeReportCardsV9Pillars({ backing: 80, exit: 80, control: 80 });
+  const excludedPillars = (Object.keys(pillars) as V9PillarKey[]).filter((key) => key !== survivingPillar).sort();
+  for (let ref = 0; ref < excludedPillars.length; ref++) {
+    const key = excludedPillars[ref]!;
+    pillars[key] = { ...pillars[key], score: null, aggregationDisposition: "excluded-a-b",
+      supportedComponentKeys: [], causeGapRefs: [ref], limitedEvidenceCauses: [] };
+  }
+  return makeReportCardsV9Card({
+    ratingStatus: "pipeline-gap", score: null, grade: null, pillars,
+    localCauseGaps: excludedPillars,
+    reasonCodes: [survivingPillar === null ? "all-pillars-pipeline-gap" : "single-pillar-pipeline-gap"],
+    partialEvidence: { reasonCode: "partial-evidence-pipeline-gap", excludedPillars,
+      excludedComponentKeys: excludedPillars.map((key) => `${key}:reviewed`),
+      causeGapRefs: excludedPillars.map((_, ref) => ref), causes: [cause] },
+    ...overrides,
+  });
 }
 
 export function makeReportCardsV9Response(
@@ -306,7 +372,7 @@ export function makeReportCardsV9Response(
     asOfSec: preset.asOfSec,
     updatedAt,
     publicationHealth: overrides.publicationHealth ?? {
-      schemaVersion: 1,
+      schemaVersion: 2,
       status: "current",
       acceptedPublicationGenerationId:
         safetyScoreIdentity.publicationGenerationId,
@@ -317,17 +383,20 @@ export function makeReportCardsV9Response(
     },
     completeness: {
       expectedCount: cards.length,
-      ratedCount: cards.filter((card) => card.grade !== "NR").length,
+      ratedCount: cards.filter((card) => card.ratingStatus === "rated").length,
       notRatedCount: cards.filter((card) => card.grade === "NR").length,
       notRatedIds: cards.filter((card) => card.grade === "NR").map((card) => card.id).sort(),
+      pipelineGapCount: cards.filter((card) => card.ratingStatus === "pipeline-gap").length,
+      pipelineGapIds: cards.filter((card) => card.ratingStatus === "pipeline-gap").map((card) => card.id).sort(),
     },
     source: {
       ...preset.source,
       sourceGenerations: { ...preset.source.sourceGenerations },
     },
     cards,
+    foreignCauseGaps: [],
     dependencyGraph: buildReportCardsV9DependencyGraph(cards),
-    ...(overrides.schemaVersion === 5 ? {} : { commonModeGroups: [] }),
+    commonModeGroups: [],
     ...overrides,
   };
 }

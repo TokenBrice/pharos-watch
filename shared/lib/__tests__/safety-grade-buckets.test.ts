@@ -21,6 +21,10 @@ const EXPECTED_BUCKETS: Record<V9Grade, V9GradeRiskBucket> = {
 };
 
 describe("safety grade buckets", () => {
+  it("keeps a pipeline-gap null grade unavailable, distinct from the numeric F grade", () => {
+    expect(getV9GradeRiskBucket(null)).toBe("unavailable");
+    expect(getV9GradeRiskBucket("F")).toBe("risky");
+  });
   // The buckets are encoded twice: `SAFE_GRADES` / `RISKY_GRADES` as explicit
   // sets (what the worker's flight-to-quality classification reads) and
   // `getV9GradeRiskBucket` as rank thresholds (what the frontend reads). These

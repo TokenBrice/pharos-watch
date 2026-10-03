@@ -6,7 +6,6 @@
       "pct": 17.275008,
       "risk": "low",
       "assetClass": "bank-deposit",
-      "issuerOrObligor": "Undisclosed regulated financial institutions holding BCP Technologies Ltd reserve cash accounts",
       "riskFactors": ["counterparty", "custody", "concentration"],
       "liquidityHorizon": "unknown"
     },
@@ -15,7 +14,6 @@
       "pct": 22.440424,
       "risk": "medium",
       "assetClass": "other",
-      "issuerOrObligor": "Undisclosed bond issuers in BCP Technologies Ltd reserves",
       "riskFactors": ["credit", "duration", "liquidity", "custody", "concentration"],
       "liquidityHorizon": "unknown"
     },
@@ -24,7 +22,6 @@
       "pct": 60.284568,
       "risk": "low",
       "assetClass": "money-market-fund",
-      "issuerOrObligor": "Undisclosed money market funds in BCP Technologies Ltd reserves",
       "riskFactors": ["counterparty", "duration", "liquidity", "custody", "concentration"],
       "liquidityHorizon": "unknown"
     }

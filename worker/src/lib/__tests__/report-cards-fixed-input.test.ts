@@ -38,6 +38,7 @@ import {
   XAUT_TRANSPARENCY_SOURCE_ID,
   XAUT_TREASURY_ADDRESS,
 } from "../safety-score-v9/xaut-supply-attribution-contract";
+import { createRuntimeGapVerdict } from "../safety-score-v9/fact-set-context";
 
 function fixedInput(dexLiqMap: Record<string, DexLiquidityData> = {}) {
   return makeV9RegistryFixedInput({
@@ -768,5 +769,23 @@ describe("retained v3 fixed report-card input", () => {
         }),
       ),
     ).toThrow("producer timestamp 1783891201 is later than scoring clock 1783891200");
+  });
+});
+
+describe("v10.01 fixed-input producer proof identity", () => {
+  it("rejects duplicate scopes and cannot strip proofs while retaining their base identity", () => {
+    const base = fixedInput();
+    const failure = createRuntimeGapVerdict({
+      assetId: "usdc-circle", scope: { pillar: "backing", componentKey: "reserve-composition",
+        factorKey: null, routeKey: null, exposureId: null, requiredDatum: "reserve-composition" },
+      sourceId: "fixture-reader", sourceGenerationId: "attempt:fixed-input",
+      observedAtSec: base.clockSec, asOfSec: base.clockSec, producerState: "producer-failed",
+      rejectionCode: "read-failed", reason: "The reserve reader failed.",
+    });
+    const captured = normalizeFixedInput({ ...base, baseInputGenerationId: undefined,
+      pipelineGapByAssetId: { "usdc-circle": [failure] } });
+    expect(() => normalizeFixedInput({ ...captured, pipelineGapByAssetId: undefined })).toThrow(/does not match payload/);
+    expect(() => normalizeFixedInput({ ...base, baseInputGenerationId: undefined,
+      pipelineGapByAssetId: { "usdc-circle": [failure, failure] } })).toThrow(/unique exact asset/);
   });
 });

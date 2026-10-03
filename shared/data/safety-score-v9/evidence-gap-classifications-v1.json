@@ -1,0 +1,1640 @@
+{
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "curation-2026-10-03-jtrsy-reconciliation",
+      "assetId": "jtrsy-anemoy",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "economic-control:mint",
+        "factorKey": "reconciliation",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "reconciliation"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T00:25:05Z",
+      "reviewer": "CurationResearchA / Safety Score v10.01 Phase 2",
+      "sources": [
+        {
+          "url": "https://www.anemoy.io/funds/jtrsy",
+          "observedAt": "2026-10-03T00:11:37Z",
+          "datumAsOf": null,
+          "location": "Investment Transparency",
+          "excerpt": "Investors will have the ability to view their holdings and returns, and overall fund composition via Centrifuge in near real-time, which can be further verified onchain.",
+          "assertion": "Transparency not whole-supply mint/reserve reconciliation; R9 rejects equivalence. Corroborates the existing 2026-08-15 mintAuthority.review in shared/data/stablecoins/domains/mint-authority/jtrsy-anemoy.json: \"the NAV feed does not establish whole-supply reconciliation\". That historical source is cited, not re-dated."
+        },
+        {
+          "url": "https://centrifuge-files.mypinata.cloud/ipfs/bafybeicdzle2bgqekmvnfqcxjhimnzlfrg7mkfvngxtmfvjzldmtoubneq",
+          "observedAt": "2026-10-03T00:11:11Z",
+          "datumAsOf": "2026-06-30",
+          "location": "June 2026 fact sheet, Overview",
+          "excerpt": "Asset Under Management (AUM) can be checked onchain.",
+          "assertion": "AUM/NAV not dated whole on/off-chain supply reconciliation."
+        },
+        {
+          "url": "https://centrifuge.mypinata.cloud/ipfs/QmQ9P1BuH6mBkN9Gs1aBZo34zX6NYigRZ84nu13Wi52CKC",
+          "observedAt": "2026-10-03T00:11:13Z",
+          "datumAsOf": "2025-03-11",
+          "location": "S&P report page 4, service providers",
+          "excerpt": "Fund administrator Trident Trust (Cayman), which will maintain investor registries for both on-chain tokenized and off-chain nontokenized units, as well as overseeing the calculation of the fund's net asset value. S&P Global Ratings' FCQRs And FVRs An F",
+          "assertion": "Historic register maintenance/NAV process, not current whole-supply reconciliation."
+        },
+        {
+          "url": "https://docs.centrifuge.io/developer/protocol/architecture/vaults/",
+          "observedAt": "2026-10-03T00:12:06Z",
+          "datumAsOf": null,
+          "location": "Vault implementations, AsyncVault",
+          "excerpt": "Useful for real-world asset (RWA) use cases requiring delayed fulfillment of deposits/redemptions.",
+          "assertion": "Current generic request architecture does not publish JTRSY reconciliation or loss recovery certificate."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.anemoy.io/funds/jtrsy",
+        "https://centrifuge-files.mypinata.cloud/ipfs/bafybeicdzle2bgqekmvnfqcxjhimnzlfrg7mkfvngxtmfvjzldmtoubneq",
+        "https://centrifuge.mypinata.cloud/ipfs/QmQ9P1BuH6mBkN9Gs1aBZo34zX6NYigRZ84nu13Wi52CKC",
+        "https://docs.centrifuge.io/developer/protocol/architecture/vaults/",
+        "https://app.centrifuge.io/pool/281474976710662",
+        "https://data.chain.link/feeds/ethereum/mainnet/jtrsy-nav-v2",
+        "https://www.spglobal.com/ratings/en/regulatory/article/-/view/type/HTML/id/3534006",
+        "https://www.bvifsc.vg/regulated-entities/anemoy-capital-spc-limited"
+      ],
+      "rationale": "Current public search across issuer fund disclosure, published factsheet/report and protocol vault architecture gives AUM/NAV, holding records and ordinary mint/redemption mechanics, but no current whole-supply reconciliation tying every on/offchain fund share liability, mint/burn movement and reserve/fund register to a common observation clock and verified cadence. Owner R9 explicitly forbids NAV/AUM equivalence. Historical corroborating source: shared/data/stablecoins/domains/mint-authority/jtrsy-anemoy.json, mintAuthority.review (reviewedAt 2026-08-15), states: \"the NAV feed does not establish whole-supply reconciliation\"; mintAuthority.reconciliation remains \"unknown\". This fresh exact-scope C uses the current dossier search without date-bumping or overriding that typed review. Inaccessible Chainlink/rating/register surfaces are not the basis of nondisclosure."
+    },
+    {
+      "id": "curation-2026-10-03-usdt-liquidity-00",
+      "assetId": "usdt-tether",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:e5cbc44c9d389d5d6fcc27d5",
+        "requiredDatum": "liquidityHorizon"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T00:25:05Z",
+      "reviewer": "CurationResearchA / Safety Score v10.01 Phase 2",
+      "sources": [
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page9 / report page4, footnote3 (U.S. Treasury bills)",
+          "excerpt": "The \u201cU.S. Treasury Bills\u201d category comprises U.S. Treasury Bills with a weighted average maturity of less than 90 days.",
+          "assertion": "Exact per-slice category description; not a complete maximum-maturity, stressed-liquidity or counterparty-allocation datum."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 9 / report page 4, footnotes 3\u201313",
+          "excerpt": "The \u201cU.S. Treasury Bills\u201d category comprises U.S. Treasury Bills with a weighted average maturity of less than 90 days. 4 The \u201cOvernight Rever",
+          "assertion": "Average is not maximum or stressed realization horizon."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 9 / reserve report page 4, asset table",
+          "excerpt": "Total Assets (1+2+3+4+5+6+7) 187,751,426,4",
+          "assertion": "Eleven categories and denominator are public and already curated, not blanket C."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 4 / assurance page 3, Emphasis of Matter",
+          "excerpt": "The valuation of the assets of the Company is based on normal trading conditions and does not reflect unexpected and extraordinary market conditions, or the case of key custodians or counterparties experiencing substantial illiquidity, which may result in delayed realisable values. No provision for expected credit losses was iden",
+          "assertion": "Acknowledges stress delay but publishes no per-slice maximum realization horizon."
+        },
+        {
+          "url": "https://tether.to/en/transparency/?tab=reports",
+          "observedAt": "2026-10-03T00:11:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Rendered Reports & Reserves tab",
+          "excerpt": "Most recent Reserves report as of June 30, 2026 UTC",
+          "assertion": "Authoritative current index identifies June 30 as latest report."
+        },
+        {
+          "url": "https://tether.to/public/Relevant_Information_Document_-_Tether_International,_S.A._de_C.V..pdf",
+          "observedAt": "2026-10-03T00:09:43Z",
+          "datumAsOf": "2026-02-20",
+          "location": "RID PDF page 17, section 3 Safeguarding Arrangements",
+          "excerpt": "Tether primarily holds the Reserves with various third parties including banks and licensed financial institutions.",
+          "assertion": "Generic classes only; no complete names/allocation/successor protections."
+        },
+        {
+          "url": "https://tether.to/en/legal/",
+          "observedAt": "2026-10-03T00:11:53Z",
+          "datumAsOf": "2026-02-26",
+          "location": "Terms section 4.1",
+          "excerpt": "The right to purchase Tether Tokens or have Tether Tokens redeemed is a contractual right personal to you.",
+          "assertion": "Known eligible-customer right, not holder trust/insolvency priority."
+        },
+        {
+          "url": "https://tether.to/en/faqs/",
+          "observedAt": "2026-10-03T00:11:54Z",
+          "datumAsOf": null,
+          "location": "FAQ: How often does Tether provide its transparency information?",
+          "excerpt": "Tether also typically publishes quarterly reports providing information on its Reserves that are held to back Tether Tokens in circulation.",
+          "assertion": "Public reporting cadence and scope; no current per-slice stress maximum/custody allocation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+        "https://tether.to/public/Relevant_Information_Document_-_Tether_International,_S.A._de_C.V..pdf",
+        "https://tether.to/en/legal/",
+        "https://tether.to/en/faqs/",
+        "https://tether.to/en/transparency/",
+        "https://tether.to/en/transparency/?tab=reports",
+        "https://tether.to/en/whitepaper/"
+      ],
+      "rationale": "Checked latest June30 BDO report asset table/footnotes3\u201313, stress caveat, current report index, RID and terms. U.S. Treasury bills has category/value disclosure, but no per-slice binding realization deadline or stressed maximum. Average tenor, quoted price, active markets, ownership, cash category and collateral mechanisms do not prove sale/access completion. Preserve the researched unknown horizon; do not infer a maximum from weighted/residual average."
+    },
+    {
+      "id": "curation-2026-10-03-usdt-liquidity-02",
+      "assetId": "usdt-tether",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:00ba64c1c785371a2101903f",
+        "requiredDatum": "liquidityHorizon"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T00:25:05Z",
+      "reviewer": "CurationResearchA / Safety Score v10.01 Phase 2",
+      "sources": [
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page9 / report page4, footnote5 (Term reverse repurchase agreements)",
+          "excerpt": "The \u201cTerm Reverse-Repurchase Agreements\u201d category comprises fully collateralized Reverse-Repurchase Agreements with a residual average maturity of less than 90 days, where the ultimate issuer or guarantor has a rating of at least A-3.",
+          "assertion": "Exact per-slice category description; not a complete maximum-maturity, stressed-liquidity or counterparty-allocation datum."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 9 / report page 4, footnotes 3\u201313",
+          "excerpt": "The \u201cU.S. Treasury Bills\u201d category comprises U.S. Treasury Bills with a weighted average maturity of less than 90 days. 4 The \u201cOvernight Rever",
+          "assertion": "Average is not maximum or stressed realization horizon."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 9 / reserve report page 4, asset table",
+          "excerpt": "Total Assets (1+2+3+4+5+6+7) 187,751,426,4",
+          "assertion": "Eleven categories and denominator are public and already curated, not blanket C."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 4 / assurance page 3, Emphasis of Matter",
+          "excerpt": "The valuation of the assets of the Company is based on normal trading conditions and does not reflect unexpected and extraordinary market conditions, or the case of key custodians or counterparties experiencing substantial illiquidity, which may result in delayed realisable values. No provision for expected credit losses was iden",
+          "assertion": "Acknowledges stress delay but publishes no per-slice maximum realization horizon."
+        },
+        {
+          "url": "https://tether.to/en/transparency/?tab=reports",
+          "observedAt": "2026-10-03T00:11:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Rendered Reports & Reserves tab",
+          "excerpt": "Most recent Reserves report as of June 30, 2026 UTC",
+          "assertion": "Authoritative current index identifies June 30 as latest report."
+        },
+        {
+          "url": "https://tether.to/public/Relevant_Information_Document_-_Tether_International,_S.A._de_C.V..pdf",
+          "observedAt": "2026-10-03T00:09:43Z",
+          "datumAsOf": "2026-02-20",
+          "location": "RID PDF page 17, section 3 Safeguarding Arrangements",
+          "excerpt": "Tether primarily holds the Reserves with various third parties including banks and licensed financial institutions.",
+          "assertion": "Generic classes only; no complete names/allocation/successor protections."
+        },
+        {
+          "url": "https://tether.to/en/legal/",
+          "observedAt": "2026-10-03T00:11:53Z",
+          "datumAsOf": "2026-02-26",
+          "location": "Terms section 4.1",
+          "excerpt": "The right to purchase Tether Tokens or have Tether Tokens redeemed is a contractual right personal to you.",
+          "assertion": "Known eligible-customer right, not holder trust/insolvency priority."
+        },
+        {
+          "url": "https://tether.to/en/faqs/",
+          "observedAt": "2026-10-03T00:11:54Z",
+          "datumAsOf": null,
+          "location": "FAQ: How often does Tether provide its transparency information?",
+          "excerpt": "Tether also typically publishes quarterly reports providing information on its Reserves that are held to back Tether Tokens in circulation.",
+          "assertion": "Public reporting cadence and scope; no current per-slice stress maximum/custody allocation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+        "https://tether.to/public/Relevant_Information_Document_-_Tether_International,_S.A._de_C.V..pdf",
+        "https://tether.to/en/legal/",
+        "https://tether.to/en/faqs/",
+        "https://tether.to/en/transparency/",
+        "https://tether.to/en/transparency/?tab=reports",
+        "https://tether.to/en/whitepaper/"
+      ],
+      "rationale": "Checked latest June30 BDO report asset table/footnotes3\u201313, stress caveat, current report index, RID and terms. Term reverse repurchase agreements has category/value disclosure, but no per-slice binding realization deadline or stressed maximum. Average tenor, quoted price, active markets, ownership, cash category and collateral mechanisms do not prove sale/access completion. Preserve the researched unknown horizon; do not infer a maximum from weighted/residual average."
+    },
+    {
+      "id": "curation-2026-10-03-usdt-liquidity-03",
+      "assetId": "usdt-tether",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:34cf70f953abf2cb4405de99",
+        "requiredDatum": "liquidityHorizon"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T00:25:05Z",
+      "reviewer": "CurationResearchA / Safety Score v10.01 Phase 2",
+      "sources": [
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page9 / report page4, footnote6 (Non-US Treasury bills)",
+          "excerpt": "The \u201cNon-US Treasury Bills\u201d have a weighted average maturity of less than 360 days.",
+          "assertion": "Exact per-slice category description; not a complete maximum-maturity, stressed-liquidity or counterparty-allocation datum."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 9 / report page 4, footnotes 3\u201313",
+          "excerpt": "The \u201cU.S. Treasury Bills\u201d category comprises U.S. Treasury Bills with a weighted average maturity of less than 90 days. 4 The \u201cOvernight Rever",
+          "assertion": "Average is not maximum or stressed realization horizon."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 9 / reserve report page 4, asset table",
+          "excerpt": "Total Assets (1+2+3+4+5+6+7) 187,751,426,4",
+          "assertion": "Eleven categories and denominator are public and already curated, not blanket C."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 4 / assurance page 3, Emphasis of Matter",
+          "excerpt": "The valuation of the assets of the Company is based on normal trading conditions and does not reflect unexpected and extraordinary market conditions, or the case of key custodians or counterparties experiencing substantial illiquidity, which may result in delayed realisable values. No provision for expected credit losses was iden",
+          "assertion": "Acknowledges stress delay but publishes no per-slice maximum realization horizon."
+        },
+        {
+          "url": "https://tether.to/en/transparency/?tab=reports",
+          "observedAt": "2026-10-03T00:11:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Rendered Reports & Reserves tab",
+          "excerpt": "Most recent Reserves report as of June 30, 2026 UTC",
+          "assertion": "Authoritative current index identifies June 30 as latest report."
+        },
+        {
+          "url": "https://tether.to/public/Relevant_Information_Document_-_Tether_International,_S.A._de_C.V..pdf",
+          "observedAt": "2026-10-03T00:09:43Z",
+          "datumAsOf": "2026-02-20",
+          "location": "RID PDF page 17, section 3 Safeguarding Arrangements",
+          "excerpt": "Tether primarily holds the Reserves with various third parties including banks and licensed financial institutions.",
+          "assertion": "Generic classes only; no complete names/allocation/successor protections."
+        },
+        {
+          "url": "https://tether.to/en/legal/",
+          "observedAt": "2026-10-03T00:11:53Z",
+          "datumAsOf": "2026-02-26",
+          "location": "Terms section 4.1",
+          "excerpt": "The right to purchase Tether Tokens or have Tether Tokens redeemed is a contractual right personal to you.",
+          "assertion": "Known eligible-customer right, not holder trust/insolvency priority."
+        },
+        {
+          "url": "https://tether.to/en/faqs/",
+          "observedAt": "2026-10-03T00:11:54Z",
+          "datumAsOf": null,
+          "location": "FAQ: How often does Tether provide its transparency information?",
+          "excerpt": "Tether also typically publishes quarterly reports providing information on its Reserves that are held to back Tether Tokens in circulation.",
+          "assertion": "Public reporting cadence and scope; no current per-slice stress maximum/custody allocation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+        "https://tether.to/public/Relevant_Information_Document_-_Tether_International,_S.A._de_C.V..pdf",
+        "https://tether.to/en/legal/",
+        "https://tether.to/en/faqs/",
+        "https://tether.to/en/transparency/",
+        "https://tether.to/en/transparency/?tab=reports",
+        "https://tether.to/en/whitepaper/"
+      ],
+      "rationale": "Checked latest June30 BDO report asset table/footnotes3\u201313, stress caveat, current report index, RID and terms. Non-US Treasury bills has category/value disclosure, but no per-slice binding realization deadline or stressed maximum. Average tenor, quoted price, active markets, ownership, cash category and collateral mechanisms do not prove sale/access completion. Preserve the researched unknown horizon; do not infer a maximum from weighted/residual average."
+    },
+    {
+      "id": "curation-2026-10-03-usdt-liquidity-04",
+      "assetId": "usdt-tether",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:c271d604eb64f6f89594867f",
+        "requiredDatum": "liquidityHorizon"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T00:25:05Z",
+      "reviewer": "CurationResearchA / Safety Score v10.01 Phase 2",
+      "sources": [
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page9 / report page4, footnote7 (Cash and bank deposits)",
+          "excerpt": "The \u201cCash & Bank Deposits\u201d category comprises cash deposits at financial institutions.",
+          "assertion": "Exact per-slice category description; not a complete maximum-maturity, stressed-liquidity or counterparty-allocation datum."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 9 / report page 4, footnotes 3\u201313",
+          "excerpt": "The \u201cU.S. Treasury Bills\u201d category comprises U.S. Treasury Bills with a weighted average maturity of less than 90 days. 4 The \u201cOvernight Rever",
+          "assertion": "Average is not maximum or stressed realization horizon."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 9 / reserve report page 4, asset table",
+          "excerpt": "Total Assets (1+2+3+4+5+6+7) 187,751,426,4",
+          "assertion": "Eleven categories and denominator are public and already curated, not blanket C."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 4 / assurance page 3, Emphasis of Matter",
+          "excerpt": "The valuation of the assets of the Company is based on normal trading conditions and does not reflect unexpected and extraordinary market conditions, or the case of key custodians or counterparties experiencing substantial illiquidity, which may result in delayed realisable values. No provision for expected credit losses was iden",
+          "assertion": "Acknowledges stress delay but publishes no per-slice maximum realization horizon."
+        },
+        {
+          "url": "https://tether.to/en/transparency/?tab=reports",
+          "observedAt": "2026-10-03T00:11:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Rendered Reports & Reserves tab",
+          "excerpt": "Most recent Reserves report as of June 30, 2026 UTC",
+          "assertion": "Authoritative current index identifies June 30 as latest report."
+        },
+        {
+          "url": "https://tether.to/public/Relevant_Information_Document_-_Tether_International,_S.A._de_C.V..pdf",
+          "observedAt": "2026-10-03T00:09:43Z",
+          "datumAsOf": "2026-02-20",
+          "location": "RID PDF page 17, section 3 Safeguarding Arrangements",
+          "excerpt": "Tether primarily holds the Reserves with various third parties including banks and licensed financial institutions.",
+          "assertion": "Generic classes only; no complete names/allocation/successor protections."
+        },
+        {
+          "url": "https://tether.to/en/legal/",
+          "observedAt": "2026-10-03T00:11:53Z",
+          "datumAsOf": "2026-02-26",
+          "location": "Terms section 4.1",
+          "excerpt": "The right to purchase Tether Tokens or have Tether Tokens redeemed is a contractual right personal to you.",
+          "assertion": "Known eligible-customer right, not holder trust/insolvency priority."
+        },
+        {
+          "url": "https://tether.to/en/faqs/",
+          "observedAt": "2026-10-03T00:11:54Z",
+          "datumAsOf": null,
+          "location": "FAQ: How often does Tether provide its transparency information?",
+          "excerpt": "Tether also typically publishes quarterly reports providing information on its Reserves that are held to back Tether Tokens in circulation.",
+          "assertion": "Public reporting cadence and scope; no current per-slice stress maximum/custody allocation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+        "https://tether.to/public/Relevant_Information_Document_-_Tether_International,_S.A._de_C.V..pdf",
+        "https://tether.to/en/legal/",
+        "https://tether.to/en/faqs/",
+        "https://tether.to/en/transparency/",
+        "https://tether.to/en/transparency/?tab=reports",
+        "https://tether.to/en/whitepaper/"
+      ],
+      "rationale": "Checked latest June30 BDO report asset table/footnotes3\u201313, stress caveat, current report index, RID and terms. Cash and bank deposits has category/value disclosure, but no per-slice binding realization deadline or stressed maximum. Average tenor, quoted price, active markets, ownership, cash category and collateral mechanisms do not prove sale/access completion. Preserve the researched unknown horizon; do not infer a maximum from weighted/residual average."
+    },
+    {
+      "id": "curation-2026-10-03-usdt-liquidity-05",
+      "assetId": "usdt-tether",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:341d6f2c64fafc305f68693d",
+        "requiredDatum": "liquidityHorizon"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T00:25:05Z",
+      "reviewer": "CurationResearchA / Safety Score v10.01 Phase 2",
+      "sources": [
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page9 / report page4, footnote8 (Corporate bonds)",
+          "excerpt": "The \u201cCorporate Bonds\u201d have a residual average maturity of more than 360 days.",
+          "assertion": "Exact per-slice category description; not a complete maximum-maturity, stressed-liquidity or counterparty-allocation datum."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 9 / report page 4, footnotes 3\u201313",
+          "excerpt": "The \u201cU.S. Treasury Bills\u201d category comprises U.S. Treasury Bills with a weighted average maturity of less than 90 days. 4 The \u201cOvernight Rever",
+          "assertion": "Average is not maximum or stressed realization horizon."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 9 / reserve report page 4, asset table",
+          "excerpt": "Total Assets (1+2+3+4+5+6+7) 187,751,426,4",
+          "assertion": "Eleven categories and denominator are public and already curated, not blanket C."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 4 / assurance page 3, Emphasis of Matter",
+          "excerpt": "The valuation of the assets of the Company is based on normal trading conditions and does not reflect unexpected and extraordinary market conditions, or the case of key custodians or counterparties experiencing substantial illiquidity, which may result in delayed realisable values. No provision for expected credit losses was iden",
+          "assertion": "Acknowledges stress delay but publishes no per-slice maximum realization horizon."
+        },
+        {
+          "url": "https://tether.to/en/transparency/?tab=reports",
+          "observedAt": "2026-10-03T00:11:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Rendered Reports & Reserves tab",
+          "excerpt": "Most recent Reserves report as of June 30, 2026 UTC",
+          "assertion": "Authoritative current index identifies June 30 as latest report."
+        },
+        {
+          "url": "https://tether.to/public/Relevant_Information_Document_-_Tether_International,_S.A._de_C.V..pdf",
+          "observedAt": "2026-10-03T00:09:43Z",
+          "datumAsOf": "2026-02-20",
+          "location": "RID PDF page 17, section 3 Safeguarding Arrangements",
+          "excerpt": "Tether primarily holds the Reserves with various third parties including banks and licensed financial institutions.",
+          "assertion": "Generic classes only; no complete names/allocation/successor protections."
+        },
+        {
+          "url": "https://tether.to/en/legal/",
+          "observedAt": "2026-10-03T00:11:53Z",
+          "datumAsOf": "2026-02-26",
+          "location": "Terms section 4.1",
+          "excerpt": "The right to purchase Tether Tokens or have Tether Tokens redeemed is a contractual right personal to you.",
+          "assertion": "Known eligible-customer right, not holder trust/insolvency priority."
+        },
+        {
+          "url": "https://tether.to/en/faqs/",
+          "observedAt": "2026-10-03T00:11:54Z",
+          "datumAsOf": null,
+          "location": "FAQ: How often does Tether provide its transparency information?",
+          "excerpt": "Tether also typically publishes quarterly reports providing information on its Reserves that are held to back Tether Tokens in circulation.",
+          "assertion": "Public reporting cadence and scope; no current per-slice stress maximum/custody allocation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+        "https://tether.to/public/Relevant_Information_Document_-_Tether_International,_S.A._de_C.V..pdf",
+        "https://tether.to/en/legal/",
+        "https://tether.to/en/faqs/",
+        "https://tether.to/en/transparency/",
+        "https://tether.to/en/transparency/?tab=reports",
+        "https://tether.to/en/whitepaper/"
+      ],
+      "rationale": "Checked latest June30 BDO report asset table/footnotes3\u201313, stress caveat, current report index, RID and terms. Corporate bonds has category/value disclosure, but no per-slice binding realization deadline or stressed maximum. Average tenor, quoted price, active markets, ownership, cash category and collateral mechanisms do not prove sale/access completion. Preserve the researched unknown horizon; do not infer a maximum from weighted/residual average."
+    },
+    {
+      "id": "curation-2026-10-03-usdt-liquidity-06",
+      "assetId": "usdt-tether",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:1b2583bf4492894b18779c24",
+        "requiredDatum": "liquidityHorizon"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T00:25:05Z",
+      "reviewer": "CurationResearchA / Safety Score v10.01 Phase 2",
+      "sources": [
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page9 / report page4, footnote9 (Precious metals)",
+          "excerpt": "The \u201cPrecious Metals\u201d category comprises LBMA standard physical gold bars owned by the Company valued using an XAU price of US$ 4,008.02/Oz closing price as published by Bloomberg on 30 June 2026.",
+          "assertion": "Exact per-slice category description; not a complete maximum-maturity, stressed-liquidity or counterparty-allocation datum."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 9 / report page 4, footnotes 3\u201313",
+          "excerpt": "The \u201cU.S. Treasury Bills\u201d category comprises U.S. Treasury Bills with a weighted average maturity of less than 90 days. 4 The \u201cOvernight Rever",
+          "assertion": "Average is not maximum or stressed realization horizon."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 9 / reserve report page 4, asset table",
+          "excerpt": "Total Assets (1+2+3+4+5+6+7) 187,751,426,4",
+          "assertion": "Eleven categories and denominator are public and already curated, not blanket C."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 4 / assurance page 3, Emphasis of Matter",
+          "excerpt": "The valuation of the assets of the Company is based on normal trading conditions and does not reflect unexpected and extraordinary market conditions, or the case of key custodians or counterparties experiencing substantial illiquidity, which may result in delayed realisable values. No provision for expected credit losses was iden",
+          "assertion": "Acknowledges stress delay but publishes no per-slice maximum realization horizon."
+        },
+        {
+          "url": "https://tether.to/en/transparency/?tab=reports",
+          "observedAt": "2026-10-03T00:11:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Rendered Reports & Reserves tab",
+          "excerpt": "Most recent Reserves report as of June 30, 2026 UTC",
+          "assertion": "Authoritative current index identifies June 30 as latest report."
+        },
+        {
+          "url": "https://tether.to/public/Relevant_Information_Document_-_Tether_International,_S.A._de_C.V..pdf",
+          "observedAt": "2026-10-03T00:09:43Z",
+          "datumAsOf": "2026-02-20",
+          "location": "RID PDF page 17, section 3 Safeguarding Arrangements",
+          "excerpt": "Tether primarily holds the Reserves with various third parties including banks and licensed financial institutions.",
+          "assertion": "Generic classes only; no complete names/allocation/successor protections."
+        },
+        {
+          "url": "https://tether.to/en/legal/",
+          "observedAt": "2026-10-03T00:11:53Z",
+          "datumAsOf": "2026-02-26",
+          "location": "Terms section 4.1",
+          "excerpt": "The right to purchase Tether Tokens or have Tether Tokens redeemed is a contractual right personal to you.",
+          "assertion": "Known eligible-customer right, not holder trust/insolvency priority."
+        },
+        {
+          "url": "https://tether.to/en/faqs/",
+          "observedAt": "2026-10-03T00:11:54Z",
+          "datumAsOf": null,
+          "location": "FAQ: How often does Tether provide its transparency information?",
+          "excerpt": "Tether also typically publishes quarterly reports providing information on its Reserves that are held to back Tether Tokens in circulation.",
+          "assertion": "Public reporting cadence and scope; no current per-slice stress maximum/custody allocation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+        "https://tether.to/public/Relevant_Information_Document_-_Tether_International,_S.A._de_C.V..pdf",
+        "https://tether.to/en/legal/",
+        "https://tether.to/en/faqs/",
+        "https://tether.to/en/transparency/",
+        "https://tether.to/en/transparency/?tab=reports",
+        "https://tether.to/en/whitepaper/"
+      ],
+      "rationale": "Checked latest June30 BDO report asset table/footnotes3\u201313, stress caveat, current report index, RID and terms. Precious metals has category/value disclosure, but no per-slice binding realization deadline or stressed maximum. Average tenor, quoted price, active markets, ownership, cash category and collateral mechanisms do not prove sale/access completion. Preserve the researched unknown horizon; do not infer a maximum from weighted/residual average."
+    },
+    {
+      "id": "curation-2026-10-03-usdt-liquidity-07",
+      "assetId": "usdt-tether",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:cc0fa755bab6eefc4714fc4c",
+        "requiredDatum": "liquidityHorizon"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T00:25:05Z",
+      "reviewer": "CurationResearchA / Safety Score v10.01 Phase 2",
+      "sources": [
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page9 / report page4, footnote10 (Bitcoin)",
+          "excerpt": "The \u201cBitcoin\u201d category comprises Bitcoins held on -chain in wallets controlled by the Company valued using a BTC price of US$ 58,642.15/Bitcoin closing price as published by Bloomberg on 30 June 2026.",
+          "assertion": "Exact per-slice category description; not a complete maximum-maturity, stressed-liquidity or counterparty-allocation datum."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 9 / report page 4, footnotes 3\u201313",
+          "excerpt": "The \u201cU.S. Treasury Bills\u201d category comprises U.S. Treasury Bills with a weighted average maturity of less than 90 days. 4 The \u201cOvernight Rever",
+          "assertion": "Average is not maximum or stressed realization horizon."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 9 / reserve report page 4, asset table",
+          "excerpt": "Total Assets (1+2+3+4+5+6+7) 187,751,426,4",
+          "assertion": "Eleven categories and denominator are public and already curated, not blanket C."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 4 / assurance page 3, Emphasis of Matter",
+          "excerpt": "The valuation of the assets of the Company is based on normal trading conditions and does not reflect unexpected and extraordinary market conditions, or the case of key custodians or counterparties experiencing substantial illiquidity, which may result in delayed realisable values. No provision for expected credit losses was iden",
+          "assertion": "Acknowledges stress delay but publishes no per-slice maximum realization horizon."
+        },
+        {
+          "url": "https://tether.to/en/transparency/?tab=reports",
+          "observedAt": "2026-10-03T00:11:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Rendered Reports & Reserves tab",
+          "excerpt": "Most recent Reserves report as of June 30, 2026 UTC",
+          "assertion": "Authoritative current index identifies June 30 as latest report."
+        },
+        {
+          "url": "https://tether.to/public/Relevant_Information_Document_-_Tether_International,_S.A._de_C.V..pdf",
+          "observedAt": "2026-10-03T00:09:43Z",
+          "datumAsOf": "2026-02-20",
+          "location": "RID PDF page 17, section 3 Safeguarding Arrangements",
+          "excerpt": "Tether primarily holds the Reserves with various third parties including banks and licensed financial institutions.",
+          "assertion": "Generic classes only; no complete names/allocation/successor protections."
+        },
+        {
+          "url": "https://tether.to/en/legal/",
+          "observedAt": "2026-10-03T00:11:53Z",
+          "datumAsOf": "2026-02-26",
+          "location": "Terms section 4.1",
+          "excerpt": "The right to purchase Tether Tokens or have Tether Tokens redeemed is a contractual right personal to you.",
+          "assertion": "Known eligible-customer right, not holder trust/insolvency priority."
+        },
+        {
+          "url": "https://tether.to/en/faqs/",
+          "observedAt": "2026-10-03T00:11:54Z",
+          "datumAsOf": null,
+          "location": "FAQ: How often does Tether provide its transparency information?",
+          "excerpt": "Tether also typically publishes quarterly reports providing information on its Reserves that are held to back Tether Tokens in circulation.",
+          "assertion": "Public reporting cadence and scope; no current per-slice stress maximum/custody allocation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+        "https://tether.to/public/Relevant_Information_Document_-_Tether_International,_S.A._de_C.V..pdf",
+        "https://tether.to/en/legal/",
+        "https://tether.to/en/faqs/",
+        "https://tether.to/en/transparency/",
+        "https://tether.to/en/transparency/?tab=reports",
+        "https://tether.to/en/whitepaper/"
+      ],
+      "rationale": "Checked latest June30 BDO report asset table/footnotes3\u201313, stress caveat, current report index, RID and terms. Bitcoin has category/value disclosure, but no per-slice binding realization deadline or stressed maximum. Average tenor, quoted price, active markets, ownership, cash category and collateral mechanisms do not prove sale/access completion. Preserve the researched unknown horizon; do not infer a maximum from weighted/residual average."
+    },
+    {
+      "id": "curation-2026-10-03-usdt-liquidity-08",
+      "assetId": "usdt-tether",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:bbe3851d64bce9dedc4fb999",
+        "requiredDatum": "liquidityHorizon"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T00:25:05Z",
+      "reviewer": "CurationResearchA / Safety Score v10.01 Phase 2",
+      "sources": [
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page9 / report page4, footnote11 (Public equities)",
+          "excerpt": "The \u201cPublic Equities\u201d category comprises indirect gold, bitcoin, and other asset exposure, which are traded on active markets and are valued at their respective closing prices as published by Bloomberg on 30 June 2026.",
+          "assertion": "Exact per-slice category description; not a complete maximum-maturity, stressed-liquidity or counterparty-allocation datum."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 9 / report page 4, footnotes 3\u201313",
+          "excerpt": "The \u201cU.S. Treasury Bills\u201d category comprises U.S. Treasury Bills with a weighted average maturity of less than 90 days. 4 The \u201cOvernight Rever",
+          "assertion": "Average is not maximum or stressed realization horizon."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 9 / reserve report page 4, asset table",
+          "excerpt": "Total Assets (1+2+3+4+5+6+7) 187,751,426,4",
+          "assertion": "Eleven categories and denominator are public and already curated, not blanket C."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 4 / assurance page 3, Emphasis of Matter",
+          "excerpt": "The valuation of the assets of the Company is based on normal trading conditions and does not reflect unexpected and extraordinary market conditions, or the case of key custodians or counterparties experiencing substantial illiquidity, which may result in delayed realisable values. No provision for expected credit losses was iden",
+          "assertion": "Acknowledges stress delay but publishes no per-slice maximum realization horizon."
+        },
+        {
+          "url": "https://tether.to/en/transparency/?tab=reports",
+          "observedAt": "2026-10-03T00:11:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Rendered Reports & Reserves tab",
+          "excerpt": "Most recent Reserves report as of June 30, 2026 UTC",
+          "assertion": "Authoritative current index identifies June 30 as latest report."
+        },
+        {
+          "url": "https://tether.to/public/Relevant_Information_Document_-_Tether_International,_S.A._de_C.V..pdf",
+          "observedAt": "2026-10-03T00:09:43Z",
+          "datumAsOf": "2026-02-20",
+          "location": "RID PDF page 17, section 3 Safeguarding Arrangements",
+          "excerpt": "Tether primarily holds the Reserves with various third parties including banks and licensed financial institutions.",
+          "assertion": "Generic classes only; no complete names/allocation/successor protections."
+        },
+        {
+          "url": "https://tether.to/en/legal/",
+          "observedAt": "2026-10-03T00:11:53Z",
+          "datumAsOf": "2026-02-26",
+          "location": "Terms section 4.1",
+          "excerpt": "The right to purchase Tether Tokens or have Tether Tokens redeemed is a contractual right personal to you.",
+          "assertion": "Known eligible-customer right, not holder trust/insolvency priority."
+        },
+        {
+          "url": "https://tether.to/en/faqs/",
+          "observedAt": "2026-10-03T00:11:54Z",
+          "datumAsOf": null,
+          "location": "FAQ: How often does Tether provide its transparency information?",
+          "excerpt": "Tether also typically publishes quarterly reports providing information on its Reserves that are held to back Tether Tokens in circulation.",
+          "assertion": "Public reporting cadence and scope; no current per-slice stress maximum/custody allocation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+        "https://tether.to/public/Relevant_Information_Document_-_Tether_International,_S.A._de_C.V..pdf",
+        "https://tether.to/en/legal/",
+        "https://tether.to/en/faqs/",
+        "https://tether.to/en/transparency/",
+        "https://tether.to/en/transparency/?tab=reports",
+        "https://tether.to/en/whitepaper/"
+      ],
+      "rationale": "Checked latest June30 BDO report asset table/footnotes3\u201313, stress caveat, current report index, RID and terms. Public equities has category/value disclosure, but no per-slice binding realization deadline or stressed maximum. Average tenor, quoted price, active markets, ownership, cash category and collateral mechanisms do not prove sale/access completion. Preserve the researched unknown horizon; do not infer a maximum from weighted/residual average."
+    },
+    {
+      "id": "curation-2026-10-03-usdt-liquidity-09",
+      "assetId": "usdt-tether",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:92bd8d0d59b00333c8023716",
+        "requiredDatum": "liquidityHorizon"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T00:25:05Z",
+      "reviewer": "CurationResearchA / Safety Score v10.01 Phase 2",
+      "sources": [
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page9 / report page4, footnote12 (Other investments)",
+          "excerpt": "The \u201cOther Investments\u201d category comprises other investments within the Reserves that do not meet any of the criteria set out in the other categories.",
+          "assertion": "Exact per-slice category description; not a complete maximum-maturity, stressed-liquidity or counterparty-allocation datum."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 9 / report page 4, footnotes 3\u201313",
+          "excerpt": "The \u201cU.S. Treasury Bills\u201d category comprises U.S. Treasury Bills with a weighted average maturity of less than 90 days. 4 The \u201cOvernight Rever",
+          "assertion": "Average is not maximum or stressed realization horizon."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 9 / reserve report page 4, asset table",
+          "excerpt": "Total Assets (1+2+3+4+5+6+7) 187,751,426,4",
+          "assertion": "Eleven categories and denominator are public and already curated, not blanket C."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 4 / assurance page 3, Emphasis of Matter",
+          "excerpt": "The valuation of the assets of the Company is based on normal trading conditions and does not reflect unexpected and extraordinary market conditions, or the case of key custodians or counterparties experiencing substantial illiquidity, which may result in delayed realisable values. No provision for expected credit losses was iden",
+          "assertion": "Acknowledges stress delay but publishes no per-slice maximum realization horizon."
+        },
+        {
+          "url": "https://tether.to/en/transparency/?tab=reports",
+          "observedAt": "2026-10-03T00:11:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Rendered Reports & Reserves tab",
+          "excerpt": "Most recent Reserves report as of June 30, 2026 UTC",
+          "assertion": "Authoritative current index identifies June 30 as latest report."
+        },
+        {
+          "url": "https://tether.to/public/Relevant_Information_Document_-_Tether_International,_S.A._de_C.V..pdf",
+          "observedAt": "2026-10-03T00:09:43Z",
+          "datumAsOf": "2026-02-20",
+          "location": "RID PDF page 17, section 3 Safeguarding Arrangements",
+          "excerpt": "Tether primarily holds the Reserves with various third parties including banks and licensed financial institutions.",
+          "assertion": "Generic classes only; no complete names/allocation/successor protections."
+        },
+        {
+          "url": "https://tether.to/en/legal/",
+          "observedAt": "2026-10-03T00:11:53Z",
+          "datumAsOf": "2026-02-26",
+          "location": "Terms section 4.1",
+          "excerpt": "The right to purchase Tether Tokens or have Tether Tokens redeemed is a contractual right personal to you.",
+          "assertion": "Known eligible-customer right, not holder trust/insolvency priority."
+        },
+        {
+          "url": "https://tether.to/en/faqs/",
+          "observedAt": "2026-10-03T00:11:54Z",
+          "datumAsOf": null,
+          "location": "FAQ: How often does Tether provide its transparency information?",
+          "excerpt": "Tether also typically publishes quarterly reports providing information on its Reserves that are held to back Tether Tokens in circulation.",
+          "assertion": "Public reporting cadence and scope; no current per-slice stress maximum/custody allocation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+        "https://tether.to/public/Relevant_Information_Document_-_Tether_International,_S.A._de_C.V..pdf",
+        "https://tether.to/en/legal/",
+        "https://tether.to/en/faqs/",
+        "https://tether.to/en/transparency/",
+        "https://tether.to/en/transparency/?tab=reports",
+        "https://tether.to/en/whitepaper/"
+      ],
+      "rationale": "Checked latest June30 BDO report asset table/footnotes3\u201313, stress caveat, current report index, RID and terms. Other investments has category/value disclosure, but no per-slice binding realization deadline or stressed maximum. Average tenor, quoted price, active markets, ownership, cash category and collateral mechanisms do not prove sale/access completion. Preserve the researched unknown horizon; do not infer a maximum from weighted/residual average."
+    },
+    {
+      "id": "curation-2026-10-03-usdt-liquidity-10",
+      "assetId": "usdt-tether",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:1f68bf53fc571605be3b0026",
+        "requiredDatum": "liquidityHorizon"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T00:25:05Z",
+      "reviewer": "CurationResearchA / Safety Score v10.01 Phase 2",
+      "sources": [
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page9 / report page4, footnote13 (Secured loans)",
+          "excerpt": "The \u201cSecured Loans\u201d category comprises loans over collateralized by assets, subject to margin call and liquidation mechanisms designed to maintain collateral coverage.",
+          "assertion": "Exact per-slice category description; not a complete maximum-maturity, stressed-liquidity or counterparty-allocation datum."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 9 / report page 4, footnotes 3\u201313",
+          "excerpt": "The \u201cU.S. Treasury Bills\u201d category comprises U.S. Treasury Bills with a weighted average maturity of less than 90 days. 4 The \u201cOvernight Rever",
+          "assertion": "Average is not maximum or stressed realization horizon."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 9 / reserve report page 4, asset table",
+          "excerpt": "Total Assets (1+2+3+4+5+6+7) 187,751,426,4",
+          "assertion": "Eleven categories and denominator are public and already curated, not blanket C."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 4 / assurance page 3, Emphasis of Matter",
+          "excerpt": "The valuation of the assets of the Company is based on normal trading conditions and does not reflect unexpected and extraordinary market conditions, or the case of key custodians or counterparties experiencing substantial illiquidity, which may result in delayed realisable values. No provision for expected credit losses was iden",
+          "assertion": "Acknowledges stress delay but publishes no per-slice maximum realization horizon."
+        },
+        {
+          "url": "https://tether.to/en/transparency/?tab=reports",
+          "observedAt": "2026-10-03T00:11:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Rendered Reports & Reserves tab",
+          "excerpt": "Most recent Reserves report as of June 30, 2026 UTC",
+          "assertion": "Authoritative current index identifies June 30 as latest report."
+        },
+        {
+          "url": "https://tether.to/public/Relevant_Information_Document_-_Tether_International,_S.A._de_C.V..pdf",
+          "observedAt": "2026-10-03T00:09:43Z",
+          "datumAsOf": "2026-02-20",
+          "location": "RID PDF page 17, section 3 Safeguarding Arrangements",
+          "excerpt": "Tether primarily holds the Reserves with various third parties including banks and licensed financial institutions.",
+          "assertion": "Generic classes only; no complete names/allocation/successor protections."
+        },
+        {
+          "url": "https://tether.to/en/legal/",
+          "observedAt": "2026-10-03T00:11:53Z",
+          "datumAsOf": "2026-02-26",
+          "location": "Terms section 4.1",
+          "excerpt": "The right to purchase Tether Tokens or have Tether Tokens redeemed is a contractual right personal to you.",
+          "assertion": "Known eligible-customer right, not holder trust/insolvency priority."
+        },
+        {
+          "url": "https://tether.to/en/faqs/",
+          "observedAt": "2026-10-03T00:11:54Z",
+          "datumAsOf": null,
+          "location": "FAQ: How often does Tether provide its transparency information?",
+          "excerpt": "Tether also typically publishes quarterly reports providing information on its Reserves that are held to back Tether Tokens in circulation.",
+          "assertion": "Public reporting cadence and scope; no current per-slice stress maximum/custody allocation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+        "https://tether.to/public/Relevant_Information_Document_-_Tether_International,_S.A._de_C.V..pdf",
+        "https://tether.to/en/legal/",
+        "https://tether.to/en/faqs/",
+        "https://tether.to/en/transparency/",
+        "https://tether.to/en/transparency/?tab=reports",
+        "https://tether.to/en/whitepaper/"
+      ],
+      "rationale": "Checked latest June30 BDO report asset table/footnotes3\u201313, stress caveat, current report index, RID and terms. Secured loans has category/value disclosure, but no per-slice binding realization deadline or stressed maximum. Average tenor, quoted price, active markets, ownership, cash category and collateral mechanisms do not prove sale/access completion. Preserve the researched unknown horizon; do not infer a maximum from weighted/residual average."
+    },
+    {
+      "id": "curation-2026-10-03-usdt-maturity-00",
+      "assetId": "usdt-tether",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "maturity",
+        "routeKey": null,
+        "exposureId": "reserve:e5cbc44c9d389d5d6fcc27d5",
+        "requiredDatum": "maturityDaysMax"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T00:25:05Z",
+      "reviewer": "CurationResearchA / Safety Score v10.01 Phase 2",
+      "sources": [
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page9 / report page4, footnote3 (U.S. Treasury bills)",
+          "excerpt": "The \u201cU.S. Treasury Bills\u201d category comprises U.S. Treasury Bills with a weighted average maturity of less than 90 days.",
+          "assertion": "Exact per-slice category description; not a complete maximum-maturity, stressed-liquidity or counterparty-allocation datum."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 9 / report page 4, footnotes 3\u201313",
+          "excerpt": "The \u201cU.S. Treasury Bills\u201d category comprises U.S. Treasury Bills with a weighted average maturity of less than 90 days. 4 The \u201cOvernight Rever",
+          "assertion": "Average is not maximum or stressed realization horizon."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 9 / reserve report page 4, asset table",
+          "excerpt": "Total Assets (1+2+3+4+5+6+7) 187,751,426,4",
+          "assertion": "Eleven categories and denominator are public and already curated, not blanket C."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 4 / assurance page 3, Emphasis of Matter",
+          "excerpt": "The valuation of the assets of the Company is based on normal trading conditions and does not reflect unexpected and extraordinary market conditions, or the case of key custodians or counterparties experiencing substantial illiquidity, which may result in delayed realisable values. No provision for expected credit losses was iden",
+          "assertion": "Acknowledges stress delay but publishes no per-slice maximum realization horizon."
+        },
+        {
+          "url": "https://tether.to/en/transparency/?tab=reports",
+          "observedAt": "2026-10-03T00:11:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Rendered Reports & Reserves tab",
+          "excerpt": "Most recent Reserves report as of June 30, 2026 UTC",
+          "assertion": "Authoritative current index identifies June 30 as latest report."
+        },
+        {
+          "url": "https://tether.to/public/Relevant_Information_Document_-_Tether_International,_S.A._de_C.V..pdf",
+          "observedAt": "2026-10-03T00:09:43Z",
+          "datumAsOf": "2026-02-20",
+          "location": "RID PDF page 17, section 3 Safeguarding Arrangements",
+          "excerpt": "Tether primarily holds the Reserves with various third parties including banks and licensed financial institutions.",
+          "assertion": "Generic classes only; no complete names/allocation/successor protections."
+        },
+        {
+          "url": "https://tether.to/en/legal/",
+          "observedAt": "2026-10-03T00:11:53Z",
+          "datumAsOf": "2026-02-26",
+          "location": "Terms section 4.1",
+          "excerpt": "The right to purchase Tether Tokens or have Tether Tokens redeemed is a contractual right personal to you.",
+          "assertion": "Known eligible-customer right, not holder trust/insolvency priority."
+        },
+        {
+          "url": "https://tether.to/en/faqs/",
+          "observedAt": "2026-10-03T00:11:54Z",
+          "datumAsOf": null,
+          "location": "FAQ: How often does Tether provide its transparency information?",
+          "excerpt": "Tether also typically publishes quarterly reports providing information on its Reserves that are held to back Tether Tokens in circulation.",
+          "assertion": "Public reporting cadence and scope; no current per-slice stress maximum/custody allocation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+        "https://tether.to/public/Relevant_Information_Document_-_Tether_International,_S.A._de_C.V..pdf",
+        "https://tether.to/en/legal/",
+        "https://tether.to/en/faqs/",
+        "https://tether.to/en/transparency/",
+        "https://tether.to/en/transparency/?tab=reports",
+        "https://tether.to/en/whitepaper/"
+      ],
+      "rationale": "The latest report gives only weighted/residual averages (Treasury/repo/nonUS/corporate) or category/collateral description (loans/other), not complete security-level maturity dates or a portfolio contractual maximum. An average<90/<360/>360 is never maturityDaysMax; no inferred366-day maximum."
+    },
+    {
+      "id": "curation-2026-10-03-usdt-maturity-02",
+      "assetId": "usdt-tether",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "maturity",
+        "routeKey": null,
+        "exposureId": "reserve:00ba64c1c785371a2101903f",
+        "requiredDatum": "maturityDaysMax"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T00:25:05Z",
+      "reviewer": "CurationResearchA / Safety Score v10.01 Phase 2",
+      "sources": [
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page9 / report page4, footnote5 (Term reverse repurchase agreements)",
+          "excerpt": "The \u201cTerm Reverse-Repurchase Agreements\u201d category comprises fully collateralized Reverse-Repurchase Agreements with a residual average maturity of less than 90 days, where the ultimate issuer or guarantor has a rating of at least A-3.",
+          "assertion": "Exact per-slice category description; not a complete maximum-maturity, stressed-liquidity or counterparty-allocation datum."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 9 / report page 4, footnotes 3\u201313",
+          "excerpt": "The \u201cU.S. Treasury Bills\u201d category comprises U.S. Treasury Bills with a weighted average maturity of less than 90 days. 4 The \u201cOvernight Rever",
+          "assertion": "Average is not maximum or stressed realization horizon."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 9 / reserve report page 4, asset table",
+          "excerpt": "Total Assets (1+2+3+4+5+6+7) 187,751,426,4",
+          "assertion": "Eleven categories and denominator are public and already curated, not blanket C."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 4 / assurance page 3, Emphasis of Matter",
+          "excerpt": "The valuation of the assets of the Company is based on normal trading conditions and does not reflect unexpected and extraordinary market conditions, or the case of key custodians or counterparties experiencing substantial illiquidity, which may result in delayed realisable values. No provision for expected credit losses was iden",
+          "assertion": "Acknowledges stress delay but publishes no per-slice maximum realization horizon."
+        },
+        {
+          "url": "https://tether.to/en/transparency/?tab=reports",
+          "observedAt": "2026-10-03T00:11:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Rendered Reports & Reserves tab",
+          "excerpt": "Most recent Reserves report as of June 30, 2026 UTC",
+          "assertion": "Authoritative current index identifies June 30 as latest report."
+        },
+        {
+          "url": "https://tether.to/public/Relevant_Information_Document_-_Tether_International,_S.A._de_C.V..pdf",
+          "observedAt": "2026-10-03T00:09:43Z",
+          "datumAsOf": "2026-02-20",
+          "location": "RID PDF page 17, section 3 Safeguarding Arrangements",
+          "excerpt": "Tether primarily holds the Reserves with various third parties including banks and licensed financial institutions.",
+          "assertion": "Generic classes only; no complete names/allocation/successor protections."
+        },
+        {
+          "url": "https://tether.to/en/legal/",
+          "observedAt": "2026-10-03T00:11:53Z",
+          "datumAsOf": "2026-02-26",
+          "location": "Terms section 4.1",
+          "excerpt": "The right to purchase Tether Tokens or have Tether Tokens redeemed is a contractual right personal to you.",
+          "assertion": "Known eligible-customer right, not holder trust/insolvency priority."
+        },
+        {
+          "url": "https://tether.to/en/faqs/",
+          "observedAt": "2026-10-03T00:11:54Z",
+          "datumAsOf": null,
+          "location": "FAQ: How often does Tether provide its transparency information?",
+          "excerpt": "Tether also typically publishes quarterly reports providing information on its Reserves that are held to back Tether Tokens in circulation.",
+          "assertion": "Public reporting cadence and scope; no current per-slice stress maximum/custody allocation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+        "https://tether.to/public/Relevant_Information_Document_-_Tether_International,_S.A._de_C.V..pdf",
+        "https://tether.to/en/legal/",
+        "https://tether.to/en/faqs/",
+        "https://tether.to/en/transparency/",
+        "https://tether.to/en/transparency/?tab=reports",
+        "https://tether.to/en/whitepaper/"
+      ],
+      "rationale": "The latest report gives only weighted/residual averages (Treasury/repo/nonUS/corporate) or category/collateral description (loans/other), not complete security-level maturity dates or a portfolio contractual maximum. An average<90/<360/>360 is never maturityDaysMax; no inferred366-day maximum."
+    },
+    {
+      "id": "curation-2026-10-03-usdt-maturity-03",
+      "assetId": "usdt-tether",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "maturity",
+        "routeKey": null,
+        "exposureId": "reserve:34cf70f953abf2cb4405de99",
+        "requiredDatum": "maturityDaysMax"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T00:25:05Z",
+      "reviewer": "CurationResearchA / Safety Score v10.01 Phase 2",
+      "sources": [
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page9 / report page4, footnote6 (Non-US Treasury bills)",
+          "excerpt": "The \u201cNon-US Treasury Bills\u201d have a weighted average maturity of less than 360 days.",
+          "assertion": "Exact per-slice category description; not a complete maximum-maturity, stressed-liquidity or counterparty-allocation datum."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 9 / report page 4, footnotes 3\u201313",
+          "excerpt": "The \u201cU.S. Treasury Bills\u201d category comprises U.S. Treasury Bills with a weighted average maturity of less than 90 days. 4 The \u201cOvernight Rever",
+          "assertion": "Average is not maximum or stressed realization horizon."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 9 / reserve report page 4, asset table",
+          "excerpt": "Total Assets (1+2+3+4+5+6+7) 187,751,426,4",
+          "assertion": "Eleven categories and denominator are public and already curated, not blanket C."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 4 / assurance page 3, Emphasis of Matter",
+          "excerpt": "The valuation of the assets of the Company is based on normal trading conditions and does not reflect unexpected and extraordinary market conditions, or the case of key custodians or counterparties experiencing substantial illiquidity, which may result in delayed realisable values. No provision for expected credit losses was iden",
+          "assertion": "Acknowledges stress delay but publishes no per-slice maximum realization horizon."
+        },
+        {
+          "url": "https://tether.to/en/transparency/?tab=reports",
+          "observedAt": "2026-10-03T00:11:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Rendered Reports & Reserves tab",
+          "excerpt": "Most recent Reserves report as of June 30, 2026 UTC",
+          "assertion": "Authoritative current index identifies June 30 as latest report."
+        },
+        {
+          "url": "https://tether.to/public/Relevant_Information_Document_-_Tether_International,_S.A._de_C.V..pdf",
+          "observedAt": "2026-10-03T00:09:43Z",
+          "datumAsOf": "2026-02-20",
+          "location": "RID PDF page 17, section 3 Safeguarding Arrangements",
+          "excerpt": "Tether primarily holds the Reserves with various third parties including banks and licensed financial institutions.",
+          "assertion": "Generic classes only; no complete names/allocation/successor protections."
+        },
+        {
+          "url": "https://tether.to/en/legal/",
+          "observedAt": "2026-10-03T00:11:53Z",
+          "datumAsOf": "2026-02-26",
+          "location": "Terms section 4.1",
+          "excerpt": "The right to purchase Tether Tokens or have Tether Tokens redeemed is a contractual right personal to you.",
+          "assertion": "Known eligible-customer right, not holder trust/insolvency priority."
+        },
+        {
+          "url": "https://tether.to/en/faqs/",
+          "observedAt": "2026-10-03T00:11:54Z",
+          "datumAsOf": null,
+          "location": "FAQ: How often does Tether provide its transparency information?",
+          "excerpt": "Tether also typically publishes quarterly reports providing information on its Reserves that are held to back Tether Tokens in circulation.",
+          "assertion": "Public reporting cadence and scope; no current per-slice stress maximum/custody allocation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+        "https://tether.to/public/Relevant_Information_Document_-_Tether_International,_S.A._de_C.V..pdf",
+        "https://tether.to/en/legal/",
+        "https://tether.to/en/faqs/",
+        "https://tether.to/en/transparency/",
+        "https://tether.to/en/transparency/?tab=reports",
+        "https://tether.to/en/whitepaper/"
+      ],
+      "rationale": "The latest report gives only weighted/residual averages (Treasury/repo/nonUS/corporate) or category/collateral description (loans/other), not complete security-level maturity dates or a portfolio contractual maximum. An average<90/<360/>360 is never maturityDaysMax; no inferred366-day maximum."
+    },
+    {
+      "id": "curation-2026-10-03-usdt-maturity-05",
+      "assetId": "usdt-tether",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "maturity",
+        "routeKey": null,
+        "exposureId": "reserve:341d6f2c64fafc305f68693d",
+        "requiredDatum": "maturityDaysMax"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T00:25:05Z",
+      "reviewer": "CurationResearchA / Safety Score v10.01 Phase 2",
+      "sources": [
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page9 / report page4, footnote8 (Corporate bonds)",
+          "excerpt": "The \u201cCorporate Bonds\u201d have a residual average maturity of more than 360 days.",
+          "assertion": "Exact per-slice category description; not a complete maximum-maturity, stressed-liquidity or counterparty-allocation datum."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 9 / report page 4, footnotes 3\u201313",
+          "excerpt": "The \u201cU.S. Treasury Bills\u201d category comprises U.S. Treasury Bills with a weighted average maturity of less than 90 days. 4 The \u201cOvernight Rever",
+          "assertion": "Average is not maximum or stressed realization horizon."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 9 / reserve report page 4, asset table",
+          "excerpt": "Total Assets (1+2+3+4+5+6+7) 187,751,426,4",
+          "assertion": "Eleven categories and denominator are public and already curated, not blanket C."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 4 / assurance page 3, Emphasis of Matter",
+          "excerpt": "The valuation of the assets of the Company is based on normal trading conditions and does not reflect unexpected and extraordinary market conditions, or the case of key custodians or counterparties experiencing substantial illiquidity, which may result in delayed realisable values. No provision for expected credit losses was iden",
+          "assertion": "Acknowledges stress delay but publishes no per-slice maximum realization horizon."
+        },
+        {
+          "url": "https://tether.to/en/transparency/?tab=reports",
+          "observedAt": "2026-10-03T00:11:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Rendered Reports & Reserves tab",
+          "excerpt": "Most recent Reserves report as of June 30, 2026 UTC",
+          "assertion": "Authoritative current index identifies June 30 as latest report."
+        },
+        {
+          "url": "https://tether.to/public/Relevant_Information_Document_-_Tether_International,_S.A._de_C.V..pdf",
+          "observedAt": "2026-10-03T00:09:43Z",
+          "datumAsOf": "2026-02-20",
+          "location": "RID PDF page 17, section 3 Safeguarding Arrangements",
+          "excerpt": "Tether primarily holds the Reserves with various third parties including banks and licensed financial institutions.",
+          "assertion": "Generic classes only; no complete names/allocation/successor protections."
+        },
+        {
+          "url": "https://tether.to/en/legal/",
+          "observedAt": "2026-10-03T00:11:53Z",
+          "datumAsOf": "2026-02-26",
+          "location": "Terms section 4.1",
+          "excerpt": "The right to purchase Tether Tokens or have Tether Tokens redeemed is a contractual right personal to you.",
+          "assertion": "Known eligible-customer right, not holder trust/insolvency priority."
+        },
+        {
+          "url": "https://tether.to/en/faqs/",
+          "observedAt": "2026-10-03T00:11:54Z",
+          "datumAsOf": null,
+          "location": "FAQ: How often does Tether provide its transparency information?",
+          "excerpt": "Tether also typically publishes quarterly reports providing information on its Reserves that are held to back Tether Tokens in circulation.",
+          "assertion": "Public reporting cadence and scope; no current per-slice stress maximum/custody allocation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+        "https://tether.to/public/Relevant_Information_Document_-_Tether_International,_S.A._de_C.V..pdf",
+        "https://tether.to/en/legal/",
+        "https://tether.to/en/faqs/",
+        "https://tether.to/en/transparency/",
+        "https://tether.to/en/transparency/?tab=reports",
+        "https://tether.to/en/whitepaper/"
+      ],
+      "rationale": "The latest report gives only weighted/residual averages (Treasury/repo/nonUS/corporate) or category/collateral description (loans/other), not complete security-level maturity dates or a portfolio contractual maximum. An average<90/<360/>360 is never maturityDaysMax; no inferred366-day maximum."
+    },
+    {
+      "id": "curation-2026-10-03-usdt-maturity-09",
+      "assetId": "usdt-tether",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "maturity",
+        "routeKey": null,
+        "exposureId": "reserve:92bd8d0d59b00333c8023716",
+        "requiredDatum": "maturityDaysMax"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T00:25:05Z",
+      "reviewer": "CurationResearchA / Safety Score v10.01 Phase 2",
+      "sources": [
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page9 / report page4, footnote12 (Other investments)",
+          "excerpt": "The \u201cOther Investments\u201d category comprises other investments within the Reserves that do not meet any of the criteria set out in the other categories.",
+          "assertion": "Exact per-slice category description; not a complete maximum-maturity, stressed-liquidity or counterparty-allocation datum."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 9 / report page 4, footnotes 3\u201313",
+          "excerpt": "The \u201cU.S. Treasury Bills\u201d category comprises U.S. Treasury Bills with a weighted average maturity of less than 90 days. 4 The \u201cOvernight Rever",
+          "assertion": "Average is not maximum or stressed realization horizon."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 9 / reserve report page 4, asset table",
+          "excerpt": "Total Assets (1+2+3+4+5+6+7) 187,751,426,4",
+          "assertion": "Eleven categories and denominator are public and already curated, not blanket C."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 4 / assurance page 3, Emphasis of Matter",
+          "excerpt": "The valuation of the assets of the Company is based on normal trading conditions and does not reflect unexpected and extraordinary market conditions, or the case of key custodians or counterparties experiencing substantial illiquidity, which may result in delayed realisable values. No provision for expected credit losses was iden",
+          "assertion": "Acknowledges stress delay but publishes no per-slice maximum realization horizon."
+        },
+        {
+          "url": "https://tether.to/en/transparency/?tab=reports",
+          "observedAt": "2026-10-03T00:11:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Rendered Reports & Reserves tab",
+          "excerpt": "Most recent Reserves report as of June 30, 2026 UTC",
+          "assertion": "Authoritative current index identifies June 30 as latest report."
+        },
+        {
+          "url": "https://tether.to/public/Relevant_Information_Document_-_Tether_International,_S.A._de_C.V..pdf",
+          "observedAt": "2026-10-03T00:09:43Z",
+          "datumAsOf": "2026-02-20",
+          "location": "RID PDF page 17, section 3 Safeguarding Arrangements",
+          "excerpt": "Tether primarily holds the Reserves with various third parties including banks and licensed financial institutions.",
+          "assertion": "Generic classes only; no complete names/allocation/successor protections."
+        },
+        {
+          "url": "https://tether.to/en/legal/",
+          "observedAt": "2026-10-03T00:11:53Z",
+          "datumAsOf": "2026-02-26",
+          "location": "Terms section 4.1",
+          "excerpt": "The right to purchase Tether Tokens or have Tether Tokens redeemed is a contractual right personal to you.",
+          "assertion": "Known eligible-customer right, not holder trust/insolvency priority."
+        },
+        {
+          "url": "https://tether.to/en/faqs/",
+          "observedAt": "2026-10-03T00:11:54Z",
+          "datumAsOf": null,
+          "location": "FAQ: How often does Tether provide its transparency information?",
+          "excerpt": "Tether also typically publishes quarterly reports providing information on its Reserves that are held to back Tether Tokens in circulation.",
+          "assertion": "Public reporting cadence and scope; no current per-slice stress maximum/custody allocation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+        "https://tether.to/public/Relevant_Information_Document_-_Tether_International,_S.A._de_C.V..pdf",
+        "https://tether.to/en/legal/",
+        "https://tether.to/en/faqs/",
+        "https://tether.to/en/transparency/",
+        "https://tether.to/en/transparency/?tab=reports",
+        "https://tether.to/en/whitepaper/"
+      ],
+      "rationale": "The latest report gives only weighted/residual averages (Treasury/repo/nonUS/corporate) or category/collateral description (loans/other), not complete security-level maturity dates or a portfolio contractual maximum. An average<90/<360/>360 is never maturityDaysMax; no inferred366-day maximum."
+    },
+    {
+      "id": "curation-2026-10-03-usdt-maturity-10",
+      "assetId": "usdt-tether",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "maturity",
+        "routeKey": null,
+        "exposureId": "reserve:1f68bf53fc571605be3b0026",
+        "requiredDatum": "maturityDaysMax"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T00:25:05Z",
+      "reviewer": "CurationResearchA / Safety Score v10.01 Phase 2",
+      "sources": [
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page9 / report page4, footnote13 (Secured loans)",
+          "excerpt": "The \u201cSecured Loans\u201d category comprises loans over collateralized by assets, subject to margin call and liquidation mechanisms designed to maintain collateral coverage.",
+          "assertion": "Exact per-slice category description; not a complete maximum-maturity, stressed-liquidity or counterparty-allocation datum."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 9 / report page 4, footnotes 3\u201313",
+          "excerpt": "The \u201cU.S. Treasury Bills\u201d category comprises U.S. Treasury Bills with a weighted average maturity of less than 90 days. 4 The \u201cOvernight Rever",
+          "assertion": "Average is not maximum or stressed realization horizon."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 9 / reserve report page 4, asset table",
+          "excerpt": "Total Assets (1+2+3+4+5+6+7) 187,751,426,4",
+          "assertion": "Eleven categories and denominator are public and already curated, not blanket C."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T00:09:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 4 / assurance page 3, Emphasis of Matter",
+          "excerpt": "The valuation of the assets of the Company is based on normal trading conditions and does not reflect unexpected and extraordinary market conditions, or the case of key custodians or counterparties experiencing substantial illiquidity, which may result in delayed realisable values. No provision for expected credit losses was iden",
+          "assertion": "Acknowledges stress delay but publishes no per-slice maximum realization horizon."
+        },
+        {
+          "url": "https://tether.to/en/transparency/?tab=reports",
+          "observedAt": "2026-10-03T00:11:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Rendered Reports & Reserves tab",
+          "excerpt": "Most recent Reserves report as of June 30, 2026 UTC",
+          "assertion": "Authoritative current index identifies June 30 as latest report."
+        },
+        {
+          "url": "https://tether.to/public/Relevant_Information_Document_-_Tether_International,_S.A._de_C.V..pdf",
+          "observedAt": "2026-10-03T00:09:43Z",
+          "datumAsOf": "2026-02-20",
+          "location": "RID PDF page 17, section 3 Safeguarding Arrangements",
+          "excerpt": "Tether primarily holds the Reserves with various third parties including banks and licensed financial institutions.",
+          "assertion": "Generic classes only; no complete names/allocation/successor protections."
+        },
+        {
+          "url": "https://tether.to/en/legal/",
+          "observedAt": "2026-10-03T00:11:53Z",
+          "datumAsOf": "2026-02-26",
+          "location": "Terms section 4.1",
+          "excerpt": "The right to purchase Tether Tokens or have Tether Tokens redeemed is a contractual right personal to you.",
+          "assertion": "Known eligible-customer right, not holder trust/insolvency priority."
+        },
+        {
+          "url": "https://tether.to/en/faqs/",
+          "observedAt": "2026-10-03T00:11:54Z",
+          "datumAsOf": null,
+          "location": "FAQ: How often does Tether provide its transparency information?",
+          "excerpt": "Tether also typically publishes quarterly reports providing information on its Reserves that are held to back Tether Tokens in circulation.",
+          "assertion": "Public reporting cadence and scope; no current per-slice stress maximum/custody allocation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+        "https://tether.to/public/Relevant_Information_Document_-_Tether_International,_S.A._de_C.V..pdf",
+        "https://tether.to/en/legal/",
+        "https://tether.to/en/faqs/",
+        "https://tether.to/en/transparency/",
+        "https://tether.to/en/transparency/?tab=reports",
+        "https://tether.to/en/whitepaper/"
+      ],
+      "rationale": "The latest report gives only weighted/residual averages (Treasury/repo/nonUS/corporate) or category/collateral description (loans/other), not complete security-level maturity dates or a portfolio contractual maximum. An average<90/<360/>360 is never maturityDaysMax; no inferred366-day maximum."
+    },
+    {
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T00:23:38Z",
+      "reviewer": "CurationResearchC",
+      "sources": [
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x50bd66d59911f5e086ec87ae43c811e0d059dd11",
+          "observedAt": "2026-10-03T00:23:38Z",
+          "datumAsOf": null,
+          "location": "contracts/sBold.sol; contracts/base/BaseSBold.sol; SpLogic.sol",
+          "excerpt": "sps public; _calcFragments uses getBoldAssets; _getBoldAssetsSP= getCompoundedBoldDeposit(address(this)) + getDepositorYieldGainWithPending(address(this)); rebalanceSPs onlyOwner; SpLogic.provideToSP / withdrawFromSP",
+          "assertion": "Fully verified nonproxy deployed source matches pinned runtime. All recorded assets are BOLD idle plus three SP deposit/yield balances; pools retain liquidation-loss absorption. No local borrowing entrypoint or external borrowing-authorization path in reviewed vault code. Required datum custodyEscrow for sbold-k3-capital/backing/wrapper-local/custodyEscrow is public at https://eth.blockscout.com/api/v2/smart-contracts/0x50bd66d59911f5e086ec87ae43c811e0d059dd11 (contracts/sBold.sol; contracts/base/BaseSBold.sol; SpLogic.sol); it is not yet represented/evaluated by Pharos at this exact atomic scope. Known Stability Pool liquidation-loss absorption, parent/depeg risk and owner controls are retained; this is not a risk-free or measured-unwind claim."
+        },
+        {
+          "url": "https://ethereum-rpc.publicnode.com",
+          "observedAt": "2026-10-03T00:23:38Z",
+          "datumAsOf": "2026-10-03T00:09:23Z",
+          "location": "Ethereum block 26108128, all sps indices and deposits",
+          "excerpt": "hash=0xb18ff025e5978a23078bab1769421d34cac45af726245c2c11c4067f6b591eb8; sps[0..2]=0x5721cbbd64fc7ae3ef44a0a3f9a790a9264cf9bf,0x9502b7c397e9aa22fe9db7ef7daf21cd2aebe56b,0xd442e41019b7f5c4dd78f50dc03726c446148695; sps(3) reverts; totalAssets=4206246503345213655748795; idle+BOLD-deposits+pending-yields=4206246503345213655748795; all three accrued/stashed/idle collateral balances=0",
+          "assertion": "Current complete sBOLD allocation is public, reconciled exactly and not admitted by the captured expired whole-allocation review. Required datum custodyEscrow for sbold-k3-capital/backing/wrapper-local/custodyEscrow is public at https://ethereum-rpc.publicnode.com (Ethereum block 26108128, all sps indices and deposits); it is not yet represented/evaluated by Pharos at this exact atomic scope. Known Stability Pool liquidation-loss absorption, parent/depeg risk and owner controls are retained; this is not a risk-free or measured-unwind claim."
+        }
+      ],
+      "id": "curation-C-sbold-k3-capital-wrapper-custodyEscrow",
+      "assetId": "sbold-k3-capital",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "wrapper-local",
+        "factorKey": "custodyEscrow",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "custodyEscrow"
+      }
+    },
+    {
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T00:23:38Z",
+      "reviewer": "CurationResearchC",
+      "sources": [
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x50bd66d59911f5e086ec87ae43c811e0d059dd11",
+          "observedAt": "2026-10-03T00:23:38Z",
+          "datumAsOf": null,
+          "location": "contracts/sBold.sol; contracts/base/BaseSBold.sol; SpLogic.sol",
+          "excerpt": "sps public; _calcFragments uses getBoldAssets; _getBoldAssetsSP= getCompoundedBoldDeposit(address(this)) + getDepositorYieldGainWithPending(address(this)); rebalanceSPs onlyOwner; SpLogic.provideToSP / withdrawFromSP",
+          "assertion": "Fully verified nonproxy deployed source matches pinned runtime. All recorded assets are BOLD idle plus three SP deposit/yield balances; pools retain liquidation-loss absorption. No local borrowing entrypoint or external borrowing-authorization path in reviewed vault code. Required datum leverage for sbold-k3-capital/backing/wrapper-local/leverage is public at https://eth.blockscout.com/api/v2/smart-contracts/0x50bd66d59911f5e086ec87ae43c811e0d059dd11 (contracts/sBold.sol; contracts/base/BaseSBold.sol; SpLogic.sol); it is not yet represented/evaluated by Pharos at this exact atomic scope. Known Stability Pool liquidation-loss absorption, parent/depeg risk and owner controls are retained; this is not a risk-free or measured-unwind claim."
+        },
+        {
+          "url": "https://ethereum-rpc.publicnode.com",
+          "observedAt": "2026-10-03T00:23:38Z",
+          "datumAsOf": "2026-10-03T00:09:23Z",
+          "location": "Ethereum block 26108128, all sps indices and deposits",
+          "excerpt": "hash=0xb18ff025e5978a23078bab1769421d34cac45af726245c2c11c4067f6b591eb8; sps[0..2]=0x5721cbbd64fc7ae3ef44a0a3f9a790a9264cf9bf,0x9502b7c397e9aa22fe9db7ef7daf21cd2aebe56b,0xd442e41019b7f5c4dd78f50dc03726c446148695; sps(3) reverts; totalAssets=4206246503345213655748795; idle+BOLD-deposits+pending-yields=4206246503345213655748795; all three accrued/stashed/idle collateral balances=0",
+          "assertion": "Current complete sBOLD allocation is public, reconciled exactly and not admitted by the captured expired whole-allocation review. Required datum leverage for sbold-k3-capital/backing/wrapper-local/leverage is public at https://ethereum-rpc.publicnode.com (Ethereum block 26108128, all sps indices and deposits); it is not yet represented/evaluated by Pharos at this exact atomic scope. Known Stability Pool liquidation-loss absorption, parent/depeg risk and owner controls are retained; this is not a risk-free or measured-unwind claim."
+        }
+      ],
+      "id": "curation-C-sbold-k3-capital-wrapper-leverage",
+      "assetId": "sbold-k3-capital",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "wrapper-local",
+        "factorKey": "leverage",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "leverage"
+      }
+    },
+    {
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T00:23:38Z",
+      "reviewer": "CurationResearchC",
+      "sources": [
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x50bd66d59911f5e086ec87ae43c811e0d059dd11",
+          "observedAt": "2026-10-03T00:23:38Z",
+          "datumAsOf": null,
+          "location": "contracts/sBold.sol; contracts/base/BaseSBold.sol; SpLogic.sol",
+          "excerpt": "sps public; _calcFragments uses getBoldAssets; _getBoldAssetsSP= getCompoundedBoldDeposit(address(this)) + getDepositorYieldGainWithPending(address(this)); rebalanceSPs onlyOwner; SpLogic.provideToSP / withdrawFromSP",
+          "assertion": "Fully verified nonproxy deployed source matches pinned runtime. All recorded assets are BOLD idle plus three SP deposit/yield balances; pools retain liquidation-loss absorption. No local borrowing entrypoint or external borrowing-authorization path in reviewed vault code. Required datum rehypothecationCorrelation for sbold-k3-capital/backing/wrapper-local/rehypothecationCorrelation is public at https://eth.blockscout.com/api/v2/smart-contracts/0x50bd66d59911f5e086ec87ae43c811e0d059dd11 (contracts/sBold.sol; contracts/base/BaseSBold.sol; SpLogic.sol); it is not yet represented/evaluated by Pharos at this exact atomic scope. Known Stability Pool liquidation-loss absorption, parent/depeg risk and owner controls are retained; this is not a risk-free or measured-unwind claim."
+        },
+        {
+          "url": "https://ethereum-rpc.publicnode.com",
+          "observedAt": "2026-10-03T00:23:38Z",
+          "datumAsOf": "2026-10-03T00:09:23Z",
+          "location": "Ethereum block 26108128, all sps indices and deposits",
+          "excerpt": "hash=0xb18ff025e5978a23078bab1769421d34cac45af726245c2c11c4067f6b591eb8; sps[0..2]=0x5721cbbd64fc7ae3ef44a0a3f9a790a9264cf9bf,0x9502b7c397e9aa22fe9db7ef7daf21cd2aebe56b,0xd442e41019b7f5c4dd78f50dc03726c446148695; sps(3) reverts; totalAssets=4206246503345213655748795; idle+BOLD-deposits+pending-yields=4206246503345213655748795; all three accrued/stashed/idle collateral balances=0",
+          "assertion": "Current complete sBOLD allocation is public, reconciled exactly and not admitted by the captured expired whole-allocation review. Required datum rehypothecationCorrelation for sbold-k3-capital/backing/wrapper-local/rehypothecationCorrelation is public at https://ethereum-rpc.publicnode.com (Ethereum block 26108128, all sps indices and deposits); it is not yet represented/evaluated by Pharos at this exact atomic scope. Known Stability Pool liquidation-loss absorption, parent/depeg risk and owner controls are retained; this is not a risk-free or measured-unwind claim."
+        }
+      ],
+      "id": "curation-C-sbold-k3-capital-wrapper-rehypothecationCorrelation",
+      "assetId": "sbold-k3-capital",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "wrapper-local",
+        "factorKey": "rehypothecationCorrelation",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "rehypothecationCorrelation"
+      }
+    }
+  ]
+}

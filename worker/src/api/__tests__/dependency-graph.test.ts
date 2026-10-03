@@ -1,3 +1,4 @@
+import { makeReportCardsV9PipelineGapCard, makeReportCardsV9PartialCard } from "@shared/test-utils/report-cards-v9";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getPublicApiAccess } from "@shared/lib/api-endpoints";
 import { DependencyGraphResponseSchema, projectDependencyGraph } from "@shared/types/dependency-graph";
@@ -15,11 +16,11 @@ function fixturePublication() {
   return makeReportCardsV9Response({
     cards: [
       makeWorkerV9Card({ id: "child", supply: { circulatingUsdAtEvaluation: 0, asOfSec: 100, generationId: "supply-1" }, sharedBookId: "book-1", dependencyCoverage: [], dependencies: {
-        serial: [{ upstreamAssetId: "parent", score: 80, blocked: false, dependencyType: "wrapper", wrapperForm: "pure", provenance: { source: "manual", evidenceAsOf: "2026-09-29", intermediary: null } }],
+        serial: [{ upstreamAssetId: "parent", score: 80, ratingStatus: "rated", partialEvidence: null, causeGapRefs: [], limitedEvidenceCauses: [], blocked: false, dependencyType: "wrapper", wrapperForm: "pure", provenance: { source: "manual", evidenceAsOf: "2026-09-29", intermediary: null } }],
         basket: [],
         cycleBlocked: false,
         reasonCodes: [],
-        roles: [{ edgeKey: "role-1", exposureKey: "exposure-1", riskEventKey: "event-1", upstreamAssetId: "parent", role: "exit-dependency", weight: 0.4, targetPillar: "exit", propagationEventEdgeKeys: [], propagationEventExposureKey: null, propagationEventRiskEventKey: null, propagationEventNominalExposureShare: null, propagationEventExposureShare: null, propagationEventInheritedScore: null, propagationEventModeledLossPoints: null, inheritedDimensions: [], unavailableDimensions: [], score: 80, boundedUnknown: false, cycleBlocked: false, evidenceRefIds: [], failureDomains: [] }],
+        roles: [{ edgeKey: "role-1", exposureKey: "exposure-1", riskEventKey: "event-1", upstreamAssetId: "parent", role: "exit-dependency", weight: 0.4, targetPillar: "exit", propagationEventEdgeKeys: [], propagationEventExposureKey: null, propagationEventRiskEventKey: null, propagationEventNominalExposureShare: null, propagationEventExposureShare: null, propagationEventInheritedScore: null, propagationEventModeledLossPoints: null, inheritedDimensions: [], unavailableDimensions: [], score: 80, ratingStatus: "rated", partialEvidence: null, causeGapRefs: [], limitedEvidenceCauses: [], boundedUnknown: false, cycleBlocked: false, evidenceRefIds: [], failureDomains: [] }],
       } }),
       makeWorkerV9Card({ id: "parent", score: null, supply: undefined, sharedBookId: undefined, dependencyCoverage: undefined }),
     ],
@@ -29,6 +30,22 @@ function fixturePublication() {
 
 describe("dependency graph projection", () => {
   beforeEach(() => mockLoadActiveSafetyScoreSource.mockReset());
+
+  it("projects graph v2 with distinct technical null and rated partial nodes", async () => {
+    const snapshot = makeReportCardsV9Response({ cards: [
+      makeReportCardsV9PipelineGapCard("control", "A", { id: "gap" }),
+      makeWorkerV9Card({ id: "nr", score: null }),
+      makeReportCardsV9PartialCard("exit", "B", { id: "partial" }),
+    ] });
+    mockLoadActiveSafetyScoreSource.mockResolvedValue({ kind: "v9", snapshot });
+    const body = DependencyGraphResponseSchema.parse(await (await handleDependencyGraph(mockD1([]))).json());
+    expect(body.schemaVersion).toBe(2);
+    expect(body.nodes.find((node) => node.id === "gap")).toMatchObject({ grade: null, score: null, ratingStatus: "pipeline-gap" });
+    expect(body.nodes.find((node) => node.id === "nr")).toMatchObject({ grade: "NR", score: null, ratingStatus: "not-rated" });
+    expect(body.nodes.find((node) => node.id === "partial")).toMatchObject({
+      ratingStatus: "rated", partialEvidence: { excludedPillars: ["exit"], causes: ["B"] },
+    });
+  });
 
   it("preserves accepted edges and publication-bound zero, null, role and coverage facts", async () => {
     const snapshot = fixturePublication();
@@ -40,18 +57,17 @@ describe("dependency graph projection", () => {
     expect(body).toMatchObject({ publicationGenerationId: snapshot.safetyScoreIdentity.publicationGenerationId, methodologyVersion: snapshot.methodology.version, asOfSec: snapshot.asOfSec, updatedAt: snapshot.updatedAt });
     expect(body.commonModeGroups).toEqual(snapshot.commonModeGroups);
     expect(body.nodes).toEqual([
-      { id: "child", grade: snapshot.cards[0]!.grade, score: 80, circulatingUsdAtEvaluation: 0, supplyAsOfSec: 100, sharedBookId: "book-1", roles: [{ upstreamAssetId: "parent", economicRole: "exit-dependency", weight: 0.4 }], dependencyCoverageCount: 0 },
-      { id: "parent", grade: "NR", score: null, circulatingUsdAtEvaluation: null, supplyAsOfSec: null, sharedBookId: null, roles: [], dependencyCoverageCount: null },
+      { id: "child", grade: snapshot.cards[0]!.grade, ratingStatus: "rated", partialEvidence: null, score: 80, circulatingUsdAtEvaluation: 0, supplyAsOfSec: 100, sharedBookId: "book-1", roles: [{ upstreamAssetId: "parent", economicRole: "exit-dependency", weight: 0.4 }], dependencyCoverageCount: 0 },
+      { id: "parent", grade: "NR", ratingStatus: "not-rated", partialEvidence: null, score: null, circulatingUsdAtEvaluation: null, supplyAsOfSec: null, sharedBookId: null, roles: [], dependencyCoverageCount: null },
     ]);
     expect(body.edges).toEqual(snapshot.dependencyGraph.edges);
     expect(body).not.toHaveProperty("cards");
   });
 
-  it("does not invent supply, book or coverage facts for v5 publications", () => {
-    const snapshot = makeReportCardsV9Response({ schemaVersion: 5, cards: [makeWorkerV9Card({ supply: undefined, sharedBookId: undefined, dependencyCoverage: undefined })] });
+  it("does not invent supply, book or coverage facts when current evidence is absent", () => {
+    const snapshot = makeReportCardsV9Response({ cards: [makeWorkerV9Card({ supply: undefined, sharedBookId: undefined, dependencyCoverage: undefined })] });
     const body = DependencyGraphResponseSchema.parse(projectDependencyGraph(snapshot));
     expect(body.nodes[0]).toMatchObject({ circulatingUsdAtEvaluation: null, supplyAsOfSec: null, sharedBookId: null, dependencyCoverageCount: null });
-    expect(body).not.toHaveProperty("commonModeGroups");
   });
 
   it("resolves common-mode cap and deployment adjustment prices without exposing evaluator detail", () => {

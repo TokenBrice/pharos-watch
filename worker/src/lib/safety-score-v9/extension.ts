@@ -1709,7 +1709,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
   const liveToFallbackAssetIds = new Set(fixedInput.liveToFallbackCoins);
 
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     registryFingerprint,
     compiledAtSec: clockSec,
     sources,
@@ -1824,6 +1824,15 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
             sources: meta.mechanismArchetypeReview.sources,
             payload: meta.mechanismArchetypeReview,
             maxAgeSec: V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.mechanismOverlayMaxAgeSec,
+          });
+        }
+        if (!mechanismOverlayEvidence) {
+          const history = getSafetyScoreV9MechanismOverlayEvidence(assetId, archetype, clockSec, { history: true });
+          if (history) reviewEvidence.add({
+            componentKeys: ["mechanism-risk-review-history"],
+            sourceId: "safety-score-v9.mechanism-review-overlay", reviewedAt: history.reviewedAt,
+            publishedBy: "unknown", confidence: "manual-review", sources: history.sources,
+            payload: history.payload, maxAgeSec: history.maxAgeSec,
           });
         }
         const assuranceReport = meta.proofOfReserves?.latestReport;

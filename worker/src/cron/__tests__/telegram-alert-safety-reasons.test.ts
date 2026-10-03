@@ -29,6 +29,8 @@ function row(
 ): SafetySnapshot[string] {
   return {
     grade: "B",
+    ratingStatus: "rated",
+    partialEvidence: null,
     score: 78,
     methodologyVersion: "9.0",
     v9Explain: {

@@ -26,7 +26,7 @@ describe("handleReportCardsV9", () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({
       model: "v9",
-      schemaVersion: 6,
+      schemaVersion: 7,
       lifecycle: "active",
       safetyScoreIdentity: snapshot.safetyScoreIdentity,
     });
@@ -70,8 +70,25 @@ describe("handleReportCardsV9", () => {
     const response = await handleReportCardsV9(mockD1([], { requireMatch: true }));
 
     expect(response.status).toBe(503);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
     await expect(response.json()).resolves.toEqual({
       error: "Canonical Safety Score V9 publication is unavailable",
+      reason: "v9-snapshot-unavailable",
     });
+  });
+
+  it("returns a non-cacheable machine-readable failure while legacy schema cutover is pending", async () => {
+    mockLoadActiveSafetyScoreSource.mockResolvedValue({
+      kind: "error",
+      reason: "publication-schema-cutover-pending",
+      snapshot: null,
+      detail: "publication-schema-cutover-pending: stored publication schemaVersion5 requires schemaVersion6",
+    });
+
+    const response = await handleReportCardsV9(mockD1([], { requireMatch: true }));
+
+    expect(response.status).toBe(503);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(await response.json()).toMatchObject({ reason: "publication-schema-cutover-pending" });
   });
 });

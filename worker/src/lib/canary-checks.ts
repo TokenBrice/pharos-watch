@@ -517,6 +517,10 @@ export async function checkReportCardCacheMethodology(db: D1Database) {
   const metadata = {
     updatedAt: active.snapshot.updatedAt,
     scoreCount: active.snapshot.cards.length,
+    ratedCount: active.snapshot.completeness.ratedCount,
+    notRatedCount: active.snapshot.completeness.notRatedCount,
+    pipelineGapCount: active.snapshot.completeness.pipelineGapCount,
+    partialEvidenceCount: active.snapshot.cards.filter((card) => card.partialEvidence !== null).length,
     methodologyVersion: active.snapshot.methodology.version,
     safetyScoreIdentity: active.snapshot.safetyScoreIdentity,
     publicationHealth: active.snapshot.publicationHealth,

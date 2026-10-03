@@ -9,6 +9,7 @@ import { runFourHourlyReserveSyncSlot } from "./hourly-live-reserves";
 import { runSingleScheduledJob } from "./slot-groups";
 import { sweepStaleScheduledSlotExecutions } from "../../lib/scheduled-slot-fence";
 import { createLeaseOwner } from "../../lib/cron-lease-primitives";
+import { recoverLiveReserveConfigChanges } from "../../cron/reserve-recovery-config";
 
 type ReserveRecoveryMode = "off" | "recover";
 
@@ -40,6 +41,17 @@ async function runReserveRecovery(runtime: ScheduledRuntimeContext, signal: Abor
     };
   }
 
+  const configRecovery = await recoverLiveReserveConfigChanges(runtime.db, signal, {
+    etherscanApiKey: runtime.env.ETHERSCAN_API_KEY,
+    alchemyApiKey: runtime.env.ALCHEMY_API_KEY,
+    trongridApiKey: runtime.env.TRONGRID_API_KEY,
+    m0ApiKey: runtime.env.M0_API_KEY,
+    chainRpcs: runtime.chainRpcs,
+  });
+  const configRecoveryDegraded = configRecovery.failed.length > 0
+    || ("deferredCount" in configRecovery && configRecovery.deferredCount > 0)
+    || ("missingFetcherCount" in configRecovery && configRecovery.missingFetcherCount > 0);
+
 
   const sweep = await sweepStaleScheduledSlotExecutions(runtime.db, {
     slotKey: "fourHourlyReserveSync",
@@ -63,11 +75,13 @@ async function runReserveRecovery(runtime: ScheduledRuntimeContext, signal: Abor
       && preparation.inspection.eligibleCheckpointCount === 0
       && preparation.inspection.readyCheckpointCount === 0;
     return {
-      status: recoveryBlocked ? "degraded" as const : "ok" as const,
-      itemCount: 0,
+      status: recoveryBlocked || configRecoveryDegraded
+        ? "degraded" as const : "ok" as const,
+      itemCount: configRecovery.healed.length,
       metadata: JSON.stringify({
         disposition: "no-recovery-due",
         mode,
+        configRecovery,
         retiredCheckpoints,
         ...(recoveryBlocked ? { statusCause: "reserve-recovery-zero-eligible-incompatible" } : {}),
         checkpointsClaimed: 0,
@@ -94,14 +108,15 @@ async function runReserveRecovery(runtime: ScheduledRuntimeContext, signal: Abor
   return {
     status: summary.jobsErrored > 0
       ? "error" as const
-      : summary.jobsDegraded > 0 || recoveryDeferred
+      : summary.jobsDegraded > 0 || recoveryDeferred || configRecoveryDegraded
         ? "degraded" as const
         : "ok" as const,
-    itemCount: 1,
+    itemCount: 1 + configRecovery.healed.length,
     error: summary.jobsErrored > 0 ? "reserve recovery child failed" : undefined,
     metadata: JSON.stringify({
       disposition: recoveryDeferred ? "recovery-deferred" : "recovery-executed",
       mode,
+      configRecovery,
       checkpointsClaimed: 1,
       originalScheduleKey: checkpoint.scheduleKey,
       originalSlotStartedAt: checkpoint.slotStartedAt,

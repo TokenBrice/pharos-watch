@@ -1,6 +1,8 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import type { PegAssetBase } from "@shared/types/core";
+import { advanceDepegPriceCoverage } from "@shared/lib/depeg-price-coverage";
+import { rowPriceCoverage } from "../lib/depeg-helpers";
 import { throwIfAborted } from "../lib/abort";
 import type { NativePegQuoteSession } from "../lib/native-peg-quotes";
 import { decideDepegAsset, emitDepegDiagnostics } from "./depeg-detection/decision-engine";
@@ -54,11 +56,12 @@ export async function detectDepegEvents(
 
   for (const asset of assets) {
     throwIfAborted(signal);
+    const existing = duplicateRepair.openEvents.get(asset.id);
     const decision = decideDepegAsset({
       now: hydrated.now,
       asset,
       meta: PSI_ELIGIBLE_META_BY_ID.get(asset.id),
-      existing: duplicateRepair.openEvents.get(asset.id),
+      existing,
       pegRates: hydrated.pegRates,
       pegRateSources: hydrated.pegRateSources,
       pegRateCounts: hydrated.pegRateCounts,
@@ -75,7 +78,25 @@ export async function detectDepegEvents(
       seen.add(eventId);
     }
     emitDepegDiagnostics(decision.diagnostics);
+    if (existing && decision.priceCoverage) {
+      commands.push({ type: "record-price-coverage", id: existing.id, coverage: decision.priceCoverage });
+    }
     commands.push(...decision.commands);
+  }
+
+  // Entirely omitted assets are coverage gaps too; keeping the lifecycle open
+  // must never extend the last trusted off-peg interval.
+  const presentAssetIds = new Set(assets.map((asset) => asset.id));
+  for (const row of duplicateRepair.openEvents.values()) {
+    if (presentAssetIds.has(row.stablecoin_id)) continue;
+    const previous = rowPriceCoverage(row);
+    const coverage = advanceDepegPriceCoverage(previous, hydrated.now, "blind");
+    if (coverage === previous) continue;
+    commands.push({
+      type: "record-price-coverage",
+      id: row.id,
+      coverage,
+    });
   }
 
   // Execute main loop statements before orphan cleanup.

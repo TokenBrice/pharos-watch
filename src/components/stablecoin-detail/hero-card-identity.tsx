@@ -251,7 +251,7 @@ export function SafetyGradeHero({
             getSafetyGradeMetadata(reportCard.grade).pulse.accentClassName
           }`}
         >
-          {reportCard.grade}
+          {reportCard.grade === null ? "Pipeline gap" : reportCard.grade}
         </span>
       </ScoreBadgeWrapper>
       {reportCard.score !== null && (
@@ -259,6 +259,12 @@ export function SafetyGradeHero({
           · {reportCard.score}/100
         </span>
       )}
+      {reportCard.partialEvidence ? (
+        <span className="text-xs text-muted-foreground">
+          Partial evidence: pipeline gap · {reportCard.partialEvidence.causes.map((cause) =>
+            cause === "A" ? "A — pipeline unavailable" : "B — public data awaiting curation").join(" · ")}
+        </span>
+      ) : null}
     </div>
   );
 }
