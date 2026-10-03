@@ -10682,6 +10682,105 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "nwisdom-nest",
+      "reviewedAt": "2026-10-03T23:08:18Z",
+      "expiresAt": "2027-10-03T23:08:18Z",
+      "reviewer": "Unknown wave W1R91 primary-source review",
+      "notes": "Exact Ethereum vault creation transaction establishes a deployment-history lower bound only under the wave contract. No uninterrupted operation, independently verified performance, settled redemption throughput, financial reconciliation, or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-vault-creation",
+          "label": "Exact Ethereum BoringVault creation transaction",
+          "publisher": "Ethereum blockchain via Blockscout",
+          "publishedAt": "2025-10-27",
+          "url": "https://eth.blockscout.com/api/v2/transactions/0x0d0d9ee2701da013eebdcd8165ab8163f0d4c24cafc5e35c025514006b335c66",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 11,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-vault-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "ntbill-nest",
+      "reviewedAt": "2026-10-03T23:08:18Z",
+      "expiresAt": "2027-10-03T23:08:18Z",
+      "reviewer": "Unknown wave W1R91 primary-source review",
+      "notes": "Exact Ethereum vault creation transaction establishes a deployment-history lower bound only under the wave contract. No uninterrupted operation, independently verified performance, settled redemption throughput, financial reconciliation, or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-vault-creation",
+          "label": "Exact Ethereum BoringVault creation transaction",
+          "publisher": "Ethereum blockchain via Blockscout",
+          "publishedAt": "2024-12-18",
+          "url": "https://eth.blockscout.com/api/v2/transactions/0x8cadb450644ed53d1c4af2dba5eac64e3ce62914c07600e38f40893149907818",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 21,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-vault-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "inalpha-nest",
+      "reviewedAt": "2026-10-03T23:08:18Z",
+      "expiresAt": "2027-10-03T23:08:18Z",
+      "reviewer": "Unknown wave W1R91 primary-source review",
+      "notes": "Exact Ethereum vault creation transaction establishes a deployment-history lower bound only under the wave contract. No uninterrupted operation, independently verified performance, settled redemption throughput, financial reconciliation, or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-vault-creation",
+          "label": "Exact Ethereum BoringVault creation transaction",
+          "publisher": "Ethereum blockchain via Blockscout",
+          "publishedAt": "2025-05-19",
+          "url": "https://eth.blockscout.com/api/v2/transactions/0xa317306ba7592ce90ae3f766fbdcb499f18c93505db99c00e1e8b5a210981250",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 16,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-vault-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

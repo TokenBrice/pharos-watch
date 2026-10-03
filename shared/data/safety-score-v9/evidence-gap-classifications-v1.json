@@ -23501,6 +23501,120 @@
         "https://docs.centrifuge.io/developer/protocol/deployments/"
       ],
       "rationale": "No full-notional final fiat settlement SLA for the Anemoy ACRDX issuer route is published. Standard quarterly liquidity and underlying limited repurchase offers are not a maximum completion bound. Fission immediate USDC liquidity is a different provider/route and cannot substitute for offchain issuer settlement."
+    },
+    {
+      "id": "uw-nwisdom-nest-521beb0be2fd5dae",
+      "assetId": "nwisdom-nest",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:nwisdom-nest:queue-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:38Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R91)",
+      "sources": [
+        {
+          "url": "https://docs.nest.credit/about/liquidity-and-redemptions/",
+          "observedAt": "2026-10-03T23:10:17Z",
+          "datumAsOf": null,
+          "location": "Queued (Asynchronous) Redemption",
+          "excerpt": "Larger withdrawals, or redemptions submitted when available liquidity is limited, may require additional time as positions are unwound in an orderly manner.",
+          "assertion": "Generic T+2 to T+5 estimates expressly admit additional time; no binding end-to-end maximum for any of these three legacy vaults is stated."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.nest.credit/",
+        "https://docs.nest.credit/about/available-vaults/",
+        "https://docs.nest.credit/about/liquidity-and-redemptions/",
+        "https://docs.nest.credit/about/vault-operations-and-valuation",
+        "https://docs.nest.credit/security-and-compliance/terms-and-conditions/",
+        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/contracts/README.md",
+        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/nTBILL.json",
+        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/nWISDOM.json",
+        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/inALPHA.json"
+      ],
+      "rationale": "The exact same-notional queue-redemption settlement maximum for nWISDOM, nTBILL and inALPHA is undisclosed. Public policy provides estimates for most strategies and expressly allows larger/illiquid exits additional time. Current vault directory omits these legacy assets; legal terms and contract/config disclosures publish no completion deadline. Async fulfillment is permissioned and can be partial. No generic estimate is converted into a guaranteed SLA."
+    },
+    {
+      "id": "uw-ntbill-nest-0575b59d662a2046",
+      "assetId": "ntbill-nest",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:ntbill-nest:queue-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:38Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R91)",
+      "sources": [
+        {
+          "url": "https://docs.nest.credit/about/liquidity-and-redemptions/",
+          "observedAt": "2026-10-03T23:10:17Z",
+          "datumAsOf": null,
+          "location": "Queued (Asynchronous) Redemption",
+          "excerpt": "Larger withdrawals, or redemptions submitted when available liquidity is limited, may require additional time as positions are unwound in an orderly manner.",
+          "assertion": "Generic T+2 to T+5 estimates expressly admit additional time; no binding end-to-end maximum for any of these three legacy vaults is stated."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.nest.credit/",
+        "https://docs.nest.credit/about/available-vaults/",
+        "https://docs.nest.credit/about/liquidity-and-redemptions/",
+        "https://docs.nest.credit/about/vault-operations-and-valuation",
+        "https://docs.nest.credit/security-and-compliance/terms-and-conditions/",
+        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/contracts/README.md",
+        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/nTBILL.json",
+        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/nWISDOM.json",
+        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/inALPHA.json"
+      ],
+      "rationale": "The exact same-notional queue-redemption settlement maximum for nWISDOM, nTBILL and inALPHA is undisclosed. Public policy provides estimates for most strategies and expressly allows larger/illiquid exits additional time. Current vault directory omits these legacy assets; legal terms and contract/config disclosures publish no completion deadline. Async fulfillment is permissioned and can be partial. No generic estimate is converted into a guaranteed SLA."
+    },
+    {
+      "id": "uw-inalpha-nest-68c96dffccd97cf1",
+      "assetId": "inalpha-nest",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:inalpha-nest:queue-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:38Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R91)",
+      "sources": [
+        {
+          "url": "https://docs.nest.credit/about/liquidity-and-redemptions/",
+          "observedAt": "2026-10-03T23:10:17Z",
+          "datumAsOf": null,
+          "location": "Queued (Asynchronous) Redemption",
+          "excerpt": "Larger withdrawals, or redemptions submitted when available liquidity is limited, may require additional time as positions are unwound in an orderly manner.",
+          "assertion": "Generic T+2 to T+5 estimates expressly admit additional time; no binding end-to-end maximum for any of these three legacy vaults is stated."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.nest.credit/",
+        "https://docs.nest.credit/about/available-vaults/",
+        "https://docs.nest.credit/about/liquidity-and-redemptions/",
+        "https://docs.nest.credit/about/vault-operations-and-valuation",
+        "https://docs.nest.credit/security-and-compliance/terms-and-conditions/",
+        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/contracts/README.md",
+        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/nTBILL.json",
+        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/nWISDOM.json",
+        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/inALPHA.json"
+      ],
+      "rationale": "The exact same-notional queue-redemption settlement maximum for nWISDOM, nTBILL and inALPHA is undisclosed. Public policy provides estimates for most strategies and expressly allows larger/illiquid exits additional time. Current vault directory omits these legacy assets; legal terms and contract/config disclosures publish no completion deadline. Async fulfillment is permissioned and can be partial. No generic estimate is converted into a guaranteed SLA."
     }
   ]
 }
