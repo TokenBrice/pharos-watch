@@ -106,13 +106,13 @@
         "address": "0x6d6f646c70792f68736d6f640000000000000000",
         "label": "HOLLAR Stability Module facilitator",
         "role": "direct-minter",
-        "authorityType": "unknown",
+        "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "unknown",
         "capDescription": "At Hydration block 15249643, getFacilitatorBucket returns an 18,000,000 HOLLAR capacity for this facilitator; its own capacity-management authority was not independently resolved.",
-        "observedAt": "2026-10-01",
-        "observedBlock": 15249643,
+        "observedAt": "2026-10-03",
+        "observedBlock": 15362506,
         "failureDomainKeys": [
           "protocol:hydration:hollar-stability-module"
         ],
@@ -124,9 +124,21 @@
           {
             "label": "Hydration public RPC",
             "url": "https://rpc.hydradx.cloud"
+          },
+          {
+            "label": "Official hydradx/447 release and deployed runtime code hash",
+            "url": "https://github.com/galacticcouncil/hydration-node/releases/tag/v53.0.0"
+          },
+          {
+            "label": "Exact v53 source commit: HSM pallet identity and runtime authority origin",
+            "url": "https://github.com/galacticcouncil/hydration-node/blob/8d87791c6942a549b63946bc37594f024f8b3af3/runtime/hydradx/src/assets.rs#L1862-L1885"
+          },
+          {
+            "label": "Official current Substrate-to-EVM account mapping",
+            "url": "https://docs.hydration.net/devs/evm/"
           }
         ],
-        "evidence": "Pinned token reads on 2026-10-01 label this registered facilitator HOLLAR Stability Module and establish its current bucket capacity. eth_getCode returns no EVM bytecode at this address; that does not prove EOA control of a runtime-native facilitator. Its controller type and protective controls remain unknown. The GhoToken source permits facilitator minting within its bucket; these observations do not establish the HSM asset allocation or full collateral denominator."
+        "evidence": "At block 15362506, EVM hash 0x8917e2e9d06c5960d615346b43388a9a0e91de6514e641d89663bbdf2c614add, getFacilitatorsList includes this account and getFacilitatorBucket returns capacity 18000000e18 and level 540630164470200441773972. The matching Substrate block hash is 0x6e60b2c0ec639f80a65f706a3fc5b23f584181f0618ef256e617cd67631f4d1e. Its :code storage is 2446732 bytes with Blake2b-256 0x0b1bc5812823c7f307f7042b2efdea695dfe95f64197599315f3c4f423dc3123, exactly the official v53.0.0 hydradx/447 release's authorized code hash. The release source declares HsmPalletId as py/hsmod and HOLLAR asset 222; the modl-prefixed pallet AccountId's first 20 bytes derive exactly this EVM address under the official mapping. This is a runtime-pallet contract authority, not an EOA. Runtime AuthorityOrigin is Root, EconomicParameters or GeneralAdmin. Immediate authority identity is established; complete cap-changing/bypass reach, HSM strategy allocation and whole backing denominator remain unresolved."
       },
       {
         "chain": "hydration",

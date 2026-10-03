@@ -27,6 +27,34 @@
     ]
   },
   "implementationLaunchDate": "2026-03-25",
+  "variantOf": "usdc-circle",
+  "variantKind": "pure-wrapper",
+  "pegReferenceId": "usdc-circle",
+  "dependencyReview": {
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Unknown-wave W2R43 primary-source wrapper identity review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Circle xReserve technical guide: fixed USDC-backed claim and remote-chain responsibilities",
+        "url": "https://developers.circle.com/xreserve/concepts/technical-guide"
+      },
+      {
+        "label": "Circle xReserve authoritative Movement token identity",
+        "url": "https://developers.circle.com/xreserve/references/supported-blockchains-and-domains"
+      }
+    ],
+    "rationale": "Circle identifies the exact Movement USDCx token as an xReserve remote-chain representation backed 1:1 by USDC. Deposits lock USDC; burning the representation releases USDC, rather than NAV-valued shares or a yield strategy. The serial parent is Circle USDC. The pure fixed-parent claim identity does not remove representation-specific bridge attestation, pause, admin or upgrade controls, or assert local custody legal protections.",
+    "relationships": [
+      {
+        "id": "usdc-circle",
+        "weight": 1,
+        "type": "wrapper",
+        "economicRole": "serial-claim",
+        "reason": "Every Movement USDCx represents a fixed 1:1 USDC claim through Circle xReserve; bridge-specific controls remain separately reviewed."
+      }
+    ]
+  },
   "detailProvider": "coingecko",
   "geckoId": "usdcx-movement",
   "links": [

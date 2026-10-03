@@ -12305,110 +12305,6 @@
       "rationale": "Resolved wave-1 archive-access blocker: retrieved official exact-token collateral, legal, deposit, withdrawal and audit disclosures through Wayback; searched docs/blog archive indices and verified treasury/lockdrop interfaces. No published dated whole-zkUSD-reserve denominator with itemized amounts/weights was found. Eligible USDC/ETH deposits and generic sportsbook collateral claims do not measure current allocations or house/betting obligations. Historical claims are not curated as a current 100% USDC book; DNS failure itself is not the basis for C."
     },
     {
-      "id": "uw-gusd-gate-7c52e9253eeffdb8",
-      "assetId": "gusd-gate",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:49:08Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R34)",
-      "sources": [
-        {
-          "url": "https://miniapp.gate.com/gusd",
-          "observedAt": "2026-10-03T22:49:08Z",
-          "datumAsOf": null,
-          "location": "What is GUSD?",
-          "excerpt": "GUSD is a principal-protected flexible earn product, with returns generated from Gate ecosystem revenue, treasury RWAs, and high-quality stablecoin-backed yield assets.",
-          "assertion": "Discloses categories and product mechanics, not dated GUSD-specific holdings or recurring whole-supply/backing reconciliation."
-        },
-        {
-          "url": "https://miniapp.gate.com/proof-of-reserves",
-          "observedAt": "2026-10-03T22:49:08Z",
-          "datumAsOf": null,
-          "location": "How do we maintain 100% reserves?",
-          "excerpt": "If the total number of tokens managed by the exchange on the blockchain meets or exceeds the aggregate balance of all user accounts, as captured in a snapshot, the platform maintains 100% reserves for those tokens.",
-          "assertion": "Exchange-custody customer-account snapshots do not establish the backing composition of issued GUSD or its treasury asset/liability reconciliation."
-        },
-        {
-          "url": "https://miniapp.gate.com/help/annlist/others/101701",
-          "observedAt": "2026-10-03T22:49:08Z",
-          "datumAsOf": "2026-08-15",
-          "location": "GUSD Reaches an All-Time High",
-          "excerpt": "Gate GUSD funds reached a record high of $257 million on August 15, marking the highest level since the product\u2019s launch.",
-          "assertion": "GUSD subscription/funds total is disclosed separately from aggregate exchange reserve coverage; no product-specific backing schedule is supplied."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://miniapp.gate.com/gusd",
-        "https://miniapp.gate.com/earn/staking/GUSD",
-        "https://miniapp.gate.com/help/lend/staking/46831",
-        "https://miniapp.gate.com/proof-of-reserves",
-        "https://miniapp.gate.com/legal/user-agreement",
-        "https://miniapp.gate.com/help/annlist/others/101701",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xaf6186b3521b60e27396b5d23b48abc34bf585c5"
-      ],
-      "rationale": "No dated recurring procedure or report reconciling all issued native and represented GUSD liabilities and mint/burn movements to GUSD-specific backing at a common clock is disclosed. Product minting claims, $257m funds and exchange customer-token custody PoR are distinct lookalikes, not GUSD treasury reconciliation."
-    },
-    {
-      "id": "uw-gusd-gate-5fdecad8aca8e38c",
-      "assetId": "gusd-gate",
-      "scope": {
-        "componentKey": "reserve-composition",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "backing",
-        "requiredDatum": "reserve-composition",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:49:08Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R34)",
-      "sources": [
-        {
-          "url": "https://miniapp.gate.com/gusd",
-          "observedAt": "2026-10-03T22:49:08Z",
-          "datumAsOf": null,
-          "location": "What is GUSD?",
-          "excerpt": "GUSD is a principal-protected flexible earn product, with returns generated from Gate ecosystem revenue, treasury RWAs, and high-quality stablecoin-backed yield assets.",
-          "assertion": "Discloses categories and product mechanics, not dated GUSD-specific holdings or recurring whole-supply/backing reconciliation."
-        },
-        {
-          "url": "https://miniapp.gate.com/proof-of-reserves",
-          "observedAt": "2026-10-03T22:49:08Z",
-          "datumAsOf": null,
-          "location": "How do we maintain 100% reserves?",
-          "excerpt": "If the total number of tokens managed by the exchange on the blockchain meets or exceeds the aggregate balance of all user accounts, as captured in a snapshot, the platform maintains 100% reserves for those tokens.",
-          "assertion": "Exchange-custody customer-account snapshots do not establish the backing composition of issued GUSD or its treasury asset/liability reconciliation."
-        },
-        {
-          "url": "https://miniapp.gate.com/help/annlist/others/101701",
-          "observedAt": "2026-10-03T22:49:08Z",
-          "datumAsOf": "2026-08-15",
-          "location": "GUSD Reaches an All-Time High",
-          "excerpt": "Gate GUSD funds reached a record high of $257 million on August 15, marking the highest level since the product\u2019s launch.",
-          "assertion": "GUSD subscription/funds total is disclosed separately from aggregate exchange reserve coverage; no product-specific backing schedule is supplied."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://miniapp.gate.com/gusd",
-        "https://miniapp.gate.com/earn/staking/GUSD",
-        "https://miniapp.gate.com/help/lend/staking/46831",
-        "https://miniapp.gate.com/proof-of-reserves",
-        "https://miniapp.gate.com/legal/user-agreement",
-        "https://miniapp.gate.com/help/annlist/others/101701",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xaf6186b3521b60e27396b5d23b48abc34bf585c5"
-      ],
-      "rationale": "No current GUSD-specific whole-book reserve holdings schedule, allocation weights or complete backing denominator is disclosed. Product/help/hub pages name Treasury RWAs and stablecoin-backed yield categories; the transparency report reports product funds and exchange-wide ratios rather than constituent backing amounts."
-    },
-    {
       "id": "uw-autousd-auto-finance-96d721f0ddb6e20d",
       "assetId": "autousd-auto-finance",
       "scope": {
@@ -12498,610 +12394,6 @@
         "https://ethereum-rpc.publicnode.com"
       ],
       "rationale": "For the exact aggregate deployed protocol-position slice, no enforceable or unconditional one-day/seven-day whole-position realization bound is disclosed. The official withdrawal guide offers on-demand attempts but explicitly conditions execution on configured market liquidity and slippage; security docs allow local/global pauses. The 18 current registered destinations and four queue entries do not turn that conditional mechanism into a guaranteed maximum. Idle underlying is separately curated and is not generalized to this slice."
-    },
-    {
-      "id": "uw-tgbp-tokenised-774ec4c11f0ac912",
-      "assetId": "tgbp-tokenised",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:1682e4b3f3e78e540101414c",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:15:36Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R84)",
-      "sources": [
-        {
-          "url": "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
-          "observedAt": "2026-10-03T23:15:36Z",
-          "datumAsOf": "2026-08-31",
-          "location": "Page 2 reserve table, visually inspected",
-          "excerpt": "Cash Accounts\nBonds\nMoney Market Funds",
-          "assertion": "Latest report publishes three class totals, but no bank/bond obligor/fund roster, contractual maximum maturity or realization horizon."
-        },
-        {
-          "url": "https://www.tokenisedgbp.com/terms",
-          "observedAt": "2026-10-03T23:15:36Z",
-          "datumAsOf": "2026-01-06",
-          "location": "Section 6 reserves",
-          "excerpt": "We hold the backing reserve in liquid assets, such as Money Market Funds, UK Treasuries and bank deposits, as permitted and in accordance with the FCA\u2019s rules and requirements as enforced time to time.",
-          "assertion": "Eligible classes and liquidity descriptions do not identify current obligors, numeric maturities or cash-realization windows."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.tokenisedgbp.com/",
-        "https://www.tokenisedgbp.com/transparency",
-        "https://www.tokenisedgbp.com/terms",
-        "https://www.tokenisedgbp.com/blog",
-        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
-        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-04-30.pdf"
-      ],
-      "rationale": "August reserve table and April report disclose cash accounts, bonds and money-market fund aggregate balances only. Issuer site, archive and terms do not identify current bank/obligor/fund keys, contractual maximum maturities or slice-specific cash-realization windows. Generic eligible UK Treasuries and liquid assets cannot establish current bond identity, maturity or immediate realization."
-    },
-    {
-      "id": "uw-tgbp-tokenised-4996309e83798727",
-      "assetId": "tgbp-tokenised",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:1682e4b3f3e78e540101414c",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:15:36Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R84)",
-      "sources": [
-        {
-          "url": "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
-          "observedAt": "2026-10-03T23:15:36Z",
-          "datumAsOf": "2026-08-31",
-          "location": "Page 2 reserve table, visually inspected",
-          "excerpt": "Cash Accounts\nBonds\nMoney Market Funds",
-          "assertion": "Latest report publishes three class totals, but no bank/bond obligor/fund roster, contractual maximum maturity or realization horizon."
-        },
-        {
-          "url": "https://www.tokenisedgbp.com/terms",
-          "observedAt": "2026-10-03T23:15:36Z",
-          "datumAsOf": "2026-01-06",
-          "location": "Section 6 reserves",
-          "excerpt": "We hold the backing reserve in liquid assets, such as Money Market Funds, UK Treasuries and bank deposits, as permitted and in accordance with the FCA\u2019s rules and requirements as enforced time to time.",
-          "assertion": "Eligible classes and liquidity descriptions do not identify current obligors, numeric maturities or cash-realization windows."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.tokenisedgbp.com/",
-        "https://www.tokenisedgbp.com/transparency",
-        "https://www.tokenisedgbp.com/terms",
-        "https://www.tokenisedgbp.com/blog",
-        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
-        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-04-30.pdf"
-      ],
-      "rationale": "August reserve table and April report disclose cash accounts, bonds and money-market fund aggregate balances only. Issuer site, archive and terms do not identify current bank/obligor/fund keys, contractual maximum maturities or slice-specific cash-realization windows. Generic eligible UK Treasuries and liquid assets cannot establish current bond identity, maturity or immediate realization."
-    },
-    {
-      "id": "uw-tgbp-tokenised-64aa015773ccce0a",
-      "assetId": "tgbp-tokenised",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:1682e4b3f3e78e540101414c",
-        "factorKey": "obligorConcentration",
-        "pillar": "backing",
-        "requiredDatum": "issuerOrObligorKey",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:15:36Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R84)",
-      "sources": [
-        {
-          "url": "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
-          "observedAt": "2026-10-03T23:15:36Z",
-          "datumAsOf": "2026-08-31",
-          "location": "Page 2 reserve table, visually inspected",
-          "excerpt": "Cash Accounts\nBonds\nMoney Market Funds",
-          "assertion": "Latest report publishes three class totals, but no bank/bond obligor/fund roster, contractual maximum maturity or realization horizon."
-        },
-        {
-          "url": "https://www.tokenisedgbp.com/terms",
-          "observedAt": "2026-10-03T23:15:36Z",
-          "datumAsOf": "2026-01-06",
-          "location": "Section 6 reserves",
-          "excerpt": "We hold the backing reserve in liquid assets, such as Money Market Funds, UK Treasuries and bank deposits, as permitted and in accordance with the FCA\u2019s rules and requirements as enforced time to time.",
-          "assertion": "Eligible classes and liquidity descriptions do not identify current obligors, numeric maturities or cash-realization windows."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.tokenisedgbp.com/",
-        "https://www.tokenisedgbp.com/transparency",
-        "https://www.tokenisedgbp.com/terms",
-        "https://www.tokenisedgbp.com/blog",
-        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
-        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-04-30.pdf"
-      ],
-      "rationale": "August reserve table and April report disclose cash accounts, bonds and money-market fund aggregate balances only. Issuer site, archive and terms do not identify current bank/obligor/fund keys, contractual maximum maturities or slice-specific cash-realization windows. Generic eligible UK Treasuries and liquid assets cannot establish current bond identity, maturity or immediate realization."
-    },
-    {
-      "id": "uw-tgbp-tokenised-5ffc3ffcd7cdabce",
-      "assetId": "tgbp-tokenised",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:363268f8b18b7767c6181786",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:15:36Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R84)",
-      "sources": [
-        {
-          "url": "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
-          "observedAt": "2026-10-03T23:15:36Z",
-          "datumAsOf": "2026-08-31",
-          "location": "Page 2 reserve table, visually inspected",
-          "excerpt": "Cash Accounts\nBonds\nMoney Market Funds",
-          "assertion": "Latest report publishes three class totals, but no bank/bond obligor/fund roster, contractual maximum maturity or realization horizon."
-        },
-        {
-          "url": "https://www.tokenisedgbp.com/terms",
-          "observedAt": "2026-10-03T23:15:36Z",
-          "datumAsOf": "2026-01-06",
-          "location": "Section 6 reserves",
-          "excerpt": "We hold the backing reserve in liquid assets, such as Money Market Funds, UK Treasuries and bank deposits, as permitted and in accordance with the FCA\u2019s rules and requirements as enforced time to time.",
-          "assertion": "Eligible classes and liquidity descriptions do not identify current obligors, numeric maturities or cash-realization windows."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.tokenisedgbp.com/",
-        "https://www.tokenisedgbp.com/transparency",
-        "https://www.tokenisedgbp.com/terms",
-        "https://www.tokenisedgbp.com/blog",
-        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
-        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-04-30.pdf"
-      ],
-      "rationale": "August reserve table and April report disclose cash accounts, bonds and money-market fund aggregate balances only. Issuer site, archive and terms do not identify current bank/obligor/fund keys, contractual maximum maturities or slice-specific cash-realization windows. Generic eligible UK Treasuries and liquid assets cannot establish current bond identity, maturity or immediate realization."
-    },
-    {
-      "id": "uw-tgbp-tokenised-52b5fe382ef54e1e",
-      "assetId": "tgbp-tokenised",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:363268f8b18b7767c6181786",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:15:36Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R84)",
-      "sources": [
-        {
-          "url": "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
-          "observedAt": "2026-10-03T23:15:36Z",
-          "datumAsOf": "2026-08-31",
-          "location": "Page 2 reserve table, visually inspected",
-          "excerpt": "Cash Accounts\nBonds\nMoney Market Funds",
-          "assertion": "Latest report publishes three class totals, but no bank/bond obligor/fund roster, contractual maximum maturity or realization horizon."
-        },
-        {
-          "url": "https://www.tokenisedgbp.com/terms",
-          "observedAt": "2026-10-03T23:15:36Z",
-          "datumAsOf": "2026-01-06",
-          "location": "Section 6 reserves",
-          "excerpt": "We hold the backing reserve in liquid assets, such as Money Market Funds, UK Treasuries and bank deposits, as permitted and in accordance with the FCA\u2019s rules and requirements as enforced time to time.",
-          "assertion": "Eligible classes and liquidity descriptions do not identify current obligors, numeric maturities or cash-realization windows."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.tokenisedgbp.com/",
-        "https://www.tokenisedgbp.com/transparency",
-        "https://www.tokenisedgbp.com/terms",
-        "https://www.tokenisedgbp.com/blog",
-        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
-        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-04-30.pdf"
-      ],
-      "rationale": "August reserve table and April report disclose cash accounts, bonds and money-market fund aggregate balances only. Issuer site, archive and terms do not identify current bank/obligor/fund keys, contractual maximum maturities or slice-specific cash-realization windows. Generic eligible UK Treasuries and liquid assets cannot establish current bond identity, maturity or immediate realization."
-    },
-    {
-      "id": "uw-tgbp-tokenised-94da9ee9d9af4968",
-      "assetId": "tgbp-tokenised",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:363268f8b18b7767c6181786",
-        "factorKey": "obligorConcentration",
-        "pillar": "backing",
-        "requiredDatum": "issuerOrObligorKey",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:15:36Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R84)",
-      "sources": [
-        {
-          "url": "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
-          "observedAt": "2026-10-03T23:15:36Z",
-          "datumAsOf": "2026-08-31",
-          "location": "Page 2 reserve table, visually inspected",
-          "excerpt": "Cash Accounts\nBonds\nMoney Market Funds",
-          "assertion": "Latest report publishes three class totals, but no bank/bond obligor/fund roster, contractual maximum maturity or realization horizon."
-        },
-        {
-          "url": "https://www.tokenisedgbp.com/terms",
-          "observedAt": "2026-10-03T23:15:36Z",
-          "datumAsOf": "2026-01-06",
-          "location": "Section 6 reserves",
-          "excerpt": "We hold the backing reserve in liquid assets, such as Money Market Funds, UK Treasuries and bank deposits, as permitted and in accordance with the FCA\u2019s rules and requirements as enforced time to time.",
-          "assertion": "Eligible classes and liquidity descriptions do not identify current obligors, numeric maturities or cash-realization windows."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.tokenisedgbp.com/",
-        "https://www.tokenisedgbp.com/transparency",
-        "https://www.tokenisedgbp.com/terms",
-        "https://www.tokenisedgbp.com/blog",
-        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
-        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-04-30.pdf"
-      ],
-      "rationale": "August reserve table and April report disclose cash accounts, bonds and money-market fund aggregate balances only. Issuer site, archive and terms do not identify current bank/obligor/fund keys, contractual maximum maturities or slice-specific cash-realization windows. Generic eligible UK Treasuries and liquid assets cannot establish current bond identity, maturity or immediate realization."
-    },
-    {
-      "id": "uw-tgbp-tokenised-377fa69708c3ef09",
-      "assetId": "tgbp-tokenised",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:d6d53f52dd022a95bfdead6c",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:15:36Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R84)",
-      "sources": [
-        {
-          "url": "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
-          "observedAt": "2026-10-03T23:15:36Z",
-          "datumAsOf": "2026-08-31",
-          "location": "Page 2 reserve table, visually inspected",
-          "excerpt": "Cash Accounts\nBonds\nMoney Market Funds",
-          "assertion": "Latest report publishes three class totals, but no bank/bond obligor/fund roster, contractual maximum maturity or realization horizon."
-        },
-        {
-          "url": "https://www.tokenisedgbp.com/terms",
-          "observedAt": "2026-10-03T23:15:36Z",
-          "datumAsOf": "2026-01-06",
-          "location": "Section 6 reserves",
-          "excerpt": "We hold the backing reserve in liquid assets, such as Money Market Funds, UK Treasuries and bank deposits, as permitted and in accordance with the FCA\u2019s rules and requirements as enforced time to time.",
-          "assertion": "Eligible classes and liquidity descriptions do not identify current obligors, numeric maturities or cash-realization windows."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.tokenisedgbp.com/",
-        "https://www.tokenisedgbp.com/transparency",
-        "https://www.tokenisedgbp.com/terms",
-        "https://www.tokenisedgbp.com/blog",
-        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
-        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-04-30.pdf"
-      ],
-      "rationale": "August reserve table and April report disclose cash accounts, bonds and money-market fund aggregate balances only. Issuer site, archive and terms do not identify current bank/obligor/fund keys, contractual maximum maturities or slice-specific cash-realization windows. Generic eligible UK Treasuries and liquid assets cannot establish current bond identity, maturity or immediate realization."
-    },
-    {
-      "id": "uw-tgbp-tokenised-b4626eff14609e01",
-      "assetId": "tgbp-tokenised",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:d6d53f52dd022a95bfdead6c",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:15:36Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R84)",
-      "sources": [
-        {
-          "url": "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
-          "observedAt": "2026-10-03T23:15:36Z",
-          "datumAsOf": "2026-08-31",
-          "location": "Page 2 reserve table, visually inspected",
-          "excerpt": "Cash Accounts\nBonds\nMoney Market Funds",
-          "assertion": "Latest report publishes three class totals, but no bank/bond obligor/fund roster, contractual maximum maturity or realization horizon."
-        },
-        {
-          "url": "https://www.tokenisedgbp.com/terms",
-          "observedAt": "2026-10-03T23:15:36Z",
-          "datumAsOf": "2026-01-06",
-          "location": "Section 6 reserves",
-          "excerpt": "We hold the backing reserve in liquid assets, such as Money Market Funds, UK Treasuries and bank deposits, as permitted and in accordance with the FCA\u2019s rules and requirements as enforced time to time.",
-          "assertion": "Eligible classes and liquidity descriptions do not identify current obligors, numeric maturities or cash-realization windows."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.tokenisedgbp.com/",
-        "https://www.tokenisedgbp.com/transparency",
-        "https://www.tokenisedgbp.com/terms",
-        "https://www.tokenisedgbp.com/blog",
-        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
-        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-04-30.pdf"
-      ],
-      "rationale": "August reserve table and April report disclose cash accounts, bonds and money-market fund aggregate balances only. Issuer site, archive and terms do not identify current bank/obligor/fund keys, contractual maximum maturities or slice-specific cash-realization windows. Generic eligible UK Treasuries and liquid assets cannot establish current bond identity, maturity or immediate realization."
-    },
-    {
-      "id": "uw-tgbp-tokenised-356b662e6e189ffd",
-      "assetId": "tgbp-tokenised",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:d6d53f52dd022a95bfdead6c",
-        "factorKey": "obligorConcentration",
-        "pillar": "backing",
-        "requiredDatum": "issuerOrObligorKey",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:15:36Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R84)",
-      "sources": [
-        {
-          "url": "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
-          "observedAt": "2026-10-03T23:15:36Z",
-          "datumAsOf": "2026-08-31",
-          "location": "Page 2 reserve table, visually inspected",
-          "excerpt": "Cash Accounts\nBonds\nMoney Market Funds",
-          "assertion": "Latest report publishes three class totals, but no bank/bond obligor/fund roster, contractual maximum maturity or realization horizon."
-        },
-        {
-          "url": "https://www.tokenisedgbp.com/terms",
-          "observedAt": "2026-10-03T23:15:36Z",
-          "datumAsOf": "2026-01-06",
-          "location": "Section 6 reserves",
-          "excerpt": "We hold the backing reserve in liquid assets, such as Money Market Funds, UK Treasuries and bank deposits, as permitted and in accordance with the FCA\u2019s rules and requirements as enforced time to time.",
-          "assertion": "Eligible classes and liquidity descriptions do not identify current obligors, numeric maturities or cash-realization windows."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.tokenisedgbp.com/",
-        "https://www.tokenisedgbp.com/transparency",
-        "https://www.tokenisedgbp.com/terms",
-        "https://www.tokenisedgbp.com/blog",
-        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
-        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-04-30.pdf"
-      ],
-      "rationale": "August reserve table and April report disclose cash accounts, bonds and money-market fund aggregate balances only. Issuer site, archive and terms do not identify current bank/obligor/fund keys, contractual maximum maturities or slice-specific cash-realization windows. Generic eligible UK Treasuries and liquid assets cannot establish current bond identity, maturity or immediate realization."
-    },
-    {
-      "id": "uw-tgbp-tokenised-47fe386911993e96",
-      "assetId": "tgbp-tokenised",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:tgbp-tokenised:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:15:36Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R84)",
-      "sources": [
-        {
-          "url": "https://www.tokenisedgbp.com/terms",
-          "observedAt": "2026-10-03T23:15:36Z",
-          "datumAsOf": "2026-01-06",
-          "location": "Section 3 issuance/redemption",
-          "excerpt": "We reserve the right to impose limits or fees on issuance and redemption transactions.",
-          "assertion": "Direct redemption is disclosed, but no numeric all-in fee schedule or finite completion SLA for eligible direct customers."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.tokenisedgbp.com/",
-        "https://www.tokenisedgbp.com/terms",
-        "https://www.tokenisedgbp.com/transparency",
-        "https://www.tokenisedgbp.com/blog",
-        "https://stableregistry.com/contracts/tgbp-on-ethereum/"
-      ],
-      "rationale": "BCP direct redemption's numeric all-in fee and finite settlement bound are not published in issuer terms/site/archive. Buying or receiving free is not redeeming free. StableRegistry's 0 bps/5-business-day claims have no cited primary tariff/SLA and cannot override BCP terms allowing fees, delays and limits. Archax OTC is a different cohort."
-    },
-    {
-      "id": "uw-tgbp-tokenised-6dd6a11335f00e03",
-      "assetId": "tgbp-tokenised",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:tgbp-tokenised:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:15:36Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R84)",
-      "sources": [
-        {
-          "url": "https://www.tokenisedgbp.com/terms",
-          "observedAt": "2026-10-03T23:15:36Z",
-          "datumAsOf": "2026-01-06",
-          "location": "Section 3 issuance/redemption",
-          "excerpt": "We reserve the right to impose limits or fees on issuance and redemption transactions.",
-          "assertion": "Direct redemption is disclosed, but no numeric all-in fee schedule or finite completion SLA for eligible direct customers."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.tokenisedgbp.com/",
-        "https://www.tokenisedgbp.com/terms",
-        "https://www.tokenisedgbp.com/transparency",
-        "https://www.tokenisedgbp.com/blog",
-        "https://stableregistry.com/contracts/tgbp-on-ethereum/"
-      ],
-      "rationale": "BCP direct redemption's numeric all-in fee and finite settlement bound are not published in issuer terms/site/archive. Buying or receiving free is not redeeming free. StableRegistry's 0 bps/5-business-day claims have no cited primary tariff/SLA and cannot override BCP terms allowing fees, delays and limits. Archax OTC is a different cohort."
-    },
-    {
-      "id": "uw-zarsc-supercoin-e01ef9de488ded93",
-      "assetId": "zarsc-supercoin",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:15:36Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R84)",
-      "sources": [
-        {
-          "url": "https://cdn.prod.website-files.com/6a43ab66ff171ec1aca79e9b/6a47cf673480e0371e2fc333_White_Paper_Supercoin_2026.pdf",
-          "observedAt": "2026-10-03T23:15:36Z",
-          "datumAsOf": null,
-          "location": "Page 12 reserve backing",
-          "excerpt": "Every token in circulation is matched 1:1 by fiat held in segregated accounts, reconciled regularly, with independent third-party attestation by Moore.",
-          "assertion": "Regular reconciliation claimed without a fixed whole-issued-supply cadence/exception-control regime. AUP uses management-defined noncirculating exclusions."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.supercoin.co.za/",
-        "https://www.supercoin.co.za/terms-of-service",
-        "https://www.supercoin.co.za/assurance-reports",
-        "https://www.supercoin.co.za/compliance",
-        "https://cdn.prod.website-files.com/6a43ab66ff171ec1aca79e9b/6a47cf673480e0371e2fc333_White_Paper_Supercoin_2026.pdf",
-        "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6aab8e272c83908780b26065_ZARSC%20AUG%202026%20Stablecoin%20Attestation%2031082026%20FINAL.pdf"
-      ],
-      "rationale": "Whitepaper claims regular circulation reconciliation but does not disclose a periodic whole-issued-supply reserve reconciliation cadence and exception/remediation controls. August Moore procedures compare a dated snapshot after management-defined treasury exclusions; ISRS 4400 expressly provides no assurance. Those disclosed neighboring checks do not establish the missing whole-supply operating regime."
-    },
-    {
-      "id": "uw-zarsc-supercoin-1f55ded07b0dc087",
-      "assetId": "zarsc-supercoin",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:44c84df45350c23e37c8746c",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:15:36Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R84)",
-      "sources": [
-        {
-          "url": "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6aab8e272c83908780b26065_ZARSC%20AUG%202026%20Stablecoin%20Attestation%2031082026%20FINAL.pdf",
-          "observedAt": "2026-10-03T23:15:36Z",
-          "datumAsOf": "2026-08-31",
-          "location": "Procedure 1(d)",
-          "excerpt": "the reserve assets comprised liquid cash reserves held in a current account with Absa Bank Limited and denominated in South African Rand.",
-          "assertion": "Current-account custody identified without the actual governing account contract or a contractual maximum maturity."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.supercoin.co.za/",
-        "https://www.supercoin.co.za/assurance-reports",
-        "https://www.supercoin.co.za/terms-of-service",
-        "https://www.supercoin.co.za/compliance",
-        "https://cdn.prod.website-files.com/6a43ab66ff171ec1aca79e9b/6a47cf673480e0371e2fc333_White_Paper_Supercoin_2026.pdf",
-        "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6aab8e272c83908780b26065_ZARSC%20AUG%202026%20Stablecoin%20Attestation%2031082026%20FINAL.pdf"
-      ],
-      "rationale": "Admitted class is bank-deposit, not maturity-inapplicable cash. Terms, whitepaper and bank-account AUP disclose Absa current-account custody but no actual account agreement or contractual maximum maturity. Generic current-account conventions cannot supply a numeric maturity bound for this account."
-    },
-    {
-      "id": "uw-wars-argentine-peso-58c362d6b754b3af",
-      "assetId": "wars-argentine-peso",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:wars-argentine-peso:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:15:36Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R84)",
-      "sources": [
-        {
-          "url": "https://www.ripio.com/en/wfiat",
-          "observedAt": "2026-10-03T23:15:36Z",
-          "datumAsOf": null,
-          "location": "Redemption flow",
-          "excerpt": "Burn the token and receive local currency in your bank account. No delays, no hidden fees.",
-          "assertion": "Fiat redemption disclosed without a numeric all-in direct wARS issuer/B2B tariff."
-        },
-        {
-          "url": "https://docs.ripio.com/crypto-as-a-service/reusable-quotes/create-reusable-quote",
-          "observedAt": "2026-10-03T23:15:36Z",
-          "datumAsOf": null,
-          "location": "Quote workflow",
-          "excerpt": "Please note that these rates are subject to change depending on the amount of base/quote currency the end user is willing to trade.",
-          "assertion": "B2B quote-dependent prices, not a complete public wARS direct redemption fee formula."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.ripio.com/en/wfiat",
-        "https://action.ripio.com/en/wfiat-attestations",
-        "https://terms.ripio.com/ar/wallet",
-        "https://docs.ripio.com/llms.txt",
-        "https://docs.ripio.com/crypto-as-a-service/reusable-quotes/create-reusable-quote",
-        "https://docs.ripio.com/crypto-as-a-service/fiat-withdrawals/create-fiat-withdrawal"
-      ],
-      "rationale": "No complete numeric/evaluable tariff for the direct wARS issuer/B2B redemption cohort is published across product, legal and API surfaces. Public 0.5% retail wallet buy/sell commissions are a different cohort/operation; no-hidden-fees is not zero-fees. API quotes expose changing rates, not a direct redemption tariff."
-    },
-    {
-      "id": "uw-usdcx-movement-dd74c0be5c6ccf7f",
-      "assetId": "usdcx-movement",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:3b16c86206e97f9f7d0e29bc",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:15:36Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R84)",
-      "sources": [
-        {
-          "url": "https://developers.circle.com/xreserve/concepts/technical-guide",
-          "observedAt": "2026-10-03T23:15:36Z",
-          "datumAsOf": null,
-          "location": "Dual attestation model",
-          "excerpt": "xReserve and remote blockchains operate independent attesters, creating a dual-attestation model that ensures both sides must validate before any funds move.",
-          "assertion": "USDC collateral identified; remote burn, attestations and release have no published finite realization horizon."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.circle.com/blog/usdcx-on-movement-now-available-via-circle-xreserve",
-        "https://developers.circle.com/xreserve/concepts/technical-guide",
-        "https://developers.circle.com/xreserve/concepts/how-xreserve-works",
-        "https://developers.circle.com/api-reference/xreserve/all/prepare-withdrawal",
-        "https://developers.circle.com/xreserve/references/fees",
-        "https://console.circle.com/legal/developer-terms",
-        "https://raw.githubusercontent.com/circlefin/evm-xreserve-contracts/master/src/modules/x-reserve/Withdrawal.sol"
-      ],
-      "rationale": "Collateral is liquid USDC, but USDCx holders realize it through remote burn intents, independent attestations and release. Technical/API/code/legal/fee documents give the sequence, not a maximum end-to-end realization window. Underlying USDC immediacy cannot be copied onto the cross-chain escrow slice."
     },
     {
       "id": "uw-fpi-frax-2e09ae5d3765972f",
@@ -13500,334 +12792,6 @@
         "https://github.com/StartaleGroup/stablecoin-vault-contracts/tree/main/audits"
       ],
       "rationale": "No whole-position liquidityHorizon for Startale-held M to final USD is publicly disclosed. Wave 2 distinguished proprietary user swaps (discretionary rates/availability, no continuing obligation) and USDSC vault withdrawal from reserve M realization. M0 burning reduces minter debt and collateral retrieval requires validator approval; neither establishes a holder cash SLA or Startale-specific full reserve eligibility. Existing unadmitted immediate metadata is not promoted."
-    },
-    {
-      "id": "uw-usdq-quill-24c7e74e7b76b73c",
-      "assetId": "usdq-quill",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:47dcfb5b865be0ae3099be07",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:52:20Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R47)",
-      "sources": [
-        {
-          "url": "https://docs.quill.finance/faq/risks-and-disclosures.md",
-          "observedAt": "2026-10-03T22:50:52Z",
-          "datumAsOf": null,
-          "location": "Issuer/protocol published product terms",
-          "excerpt": "In DeFi, risks include **smart contract risk** (vulnerabilities in the code), **protocol risk** (potential for governance or operational issues), **market risk** (fluctuations in asset prices) and **liquidity risk** (availability of assets during high demand).",
-          "assertion": "Quill discloses collateral/liquidity risk and onchain redemption, but no whole-position USD realization horizon for SCR, WETH, wstETH or weETH."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.quill.finance/",
-        "https://app.quill.finance/",
-        "https://docs.quill.finance/llms.txt",
-        "https://docs.quill.finance/faq/borrowing.md",
-        "https://docs.quill.finance/faq/fee-model.md",
-        "https://docs.quill.finance/faq/liquidations-oracle-and-redemptions.md",
-        "https://docs.quill.finance/faq/risks-and-disclosures.md",
-        "https://docs.quill.finance/documentation/contract-addresses.md",
-        "https://docs.quill.finance/documentation/audits.md",
-        "https://scrollscan.com/api/v2/smart-contracts/0x358d90036e70542ae24b3813c0efecc1f8811442"
-      ],
-      "rationale": "Docs, risk disclosure, branch address inventory and verified token/registry source distinguish pledged collateral from free assets. No published maximum for realizing the entire SCR, WETH, wstETH or weETH collateral slice into USD was located; collateral redemption speed alone does not establish that horizon."
-    },
-    {
-      "id": "uw-usdq-quill-0641a52c94f73cd3",
-      "assetId": "usdq-quill",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:68594bcc0742a1c26a1c9ca5",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:52:20Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R47)",
-      "sources": [
-        {
-          "url": "https://docs.quill.finance/faq/risks-and-disclosures.md",
-          "observedAt": "2026-10-03T22:50:52Z",
-          "datumAsOf": null,
-          "location": "Issuer/protocol published product terms",
-          "excerpt": "In DeFi, risks include **smart contract risk** (vulnerabilities in the code), **protocol risk** (potential for governance or operational issues), **market risk** (fluctuations in asset prices) and **liquidity risk** (availability of assets during high demand).",
-          "assertion": "Quill discloses collateral/liquidity risk and onchain redemption, but no whole-position USD realization horizon for SCR, WETH, wstETH or weETH."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.quill.finance/",
-        "https://app.quill.finance/",
-        "https://docs.quill.finance/llms.txt",
-        "https://docs.quill.finance/faq/borrowing.md",
-        "https://docs.quill.finance/faq/fee-model.md",
-        "https://docs.quill.finance/faq/liquidations-oracle-and-redemptions.md",
-        "https://docs.quill.finance/faq/risks-and-disclosures.md",
-        "https://docs.quill.finance/documentation/contract-addresses.md",
-        "https://docs.quill.finance/documentation/audits.md",
-        "https://scrollscan.com/api/v2/smart-contracts/0x358d90036e70542ae24b3813c0efecc1f8811442"
-      ],
-      "rationale": "Docs, risk disclosure, branch address inventory and verified token/registry source distinguish pledged collateral from free assets. No published maximum for realizing the entire SCR, WETH, wstETH or weETH collateral slice into USD was located; collateral redemption speed alone does not establish that horizon."
-    },
-    {
-      "id": "uw-usdq-quill-e6890233f7778b44",
-      "assetId": "usdq-quill",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:a301b79207c96314b21d329d",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:52:20Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R47)",
-      "sources": [
-        {
-          "url": "https://docs.quill.finance/faq/risks-and-disclosures.md",
-          "observedAt": "2026-10-03T22:50:52Z",
-          "datumAsOf": null,
-          "location": "Issuer/protocol published product terms",
-          "excerpt": "In DeFi, risks include **smart contract risk** (vulnerabilities in the code), **protocol risk** (potential for governance or operational issues), **market risk** (fluctuations in asset prices) and **liquidity risk** (availability of assets during high demand).",
-          "assertion": "Quill discloses collateral/liquidity risk and onchain redemption, but no whole-position USD realization horizon for SCR, WETH, wstETH or weETH."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.quill.finance/",
-        "https://app.quill.finance/",
-        "https://docs.quill.finance/llms.txt",
-        "https://docs.quill.finance/faq/borrowing.md",
-        "https://docs.quill.finance/faq/fee-model.md",
-        "https://docs.quill.finance/faq/liquidations-oracle-and-redemptions.md",
-        "https://docs.quill.finance/faq/risks-and-disclosures.md",
-        "https://docs.quill.finance/documentation/contract-addresses.md",
-        "https://docs.quill.finance/documentation/audits.md",
-        "https://scrollscan.com/api/v2/smart-contracts/0x358d90036e70542ae24b3813c0efecc1f8811442"
-      ],
-      "rationale": "Docs, risk disclosure, branch address inventory and verified token/registry source distinguish pledged collateral from free assets. No published maximum for realizing the entire SCR, WETH, wstETH or weETH collateral slice into USD was located; collateral redemption speed alone does not establish that horizon."
-    },
-    {
-      "id": "uw-usdq-quill-17ede80556fd01cc",
-      "assetId": "usdq-quill",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:cc80f6ed653591ecc51ccde0",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:52:20Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R47)",
-      "sources": [
-        {
-          "url": "https://docs.quill.finance/faq/risks-and-disclosures.md",
-          "observedAt": "2026-10-03T22:50:52Z",
-          "datumAsOf": null,
-          "location": "Issuer/protocol published product terms",
-          "excerpt": "In DeFi, risks include **smart contract risk** (vulnerabilities in the code), **protocol risk** (potential for governance or operational issues), **market risk** (fluctuations in asset prices) and **liquidity risk** (availability of assets during high demand).",
-          "assertion": "Quill discloses collateral/liquidity risk and onchain redemption, but no whole-position USD realization horizon for SCR, WETH, wstETH or weETH."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.quill.finance/",
-        "https://app.quill.finance/",
-        "https://docs.quill.finance/llms.txt",
-        "https://docs.quill.finance/faq/borrowing.md",
-        "https://docs.quill.finance/faq/fee-model.md",
-        "https://docs.quill.finance/faq/liquidations-oracle-and-redemptions.md",
-        "https://docs.quill.finance/faq/risks-and-disclosures.md",
-        "https://docs.quill.finance/documentation/contract-addresses.md",
-        "https://docs.quill.finance/documentation/audits.md",
-        "https://scrollscan.com/api/v2/smart-contracts/0x358d90036e70542ae24b3813c0efecc1f8811442"
-      ],
-      "rationale": "Docs, risk disclosure, branch address inventory and verified token/registry source distinguish pledged collateral from free assets. No published maximum for realizing the entire SCR, WETH, wstETH or weETH collateral slice into USD was located; collateral redemption speed alone does not establish that horizon."
-    },
-    {
-      "id": "uw-onyc-onre-afec61e8de932ba9",
-      "assetId": "onyc-onre",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:16b7da85962152dcaf6eb9d5",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:50:52Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R47)",
-      "sources": [
-        {
-          "url": "https://kamino.com/docs/products/borrow/supplying.md",
-          "observedAt": "2026-10-03T22:50:52Z",
-          "datumAsOf": null,
-          "location": "Issuer/protocol published product terms",
-          "excerpt": "You can withdraw at any time as long as the pool has available liquidity \u2014 that is, not all deposited assets are currently borrowed.",
-          "assertion": "Withdrawal depends on liquidity; no guaranteed all-position realization time for OnRe Kamino lending slices."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.onre.finance/for-capital-providers/collateral-composition",
-        "https://docs.onre.finance/legal/platform-terms-of-use.md",
-        "https://docs.onre.finance/security-and-verification/independent-attestations.md",
-        "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-bLCCxKNCB2GHgFV5Jo6_fbv4t3CT60dwPMbUDfwhHglt5GBoLp47jp1wcCOY8Ob1ZgjA6KXNczdq/pub?output=csv&gid=1591707661&single=true",
-        "https://kamino.com/docs/llms.txt",
-        "https://kamino.com/docs/products/borrow/supplying.md"
-      ],
-      "rationale": "OnRe identifies USDC and USDG supplied to Kamino, but provides no slice-specific liquidity horizon. Kamino explicitly conditions withdrawal on available pool liquidity and gives no full-position realization deadline. Source-native conditional availability is not an immediate whole-slice bound."
-    },
-    {
-      "id": "uw-onyc-onre-67036e1fd616fe30",
-      "assetId": "onyc-onre",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:cc2850adad80c09884d1cbba",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:50:52Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R47)",
-      "sources": [
-        {
-          "url": "https://kamino.com/docs/products/borrow/supplying.md",
-          "observedAt": "2026-10-03T22:50:52Z",
-          "datumAsOf": null,
-          "location": "Issuer/protocol published product terms",
-          "excerpt": "You can withdraw at any time as long as the pool has available liquidity \u2014 that is, not all deposited assets are currently borrowed.",
-          "assertion": "Withdrawal depends on liquidity; no guaranteed all-position realization time for OnRe Kamino lending slices."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.onre.finance/for-capital-providers/collateral-composition",
-        "https://docs.onre.finance/legal/platform-terms-of-use.md",
-        "https://docs.onre.finance/security-and-verification/independent-attestations.md",
-        "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-bLCCxKNCB2GHgFV5Jo6_fbv4t3CT60dwPMbUDfwhHglt5GBoLp47jp1wcCOY8Ob1ZgjA6KXNczdq/pub?output=csv&gid=1591707661&single=true",
-        "https://kamino.com/docs/llms.txt",
-        "https://kamino.com/docs/products/borrow/supplying.md"
-      ],
-      "rationale": "OnRe identifies USDC and USDG supplied to Kamino, but provides no slice-specific liquidity horizon. Kamino explicitly conditions withdrawal on available pool liquidity and gives no full-position realization deadline. Source-native conditional availability is not an immediate whole-slice bound."
-    },
-    {
-      "id": "uw-onyc-onre-14b6843746f46e76",
-      "assetId": "onyc-onre",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:8c681fb5ffeb76135fa1384f",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:52:20Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R47)",
-      "sources": [
-        {
-          "url": "https://bitwiseinvestments.com/crypto-funds/uscc",
-          "observedAt": "2026-10-03T22:50:52Z",
-          "datumAsOf": null,
-          "location": "Issuer/protocol published product terms",
-          "excerpt": "Ownership in the Fund is via the USCC token or book-entry record keeping.",
-          "assertion": "Fund-share claims are disclosed, but no contractual maximum maturity of the fund share is published."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.onre.finance/for-capital-providers/collateral-composition/uscc-or-bitwise-crypto-carry-fund.md",
-        "https://bitwiseinvestments.com/crypto-funds/uscc",
-        "https://s3.us-east-1.amazonaws.com/static.bitwiseinvestments.com/uscc/bitwise-crypto-carry-fund-uscc-fact-sheet.pdf",
-        "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc"
-      ],
-      "rationale": "The scoped USCC holding is a fund share, not the underlying Treasury or futures instruments. Public issuer holdings, structuring and redemption documents do not publish a maximum maturityDaysMax for that share claim. Short duration, dated underlying positions and daily redemption are not a share-maturity covenant."
-    },
-    {
-      "id": "uw-onyc-onre-f6eebc1b3555f3e9",
-      "assetId": "onyc-onre",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:2e3053db34e2d87f05122e2f",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:52:20Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R47)",
-      "sources": [
-        {
-          "url": "https://usyc.docs.hashnote.com/overview/product-structuring.md",
-          "observedAt": "2026-10-03T22:50:52Z",
-          "datumAsOf": null,
-          "location": "Issuer/protocol published product terms",
-          "excerpt": "Tokens represent shares in the fund, thus all token holders need to be onboarded and KYC/AML\u2019d to be able to own SDYF shares.",
-          "assertion": "Fund-share claims are disclosed, but no contractual maximum maturity of the fund share is published."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.onre.finance/for-capital-providers/collateral-composition/usyc-or-us-yield-coin.md",
-        "https://usyc.docs.hashnote.com/llms.txt",
-        "https://usyc.docs.hashnote.com/overview/introduction.md",
-        "https://usyc.docs.hashnote.com/overview/product-structuring.md",
-        "https://usyc.docs.hashnote.com/overview/subscription-and-redemption.md",
-        "https://www.hashnote.com/legal-disclosures"
-      ],
-      "rationale": "The scoped USYC holding is a fund share, not the underlying Treasury or futures instruments. Public issuer holdings, structuring and redemption documents do not publish a maximum maturityDaysMax for that share claim. Short duration, dated underlying positions and daily redemption are not a share-maturity covenant."
-    },
-    {
-      "id": "uw-onyc-onre-807403c731f0e76f",
-      "assetId": "onyc-onre",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:fbc58fbcf982e8298134e5b0",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:52:20Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R47)",
-      "sources": [
-        {
-          "url": "https://docs.solomonlabs.org/usdv/acquiring-and-redeeming",
-          "observedAt": "2026-10-03T22:50:52Z",
-          "datumAsOf": null,
-          "location": "Issuer/protocol published product terms",
-          "excerpt": "Direct redemption is subject to onboarding, available liquidity, operational controls, program terms, and processing windows.",
-          "assertion": "USDv redemption is explicitly conditional; no full-position liquidity-horizon bound is provided."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.onre.finance/for-capital-providers/collateral-composition/usdv-or-usdv.md",
-        "https://docs.solomonlabs.org/",
-        "https://docs.solomonlabs.org/usdv/",
-        "https://docs.solomonlabs.org/usdv/acquiring-and-redeeming",
-        "https://docs.solomonlabs.org/usdv/transparency-and-risk"
-      ],
-      "rationale": "Exact replacement mint is identified in the issuer docs. The acquisition/redemption terms describe venues and conditional institutional access but no guaranteed full-position realization horizon for OnRe\u2019s held USDv. Liquid/composable marketing is not a maximum time bound."
     },
     {
       "id": "uw-sfrxusd-frax-a9becd93de387e60",
@@ -22829,395 +21793,6 @@
         "https://ethereum-rpc.publicnode.com"
       ],
       "rationale": "No maximum liquidityHorizon for the entire DSR/DAI yield-manager position is published. Block 26115205 binds the manager to the reviewed implementation and sole DSR provider; availableBalance is zero. DSR exits synchronously when called, but current manager unstake and finalization are admin-gated without forced deadlines. Official mechanism, withdrawal guidance and legal governance bylaws supply no whole-position realization SLA. Neither immediate nor seven-days is justified."
-    },
-    {
-      "id": "uw-usdf-astherus-48ff6349cb8f32be",
-      "assetId": "usdf-astherus",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:54:57Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R51)",
-      "sources": [
-        {
-          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works.md",
-          "observedAt": "2026-10-03T22:54:08Z",
-          "datumAsOf": null,
-          "location": "Capital flow steps 2-4",
-          "excerpt": "The USDT is transferred to a Ceffu wallet, a custodial solution that securely holds the funds on behalf of Aster.",
-          "assertion": "Describes custodial capital flow, not a common-clock whole-supply-to-reserves reconciliation."
-        },
-        {
-          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
-          "observedAt": "2026-10-03T22:54:08Z",
-          "datumAsOf": null,
-          "location": "Audit and custodial partner risk",
-          "excerpt": "All smart contracts are audited by reputable security firms, and Aster maintains a robust risk monitoring system.",
-          "assertion": "Security audits and Ceffu SOC reports do not establish financial liability reconciliation."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.asterdex.com/en/usdf",
-        "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works.md",
-        "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
-        "https://docs.asterdex.com/usdf-stablecoin/overview/faqs.md",
-        "https://docs.asterdex.com/resources/terms-and-conditions.md",
-        "https://docs.asterdex.com/overview/smart-contracts.md",
-        "https://docs.asterdex.com/overview/audit-reports.md",
-        "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/USDFEarn.sol",
-        "https://docs.asterdex.com/usdf-stablecoin/overview/usdf-and-the-stablecoin-landscape.md"
-      ],
-      "rationale": "USDF docs, financial/transparency searches, legal terms, audit index and canonical mint source disclose deposit accounting, weekly yield and custodian security but no dated whole-supply on/off-chain liabilities versus Ceffu/Binance backing reconciliation procedure or cadence. Internal deposit equality and risk monitoring are not that datum."
-    },
-    {
-      "id": "uw-usdf-astherus-33a3b80ee3dfd05d",
-      "assetId": "usdf-astherus",
-      "scope": {
-        "componentKey": "economic-control:oracle",
-        "exposureId": null,
-        "factorKey": "tier",
-        "pillar": "control",
-        "requiredDatum": "tier",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:54:57Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R51)",
-      "sources": [
-        {
-          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works.md",
-          "observedAt": "2026-10-03T22:54:08Z",
-          "datumAsOf": null,
-          "location": "Delta-neutral strategy",
-          "excerpt": "Funds deposited into Binance are used to simultaneously buy spot (long) and short perpetual positions on a specific asset like Bitcoin (BTC) or Ether (ETH)",
-          "assertion": "Backing is offchain price-sensitive; no complete exact reserve valuation/feed/fallback topology disclosed."
-        },
-        {
-          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
-          "observedAt": "2026-10-03T22:54:08Z",
-          "datumAsOf": null,
-          "location": "Liquidation risk",
-          "excerpt": "The Aster account on Ceffu regularly monitors positions and frequently settles profit/loss to keep liquidation risk minimal.",
-          "assertion": "Monitoring does not identify reserve valuation source, governance or failure topology."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.asterdex.com/en/usdf",
-        "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works.md",
-        "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
-        "https://docs.asterdex.com/usdf-stablecoin/overview/faqs.md",
-        "https://docs.asterdex.com/resources/terms-and-conditions.md",
-        "https://docs.asterdex.com/overview/smart-contracts.md",
-        "https://docs.asterdex.com/overview/audit-reports.md",
-        "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/USDFEarn.sol",
-        "https://docs.asterdex.com/usdf-stablecoin/overview/usdf-and-the-stablecoin-landscape.md",
-        "https://docs.asterdex.com/astherusex-orderbook-perp-guide/mark-price-oracle"
-      ],
-      "rationale": "USDF reserve pricing/rebalancing oracle tier is not disclosed: issuer describes offchain hedging and P/L monitoring but not the exact USDF valuation/feed/controller/fallback inventory. Aster perp-trading mark-price docs describe a different product and cannot establish the Binance strategy account topology. Retain opaque tier; no oracleless exemption."
-    },
-    {
-      "id": "uw-usdf-astherus-48ac8d31e0a17263",
-      "assetId": "usdf-astherus",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:105e1a00e54703a4d2b907fd",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:54:57Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R51)",
-      "sources": [
-        {
-          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
-          "observedAt": "2026-10-03T22:54:08Z",
-          "datumAsOf": null,
-          "location": "MirrorX operation",
-          "excerpt": "Withdrawals settle on T+1 basis",
-          "assertion": "Ceffu withdrawal settlement alone is not realization of the entire long/short reserve book."
-        },
-        {
-          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/faqs.md",
-          "observedAt": "2026-10-03T22:54:08Z",
-          "datumAsOf": null,
-          "location": "Redeem on Aster",
-          "excerpt": "Processing takes 1-2 days for standard amounts, up to 7 days for large amounts",
-          "assertion": "Holder request processing does not disclose per-position liquidation horizon for the whole reserve slice."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.asterdex.com/en/usdf",
-        "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works.md",
-        "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
-        "https://docs.asterdex.com/usdf-stablecoin/overview/faqs.md",
-        "https://docs.asterdex.com/resources/terms-and-conditions.md",
-        "https://docs.asterdex.com/overview/smart-contracts.md",
-        "https://docs.asterdex.com/overview/audit-reports.md",
-        "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/USDFEarn.sol",
-        "https://docs.asterdex.com/usdf-stablecoin/overview/usdf-and-the-stablecoin-landscape.md"
-      ],
-      "rationale": "The whole USDT-funded spot/short strategy slice has no published complete realization bound. MirrorX T+1 withdrawal settlement and token redemption processing times do not establish liquidation/unwind of every spot and futures position, funding/margin obligations and final available proceeds. No per-slice maximum was located."
-    },
-    {
-      "id": "uw-usdf-astherus-bcc0f158c5be60b2",
-      "assetId": "usdf-astherus",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdf-astherus:stablecoin-redeem"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:54:57Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R51)",
-      "sources": [
-        {
-          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/faqs.md",
-          "observedAt": "2026-10-03T22:54:08Z",
-          "datumAsOf": null,
-          "location": "Redeem on Aster",
-          "excerpt": "Processing takes 1-2 days for standard amounts, up to 7 days for large amounts",
-          "assertion": "Publishes processing guidance, followed by a separate claim step, not guaranteed end-to-end completion."
-        },
-        {
-          "url": "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/libraries/Withdrawable.sol",
-          "observedAt": "2026-10-03T22:54:08Z",
-          "datumAsOf": null,
-          "location": "_claimWithdraw",
-          "excerpt": "require(requestWithdrawInfo.receiveAmount > 0 && requestWithdrawInfo.claimable, \"not available\");",
-          "assertion": "Claim requires privileged distribution; elapsed time does not force claimability."
-        },
-        {
-          "url": "https://docs.asterdex.com/resources/terms-and-conditions.md",
-          "observedAt": "2026-10-03T22:54:08Z",
-          "datumAsOf": "2026-02-25",
-          "location": "Services 3.1(c)",
-          "excerpt": "The specific features and functionalities of our Services are described on our Platform, but they do not constitute a guarantee of availability or performance.",
-          "assertion": "Terms do not guarantee FAQ processing times."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.asterdex.com/en/usdf",
-        "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works.md",
-        "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
-        "https://docs.asterdex.com/usdf-stablecoin/overview/faqs.md",
-        "https://docs.asterdex.com/resources/terms-and-conditions.md",
-        "https://docs.asterdex.com/overview/smart-contracts.md",
-        "https://docs.asterdex.com/overview/audit-reports.md",
-        "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/USDFEarn.sol",
-        "https://docs.asterdex.com/usdf-stablecoin/overview/usdf-and-the-stablecoin-landscape.md",
-        "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/libraries/Withdrawable.sol"
-      ],
-      "rationale": "No unconditional maximum from accepted request through claimable USDT is disclosed. FAQ gives 1-2/up-to-7-day processing guidance; canonical withdrawal library requires a bot-controlled claimable flag without a forced deadline, and legal terms disclaim availability/performance guarantees. Do not convert this processing target to a guaranteed settlement SLA."
-    },
-    {
-      "id": "uw-asusdf-astherus-c2b1d13d22fa809a",
-      "assetId": "asusdf-astherus",
-      "scope": {
-        "componentKey": "wrapper-local",
-        "exposureId": null,
-        "factorKey": "custodyEscrow",
-        "pillar": "backing",
-        "requiredDatum": "custodyEscrow",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:54:57Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R51)",
-      "sources": [
-        {
-          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
-          "observedAt": "2026-10-03T22:54:08Z",
-          "datumAsOf": null,
-          "location": "Custody introduction",
-          "excerpt": "Aster partners with Ceffu for the custody of USDF and underlying USDT funds, and to prepare funds for yield strategy execution on behalf of asUSDF holders.",
-          "assertion": "Names upstream custody; does not publish the asUSDF holder-specific escrow/legal segregation regime."
-        },
-        {
-          "url": "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/asUSDFEarn.sol",
-          "observedAt": "2026-10-03T22:54:08Z",
-          "datumAsOf": null,
-          "location": "Deposit transfer",
-          "excerpt": "token.safeTransferFrom(from, address(this), amount);",
-          "assertion": "Local USDF balance custody is visible in code; legal segregation and beneficial ownership rights are not established by a balance."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.asterdex.com/en/usdf",
-        "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works.md",
-        "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
-        "https://docs.asterdex.com/usdf-stablecoin/overview/faqs.md",
-        "https://docs.asterdex.com/resources/terms-and-conditions.md",
-        "https://docs.asterdex.com/overview/smart-contracts.md",
-        "https://docs.asterdex.com/overview/audit-reports.md",
-        "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/USDFEarn.sol",
-        "https://docs.asterdex.com/usdf-stablecoin/overview/usdf-and-the-stablecoin-landscape.md",
-        "https://docs.asterdex.com/earn/overview/mint-asusdf.md",
-        "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/asUSDFEarn.sol",
-        "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/libraries/Withdrawable.sol",
-        "https://www.ceffu.com/"
-      ],
-      "rationale": "Exact asUSDF custodyEscrow remains incomplete because no holder-specific segregation/escrow entitlement and insolvency-rights terms were published in issuer product/legal/audit surfaces or Ceffu custody descriptions. Local deposits enter asUSDFEarn and withdrawals move to a vault; public code does not establish legal ring-fencing. Do not infer parent custody protection or zero unknown exposure."
-    },
-    {
-      "id": "uw-dgld-gold-token-sa-12ac892f0aa7275a",
-      "assetId": "dgld-gold-token-sa",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:physical-to-usd:dgld-gold-token-sa"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:54:57Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R51)",
-      "sources": [
-        {
-          "url": "https://dgld.ch/docs/terms",
-          "observedAt": "2026-10-03T22:54:57Z",
-          "datumAsOf": null,
-          "location": "Section 8.1 Delivery discretion",
-          "excerpt": "GTSA may refuse, suspend or postpone a Delivery where required by applicable law",
-          "assertion": "Physical delivery may be delayed; no end-to-end maximum is supplied."
-        },
-        {
-          "url": "https://dgld.ch/news/dgld-complete-step-by-step-guide-november-2025",
-          "observedAt": "2026-10-03T22:54:57Z",
-          "datumAsOf": "2025-11-19",
-          "location": "Shipping details",
-          "excerpt": "Europe: 3\u20137 business days, insured post",
-          "assertion": "Shipping leg estimate excludes quoting/KYC, acceptance, gold sale and final bank proceeds."
-        },
-        {
-          "url": "https://files.dgld.ch/dgld-white-paper.pdf",
-          "observedAt": "2026-10-03T22:54:57Z",
-          "datumAsOf": "2026-09-01",
-          "location": "Part I.1 Market volatility",
-          "excerpt": "Neither the Issuer nor any other person is under an obligation to purchase or sell DGLD, provide liquidity, intervene in the secondary market, or otherwise support the price of the DGLD.",
-          "assertion": "Physical co-ownership/delivery is not guaranteed cash settlement."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://dgld.ch/docs/terms",
-        "https://dgld.ch/news/dgld-complete-step-by-step-guide-november-2025",
-        "https://dgld.ch/about-faq",
-        "https://dgld.ch/news/dgld-update",
-        "https://files.dgld.ch/dgld-white-paper.pdf",
-        "https://dgld.ch/audits"
-      ],
-      "rationale": "Neither direct issuer physical delivery nor the composed physical-to-USD route has a published complete maximum. Governing terms permit suspension/postponement, guide provides only Europe shipping 3-7 business days after earlier quote/KYC/payment, and no bounded gold sale-to-spendable-USD endpoint is disclosed. Do not reinterpret shipping estimates as full SLA."
-    },
-    {
-      "id": "uw-dgld-gold-token-sa-108b3e6066f20ead",
-      "assetId": "dgld-gold-token-sa",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:dgld-gold-token-sa:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:54:57Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R51)",
-      "sources": [
-        {
-          "url": "https://dgld.ch/docs/terms",
-          "observedAt": "2026-10-03T22:54:57Z",
-          "datumAsOf": null,
-          "location": "Section 8.1 Delivery discretion",
-          "excerpt": "GTSA may refuse, suspend or postpone a Delivery where required by applicable law",
-          "assertion": "Physical delivery may be delayed; no end-to-end maximum is supplied."
-        },
-        {
-          "url": "https://dgld.ch/news/dgld-complete-step-by-step-guide-november-2025",
-          "observedAt": "2026-10-03T22:54:57Z",
-          "datumAsOf": "2025-11-19",
-          "location": "Shipping details",
-          "excerpt": "Europe: 3\u20137 business days, insured post",
-          "assertion": "Shipping leg estimate excludes quoting/KYC, acceptance, gold sale and final bank proceeds."
-        },
-        {
-          "url": "https://files.dgld.ch/dgld-white-paper.pdf",
-          "observedAt": "2026-10-03T22:54:57Z",
-          "datumAsOf": "2026-09-01",
-          "location": "Part I.1 Market volatility",
-          "excerpt": "Neither the Issuer nor any other person is under an obligation to purchase or sell DGLD, provide liquidity, intervene in the secondary market, or otherwise support the price of the DGLD.",
-          "assertion": "Physical co-ownership/delivery is not guaranteed cash settlement."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://dgld.ch/docs/terms",
-        "https://dgld.ch/news/dgld-complete-step-by-step-guide-november-2025",
-        "https://dgld.ch/about-faq",
-        "https://dgld.ch/news/dgld-update",
-        "https://files.dgld.ch/dgld-white-paper.pdf",
-        "https://dgld.ch/audits"
-      ],
-      "rationale": "Neither direct issuer physical delivery nor the composed physical-to-USD route has a published complete maximum. Governing terms permit suspension/postponement, guide provides only Europe shipping 3-7 business days after earlier quote/KYC/payment, and no bounded gold sale-to-spendable-USD endpoint is disclosed. Do not reinterpret shipping estimates as full SLA."
-    },
-    {
-      "id": "uw-axcnh-anchorx-56ec18d10e20f9d1",
-      "assetId": "axcnh-anchorx",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:axcnh-anchorx:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:54:57Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R51)",
-      "sources": [
-        {
-          "url": "https://www.anchorx.org/terms",
-          "observedAt": "2026-10-03T22:54:57Z",
-          "datumAsOf": null,
-          "location": "Fees and Taxes",
-          "excerpt": "The Company reserves the right to implement fees for certain Services.",
-          "assertion": "No numeric/formula AxCNH fiat-redemption fee schedule is provided."
-        },
-        {
-          "url": "https://www.anchorx.org/",
-          "observedAt": "2026-10-03T22:54:57Z",
-          "datumAsOf": null,
-          "location": "Stable & Reliable",
-          "excerpt": "AxCNH is pegged 1:1 with CNH and always available for 1:1 CNH redemption",
-          "assertion": "Par denomination does not establish zero redemption or banking fees."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.anchorx.org/",
-        "https://www.anchorx.org/terms",
-        "https://www.anchorx.org/risk",
-        "https://www.anchorx.org/about-us",
-        "https://www.anchorx.org/transparency",
-        "https://onlineportal.anchorx.org/login"
-      ],
-      "rationale": "Public issuer homepage, rendered legal terms, risk/about pages and transparency archive disclose par redemption and discretionary fees but no AxCNH redemption tariff, applicable percentage/formula, minimum or all-in bank/intermediary charges. Professional-investor portal is login-gated; no public fee schedule located. No inference of zero cost from 1:1 redemption."
     },
     {
       "id": "uw-nusd-nexus-61d11e53cf6d122e",
@@ -37330,6 +35905,1543 @@
         "https://files.baconcoin.finance/bacon-protocol-full-audit.pdf"
       ],
       "rationale": "No dated recurring reconciliation of all HOME liabilities/mint-burn movements against current USDC, outstanding loan balances and enforceable lien backing is disclosed in the issuer website, complete docs index/FAQ, whitepaper or Pool16 accounting source. Public lien descriptors and a historical design equality are not this datum. Linked code-audit hosts fail DNS; those failures are not evidence of financial non-disclosure. Preserve unknown, not none."
+    },
+    {
+      "id": "uw-usdcx-movement-a7f8826d87cfb5ec",
+      "assetId": "usdcx-movement",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "custodyEscrow",
+        "pillar": "backing",
+        "requiredDatum": "custodyEscrow",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:57:30Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R43)",
+      "sources": [
+        {
+          "url": "https://console.circle.com/legal/developer-terms",
+          "observedAt": "2026-10-03T23:54:39Z",
+          "datumAsOf": "2026-09-16",
+          "location": "Schedule Additional Terms, xReserve paragraphs 1-3",
+          "excerpt": "Circle acquires no lien, security interest, or other claim in the USDC deposited into the xReserve smart contract wallet and assumes no fiduciary or trust obligations with respect to it.",
+          "assertion": "Non-Circle ownership and absence of Circle custody are disclosed; no holder-specific reserve segregation, insolvency priority or complete reserve-reuse covenant is supplied."
+        },
+        {
+          "url": "https://www.movementnetwork.xyz/terms-of-service",
+          "observedAt": "2026-10-03T23:54:39Z",
+          "datumAsOf": "2026-04-06",
+          "location": "Section 9.7; full HTML fetched with Accept: text/html",
+          "excerpt": "We do not take custody of, hold for our own account, rehypothecate, lend, or otherwise exercise discretionary control over staked assets.",
+          "assertion": "This prohibition is expressly about staked assets, not xReserve USDC; it cannot establish USDCx reserve non-rehypothecation or holder insolvency protections."
+        },
+        {
+          "url": "https://developers.circle.com/xreserve/concepts/technical-guide",
+          "observedAt": "2026-10-03T23:54:40Z",
+          "datumAsOf": null,
+          "location": "USDC reserve",
+          "excerpt": "xReserve uses Circle Gateway wallets to hold these balances for USDC-backed stablecoins on the remote chain.",
+          "assertion": "Technical reserve custody is described, but not complete USDCx-holder legal segregation, creditor priority or reserve-reuse terms."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.circle.com/legal",
+        "https://console.circle.com/legal/developer-terms",
+        "https://www.circle.com/xreserve",
+        "https://developers.circle.com/xreserve",
+        "https://developers.circle.com/xreserve/concepts/how-xreserve-works",
+        "https://developers.circle.com/xreserve/concepts/technical-guide",
+        "https://developers.circle.com/xreserve/references/supported-blockchains-and-domains",
+        "https://www.movementnetwork.xyz/terms-of-service",
+        "https://www.movementnetwork.xyz/article/introducing-usdcx-movements-native-usdc-backed-stablecoin",
+        "https://docs.movementnetwork.xyz/",
+        "https://eth.blockscout.com/address/0x8888888199b2Df864bf678259607d6D5EBb4e3Ce"
+      ],
+      "rationale": "Exact missing data are USDCx-holder reserve segregation/insolvency protection and complete local reserve-reuse terms. Circle's September 16 developer terms newly disclose non-Circle ownership, noncustody and no Circle lien, but disclaim a trust and make the partner token nonredeemable with Circle. Movement's April 6 non-rehypothecation provision is staking-only. Product, technical, deployment and legal surfaces disclose mechanics rather than these complete protections. No prohibition or bankruptcy remoteness is inferred from smart-contract custody."
+    },
+    {
+      "id": "uw-usdcx-movement-5ca290a9c353b3c4",
+      "assetId": "usdcx-movement",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "rehypothecationCorrelation",
+        "pillar": "backing",
+        "requiredDatum": "rehypothecationCorrelation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:57:30Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R43)",
+      "sources": [
+        {
+          "url": "https://console.circle.com/legal/developer-terms",
+          "observedAt": "2026-10-03T23:54:39Z",
+          "datumAsOf": "2026-09-16",
+          "location": "Schedule Additional Terms, xReserve paragraphs 1-3",
+          "excerpt": "Circle acquires no lien, security interest, or other claim in the USDC deposited into the xReserve smart contract wallet and assumes no fiduciary or trust obligations with respect to it.",
+          "assertion": "Non-Circle ownership and absence of Circle custody are disclosed; no holder-specific reserve segregation, insolvency priority or complete reserve-reuse covenant is supplied."
+        },
+        {
+          "url": "https://www.movementnetwork.xyz/terms-of-service",
+          "observedAt": "2026-10-03T23:54:39Z",
+          "datumAsOf": "2026-04-06",
+          "location": "Section 9.7; full HTML fetched with Accept: text/html",
+          "excerpt": "We do not take custody of, hold for our own account, rehypothecate, lend, or otherwise exercise discretionary control over staked assets.",
+          "assertion": "This prohibition is expressly about staked assets, not xReserve USDC; it cannot establish USDCx reserve non-rehypothecation or holder insolvency protections."
+        },
+        {
+          "url": "https://developers.circle.com/xreserve/concepts/technical-guide",
+          "observedAt": "2026-10-03T23:54:40Z",
+          "datumAsOf": null,
+          "location": "USDC reserve",
+          "excerpt": "xReserve uses Circle Gateway wallets to hold these balances for USDC-backed stablecoins on the remote chain.",
+          "assertion": "Technical reserve custody is described, but not complete USDCx-holder legal segregation, creditor priority or reserve-reuse terms."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.circle.com/legal",
+        "https://console.circle.com/legal/developer-terms",
+        "https://www.circle.com/xreserve",
+        "https://developers.circle.com/xreserve",
+        "https://developers.circle.com/xreserve/concepts/how-xreserve-works",
+        "https://developers.circle.com/xreserve/concepts/technical-guide",
+        "https://developers.circle.com/xreserve/references/supported-blockchains-and-domains",
+        "https://www.movementnetwork.xyz/terms-of-service",
+        "https://www.movementnetwork.xyz/article/introducing-usdcx-movements-native-usdc-backed-stablecoin",
+        "https://docs.movementnetwork.xyz/",
+        "https://eth.blockscout.com/address/0x8888888199b2Df864bf678259607d6D5EBb4e3Ce"
+      ],
+      "rationale": "Exact missing data are USDCx-holder reserve segregation/insolvency protection and complete local reserve-reuse terms. Circle's September 16 developer terms newly disclose non-Circle ownership, noncustody and no Circle lien, but disclaim a trust and make the partner token nonredeemable with Circle. Movement's April 6 non-rehypothecation provision is staking-only. Product, technical, deployment and legal surfaces disclose mechanics rather than these complete protections. No prohibition or bankruptcy remoteness is inferred from smart-contract custody."
+    },
+    {
+      "id": "uw-gusd-gate-7c52e9253eeffdb8",
+      "assetId": "gusd-gate",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:49:08Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R34)",
+      "sources": [
+        {
+          "url": "https://miniapp.gate.com/gusd",
+          "observedAt": "2026-10-03T22:49:08Z",
+          "datumAsOf": null,
+          "location": "What is GUSD?",
+          "excerpt": "GUSD is a principal-protected flexible earn product, with returns generated from Gate ecosystem revenue, treasury RWAs, and high-quality stablecoin-backed yield assets.",
+          "assertion": "Discloses categories and product mechanics, not dated GUSD-specific holdings or recurring whole-supply/backing reconciliation."
+        },
+        {
+          "url": "https://miniapp.gate.com/proof-of-reserves",
+          "observedAt": "2026-10-03T22:49:08Z",
+          "datumAsOf": null,
+          "location": "How do we maintain 100% reserves?",
+          "excerpt": "If the total number of tokens managed by the exchange on the blockchain meets or exceeds the aggregate balance of all user accounts, as captured in a snapshot, the platform maintains 100% reserves for those tokens.",
+          "assertion": "Exchange-custody customer-account snapshots do not establish the backing composition of issued GUSD or its treasury asset/liability reconciliation."
+        },
+        {
+          "url": "https://miniapp.gate.com/help/annlist/others/101701",
+          "observedAt": "2026-10-03T22:49:08Z",
+          "datumAsOf": "2026-08-15",
+          "location": "GUSD Reaches an All-Time High",
+          "excerpt": "Gate GUSD funds reached a record high of $257 million on August 15, marking the highest level since the product\u2019s launch.",
+          "assertion": "GUSD subscription/funds total is disclosed separately from aggregate exchange reserve coverage; no product-specific backing schedule is supplied."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://miniapp.gate.com/gusd",
+        "https://miniapp.gate.com/earn/staking/GUSD",
+        "https://miniapp.gate.com/help/lend/staking/46831",
+        "https://miniapp.gate.com/proof-of-reserves",
+        "https://miniapp.gate.com/legal/user-agreement",
+        "https://miniapp.gate.com/help/annlist/others/101701",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xaf6186b3521b60e27396b5d23b48abc34bf585c5"
+      ],
+      "rationale": "No dated recurring procedure or report reconciling all issued native and represented GUSD liabilities and mint/burn movements to GUSD-specific backing at a common clock is disclosed. Product minting claims, $257m funds and exchange customer-token custody PoR are distinct lookalikes, not GUSD treasury reconciliation."
+    },
+    {
+      "id": "uw-gusd-gate-5fdecad8aca8e38c",
+      "assetId": "gusd-gate",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:49:08Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R34)",
+      "sources": [
+        {
+          "url": "https://miniapp.gate.com/gusd",
+          "observedAt": "2026-10-03T22:49:08Z",
+          "datumAsOf": null,
+          "location": "What is GUSD?",
+          "excerpt": "GUSD is a principal-protected flexible earn product, with returns generated from Gate ecosystem revenue, treasury RWAs, and high-quality stablecoin-backed yield assets.",
+          "assertion": "Discloses categories and product mechanics, not dated GUSD-specific holdings or recurring whole-supply/backing reconciliation."
+        },
+        {
+          "url": "https://miniapp.gate.com/proof-of-reserves",
+          "observedAt": "2026-10-03T22:49:08Z",
+          "datumAsOf": null,
+          "location": "How do we maintain 100% reserves?",
+          "excerpt": "If the total number of tokens managed by the exchange on the blockchain meets or exceeds the aggregate balance of all user accounts, as captured in a snapshot, the platform maintains 100% reserves for those tokens.",
+          "assertion": "Exchange-custody customer-account snapshots do not establish the backing composition of issued GUSD or its treasury asset/liability reconciliation."
+        },
+        {
+          "url": "https://miniapp.gate.com/help/annlist/others/101701",
+          "observedAt": "2026-10-03T22:49:08Z",
+          "datumAsOf": "2026-08-15",
+          "location": "GUSD Reaches an All-Time High",
+          "excerpt": "Gate GUSD funds reached a record high of $257 million on August 15, marking the highest level since the product\u2019s launch.",
+          "assertion": "GUSD subscription/funds total is disclosed separately from aggregate exchange reserve coverage; no product-specific backing schedule is supplied."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://miniapp.gate.com/gusd",
+        "https://miniapp.gate.com/earn/staking/GUSD",
+        "https://miniapp.gate.com/help/lend/staking/46831",
+        "https://miniapp.gate.com/proof-of-reserves",
+        "https://miniapp.gate.com/legal/user-agreement",
+        "https://miniapp.gate.com/help/annlist/others/101701",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xaf6186b3521b60e27396b5d23b48abc34bf585c5"
+      ],
+      "rationale": "No current GUSD-specific whole-book reserve holdings schedule, allocation weights or complete backing denominator is disclosed. Product/help/hub pages name Treasury RWAs and stablecoin-backed yield categories; the transparency report reports product funds and exchange-wide ratios rather than constituent backing amounts."
+    },
+    {
+      "id": "uw-usdq-quill-24c7e74e7b76b73c",
+      "assetId": "usdq-quill",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:47dcfb5b865be0ae3099be07",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:20Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R47)",
+      "sources": [
+        {
+          "url": "https://docs.quill.finance/faq/risks-and-disclosures.md",
+          "observedAt": "2026-10-03T22:50:52Z",
+          "datumAsOf": null,
+          "location": "Issuer/protocol published product terms",
+          "excerpt": "In DeFi, risks include **smart contract risk** (vulnerabilities in the code), **protocol risk** (potential for governance or operational issues), **market risk** (fluctuations in asset prices) and **liquidity risk** (availability of assets during high demand).",
+          "assertion": "Quill discloses collateral/liquidity risk and onchain redemption, but no whole-position USD realization horizon for SCR, WETH, wstETH or weETH."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.quill.finance/",
+        "https://app.quill.finance/",
+        "https://docs.quill.finance/llms.txt",
+        "https://docs.quill.finance/faq/borrowing.md",
+        "https://docs.quill.finance/faq/fee-model.md",
+        "https://docs.quill.finance/faq/liquidations-oracle-and-redemptions.md",
+        "https://docs.quill.finance/faq/risks-and-disclosures.md",
+        "https://docs.quill.finance/documentation/contract-addresses.md",
+        "https://docs.quill.finance/documentation/audits.md",
+        "https://scrollscan.com/api/v2/smart-contracts/0x358d90036e70542ae24b3813c0efecc1f8811442"
+      ],
+      "rationale": "Docs, risk disclosure, branch address inventory and verified token/registry source distinguish pledged collateral from free assets. No published maximum for realizing the entire SCR, WETH, wstETH or weETH collateral slice into USD was located; collateral redemption speed alone does not establish that horizon."
+    },
+    {
+      "id": "uw-usdq-quill-0641a52c94f73cd3",
+      "assetId": "usdq-quill",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:68594bcc0742a1c26a1c9ca5",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:20Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R47)",
+      "sources": [
+        {
+          "url": "https://docs.quill.finance/faq/risks-and-disclosures.md",
+          "observedAt": "2026-10-03T22:50:52Z",
+          "datumAsOf": null,
+          "location": "Issuer/protocol published product terms",
+          "excerpt": "In DeFi, risks include **smart contract risk** (vulnerabilities in the code), **protocol risk** (potential for governance or operational issues), **market risk** (fluctuations in asset prices) and **liquidity risk** (availability of assets during high demand).",
+          "assertion": "Quill discloses collateral/liquidity risk and onchain redemption, but no whole-position USD realization horizon for SCR, WETH, wstETH or weETH."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.quill.finance/",
+        "https://app.quill.finance/",
+        "https://docs.quill.finance/llms.txt",
+        "https://docs.quill.finance/faq/borrowing.md",
+        "https://docs.quill.finance/faq/fee-model.md",
+        "https://docs.quill.finance/faq/liquidations-oracle-and-redemptions.md",
+        "https://docs.quill.finance/faq/risks-and-disclosures.md",
+        "https://docs.quill.finance/documentation/contract-addresses.md",
+        "https://docs.quill.finance/documentation/audits.md",
+        "https://scrollscan.com/api/v2/smart-contracts/0x358d90036e70542ae24b3813c0efecc1f8811442"
+      ],
+      "rationale": "Docs, risk disclosure, branch address inventory and verified token/registry source distinguish pledged collateral from free assets. No published maximum for realizing the entire SCR, WETH, wstETH or weETH collateral slice into USD was located; collateral redemption speed alone does not establish that horizon."
+    },
+    {
+      "id": "uw-usdq-quill-e6890233f7778b44",
+      "assetId": "usdq-quill",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:a301b79207c96314b21d329d",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:20Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R47)",
+      "sources": [
+        {
+          "url": "https://docs.quill.finance/faq/risks-and-disclosures.md",
+          "observedAt": "2026-10-03T22:50:52Z",
+          "datumAsOf": null,
+          "location": "Issuer/protocol published product terms",
+          "excerpt": "In DeFi, risks include **smart contract risk** (vulnerabilities in the code), **protocol risk** (potential for governance or operational issues), **market risk** (fluctuations in asset prices) and **liquidity risk** (availability of assets during high demand).",
+          "assertion": "Quill discloses collateral/liquidity risk and onchain redemption, but no whole-position USD realization horizon for SCR, WETH, wstETH or weETH."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.quill.finance/",
+        "https://app.quill.finance/",
+        "https://docs.quill.finance/llms.txt",
+        "https://docs.quill.finance/faq/borrowing.md",
+        "https://docs.quill.finance/faq/fee-model.md",
+        "https://docs.quill.finance/faq/liquidations-oracle-and-redemptions.md",
+        "https://docs.quill.finance/faq/risks-and-disclosures.md",
+        "https://docs.quill.finance/documentation/contract-addresses.md",
+        "https://docs.quill.finance/documentation/audits.md",
+        "https://scrollscan.com/api/v2/smart-contracts/0x358d90036e70542ae24b3813c0efecc1f8811442"
+      ],
+      "rationale": "Docs, risk disclosure, branch address inventory and verified token/registry source distinguish pledged collateral from free assets. No published maximum for realizing the entire SCR, WETH, wstETH or weETH collateral slice into USD was located; collateral redemption speed alone does not establish that horizon."
+    },
+    {
+      "id": "uw-usdq-quill-17ede80556fd01cc",
+      "assetId": "usdq-quill",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:cc80f6ed653591ecc51ccde0",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:20Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R47)",
+      "sources": [
+        {
+          "url": "https://docs.quill.finance/faq/risks-and-disclosures.md",
+          "observedAt": "2026-10-03T22:50:52Z",
+          "datumAsOf": null,
+          "location": "Issuer/protocol published product terms",
+          "excerpt": "In DeFi, risks include **smart contract risk** (vulnerabilities in the code), **protocol risk** (potential for governance or operational issues), **market risk** (fluctuations in asset prices) and **liquidity risk** (availability of assets during high demand).",
+          "assertion": "Quill discloses collateral/liquidity risk and onchain redemption, but no whole-position USD realization horizon for SCR, WETH, wstETH or weETH."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.quill.finance/",
+        "https://app.quill.finance/",
+        "https://docs.quill.finance/llms.txt",
+        "https://docs.quill.finance/faq/borrowing.md",
+        "https://docs.quill.finance/faq/fee-model.md",
+        "https://docs.quill.finance/faq/liquidations-oracle-and-redemptions.md",
+        "https://docs.quill.finance/faq/risks-and-disclosures.md",
+        "https://docs.quill.finance/documentation/contract-addresses.md",
+        "https://docs.quill.finance/documentation/audits.md",
+        "https://scrollscan.com/api/v2/smart-contracts/0x358d90036e70542ae24b3813c0efecc1f8811442"
+      ],
+      "rationale": "Docs, risk disclosure, branch address inventory and verified token/registry source distinguish pledged collateral from free assets. No published maximum for realizing the entire SCR, WETH, wstETH or weETH collateral slice into USD was located; collateral redemption speed alone does not establish that horizon."
+    },
+    {
+      "id": "uw-onyc-onre-afec61e8de932ba9",
+      "assetId": "onyc-onre",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:16b7da85962152dcaf6eb9d5",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:50:52Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R47)",
+      "sources": [
+        {
+          "url": "https://kamino.com/docs/products/borrow/supplying.md",
+          "observedAt": "2026-10-03T22:50:52Z",
+          "datumAsOf": null,
+          "location": "Issuer/protocol published product terms",
+          "excerpt": "You can withdraw at any time as long as the pool has available liquidity \u2014 that is, not all deposited assets are currently borrowed.",
+          "assertion": "Withdrawal depends on liquidity; no guaranteed all-position realization time for OnRe Kamino lending slices."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.onre.finance/for-capital-providers/collateral-composition",
+        "https://docs.onre.finance/legal/platform-terms-of-use.md",
+        "https://docs.onre.finance/security-and-verification/independent-attestations.md",
+        "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-bLCCxKNCB2GHgFV5Jo6_fbv4t3CT60dwPMbUDfwhHglt5GBoLp47jp1wcCOY8Ob1ZgjA6KXNczdq/pub?output=csv&gid=1591707661&single=true",
+        "https://kamino.com/docs/llms.txt",
+        "https://kamino.com/docs/products/borrow/supplying.md"
+      ],
+      "rationale": "OnRe identifies USDC and USDG supplied to Kamino, but provides no slice-specific liquidity horizon. Kamino explicitly conditions withdrawal on available pool liquidity and gives no full-position realization deadline. Source-native conditional availability is not an immediate whole-slice bound."
+    },
+    {
+      "id": "uw-onyc-onre-67036e1fd616fe30",
+      "assetId": "onyc-onre",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:cc2850adad80c09884d1cbba",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:50:52Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R47)",
+      "sources": [
+        {
+          "url": "https://kamino.com/docs/products/borrow/supplying.md",
+          "observedAt": "2026-10-03T22:50:52Z",
+          "datumAsOf": null,
+          "location": "Issuer/protocol published product terms",
+          "excerpt": "You can withdraw at any time as long as the pool has available liquidity \u2014 that is, not all deposited assets are currently borrowed.",
+          "assertion": "Withdrawal depends on liquidity; no guaranteed all-position realization time for OnRe Kamino lending slices."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.onre.finance/for-capital-providers/collateral-composition",
+        "https://docs.onre.finance/legal/platform-terms-of-use.md",
+        "https://docs.onre.finance/security-and-verification/independent-attestations.md",
+        "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-bLCCxKNCB2GHgFV5Jo6_fbv4t3CT60dwPMbUDfwhHglt5GBoLp47jp1wcCOY8Ob1ZgjA6KXNczdq/pub?output=csv&gid=1591707661&single=true",
+        "https://kamino.com/docs/llms.txt",
+        "https://kamino.com/docs/products/borrow/supplying.md"
+      ],
+      "rationale": "OnRe identifies USDC and USDG supplied to Kamino, but provides no slice-specific liquidity horizon. Kamino explicitly conditions withdrawal on available pool liquidity and gives no full-position realization deadline. Source-native conditional availability is not an immediate whole-slice bound."
+    },
+    {
+      "id": "uw-onyc-onre-14b6843746f46e76",
+      "assetId": "onyc-onre",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:8c681fb5ffeb76135fa1384f",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:20Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R47)",
+      "sources": [
+        {
+          "url": "https://bitwiseinvestments.com/crypto-funds/uscc",
+          "observedAt": "2026-10-03T22:50:52Z",
+          "datumAsOf": null,
+          "location": "Issuer/protocol published product terms",
+          "excerpt": "Ownership in the Fund is via the USCC token or book-entry record keeping.",
+          "assertion": "Fund-share claims are disclosed, but no contractual maximum maturity of the fund share is published."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.onre.finance/for-capital-providers/collateral-composition/uscc-or-bitwise-crypto-carry-fund.md",
+        "https://bitwiseinvestments.com/crypto-funds/uscc",
+        "https://s3.us-east-1.amazonaws.com/static.bitwiseinvestments.com/uscc/bitwise-crypto-carry-fund-uscc-fact-sheet.pdf",
+        "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc"
+      ],
+      "rationale": "The scoped USCC holding is a fund share, not the underlying Treasury or futures instruments. Public issuer holdings, structuring and redemption documents do not publish a maximum maturityDaysMax for that share claim. Short duration, dated underlying positions and daily redemption are not a share-maturity covenant."
+    },
+    {
+      "id": "uw-onyc-onre-f6eebc1b3555f3e9",
+      "assetId": "onyc-onre",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:2e3053db34e2d87f05122e2f",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:20Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R47)",
+      "sources": [
+        {
+          "url": "https://usyc.docs.hashnote.com/overview/product-structuring.md",
+          "observedAt": "2026-10-03T22:50:52Z",
+          "datumAsOf": null,
+          "location": "Issuer/protocol published product terms",
+          "excerpt": "Tokens represent shares in the fund, thus all token holders need to be onboarded and KYC/AML\u2019d to be able to own SDYF shares.",
+          "assertion": "Fund-share claims are disclosed, but no contractual maximum maturity of the fund share is published."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.onre.finance/for-capital-providers/collateral-composition/usyc-or-us-yield-coin.md",
+        "https://usyc.docs.hashnote.com/llms.txt",
+        "https://usyc.docs.hashnote.com/overview/introduction.md",
+        "https://usyc.docs.hashnote.com/overview/product-structuring.md",
+        "https://usyc.docs.hashnote.com/overview/subscription-and-redemption.md",
+        "https://www.hashnote.com/legal-disclosures"
+      ],
+      "rationale": "The scoped USYC holding is a fund share, not the underlying Treasury or futures instruments. Public issuer holdings, structuring and redemption documents do not publish a maximum maturityDaysMax for that share claim. Short duration, dated underlying positions and daily redemption are not a share-maturity covenant."
+    },
+    {
+      "id": "uw-onyc-onre-807403c731f0e76f",
+      "assetId": "onyc-onre",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:fbc58fbcf982e8298134e5b0",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:20Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R47)",
+      "sources": [
+        {
+          "url": "https://docs.solomonlabs.org/usdv/acquiring-and-redeeming",
+          "observedAt": "2026-10-03T22:50:52Z",
+          "datumAsOf": null,
+          "location": "Issuer/protocol published product terms",
+          "excerpt": "Direct redemption is subject to onboarding, available liquidity, operational controls, program terms, and processing windows.",
+          "assertion": "USDv redemption is explicitly conditional; no full-position liquidity-horizon bound is provided."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.onre.finance/for-capital-providers/collateral-composition/usdv-or-usdv.md",
+        "https://docs.solomonlabs.org/",
+        "https://docs.solomonlabs.org/usdv/",
+        "https://docs.solomonlabs.org/usdv/acquiring-and-redeeming",
+        "https://docs.solomonlabs.org/usdv/transparency-and-risk"
+      ],
+      "rationale": "Exact replacement mint is identified in the issuer docs. The acquisition/redemption terms describe venues and conditional institutional access but no guaranteed full-position realization horizon for OnRe\u2019s held USDv. Liquid/composable marketing is not a maximum time bound."
+    },
+    {
+      "id": "uw-usdf-astherus-48ff6349cb8f32be",
+      "assetId": "usdf-astherus",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R51)",
+      "sources": [
+        {
+          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works.md",
+          "observedAt": "2026-10-03T22:54:08Z",
+          "datumAsOf": null,
+          "location": "Capital flow steps 2-4",
+          "excerpt": "The USDT is transferred to a Ceffu wallet, a custodial solution that securely holds the funds on behalf of Aster.",
+          "assertion": "Describes custodial capital flow, not a common-clock whole-supply-to-reserves reconciliation."
+        },
+        {
+          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
+          "observedAt": "2026-10-03T22:54:08Z",
+          "datumAsOf": null,
+          "location": "Audit and custodial partner risk",
+          "excerpt": "All smart contracts are audited by reputable security firms, and Aster maintains a robust risk monitoring system.",
+          "assertion": "Security audits and Ceffu SOC reports do not establish financial liability reconciliation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.asterdex.com/en/usdf",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works.md",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/faqs.md",
+        "https://docs.asterdex.com/resources/terms-and-conditions.md",
+        "https://docs.asterdex.com/overview/smart-contracts.md",
+        "https://docs.asterdex.com/overview/audit-reports.md",
+        "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/USDFEarn.sol",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/usdf-and-the-stablecoin-landscape.md"
+      ],
+      "rationale": "USDF docs, financial/transparency searches, legal terms, audit index and canonical mint source disclose deposit accounting, weekly yield and custodian security but no dated whole-supply on/off-chain liabilities versus Ceffu/Binance backing reconciliation procedure or cadence. Internal deposit equality and risk monitoring are not that datum."
+    },
+    {
+      "id": "uw-usdf-astherus-33a3b80ee3dfd05d",
+      "assetId": "usdf-astherus",
+      "scope": {
+        "componentKey": "economic-control:oracle",
+        "exposureId": null,
+        "factorKey": "tier",
+        "pillar": "control",
+        "requiredDatum": "tier",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R51)",
+      "sources": [
+        {
+          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works.md",
+          "observedAt": "2026-10-03T22:54:08Z",
+          "datumAsOf": null,
+          "location": "Delta-neutral strategy",
+          "excerpt": "Funds deposited into Binance are used to simultaneously buy spot (long) and short perpetual positions on a specific asset like Bitcoin (BTC) or Ether (ETH)",
+          "assertion": "Backing is offchain price-sensitive; no complete exact reserve valuation/feed/fallback topology disclosed."
+        },
+        {
+          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
+          "observedAt": "2026-10-03T22:54:08Z",
+          "datumAsOf": null,
+          "location": "Liquidation risk",
+          "excerpt": "The Aster account on Ceffu regularly monitors positions and frequently settles profit/loss to keep liquidation risk minimal.",
+          "assertion": "Monitoring does not identify reserve valuation source, governance or failure topology."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.asterdex.com/en/usdf",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works.md",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/faqs.md",
+        "https://docs.asterdex.com/resources/terms-and-conditions.md",
+        "https://docs.asterdex.com/overview/smart-contracts.md",
+        "https://docs.asterdex.com/overview/audit-reports.md",
+        "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/USDFEarn.sol",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/usdf-and-the-stablecoin-landscape.md",
+        "https://docs.asterdex.com/astherusex-orderbook-perp-guide/mark-price-oracle"
+      ],
+      "rationale": "USDF reserve pricing/rebalancing oracle tier is not disclosed: issuer describes offchain hedging and P/L monitoring but not the exact USDF valuation/feed/controller/fallback inventory. Aster perp-trading mark-price docs describe a different product and cannot establish the Binance strategy account topology. Retain opaque tier; no oracleless exemption."
+    },
+    {
+      "id": "uw-usdf-astherus-48ac8d31e0a17263",
+      "assetId": "usdf-astherus",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:105e1a00e54703a4d2b907fd",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R51)",
+      "sources": [
+        {
+          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
+          "observedAt": "2026-10-03T22:54:08Z",
+          "datumAsOf": null,
+          "location": "MirrorX operation",
+          "excerpt": "Withdrawals settle on T+1 basis",
+          "assertion": "Ceffu withdrawal settlement alone is not realization of the entire long/short reserve book."
+        },
+        {
+          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/faqs.md",
+          "observedAt": "2026-10-03T22:54:08Z",
+          "datumAsOf": null,
+          "location": "Redeem on Aster",
+          "excerpt": "Processing takes 1-2 days for standard amounts, up to 7 days for large amounts",
+          "assertion": "Holder request processing does not disclose per-position liquidation horizon for the whole reserve slice."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.asterdex.com/en/usdf",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works.md",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/faqs.md",
+        "https://docs.asterdex.com/resources/terms-and-conditions.md",
+        "https://docs.asterdex.com/overview/smart-contracts.md",
+        "https://docs.asterdex.com/overview/audit-reports.md",
+        "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/USDFEarn.sol",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/usdf-and-the-stablecoin-landscape.md"
+      ],
+      "rationale": "The whole USDT-funded spot/short strategy slice has no published complete realization bound. MirrorX T+1 withdrawal settlement and token redemption processing times do not establish liquidation/unwind of every spot and futures position, funding/margin obligations and final available proceeds. No per-slice maximum was located."
+    },
+    {
+      "id": "uw-usdf-astherus-bcc0f158c5be60b2",
+      "assetId": "usdf-astherus",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdf-astherus:stablecoin-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R51)",
+      "sources": [
+        {
+          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/faqs.md",
+          "observedAt": "2026-10-03T22:54:08Z",
+          "datumAsOf": null,
+          "location": "Redeem on Aster",
+          "excerpt": "Processing takes 1-2 days for standard amounts, up to 7 days for large amounts",
+          "assertion": "Publishes processing guidance, followed by a separate claim step, not guaranteed end-to-end completion."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/libraries/Withdrawable.sol",
+          "observedAt": "2026-10-03T22:54:08Z",
+          "datumAsOf": null,
+          "location": "_claimWithdraw",
+          "excerpt": "require(requestWithdrawInfo.receiveAmount > 0 && requestWithdrawInfo.claimable, \"not available\");",
+          "assertion": "Claim requires privileged distribution; elapsed time does not force claimability."
+        },
+        {
+          "url": "https://docs.asterdex.com/resources/terms-and-conditions.md",
+          "observedAt": "2026-10-03T22:54:08Z",
+          "datumAsOf": "2026-02-25",
+          "location": "Services 3.1(c)",
+          "excerpt": "The specific features and functionalities of our Services are described on our Platform, but they do not constitute a guarantee of availability or performance.",
+          "assertion": "Terms do not guarantee FAQ processing times."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.asterdex.com/en/usdf",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works.md",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/faqs.md",
+        "https://docs.asterdex.com/resources/terms-and-conditions.md",
+        "https://docs.asterdex.com/overview/smart-contracts.md",
+        "https://docs.asterdex.com/overview/audit-reports.md",
+        "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/USDFEarn.sol",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/usdf-and-the-stablecoin-landscape.md",
+        "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/libraries/Withdrawable.sol"
+      ],
+      "rationale": "No unconditional maximum from accepted request through claimable USDT is disclosed. FAQ gives 1-2/up-to-7-day processing guidance; canonical withdrawal library requires a bot-controlled claimable flag without a forced deadline, and legal terms disclaim availability/performance guarantees. Do not convert this processing target to a guaranteed settlement SLA."
+    },
+    {
+      "id": "uw-asusdf-astherus-c2b1d13d22fa809a",
+      "assetId": "asusdf-astherus",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "custodyEscrow",
+        "pillar": "backing",
+        "requiredDatum": "custodyEscrow",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R51)",
+      "sources": [
+        {
+          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
+          "observedAt": "2026-10-03T22:54:08Z",
+          "datumAsOf": null,
+          "location": "Custody introduction",
+          "excerpt": "Aster partners with Ceffu for the custody of USDF and underlying USDT funds, and to prepare funds for yield strategy execution on behalf of asUSDF holders.",
+          "assertion": "Names upstream custody; does not publish the asUSDF holder-specific escrow/legal segregation regime."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/asUSDFEarn.sol",
+          "observedAt": "2026-10-03T22:54:08Z",
+          "datumAsOf": null,
+          "location": "Deposit transfer",
+          "excerpt": "token.safeTransferFrom(from, address(this), amount);",
+          "assertion": "Local USDF balance custody is visible in code; legal segregation and beneficial ownership rights are not established by a balance."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.asterdex.com/en/usdf",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works.md",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/faqs.md",
+        "https://docs.asterdex.com/resources/terms-and-conditions.md",
+        "https://docs.asterdex.com/overview/smart-contracts.md",
+        "https://docs.asterdex.com/overview/audit-reports.md",
+        "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/USDFEarn.sol",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/usdf-and-the-stablecoin-landscape.md",
+        "https://docs.asterdex.com/earn/overview/mint-asusdf.md",
+        "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/asUSDFEarn.sol",
+        "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/libraries/Withdrawable.sol",
+        "https://www.ceffu.com/"
+      ],
+      "rationale": "Exact asUSDF custodyEscrow remains incomplete because no holder-specific segregation/escrow entitlement and insolvency-rights terms were published in issuer product/legal/audit surfaces or Ceffu custody descriptions. Local deposits enter asUSDFEarn and withdrawals move to a vault; public code does not establish legal ring-fencing. Do not infer parent custody protection or zero unknown exposure."
+    },
+    {
+      "id": "uw-dgld-gold-token-sa-12ac892f0aa7275a",
+      "assetId": "dgld-gold-token-sa",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:physical-to-usd:dgld-gold-token-sa"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R51)",
+      "sources": [
+        {
+          "url": "https://dgld.ch/docs/terms",
+          "observedAt": "2026-10-03T22:54:57Z",
+          "datumAsOf": null,
+          "location": "Section 8.1 Delivery discretion",
+          "excerpt": "GTSA may refuse, suspend or postpone a Delivery where required by applicable law",
+          "assertion": "Physical delivery may be delayed; no end-to-end maximum is supplied."
+        },
+        {
+          "url": "https://dgld.ch/news/dgld-complete-step-by-step-guide-november-2025",
+          "observedAt": "2026-10-03T22:54:57Z",
+          "datumAsOf": "2025-11-19",
+          "location": "Shipping details",
+          "excerpt": "Europe: 3\u20137 business days, insured post",
+          "assertion": "Shipping leg estimate excludes quoting/KYC, acceptance, gold sale and final bank proceeds."
+        },
+        {
+          "url": "https://files.dgld.ch/dgld-white-paper.pdf",
+          "observedAt": "2026-10-03T22:54:57Z",
+          "datumAsOf": "2026-09-01",
+          "location": "Part I.1 Market volatility",
+          "excerpt": "Neither the Issuer nor any other person is under an obligation to purchase or sell DGLD, provide liquidity, intervene in the secondary market, or otherwise support the price of the DGLD.",
+          "assertion": "Physical co-ownership/delivery is not guaranteed cash settlement."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://dgld.ch/docs/terms",
+        "https://dgld.ch/news/dgld-complete-step-by-step-guide-november-2025",
+        "https://dgld.ch/about-faq",
+        "https://dgld.ch/news/dgld-update",
+        "https://files.dgld.ch/dgld-white-paper.pdf",
+        "https://dgld.ch/audits"
+      ],
+      "rationale": "Neither direct issuer physical delivery nor the composed physical-to-USD route has a published complete maximum. Governing terms permit suspension/postponement, guide provides only Europe shipping 3-7 business days after earlier quote/KYC/payment, and no bounded gold sale-to-spendable-USD endpoint is disclosed. Do not reinterpret shipping estimates as full SLA."
+    },
+    {
+      "id": "uw-dgld-gold-token-sa-108b3e6066f20ead",
+      "assetId": "dgld-gold-token-sa",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:dgld-gold-token-sa:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R51)",
+      "sources": [
+        {
+          "url": "https://dgld.ch/docs/terms",
+          "observedAt": "2026-10-03T22:54:57Z",
+          "datumAsOf": null,
+          "location": "Section 8.1 Delivery discretion",
+          "excerpt": "GTSA may refuse, suspend or postpone a Delivery where required by applicable law",
+          "assertion": "Physical delivery may be delayed; no end-to-end maximum is supplied."
+        },
+        {
+          "url": "https://dgld.ch/news/dgld-complete-step-by-step-guide-november-2025",
+          "observedAt": "2026-10-03T22:54:57Z",
+          "datumAsOf": "2025-11-19",
+          "location": "Shipping details",
+          "excerpt": "Europe: 3\u20137 business days, insured post",
+          "assertion": "Shipping leg estimate excludes quoting/KYC, acceptance, gold sale and final bank proceeds."
+        },
+        {
+          "url": "https://files.dgld.ch/dgld-white-paper.pdf",
+          "observedAt": "2026-10-03T22:54:57Z",
+          "datumAsOf": "2026-09-01",
+          "location": "Part I.1 Market volatility",
+          "excerpt": "Neither the Issuer nor any other person is under an obligation to purchase or sell DGLD, provide liquidity, intervene in the secondary market, or otherwise support the price of the DGLD.",
+          "assertion": "Physical co-ownership/delivery is not guaranteed cash settlement."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://dgld.ch/docs/terms",
+        "https://dgld.ch/news/dgld-complete-step-by-step-guide-november-2025",
+        "https://dgld.ch/about-faq",
+        "https://dgld.ch/news/dgld-update",
+        "https://files.dgld.ch/dgld-white-paper.pdf",
+        "https://dgld.ch/audits"
+      ],
+      "rationale": "Neither direct issuer physical delivery nor the composed physical-to-USD route has a published complete maximum. Governing terms permit suspension/postponement, guide provides only Europe shipping 3-7 business days after earlier quote/KYC/payment, and no bounded gold sale-to-spendable-USD endpoint is disclosed. Do not reinterpret shipping estimates as full SLA."
+    },
+    {
+      "id": "uw-axcnh-anchorx-56ec18d10e20f9d1",
+      "assetId": "axcnh-anchorx",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:axcnh-anchorx:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R51)",
+      "sources": [
+        {
+          "url": "https://www.anchorx.org/terms",
+          "observedAt": "2026-10-03T22:54:57Z",
+          "datumAsOf": null,
+          "location": "Fees and Taxes",
+          "excerpt": "The Company reserves the right to implement fees for certain Services.",
+          "assertion": "No numeric/formula AxCNH fiat-redemption fee schedule is provided."
+        },
+        {
+          "url": "https://www.anchorx.org/",
+          "observedAt": "2026-10-03T22:54:57Z",
+          "datumAsOf": null,
+          "location": "Stable & Reliable",
+          "excerpt": "AxCNH is pegged 1:1 with CNH and always available for 1:1 CNH redemption",
+          "assertion": "Par denomination does not establish zero redemption or banking fees."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.anchorx.org/",
+        "https://www.anchorx.org/terms",
+        "https://www.anchorx.org/risk",
+        "https://www.anchorx.org/about-us",
+        "https://www.anchorx.org/transparency",
+        "https://onlineportal.anchorx.org/login"
+      ],
+      "rationale": "Public issuer homepage, rendered legal terms, risk/about pages and transparency archive disclose par redemption and discretionary fees but no AxCNH redemption tariff, applicable percentage/formula, minimum or all-in bank/intermediary charges. Professional-investor portal is login-gated; no public fee schedule located. No inference of zero cost from 1:1 redemption."
+    },
+    {
+      "id": "uw-tgbp-tokenised-774ec4c11f0ac912",
+      "assetId": "tgbp-tokenised",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:1682e4b3f3e78e540101414c",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:36Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R84)",
+      "sources": [
+        {
+          "url": "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Page 2 reserve table, visually inspected",
+          "excerpt": "Cash Accounts\nBonds\nMoney Market Funds",
+          "assertion": "Latest report publishes three class totals, but no bank/bond obligor/fund roster, contractual maximum maturity or realization horizon."
+        },
+        {
+          "url": "https://www.tokenisedgbp.com/terms",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": "2026-01-06",
+          "location": "Section 6 reserves",
+          "excerpt": "We hold the backing reserve in liquid assets, such as Money Market Funds, UK Treasuries and bank deposits, as permitted and in accordance with the FCA\u2019s rules and requirements as enforced time to time.",
+          "assertion": "Eligible classes and liquidity descriptions do not identify current obligors, numeric maturities or cash-realization windows."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.tokenisedgbp.com/",
+        "https://www.tokenisedgbp.com/transparency",
+        "https://www.tokenisedgbp.com/terms",
+        "https://www.tokenisedgbp.com/blog",
+        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
+        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-04-30.pdf"
+      ],
+      "rationale": "August reserve table and April report disclose cash accounts, bonds and money-market fund aggregate balances only. Issuer site, archive and terms do not identify current bank/obligor/fund keys, contractual maximum maturities or slice-specific cash-realization windows. Generic eligible UK Treasuries and liquid assets cannot establish current bond identity, maturity or immediate realization."
+    },
+    {
+      "id": "uw-tgbp-tokenised-4996309e83798727",
+      "assetId": "tgbp-tokenised",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:1682e4b3f3e78e540101414c",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:36Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R84)",
+      "sources": [
+        {
+          "url": "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Page 2 reserve table, visually inspected",
+          "excerpt": "Cash Accounts\nBonds\nMoney Market Funds",
+          "assertion": "Latest report publishes three class totals, but no bank/bond obligor/fund roster, contractual maximum maturity or realization horizon."
+        },
+        {
+          "url": "https://www.tokenisedgbp.com/terms",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": "2026-01-06",
+          "location": "Section 6 reserves",
+          "excerpt": "We hold the backing reserve in liquid assets, such as Money Market Funds, UK Treasuries and bank deposits, as permitted and in accordance with the FCA\u2019s rules and requirements as enforced time to time.",
+          "assertion": "Eligible classes and liquidity descriptions do not identify current obligors, numeric maturities or cash-realization windows."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.tokenisedgbp.com/",
+        "https://www.tokenisedgbp.com/transparency",
+        "https://www.tokenisedgbp.com/terms",
+        "https://www.tokenisedgbp.com/blog",
+        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
+        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-04-30.pdf"
+      ],
+      "rationale": "August reserve table and April report disclose cash accounts, bonds and money-market fund aggregate balances only. Issuer site, archive and terms do not identify current bank/obligor/fund keys, contractual maximum maturities or slice-specific cash-realization windows. Generic eligible UK Treasuries and liquid assets cannot establish current bond identity, maturity or immediate realization."
+    },
+    {
+      "id": "uw-tgbp-tokenised-64aa015773ccce0a",
+      "assetId": "tgbp-tokenised",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:1682e4b3f3e78e540101414c",
+        "factorKey": "obligorConcentration",
+        "pillar": "backing",
+        "requiredDatum": "issuerOrObligorKey",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:36Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R84)",
+      "sources": [
+        {
+          "url": "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Page 2 reserve table, visually inspected",
+          "excerpt": "Cash Accounts\nBonds\nMoney Market Funds",
+          "assertion": "Latest report publishes three class totals, but no bank/bond obligor/fund roster, contractual maximum maturity or realization horizon."
+        },
+        {
+          "url": "https://www.tokenisedgbp.com/terms",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": "2026-01-06",
+          "location": "Section 6 reserves",
+          "excerpt": "We hold the backing reserve in liquid assets, such as Money Market Funds, UK Treasuries and bank deposits, as permitted and in accordance with the FCA\u2019s rules and requirements as enforced time to time.",
+          "assertion": "Eligible classes and liquidity descriptions do not identify current obligors, numeric maturities or cash-realization windows."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.tokenisedgbp.com/",
+        "https://www.tokenisedgbp.com/transparency",
+        "https://www.tokenisedgbp.com/terms",
+        "https://www.tokenisedgbp.com/blog",
+        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
+        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-04-30.pdf"
+      ],
+      "rationale": "August reserve table and April report disclose cash accounts, bonds and money-market fund aggregate balances only. Issuer site, archive and terms do not identify current bank/obligor/fund keys, contractual maximum maturities or slice-specific cash-realization windows. Generic eligible UK Treasuries and liquid assets cannot establish current bond identity, maturity or immediate realization."
+    },
+    {
+      "id": "uw-tgbp-tokenised-5ffc3ffcd7cdabce",
+      "assetId": "tgbp-tokenised",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:363268f8b18b7767c6181786",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:36Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R84)",
+      "sources": [
+        {
+          "url": "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Page 2 reserve table, visually inspected",
+          "excerpt": "Cash Accounts\nBonds\nMoney Market Funds",
+          "assertion": "Latest report publishes three class totals, but no bank/bond obligor/fund roster, contractual maximum maturity or realization horizon."
+        },
+        {
+          "url": "https://www.tokenisedgbp.com/terms",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": "2026-01-06",
+          "location": "Section 6 reserves",
+          "excerpt": "We hold the backing reserve in liquid assets, such as Money Market Funds, UK Treasuries and bank deposits, as permitted and in accordance with the FCA\u2019s rules and requirements as enforced time to time.",
+          "assertion": "Eligible classes and liquidity descriptions do not identify current obligors, numeric maturities or cash-realization windows."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.tokenisedgbp.com/",
+        "https://www.tokenisedgbp.com/transparency",
+        "https://www.tokenisedgbp.com/terms",
+        "https://www.tokenisedgbp.com/blog",
+        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
+        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-04-30.pdf"
+      ],
+      "rationale": "August reserve table and April report disclose cash accounts, bonds and money-market fund aggregate balances only. Issuer site, archive and terms do not identify current bank/obligor/fund keys, contractual maximum maturities or slice-specific cash-realization windows. Generic eligible UK Treasuries and liquid assets cannot establish current bond identity, maturity or immediate realization."
+    },
+    {
+      "id": "uw-tgbp-tokenised-52b5fe382ef54e1e",
+      "assetId": "tgbp-tokenised",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:363268f8b18b7767c6181786",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:36Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R84)",
+      "sources": [
+        {
+          "url": "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Page 2 reserve table, visually inspected",
+          "excerpt": "Cash Accounts\nBonds\nMoney Market Funds",
+          "assertion": "Latest report publishes three class totals, but no bank/bond obligor/fund roster, contractual maximum maturity or realization horizon."
+        },
+        {
+          "url": "https://www.tokenisedgbp.com/terms",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": "2026-01-06",
+          "location": "Section 6 reserves",
+          "excerpt": "We hold the backing reserve in liquid assets, such as Money Market Funds, UK Treasuries and bank deposits, as permitted and in accordance with the FCA\u2019s rules and requirements as enforced time to time.",
+          "assertion": "Eligible classes and liquidity descriptions do not identify current obligors, numeric maturities or cash-realization windows."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.tokenisedgbp.com/",
+        "https://www.tokenisedgbp.com/transparency",
+        "https://www.tokenisedgbp.com/terms",
+        "https://www.tokenisedgbp.com/blog",
+        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
+        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-04-30.pdf"
+      ],
+      "rationale": "August reserve table and April report disclose cash accounts, bonds and money-market fund aggregate balances only. Issuer site, archive and terms do not identify current bank/obligor/fund keys, contractual maximum maturities or slice-specific cash-realization windows. Generic eligible UK Treasuries and liquid assets cannot establish current bond identity, maturity or immediate realization."
+    },
+    {
+      "id": "uw-tgbp-tokenised-94da9ee9d9af4968",
+      "assetId": "tgbp-tokenised",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:363268f8b18b7767c6181786",
+        "factorKey": "obligorConcentration",
+        "pillar": "backing",
+        "requiredDatum": "issuerOrObligorKey",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:36Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R84)",
+      "sources": [
+        {
+          "url": "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Page 2 reserve table, visually inspected",
+          "excerpt": "Cash Accounts\nBonds\nMoney Market Funds",
+          "assertion": "Latest report publishes three class totals, but no bank/bond obligor/fund roster, contractual maximum maturity or realization horizon."
+        },
+        {
+          "url": "https://www.tokenisedgbp.com/terms",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": "2026-01-06",
+          "location": "Section 6 reserves",
+          "excerpt": "We hold the backing reserve in liquid assets, such as Money Market Funds, UK Treasuries and bank deposits, as permitted and in accordance with the FCA\u2019s rules and requirements as enforced time to time.",
+          "assertion": "Eligible classes and liquidity descriptions do not identify current obligors, numeric maturities or cash-realization windows."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.tokenisedgbp.com/",
+        "https://www.tokenisedgbp.com/transparency",
+        "https://www.tokenisedgbp.com/terms",
+        "https://www.tokenisedgbp.com/blog",
+        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
+        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-04-30.pdf"
+      ],
+      "rationale": "August reserve table and April report disclose cash accounts, bonds and money-market fund aggregate balances only. Issuer site, archive and terms do not identify current bank/obligor/fund keys, contractual maximum maturities or slice-specific cash-realization windows. Generic eligible UK Treasuries and liquid assets cannot establish current bond identity, maturity or immediate realization."
+    },
+    {
+      "id": "uw-tgbp-tokenised-377fa69708c3ef09",
+      "assetId": "tgbp-tokenised",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:d6d53f52dd022a95bfdead6c",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:36Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R84)",
+      "sources": [
+        {
+          "url": "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Page 2 reserve table, visually inspected",
+          "excerpt": "Cash Accounts\nBonds\nMoney Market Funds",
+          "assertion": "Latest report publishes three class totals, but no bank/bond obligor/fund roster, contractual maximum maturity or realization horizon."
+        },
+        {
+          "url": "https://www.tokenisedgbp.com/terms",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": "2026-01-06",
+          "location": "Section 6 reserves",
+          "excerpt": "We hold the backing reserve in liquid assets, such as Money Market Funds, UK Treasuries and bank deposits, as permitted and in accordance with the FCA\u2019s rules and requirements as enforced time to time.",
+          "assertion": "Eligible classes and liquidity descriptions do not identify current obligors, numeric maturities or cash-realization windows."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.tokenisedgbp.com/",
+        "https://www.tokenisedgbp.com/transparency",
+        "https://www.tokenisedgbp.com/terms",
+        "https://www.tokenisedgbp.com/blog",
+        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
+        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-04-30.pdf"
+      ],
+      "rationale": "August reserve table and April report disclose cash accounts, bonds and money-market fund aggregate balances only. Issuer site, archive and terms do not identify current bank/obligor/fund keys, contractual maximum maturities or slice-specific cash-realization windows. Generic eligible UK Treasuries and liquid assets cannot establish current bond identity, maturity or immediate realization."
+    },
+    {
+      "id": "uw-tgbp-tokenised-b4626eff14609e01",
+      "assetId": "tgbp-tokenised",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:d6d53f52dd022a95bfdead6c",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:36Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R84)",
+      "sources": [
+        {
+          "url": "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Page 2 reserve table, visually inspected",
+          "excerpt": "Cash Accounts\nBonds\nMoney Market Funds",
+          "assertion": "Latest report publishes three class totals, but no bank/bond obligor/fund roster, contractual maximum maturity or realization horizon."
+        },
+        {
+          "url": "https://www.tokenisedgbp.com/terms",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": "2026-01-06",
+          "location": "Section 6 reserves",
+          "excerpt": "We hold the backing reserve in liquid assets, such as Money Market Funds, UK Treasuries and bank deposits, as permitted and in accordance with the FCA\u2019s rules and requirements as enforced time to time.",
+          "assertion": "Eligible classes and liquidity descriptions do not identify current obligors, numeric maturities or cash-realization windows."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.tokenisedgbp.com/",
+        "https://www.tokenisedgbp.com/transparency",
+        "https://www.tokenisedgbp.com/terms",
+        "https://www.tokenisedgbp.com/blog",
+        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
+        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-04-30.pdf"
+      ],
+      "rationale": "August reserve table and April report disclose cash accounts, bonds and money-market fund aggregate balances only. Issuer site, archive and terms do not identify current bank/obligor/fund keys, contractual maximum maturities or slice-specific cash-realization windows. Generic eligible UK Treasuries and liquid assets cannot establish current bond identity, maturity or immediate realization."
+    },
+    {
+      "id": "uw-tgbp-tokenised-356b662e6e189ffd",
+      "assetId": "tgbp-tokenised",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:d6d53f52dd022a95bfdead6c",
+        "factorKey": "obligorConcentration",
+        "pillar": "backing",
+        "requiredDatum": "issuerOrObligorKey",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:36Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R84)",
+      "sources": [
+        {
+          "url": "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Page 2 reserve table, visually inspected",
+          "excerpt": "Cash Accounts\nBonds\nMoney Market Funds",
+          "assertion": "Latest report publishes three class totals, but no bank/bond obligor/fund roster, contractual maximum maturity or realization horizon."
+        },
+        {
+          "url": "https://www.tokenisedgbp.com/terms",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": "2026-01-06",
+          "location": "Section 6 reserves",
+          "excerpt": "We hold the backing reserve in liquid assets, such as Money Market Funds, UK Treasuries and bank deposits, as permitted and in accordance with the FCA\u2019s rules and requirements as enforced time to time.",
+          "assertion": "Eligible classes and liquidity descriptions do not identify current obligors, numeric maturities or cash-realization windows."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.tokenisedgbp.com/",
+        "https://www.tokenisedgbp.com/transparency",
+        "https://www.tokenisedgbp.com/terms",
+        "https://www.tokenisedgbp.com/blog",
+        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
+        "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-04-30.pdf"
+      ],
+      "rationale": "August reserve table and April report disclose cash accounts, bonds and money-market fund aggregate balances only. Issuer site, archive and terms do not identify current bank/obligor/fund keys, contractual maximum maturities or slice-specific cash-realization windows. Generic eligible UK Treasuries and liquid assets cannot establish current bond identity, maturity or immediate realization."
+    },
+    {
+      "id": "uw-tgbp-tokenised-47fe386911993e96",
+      "assetId": "tgbp-tokenised",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:tgbp-tokenised:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:36Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R84)",
+      "sources": [
+        {
+          "url": "https://www.tokenisedgbp.com/terms",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": "2026-01-06",
+          "location": "Section 3 issuance/redemption",
+          "excerpt": "We reserve the right to impose limits or fees on issuance and redemption transactions.",
+          "assertion": "Direct redemption is disclosed, but no numeric all-in fee schedule or finite completion SLA for eligible direct customers."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.tokenisedgbp.com/",
+        "https://www.tokenisedgbp.com/terms",
+        "https://www.tokenisedgbp.com/transparency",
+        "https://www.tokenisedgbp.com/blog",
+        "https://stableregistry.com/contracts/tgbp-on-ethereum/"
+      ],
+      "rationale": "BCP direct redemption's numeric all-in fee and finite settlement bound are not published in issuer terms/site/archive. Buying or receiving free is not redeeming free. StableRegistry's 0 bps/5-business-day claims have no cited primary tariff/SLA and cannot override BCP terms allowing fees, delays and limits. Archax OTC is a different cohort."
+    },
+    {
+      "id": "uw-tgbp-tokenised-6dd6a11335f00e03",
+      "assetId": "tgbp-tokenised",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:tgbp-tokenised:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:36Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R84)",
+      "sources": [
+        {
+          "url": "https://www.tokenisedgbp.com/terms",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": "2026-01-06",
+          "location": "Section 3 issuance/redemption",
+          "excerpt": "We reserve the right to impose limits or fees on issuance and redemption transactions.",
+          "assertion": "Direct redemption is disclosed, but no numeric all-in fee schedule or finite completion SLA for eligible direct customers."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.tokenisedgbp.com/",
+        "https://www.tokenisedgbp.com/terms",
+        "https://www.tokenisedgbp.com/transparency",
+        "https://www.tokenisedgbp.com/blog",
+        "https://stableregistry.com/contracts/tgbp-on-ethereum/"
+      ],
+      "rationale": "BCP direct redemption's numeric all-in fee and finite settlement bound are not published in issuer terms/site/archive. Buying or receiving free is not redeeming free. StableRegistry's 0 bps/5-business-day claims have no cited primary tariff/SLA and cannot override BCP terms allowing fees, delays and limits. Archax OTC is a different cohort."
+    },
+    {
+      "id": "uw-zarsc-supercoin-e01ef9de488ded93",
+      "assetId": "zarsc-supercoin",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:36Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R84)",
+      "sources": [
+        {
+          "url": "https://cdn.prod.website-files.com/6a43ab66ff171ec1aca79e9b/6a47cf673480e0371e2fc333_White_Paper_Supercoin_2026.pdf",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": null,
+          "location": "Page 12 reserve backing",
+          "excerpt": "Every token in circulation is matched 1:1 by fiat held in segregated accounts, reconciled regularly, with independent third-party attestation by Moore.",
+          "assertion": "Regular reconciliation claimed without a fixed whole-issued-supply cadence/exception-control regime. AUP uses management-defined noncirculating exclusions."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.supercoin.co.za/",
+        "https://www.supercoin.co.za/terms-of-service",
+        "https://www.supercoin.co.za/assurance-reports",
+        "https://www.supercoin.co.za/compliance",
+        "https://cdn.prod.website-files.com/6a43ab66ff171ec1aca79e9b/6a47cf673480e0371e2fc333_White_Paper_Supercoin_2026.pdf",
+        "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6aab8e272c83908780b26065_ZARSC%20AUG%202026%20Stablecoin%20Attestation%2031082026%20FINAL.pdf"
+      ],
+      "rationale": "Whitepaper claims regular circulation reconciliation but does not disclose a periodic whole-issued-supply reserve reconciliation cadence and exception/remediation controls. August Moore procedures compare a dated snapshot after management-defined treasury exclusions; ISRS 4400 expressly provides no assurance. Those disclosed neighboring checks do not establish the missing whole-supply operating regime."
+    },
+    {
+      "id": "uw-zarsc-supercoin-1f55ded07b0dc087",
+      "assetId": "zarsc-supercoin",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:44c84df45350c23e37c8746c",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:36Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R84)",
+      "sources": [
+        {
+          "url": "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6aab8e272c83908780b26065_ZARSC%20AUG%202026%20Stablecoin%20Attestation%2031082026%20FINAL.pdf",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Procedure 1(d)",
+          "excerpt": "the reserve assets comprised liquid cash reserves held in a current account with Absa Bank Limited and denominated in South African Rand.",
+          "assertion": "Current-account custody identified without the actual governing account contract or a contractual maximum maturity."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.supercoin.co.za/",
+        "https://www.supercoin.co.za/assurance-reports",
+        "https://www.supercoin.co.za/terms-of-service",
+        "https://www.supercoin.co.za/compliance",
+        "https://cdn.prod.website-files.com/6a43ab66ff171ec1aca79e9b/6a47cf673480e0371e2fc333_White_Paper_Supercoin_2026.pdf",
+        "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6aab8e272c83908780b26065_ZARSC%20AUG%202026%20Stablecoin%20Attestation%2031082026%20FINAL.pdf"
+      ],
+      "rationale": "Admitted class is bank-deposit, not maturity-inapplicable cash. Terms, whitepaper and bank-account AUP disclose Absa current-account custody but no actual account agreement or contractual maximum maturity. Generic current-account conventions cannot supply a numeric maturity bound for this account."
+    },
+    {
+      "id": "uw-wars-argentine-peso-58c362d6b754b3af",
+      "assetId": "wars-argentine-peso",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:wars-argentine-peso:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:36Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R84)",
+      "sources": [
+        {
+          "url": "https://www.ripio.com/en/wfiat",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": null,
+          "location": "Redemption flow",
+          "excerpt": "Burn the token and receive local currency in your bank account. No delays, no hidden fees.",
+          "assertion": "Fiat redemption disclosed without a numeric all-in direct wARS issuer/B2B tariff."
+        },
+        {
+          "url": "https://docs.ripio.com/crypto-as-a-service/reusable-quotes/create-reusable-quote",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": null,
+          "location": "Quote workflow",
+          "excerpt": "Please note that these rates are subject to change depending on the amount of base/quote currency the end user is willing to trade.",
+          "assertion": "B2B quote-dependent prices, not a complete public wARS direct redemption fee formula."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.ripio.com/en/wfiat",
+        "https://action.ripio.com/en/wfiat-attestations",
+        "https://terms.ripio.com/ar/wallet",
+        "https://docs.ripio.com/llms.txt",
+        "https://docs.ripio.com/crypto-as-a-service/reusable-quotes/create-reusable-quote",
+        "https://docs.ripio.com/crypto-as-a-service/fiat-withdrawals/create-fiat-withdrawal"
+      ],
+      "rationale": "No complete numeric/evaluable tariff for the direct wARS issuer/B2B redemption cohort is published across product, legal and API surfaces. Public 0.5% retail wallet buy/sell commissions are a different cohort/operation; no-hidden-fees is not zero-fees. API quotes expose changing rates, not a direct redemption tariff."
+    },
+    {
+      "id": "uw-usdcx-movement-dd74c0be5c6ccf7f",
+      "assetId": "usdcx-movement",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:3b16c86206e97f9f7d0e29bc",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:36Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R84)",
+      "sources": [
+        {
+          "url": "https://developers.circle.com/xreserve/concepts/technical-guide",
+          "observedAt": "2026-10-03T23:15:36Z",
+          "datumAsOf": null,
+          "location": "Dual attestation model",
+          "excerpt": "xReserve and remote blockchains operate independent attesters, creating a dual-attestation model that ensures both sides must validate before any funds move.",
+          "assertion": "USDC collateral identified; remote burn, attestations and release have no published finite realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.circle.com/blog/usdcx-on-movement-now-available-via-circle-xreserve",
+        "https://developers.circle.com/xreserve/concepts/technical-guide",
+        "https://developers.circle.com/xreserve/concepts/how-xreserve-works",
+        "https://developers.circle.com/api-reference/xreserve/all/prepare-withdrawal",
+        "https://developers.circle.com/xreserve/references/fees",
+        "https://console.circle.com/legal/developer-terms",
+        "https://raw.githubusercontent.com/circlefin/evm-xreserve-contracts/master/src/modules/x-reserve/Withdrawal.sol"
+      ],
+      "rationale": "Collateral is liquid USDC, but USDCx holders realize it through remote burn intents, independent attestations and release. Technical/API/code/legal/fee documents give the sequence, not a maximum end-to-end realization window. Underlying USDC immediacy cannot be copied onto the cross-chain escrow slice."
     }
   ]
 }
