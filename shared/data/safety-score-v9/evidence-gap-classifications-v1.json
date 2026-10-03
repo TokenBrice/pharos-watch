@@ -29838,6 +29838,135 @@
         "https://raw.githubusercontent.com/circlefin/evm-xreserve-contracts/master/src/modules/x-reserve/Withdrawal.sol"
       ],
       "rationale": "Collateral is liquid USDC, but USDCx holders realize it through remote burn intents, independent attestations and release. Technical/API/code/legal/fee documents give the sequence, not a maximum end-to-end realization window. Underlying USDC immediacy cannot be copied onto the cross-chain escrow slice."
+    },
+    {
+      "id": "uw-zys-zephyr-protocol-f0b4abdcbfadac2e",
+      "assetId": "zys-zephyr-protocol",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:fd346d791b2a1ffe7526dc30",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:20:56Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R72)",
+      "sources": [
+        {
+          "url": "https://raw.githubusercontent.com/ZephyrProtocol/zephyr/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_config.h",
+          "observedAt": "2026-10-03T23:20:54Z",
+          "datumAsOf": null,
+          "location": "Native consensus configuration, spendable age and difficulty target",
+          "excerpt": "#define CRYPTONOTE_DEFAULT_TX_SPENDABLE_AGE             10",
+          "assertion": "A spendability age in blocks is disclosed, not a guaranteed elapsed-time whole-slice realization horizon."
+        },
+        {
+          "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc",
+          "observedAt": "2026-10-03T23:20:55Z",
+          "datumAsOf": "2026-10-03",
+          "location": "on_chain reserve snapshot",
+          "excerpt": "\"reserve_height\": 877372",
+          "assertion": "Snapshot discloses balances and reserve ratio, not a whole-position realization SLA."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://zephyrprotocol.com/docs/zephyr_whitepaper.pdf",
+        "https://zephyrprotocol.com/documentation",
+        "https://raw.githubusercontent.com/ZephyrProtocol/zephyr/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_config.h",
+        "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc",
+        "https://zephyrprotocol.com/documentation/scanner-api",
+        "https://zephyrprotocol.com/blog/2024-09-30-Zephyr-Protocol-v2-0-0-ZSD-Yield-Hardfork-Annoucement"
+      ],
+      "rationale": "No hard whole-position liquidity/realization horizon is published for the ZSD yield reserve backing ZYS shares. Native conversion availability and block-based output spendability do not guarantee an elapsed-time full-position realization at a known value; the published reserve snapshot only measures balances. No fixed one-day or immediate bound is inferred from target block time."
+    },
+    {
+      "id": "uw-zsd-zephyr-protocol-6b6e9c91949391e0",
+      "assetId": "zsd-zephyr-protocol",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:269781b362b9fc8899c60d27",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:20:56Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R72)",
+      "sources": [
+        {
+          "url": "https://raw.githubusercontent.com/ZephyrProtocol/zephyr/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_config.h",
+          "observedAt": "2026-10-03T23:20:54Z",
+          "datumAsOf": null,
+          "location": "Native consensus configuration, spendable age and difficulty target",
+          "excerpt": "#define CRYPTONOTE_DEFAULT_TX_SPENDABLE_AGE             10",
+          "assertion": "A spendability age in blocks is disclosed, not a guaranteed elapsed-time whole-slice realization horizon."
+        },
+        {
+          "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc",
+          "observedAt": "2026-10-03T23:20:55Z",
+          "datumAsOf": "2026-10-03",
+          "location": "on_chain reserve snapshot",
+          "excerpt": "\"reserve_height\": 877372",
+          "assertion": "Snapshot discloses balances and reserve ratio, not a whole-position realization SLA."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://zephyrprotocol.com/docs/zephyr_whitepaper.pdf",
+        "https://zephyrprotocol.com/documentation",
+        "https://raw.githubusercontent.com/ZephyrProtocol/zephyr/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_config.h",
+        "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc",
+        "https://zephyrprotocol.com/documentation/scanner-api",
+        "https://zephyrprotocol.com/blog/2024-09-30-Zephyr-Protocol-v2-0-0-ZSD-Yield-Hardfork-Annoucement"
+      ],
+      "rationale": "No hard whole-position liquidity/realization horizon is published for the ZEPH protocol reserve. Native conversion availability and block-based output spendability do not guarantee an elapsed-time full-position realization at a known value; the published reserve snapshot only measures balances. No fixed one-day or immediate bound is inferred from target block time."
+    },
+    {
+      "id": "uw-eurw-newrails-1128818c29525c34",
+      "assetId": "eurw-newrails",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:20:56Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R72)",
+      "sources": [
+        {
+          "url": "https://cmpl-docs.newrails.xyz/docs/Newrails%20EURW%20WP%202026-05-26.xhtml",
+          "observedAt": "2026-10-03T23:20:55Z",
+          "datumAsOf": "2026-06-25",
+          "location": "D.1 Reserve policy",
+          "excerpt": "A minimum of 30% of client funds will be held in a safeguarding account in cash, in Euros, with a reputable European regulated credit institution.",
+          "assertion": "Policy minimum is not observed portfolio weight or a dated full-denominator reserve schedule."
+        },
+        {
+          "url": "https://www.newrails.xyz/en/platform/eurw",
+          "observedAt": "2026-10-03T23:20:56Z",
+          "datumAsOf": null,
+          "location": "Trust and transparency",
+          "excerpt": "Monthly attestation reports published publicly.",
+          "assertion": "Issuer claims published reports, but linked public download/archive provides whitepaper, audit and policies rather than a dated reserve allocation report."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.newrails.xyz/en/platform/eurw",
+        "https://www.newrails.xyz/en/download-centre",
+        "https://cmpl-docs.newrails.xyz/docs/Newrails%20EURW%20WP%202026-05-26.xhtml",
+        "https://cmpl-docs.newrails.xyz/docs/Hacken_Newrails_SCA_Newrails_Stablecoin_Feb2026_P_2026_2028_2_20260312.pdf",
+        "https://www.newrails.xyz/en/hubs/euro-stablecoin",
+        "https://www.lb.lt/en/sfi-financial-market-participants/newrails-uab"
+      ],
+      "rationale": "The exact current EURW reserve composition, measured whole-asset weights and named holding/custodian allocation are not disclosed in the accessed primary public archive. The whitepaper gives a >=30% cash/<=70% permitted-investment policy; the current guide says cash and overnight deposits. Neither supplies a dated observed reserve schedule. Do not convert the policy into fabricated 30/70 weights or admit the undisclosed placeholder as measured composition."
     }
   ]
 }

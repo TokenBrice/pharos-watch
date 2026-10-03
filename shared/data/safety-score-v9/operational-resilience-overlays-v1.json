@@ -12926,6 +12926,180 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "zys-zephyr-protocol",
+      "reviewedAt": "2026-10-03T23:07:53Z",
+      "expiresAt": "2027-10-03T23:07:53Z",
+      "reviewer": "W1R72 primary-source unknown-wave review",
+      "notes": "Exact-asset live operating-history lower bound from a dated primary record, not original inception where only a later operating record is available. No independently verified performance, redemption throughput, reconciliation continuity or incident-free claim is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Official explorer dates activation block 360000 to 13 October 2024",
+          "publisher": "Zephyr Protocol",
+          "publishedAt": "2024-10-13",
+          "url": "https://explorer.zephyrprotocol.com/tx/7396c098b702fee02ba9632c8cb9b210fd6d0a5e91488de85b2b6b9a5f12d550",
+          "confidence": "issuer-reported"
+        },
+        {
+          "sourceId": "yield-activation-announcement",
+          "label": "ZYS activation announced for block 360000",
+          "publisher": "Zephyr Protocol",
+          "publishedAt": "2024-09-30",
+          "url": "https://zephyrprotocol.com/blog/2024-09-30-Zephyr-Protocol-v2-0-0-ZSD-Yield-Hardfork-Annoucement",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 23,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation",
+            "yield-activation-announcement"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "zsd-zephyr-protocol",
+      "reviewedAt": "2026-10-03T23:07:53Z",
+      "expiresAt": "2027-10-03T23:07:53Z",
+      "reviewer": "W1R72 primary-source unknown-wave review",
+      "notes": "Exact-asset live operating-history lower bound from a dated primary record, not original inception where only a later operating record is available. No independently verified performance, redemption throughput, reconciliation continuity or incident-free claim is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Dated issuer article explicitly describes already minted ZSD",
+          "publisher": "Zephyr Protocol",
+          "publishedAt": "2024-09-30",
+          "url": "https://zephyrprotocol.com/blog/2024-09-30-Zephyr-Protocol-v2-0-0-ZSD-Yield-Hardfork-Annoucement",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 24,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "eurw-newrails",
+      "reviewedAt": "2026-10-03T23:07:53Z",
+      "expiresAt": "2027-10-03T23:07:53Z",
+      "reviewer": "W1R72 primary-source unknown-wave review",
+      "notes": "Exact-asset live operating-history lower bound from a dated primary record, not original inception where only a later operating record is available. No independently verified performance, redemption throughput, reconciliation continuity or incident-free claim is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "EURW whitepaper publication and already commenced February issuance",
+          "publisher": "Newrails UAB",
+          "publishedAt": "2026-06-25",
+          "url": "https://cmpl-docs.newrails.xyz/docs/Newrails%20EURW%20WP%202026-05-26.xhtml",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 3,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "cdp-enosys",
+      "reviewedAt": "2026-10-03T23:07:53Z",
+      "expiresAt": "2027-10-03T23:07:53Z",
+      "reviewer": "W1R72 primary-source unknown-wave review",
+      "notes": "Exact-asset live operating-history lower bound from a dated primary record, not original inception where only a later operating record is available. No independently verified performance, redemption throughput, reconciliation continuity or incident-free claim is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Dated retrospective confirms Enosys CDP already live",
+          "publisher": "Flare Network",
+          "publishedAt": "2025-12-31",
+          "url": "https://flare.network/news/flare-rewind-2025",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 9,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "vbill-vaneck",
+      "reviewedAt": "2026-10-03T23:07:53Z",
+      "expiresAt": "2027-10-03T23:07:53Z",
+      "reviewer": "W1R72 primary-source unknown-wave review",
+      "notes": "Exact-asset live operating-history lower bound from a dated primary record, not original inception where only a later operating record is available. No independently verified performance, redemption throughput, reconciliation continuity or incident-free claim is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Exact VBILL tokenized fund launch",
+          "publisher": "Securitize",
+          "publishedAt": "2025-05-13",
+          "url": "https://investors.securitize.io/news/news-details/2025/VanEck-Launches-First-Tokenized-Fund-VBILL-on-Securitize-05-13-2025/default.aspx",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 16,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }
