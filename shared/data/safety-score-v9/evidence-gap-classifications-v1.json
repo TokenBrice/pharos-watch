@@ -4332,308 +4332,6 @@
       "rationale": "Whole-allocation legal custody/escrow safeguards, statutory segregation and bankruptcy-remoteness rights are not published for this yvUSDC lending book. Public contracts show technical custody/accounting and borrower transfers, not complete lender-of-record, borrower legal entity or insolvency rights. This is not evidence of adverse absence; no structural N/A or zero unknown custody is asserted."
     },
     {
-      "id": "uw-xaum-matrixdock-45d5ede3b65a1192",
-      "assetId": "xaum-matrixdock",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:physical-to-usd:xaum-matrixdock"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:53:35Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R64)",
-      "sources": [
-        {
-          "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/minting-and-redeeming.md",
-          "observedAt": "2026-10-03T22:53:35Z",
-          "datumAsOf": null,
-          "location": "Official documentation",
-          "excerpt": "Customer picks up or receives the gold via secured delivery.",
-          "assertion": "Physical delivery procedure names pickup/delivery but specifies no final completion maximum."
-        },
-        {
-          "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/minting-and-redeeming.md",
-          "observedAt": "2026-10-03T22:53:35Z",
-          "datumAsOf": null,
-          "location": "Official documentation",
-          "excerpt": "The stablecoins will be sent within T+3.",
-          "assertion": "This is after execution; it does not bound pre-execution or physical-release-to-USD legs."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.matrixdock.com/xaum",
-        "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/faq.md",
-        "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/minting-and-redeeming.md",
-        "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/physical-gold-vault-audit.md",
-        "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2Foa3Zaj3t7Mic13UuT1ph%2FXAUm%20Token%20Terms%20and%20Conditions.docx.pdf?alt=media&token=3cad87ae-7846-4bfe-ba2e-411fbf166f60",
-        "https://matrixdock.gitbook.io/matrixdock-docs/llms.txt"
-      ],
-      "rationale": "No end-to-end maximum is disclosed for the physical-delivery or composed physical-to-USD route. T+3 is only the executed-order-to-stablecoin leg; out-of-slippage requests may be cancelled/requoted, and physical pickup/release time must be arranged. It is not a whole-route SLA."
-    },
-    {
-      "id": "uw-xaum-matrixdock-6ea8bd953797842e",
-      "assetId": "xaum-matrixdock",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:xaum-matrixdock:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:53:35Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R64)",
-      "sources": [
-        {
-          "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/minting-and-redeeming.md",
-          "observedAt": "2026-10-03T22:53:35Z",
-          "datumAsOf": null,
-          "location": "Official documentation",
-          "excerpt": "Customer picks up or receives the gold via secured delivery.",
-          "assertion": "Physical delivery procedure names pickup/delivery but specifies no final completion maximum."
-        },
-        {
-          "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/minting-and-redeeming.md",
-          "observedAt": "2026-10-03T22:53:35Z",
-          "datumAsOf": null,
-          "location": "Official documentation",
-          "excerpt": "The stablecoins will be sent within T+3.",
-          "assertion": "This is after execution; it does not bound pre-execution or physical-release-to-USD legs."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.matrixdock.com/xaum",
-        "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/faq.md",
-        "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/minting-and-redeeming.md",
-        "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/physical-gold-vault-audit.md",
-        "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2Foa3Zaj3t7Mic13UuT1ph%2FXAUm%20Token%20Terms%20and%20Conditions.docx.pdf?alt=media&token=3cad87ae-7846-4bfe-ba2e-411fbf166f60",
-        "https://matrixdock.gitbook.io/matrixdock-docs/llms.txt"
-      ],
-      "rationale": "No end-to-end maximum is disclosed for the physical-delivery or composed physical-to-USD route. T+3 is only the executed-order-to-stablecoin leg; out-of-slippage requests may be cancelled/requoted, and physical pickup/release time must be arranged. It is not a whole-route SLA."
-    },
-    {
-      "id": "uw-xaum-matrixdock-aec9e7e30b7a8a2f",
-      "assetId": "xaum-matrixdock",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:885860b7b2ea721ed8aca049",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:53:35Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R64)",
-      "sources": [
-        {
-          "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/faq.md",
-          "observedAt": "2026-10-03T22:53:35Z",
-          "datumAsOf": null,
-          "location": "Official documentation",
-          "excerpt": "Available bars to be redeemed will be provided upon request and subject to inventory availability.",
-          "assertion": "Inventory-dependent redemption does not establish a maximum liquidation horizon for the entire physical reserve slice."
-        },
-        {
-          "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2Foa3Zaj3t7Mic13UuT1ph%2FXAUm%20Token%20Terms%20and%20Conditions.docx.pdf?alt=media&token=3cad87ae-7846-4bfe-ba2e-411fbf166f60",
-          "observedAt": "2026-10-03T22:53:35Z",
-          "datumAsOf": "2025-10-21",
-          "location": "Terms section 7.14",
-          "excerpt": "do not guarantee the existence of a market or a buyer or seller for your LBMA Gold or XAUm Tokens.",
-          "assertion": "Terms disclose delivery/market conditions, not a whole-slice realizability maximum."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.matrixdock.com/xaum",
-        "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/faq.md",
-        "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/minting-and-redeeming.md",
-        "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/physical-gold-vault-audit.md",
-        "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2Foa3Zaj3t7Mic13UuT1ph%2FXAUm%20Token%20Terms%20and%20Conditions.docx.pdf?alt=media&token=3cad87ae-7846-4bfe-ba2e-411fbf166f60",
-        "https://matrixdock.gitbook.io/matrixdock-docs/llms.txt"
-      ],
-      "rationale": "Physical gold/silver category and custody are disclosed, but no maximum time for liquidating the entire scoped reserve position is stated. T+3 after execution concerns an individual issuer cash-out, not whole-book sale availability or physical delivery. No bucket is inferred from bullion transferability."
-    },
-    {
-      "id": "uw-xagm-matrixdock-b9f9012d8de66b21",
-      "assetId": "xagm-matrixdock",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:physical-to-usd:xagm-matrixdock"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:53:35Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R64)",
-      "sources": [
-        {
-          "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/minting-and-redeeming.md",
-          "observedAt": "2026-10-03T22:53:35Z",
-          "datumAsOf": null,
-          "location": "Official documentation",
-          "excerpt": "Customer picks up or receives the gold via secured delivery.",
-          "assertion": "Physical delivery procedure names pickup/delivery but specifies no final completion maximum."
-        },
-        {
-          "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/minting-and-redeeming.md",
-          "observedAt": "2026-10-03T22:53:35Z",
-          "datumAsOf": null,
-          "location": "Official documentation",
-          "excerpt": "The stablecoins will be sent within T+3.",
-          "assertion": "This is after execution; it does not bound pre-execution or physical-release-to-USD legs."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.matrixdock.com/xagm",
-        "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/faq.md",
-        "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/minting-and-redeeming.md",
-        "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/physical-silver-vault-audit.md",
-        "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FTRQNUC7Hw1k5EyWrxUrR%2FMatrixdock%20Silver%20XAGm%20Whitepaper.pdf?alt=media&token=cad709b6-47f1-427d-ad14-443fa5cd76e1",
-        "https://matrixdock.gitbook.io/matrixdock-docs/llms.txt"
-      ],
-      "rationale": "No end-to-end maximum is disclosed for the physical-delivery or composed physical-to-USD route. T+3 is only the executed-order-to-stablecoin leg; out-of-slippage requests may be cancelled/requoted, and physical pickup/release time must be arranged. It is not a whole-route SLA."
-    },
-    {
-      "id": "uw-xagm-matrixdock-e0c224347a0c1ecd",
-      "assetId": "xagm-matrixdock",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:xagm-matrixdock:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:53:35Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R64)",
-      "sources": [
-        {
-          "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/minting-and-redeeming.md",
-          "observedAt": "2026-10-03T22:53:35Z",
-          "datumAsOf": null,
-          "location": "Official documentation",
-          "excerpt": "Customer picks up or receives the gold via secured delivery.",
-          "assertion": "Physical delivery procedure names pickup/delivery but specifies no final completion maximum."
-        },
-        {
-          "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/minting-and-redeeming.md",
-          "observedAt": "2026-10-03T22:53:35Z",
-          "datumAsOf": null,
-          "location": "Official documentation",
-          "excerpt": "The stablecoins will be sent within T+3.",
-          "assertion": "This is after execution; it does not bound pre-execution or physical-release-to-USD legs."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.matrixdock.com/xagm",
-        "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/faq.md",
-        "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/minting-and-redeeming.md",
-        "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/physical-silver-vault-audit.md",
-        "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FTRQNUC7Hw1k5EyWrxUrR%2FMatrixdock%20Silver%20XAGm%20Whitepaper.pdf?alt=media&token=cad709b6-47f1-427d-ad14-443fa5cd76e1",
-        "https://matrixdock.gitbook.io/matrixdock-docs/llms.txt"
-      ],
-      "rationale": "No end-to-end maximum is disclosed for the physical-delivery or composed physical-to-USD route. T+3 is only the executed-order-to-stablecoin leg; out-of-slippage requests may be cancelled/requoted, and physical pickup/release time must be arranged. It is not a whole-route SLA."
-    },
-    {
-      "id": "uw-xagm-matrixdock-0432b296a881a366",
-      "assetId": "xagm-matrixdock",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:a1ccefc38affeb9df80b395d",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:53:35Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R64)",
-      "sources": [
-        {
-          "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/faq.md",
-          "observedAt": "2026-10-03T22:53:35Z",
-          "datumAsOf": null,
-          "location": "Official documentation",
-          "excerpt": "Available bars to be redeemed will be provided upon request and subject to inventory availability.",
-          "assertion": "Inventory-dependent redemption does not establish a maximum liquidation horizon for the entire physical reserve slice."
-        },
-        {
-          "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FTRQNUC7Hw1k5EyWrxUrR%2FMatrixdock%20Silver%20XAGm%20Whitepaper.pdf?alt=media&token=cad709b6-47f1-427d-ad14-443fa5cd76e1",
-          "observedAt": "2026-10-03T22:53:35Z",
-          "datumAsOf": "2026-03-17",
-          "location": "Whitepaper redemption execution",
-          "excerpt": "When redeeming into a physical LBMA silver bar, a request has to be made to the Matrixdock Silver operator to seek confirmation on the time, location of collection and other relevant details.",
-          "assertion": "Terms disclose delivery/market conditions, not a whole-slice realizability maximum."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.matrixdock.com/xagm",
-        "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/faq.md",
-        "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/minting-and-redeeming.md",
-        "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/physical-silver-vault-audit.md",
-        "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FTRQNUC7Hw1k5EyWrxUrR%2FMatrixdock%20Silver%20XAGm%20Whitepaper.pdf?alt=media&token=cad709b6-47f1-427d-ad14-443fa5cd76e1",
-        "https://matrixdock.gitbook.io/matrixdock-docs/llms.txt"
-      ],
-      "rationale": "Physical gold/silver category and custody are disclosed, but no maximum time for liquidating the entire scoped reserve position is stated. T+3 after execution concerns an individual issuer cash-out, not whole-book sale availability or physical delivery. No bucket is inferred from bullion transferability."
-    },
-    {
-      "id": "uw-stbt-matrixdock-df198d8379510285",
-      "assetId": "stbt-matrixdock",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:53:35Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R64)",
-      "sources": [
-        {
-          "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/treasury-bill-token-stbt/token-features.md",
-          "observedAt": "2026-10-03T22:53:35Z",
-          "datumAsOf": null,
-          "location": "Official documentation",
-          "excerpt": "we may also upload certain Underlying Assets reporting documents for review on the Matrixdock Platform which can be viewed through its hash.",
-          "assertion": "Optional underlying asset reports and visible mint/burn records are disclosed, not a current whole-supply common-clock reconciliation cadence."
-        },
-        {
-          "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FzHip8cJaP5aud3KfdVud%2FSTBT%20Token%C2%A0Terms%20and%20Conditions.pdf?alt=media&token=79d5fd49-deae-41b4-a809-9e1afaa02f32",
-          "observedAt": "2026-10-03T22:53:35Z",
-          "datumAsOf": "2025-01-20",
-          "location": "Terms section 8.2",
-          "excerpt": "The net asset value of the STBT Token Reserves Account is expected to be published on a daily basis on U.S. Treasury market trading days.",
-          "assertion": "Daily NAV publication is not reconciliation of all STBT liabilities, mint/burn/register movements and affiliated reserve accounts."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://matrixdock.gitbook.io/matrixdock-docs/english/treasury-bill-token-stbt/token-features.md",
-        "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FzHip8cJaP5aud3KfdVud%2FSTBT%20Token%C2%A0Terms%20and%20Conditions.pdf?alt=media&token=79d5fd49-deae-41b4-a809-9e1afaa02f32",
-        "https://www.matrixdock.com/stbt",
-        "https://stbt.matrixdock.com/transparency?tabState=assets",
-        "https://www.matrixdock.com/blog/announcements/matrixdock-integrates-chainlink-proof-of-reserve",
-        "https://matrixdock.gitbook.io/matrixdock-docs/english/announcements/other-announcements/notice-regarding-stbt-daily-asset-statement.md",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xe7efc5060b6ad57b68f5911eca6c5cd1952da152"
-      ],
-      "rationale": "Current whole-supply STBT liability-to-affiliate-backing reconciliation procedure and cadence are not published in the reviewed surfaces. The 2023 PoR integration announcement is historical; daily reserve NAV, asset statements, mutable reserve-feed mint ceilings and on-chain issuance records do not supply a dated current common-clock whole-liability reconciliation. Bullion audit does not cover STBT."
-    },
-    {
       "id": "uw-syrupusdc-maple-a8b811fe43c55cd0",
       "assetId": "syrupusdc-maple",
       "scope": {
@@ -6326,395 +6024,6 @@
           "assertion": "Exact immutable runtime has no upgrade entrypoint. Independent immutable-code fact cannot currently clear wrapper contractMutability while unrelated registry/delegated authorization questions keep aggregate mint non-known."
         }
       ]
-    },
-    {
-      "id": "uw-fxsave-f-x-protocol-aef6423aa209a73d",
-      "assetId": "fxsave-f-x-protocol",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:fxsave-f-x-protocol:stablecoin-redeem"
-      },
-      "cause": "B",
-      "assertion": "required-data-public",
-      "reviewedAt": "2026-10-03T23:02:12Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
-      "sources": [
-        {
-          "url": "https://fxprotocol.gitbook.io/fx-docs/developers/integrating-fxsave.md",
-          "observedAt": "2026-10-03T23:02:11Z",
-          "datumAsOf": null,
-          "location": "Scenario 2: Redeeming fxUSD",
-          "excerpt": "USDC needs to be swapped into fxUSD via the converter.",
-          "assertion": "Published fxUSD-only route combines mutable instantRedeemFeeRatio with converter execution. Current producer stores a documented formula but cannot evaluate same-notional net fxUSD cost; fixed 100 bps would omit conversion."
-        },
-        {
-          "url": "https://fxprotocol.gitbook.io/fx-docs/f-x-protocol-mechanisms/fees.md",
-          "observedAt": "2026-10-03T23:02:11Z",
-          "datumAsOf": null,
-          "location": "Stability Pool fees",
-          "excerpt": "1%",
-          "assertion": "Published early-exit component is not the complete converter-dependent same-notional cost."
-        }
-      ]
-    },
-    {
-      "id": "uw-fxsave-f-x-protocol-6e98aa6dbec79939",
-      "assetId": "fxsave-f-x-protocol",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:45c8a74a34f217637ae5efe5",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:02:12Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
-      "sources": [
-        {
-          "url": "https://fxprotocol.gitbook.io/fx-docs/developers/integrating-fxsave.md",
-          "observedAt": "2026-10-03T23:02:11Z",
-          "datumAsOf": null,
-          "location": "Method 2, Step 1",
-          "excerpt": "After redeeming, you will receive the corresponding amount of fxSP tokens.",
-          "assertion": "Native redemption returns a pool receipt, not USD. Atomic basket exits and a cooldown exist; no whole strategy-position final-value realization bound is published."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://fxprotocol.gitbook.io/fx-docs/llms.txt",
-        "https://fxprotocol.gitbook.io/fx-docs/f-x-protocol-mechanisms/stability-pool.md",
-        "https://fxprotocol.gitbook.io/fx-docs/guides/how-to-unstake-from-the-stability-pool.md",
-        "https://fxprotocol.gitbook.io/fx-docs/developers/integrating-fxsave.md",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xe4031e271809d20074e4bef1caeefec5f710e8a6",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x9cfefd90d4c8428d4cbac9baaa6d52c6ba7897f9",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xd023aac0e2d46c93d4c6e8e2a449bf2d4687804f"
-      ],
-      "rationale": "The exact whole-slice liquidityHorizon of fxSAVE deployed strategy positions is not disclosed. Documentation and current contracts specify receipt redemption, cooldown and basket conversions, but no all-position realization horizon at a known USD value. The pinned onchain principal census establishes custody, not market conversion or Aave withdrawal capacity."
-    },
-    {
-      "id": "uw-fxusd-f-x-protocol-9a3b142ddcdc37f1",
-      "assetId": "fxusd-f-x-protocol",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:0137717dd14ab3c851abe172",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:02:12Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
-      "sources": [
-        {
-          "url": "https://fxprotocol.gitbook.io/fx-docs/developers/processing-the-rebalances-and-liquidations/long-pool-integration.md",
-          "observedAt": "2026-10-03T23:02:11Z",
-          "datumAsOf": null,
-          "location": "3. CreditNote Received",
-          "excerpt": "If it happens that the long pool does not have enough collateral in the contract",
-          "assertion": "Liquidation can deliver credit notes when collateral is lent to short pools; no full WBTC/wstETH branch realization deadline is stated."
-        },
-        {
-          "url": "https://docs.lido.fi/contracts/withdrawal-queue-erc721/",
-          "observedAt": "2026-10-03T23:02:12Z",
-          "datumAsOf": null,
-          "location": "Finalization",
-          "excerpt": "If there is enough ether to fulfill the request.",
-          "assertion": "Lido withdrawal depends on available ETH and oracle finalization, not an unconditional wstETH whole-position deadline."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://fxprotocol.gitbook.io/fx-docs/llms.txt",
-        "https://fxprotocol.gitbook.io/fx-docs/risk-management/advanced-peg-protection-mechanisms/understanding-the-redemption-mechanism.md",
-        "https://fxprotocol.gitbook.io/fx-docs/developers/processing-the-rebalances-and-liquidations/long-pool-integration.md",
-        "https://fxprotocol.gitbook.io/fx-docs/developers/processing-the-rebalances-and-liquidations/creditnotes.md",
-        "https://wbtc.network/",
-        "https://docs.lido.fi/contracts/withdrawal-queue-erc721/",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x9cfefd90d4c8428d4cbac9baaa6d52c6ba7897f9"
-      ],
-      "rationale": "Neither WBTC nor wstETH collateral exposure has a published whole-slice liquidityHorizon. The protocol documents conditional rebalances/liquidations and credit-note substitution. Redemption, underlying market access and Lido queue finalization do not establish a guaranteed realization horizon for the entire scoped branch."
-    },
-    {
-      "id": "uw-fxusd-f-x-protocol-e0e863aac7054d55",
-      "assetId": "fxusd-f-x-protocol",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:67b0ca334fe4dd4b5475cf7d",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:02:12Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
-      "sources": [
-        {
-          "url": "https://fxprotocol.gitbook.io/fx-docs/developers/processing-the-rebalances-and-liquidations/long-pool-integration.md",
-          "observedAt": "2026-10-03T23:02:11Z",
-          "datumAsOf": null,
-          "location": "3. CreditNote Received",
-          "excerpt": "If it happens that the long pool does not have enough collateral in the contract",
-          "assertion": "Liquidation can deliver credit notes when collateral is lent to short pools; no full WBTC/wstETH branch realization deadline is stated."
-        },
-        {
-          "url": "https://docs.lido.fi/contracts/withdrawal-queue-erc721/",
-          "observedAt": "2026-10-03T23:02:12Z",
-          "datumAsOf": null,
-          "location": "Finalization",
-          "excerpt": "If there is enough ether to fulfill the request.",
-          "assertion": "Lido withdrawal depends on available ETH and oracle finalization, not an unconditional wstETH whole-position deadline."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://fxprotocol.gitbook.io/fx-docs/llms.txt",
-        "https://fxprotocol.gitbook.io/fx-docs/risk-management/advanced-peg-protection-mechanisms/understanding-the-redemption-mechanism.md",
-        "https://fxprotocol.gitbook.io/fx-docs/developers/processing-the-rebalances-and-liquidations/long-pool-integration.md",
-        "https://fxprotocol.gitbook.io/fx-docs/developers/processing-the-rebalances-and-liquidations/creditnotes.md",
-        "https://wbtc.network/",
-        "https://docs.lido.fi/contracts/withdrawal-queue-erc721/",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x9cfefd90d4c8428d4cbac9baaa6d52c6ba7897f9"
-      ],
-      "rationale": "Neither WBTC nor wstETH collateral exposure has a published whole-slice liquidityHorizon. The protocol documents conditional rebalances/liquidations and credit-note substitution. Redemption, underlying market access and Lido queue finalization do not establish a guaranteed realization horizon for the entire scoped branch."
-    },
-    {
-      "id": "uw-fxd-fathom-ad30a9d40bbf4091",
-      "assetId": "fxd-fathom",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:01ba9e9e0b5953570d4e52f0",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:02:12Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
-      "sources": [
-        {
-          "url": "https://docs.stakexdc.com/docs/liquid-staking/withdrawals",
-          "observedAt": "2026-10-03T23:02:12Z",
-          "datumAsOf": null,
-          "location": "The queue is public \u2014 position, not a date",
-          "excerpt": "No settlement date is shown or promised",
-          "assertion": "psXDC queues depend on funding tranches and masternode unbonding; approximately 35 days is not a promised whole-position horizon."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.fathom.fi/llms.txt",
-        "https://docs.fathom.fi/fxd-stablecoin/deployments/xdc-network.md",
-        "https://docs.fathom.fi/fxd-stablecoin/risk-management.md",
-        "https://docs.fathom.fi/terms-of-service.md",
-        "https://docs.stakexdc.com/docs/liquid-staking/architecture",
-        "https://docs.stakexdc.com/docs/liquid-staking/withdrawals",
-        "https://xdcscan.com/block/107486464"
-      ],
-      "rationale": "No exact full psXDC-collateral slice liquidityHorizon is published. Fathom exposes collateral pools and conditional liquidation; PrimeStaked publishes instant-or-queued withdrawal rules, funding lanes and approximate unbonding, expressly without a settlement date. Neither establishes full scoped FXD collateral realization at a known value."
-    },
-    {
-      "id": "uw-fxd-fathom-9fd17e515d0559f4",
-      "assetId": "fxd-fathom",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:63ca7f2ed31b0df9b4bedb9b",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:02:12Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
-      "sources": [
-        {
-          "url": "https://docs.fathom.fi/terms-of-service.md",
-          "observedAt": "2026-10-03T23:02:11Z",
-          "datumAsOf": "2024-04-09",
-          "location": "8.4 Not Registered with the SEC or Any Other Agency",
-          "excerpt": "we do not (and cannot) guarantee market best pricing or best execution through our Products",
-          "assertion": "Published third-party market execution does not establish the entire WXDC collateral slice realization horizon."
-        },
-        {
-          "url": "https://docs.fathom.fi/fxd-stablecoin/risk-management.md",
-          "observedAt": "2026-10-03T23:02:12Z",
-          "datumAsOf": null,
-          "location": "Liquidation Risks",
-          "excerpt": "Governance decides on the Close Factor value",
-          "assertion": "Conditional partial liquidations do not promise all-position USD availability."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.fathom.fi/introduction.md",
-        "https://docs.fathom.fi/llms.txt",
-        "https://docs.fathom.fi/fxd-stablecoin/deployments/xdc-network.md",
-        "https://docs.fathom.fi/fxd-stablecoin/user-guides/repay-and-close-fxd-position.md",
-        "https://docs.fathom.fi/fxd-stablecoin/risk-management.md",
-        "https://docs.fathom.fi/terms-of-service.md",
-        "https://xdcscan.com/block/107486464"
-      ],
-      "rationale": "No exact whole WXDC collateral pool liquidityHorizon is published in Fathom deployment, repayment, risk, liquidation or legal sources. Onchain unwrap/transfer and borrower debt closure are not a bound for final realization of all FXD backing; the protocol explicitly relies on third-party liquidity and disclaims best execution."
-    },
-    {
-      "id": "uw-fxd-fathom-60af023bdc795070",
-      "assetId": "fxd-fathom",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:90c347f557383f87fc8fa7cf",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:02:12Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
-      "sources": [
-        {
-          "url": "https://comtechgold.com/assets/pdf/Terms_and_Conditions.pdf",
-          "observedAt": "2026-10-03T23:02:12Z",
-          "datumAsOf": "2022-08-23",
-          "location": "8.1 Redemption of Digital Gold to physical gold",
-          "excerpt": "You may instruct the Digitization Entity to convert Digital Gold to physical gold from the Gold Reserves of a minimum quantity of one kilogram",
-          "assertion": "CGO physical redemption has a 1 kg minimum; no guaranteed final USD liquidation or delivery deadline is specified."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.fathom.fi/fxd-stablecoin/deployments/xdc-network.md",
-        "https://docs.fathom.fi/fxd-stablecoin/risk-management.md",
-        "https://docs.fathom.fi/terms-of-service.md",
-        "https://comtechgold.com/assets/pdf/Terms_and_Conditions.pdf",
-        "https://comtechgold.com/assets/pdf/cgo_whitepaper_v1.pdf",
-        "https://xdcscan.com/block/107486464"
-      ],
-      "rationale": "No exact full CGO collateral slice liquidityHorizon is disclosed. Fathom documents conditional liquidation; Comtech terms describe minimum-size gold conversion, identification, delivery and variable charges without a final-delivery or USD settlement bound. Current measured Fathom CGO holding is far below the physical redemption minimum."
-    },
-    {
-      "id": "uw-bc3m-backed-0fe86a7c3cd04e82",
-      "assetId": "bc3m-backed",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:bc3m-backed:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:02:12Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
-      "sources": [
-        {
-          "url": "https://cdn.prod.website-files.com/655f3efc4be468487052e35a/6a748b81c9b1aca19a11c102_Backed_Assets_Base%20Prospectus_20260727.pdf",
-          "observedAt": "2026-10-03T23:02:12Z",
-          "datumAsOf": "2026-07-27",
-          "location": "VI.v.c Settlement, p.115",
-          "excerpt": "Until the fifth Business Day following the receipt of the Investor's Products (i.e. T+5)",
-          "assertion": "T+5 bounds instructions/liquidation steps, not final bank receipt; VIII.ii permits payment postponement without a finite cap."
-        },
-        {
-          "url": "https://cdn.prod.website-files.com/655f3efc4be468487052e35a/6a748b81c9b1aca19a11c102_Backed_Assets_Base%20Prospectus_20260727.pdf",
-          "observedAt": "2026-10-03T23:02:12Z",
-          "datumAsOf": "2026-07-27",
-          "location": "VIII.ii.b Underlying Illiquidity, p.118",
-          "excerpt": "May postpone the determination (fixing) and/or the payment of the relevant Redemption Amount accordingly",
-          "assertion": "No finite calendar-second final-settlement SLA is imposed when collateral is illiquid."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://assets.backed.fi/products/bc3m",
-        "https://assets.backed.fi/legal-documentation",
-        "https://cdn.prod.website-files.com/655f3efc4be468487052e35a/6a748b81c9b1aca19a11c102_Backed_Assets_Base%20Prospectus_20260727.pdf",
-        "https://backed.fi/news-updates/the-future-is-xstocks-upgrading-btokens",
-        "https://www.amundi.fr/fr_part/dl/doc/prospectus/FR0010754200/FRA/FRA",
-        "https://www.amundietf.it/pdfDocuments/annual-report/FR0010754200/ENG/20250630",
-        "https://eth.blockscout.com/tx/0xed24a874126443f07e7976ea89d84499999346ef574b78d4b2dd3daf9bb84128"
-      ],
-      "rationale": "The exact settlementSlaSec for final bC3M redemption proceeds is not disclosed. T+5 business days concerns deactivation, collateral sale, amount calculation and payment instructions; it is not a final-receipt SLA. Underlying-illiquidity terms permit payment postponement for the number of business days the issuer determines necessary. Wind-down notice keeps standard redemption, not a new finite SLA."
-    },
-    {
-      "id": "uw-bc3m-backed-d52d3adf7e9860f3",
-      "assetId": "bc3m-backed",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:5b88ab39ffe7a05d24df56b5",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:02:12Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
-      "sources": [
-        {
-          "url": "https://www.amundi.fr/fr_part/dl/doc/prospectus/FR0010754200/FRA/FRA",
-          "observedAt": "2026-10-03T23:02:12Z",
-          "datumAsOf": "2026-04-16",
-          "location": "R\u00e8glement Article 3, p.29",
-          "excerpt": "le rachat par le Fonds de ses parts, comme l\u2019\u00e9mission de parts nouvelles, peuvent \u00eatre suspendus",
-          "assertion": "Five-day post-valuation settlement can extend to 30 days, and redemptions can also be suspended; no whole-slice unconditional horizon."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://assets.backed.fi/products/bc3m",
-        "https://assets.backed.fi/legal-documentation",
-        "https://cdn.prod.website-files.com/655f3efc4be468487052e35a/6a748b81c9b1aca19a11c102_Backed_Assets_Base%20Prospectus_20260727.pdf",
-        "https://backed.fi/news-updates/the-future-is-xstocks-upgrading-btokens",
-        "https://www.amundi.fr/fr_part/dl/doc/prospectus/FR0010754200/FRA/FRA",
-        "https://www.amundietf.it/pdfDocuments/annual-report/FR0010754200/ENG/20250630",
-        "https://eth.blockscout.com/tx/0xed24a874126443f07e7976ea89d84499999346ef574b78d4b2dd3daf9bb84128"
-      ],
-      "rationale": "No exact whole ETF-share reserve liquidityHorizon is published. Primary orders normally settle J+2, regulations allow five days after valuation and up to 30 days in exceptional asset sales; gates and temporary suspension occur before final payment. These conditional schedules do not bound the entire bC3M backing slice under all admitted restrictions."
-    },
-    {
-      "id": "uw-bc3m-backed-0dac2ca6802cc7d1",
-      "assetId": "bc3m-backed",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:5b88ab39ffe7a05d24df56b5",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:02:12Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
-      "sources": [
-        {
-          "url": "https://www.amundi.fr/fr_part/dl/doc/prospectus/FR0010754200/FRA/FRA",
-          "observedAt": "2026-10-03T23:02:12Z",
-          "datumAsOf": "2026-04-16",
-          "location": "R\u00e8glement Article 1, p.28",
-          "excerpt": "La dur\u00e9e du Fonds est de 99 ans \u00e0 compter de sa cr\u00e9ation, sauf dans les cas de dissolution anticip\u00e9e ou de la prorogation pr\u00e9vue au pr\u00e9sent r\u00e8glement.",
-          "assertion": "Fund duration can be extended and is not a nonextendable maximum maturity of its shares; 0\u20136 months is the bond-index mandate."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://assets.backed.fi/products/bc3m",
-        "https://assets.backed.fi/legal-documentation",
-        "https://cdn.prod.website-files.com/655f3efc4be468487052e35a/6a748b81c9b1aca19a11c102_Backed_Assets_Base%20Prospectus_20260727.pdf",
-        "https://backed.fi/news-updates/the-future-is-xstocks-upgrading-btokens",
-        "https://www.amundi.fr/fr_part/dl/doc/prospectus/FR0010754200/FRA/FRA",
-        "https://www.amundietf.it/pdfDocuments/annual-report/FR0010754200/ENG/20250630",
-        "https://eth.blockscout.com/tx/0xed24a874126443f07e7976ea89d84499999346ef574b78d4b2dd3daf9bb84128"
-      ],
-      "rationale": "No finite maximum maturityDaysMax of the fund-share claim is disclosed. This is a fund-share reserve, not individual bills: the 0\u20136 month index mandate is not share maturity. The fund has a 99-year organizational life expressly subject to extension, so neither 180 days nor a conversion of 99 years is a hard share-claim maximum."
     },
     {
       "id": "uw-cngn-compliant-naira-b60ac9ca151ca5d1",
@@ -11229,403 +10538,6 @@
         "https://files.baconcoin.finance/bacon-protocol-full-audit.pdf"
       ],
       "rationale": "No dated recurring reconciliation of all HOME liabilities/mint-burn movements against current USDC, outstanding loan balances and enforceable lien backing is disclosed in the issuer website, complete docs index/FAQ, whitepaper or Pool16 accounting source. Public lien descriptors and a historical design equality are not this datum. Linked code-audit hosts fail DNS; those failures are not evidence of financial non-disclosure. Preserve unknown, not none."
-    },
-    {
-      "id": "uw-nusd-nexus-61d11e53cf6d122e",
-      "assetId": "nusd-nexus",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:16:52Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R78)",
-      "sources": [
-        {
-          "url": "https://raw.githubusercontent.com/synapsecns/synapse-contracts/master/contracts/amm/Swap.sol",
-          "observedAt": "2026-10-03T23:15:30Z",
-          "datumAsOf": null,
-          "location": "Swap contract description",
-          "excerpt": "Users can burn pool tokens and withdraw their share of token(s).",
-          "assertion": "Native pool accounting explains deposit/share/burn mechanics, not a dated common-clock reconciliation of every satellite representation and escrow against backing."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://synapseprotocol.com/",
-        "https://docs.synapseprotocol.com/docs/Bridge/",
-        "https://docs.synapseprotocol.com/docs/Contracts/Liquidity-Pools",
-        "https://docs.synapseprotocol.com/docs/Contracts/Intermediate-Tokens",
-        "https://docs.synapseprotocol.com/docs/Contracts/SynapseBridge",
-        "https://raw.githubusercontent.com/synapsecns/synapse-contracts/master/contracts/amm/Swap.sol",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x6c8c6e68604e78b549c96907bfe9ebdaac04e3b3"
-      ],
-      "rationale": "No dated whole-NUSD liability/backing reconciliation procedure and cadence spanning native LP supply, bridge escrows and all satellite representations was disclosed. Native LP invariant/accounting and public deployment lists do not establish that common-clock whole-supply reconciliation."
-    },
-    {
-      "id": "uw-nusd-nexus-4e4ecfee88801915",
-      "assetId": "nusd-nexus",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:3c97cdfc8418680ef82108de",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:16:52Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R78)",
-      "sources": [
-        {
-          "url": "https://raw.githubusercontent.com/synapsecns/synapse-contracts/master/contracts/amm/Swap.sol",
-          "observedAt": "2026-10-03T23:15:30Z",
-          "datumAsOf": null,
-          "location": "Swap contract emergency/withdrawal documentation",
-          "excerpt": "Users can always withdraw their tokens via multi-asset withdraws.",
-          "assertion": "Pro-rata asset withdrawal is disclosed, but no bound for realizing the entire DAI, USDC or USDT pool position at final USD value."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://synapseprotocol.com/",
-        "https://docs.synapseprotocol.com/docs/Contracts/Liquidity-Pools",
-        "https://docs.synapseprotocol.com/docs/Bridge/",
-        "https://raw.githubusercontent.com/synapsecns/synapse-contracts/master/contracts/amm/Swap.sol",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x5a5fff6f753d7c11a56a52fe47a177a87e431655"
-      ],
-      "rationale": "The exact DAI/USDC/USDT position-wide liquidityHorizon is not published. Pool pro-rata redemption and token transferability establish mechanics, not whole-position realizability at a known value; single-asset exits can be paused and satellite escrow scope is separate. No scalar horizon is inferred."
-    },
-    {
-      "id": "uw-nusd-nexus-bb16f599840ee130",
-      "assetId": "nusd-nexus",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:7c34054d5323f1adbc700d54",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:16:52Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R78)",
-      "sources": [
-        {
-          "url": "https://raw.githubusercontent.com/synapsecns/synapse-contracts/master/contracts/amm/Swap.sol",
-          "observedAt": "2026-10-03T23:15:30Z",
-          "datumAsOf": null,
-          "location": "Swap contract emergency/withdrawal documentation",
-          "excerpt": "Users can always withdraw their tokens via multi-asset withdraws.",
-          "assertion": "Pro-rata asset withdrawal is disclosed, but no bound for realizing the entire DAI, USDC or USDT pool position at final USD value."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://synapseprotocol.com/",
-        "https://docs.synapseprotocol.com/docs/Contracts/Liquidity-Pools",
-        "https://docs.synapseprotocol.com/docs/Bridge/",
-        "https://raw.githubusercontent.com/synapsecns/synapse-contracts/master/contracts/amm/Swap.sol",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x5a5fff6f753d7c11a56a52fe47a177a87e431655"
-      ],
-      "rationale": "The exact DAI/USDC/USDT position-wide liquidityHorizon is not published. Pool pro-rata redemption and token transferability establish mechanics, not whole-position realizability at a known value; single-asset exits can be paused and satellite escrow scope is separate. No scalar horizon is inferred."
-    },
-    {
-      "id": "uw-nusd-nexus-853f24b15bf3e1c7",
-      "assetId": "nusd-nexus",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:81c957a7cb8150d40ea55f7a",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:16:52Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R78)",
-      "sources": [
-        {
-          "url": "https://raw.githubusercontent.com/synapsecns/synapse-contracts/master/contracts/amm/Swap.sol",
-          "observedAt": "2026-10-03T23:15:30Z",
-          "datumAsOf": null,
-          "location": "Swap contract emergency/withdrawal documentation",
-          "excerpt": "Users can always withdraw their tokens via multi-asset withdraws.",
-          "assertion": "Pro-rata asset withdrawal is disclosed, but no bound for realizing the entire DAI, USDC or USDT pool position at final USD value."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://synapseprotocol.com/",
-        "https://docs.synapseprotocol.com/docs/Contracts/Liquidity-Pools",
-        "https://docs.synapseprotocol.com/docs/Bridge/",
-        "https://raw.githubusercontent.com/synapsecns/synapse-contracts/master/contracts/amm/Swap.sol",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x5a5fff6f753d7c11a56a52fe47a177a87e431655"
-      ],
-      "rationale": "The exact DAI/USDC/USDT position-wide liquidityHorizon is not published. Pool pro-rata redemption and token transferability establish mechanics, not whole-position realizability at a known value; single-asset exits can be paused and satellite escrow scope is separate. No scalar horizon is inferred."
-    },
-    {
-      "id": "uw-honey-berachain-a22e95431963923c",
-      "assetId": "honey-berachain",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:3f465e83e9281db09ed54264",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:16:52Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R78)",
-      "sources": [
-        {
-          "url": "https://docs.berachain.com/general/tokens/busd.md",
-          "observedAt": "2026-10-03T23:06:34Z",
-          "datumAsOf": null,
-          "location": "Using and minting BUSD",
-          "excerpt": "Minting and redemption rates are configurable per collateral asset by governance.",
-          "assertion": "Protocol discloses variable collateral redemption mechanics, not an unconditional position-wide liquidity horizon for held bridged BYUSD or USDt0."
-        },
-        {
-          "url": "https://raw.githubusercontent.com/berachain/contracts/main/src/honey/CollateralVault.sol",
-          "observedAt": "2026-10-03T23:14:00Z",
-          "datumAsOf": null,
-          "location": "CustodyInfo struct",
-          "excerpt": "bool isCustodyVault;",
-          "assertion": "Vaults support external custody and pausing; contract mechanics do not promise a final USD realization maximum for the entire bridged positions."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://busd.berachain.com/",
-        "https://docs.berachain.com/general/tokens/busd",
-        "https://docs.berachain.com/build/getting-started/deployed-contracts.md",
-        "https://raw.githubusercontent.com/berachain/contracts/main/src/honey/CollateralVault.sol",
-        "https://raw.githubusercontent.com/berachain/contracts/main/src/honey/HoneyFactory.sol",
-        "https://raw.githubusercontent.com/berachain/contracts/main/src/honey/VaultAdmin.sol",
-        "https://docs.usdt0.to/",
-        "https://www.paypal.com/us/legalhub/paypal/cryptocurrencies-tnc"
-      ],
-      "rationale": "No scoped, guaranteed whole-position liquidityHorizon for Berachain-held BYUSD or USDt0 is disclosed. Collateral-vault withdrawal, basket redemption and bridge burn/unlock mechanics do not bound complete USD realization of these bridged positions; no parent-token SLA is copied to the bridge claim."
-    },
-    {
-      "id": "uw-honey-berachain-a0ae8e5d19f5f47b",
-      "assetId": "honey-berachain",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:892021ff82db5cf513acf3f1",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:16:52Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R78)",
-      "sources": [
-        {
-          "url": "https://docs.berachain.com/general/tokens/busd.md",
-          "observedAt": "2026-10-03T23:06:34Z",
-          "datumAsOf": null,
-          "location": "Using and minting BUSD",
-          "excerpt": "Minting and redemption rates are configurable per collateral asset by governance.",
-          "assertion": "Protocol discloses variable collateral redemption mechanics, not an unconditional position-wide liquidity horizon for held bridged BYUSD or USDt0."
-        },
-        {
-          "url": "https://raw.githubusercontent.com/berachain/contracts/main/src/honey/CollateralVault.sol",
-          "observedAt": "2026-10-03T23:14:00Z",
-          "datumAsOf": null,
-          "location": "CustodyInfo struct",
-          "excerpt": "bool isCustodyVault;",
-          "assertion": "Vaults support external custody and pausing; contract mechanics do not promise a final USD realization maximum for the entire bridged positions."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://busd.berachain.com/",
-        "https://docs.berachain.com/general/tokens/busd",
-        "https://docs.berachain.com/build/getting-started/deployed-contracts.md",
-        "https://raw.githubusercontent.com/berachain/contracts/main/src/honey/CollateralVault.sol",
-        "https://raw.githubusercontent.com/berachain/contracts/main/src/honey/HoneyFactory.sol",
-        "https://raw.githubusercontent.com/berachain/contracts/main/src/honey/VaultAdmin.sol",
-        "https://docs.usdt0.to/",
-        "https://www.paypal.com/us/legalhub/paypal/cryptocurrencies-tnc"
-      ],
-      "rationale": "No scoped, guaranteed whole-position liquidityHorizon for Berachain-held BYUSD or USDt0 is disclosed. Collateral-vault withdrawal, basket redemption and bridge burn/unlock mechanics do not bound complete USD realization of these bridged positions; no parent-token SLA is copied to the bridge claim."
-    },
-    {
-      "id": "uw-usdm-moneta-6df9131af4f4dc9b",
-      "assetId": "usdm-moneta",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdm-moneta:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:17:21Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R78)",
-      "sources": [
-        {
-          "url": "https://moneta.global/terms-of-service.pdf",
-          "observedAt": "2026-10-03T23:04:31Z",
-          "datumAsOf": "2026-07-22",
-          "location": "Section 17 disclaimer of warranties",
-          "excerpt": "Moneta makes no representations or warranties regarding the amount of time needed to \ncomplete processing",
-          "assertion": "Governing terms expressly disclaim a completion-time warranty, so no final spendable-USD maximum is established."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://moneta.global/",
-        "https://moneta.global/resources/faq/",
-        "https://moneta.global/terms-of-service/",
-        "https://moneta.global/terms-of-service.pdf",
-        "https://moneta.global/USDM%20Lite%20Paper.pdf",
-        "https://nbx.com/en/usdm-terms"
-      ],
-      "rationale": "No end-to-end maximum for redemption to final spendable bank USD is disclosed. Moneta terms disclaim processing completion time; litepaper gives compliance/cutoffs rather than a maximum. NBX processing cannot substitute for Moneta-attributed claims, which require prior settled Moneta funds."
-    },
-    {
-      "id": "uw-usdm-moneta-102e99ff7fb6de96",
-      "assetId": "usdm-moneta",
-      "scope": {
-        "componentKey": "reserve-composition",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "backing",
-        "requiredDatum": "reserve-composition",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:17:21Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R78)",
-      "sources": [
-        {
-          "url": "https://moneta.global/transparency/",
-          "observedAt": "2026-10-03T23:06:34Z",
-          "datumAsOf": null,
-          "location": "Reserve Composition",
-          "excerpt": "US Government Money Market Funds",
-          "assertion": "Current transparency shows reserve categories and aggregate balance, but not dated category weights or both separate issuer books and common liability denominator."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://moneta.global/",
-        "https://moneta.global/transparency/",
-        "https://moneta.global/learn/usdm-reserve-architecture/",
-        "https://moneta.global/USDM%20Lite%20Paper.pdf",
-        "https://moneta.global/terms-of-service.pdf",
-        "https://nbx.com/en/usdm",
-        "https://cdn.prod.website-files.com/6152dfaed2ce58d94ef37b88/6ab4e90ceb46558d48fc093a_USDM%20White%20Paper%20-%20Modified%20version%202026-09-24.pdf"
-      ],
-      "rationale": "No current whole-asset reserve composition with measured category/provider allocations across the separate Moneta and NBX books is disclosed. Aggregate daily reserve balances and historical 80/20 allocation do not establish a same-date combined-token composition; NBX explicitly excludes cross-backing."
-    },
-    {
-      "id": "uw-usdm-moneta-af3c32783e1c964b",
-      "assetId": "usdm-moneta",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdm-moneta:offchain-issuer"
-      },
-      "cause": "B",
-      "assertion": "required-data-public",
-      "reviewedAt": "2026-10-03T23:17:21Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R78)",
-      "sources": [
-        {
-          "url": "https://moneta.global/resources/faq/",
-          "observedAt": "2026-10-03T23:06:22Z",
-          "datumAsOf": null,
-          "location": "FAQ structured acceptedAnswer, Are there mint/burn fees?",
-          "excerpt": "Burning: 0.1% fee ($50 minimum, capped at $5,000). Includes Cardano network fees.",
-          "assertion": "Exact route fee formula is public but the cost schema lacks maxFeeUsd and current route does not evaluate this capped minimum formula at each notional; bank charges remain separate."
-        }
-      ]
-    },
-    {
-      "id": "uw-jpyc-jpyc-e8142c370add207d",
-      "assetId": "jpyc-jpyc",
-      "scope": {
-        "componentKey": "reserve-composition",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "backing",
-        "requiredDatum": "reserve-composition",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:17:46Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R78)",
-      "sources": [
-        {
-          "url": "https://corporate.jpyc.co.jp/news/posts/jpyc-ex-launch",
-          "observedAt": "2026-10-03T23:15:15Z",
-          "datumAsOf": "2025-10-24",
-          "location": "JPYC features / reserve backing",
-          "excerpt": "\u767a\u884c\u4fa1\u5024\u306e\u88cf\u4ed8\u3051\u8cc7\u7523\u306f\u3001\u65e5\u672c\u5186\uff08\u9810\u8caf\u91d1\u304a\u3088\u3073\u56fd\u50b5\uff09\u306b\u3088\u3063\u3066\u767a\u884c\u6b8b\u9ad8\u306e100%\u4ee5\u4e0a\u3092\u4fdd\u5168",
-          "assertion": "Issuer discloses deposits/JGB basket and 100%+ backing, not current measured category weights or dated whole-reserve holdings."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://jpyc.co.jp/",
-        "https://corporate.jpyc.co.jp/news/posts/jpyc-ex-launch",
-        "https://jpyc.co.jp/legal/pre-contract-disclosure.pdf",
-        "https://jpyc.co.jp/legal/terms.pdf",
-        "https://corporate.jpyc.co.jp/terms/financialreporting",
-        "https://corporate.jpyc.co.jp/news",
-        "https://assets.jpyc.co.jp/ir/Financial-results/kessan-3.pdf"
-      ],
-      "rationale": "No dated current reserve composition with measured deposit/JGB weights and complete holdings is published. Launch discloses only a 100%+ deposit/JGB envelope; statutory safeguarding names trust/guarantee counterparties but not allocation. Historical 2022 corporate accounts are not the 2025 regulated token reserve book."
-    },
-    {
-      "id": "uw-jpyc-jpyc-b6759a3434a262b3",
-      "assetId": "jpyc-jpyc",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:17:46Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R78)",
-      "sources": [
-        {
-          "url": "https://jpyc.co.jp/legal/pre-contract-disclosure.pdf",
-          "observedAt": "2026-10-03T23:04:52Z",
-          "datumAsOf": null,
-          "location": "Section 2.2 statutory safeguarding",
-          "excerpt": "\u5229\u7528\u8005\u304b\u3089\u53d7\u3051\u5165\u308c\u305f\u8cc7\u91d1\u3092\u672a\u9054\u50b5\u52d9\u3068\u3057\u3066\u6bce\u9031\u91d1\u66dc\u65e5\n\u304b\u3089\u7fcc\u6728\u66dc\u65e5\u307e\u3067\u306e1\u9031\u9593\u306e\u671f\u9593\u306b\u304a\u3044\u3066\u7b97\u5b9a\u3057",
-          "assertion": "Weekly safeguarding debt calculation is disclosed; it does not provide a dated performed all-chain token-supply versus reserve reconciliation procedure/report."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://jpyc.co.jp/",
-        "https://corporate.jpyc.co.jp/news/posts/jpyc-ex-launch",
-        "https://jpyc.co.jp/legal/pre-contract-disclosure.pdf",
-        "https://jpyc.co.jp/legal/terms.pdf",
-        "https://corporate.jpyc.co.jp/terms/financialreporting",
-        "https://corporate.jpyc.co.jp/news",
-        "https://assets.jpyc.co.jp/ir/Financial-results/kessan-3.pdf"
-      ],
-      "rationale": "No dated performed whole-JPYC supply-to-reserve reconciliation procedure and cadence covering every native-chain liability, mint/burn and backing at one clock is disclosed. Weekly statutory maximum-undelivered-debt safeguarding and customer history are not a public common-clock token/reserve reconciliation; the homepage says reserve publication is planned."
     },
     {
       "id": "uw-gbpa-agant-0013c532d5a15e5c",
@@ -17539,395 +16451,6 @@
         "https://research.m0.org/research/expanding-available-collateral-structures-for-minters"
       ],
       "rationale": "No current whole-slice maximum liquidity horizon for the aggregate M0 eligible-collateral position is published on the searched surfaces. Historical T+1 minter redemption is not an all-minter/full-position guarantee. Wrapper code adds facility, pause and freeze conditions; atomic unwrap to M is not unrestricted realization at known USD value. No immediate/one-day bound is inferred."
-    },
-    {
-      "id": "uw-usdf-astherus-48ff6349cb8f32be",
-      "assetId": "usdf-astherus",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:54:57Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R51)",
-      "sources": [
-        {
-          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works.md",
-          "observedAt": "2026-10-03T22:54:08Z",
-          "datumAsOf": null,
-          "location": "Capital flow steps 2-4",
-          "excerpt": "The USDT is transferred to a Ceffu wallet, a custodial solution that securely holds the funds on behalf of Aster.",
-          "assertion": "Describes custodial capital flow, not a common-clock whole-supply-to-reserves reconciliation."
-        },
-        {
-          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
-          "observedAt": "2026-10-03T22:54:08Z",
-          "datumAsOf": null,
-          "location": "Audit and custodial partner risk",
-          "excerpt": "All smart contracts are audited by reputable security firms, and Aster maintains a robust risk monitoring system.",
-          "assertion": "Security audits and Ceffu SOC reports do not establish financial liability reconciliation."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.asterdex.com/en/usdf",
-        "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works.md",
-        "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
-        "https://docs.asterdex.com/usdf-stablecoin/overview/faqs.md",
-        "https://docs.asterdex.com/resources/terms-and-conditions.md",
-        "https://docs.asterdex.com/overview/smart-contracts.md",
-        "https://docs.asterdex.com/overview/audit-reports.md",
-        "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/USDFEarn.sol",
-        "https://docs.asterdex.com/usdf-stablecoin/overview/usdf-and-the-stablecoin-landscape.md"
-      ],
-      "rationale": "USDF docs, financial/transparency searches, legal terms, audit index and canonical mint source disclose deposit accounting, weekly yield and custodian security but no dated whole-supply on/off-chain liabilities versus Ceffu/Binance backing reconciliation procedure or cadence. Internal deposit equality and risk monitoring are not that datum."
-    },
-    {
-      "id": "uw-usdf-astherus-33a3b80ee3dfd05d",
-      "assetId": "usdf-astherus",
-      "scope": {
-        "componentKey": "economic-control:oracle",
-        "exposureId": null,
-        "factorKey": "tier",
-        "pillar": "control",
-        "requiredDatum": "tier",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:54:57Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R51)",
-      "sources": [
-        {
-          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works.md",
-          "observedAt": "2026-10-03T22:54:08Z",
-          "datumAsOf": null,
-          "location": "Delta-neutral strategy",
-          "excerpt": "Funds deposited into Binance are used to simultaneously buy spot (long) and short perpetual positions on a specific asset like Bitcoin (BTC) or Ether (ETH)",
-          "assertion": "Backing is offchain price-sensitive; no complete exact reserve valuation/feed/fallback topology disclosed."
-        },
-        {
-          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
-          "observedAt": "2026-10-03T22:54:08Z",
-          "datumAsOf": null,
-          "location": "Liquidation risk",
-          "excerpt": "The Aster account on Ceffu regularly monitors positions and frequently settles profit/loss to keep liquidation risk minimal.",
-          "assertion": "Monitoring does not identify reserve valuation source, governance or failure topology."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.asterdex.com/en/usdf",
-        "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works.md",
-        "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
-        "https://docs.asterdex.com/usdf-stablecoin/overview/faqs.md",
-        "https://docs.asterdex.com/resources/terms-and-conditions.md",
-        "https://docs.asterdex.com/overview/smart-contracts.md",
-        "https://docs.asterdex.com/overview/audit-reports.md",
-        "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/USDFEarn.sol",
-        "https://docs.asterdex.com/usdf-stablecoin/overview/usdf-and-the-stablecoin-landscape.md",
-        "https://docs.asterdex.com/astherusex-orderbook-perp-guide/mark-price-oracle"
-      ],
-      "rationale": "USDF reserve pricing/rebalancing oracle tier is not disclosed: issuer describes offchain hedging and P/L monitoring but not the exact USDF valuation/feed/controller/fallback inventory. Aster perp-trading mark-price docs describe a different product and cannot establish the Binance strategy account topology. Retain opaque tier; no oracleless exemption."
-    },
-    {
-      "id": "uw-usdf-astherus-48ac8d31e0a17263",
-      "assetId": "usdf-astherus",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:105e1a00e54703a4d2b907fd",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:54:57Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R51)",
-      "sources": [
-        {
-          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
-          "observedAt": "2026-10-03T22:54:08Z",
-          "datumAsOf": null,
-          "location": "MirrorX operation",
-          "excerpt": "Withdrawals settle on T+1 basis",
-          "assertion": "Ceffu withdrawal settlement alone is not realization of the entire long/short reserve book."
-        },
-        {
-          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/faqs.md",
-          "observedAt": "2026-10-03T22:54:08Z",
-          "datumAsOf": null,
-          "location": "Redeem on Aster",
-          "excerpt": "Processing takes 1-2 days for standard amounts, up to 7 days for large amounts",
-          "assertion": "Holder request processing does not disclose per-position liquidation horizon for the whole reserve slice."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.asterdex.com/en/usdf",
-        "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works.md",
-        "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
-        "https://docs.asterdex.com/usdf-stablecoin/overview/faqs.md",
-        "https://docs.asterdex.com/resources/terms-and-conditions.md",
-        "https://docs.asterdex.com/overview/smart-contracts.md",
-        "https://docs.asterdex.com/overview/audit-reports.md",
-        "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/USDFEarn.sol",
-        "https://docs.asterdex.com/usdf-stablecoin/overview/usdf-and-the-stablecoin-landscape.md"
-      ],
-      "rationale": "The whole USDT-funded spot/short strategy slice has no published complete realization bound. MirrorX T+1 withdrawal settlement and token redemption processing times do not establish liquidation/unwind of every spot and futures position, funding/margin obligations and final available proceeds. No per-slice maximum was located."
-    },
-    {
-      "id": "uw-usdf-astherus-bcc0f158c5be60b2",
-      "assetId": "usdf-astherus",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdf-astherus:stablecoin-redeem"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:54:57Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R51)",
-      "sources": [
-        {
-          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/faqs.md",
-          "observedAt": "2026-10-03T22:54:08Z",
-          "datumAsOf": null,
-          "location": "Redeem on Aster",
-          "excerpt": "Processing takes 1-2 days for standard amounts, up to 7 days for large amounts",
-          "assertion": "Publishes processing guidance, followed by a separate claim step, not guaranteed end-to-end completion."
-        },
-        {
-          "url": "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/libraries/Withdrawable.sol",
-          "observedAt": "2026-10-03T22:54:08Z",
-          "datumAsOf": null,
-          "location": "_claimWithdraw",
-          "excerpt": "require(requestWithdrawInfo.receiveAmount > 0 && requestWithdrawInfo.claimable, \"not available\");",
-          "assertion": "Claim requires privileged distribution; elapsed time does not force claimability."
-        },
-        {
-          "url": "https://docs.asterdex.com/resources/terms-and-conditions.md",
-          "observedAt": "2026-10-03T22:54:08Z",
-          "datumAsOf": "2026-02-25",
-          "location": "Services 3.1(c)",
-          "excerpt": "The specific features and functionalities of our Services are described on our Platform, but they do not constitute a guarantee of availability or performance.",
-          "assertion": "Terms do not guarantee FAQ processing times."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.asterdex.com/en/usdf",
-        "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works.md",
-        "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
-        "https://docs.asterdex.com/usdf-stablecoin/overview/faqs.md",
-        "https://docs.asterdex.com/resources/terms-and-conditions.md",
-        "https://docs.asterdex.com/overview/smart-contracts.md",
-        "https://docs.asterdex.com/overview/audit-reports.md",
-        "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/USDFEarn.sol",
-        "https://docs.asterdex.com/usdf-stablecoin/overview/usdf-and-the-stablecoin-landscape.md",
-        "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/libraries/Withdrawable.sol"
-      ],
-      "rationale": "No unconditional maximum from accepted request through claimable USDT is disclosed. FAQ gives 1-2/up-to-7-day processing guidance; canonical withdrawal library requires a bot-controlled claimable flag without a forced deadline, and legal terms disclaim availability/performance guarantees. Do not convert this processing target to a guaranteed settlement SLA."
-    },
-    {
-      "id": "uw-asusdf-astherus-c2b1d13d22fa809a",
-      "assetId": "asusdf-astherus",
-      "scope": {
-        "componentKey": "wrapper-local",
-        "exposureId": null,
-        "factorKey": "custodyEscrow",
-        "pillar": "backing",
-        "requiredDatum": "custodyEscrow",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:54:57Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R51)",
-      "sources": [
-        {
-          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
-          "observedAt": "2026-10-03T22:54:08Z",
-          "datumAsOf": null,
-          "location": "Custody introduction",
-          "excerpt": "Aster partners with Ceffu for the custody of USDF and underlying USDT funds, and to prepare funds for yield strategy execution on behalf of asUSDF holders.",
-          "assertion": "Names upstream custody; does not publish the asUSDF holder-specific escrow/legal segregation regime."
-        },
-        {
-          "url": "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/asUSDFEarn.sol",
-          "observedAt": "2026-10-03T22:54:08Z",
-          "datumAsOf": null,
-          "location": "Deposit transfer",
-          "excerpt": "token.safeTransferFrom(from, address(this), amount);",
-          "assertion": "Local USDF balance custody is visible in code; legal segregation and beneficial ownership rights are not established by a balance."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.asterdex.com/en/usdf",
-        "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works.md",
-        "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
-        "https://docs.asterdex.com/usdf-stablecoin/overview/faqs.md",
-        "https://docs.asterdex.com/resources/terms-and-conditions.md",
-        "https://docs.asterdex.com/overview/smart-contracts.md",
-        "https://docs.asterdex.com/overview/audit-reports.md",
-        "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/USDFEarn.sol",
-        "https://docs.asterdex.com/usdf-stablecoin/overview/usdf-and-the-stablecoin-landscape.md",
-        "https://docs.asterdex.com/earn/overview/mint-asusdf.md",
-        "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/asUSDFEarn.sol",
-        "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/libraries/Withdrawable.sol",
-        "https://www.ceffu.com/"
-      ],
-      "rationale": "Exact asUSDF custodyEscrow remains incomplete because no holder-specific segregation/escrow entitlement and insolvency-rights terms were published in issuer product/legal/audit surfaces or Ceffu custody descriptions. Local deposits enter asUSDFEarn and withdrawals move to a vault; public code does not establish legal ring-fencing. Do not infer parent custody protection or zero unknown exposure."
-    },
-    {
-      "id": "uw-dgld-gold-token-sa-12ac892f0aa7275a",
-      "assetId": "dgld-gold-token-sa",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:physical-to-usd:dgld-gold-token-sa"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:54:57Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R51)",
-      "sources": [
-        {
-          "url": "https://dgld.ch/docs/terms",
-          "observedAt": "2026-10-03T22:54:57Z",
-          "datumAsOf": null,
-          "location": "Section 8.1 Delivery discretion",
-          "excerpt": "GTSA may refuse, suspend or postpone a Delivery where required by applicable law",
-          "assertion": "Physical delivery may be delayed; no end-to-end maximum is supplied."
-        },
-        {
-          "url": "https://dgld.ch/news/dgld-complete-step-by-step-guide-november-2025",
-          "observedAt": "2026-10-03T22:54:57Z",
-          "datumAsOf": "2025-11-19",
-          "location": "Shipping details",
-          "excerpt": "Europe: 3\u20137 business days, insured post",
-          "assertion": "Shipping leg estimate excludes quoting/KYC, acceptance, gold sale and final bank proceeds."
-        },
-        {
-          "url": "https://files.dgld.ch/dgld-white-paper.pdf",
-          "observedAt": "2026-10-03T22:54:57Z",
-          "datumAsOf": "2026-09-01",
-          "location": "Part I.1 Market volatility",
-          "excerpt": "Neither the Issuer nor any other person is under an obligation to purchase or sell DGLD, provide liquidity, intervene in the secondary market, or otherwise support the price of the DGLD.",
-          "assertion": "Physical co-ownership/delivery is not guaranteed cash settlement."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://dgld.ch/docs/terms",
-        "https://dgld.ch/news/dgld-complete-step-by-step-guide-november-2025",
-        "https://dgld.ch/about-faq",
-        "https://dgld.ch/news/dgld-update",
-        "https://files.dgld.ch/dgld-white-paper.pdf",
-        "https://dgld.ch/audits"
-      ],
-      "rationale": "Neither direct issuer physical delivery nor the composed physical-to-USD route has a published complete maximum. Governing terms permit suspension/postponement, guide provides only Europe shipping 3-7 business days after earlier quote/KYC/payment, and no bounded gold sale-to-spendable-USD endpoint is disclosed. Do not reinterpret shipping estimates as full SLA."
-    },
-    {
-      "id": "uw-dgld-gold-token-sa-108b3e6066f20ead",
-      "assetId": "dgld-gold-token-sa",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:dgld-gold-token-sa:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:54:57Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R51)",
-      "sources": [
-        {
-          "url": "https://dgld.ch/docs/terms",
-          "observedAt": "2026-10-03T22:54:57Z",
-          "datumAsOf": null,
-          "location": "Section 8.1 Delivery discretion",
-          "excerpt": "GTSA may refuse, suspend or postpone a Delivery where required by applicable law",
-          "assertion": "Physical delivery may be delayed; no end-to-end maximum is supplied."
-        },
-        {
-          "url": "https://dgld.ch/news/dgld-complete-step-by-step-guide-november-2025",
-          "observedAt": "2026-10-03T22:54:57Z",
-          "datumAsOf": "2025-11-19",
-          "location": "Shipping details",
-          "excerpt": "Europe: 3\u20137 business days, insured post",
-          "assertion": "Shipping leg estimate excludes quoting/KYC, acceptance, gold sale and final bank proceeds."
-        },
-        {
-          "url": "https://files.dgld.ch/dgld-white-paper.pdf",
-          "observedAt": "2026-10-03T22:54:57Z",
-          "datumAsOf": "2026-09-01",
-          "location": "Part I.1 Market volatility",
-          "excerpt": "Neither the Issuer nor any other person is under an obligation to purchase or sell DGLD, provide liquidity, intervene in the secondary market, or otherwise support the price of the DGLD.",
-          "assertion": "Physical co-ownership/delivery is not guaranteed cash settlement."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://dgld.ch/docs/terms",
-        "https://dgld.ch/news/dgld-complete-step-by-step-guide-november-2025",
-        "https://dgld.ch/about-faq",
-        "https://dgld.ch/news/dgld-update",
-        "https://files.dgld.ch/dgld-white-paper.pdf",
-        "https://dgld.ch/audits"
-      ],
-      "rationale": "Neither direct issuer physical delivery nor the composed physical-to-USD route has a published complete maximum. Governing terms permit suspension/postponement, guide provides only Europe shipping 3-7 business days after earlier quote/KYC/payment, and no bounded gold sale-to-spendable-USD endpoint is disclosed. Do not reinterpret shipping estimates as full SLA."
-    },
-    {
-      "id": "uw-axcnh-anchorx-56ec18d10e20f9d1",
-      "assetId": "axcnh-anchorx",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:axcnh-anchorx:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:54:57Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R51)",
-      "sources": [
-        {
-          "url": "https://www.anchorx.org/terms",
-          "observedAt": "2026-10-03T22:54:57Z",
-          "datumAsOf": null,
-          "location": "Fees and Taxes",
-          "excerpt": "The Company reserves the right to implement fees for certain Services.",
-          "assertion": "No numeric/formula AxCNH fiat-redemption fee schedule is provided."
-        },
-        {
-          "url": "https://www.anchorx.org/",
-          "observedAt": "2026-10-03T22:54:57Z",
-          "datumAsOf": null,
-          "location": "Stable & Reliable",
-          "excerpt": "AxCNH is pegged 1:1 with CNH and always available for 1:1 CNH redemption",
-          "assertion": "Par denomination does not establish zero redemption or banking fees."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.anchorx.org/",
-        "https://www.anchorx.org/terms",
-        "https://www.anchorx.org/risk",
-        "https://www.anchorx.org/about-us",
-        "https://www.anchorx.org/transparency",
-        "https://onlineportal.anchorx.org/login"
-      ],
-      "rationale": "Public issuer homepage, rendered legal terms, risk/about pages and transparency archive disclose par redemption and discretionary fees but no AxCNH redemption tariff, applicable percentage/formula, minimum or all-in bank/intermediary charges. Professional-investor portal is login-gated; no public fee schedule located. No inference of zero cost from 1:1 redemption."
     },
     {
       "id": "uw-oned-gennius-a145877ca6d652d9",
@@ -34800,6 +33323,1537 @@
         "https://www.dnb.nl/en/public-register/information-detail/?registerCode=WFTEG&relationNumber=R186418"
       ],
       "rationale": "The admitted August 30 composition exposes five previously masked reserve gaps. Current issuer snapshot, complete USDQ whitepaper, archive, terms, deployments and regulator register do not disclose the unexplained 1% composition, cash-bank identities, deposit/bond maximum maturity days or exact bond-slice realization bound. Do not attribute the 1% to rounding, identify a Tier 1 bank by inference, convert short-term to a numeric cap, or reuse issuer processing/wind-down schedules as a reserve-asset liquidation guarantee."
+    },
+    {
+      "id": "uw-usdb-blast-a341c86e1ac1a806",
+      "assetId": "usdb-blast",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:c935695f82311df07869bad5",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:51:18Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R36)",
+      "sources": [
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xeCDdf748A60E23609c07af6CA3856744B139B911",
+          "observedAt": "2026-10-03T23:51:18Z",
+          "datumAsOf": null,
+          "location": "additional_sources: src/mainnet-bridge/YieldManager.sol, unstake/finalize",
+          "excerpt": "function unstake(uint256 idx, address providerAddress, uint256 amount) external onlyAdmin {",
+          "assertion": "Reserve release requires an admin transaction; neither unstake nor finalize imposes a deadline. Pinned current manager/provider identity confirms this is the relevant path."
+        },
+        {
+          "url": "https://metalayerlabs.mintlify.app/about-blast.md",
+          "observedAt": "2026-10-03T23:51:18Z",
+          "datumAsOf": null,
+          "location": "T-Bill Yield",
+          "excerpt": "USDB can be redeemed for DAI when bridging back to Ethereum.",
+          "assertion": "Discloses DAI backing/redemption, not an unconditional whole-position reserve realization horizon."
+        },
+        {
+          "url": "https://metalayerlabs.mintlify.app/building/bridges/faq.md",
+          "observedAt": "2026-10-03T23:51:18Z",
+          "datumAsOf": null,
+          "location": "Blast to Ethereum",
+          "excerpt": "Transferring from Blast to Ethereum takes approximately 7 days.",
+          "assertion": "Approximate holder bridge processing is not a reserve-position liquidity maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://blast.io/en",
+        "https://blast.io/en/bridge",
+        "https://docs.blast.io/llms.txt",
+        "https://metalayerlabs.mintlify.app/about-blast.md",
+        "https://metalayerlabs.mintlify.app/governance.md",
+        "https://metalayerlabs.mintlify.app/building/bridges/faq.md",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xeCDdf748A60E23609c07af6CA3856744B139B911",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x0733F618118bF420b6b604c969498ecf143681a8",
+        "https://ethereum-rpc.publicnode.com"
+      ],
+      "rationale": "No maximum liquidityHorizon for the entire DSR/DAI yield-manager position is published. Block 26115205 binds the manager to the reviewed implementation and sole DSR provider; availableBalance is zero. DSR exits synchronously when called, but current manager unstake and finalization are admin-gated without forced deadlines. Official mechanism, withdrawal guidance and legal governance bylaws supply no whole-position realization SLA. Neither immediate nor seven-days is justified."
+    },
+    {
+      "id": "uw-fxsave-f-x-protocol-aef6423aa209a73d",
+      "assetId": "fxsave-f-x-protocol",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:fxsave-f-x-protocol:stablecoin-redeem"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T23:02:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
+      "sources": [
+        {
+          "url": "https://fxprotocol.gitbook.io/fx-docs/developers/integrating-fxsave.md",
+          "observedAt": "2026-10-03T23:02:11Z",
+          "datumAsOf": null,
+          "location": "Scenario 2: Redeeming fxUSD",
+          "excerpt": "USDC needs to be swapped into fxUSD via the converter.",
+          "assertion": "Published fxUSD-only route combines mutable instantRedeemFeeRatio with converter execution. Current producer stores a documented formula but cannot evaluate same-notional net fxUSD cost; fixed 100 bps would omit conversion."
+        },
+        {
+          "url": "https://fxprotocol.gitbook.io/fx-docs/f-x-protocol-mechanisms/fees.md",
+          "observedAt": "2026-10-03T23:02:11Z",
+          "datumAsOf": null,
+          "location": "Stability Pool fees",
+          "excerpt": "1%",
+          "assertion": "Published early-exit component is not the complete converter-dependent same-notional cost."
+        }
+      ]
+    },
+    {
+      "id": "uw-fxsave-f-x-protocol-6e98aa6dbec79939",
+      "assetId": "fxsave-f-x-protocol",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:45c8a74a34f217637ae5efe5",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
+      "sources": [
+        {
+          "url": "https://fxprotocol.gitbook.io/fx-docs/developers/integrating-fxsave.md",
+          "observedAt": "2026-10-03T23:02:11Z",
+          "datumAsOf": null,
+          "location": "Method 2, Step 1",
+          "excerpt": "After redeeming, you will receive the corresponding amount of fxSP tokens.",
+          "assertion": "Native redemption returns a pool receipt, not USD. Atomic basket exits and a cooldown exist; no whole strategy-position final-value realization bound is published."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://fxprotocol.gitbook.io/fx-docs/llms.txt",
+        "https://fxprotocol.gitbook.io/fx-docs/f-x-protocol-mechanisms/stability-pool.md",
+        "https://fxprotocol.gitbook.io/fx-docs/guides/how-to-unstake-from-the-stability-pool.md",
+        "https://fxprotocol.gitbook.io/fx-docs/developers/integrating-fxsave.md",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xe4031e271809d20074e4bef1caeefec5f710e8a6",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x9cfefd90d4c8428d4cbac9baaa6d52c6ba7897f9",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xd023aac0e2d46c93d4c6e8e2a449bf2d4687804f"
+      ],
+      "rationale": "The exact whole-slice liquidityHorizon of fxSAVE deployed strategy positions is not disclosed. Documentation and current contracts specify receipt redemption, cooldown and basket conversions, but no all-position realization horizon at a known USD value. The pinned onchain principal census establishes custody, not market conversion or Aave withdrawal capacity."
+    },
+    {
+      "id": "uw-fxusd-f-x-protocol-9a3b142ddcdc37f1",
+      "assetId": "fxusd-f-x-protocol",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:0137717dd14ab3c851abe172",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
+      "sources": [
+        {
+          "url": "https://fxprotocol.gitbook.io/fx-docs/developers/processing-the-rebalances-and-liquidations/long-pool-integration.md",
+          "observedAt": "2026-10-03T23:02:11Z",
+          "datumAsOf": null,
+          "location": "3. CreditNote Received",
+          "excerpt": "If it happens that the long pool does not have enough collateral in the contract",
+          "assertion": "Liquidation can deliver credit notes when collateral is lent to short pools; no full WBTC/wstETH branch realization deadline is stated."
+        },
+        {
+          "url": "https://docs.lido.fi/contracts/withdrawal-queue-erc721/",
+          "observedAt": "2026-10-03T23:02:12Z",
+          "datumAsOf": null,
+          "location": "Finalization",
+          "excerpt": "If there is enough ether to fulfill the request.",
+          "assertion": "Lido withdrawal depends on available ETH and oracle finalization, not an unconditional wstETH whole-position deadline."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://fxprotocol.gitbook.io/fx-docs/llms.txt",
+        "https://fxprotocol.gitbook.io/fx-docs/risk-management/advanced-peg-protection-mechanisms/understanding-the-redemption-mechanism.md",
+        "https://fxprotocol.gitbook.io/fx-docs/developers/processing-the-rebalances-and-liquidations/long-pool-integration.md",
+        "https://fxprotocol.gitbook.io/fx-docs/developers/processing-the-rebalances-and-liquidations/creditnotes.md",
+        "https://wbtc.network/",
+        "https://docs.lido.fi/contracts/withdrawal-queue-erc721/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x9cfefd90d4c8428d4cbac9baaa6d52c6ba7897f9"
+      ],
+      "rationale": "Neither WBTC nor wstETH collateral exposure has a published whole-slice liquidityHorizon. The protocol documents conditional rebalances/liquidations and credit-note substitution. Redemption, underlying market access and Lido queue finalization do not establish a guaranteed realization horizon for the entire scoped branch."
+    },
+    {
+      "id": "uw-fxusd-f-x-protocol-e0e863aac7054d55",
+      "assetId": "fxusd-f-x-protocol",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:67b0ca334fe4dd4b5475cf7d",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
+      "sources": [
+        {
+          "url": "https://fxprotocol.gitbook.io/fx-docs/developers/processing-the-rebalances-and-liquidations/long-pool-integration.md",
+          "observedAt": "2026-10-03T23:02:11Z",
+          "datumAsOf": null,
+          "location": "3. CreditNote Received",
+          "excerpt": "If it happens that the long pool does not have enough collateral in the contract",
+          "assertion": "Liquidation can deliver credit notes when collateral is lent to short pools; no full WBTC/wstETH branch realization deadline is stated."
+        },
+        {
+          "url": "https://docs.lido.fi/contracts/withdrawal-queue-erc721/",
+          "observedAt": "2026-10-03T23:02:12Z",
+          "datumAsOf": null,
+          "location": "Finalization",
+          "excerpt": "If there is enough ether to fulfill the request.",
+          "assertion": "Lido withdrawal depends on available ETH and oracle finalization, not an unconditional wstETH whole-position deadline."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://fxprotocol.gitbook.io/fx-docs/llms.txt",
+        "https://fxprotocol.gitbook.io/fx-docs/risk-management/advanced-peg-protection-mechanisms/understanding-the-redemption-mechanism.md",
+        "https://fxprotocol.gitbook.io/fx-docs/developers/processing-the-rebalances-and-liquidations/long-pool-integration.md",
+        "https://fxprotocol.gitbook.io/fx-docs/developers/processing-the-rebalances-and-liquidations/creditnotes.md",
+        "https://wbtc.network/",
+        "https://docs.lido.fi/contracts/withdrawal-queue-erc721/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x9cfefd90d4c8428d4cbac9baaa6d52c6ba7897f9"
+      ],
+      "rationale": "Neither WBTC nor wstETH collateral exposure has a published whole-slice liquidityHorizon. The protocol documents conditional rebalances/liquidations and credit-note substitution. Redemption, underlying market access and Lido queue finalization do not establish a guaranteed realization horizon for the entire scoped branch."
+    },
+    {
+      "id": "uw-fxd-fathom-ad30a9d40bbf4091",
+      "assetId": "fxd-fathom",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:01ba9e9e0b5953570d4e52f0",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
+      "sources": [
+        {
+          "url": "https://docs.stakexdc.com/docs/liquid-staking/withdrawals",
+          "observedAt": "2026-10-03T23:02:12Z",
+          "datumAsOf": null,
+          "location": "The queue is public \u2014 position, not a date",
+          "excerpt": "No settlement date is shown or promised",
+          "assertion": "psXDC queues depend on funding tranches and masternode unbonding; approximately 35 days is not a promised whole-position horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.fathom.fi/llms.txt",
+        "https://docs.fathom.fi/fxd-stablecoin/deployments/xdc-network.md",
+        "https://docs.fathom.fi/fxd-stablecoin/risk-management.md",
+        "https://docs.fathom.fi/terms-of-service.md",
+        "https://docs.stakexdc.com/docs/liquid-staking/architecture",
+        "https://docs.stakexdc.com/docs/liquid-staking/withdrawals",
+        "https://xdcscan.com/block/107486464"
+      ],
+      "rationale": "No exact full psXDC-collateral slice liquidityHorizon is published. Fathom exposes collateral pools and conditional liquidation; PrimeStaked publishes instant-or-queued withdrawal rules, funding lanes and approximate unbonding, expressly without a settlement date. Neither establishes full scoped FXD collateral realization at a known value."
+    },
+    {
+      "id": "uw-fxd-fathom-9fd17e515d0559f4",
+      "assetId": "fxd-fathom",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:63ca7f2ed31b0df9b4bedb9b",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
+      "sources": [
+        {
+          "url": "https://docs.fathom.fi/terms-of-service.md",
+          "observedAt": "2026-10-03T23:02:11Z",
+          "datumAsOf": "2024-04-09",
+          "location": "8.4 Not Registered with the SEC or Any Other Agency",
+          "excerpt": "we do not (and cannot) guarantee market best pricing or best execution through our Products",
+          "assertion": "Published third-party market execution does not establish the entire WXDC collateral slice realization horizon."
+        },
+        {
+          "url": "https://docs.fathom.fi/fxd-stablecoin/risk-management.md",
+          "observedAt": "2026-10-03T23:02:12Z",
+          "datumAsOf": null,
+          "location": "Liquidation Risks",
+          "excerpt": "Governance decides on the Close Factor value",
+          "assertion": "Conditional partial liquidations do not promise all-position USD availability."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.fathom.fi/introduction.md",
+        "https://docs.fathom.fi/llms.txt",
+        "https://docs.fathom.fi/fxd-stablecoin/deployments/xdc-network.md",
+        "https://docs.fathom.fi/fxd-stablecoin/user-guides/repay-and-close-fxd-position.md",
+        "https://docs.fathom.fi/fxd-stablecoin/risk-management.md",
+        "https://docs.fathom.fi/terms-of-service.md",
+        "https://xdcscan.com/block/107486464"
+      ],
+      "rationale": "No exact whole WXDC collateral pool liquidityHorizon is published in Fathom deployment, repayment, risk, liquidation or legal sources. Onchain unwrap/transfer and borrower debt closure are not a bound for final realization of all FXD backing; the protocol explicitly relies on third-party liquidity and disclaims best execution."
+    },
+    {
+      "id": "uw-fxd-fathom-60af023bdc795070",
+      "assetId": "fxd-fathom",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:90c347f557383f87fc8fa7cf",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
+      "sources": [
+        {
+          "url": "https://comtechgold.com/assets/pdf/Terms_and_Conditions.pdf",
+          "observedAt": "2026-10-03T23:02:12Z",
+          "datumAsOf": "2022-08-23",
+          "location": "8.1 Redemption of Digital Gold to physical gold",
+          "excerpt": "You may instruct the Digitization Entity to convert Digital Gold to physical gold from the Gold Reserves of a minimum quantity of one kilogram",
+          "assertion": "CGO physical redemption has a 1 kg minimum; no guaranteed final USD liquidation or delivery deadline is specified."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.fathom.fi/fxd-stablecoin/deployments/xdc-network.md",
+        "https://docs.fathom.fi/fxd-stablecoin/risk-management.md",
+        "https://docs.fathom.fi/terms-of-service.md",
+        "https://comtechgold.com/assets/pdf/Terms_and_Conditions.pdf",
+        "https://comtechgold.com/assets/pdf/cgo_whitepaper_v1.pdf",
+        "https://xdcscan.com/block/107486464"
+      ],
+      "rationale": "No exact full CGO collateral slice liquidityHorizon is disclosed. Fathom documents conditional liquidation; Comtech terms describe minimum-size gold conversion, identification, delivery and variable charges without a final-delivery or USD settlement bound. Current measured Fathom CGO holding is far below the physical redemption minimum."
+    },
+    {
+      "id": "uw-bc3m-backed-0fe86a7c3cd04e82",
+      "assetId": "bc3m-backed",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:bc3m-backed:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
+      "sources": [
+        {
+          "url": "https://cdn.prod.website-files.com/655f3efc4be468487052e35a/6a748b81c9b1aca19a11c102_Backed_Assets_Base%20Prospectus_20260727.pdf",
+          "observedAt": "2026-10-03T23:02:12Z",
+          "datumAsOf": "2026-07-27",
+          "location": "VI.v.c Settlement, p.115",
+          "excerpt": "Until the fifth Business Day following the receipt of the Investor's Products (i.e. T+5)",
+          "assertion": "T+5 bounds instructions/liquidation steps, not final bank receipt; VIII.ii permits payment postponement without a finite cap."
+        },
+        {
+          "url": "https://cdn.prod.website-files.com/655f3efc4be468487052e35a/6a748b81c9b1aca19a11c102_Backed_Assets_Base%20Prospectus_20260727.pdf",
+          "observedAt": "2026-10-03T23:02:12Z",
+          "datumAsOf": "2026-07-27",
+          "location": "VIII.ii.b Underlying Illiquidity, p.118",
+          "excerpt": "May postpone the determination (fixing) and/or the payment of the relevant Redemption Amount accordingly",
+          "assertion": "No finite calendar-second final-settlement SLA is imposed when collateral is illiquid."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://assets.backed.fi/products/bc3m",
+        "https://assets.backed.fi/legal-documentation",
+        "https://cdn.prod.website-files.com/655f3efc4be468487052e35a/6a748b81c9b1aca19a11c102_Backed_Assets_Base%20Prospectus_20260727.pdf",
+        "https://backed.fi/news-updates/the-future-is-xstocks-upgrading-btokens",
+        "https://www.amundi.fr/fr_part/dl/doc/prospectus/FR0010754200/FRA/FRA",
+        "https://www.amundietf.it/pdfDocuments/annual-report/FR0010754200/ENG/20250630",
+        "https://eth.blockscout.com/tx/0xed24a874126443f07e7976ea89d84499999346ef574b78d4b2dd3daf9bb84128"
+      ],
+      "rationale": "The exact settlementSlaSec for final bC3M redemption proceeds is not disclosed. T+5 business days concerns deactivation, collateral sale, amount calculation and payment instructions; it is not a final-receipt SLA. Underlying-illiquidity terms permit payment postponement for the number of business days the issuer determines necessary. Wind-down notice keeps standard redemption, not a new finite SLA."
+    },
+    {
+      "id": "uw-bc3m-backed-d52d3adf7e9860f3",
+      "assetId": "bc3m-backed",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:5b88ab39ffe7a05d24df56b5",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
+      "sources": [
+        {
+          "url": "https://www.amundi.fr/fr_part/dl/doc/prospectus/FR0010754200/FRA/FRA",
+          "observedAt": "2026-10-03T23:02:12Z",
+          "datumAsOf": "2026-04-16",
+          "location": "R\u00e8glement Article 3, p.29",
+          "excerpt": "le rachat par le Fonds de ses parts, comme l\u2019\u00e9mission de parts nouvelles, peuvent \u00eatre suspendus",
+          "assertion": "Five-day post-valuation settlement can extend to 30 days, and redemptions can also be suspended; no whole-slice unconditional horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://assets.backed.fi/products/bc3m",
+        "https://assets.backed.fi/legal-documentation",
+        "https://cdn.prod.website-files.com/655f3efc4be468487052e35a/6a748b81c9b1aca19a11c102_Backed_Assets_Base%20Prospectus_20260727.pdf",
+        "https://backed.fi/news-updates/the-future-is-xstocks-upgrading-btokens",
+        "https://www.amundi.fr/fr_part/dl/doc/prospectus/FR0010754200/FRA/FRA",
+        "https://www.amundietf.it/pdfDocuments/annual-report/FR0010754200/ENG/20250630",
+        "https://eth.blockscout.com/tx/0xed24a874126443f07e7976ea89d84499999346ef574b78d4b2dd3daf9bb84128"
+      ],
+      "rationale": "No exact whole ETF-share reserve liquidityHorizon is published. Primary orders normally settle J+2, regulations allow five days after valuation and up to 30 days in exceptional asset sales; gates and temporary suspension occur before final payment. These conditional schedules do not bound the entire bC3M backing slice under all admitted restrictions."
+    },
+    {
+      "id": "uw-bc3m-backed-0dac2ca6802cc7d1",
+      "assetId": "bc3m-backed",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:5b88ab39ffe7a05d24df56b5",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
+      "sources": [
+        {
+          "url": "https://www.amundi.fr/fr_part/dl/doc/prospectus/FR0010754200/FRA/FRA",
+          "observedAt": "2026-10-03T23:02:12Z",
+          "datumAsOf": "2026-04-16",
+          "location": "R\u00e8glement Article 1, p.28",
+          "excerpt": "La dur\u00e9e du Fonds est de 99 ans \u00e0 compter de sa cr\u00e9ation, sauf dans les cas de dissolution anticip\u00e9e ou de la prorogation pr\u00e9vue au pr\u00e9sent r\u00e8glement.",
+          "assertion": "Fund duration can be extended and is not a nonextendable maximum maturity of its shares; 0\u20136 months is the bond-index mandate."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://assets.backed.fi/products/bc3m",
+        "https://assets.backed.fi/legal-documentation",
+        "https://cdn.prod.website-files.com/655f3efc4be468487052e35a/6a748b81c9b1aca19a11c102_Backed_Assets_Base%20Prospectus_20260727.pdf",
+        "https://backed.fi/news-updates/the-future-is-xstocks-upgrading-btokens",
+        "https://www.amundi.fr/fr_part/dl/doc/prospectus/FR0010754200/FRA/FRA",
+        "https://www.amundietf.it/pdfDocuments/annual-report/FR0010754200/ENG/20250630",
+        "https://eth.blockscout.com/tx/0xed24a874126443f07e7976ea89d84499999346ef574b78d4b2dd3daf9bb84128"
+      ],
+      "rationale": "No finite maximum maturityDaysMax of the fund-share claim is disclosed. This is a fund-share reserve, not individual bills: the 0\u20136 month index mandate is not share maturity. The fund has a 99-year organizational life expressly subject to extension, so neither 180 days nor a conversion of 99 years is a hard share-claim maximum."
+    },
+    {
+      "id": "uw-usdf-astherus-48ff6349cb8f32be",
+      "assetId": "usdf-astherus",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R51)",
+      "sources": [
+        {
+          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works.md",
+          "observedAt": "2026-10-03T22:54:08Z",
+          "datumAsOf": null,
+          "location": "Capital flow steps 2-4",
+          "excerpt": "The USDT is transferred to a Ceffu wallet, a custodial solution that securely holds the funds on behalf of Aster.",
+          "assertion": "Describes custodial capital flow, not a common-clock whole-supply-to-reserves reconciliation."
+        },
+        {
+          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
+          "observedAt": "2026-10-03T22:54:08Z",
+          "datumAsOf": null,
+          "location": "Audit and custodial partner risk",
+          "excerpt": "All smart contracts are audited by reputable security firms, and Aster maintains a robust risk monitoring system.",
+          "assertion": "Security audits and Ceffu SOC reports do not establish financial liability reconciliation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.asterdex.com/en/usdf",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works.md",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/faqs.md",
+        "https://docs.asterdex.com/resources/terms-and-conditions.md",
+        "https://docs.asterdex.com/overview/smart-contracts.md",
+        "https://docs.asterdex.com/overview/audit-reports.md",
+        "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/USDFEarn.sol",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/usdf-and-the-stablecoin-landscape.md"
+      ],
+      "rationale": "USDF docs, financial/transparency searches, legal terms, audit index and canonical mint source disclose deposit accounting, weekly yield and custodian security but no dated whole-supply on/off-chain liabilities versus Ceffu/Binance backing reconciliation procedure or cadence. Internal deposit equality and risk monitoring are not that datum."
+    },
+    {
+      "id": "uw-usdf-astherus-33a3b80ee3dfd05d",
+      "assetId": "usdf-astherus",
+      "scope": {
+        "componentKey": "economic-control:oracle",
+        "exposureId": null,
+        "factorKey": "tier",
+        "pillar": "control",
+        "requiredDatum": "tier",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R51)",
+      "sources": [
+        {
+          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works.md",
+          "observedAt": "2026-10-03T22:54:08Z",
+          "datumAsOf": null,
+          "location": "Delta-neutral strategy",
+          "excerpt": "Funds deposited into Binance are used to simultaneously buy spot (long) and short perpetual positions on a specific asset like Bitcoin (BTC) or Ether (ETH)",
+          "assertion": "Backing is offchain price-sensitive; no complete exact reserve valuation/feed/fallback topology disclosed."
+        },
+        {
+          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
+          "observedAt": "2026-10-03T22:54:08Z",
+          "datumAsOf": null,
+          "location": "Liquidation risk",
+          "excerpt": "The Aster account on Ceffu regularly monitors positions and frequently settles profit/loss to keep liquidation risk minimal.",
+          "assertion": "Monitoring does not identify reserve valuation source, governance or failure topology."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.asterdex.com/en/usdf",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works.md",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/faqs.md",
+        "https://docs.asterdex.com/resources/terms-and-conditions.md",
+        "https://docs.asterdex.com/overview/smart-contracts.md",
+        "https://docs.asterdex.com/overview/audit-reports.md",
+        "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/USDFEarn.sol",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/usdf-and-the-stablecoin-landscape.md",
+        "https://docs.asterdex.com/astherusex-orderbook-perp-guide/mark-price-oracle"
+      ],
+      "rationale": "USDF reserve pricing/rebalancing oracle tier is not disclosed: issuer describes offchain hedging and P/L monitoring but not the exact USDF valuation/feed/controller/fallback inventory. Aster perp-trading mark-price docs describe a different product and cannot establish the Binance strategy account topology. Retain opaque tier; no oracleless exemption."
+    },
+    {
+      "id": "uw-usdf-astherus-48ac8d31e0a17263",
+      "assetId": "usdf-astherus",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:105e1a00e54703a4d2b907fd",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R51)",
+      "sources": [
+        {
+          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
+          "observedAt": "2026-10-03T22:54:08Z",
+          "datumAsOf": null,
+          "location": "MirrorX operation",
+          "excerpt": "Withdrawals settle on T+1 basis",
+          "assertion": "Ceffu withdrawal settlement alone is not realization of the entire long/short reserve book."
+        },
+        {
+          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/faqs.md",
+          "observedAt": "2026-10-03T22:54:08Z",
+          "datumAsOf": null,
+          "location": "Redeem on Aster",
+          "excerpt": "Processing takes 1-2 days for standard amounts, up to 7 days for large amounts",
+          "assertion": "Holder request processing does not disclose per-position liquidation horizon for the whole reserve slice."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.asterdex.com/en/usdf",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works.md",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/faqs.md",
+        "https://docs.asterdex.com/resources/terms-and-conditions.md",
+        "https://docs.asterdex.com/overview/smart-contracts.md",
+        "https://docs.asterdex.com/overview/audit-reports.md",
+        "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/USDFEarn.sol",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/usdf-and-the-stablecoin-landscape.md"
+      ],
+      "rationale": "The whole USDT-funded spot/short strategy slice has no published complete realization bound. MirrorX T+1 withdrawal settlement and token redemption processing times do not establish liquidation/unwind of every spot and futures position, funding/margin obligations and final available proceeds. No per-slice maximum was located."
+    },
+    {
+      "id": "uw-usdf-astherus-bcc0f158c5be60b2",
+      "assetId": "usdf-astherus",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdf-astherus:stablecoin-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R51)",
+      "sources": [
+        {
+          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/faqs.md",
+          "observedAt": "2026-10-03T22:54:08Z",
+          "datumAsOf": null,
+          "location": "Redeem on Aster",
+          "excerpt": "Processing takes 1-2 days for standard amounts, up to 7 days for large amounts",
+          "assertion": "Publishes processing guidance, followed by a separate claim step, not guaranteed end-to-end completion."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/libraries/Withdrawable.sol",
+          "observedAt": "2026-10-03T22:54:08Z",
+          "datumAsOf": null,
+          "location": "_claimWithdraw",
+          "excerpt": "require(requestWithdrawInfo.receiveAmount > 0 && requestWithdrawInfo.claimable, \"not available\");",
+          "assertion": "Claim requires privileged distribution; elapsed time does not force claimability."
+        },
+        {
+          "url": "https://docs.asterdex.com/resources/terms-and-conditions.md",
+          "observedAt": "2026-10-03T22:54:08Z",
+          "datumAsOf": "2026-02-25",
+          "location": "Services 3.1(c)",
+          "excerpt": "The specific features and functionalities of our Services are described on our Platform, but they do not constitute a guarantee of availability or performance.",
+          "assertion": "Terms do not guarantee FAQ processing times."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.asterdex.com/en/usdf",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works.md",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/faqs.md",
+        "https://docs.asterdex.com/resources/terms-and-conditions.md",
+        "https://docs.asterdex.com/overview/smart-contracts.md",
+        "https://docs.asterdex.com/overview/audit-reports.md",
+        "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/USDFEarn.sol",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/usdf-and-the-stablecoin-landscape.md",
+        "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/libraries/Withdrawable.sol"
+      ],
+      "rationale": "No unconditional maximum from accepted request through claimable USDT is disclosed. FAQ gives 1-2/up-to-7-day processing guidance; canonical withdrawal library requires a bot-controlled claimable flag without a forced deadline, and legal terms disclaim availability/performance guarantees. Do not convert this processing target to a guaranteed settlement SLA."
+    },
+    {
+      "id": "uw-asusdf-astherus-c2b1d13d22fa809a",
+      "assetId": "asusdf-astherus",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "custodyEscrow",
+        "pillar": "backing",
+        "requiredDatum": "custodyEscrow",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R51)",
+      "sources": [
+        {
+          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
+          "observedAt": "2026-10-03T22:54:08Z",
+          "datumAsOf": null,
+          "location": "Custody introduction",
+          "excerpt": "Aster partners with Ceffu for the custody of USDF and underlying USDT funds, and to prepare funds for yield strategy execution on behalf of asUSDF holders.",
+          "assertion": "Names upstream custody; does not publish the asUSDF holder-specific escrow/legal segregation regime."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/asUSDFEarn.sol",
+          "observedAt": "2026-10-03T22:54:08Z",
+          "datumAsOf": null,
+          "location": "Deposit transfer",
+          "excerpt": "token.safeTransferFrom(from, address(this), amount);",
+          "assertion": "Local USDF balance custody is visible in code; legal segregation and beneficial ownership rights are not established by a balance."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.asterdex.com/en/usdf",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works.md",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/faqs.md",
+        "https://docs.asterdex.com/resources/terms-and-conditions.md",
+        "https://docs.asterdex.com/overview/smart-contracts.md",
+        "https://docs.asterdex.com/overview/audit-reports.md",
+        "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/USDFEarn.sol",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/usdf-and-the-stablecoin-landscape.md",
+        "https://docs.asterdex.com/earn/overview/mint-asusdf.md",
+        "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/asUSDFEarn.sol",
+        "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/libraries/Withdrawable.sol",
+        "https://www.ceffu.com/"
+      ],
+      "rationale": "Exact asUSDF custodyEscrow remains incomplete because no holder-specific segregation/escrow entitlement and insolvency-rights terms were published in issuer product/legal/audit surfaces or Ceffu custody descriptions. Local deposits enter asUSDFEarn and withdrawals move to a vault; public code does not establish legal ring-fencing. Do not infer parent custody protection or zero unknown exposure."
+    },
+    {
+      "id": "uw-dgld-gold-token-sa-12ac892f0aa7275a",
+      "assetId": "dgld-gold-token-sa",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:physical-to-usd:dgld-gold-token-sa"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R51)",
+      "sources": [
+        {
+          "url": "https://dgld.ch/docs/terms",
+          "observedAt": "2026-10-03T22:54:57Z",
+          "datumAsOf": null,
+          "location": "Section 8.1 Delivery discretion",
+          "excerpt": "GTSA may refuse, suspend or postpone a Delivery where required by applicable law",
+          "assertion": "Physical delivery may be delayed; no end-to-end maximum is supplied."
+        },
+        {
+          "url": "https://dgld.ch/news/dgld-complete-step-by-step-guide-november-2025",
+          "observedAt": "2026-10-03T22:54:57Z",
+          "datumAsOf": "2025-11-19",
+          "location": "Shipping details",
+          "excerpt": "Europe: 3\u20137 business days, insured post",
+          "assertion": "Shipping leg estimate excludes quoting/KYC, acceptance, gold sale and final bank proceeds."
+        },
+        {
+          "url": "https://files.dgld.ch/dgld-white-paper.pdf",
+          "observedAt": "2026-10-03T22:54:57Z",
+          "datumAsOf": "2026-09-01",
+          "location": "Part I.1 Market volatility",
+          "excerpt": "Neither the Issuer nor any other person is under an obligation to purchase or sell DGLD, provide liquidity, intervene in the secondary market, or otherwise support the price of the DGLD.",
+          "assertion": "Physical co-ownership/delivery is not guaranteed cash settlement."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://dgld.ch/docs/terms",
+        "https://dgld.ch/news/dgld-complete-step-by-step-guide-november-2025",
+        "https://dgld.ch/about-faq",
+        "https://dgld.ch/news/dgld-update",
+        "https://files.dgld.ch/dgld-white-paper.pdf",
+        "https://dgld.ch/audits"
+      ],
+      "rationale": "Neither direct issuer physical delivery nor the composed physical-to-USD route has a published complete maximum. Governing terms permit suspension/postponement, guide provides only Europe shipping 3-7 business days after earlier quote/KYC/payment, and no bounded gold sale-to-spendable-USD endpoint is disclosed. Do not reinterpret shipping estimates as full SLA."
+    },
+    {
+      "id": "uw-dgld-gold-token-sa-108b3e6066f20ead",
+      "assetId": "dgld-gold-token-sa",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:dgld-gold-token-sa:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R51)",
+      "sources": [
+        {
+          "url": "https://dgld.ch/docs/terms",
+          "observedAt": "2026-10-03T22:54:57Z",
+          "datumAsOf": null,
+          "location": "Section 8.1 Delivery discretion",
+          "excerpt": "GTSA may refuse, suspend or postpone a Delivery where required by applicable law",
+          "assertion": "Physical delivery may be delayed; no end-to-end maximum is supplied."
+        },
+        {
+          "url": "https://dgld.ch/news/dgld-complete-step-by-step-guide-november-2025",
+          "observedAt": "2026-10-03T22:54:57Z",
+          "datumAsOf": "2025-11-19",
+          "location": "Shipping details",
+          "excerpt": "Europe: 3\u20137 business days, insured post",
+          "assertion": "Shipping leg estimate excludes quoting/KYC, acceptance, gold sale and final bank proceeds."
+        },
+        {
+          "url": "https://files.dgld.ch/dgld-white-paper.pdf",
+          "observedAt": "2026-10-03T22:54:57Z",
+          "datumAsOf": "2026-09-01",
+          "location": "Part I.1 Market volatility",
+          "excerpt": "Neither the Issuer nor any other person is under an obligation to purchase or sell DGLD, provide liquidity, intervene in the secondary market, or otherwise support the price of the DGLD.",
+          "assertion": "Physical co-ownership/delivery is not guaranteed cash settlement."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://dgld.ch/docs/terms",
+        "https://dgld.ch/news/dgld-complete-step-by-step-guide-november-2025",
+        "https://dgld.ch/about-faq",
+        "https://dgld.ch/news/dgld-update",
+        "https://files.dgld.ch/dgld-white-paper.pdf",
+        "https://dgld.ch/audits"
+      ],
+      "rationale": "Neither direct issuer physical delivery nor the composed physical-to-USD route has a published complete maximum. Governing terms permit suspension/postponement, guide provides only Europe shipping 3-7 business days after earlier quote/KYC/payment, and no bounded gold sale-to-spendable-USD endpoint is disclosed. Do not reinterpret shipping estimates as full SLA."
+    },
+    {
+      "id": "uw-axcnh-anchorx-56ec18d10e20f9d1",
+      "assetId": "axcnh-anchorx",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:axcnh-anchorx:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R51)",
+      "sources": [
+        {
+          "url": "https://www.anchorx.org/terms",
+          "observedAt": "2026-10-03T22:54:57Z",
+          "datumAsOf": null,
+          "location": "Fees and Taxes",
+          "excerpt": "The Company reserves the right to implement fees for certain Services.",
+          "assertion": "No numeric/formula AxCNH fiat-redemption fee schedule is provided."
+        },
+        {
+          "url": "https://www.anchorx.org/",
+          "observedAt": "2026-10-03T22:54:57Z",
+          "datumAsOf": null,
+          "location": "Stable & Reliable",
+          "excerpt": "AxCNH is pegged 1:1 with CNH and always available for 1:1 CNH redemption",
+          "assertion": "Par denomination does not establish zero redemption or banking fees."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.anchorx.org/",
+        "https://www.anchorx.org/terms",
+        "https://www.anchorx.org/risk",
+        "https://www.anchorx.org/about-us",
+        "https://www.anchorx.org/transparency",
+        "https://onlineportal.anchorx.org/login"
+      ],
+      "rationale": "Public issuer homepage, rendered legal terms, risk/about pages and transparency archive disclose par redemption and discretionary fees but no AxCNH redemption tariff, applicable percentage/formula, minimum or all-in bank/intermediary charges. Professional-investor portal is login-gated; no public fee schedule located. No inference of zero cost from 1:1 redemption."
+    },
+    {
+      "id": "uw-xaum-matrixdock-45d5ede3b65a1192",
+      "assetId": "xaum-matrixdock",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:physical-to-usd:xaum-matrixdock"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:35Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R64)",
+      "sources": [
+        {
+          "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/minting-and-redeeming.md",
+          "observedAt": "2026-10-03T22:53:35Z",
+          "datumAsOf": null,
+          "location": "Official documentation",
+          "excerpt": "Customer picks up or receives the gold via secured delivery.",
+          "assertion": "Physical delivery procedure names pickup/delivery but specifies no final completion maximum."
+        },
+        {
+          "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/minting-and-redeeming.md",
+          "observedAt": "2026-10-03T22:53:35Z",
+          "datumAsOf": null,
+          "location": "Official documentation",
+          "excerpt": "The stablecoins will be sent within T+3.",
+          "assertion": "This is after execution; it does not bound pre-execution or physical-release-to-USD legs."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.matrixdock.com/xaum",
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/faq.md",
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/minting-and-redeeming.md",
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/physical-gold-vault-audit.md",
+        "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2Foa3Zaj3t7Mic13UuT1ph%2FXAUm%20Token%20Terms%20and%20Conditions.docx.pdf?alt=media&token=3cad87ae-7846-4bfe-ba2e-411fbf166f60",
+        "https://matrixdock.gitbook.io/matrixdock-docs/llms.txt"
+      ],
+      "rationale": "No end-to-end maximum is disclosed for the physical-delivery or composed physical-to-USD route. T+3 is only the executed-order-to-stablecoin leg; out-of-slippage requests may be cancelled/requoted, and physical pickup/release time must be arranged. It is not a whole-route SLA."
+    },
+    {
+      "id": "uw-xaum-matrixdock-6ea8bd953797842e",
+      "assetId": "xaum-matrixdock",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:xaum-matrixdock:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:35Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R64)",
+      "sources": [
+        {
+          "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/minting-and-redeeming.md",
+          "observedAt": "2026-10-03T22:53:35Z",
+          "datumAsOf": null,
+          "location": "Official documentation",
+          "excerpt": "Customer picks up or receives the gold via secured delivery.",
+          "assertion": "Physical delivery procedure names pickup/delivery but specifies no final completion maximum."
+        },
+        {
+          "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/minting-and-redeeming.md",
+          "observedAt": "2026-10-03T22:53:35Z",
+          "datumAsOf": null,
+          "location": "Official documentation",
+          "excerpt": "The stablecoins will be sent within T+3.",
+          "assertion": "This is after execution; it does not bound pre-execution or physical-release-to-USD legs."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.matrixdock.com/xaum",
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/faq.md",
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/minting-and-redeeming.md",
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/physical-gold-vault-audit.md",
+        "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2Foa3Zaj3t7Mic13UuT1ph%2FXAUm%20Token%20Terms%20and%20Conditions.docx.pdf?alt=media&token=3cad87ae-7846-4bfe-ba2e-411fbf166f60",
+        "https://matrixdock.gitbook.io/matrixdock-docs/llms.txt"
+      ],
+      "rationale": "No end-to-end maximum is disclosed for the physical-delivery or composed physical-to-USD route. T+3 is only the executed-order-to-stablecoin leg; out-of-slippage requests may be cancelled/requoted, and physical pickup/release time must be arranged. It is not a whole-route SLA."
+    },
+    {
+      "id": "uw-xaum-matrixdock-aec9e7e30b7a8a2f",
+      "assetId": "xaum-matrixdock",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:885860b7b2ea721ed8aca049",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:35Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R64)",
+      "sources": [
+        {
+          "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/faq.md",
+          "observedAt": "2026-10-03T22:53:35Z",
+          "datumAsOf": null,
+          "location": "Official documentation",
+          "excerpt": "Available bars to be redeemed will be provided upon request and subject to inventory availability.",
+          "assertion": "Inventory-dependent redemption does not establish a maximum liquidation horizon for the entire physical reserve slice."
+        },
+        {
+          "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2Foa3Zaj3t7Mic13UuT1ph%2FXAUm%20Token%20Terms%20and%20Conditions.docx.pdf?alt=media&token=3cad87ae-7846-4bfe-ba2e-411fbf166f60",
+          "observedAt": "2026-10-03T22:53:35Z",
+          "datumAsOf": "2025-10-21",
+          "location": "Terms section 7.14",
+          "excerpt": "do not guarantee the existence of a market or a buyer or seller for your LBMA Gold or XAUm Tokens.",
+          "assertion": "Terms disclose delivery/market conditions, not a whole-slice realizability maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.matrixdock.com/xaum",
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/faq.md",
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/minting-and-redeeming.md",
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/physical-gold-vault-audit.md",
+        "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2Foa3Zaj3t7Mic13UuT1ph%2FXAUm%20Token%20Terms%20and%20Conditions.docx.pdf?alt=media&token=3cad87ae-7846-4bfe-ba2e-411fbf166f60",
+        "https://matrixdock.gitbook.io/matrixdock-docs/llms.txt"
+      ],
+      "rationale": "Physical gold/silver category and custody are disclosed, but no maximum time for liquidating the entire scoped reserve position is stated. T+3 after execution concerns an individual issuer cash-out, not whole-book sale availability or physical delivery. No bucket is inferred from bullion transferability."
+    },
+    {
+      "id": "uw-xagm-matrixdock-b9f9012d8de66b21",
+      "assetId": "xagm-matrixdock",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:physical-to-usd:xagm-matrixdock"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:35Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R64)",
+      "sources": [
+        {
+          "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/minting-and-redeeming.md",
+          "observedAt": "2026-10-03T22:53:35Z",
+          "datumAsOf": null,
+          "location": "Official documentation",
+          "excerpt": "Customer picks up or receives the gold via secured delivery.",
+          "assertion": "Physical delivery procedure names pickup/delivery but specifies no final completion maximum."
+        },
+        {
+          "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/minting-and-redeeming.md",
+          "observedAt": "2026-10-03T22:53:35Z",
+          "datumAsOf": null,
+          "location": "Official documentation",
+          "excerpt": "The stablecoins will be sent within T+3.",
+          "assertion": "This is after execution; it does not bound pre-execution or physical-release-to-USD legs."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.matrixdock.com/xagm",
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/faq.md",
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/minting-and-redeeming.md",
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/physical-silver-vault-audit.md",
+        "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FTRQNUC7Hw1k5EyWrxUrR%2FMatrixdock%20Silver%20XAGm%20Whitepaper.pdf?alt=media&token=cad709b6-47f1-427d-ad14-443fa5cd76e1",
+        "https://matrixdock.gitbook.io/matrixdock-docs/llms.txt"
+      ],
+      "rationale": "No end-to-end maximum is disclosed for the physical-delivery or composed physical-to-USD route. T+3 is only the executed-order-to-stablecoin leg; out-of-slippage requests may be cancelled/requoted, and physical pickup/release time must be arranged. It is not a whole-route SLA."
+    },
+    {
+      "id": "uw-xagm-matrixdock-e0c224347a0c1ecd",
+      "assetId": "xagm-matrixdock",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:xagm-matrixdock:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:35Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R64)",
+      "sources": [
+        {
+          "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/minting-and-redeeming.md",
+          "observedAt": "2026-10-03T22:53:35Z",
+          "datumAsOf": null,
+          "location": "Official documentation",
+          "excerpt": "Customer picks up or receives the gold via secured delivery.",
+          "assertion": "Physical delivery procedure names pickup/delivery but specifies no final completion maximum."
+        },
+        {
+          "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/minting-and-redeeming.md",
+          "observedAt": "2026-10-03T22:53:35Z",
+          "datumAsOf": null,
+          "location": "Official documentation",
+          "excerpt": "The stablecoins will be sent within T+3.",
+          "assertion": "This is after execution; it does not bound pre-execution or physical-release-to-USD legs."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.matrixdock.com/xagm",
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/faq.md",
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/minting-and-redeeming.md",
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/physical-silver-vault-audit.md",
+        "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FTRQNUC7Hw1k5EyWrxUrR%2FMatrixdock%20Silver%20XAGm%20Whitepaper.pdf?alt=media&token=cad709b6-47f1-427d-ad14-443fa5cd76e1",
+        "https://matrixdock.gitbook.io/matrixdock-docs/llms.txt"
+      ],
+      "rationale": "No end-to-end maximum is disclosed for the physical-delivery or composed physical-to-USD route. T+3 is only the executed-order-to-stablecoin leg; out-of-slippage requests may be cancelled/requoted, and physical pickup/release time must be arranged. It is not a whole-route SLA."
+    },
+    {
+      "id": "uw-xagm-matrixdock-0432b296a881a366",
+      "assetId": "xagm-matrixdock",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:a1ccefc38affeb9df80b395d",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:35Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R64)",
+      "sources": [
+        {
+          "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/faq.md",
+          "observedAt": "2026-10-03T22:53:35Z",
+          "datumAsOf": null,
+          "location": "Official documentation",
+          "excerpt": "Available bars to be redeemed will be provided upon request and subject to inventory availability.",
+          "assertion": "Inventory-dependent redemption does not establish a maximum liquidation horizon for the entire physical reserve slice."
+        },
+        {
+          "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FTRQNUC7Hw1k5EyWrxUrR%2FMatrixdock%20Silver%20XAGm%20Whitepaper.pdf?alt=media&token=cad709b6-47f1-427d-ad14-443fa5cd76e1",
+          "observedAt": "2026-10-03T22:53:35Z",
+          "datumAsOf": "2026-03-17",
+          "location": "Whitepaper redemption execution",
+          "excerpt": "When redeeming into a physical LBMA silver bar, a request has to be made to the Matrixdock Silver operator to seek confirmation on the time, location of collection and other relevant details.",
+          "assertion": "Terms disclose delivery/market conditions, not a whole-slice realizability maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.matrixdock.com/xagm",
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/faq.md",
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/minting-and-redeeming.md",
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/physical-silver-vault-audit.md",
+        "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FTRQNUC7Hw1k5EyWrxUrR%2FMatrixdock%20Silver%20XAGm%20Whitepaper.pdf?alt=media&token=cad709b6-47f1-427d-ad14-443fa5cd76e1",
+        "https://matrixdock.gitbook.io/matrixdock-docs/llms.txt"
+      ],
+      "rationale": "Physical gold/silver category and custody are disclosed, but no maximum time for liquidating the entire scoped reserve position is stated. T+3 after execution concerns an individual issuer cash-out, not whole-book sale availability or physical delivery. No bucket is inferred from bullion transferability."
+    },
+    {
+      "id": "uw-stbt-matrixdock-df198d8379510285",
+      "assetId": "stbt-matrixdock",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:35Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R64)",
+      "sources": [
+        {
+          "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/treasury-bill-token-stbt/token-features.md",
+          "observedAt": "2026-10-03T22:53:35Z",
+          "datumAsOf": null,
+          "location": "Official documentation",
+          "excerpt": "we may also upload certain Underlying Assets reporting documents for review on the Matrixdock Platform which can be viewed through its hash.",
+          "assertion": "Optional underlying asset reports and visible mint/burn records are disclosed, not a current whole-supply common-clock reconciliation cadence."
+        },
+        {
+          "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FzHip8cJaP5aud3KfdVud%2FSTBT%20Token%C2%A0Terms%20and%20Conditions.pdf?alt=media&token=79d5fd49-deae-41b4-a809-9e1afaa02f32",
+          "observedAt": "2026-10-03T22:53:35Z",
+          "datumAsOf": "2025-01-20",
+          "location": "Terms section 8.2",
+          "excerpt": "The net asset value of the STBT Token Reserves Account is expected to be published on a daily basis on U.S. Treasury market trading days.",
+          "assertion": "Daily NAV publication is not reconciliation of all STBT liabilities, mint/burn/register movements and affiliated reserve accounts."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/treasury-bill-token-stbt/token-features.md",
+        "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FzHip8cJaP5aud3KfdVud%2FSTBT%20Token%C2%A0Terms%20and%20Conditions.pdf?alt=media&token=79d5fd49-deae-41b4-a809-9e1afaa02f32",
+        "https://www.matrixdock.com/stbt",
+        "https://stbt.matrixdock.com/transparency?tabState=assets",
+        "https://www.matrixdock.com/blog/announcements/matrixdock-integrates-chainlink-proof-of-reserve",
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/announcements/other-announcements/notice-regarding-stbt-daily-asset-statement.md",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xe7efc5060b6ad57b68f5911eca6c5cd1952da152"
+      ],
+      "rationale": "Current whole-supply STBT liability-to-affiliate-backing reconciliation procedure and cadence are not published in the reviewed surfaces. The 2023 PoR integration announcement is historical; daily reserve NAV, asset statements, mutable reserve-feed mint ceilings and on-chain issuance records do not supply a dated current common-clock whole-liability reconciliation. Bullion audit does not cover STBT."
+    },
+    {
+      "id": "uw-nusd-nexus-61d11e53cf6d122e",
+      "assetId": "nusd-nexus",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:52Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R78)",
+      "sources": [
+        {
+          "url": "https://raw.githubusercontent.com/synapsecns/synapse-contracts/master/contracts/amm/Swap.sol",
+          "observedAt": "2026-10-03T23:15:30Z",
+          "datumAsOf": null,
+          "location": "Swap contract description",
+          "excerpt": "Users can burn pool tokens and withdraw their share of token(s).",
+          "assertion": "Native pool accounting explains deposit/share/burn mechanics, not a dated common-clock reconciliation of every satellite representation and escrow against backing."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://synapseprotocol.com/",
+        "https://docs.synapseprotocol.com/docs/Bridge/",
+        "https://docs.synapseprotocol.com/docs/Contracts/Liquidity-Pools",
+        "https://docs.synapseprotocol.com/docs/Contracts/Intermediate-Tokens",
+        "https://docs.synapseprotocol.com/docs/Contracts/SynapseBridge",
+        "https://raw.githubusercontent.com/synapsecns/synapse-contracts/master/contracts/amm/Swap.sol",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x6c8c6e68604e78b549c96907bfe9ebdaac04e3b3"
+      ],
+      "rationale": "No dated whole-NUSD liability/backing reconciliation procedure and cadence spanning native LP supply, bridge escrows and all satellite representations was disclosed. Native LP invariant/accounting and public deployment lists do not establish that common-clock whole-supply reconciliation."
+    },
+    {
+      "id": "uw-nusd-nexus-4e4ecfee88801915",
+      "assetId": "nusd-nexus",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:3c97cdfc8418680ef82108de",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:52Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R78)",
+      "sources": [
+        {
+          "url": "https://raw.githubusercontent.com/synapsecns/synapse-contracts/master/contracts/amm/Swap.sol",
+          "observedAt": "2026-10-03T23:15:30Z",
+          "datumAsOf": null,
+          "location": "Swap contract emergency/withdrawal documentation",
+          "excerpt": "Users can always withdraw their tokens via multi-asset withdraws.",
+          "assertion": "Pro-rata asset withdrawal is disclosed, but no bound for realizing the entire DAI, USDC or USDT pool position at final USD value."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://synapseprotocol.com/",
+        "https://docs.synapseprotocol.com/docs/Contracts/Liquidity-Pools",
+        "https://docs.synapseprotocol.com/docs/Bridge/",
+        "https://raw.githubusercontent.com/synapsecns/synapse-contracts/master/contracts/amm/Swap.sol",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x5a5fff6f753d7c11a56a52fe47a177a87e431655"
+      ],
+      "rationale": "The exact DAI/USDC/USDT position-wide liquidityHorizon is not published. Pool pro-rata redemption and token transferability establish mechanics, not whole-position realizability at a known value; single-asset exits can be paused and satellite escrow scope is separate. No scalar horizon is inferred."
+    },
+    {
+      "id": "uw-nusd-nexus-bb16f599840ee130",
+      "assetId": "nusd-nexus",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:7c34054d5323f1adbc700d54",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:52Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R78)",
+      "sources": [
+        {
+          "url": "https://raw.githubusercontent.com/synapsecns/synapse-contracts/master/contracts/amm/Swap.sol",
+          "observedAt": "2026-10-03T23:15:30Z",
+          "datumAsOf": null,
+          "location": "Swap contract emergency/withdrawal documentation",
+          "excerpt": "Users can always withdraw their tokens via multi-asset withdraws.",
+          "assertion": "Pro-rata asset withdrawal is disclosed, but no bound for realizing the entire DAI, USDC or USDT pool position at final USD value."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://synapseprotocol.com/",
+        "https://docs.synapseprotocol.com/docs/Contracts/Liquidity-Pools",
+        "https://docs.synapseprotocol.com/docs/Bridge/",
+        "https://raw.githubusercontent.com/synapsecns/synapse-contracts/master/contracts/amm/Swap.sol",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x5a5fff6f753d7c11a56a52fe47a177a87e431655"
+      ],
+      "rationale": "The exact DAI/USDC/USDT position-wide liquidityHorizon is not published. Pool pro-rata redemption and token transferability establish mechanics, not whole-position realizability at a known value; single-asset exits can be paused and satellite escrow scope is separate. No scalar horizon is inferred."
+    },
+    {
+      "id": "uw-nusd-nexus-853f24b15bf3e1c7",
+      "assetId": "nusd-nexus",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:81c957a7cb8150d40ea55f7a",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:52Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R78)",
+      "sources": [
+        {
+          "url": "https://raw.githubusercontent.com/synapsecns/synapse-contracts/master/contracts/amm/Swap.sol",
+          "observedAt": "2026-10-03T23:15:30Z",
+          "datumAsOf": null,
+          "location": "Swap contract emergency/withdrawal documentation",
+          "excerpt": "Users can always withdraw their tokens via multi-asset withdraws.",
+          "assertion": "Pro-rata asset withdrawal is disclosed, but no bound for realizing the entire DAI, USDC or USDT pool position at final USD value."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://synapseprotocol.com/",
+        "https://docs.synapseprotocol.com/docs/Contracts/Liquidity-Pools",
+        "https://docs.synapseprotocol.com/docs/Bridge/",
+        "https://raw.githubusercontent.com/synapsecns/synapse-contracts/master/contracts/amm/Swap.sol",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x5a5fff6f753d7c11a56a52fe47a177a87e431655"
+      ],
+      "rationale": "The exact DAI/USDC/USDT position-wide liquidityHorizon is not published. Pool pro-rata redemption and token transferability establish mechanics, not whole-position realizability at a known value; single-asset exits can be paused and satellite escrow scope is separate. No scalar horizon is inferred."
+    },
+    {
+      "id": "uw-honey-berachain-a22e95431963923c",
+      "assetId": "honey-berachain",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:3f465e83e9281db09ed54264",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:52Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R78)",
+      "sources": [
+        {
+          "url": "https://docs.berachain.com/general/tokens/busd.md",
+          "observedAt": "2026-10-03T23:06:34Z",
+          "datumAsOf": null,
+          "location": "Using and minting BUSD",
+          "excerpt": "Minting and redemption rates are configurable per collateral asset by governance.",
+          "assertion": "Protocol discloses variable collateral redemption mechanics, not an unconditional position-wide liquidity horizon for held bridged BYUSD or USDt0."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/berachain/contracts/main/src/honey/CollateralVault.sol",
+          "observedAt": "2026-10-03T23:14:00Z",
+          "datumAsOf": null,
+          "location": "CustodyInfo struct",
+          "excerpt": "bool isCustodyVault;",
+          "assertion": "Vaults support external custody and pausing; contract mechanics do not promise a final USD realization maximum for the entire bridged positions."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://busd.berachain.com/",
+        "https://docs.berachain.com/general/tokens/busd",
+        "https://docs.berachain.com/build/getting-started/deployed-contracts.md",
+        "https://raw.githubusercontent.com/berachain/contracts/main/src/honey/CollateralVault.sol",
+        "https://raw.githubusercontent.com/berachain/contracts/main/src/honey/HoneyFactory.sol",
+        "https://raw.githubusercontent.com/berachain/contracts/main/src/honey/VaultAdmin.sol",
+        "https://docs.usdt0.to/",
+        "https://www.paypal.com/us/legalhub/paypal/cryptocurrencies-tnc"
+      ],
+      "rationale": "No scoped, guaranteed whole-position liquidityHorizon for Berachain-held BYUSD or USDt0 is disclosed. Collateral-vault withdrawal, basket redemption and bridge burn/unlock mechanics do not bound complete USD realization of these bridged positions; no parent-token SLA is copied to the bridge claim."
+    },
+    {
+      "id": "uw-honey-berachain-a0ae8e5d19f5f47b",
+      "assetId": "honey-berachain",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:892021ff82db5cf513acf3f1",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:52Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R78)",
+      "sources": [
+        {
+          "url": "https://docs.berachain.com/general/tokens/busd.md",
+          "observedAt": "2026-10-03T23:06:34Z",
+          "datumAsOf": null,
+          "location": "Using and minting BUSD",
+          "excerpt": "Minting and redemption rates are configurable per collateral asset by governance.",
+          "assertion": "Protocol discloses variable collateral redemption mechanics, not an unconditional position-wide liquidity horizon for held bridged BYUSD or USDt0."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/berachain/contracts/main/src/honey/CollateralVault.sol",
+          "observedAt": "2026-10-03T23:14:00Z",
+          "datumAsOf": null,
+          "location": "CustodyInfo struct",
+          "excerpt": "bool isCustodyVault;",
+          "assertion": "Vaults support external custody and pausing; contract mechanics do not promise a final USD realization maximum for the entire bridged positions."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://busd.berachain.com/",
+        "https://docs.berachain.com/general/tokens/busd",
+        "https://docs.berachain.com/build/getting-started/deployed-contracts.md",
+        "https://raw.githubusercontent.com/berachain/contracts/main/src/honey/CollateralVault.sol",
+        "https://raw.githubusercontent.com/berachain/contracts/main/src/honey/HoneyFactory.sol",
+        "https://raw.githubusercontent.com/berachain/contracts/main/src/honey/VaultAdmin.sol",
+        "https://docs.usdt0.to/",
+        "https://www.paypal.com/us/legalhub/paypal/cryptocurrencies-tnc"
+      ],
+      "rationale": "No scoped, guaranteed whole-position liquidityHorizon for Berachain-held BYUSD or USDt0 is disclosed. Collateral-vault withdrawal, basket redemption and bridge burn/unlock mechanics do not bound complete USD realization of these bridged positions; no parent-token SLA is copied to the bridge claim."
+    },
+    {
+      "id": "uw-usdm-moneta-6df9131af4f4dc9b",
+      "assetId": "usdm-moneta",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdm-moneta:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:17:21Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R78)",
+      "sources": [
+        {
+          "url": "https://moneta.global/terms-of-service.pdf",
+          "observedAt": "2026-10-03T23:04:31Z",
+          "datumAsOf": "2026-07-22",
+          "location": "Section 17 disclaimer of warranties",
+          "excerpt": "Moneta makes no representations or warranties regarding the amount of time needed to \ncomplete processing",
+          "assertion": "Governing terms expressly disclaim a completion-time warranty, so no final spendable-USD maximum is established."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://moneta.global/",
+        "https://moneta.global/resources/faq/",
+        "https://moneta.global/terms-of-service/",
+        "https://moneta.global/terms-of-service.pdf",
+        "https://moneta.global/USDM%20Lite%20Paper.pdf",
+        "https://nbx.com/en/usdm-terms"
+      ],
+      "rationale": "No end-to-end maximum for redemption to final spendable bank USD is disclosed. Moneta terms disclaim processing completion time; litepaper gives compliance/cutoffs rather than a maximum. NBX processing cannot substitute for Moneta-attributed claims, which require prior settled Moneta funds."
+    },
+    {
+      "id": "uw-usdm-moneta-102e99ff7fb6de96",
+      "assetId": "usdm-moneta",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:17:21Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R78)",
+      "sources": [
+        {
+          "url": "https://moneta.global/transparency/",
+          "observedAt": "2026-10-03T23:06:34Z",
+          "datumAsOf": null,
+          "location": "Reserve Composition",
+          "excerpt": "US Government Money Market Funds",
+          "assertion": "Current transparency shows reserve categories and aggregate balance, but not dated category weights or both separate issuer books and common liability denominator."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://moneta.global/",
+        "https://moneta.global/transparency/",
+        "https://moneta.global/learn/usdm-reserve-architecture/",
+        "https://moneta.global/USDM%20Lite%20Paper.pdf",
+        "https://moneta.global/terms-of-service.pdf",
+        "https://nbx.com/en/usdm",
+        "https://cdn.prod.website-files.com/6152dfaed2ce58d94ef37b88/6ab4e90ceb46558d48fc093a_USDM%20White%20Paper%20-%20Modified%20version%202026-09-24.pdf"
+      ],
+      "rationale": "No current whole-asset reserve composition with measured category/provider allocations across the separate Moneta and NBX books is disclosed. Aggregate daily reserve balances and historical 80/20 allocation do not establish a same-date combined-token composition; NBX explicitly excludes cross-backing."
+    },
+    {
+      "id": "uw-usdm-moneta-af3c32783e1c964b",
+      "assetId": "usdm-moneta",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdm-moneta:offchain-issuer"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T23:17:21Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R78)",
+      "sources": [
+        {
+          "url": "https://moneta.global/resources/faq/",
+          "observedAt": "2026-10-03T23:06:22Z",
+          "datumAsOf": null,
+          "location": "FAQ structured acceptedAnswer, Are there mint/burn fees?",
+          "excerpt": "Burning: 0.1% fee ($50 minimum, capped at $5,000). Includes Cardano network fees.",
+          "assertion": "Exact route fee formula is public but the cost schema lacks maxFeeUsd and current route does not evaluate this capped minimum formula at each notional; bank charges remain separate."
+        }
+      ]
+    },
+    {
+      "id": "uw-jpyc-jpyc-e8142c370add207d",
+      "assetId": "jpyc-jpyc",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:17:46Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R78)",
+      "sources": [
+        {
+          "url": "https://corporate.jpyc.co.jp/news/posts/jpyc-ex-launch",
+          "observedAt": "2026-10-03T23:15:15Z",
+          "datumAsOf": "2025-10-24",
+          "location": "JPYC features / reserve backing",
+          "excerpt": "\u767a\u884c\u4fa1\u5024\u306e\u88cf\u4ed8\u3051\u8cc7\u7523\u306f\u3001\u65e5\u672c\u5186\uff08\u9810\u8caf\u91d1\u304a\u3088\u3073\u56fd\u50b5\uff09\u306b\u3088\u3063\u3066\u767a\u884c\u6b8b\u9ad8\u306e100%\u4ee5\u4e0a\u3092\u4fdd\u5168",
+          "assertion": "Issuer discloses deposits/JGB basket and 100%+ backing, not current measured category weights or dated whole-reserve holdings."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://jpyc.co.jp/",
+        "https://corporate.jpyc.co.jp/news/posts/jpyc-ex-launch",
+        "https://jpyc.co.jp/legal/pre-contract-disclosure.pdf",
+        "https://jpyc.co.jp/legal/terms.pdf",
+        "https://corporate.jpyc.co.jp/terms/financialreporting",
+        "https://corporate.jpyc.co.jp/news",
+        "https://assets.jpyc.co.jp/ir/Financial-results/kessan-3.pdf"
+      ],
+      "rationale": "No dated current reserve composition with measured deposit/JGB weights and complete holdings is published. Launch discloses only a 100%+ deposit/JGB envelope; statutory safeguarding names trust/guarantee counterparties but not allocation. Historical 2022 corporate accounts are not the 2025 regulated token reserve book."
+    },
+    {
+      "id": "uw-jpyc-jpyc-b6759a3434a262b3",
+      "assetId": "jpyc-jpyc",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:17:46Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R78)",
+      "sources": [
+        {
+          "url": "https://jpyc.co.jp/legal/pre-contract-disclosure.pdf",
+          "observedAt": "2026-10-03T23:04:52Z",
+          "datumAsOf": null,
+          "location": "Section 2.2 statutory safeguarding",
+          "excerpt": "\u5229\u7528\u8005\u304b\u3089\u53d7\u3051\u5165\u308c\u305f\u8cc7\u91d1\u3092\u672a\u9054\u50b5\u52d9\u3068\u3057\u3066\u6bce\u9031\u91d1\u66dc\u65e5\n\u304b\u3089\u7fcc\u6728\u66dc\u65e5\u307e\u3067\u306e1\u9031\u9593\u306e\u671f\u9593\u306b\u304a\u3044\u3066\u7b97\u5b9a\u3057",
+          "assertion": "Weekly safeguarding debt calculation is disclosed; it does not provide a dated performed all-chain token-supply versus reserve reconciliation procedure/report."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://jpyc.co.jp/",
+        "https://corporate.jpyc.co.jp/news/posts/jpyc-ex-launch",
+        "https://jpyc.co.jp/legal/pre-contract-disclosure.pdf",
+        "https://jpyc.co.jp/legal/terms.pdf",
+        "https://corporate.jpyc.co.jp/terms/financialreporting",
+        "https://corporate.jpyc.co.jp/news",
+        "https://assets.jpyc.co.jp/ir/Financial-results/kessan-3.pdf"
+      ],
+      "rationale": "No dated performed whole-JPYC supply-to-reserve reconciliation procedure and cadence covering every native-chain liability, mint/burn and backing at one clock is disclosed. Weekly statutory maximum-undelivered-debt safeguarding and customer history are not a public common-clock token/reserve reconciliation; the homepage says reserve publication is planned."
     }
   ]
 }
