@@ -4373,6 +4373,171 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "bold-liquity",
+      "reviewedAt": "2026-10-03T22:46:01Z",
+      "expiresAt": "2027-10-03T22:46:01Z",
+      "reviewer": "Unknown wave W1R31",
+      "notes": "Issuer-reported live-history lower bound from dated exact-token launch. Age is eligibility only; no verified continuous uptime, stress throughput, peg recovery, reserve assurance history or incident-free claim.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Liquity V2 BOLD live launch",
+          "publisher": "Liquity AG",
+          "publishedAt": "2025-05-19",
+          "url": "https://www.liquity.org/blog/liquity-v2-is-live",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 16,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "lusd-liquity",
+      "reviewedAt": "2026-10-03T22:46:01Z",
+      "expiresAt": "2027-10-03T22:46:01Z",
+      "reviewer": "Unknown wave W1R31",
+      "notes": "Issuer-reported live-history lower bound from dated exact-token launch. Age is eligibility only; no verified continuous uptime, stress throughput, peg recovery, reserve assurance history or incident-free claim.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Liquity LUSD mainnet launch",
+          "publisher": "Liquity AG",
+          "publishedAt": "2021-04-05",
+          "url": "https://www.liquity.org/blog/liquity-goes-live-on-ethereum-mainnet",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 65,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usdh-hermetica",
+      "reviewedAt": "2026-10-03T22:46:01Z",
+      "expiresAt": "2027-10-03T22:46:01Z",
+      "reviewer": "Unknown wave W1R31",
+      "notes": "Issuer-reported live-history lower bound from dated exact-token launch. Age is eligibility only; no verified continuous uptime, stress throughput, peg recovery, reserve assurance history or incident-free claim.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "USDh live on Stacks",
+          "publisher": "Hermetica Labs",
+          "publishedAt": "2024-09-25",
+          "url": "https://blog.hermetica.fi/p/usdh-is-live-on-stacks",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 24,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "sofid-sofi",
+      "reviewedAt": "2026-10-03T22:46:01Z",
+      "expiresAt": "2027-10-03T22:46:01Z",
+      "reviewer": "Unknown wave W1R31",
+      "notes": "Issuer-reported live-history lower bound from dated exact-token launch. Age is eligibility only; no verified continuous uptime, stress throughput, peg recovery, reserve assurance history or incident-free claim.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "SoFiUSD live issuance announcement",
+          "publisher": "SoFi Technologies",
+          "publishedAt": "2025-12-18",
+          "url": "https://investors.sofi.com/news/news-details/2025/SoFi-Launches-Fully-Reserved-Stablecoin-to-Power-Financial-Infrastructure-for-Banks-Fintechs-and-Enterprise-Partners/default.aspx",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 9,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "weusd-picwe",
+      "reviewedAt": "2026-10-03T22:46:01Z",
+      "expiresAt": "2027-10-03T22:46:01Z",
+      "reviewer": "Unknown wave W1R31",
+      "notes": "Issuer-reported live-history lower bound from dated exact-token operation disclosure; age is eligibility only. No verified continuous uptime, stress throughput, peg recovery, reserve assurance history, or incident-free claim. WEUSD uses dated current-operation docs, not its unverified launch date.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Dated WEUSD current operation disclosure",
+          "publisher": "PicWe",
+          "publishedAt": "2026-04-27",
+          "url": "https://docs.picwe.org/what-is-weusd",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 5,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

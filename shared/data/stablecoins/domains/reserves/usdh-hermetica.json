@@ -15,7 +15,7 @@
         "liquidity",
         "concentration"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "over-seven-days"
     },
     {
       "name": "Other unitemized Ethereum Settlement Wallet assets",
@@ -75,8 +75,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-30",
-    "reviewer": "Sol owner-session-4 reserve decisions 2026-10-02 (ReserveDecisions)",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Unknown wave W1R31 STRCx contractual-liquidity review; prior September composition retained",
     "confidence": "verified",
     "sources": [
       {
@@ -86,9 +86,13 @@
       {
         "label": "Hermetica STRCx credit-instrument backing integration",
         "url": "https://blog.hermetica.fi/p/strcx-direct-tokenized-strc-exposure-for-usdh"
+      },
+      {
+        "label": "STRCx CH1500008482 final terms dated May 8, 2026; investor redemption, settlement and underlying illiquidity",
+        "url": "https://sppdownloaddocumentservice.l-p-a.com/api/DownloadDocument/UPI/CH1500008482/BF%20Final%20Terms%20AND%20Summary%20%28PDF%29"
       }
     ],
-    "rationale": "Scoped September 30, 2026 14:00 UTC backing review from the report published October 1, fetched October 2. Total reported assets are $2,081,799.60 against $1,981,448.18 USDh. The new Ethereum Settlement Wallet 0x1046a6AD45B60264c83A4b93F6D2c6078C73c1d5 holds $1,501,041.77, including $1,396,969.74 of STRCx credit-instrument backing and $104,072.03 unitemized assets. Copper holds $472,573.22 of aggregate BTC, USDT and USDC without instrument weights; Ceffu holds $0. Stacks Redeeming Reserve holds $8,036.50 without instrument itemization; Reserve Fund holds $100,148.12 USDC and $0 USDh. Percentages are independently calculated against reported total backing and rounded to six decimals. Location amounts sum to $2,081,799.61: the one-cent reporting discrepancy is not a balancing asset or favourable coverage claim. This review and latestReport.periodEnd move together; only Copper's custody subtotal is independently attested, not the whole book, legal safeguards or hedge reconciliation.",
+    "rationale": "Scoped September 30, 2026 14:00 UTC backing review from the report published October 1, fetched October 2. Total reported assets are $2,081,799.60 against $1,981,448.18 USDh. The new Ethereum Settlement Wallet 0x1046a6AD45B60264c83A4b93F6D2c6078C73c1d5 holds $1,501,041.77, including $1,396,969.74 of STRCx credit-instrument backing and $104,072.03 unitemized assets. Copper holds $472,573.22 of aggregate BTC, USDT and USDC without instrument weights; Ceffu holds $0. Stacks Redeeming Reserve holds $8,036.50 without instrument itemization; Reserve Fund holds $100,148.12 USDC and $0 USDh. Percentages are independently calculated against reported total backing and rounded to six decimals. Location amounts sum to $2,081,799.61: the one-cent reporting discrepancy is not a balancing asset or favourable coverage claim. This review and latestReport.periodEnd move together; only Copper's custody subtotal is independently attested, not the whole book, legal safeguards or hedge reconciliation. October 3 metadata-only research retains the September composition unchanged. STRCx final terms dated May 8, 2026, clauses VI.v and VIII.ii, require successful KYC before redemption acceptance, permit five Business Days after token receipt to instruct payment, and permit further postponement under underlying illiquidity. The conservative over-seven-days bucket records these documented restrictions, not a guaranteed settlement maximum, immediate secondary-market sale, or measured liquidity. The perpetual instrument has no finite maturity maximum; no numeric maturity is invented.",
     "compositionBasis": "September 30, 2026 Hermetica report: disclosed STRCx and USDC plus explicit unclassified settlement-wallet, Copper and Stacks residuals; six-decimal shares of reported $2,081,799.60 backing",
     "compositionAsOf": "2026-09-30",
     "scope": "full-composition",

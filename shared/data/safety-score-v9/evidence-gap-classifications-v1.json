@@ -9470,6 +9470,485 @@
           "assertion": "Whole portfolio chart shows Time Deposit 24.71%, Other Money Market Instrument 63.54%, Cash and Cash Equivalent 11.75%; schema lockstep to historical annual report prevents independent unaudited composition-date admission."
         }
       ]
+    },
+    {
+      "id": "uw-usdh-hermetica-851032530e21fc36",
+      "assetId": "usdh-hermetica",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:8f4df462b8245ee19d12626d",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R31)",
+      "sources": [
+        {
+          "url": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026",
+          "observedAt": "2026-10-03T22:54:53Z",
+          "datumAsOf": "2026-09-30",
+          "location": "Location balances and STRCx itemization",
+          "excerpt": "At 14:00 UTC September 30, there was $8,036.50 in the Redeeming Reserve on Stacks, $1,501,041.77 in the Ethereum Settlement Wallet, and $100,148.12 in the Reserve Fund.",
+          "assertion": "Publishes location totals but no finite maximum maturity or whole-slice realization horizon for the unitemized Stacks, Copper and other settlement-wallet positions."
+        },
+        {
+          "url": "https://docs.hermetica.fi/usdh/risk-disclosures/liquidity-risk.md",
+          "observedAt": "2026-10-03T22:54:53Z",
+          "datumAsOf": null,
+          "location": "Liquidity Risk",
+          "excerpt": "If for any reason Hermetica is not able to source enough liquidity to either increase or unwind a derivative position, it will not be able to either mint or redeem USDh tokens.",
+          "assertion": "Describes unwind restrictions, not an enforceable per-location liquidity horizon or maturity maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026",
+        "https://docs.hermetica.fi/usdh/how-it-works/backing.md",
+        "https://app.hermetica.fi/transparency/usdh/reserves",
+        "https://docs.hermetica.fi/usdh/how-it-works/security.md",
+        "https://docs.hermetica.fi/usdh/risk-disclosures/liquidity-risk.md",
+        "https://docs.hermetica.fi/resources/legal/terms-of-service.md",
+        "https://github.com/hermetica-fi/hermetica-contracts/blob/master/mainnet/contracts/usdh/protocol/redeeming-reserve-v1-2.clar"
+      ],
+      "rationale": "The September report and signed Copper image disclose account totals (Copper aggregate BTC/USDT/USDC including P&L), not the residual instruments, lock terms or per-slice maximum maturity and realization horizon. Backing archive, live dashboard, custody design, liquidity risks, legal terms and reserve transfer code provide no such bounds for these three scoped residuals. Generic OES recovery and manager-authorized transfers do not prove the entire positions immediately realizable."
+    },
+    {
+      "id": "uw-usdh-hermetica-c7087430f918d783",
+      "assetId": "usdh-hermetica",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:8f4df462b8245ee19d12626d",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R31)",
+      "sources": [
+        {
+          "url": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026",
+          "observedAt": "2026-10-03T22:54:53Z",
+          "datumAsOf": "2026-09-30",
+          "location": "Location balances and STRCx itemization",
+          "excerpt": "At 14:00 UTC September 30, there was $8,036.50 in the Redeeming Reserve on Stacks, $1,501,041.77 in the Ethereum Settlement Wallet, and $100,148.12 in the Reserve Fund.",
+          "assertion": "Publishes location totals but no finite maximum maturity or whole-slice realization horizon for the unitemized Stacks, Copper and other settlement-wallet positions."
+        },
+        {
+          "url": "https://docs.hermetica.fi/usdh/risk-disclosures/liquidity-risk.md",
+          "observedAt": "2026-10-03T22:54:53Z",
+          "datumAsOf": null,
+          "location": "Liquidity Risk",
+          "excerpt": "If for any reason Hermetica is not able to source enough liquidity to either increase or unwind a derivative position, it will not be able to either mint or redeem USDh tokens.",
+          "assertion": "Describes unwind restrictions, not an enforceable per-location liquidity horizon or maturity maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026",
+        "https://docs.hermetica.fi/usdh/how-it-works/backing.md",
+        "https://app.hermetica.fi/transparency/usdh/reserves",
+        "https://docs.hermetica.fi/usdh/how-it-works/security.md",
+        "https://docs.hermetica.fi/usdh/risk-disclosures/liquidity-risk.md",
+        "https://docs.hermetica.fi/resources/legal/terms-of-service.md",
+        "https://github.com/hermetica-fi/hermetica-contracts/blob/master/mainnet/contracts/usdh/protocol/redeeming-reserve-v1-2.clar"
+      ],
+      "rationale": "The September report and signed Copper image disclose account totals (Copper aggregate BTC/USDT/USDC including P&L), not the residual instruments, lock terms or per-slice maximum maturity and realization horizon. Backing archive, live dashboard, custody design, liquidity risks, legal terms and reserve transfer code provide no such bounds for these three scoped residuals. Generic OES recovery and manager-authorized transfers do not prove the entire positions immediately realizable."
+    },
+    {
+      "id": "uw-usdh-hermetica-3f357368dd8b15c4",
+      "assetId": "usdh-hermetica",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:d72b0bc8bcdfd369c0c261da",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R31)",
+      "sources": [
+        {
+          "url": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026",
+          "observedAt": "2026-10-03T22:54:53Z",
+          "datumAsOf": "2026-09-30",
+          "location": "Location balances and STRCx itemization",
+          "excerpt": "At 14:00 UTC September 30, there was $8,036.50 in the Redeeming Reserve on Stacks, $1,501,041.77 in the Ethereum Settlement Wallet, and $100,148.12 in the Reserve Fund.",
+          "assertion": "Publishes location totals but no finite maximum maturity or whole-slice realization horizon for the unitemized Stacks, Copper and other settlement-wallet positions."
+        },
+        {
+          "url": "https://docs.hermetica.fi/usdh/risk-disclosures/liquidity-risk.md",
+          "observedAt": "2026-10-03T22:54:53Z",
+          "datumAsOf": null,
+          "location": "Liquidity Risk",
+          "excerpt": "If for any reason Hermetica is not able to source enough liquidity to either increase or unwind a derivative position, it will not be able to either mint or redeem USDh tokens.",
+          "assertion": "Describes unwind restrictions, not an enforceable per-location liquidity horizon or maturity maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026",
+        "https://docs.hermetica.fi/usdh/how-it-works/backing.md",
+        "https://app.hermetica.fi/transparency/usdh/reserves",
+        "https://docs.hermetica.fi/usdh/how-it-works/security.md",
+        "https://docs.hermetica.fi/usdh/risk-disclosures/liquidity-risk.md",
+        "https://docs.hermetica.fi/resources/legal/terms-of-service.md",
+        "https://github.com/hermetica-fi/hermetica-contracts/blob/master/mainnet/contracts/usdh/protocol/redeeming-reserve-v1-2.clar"
+      ],
+      "rationale": "The September report and signed Copper image disclose account totals (Copper aggregate BTC/USDT/USDC including P&L), not the residual instruments, lock terms or per-slice maximum maturity and realization horizon. Backing archive, live dashboard, custody design, liquidity risks, legal terms and reserve transfer code provide no such bounds for these three scoped residuals. Generic OES recovery and manager-authorized transfers do not prove the entire positions immediately realizable."
+    },
+    {
+      "id": "uw-usdh-hermetica-15cb6c7e1204e57f",
+      "assetId": "usdh-hermetica",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:d72b0bc8bcdfd369c0c261da",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R31)",
+      "sources": [
+        {
+          "url": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026",
+          "observedAt": "2026-10-03T22:54:53Z",
+          "datumAsOf": "2026-09-30",
+          "location": "Location balances and STRCx itemization",
+          "excerpt": "At 14:00 UTC September 30, there was $8,036.50 in the Redeeming Reserve on Stacks, $1,501,041.77 in the Ethereum Settlement Wallet, and $100,148.12 in the Reserve Fund.",
+          "assertion": "Publishes location totals but no finite maximum maturity or whole-slice realization horizon for the unitemized Stacks, Copper and other settlement-wallet positions."
+        },
+        {
+          "url": "https://docs.hermetica.fi/usdh/risk-disclosures/liquidity-risk.md",
+          "observedAt": "2026-10-03T22:54:53Z",
+          "datumAsOf": null,
+          "location": "Liquidity Risk",
+          "excerpt": "If for any reason Hermetica is not able to source enough liquidity to either increase or unwind a derivative position, it will not be able to either mint or redeem USDh tokens.",
+          "assertion": "Describes unwind restrictions, not an enforceable per-location liquidity horizon or maturity maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026",
+        "https://docs.hermetica.fi/usdh/how-it-works/backing.md",
+        "https://app.hermetica.fi/transparency/usdh/reserves",
+        "https://docs.hermetica.fi/usdh/how-it-works/security.md",
+        "https://docs.hermetica.fi/usdh/risk-disclosures/liquidity-risk.md",
+        "https://docs.hermetica.fi/resources/legal/terms-of-service.md",
+        "https://github.com/hermetica-fi/hermetica-contracts/blob/master/mainnet/contracts/usdh/protocol/redeeming-reserve-v1-2.clar"
+      ],
+      "rationale": "The September report and signed Copper image disclose account totals (Copper aggregate BTC/USDT/USDC including P&L), not the residual instruments, lock terms or per-slice maximum maturity and realization horizon. Backing archive, live dashboard, custody design, liquidity risks, legal terms and reserve transfer code provide no such bounds for these three scoped residuals. Generic OES recovery and manager-authorized transfers do not prove the entire positions immediately realizable."
+    },
+    {
+      "id": "uw-usdh-hermetica-33ef26ba1f8ffcf4",
+      "assetId": "usdh-hermetica",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:d81c2d1959e0c643d5d1e8fc",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R31)",
+      "sources": [
+        {
+          "url": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026",
+          "observedAt": "2026-10-03T22:54:53Z",
+          "datumAsOf": "2026-09-30",
+          "location": "Location balances and STRCx itemization",
+          "excerpt": "At 14:00 UTC September 30, there was $8,036.50 in the Redeeming Reserve on Stacks, $1,501,041.77 in the Ethereum Settlement Wallet, and $100,148.12 in the Reserve Fund.",
+          "assertion": "Publishes location totals but no finite maximum maturity or whole-slice realization horizon for the unitemized Stacks, Copper and other settlement-wallet positions."
+        },
+        {
+          "url": "https://docs.hermetica.fi/usdh/risk-disclosures/liquidity-risk.md",
+          "observedAt": "2026-10-03T22:54:53Z",
+          "datumAsOf": null,
+          "location": "Liquidity Risk",
+          "excerpt": "If for any reason Hermetica is not able to source enough liquidity to either increase or unwind a derivative position, it will not be able to either mint or redeem USDh tokens.",
+          "assertion": "Describes unwind restrictions, not an enforceable per-location liquidity horizon or maturity maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026",
+        "https://docs.hermetica.fi/usdh/how-it-works/backing.md",
+        "https://app.hermetica.fi/transparency/usdh/reserves",
+        "https://docs.hermetica.fi/usdh/how-it-works/security.md",
+        "https://docs.hermetica.fi/usdh/risk-disclosures/liquidity-risk.md",
+        "https://docs.hermetica.fi/resources/legal/terms-of-service.md",
+        "https://github.com/hermetica-fi/hermetica-contracts/blob/master/mainnet/contracts/usdh/protocol/redeeming-reserve-v1-2.clar"
+      ],
+      "rationale": "The September report and signed Copper image disclose account totals (Copper aggregate BTC/USDT/USDC including P&L), not the residual instruments, lock terms or per-slice maximum maturity and realization horizon. Backing archive, live dashboard, custody design, liquidity risks, legal terms and reserve transfer code provide no such bounds for these three scoped residuals. Generic OES recovery and manager-authorized transfers do not prove the entire positions immediately realizable."
+    },
+    {
+      "id": "uw-usdh-hermetica-8d3efcedfd47407e",
+      "assetId": "usdh-hermetica",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:d81c2d1959e0c643d5d1e8fc",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R31)",
+      "sources": [
+        {
+          "url": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026",
+          "observedAt": "2026-10-03T22:54:53Z",
+          "datumAsOf": "2026-09-30",
+          "location": "Location balances and STRCx itemization",
+          "excerpt": "At 14:00 UTC September 30, there was $8,036.50 in the Redeeming Reserve on Stacks, $1,501,041.77 in the Ethereum Settlement Wallet, and $100,148.12 in the Reserve Fund.",
+          "assertion": "Publishes location totals but no finite maximum maturity or whole-slice realization horizon for the unitemized Stacks, Copper and other settlement-wallet positions."
+        },
+        {
+          "url": "https://docs.hermetica.fi/usdh/risk-disclosures/liquidity-risk.md",
+          "observedAt": "2026-10-03T22:54:53Z",
+          "datumAsOf": null,
+          "location": "Liquidity Risk",
+          "excerpt": "If for any reason Hermetica is not able to source enough liquidity to either increase or unwind a derivative position, it will not be able to either mint or redeem USDh tokens.",
+          "assertion": "Describes unwind restrictions, not an enforceable per-location liquidity horizon or maturity maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026",
+        "https://docs.hermetica.fi/usdh/how-it-works/backing.md",
+        "https://app.hermetica.fi/transparency/usdh/reserves",
+        "https://docs.hermetica.fi/usdh/how-it-works/security.md",
+        "https://docs.hermetica.fi/usdh/risk-disclosures/liquidity-risk.md",
+        "https://docs.hermetica.fi/resources/legal/terms-of-service.md",
+        "https://github.com/hermetica-fi/hermetica-contracts/blob/master/mainnet/contracts/usdh/protocol/redeeming-reserve-v1-2.clar"
+      ],
+      "rationale": "The September report and signed Copper image disclose account totals (Copper aggregate BTC/USDT/USDC including P&L), not the residual instruments, lock terms or per-slice maximum maturity and realization horizon. Backing archive, live dashboard, custody design, liquidity risks, legal terms and reserve transfer code provide no such bounds for these three scoped residuals. Generic OES recovery and manager-authorized transfers do not prove the entire positions immediately realizable."
+    },
+    {
+      "id": "uw-usdh-hermetica-06cf4b749a0765b3",
+      "assetId": "usdh-hermetica",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdh-hermetica:queue-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R31)",
+      "sources": [
+        {
+          "url": "https://docs.hermetica.fi/usdh/how-it-works/mint",
+          "observedAt": "2026-10-03T22:54:53Z",
+          "datumAsOf": null,
+          "location": "Redemptions",
+          "excerpt": "Approved Participants may redeem USDh for USDC or USDT via a redemption process that mirrors the minting flow in reverse.",
+          "assertion": "Discloses eligible redeemers and payout assets, plus pause conditions, but no final settlement maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.hermetica.fi/usdh/how-it-works/mint",
+        "https://docs.hermetica.fi/resources/faqs.md",
+        "https://docs.hermetica.fi/usdh/how-it-works/security.md",
+        "https://docs.hermetica.fi/resources/legal/terms-of-service.md",
+        "https://docs.hermetica.fi/usdh/risk-disclosures/liquidity-risk.md",
+        "https://github.com/hermetica-fi/hermetica-contracts/blob/master/mainnet/contracts/usdh/protocol/redeeming-reserve-v1-2.clar"
+      ],
+      "rationale": "USDh AP redemption documentation, FAQ, legal terms and reserve-transfer code publish no request-to-delivered-USDC/USDT maximum. Risk terms permit pauses and liquidity-dependent unwind. hBTC's separate three-day/four-hour cooldowns are not USDh terms; arbitrage examples using 'immediately' are not an end-to-end SLA."
+    },
+    {
+      "id": "uw-usdh-hermetica-803829bb86374dd2",
+      "assetId": "usdh-hermetica",
+      "scope": {
+        "componentKey": "economic-control:oracle",
+        "exposureId": null,
+        "factorKey": "tier",
+        "pillar": "control",
+        "requiredDatum": "tier",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R31)",
+      "sources": [
+        {
+          "url": "https://docs.hermetica.fi/usdh/how-it-works/stability",
+          "observedAt": "2026-10-03T22:54:53Z",
+          "datumAsOf": null,
+          "location": "Risk Management System",
+          "excerpt": "To minimize this possibility, our risk engine runs checks every 100 milliseconds and reconciles our liabilities with assets and perpetual futures positions.",
+          "assertion": "Discloses the issuer's valuation-sensitive engine but not its actual price-source topology, stale-feed thresholds or failover."
+        },
+        {
+          "url": "https://www.diadata.org/blog/post/hermetica-usdh-reserve-backed-fair-value-oracle/",
+          "observedAt": "2026-10-03T22:54:53Z",
+          "datumAsOf": "2026-03-11",
+          "location": "How the Oracle Works",
+          "excerpt": "The feed is live on the Stacks public good oracle, where any protocol or user can query the USDh/USD value in real time.",
+          "assertion": "A public DIA consumer feed is disclosed; this does not establish the price topology used by Hermetica's own redemption/hedge risk engine."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.hermetica.fi/usdh/how-it-works/stability",
+        "https://docs.hermetica.fi/usdh/how-it-works/mint",
+        "https://docs.hermetica.fi/usdh/how-it-works/technical-primitives.md",
+        "https://docs.hermetica.fi/resources/faqs.md",
+        "https://docs.hermetica.fi/resources/legal/terms-of-service.md",
+        "https://blog.hermetica.fi/p/weekly-update-march-13-2026",
+        "https://www.diadata.org/blog/post/hermetica-usdh-reserve-backed-fair-value-oracle/",
+        "https://github.com/hermetica-fi/hermetica-contracts"
+      ],
+      "rationale": "The authored top-level-only review scopes USDh's issuer valuation/rebalancing and redemption-pause authority. Its docs disclose 100ms checks and price-feed failure pauses, not actual engine sources, redundancy or delay. The March DIA reserve-backed public-good USDh/USD feed is for integrating lending/trading/liquidation markets; neither party establishes that it supplies Hermetica's internal hedge/redemption engine. Thus that scoped tier remains undisclosed, not an assertion that no public USDh oracle exists."
+    },
+    {
+      "id": "uw-sofid-sofi-3f557166054a9fae",
+      "assetId": "sofid-sofi",
+      "scope": {
+        "componentKey": "mechanism-review:custodyContinuity",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "mechanism-review:custodyContinuity",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R31)",
+      "sources": [
+        {
+          "url": "https://d32ijn7u0aqfv4.cloudfront.net/wp/wp-content/uploads/raw/SoFiUSD-Stablecoin-Attestation-Report-7.31.2026.pdf",
+          "observedAt": "2026-10-03T22:54:53Z",
+          "datumAsOf": "2026-07-31",
+          "location": "Schedule II, page 5",
+          "excerpt": "In a fiduciary account at a depository institution established by BitGo Trust Company, Inc.",
+          "assertion": "Names BitGo and the Federal Reserve, allocation and non-reuse safeguards, but not the commercial depository or substitute/failure-continuity arrangements."
+        },
+        {
+          "url": "https://d32ijn7u0aqfv4.cloudfront.net/wp/wp-content/uploads/raw/SOFID-Risk-Disclosure-1.pdf",
+          "observedAt": "2026-10-03T22:54:53Z",
+          "datumAsOf": "2026-05-27",
+          "location": "Section 5.2 Third-Party Risk",
+          "excerpt": "Failures, insolvency, misconduct, or service interruptions of third parties may adversely affect SOFID.",
+          "assertion": "Warns of continuity failure without a token-specific substitute-custodian or recovery commitment."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.sofi.com/crypto/sofiusd/",
+        "https://d32ijn7u0aqfv4.cloudfront.net/wp/wp-content/uploads/raw/SoFiUSD-Stablecoin-Attestation-Report-7.31.2026.pdf",
+        "https://d32ijn7u0aqfv4.cloudfront.net/wp/wp-content/uploads/raw/SOFID-Terms-of-Use-1.pdf",
+        "https://d32ijn7u0aqfv4.cloudfront.net/wp/wp-content/uploads/raw/SOFID-Risk-Disclosure-1.pdf",
+        "https://www.bitgo.com/resources/blog/bitgo-selected-by-sofi-to-provide-stablecoin-infrastructure/",
+        "https://www.bitgo.com/legal/bitgo-additional-terms/"
+      ],
+      "rationale": "The independent July examination establishes unencumbered cash at the Federal Reserve and a BitGo-created fiduciary bank account, with allocation and segregation from BitGo. The commercial depository remains unnamed and no SOFID-specific substitute-provider, continuity or failure-recovery arrangement is disclosed in the report, holder terms, risk disclosures or BitGo service materials. Existing adverse holder-claim evidence is preserved; no favorable whole-component quality is inferred."
+    },
+    {
+      "id": "uw-weusd-picwe-5bdd18b60a5fb6bc",
+      "assetId": "weusd-picwe",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R31)",
+      "sources": [
+        {
+          "url": "https://docs.picwe.org/what-is-weusd",
+          "observedAt": "2026-10-03T22:54:53Z",
+          "datumAsOf": "2026-04-27",
+          "location": "Definition and Core Properties",
+          "excerpt": "Today, WEUSD is minted 1:1 against USDC.",
+          "assertion": "A design/backing claim, not a dated whole-asset reserve inventory or supply-to-backing reconciliation cadence."
+        },
+        {
+          "url": "https://docs.picwe.org/developers/security",
+          "observedAt": "2026-10-03T22:54:53Z",
+          "datumAsOf": "2026-04-27",
+          "location": "Operational Security",
+          "excerpt": "Real-time transaction monitoring",
+          "assertion": "Transaction/security monitoring does not establish all-chain token liabilities reconciled to reserves on a common clock."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.picwe.org/en",
+        "https://docs.picwe.org/",
+        "https://docs.picwe.org/what-is-weusd",
+        "https://docs.picwe.org/mint-and-redeem",
+        "https://docs.picwe.org/faq",
+        "https://docs.picwe.org/developers/contracts",
+        "https://docs.picwe.org/developers/api-reference",
+        "https://docs.picwe.org/developers/security",
+        "https://mainnet.movementnetwork.xyz/v1/accounts/0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6/module/weusd_mint_redeem"
+      ],
+      "rationale": "Current docs claim USDC backing and reserve-lock minting but publish no dated measured whole-WEUSD book/denominator or recurring common-clock reconciliation covering all native deployments, mint/burn and cross-chain reserves/deficits. Security audits, transaction monitoring and local reserve getter ABIs do not establish that financial scope. Prior conflicting basket descriptions remain unresolved; no 100% USDC composition or favorable reconciliation is invented."
+    },
+    {
+      "id": "uw-weusd-picwe-60a64c405e7394b7",
+      "assetId": "weusd-picwe",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R31)",
+      "sources": [
+        {
+          "url": "https://docs.picwe.org/what-is-weusd",
+          "observedAt": "2026-10-03T22:54:53Z",
+          "datumAsOf": "2026-04-27",
+          "location": "Definition and Core Properties",
+          "excerpt": "Today, WEUSD is minted 1:1 against USDC.",
+          "assertion": "A design/backing claim, not a dated whole-asset reserve inventory or supply-to-backing reconciliation cadence."
+        },
+        {
+          "url": "https://docs.picwe.org/developers/security",
+          "observedAt": "2026-10-03T22:54:53Z",
+          "datumAsOf": "2026-04-27",
+          "location": "Operational Security",
+          "excerpt": "Real-time transaction monitoring",
+          "assertion": "Transaction/security monitoring does not establish all-chain token liabilities reconciled to reserves on a common clock."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.picwe.org/en",
+        "https://docs.picwe.org/",
+        "https://docs.picwe.org/what-is-weusd",
+        "https://docs.picwe.org/mint-and-redeem",
+        "https://docs.picwe.org/faq",
+        "https://docs.picwe.org/developers/contracts",
+        "https://docs.picwe.org/developers/api-reference",
+        "https://docs.picwe.org/developers/security",
+        "https://mainnet.movementnetwork.xyz/v1/accounts/0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6/module/weusd_mint_redeem"
+      ],
+      "rationale": "Current docs claim USDC backing and reserve-lock minting but publish no dated measured whole-WEUSD book/denominator or recurring common-clock reconciliation covering all native deployments, mint/burn and cross-chain reserves/deficits. Security audits, transaction monitoring and local reserve getter ABIs do not establish that financial scope. Prior conflicting basket descriptions remain unresolved; no 100% USDC composition or favorable reconciliation is invented."
     }
   ]
 }
