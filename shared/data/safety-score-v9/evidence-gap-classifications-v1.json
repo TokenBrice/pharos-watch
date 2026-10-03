@@ -4332,6 +4332,292 @@
         "https://raw.githubusercontent.com/SwisscoastAG/HLiquity/30f7253f635f6015267b0fcdb5554d259b76e5db/packages/contracts/contracts/TroveManager.sol"
       ],
       "rationale": "No published whole-position realization horizon for the aggregate HBAR collateral across Troves and Stability Pool was located. Borrowing, repayment, liquidation/redistribution and redemption mechanics disclose encumbrance and distinct claims but no maximum for realizing the entire scoped collateral into USD. Atomic HBAR redemption alone does not establish immediate liquidity of the whole reserve slice. Preserve unknown rather than infer zero-day liquidity from native HBAR transferability."
+    },
+    {
+      "id": "uw-idrx-idrx-c553907909eb3415",
+      "assetId": "idrx-idrx",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:idrx-idrx:offchain-issuer"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T22:48:43Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R22)",
+      "sources": [
+        {
+          "url": "https://docs.idrx.co/services/fees",
+          "observedAt": "2026-10-03T22:48:43Z",
+          "datumAsOf": null,
+          "location": "Redeem (IDRX \u2192 IDR) fee table",
+          "excerpt": "Redeem fees are deducted from the IDR amount you receive.",
+          "assertion": "Rp5,000 below Rp250m; Rp35,000 at/above, with bank-dependent RTGS fallback. Public flat-IDR formula is not evaluated at USD stress notionals by the existing documentedVariableFee model (W15)."
+        }
+      ]
+    },
+    {
+      "id": "uw-uscc-superstate-553ffbe0bde60ee3",
+      "assetId": "uscc-superstate",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T22:48:43Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R22)",
+      "sources": [
+        {
+          "url": "https://superstate.com/assets/uscc",
+          "observedAt": "2026-10-03T22:48:43Z",
+          "datumAsOf": "2026-10-01",
+          "location": "Holdings table, Cme Ether Future Oct26 and USDC rows",
+          "excerpt": "Portfolio holdings are shown as of the date indicated and are unaudited.",
+          "assertion": "Whole current portfolio publishes signed NAV percentages, including Ether future -0.90% and USDC -1.49%. ReserveSlice requires nonnegative pct; a net long/short NAV book cannot be honestly normalized into its long-only schema."
+        }
+      ]
+    },
+    {
+      "id": "uw-idrx-idrx-1b1d928ee27e879e",
+      "assetId": "idrx-idrx",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:2fb48797045babd839df7961",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:48:43Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R22)",
+      "sources": [
+        {
+          "url": "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20August%202026.pdf",
+          "observedAt": "2026-10-03T22:48:43Z",
+          "datumAsOf": "2026-08-28",
+          "location": "Appendix 1 pp. 5\u20139 and 13; bank/ORI030 supporting images visually inspected",
+          "excerpt": "the Company's designated ORI030 (secondary) account",
+          "assertion": "Report identifies ORI030 secondary balance and Ina/BRI accounts; Ina images show GIRO/GIRO PREMI. No ORI030 series/ISIN/maturity or sale-completion horizon, or bank-account maturity maximum appears."
+        },
+        {
+          "url": "https://app.idrx.co/assets/docs/idrx-terms-n-condition-en.pdf",
+          "observedAt": "2026-10-03T22:48:43Z",
+          "datumAsOf": "2026-05-04",
+          "location": "Definitions and service terms",
+          "excerpt": "IDRX reserves the right to modify, update, or discontinue part or all of the services on the Platform at any time with or without prior notice, at its discretion.",
+          "assertion": "Customer redemption/service terms do not disclose terms of the exact underlying reserve bank accounts or a realizability bound on the GHP ORI030 secondary position."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://idrx.co/en",
+        "https://idrx.co/en/docs",
+        "https://idrx.co/api/documents?page=1&take=100",
+        "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20August%202026.pdf",
+        "https://docs.idrx.co/introduction/readme",
+        "https://docs.idrx.co/llms.txt",
+        "https://docs.idrx.co/services/fees",
+        "https://app.idrx.co/assets/docs/idrx-terms-n-condition-en.pdf"
+      ],
+      "rationale": "Exact ORI030 maturityDaysMax and liquidityHorizon and Ina/BRI account maturityDaysMax are not disclosed in the issuer site, report archive/current AUP with visually inspected bank/ORI appendices, whitepaper landing/docs, or governing customer terms. ORI030 is an aggregate secondary account label, not a series/ISIN; a general government-security maturity cannot be assigned to it. Bank balance/GIRO disclosure is not an explicit maturity maximum. No fabricated zero or maturity extrapolation is used."
+    },
+    {
+      "id": "uw-idrx-idrx-171b73550960d26a",
+      "assetId": "idrx-idrx",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:2fb48797045babd839df7961",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:48:43Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R22)",
+      "sources": [
+        {
+          "url": "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20August%202026.pdf",
+          "observedAt": "2026-10-03T22:48:43Z",
+          "datumAsOf": "2026-08-28",
+          "location": "Appendix 1 pp. 5\u20139 and 13; bank/ORI030 supporting images visually inspected",
+          "excerpt": "the Company's designated ORI030 (secondary) account",
+          "assertion": "Report identifies ORI030 secondary balance and Ina/BRI accounts; Ina images show GIRO/GIRO PREMI. No ORI030 series/ISIN/maturity or sale-completion horizon, or bank-account maturity maximum appears."
+        },
+        {
+          "url": "https://app.idrx.co/assets/docs/idrx-terms-n-condition-en.pdf",
+          "observedAt": "2026-10-03T22:48:43Z",
+          "datumAsOf": "2026-05-04",
+          "location": "Definitions and service terms",
+          "excerpt": "IDRX reserves the right to modify, update, or discontinue part or all of the services on the Platform at any time with or without prior notice, at its discretion.",
+          "assertion": "Customer redemption/service terms do not disclose terms of the exact underlying reserve bank accounts or a realizability bound on the GHP ORI030 secondary position."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://idrx.co/en",
+        "https://idrx.co/en/docs",
+        "https://idrx.co/api/documents?page=1&take=100",
+        "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20August%202026.pdf",
+        "https://docs.idrx.co/introduction/readme",
+        "https://docs.idrx.co/llms.txt",
+        "https://docs.idrx.co/services/fees",
+        "https://app.idrx.co/assets/docs/idrx-terms-n-condition-en.pdf"
+      ],
+      "rationale": "Exact ORI030 maturityDaysMax and liquidityHorizon and Ina/BRI account maturityDaysMax are not disclosed in the issuer site, report archive/current AUP with visually inspected bank/ORI appendices, whitepaper landing/docs, or governing customer terms. ORI030 is an aggregate secondary account label, not a series/ISIN; a general government-security maturity cannot be assigned to it. Bank balance/GIRO disclosure is not an explicit maturity maximum. No fabricated zero or maturity extrapolation is used."
+    },
+    {
+      "id": "uw-idrx-idrx-5f448584b6631db4",
+      "assetId": "idrx-idrx",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:49785466b99abe3671ca321f",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:48:43Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R22)",
+      "sources": [
+        {
+          "url": "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20August%202026.pdf",
+          "observedAt": "2026-10-03T22:48:43Z",
+          "datumAsOf": "2026-08-28",
+          "location": "Appendix 1 pp. 5\u20139 and 13; bank/ORI030 supporting images visually inspected",
+          "excerpt": "the Company's designated ORI030 (secondary) account",
+          "assertion": "Report identifies ORI030 secondary balance and Ina/BRI accounts; Ina images show GIRO/GIRO PREMI. No ORI030 series/ISIN/maturity or sale-completion horizon, or bank-account maturity maximum appears."
+        },
+        {
+          "url": "https://app.idrx.co/assets/docs/idrx-terms-n-condition-en.pdf",
+          "observedAt": "2026-10-03T22:48:43Z",
+          "datumAsOf": "2026-05-04",
+          "location": "Definitions and service terms",
+          "excerpt": "IDRX reserves the right to modify, update, or discontinue part or all of the services on the Platform at any time with or without prior notice, at its discretion.",
+          "assertion": "Customer redemption/service terms do not disclose terms of the exact underlying reserve bank accounts or a realizability bound on the GHP ORI030 secondary position."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://idrx.co/en",
+        "https://idrx.co/en/docs",
+        "https://idrx.co/api/documents?page=1&take=100",
+        "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20August%202026.pdf",
+        "https://docs.idrx.co/introduction/readme",
+        "https://docs.idrx.co/llms.txt",
+        "https://docs.idrx.co/services/fees",
+        "https://app.idrx.co/assets/docs/idrx-terms-n-condition-en.pdf"
+      ],
+      "rationale": "Exact ORI030 maturityDaysMax and liquidityHorizon and Ina/BRI account maturityDaysMax are not disclosed in the issuer site, report archive/current AUP with visually inspected bank/ORI appendices, whitepaper landing/docs, or governing customer terms. ORI030 is an aggregate secondary account label, not a series/ISIN; a general government-security maturity cannot be assigned to it. Bank balance/GIRO disclosure is not an explicit maturity maximum. No fabricated zero or maturity extrapolation is used."
+    },
+    {
+      "id": "uw-idrx-idrx-6315e4807d4ae26a",
+      "assetId": "idrx-idrx",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:6844e403a5152afde98fcc71",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:48:43Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R22)",
+      "sources": [
+        {
+          "url": "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20August%202026.pdf",
+          "observedAt": "2026-10-03T22:48:43Z",
+          "datumAsOf": "2026-08-28",
+          "location": "Appendix 1 pp. 5\u20139 and 13; bank/ORI030 supporting images visually inspected",
+          "excerpt": "the Company's designated ORI030 (secondary) account",
+          "assertion": "Report identifies ORI030 secondary balance and Ina/BRI accounts; Ina images show GIRO/GIRO PREMI. No ORI030 series/ISIN/maturity or sale-completion horizon, or bank-account maturity maximum appears."
+        },
+        {
+          "url": "https://app.idrx.co/assets/docs/idrx-terms-n-condition-en.pdf",
+          "observedAt": "2026-10-03T22:48:43Z",
+          "datumAsOf": "2026-05-04",
+          "location": "Definitions and service terms",
+          "excerpt": "IDRX reserves the right to modify, update, or discontinue part or all of the services on the Platform at any time with or without prior notice, at its discretion.",
+          "assertion": "Customer redemption/service terms do not disclose terms of the exact underlying reserve bank accounts or a realizability bound on the GHP ORI030 secondary position."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://idrx.co/en",
+        "https://idrx.co/en/docs",
+        "https://idrx.co/api/documents?page=1&take=100",
+        "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20August%202026.pdf",
+        "https://docs.idrx.co/introduction/readme",
+        "https://docs.idrx.co/llms.txt",
+        "https://docs.idrx.co/services/fees",
+        "https://app.idrx.co/assets/docs/idrx-terms-n-condition-en.pdf"
+      ],
+      "rationale": "Exact ORI030 maturityDaysMax and liquidityHorizon and Ina/BRI account maturityDaysMax are not disclosed in the issuer site, report archive/current AUP with visually inspected bank/ORI appendices, whitepaper landing/docs, or governing customer terms. ORI030 is an aggregate secondary account label, not a series/ISIN; a general government-security maturity cannot be assigned to it. Bank balance/GIRO disclosure is not an explicit maturity maximum. No fabricated zero or maturity extrapolation is used."
+    },
+    {
+      "id": "uw-sbold-k3-capital-b918fd8fbbfb3509",
+      "assetId": "sbold-k3-capital",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:c967128e84e617e34aef61e0",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:20Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R22)",
+      "sources": [
+        {
+          "url": "https://k3-capital.gitbook.io/sbold/technical-details/interactions",
+          "observedAt": "2026-10-03T22:51:20Z",
+          "datumAsOf": null,
+          "location": "Collateral exposure restrictions / Withdraw",
+          "excerpt": "In such cases, the protocol temporarily restricts the deposit and withdraw operations to avoid increasing exposure further and to maintain healthy system dynamics.",
+          "assertion": "Collateral gates are disclosed but no time bound on restored withdrawal or full-position liquidation/swap completion is promised."
+        },
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x50bd66d59911f5e086ec87ae43c811e0d059dd11",
+          "observedAt": "2026-10-03T22:51:20Z",
+          "datumAsOf": null,
+          "location": "sBold.sol _maxWithdraw/_maxRedeem and _checkCollHealth",
+          "excerpt": "if (!success || paused()) return 0;",
+          "assertion": "Exact deployed source gates withdrawal on oracle success, pause and collateral health; no deadline makes the whole protocol position realizable in a fixed horizon."
+        },
+        {
+          "url": "https://dedaub.com/audits/k3-capital/sbold-may-19-2025/",
+          "observedAt": "2026-10-03T22:51:20Z",
+          "datumAsOf": "2025-05-19",
+          "location": "P1: operability relies on BOLD liquidity",
+          "excerpt": "some users attempting to redeem their sBOLD may be unable to do so until BOLD liquidity returns to adequate levels on-chain.",
+          "assertion": "Independent audit corroborates market-dependent withdrawal restoration rather than a specified maximum realization time."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://k3-capital.gitbook.io/sbold/llms.txt",
+        "https://k3-capital.gitbook.io/sbold/introducing-sbold",
+        "https://k3-capital.gitbook.io/sbold/liquity-v2-design",
+        "https://k3-capital.gitbook.io/sbold/technical-details",
+        "https://k3-capital.gitbook.io/sbold/technical-details/interactions",
+        "https://k3-capital.gitbook.io/sbold/audit-reports",
+        "https://www.chainsecurity.com/security-audit/k3-sbold",
+        "https://dedaub.com/audits/k3-capital/sbold-may-19-2025/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x50bd66d59911f5e086ec87ae43c811e0d059dd11"
+      ],
+      "rationale": "Exact whole-slice liquidityHorizon for the BOLD-in-Stability-Pools position has no published guaranteed realization bound. Official product/technical/interaction docs, source and both audit disclosures show conditional collateral/pausing/oracle and market-liquidity gates, not a deadline. Atomic successful withdraw calls do not imply the entire scoped position is immediately available; no scalar immediate or fabricated seven-day bound is authored."
     }
   ]
 }

@@ -1988,6 +1988,180 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "uscc-superstate",
+      "reviewedAt": "2026-10-03T22:46:02Z",
+      "expiresAt": "2027-10-03T22:46:02Z",
+      "reviewer": "W1R22 unknown-wave primary-source review",
+      "notes": "Exact token operating history lower bound from dated launch or live-product announcement. No throughput, stress settlement, assurance continuity, or incident-free claim is established.",
+      "sources": [
+        {
+          "sourceId": "dated-operation",
+          "label": "Exact token dated operating announcement",
+          "publisher": "Superstate",
+          "publishedAt": "2024-07-22",
+          "url": "https://superstate.com/newsroom/introducing-the-superstate-crypto-carry-fund-uscc",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 26,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "ustb-superstate",
+      "reviewedAt": "2026-10-03T22:46:02Z",
+      "expiresAt": "2027-10-03T22:46:02Z",
+      "reviewer": "W1R22 unknown-wave primary-source review",
+      "notes": "Exact token operating history lower bound from dated launch or live-product announcement. No throughput, stress settlement, assurance continuity, or incident-free claim is established.",
+      "sources": [
+        {
+          "sourceId": "dated-operation",
+          "label": "Exact token dated operating announcement",
+          "publisher": "Superstate",
+          "publishedAt": "2024-02-01",
+          "url": "https://superstate.com/newsroom/blog-introducing-the-superstate-short-duration-u.s.-government-securities-fund-ustb",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 32,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "idrx-idrx",
+      "reviewedAt": "2026-10-03T22:46:02Z",
+      "expiresAt": "2027-10-03T22:46:02Z",
+      "reviewer": "W1R22 unknown-wave primary-source review",
+      "notes": "Exact token operating history lower bound from dated launch or live-product announcement. No throughput, stress settlement, assurance continuity, or incident-free claim is established.",
+      "sources": [
+        {
+          "sourceId": "dated-operation",
+          "label": "Exact token dated operating announcement",
+          "publisher": "PT IDRX Indo Inovasi",
+          "publishedAt": "2025-03-14",
+          "url": "https://idrx.co/en/articles/introducing-idrx-rupiah-pegged-stablecoin",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 18,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "sbold-k3-capital",
+      "reviewedAt": "2026-10-03T22:46:02Z",
+      "expiresAt": "2027-10-03T22:46:02Z",
+      "reviewer": "W1R22 unknown-wave primary-source review",
+      "notes": "Exact token operating history lower bound from dated launch or live-product announcement. No throughput, stress settlement, assurance continuity, or incident-free claim is established.",
+      "sources": [
+        {
+          "sourceId": "dated-operation",
+          "label": "Exact token dated operating announcement",
+          "publisher": "Liquity",
+          "publishedAt": "2025-08-15",
+          "url": "https://www.liquity.org/blog/forkonomics-update---august-2025",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 13,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "iusd-initia",
+      "reviewedAt": "2026-10-03T22:48:43Z",
+      "expiresAt": "2027-10-03T22:48:43Z",
+      "reviewer": "W1R22 pinned exact-token operating observation",
+      "notes": "At interwoven-1 block 22605236, dated 2026-10-03T22:47:27Z, iUSD metadata names the exact token and positive supply 1622218608703 at 6 decimals. This proves live operation today only: zero completed months is the evidenced lower bound, NOT a launch-date or zero-age claim. Historical block 21248472 could not be reopened (REST/RPC HTTP 500); no parent history or unverified February announcement is used. Performance and incidents remain unreviewed.",
+      "sources": [
+        {
+          "sourceId": "live-token-observation",
+          "label": "Pinned iUSD metadata at interwoven-1 block 22605236 (x-cosmos-block-height header)",
+          "publisher": "Initia Labs",
+          "publishedAt": "2026-10-03",
+          "url": "https://rest.initia.xyz/initia/move/v1/accounts/0x6c69733a9e722f3660afb524f89fce957801fa7e4408b8ef8fe89db9627b570e/resources",
+          "confidence": "issuer-reported"
+        },
+        {
+          "sourceId": "dated-block",
+          "label": "Block 22605236 header; 2026-10-03T22:47:27Z",
+          "publisher": "Initia Labs",
+          "publishedAt": "2026-10-03",
+          "url": "https://rest.initia.xyz/cosmos/base/tendermint/v1beta1/blocks/22605236",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 0,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "live-token-observation",
+            "dated-block"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }
