@@ -2954,6 +2954,138 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "mantrausd-mantra",
+      "reviewedAt": "2026-10-03T22:47:31Z",
+      "expiresAt": "2027-10-03T22:47:10Z",
+      "reviewer": "Unknown-wave W1R49",
+      "notes": "Exact token live-operation lower bound from dated primary announcement; age only. No throughput, stress recovery, financial reconciliation or incident-free history is claimed.",
+      "sources": [
+        {
+          "sourceId": "dated-operation",
+          "label": "November recap documents first mantraUSD mint and trading",
+          "publisher": "MANTRA",
+          "publishedAt": "2025-12-01",
+          "url": "https://mantrachain.io/resources/announcements/mantra-november-recap",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 10,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "fusd-freedom-dollar",
+      "reviewedAt": "2026-10-03T22:47:31Z",
+      "expiresAt": "2027-10-03T22:47:10Z",
+      "reviewer": "Unknown-wave W1R49",
+      "notes": "Exact token live-operation lower bound from dated primary announcement; age only. No throughput, stress recovery, financial reconciliation or incident-free history is claimed.",
+      "sources": [
+        {
+          "sourceId": "dated-operation",
+          "label": "Zano May ecosystem update confirms fUSD launch",
+          "publisher": "Zano Project",
+          "publishedAt": "2025-06-03",
+          "url": "https://blog.zano.org/zano-monthly-project-update-8-may-2025/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 16,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "satusd-river",
+      "reviewedAt": "2026-10-03T22:47:31Z",
+      "expiresAt": "2027-10-03T22:47:10Z",
+      "reviewer": "Unknown-wave W1R49",
+      "notes": "Exact token live-operation lower bound from dated primary announcement; age only. No throughput, stress recovery, financial reconciliation or incident-free history is claimed.",
+      "sources": [
+        {
+          "sourceId": "dated-operation",
+          "label": "Satoshi SAT mainnet launch; renamed satUSD September 2024",
+          "publisher": "River / Satoshi Protocol",
+          "publishedAt": "2024-03-28",
+          "url": "https://blog.riverai.inc/satoshi-protocol-is-live-on-mainnet-referral-program-and-next-steps/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 30,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "hyusd-hylo",
+      "reviewedAt": "2026-10-03T22:55:45Z",
+      "expiresAt": "2027-10-03T22:47:10Z",
+      "reviewer": "Unknown-wave W1R49",
+      "notes": "Exact hyUSD SPL mint first issuance dated by Solscan; eligibility-only full-calendar-month lower bound. No throughput, reconciliation, stress recovery or clean incident history is asserted.",
+      "sources": [
+        {
+          "sourceId": "first-mint",
+          "label": "Exact hyUSD SPL mint first issuance 2025-04-13 20:28:49 UTC",
+          "publisher": "Solana blockchain via Solscan",
+          "publishedAt": "2025-04-13",
+          "url": "https://solscan.io/token/5YMkXAYccHSGnHn9nob9xEvv6Pvka9DZWH7nTbotTu9E",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 17,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "first-mint"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }
