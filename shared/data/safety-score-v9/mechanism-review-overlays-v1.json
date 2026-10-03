@@ -3364,7 +3364,7 @@
     {
       "assetId": "audm-macropod",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-07-15",
+      "reviewedAt": "2026-10-03",
       "sources": [
         {
           "label": "Macropod financial-services guide and PDS (AUDM Trust, beneficial interest, and insolvency insulation)",
@@ -3377,9 +3377,17 @@
         {
           "label": "Macropod AUDM reserve report for July 1, 2026",
           "url": "https://cdn.prod.website-files.com/69df87da28d300c1b443a0d6/6a4c45fc27ad45b67c2b0d4f_260701%20Catena%20Digital%20Pty%20Ltd%20Reserve%20Verification%20Report%20as%20at%201st%20July%202026.pdf"
+        },
+        {
+          "label": "Macropod current September 30, 2026 complete reserve and chain-liability reconciliation",
+          "url": "https://cdn.prod.website-files.com/69df87da28d300c1b443a0d6/6abf4aae214c978251192bb2_261001%20Catena%20Digital%20Pty%20Ltd%20Reserve%20Verification%20Report%20as%20at%2030th%20Sept%202026.pdf"
+        },
+        {
+          "label": "Macropod January 2026 named issuer and AUDM service agreement",
+          "url": "https://cdn.prod.website-files.com/689be6f8cea5ca69d2deb530/69cb4b412e40a2f45b5e8607_combined-legal-agreement-for-the-macropod-platform-audm-token.pdf"
         }
       ],
-      "notes": "Macropod's effective December 2025 PDS identifies AFSL 566313, defines each AUDM as a unit and beneficial interest in the AUDM Trust, and states that trust reserves are insulated from issuer insolvency. Hall Chadwick's March 2026 agreed-upon-procedures report identifies Westpac and Australian Settlements Limited/Banking Circle trust accounts and reports no encumbrances, pledges, or third-party claims; the July issuer report names the same accounts. This supports adequate claim and segregation and adequate custody continuity. The verification expressly provides no assurance conclusion or independence representation, and no substitute-custodian succession clause was established, so neither component is strong.",
+      "notes": "Macropod's effective December 2025 PDS identifies AFSL 566313, defines each AUDM as a unit and beneficial interest in the AUDM Trust, and states that trust reserves are insulated from issuer insolvency. Hall Chadwick's March 2026 agreed-upon-procedures report identifies Westpac and Australian Settlements Limited/Banking Circle trust accounts and reports no encumbrances, pledges, or third-party claims; the July issuer report names the same accounts. This supports adequate claim and segregation and adequate custody continuity. The verification expressly provides no assurance conclusion or independence representation, and no substitute-custodian succession clause was established, so neither component is strong. Research update 2026-10-03: the September 30 issuer verification itemizes Westpac AUDM Trust Class A Reserve AUD 3,322,783.88 and AUDM 3,322,070.88 across Ethereum, Redbelly, Solana and Base at the same date. It describes bank-statement/transaction review, exact issuing contract addresses and reserve-to-blockchain transaction reconciliation. The named Catena Digital service agreement and exact chain identity anchor support limited issuer-reported assuranceAndReconciliation. This is not an independent assurance opinion; stronger quality is not asserted and the older claim/custody conclusions are unchanged.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
@@ -3387,6 +3395,9 @@
         },
         "custodyContinuity": {
           "quality": "adequate"
+        },
+        "assuranceAndReconciliation": {
+          "quality": "limited"
         }
       }
     },

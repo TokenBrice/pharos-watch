@@ -11870,6 +11870,105 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "gbpa-agant",
+      "reviewedAt": "2026-10-03T23:05:09Z",
+      "expiresAt": "2027-10-03T23:05:09Z",
+      "reviewer": "Pharos unknown-wave W1R85",
+      "notes": "Documented exact-token deployment/live operation on 2026-01-25 supplies only a conservative completed-calendar-month lower bound as of 2026-10-03. Deployment is not independent verification of operating continuity. No settled stress redemptions, lifetime throughput, continuous report sequence, recovery performance or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-token",
+          "label": "Ethereum GBPA creation at block 24312390",
+          "publisher": "Ethereum explorer",
+          "publishedAt": "2026-01-25",
+          "url": "https://etherscan.io/tx/0x2104d4b08186624b758335bc4938c070438e81874feff7a2dd1535b900a4a954",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 8,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-token"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usdm-mega",
+      "reviewedAt": "2026-10-03T23:05:09Z",
+      "expiresAt": "2027-10-03T23:05:09Z",
+      "reviewer": "Pharos unknown-wave W1R85",
+      "notes": "Documented exact-token deployment/live operation on 2025-12-08 supplies only a conservative completed-calendar-month lower bound as of 2026-10-03. Deployment is not independent verification of operating continuity. No settled stress redemptions, lifetime throughput, continuous report sequence, recovery performance or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-token",
+          "label": "Exact Ethereum USDm creation at block 23969600",
+          "publisher": "Ethereum explorer",
+          "publishedAt": "2025-12-08",
+          "url": "https://etherscan.io/tx/0x00ec709103e2b627d4297f4e6fa53f166923eb2720e4b854e53ec10ead84fdb0",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 9,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-token"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "audm-macropod",
+      "reviewedAt": "2026-10-03T23:05:09Z",
+      "expiresAt": "2027-10-03T23:05:09Z",
+      "reviewer": "Pharos unknown-wave W1R85",
+      "notes": "Documented exact-token deployment/live operation on 2026-01-06 supplies only a conservative completed-calendar-month lower bound as of 2026-10-03. Deployment is not independent verification of operating continuity. No settled stress redemptions, lifetime throughput, continuous report sequence, recovery performance or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-token",
+          "label": "Macropod dated announcement of live AUDM online mint and redemption",
+          "publisher": "Macropod Global",
+          "publishedAt": "2026-01-06",
+          "url": "https://www.macropod.com/resources/australias-first-regulated-stablecoin",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 8,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-token"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

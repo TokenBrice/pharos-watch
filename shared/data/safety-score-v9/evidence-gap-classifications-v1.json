@@ -26024,6 +26024,522 @@
         "https://assets.jpyc.co.jp/ir/Financial-results/kessan-3.pdf"
       ],
       "rationale": "No dated performed whole-JPYC supply-to-reserve reconciliation procedure and cadence covering every native-chain liability, mint/burn and backing at one clock is disclosed. Weekly statutory maximum-undelivered-debt safeguarding and customer history are not a public common-clock token/reserve reconciliation; the homepage says reserve publication is planned."
+    },
+    {
+      "id": "uw-gbpa-agant-0013c532d5a15e5c",
+      "assetId": "gbpa-agant",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:cefb5f248bc428cfb19d0537",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:18:50Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R85)",
+      "sources": [
+        {
+          "url": "https://security.agant.io/doc/trust?rid=6abea083a941a8650c35ebf8&r=lz53fv2d0lk02myddnbz7&download=true",
+          "observedAt": "2026-10-03T23:18:50Z",
+          "datumAsOf": "2026-09-30",
+          "location": "Reserve accounts and Custody Model",
+          "excerpt": "GBP in the backing asset account may be deployed to a State Street Money Market Fund (MMF), subject to the same dual-approval controls described above.",
+          "assertion": "Lists Griffin cash and State Street MMF balances, but no specific fund/share-class identifier, maturity maxima or reserve-account withdrawal settlement terms."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.agant.io/gbpa/",
+        "https://www.agant.io/company/",
+        "https://security.agant.io/resources",
+        "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/networks.md",
+        "https://app.agant.io/terms-of-service/",
+        "https://committees.parliament.uk/writtenevidence/163761/html/",
+        "https://security.agant.io/doc/trust?rid=6abea083a941a8650c35ebf8&r=lz53fv2d0lk02myddnbz7&download=true",
+        "https://security.agant.io/doc/trust?rid=6a96cc38d6872004fe8bb2a0&r=lz53fv2d0lk02myddnbz7&download=true"
+      ],
+      "rationale": "For the exact Griffin designated reserve deposit and unnamed State Street MMF holding, neither per-slice maturityDaysMax nor liquidityHorizon is published in the reviewed issuer reports, terms and docs. The MMF is not identified to a share class/ISIN, so generic State Street WAM, WAL or daily dealing cannot establish these held-slice facts. Cash description is not a disclosed demand-deposit contract or measured withdrawal horizon."
+    },
+    {
+      "id": "uw-gbpa-agant-54928b825acab907",
+      "assetId": "gbpa-agant",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:cefb5f248bc428cfb19d0537",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:18:50Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R85)",
+      "sources": [
+        {
+          "url": "https://security.agant.io/doc/trust?rid=6abea083a941a8650c35ebf8&r=lz53fv2d0lk02myddnbz7&download=true",
+          "observedAt": "2026-10-03T23:18:50Z",
+          "datumAsOf": "2026-09-30",
+          "location": "Reserve accounts and Custody Model",
+          "excerpt": "GBP in the backing asset account may be deployed to a State Street Money Market Fund (MMF), subject to the same dual-approval controls described above.",
+          "assertion": "Lists Griffin cash and State Street MMF balances, but no specific fund/share-class identifier, maturity maxima or reserve-account withdrawal settlement terms."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.agant.io/gbpa/",
+        "https://www.agant.io/company/",
+        "https://security.agant.io/resources",
+        "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/networks.md",
+        "https://app.agant.io/terms-of-service/",
+        "https://committees.parliament.uk/writtenevidence/163761/html/",
+        "https://security.agant.io/doc/trust?rid=6abea083a941a8650c35ebf8&r=lz53fv2d0lk02myddnbz7&download=true",
+        "https://security.agant.io/doc/trust?rid=6a96cc38d6872004fe8bb2a0&r=lz53fv2d0lk02myddnbz7&download=true"
+      ],
+      "rationale": "For the exact Griffin designated reserve deposit and unnamed State Street MMF holding, neither per-slice maturityDaysMax nor liquidityHorizon is published in the reviewed issuer reports, terms and docs. The MMF is not identified to a share class/ISIN, so generic State Street WAM, WAL or daily dealing cannot establish these held-slice facts. Cash description is not a disclosed demand-deposit contract or measured withdrawal horizon."
+    },
+    {
+      "id": "uw-gbpa-agant-2e9b4d42a0cdca9a",
+      "assetId": "gbpa-agant",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:fd470a9cc8af74fa1d0b9fde",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:18:50Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R85)",
+      "sources": [
+        {
+          "url": "https://security.agant.io/doc/trust?rid=6abea083a941a8650c35ebf8&r=lz53fv2d0lk02myddnbz7&download=true",
+          "observedAt": "2026-10-03T23:18:50Z",
+          "datumAsOf": "2026-09-30",
+          "location": "Reserve accounts and Custody Model",
+          "excerpt": "GBP in the backing asset account may be deployed to a State Street Money Market Fund (MMF), subject to the same dual-approval controls described above.",
+          "assertion": "Lists Griffin cash and State Street MMF balances, but no specific fund/share-class identifier, maturity maxima or reserve-account withdrawal settlement terms."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.agant.io/gbpa/",
+        "https://www.agant.io/company/",
+        "https://security.agant.io/resources",
+        "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/networks.md",
+        "https://app.agant.io/terms-of-service/",
+        "https://committees.parliament.uk/writtenevidence/163761/html/",
+        "https://security.agant.io/doc/trust?rid=6abea083a941a8650c35ebf8&r=lz53fv2d0lk02myddnbz7&download=true",
+        "https://security.agant.io/doc/trust?rid=6a96cc38d6872004fe8bb2a0&r=lz53fv2d0lk02myddnbz7&download=true"
+      ],
+      "rationale": "For the exact Griffin designated reserve deposit and unnamed State Street MMF holding, neither per-slice maturityDaysMax nor liquidityHorizon is published in the reviewed issuer reports, terms and docs. The MMF is not identified to a share class/ISIN, so generic State Street WAM, WAL or daily dealing cannot establish these held-slice facts. Cash description is not a disclosed demand-deposit contract or measured withdrawal horizon."
+    },
+    {
+      "id": "uw-gbpa-agant-aa51c23cc4c5c9d3",
+      "assetId": "gbpa-agant",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:fd470a9cc8af74fa1d0b9fde",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:18:50Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R85)",
+      "sources": [
+        {
+          "url": "https://security.agant.io/doc/trust?rid=6abea083a941a8650c35ebf8&r=lz53fv2d0lk02myddnbz7&download=true",
+          "observedAt": "2026-10-03T23:18:50Z",
+          "datumAsOf": "2026-09-30",
+          "location": "Reserve accounts and Custody Model",
+          "excerpt": "GBP in the backing asset account may be deployed to a State Street Money Market Fund (MMF), subject to the same dual-approval controls described above.",
+          "assertion": "Lists Griffin cash and State Street MMF balances, but no specific fund/share-class identifier, maturity maxima or reserve-account withdrawal settlement terms."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.agant.io/gbpa/",
+        "https://www.agant.io/company/",
+        "https://security.agant.io/resources",
+        "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/networks.md",
+        "https://app.agant.io/terms-of-service/",
+        "https://committees.parliament.uk/writtenevidence/163761/html/",
+        "https://security.agant.io/doc/trust?rid=6abea083a941a8650c35ebf8&r=lz53fv2d0lk02myddnbz7&download=true",
+        "https://security.agant.io/doc/trust?rid=6a96cc38d6872004fe8bb2a0&r=lz53fv2d0lk02myddnbz7&download=true"
+      ],
+      "rationale": "For the exact Griffin designated reserve deposit and unnamed State Street MMF holding, neither per-slice maturityDaysMax nor liquidityHorizon is published in the reviewed issuer reports, terms and docs. The MMF is not identified to a share class/ISIN, so generic State Street WAM, WAL or daily dealing cannot establish these held-slice facts. Cash description is not a disclosed demand-deposit contract or measured withdrawal horizon."
+    },
+    {
+      "id": "uw-usdm-mega-db8aa0b8e89f8ea1",
+      "assetId": "usdm-mega",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdm-mega:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:18:50Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R85)",
+      "sources": [
+        {
+          "url": "https://app.megausd.money/mint-agreement",
+          "observedAt": "2026-10-03T23:18:50Z",
+          "datumAsOf": null,
+          "location": "Section 3 Fees",
+          "excerpt": "Applicable fees will be disclosed prior to transaction confirmation.",
+          "assertion": "Transaction-time disclosure is promised, but the numerical redemption fee schedule/formula is not public."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://megausd.money/",
+        "https://docs.megaeth.com/llms.txt",
+        "https://app.megausd.money/",
+        "https://app.megausd.money/api/transparency/backing-and-supply-current",
+        "https://app.megausd.money/mint-agreement",
+        "https://app.megausd.money/terms",
+        "https://etherscan.io/address/0xec2af1c8b110a61fd9c3fa6a554a031ca9943926"
+      ],
+      "rationale": "The exact same-notional issuer redemption cost is not publicly disclosed. Both governing agreements defer applicable fees to transaction confirmation, with separate gas and institution costs; the public application requires a whitelisted wallet. No public numerical schedule or computable fee formula was located. No zero fee is inferred."
+    },
+    {
+      "id": "uw-usdm-mega-69c298bba1b19f35",
+      "assetId": "usdm-mega",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:40d656af6305e082a014dfa1",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:18:50Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R85)",
+      "sources": [
+        {
+          "url": "https://app.megausd.money/mint-agreement",
+          "observedAt": "2026-10-03T23:18:50Z",
+          "datumAsOf": null,
+          "location": "Section 3 Services",
+          "excerpt": "All services are subject to whitelisting, compliance requirements, and MegaUSD\u2019s discretion.",
+          "assertion": "Direct services are conditional; no per-USDC/per-USDtb reserve-wallet liquidation horizon is stated."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://megausd.money/",
+        "https://docs.megaeth.com/llms.txt",
+        "https://app.megausd.money/",
+        "https://app.megausd.money/api/transparency/backing-and-supply-current",
+        "https://app.megausd.money/mint-agreement",
+        "https://app.megausd.money/terms",
+        "https://etherscan.io/address/0xec2af1c8b110a61fd9c3fa6a554a031ca9943926"
+      ],
+      "rationale": "The liquidityHorizon of MegaUSD\u2019s exact directly-held USDC and USDtb reserve slices is not published. Current transparency discloses balances by custodian address, but not each custodial holding\u2019s conversion/withdrawal SLA or restrictions. Underlying USDC/USDtb liquidity and BUIDL marketing do not establish the local MegaUSD reserve-position unwind horizon."
+    },
+    {
+      "id": "uw-usdm-mega-593f5137fb4b0ac2",
+      "assetId": "usdm-mega",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:f273f829bdabcea2c223abbd",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:18:50Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R85)",
+      "sources": [
+        {
+          "url": "https://app.megausd.money/mint-agreement",
+          "observedAt": "2026-10-03T23:18:50Z",
+          "datumAsOf": null,
+          "location": "Section 3 Services",
+          "excerpt": "All services are subject to whitelisting, compliance requirements, and MegaUSD\u2019s discretion.",
+          "assertion": "Direct services are conditional; no per-USDC/per-USDtb reserve-wallet liquidation horizon is stated."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://megausd.money/",
+        "https://docs.megaeth.com/llms.txt",
+        "https://app.megausd.money/",
+        "https://app.megausd.money/api/transparency/backing-and-supply-current",
+        "https://app.megausd.money/mint-agreement",
+        "https://app.megausd.money/terms",
+        "https://etherscan.io/address/0xec2af1c8b110a61fd9c3fa6a554a031ca9943926"
+      ],
+      "rationale": "The liquidityHorizon of MegaUSD\u2019s exact directly-held USDC and USDtb reserve slices is not published. Current transparency discloses balances by custodian address, but not each custodial holding\u2019s conversion/withdrawal SLA or restrictions. Underlying USDC/USDtb liquidity and BUIDL marketing do not establish the local MegaUSD reserve-position unwind horizon."
+    },
+    {
+      "id": "uw-usdm-mega-f9e2d9c51403778e",
+      "assetId": "usdm-mega",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:18:50Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R85)",
+      "sources": [
+        {
+          "url": "https://app.megausd.money/terms",
+          "observedAt": "2026-10-03T23:18:50Z",
+          "datumAsOf": null,
+          "location": "Section 1 Reserves",
+          "excerpt": "The composition and value of the USDm Reserves may fluctuate over time, and MegaUSD does not guarantee that the value of the USDm Reserves will always equal the notional amount of USDm in circulation.",
+          "assertion": "Discloses a backing intention, not a documented whole-liability mint/burn reconciliation procedure with actual cadence."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://megausd.money/",
+        "https://docs.megaeth.com/llms.txt",
+        "https://app.megausd.money/",
+        "https://app.megausd.money/api/transparency/backing-and-supply-current",
+        "https://app.megausd.money/mint-agreement",
+        "https://app.megausd.money/terms",
+        "https://etherscan.io/address/0xec2af1c8b110a61fd9c3fa6a554a031ca9943926"
+      ],
+      "rationale": "MegaUSD publishes current collateral balances and supply through its transparency API, but no documented whole-supply mint/burn-to-reserve reconciliation procedure, process operator and verified recurring cadence was found. A current reserve snapshot, collateral-gateway mint checks and upstream Ethena reporting do not establish this exact MegaUSD-native financial process."
+    },
+    {
+      "id": "uw-audm-macropod-4234de6738caf3f1",
+      "assetId": "audm-macropod",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:audm-macropod:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:18:50Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R85)",
+      "sources": [
+        {
+          "url": "https://cdn.prod.website-files.com/689be6f8cea5ca69d2deb530/69cb4b412e40a2f45b5e8607_combined-legal-agreement-for-the-macropod-platform-audm-token.pdf",
+          "observedAt": "2026-10-03T23:18:50Z",
+          "datumAsOf": "2026-01-09",
+          "location": "Clause 21.17(b)",
+          "excerpt": "The refund might not appear in your Nominated Bank Account the same day as instructed due to the ADI\u2019s processing times and the processing time for your Nominated Bank Account.",
+          "assertion": "Best endeavours concerns next-business-day bank instructions, not a guaranteed maximum final bank credit."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.macropod.com/transparency/",
+        "https://docs.macropod.com/",
+        "https://www.macropod.com/frequently-asked-questions",
+        "https://cdn.prod.website-files.com/689be6f8cea5ca69d2deb530/69cb4b412e40a2f45b5e8607_combined-legal-agreement-for-the-macropod-platform-audm-token.pdf",
+        "https://cdn.prod.website-files.com/69df87da28d300c1b443a0d6/6abf4aae214c978251192bb2_261001%20Catena%20Digital%20Pty%20Ltd%20Reserve%20Verification%20Report%20as%20at%2030th%20Sept%202026.pdf",
+        "https://www.macropod.com/legal/combined-financial-services-guide.pdf",
+        "https://cdn.prod.website-files.com/689be6f8cea5ca69d2deb530/693103ded831fb7a82568a28_250919%20Macropod%20AUDM%20Trust%20deed%20-%20as%20executed-compressed.pdf"
+      ],
+      "rationale": "The maximum end-to-end AUDM issuer redemption settlement time is undisclosed. Clause 21.17 promises only best endeavours to instruct the ADI by the next Business Day and expressly excludes receiving-bank processing; reviewed FAQ, PDS, trust deed and terms disclose no final bank-credit maximum. This instruction target is not a settlement SLA."
+    },
+    {
+      "id": "uw-audm-macropod-96490048ab803995",
+      "assetId": "audm-macropod",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:c726bff886577505c36bee48",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:18:50Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R85)",
+      "sources": [
+        {
+          "url": "https://cdn.prod.website-files.com/69df87da28d300c1b443a0d6/6abf4aae214c978251192bb2_261001%20Catena%20Digital%20Pty%20Ltd%20Reserve%20Verification%20Report%20as%20at%2030th%20Sept%202026.pdf",
+          "observedAt": "2026-10-03T23:18:50Z",
+          "datumAsOf": "2026-09-30",
+          "location": "Reserve schedule",
+          "excerpt": "Westpac Banking Corporation (ABN 33 007 457 141) Acc: XXXXX4573",
+          "assertion": "Identifies the exact cash reserve bank/account and value, but no deposit maturity maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.macropod.com/transparency/",
+        "https://docs.macropod.com/",
+        "https://www.macropod.com/frequently-asked-questions",
+        "https://cdn.prod.website-files.com/689be6f8cea5ca69d2deb530/69cb4b412e40a2f45b5e8607_combined-legal-agreement-for-the-macropod-platform-audm-token.pdf",
+        "https://cdn.prod.website-files.com/69df87da28d300c1b443a0d6/6abf4aae214c978251192bb2_261001%20Catena%20Digital%20Pty%20Ltd%20Reserve%20Verification%20Report%20as%20at%2030th%20Sept%202026.pdf",
+        "https://www.macropod.com/legal/combined-financial-services-guide.pdf",
+        "https://cdn.prod.website-files.com/689be6f8cea5ca69d2deb530/693103ded831fb7a82568a28_250919%20Macropod%20AUDM%20Trust%20deed%20-%20as%20executed-compressed.pdf"
+      ],
+      "rationale": "maturityDaysMax for the Westpac AUDM Trust Class A Reserve deposit is not disclosed in the reserve verification, trust deed, legal agreement or PDS. The documents identify cash and the named reserve account but do not publish the account\u2019s deposit tenor or contractual maximum maturity. Existing immediate liquidity is preserved; maturity is not encoded as zero."
+    },
+    {
+      "id": "uw-gbpa-agant-f7847b2b61936fdf",
+      "assetId": "gbpa-agant",
+      "scope": {
+        "componentKey": "control:mint-meta:gbpa-agant:9274ef656b1a4469505d",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:gbpa-agant:9274ef656b1a4469505d",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:18:50Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R85)",
+      "sources": [
+        {
+          "url": "https://security.agant.io/doc/trust?rid=6abea083a941a8650c35ebf8&r=lz53fv2d0lk02myddnbz7&download=true",
+          "observedAt": "2026-10-03T23:18:50Z",
+          "datumAsOf": "2026-09-30",
+          "location": "Governance controls and Access Controls",
+          "excerpt": "Role-based permissions; no single user can initiate and approve an on-chain transaction unilaterally",
+          "assertion": "Generic Fireblocks dual approval is disclosed, but not the exact EVM/Tempo EOA binding, key-recovery policy or independently identified controller operators."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.agant.io/gbpa/",
+        "https://www.agant.io/company/",
+        "https://security.agant.io/resources",
+        "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/networks.md",
+        "https://app.agant.io/terms-of-service/",
+        "https://committees.parliament.uk/writtenevidence/163761/html/",
+        "https://security.agant.io/doc/trust?rid=6abea083a941a8650c35ebf8&r=lz53fv2d0lk02myddnbz7&download=true",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x4b55cc51901ef212a6cb4fa5e5daa6575afdd3f0",
+        "https://explorer.tempo.xyz/address/0x20c0000000000000000000000a6da882d075a4c3"
+      ],
+      "rationale": "For each identified EVM/Tempo fiat-minter and administrator EOA, the scoped question\u2019s independently evidenced key-custody/operator/recovery/replacement process remains undisclosed. The report publishes generic Fireblocks two-approval controls, but does not map them to these exact addresses or disclose signer/operator identities, key recovery and replacement. Contract role identity alone cannot supply these off-chain facts."
+    },
+    {
+      "id": "uw-gbpa-agant-4e26c8528c6d1b49",
+      "assetId": "gbpa-agant",
+      "scope": {
+        "componentKey": "control:mint-meta:gbpa-agant:946fa094ef021970c955",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:gbpa-agant:946fa094ef021970c955",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:18:50Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R85)",
+      "sources": [
+        {
+          "url": "https://security.agant.io/doc/trust?rid=6abea083a941a8650c35ebf8&r=lz53fv2d0lk02myddnbz7&download=true",
+          "observedAt": "2026-10-03T23:18:50Z",
+          "datumAsOf": "2026-09-30",
+          "location": "Governance controls and Access Controls",
+          "excerpt": "Role-based permissions; no single user can initiate and approve an on-chain transaction unilaterally",
+          "assertion": "Generic Fireblocks dual approval is disclosed, but not the exact EVM/Tempo EOA binding, key-recovery policy or independently identified controller operators."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.agant.io/gbpa/",
+        "https://www.agant.io/company/",
+        "https://security.agant.io/resources",
+        "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/networks.md",
+        "https://app.agant.io/terms-of-service/",
+        "https://committees.parliament.uk/writtenevidence/163761/html/",
+        "https://security.agant.io/doc/trust?rid=6abea083a941a8650c35ebf8&r=lz53fv2d0lk02myddnbz7&download=true",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x4b55cc51901ef212a6cb4fa5e5daa6575afdd3f0",
+        "https://explorer.tempo.xyz/address/0x20c0000000000000000000000a6da882d075a4c3"
+      ],
+      "rationale": "For each identified EVM/Tempo fiat-minter and administrator EOA, the scoped question\u2019s independently evidenced key-custody/operator/recovery/replacement process remains undisclosed. The report publishes generic Fireblocks two-approval controls, but does not map them to these exact addresses or disclose signer/operator identities, key recovery and replacement. Contract role identity alone cannot supply these off-chain facts."
+    },
+    {
+      "id": "uw-gbpa-agant-e2b125f3b4062db7",
+      "assetId": "gbpa-agant",
+      "scope": {
+        "componentKey": "control:mint-meta:gbpa-agant:f0519a474b5479587b4b",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:gbpa-agant:f0519a474b5479587b4b",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:18:50Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R85)",
+      "sources": [
+        {
+          "url": "https://security.agant.io/doc/trust?rid=6abea083a941a8650c35ebf8&r=lz53fv2d0lk02myddnbz7&download=true",
+          "observedAt": "2026-10-03T23:18:50Z",
+          "datumAsOf": "2026-09-30",
+          "location": "Governance controls and Access Controls",
+          "excerpt": "Role-based permissions; no single user can initiate and approve an on-chain transaction unilaterally",
+          "assertion": "Generic Fireblocks dual approval is disclosed, but not the exact EVM/Tempo EOA binding, key-recovery policy or independently identified controller operators."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.agant.io/gbpa/",
+        "https://www.agant.io/company/",
+        "https://security.agant.io/resources",
+        "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/networks.md",
+        "https://app.agant.io/terms-of-service/",
+        "https://committees.parliament.uk/writtenevidence/163761/html/",
+        "https://security.agant.io/doc/trust?rid=6abea083a941a8650c35ebf8&r=lz53fv2d0lk02myddnbz7&download=true",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x4b55cc51901ef212a6cb4fa5e5daa6575afdd3f0",
+        "https://explorer.tempo.xyz/address/0x20c0000000000000000000000a6da882d075a4c3"
+      ],
+      "rationale": "For each identified EVM/Tempo fiat-minter and administrator EOA, the scoped question\u2019s independently evidenced key-custody/operator/recovery/replacement process remains undisclosed. The report publishes generic Fireblocks two-approval controls, but does not map them to these exact addresses or disclose signer/operator identities, key recovery and replacement. Contract role identity alone cannot supply these off-chain facts."
+    },
+    {
+      "id": "uw-gbpa-agant-59484e6b4fc6899d",
+      "assetId": "gbpa-agant",
+      "scope": {
+        "componentKey": "control:mint-meta:gbpa-agant:f7c1e859b983dbc4cb65",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:gbpa-agant:f7c1e859b983dbc4cb65",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:18:50Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R85)",
+      "sources": [
+        {
+          "url": "https://security.agant.io/doc/trust?rid=6abea083a941a8650c35ebf8&r=lz53fv2d0lk02myddnbz7&download=true",
+          "observedAt": "2026-10-03T23:18:50Z",
+          "datumAsOf": "2026-09-30",
+          "location": "Governance controls and Access Controls",
+          "excerpt": "Role-based permissions; no single user can initiate and approve an on-chain transaction unilaterally",
+          "assertion": "Generic Fireblocks dual approval is disclosed, but not the exact EVM/Tempo EOA binding, key-recovery policy or independently identified controller operators."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.agant.io/gbpa/",
+        "https://www.agant.io/company/",
+        "https://security.agant.io/resources",
+        "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/networks.md",
+        "https://app.agant.io/terms-of-service/",
+        "https://committees.parliament.uk/writtenevidence/163761/html/",
+        "https://security.agant.io/doc/trust?rid=6abea083a941a8650c35ebf8&r=lz53fv2d0lk02myddnbz7&download=true",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x4b55cc51901ef212a6cb4fa5e5daa6575afdd3f0",
+        "https://explorer.tempo.xyz/address/0x20c0000000000000000000000a6da882d075a4c3"
+      ],
+      "rationale": "For each identified EVM/Tempo fiat-minter and administrator EOA, the scoped question\u2019s independently evidenced key-custody/operator/recovery/replacement process remains undisclosed. The report publishes generic Fireblocks two-approval controls, but does not map them to these exact addresses or disclose signer/operator identities, key recovery and replacement. Contract role identity alone cannot supply these off-chain facts."
     }
   ]
 }
