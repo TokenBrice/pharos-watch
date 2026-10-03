@@ -5330,6 +5330,171 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "sdai-gnosis",
+      "reviewedAt": "2026-10-03T22:46:52Z",
+      "expiresAt": "2027-10-03T22:46:52Z",
+      "reviewer": "W1R45 primary-source unknown resolver",
+      "notes": "Exact token deployment/dated operating announcement establishes a conservative live-history lower bound only. No independently verified throughput, stress recovery, reconciliation continuity or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-token-history",
+          "label": "SavingsXDai creation, Gnosis block 30195209",
+          "publisher": "Gnosis Blockscout",
+          "publishedAt": "2023-09-28",
+          "url": "https://gnosis.blockscout.com/tx/0xaf1e7513a4e5f219f195249c370a8babf0039eee866969ec86deeb9235a52066",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 36,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-token-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "xdai-gnosis",
+      "reviewedAt": "2026-10-03T22:46:52Z",
+      "expiresAt": "2027-10-03T22:46:52Z",
+      "reviewer": "W1R45 primary-source unknown resolver",
+      "notes": "Exact token deployment/dated operating announcement establishes a conservative live-history lower bound only. No independently verified throughput, stress recovery, reconciliation continuity or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-token-history",
+          "label": "xDAI first block October 8 2018 and live bridge operation",
+          "publisher": "Gnosis Chain",
+          "publishedAt": "2020-10-09",
+          "url": "https://docs.gnosischain.com/updates/archive/2020/xdai-weekly-recap-09-10-2020",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 95,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-token-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "yusd-yieldfi",
+      "reviewedAt": "2026-10-03T22:46:52Z",
+      "expiresAt": "2027-10-03T22:46:52Z",
+      "reviewer": "W1R45 primary-source unknown resolver",
+      "notes": "Exact token deployment/dated operating announcement establishes a conservative live-history lower bound only. No independently verified throughput, stress recovery, reconciliation continuity or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-token-history",
+          "label": "Exact catalog token proxy creation transaction",
+          "publisher": "Ethereum Blockscout",
+          "publishedAt": "2025-04-28",
+          "url": "https://eth.blockscout.com/api/v2/transactions/0x1037a556b13e8a5525f9df4ab34176398cdf7334c50da7de331097805699798c",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 17,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-token-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "mf-one-midas",
+      "reviewedAt": "2026-10-03T22:46:52Z",
+      "expiresAt": "2027-10-03T22:46:52Z",
+      "reviewer": "W1R45 primary-source unknown resolver",
+      "notes": "Exact token deployment/dated operating announcement establishes a conservative live-history lower bound only. No independently verified throughput, stress recovery, reconciliation continuity or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-token-history",
+          "label": "Exact catalog token proxy creation transaction",
+          "publisher": "Ethereum Blockscout",
+          "publishedAt": "2025-05-08",
+          "url": "https://eth.blockscout.com/api/v2/transactions/0x8764635d434b0f12edb4918ab7048440099fa144bc4c7bc9648bd7982a8c86bc",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 16,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-token-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usdpt-western-union",
+      "reviewedAt": "2026-10-03T22:46:52Z",
+      "expiresAt": "2027-10-03T22:46:52Z",
+      "reviewer": "W1R45 primary-source unknown resolver",
+      "notes": "Exact token deployment/dated operating announcement establishes a conservative live-history lower bound only. No independently verified throughput, stress recovery, reconciliation continuity or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-token-history",
+          "label": "USDPT launch May 4 2026",
+          "publisher": "Western Union",
+          "publishedAt": "2026-05-04",
+          "url": "https://ir.westernunion.com/news/archived-press-releases/press-release-details/2026/Western-Union-Launches-USDPT-on-Solana-Advancing-Regulated-Digital-Infrastructure-for-Global-Payments/default.aspx",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 4,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-token-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

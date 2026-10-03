@@ -11594,6 +11594,211 @@
         "https://rootstock.blockscout.com/api/v2/smart-contracts/0x47f5014115d3bb29B20b5168Ee75050D6f8c3Bf1"
       ],
       "rationale": "No final maximum for the retained USDRIF queue-redeem route is published. V3 has minimum queue delay, dynamic throttles, coverage/oracle conditions and TasksRunner execution; none guarantees completion. Verified current MocQueue source also publishes maxOperWaitingBlk: it makes an operation executable even without a price update, but does not ensure that the privileged guard executes it or that bucket redemption succeeds. Legacy docs describe 90-day settlement intervals, not a V3 SLA. No eligibility delay, minimum or average is encoded as a final-settlement maximum."
+    },
+    {
+      "id": "uw-yusd-yieldfi-352eda412973867f",
+      "assetId": "yusd-yieldfi",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:16Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R45)",
+      "sources": [
+        {
+          "url": "https://docs.yield.fi/due-diligence-questionaire/operational-control",
+          "observedAt": "2026-10-03T22:54:54Z",
+          "datumAsOf": null,
+          "location": "Accounting, NAV & Reporting",
+          "excerpt": "Reconciles token supply vs Vault net assets and flags breaks",
+          "assertion": "Publishes an internal software control objective, not an exact yUSD common-clock whole-liability reconciliation cadence."
+        },
+        {
+          "url": "https://docs.yield.fi/legal-documents/token-terms/yusd",
+          "observedAt": "2026-10-03T22:54:54Z",
+          "datumAsOf": null,
+          "location": "Sections 7.1, 7.2, 12",
+          "excerpt": "Valuation frequency. Minimum twice per week.",
+          "assertion": "NAV valuation frequency is disclosed; it is not whole-supply reserve reconciliation cadence."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.yield.fi/legal-documents/token-terms/yusd",
+        "https://docs.yield.fi/due-diligence-questionaire/operational-control",
+        "https://docs.yield.fi/prime-analytics/transparency-and-analytics",
+        "https://docs.yield.fi/legal-documents/terms-and-conditions",
+        "https://docs.yield.fi/due-diligence-questionaire/flow-of-funds",
+        "https://v2.yield.fi/transparency",
+        "https://docs.yield.fi/resources/legacy-smart-contract-addresses",
+        "https://etherscan.io/address/0x19ebd191f7a24ece672ba13a302212b5ef7f35cb#code"
+      ],
+      "rationale": "Exact yUSD whole-supply backing reconciliation cadence, common checkpoint and inclusion of every mint/burn and off-vault position remain undisclosed. NAV frequency, generic software objectives, user ledgers and Prime reserve analytics do not establish that exact procedure. Preserve unknown rather than assert no reconciliation."
+    },
+    {
+      "id": "uw-yusd-yieldfi-49db6695b25ecccc",
+      "assetId": "yusd-yieldfi",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:yusd-yieldfi:stablecoin-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:16Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R45)",
+      "sources": [
+        {
+          "url": "https://docs.yield.fi/legal-documents/token-terms/yusd",
+          "observedAt": "2026-10-03T22:54:54Z",
+          "datumAsOf": null,
+          "location": "Section 8.2",
+          "excerpt": "Delays may occur due to Market Disruption, illiquidity, compliance, or operational constraints.",
+          "assertion": "T+2 is expressly a processing target, not a final maximum settlement guarantee."
+        },
+        {
+          "url": "https://docs.yield.fi/legal-documents/terms-and-conditions",
+          "observedAt": "2026-10-03T22:54:54Z",
+          "datumAsOf": null,
+          "location": "Condition 9.3",
+          "excerpt": "Timing, processing windows, and SLAs are described in Token Terms, are subject to change without prior notice",
+          "assertion": "General timing terms preserve conditional delays."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.yield.fi/legal-documents/token-terms/yusd",
+        "https://docs.yield.fi/legal-documents/terms-and-conditions",
+        "https://docs.yield.fi/faqs",
+        "https://docs.yield.fi/defi-integration/primary-and-secondary-liquidity",
+        "https://v2.yield.fi/transparency"
+      ],
+      "rationale": "No unconditional final spendable-USDC settlement maximum is published for the onchain yUSD queued redemption. The specific T+2 processing target is qualified by disruption, illiquidity, compliance and operations; it is not a calendar-day SLA."
+    },
+    {
+      "id": "uw-usdpt-western-union-e6e68e13b05bdbe4",
+      "assetId": "usdpt-western-union",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdpt-western-union:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:16Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R45)",
+      "sources": [
+        {
+          "url": "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-terms",
+          "observedAt": "2026-10-03T22:54:54Z",
+          "datumAsOf": "2025-10-13",
+          "location": "Section 6 Timing",
+          "excerpt": "ADB uses commercially reasonable efforts to process redemption requests promptly.",
+          "assertion": "Only reasonable-efforts processing is promised; no numeric final USD settlement maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-terms",
+        "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-service-fee-schedule",
+        "https://www.westernunion.com/global/en/digital-assets-stablecoin.html",
+        "https://www.anchorage.com/platform/usdpt-reserve-attestations-anchorage-digital",
+        "https://developers.anchorage.com/docs/settlement-process"
+      ],
+      "rationale": "No maximum time to final USD delivery is published for USDPT client redemption. Covered Stablecoin Terms section 6 permits compliance, liquidity, technical and operational delays; Solana transfer speed is not issuer bank-redemption settlement."
+    },
+    {
+      "id": "uw-usdpt-western-union-4e17b76d6e1f5539",
+      "assetId": "usdpt-western-union",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:47dbdcc0d92288beae0b6332",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:16Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R45)",
+      "sources": [
+        {
+          "url": "https://learn.anchorage.com/08.31.26_USDPT_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf",
+          "observedAt": "2026-10-03T22:54:54Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Schedule II, page 5",
+          "excerpt": "Demand deposit accounts at FDIC-insured depository institutions, held directly",
+          "assertion": "Demand deposit category is disclosed without a fixed maximum contractual term."
+        },
+        {
+          "url": "https://learn.anchorage.com/08.31.26_USDPT_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf",
+          "observedAt": "2026-10-03T22:54:54Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Schedule II, page 5",
+          "excerpt": "Money market funds hold investments in cash, cash equivalents, and short-term debt securities.",
+          "assertion": "Both held fund-share CUSIPs have Maturity Date N/A; no finite share-claim maturity maximum is disclosed."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.anchorage.com/platform/usdpt-reserve-attestations-anchorage-digital",
+        "https://learn.anchorage.com/08.31.26_USDPT_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf",
+        "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-terms",
+        "https://www.sec.gov/Archives/edgar/data/1659326/000119312526217424/d44657d485bpos.htm",
+        "https://www.blackrock.com/cash/en-us/products/282772/fed-trust-%28institutional%29-fund"
+      ],
+      "rationale": "No finite maturityDaysMax for the actual demand-deposit claims or held money-market-fund share claims is published. The report gives demand deposits and fund Maturity Date N/A, not portfolio maxima. Underlying bill limits/WAM/WAL do not establish expiry of the fund-share claims. Do not invent zero or apply an underlying mandate across the mixed fund bucket."
+    },
+    {
+      "id": "uw-usdpt-western-union-d411f37e55f00d50",
+      "assetId": "usdpt-western-union",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:d13fcab416f093397ce8fabd",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:16Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R45)",
+      "sources": [
+        {
+          "url": "https://learn.anchorage.com/08.31.26_USDPT_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf",
+          "observedAt": "2026-10-03T22:54:54Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Schedule II, page 5",
+          "excerpt": "Demand deposit accounts at FDIC-insured depository institutions, held directly",
+          "assertion": "Demand deposit category is disclosed without a fixed maximum contractual term."
+        },
+        {
+          "url": "https://learn.anchorage.com/08.31.26_USDPT_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf",
+          "observedAt": "2026-10-03T22:54:54Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Schedule II, page 5",
+          "excerpt": "Money market funds hold investments in cash, cash equivalents, and short-term debt securities.",
+          "assertion": "Both held fund-share CUSIPs have Maturity Date N/A; no finite share-claim maturity maximum is disclosed."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.anchorage.com/platform/usdpt-reserve-attestations-anchorage-digital",
+        "https://learn.anchorage.com/08.31.26_USDPT_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf",
+        "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-terms",
+        "https://www.sec.gov/Archives/edgar/data/1659326/000119312526217424/d44657d485bpos.htm",
+        "https://www.blackrock.com/cash/en-us/products/282772/fed-trust-%28institutional%29-fund"
+      ],
+      "rationale": "No finite maturityDaysMax for the actual demand-deposit claims or held money-market-fund share claims is published. The report gives demand deposits and fund Maturity Date N/A, not portfolio maxima. Underlying bill limits/WAM/WAL do not establish expiry of the fund-share claims. Do not invent zero or apply an underlying mandate across the mixed fund bucket."
     }
   ]
 }

@@ -4307,6 +4307,40 @@
           "url": "https://bsc-rpc.publicnode.com"
         }
       ]
+    },
+    {
+      "assetId": "sdai-gnosis",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2027-01-01",
+      "reviewer": "W1R45 exact SavingsXDai source and pinned RPC review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "none",
+      "rationale": "Exact nonproxy SavingsXDai code fixes WXDAI as the sole asset; inherited totalAssets equals WXDAI.balanceOf(vault). At the pinned block those quantities agree. Deposits transfer WXDAI in; withdrawals burn shares and transfer WXDAI out. The complete source has no borrow, strategy allocation or arbitrary-call surface. This covers only the immediate wrapper; xDAI bridge/Sky reserve risks remain serial parent risks.",
+      "observations": [
+        {
+          "chain": "gnosis",
+          "address": "0xaf204776c7245bf4147c2612bf6e5972ee483701",
+          "function": "asset()/totalAssets()/WXDAI.balanceOf(vault)",
+          "value": "asset=0xe91d153e0b41518a2ce8dd3d7944fa863463a97d; totalAssets=balance=42631254907509954528921547",
+          "block": 48574355
+        }
+      ],
+      "sources": [
+        {
+          "label": "Exact verified SavingsXDai and imported ERC4626 source",
+          "url": "https://gnosis.blockscout.com/api/v2/smart-contracts/0xaf204776c7245bf4147c2612bf6e5972ee483701"
+        },
+        {
+          "label": "Gnosis documented Savings xDAI holder deposit and redemption flow",
+          "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge"
+        },
+        {
+          "label": "Pinned Gnosis RPC observation",
+          "url": "https://rpc.gnosischain.com"
+        }
+      ]
     }
   ]
 }
