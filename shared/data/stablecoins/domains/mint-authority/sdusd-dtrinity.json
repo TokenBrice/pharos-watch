@@ -2,10 +2,10 @@
   "id": "sdusd-dtrinity",
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "none-resolved-mint",
+    "authorityPosture": "unbounded-unreconciled",
     "confidence": "verified",
     "inheritedFrom": "dusd-dtrinity",
-    "summary": "sdUSD (dSTAKE vault) is upgradeable via ProxyAdmin owned by a 24-hour TimelockController, whose proposer/executor/canceller is a single 3-of-5 Safe multisig (0xe83c188...). Shares are minted only by staking dUSD, no privileged mint surface. Fraxtal's DStakeProxyAdmin is owned by a separate 24-hour TimelockController (0x0bafaDA2...) whose proposer/executor/canceller role is a 3-of-5 Safe (0xFC2f89f9...) holding the identical five-owner set as the Ethereum Safe.",
+    "summary": "The current Ethereum DStakeTokenV2 implementation has DEFAULT_ADMIN_ROLE migrateCore(newRouter,newCollateralVault). Its interface-consistency checks do not certify backing. The selected router may call mintForRouter(initiator,receiver,assets,shares), which directly _mints caller-selected shares without checking asset transfer or collateral. Full RoleGranted candidate enumeration and current hasRole reads identify TimelockController 0x18cb0eb73d953ed20f2157ce6bde2a85e30e681b as the active default admin. This is wrapper-local can-authorize unbacked issuance without upgrading the token. Fraxtal remains the older deposit-backed implementation; Ethereum suffices for the profile-level unbounded verdict. Parent dusd-dtrinity issuance remains inherited through the dependency.",
     "upgradeability": {
       "model": "transparent-proxy",
       "deploymentRefs": [
@@ -40,6 +40,42 @@
       ]
     },
     "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x18cb0eb73d953ed20f2157ce6bde2a85e30e681b",
+        "deploymentRefs": [
+          "ethereum:0x7cb20517776636ed76b68edb3d99dcce356abf02"
+        ],
+        "label": "dSTAKE Ethereum TimelockController (local router authorization)",
+        "role": "minter-admin",
+        "authorityType": "timelock",
+        "directMintAbility": "can-authorize",
+        "timelockDelaySec": 86400,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26113624,
+        "capDescription": "DEFAULT_ADMIN_ROLE may migrateCore to a chosen router whose mintForRouter calls are not token-side collateral checked.",
+        "evidence": "The current Ethereum DStakeTokenV2 implementation has DEFAULT_ADMIN_ROLE migrateCore(newRouter,newCollateralVault). Its interface-consistency checks do not certify backing. The selected router may call mintForRouter(initiator,receiver,assets,shares), which directly _mints caller-selected shares without checking asset transfer or collateral. Full RoleGranted candidate enumeration and current hasRole reads identify TimelockController 0x18cb0eb73d953ed20f2157ce6bde2a85e30e681b as the active default admin. At Ethereum block 26113624 (hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2), its getMinDelay() returns 86400 seconds. This is wrapper-local can-authorize unbacked issuance without upgrading the token. Fraxtal remains the older deposit-backed implementation; Ethereum suffices for the profile-level unbounded verdict.",
+        "sources": [
+          {
+            "label": "Verified current local mint implementation/source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9c278036c3c4529472751502dfc71bb1f0a3bfd4"
+          },
+          {
+            "label": "Verified current local mint implementation/source",
+            "url": "https://sourcify.dev/server/v2/contract/252/0x0f51b15939a42bd995ecd3a2c151dc58621856c6?fields=all"
+          },
+          {
+            "label": "ethereum D14 observation block 26113624, hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2",
+            "url": "https://etherscan.io/block/26113624"
+          },
+          {
+            "label": "fraxtal D14 observation block 42120812, hash 0x7f59fd0182eb85add452c59329089336b6725f9f516216424a333ce1708987fb",
+            "url": "https://rpc.frax.com"
+          }
+        ]
+      },
       {
         "label": "dSTAKE Ethereum upgrade Safe (via 24-hour TimelockController)",
         "role": "proxy-admin",
@@ -102,7 +138,7 @@
         ],
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "Ethereum sdUSD shares are minted only against deposited local dUSD and do not create base dUSD supply.",
+        "capDescription": "User issuance is asset-funded, but the default-admin-selected router can mint arbitrary local shares through mintForRouter without token-side backing validation.",
         "observedAt": "2026-10-01",
         "observedBlock": 26095807,
         "sources": [
@@ -111,7 +147,7 @@
             "url": "https://etherscan.io/address/0x7cb20517776636ed76b68edb3d99dcce356abf02"
           }
         ],
-        "evidence": "At Ethereum block 26095807, asset() on the dSTAKE vault returned local dUSD 0x07fff99e1664d9b116fbc158c0e99785f81ca236. The vault retains deposit-backed share accounting; the upgrade and router accounting powers are documented separately."
+        "evidence": "The current Ethereum DStakeTokenV2 implementation has DEFAULT_ADMIN_ROLE migrateCore(newRouter,newCollateralVault). Its interface-consistency checks do not certify backing. The selected router may call mintForRouter(initiator,receiver,assets,shares), which directly _mints caller-selected shares without checking asset transfer or collateral. Full RoleGranted candidate enumeration and current hasRole reads identify TimelockController 0x18cb0eb73d953ed20f2157ce6bde2a85e30e681b as the active default admin. This is wrapper-local can-authorize unbacked issuance without upgrading the token. Fraxtal remains the older deposit-backed implementation; Ethereum suffices for the profile-level unbounded verdict."
       },
       {
         "label": "Inherited dUSD AMO/governed-reserve mint authority",
@@ -207,11 +243,15 @@
         "evidence": "At Fraxtal block 38906249, owner() on DStakeProxyAdmin 0xde914ec384346fea47339e5086d2d399b7f4733b returned 0x0bafaDA2a5824864720873EE40cd960b36445212, an OpenZeppelin TimelockController (getMinDelay()=86400 seconds), not an EOA. That timelock's only RoleGranted events (from deployment, no RoleRevoked events found) show PROPOSER_ROLE, EXECUTOR_ROLE, and CANCELLER_ROLE all granted to Safe 0xFC2f89f9982Be98A9672CEfc3eA6dbBDd88Bc8e9. The Safe (v1.3.0) returned the five owners recorded here, threshold 3, no enabled modules, and a zero guard, an identical owner set and threshold to the Ethereum-side Safe, deployed as a separate per-chain instance."
       }
     ],
-    "economicCapSemantics": "bounded",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
       "sources": [
+        {"label": "Verified current local mint implementation/source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9c278036c3c4529472751502dfc71bb1f0a3bfd4"},
+        {"label": "Verified current local mint implementation/source", "url": "https://sourcify.dev/server/v2/contract/252/0x0f51b15939a42bd995ecd3a2c151dc58621856c6?fields=all"},
+        {"label": "ethereum D14 observation block 26113624, hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2", "url": "https://etherscan.io/block/26113624"},
+        {"label": "fraxtal D14 observation block 42120812, hash 0x7f59fd0182eb85add452c59329089336b6725f9f516216424a333ce1708987fb", "url": "https://rpc.frax.com"},
         {
           "label": "dTRINITY sdUSD docs",
           "url": "https://docs.dtrinity.org/protocol-components/sdusd"
@@ -225,9 +265,9 @@
           "url": "https://etherscan.io/address/0x18cb0eb73d953ed20f2157ce6bde2a85e30e681b"
         }
       ],
-      "evidence": "Ethereum control review is current: ProxyAdmin 0xbe90db309b80357631069b689fc3481aca2c65be is owned by the 86400-second TimelockController 0x18cb0eb73d953ed20f2157ce6bde2a85e30e681b, which resolves to the reviewed 3-of-5 Safe. The local wrapper share path is dUSD-deposit backed. Follow-up 2026-07-21: Fraxtal's distinct transparent proxy and DStakeProxyAdmin 0xde914ec384346fea47339e5086d2d399b7f4733b is owned by TimelockController 0x0bafaDA2a5824864720873EE40cd960b36445212 (getMinDelay=86400 seconds, not an EOA as previously stated), whose PROPOSER_ROLE/EXECUTOR_ROLE/CANCELLER_ROLE all resolve to Safe 0xFC2f89f9982Be98A9672CEfc3eA6dbBDd88Bc8e9 (3-of-5, same five owners as the Ethereum Safe, no modules, zero guard). Both chains' upgrade authority are now fully resolved. Re-verified 2026-07-27: at Ethereum block 25625502 the sdUSD proxy EIP-1967 admin slot still returns ProxyAdmin 0xbe90db309b80357631069b689fc3481aca2c65be, owner() is the TimelockController with getMinDelay()=86400, hasRole confirms PROPOSER_ROLE, EXECUTOR_ROLE and CANCELLER_ROLE all held by Safe 0xe83c188a7be46b90715c757a06cf917175f30262, and the Safe returns threshold 3 with the same five owners; at Fraxtal block 39180535 DStakeProxyAdmin owner() is TimelockController 0x0bafaDA2a5824864720873EE40cd960b36445212 with getMinDelay()=86400 and Safe 0xFC2f89f9982Be98A9672CEfc3eA6dbBDd88Bc8e9 returns threshold 3 with the identical five owners. sdUSD shares are minted only against deposited local dUSD, so the wrapper mint is economically bounded by the staking vault contract; the timelocked 3-of-5 Safe can change that code after the delay.",
-      "reviewer": "P2 mint-free cohort; Claude V9 evidence-gap curation; Kimi data review (2026-07-27)",
-      "reviewedAt": "2026-07-27",
+      "evidence": "D14/A7/A10 review 2026-10-03, pinned ethereum block 26113624 (hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2); fraxtal block 42120812 (hash 0x7f59fd0182eb85add452c59329089336b6725f9f516216424a333ce1708987fb). The current Ethereum DStakeTokenV2 implementation has DEFAULT_ADMIN_ROLE migrateCore(newRouter,newCollateralVault). Its interface-consistency checks do not certify backing. The selected router may call mintForRouter(initiator,receiver,assets,shares), which directly _mints caller-selected shares without checking asset transfer or collateral. Full RoleGranted candidate enumeration and current hasRole reads identify TimelockController 0x18cb0eb73d953ed20f2157ce6bde2a85e30e681b as the active default admin. This is wrapper-local can-authorize unbacked issuance without upgrading the token. Fraxtal remains the older deposit-backed implementation; Ethereum suffices for the profile-level unbounded verdict.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U12aWrapperCapReviews)",
+      "reviewedAt": "2026-10-03",
       "disposition": "scoreable"
     }
   }

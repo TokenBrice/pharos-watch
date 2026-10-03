@@ -23,7 +23,7 @@ export const V9_MINT_POSTURE_BANDS: Record<V9MintPostureBand, { label: string; d
   },
   governed: {
     label: "Governed",
-    detail: "A partially bounded administrator: the claim is constrained but the cap can move.",
+    detail: "A partially bounded administrator, or unbounded issuance held only by delayed on-chain token governance.",
   },
   managed: {
     label: "Managed",
@@ -35,7 +35,7 @@ export const V9_MINT_POSTURE_BANDS: Record<V9MintPostureBand, { label: string; d
   },
   exposed: {
     label: "Exposed",
-    detail: "Economically effective minting is unbounded — unreconciled, unverified, or compromised.",
+    detail: "Economically effective minting is unbounded — unreconciled, unverified, or under an active incident.",
   },
 };
 
@@ -48,17 +48,19 @@ export const V9_MINT_POSTURE_BAND_ORDER = [
   "exposed",
 ] as const satisfies readonly V9MintPostureBand[];
 
-// MINT-LADDER 9.32 (2026-08-21): the finer postures reuse existing public
-// bands, so filter values and screener URLs remain unchanged.
+// D29 (v10.02): governed unbounded issuance reuses the governed public band;
+// filter values and screener URLs remain unchanged.
 const POSTURE_BANDS: Record<V9MintPosture, V9MintPostureBand | null> = {
   "none-resolved": "hardened",
   "bounded-admin": "hardened",
   "partially-bounded-admin": "governed",
+  "unbounded-governed": "governed",
   "unbounded-reconciled": "managed",
   "concentrated-admin": "concentrated",
   "collateral-gated": "concentrated",
   "unbounded-reconciliation-unknown": "exposed",
-  "unbounded-or-compromised": "exposed",
+  "unbounded-unreconciled": "exposed",
+  compromised: "exposed",
   // An unresolved posture is not a band: it is the absence of a review.
   unknown: null,
 };
@@ -85,10 +87,9 @@ const CURATED_ONLY_POSTURE_BANDS: Partial<Record<MintAuthorityPosture, V9MintPos
 };
 
 /**
- * Project the curated `authorityPosture` annotation onto the derived posture
- * vocabulary. The curated field predates V9's split of unbounded minting into
- * reconciled and unreconciled rungs, so it can only ever claim the adverse
- * side; both derived rungs are accepted as agreement.
+ * Project the curated `authorityPosture` annotation onto the public band.
+ * Curated and derived postures share the same band map except for the
+ * curated-only mint-scoped `none-resolved-mint` value.
  */
 export function curatedMintPostureBand(posture: MintAuthorityPosture | null | undefined): V9MintPostureBand | null {
   if (posture == null || posture === "unknown") return null;
@@ -107,9 +108,9 @@ export function curatedMintPostureBand(posture: MintAuthorityPosture | null | un
  * Every engine that asks a yes/no question about a mint posture asks it here,
  * so a vocabulary addition is handled once instead of falling through unnamed
  * literal comparisons at each call site. The vocabulary has grown repeatedly
- * (`unbounded-reconciled`, `none-resolved-mint`, and the 9.32 ladder values),
- * and each time the membership of these sets had to be re-derived by hand at
- * every site.
+ * (`unbounded-reconciled`, `none-resolved-mint`, the 9.32 ladder values, and
+ * D29's governed issuance), so explicit membership must preserve each
+ * consumer's economic meaning across classification refinements.
  *
  * The predicates take `string | null | undefined` rather than
  * `MintAuthorityPosture`: consumers such as the Depeg Duration Resolver carry
@@ -138,29 +139,32 @@ const NO_PRIVILEGED_MINT_POSTURES: ReadonlySet<string> = new Set<MintAuthorityPo
 const NO_PRIVILEGED_MINT_CHAIN_POSTURES: ReadonlySet<string> = new Set<MintAuthorityPosture>(["none-resolved"]);
 
 /**
- * Postures whose minter can expand the claim at will. `unbounded-reconciled` is
- * a supervisory refinement *within* the unbounded class, not an exit from it:
- * reconciliation is after-the-fact evidence rather than a bound, so it belongs
- * to the adverse set exactly like `unbounded-or-compromised`. Adopting the finer
- * curated vocabulary must never relax a verdict.
+ * Concentrated or economically unbounded minters remain fragile for DDR.
+ * Reconciliation and delayed token governance refine the Safety Score rung,
+ * not the economic issuance bound; active incidents remain adverse too.
+ * These refinements must never relax a DDR verdict.
  */
 const FRAGILE_MINT_POSTURES: ReadonlySet<string> = new Set<MintAuthorityPosture>([
   "concentrated-admin",
   "collateral-gated",
   "unbounded-reconciled",
+  "unbounded-governed",
   "unbounded-reconciliation-unknown",
-  "unbounded-or-compromised",
+  "unbounded-unreconciled",
+  "compromised",
 ]);
 
 /**
- * The *economically unbounded* rungs — the strict subset of the fragile set that
- * can print without limit during a live event. A merely concentrated admin is
- * fragile but not unbounded.
+ * The economically unbounded subset of the fragile set. Reconciliation and
+ * governance delay do not impose an issuance limit; a merely concentrated
+ * administrator is fragile but not unbounded.
  */
 const UNBOUNDED_MINT_POSTURES: ReadonlySet<string> = new Set<MintAuthorityPosture>([
   "unbounded-reconciled",
+  "unbounded-governed",
   "unbounded-reconciliation-unknown",
-  "unbounded-or-compromised",
+  "unbounded-unreconciled",
+  "compromised",
 ]);
 
 /** True when no privileged party can mint this asset directly (either scope). */
@@ -178,7 +182,7 @@ export function isFragileMintPosture(posture: string | null | undefined): boolea
   return posture != null && FRAGILE_MINT_POSTURES.has(posture);
 }
 
-/** True when minting is economically unbounded, reconciled or not. */
+/** True when minting is economically unbounded, including governance-delayed issuance. */
 export function isUnboundedMintPosture(posture: string | null | undefined): boolean {
   return posture != null && UNBOUNDED_MINT_POSTURES.has(posture);
 }

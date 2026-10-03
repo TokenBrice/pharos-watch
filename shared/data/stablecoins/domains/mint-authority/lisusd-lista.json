@@ -2,7 +2,7 @@
   "id": "lisusd-lista",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-unreconciled",
     "confidence": "verified",
     "summary": "lisUSD uses Maker-style wards() authorization with roles 1 = minter, 2 = manager, and 3 = admin. The 24-hour timelock is the hardcoded DEFAULT_ADMIN and owns the ProxyAdmin for the token and HayJoin; onlyAdmin also admits wards with role 3, whose complete membership is not established by the historical probe list. The manager Safe remains 3-of-6, and its role 2 can set the supply cap and update the domain separator, but cannot mint.",
     "mintIncidents": [

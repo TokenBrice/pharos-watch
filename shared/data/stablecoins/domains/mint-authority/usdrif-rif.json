@@ -2,9 +2,9 @@
   "id": "usdrif-rif",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "USDRIF has one native issuance deployment on Rootstock. The RIF and DOC V3 collateral buckets are the only verified MINTER_ROLE members and mint through overcollateralized RIF On Chain accounting; MOC token-vote governance can authorize mint-parameter, role, or UUPS changes, so the native posture remains partially-bounded-admin and raiseable. The Arbitrum LayerZero OFT and the Rootstock adapter are bridge machinery assessed only in Bridge Risk; their message-path mint/burn, lockbox, peer, delegate, and owner controls do not expand native Mint Authority.",
+    "summary": "USDRIF's two current native Rootstock minters are continuously collateral-accounted RIF and DOC V3 buckets, but Governor-authorized changers or role admins can grant MINTER_ROLE to an arbitrary address whose token mint has no collateral or numeric cap check. D14 is unbounded with continuous reconciliation. MOC governance supports early acceptance and immediate changer execution, so no unavoidable 48-hour delay is certified. Arbitrum OFT and Rootstock adapter powers remain assessed only under Bridge Risk.",
     "upgradeability": {
       "model": "uups",
       "deploymentRefs": [
@@ -148,13 +148,13 @@
         ]
       }
     ],
-    "economicCapSemantics": "raiseable",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "continuous",
     "supervision": "none",
     "review": {
-      "evidence": "Current Rootstock block 9157327 reads enumerate the two and only two direct USDRIF MINTER_ROLE and BURNER_ROLE members: the RIF and DOC V3 collateral buckets. Their operation paths mint exclusively against protocol-accounted collateral, so native supply reconciliation is continuous by construction. The same block resolves the native UUPS implementation and Governor. The recursive governance chain remains: Governor 0x3b8853... is owned by VotingMachine 0x65a568..., Governor and VotingMachine proxies share ProxyAdmin 0x1a1824..., ProxyAdmin owner() is UpgradeDelegator proxy 0x131564..., and verified UpgradeDelegator implementation 0x6d1cca... gates upgrade(), upgradeAndCall(), and changeProxyAdmin() through Governor.isAuthorizedChanger with no keyholder bypass. Arbitrum OFT mint/burn and Rootstock adapter/OFT-owner administration are bridge controls retained under Bridge Risk and do not enter this native inventory. Native issuance remains partially-bounded-admin, raiseable, continuously reconciled, and unsupervised.",
-      "reviewer": "OpenAI Codex SOL-UPGRADE evidence review; Kimi data review; Sol economic-posture batch 2026-08-15; Codex mint/bridge boundary migration",
-      "reviewedAt": "2026-08-16",
+      "evidence": "Current Rootstock block 9157327 reads enumerate the two and only two direct USDRIF MINTER_ROLE and BURNER_ROLE members: the RIF and DOC V3 collateral buckets. Their operation paths mint exclusively against protocol-accounted collateral, so native supply reconciliation is continuous by construction. The same block resolves the native UUPS implementation and Governor. The recursive governance chain remains: Governor 0x3b8853... is owned by VotingMachine 0x65a568..., Governor and VotingMachine proxies share ProxyAdmin 0x1a1824..., ProxyAdmin owner() is UpgradeDelegator proxy 0x131564..., and verified UpgradeDelegator implementation 0x6d1cca... gates upgrade(), upgradeAndCall(), and changeProxyAdmin() through Governor.isAuthorizedChanger with no keyholder bypass. Arbitrum OFT mint/burn and Rootstock adapter/OFT-owner administration are bridge controls retained under Bridge Risk and do not enter this native inventory. Native issuance remains partially-bounded-admin, raiseable, continuously reconciled, and unsupervised. D14/D29 sweep 2026-10-03 supersedes the historical raiseable classification: at Rootstock block 9293830 (hash 0x8f77258c9cfba3d0da535f26b47e1de9060951f7656ba25946725fdc3b160a41), the token implementation remains 0x6d1bb87856a2b2351d87ba5772a93dc911325af9. Verified MocRC20.grantRole accepts a Governor-authorized changer OR the role admin and can add an arbitrary MINTER_ROLE holder; mint(to,amount) checks only MINTER_ROLE, without collateral or a numeric cap. Enumeration confirms two current minters, RIF bucket 0xa27024ed70035e46dba712609fc2afa1c97aa36a and DOC bucket 0x697535055aa7afd2c280523c7b062b1f05284661, and one DEFAULT_ADMIN_ROLE member, the RIF bucket. Bucket issuance remains continuously collateral-accounted, but role expansion makes D14 unbounded. D29 fails the unavoidable-delay gate: verified VotingLib._isAccepted accepts high-support proposals before voting expiry and VotingMachine.acceptedStep executes the changer immediately. Separate preVoteStep/voteStep calls impose no elapsed-time floor. Voting stakes are locked, but complete role-admin/bucket/governance executionScope closure and a 172800-second minimum are not certified. Fallback is unbounded-reconciled; bridge powers remain excluded.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U5GovAmbiguousA)",
+      "reviewedAt": "2026-10-03",
       "disposition": "scoreable",
       "sources": [
         {
@@ -172,6 +172,18 @@
         {
           "label": "Arbitrum block 486369748",
           "url": "https://arbiscan.io/block/486369748"
+        },
+        {
+          "label": "Verified USDRIF: arbitrary role grants and role-only mint",
+          "url": "https://rootstock.blockscout.com/api/v2/smart-contracts/0x6d1bb87856a2b2351d87ba5772a93dc911325af9"
+        },
+        {
+          "label": "Verified VotingMachine: early acceptance and immediate execution",
+          "url": "https://rootstock.blockscout.com/api/v2/smart-contracts/0x00594d5456c4650d10edbb62d7a482d8fa9a5b53"
+        },
+        {
+          "label": "Rootstock pinned block 9293830",
+          "url": "https://rootstock.blockscout.com/block/9293830"
         }
       ]
     }

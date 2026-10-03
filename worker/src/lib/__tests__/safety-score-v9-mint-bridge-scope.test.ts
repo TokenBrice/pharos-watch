@@ -441,7 +441,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
       asset, { assetId: asset.assetId, ...asset.economicControlReview }, V9_CANDIDATE_POLICY_V1,
     );
     expect(result.components.find((component) => component.kind === "mint")).toMatchObject({
-      binding: true, posture: "unbounded-or-compromised", score: 25,
+      binding: true, posture: "unbounded-unreconciled", score: 25,
     });
     expect(result.structuralFailures).toContainEqual(expect.objectContaining({
       kind: "centralized-mint", binding: true, materialSharePct: null,
@@ -469,7 +469,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
         asset, { assetId: asset.assetId, ...asset.economicControlReview }, V9_CANDIDATE_POLICY_V1,
       );
       expect(result.components.find((component) => component.kind === "mint")).toMatchObject({
-        binding: true, posture: "unbounded-or-compromised", score: 25,
+        binding: true, posture: "unbounded-unreconciled", score: 25,
       });
     }
   });
@@ -1229,7 +1229,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
       after, { assetId: after.assetId, ...after.economicControlReview }, V9_CANDIDATE_POLICY_V1,
     );
     expect(afterResult.components.find((component) => component.kind === "mint")).toMatchObject({
-      binding: true, posture: "unbounded-or-compromised", score: 25,
+      binding: true, posture: "unbounded-unreconciled", score: 25,
       controlKeys: [after.controls[0]!.controlKey],
     });
     expect(afterResult.components).toEqual(beforeResult.components);

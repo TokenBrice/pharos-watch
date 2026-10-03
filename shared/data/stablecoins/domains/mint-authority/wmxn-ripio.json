@@ -2,7 +2,7 @@
   "id": "wmxn-ripio",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-unreconciled",
     "confidence": "verified",
     "summary": "WMXN has six reviewed native issuer deployments on Ethereum, Base, Worldchain, BSC, Polygon, and Gnosis. Ripio's issuer EOA directly holds MINTER_ROLE and UPGRADER_ROLE on each native token, the 4-of-7 Safe holds DEFAULT_ADMIN_ROLE, and the fixed-destination LimitedMinter is an additional native issuer facility where currently authorized. The separate LimitedMinterBridge burn/mint adapter and Celo representation are reviewed only in Bridge Risk.",
     "upgradeability": {

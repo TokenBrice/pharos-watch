@@ -2,9 +2,9 @@
   "id": "krwq-iq",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-reconciliation-unknown",
     "confidence": "manual-review",
-    "summary": "KRWQ has one issuer-native liability deployment on Ethereum. Its TransparentUpgradeableProxy owner (3/5 Safe 0x56398b89) controls the token minter set; the two active KRWTCustodianWithOracle minters use deposit/custodian-asset and oracle-freshness gates with current mutable 1.5 billion KRWQ caps, so native issuance is cap- and deposit-bounded but the Safe can raise caps, authorize minters, and replace mint-critical logic. Base, Polygon, Fraxtal, Codex, and Morph are LayerZero V2 OFT representations and are excluded from Mint Authority; their bridge controllers and the Ethereum OFT Adapter are recorded in Bridge Risk.",
+    "summary": "KRWQ has one issuer-native deployment on Ethereum. Its 3-of-5 Safe can authorize any nonzero token minter; minterMint has no collateral or token-level cap check. D14 issuance is economically unbounded despite deposit/oracle checks and mutable caps in the two current custodians. Whole-supply reconciliation remains unverified. LayerZero OFT representations and the Ethereum OFT Adapter remain exclusively in Bridge Risk.",
     "controls": [
       {
         "chain": "ethereum",
@@ -50,7 +50,7 @@
           }
         ],
         "evidence": "At Ethereum block 25770699 (2026-08-16), the KRWQ TransparentUpgradeableProxy implementation 0x350b6b5cf2bda130a9bee0a3cda86ec88e71dcca exposes minterMint(address,uint256) only to addresses in the minters mapping; the token function itself has no token-level cap, and addMinter/removeMinter are owner-only. The two active minters are KRWTCustodianWithOracle proxies 0x5573b8db24043bee020c36ee0df32694dffef04c and 0x7e88ac6a9c2dad21fea4de6b54c764ca4d99c05d, both owned by this 3-of-5 Safe. Each custodian uses deposit/custodian-asset and oracle-freshness checks and currently reports mintCap = 1,500,000,000e18; the Safe can raise those caps, add or remove minters, and owns the Ethereum mint-critical ProxyAdmins. getModules() returned empty, while current guard/fallback reads reverted, so guard state is not claimed absent.",
-        "capDescription": "The token's minterMint function is uncapped for an authorized minter, but the two currently authorized KRWTCustodianWithOracle contracts enforce deposit/oracle checks and 1,500,000,000 KRWQ caps. This Safe can add or remove minters and call the owner paths that raise those caps, so the reviewed native path is raiseable rather than economically unbounded."
+        "capDescription": "Current custodian minters enforce deposit/oracle checks and 1.5 billion KRWQ caps, but owner-only addMinter can authorize any nonzero address. Token minterMint checks only authorization, not collateral or a token-level cap; D14 root issuance is economically unbounded."
       },
       {
         "chain": "ethereum",
@@ -123,14 +123,18 @@
         "evidence": "At Ethereum block 25770699, mintersArray on the verified KRWQ implementation included this KRWTCustodianWithOracle proxy. Its verified implementation exposes deposit/mint against a custodian asset, oracle freshness state, mutable mintCap, and owner-only setMintCap; the live mintCap read returned 1,500,000,000e18. The custodian owner and its ProxyAdmin owner resolve to the Ethereum 3-of-5 Safe 0x56398b89."
       }
     ],
-    "economicCapSemantics": "raiseable",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "Reviewed at the Mint Authority / Bridge Risk boundary on 2026-08-16 using pinned 2026-08-16 observations. Ethereum is the only issuer-native liability route: the KRWQ token proxy is owner-controlled by the 3-of-5 Safe 0x56398b89, its two active KRWTCustodianWithOracle minters enforce deposit/custodian-asset and oracle-freshness checks with 1,500,000,000e18 caps, and the Safe can raise those caps, change the minter set, or replace the token and custodian mint-critical implementations. Base, Polygon, Fraxtal, Codex, and Morph are LayerZero OFT bridge representations; their destination mint/burn, peer, owner, and upgrade machinery, plus the Ethereum OFT Adapter escrow, are scored only under bridgeRouteRisk. The assets-only Chainlink Proof of Reserve does not reconcile total liabilities across the canonical token, Adapter, and five representations, so reconciliation remains unknown and no independent supervisor is evidenced.",
-      "reviewer": "Codex mint/bridge boundary migration",
-      "reviewedAt": "2026-08-16",
+      "evidence": "Reviewed at the Mint Authority / Bridge Risk boundary on 2026-08-16 using pinned 2026-08-16 observations. Ethereum is the only issuer-native liability route: the KRWQ token proxy is owner-controlled by the 3-of-5 Safe 0x56398b89, its two active KRWTCustodianWithOracle minters enforce deposit/custodian-asset and oracle-freshness checks with 1,500,000,000e18 caps, and the Safe can raise those caps, change the minter set, or replace the token and custodian mint-critical implementations. Base, Polygon, Fraxtal, Codex, and Morph are LayerZero OFT bridge representations; their destination mint/burn, peer, owner, and upgrade machinery, plus the Ethereum OFT Adapter escrow, are scored only under bridgeRouteRisk. The assets-only Chainlink Proof of Reserve does not reconcile total liabilities across the canonical token, Adapter, and five representations, so reconciliation remains unknown and no independent supervisor is evidenced. D14/D29 review on 2026-10-03 confirmed token owner() at Ethereum block 26112822 (hash 0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a) and read verified KRWQ source. addMinter(address) requires onlyOwner, a nonzero address and absence from the mapping; it does not constrain minters to deposit-backed custodians. minterMint(address,uint256) checks onlyMinters then calls _mint to a chosen recipient without collateral or a token-level cap. The Safe can therefore admit an unrestricted minter without upgrading; D14 semantics are unbounded. Safe authority is not D29 token governance. Unknown reconciliation and no supervision derive unbounded-reconciliation-unknown.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U7SafeRootedFloorA)",
+      "reviewedAt": "2026-10-03",
       "sources": [
+        {
+          "label": "Verified KRWQ implementation source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x350b6b5cf2bda130a9bee0a3cda86ec88e71dcca"
+        },
         {
           "label": "KRWQ official site",
           "url": "https://krwq.cash"

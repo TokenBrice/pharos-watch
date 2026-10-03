@@ -2,7 +2,7 @@
   "id": "suiusde-sui",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "suiUSDe minting routes through a shared Treasury object that wraps the TreasuryCap. One AdminRole address (0xe3dbc438…) also owns the compatible-policy package UpgradeCap and can replace mint-critical logic. Address ownership does not disclose whether signing custody is single-party or multisig.",
     "upgradeability": {

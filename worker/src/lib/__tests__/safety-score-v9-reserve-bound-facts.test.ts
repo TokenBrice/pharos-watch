@@ -57,7 +57,10 @@ describe("reserve bound compiler admission", () => {
         },
       },
     });
-    const extension = buildSafetyScoreV9BaselineExtension(fixed, { metaById: new Map([[assetId, ACTIVE_META_BY_ID.get(assetId)!]]) });
+    // This historical same-block reserve collision must not import a later,
+    // unrelated mint review and quarantine the asset before bounds admission.
+    const meta = { ...ACTIVE_META_BY_ID.get(assetId)!, mintAuthority: undefined };
+    const extension = buildSafetyScoreV9BaselineExtension(fixed, { metaById: new Map([[assetId, meta]]) });
     extension.sources.liveReserves.maxAgeSec = liveMaxAgeSec;
     const facts = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension);
     const asset = facts.assets.find((row) => row.assetId === assetId)!;

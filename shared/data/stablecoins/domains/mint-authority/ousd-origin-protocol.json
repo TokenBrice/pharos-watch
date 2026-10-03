@@ -2,9 +2,9 @@
   "id": "ousd-origin-protocol",
   "mintAuthority": {
     "mintPath": "amo-or-custodian-hybrid",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "OUSD is minted 1:1 when users deposit USDC into the Origin OUSD Vault, but the protocol also runs a Curve AMO that pre-mints OUSD into protocol-owned liquidity and deploys USDC into Morpho/Curve strategies under privileged owner/Governor/Strategist roles.",
+    "summary": "OUSD user minting requires USDC deposits, but the 48-hour Origin governance timelock can approve and mint-whitelist an arbitrary strategy whose mintForStrategy calls need no collateral transfer or durable supply ceiling. Economic mint power is unbounded despite continuous on-chain reconciliation; the separately authored 2-of-8 Strategist Safe and its partially reviewed modules prevent a complete governor-only execution certificate.",
     "upgradeability": {
       "model": "transparent-proxy",
       "proxyAddresses": [
@@ -93,15 +93,15 @@
         "chain": "ethereum",
         "address": "0x35918cde7233f2dd33fa41ae3cb6ae0e42e0e69f",
         "canRaiseCap": true,
-        "evidence": "At Ethereum block 26095831, the OUSD token and Vault admin()/governor() reads identify Timelock 0x35918cde7233f2dd33fa41ae3cb6ae0e42e0e69f. Its getMinDelay() returns 172800 seconds. Previously enumerated proposer roles remain historical and were not re-enumerated in this review.",
+        "evidence": "At Ethereum block 26113561 (hash 0xf8669491a2d5c3e0dfe4c4233ed6861dcbe45f046fac9804a60c40ae5ee6846e), Vault governor() returned this Timelock and getMinDelay() returned 172800 seconds. Complete RoleGranted/RoleRevoked replay through this block and confirming hasRole calls resolve PROPOSER_ROLE and EXECUTOR_ROLE solely to Origin DeFi Governance 0x1d3fbd4d129ddd2372ea85c5fa00b2682081c9ec, not a Safe. CANCELLER_ROLE belongs to that governor and 0xbe2ab3d3d8f6a32b96414ebbd865dbd276d3d899; TIMELOCK_ADMIN_ROLE belongs only to the Timelock. Verified VaultAdmin permits the governor to approveStrategy and addStrategyToMintWhitelist, and VaultCore.mintForStrategy then mints arbitrary amounts to the whitelisted strategy without collateral transfer.",
         "sources": [
           {
             "label": "OUSD Timelock (Blockscout)",
             "url": "https://eth.blockscout.com/address/0x35918cde7233f2dd33fa41ae3cb6ae0e42e0e69f"
           }
         ],
-        "observedAt": "2026-10-01",
-        "observedBlock": 26095831
+        "observedAt": "2026-10-03",
+        "observedBlock": 26113561
       },
       {
         "label": "OUSD Strategist Safe (strategy allocation)",
@@ -271,13 +271,13 @@
         "observedBlock": 26101011
       }
     ],
-    "economicCapSemantics": "raiseable",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "continuous",
     "supervision": "none",
     "review": {
-      "evidence": "At Ethereum block 25530882, token admin() and governor() and Vault admin() and governor() all returned the 48-hour Timelock 0x35918cde7233f2dd33fa41ae3cb6ae0e42e0e69f. implementation() returned 0xa7b7c59a1705e4a624ea8a4ad8a06f9de22dcc33 for the token and 0x82948060c4b72684bededec342350ab344975145 for the Vault. Timelock getMinDelay() returned 172800 seconds. The same Timelock controls the Vault mint/AMO administration path, so mint-critical logic can change after the recorded delay. User issuance deposits reserve assets into the Vault, while any expansion through AMO or changed mint logic remains behind that independently enforced 48-hour delay; economic cap semantics are raiseable rather than the direct-call encoding's unbounded value. Economic-posture fields reviewed 2026-08-15: mint-critical changes traverse the 48-hour timelock, live on-chain vault balances cover the full USDC reserve basket, and no regulator or independent attestor is evidenced.",
-      "reviewer": "Codex CTRL batch 16; SOL-V mint-tier review; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "Historical review at Ethereum block 25530882 resolved token/Vault admin and governor to Timelock 0x35918cde7233f2dd33fa41ae3cb6ae0e42e0e69f and getMinDelay() to 172800; the token implementation was 0xa7b7c59a1705e4a624ea8a4ad8a06f9de22dcc33 and Vault implementation 0x82948060c4b72684bededec342350ab344975145. The 2026-08-15 reconciliation review established continuous on-chain reserve visibility and no supervisor/independent attestor. D14/D29 sweep 2026-10-03 at Ethereum block 26113561 (hash 0xf8669491a2d5c3e0dfe4c4233ed6861dcbe45f046fac9804a60c40ae5ee6846e): verified VaultAdmin.approveStrategy and addStrategyToMintWhitelist admit arbitrary strategies, and VaultCore.mintForStrategy mints to an admitted strategy without checking a collateral transfer or durable supply bound. A one-OUSD eth_call from current whitelisted strategy 0x26a02ec47acc2a3442b757f45e0a82b8e993ce11 succeeded; no transaction was submitted. The earlier inference that a timelock makes economic cap semantics raiseable is superseded: D14 is unbounded, not an upgrade-only trigger. Full timelock role-event replay and confirming reads show Origin DeFi Governance 0x1d3fbd4d129ddd2372ea85c5fa00b2682081c9ec as sole proposer and executor; verified GovernorVotes uses getPastVotes. Vault strategistAddr() remains Safe 0x4ff1b9d9ba8558f5eafcec096318ea0d8b541971, with threshold 2 and eight owners. D29 is not certified: the separately authored Safe can-authorize root is not token governance, and its existing partial executionScope leaves mutable module targets, delegate/fallback, permissions, upgrades, bypasses and liability inventory open. No complete scope exists for every authored control. Continuous reconciliation therefore yields unbounded-reconciled, not unbounded-governed.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U6GovAmbiguousB)",
+      "reviewedAt": "2026-10-03",
       "sources": [
         {
           "label": "OUSD Vault (Blockscout)",
@@ -294,6 +294,22 @@
         {
           "label": "OpenZeppelin Origin Dollar audit",
           "url": "https://blog.openzeppelin.com/origin-dollar-audit-2/"
+        },
+        {
+          "label": "Verified OUSD Vault implementation: strategy authorization and collateral-unchecked mintForStrategy",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x82948060c4b72684bededec342350ab344975145"
+        },
+        {
+          "label": "Verified Origin DeFi Governance source and checkpoint voting",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1d3fbd4d129ddd2372ea85c5fa00b2682081c9ec"
+        },
+        {
+          "label": "Pinned OUSD timelock RoleGranted history through block 26113561",
+          "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&fromBlock=0&toBlock=26113561&address=0x35918cde7233f2dd33fa41ae3cb6ae0e42e0e69f&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+        },
+        {
+          "label": "Pinned OUSD timelock RoleRevoked history through block 26113561",
+          "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&fromBlock=0&toBlock=26113561&address=0x35918cde7233f2dd33fa41ae3cb6ae0e42e0e69f&topic0=0xf6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b"
         }
       ]
     }

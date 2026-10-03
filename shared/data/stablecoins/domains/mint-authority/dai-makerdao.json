@@ -2,9 +2,9 @@
   "id": "dai-makerdao",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-unreconciled",
     "confidence": "verified",
-    "summary": "DAI minting is vault/module based, with DaiJoin moving Vat.dai into ERC-20 DAI and Maker/Sky governance controlling module authorization and debt ceilings through the Pause process.",
+    "summary": "DAI has an economically unbounded governance issuance path: the Sky Pause Proxy is a Vat ward and can create unbacked Vat.dai with Vat.suck, then convert that credit into durable ERC-20 DAI through DaiJoin.exit without new collateral. The current Chief/Pause route requires 48 hours after plotting, but the complete 129-ward Vat liability inventory and delegated/emergency paths are not execution-certified, so no governed-issuance credit is claimed.",
     "upgradeability": {
       "model": "immutable",
       "canChangeMintLogic": false,
@@ -47,12 +47,12 @@
         "label": "DaiJoin token adapter",
         "role": "direct-minter",
         "authorityType": "contract",
-        "directMintAbility": "cap-limited",
+        "directMintAbility": "direct",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-01",
-        "observedBlock": 26095796,
-        "capDescription": "DaiJoin mints ERC-20 DAI only against existing Vat.dai balances and burns DAI on join; it is not an unrestricted off-protocol issuer minter.",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26112822,
+        "capDescription": "DaiJoin.exit converts the caller's Vat.dai credit into ERC-20 DAI without an adapter-specific numeric ceiling or external-collateral check. Vat.suck can create that credit without backing; an internal accounting balance is not an economic mint cap.",
         "sources": [
           {
             "label": "Sky Chainlog",
@@ -75,7 +75,85 @@
             "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
           }
         ],
-        "evidence": "Sky Chainlog lists MCD_JOIN_DAI at this address. At Ethereum block 25711852, DAI.wards(DaiJoin) returned 1 and eth_getCode confirmed contract bytecode. DaiJoin mints ERC-20 DAI only against existing Vat.dai balance, so it has no unrestricted off-protocol mint path and cannot raise its own accounting bound. Re-verified 2026-10-01 at Ethereum block 26095796: DAI.wards(DaiJoin)=1 and DaiJoin bytecode remains live."
+        "executionScope": {
+          "controllerDeployment": "ethereum:0x9759a6ac90977b93b58547b4a71c78317f391a28",
+          "reviewedAt": "2026-10-03",
+          "observedAt": "2026-10-03",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol v10.02 D14/D29 sweep (U2SkyGoverned)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Verified DaiJoin deployed source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9759a6ac90977b93b58547b4a71c78317f391a28"
+            },
+            {
+              "label": "Verified Vat authorization and unbacked-credit source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x35d1b3f3d7966a1dfe207aa4514c12a259a0492b"
+            },
+            {
+              "label": "Ethereum observation block 26112822",
+              "url": "https://etherscan.io/block/26112822"
+            }
+          ],
+          "pin": {
+            "position": "26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "sha256:200a5516a3b647461ff1a8e6804a16e5447a6fea4877c9c97a92926ab096fd4f",
+            "signerIdentity": "exit public against caller Vat.dai and Vat.hope(DaiJoin);DAI.wards(DaiJoin)=1;129 live Vat wards and upstream credit creation remain uncertified"
+          },
+          "observedState": {
+            "position": "26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "sha256:200a5516a3b647461ff1a8e6804a16e5447a6fea4877c9c97a92926ab096fd4f",
+            "signerIdentity": "exit public against caller Vat.dai and Vat.hope(DaiJoin);DAI.wards(DaiJoin)=1;129 live Vat wards and upstream credit creation remain uncertified"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "vat-credit-to-dai",
+              "targetDeployment": "ethereum:0x9759a6ac90977b93b58547b4a71c78317f391a28",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xef693bed"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "dai-makerdao"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x6b175474e89094c44da98b954eedeac495271d0f"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
+        "evidence": "At Ethereum block 26112822 (hash 0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a), DAI.wards(DaiJoin)=1 and the pinned runtime exactly matched verified deployed source. The full-history DAI rely/deny census has DaiJoin as the sole live token ward. Verified exit calls vat.move(msg.sender,address(this),wad*RAY) and dai.mint(usr,wad), with no separately configured ceiling. This public exit is immediately executable against credit; it cannot honestly name governance as its only caller. The 129 live Vat wards and non-ward credit-producing actors are not execution-closed, so this scope is partial."
       },
       {
         "chain": "ethereum",
@@ -90,9 +168,9 @@
         "timelockDelaySec": 172800,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-01",
-        "observedBlock": 26095796,
-        "capDescription": "Maker/Sky governance executes through the Pause Proxy after the current 2-day Pause delay and can change system modules, collateral parameters, and debt ceilings via MCD_VAT.",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26112822,
+        "capDescription": "The current 48-hour Pause route can call Vat.suck to create arbitrary unbacked internal credit and make that credit reach a chosen DAI recipient through DaiJoin.exit; it can also authorize Vat wards and change debt ceilings.",
         "sources": [
           {
             "label": "Sky Chainlog",
@@ -115,10 +193,137 @@
             "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
           }
         ],
-        "evidence": "At Ethereum block 25711852, MCD_PAUSE.delay() returned 172800, MCD_VAT.wards(PauseProxy) returned 1, and eth_getCode confirmed PauseProxy bytecode. Governance can use the two-day delayed executor to authorize system modules and change Vat parameters and debt ceilings. DAI.wards(PauseProxy)=0 is expected because this authority reaches supply through Vat rather than direct token minting. Re-verified 2026-10-01 at Ethereum block 26095796: MCD_PAUSE.delay()=172800, MCD_VAT.wards(PauseProxy)=1, DAI.wards(PauseProxy)=0, and PauseProxy bytecode remains live."
+        "executionScope": {
+          "controllerDeployment": "ethereum:0xbe8e3e3618f7474f8cb1d074a26affef007e98fb",
+          "reviewedAt": "2026-10-03",
+          "observedAt": "2026-10-03",
+          "expiresAt": "2027-01-01",
+          "reviewer": "Sol v10.02 D14/D29 sweep (U2SkyGoverned)",
+          "confidence": "partial",
+          "sources": [
+            {
+              "label": "Verified Pause Proxy executor",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbe8e3e3618f7474f8cb1d074a26affef007e98fb"
+            },
+            {
+              "label": "Verified DSPause plotting and execution delay",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbe286431454714f511008713973d3b053a2d38f3"
+            },
+            {
+              "label": "Verified SKY Chief locked approval weight",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x929d9a1435662357f54adcf64dcee4d6b867a6f9"
+            },
+            {
+              "label": "Verified Vat suck, rely and deny",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x35d1b3f3d7966a1dfe207aa4514c12a259a0492b"
+            }
+          ],
+          "pin": {
+            "position": "26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "sha256:ab4f2b404904fa69f1402692bd3be3c8dcfd2ab89ee0f7604b77d8cf7b431cb9",
+            "signerIdentity": "0xbe8e3e3618f7474f8cb1d074a26affef007e98fb owned only by DSPause 0xbe286431454714f511008713973d3b053a2d38f3;Pause.owner=0;Pause.authority=SKY Chief 0x929d9a1435662357f54adcf64dcee4d6b867a6f9;Chief.hat=0xf01b594af26fc8a8ae1e24dcaf904ecb6fd1badc;locked SKY approvals;Pause.delay=172800;other Vat wards not execution-closed"
+          },
+          "observedState": {
+            "position": "26112822",
+            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "runtimeIdentity": "sha256:ab4f2b404904fa69f1402692bd3be3c8dcfd2ab89ee0f7604b77d8cf7b431cb9",
+            "signerIdentity": "0xbe8e3e3618f7474f8cb1d074a26affef007e98fb owned only by DSPause 0xbe286431454714f511008713973d3b053a2d38f3;Pause.owner=0;Pause.authority=SKY Chief 0x929d9a1435662357f54adcf64dcee4d6b867a6f9;Chief.hat=0xf01b594af26fc8a8ae1e24dcaf904ecb6fd1badc;locked SKY approvals;Pause.delay=172800;other Vat wards not execution-closed"
+          },
+          "inventory": "partial",
+          "closure": {
+            "entrypoints": false,
+            "mutableTargets": false,
+            "delegateAndFallback": false,
+            "permissions": false,
+            "upgrades": false,
+            "bypasses": false,
+            "liabilityInventory": false
+          },
+          "paths": [
+            {
+              "id": "governance-unbacked-vat-credit",
+              "targetDeployment": "ethereum:0x35d1b3f3d7966a1dfe207aa4514c12a259a0492b",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0xf24e23eb",
+                "0x65fae35e",
+                "0x9c52a7f1"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 172800,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "dai-makerdao",
+                "usds-sky"
+              ],
+              "affectedDeployments": [
+                "ethereum:0x6b175474e89094c44da98b954eedeac495271d0f",
+                "ethereum:0xdc035d45d973e3ec169d2276ddab16f1e407384f"
+              ],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": []
+            }
+          ]
+        },
+        "evidence": "Pinned block 26112822 confirms Vat.wards(Pause Proxy)=1, DAI.wards(Pause Proxy)=0, Pause.delay=172800, Pause.owner=0, Pause.authority=SKY Chief and Proxy.owner=Pause; all four root runtimes exactly match verified source. The prior read-only Vat.suck(dead,dead,1e45) simulation from Pause Proxy succeeded at the same block. Verified suck updates sin, dai, vice and debt without testing collateral or Line; the credited account can hope(DaiJoin) then exit durable DAI. Chief.lock transfers SKY into escrow and weights votes by deposits; free subtracts that weight and requires block.number>last, with lift setting last. There is no fixed voting duration; liftCooldown=10 is a between-lift constraint, not a voting window. The demonstrated governance path requires the 172800-second Pause, but broader liability/permission/bypass closure is not certified."
       }
     ],
-    "economicCapSemantics": "raiseable",
+    "economicCapSemantics": "unbounded",
+    "governedIssuance": {
+      "governorControlRef": "ethereum:0xbe8e3e3618f7474f8cb1d074a26affef007e98fb",
+      "votingPower": "lock-escrowed",
+      "votingPowerEvidence": "Pinned Chief.gov is SKY 0x56072c95faa701256059aa122697b133aded9279. Verified Chief.lock transfers SKY into the Chief and increases deposits/approval weight; vote uses deposits, not the voter's live wallet balance. free removes approval weight and requires block.number > last, while lift sets last, preventing same-block lift-and-release. Chief has no fixed vote duration; liftCooldown=10 constrains repeated lifts and the current unavoidable governance issuance delay is DSPause's 172800 seconds after plot. This is locked approval stake, not time-locked veSKY.",
+      "enumerability": {
+        "authorizationEvents": [
+          "Vat full-history anonymous DSNote rely(address) 0x65fae35e / deny(address) 0x9c52a7f1; indexed ward is topic1, not topic2; blocks 0..26112822",
+          "DAI full-history anonymous DSNote rely(address) / deny(address); indexed ward is topic2; blocks 0..26112822"
+        ],
+        "capacityReads": [
+          "Vat.wards(address) for all 144 historical ward candidates including the revoked constructor deployer; 129 live",
+          "DAI.wards(DaiJoin)=1; DAI.wards(Pause Proxy)=0",
+          "Vat.Line(); Vat.ilks/Vat.urns/Auto-Line.ilks for all eight Chainlog allocator vaults: BLOOM, NOVA, SPARK, OBEX, PATTERN, PRYSM, INTERVAL and GROVE",
+          "DSPause.delay()=172800; owner()=0; authority()=SKY Chief; Pause Proxy.owner()=DSPause",
+          "Chief.gov(), hat(), last(), live() and liftCooldown()=10"
+        ]
+      },
+      "observedAt": "2026-10-03",
+      "observedBlock": 26112822,
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U2SkyGoverned)",
+      "sources": [
+        {
+          "label": "Verified SKY Chief lock, free, vote and lift",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x929d9a1435662357f54adcf64dcee4d6b867a6f9"
+        },
+        {
+          "label": "Verified DSPause and Pause Proxy delay enforcement",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbe286431454714f511008713973d3b053a2d38f3"
+        },
+        {
+          "label": "Verified Vat DSNote authorization inventory and suck",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x35d1b3f3d7966a1dfe207aa4514c12a259a0492b"
+        },
+        {
+          "label": "Pinned Ethereum block 26112822",
+          "url": "https://etherscan.io/block/26112822"
+        }
+      ]
+    },
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
@@ -146,11 +351,27 @@
         {
           "label": "Ethereum Dwellir RPC, pinned block 26095796",
           "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+        },
+        {
+          "label": "Verified Vat unbacked credit and full-history ward event format",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x35d1b3f3d7966a1dfe207aa4514c12a259a0492b"
+        },
+        {
+          "label": "Verified DaiJoin credit-to-token conversion",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9759a6ac90977b93b58547b4a71c78317f391a28"
+        },
+        {
+          "label": "Verified SKY Chief locked approval weight",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x929d9a1435662357f54adcf64dcee4d6b867a6f9"
+        },
+        {
+          "label": "Pinned Ethereum block 26112822",
+          "url": "https://etherscan.io/block/26112822"
         }
       ],
-      "evidence": "At Ethereum block 25711852, DAI.wards(0x9759a6ac90977b93b58547b4a71c78317f391a28)=1, MCD_VAT.wards(0xbe8e3e3618f7474f8cb1d074a26affef007e98fb)=1, and MCD_PAUSE.delay()=172800; both controls had bytecode. DaiJoin can mint only against existing Vat credit, while governance can raise system ceilings or authorize modules only through the two-day Pause path. The economic bound is therefore raiseable rather than unrestricted, and the on-chain Vat accounting path makes reserve reconciliation and prudential issuer supervision not applicable. Economic-posture fields reviewed 2026-08-15: the two-day Pause independently delays ceiling and module changes, Vat issuance is on-chain collateral-accounted, and no prudential supervisor or independent attestor applies.",
-      "reviewer": "OpenAI Codex C01 control wave; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "D14/D29 reviewed 2026-10-03 at Ethereum block 26112822, hash 0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a. The prior pinned read-only Vat.suck simulation from Pause Proxy succeeded; verified suck creates unbacked internal credit with no collateral or debt-ceiling test, and DaiJoin.exit converts credit into durable DAI to a chosen recipient. The former raiseable economic-cap verdict is therefore corrected to unbounded. Reconciliation and supervision remain not-applicable/none, so incomplete governed evidence derives unbounded-unreconciled, not compromise. Full-history Vat rely/deny DSNote census returned 158 logs and 144 distinct candidate wards; every latest event agreed with a pinned wards read, including the revoked constructor deployer. There are 129 live wards: 61 collateral joins, 47 clippers and 21 other modules. All 129 have verified source responses; 128 deployed runtimes matched exactly, while CRVV1ETHSTETH Clipper 0x1926862f899410bfc19fefb8a3c69c7aed22463a has an empty deployed-bytecode field and remains unbound. D29 is not certified: all 129 ward execution surfaces, including Pot/Jug drip, D3M exec/uncull, DAI/USDS vesting, Teleport, STUSDS, Lockstake, Kicker/Flopper, Auto-Line and LineMom, lack complete reachable-authority/liability scopes. End.snip/skip call suck and ESM emergency authority is not certified restriction-only. Vow downstream accounting, LitePSM.fill with synthetic ink, Allocator draw and Spark ALM mintUSDS relayers also lack complete ceiling/admin/bypass closure. The immediate public DaiJoin exit cannot assert the governor as its sole execution root. Chief approval weight is escrowed SKY, not live wallet balance; it has no fixed vote duration and the proven governor path has only the enforced 48-hour Pause. The exact live ward census and per-path blocking gaps are retained in the U2SkyGoverned research result; authored scopes intentionally remain partial.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U2SkyGoverned)",
+      "reviewedAt": "2026-10-03",
       "disposition": "scoreable"
     }
   }

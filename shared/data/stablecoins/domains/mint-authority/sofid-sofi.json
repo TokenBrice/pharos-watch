@@ -2,7 +2,7 @@
   "id": "sofid-sofi",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "SOFID is natively issued by SoFi Bank, N.A. on Ethereum and Solana, with BitGo Bank & Trust providing Stablecoin-as-a-Service infrastructure. Ethereum issuance uses the ERC1967 UUPS proxy's native MINTER role plus separate DEFAULT_ADMIN, MASTER_MINTER_ROLE, and UPGRADER_ROLE controls; Solana issuance uses a live 1-of-2 Token-2022 mint-authority multisig. Both deployments are native issuance routes; no bridge representation is included in Mint Authority.",
     "upgradeability": {

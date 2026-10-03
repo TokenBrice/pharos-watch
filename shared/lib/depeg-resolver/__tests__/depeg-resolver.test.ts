@@ -103,19 +103,18 @@ describe("structuralClass", () => {
   it("treats immutable CDP as robust and concentrated/algorithmic as fragile", () => {
     expect(structuralClass(coin({ mechanismArchetype: "cdp", authorityPosture: "none-resolved" }))).toBe("robust");
     expect(structuralClass(coin({ mechanismArchetype: "algorithmic" }))).toBe("fragile");
-    expect(structuralClass(coin({ authorityPosture: "unbounded-or-compromised" }))).toBe("fragile");
+    expect(structuralClass(coin({ authorityPosture: "unbounded-unreconciled" }))).toBe("fragile");
     expect(structuralClass(coin({ collateralQuality: "exotic", mechanismArchetype: "cdp" }))).toBe("fragile");
   });
 
   it("keeps a reconciled unbounded minter fragile, including over a robust archetype", () => {
-    // The curated vocabulary gained `unbounded-reconciled` as a refinement of
-    // the unbounded class. Re-annotating a supervised issuer from
-    // `unbounded-or-compromised` to it must not reclassify the coin, or ~110
-    // assets would silently change stratum and move DDR duration percentiles.
+    // Reconciliation refines the unbounded class, not its economic bound.
+    // Re-annotating an unreconciled issuer as reconciled must preserve the DDR
+    // stratum; the governed and incident split likewise never relaxes DDR.
     expect(structuralClass(coin({ authorityPosture: "unbounded-reconciled" }))).toBe("fragile");
     expect(
       structuralClass(coin({ mechanismArchetype: "fiat-cash", authorityPosture: "unbounded-reconciled" })),
-    ).toBe(structuralClass(coin({ mechanismArchetype: "fiat-cash", authorityPosture: "unbounded-or-compromised" })));
+    ).toBe(structuralClass(coin({ mechanismArchetype: "fiat-cash", authorityPosture: "unbounded-unreconciled" })));
   });
 
   it("keeps 9.32 exposed/concentrated refinements fragile without relaxing DDR", () => {
@@ -160,10 +159,13 @@ describe("DDR curated-posture set membership — pinned", () => {
       baseLive(),
     ).factors.find((factor) => factor.code === "K1_supply_weaponization") ?? null;
 
-  it("keeps unbounded-reconciled fragile, risky, and severe-surge eligible", () => {
-    expect(structuralClass(coin({ authorityPosture: "unbounded-reconciled" }))).toBe("fragile");
-    expect(k1("unbounded-reconciled")).toMatchObject({ severity: "severe" });
-  });
+  it.each(["unbounded-reconciled", "unbounded-governed", "unbounded-unreconciled", "compromised"])(
+    "keeps %s fragile, risky, and severe-surge eligible",
+    (posture) => {
+      expect(structuralClass(coin({ mechanismArchetype: "fiat-cash", authorityPosture: posture }))).toBe("fragile");
+      expect(k1(posture)).toMatchObject({ severity: "severe" });
+    },
+  );
 
   it("keeps concentrated-admin fragile and risky but never severe on surge alone", () => {
     expect(structuralClass(coin({ authorityPosture: "concentrated-admin" }))).toBe("fragile");
@@ -229,7 +231,7 @@ describe("resolveOutlook — acceptance cases", () => {
     const r = resolveOutlook(
       event({ stablecoinId: "usr-resolv", direction: "below", peakDeviationBps: -9025 }),
       coin({
-        authorityPosture: "unbounded-or-compromised",
+        authorityPosture: "unbounded-unreconciled",
         mintPath: "offchain-attested-minter",
         governance: "centralized",
         custodyModel: "institutional-unregulated",

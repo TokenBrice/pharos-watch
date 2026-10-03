@@ -2,7 +2,7 @@
   "id": "usdq-quantoz",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "USDQ is issuer-minted natively on Ethereum, Polygon, XRPL, and Algorand. Ethereum and Polygon expose independent HadronToken onlyOwner mint paths; both issuer owners and both proxy admins are 3-of-5 multisigs in the 2026-10-01 pinned census. The Polygon issuer owner was historically 2-of-5. XRPL issuance is controlled by the USDQ issuer account, while Algorand ASA distribution and role replacement are controlled by issuer reserve and manager accounts. The EVM paths remain economically unbounded, and no independent whole-supply reconciliation is verified.",
     "controls": [

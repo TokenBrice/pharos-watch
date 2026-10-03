@@ -2,7 +2,7 @@
   "id": "moveusd-cfx",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-unreconciled",
     "confidence": "verified",
     "summary": "Finalized Solana state at slot 452212543 keeps the MOVEUSD SPL mint and freeze authorities at the mint address, an off-curve program-derived address. Finalized transaction 4G6Asw...PE4wH3 at slot 432775304 proves that executable program EmiytJ3zWX9koH3emPsWDEs9RqNm6NNFp4CkMLoiA1KC can sign for that PDA and invoke MintToChecked. The program remains upgradeable; its current ProgramData names AiWGaHWRrSAizfXRPGypvxGoMgH714yr6cpRZgdKq2tr as upgrade authority, replacing the previously recorded 6fTsNdopg4K5nFBFoBhfiU7GnaEkVa3cvxHoVc1Q9Rw1. MOVEUSD retains a concentrated program-controlled mint route.",
     "upgradeability": {

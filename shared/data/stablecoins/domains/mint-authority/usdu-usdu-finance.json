@@ -2,7 +2,7 @@
   "id": "usdu-usdu-finance",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
     "summary": "At Ethereum block 26098754, three modules can mint USDU: the curator-operated Morpho USDU adapter and two permissionless SwapBridgeMorphoV1 modules accepting USDC or USDT into ERC-4626 vaults. The token itself remains module-gated; users can invoke the approved swap modules. Historical expired modules retain burn rights, and the uncapped Morpho/curator issuance path remains adverse.",
     "upgradeability": {

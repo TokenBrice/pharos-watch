@@ -2,9 +2,9 @@
   "id": "iusd-infinifi",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "IUSD receipt-token minting is gated by RECEIPT_TOKEN_MINTER in the infiniFi Core. At Ethereum block 26095801, the role had six holders: the four reviewed native protocol contracts and two OutlandVault portal-reconciliation contracts, 0x4197f2adfce9fdeb36b02e96737ddf646c841e45 and 0x77776f422b7eb0a95ccd35fbd088a5957d4408ea, assessed as bridge machinery. The previously reviewed OutlandVault 0xf0d0f1fdee5595628de17b37e4134a5bac4441c3 was no longer in that enumeration. YieldSharing's recorded implementation and ProxyAdmin were unchanged; the ProxyAdmin remained owned by the seven-day timelock. The Ethereum admin Safe remained 4-of-8.",
+    "summary": "IUSD user issuance is receipt-token accounting, but Core GOVERNOR can grant RECEIPT_TOKEN_MINTER to an arbitrary address whose ReceiptToken.mint call checks no collateral or durable supply ceiling. At Ethereum block 26113561, GOVERNOR includes the seven-day timelock and FluidRewardsClaimer; the timelock's sole Core proposer is the 4-of-8 admin Safe. The Safe root fails governed issuance qualification even though its delay exceeds two days; continuous reconciliation yields unbounded-reconciled.",
     "upgradeability": {
       "model": "custom",
       "deploymentRefs": [
@@ -161,7 +161,7 @@
         ]
       }
     ],
-    "economicCapSemantics": "raiseable",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "continuous",
     "supervision": "none",
     "review": {
@@ -185,11 +185,23 @@
         {
           "label": "infiniFi YieldSharing proxy",
           "url": "https://eth.blockscout.com/address/0x90e91f5bfd9a0a4d925bf30b512add8cd2bbae3b"
+        },
+        {
+          "label": "Verified InfiniFiCore role administration",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf6d48735eccf12bdc1df2674b1ce3fcb3bd25490"
+        },
+        {
+          "label": "Verified ReceiptToken arbitrary authorized mint",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x48f9e38f3070ad8945dfeae3fa70987722e3d89c"
+        },
+        {
+          "label": "Verified additional GOVERNOR: FluidRewardsClaimer",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd0ec80032c0da717bd78b9569321d9069365241e"
         }
       ],
-      "evidence": "At Ethereum block 25771089, ReceiptToken 0x48f9e38f3070ad8945dfeae3fa70987722e3d89c, Core 0xf6d48735eccf12bdc1df2674b1ce3fcb3bd25490, MintController 0x49877d937b9a00d50557bdc3d87287b5c3a4c256, PLSmoother 0xc324569141697045b9ede54b5d4623a691ed57a4, and MigrationController 0x5f5403656e4db95accf1064a714b1bce351839f8 were direct non-proxy deployments. Core also listed OutlandVault 0xf0d0f1fdee5595628de17b37e4134a5bac4441c3 as a fifth RECEIPT_TOKEN_MINTER; its portal reconciliation can mirror remote supply and is authored in Bridge Risk, not counted as native Mint Authority. YieldSharing 0x90e91f5bfd9a0a4d925bf30b512add8cd2bbae3b was a transparent proxy with implementation 0x0d5dbf208a9a7540018d204a9a0ad08a091407e5 and ProxyAdmin 0x094227ee5e9c3877860ac212f1e5218441e5b4eb. The current 4-of-8 admin Safe has no immediate GOVERNOR or ProxyAdmin-owner path: mint-role administration, ReceiptToken core replacement, and YieldSharing upgrades all converge on Timelock 0x3d18480cc32b6ab3b833dcabd80e76cfd41c48a9 with a 604800-second minimum delay. IUSD native issuance remains receipt-token issuance through the four protocol minters and is separate from the BNB, Tempo, and Outland bridge machinery; every path to replace the receipt core, add a minter, or change the upgradeable mint module traverses that seven-day delay, so economic cap semantics remain raiseable rather than unbounded. Economic-posture fields reviewed 2026-08-16: the seven-day timelock bounds mint-path changes, the real-time protocol feed covers the full reserve composition, and no regulator or independent attestor is evidenced.",
-      "reviewer": "Codex Safety Score V9 registry pass; RELOC-07 mint/bridge boundary migration",
-      "reviewedAt": "2026-08-16"
+      "evidence": "Historical review at Ethereum block 25771089 established direct ReceiptToken/Core deployments, four native minters and Outland bridge machinery; YieldSharing implementation was 0x0d5dbf208a9a7540018d204a9a0ad08a091407e5 with ProxyAdmin 0x094227ee5e9c3877860ac212f1e5218441e5b4eb. The 2026-08-16 review established continuous protocol reserve reconciliation and no independent attestor or prudential supervisor. D14/D29 sweep 2026-10-03 at Ethereum block 26113561 (hash 0xf8669491a2d5c3e0dfe4c4233ed6861dcbe45f046fac9804a60c40ae5ee6846e): verified InfiniFiCore makes GOVERNOR the admin of RECEIPT_TOKEN_MINTER, and verified ReceiptToken.mint(address,uint256) accepts that role without checking collateral or a durable supply ceiling. Authorization of a new arbitrary minter is therefore economically unbounded; the previous raiseable inference from the seven-day delay is superseded. Core enumeration returned six receipt minters, including OutlandVaults 0x4197f2adfce9fdeb36b02e96737ddf646c841e45 and 0x77776f422b7eb0a95ccd35fbd088a5957d4408ea, while GOVERNOR returned Timelock 0x3d18480cc32b6ab3b833dcabd80e76cfd41c48a9 and FluidRewardsClaimer 0xd0ec80032c0da717bd78b9569321d9069365241e. The latter's verified claim entrypoint has fixed Fluid claim/transfer targets, not an arbitrary Core.grantRole entrypoint; its inherited emergencyAction and caller closure are not certified here. Timelock getMinDelay() remains 604800 and hasRole confirms the admin Safe as proposer/executor; Core PROPOSER_ROLE enumeration returns that Safe alone. Safe getThreshold/getOwners remains 4-of-8. D29 G1 fails because proposal power is rooted in that Safe, not a token-vote governor; seven days passes the nominal delay gate but cannot cure G1. Every-control execution closure, including the additional GOVERNOR contract, is not certified. No governedIssuance certificate is authored; continuous reconciliation yields unbounded-reconciled.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U6GovAmbiguousB)",
+      "reviewedAt": "2026-10-03"
     }
   }
 }

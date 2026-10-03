@@ -2,7 +2,7 @@
   "id": "msusd-metronome",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-reconciliation-unknown",
     "confidence": "verified",
     "summary": "All five authored msUSD deployments are native Metronome Synth liabilities. Registered Pool/DebtToken collateral paths mint locally behind each chain's 3-of-5 PoolRegistry governor Safe; each SyntheticToken and its local ProxyAdmin are separately upgradeable, while the LayerZero ProxyOFT caller is scored as bridge machinery rather than native issuance.",
     "upgradeability": {

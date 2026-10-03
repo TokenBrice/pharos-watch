@@ -2,9 +2,9 @@
   "id": "money-defi-money",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-unreconciled",
     "confidence": "verified",
-    "summary": "MONEY has independent native crvUSD-style CDP issuance on Arbitrum, Base, and Optimism: users deposit approved collateral (WBTC, ETH, etc.) and mint MONEY against per-market debt ceilings using defi.money's controller/LLAMMA design; the defi.money admin Safe controls market onboarding and native risk parameters. LayerZero OFT transfer machinery is assessed separately in Bridge Risk.",
+    "summary": "MONEY has native collateralized MainController issuance on Arbitrum, Base and Optimism. The 3-of-7 owner Safes can also authorize arbitrary token minters; BridgeToken.mint checks only minter authorization, without collateral or controller debt ceilings. D14 root native issuance is economically unbounded. LayerZero OFT transfer machinery remains exclusively in Bridge Risk.",
     "controls": [
       {
         "chain": "arbitrum",
@@ -272,14 +272,18 @@
         }
       ]
     },
-    "economicCapSemantics": "raiseable",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
-      "evidence": "At Arbitrum block 495410695, the MainController approved the MONEY token as its minter and reported 7 markets, positive total debt, and a 100,000,000 MONEY global debt ceiling; equivalent native reads were confirmed at Optimism block 155676713 and Base block 50081434. Safe reads at Arbitrum block 495412172, Optimism block 155676732, and Base block 50081448 confirmed the same 3-of-7 Safe with 7 owners, no enabled modules, and zero guard. EIP-1967 implementation and admin slots for the token and controller were zero at Arbitrum block 495419385, Optimism block 155677632, and Base block 50082350, confirming immutable native mint logic. The Safe can authorize controllers and raise native debt ceilings without an independent delay; LayerZero OFT bridge mint/burn, peer configuration, pause, and message validation are separate Bridge Risk machinery.",
-      "reviewer": "Codex mint-bridge-boundary migration",
-      "reviewedAt": "2026-08-17",
+      "evidence": "At Arbitrum block 495410695, the MainController approved the MONEY token as its minter and reported 7 markets, positive total debt, and a 100,000,000 MONEY global debt ceiling; equivalent native reads were confirmed at Optimism block 155676713 and Base block 50081434. Safe reads at Arbitrum block 495412172, Optimism block 155676732, and Base block 50081448 confirmed the same 3-of-7 Safe with 7 owners, no enabled modules, and zero guard. EIP-1967 implementation and admin slots for the token and controller were zero at Arbitrum block 495419385, Optimism block 155677632, and Base block 50082350, confirming immutable native mint logic. The Safe can authorize controllers and raise native debt ceilings without an independent delay; LayerZero OFT bridge mint/burn, peer configuration, pause, and message validation are separate Bridge Risk machinery. D14/D29 review on 2026-10-03 confirmed MONEY owner() is the admin Safe at Arbitrum block 495412172 (hash 0xd63068572261c4b2cfa90d54e6e9c76f96469d0933ae5bfe7203244f02d444a1) and read the deployed verified BridgeToken source. setMinter(address,bool) is onlyOwner and permits arbitrary addresses; mint(address,uint256) checks isMinter[msg.sender] then _mint, with no collateral or debt-ceiling check. The existing pinned native multi-chain Safe review is reused. The Safe can authorize a chosen unrestricted native minter even though current MainController loans are collateral-gated. This is token minter authorization, not the separately scored OFT bridge mint path. D14 semantics are unbounded; Safe authority is not D29 token governance. Not-applicable reconciliation and no supervision derive unbounded-unreconciled.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U7SafeRootedFloorA)",
+      "reviewedAt": "2026-10-03",
       "sources": [
+        {
+          "label": "Verified deployed MONEY BridgeToken source",
+          "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x69420f9e38a4e60a62224c489be4bf7a94402496"
+        },
         {
           "label": "defi.money docs",
           "url": "https://docs.defi.money/"

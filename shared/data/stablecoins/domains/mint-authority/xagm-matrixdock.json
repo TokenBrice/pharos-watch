@@ -2,7 +2,7 @@
   "id": "xagm-matrixdock",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "XAGm has two genuinely native issuer-liability paths: the Ethereum MToken proxy and the Sui XAGM coin type. Each operator can add local mint budget through a manual budget-receive path, while durable mint execution requires the current four-hour request/execute delay; Ethereum's owner controls delayed UUPS upgrades and Sui's State owner holds the MToken package UpgradeCap. The Ethereum/Sui MTokenMessenger transfer rail is bridge machinery scored only under bridgeRouteRisk.",
     "upgradeability": {

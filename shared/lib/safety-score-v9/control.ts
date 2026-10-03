@@ -12,6 +12,7 @@ import {
 } from "./policy";
 import { v9StructuralSignalSharePct } from "./backing-primitives";
 import { canonicalDomains, compareText, domainKey, uniqueSorted } from "./primitives";
+import { isUnboundedMintPosture } from "./mint-posture";
 import {
   controlFallbackKind,
   evaluateV9SubthresholdUnresolvedBridgeJoins,
@@ -271,10 +272,9 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
             !isControlEconomicallyRelevant(control) ||
             (!control.capabilities.includes("mint") && control.controlKey !== mint.controlKey)
           ) return false;
-          const posture = deriveV9MintPosture(control, mint, false);
+          const posture = deriveV9MintPosture(control, mint, false, policy.control.governedIssuance);
           return posture === "unknown" ||
-            (control.status.evidenceRefIds.length > 0 &&
-              (posture === "unbounded-or-compromised" || posture === "unbounded-reconciliation-unknown" || posture === "unbounded-reconciled"));
+            (control.status.evidenceRefIds.length > 0 && isUnboundedMintPosture(posture));
         })
       : [];
   if (mint.status.applicability.state === "not-applicable") {
@@ -355,8 +355,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
         addReason("mint-control-question", "local-component", "mint:reconciliation", mintControl.controlKey);
       }
 
-      const compromised = mintControl?.incidentState === "active";
-      const posture = deriveV9MintPosture(mintControl, mint, immutableMechanism);
+      const posture = deriveV9MintPosture(mintControl, mint, immutableMechanism, policy.control.governedIssuance);
       const componentControlKeys = uniqueSorted(
         [mintControl?.controlKey, upgradeControl?.controlKey].filter((value): value is string => value !== undefined),
       );
@@ -382,21 +381,22 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
       // non-adverse measured posture with >= seasonedCreditMinMonths of track
       // record earns seasonedCreditPoints, capped at the next rung of the merged
       // posture/grading ladder — longevity can close the gap to the next rung
-      // but never leapfrog it. MINT-LADDER 9.32 (2026-08-21) also permits the
-      // two unreconciled adverse rungs to earn credit when no active compromise
-      // remains; the compromised rung uses its dedicated adverse ceiling.
+      // but never leapfrog it. D29 governed issuance uses that ordinary ladder;
+      // the unreconciled adverse rung keeps its dedicated ceiling, and active
+      // compromise never earns credit.
       const mintPostureScore = (() => {
         const grading = policy.control.mintPostureGrading;
-        const adverseSeasonedEligible =
-          (posture === "unbounded-or-compromised" && mintControl?.incidentState !== "active") ||
-          posture === "unbounded-reconciliation-unknown";
+        const postureSeasonedEligible =
+          posture === "unbounded-unreconciled" ||
+          posture === "unbounded-reconciliation-unknown" ||
+          posture === "unbounded-governed";
         if (
           grading.seasonedCreditPoints <= 0 ||
           args.trackRecordMonths === undefined ||
           args.trackRecordMonths < grading.seasonedCreditMinMonths ||
-          (!mintReconciled && !adverseSeasonedEligible) ||
+          (!mintReconciled && !postureSeasonedEligible) ||
           posture === "unknown" ||
-          (posture === "unbounded-or-compromised" && mintControl?.incidentState === "active")
+          posture === "compromised"
         ) {
           return gradedPostureScore;
         }
@@ -405,7 +405,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
         // never make a lower posture class read identical to the class above it
         // (adversarial-review finding on the credit widening to 10).
         const ceiling =
-          posture === "unbounded-or-compromised"
+          posture === "unbounded-unreconciled"
             ? grading.adverseSeasonedCreditCeiling
             : nextRung === undefined
               ? gradedPostureScore
@@ -415,7 +415,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
       // Safety 9.1 merged mint grader: quorum granularity, Safe module evidence,
       // and resolved-incident age decay refine the posture-derived score. The
       // active-incident path above is untouched — a live compromise still pins the
-      // posture at unbounded-or-compromised and raises the critical signal.
+      // posture at compromised and raises the critical signal.
       const mergedMintScore = applyMergedMintSignals(
         mintPostureScore,
         mintControl,
@@ -432,40 +432,37 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
         controlKeys: componentControlKeys,
         failureDomains: componentFailureDomains,
       });
-      if (
-        posture === "unbounded-reconciled" ||
-        posture === "unbounded-reconciliation-unknown" ||
-        posture === "unbounded-or-compromised"
-      ) {
+      if (isUnboundedMintPosture(posture)) {
         // R3 keeps reconciled mint risk inside the control pillar for prudential
-        // issuers, emits a diagnostic low signal for attestation-only issuers,
-        // and fails closed for absent/unknown supervision. Only an active mint
-        // compromise stays critical; an unbounded/unreconciled mint with no active
-        // incident takes the high rung so its composite reflects its pillar blend
-        // rather than being hard-capped at the critical floor (the 9.32 unknown-
-        // reconciliation rung is scored separately above the confirmed floor).
+        // issuers and emits a low diagnostic for attestation-only reconciliation.
+        // D29 also makes delayed governance a low diagnostic, without treating
+        // its economically unbounded issuance as bounded.
         const prudentiallySupervised = posture === "unbounded-reconciled" && mint.supervision === "prudential";
         const severity: V9Severity | null =
-          posture === "unbounded-reconciliation-unknown"
-            ? "high"
-            : posture === "unbounded-or-compromised"
-              ? compromised
-                ? "critical"
-                : "high"
-              : prudentiallySupervised
-                ? null
-                : mint.supervision === "attestation-only"
-                  ? "low"
-                  : "high";
+          posture === "compromised"
+            ? "critical"
+            : posture === "unbounded-governed"
+              ? "low"
+              : posture === "unbounded-unreconciled" || posture === "unbounded-reconciliation-unknown"
+                ? "high"
+                : prudentiallySupervised
+                  ? null
+                  : mint.supervision === "attestation-only"
+                    ? "low"
+                    : "high";
         if (severity !== null) {
           addStructuralFailure({
             kind: "centralized-mint",
             severity,
             binding: mintBinding,
             reason:
-              posture === "unbounded-or-compromised"
-                ? "Economically effective minting is unbounded or compromised."
-                : "Minting is economically unbounded.",
+              posture === "compromised"
+                ? "Minting authority is under an active incident."
+                : posture === "unbounded-governed"
+                  ? "Minting is economically unbounded but held only by delayed on-chain governance."
+                  : posture === "unbounded-unreconciled"
+                    ? "Economically effective minting is unbounded and unreconciled."
+                    : "Minting is economically unbounded.",
             materialSharePct:
               mintControl?.materialSupplyShare == null
                 ? null

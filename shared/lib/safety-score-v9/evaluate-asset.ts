@@ -27,6 +27,7 @@ import { selectV9CdpLiquidationCapacity } from "./archetypes/cdp";
 import { evaluateV9EconomicControlAssetFacts } from "./control";
 import { unresolvedDeploymentCohort } from "./control-bridge-join";
 import { deriveV9MintPosture, resolveV9StatusCauses, type V9EconomicControlResult } from "./control-primitives";
+import { isUnboundedMintPosture } from "./mint-posture";
 import {
   projectV9RoleDependencyPillarLimits,
   type V9DependencyEvaluationPlan,
@@ -257,6 +258,7 @@ function structuralSignalFromControl(
   asset: V9AssetFactsV3,
   failure: V9EconomicControlResult["structuralFailures"][number],
   bindingComponentControlKeys: ReadonlySet<string>,
+  policy: V9ValidatedPolicyEnvelope,
 ): V9StructuralSignal {
   const controls = failure.controlKeys.flatMap((key) => {
     const control = asset.controls.find((candidate) => candidate.controlKey === key);
@@ -303,11 +305,11 @@ function structuralSignalFromControl(
     (failure.kind === "centralized-mint" || failure.kind === "active-control-incident") &&
     controls.length > 0 && controls.length === failure.controlKeys.length &&
     controls.every((control) => {
-      const posture = deriveV9MintPosture(control, asset.economicControlReview.mint, false);
+      const posture = deriveV9MintPosture(control, asset.economicControlReview.mint, false, policy.policy.semantic.control.governedIssuance);
       return control.controlKind !== "bridge" &&
         control.status.applicability.state !== "not-applicable" &&
         control.status.evidenceRefIds.length > 0 &&
-        (posture === "unbounded-or-compromised" || posture === "unbounded-reconciliation-unknown" || posture === "unbounded-reconciled");
+        isUnboundedMintPosture(posture);
     });
   const knownOraclePathEvidence =
     failure.kind === "weak-oracle-branch" &&
@@ -967,7 +969,7 @@ function controlPillar(
           .flatMap((component) => component.controlKeys),
       );
       return result.structuralFailures.flatMap((failure) => {
-        const signal = structuralSignalFromControl(asset, failure, bindingComponentControlKeys);
+        const signal = structuralSignalFromControl(asset, failure, bindingComponentControlKeys, envelope);
         return failure.binding || (signal.economicLossScope === "deployment" && signal.responsibility === "measured-adverse")
           ? [signal]
           : [];

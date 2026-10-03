@@ -2,7 +2,7 @@
   "id": "dusd-standx",
   "mintAuthority": {
     "mintPath": "offchain-attested-minter",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-unreconciled",
     "confidence": "manual-review",
     "summary": "StandX DUSD has native issuance on BSC and Solana. BSC's sole MINTER_ROLE is held by the Settler controller proxy under a 3-of-4 DEFAULT_ADMIN Safe, while Solana mint authority is a Settler-program PDA whose program upgrade authority is separately reviewed. The issuer Gateway, Highway, vault, and off-chain settlement controls are assessed under Bridge Risk; the terminal Settler/RSV backend signer set is issuer-undisclosed and remains the manual-review cap on this profile.",
     "controls": [

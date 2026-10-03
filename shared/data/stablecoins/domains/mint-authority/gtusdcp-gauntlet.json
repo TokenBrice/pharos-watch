@@ -2,7 +2,7 @@
   "id": "gtusdcp-gauntlet",
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "unbounded-reconciled",
+    "authorityPosture": "bounded-admin",
     "confidence": "verified",
     "summary": "gtUSDCp has three independent immutable Morpho vault deployments on Ethereum, Base and Arbitrum. Depositors receive shares for chain-local USDC, and the contracts can also mint fee shares during accrual. The inherited USDC MasterMinter remains parent exposure, not authority to mint vault shares or replace vault bytecode.",
     "inheritedFrom": "usdc-circle",
@@ -124,6 +124,26 @@
       }
     ],
     "economicCapSemantics": "bounded",
+    "capSemanticsReview": {
+      "verdict": "bounded-by-construction",
+      "rationale": "At Ethereum block 26112822 (hash 0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a), verified VaultV2 runtime matches deployment and asset() is USDC. enter() transfers required assets before createShares(); accrueInterest mints formula-limited performance and management fee shares against existing vault assets, redistributing backed claims rather than creating arbitrary unbacked issuance. Fee parameters and adapter/allocation-cap administration do not expose a free share mint or minter-registration function. Base MetaMorpho and Arbitrum MetaMorphoV1_1 verified runtimes matched at blocks 48599296 (hash 0x95fc2dfcf0c1aa77e32e9041ffa6fe96376dbac823a27c3cdec6e909af5ae0e7) and 483587934 (hash 0x6ab358e298e48ceb34e6e4f8700ecae4bf7e41c3b57ae5fa5d79789c78ba8af4), with deposit-backed minting and interest-derived fee shares. Inherited issuer controls describe parent issuance carried by the serial-claim dependency edge, not wrapper-local share minting; parent D14 risk is not charged twice.",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U10BoundedWrappersA)",
+      "sources": [
+        {
+          "label": "Verified wrapper source reviewed for D14",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8c106eedad96553e64287a5a6839c3cc78afa3d0"
+        },
+        {
+          "label": "base verified vault source",
+          "url": "https://base.blockscout.com/api/v2/smart-contracts/0xee8f4ec5672f09119b96ab6fb59c27e1b7e44b61"
+        },
+        {
+          "label": "arbitrum verified vault source",
+          "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x7c574174da4b2be3f705c6244b4bfa0815a8b3ed"
+        }
+      ]
+    },
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
@@ -158,9 +178,9 @@
           "url": "https://www.dfs.ny.gov/virtual_currency_businesses"
         }
       ],
-      "evidence": "Historical inventory review at Ethereum block 25527215, Base block 48599296 and Arbitrum block 483587934 is retained in the individual controls. Re-verification on 2026-10-01 at Ethereum block 26095807, Base block 52024171 and Arbitrum block 510584559 confirms zero corrected EIP-1967 implementation, admin and beacon slots, native chain-local USDC asset(), unchanged owners, owner Safe configurations of 4-of-7, 4-of-7 and 3-of-7 respectively, and no enabled modules or guard. Exact verified sources identify Ethereum VaultV2, Base MetaMorpho and Arbitrum MetaMorphoV1_1, not three MetaMorpho V2 instances. Depositor shares require assets, but accrual can separately mint fee shares; this does not grant arbitrary privileged share issuance. At the pinned Ethereum block, underlying USDC.masterMinter() matches the inherited control; it cannot mint vault shares or replace vault bytecode. Circle's reserve examinations and supervision remain parent evidence, not a wrapper attestation or prudential regime. The May 2026 USDC report cited below is historical and is not represented as the latest report. Wrapper-level reconciliation and supervision remain not-applicable and none.",
-      "reviewer": "Sol curation pass 2026-10-01 (CurA57DOLA)",
-      "reviewedAt": "2026-10-01"
+      "evidence": "Historical inventory review at Ethereum block 25527215, Base block 48599296 and Arbitrum block 483587934 is retained in the individual controls. Re-verification on 2026-10-01 at Ethereum block 26095807, Base block 52024171 and Arbitrum block 510584559 confirms zero corrected EIP-1967 implementation, admin and beacon slots, native chain-local USDC asset(), unchanged owners, owner Safe configurations of 4-of-7, 4-of-7 and 3-of-7 respectively, and no enabled modules or guard. Exact verified sources identify Ethereum VaultV2, Base MetaMorpho and Arbitrum MetaMorphoV1_1, not three MetaMorpho V2 instances. Depositor shares require assets, but accrual can separately mint fee shares; this does not grant arbitrary privileged share issuance. At the pinned Ethereum block, underlying USDC.masterMinter() matches the inherited control; it cannot mint vault shares or replace vault bytecode. Circle's reserve examinations and supervision remain parent evidence, not a wrapper attestation or prudential regime. The May 2026 USDC report cited below is historical and is not represented as the latest report. Wrapper-level reconciliation and supervision remain not-applicable and none. D14/D29 sweep 2026-10-03: At Ethereum block 26112822 (hash 0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a), verified VaultV2 runtime matches deployment and asset() is USDC. enter() transfers required assets before createShares(); accrueInterest mints formula-limited performance and management fee shares against existing vault assets, redistributing backed claims rather than creating arbitrary unbacked issuance. Fee parameters and adapter/allocation-cap administration do not expose a free share mint or minter-registration function. Base MetaMorpho and Arbitrum MetaMorphoV1_1 verified runtimes matched at blocks 48599296 (hash 0x95fc2dfcf0c1aa77e32e9041ffa6fe96376dbac823a27c3cdec6e909af5ae0e7) and 483587934 (hash 0x6ab358e298e48ceb34e6e4f8700ecae4bf7e41c3b57ae5fa5d79789c78ba8af4), with deposit-backed minting and interest-derived fee shares. Inherited issuer controls describe parent issuance carried by the serial-claim dependency edge, not wrapper-local share minting; parent D14 risk is not charged twice.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U10BoundedWrappersA)",
+      "reviewedAt": "2026-10-03"
     }
   }
 }

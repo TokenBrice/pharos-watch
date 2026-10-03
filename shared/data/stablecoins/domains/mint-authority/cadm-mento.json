@@ -2,9 +2,9 @@
   "id": "cadm-mento",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "At Celo block 78972424, CADm issuance uses the V2 Broker and legacy BiPoolManager. The two-day Mento Timelock owns the token and Broker and can raise trading limits. The BiPoolManager pricing/configuration owner is a separate 4-of-6 migration Safe. Validators is token-authorized, but its current mint function targets registry USDm and only registry EpochManager can invoke it. Celo Governance owns both the Validators proxy and Registry: upgrades or registry reassignment can enable a latent CADm mint path. No Mento Timelock protection is attributed to Celo Governance.",
+    "summary": "At Celo block 78972424, CADm issuance uses the V2 Broker and legacy BiPoolManager. The two-day Mento Timelock owns the token, Broker and BiPoolManager and can raise trading limits and configure legacy pool pricing. The separate 4-of-6 migration Safe is not BiPoolManager owner at that pin. Validators is token-authorized, but its current mint function targets registry USDm and only registry EpochManager can invoke it. Celo Governance owns both the Validators proxy and Registry: upgrades or registry reassignment can enable a latent CADm mint path. No Mento Timelock protection is attributed to Celo Governance. D14: issuance is economically unbounded because the token owner can set an arbitrary Broker/minter with no token-level collateral check; the two-day delay does not bound the amount. D29 is not certified because the authorized Validators proxy has separate Celo Governance upgrade authority.",
     "upgradeability": {
       "model": "transparent-proxy",
       "proxyAddresses": [
@@ -142,7 +142,7 @@
         "label": "Mento migration Safe - legacy FX pool configuration",
         "role": "minter-admin",
         "authorityType": "safe",
-        "directMintAbility": "can-authorize",
+        "directMintAbility": "none",
         "threshold": 4,
         "signerCount": 6,
         "safe": {
@@ -175,14 +175,34 @@
             "url": "https://forum.mento.org/t/mgp-18-mento-v2-deprecation/137"
           }
         ],
-        "evidence": "At Celo block 78972424, BiPoolManager owner() is this 4-of-6 Safe; getModulesPaginated returns no enabled modules and the guard slot is zero. Verified BiPoolManager source permits owner-only pricing-module, oracle, spread and exchange configuration that determines Broker issuance quotes. It cannot call Broker configureTradingLimit, which is restricted to the separate Broker owner. BiPoolManager proxy administration remains the Mento Timelock."
+        "evidence": "At Celo block 78972424, BiPoolManager 0xc016174b60519bdc24433d4ed2cff6c1efac7881 owner() returns Mento Timelock 0x890db8a597940165901372dd7db61c9f246e2147, not this 4-of-6 Safe. The Safe's getModulesPaginated returns no enabled modules and the guard slot is zero. Verified BiPoolManager source permits owner-only pricing-module, oracle, spread and exchange configuration that determines Broker issuance quotes; these owner-only powers belong to the Timelock at this pin, not the Safe. Broker configureTradingLimit is separately restricted to its owner, also the Mento Timelock. BiPoolManager proxy administration remains the Mento Timelock."
       }
     ],
-    "economicCapSemantics": "raiseable",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "continuous",
     "supervision": "none",
     "review": {
       "sources": [
+        {
+          "label": "Pinned Celo block",
+          "url": "https://celo.blockscout.com/block/79142378"
+        },
+        {
+          "label": "Verified token implementation",
+          "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x434563b0604be100f04b7ae485bcafe3c9d8850e"
+        },
+        {
+          "label": "veMENTO locking implementation (D29 voting-power screen)",
+          "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x5a2c50efa0f63f0f97da9f002fefef3f64ed7d46"
+        },
+        {
+          "label": "Timelock full-history role grants through pinned block",
+          "url": "https://celo.blockscout.com/api?module=logs&action=getLogs&fromBlock=0&toBlock=79142378&address=0x890db8a597940165901372dd7db61c9f246e2147&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+        },
+        {
+          "label": "Timelock full-history role revocations through pinned block",
+          "url": "https://celo.blockscout.com/api?module=logs&action=getLogs&fromBlock=0&toBlock=79142378&address=0x890db8a597940165901372dd7db61c9f246e2147&topic0=0xf6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b"
+        },
         {
           "label": "Finalized Celo block 72780426",
           "url": "https://celo.blockscout.com/block/72780426"
@@ -196,9 +216,9 @@
           "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/swap/Broker.sol"
         }
       ],
-      "evidence": "At finalized Celo block 72780426, CADm broker(), owner(), validators(), and exchange() returned the Mento Broker, two-day Mento Timelock, Celo ValidatorsProxy, and zero address respectively. Proxy introspection resolved the current token and Broker implementations and administrators. The Broker is the live swap mint/burn path; the current Validators implementation can only mint Registry USDm, while its Celo-Governance-owned proxy remains a latent upgrade-controlled authorization surface. Economic-posture fields reviewed 2026-08-15: the Mento Timelock and broad Celo governance bound the live and latent raise paths, the CADm-scoped live adapter covers the full shared reserve continuously, and no named prudential regulator or independent attestor applies.",
-      "reviewer": "OpenAI Codex SOL-UPGRADE evidence review; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "At finalized Celo block 72780426, CADm broker(), owner(), validators(), and exchange() returned the Mento Broker, two-day Mento Timelock, Celo ValidatorsProxy, and zero address respectively. Proxy introspection resolved the current token and Broker implementations and administrators. The Broker is the live swap mint/burn path; the current Validators implementation can only mint Registry USDm, while its Celo-Governance-owned proxy remains a latent upgrade-controlled authorization surface. Economic-posture fields reviewed 2026-08-15: the Mento Timelock and broad Celo governance bound the live and latent raise paths, the CADm-scoped live adapter covers the full shared reserve continuously, and no named prudential regulator or independent attestor applies. D14/D29 review 2026-10-03 at Celo block 79142378 (hash 0xe5ac3917c420c5f097992356e3a8934c336d354a139b8a1207fe547af3569c6c): owner(), _getOwner(), and the EIP-1967 admin slot resolve to Mento Timelock 0x890db8a597940165901372dd7db61c9f246e2147, not the migration Safe; the implementation slot resolves to verified StableTokenV2 0x434563b0604be100f04b7ae485bcafe3c9d8850e. Read-only setBroker(0x000000000000000000000000000000000000dead) from that owner succeeds, and mint(chosenRecipient,1e18) from the configured Broker succeeds. Verified setBroker accepts an arbitrary address; onlyMinter gates mint by caller identity and imposes no collateral/deposit check or economic ceiling. The 172800-second Timelock delay does not make arbitrary minter authorization economically bounded. D29 screening confirms MentoGovernor proposer/canceller membership, open execution, Timelock administration, and no such Safe roles; the separately observed canceller 0xe6951c4176aab41097c6f5fe11e9c515b7108acd is not asserted to have mint power. The governor uses the verified lock-escrowed veMENTO contract. However validators() on this token resolves to 0xaeb865bca93ddc8f47b8e29f40c5399ce34d0c58, whose proxy owner is separate Celo Governance 0xd533ca259b330c7a88f74e000a3faea2d63b7972: independently replacing this token-authorized implementation is not rooted in MentoGovernor. Current Validators targets registry USDm, not this token; that observation does not close its independent upgrade path. Complete governor-only issuance closure is therefore not certified and no governedIssuance or complete executionScope is authored. This D14 verdict supersedes any earlier raiseable/partially-bounded economic inference; reconciliation and supervision are unchanged.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U4MentoFamily)",
+      "reviewedAt": "2026-10-03",
       "disposition": "scoreable"
     }
   }

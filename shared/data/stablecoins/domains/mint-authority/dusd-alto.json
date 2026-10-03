@@ -2,9 +2,9 @@
   "id": "dusd-alto",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-unreconciled",
     "confidence": "verified",
-    "summary": "DUSD token (0x63d74d22e689c715a04f2c13962b1f77f443d35b) is a direct, non-proxy deployment owned by AltoTimelockController (0xfae841679dc1a93d225ecc827e4bbf3e8d703f86, 1-hour min delay). At Ethereum block 26096016 on 2026-10-01, the timelock's proposer/executor and DEFAULT_ADMIN_ROLE holder is a 4-of-7 Alto Safe (0xc49bf619cc9a68f84a6c9ab88506f2627565a4d0). The full SetMinterStatus event census resolves 20 addresses, of which 18 are currently active; each is restricted by its on-chain minterConfig ceiling. The token owner can change minter status and ceilings through the timelock, while a minter cannot change its own token-level ceiling. Minter implementation and collateral-gate coverage require separate review for the newly admitted contracts.",
+    "summary": "DUSD is a non-proxy token owned by AltoTimelockController, historically controlled by the 4-of-7 Alto Safe with a 3600-second minimum delay. Current minters have ceilings, but owner-only minter admission and ceiling changes can authorize any address without token-level collateral checks. D14 classifies root native issuance as economically unbounded, regardless of current minter collateral gates.",
     "upgradeability": {
       "model": "immutable",
       "implementationAddresses": [
@@ -504,13 +504,13 @@
         ]
       }
     ],
-    "economicCapSemantics": "raiseable",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
-      "evidence": "Historical block 25540452 review found 11 active minters among 13 event addresses and a 3-of-5 Alto Safe. At Ethereum block 26096016 on 2026-10-01, a fresh full SetMinterStatus census returned 22 events with no next page, covering 20 unique addresses; pinned allowedMinter/minterConfig reads found 18 active and two inactive. The Safe is now 4-of-7 and holds proposer, executor and DEFAULT_ADMIN_ROLE on the token-owner timelock, with getMinDelay()=3600. Verified DUSD source restricts mint to active minters within their ceilings, and onlyOwner can change status or ceilings. Newly admitted minters are recorded as token-level capped contracts, without asserting that their underlying collateral/upgrade gates were fully reviewed.",
-      "reviewer": "SONG Safety Score V9 control review; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "Historical block 25540452 review found 11 active minters among 13 event addresses and a 3-of-5 Alto Safe. At Ethereum block 26096016 on 2026-10-01, a fresh full SetMinterStatus census returned 22 events with no next page, covering 20 unique addresses; pinned allowedMinter/minterConfig reads found 18 active and two inactive. The Safe is now 4-of-7 and holds proposer, executor and DEFAULT_ADMIN_ROLE on the token-owner timelock, with getMinDelay()=3600. Verified DUSD source restricts mint to active minters within their ceilings, and onlyOwner can change status or ceilings. Newly admitted minters are recorded as token-level capped contracts, without asserting that their underlying collateral/upgrade gates were fully reviewed. D14/D29 review on 2026-10-03 confirmed owner() remains AltoTimelockController at Ethereum block 26112822 (hash 0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a). Verified setMinterStatus(address,bool) and setMinterCeiling(address,uint256) admit arbitrary addresses; mint(address,uint256) checks only authorization and ceiling, not posted collateral. The owner can authorize a chosen minter, raise its ceiling and cause durable unbacked supply to any recipient without upgrading. Semantics are unbounded; Safe-rooted delay is not D29 token governance. Not-applicable reconciliation and no supervision derive unbounded-unreconciled.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U7SafeRootedFloorA)",
+      "reviewedAt": "2026-10-03",
       "sources": [
         {
           "label": "Ethereum DUSD verified direct-deployment source",

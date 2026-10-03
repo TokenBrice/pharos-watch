@@ -109,12 +109,36 @@
       }
     ],
     "economicCapSemantics": "raiseable",
+    "capSemanticsReview": {
+      "verdict": "raiseable-collateral-only",
+      "rationale": "At Ethereum block 26113566 (hash 0x8ee5bf8702023bb24470045b03b62f22fe10f1c46654ea9e79377e5dac7193b9), the live RToken implementation is verified RTokenP1 0x258ce833cf9ad19208372763a00aa1565dd40b3c. issueTo atomically quotes and transfers the required basket deposits from the issuer to BackingManager. The only other mint entrypoint is BackingManager-only; verified BackingManagerP1 0x62a574b9f4bcc1ddf877e154963c5b4e792985d6 forwardRevenue checks basketsHeld.bottom >= basketsNeeded and mints only surplus basket units above the backing buffer. Main component setters are initialization-only internal methods. Governance can change basket/plugin parameters and raise issuance/redemption throttles, but those powers do not authorize arbitrary minters or bypass the deposit/balance checks. Basket and oracle quality remain Backing risks, and upgrade authority is excluded as a D14 trigger. All native issuance paths remain deposit- or balance-backed under the verified live construction.",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U5GovAmbiguousA)",
+      "sources": [
+        {
+          "label": "Verified RTokenP1: deposit issuance and BackingManager-only mint",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x258ce833cf9ad19208372763a00aa1565dd40b3c"
+        },
+        {
+          "label": "Verified BackingManagerP1: collateral-surplus-only mint",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x62a574b9f4bcc1ddf877e154963c5b4e792985d6"
+        },
+        {
+          "label": "Verified MainP1: initialization-only component assignments",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc5bf686cfb85786fcfff557297d4aff8f4e15e44"
+        },
+        {
+          "label": "Ethereum pinned block 26113566",
+          "url": "https://eth.blockscout.com/block/26113566"
+        }
+      ]
+    },
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
-      "evidence": "At Ethereum block 25770459, USD3 Main proxy 0x81117e3e98910C3dCF956b5Fc97a7212E047AcF4 had implementation 0xc5bf686cfb85786fcfff557297d4aff8f4e15e44; Main.OWNER_ROLE() was held by TimelockController 0x848b923b5d99d5963608ff55acdfee51c443cca6, whose getMinDelay() returned 259200 seconds. Main.rToken() and Main.basketHandler() identify the Ethereum USD3 and BasketHandler, and the Reserve issuance system was not paused or frozen at the authored observation. Governor Anastasius remains the stRSR governance path and the existing 3/5 guardian Safe remains the Ethereum timelock cancellation authority. Ethereum native issuance requires the governed collateral basket; the Base representation's bridge-mint capability is excluded from this native review and is scored separately under Bridge Risk. Changing Reserve issuance economics or mint logic traverses the three-day governance timelock. The native path is therefore economically raiseable, not unbounded, and no named supervisor or independent attestor applies.",
-      "reviewer": "Codex USD3 canonical mint-authority correction",
-      "reviewedAt": "2026-08-16",
+      "evidence": "At Ethereum block 25770459, USD3 Main proxy 0x81117e3e98910C3dCF956b5Fc97a7212E047AcF4 had implementation 0xc5bf686cfb85786fcfff557297d4aff8f4e15e44; Main.OWNER_ROLE() was held by TimelockController 0x848b923b5d99d5963608ff55acdfee51c443cca6, whose getMinDelay() returned 259200 seconds. Main.rToken() and Main.basketHandler() identify the Ethereum USD3 and BasketHandler, and the Reserve issuance system was not paused or frozen at the authored observation. Governor Anastasius remains the stRSR governance path and the existing 3/5 guardian Safe remains the Ethereum timelock cancellation authority. Ethereum native issuance requires the governed collateral basket; the Base representation's bridge-mint capability is excluded from this native review and is scored separately under Bridge Risk. Changing Reserve issuance economics or mint logic traverses the three-day governance timelock. The native path is therefore economically raiseable, not unbounded, and no named supervisor or independent attestor applies. D14/D29 sweep 2026-10-03 at Ethereum block 26113566 (hash 0x8ee5bf8702023bb24470045b03b62f22fe10f1c46654ea9e79377e5dac7193b9): live RToken implementation is 0x258ce833cf9ad19208372763a00aa1565dd40b3c and Main remains 0xc5bf686cfb85786fcfff557297d4aff8f4e15e44. Verified issueTo requires basket deposits; the only other mint caller is BackingManager, whose verified forwardRevenue mints only collateral surplus. Component assignments are initialization-only internal setters. Governance basket/plugin/throttle powers do not create an arbitrary-minter path; upgrade authority is not a D14 trigger. Keep raiseable with sourced capSemanticsReview. getMinDelay()=259200; guardian 0xd5fe2780eb882d1da78f2136b81c2a4395488c98 has CANCELLER_ROLE but not PROPOSER_ROLE, EXECUTOR_ROLE or TIMELOCK_ADMIN_ROLE. These reads prove current timelock role restriction, not complete Safe/target/bypass closure. D29 is not needed for the collateral-only verdict; no complete executionScope or governed qualification is asserted.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U5GovAmbiguousA)",
+      "reviewedAt": "2026-10-03",
       "sources": [
         {
           "label": "Reserve Yield DTF overview",
@@ -139,6 +163,22 @@
         {
           "label": "Base PublicNode RPC",
           "url": "https://base-rpc.publicnode.com"
+        },
+        {
+          "label": "Verified RTokenP1 issuance implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x258ce833cf9ad19208372763a00aa1565dd40b3c"
+        },
+        {
+          "label": "Verified BackingManagerP1 collateral-surplus mint",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x62a574b9f4bcc1ddf877e154963c5b4e792985d6"
+        },
+        {
+          "label": "Verified TimelockController role semantics",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x848b923b5d99d5963608ff55acdfee51c443cca6"
+        },
+        {
+          "label": "Ethereum pinned block 26113566",
+          "url": "https://eth.blockscout.com/block/26113566"
         }
       ]
     }

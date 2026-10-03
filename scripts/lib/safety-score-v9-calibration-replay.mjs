@@ -87,6 +87,7 @@ const COMPILER_PROFILES = [
       "canonical-lock-mint-supply-attribution.v1",
       "exit-route-modeled-confidence.v1",
       "fact-gap-cause-proofs.v1",
+      "governed-issuance.v1",
       "journaled-cdp-shock-coverage.v1",
       "reviewed-deployment-unit-supply-attribution.v1",
       "reviewed-transfer-deployments.v1",

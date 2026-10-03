@@ -2,9 +2,9 @@
   "id": "fxusd-f-x-protocol",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-unreconciled",
     "confidence": "manual-review",
-    "summary": "Ethereum fxUSD is minted CDP-style against protocol collateral and its native fxUSD and PoolManager proxies are administered by ProxyAdmin through a 3-day TimelockController path to a 6-of-9 Safe. The Base LayerZero OFT peer and messaging authorities are reviewed separately under Bridge Risk and do not contribute to native Mint Authority.",
+    "summary": "Ethereum fxUSD ordinarily mints through collateralized CDP pools, but the PoolManager administrator can register an arbitrary mint-critical pool module and raise its debt capacity without an independent collateral predicate. The current three-day timelock, rooted in the reviewed 6-of-9 Safe, can therefore authorize a durable unbacked mint path without upgrading code. Native economic issuance is unbounded and unreconciled; Base LayerZero controls remain scoped to Bridge Risk.",
     "upgradeability": {
       "model": "custom",
       "deploymentRefs": [
@@ -109,7 +109,7 @@
         "directMintAbility": "cap-limited",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "fxUSD is minted only against overcollateralized wstETH/WBTC CDP positions inside f(x) Protocol; supply expands and contracts with collateral and redemptions, not by an off-protocol issuer minter.",
+        "capDescription": "The token accepts mint calls only from its immutable PoolManager. Existing wstETH/WBTC pools check collateral, but the PoolManager administrator can register an arbitrary pool module and expand its debt capacity; the token has no independent collateral predicate on that module-authorized mint path.",
         "sources": [
           {
             "label": "fxUSD token on Etherscan",
@@ -129,7 +129,7 @@
         "label": "f(x) Protocol OZ TimelockController (3-day delay)",
         "role": "timelock",
         "authorityType": "timelock",
-        "directMintAbility": "parameter-only",
+        "directMintAbility": "can-authorize",
         "timelockDelaySec": 259200,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
@@ -145,7 +145,7 @@
             "url": "https://etherscan.io/address/0x250893ca4ba5d05626c785e8da758026928fcd24"
           }
         ],
-        "evidence": "At Ethereum block 25770536, ProxyAdmin owner() and PoolManager DEFAULT_ADMIN_ROLE checks identify TimelockController 0x68863fb8855b04509a835082478d6e3d0be4e61a; getMinDelay() returns 259200 seconds. The Timelock can register pools and update pool capacities. The 6-of-9 Safe 0x26B2ec4E02ebe2F54583af25b647b1D619e67BbF passes PROPOSER_ROLE, EXECUTOR_ROLE, and CANCELLER_ROLE checks; complete current TIMELOCK_ADMIN_ROLE history was not recovered from the public RPC."
+        "evidence": "At Ethereum block 25770536, ProxyAdmin owner() and PoolManager DEFAULT_ADMIN_ROLE checks identify TimelockController 0x68863fb8855b04509a835082478d6e3d0be4e61a; getMinDelay() returns 259200 seconds. The Timelock can register pools and update pool capacities. The 6-of-9 Safe 0x26B2ec4E02ebe2F54583af25b647b1D619e67BbF passes PROPOSER_ROLE, EXECUTOR_ROLE, and CANCELLER_ROLE checks; complete current TIMELOCK_ADMIN_ROLE history was not recovered from the public RPC. D14/A7 corrective review on 2026-10-03 at ethereum block 26113622 (0x5f41a07faa7b201ebd6180fd900a8e50989c7d3ac2f09c64d5b5d6272ad71cb9): token and PoolManager implementations remain 0xf729422d68c2cf00574fb5712972454cf402a9b1 and 0xa70dddb8ddd06b1c26061d998e041748b18ecf85. PoolManager.hasRole(DEFAULT_ADMIN_ROLE, 0x68863fb8855b04509a835082478d6e3d0be4e61a) is true. Verified registerPool accepts an arbitrary module address and capacities without code, collateral, or health validation; a pinned eth_call from that timelock registering a no-code address with positive capacities succeeds. operate delegates position validation to the registered pool, then accepts its returned newRawDebt and calls _handleBorrow, which invokes fxUSD.mint for the caller. A newly authorized module can return positive debt with zero collateral movement. This is mint-module authorization, not merely collateral/oracle admission and not an upgrade-only inference. The timelock's 259200-second minimum and the Safe's proposer/executor/canceller roles were re-read. Economic cap semantics are unbounded; with not-applicable reconciliation and no supervision, the derived posture is unbounded-unreconciled. Safe-rooted authority and incomplete executionScopes cannot qualify for D29."
       },
       {
         "chain": "ethereum",
@@ -156,7 +156,7 @@
         "label": "f(x) Protocol governance multisig (6-of-9 Gnosis Safe)",
         "role": "governor",
         "authorityType": "safe",
-        "directMintAbility": "parameter-only",
+        "directMintAbility": "can-authorize",
         "canRaiseCap": true,
         "threshold": 6,
         "signerCount": 9,
@@ -190,14 +190,22 @@
         "evidence": "At Ethereum block 26095796, Safe reads returned threshold 6, nine owners, and no enabled modules for governance Safe 0x26B2ec4E02ebe2F54583af25b647b1D619e67BbF. The owner list includes 0x18411aB626c9b3B3Dd5b7356574D8ff396436744 in place of the previously recorded 0x4088421cBDBa1501d8Fd09fD241717097Afb42Cb. The Safe passes the Timelock PROPOSER_ROLE, EXECUTOR_ROLE, and CANCELLER_ROLE checks at the same block. Guard state was not resolved in this observation and remains unknown."
       }
     ],
-    "economicCapSemantics": "raiseable",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
-      "evidence": "Ethereum fxUSD issuance is the sole reviewed native path. The fxUSD ERC-20 and PoolManager proxies are administered by ProxyAdmin 0x9b54...; ProxyAdmin owner() is TimelockController 0x6886... with a 259,200-second delay, and the 6-of-9 Safe 0x26B2... is the verified proposer/executor/canceller authority. FxUSD minting is restricted to the PoolManager's registered, collateral-gated CDP flow; the reviewed wstETH and WBTC pools have configured debt capacities and operate through collateral and price checks. The native posture remains partially-bounded-admin with raiseable economic cap semantics, not-applicable reconciliation for the on-chain collateral-gated path, and no identified prudential supervisor. The Base OFT peer and LayerZero messaging authority is reviewed under Bridge Risk only and is not part of the global Mint Authority assessment.",
-      "reviewer": "SOL-7 blocker challenge batch 01; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-16",
+      "evidence": "Ethereum fxUSD issuance is the sole reviewed native path. The fxUSD ERC-20 and PoolManager proxies are administered by ProxyAdmin 0x9b54...; ProxyAdmin owner() is TimelockController 0x6886... with a 259,200-second delay, and the 6-of-9 Safe 0x26B2... is the verified proposer/executor/canceller authority. FxUSD minting is restricted to the PoolManager's registered, collateral-gated CDP flow; the reviewed wstETH and WBTC pools have configured debt capacities and operate through collateral and price checks. The native posture remains partially-bounded-admin with raiseable economic cap semantics, not-applicable reconciliation for the on-chain collateral-gated path, and no identified prudential supervisor. The Base OFT peer and LayerZero messaging authority is reviewed under Bridge Risk only and is not part of the global Mint Authority assessment. D14/A7 corrective review on 2026-10-03 at ethereum block 26113622 (0x5f41a07faa7b201ebd6180fd900a8e50989c7d3ac2f09c64d5b5d6272ad71cb9): token and PoolManager implementations remain 0xf729422d68c2cf00574fb5712972454cf402a9b1 and 0xa70dddb8ddd06b1c26061d998e041748b18ecf85. PoolManager.hasRole(DEFAULT_ADMIN_ROLE, 0x68863fb8855b04509a835082478d6e3d0be4e61a) is true. Verified registerPool accepts an arbitrary module address and capacities without code, collateral, or health validation; a pinned eth_call from that timelock registering a no-code address with positive capacities succeeds. operate delegates position validation to the registered pool, then accepts its returned newRawDebt and calls _handleBorrow, which invokes fxUSD.mint for the caller. A newly authorized module can return positive debt with zero collateral movement. This is mint-module authorization, not merely collateral/oracle admission and not an upgrade-only inference. The timelock's 259200-second minimum and the Safe's proposer/executor/canceller roles were re-read. Economic cap semantics are unbounded; with not-applicable reconciliation and no supervision, the derived posture is unbounded-unreconciled. Safe-rooted authority and incomplete executionScopes cannot qualify for D29. This D14 refresh does not re-date older quorum or reserve-reconciliation observations.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U12bNativeCapReviews)",
+      "reviewedAt": "2026-10-03",
       "sources": [
+        {
+          "label": "Verified fxUSD current implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf729422d68c2cf00574fb5712972454cf402a9b1"
+        },
+        {
+          "label": "Verified PoolManager arbitrary pool authorization and mint dispatch",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa70dddb8ddd06b1c26061d998e041748b18ecf85"
+        },
         {
           "label": "AladdinDAO deployment registry",
           "url": "https://github.com/aladdindao/deployments/blob/main/deployments.mainnet.md"

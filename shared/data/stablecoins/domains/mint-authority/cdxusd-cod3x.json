@@ -2,9 +2,9 @@
   "id": "cdxusd-cod3x",
   "mintAuthority": {
     "mintPath": "facilitator-bucket-mint",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-reconciliation-unknown",
     "confidence": "verified",
-    "summary": "cdxUSD has one verified native issuance deployment on Base and uses a GHO-style facilitator bucket model. The active 3/9 Safe facilitator mints within a finite bucket, while the immutable token owner is a TimelockController with a 24-hour delay; the facilitator Safe proposes native bucket changes and the 1/8 guardian Safe executes scheduled operations. The inherited LayerZero OFT extension and its bridge administration are scoped only under risk-review.bridgeRouteRisk and do not contribute separate native mint authority.",
+    "summary": "cdxUSD has one verified native issuance deployment on Base and uses a GHO-style facilitator bucket model. The active 3/9 Safe facilitator mints within a finite bucket, while the immutable token owner is a TimelockController with a 24-hour delay; the facilitator Safe proposes native bucket changes and the 1/8 guardian Safe executes scheduled operations. The inherited LayerZero OFT extension and its bridge administration are scoped only under risk-review.bridgeRouteRisk and do not contribute separate native mint authority. D14: The owner can authorize facilitators and raise buckets on a non-collateral-checked mint path; native issuance is economically unbounded.",
     "upgradeability": {
       "model": "immutable",
       "canChangeMintLogic": false,
@@ -122,11 +122,15 @@
         "evidence": "At Base block 50064182, the guardian Safe was the Timelock EXECUTOR_ROLE holder; the Base Safe API returned threshold 1, 8 owners, no modules, and zero guard. Its Mint Authority relevance is limited to executing scheduled native Facilitator administration; direct bridge pause authority is scoped under risk-review.bridgeRouteRisk."
       }
     ],
-    "economicCapSemantics": "raiseable",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
       "sources": [
+        {
+          "label": "Verified CdxUSD facilitator authorization and bucket-only mint source, D14 reviewed 2026-10-03",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0xc0d3700000987c99b3c9009069e4f8413fd22330?fields=sources,compilation"
+        },
         {
           "label": "Cod3x tech stack",
           "url": "https://www.cod3x.org/unveiling-the-cod3x-tech-stack/"
@@ -140,9 +144,9 @@
           "url": "https://base.blockscout.com/address/0xc0D3700924301AC384E5Eae3272E08220752DE3D"
         }
       ],
-      "evidence": "At Base block 50064182, the facilitator bucket was finite at 6,250,000 cdxUSD capacity and 6,150,000 cdxUSD level; the owner contract is an OZ TimelockController with a 24-hour delay, the 3/9 Safe is PROPOSER, the 1/8 guardian is EXECUTOR, and the default-admin role does not bypass the Timelock delay for target calls. The inherited OFT and bridge administration are intentionally excluded from Mint Authority and reviewed under risk-review.bridgeRouteRisk. The finite Facilitator bucket is raiseable only through the enforced Timelock path, but no reviewed evidence reconciles Facilitator collateral to the whole supply and no independent supervisor or attestor is identified.",
-      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-16"
+      "evidence": "At Base block 50064182, the facilitator bucket was finite at 6,250,000 cdxUSD capacity and 6,150,000 cdxUSD level; the owner contract is an OZ TimelockController with a 24-hour delay, the 3/9 Safe is PROPOSER, the 1/8 guardian is EXECUTOR, and the default-admin role does not bypass the Timelock delay for target calls. The inherited OFT and bridge administration are intentionally excluded from Mint Authority and reviewed under risk-review.bridgeRouteRisk. The finite Facilitator bucket is raiseable only through the enforced Timelock path, but no reviewed evidence reconciles Facilitator collateral to the whole supply and no independent supervisor or attestor is identified. D14/D29 sweep (2026-10-03): Verified CdxUSD.addFacilitator and setFacilitatorBucketCapacity are onlyOwner; mint(account,amount) checks only the authorized facilitator bucket, not a collateral transfer. The pinned owner Timelock can admit a chosen facilitator or raise its capacity, then enable durable unbacked native issuance to a chosen recipient. The 86400-second delay prices execution but does not impose economic backing, and the Safe-rooted owner path is not D29 token governance. Pinned block hashes read this review: base 50064182 0xbb454008ca8278ddaa80eab4a0a59851947d62fe0bd8d06752700e4c54495fc8; base 50064039 0xe1b5944722f29502a300336aed9af0bec530f9208cb886afca186266120cfa20. No transaction was sent; no governed-issuance qualification is claimed.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (MiscRaiseable)",
+      "reviewedAt": "2026-10-03"
     }
   }
 }

@@ -2,7 +2,7 @@
   "id": "mai-qidao",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-unreconciled",
     "confidence": "manual-review",
     "summary": "MAI is minted natively on 14 reviewed non-Fraxtal QiDao deployments by borrowing against overcollateralized vault positions under owner-set debt ceilings. Polygon and Base are currently identified by QiDao as fully live; the other nonzero-supply deployments remain legacy native issuance surfaces whose current ability to accept new issuance is not independently established. Per-chain MAI owner Safes can authorize or revoke native mint paths and change issuance parameters; the Polygon collateral vaults are owned by a separate 3-of-4 QiDao Safe that sets per-vault ceilings. Fraxtal is a reviewed native deployment but is sunset with ownership renounced and zero supply. No current tracked deployment is classified as a bridge representation.",
     "controls": [

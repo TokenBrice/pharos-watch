@@ -4,7 +4,7 @@
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "Initia iUSD is a wrapper over the AUSD0 representation of Agora AUSD. Users deposit registered AUSD0 collateral into the local iusd-vault and receive iUSD 1:1; AUSD0/LayerZero administration and its bridge mint/burn surface are reviewed separately under Bridge Risk.",
+    "summary": "Initia iUSD is a wrapper over the AUSD0 representation of Agora AUSD. Users deposit registered AUSD0 collateral into the local iusd-vault and receive iUSD 1:1; AUSD0/LayerZero administration and its bridge mint/burn surface are reviewed separately under Bridge Risk. D14: Local cap construction is unverifiable; economic cap semantics remains unknown pending deployed-source matching.",
     "inheritedFrom": "ausd-agora",
     "upgradeability": {
       "model": "custom",
@@ -103,14 +103,22 @@
         ]
       }
     ],
-    "economicCapSemantics": "raiseable",
+    "economicCapSemantics": "unknown",
     "reconciliation": "continuous",
     "supervision": "attestation-only",
     "review": {
-      "evidence": "At Initia height 20754353, 0xfd6a07594842ac5d7501ff55243aff06e4f991f320828be05a4590970145e90a remained a sticky Move Object and vault::VaultAccount.extend_ref remained stored at iusd-vault contract 0x2981d795..., so the local vault controls the iUSD capabilities. The current base_tokens table has length 1 and identifies vault::BaseTokenConfig; its item and optional max_balance were not returned by the public table endpoint. The published March 2026 Zellic audit describes the user mint path as depositing a registered base token before minting iUSD 1:1. The vault package was COMPATIBLE and its publishing account was a native 3-of-4 multisig with no separately observed timelock or delay. These native facts support partially-bounded-admin, raiseable, continuous, and attestation-only annotations. AUSD0/LayerZero bridge administration and its package upgrade surface are excluded from Mint Authority and preserved under the reviewed Bridge Risk route.",
-      "reviewer": "Codex mint/bridge boundary migration RELOC-01",
-      "reviewedAt": "2026-08-16",
+      "evidence": "At Initia height 20754353, 0xfd6a07594842ac5d7501ff55243aff06e4f991f320828be05a4590970145e90a remained a sticky Move Object and vault::VaultAccount.extend_ref remained stored at iusd-vault contract 0x2981d795..., so the local vault controls the iUSD capabilities. The current base_tokens table has length 1 and identifies vault::BaseTokenConfig; its item and optional max_balance were not returned by the public table endpoint. The published March 2026 Zellic audit describes the user mint path as depositing a registered base token before minting iUSD 1:1. The vault package was COMPATIBLE and its publishing account was a native 3-of-4 multisig with no separately observed timelock or delay. These native facts support partially-bounded-admin, raiseable, continuous, and attestation-only annotations. AUSD0/LayerZero bridge administration and its package upgrade surface are excluded from Mint Authority and preserved under the reviewed Bridge Risk route. D14/D29 sweep (2026-10-03): The published Zellic assessment describes deposit-only 1:1 minting and admin registration/max_balance powers, and the deployed vault ABI/raw bytecode was readable from Initia REST. However the assessed repository https://github.com/initia-labs/iUSD-vault returns 404, and an exact deployed-source/bytecode match cannot be certified. An audit excerpt cannot certify every mint-capable function or authorization bypass. Economic cap semantics is therefore unknown, without a favorable capSemanticsReview or an asserted arbitrary mint path; the existing cap-limited/canRaiseCap=true control conservatively encodes raiseable/bounded impairment and derives partially-bounded-admin. Parent Agora issuance is carried through the serial-claim dependency; package upgrades remain separate. Pinned historical Initia height 20754353 hash read this review: 361282C3C0CC890D0158990A2191CF97171E48D9781089B00CDFDFAF0232BBE5 (Polkachu RPC; existing historical authority observations reused). No transaction was sent; no governed-issuance qualification is claimed.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (MiscRaiseable)",
+      "reviewedAt": "2026-10-03",
       "sources": [
+        {
+          "label": "Zellic iUSD assessment: source scope and deposit/collateral-admission powers (not deployed-source-match proof)",
+          "url": "https://raw.githubusercontent.com/initia-labs/audits/main/iUSD%20Vault%20-%20Zellic%20Audit%20Report.pdf"
+        },
+        {
+          "label": "Deployed iUSD vault ABI/raw bytecode; reviewed 2026-10-03",
+          "url": "https://rest.initia.xyz/initia/move/v1/accounts/0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6/modules"
+        },
         {
           "label": "Initia docs",
           "url": "https://docs.initia.xyz"

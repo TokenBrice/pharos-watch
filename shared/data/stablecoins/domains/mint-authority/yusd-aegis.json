@@ -2,7 +2,7 @@
   "id": "yusd-aegis",
   "mintAuthority": {
     "mintPath": "offchain-attested-minter",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "YUSD has independent native issuance on Ethereum and BSC. Each chain-local AegisMinting contract mints its YUSD against the native whitelisted order and single trusted-signer path; Ethereum's active mint cap is disabled and BSC's configurable cap is raiseable. The common 3-of-5 Safe owns the native YUSD, AegisMinting, and AegisConfig controls and can change minters and settings without a timelock. Avalanche and Katana are LayerZero V2 burn/mint representations; their adapter, OFT, peer, delegate, DVN, and cross-chain operator risks are assessed only in Bridge Risk.",
     "upgradeability": {

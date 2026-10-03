@@ -2,7 +2,7 @@
   "id": "wpen-ripio",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-unreconciled",
     "confidence": "verified",
     "summary": "WPEN has reviewed native issuer deployments on Ethereum, Base, Worldchain, BSC, Polygon, Gnosis, Celo, and HyperEVM. On the six original deployments the shared issuer EOA retains direct MINTER_ROLE and UUPS UPGRADER_ROLE. The 4-of-7 Ripio Safe controls native roles; its Ethereum and Celo owner sets have changed since the earlier review, while HyperEVM retains the older owner set. The recorded LimitedMinter contract has native MINTER_ROLE on Ethereum, BSC, Polygon, and Gnosis, subject to the pinned observations in its control. The separate LimitedMinterBridge and BridgeDeposit cross-chain rail is assessed under Bridge Risk. Historical dormant-supply observations on Celo and HyperEVM are not refreshed here.",
     "upgradeability": {

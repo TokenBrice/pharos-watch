@@ -31,7 +31,7 @@ const PILLAR_BOUNDED_UNKNOWN_FLOORS = {
   control: V9_CANDIDATE_POLICY_V1.policy.semantic.control.boundedUnknownQuality,
 };
 const COMPROMISED_MINT_POSTURE_QUALITY =
-  V9_CANDIDATE_POLICY_V1.policy.semantic.control.mintPostureQuality["unbounded-or-compromised"];
+  V9_CANDIDATE_POLICY_V1.policy.semantic.control.mintPostureQuality.compromised;
 const MEASURED_PEG_MULTIPLIER_FLOOR = 0.9;
 const UNSUPPORTED_DESIGN_REASON_CODES = new Set(
   V9_CANDIDATE_POLICY_V1.policy.reasonRegistry

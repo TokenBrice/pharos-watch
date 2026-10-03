@@ -2,7 +2,7 @@
   "id": "trusd-tori",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "trUSD's token minter is the verified ToriMinting contract. Three operator EOAs can execute signed, whitelisted, collateral-transfer-backed orders within per-block caps; a 3-of-5 Safe can raise those caps or authorize operators, while a one-day timelock can replace the token minter or UUPS implementation.",
     "upgradeability": {

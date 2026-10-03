@@ -13,7 +13,7 @@ import type { V9AccessClaimGraph, V9AccessClaimGraphReview } from "@shared/types
 import { buildSafetyScoreV9AccessClaimGraph, computeSafetyScoreV9AccessClaimGraphReviewsDigest } from "./extension-access-lookthrough";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC, V9_SCOPED_QUESTION_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
-import { compileReviewedControlScope, partialControlScopeSemantics, weightedReviewIsCurrent } from "@shared/lib/safety-score-v9/control-scope";
+import { compileReviewedControlScope, partialControlScopeSemantics, weightedReviewIsCurrent, type V9ReviewedControlProjection } from "@shared/lib/safety-score-v9/control-scope";
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -393,6 +393,88 @@ function resolveMintControlDeploymentScopes(
   }));
 }
 
+function compileMintIssuanceGovernance(
+  assetId: string,
+  profile: MintAuthorityProfile,
+  projections: readonly V9ReviewedControlProjection[],
+  reviewComplete: boolean,
+  hasFreshScopedQuestion: boolean,
+  clockSec: number,
+): ControlOverlay["issuanceGovernance"] {
+  const governed = profile.governedIssuance;
+  if (!governed) return undefined;
+  const authoredControls = profile.controls ?? [];
+  const incompleteReasons = new Set<string>();
+  if (!reviewComplete) incompleteReasons.add("review-incomplete");
+  if (hasFreshScopedQuestion) incompleteReasons.add("scoped-question-open");
+  if (profile.mintIncidents?.some((incident) => incident.status === "active")) incompleteReasons.add("active-incident");
+  const governedReviewSec = Date.parse(`${governed.reviewedAt}T00:00:00Z`) / 1000;
+  if (governedReviewSec > clockSec || clockSec - governedReviewSec > V9_REVIEW_EVIDENCE_MAX_AGE_SEC) {
+    incompleteReasons.add("governed-review-expired");
+  }
+  const governorIndexes = authoredControls.flatMap((control, index) =>
+    control.chain != null && control.address != null &&
+    `${control.chain}:${control.address.toLowerCase()}` === governed.governorControlRef ? [index] : []);
+  const governorIndex = governorIndexes.length === 1 ? governorIndexes[0]! : -1;
+  const governor = governorIndex >= 0 ? authoredControls[governorIndex] : undefined;
+  if (!governor) {
+    incompleteReasons.add("governor-control-missing");
+  } else if (canonicalAuthorityType(assetId, governor)?.model !== "governance" ||
+      ((governed.votingPower === "lock-escrowed" || governed.votingPower === "past-block-checkpoint") &&
+        (governor.weightedQuorum != null || governor.threshold != null || governor.signerCount != null))) {
+    incompleteReasons.add("governor-not-governance");
+  }
+  if (governor && projections[governorIndex]!.complete &&
+      !governor.executionScope!.paths.some((path) => path.activation !== "disabled-final" &&
+        path.capabilities.some((capability) => capability === "mint" || capability === "upgrade" || capability === "bridge-mint"))) {
+    incompleteReasons.add("governor-without-issuance-path");
+  }
+  const authoredContractAuthorityKeys = new Set(authoredControls.flatMap((control) =>
+    control.authorityType === "contract" && control.chain != null && control.address != null
+      ? [`${control.chain}:${control.address.toLowerCase()}`] : []));
+  let minUnavoidableDelaySec: number | null = null;
+  let hasNullDelay = false;
+  const nonGovernorUnboundedPathKeys = new Set<string>();
+  for (const [index, control] of authoredControls.entries()) {
+    const projection = projections[index]!;
+    if (!projection.complete) {
+      incompleteReasons.add(`control-scope-incomplete:${control.label}`);
+      continue;
+    }
+    let governorRooted = index === governorIndex;
+    if (!governorRooted && governor != null && control.authorityType === "contract" && control.chain != null) {
+      const identity = control.executionScope!.pin.signerIdentity.toLowerCase();
+      if (!/\b\d+\s*(?:of|out\s+of|\/|-of-)\s*\d+\b|\b(?:safes?|multisigs?|multisignature|thresholds?|signers?|owners?|quorum)\b/.test(identity)) {
+        const addresses: readonly string[] = identity.match(/(?<![0-9a-f])0x[0-9a-f]{40}(?![0-9a-f])/g) ?? [];
+        const authorityKeys = addresses.map((address) => `${control.chain}:${address}`);
+        governorRooted = authorityKeys.includes(governed.governorControlRef) &&
+          authorityKeys.every((key) => key === governed.governorControlRef || authoredContractAuthorityKeys.has(key));
+      }
+    }
+    for (const path of projection.paths) {
+      if (!(path.capSemantics.kind === "unbounded" || path.capSemantics.kind === "unknown" ||
+            path.claimImpairment === "unbounded" || path.claimImpairment === "unknown")) continue;
+      if (path.unavoidableDelaySec === null) {
+        hasNullDelay = true;
+      } else {
+        minUnavoidableDelaySec = minUnavoidableDelaySec === null
+          ? path.unavoidableDelaySec
+          : Math.min(minUnavoidableDelaySec, path.unavoidableDelaySec);
+      }
+      if (!governorRooted) nonGovernorUnboundedPathKeys.add(`${control.label}:${path.id}`);
+    }
+  }
+  return {
+    coverage: incompleteReasons.size === 0 ? "complete" : "incomplete",
+    incompleteReasons: [...incompleteReasons].sort(compareText),
+    governorAuthorityKey: governed.governorControlRef,
+    minUnavoidableDelaySec: hasNullDelay ? null : minUnavoidableDelaySec,
+    votingPower: governed.votingPower,
+    enumerable: governed.enumerability.authorizationEvents.length > 0 && governed.enumerability.capacityReads.length > 0,
+    nonGovernorUnboundedPathKeys: [...nonGovernorUnboundedPathKeys].sort(compareText),
+  };
+}
+
 function adaptMintControl(
   assetId: string,
   control: MintAuthorityControl,
@@ -404,9 +486,10 @@ function adaptMintControl(
   scopedQuestionFresh: boolean,
   supplyReview: ExtensionAsset["supplyReview"],
   clockSec: number,
+  projection: V9ReviewedControlProjection,
+  issuanceGovernance: ControlOverlay["issuanceGovernance"],
 ): ControlOverlay[] {
   const controlKind = mintControlKind(control);
-  const projection = compileReviewedControlScope(control.executionScope, `${control.chain ?? "chain-unresolved"}:${control.address ?? ""}`, assetId, clockSec, V9_REVIEW_EVIDENCE_MAX_AGE_SEC);
   const coarseCapabilities = mintCapabilities(control, upgradeCapable);
   const capabilities = control.executionScope && projection.complete
     ? [...new Set(projection.paths.flatMap((path) => path.capabilities))].sort(compareText)
@@ -520,6 +603,7 @@ function adaptMintControl(
       scopeDiagnostics: projection.diagnostics.sort(compareText),
       moduleImpact: projection.moduleImpact,
     } : {}),
+    ...(issuanceGovernance ? { issuanceGovernance } : {}),
     incidentState,
     failureDomains: controlFailureDomains(assetId, control, controlKind),
     ...(control.weightedQuorum && !weightedReviewIsCurrent(control.weightedQuorum, clockSec, V9_REVIEW_EVIDENCE_MAX_AGE_SEC)
@@ -1401,10 +1485,16 @@ function adaptMintReview(
       )
       .map((question) => question.controlRef.toLowerCase()),
   );
+  const authoredControls = profile.controls ?? [];
+  const controlProjections = authoredControls.map((control) =>
+    compileReviewedControlScope(control.executionScope, `${control.chain ?? "chain-unresolved"}:${control.address ?? ""}`, meta.id, clockSec, V9_REVIEW_EVIDENCE_MAX_AGE_SEC));
+  const issuanceGovernance = compileMintIssuanceGovernance(
+    meta.id, profile, controlProjections, reviewComplete, freshScopedQuestionRefs.size > 0, clockSec,
+  );
   // An unresolved aggregate inventory does not erase controls that were
   // individually identified. Retain those controls in a partial review while
   // the unresolved deployment surfaces remain bounded and fail closed.
-  const controls = (profile.controls ?? []).flatMap((control, index, allControls) =>
+  const controls = authoredControls.flatMap((control, index, allControls) =>
     adaptMintControl(
       meta.id,
       control,
@@ -1423,6 +1513,8 @@ function adaptMintReview(
         freshScopedQuestionRefs.has(control.label.toLowerCase()),
       supplyReview,
       clockSec,
+      controlProjections[index]!,
+      issuanceGovernance,
     ),
   );
   const directMintControl =

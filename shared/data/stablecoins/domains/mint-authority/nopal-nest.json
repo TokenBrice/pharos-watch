@@ -2,7 +2,7 @@
   "id": "nopal-nest",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-unreconciled",
     "confidence": "verified",
     "summary": "nOPAL has independent native issuance on Ethereum, Plume, BSC, and Plasma. On each native deployment, the nOPAL BoringVault is owned by the Nest Timelock 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a (172,800-second minimum delay), while the Teller and Manager are owned by the same current 3-of-6 Gnosis Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982; fresh 2026-09-05 Plasma reads confirm the same graph there, including the Manager's vault() linkage and the Safe holding proposer and canceller roles on the Plasma Timelock. The Plasma deployment is live per the issuer registry but dormant, with zero supply at the reviewed block, and the Plasma Safe's modules state could not be read this pass, so no Plasma Safe control row is authored. These are native issuance controls on four independent liability surfaces, not bridge-admin controls; issuance remains unbounded and no independent whole-supply reconciliation or prudential supervision was found.",
     "upgradeability": {

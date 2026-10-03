@@ -2,11 +2,11 @@
   "id": "dusd-dialectic",
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "probable",
-    "summary": "DUSD shares mint only through the Machine: user deposits at the current share price, and fee shares minted to the Watermark Fee Manager, whose accrual is capped by governance-set maximum rates. Durable USDC issuance stays inherited from Circle. The residual admin surface is Makina's: the Risk Manager can raise the share supply cap immediately, and the DAO can upgrade the Machine class through a shared beacon behind a 2-day AccessManager delay. At the pinned block the Machine-beacon selector uses ADMIN_ROLE 0, whose guardian is role 0; the Security Council holds role 7 and therefore is not established as cancellation authority for that active upgrade path.",
+    "summary": "Machine.deposit transfers USDC, but MachineUtils.manageFees separately mints fee shares without new AUM. The restricted setFeeManager chooses their distributor, and Risk Manager Timelock setters accept unconstrained uint256 maxFixedFeeAccrualRate/maxPerfFeeAccrualRate. The shareLimit is not applied to fee minting. The deposit-cap raise alone is collateral-only, but replaceable fee calculation/distribution plus raiseable fee maxima make wrapper-local dilution economically unbounded; no bytecode upgrade is needed. Parent usdc-circle issuance remains inherited through the dependency.",
     "inheritedFrom": "usdc-circle",
-    "economicCapSemantics": "raiseable",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "periodic",
     "supervision": "none",
     "upgradeability": {
@@ -40,6 +40,34 @@
       ]
     },
     "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x38542447c49d24e617fc06113295d7aaa3bec4b6",
+        "deploymentRefs": [
+          "ethereum:0x1e33e98af620f1d563fcd3cfd3c75ace841204ef"
+        ],
+        "label": "Makina Risk Manager Timelock (mutable fee-accrual maxima)",
+        "role": "cap-admin",
+        "authorityType": "timelock",
+        "directMintAbility": "parameter-only",
+        "timelockDelaySec": 172800,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26113624,
+        "capDescription": "setMaxFixedFeeAccrualRate/setMaxPerfFeeAccrualRate accept uint256 with no immutable ceiling; this is a fee-dilution cap, not only a deposit limit.",
+        "evidence": "Pinned Machine.riskManagerTimelock() returns this address at block 26113624, hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2; getMinDelay() on this TimelockController returns 172800 seconds at the same pin. Verified Machine source gates both fee-maxima setters with onlyRiskManagerTimelock. Machine.deposit transfers USDC, but MachineUtils.manageFees separately mints fee shares without new AUM. The restricted setFeeManager chooses their distributor, and Risk Manager Timelock setters accept unconstrained uint256 maxFixedFeeAccrualRate/maxPerfFeeAccrualRate. The shareLimit is not applied to fee minting. The deposit-cap raise alone is collateral-only, but replaceable fee calculation/distribution plus raiseable fee maxima make wrapper-local dilution economically unbounded; no bytecode upgrade is needed.",
+        "sources": [
+          {
+            "label": "Verified current local mint implementation/source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6a759cae19aa25b41237089eb0bbbc4473bfb996"
+          },
+          {
+            "label": "ethereum D14 observation block 26113624, hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2",
+            "url": "https://etherscan.io/block/26113624"
+          }
+        ]
+      },
       {
         "chain": "ethereum",
         "address": "0x6b006870c83b1cd49e766ac9209f8d68763df721",
@@ -92,7 +120,7 @@
             "url": "https://etherscan.io/address/0xa7f0121375dc52028e333f02715183a1d1a690a7"
           }
         ],
-        "evidence": "At Ethereum block 25637903 the fee manager returns mgmtFeeRatePerSecond() = 0, smFeeRatePerSecond() = 31709792 (about 0.1% annualized to the Security Module), perfFeeRate() = 1e17 (10% over a high-water mark), and sharePriceWatermark() = 1.034978 USDC. The Machine caps accrual at maxFixedFeeAccrualRate() = 951293760 and maxPerfFeeAccrualRate() = 14269406394 per second, so a misconfigured fee manager cannot mint without bound."
+        "evidence": "At Ethereum block 25637903 the fee manager returns mgmtFeeRatePerSecond() = 0, smFeeRatePerSecond() = 31709792 (about 0.1% annualized to the Security Module), perfFeeRate() = 1e17 (10% over a high-water mark), and sharePriceWatermark() = 1.034978 USDC. The Machine caps accrual at maxFixedFeeAccrualRate() = 951293760 and maxPerfFeeAccrualRate() = 14269406394 per second, these observed rates restrict the current fee manager but are mutable without immutable maxima and do not establish bounded-by-construction issuance."
       },
       {
         "chain": "ethereum",
@@ -153,11 +181,11 @@
         "label": "Makina DAO - 3-of-5 Safe (ADMIN_ROLE 0)",
         "role": "proxy-admin",
         "authorityType": "safe",
-        "directMintAbility": "upgrade-only",
+        "directMintAbility": "can-authorize",
         "canRaiseCap": false,
         "threshold": 3,
         "signerCount": 5,
-        "timelockDelaySec": 172800,
+        "timelockDelaySec": 86400,
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
           "owners": [
@@ -192,7 +220,7 @@
             "url": "https://etherscan.io/address/0x62244c74e1d09b3d86ef7342d354b5d7770bde10"
           }
         ],
-        "evidence": "At Ethereum block 25637903 this Safe reads VERSION() 1.4.1, getThreshold() 3 of 5 listed owners, no enabled modules, a zero guard, fallback handler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99, and singleton 0x41675c099f32341bf84bfc5382af534df5c7461a. The AccessManager 0x0fcefa3f1047f35521a49cd8b06fabd588665d7f owns every beacon, including the Machine beacon 0x5c680ec39bafe8524f3c2fa9d5f6d65f09bd7333 whose implementation() read 0xb655ad796634562136b593397b8b4849f332213f. Current chain state contradicts Makina's INFRA_UPGRADE_ROLE description: getTargetFunctionRole(Machine beacon, upgradeTo(address)) returned ADMIN_ROLE 0, the DAO has that role with a 172,800-second execution delay, getRoleGuardian(0) returned role 0, and the Security Council holds role 7 rather than role 0. The DAO/original proposer can cancel its scheduled operation, but the Council is not established as cancellation authority for this active selector."
+        "evidence": "At Ethereum block 25637903 this Safe reads VERSION() 1.4.1, getThreshold() 3 of 5 listed owners, no enabled modules, a zero guard, fallback handler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99, and singleton 0x41675c099f32341bf84bfc5382af534df5c7461a. The AccessManager 0x0fcefa3f1047f35521a49cd8b06fabd588665d7f owns every beacon, including the Machine beacon 0x5c680ec39bafe8524f3c2fa9d5f6d65f09bd7333 whose implementation() read 0xb655ad796634562136b593397b8b4849f332213f. Current chain state contradicts Makina's INFRA_UPGRADE_ROLE description: getTargetFunctionRole(Machine beacon, upgradeTo(address)) returned ADMIN_ROLE 0, the DAO has that role with a 172,800-second execution delay, getRoleGuardian(0) returned role 0, and the Security Council holds role 7 rather than role 0. The DAO/original proposer can cancel its scheduled operation, but the Council is not established as cancellation authority for this active selector. D14 pin 26113624 (hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2): AccessManager.getTargetFunctionRole(Machine,setFeeManager(address)) returns role 3; hasRole(3,this Safe) returns active=true with executionDelay=86400. Fresh Ethereum pin 26113908 on 2026-10-03 (hash 0x29e4732a50876c7bac0cd2747133bcb0763791142bf492a9f539b0bc646890e1) confirms getTargetFunctionRole(0x6b006870c83b1cd49e766ac9209f8d68763df721,setFeeManager(address))=3, hasRole(3,this Safe)=(true,86400), and hasRole(0,this Safe)=(true,172800). Thus this Safe can select the local fee-share calculator/distributor after 86,400 seconds as well as upgrade code after 172,800 seconds; timelockDelaySec records the minimum enforced issuance-path delay of 86400, not the beacon-only delay."
       },
       {
         "chain": "ethereum",
@@ -261,6 +289,8 @@
     ],
     "review": {
       "sources": [
+        {"label": "Verified current local mint implementation/source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6a759cae19aa25b41237089eb0bbbc4473bfb996"},
+        {"label": "ethereum D14 observation block 26113624, hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2", "url": "https://etherscan.io/block/26113624"},
         {
           "label": "Makina fees",
           "url": "https://docs.makina.finance/concepts/architecture/machine/fees"
@@ -318,9 +348,9 @@
           "url": "https://etherscan.io/block/25712315"
         }
       ],
-      "evidence": "Fixed-block reads at Ethereum blocks 25637903 and 25638710 established the complete local issuance inventory: the DUSD share token's minter() and owner() both return Machine 0x6b006870c83b1cd49e766ac9209f8d68763df721, which returns accountingToken() = USDC, shareToken() = DUSD, shareLimit() = 75,000,000e18, recoveryMode() = false, feeManager() = 0xa7f0121375dc52028e333f02715183a1d1a690a7, depositor() = 0x94b1828f91c150c5e6776198e170aca4304903d7, redeemer() = 0x1303c26cfe06bac5bfee29907f37919643def75c, hubCaliber() = 0xd1a1c248b253f1fc60eacd90777b9a63f8c8c1bc, and authority() = AccessManager 0x0fcefa3f1047f35521a49cd8b06fabd588665d7f. The share token is direct code; the Machine, redeemer, depositor, and fee manager are beacon proxies whose beacons are owned by the AccessManager. The Machine beacon upgradeTo(address) selector is ADMIN_ROLE 0 with a 172,800-second DAO execution delay and role 0 guardian; the Security Council holds role 7, so it is not established as cancellation authority for that selector. At block 25712315 on 2026-08-08, the token owner/minter, Machine accounting token, 75,000,000-share limit, recoveryMode=false, Machine beacon implementation, AccessManager role assignment and delay, three governance Safe thresholds, and Council module/executor all rechecked unchanged. The RecoveryModeTriggerModule is completely represented as a narrow bypass surface on the Security Council control: modulesOrGuardsStatus records its presence, bypassSurfaces records its sole setRecoveryMode(true) route, and failureDomainKeys records both module and 1-of-1 executor. It cannot mint, raise the share cap, or upgrade code, so adding it as an economically mint-capable control would overstate its scope. The official Makina publication archive was reviewed through 2026-08-08 for privileged or unbacked DUSD mint incidents. The January 20 postmortem and January 21 update describe an external Curve accounting/oracle propagation exploit, state that Machine-held funds were not compromised and DUSD remained collateralized, and record Security Council activation of Recovery Mode. It is non-qualifying under the privileged/unbacked-mint definition. No qualifying mint incident was identified in the reviewed official sources; the complete scoreable review therefore establishes incidentState without asserting a positive incident row. Reconciliation is periodic rather than continuous because AUM refreshes on operator-triggered accounting updates bounded by caliberStaleThreshold() = 28,800 seconds and maxSharePriceChangeRate() = 9,512,937,595 per second. Supervision is none: no fund or issuer registration was found for the Dialectic USD strategy. Security Module slashing is authorized but discretionary and bounded by current stake and slash parameters; the reviewed materials establish no Operator recourse, treasury recapitalization, external guarantor, binding replenishment, or enforceable holder loss waterfall, so the Security Module is control evidence only and not positive risk-transfer credit.",
-      "reviewer": "OpenAI Codex C07 control review; OpenAI Codex Safety Score V9 on-chain curation; Claude stablecoin addition (issue #705)",
-      "reviewedAt": "2026-08-08",
+      "evidence": "D14/A7/A10 review 2026-10-03, pinned ethereum block 26113624 (hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2). Machine.deposit transfers USDC, but MachineUtils.manageFees separately mints fee shares without new AUM. The restricted setFeeManager chooses their distributor, and Risk Manager Timelock setters accept unconstrained uint256 maxFixedFeeAccrualRate/maxPerfFeeAccrualRate. The shareLimit is not applied to fee minting. The deposit-cap raise alone is collateral-only, but replaceable fee calculation/distribution plus raiseable fee maxima make wrapper-local dilution economically unbounded; no bytecode upgrade is needed.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U12aWrapperCapReviews)",
+      "reviewedAt": "2026-10-03",
       "disposition": "scoreable"
     }
   }

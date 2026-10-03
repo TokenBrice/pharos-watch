@@ -2,9 +2,9 @@
   "id": "usdh-native-markets",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "USDH has one canonical native issuance deployment on HyperEVM. Bridge Building, Inc. controls issuer-direct minting through the USDH MINTER_ROLE and reserve-ledger handler, while two DEFAULT_ADMIN_ROLE EOAs can authorize minters, raise the on-chain cap, and authorize UUPS upgrades. The HyperCore HIP-1 asset is a linked representation of this deployment and is excluded from Mint Authority.",
+    "summary": "USDH has one canonical native issuance deployment on HyperEVM. Bridge Building, Inc. controls issuer-direct minting through the USDH MINTER_ROLE and reserve-ledger handler, while two DEFAULT_ADMIN_ROLE EOAs can authorize minters, raise the on-chain cap, and authorize UUPS upgrades. The HyperCore HIP-1 asset is a linked representation of this deployment and is excluded from Mint Authority. D14 review 2026-10-03 reuses verified control evidence at HyperEVM block 43375036 (hash 0x6bff792296d35e8303b026dcf590c941ffd130ed7c40a5efc235242308f84e44): DEFAULT_ADMIN_ROLE EOAs can authorize new MINTER_ROLE callers and raise setMaxSupply on issuer-direct minting without an on-chain collateral/deposit check. Recipient permission and a mutable numeric cap do not bound durable unbacked issuance. Economic semantics are unbounded; periodic reconciliation yields unbounded-reconciled. No D29 qualification is claimed.",
     "upgradeability": {
       "model": "uups",
       "deploymentRefs": [
@@ -196,13 +196,13 @@
         ]
       }
     ],
-    "economicCapSemantics": "raiseable",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "periodic",
     "supervision": "attestation-only",
     "review": {
-      "evidence": "At HyperEVM block 43375036 on 2026-08-16, the canonical USDH proxy had MINTER_ROLE members EOA 0x19810813f2e46cf01e7c543f6d8c3ecc8ea2001e and ReserveLedgerBackedHandler 0x6fb239a92d3a7b2b9898c13cdedd2bc26e323ec2. DEFAULT_ADMIN_ROLE had EOAs 0x178a0f2ad20e2abefe2cb86e4fc2db412edfb3b9 and 0x79c6631fa15cda38777fb9dd7a6348baee794a4e. The verified UUPS implementation was 0x0be1d5d7c5f9b8784fbf341c4c4a1eb732d4a7f9, the observed getMaxSupply() was 250,000,000 USDH, and no upgrade delay was observed. Bridge Building's reserve-ledger handler is native issuance; HyperCore token index 360 is a linked representation and is not global Mint Authority. Monthly BPM LLP attestations support periodic reconciliation, while no product-specific prudential authorization was verified.",
-      "reviewer": "Codex mint-bridge-boundary migration",
-      "reviewedAt": "2026-08-16",
+      "evidence": "At HyperEVM block 43375036 on 2026-08-16, the canonical USDH proxy had MINTER_ROLE members EOA 0x19810813f2e46cf01e7c543f6d8c3ecc8ea2001e and ReserveLedgerBackedHandler 0x6fb239a92d3a7b2b9898c13cdedd2bc26e323ec2. DEFAULT_ADMIN_ROLE had EOAs 0x178a0f2ad20e2abefe2cb86e4fc2db412edfb3b9 and 0x79c6631fa15cda38777fb9dd7a6348baee794a4e. The verified UUPS implementation was 0x0be1d5d7c5f9b8784fbf341c4c4a1eb732d4a7f9, the observed getMaxSupply() was 250,000,000 USDH, and no upgrade delay was observed. Bridge Building's reserve-ledger handler is native issuance; HyperCore token index 360 is a linked representation and is not global Mint Authority. Monthly BPM LLP attestations support periodic reconciliation, while no product-specific prudential authorization was verified. D14 review 2026-10-03 reuses verified control evidence at HyperEVM block 43375036 (hash 0x6bff792296d35e8303b026dcf590c941ffd130ed7c40a5efc235242308f84e44): DEFAULT_ADMIN_ROLE EOAs can authorize new MINTER_ROLE callers and raise setMaxSupply on issuer-direct minting without an on-chain collateral/deposit check. Recipient permission and a mutable numeric cap do not bound durable unbacked issuance. Economic semantics are unbounded; periodic reconciliation yields unbounded-reconciled. No D29 qualification is claimed.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U8SafeRootedFloorB)",
+      "reviewedAt": "2026-10-03",
       "sources": [
         {
           "label": "USDH documentation",

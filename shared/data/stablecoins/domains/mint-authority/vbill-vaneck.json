@@ -2,7 +2,7 @@
   "id": "vbill-vaneck",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
     "summary": "VBILL is a Securitize-administered fund token with issuer-native issuance surfaces on Ethereum, Avalanche, BNB Chain, and Solana. The three EVM DSToken proxies have the same observed owner EOA 0x59c1eA...76Ee and return cap() = 0. Their verified DSToken sources gate issuance through trust-service issuer/master roles and UUPS authorization through the owner or a master role. The shared owner holds MASTER role in each observed trust service and therefore has direct native mint authority; owner() alone still does not enumerate every authorized minter or upgrader. On Solana the Token-2022 mint and freeze authority BJXUcHs7...cgiK is a program-derived address of the Securitize DS controller 7tXjm...9tvP, driven by a single issuer signature, and that controller's program upgrade authority is the single plain key 8d36iv2Y...zbB6 shared with the controller that mints STAC. These are native issuance controls, not Wormhole Guardian or transfer-admin controls. No protective on-chain threshold or timelock has been established for these issuer-administered issuance surfaces.",
     "upgradeability": {

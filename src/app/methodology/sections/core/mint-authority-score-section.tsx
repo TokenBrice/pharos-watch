@@ -22,7 +22,7 @@ const SIGNAL_ROWS = [
       signal: "Derived posture",
       effect: "Sets the base",
       meaning:
-        "Cap semantics, claim impairment, reconciliation cadence, and supervisory regime place the mint on a posture rung. The ladder distinguishes collateral-gated issuance, unbounded minting with unknown reconciliation, and a confirmed absence of reconciliation.",
+        "Cap semantics, claim impairment, reconciliation cadence, supervisory regime, and qualified governance place the mint on a posture rung. The ladder distinguishes collateral-gated issuance, governance-delayed unbounded issuance, unbounded minting with unknown reconciliation, and a confirmed absence of reconciliation.",
     },
   },
   {
@@ -40,7 +40,7 @@ const SIGNAL_ROWS = [
       signal: "Seasoned track record",
       effect: "Bounded credit",
       meaning:
-        "After 60 months, eligible postures earn 10 points without crossing the next rung. A non-active unbounded/compromised posture has a dedicated ceiling of 39; unbounded minting with unknown reconciliation is capped at 44. An active incident is ineligible.",
+        "After 60 months, eligible postures earn 10 points without crossing the next rung. Unbounded, governance-delayed issuance follows this ordinary ladder. Unbounded minting with unknown reconciliation has a 55-point base; seasoned and positive merged-signal credits from a 55-point base stop at 59, below the governed rung of 60. Unbounded, unreconciled issuance has a dedicated ceiling of 39. An active incident is ineligible.",
     },
   },
   {
@@ -91,7 +91,7 @@ const BAND_ROWS = [
     id: "governed",
     cells: {
       band: V9_MINT_POSTURE_BANDS.governed.label,
-      posture: "Partially bounded admin (70)",
+      posture: "Partially bounded admin (70), or unbounded, governance-delayed (60)",
       meaning: V9_MINT_POSTURE_BANDS.governed.detail,
     },
   },
@@ -99,7 +99,7 @@ const BAND_ROWS = [
     id: "managed",
     cells: {
       band: V9_MINT_POSTURE_BANDS.managed.label,
-      posture: "Unbounded but reconciled (55-80)",
+      posture: "Prudential-reconciled (80), attestation-reconciled (70), or unbounded-reconciled base (55)",
       meaning: V9_MINT_POSTURE_BANDS.managed.detail,
     },
   },
@@ -115,7 +115,7 @@ const BAND_ROWS = [
     id: "exposed",
     cells: {
       band: V9_MINT_POSTURE_BANDS.exposed.label,
-      posture: "Unknown reconciliation (35), or no reconciliation / compromised (25)",
+      posture: "Unknown reconciliation (55), or unbounded, unreconciled / compromised (25)",
       meaning: V9_MINT_POSTURE_BANDS.exposed.detail,
     },
   },
@@ -123,7 +123,7 @@ const BAND_ROWS = [
     id: "nr",
     cells: {
       band: "NR",
-      posture: "Unknown control facts (quality 45)",
+      posture: "Unknown control facts (quality 45-50)",
       meaning: "Missing, unknown, inherited-but-unresolved, or insufficient review data.",
     },
   },
@@ -170,6 +170,12 @@ export function MintAuthorityScoreMethodologySection() {
         columns={SIGNAL_COLUMNS}
         rows={SIGNAL_ROWS}
       />
+      <p>
+        The governed rung covers economically unbounded issuance held only by delayed, flash-resistant on-chain token
+        governance. Every mint control must have a complete execution-scope certificate proving that all unbounded
+        issuance paths are governance-controlled and enforce an unavoidable delay of at least 48 hours. Qualifying
+        issuance starts at 60 and publishes in the Governed band.
+      </p>
       <WorkedExample summary="Worked example: a resolved mint incident on a reconciled issuer">
         <p>
           An issuer whose minting is economically unbounded but reconciled against reserves under attestation sits on
@@ -207,10 +213,11 @@ export function MintAuthorityScoreMethodologySection() {
         <div className="space-y-2">
           <h3 className="text-foreground font-medium">Curated posture is an annotation</h3>
           <p>
-            The curated authority-posture field shown on detail pages is a reviewer annotation. It is validated against
-            the derived posture and never affects the Safety Score; a disagreement raises curation work rather than
-            moving a score. It is not inert everywhere: the depeg resolver reads it as a curated structural input, so
-            re-curating a posture can change a published depeg verdict.
+            The curated authority-posture field shown on detail pages is a reviewer annotation, not a scoring input.
+            The Safety Score derives posture from compiled control facts, including the complete execution-scope
+            certificates and governance evidence required for the governed rung; a disagreement raises curation work
+            rather than moving a score. It is not inert everywhere: the depeg resolver reads it as a curated structural
+            input, so re-curating a posture can change a published depeg verdict.
           </p>
         </div>
         <ContentTable

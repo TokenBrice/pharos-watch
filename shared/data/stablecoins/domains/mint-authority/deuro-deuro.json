@@ -2,9 +2,9 @@
   "id": "deuro-deuro",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-unreconciled",
     "confidence": "verified",
-    "summary": "dEURO native issuance uses admitted minting modules under the Equity veto/application process. Collateralized MintingHub positions are oracle-free; stablecoin-bridge, gateway and savings modules require separate issuance-scope review before describing all native issuance as collateral gated.",
+    "summary": "dEURO admits arbitrary new minters through a permissionless fee/application process unless nDEPS holders veto them. Once admitted, a minter can mint durable tokens to a chosen recipient without a token-level collateral or numeric cap check; MintingHub collateral constraints do not bind arbitrary admitted minters. D14 is unbounded and unreconciled. Transferable current-state nDEPS voting and veto-only admission do not qualify as sole flash-resistant token-governor issuance.",
     "upgradeability": {
       "model": "immutable",
       "implementationAddresses": [
@@ -80,13 +80,13 @@
         ]
       }
     ],
-    "economicCapSemantics": "raiseable",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
-      "evidence": "At Ethereum block 25295200: DecentralizedEURO (0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea) is immutable, no EIP-1967 proxy admin slot, owner() reverts, code length 21734. Equity/nDEPS contract (0xc71104001a3ccda1bef1177d765831bd1bfe8ee6) confirmed via internal CREATE from dEURO constructor at block 22088283. The minting model is Frankencoin-style: anyone can suggestMinter() with a fee and application period; nDEPS holders can denyMinter(). No privileged operator can mint directly; new modules are time-delayed and community-vetoable. Economic-posture fields reviewed 2026-08-15: permissionless overcollateralized minting can expand only through the challenge-period and nDEPS veto process, with no off-chain reserve claim or prudential supervisor.",
-      "reviewer": "SONG-1 mint-control evidence review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20); Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "At Ethereum block 25295200: DecentralizedEURO (0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea) is immutable, no EIP-1967 proxy admin slot, owner() reverts, code length 21734. Equity/nDEPS contract (0xc71104001a3ccda1bef1177d765831bd1bfe8ee6) confirmed via internal CREATE from dEURO constructor at block 22088283. The minting model is Frankencoin-style: anyone can suggestMinter() with a fee and application period; nDEPS holders can denyMinter(). No privileged operator can mint directly; new modules are time-delayed and community-vetoable. Economic-posture fields reviewed 2026-08-15: permissionless overcollateralized minting can expand only through the challenge-period and nDEPS veto process, with no off-chain reserve claim or prudential supervisor. D14/D29 sweep 2026-10-03 supersedes the historical raiseable classification: at Ethereum block 26113566 (hash 0x8ee5bf8702023bb24470045b03b62f22fe10f1c46654ea9e79377e5dac7193b9), reserve() confirms Equity 0xc71104001a3ccda1bef1177d765831bd1bfe8ee6 and MIN_APPLICATION_PERIOD()=1209600 seconds. Verified suggestMinter admits any new address after fee/application requirements; mint(target,amount) checks minterOnly without a posted-collateral or amount check. Module-level collateral checks do not bind arbitrary new minters, so D14 is unbounded. D29 fails G1 because admission is permissionless unless vetoed, not affirmative token-governor execution. Equity votes use current balance multiplied by holding age; transfers adjust the recipient anchor. This is not evidence of a flash exploit, but this transferable current-state model is live-balance, not D29's lock-escrowed or past-block-checkpoint voting. The 14-day application delay does not constrain subsequent mint calls from an admitted arbitrary minter. Complete current module/position executionScope inventory is not certified; no governed qualification is authored. With reconciliation not-applicable and no supervision, fallback is unbounded-unreconciled.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U5GovAmbiguousA)",
+      "reviewedAt": "2026-10-03",
       "sources": [
         {
           "label": "dEURO docs",
@@ -99,6 +99,18 @@
         {
           "label": "dEURO Equity (nDEPS) on Etherscan",
           "url": "https://etherscan.io/address/0xc71104001a3ccda1bef1177d765831bd1bfe8ee6"
+        },
+        {
+          "label": "Verified dEURO: permissionless minter admission and role-only mint",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
+        },
+        {
+          "label": "Verified Equity: current balance/age voting and transferable shares",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc71104001a3ccda1bef1177d765831bd1bfe8ee6"
+        },
+        {
+          "label": "Ethereum pinned block 26113566",
+          "url": "https://eth.blockscout.com/block/26113566"
         }
       ]
     }

@@ -2,9 +2,9 @@
   "id": "hollar-hydrated",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unknown",
     "confidence": "manual-review",
-    "summary": "HOLLAR is minted on the Hydration appchain by depositing DOT/ETH/BTC/stablecoin collateral into an Aave v3 (GHO-derived) money market, with the HOLLAR Stability Module anchoring the peg; Hydration governance controls collateral and risk parameters.",
+    "summary": "HOLLAR's documented collateralized borrowing path is Hydration's Aave-v3/GHO-derived money market, but current token reads identify five native facilitators rather than one exclusive mint path. Complete collateral and controller closure for the HSM, GIGAHDX and BIL facilitators, and the current runtime origin behind token administration, remain unverified. Economic cap semantics and four facilitator canRaiseCap values are unknown; the controls derive unknown, without certifying governed issuance.",
     "upgradeability": {
       "model": "custom",
       "canChangeMintLogic": true,
@@ -210,14 +210,22 @@
         "evidence": "Pinned token reads on 2026-10-01 label this registered facilitator BIL and return capacity 950000e18. The full collateral and administrative path remains unverified; no stronger protective-control claim is made."
       }
     ],
-    "economicCapSemantics": "raiseable",
+    "economicCapSemantics": "unknown",
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
-      "evidence": "Hydration press and coverage describe HOLLAR as an Aave-v3/GHO-derived overcollateralized stablecoin with the native HSM for peg support, governed by Hydration with parameter-level control over collateral and caps. Economic-posture fields reviewed 2026-08-15: collateral-gated issuance is capped but Hydration OpenGov can raise caps and upgrade runtime logic; no off-chain reserve claim or prudential supervisor applies.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20); Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "Hydration press and coverage describe HOLLAR as an Aave-v3/GHO-derived overcollateralized stablecoin with the native HSM for peg support, governed by Hydration with parameter-level control over collateral and caps. Economic-posture fields reviewed 2026-08-15: collateral-gated issuance is capped but Hydration OpenGov can raise caps and upgrade runtime logic; no off-chain reserve claim or prudential supervisor applies. D14/A7 review on 2026-10-03 at hydration EVM block 15353261 (0x28fe556392f72a8673f16b503369d3a5a4e4b70e401e63cbb093a426a72e4ce4, re-fetched with eth_getBlockByNumber): pinned token code and getFacilitatorsList still identify five native facilitators, and hasRole(DEFAULT_ADMIN_ROLE, 0xaa7e0000000000000000000000000000000aa7e0) is true. The official pinned GhoToken source permits arbitrary facilitator admission and capacity changes without a collateral predicate, but this run cannot certify its bytecode correspondence or the current runtime origin controlling that admin address. The HSM, GIGAHDX and BIL facilitator collateral/controller closures remain unresolved. An upstream source file, a zero-code runtime address, or a runtime-upgrade power does not prove the complete current D14 root path. A11 sets economicCapSemantics to unknown with no capSemanticsReview. Four cap-limited facilitator controls retain canRaiseCap unknown; the compiler therefore derives unknown despite the same-chain parameter raiser. Curated authorityPosture is unknown, fail-closed. No D29 certificate is authored. This D14 refresh does not re-date older quorum or reserve-reconciliation observations.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U12bNativeCapReviews)",
+      "reviewedAt": "2026-10-03",
       "sources": [
+        {
+          "label": "Official pinned HOLLAR token source (deployment correspondence unresolved)",
+          "url": "https://github.com/galacticcouncil/hollar/blob/7bbf3e1dc03313db72c1ad488aaa56c55b6e299c/src/contracts/gho/GhoToken.sol"
+        },
+        {
+          "label": "Hydration pinned read RPC",
+          "url": "https://hydration-rpc.n.dwellir.com"
+        },
         {
           "label": "Hydration HOLLAR launch (Polkadot newsroom)",
           "url": "https://www.coindesk.com/press-release/2025/09/22/hydration-launches-hollar-as-polkadot-s-premier-decentralized-stablecoin"

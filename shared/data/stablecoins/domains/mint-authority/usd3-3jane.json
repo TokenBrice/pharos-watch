@@ -4,7 +4,7 @@
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "USD3 shares are minted by the vault only against USDC deposits. A 3-of-5 3Jane Safe controls a one-day configuration timelock, while a separate seven-day timelock owns the proxy admin and can replace mint-critical implementation logic.",
+    "summary": "USD3 user shares mint against USDC deposits; report-time fee and profit-lock shares are computed from strategy NAV gains, not an administrator-selected unbacked amount. A 3-of-5 3Jane Safe controls a one-day configuration timelock that can raise deposit capacity or exempt self-deposit receivers without bypassing the asset transfer. A separate seven-day timelock owns the proxy admin and can replace mint-critical implementation logic; that upgrade-only power is outside the D14 cap trigger.",
     "inheritedFrom": "usdc-circle",
     "upgradeability": {
       "model": "transparent-proxy",
@@ -135,6 +135,22 @@
       }
     ],
     "economicCapSemantics": "raiseable",
+    "capSemanticsReview": {
+      "verdict": "raiseable-collateral-only",
+      "rationale": "D14 review of verified USD3 implementation 0xd1f1c3f485063712873285bf4ef25ab068f13893 and its fixed TokenizedStrategy singleton 0xd377919fa87120584b21279a491f82d5265a139c: deposit/mint calls _deposit, transferring USDC before minting shares. Configuration management can increase supply capacity or exempt self-deposit receivers, but cannot bypass that transfer or authorize an arbitrary share minter. Report fee and profit-lock shares are computed from strategy-reported NAV, not a privileged arbitrary amount mint; USD3 harvestAndReport returns live nav(). Proxy upgrades remain separate from D14. Inherited USDC issuer power is carried by the parent dependency edge, not charged again to USD3.",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U8SafeRootedFloorB)",
+      "sources": [
+        {
+          "label": "Verified USD3 implementation source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd1f1c3f485063712873285bf4ef25ab068f13893"
+        },
+        {
+          "label": "Verified USD3 TokenizedStrategy singleton source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd377919fa87120584b21279a491f82d5265a139c"
+        }
+      ]
+    },
     "reconciliation": "continuous",
     "supervision": "none",
     "review": {
@@ -156,9 +172,9 @@
           "url": "https://eth.blockscout.com/address/0xd1f1c3f485063712873285bf4ef25ab068f13893#code"
         }
       ],
-      "evidence": "At Ethereum block 26095802, USD3 used source-verified implementation 0xd1f1c3f485063712873285bf4ef25ab068f13893 and proxy admin 0x41c838664a9c64905537ff410333b9f5964cc596 owned by the seven-day timelock. The issuer-listed 3-of-5 Safe 0x33333333bd7045f1a601a1e289d7ab21036fb5ef holds proposer, executor, and canceller roles on the one-day configuration and seven-day upgrade timelocks. ProtocolConfig's supply cap is 100 million USDC and maxOnCredit is 100%; management can exempt self-deposit receivers from supply-cap headroom. USD3 management is the configuration timelock and its keeper is 0xc22158100b823e1ef612fba265941efe9e7d7975. The current implementation retains deposit-backed share issuance and live accounting; prudential supervision remains unestablished.",
-      "reviewer": "Sol curation pass 2026-10-01 (CurA39GUSD)",
-      "reviewedAt": "2026-10-01",
+      "evidence": "At Ethereum block 26095802, USD3 used source-verified implementation 0xd1f1c3f485063712873285bf4ef25ab068f13893 and proxy admin 0x41c838664a9c64905537ff410333b9f5964cc596 owned by the seven-day timelock. The issuer-listed 3-of-5 Safe 0x33333333bd7045f1a601a1e289d7ab21036fb5ef holds proposer, executor, and canceller roles on the one-day configuration and seven-day upgrade timelocks. ProtocolConfig's supply cap is 100 million USDC and maxOnCredit is 100%; management can exempt self-deposit receivers from supply-cap headroom. USD3 management is the configuration timelock and its keeper is 0xc22158100b823e1ef612fba265941efe9e7d7975. The current implementation retains deposit-backed share issuance and live accounting; prudential supervision remains unestablished. D14 review of verified USD3 implementation 0xd1f1c3f485063712873285bf4ef25ab068f13893 and its fixed TokenizedStrategy singleton 0xd377919fa87120584b21279a491f82d5265a139c: deposit/mint calls _deposit, transferring USDC before minting shares. Configuration management can increase supply capacity or exempt self-deposit receivers, but cannot bypass that transfer or authorize an arbitrary share minter. Report fee and profit-lock shares are computed from strategy-reported NAV, not a privileged arbitrary amount mint; USD3 harvestAndReport returns live nav(). Proxy upgrades remain separate from D14. Inherited USDC issuer power is carried by the parent dependency edge, not charged again to USD3.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U8SafeRootedFloorB)",
+      "reviewedAt": "2026-10-03",
       "disposition": "scoreable"
     }
   }

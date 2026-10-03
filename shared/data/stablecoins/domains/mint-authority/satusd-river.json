@@ -2,7 +2,7 @@
   "id": "satusd-river",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-unreconciled",
     "confidence": "verified",
     "summary": "satUSD native Mint Authority covers the chain-local SatoshiXApp/CDP issuance paths, the verified Ethereum and Base ward histories, and the River owner EOA's native UUPS/rely powers across all 11 reviewed native deployments. LayerZero OFT burn/mint, peer, delegate, endpoint, and messaging machinery is assessed separately under Bridge Risk.",
     "upgradeability": {

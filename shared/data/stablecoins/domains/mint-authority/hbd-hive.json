@@ -2,7 +2,7 @@
   "id": "hbd-hive",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "bounded-admin",
     "confidence": "verified",
     "summary": "HBD is created at the Hive protocol layer through a HIVE<->HBD conversion mechanism; supply expands when HIVE is converted to HBD, bounded by a 20% print-stop threshold and a 30% hard-cap haircut. At irreversible block 108364554, consensus-counted HBD debt was 25.25345% after excluding treasury-held HBD, so hbd_print_rate was 0 while HBD-to-HIVE conversion still paid the full nominal amount.",
     "upgradeability": {
@@ -54,12 +54,24 @@
       }
     ],
     "economicCapSemantics": "bounded",
+    "capSemanticsReview": {
+      "verdict": "bounded-by-construction",
+      "rationale": "D14 review 2026-10-03: pinned Hive consensus source enforces conversion, reward and balance-proportional interest issuance, not a privileged mint(address,amount) to a chosen recipient. Witness feed/interest parameters and hard-fork governance do not authorize an administrator mint; bounded-by-construction review retained. Block 108364554 ID 0675830a6dd0e4a698ba72a84010caaf412a0826 was retrieved from block_api.get_block.",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U11BoundedB)",
+      "sources": [
+        {
+          "label": "Pinned Hive consensus implementation",
+          "url": "https://raw.githubusercontent.com/openhive-network/hive/dab219074fd146d07305bccd4a9f869c9d94d301/libraries/chain/database.cpp"
+        }
+      ]
+    },
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
-      "evidence": "Hive API state at irreversible block 108364554 and the pinned consensus implementation establish the live debt controls. Total HBD was 32,394,046.860, but consensus subtracts 23,179,590.895 treasury HBD before calculating debt; counted HBD was therefore 9,214,455.965. With 568,196,982.317 HIVE and a 0.048 HBD/HIVE median feed, debt was 25.25345%. New printing was stopped, but the feed exceeded the 0.0378396893 hard-cap minimum and the current nominal HBD-to-HIVE conversion payout remained 1.0. There is no token proxy or contract administrator: HBD mint logic is base-layer consensus code changed through Hive's witness-approved hard-fork path. Economic-posture fields reviewed 2026-08-15: consensus code enforces the 20% print stop and 30% haircut band and changes require a witness-approved hard fork, with no off-chain reserve claim or prudential supervisor.",
-      "reviewer": "GPT SOL-NR-A wave6; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "Hive API state at irreversible block 108364554 and the pinned consensus implementation establish the live debt controls. Total HBD was 32,394,046.860, but consensus subtracts 23,179,590.895 treasury HBD before calculating debt; counted HBD was therefore 9,214,455.965. With 568,196,982.317 HIVE and a 0.048 HBD/HIVE median feed, debt was 25.25345%. New printing was stopped, but the feed exceeded the 0.0378396893 hard-cap minimum and the current nominal HBD-to-HIVE conversion payout remained 1.0. There is no token proxy or contract administrator: HBD mint logic is base-layer consensus code changed through Hive's witness-approved hard-fork path. Economic-posture fields reviewed 2026-08-15: consensus code enforces the 20% print stop and 30% haircut band and changes require a witness-approved hard fork, with no off-chain reserve claim or prudential supervisor. D14 review 2026-10-03: pinned Hive consensus source enforces conversion, reward and balance-proportional interest issuance, not a privileged mint(address,amount) to a chosen recipient. Witness feed/interest parameters and hard-fork governance do not authorize an administrator mint; bounded-by-construction review retained. Block 108364554 ID 0675830a6dd0e4a698ba72a84010caaf412a0826 was retrieved from block_api.get_block.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U11BoundedB)",
+      "reviewedAt": "2026-10-03",
       "sources": [
         {
           "label": "Hive Dollar (HBD) overview",

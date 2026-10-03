@@ -2,7 +2,7 @@
   "id": "ceur-celo",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "EURm minting on Celo routes through the Mento Broker contract (confirmed isMinter), while token ownership resolves to a 4/6 Mento Safe; identical structure to verified GBPm.",
     "upgradeability": {

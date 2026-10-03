@@ -2,7 +2,7 @@
   "id": "xo-exodus",
   "mintAuthority": {
     "mintPath": "unknown",
-    "authorityPosture": "unknown",
+    "authorityPosture": "none-resolved-mint",
     "confidence": "unknown",
     "summary": "XO Cash is authored only as a Solana M0 extension. M0 documents Solana as a hub-and-spoke representation reached by locking M on Ethereum and minting the corresponding Solana extension through the Portal; the authored XO deployment does not establish a separate native XO liability path. Portal, extension mint/burn, and program-upgrade controls are reviewed under Bridge Risk, while base M issuance remains assessed on m-m0.",
     "economicCapSemantics": "unknown",
@@ -27,9 +27,9 @@
           "url": "https://www.exodus.com/investors/news-events/press-releases/detail/112/exodus-launches-xo-cash-as-the-first-stablecoin-built-for-ai-agents"
         }
       ],
-      "evidence": "Official M0 documentation describes Solana as a spoke with Ethereum as the hub: extensions are transferred by locking the source token on Ethereum, passing a Wormhole message, and minting an equivalent Solana extension through the Portal. Exodus identifies XO Cash as built on Solana with MoonPay and M0. The former Ethereum MinterGateway observation is parent M issuance assessed on m-m0, not a local XO mint authority; the Portal, XO mint PDA, and shared Solana upgrade-key observations are preserved in bridgeRouteRisk.controls[].",
-      "reviewer": "Codex mint-bridge-boundary migration RELOC-02",
-      "reviewedAt": "2026-08-16",
+      "evidence": "Official M0 documentation describes Solana as a spoke with Ethereum as the hub: extensions are transferred by locking the source token on Ethereum, passing a Wormhole message, and minting an equivalent Solana extension through the Portal. Exodus identifies XO Cash as built on Solana with MoonPay and M0. The former Ethereum MinterGateway observation is parent M issuance assessed on m-m0, not a local XO mint authority; the Portal, XO mint PDA, and shared Solana upgrade-key observations are preserved in bridgeRouteRisk.controls[]. Queue convergence review 2026-10-03 re-read M0's cross-chain architecture: the Solana section still specifies HubPortal lock on Ethereum, Wormhole message, and Portal mint of the equivalent Solana extension. The reviewed external-only-representation exception covers the sole authored Solana deployment and no native XO mint control is authored, so adaptMintReview emits a known not-applicable mint review with null controlKey and no mint controls; the published posture is none-resolved. Annotate none-resolved-mint only for the absence of an independently authored native issuance surface. mintPath unknown, confidence unknown, the unresolved native-liability question, and all Bridge Risk powers remain unchanged. This does not assert fixed-unit pure-wrapper equivalence, close the unresolved source/executable correspondence of the extension program, or claim a new Solana observation; those uncertainties remain as recorded.",
+      "reviewer": "Sol v10.02 posture-queue convergence (QueueResolve)",
+      "reviewedAt": "2026-10-03",
       "disposition": "unresolved",
       "unresolvedQuestions": [
         "No separately authored canonical native XO-liability deployment has been identified outside the reviewed Solana M0 extension route."

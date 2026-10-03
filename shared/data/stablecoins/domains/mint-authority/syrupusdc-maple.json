@@ -2,7 +2,7 @@
   "id": "syrupusdc-maple",
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "unbounded-reconciled",
+    "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "inheritedFrom": "usdc-circle",
     "summary": "syrupUSDC is Maple's ERC-4626 strategy-vault receipt for USDC lent to institutional borrowers; Ethereum is the sole canonical native-issuance deployment, where shares are minted against USDC deposits and do not create base USDC supply, so durable mint authority is inherited from USDC (usdc-circle). Base, Arbitrum, and Solana are CCIP bridge representations assessed under Bridge Risk, not additional Mint Authority deployments.",
@@ -101,12 +101,24 @@
       }
     ],
     "economicCapSemantics": "bounded",
+    "capSemanticsReview": {
+      "verdict": "bounded-by-construction",
+      "rationale": "At Ethereum block 26112822 (hash 0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a), the verified MaplePool runtime matches the canonical token deployment. deposit/mint and their permit variants exclusively enter the internal _mint(shares, assets, receiver, caller), which requires nonzero assets and a successful transferFrom of the underlying from the caller; bootstrap shares also arise only within that deposit transaction. No external arbitrary-share mint or share-minter authorization exists. PoolManager permissions, liquidity limits and asset-accounting parameters do not remove the deposited-asset transfer requirement. Manager upgrade power remains the separately recorded upgrade dimension, not a D14 mint trigger. Inherited issuer controls describe parent issuance carried by the serial-claim dependency edge, not wrapper-local share minting; parent D14 risk is not charged twice.",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U10BoundedWrappersA)",
+      "sources": [
+        {
+          "label": "Verified wrapper source reviewed for D14",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b"
+        }
+      ]
+    },
     "reconciliation": "periodic",
     "supervision": "attestation-only",
     "review": {
-      "evidence": "At Ethereum block 25771046 on 2026-08-16, syrupUSDC asset() = USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, totalAssets() = 1,049,015,912.169937 USDC, and totalSupply() = 890,051,815.053496 shares; EIP-1967 implementation and admin slots were both zero, confirming the non-upgradeable MaplePool wrapper. Base 0x660975730059246a68521a3e2fbd4740173100f5, Arbitrum 0x41ca7586cc1311807b4605fbb748a3b8862b42b5, and Solana AvZZF1YaZDziPY2RCK4oJrRVrbN3mTD9NL24hPeaZeUj are CCIP burn/mint representations rather than independent native-issuance deployments, so their token roles, pools, receiver, timelocks, and Solana authorities are assessed under bridgeRouteRisk. Durable mint authority inherits from reviewed parent USDC (usdc-circle). Economic-control evidence reviewed 2026-07-15: Maple launched recurring The Network Firm reports on 2026-05-07, sourcing loan collateral directly from custodians and onchain activity for syrupUSDC; the current report dashboard was reviewed 2026-07-15. No exact issuer/product prudential registry entry was found. Economic-posture fields reviewed 2026-08-15: local syrupUSDC shares are immutably deposit-gated by USDC; Maple's recurring third-party reporting supports periodic attestation-only posture.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-7 (lead pyusd-paypal); Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-16",
+      "evidence": "At Ethereum block 25771046 on 2026-08-16, syrupUSDC asset() = USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, totalAssets() = 1,049,015,912.169937 USDC, and totalSupply() = 890,051,815.053496 shares; EIP-1967 implementation and admin slots were both zero, confirming the non-upgradeable MaplePool wrapper. Base 0x660975730059246a68521a3e2fbd4740173100f5, Arbitrum 0x41ca7586cc1311807b4605fbb748a3b8862b42b5, and Solana AvZZF1YaZDziPY2RCK4oJrRVrbN3mTD9NL24hPeaZeUj are CCIP burn/mint representations rather than independent native-issuance deployments, so their token roles, pools, receiver, timelocks, and Solana authorities are assessed under bridgeRouteRisk. Durable mint authority inherits from reviewed parent USDC (usdc-circle). Economic-control evidence reviewed 2026-07-15: Maple launched recurring The Network Firm reports on 2026-05-07, sourcing loan collateral directly from custodians and onchain activity for syrupUSDC; the current report dashboard was reviewed 2026-07-15. No exact issuer/product prudential registry entry was found. Economic-posture fields reviewed 2026-08-15: local syrupUSDC shares are immutably deposit-gated by USDC; Maple's recurring third-party reporting supports periodic attestation-only posture. D14/D29 sweep 2026-10-03: At Ethereum block 26112822 (hash 0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a), the verified MaplePool runtime matches the canonical token deployment. deposit/mint and their permit variants exclusively enter the internal _mint(shares, assets, receiver, caller), which requires nonzero assets and a successful transferFrom of the underlying from the caller; bootstrap shares also arise only within that deposit transaction. No external arbitrary-share mint or share-minter authorization exists. PoolManager permissions, liquidity limits and asset-accounting parameters do not remove the deposited-asset transfer requirement. Manager upgrade power remains the separately recorded upgrade dimension, not a D14 mint trigger. Inherited issuer controls describe parent issuance carried by the serial-claim dependency edge, not wrapper-local share minting; parent D14 risk is not charged twice.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U10BoundedWrappersA)",
+      "reviewedAt": "2026-10-03",
       "disposition": "scoreable",
       "sources": [
         {

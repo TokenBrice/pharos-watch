@@ -2,7 +2,7 @@
   "id": "wm-m0",
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "wM is a pure M-backed wrapper: Ethereum wrap/unwrap transfers M before minting or burns wM before returning M, while the Solana m_ext path mints Token-2022 wM only after M is deposited into its extension vault. Wrapper-local logic remains mutable: Ethereum migration requires a TTG-registered migrator and the current one-of-two migrationAdmin Safe, while the Solana m_ext ProgramData upgrade authority is scored on the Solana bridge-representation route in Bridge Risk. Base M issuance is inherited from reviewed m-m0 and is not a second direct wM controller.",
     "inheritedFrom": "m-m0",

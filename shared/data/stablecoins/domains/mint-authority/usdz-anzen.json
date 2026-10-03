@@ -92,12 +92,24 @@
       }
     ],
     "economicCapSemantics": "bounded",
+    "capSemanticsReview": {
+      "verdict": "bounded-by-construction",
+      "rationale": "D14 review 2026-10-03: verified immutable USDz native deposit paths require USDC safeTransferFrom followed by bound SPCT deposit or SPCT safeTransferFrom, then mint no more than normalized deposited principal split between user and fee treasury. Admin/POOL_MANAGER role grants, fees, blacklist, oracle and mode changes do not expose native arbitrary mint or replace the constructor-bound USDC/SPCT references. Oracle changes affect backing valuation, not the D14 native mint gate. LayerZero _credit remains route-scoped Bridge Risk. Keep bounded with bounded-by-construction review.",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U11BoundedB)",
+      "sources": [
+        {
+          "label": "Verified usdz source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa469b7ee9ee773642b3e93e842e5d9b5baa10067"
+        }
+      ]
+    },
     "reconciliation": "continuous",
     "supervision": "none",
     "review": {
-      "evidence": "Canonicality verification at Ethereum block 25771000 on 2026-08-17 identifies Ethereum as the only independently issued USDz liability source. The verified non-proxy USDz source exposes SPCT-backed deposit() and depositBySPCT() paths that call _mintUSDz and increment totalPooledSPCT; its constructor binds the SPCT pool and price oracle. owner() is the Anzen 2-of-6 Safe, endpoint() is LayerZero V2, and no privileged arbitrary mint or native upgrade path was evidenced. Base, Arbitrum, Blast, and Manta are bridge representations whose adapter/minter, peer, pause, and owner controls are retained in bridgeRouteRisk rather than global Mint Authority. No independent prudential supervisor for the SPCT disclosure was evidenced.",
-      "reviewer": "Codex USDz canonical mint-authority boundary verification",
-      "reviewedAt": "2026-08-17",
+      "evidence": "Canonicality verification at Ethereum block 25771000 on 2026-08-17 identifies Ethereum as the only independently issued USDz liability source. The verified non-proxy USDz source exposes SPCT-backed deposit() and depositBySPCT() paths that call _mintUSDz and increment totalPooledSPCT; its constructor binds the SPCT pool and price oracle. owner() is the Anzen 2-of-6 Safe, endpoint() is LayerZero V2, and no privileged arbitrary mint or native upgrade path was evidenced. Base, Arbitrum, Blast, and Manta are bridge representations whose adapter/minter, peer, pause, and owner controls are retained in bridgeRouteRisk rather than global Mint Authority. No independent prudential supervisor for the SPCT disclosure was evidenced. D14 review 2026-10-03: verified immutable USDz native deposit paths require USDC safeTransferFrom followed by bound SPCT deposit or SPCT safeTransferFrom, then mint no more than normalized deposited principal split between user and fee treasury. Admin/POOL_MANAGER role grants, fees, blacklist, oracle and mode changes do not expose native arbitrary mint or replace the constructor-bound USDC/SPCT references. Oracle changes affect backing valuation, not the D14 native mint gate. LayerZero _credit remains route-scoped Bridge Risk. Keep bounded with bounded-by-construction review.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U11BoundedB)",
+      "reviewedAt": "2026-10-03",
       "sources": [
         {
           "label": "Anzen USDz overview",

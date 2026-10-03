@@ -2,7 +2,7 @@
   "id": "vchf-vnx",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-unreconciled",
     "confidence": "verified",
     "summary": "VCHF is issuer-native across all 12 authored deployments: Ethereum, Base, Arbitrum, Avalanche, Solana, Celo, Polygon, Tezos, XRPL, Fraxtal, ICP, and Stellar. Ethereum retains the fully reconstructed VNXManager and no-delay proxy-admin graph; each other route has its chain-local issuer mint/admin evidence and EVM proxy implementation/admin evidence. Native mint capacity remains unbounded or raiseable across issuer-controlled routes, and current whole-supply reconciliation is not established. No bridge representation is claimed in this mint review.",
     "upgradeability": {

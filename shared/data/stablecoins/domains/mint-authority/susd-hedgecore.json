@@ -2,9 +2,9 @@
   "id": "susd-hedgecore",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "bounded-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "HedgeCore sUSD uses OZ AccessControl. The hUSDC wrapper contract (0x34EEa40FB…) holds MINTER_ROLE; DEFAULT_ADMIN_ROLE is held by EOA 0x30829883…. MAX_SUPPLY is a Solidity constant at 1B tokens.",
+    "summary": "D14 review 2026-10-03: verified SUDC.issueFromWrapper(address,uint256) checks only MINTER_ROLE and nominal MAX_SUPPLY, without requiring hUSDC/USDC deposits. DEFAULT_ADMIN_ROLE can grant MINTER_ROLE to a recipient-controlled account. The immutable one-billion nominal cap is not an economic backing bound; economic cap is unbounded, with existing continuous reconciliation yielding unbounded-reconciled.",
     "controls": [
       {
         "label": "HedgeCore hUSDC wrapper contract (MINTER_ROLE holder)",
@@ -78,13 +78,13 @@
         }
       ]
     },
-    "economicCapSemantics": "bounded",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "continuous",
     "supervision": "none",
     "review": {
-      "evidence": "At BSC block 103632643: hasRole(MINTER_ROLE, wrapper 0x34eea40fb…) = true; hasRole(DEFAULT_ADMIN_ROLE, EOA 0x30829883…) = true; wrapper() = 0x34eea40fb… (confirmed cross-match). 0x30829883… is EOA (empty bytecode). MAX_SUPPLY() = 1B (immutable constant, no setter function). HedgeCore docs confirm soul-bound soul mechanism and operator redemption flow. The token and wrapper are non-upgradeable, the 1 billion sUSD ceiling is a Solidity constant, and no authority can raise it; the direct mint call is therefore economically bounded. Economic-posture fields reviewed 2026-08-15: the immutable 1 billion-token cap remains bounded, live on-chain reserve inputs cover the sole BSC collateral path, and no supervisor or independent attestor is identified.",
-      "reviewer": "Claude Phase 0c continuation; SOL-V mint-tier review; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "evidence": "At BSC block 103632643: hasRole(MINTER_ROLE, wrapper 0x34eea40fb…) = true; hasRole(DEFAULT_ADMIN_ROLE, EOA 0x30829883…) = true; wrapper() = 0x34eea40fb… (confirmed cross-match). 0x30829883… is EOA (empty bytecode). MAX_SUPPLY() = 1B (immutable constant, no setter function). HedgeCore docs confirm soul-bound soul mechanism and operator redemption flow. The token and wrapper are non-upgradeable, the 1 billion sUSD ceiling is a Solidity constant, and no authority can raise it; the direct mint call is therefore economically bounded. Economic-posture fields reviewed 2026-08-15: the immutable 1 billion-token cap remains bounded, live on-chain reserve inputs cover the sole BSC collateral path, and no supervisor or independent attestor is identified. D14 review 2026-10-03: verified SUDC.issueFromWrapper(address,uint256) checks only MINTER_ROLE and nominal MAX_SUPPLY, without requiring hUSDC/USDC deposits. DEFAULT_ADMIN_ROLE can grant MINTER_ROLE to a recipient-controlled account. The immutable one-billion nominal cap is not an economic backing bound; economic cap is unbounded, with existing continuous reconciliation yielding unbounded-reconciled.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U11BoundedB)",
+      "reviewedAt": "2026-10-03",
       "sources": [
         {
           "label": "HedgeCore hUSDC wrapper docs",

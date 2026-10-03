@@ -35,11 +35,11 @@ describe("V10 exact authority scope", () => {
     scope.paths[0]!.capSemantics = { kind: "unbounded", bound: null };
     scope.paths[0]!.claimImpairment = "unbounded";
     const adverse = { ...partial, ...partialControlScopeSemantics(legacy, compile(scope)) };
-    expect(deriveV9MintPosture(adverse, mint, false)).toBe("unbounded-or-compromised");
+    expect(deriveV9MintPosture(adverse, mint, false, policy.governedIssuance)).toBe("unbounded-unreconciled");
     expect(evaluate(adverse).score).toBeLessThan(evaluate(legacy).score!);
     scope.paths[0]!.activation = "disabled-final";
     const disabledPartial = { ...partial, ...partialControlScopeSemantics(legacy, compile(scope)) };
-    expect(deriveV9MintPosture(disabledPartial, mint, false)).toBe("unbounded-or-compromised");
+    expect(deriveV9MintPosture(disabledPartial, mint, false, policy.governedIssuance)).toBe("unbounded-unreconciled");
     expect(evaluate(disabledPartial).score).toBe(evaluate(adverse).score);
     scope.inventory = "complete"; scope.confidence = "verified";
     expect(reviewedControlScopeSemantics(compile(scope).paths).claimImpairment).toBe("none");
@@ -172,12 +172,12 @@ describe("V10 exact authority scope", () => {
     const baseline = evaluate(known);
     for (const review of [mint, { ...mint, status: boundedUnknown() }]) {
       const result = evaluate(adjacentUnknown, review);
-      expect(deriveV9MintPosture(adjacentUnknown, review, false)).toBe("unbounded-or-compromised");
+      expect(deriveV9MintPosture(adjacentUnknown, review, false, policy.governedIssuance)).toBe("unbounded-unreconciled");
       expect(result.structuralFailures).toContainEqual(expect.objectContaining({ kind: "centralized-mint", severity: "high" }));
       expect(result.score).toBe(baseline.score);
       expect(result.reasons.map((reason) => reason.code)).toContain(adverseField === "cap" ? "unknown-control-mint-ability" : "unknown-control-cap-authority");
     }
-    expect(deriveV9MintPosture({ ...adjacentUnknown, economicLossScope: "unknown" }, mint, false)).toBe("unknown");
+    expect(deriveV9MintPosture({ ...adjacentUnknown, economicLossScope: "unknown" }, mint, false, policy.governedIssuance)).toBe("unknown");
   });
 
   it("retains reconciled but unsupervised adverse mint evidence without clearing aggregate uncertainty", () => {
@@ -203,7 +203,7 @@ describe("V10 exact authority scope", () => {
     const friendly = makeDeploymentControl("mint:friendly", "mint");
     const unknown = makeDeploymentControl("mint:unreviewed", "mint", { authority: null, capSemantics: { kind: "unknown", bound: null }, claimImpairment: "unknown", economicLossScope: "unknown" });
     const mint = makeReviewedMintInput(friendly.controlKey);
-    expect(deriveV9MintPosture(unknown, mint, false)).toBe("unknown");
+    expect(deriveV9MintPosture(unknown, mint, false, policy.governedIssuance)).toBe("unknown");
     const result = evaluateV9EconomicControl(makeEconomicControlArgs({ facts: makeEconomicControlFacts([friendly, unknown]), mint }));
     expect(result.components.some((component) => component.posture === "unknown" && component.controlKeys.includes(unknown.controlKey))).toBe(true);
   });

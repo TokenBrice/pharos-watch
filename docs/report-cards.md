@@ -7,7 +7,7 @@ Safety Score V10 is the sole active stablecoin safety model. It publishes eviden
 ## Methodology Identity
 
 - Active model: <!-- GENERATED-START: report-cards-active-model -->`v10`<!-- GENERATED-END: report-cards-active-model -->
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v10.01`<!-- GENERATED-END: methodology-version-safety-score -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v10.02`<!-- GENERATED-END: methodology-version-safety-score -->
 - Public response schema: report v7 with score trace v4; retained older publications require explicit historical version dispatch or refusal, never fabricated cause defaults
 - Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`, parsed and digested by `shared/lib/safety-score-v9/policy.ts`
 - **Evaluation build:** `6504f67c3c78de3e2b7514ac40b7a069e7cff48c6da317eff7043b0a32448c74` (`SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST`), generated from the evaluator and fact-producer source manifest. The manifest's evaluator closure includes the policy's reviewed chain-maturity registry, so score-bearing source edits rotate the identity used by replay and publication comparability.
@@ -189,6 +189,12 @@ The policy-declared `market-anchor-longevity` premium applies only to `usdt-teth
 Premium gates re-evaluate each capture; new chain admission can restore eligibility without policy change. Neither 9.9 replay nor 2026-09-23 TRON re-review met every gate. [Structured changelog](../shared/data/methodology-changelogs/safety-score/v10.ts) owns capture scores/history; `CHAIN_MATURITY_REVIEWS_V1` owns current admission/rationale.
 
 Premiums are not inherited: `applyV9AssetPremium` leaves `inheritableScore` unchanged; `projectV9DependencyScore` returns it. USDT may publicly score 87 while `steakusdt-steakhouse`/`susdt-spark` inherit 83. That 83 snapshot is not stale and must not sync to the premium-adjusted parent.
+
+### D29 governed unbounded issuance (10.02)
+
+Economic bound and actor process are separate axes: D14 still classifies any root's durable arbitrary-recipient unbacked issuance power as `unbounded`. [D29's governed-issuance gates](./mint-authority-scoring.md#governed-unbounded-issuance-1002) require complete fresh execution-scope certificates on every authored control, governor-rooted unbounded paths, a minimum unavoidable public delay of 172800 seconds (never summed), flash-resistant token voting, and enumerable authority/capacity. Unknown or incomplete evidence fails closed.
+
+Within unbounded issuance, graded reconciliation takes precedence over qualified `unbounded-governed`, followed by base reconciliation, reconciliation-unknown, and unreconciled issuance; an active incident always derives `compromised`. Governed issuance has base quality 60, a low centralized-mint signal, and the Governed public band. It uses ordinary seasoning and adds the 60 ladder boundary, clipping 55-base credits at 59. `unbounded-unreconciled` remains the 25/high-signal posture with adverse seasoning ceiling 39; `compromised` is 25/critical and never seasoning-eligible. Both are Exposed. Governed issuance stays in DDR's fragile and unbounded sets, relaxing no verdict. The [registry authoring contract](./stablecoin-data.md#governed-issuance-and-cap-semantics-review) requires sourced `capSemanticsReview` evidence for bounded/raiseable/collateral-gated authorization or raise powers, preventing D14 semantic drift.
 
 ## Dependency Coverage
 
