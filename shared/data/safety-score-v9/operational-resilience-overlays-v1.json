@@ -7277,6 +7277,138 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "cngn-compliant-naira",
+      "reviewedAt": "2026-10-03T22:48:40Z",
+      "expiresAt": "2027-10-03T22:50:00Z",
+      "reviewer": "Unknown wave W1R57",
+      "notes": "Exact cNGN exchange availability establishes only a 20-full-calendar-month live-history lower bound. No performance, redemption, reconciliation or incident-free claims.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Busha lists cNGN",
+          "publisher": "Busha",
+          "publishedAt": "2025-02-03",
+          "url": "https://blog.busha.io/busha-lists-cngn/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 20,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usdk-kast",
+      "reviewedAt": "2026-10-03T22:48:40Z",
+      "expiresAt": "2027-10-03T22:50:00Z",
+      "reviewer": "Unknown wave W1R57",
+      "notes": "June 2 KAST Team case study says USDK has launched on Solana. Four full calendar months is a lower bound, not the planned April launch date or parent M history. No performance or incident claims.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "KAST live USDK operating case study",
+          "publisher": "KAST Team / M0",
+          "publishedAt": "2026-06-02",
+          "url": "https://research.m0.org/research/how-kast-builds-stablecoin-products-with-m0",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 4,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "stac-securitize",
+      "reviewedAt": "2026-10-03T22:48:40Z",
+      "expiresAt": "2027-10-03T22:50:00Z",
+      "reviewer": "Unknown wave W1R57",
+      "notes": "Issuer October 29, 2025 launch establishes an 11-full-calendar-month tokenized STAC history lower bound. No parent BNY history, performance, report continuity or incident-free claims.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Securitize STAC tokenized launch",
+          "publisher": "Securitize",
+          "publishedAt": "2025-10-29",
+          "url": "https://investors.securitize.io/news/news-details/2025/Securitize-Launches-Tokenized-AAA-CLO-Fund-with-Services-Provided-by-BNY-Bringing-Institutional-Structured-Credit-Onchain-10-29-2025/default.aspx",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 11,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "xusd-babelfish",
+      "reviewedAt": "2026-10-03T22:48:40Z",
+      "expiresAt": "2027-10-03T22:50:00Z",
+      "reviewer": "Unknown wave W1R57",
+      "notes": "Protocol roadmap and FAQ explicitly date XUSD mainnet deployment June 7, 2021. This establishes 63 full calendar months only; no stress performance, redemption or incident-free claims.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "BabelFish XUSD dated mainnet roadmap",
+          "publisher": "BabelFish",
+          "publishedAt": "2021-06-07",
+          "url": "https://babelfish.gitbook.io/the-babelfish-gitbook/getting-started/roadmap.md",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 63,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

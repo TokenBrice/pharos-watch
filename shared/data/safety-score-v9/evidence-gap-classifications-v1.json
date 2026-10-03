@@ -15584,6 +15584,240 @@
         "https://eth.blockscout.com/tx/0xed24a874126443f07e7976ea89d84499999346ef574b78d4b2dd3daf9bb84128"
       ],
       "rationale": "No finite maximum maturityDaysMax of the fund-share claim is disclosed. This is a fund-share reserve, not individual bills: the 0\u20136 month index mandate is not share maturity. The fund has a 99-year organizational life expressly subject to extension, so neither 180 days nor a conversion of 99 years is a hard share-claim maximum."
+    },
+    {
+      "id": "uw-cngn-compliant-naira-b60ac9ca151ca5d1",
+      "assetId": "cngn-compliant-naira",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T22:57:59Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R57)",
+      "sources": [
+        {
+          "url": "https://www.cngn.co/transparency#audit-report",
+          "observedAt": "2026-10-03T22:57:59Z",
+          "datumAsOf": null,
+          "location": "Rendered 2026 reserve-audit tab",
+          "excerpt": "JAN FEB MAR APR MAY JUN JUL AUG",
+          "assertion": "The hydrated 2026 archive links the August 2026 reserve examination. Static HTML misses the report links; a failed static search is not evidence of nondisclosure."
+        },
+        {
+          "url": "https://drive.google.com/file/d/1Hw3aKTD29QxEqawYQjpRmGtVuK1_lV92/view?usp=drive_link",
+          "observedAt": "2026-10-03T22:57:59Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Pages 5-9; Table 2 whole reserve book",
+          "excerpt": "Money Market Fund 1,906,693,594.74 54; Treasury Bills 455,102,195.58 13; Bank Deposits 820,332,487.05 23; Investment 368,716,771.02 10; Total 3,550,845,048.39 100",
+          "assertion": "Current complete measured reserve composition and liabilities are public. Named-firm admission requires an established publishedAt; the accountant signature is undated, management stamp has no visible signing date, and PDF creation/modification timestamps are not publication evidence. Proof metadata is corrected without inventing that required date."
+        }
+      ]
+    },
+    {
+      "id": "uw-usdk-kast-f8429a4fab0c2c94",
+      "assetId": "usdk-kast",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdk-kast:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R57)",
+      "sources": [
+        {
+          "url": "https://www.kast.xyz/en/legal/terms-and-conditions-of-service",
+          "observedAt": "2026-10-03T22:51:12Z",
+          "datumAsOf": "2026-07-07",
+          "location": "Wallet and Card Balance / fee terms",
+          "excerpt": "Fees are listed on the Platform and may be updated, removed or new fees introduced at the Company's discretion.",
+          "assertion": "KAST publishes withdrawal rights, compliance checks and partner charges, but directs fee amounts to the platform; no public complete USDK-to-USD fee schedule is given."
+        },
+        {
+          "url": "https://www.kast.xyz/en/legal/terms-and-conditions-of-service",
+          "observedAt": "2026-10-03T22:51:12Z",
+          "datumAsOf": "2026-07-07",
+          "location": "Scope of Services",
+          "excerpt": "you retain an affirmative right to redeem or withdraw the unspent balance of the resulting payment obligation at any time, subject to our standard withdrawal procedures, compliance and fraud checks, minimum limits, and applicable fees.",
+          "assertion": "App withdrawal restrictions are disclosed; USDK-specific complete fee terms remain unpublished. App debt terms are not assumed to be direct token-holder custody rights."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.kast.xyz/en/legal",
+        "https://www.kast.xyz/en/legal/terms-and-conditions-of-service",
+        "https://www.kast.xyz/en/legal/kast-risk-disclosure",
+        "https://www.kast.xyz/en/newsroom/press-releases/kast-strengthens-its-banking-alternative-platform-with-its-own-stablecoins",
+        "https://research.m0.org/research/how-kast-builds-stablecoin-products-with-m0",
+        "https://docs.m0.org/protocol/solana",
+        "https://docs.m0.org/resources/addresses/m0-platform",
+        "https://github.com/m0-foundation/solana-m-extensions"
+      ],
+      "rationale": "For the configured KAST app/partner USDK-to-fiat redemption route, complete numeric/formula all-in cost is not public: KAST defers fees to its app and partner terms. The same missing fee schedule prevents complete wrapper withdrawalTerms admission despite known app eligibility/discretion. M0 wrap/unwrap documentation is a separate M-output route, not a USD fiat fee schedule; USDKy savings terms are not USDK terms."
+    },
+    {
+      "id": "uw-usdk-kast-84b96f26b33bde8f",
+      "assetId": "usdk-kast",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "withdrawalTerms",
+        "pillar": "backing",
+        "requiredDatum": "withdrawalTerms",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R57)",
+      "sources": [
+        {
+          "url": "https://www.kast.xyz/en/legal/terms-and-conditions-of-service",
+          "observedAt": "2026-10-03T22:51:12Z",
+          "datumAsOf": "2026-07-07",
+          "location": "Wallet and Card Balance / fee terms",
+          "excerpt": "Fees are listed on the Platform and may be updated, removed or new fees introduced at the Company's discretion.",
+          "assertion": "KAST publishes withdrawal rights, compliance checks and partner charges, but directs fee amounts to the platform; no public complete USDK-to-USD fee schedule is given."
+        },
+        {
+          "url": "https://www.kast.xyz/en/legal/terms-and-conditions-of-service",
+          "observedAt": "2026-10-03T22:51:12Z",
+          "datumAsOf": "2026-07-07",
+          "location": "Scope of Services",
+          "excerpt": "you retain an affirmative right to redeem or withdraw the unspent balance of the resulting payment obligation at any time, subject to our standard withdrawal procedures, compliance and fraud checks, minimum limits, and applicable fees.",
+          "assertion": "App withdrawal restrictions are disclosed; USDK-specific complete fee terms remain unpublished. App debt terms are not assumed to be direct token-holder custody rights."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.kast.xyz/en/legal",
+        "https://www.kast.xyz/en/legal/terms-and-conditions-of-service",
+        "https://www.kast.xyz/en/legal/kast-risk-disclosure",
+        "https://www.kast.xyz/en/newsroom/press-releases/kast-strengthens-its-banking-alternative-platform-with-its-own-stablecoins",
+        "https://research.m0.org/research/how-kast-builds-stablecoin-products-with-m0",
+        "https://docs.m0.org/protocol/solana",
+        "https://docs.m0.org/resources/addresses/m0-platform",
+        "https://github.com/m0-foundation/solana-m-extensions"
+      ],
+      "rationale": "For the configured KAST app/partner USDK-to-fiat redemption route, complete numeric/formula all-in cost is not public: KAST defers fees to its app and partner terms. The same missing fee schedule prevents complete wrapper withdrawalTerms admission despite known app eligibility/discretion. M0 wrap/unwrap documentation is a separate M-output route, not a USD fiat fee schedule; USDKy savings terms are not USDK terms."
+    },
+    {
+      "id": "uw-stac-securitize-1a27e870ba238e87",
+      "assetId": "stac-securitize",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:stac-securitize:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R57)",
+      "sources": [
+        {
+          "url": "https://securitize.io/primary-market/Securitize-BNY-CLO-Fund",
+          "observedAt": "2026-10-03T22:51:12Z",
+          "datumAsOf": null,
+          "location": "Rendered Redemptions footnotes 4 and 5",
+          "excerpt": "It is expected that CLO liquidations will generally be facilitated on a T+2 or T+3 timing, however, there can be no guarantee of such timing.",
+          "assertion": "Daily redemption and expected liquidation timing are explicitly not guaranteed final-settlement maxima."
+        },
+        {
+          "url": "https://securitize.io/primary-market/Securitize-BNY-CLO-Fund",
+          "observedAt": "2026-10-03T22:51:12Z",
+          "datumAsOf": null,
+          "location": "Rendered Redemptions footnote 5",
+          "excerpt": "On-demand redemptions via a liquidity pool are available at GP discretion. Liquidity may be subject to delays due to market conditions or blockchain settlement mechanics.",
+          "assertion": "Discretionary on-demand pool availability is not a guaranteed full issuer redemption settlement bound."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://securitize.io/primary-market/Securitize-BNY-CLO-Fund",
+        "https://securitize.io/fee-schedule-table",
+        "https://investors.securitize.io/news/news-details/2025/Securitize-Launches-Tokenized-AAA-CLO-Fund-with-Services-Provided-by-BNY-Bringing-Institutional-Structured-Credit-Onchain-10-29-2025/default.aspx",
+        "https://www.sec.gov/Archives/edgar/data/2095325/000209532525000001/0002095325-25-000001-index.htm",
+        "https://chroniclelabs.org/api/ipfs/Qmedv33sWmMtXbho9dbZaXuFgsw7nL2c82UU6Rpt2aDY1J"
+      ],
+      "rationale": "The exact primary-market STAC fund redemption route has no public guaranteed end-to-end maximum settlement interval. Issuer terms explicitly disclaim the expected T+2/T+3 liquidation timing and make liquidity-pool redemption discretionary. Daily request frequency and one-day holder transfer restriction are not final USD settlement."
+    },
+    {
+      "id": "uw-stac-securitize-dfa329b1d04c516a",
+      "assetId": "stac-securitize",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:266991e8408d5ccd5cf478f9",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R57)",
+      "sources": [
+        {
+          "url": "https://chroniclelabs.org/api/ipfs/Qmedv33sWmMtXbho9dbZaXuFgsw7nL2c82UU6Rpt2aDY1J",
+          "observedAt": "2026-10-03T22:51:12Z",
+          "datumAsOf": "2026-09-29",
+          "location": "payload.output.dashboard.portfolio.positions",
+          "excerpt": "\"description\":\"CIFC FUNDING LTD 2022-1AR CLO 4.96286% 07/17/2041\"",
+          "assertion": "Underlying CLO positions have dated maturities; the proof does not establish a maximum contractual maturity of the single admitted STAC fund-NAV claim."
+        },
+        {
+          "url": "https://securitize.io/primary-market/Securitize-BNY-CLO-Fund",
+          "observedAt": "2026-10-03T22:51:12Z",
+          "datumAsOf": null,
+          "location": "Rendered Overview",
+          "excerpt": "This Fund provides digital, tokenized exposure to a diversified portfolio of U.S. dollar-denominated Collateralized Loan Obligations (CLOs), with a focus on tranches rated AAA.",
+          "assertion": "Fund exposure is disclosed, without a fund-share maximum term or governing all-in-scope maturity covenant."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://securitize.io/primary-market/Securitize-BNY-CLO-Fund",
+        "https://investors.securitize.io/news/news-details/2025/Securitize-Launches-Tokenized-AAA-CLO-Fund-with-Services-Provided-by-BNY-Bringing-Institutional-Structured-Credit-Onchain-10-29-2025/default.aspx",
+        "https://www.sec.gov/Archives/edgar/data/2095325/000209532525000001/0002095325-25-000001-index.htm",
+        "https://chroniclelabs.org/api/ipfs/Qmedv33sWmMtXbho9dbZaXuFgsw7nL2c82UU6Rpt2aDY1J",
+        "https://www.securitize-stac.com/"
+      ],
+      "rationale": "No maximum term is publicly specified for the admitted STAC fund-NAV exposure. Full dated portfolio maturities concern constituent CLOs, not the redeemable fund share; public issuer offering/launch and SEC filing disclose no all-in-scope fund maturity covenant. Neither latest underlying maturity nor WAM is substituted for the fund claim. The failed portal is not the basis for C."
+    },
+    {
+      "id": "uw-xusd-babelfish-057b2a8da5567afa",
+      "assetId": "xusd-babelfish",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:xusd-babelfish:basket-redeem"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T22:51:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R57)",
+      "sources": [
+        {
+          "url": "https://babelfish.gitbook.io/the-babelfish-gitbook/getting-started/balancing-curves.md",
+          "observedAt": "2026-10-03T22:48:40Z",
+          "datumAsOf": null,
+          "location": "Balancing curve technical specification / Rewards and penalties",
+          "excerpt": "Negative rewards are removed in XUSD from a user\u2019s withdrawal prior to conversion to the required stablecoin and kept in a vault.",
+          "assertion": "Exact basket imbalance withdrawal formula is public (R=V_n-V_(n+1), V=C*D/(1-D), maximum penalty 10%); current documented redemption producer does not evaluate basket-state-dependent same-notional cost. W15 disclosed-unquantified treatment, not zero fees."
+        }
+      ]
     }
   ]
 }
