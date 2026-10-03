@@ -9989,6 +9989,105 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "cusd-celo",
+      "reviewedAt": "2026-10-03T23:05:55Z",
+      "expiresAt": "2027-10-03T23:05:55Z",
+      "reviewer": "W1R87",
+      "notes": "Issuer-reported live-history lower bound from the dated cLabs publication confirming cUSD already operating; elapsed full months from publication, not an invented exact launch day. No independent continuity, throughput, reconciliation or incident-free claims.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "cLabs discussion confirming cUSD launch",
+          "publisher": "cLabs and DuniaPay",
+          "publishedAt": "2021-04-09",
+          "url": "https://forum.celo.org/t/approach-to-stablecoins-on-celo/897",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 65,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "ceur-celo",
+      "reviewedAt": "2026-10-03T23:05:55Z",
+      "expiresAt": "2027-10-03T23:05:55Z",
+      "reviewer": "W1R87",
+      "notes": "Issuer-reported live-history lower bound from cLabs' dated achieved-launch milestone, not the earlier prospective April activation schedule. No independent continuity, throughput, reconciliation or incident-free claims.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "cLabs achieved cEUR launch milestone",
+          "publisher": "cLabs",
+          "publishedAt": "2021-09-24",
+          "url": "https://forum.celo.org/t/clabs-product-priorities/1395",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 60,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "stkgho-umbrella-aave",
+      "reviewedAt": "2026-10-03T23:05:55Z",
+      "expiresAt": "2027-10-03T23:05:55Z",
+      "reviewer": "W1R87",
+      "notes": "Exact Umbrella GHO operating history, not parent GHO or legacy stkGHO history. Official changelog dates Umbrella launch to June 5, 2025; dated governance operating review identifies exact wrapper 0x4f827a63755855cdf3e8f3bcd20265c833f15033. No throughput, financial reconciliation or incident-free claims.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Aave Umbrella launch changelog",
+          "publisher": "Aave Labs",
+          "publishedAt": "2025-06-05",
+          "url": "https://www.aave.com/docs/resources/changelog",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 15,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }
