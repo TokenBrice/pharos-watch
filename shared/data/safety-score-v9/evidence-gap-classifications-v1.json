@@ -18334,6 +18334,285 @@
         "https://investors.securitize.io/news/news-details/2025/Hamilton-Lane-and-Securitizes-SCOPE-Gains-Instant-RLUSD-Liquidity-by-integrating-with-VBILLs-Onchain-Facility-11-05-2025/default.aspx"
       ],
       "rationale": "No current exact HLSCOPE offchain-issuer all-in redemption fee schedule or request-to-final-fiat-settlement maximum is published. The historical no-Securitize-transaction-fee statement expressly excludes other fees. Main Fund PPM terms cannot be applied to the separate feeder, and instant RLUSD liquidity is a distinct rail from the modeled fiat route."
+    },
+    {
+      "id": "uw-usdr-rise-68cc82cb18727d2c",
+      "assetId": "usdr-rise",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "supervision",
+        "pillar": "control",
+        "requiredDatum": "supervision",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:01:04Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R05)",
+      "sources": [
+        {
+          "url": "https://docs.risechain.com/docs/rise-evm/usdr",
+          "observedAt": "2026-10-03T23:00:53Z",
+          "datumAsOf": null,
+          "location": "Minting and redemption, canonical route",
+          "excerpt": "RISE holds a direct minting relationship with M0, enabling 1:1 minting of USDR by RISE from USDC on Ethereum.",
+          "assertion": "Names a product relationship, not the exact USDR legal issuer, supervisory authority or authorization."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.risechain.com/docs/rise-evm/usdr",
+        "https://www.risechain.com/",
+        "https://docs.m0.org/issuers/overview",
+        "https://docs.m0.org/resources/addresses/m0-platform",
+        "https://docs.m0.org/resources/audits"
+      ],
+      "rationale": "Exact USDR issuing-entity supervision/authorization is not identified in its native product docs, issuer site or M0 issuer/contract/audit disclosures. M0 generic qualified-institution requirements and unrelated StablR USDR licenses do not establish RISE-USDR supervision. This is missing product-specific disclosure, not an assertion of unlicensed activity."
+    },
+    {
+      "id": "uw-usdr-rise-9210045a4ceba364",
+      "assetId": "usdr-rise",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:9396d6806d766717712c6e25",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:01:04Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R05)",
+      "sources": [
+        {
+          "url": "https://docs.m0.org/build/accessing-liquidity",
+          "observedAt": "2026-10-03T23:00:53Z",
+          "datumAsOf": null,
+          "location": "Onchain Orchestration, product capabilities",
+          "excerpt": "Enables any transaction size",
+          "assertion": "The advertised any-size route uses partial fills and solver inventory cycling; no maximum completion horizon for the whole RISE M reserve claim is given."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.risechain.com/docs/rise-evm/usdr",
+        "https://docs.m0.org/build/accessing-liquidity",
+        "https://docs.m0.org/api-reference/orchestration/overview",
+        "https://docs.m0.org/resources/addresses/m0-platform",
+        "https://explorer.risechain.com/api/v2/smart-contracts/0xf7f9638cb444d65e5a40bf5ff98ebe4ff319f04e"
+      ],
+      "rationale": "Exact full-slice realization horizon of the M token held by USDR is not disclosed. Atomic extension swaps return another M claim; direct M output is approved-swapper gated. Public USDC solver routes permit partial fills/inventory cycling without a published whole-position completion bound. Neither Treasury underlying maturity nor one sampled swap supplies liquidityHorizon."
+    },
+    {
+      "id": "uw-pusd-plume-bffe4e68ad1f41ae",
+      "assetId": "pusd-plume",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:01:04Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R05)",
+      "sources": [
+        {
+          "url": "https://www.plume.org/blog/nexus-eoracle",
+          "observedAt": "2026-10-03T23:00:54Z",
+          "datumAsOf": "2025-03-31",
+          "location": "Driving Innovation in the Plume Ecosystem",
+          "excerpt": "This solution provides real-time verification of backing assets and collateralization levels, ensuring ongoing stability and reliability of the pUSD ecosystem.",
+          "assertion": "Real-time collateral monitoring is disclosed; no exact whole-liability reconciliation procedure/cadence across both canonical deployments is supplied."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.plume.org/plume/tokens/plume-usd",
+        "https://www.plume.org/pusd",
+        "https://www.plume.org/blog/nexus-eoracle",
+        "https://docs.nucleusearn.io/nucleus-architecture/vault-framework",
+        "https://blog.eo.app/eo-deploys-on-plume-mainnet-powering-top-dapps-in-the-rwa-ecosystem/",
+        "https://docs.plume.org/plume/llms.txt",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x16424edf021697e34b800e1d98857536b0f2287b",
+        "https://explorer.plume.org/api/v2/smart-contracts/0x16424edf021697e34b800e1d98857536b0f2287b",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xd282fb66e56cf2873a75fbb2e15d785c5901c0b2",
+        "https://explorer.plume.org/api/v2/smart-contracts/0x5766a40abfb8802303235a2f5f12a71ed84d4700"
+      ],
+      "rationale": "Exact pUSD economic-control asset/liability reconciliation cadence and complete liability inventory are not published in the reviewed issuer, BoringVault/accountant, audit/compliance and EO monitoring disclosures. Real-time collateral/exchange-rate monitoring and token supply readability alone do not establish the continuous whole-book reconciliation required here."
+    },
+    {
+      "id": "uw-usd1-world-liberty-financial-3f6d784e737fa45b",
+      "assetId": "usd1-world-liberty-financial",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usd1-world-liberty-financial:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:01:04Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R05)",
+      "sources": [
+        {
+          "url": "https://www.bitgo.com/legal/bitgo-coin-minting-services-terms/",
+          "observedAt": "2026-10-03T23:00:54Z",
+          "datumAsOf": "2026-03-25",
+          "location": "II.6 Minting Services Fees",
+          "excerpt": "The transaction fees displayed in the Platform at the time Client submits the applicable mint or redemption request will govern that request.",
+          "assertion": "Customer-platform fees control; public terms do not disclose an exact numeric all-in redemption fee or upper bound."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.bitgo.com/legal/bitgo-coin-minting-services-terms/",
+        "https://www.bitgo.com/legal/bitgo-additional-terms/",
+        "https://app.bitgo.com/my/mint/fees",
+        "https://docs.worldlibertyfinancial.com/legal/terms-of-service",
+        "https://docs.worldlibertyfinancial.com/usd1-token/usd1-risk-disclosures"
+      ],
+      "rationale": "Exact cost/all-in fee bound for the offchain-issuer USD1 redemption route is not publicly disclosed. Binding terms defer the transaction-specific fee to the authenticated customer platform and charge network fees separately. Public Additional Terms point to that customer fee screen, not a public numerical schedule; neither par redemption nor the absence of public numbers means zero fees."
+    },
+    {
+      "id": "uw-usd1-world-liberty-financial-d0cfc215e8d6df66",
+      "assetId": "usd1-world-liberty-financial",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usd1-world-liberty-financial:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:01:04Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R05)",
+      "sources": [
+        {
+          "url": "https://www.bitgo.com/legal/bitgo-coin-minting-services-terms/",
+          "observedAt": "2026-10-03T23:00:54Z",
+          "datumAsOf": "2026-03-25",
+          "location": "II.4(B) Fiat Referenced Coin redemption",
+          "excerpt": "Redemption of Fiat Referenced Coins will be deemed to have occurred when BitGo processes and initiates the transfer of Fiat Currency to Client.",
+          "assertion": "Transfer initiation is not final receipt; typical two-business-day processing has explicit delay exclusions, not a hard settlement SLA."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.bitgo.com/legal/bitgo-coin-minting-services-terms/",
+        "https://www.bitgo.com/legal/bitgo-additional-terms/",
+        "https://docs.worldlibertyfinancial.com/legal/terms-of-service",
+        "https://docs.worldlibertyfinancial.com/usd1-token/usd1-risk-disclosures",
+        "https://landing.bitgo.com/rs/552-OGK-141/images/USD1_Reserve_Attestation_Report_August_2026.pdf?version=0"
+      ],
+      "rationale": "Exact maximum final-settlement bound for the offchain-issuer USD1 route is not published. The terms target initiation typically within two business days after a compliant request, with no delay liability for payment rails, outages or legal constraints. Compliance completion is itself a precondition without a maximum; the typical initiation target cannot be authored as guaranteed final settlement."
+    },
+    {
+      "id": "uw-usd1-world-liberty-financial-3220f679b27f2e5c",
+      "assetId": "usd1-world-liberty-financial",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:02bda6eab15198db613db733",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:01:04Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R05)",
+      "sources": [
+        {
+          "url": "https://landing.bitgo.com/rs/552-OGK-141/images/USD1_Reserve_Attestation_Report_August_2026.pdf?version=0",
+          "observedAt": "2026-10-03T23:00:54Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Note B, Government Money Market funds, page 6",
+          "excerpt": "Government Money Market funds, at net asset value, hold investments in cash, cash equivalents, and short-term debt securities.",
+          "assertion": "No scalar maximum maturity of the entire live-adapter cash/Treasury/fund-share envelope is stated."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://landing.bitgo.com/rs/552-OGK-141/images/USD1_Reserve_Attestation_Report_August_2026.pdf?version=0",
+        "https://www.bitgo.com/usd1/attestations/",
+        "https://www.bitgo.com/legal/bitgo-coin-minting-services-terms/",
+        "https://docs.worldlibertyfinancial.com/usd1-token/usd1-risk-disclosures",
+        "https://institutional.fidelity.com/app/tabbed/literature/FIIS_FL_REGDOCS_CASH_DPL3.html?navId=325&productLine=3&tab=literature"
+      ],
+      "rationale": "The exact maturityDaysMax of the admitted 100% other-class aggregate Treasury/MMF/cash slice is not disclosed. Note B limits cash-equivalent investments to three months from purchase, but separately includes perpetual government fund shares (CUSIP 31607A703). A cash-only bound, fund WAM or underlying security limit does not bound every claim in this live aggregate; no fabricated zero/90-day maturity or dated-to-live split."
+    },
+    {
+      "id": "uw-usda-alpha-partner-54f922572713bbca",
+      "assetId": "usda-alpha-partner",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:01:04Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R05)",
+      "sources": [
+        {
+          "url": "https://paragraph.com/@alphapartners/usda-the-stable-anchor-of-decentralized-finance-a-new-engine-connecting-real-and-on-chain-value.md",
+          "observedAt": "2026-10-03T23:00:54Z",
+          "datumAsOf": "2025-10-22",
+          "location": "The Innovation Behind USDA, Asset Reserve Mechanism",
+          "excerpt": "Every USDA in circulation is backed 1:1 by fiat reserves held off-chain, regularly audited by independent third parties.",
+          "assertion": "Claims regular audits but gives no cadence, identified auditor/report, reserve ledger or assets-versus-liabilities reconciliation procedure."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://alphapartner.vip/",
+        "https://ap-organization-1.gitbook.io/alpha-partners/llms-full.txt",
+        "https://linktr.ee/AlphaPartners",
+        "https://paragraph.com/@alphapartners",
+        "https://paragraph.com/@alphapartners/usda-the-stable-anchor-of-decentralized-finance-a-new-engine-connecting-real-and-on-chain-value.md",
+        "https://skynet.certik.com/projects/alpha-partners"
+      ],
+      "rationale": "Exact USDA whole-book assets/liabilities reconciliation cadence is absent from the issuer website/scripts, full GitBook and official linked article archive. Its USDA article claims regular independent audits without dates, auditor, report or procedure. Real-time issuance/burn data is not reserve reconciliation; GitBook internal-ledger copy concerns UCard points, and CertiK code audit is not a reserve audit."
+    },
+    {
+      "id": "uw-usda-alpha-partner-18d4d5d5bcac7904",
+      "assetId": "usda-alpha-partner",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:01:04Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R05)",
+      "sources": [
+        {
+          "url": "https://paragraph.com/@alphapartners/usda-the-stable-anchor-of-decentralized-finance-a-new-engine-connecting-real-and-on-chain-value.md",
+          "observedAt": "2026-10-03T23:00:54Z",
+          "datumAsOf": "2025-10-22",
+          "location": "The Innovation Behind USDA, Asset Reserve Mechanism",
+          "excerpt": "Every USDA in circulation is backed 1:1 by fiat reserves held off-chain, regularly audited by independent third parties.",
+          "assertion": "A broad fiat-backing claim supplies no itemized reserve assets, current weights, providers or scoped report."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://alphapartner.vip/",
+        "https://ap-organization-1.gitbook.io/alpha-partners/llms-full.txt",
+        "https://linktr.ee/AlphaPartners",
+        "https://paragraph.com/@alphapartners",
+        "https://paragraph.com/@alphapartners/usda-the-stable-anchor-of-decentralized-finance-a-new-engine-connecting-real-and-on-chain-value.md",
+        "https://skynet.certik.com/projects/alpha-partners"
+      ],
+      "rationale": "Exact current USDA reserve composition (asset identities and weights, providers/custody and report period) is not published in reviewed issuer website/scripts, full GitBook or official linked article archive. The dated article supplies only a general off-chain fiat-backing/audit claim. Preserve the synthetic 100% undisclosed slice and its very-high risk; do not infer an itemized cash portfolio or verified audit."
     }
   ]
 }

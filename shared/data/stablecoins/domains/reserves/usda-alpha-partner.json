@@ -19,21 +19,25 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok wave-8 reserve re-verification",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "W1R05 unknown-resolver primary disclosure review",
     "confidence": "manual-review",
     "sources": [
       {
-        "label": "Alpha Partners official website re-opened 2026-07-28 for reserve disclosure",
+        "label": "Alpha Partners official website and shipped scripts re-opened 2026-10-03 for reserve disclosure",
         "url": "https://alphapartner.vip/"
       },
       {
-        "label": "Alpha Partners official documentation (full GitBook corpus) re-opened 2026-07-28 for reserve disclosure",
+        "label": "Alpha Partners official documentation (full GitBook corpus) re-opened 2026-10-03 for reserve disclosure",
         "url": "https://ap-organization-1.gitbook.io/alpha-partners"
+      },
+      {
+        "label": "AlphaPartners USDA issuer article, published 2025-10-22; retrieved 2026-10-03",
+        "url": "https://paragraph.com/@alphapartners/usda-the-stable-anchor-of-decentralized-finance-a-new-engine-connecting-real-and-on-chain-value"
       }
     ],
-    "rationale": "Write-time re-open 2026-07-28 of both primary issuer surfaces confirms continued absence of any USDA reserve composition. (1) https://alphapartner.vip/ returned HTTP 200 as an AP U-Card marketing page; HTML and the shipped index JS contain multi-chain stablecoin/USDT top-up copy only and zero mentions of USDA, reserve composition, proof of reserves, attestation, FDIC, or itemized backing assets. Paths such as /transparency, /reserve, /reserves, and /usda serve the same SPA shell with no additional disclosure. (2) The full Alpha Partners GitBook corpus (llms.txt index plus every linked .md page: background, overview, settlement, multi-card, KYC, core features, usage guidelines, rules-and-trust, vision, roadmap, FAQ, contact, and strategy subpages) was re-fetched; none of the pages name USDA, publish reserve assets/weights/custodians/balances, or host an attestation or proof-of-reserves report. It only lists U-Card USDT top-up flows and generic platform risk language. Secondary aggregator marketing (e.g. CoinGecko/DefiLlama 1:1 USD/FDIC phrasing) is not issuer primary disclosure and supplies no itemized composition; DefiLlama auditLinks remains null. Composition therefore remains a single 100% undisclosed-reserve bucket with knownUnknownExposurePct=100.",
-    "compositionBasis": "No primary USDA reserve-composition disclosure found in the re-opened issuer website and full GitBook corpus on 2026-07-28",
+    "rationale": "Primary disclosures re-opened 2026-10-03: the official website HTML and all shipped script bundles, complete GitBook corpus, official Linktree and its Mirror-to-Paragraph publication archive. The located USDA article dated 2025-10-22 claims every USDA is backed 1:1 by off-chain fiat reserves regularly audited by independent third parties, but names no reserve assets, weights, custodians, auditor, report, report period or reconciliation cadence. Its real-time issuance/circulation/burn visibility is not an assets-versus-liabilities reconciliation. GitBook's internal ledger concerns UCard points and USDT top-ups, not USDA reserves. Preserve the 100% synthetic undisclosed slice and very-high risk; do not turn a broad issuer claim into a measured cash composition or verified audit.",
+    "compositionBasis": "No itemized USDA reserve composition in primary issuer surfaces reviewed 2026-10-03; dated issuer article provides an unverified general off-chain fiat-backing claim only",
     "scope": "full-composition",
     "knownUnknownExposure": "All reserve asset identities, weights, obligors, custodians, legal safeguards, liquidity terms, valuation methods, and asset-versus-liability reconciliation remain unknown.",
     "knownUnknownExposurePct": 100,
@@ -43,7 +47,7 @@
         "reserveName": "Undisclosed reserve assets",
         "pct": 100,
         "disposition": "insufficient-evidence",
-        "rationale": "Re-opened official website and full GitBook corpus on 2026-07-28 still publish no USDA reserve source from which a composition could be authored."
+        "rationale": "Issuer's 2025-10-22 USDA article claims off-chain fiat backing but publishes no asset identities, weights or reserve report; official website and full GitBook corpus supply no itemized composition."
       }
     ]
   }

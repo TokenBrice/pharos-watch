@@ -257,14 +257,25 @@
         {
           "label": "Guardian JMI/MYieldToOne/Freezable/SwapFacility code review, 2025-12-12; not a reserve audit or exact deployment certification",
           "url": "https://github.com/m0-foundation/evm-m-extensions/blob/main/audits/JMI/M0_EVM-M_Extensions_Review_report.pdf"
+        },
+        {
+          "label": "USDR complete role-grant history, terminal pagination; all five JMI roles granted to operational Safe in deployment transaction 2026-05-12",
+          "url": "https://explorer.risechain.com/api/v2/addresses/0x62b7f5a5be488ea58f660c5aff465647213bc6e9/logs?topic=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+        },
+        {
+          "label": "USDR role-revocation history reviewed 2026-10-03; terminal empty result, cross-checked live membership",
+          "url": "https://explorer.risechain.com/api/v2/addresses/0x62b7f5a5be488ea58f660c5aff465647213bc6e9/logs?topic=0xf6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b"
+        },
+        {
+          "label": "W1R05 pinned RISE block 23462554: DEFAULT_ADMIN, ASSET_CAP_MANAGER, FREEZE_MANAGER, PAUSER and YIELD_RECIPIENT_MANAGER memberships all true for operational Safe; each role admin is DEFAULT_ADMIN",
+          "url": "https://rpc.risechain.com"
         }
       ],
       "evidence": "At rise block 23375290, symbol/decimals and EIP-1967 implementation/admin were re-read. Local backing balance was 4,186,507.178834 M against 4,166,902.771484 USDR supply. M-extension wrapping and unwrapping conserve the deposited M claim. The current SwapFacility restricts direct M output to approved swappers; an unprivileged sample canSwapViaPath(child,wM) returned true while child-to-M returned false. This is technical conversion eligibility, not a sent transaction or a cash redemption right. Local role/proxy reach is authored separately from inherited M authority and the parent bridge layer. Calibration provenance (2026-10-03): original umbrella observations retained verbatim: [\"Close current SwapFacility upgrade/role-control reach and all extension operational role holders.\", \"Safe owner/threshold and terminal module pagination are enumerated; executable fallback-handler noninterference, independent human signers and key custody are not publicly established.\"]. Human independence and key custody remain unverified and are priced by their dedicated control signals; financial/legal safeguards remain Backing-domain gaps. Calibration v2 (2026-10-03) reconsidered every prior removal and scoped move. Prior scoped observations retained verbatim: [\"Close the current USDR local SwapFacility upgrade/role-control reach at rise:0xb6807116b3b1b321a390594e31ecd6e0076f6278; the local controller implementation and full permission/upgrade chain remain incompletely reviewed.\"]. Genuine unknown implementation, controller authorization and unreadable execution state are retained as umbrella questions; identified-signer custody/independence is recorded per control, not asserted to be independently scored or resolved. Field re-justification: reconciliation=continuous describes the cited local parent-token custody and wrap/custodian supply-accounting mechanism only. It does not certify the upstream fiat/Treasury book, independent assurance or holder insolvency priority; supervision=unknown supplies no prudential or attestation-based credit. D14/D29 sweep (2026-10-03): Verified JMIExtension _wrap(asset,account,recipient,amount) requires the immutable SwapFacility, transfers the admitted asset, checks the actual balance increase, and only then mints decimal-normalized extension units; the inherited M wrap path transfers matching M first. The operational Safe can assign asset-cap managers and admit/raise non-M asset caps, but these powers do not bypass asset transfer. Collateral admission/value risk is Backing, not arbitrary issuance. Parent M issuance belongs to the inherited serial-claim edge; proxy upgrades are separate from D14. Pinned block hashes read this review: rise 23405374 0xc04310722aff91e1f9f6c14d1ad79b1ba0f443f10b7f1b389b21f52670079315; rise 23375290 0x6d2070ec722f38c6a9f78c23e150623eee52b98991a11f2ad3d3e47047ec3c01. No transaction was sent; no governed-issuance qualification is claimed.",
-      "reviewer": "Sol v10.02 D14/D29 sweep (MiscRaiseable)",
+      "reviewer": "Sol D14/D29 sweep; W1R05 exact operational role census",
       "reviewedAt": "2026-10-03",
       "disposition": "scoreable",
       "unresolvedQuestions": [
-        "Complete the USDR extension operational role-holder census on rise:0x62b7f5a5be488ea58f660c5aff465647213bc6e9; all live operational roles and their holders have not been exhaustively enumerated.",
         "Close the current USDR local SwapFacility upgrade/role-control reach at rise:0xb6807116b3b1b321a390594e31ecd6e0076f6278; the local controller implementation and full permission/upgrade chain remain incompletely reviewed."
       ],
       "scopedQuestions": [

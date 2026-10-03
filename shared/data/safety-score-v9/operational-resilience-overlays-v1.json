@@ -8234,6 +8234,138 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "usdr-rise",
+      "reviewedAt": "2026-10-03T22:48:25Z",
+      "expiresAt": "2027-10-03T22:48:25Z",
+      "reviewer": "W1R05 unknown research wave",
+      "notes": "Contract deployment and initialization on 2026-05-12 establish a conservative four-full-calendar-month eligibility lower bound, not continuous operation or a public launch date. Confirmed operating mint 2026-09-24: 0xd3f133f48cd95db1bcce707f04bc2503d5d85d85a91f527e615dc2e71426bd67. No throughput, stress recovery, reserve reconciliation or incident-free performance asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-token-operation",
+          "label": "Exact USDR deployment and initialization at RISE block 10977621",
+          "publisher": "RISE explorer",
+          "publishedAt": "2026-05-12",
+          "url": "https://explorer.risechain.com/tx/0x51c9bd6635423dcaab08ff6c9a63aa689295b900dc8fc348a42dae872c2eb89d",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 4,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-token-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "pusd-plume",
+      "reviewedAt": "2026-10-03T22:48:25Z",
+      "expiresAt": "2027-10-03T22:48:25Z",
+      "reviewer": "W1R05 unknown research wave",
+      "notes": "Dated exact-token operating evidence establishes only a conservative full-calendar-month lower bound; not necessarily inception. No independent continuity, throughput, stress recovery, reconciliation or incident-free performance is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-token-operation",
+          "label": "Plume issuer announcement identifies operating pUSD",
+          "publisher": "Plume",
+          "publishedAt": "2025-06-23",
+          "url": "https://www.plume.org/blog/agora",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 15,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-token-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usd1-world-liberty-financial",
+      "reviewedAt": "2026-10-03T22:48:25Z",
+      "expiresAt": "2027-10-03T22:48:25Z",
+      "reviewer": "W1R05 unknown research wave",
+      "notes": "Dated exact-token operating evidence establishes only a conservative full-calendar-month lower bound; not necessarily inception. No independent continuity, throughput, stress recovery, reconciliation or incident-free performance is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-token-operation",
+          "label": "April 22 2025 outstanding USD1 documented in June 6 examination",
+          "publisher": "BitGo / Crowe LLP",
+          "publishedAt": "2025-06-06",
+          "url": "https://landing.bitgo.com/rs/552-OGK-141/images/USD1_Reserve_Attestation_Report_April_2025%20.pdf?version=0",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 17,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-token-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usda-alpha-partner",
+      "reviewedAt": "2026-10-03T22:48:25Z",
+      "expiresAt": "2027-10-03T22:48:25Z",
+      "reviewer": "W1R05 unknown research wave",
+      "notes": "Dated exact-token operating evidence establishes only a conservative full-calendar-month lower bound; not necessarily inception. No independent continuity, throughput, stress recovery, reconciliation or incident-free performance is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-token-operation",
+          "label": "USDA transfer at block 60000000",
+          "publisher": "BNB Chain",
+          "publishedAt": "2025-09-04",
+          "url": "https://bscscan.com/tx/0x2827b0e0d262af84ff1b6097d5d11f779ef4083bd05aaafbcb6f225651b2b7c8",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 12,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-token-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }
