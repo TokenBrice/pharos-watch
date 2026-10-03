@@ -1760,6 +1760,125 @@
         "https://support.paxos.com/articles/7442970352-how-to-submit-a-usd-fiat-withdrawal-to-a-bank-account"
       ],
       "rationale": "The exact whole-slice liquidityHorizon for allocated reserve gold is undisclosed. The full August gold inventory, vault/source identities, whitepaper, terms, dashboard docs, product FAQ and redemption/wire help disclose ownership and customer conversion mechanisms but no funded or enforceable time bound to realize the entire scoped gold position into USD. Instant token transfer, indicative quotes and market-wide gold volume cannot establish immediate whole-book liquidity."
+    },
+    {
+      "id": "uw-eurc-circle-2549905cf243db45",
+      "assetId": "eurc-circle",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:eurc-circle:offchain-issuer"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T22:32:38Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (PilotRwa)",
+      "sources": [
+        {
+          "url": "https://help.circle.com/support/en/usdc-eurc-redemption-structure?id=kb_article_view&sysparm_article=KB0010644&sysparm_language=en",
+          "observedAt": "2026-10-03T22:32:38Z",
+          "datumAsOf": null,
+          "location": "Updated August 2026; fee table effective March 15, 2026 and FAQ",
+          "excerpt": "The daily free redemption threshold is calculated per currency, not combined across USDC and EURC.",
+          "assertion": "Public USDC/EURC tiered fees depend on daily gross/net redemption, monthly flows and credits. The current route lacks customer tier/flow state and formula evaluation; W15 supports B, not invented zero or a universal fixed fee."
+        }
+      ]
+    },
+    {
+      "id": "uw-usdc-circle-32b0b029346dba98",
+      "assetId": "usdc-circle",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdc-circle:offchain-issuer"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T22:32:38Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (PilotRwa)",
+      "sources": [
+        {
+          "url": "https://help.circle.com/support/en/usdc-eurc-redemption-structure?id=kb_article_view&sysparm_article=KB0010644&sysparm_language=en",
+          "observedAt": "2026-10-03T22:32:38Z",
+          "datumAsOf": null,
+          "location": "Updated August 2026; fee table effective March 15, 2026 and FAQ",
+          "excerpt": "The daily free redemption threshold is calculated per currency, not combined across USDC and EURC.",
+          "assertion": "Public USDC/EURC tiered fees depend on daily gross/net redemption, monthly flows and credits. The current route lacks customer tier/flow state and formula evaluation; W15 supports B, not invented zero or a universal fixed fee."
+        }
+      ]
+    },
+    {
+      "id": "uw-eurc-circle-cb63db797c44cac1",
+      "assetId": "eurc-circle",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:60326ba3ee3552a8d97c55c0",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:32:38Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (PilotRwa)",
+      "sources": [
+        {
+          "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/EURC%20Attestations/2026%20EURC_Examination%20Report%20August%2026.pdf",
+          "observedAt": "2026-10-03T22:32:38Z",
+          "datumAsOf": "2026-08-31",
+          "location": "EURC Reserve Report pp.2-4, reserve criteria and cash balances",
+          "excerpt": "Bank balances have been adjusted for timing and settlement differences, which include: deposits/withdrawals occurring after the bank statement cut-off time (but before the Report Dates).",
+          "assertion": "Discloses bank cash and net settlement adjustments, but no contractual maximum term for the entire bank-deposit slice."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.circle.com/transparency",
+        "https://www.circle.com/legal/eurc-terms",
+        "https://www.circle.com/legal/eea-terms",
+        "https://www.circle.com/legal/mica-eurc-whitepaper",
+        "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/EURC%20Attestations/2026%20EURC_Examination%20Report%20August%2026.pdf"
+      ],
+      "rationale": "The exact missing datum is maturityDaysMax for Cash at Regulated Financial Institutions (net settlement adjustments). The current signed reserve report, archive, issuer terms and regulator-notified white paper disclose segregated euro balances and liquidity/redemption rights, not deposit account contracts or a hard maximum term covering this entire composite slice. Token holder redemption and bank cash liquidity are not contractual maturity. Bank-deposit is not the compiler's cash N/A class; no zero or class relabel is authored."
+    },
+    {
+      "id": "uw-usdc-circle-eb842dec09f88eee",
+      "assetId": "usdc-circle",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:b842f343c9aa3c612f5caafc",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:32:38Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (PilotRwa)",
+      "sources": [
+        {
+          "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20August%2026.pdf",
+          "observedAt": "2026-10-03T22:32:38Z",
+          "datumAsOf": "2026-08-31",
+          "location": "USDC Reserve Report pp.2-5, reserve criteria and bank balances",
+          "excerpt": "Segregated Accounts are unencumbered accounts held on behalf of USDC holders that are segregated from other accounts of Circle, including general corporate funds.",
+          "assertion": "Treasury maturity dates and overnight repo term are disclosed separately; bank cash and net settlement adjustments have no stated maximum contractual term."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.circle.com/transparency",
+        "https://www.circle.com/legal/usdc-terms",
+        "https://www.circle.com/legal/eea-terms",
+        "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20August%2026.pdf"
+      ],
+      "rationale": "The exact missing datum is maturityDaysMax for Cash at Regulated Financial Institutions (net settlement adjustments). The current signed report and transparency archive identify bank cash and settlement adjustments, and the legal terms explain segregated USD-denominated reserves. None supplies account contracts or a maximum term applying to every claim in this scoped bank-deposit slice. Published Treasury maturity dates and overnight repo maturities cannot be transferred to bank claims; holder redemption at par is not deposit maturity."
     }
   ]
 }

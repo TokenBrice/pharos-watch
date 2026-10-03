@@ -692,6 +692,114 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "buidl-blackrock",
+      "reviewedAt": "2026-10-03T22:36:39Z",
+      "expiresAt": "2027-10-03T22:29:51Z",
+      "reviewer": "PilotRwa primary-source research",
+      "notes": "Conservative exact-token calendar-history lower bound between documented March 2024 launch and January 27, 2025 live BUIDL AUM observation. No extrapolation to today's history, continuous-service finding, throughput, stress-recovery, reconciliation continuity or incident-free claim.",
+      "sources": [
+        {
+          "sourceId": "exact-token-history",
+          "label": "BUIDL exact token launch",
+          "publisher": "Securitize",
+          "publishedAt": "2024-03-21",
+          "url": "https://securitize.io/learn/press/blackrock-launches-first-tokenized-fund-buidl-on-the-ethereum-network",
+          "confidence": "issuer-reported"
+        },
+        {
+          "sourceId": "documented-live-observation",
+          "label": "Securitize deployment: BUIDL live AUM as of January 27, 2025",
+          "publisher": "Wormhole",
+          "publishedAt": "2025-01-28",
+          "url": "https://wormhole.com/blog/securitize-announces-the-live-deployment-of-wormhole-enabling-tokenized",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 10,
+          "observedAt": "2025-01-27",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-token-history",
+            "documented-live-observation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "eurc-circle",
+      "reviewedAt": "2026-10-03T22:32:38Z",
+      "expiresAt": "2027-10-03T22:29:51Z",
+      "reviewer": "PilotRwa primary-source research",
+      "notes": "Issuer-reported EURC operating-history lower bound from the December 24, 2025 white paper: first issued June 2022 and still issued by the successor Circle SAS. 41 completed months conservatively excludes the partial June and December endpoints. This is token history, not Circle parent age or continuous verified performance. No throughput, stress recovery, financial-report continuity or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-token-history",
+          "label": "EURC regulator-notified white paper, B.6 and B.9",
+          "publisher": "Circle",
+          "publishedAt": "2025-12-24",
+          "url": "https://www.circle.com/legal/mica-eurc-whitepaper",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 41,
+          "observedAt": "2025-12-24",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-token-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usdc-circle",
+      "reviewedAt": "2026-10-03T22:29:51Z",
+      "expiresAt": "2027-10-03T22:29:51Z",
+      "reviewer": "PilotRwa primary-source research",
+      "notes": "Issuer-reported exact-token operating-history lower bound only; launch evidence does not prove uninterrupted service. No redemption-throughput, stress-recovery, reserve-reconciliation continuity or incident-free claim is made. The January 2023 release marks the five-year anniversary year; conservative 48 months avoids claiming the later 2023 anniversary had already elapsed.",
+      "sources": [
+        {
+          "sourceId": "exact-token-history",
+          "label": "USDC issuer operating-history milestone",
+          "publisher": "Circle",
+          "publishedAt": "2023-01-17",
+          "url": "https://www.circle.com/pressroom/circle-kicks-off-10-year-anniversary-in-2023-and-5-years-of-usdc-with-release-of-first-annual-state-of-the-usdc-economy-report-and-more",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 48,
+          "observedAt": "2023-01-17",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-token-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }
