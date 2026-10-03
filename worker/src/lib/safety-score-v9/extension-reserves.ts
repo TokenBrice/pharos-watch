@@ -382,32 +382,21 @@ function hasNamedReportFirm(meta: V9ExtensionRegistryMeta): boolean {
   const provider = proof?.provider?.trim();
   if (!provider || !report || !["attestation", "independent-audit"].includes(proof!.type) ||
     !["big4", "regional", "niche"].includes(proof!.attestorTier ?? "")) return false;
-  // Preserve /iu folding for sigma and historical Cyrillic letters.
-  const normalizeName = (value: string) => value.normalize("NFKD").replace(/\p{M}/gu, "")
-    .toLowerCase().replace(/[ς\u1C80-\u1C88]/g, letter => letter.toUpperCase().toLowerCase());
+  const normalizeName = (value: string) => value.normalize("NFKD").replace(/\p{M}/gu, "");
   // A provider may name the actual firm after an issuer-led assurance description.
   const describedFirmNames = Array.from(provider.matchAll(
     /(?:attestations?|audits?|assurance|examinations?)\s*\(([^)]+)\)/giu), match => match[1]!);
   const firmNames = describedFirmNames.length > 0 ? describedFirmNames : [provider];
-  const firmTokens = firmNames.map(name => normalizeName(name.trim().split(/\s/, 1)[0]!));
-  const matchesFirm = (label: string) => {
-    const value = normalizeName(label);
-    return firmTokens.some(token => {
-      for (let index = value.indexOf(token); index >= 0; index = value.indexOf(token, index + 1)) {
-        const end = index + token.length;
-        // A literal search must not start or end inside an astral character.
-        if ((value.codePointAt(index - 1) ?? 0) > 0xffff || (value.codePointAt(end - 1) ?? 0) > 0xffff) continue;
-        if (!/[\p{L}\p{N}]$/u.test(value.slice(Math.max(0, index - 2), index)) &&
-          !/^[\p{L}\p{N}]/u.test(value.slice(end, end + 2))) return true;
-        if (index === value.length) break;
-      }
-      return false;
-    });
-  };
+  const firmPatterns = firmNames.map(name => {
+    const token = normalizeName(name.trim().split(/\s/, 1)[0]!);
+    // eslint-disable-next-line security/detect-non-literal-regexp -- token comes from reviewed registry metadata and is escaped before interpolation.
+    return new RegExp(`(?:^|[^\\p{L}\\p{N}])${token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:$|[^\\p{L}\\p{N}])`, "iu");
+  });
   return report.sources.some(source => {
     // A proof URL can itself be the signed report PDF, rather than an issuer index.
     const reportSource = source.url !== proof!.url || /\.pdf(?:[?#]|$)/i.test(source.url);
-    return reportSource && (matchesFirm(source.label) || matchesFirm(report.reviewer ?? ""));
+    return reportSource && firmPatterns.some(pattern =>
+      pattern.test(normalizeName(source.label)) || pattern.test(normalizeName(report.reviewer ?? "")));
   });
 }
 

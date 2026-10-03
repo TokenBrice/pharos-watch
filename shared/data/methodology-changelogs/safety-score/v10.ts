@@ -5,7 +5,7 @@ export const SAFETY_SCORE_V10: readonly MethodologyChangelogEntry[] = [
     version: "10.01",
     title: "Cause-aware evidence: pipeline gaps are not asset risk",
     date: "2026-10-03",
-    effectiveAt: 1791040920,
+    effectiveAt: 1791042720,
     summary:
       "Safety Score v10.01 distinguishes pipeline and curation gaps from researched issuer non-disclosure, unresearched questions, and measured adverse facts. Proven Pharos-side gaps stay visible without scoring penalties; bounded uncertainty remains in components without missing-data ceilings. The release preserves identified reserves, admits named-firm reports for 120 days, separates Exit confidence causes, and selects the strongest feasible route portfolio. It also includes the reviewed monotonicity, native-bridge, supply-capture, peg-coverage, and data corrections. Missing evidence still grants no executable capacity, favorable rights, or measured-adverse claim.",
     impact: [
