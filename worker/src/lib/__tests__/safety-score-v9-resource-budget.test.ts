@@ -35,7 +35,7 @@ let temporaryDirectory = "";
 let bundledProbe = "";
 
 describe("Safety Score V9 canonical publication resource budget", {
-  timeout: 60_000,
+  timeout: 120_000,
 }, () => {
   beforeAll(() => {
     temporaryDirectory = mkdtempSync(join(tmpdir(), "pharos-v9-resource-"));
@@ -273,7 +273,9 @@ describe("Safety Score V9 canonical publication resource budget", {
     const result = spawnSync(process.execPath, [
       `--max-old-space-size=${CONTAGION_HEAP_LIMIT_MIB}`, "--expose-gc", bundledProbe,
     ], {
-      cwd: ROOT, encoding: "utf8", timeout: 45_000,
+      // Wall-clock guard only (memory is the asserted bound): v10.01 cause
+      // tracing raises evaluation CPU, and shared CI runners exceeded 45s.
+      cwd: ROOT, encoding: "utf8", timeout: 100_000,
       env: { ...process.env, CONTAGION_MATRIX: "1", SAFETY_SCORE_V9_RESOURCE_CAPTURE: "" },
     });
     expect(result.error).toBeUndefined();
