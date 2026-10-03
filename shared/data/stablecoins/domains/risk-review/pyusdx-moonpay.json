@@ -537,11 +537,15 @@
         "controllerChain": "ethereum",
         "controllerAddress": "0xf2f1acbe0ba726fee8d75f3e32900526874740bb",
         "label": "PYUSDx ethereum Portal delegated-account pauser",
-        "authorityType": "unknown",
+        "authorityType": "eoa",
         "observedAt": "2026-10-03",
-        "observedBlock": 26110185,
-        "sources": [{"label": "Exact Portal role and pause deployment", "url": "https://etherscan.io/address/0xaad1466fe33d373189fb9dcc47270e608feee8a7"}],
-        "evidence": "Complete Portal role-event census leaves this sole PAUSER_ROLE member. eth_getCode returns EIP-7702 delegation designator 0xef010063c0c19a282a1b52b07dd5a65b58948a07dae32b; delegated execution and signer safeguards are unresolved, not an inferred EOA."
+        "observedBlock": 26114898,
+        "sources": [
+          {"label": "Exact Portal role and pause deployment", "url": "https://etherscan.io/address/0xaad1466fe33d373189fb9dcc47270e608feee8a7"},
+          {"label": "Verified EIP7702StatelessDeleGator and inherited execution source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x63c0c19a282a1b52b07dd5a65b58948a07dae32b"},
+          {"label": "Pinned Ethereum observation block", "url": "https://etherscan.io/block/26114898"}
+        ],
+        "evidence": "W1R50 at Ethereum block 26114898: Portal.hasRole(PAUSER_ROLE,0xf2f1acbe0ba726fee8d75f3e32900526874740bb)=true. The account retains EIP-7702 designation to verified EIP7702StatelessDeleGator 0x63c0c19a282a1b52b07dd5a65b58948a07dae32b, VERSION 1.3.0. Its signature implementation accepts ECDSA.recover(hash,signature)==address(this), so root authorization is the same single EOA key, not a multisig. Delegated execution also admits EntryPoint 0x0000000071727de22e5e9d8baf0edac6f37da032 and DelegationManager 0xdb9b1e94b5b69df7e401ddbede43491141047db3. EOA denotes the proved root signer, not codelessness or absence of delegate/bypass execution; outstanding signed delegations, key custody, operator independence and complete execution scope are not certified."
       },
       {
         "id": "pyusdx-arbitrum-portal-pause",
@@ -564,11 +568,15 @@
         "controllerChain": "monad",
         "controllerAddress": "0xf2f1acbe0ba726fee8d75f3e32900526874740bb",
         "label": "PYUSDx monad Portal delegated-account pauser",
-        "authorityType": "unknown",
+        "authorityType": "eoa",
         "observedAt": "2026-10-03",
-        "observedBlock": 110115415,
-        "sources": [{"label": "Exact Portal role and pause deployment", "url": "https://monadscan.com/address/0xaad1466fe33d373189fb9dcc47270e608feee8a7"}],
-        "evidence": "Complete Portal role-event census leaves this sole PAUSER_ROLE member. eth_getCode returns EIP-7702 delegation designator 0xef010063c0c19a282a1b52b07dd5a65b58948a07dae32b; delegated execution and signer safeguards are unresolved, not an inferred EOA."
+        "observedBlock": 110303959,
+        "sources": [
+          {"label": "Exact Portal role and pause deployment", "url": "https://monadscan.com/address/0xaad1466fe33d373189fb9dcc47270e608feee8a7"},
+          {"label": "Verified Monad EIP7702StatelessDeleGator deployment", "url": "https://monadscan.com/address/0x63c0c19a282a1b52b07dd5a65b58948a07dae32b#code"},
+          {"label": "Pinned Monad observation block", "url": "https://monadscan.com/block/110303959"}
+        ],
+        "evidence": "W1R50 at Monad block 110303959: Portal.hasRole(PAUSER_ROLE,0xf2f1acbe0ba726fee8d75f3e32900526874740bb)=true. The account retains EIP-7702 designation to verified EIP7702StatelessDeleGator 0x63c0c19a282a1b52b07dd5a65b58948a07dae32b, VERSION 1.3.0. Verified signature logic requires recovery to the delegated account itself: the root signer is its single EOA key, not a multisig. Pinned getters return EntryPoint 0x0000000071727de22e5e9d8baf0edac6f37da032 and DelegationManager 0xdb9b1e94b5b69df7e401ddbede43491141047db3. EOA denotes root authorization, not codelessness or absence of delegated execution. Outstanding signed delegations, key custody, signer independence and full execution closure remain unasserted; chain-specific runtime identity is not assumed equal to Ethereum."
       },
       {
         "id": "pyusdx-base-portal",

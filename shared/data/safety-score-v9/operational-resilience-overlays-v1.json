@@ -5759,6 +5759,171 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "yvusdc-yearn",
+      "reviewedAt": "2026-10-03T22:46:10Z",
+      "expiresAt": "2027-10-03T22:46:10Z",
+      "reviewer": "W1R50 primary-source research",
+      "notes": "Exact token creation transaction establishes a 30-full-calendar-month implementation-history lower bound. No uninterrupted issuance, independent continuity, incident absence, financial reconciliation or redemption/stress performance is asserted. Parent-token or protocol history is not substituted.",
+      "sources": [
+        {
+          "sourceId": "exact-deployment-history",
+          "label": "Exact token contract creation transaction",
+          "publisher": "Ethereum deployment transaction",
+          "publishedAt": "2024-03-12",
+          "url": "https://eth.blockscout.com/tx/0xfc6be986a2e60849a91c397c5c4bd10d9b247f0e1fb30cdaf0ed1f7687ea648e",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 30,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-deployment-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "ybold-yearn",
+      "reviewedAt": "2026-10-03T22:46:10Z",
+      "expiresAt": "2027-10-03T22:46:10Z",
+      "reviewer": "W1R50 primary-source research",
+      "notes": "Exact token creation transaction establishes a 16-full-calendar-month implementation-history lower bound. No uninterrupted issuance, independent continuity, incident absence, financial reconciliation or redemption/stress performance is asserted. Parent-token or protocol history is not substituted.",
+      "sources": [
+        {
+          "sourceId": "exact-deployment-history",
+          "label": "Exact token contract creation transaction",
+          "publisher": "Ethereum deployment transaction",
+          "publishedAt": "2025-05-26",
+          "url": "https://eth.blockscout.com/tx/0x1606c33ba741e5888f02dd1eead5a303a52ed99cf584cde176646b452d3fd359",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 16,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-deployment-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "pyusdx-moonpay",
+      "reviewedAt": "2026-10-03T22:46:10Z",
+      "expiresAt": "2027-10-03T22:46:10Z",
+      "reviewer": "W1R50 primary-source research",
+      "notes": "Exact token creation transaction establishes a 4-full-calendar-month implementation-history lower bound. No uninterrupted issuance, independent continuity, incident absence, financial reconciliation or redemption/stress performance is asserted. Parent-token or protocol history is not substituted.",
+      "sources": [
+        {
+          "sourceId": "exact-deployment-history",
+          "label": "Exact token contract creation transaction",
+          "publisher": "Ethereum deployment transaction",
+          "publishedAt": "2026-06-02",
+          "url": "https://eth.blockscout.com/tx/0x816ed5f3fd53be632d241f660d069e0bdec880feb7347333265b48a13d2919df",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 4,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-deployment-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usdglo-glo",
+      "reviewedAt": "2026-10-03T22:46:10Z",
+      "expiresAt": "2027-10-03T22:46:10Z",
+      "reviewer": "W1R50 primary-source research",
+      "notes": "Exact token creation transaction establishes a 47-full-calendar-month implementation-history lower bound. No uninterrupted issuance, independent continuity, incident absence, financial reconciliation or redemption/stress performance is asserted. Parent-token or protocol history is not substituted.",
+      "sources": [
+        {
+          "sourceId": "exact-deployment-history",
+          "label": "Exact token contract creation transaction",
+          "publisher": "Ethereum deployment transaction",
+          "publishedAt": "2022-11-01",
+          "url": "https://eth.blockscout.com/tx/0x1c6fa14c472c1d4bb872ec5b9d5cde06c695586e14d4e8e677dbfb51d6549531",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 47,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-deployment-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usdkg-gold-dollar",
+      "reviewedAt": "2026-10-03T22:46:10Z",
+      "expiresAt": "2027-10-03T22:46:10Z",
+      "reviewer": "W1R50 primary-source research",
+      "notes": "Exact token deployment/operating observation establishes a conservative 10-full-calendar-month lower bound. This is eligibility-only, not independent continuity, incident absence, financial reconciliation or redemption/stress performance. USDKG history starts with observed November 2025 wallet control tests, not its older contract deployment.",
+      "sources": [
+        {
+          "sourceId": "kreston-live-control-tests",
+          "label": "Kreston observed Ethereum/Tron wallet control tests",
+          "publisher": "Kreston Digital Assets Ltd",
+          "publishedAt": "2025-11-30",
+          "url": "https://cdn.prod.website-files.com/676044643c93dc0ff69305a1/6936f69aed2ddfcd2529ef79_USDKG%20November%20%2725%20Report.pdf",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 10,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "kreston-live-control-tests"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

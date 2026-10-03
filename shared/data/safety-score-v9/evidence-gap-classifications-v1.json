@@ -12198,6 +12198,430 @@
         "https://docs.tangent.finance/docs/usg/Markets/hec_markets.md"
       ],
       "rationale": "No published whole-supply reconciliation procedure/cadence covering all authorized mint paths and economic backing was located. Onchain balances, collateral/debt dashboards and code-security audits do not establish that exact datum. Existing explicit reconciliation unknown remains unchanged."
+    },
+    {
+      "id": "uw-pyusdx-moonpay-6416874446d0d55b",
+      "assetId": "pyusdx-moonpay",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:57:08Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R50)",
+      "sources": [
+        {
+          "url": "https://www.moonpay.com/legal/pyusdx_terms",
+          "observedAt": "2026-10-03T22:54:19Z",
+          "datumAsOf": "2026-08-05",
+          "location": "Public issuer disclosure",
+          "excerpt": "Minting occurs at a 1:1 ratio (1 PYUSD for 1 PYUSDx).",
+          "assertion": "Transaction-level 1:1 mechanics disclose neither a current whole-supply reserve denominator nor periodic complete-liability reconciliation."
+        },
+        {
+          "url": "https://www.moonpay.com/legal/pyusdx_terms",
+          "observedAt": "2026-10-03T22:54:19Z",
+          "datumAsOf": "2026-08-05",
+          "location": "Public issuer disclosure",
+          "excerpt": "Holding PYUSDx does not give you any ownership, beneficial, security, trust, custodial, fiduciary, proprietary or other interest of any kind in PYUSD or any other asset.",
+          "assertion": "No complete reserve account/wallet census or current reserve amount accompanies these rights."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.moonpay.com/legal/pyusdx_terms",
+        "https://dev.enterprise.moonpay.com/issuance/pyusdx",
+        "https://www.moonpay.com/business/issuance",
+        "https://www.moonpay.com/newsroom/pyusdx",
+        "https://docs.m0.org/resources/addresses/pyusdx-platform",
+        "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md",
+        "https://www.moonpay.com/legal/licenses",
+        "https://www.paxos.com/pyusd-transparency"
+      ],
+      "rationale": "Exact MoonPay-issued PYUSDx whole-supply reserve composition/denominator and completed liability-to-PYUSD reconciliation program are unpublished on the reviewed issuer/legal/platform/explorer surfaces. 1:1 mint/burn workflow and Paxos PYUSD assurance are not current MoonPay PYUSDx balances or whole-supply reconciliation."
+    },
+    {
+      "id": "uw-pyusdx-moonpay-5f4c0b8e1a77ec6d",
+      "assetId": "pyusdx-moonpay",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:57:08Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R50)",
+      "sources": [
+        {
+          "url": "https://www.moonpay.com/legal/pyusdx_terms",
+          "observedAt": "2026-10-03T22:54:19Z",
+          "datumAsOf": "2026-08-05",
+          "location": "Public issuer disclosure",
+          "excerpt": "Minting occurs at a 1:1 ratio (1 PYUSD for 1 PYUSDx).",
+          "assertion": "Transaction-level 1:1 mechanics disclose neither a current whole-supply reserve denominator nor periodic complete-liability reconciliation."
+        },
+        {
+          "url": "https://www.moonpay.com/legal/pyusdx_terms",
+          "observedAt": "2026-10-03T22:54:19Z",
+          "datumAsOf": "2026-08-05",
+          "location": "Public issuer disclosure",
+          "excerpt": "Holding PYUSDx does not give you any ownership, beneficial, security, trust, custodial, fiduciary, proprietary or other interest of any kind in PYUSD or any other asset.",
+          "assertion": "No complete reserve account/wallet census or current reserve amount accompanies these rights."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.moonpay.com/legal/pyusdx_terms",
+        "https://dev.enterprise.moonpay.com/issuance/pyusdx",
+        "https://www.moonpay.com/business/issuance",
+        "https://www.moonpay.com/newsroom/pyusdx",
+        "https://docs.m0.org/resources/addresses/pyusdx-platform",
+        "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md",
+        "https://www.moonpay.com/legal/licenses",
+        "https://www.paxos.com/pyusd-transparency"
+      ],
+      "rationale": "Exact MoonPay-issued PYUSDx whole-supply reserve composition/denominator and completed liability-to-PYUSD reconciliation program are unpublished on the reviewed issuer/legal/platform/explorer surfaces. 1:1 mint/burn workflow and Paxos PYUSD assurance are not current MoonPay PYUSDx balances or whole-supply reconciliation."
+    },
+    {
+      "id": "uw-usdglo-glo-1ebe672c168000e3",
+      "assetId": "usdglo-glo",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdglo-glo:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:57:08Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R50)",
+      "sources": [
+        {
+          "url": "https://brale.xyz/legal/terms",
+          "observedAt": "2026-10-03T22:54:19Z",
+          "datumAsOf": "2026-05-27",
+          "location": "Public issuer disclosure",
+          "excerpt": "Please see the Services Agreement for a description of the current Paid Services and the associated fees and payment terms.",
+          "assertion": "Issuer sends users to nonpublic negotiated Services Agreements, rather than publishing an exact USDGLO redemption tariff."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://brale.xyz/legal/terms",
+        "https://docs.brale.xyz/guides/stablecoin-to-fiat-offramp.md",
+        "https://docs.brale.xyz/llms.txt",
+        "https://www.glodollar.org/articles/glo-dollar-availability",
+        "https://brale.xyz/assets/reports/USDGLO-Glo-Dollar-Reserve-Attestation-Report-08-2026.pdf"
+      ],
+      "rationale": "No public issuer redemption-fee schedule, evaluated fee formula or contractual USDGLO offchain redemption cost is disclosed. Brale terms defer fees to the Services Agreement; 1:1 issuance, transfer gas and exchange prices do not establish issuer route cost."
+    },
+    {
+      "id": "uw-usdglo-glo-65296acb5c86fb1d",
+      "assetId": "usdglo-glo",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:1d3bac80a4ef26f791160da2",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:57:08Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R50)",
+      "sources": [
+        {
+          "url": "https://brale.xyz/assets/reports/USDGLO-Glo-Dollar-Reserve-Attestation-Report-08-2026.pdf",
+          "observedAt": "2026-10-03T22:54:28Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Public issuer disclosure",
+          "excerpt": "Cash and cash equivalents \n$1,039,730 \nUS government backed debt \n$73,461",
+          "assertion": "Report supplies class amounts but no all-position liquid-realization bound or maximum term for the debt class."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://brale.xyz/assets/reports/USDGLO-Glo-Dollar-Reserve-Attestation-Report-08-2026.pdf",
+        "https://docs.brale.xyz/documentation/platform/reserves.md",
+        "https://brale.xyz/legal/terms",
+        "https://docs.brale.xyz/guides/stablecoin-to-fiat-offramp.md",
+        "https://brale.xyz",
+        "https://www.glodollar.org"
+      ],
+      "rationale": "Exact cash/cash-equivalents and government-backed-debt per-slice liquidity horizons, and the maximum maturity of the USDGLO government-backed-debt slice, are not disclosed. Generic short-duration/T-bill examples are not a binding all-holdings maximum; fiat ACH/wire availability is not the reserve slice realization bound. Cash maturity remains structurally inapplicable, not C."
+    },
+    {
+      "id": "uw-usdglo-glo-e247f946ec82a7de",
+      "assetId": "usdglo-glo",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:798131dca5b608fdbb229f7b",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:57:08Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R50)",
+      "sources": [
+        {
+          "url": "https://brale.xyz/assets/reports/USDGLO-Glo-Dollar-Reserve-Attestation-Report-08-2026.pdf",
+          "observedAt": "2026-10-03T22:54:28Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Public issuer disclosure",
+          "excerpt": "Cash and cash equivalents \n$1,039,730 \nUS government backed debt \n$73,461",
+          "assertion": "Report supplies class amounts but no all-position liquid-realization bound or maximum term for the debt class."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://brale.xyz/assets/reports/USDGLO-Glo-Dollar-Reserve-Attestation-Report-08-2026.pdf",
+        "https://docs.brale.xyz/documentation/platform/reserves.md",
+        "https://brale.xyz/legal/terms",
+        "https://docs.brale.xyz/guides/stablecoin-to-fiat-offramp.md",
+        "https://brale.xyz",
+        "https://www.glodollar.org"
+      ],
+      "rationale": "Exact cash/cash-equivalents and government-backed-debt per-slice liquidity horizons, and the maximum maturity of the USDGLO government-backed-debt slice, are not disclosed. Generic short-duration/T-bill examples are not a binding all-holdings maximum; fiat ACH/wire availability is not the reserve slice realization bound. Cash maturity remains structurally inapplicable, not C."
+    },
+    {
+      "id": "uw-usdglo-glo-9d8d8e0eb49c1a2f",
+      "assetId": "usdglo-glo",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:798131dca5b608fdbb229f7b",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:57:08Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R50)",
+      "sources": [
+        {
+          "url": "https://brale.xyz/assets/reports/USDGLO-Glo-Dollar-Reserve-Attestation-Report-08-2026.pdf",
+          "observedAt": "2026-10-03T22:54:28Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Public issuer disclosure",
+          "excerpt": "Cash and cash equivalents \n$1,039,730 \nUS government backed debt \n$73,461",
+          "assertion": "Report supplies class amounts but no all-position liquid-realization bound or maximum term for the debt class."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://brale.xyz/assets/reports/USDGLO-Glo-Dollar-Reserve-Attestation-Report-08-2026.pdf",
+        "https://docs.brale.xyz/documentation/platform/reserves.md",
+        "https://brale.xyz/legal/terms",
+        "https://docs.brale.xyz/guides/stablecoin-to-fiat-offramp.md",
+        "https://brale.xyz",
+        "https://www.glodollar.org"
+      ],
+      "rationale": "Exact cash/cash-equivalents and government-backed-debt per-slice liquidity horizons, and the maximum maturity of the USDGLO government-backed-debt slice, are not disclosed. Generic short-duration/T-bill examples are not a binding all-holdings maximum; fiat ACH/wire availability is not the reserve slice realization bound. Cash maturity remains structurally inapplicable, not C."
+    },
+    {
+      "id": "uw-usdkg-gold-dollar-bb53da13258f28bd",
+      "assetId": "usdkg-gold-dollar",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdkg-gold-dollar:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:57:08Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R50)",
+      "sources": [
+        {
+          "url": "https://www.usdkg.com/",
+          "observedAt": "2026-10-03T22:54:29Z",
+          "datumAsOf": null,
+          "location": "Public issuer disclosure",
+          "excerpt": "gold redemption is handled on a case-by-case basis.",
+          "assertion": "Institutional issuer access is described but no issuer fee or maximum final-settlement SLA is given."
+        },
+        {
+          "url": "https://cdn.prod.website-files.com/675ee2248e357f63d8256c8d/6895fd6cc933876e216aa9f9_USDKG%20Whitepaper.pdf",
+          "observedAt": "2026-10-03T22:54:29Z",
+          "datumAsOf": null,
+          "location": "Public issuer disclosure",
+          "excerpt": "including liquidity strategy, redemption mechanisms, proof-of-reserve procedures, roadmap milestones, and \neconomic model design",
+          "assertion": "Whitepaper lists redemption design among operational aspects still to be detailed."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.usdkg.com/",
+        "https://cdn.prod.website-files.com/675ee2248e357f63d8256c8d/6895fd6cc933876e216aa9f9_USDKG%20Whitepaper.pdf",
+        "https://www.usdkg.com/terms",
+        "https://www.usdkg.com/transparency",
+        "https://www.usdkg.com/get-usdkg",
+        "https://www.usdkg.com/about",
+        "https://www.usdkg.com/blog/building-usdkg-for-regulated-markets-in-2026"
+      ],
+      "rationale": "Public issuer site, FAQ, whitepaper, transparency archive and terms do not provide the institutional offchain issuer redemption fee schedule/evaluated formula or a binding maximum completion/final settlement SLA. Case-by-case gold redemption and near-instant onchain transfers are different from final fiat issuer settlement."
+    },
+    {
+      "id": "uw-usdkg-gold-dollar-4cb429327ba2f643",
+      "assetId": "usdkg-gold-dollar",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdkg-gold-dollar:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:57:08Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R50)",
+      "sources": [
+        {
+          "url": "https://www.usdkg.com/",
+          "observedAt": "2026-10-03T22:54:29Z",
+          "datumAsOf": null,
+          "location": "Public issuer disclosure",
+          "excerpt": "gold redemption is handled on a case-by-case basis.",
+          "assertion": "Institutional issuer access is described but no issuer fee or maximum final-settlement SLA is given."
+        },
+        {
+          "url": "https://cdn.prod.website-files.com/675ee2248e357f63d8256c8d/6895fd6cc933876e216aa9f9_USDKG%20Whitepaper.pdf",
+          "observedAt": "2026-10-03T22:54:29Z",
+          "datumAsOf": null,
+          "location": "Public issuer disclosure",
+          "excerpt": "including liquidity strategy, redemption mechanisms, proof-of-reserve procedures, roadmap milestones, and \neconomic model design",
+          "assertion": "Whitepaper lists redemption design among operational aspects still to be detailed."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.usdkg.com/",
+        "https://cdn.prod.website-files.com/675ee2248e357f63d8256c8d/6895fd6cc933876e216aa9f9_USDKG%20Whitepaper.pdf",
+        "https://www.usdkg.com/terms",
+        "https://www.usdkg.com/transparency",
+        "https://www.usdkg.com/get-usdkg",
+        "https://www.usdkg.com/about",
+        "https://www.usdkg.com/blog/building-usdkg-for-regulated-markets-in-2026"
+      ],
+      "rationale": "Public issuer site, FAQ, whitepaper, transparency archive and terms do not provide the institutional offchain issuer redemption fee schedule/evaluated formula or a binding maximum completion/final settlement SLA. Case-by-case gold redemption and near-instant onchain transfers are different from final fiat issuer settlement."
+    },
+    {
+      "id": "uw-usdkg-gold-dollar-eae50d824bf4c0f2",
+      "assetId": "usdkg-gold-dollar",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:57:08Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R50)",
+      "sources": [
+        {
+          "url": "https://cdn.prod.website-files.com/676044643c93dc0ff69305a1/6936f69aed2ddfcd2529ef79_USDKG%20November%20%2725%20Report.pdf",
+          "observedAt": "2026-10-03T22:54:29Z",
+          "datumAsOf": "2025-11-28",
+          "location": "Public issuer disclosure",
+          "excerpt": "As at the Report date the Company had not put any tokens in circulation.",
+          "assertion": "Only linked independent factual-findings report is pre-circulation history; it does not establish the current circulated-token reserve denominator."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.usdkg.com/transparency",
+        "https://cdn.prod.website-files.com/676044643c93dc0ff69305a1/6936f69aed2ddfcd2529ef79_USDKG%20November%20%2725%20Report.pdf",
+        "https://www.usdkg.com/",
+        "https://cdn.prod.website-files.com/675ee2248e357f63d8256c8d/6895fd6cc933876e216aa9f9_USDKG%20Whitepaper.pdf",
+        "https://www.usdkg.com/about",
+        "https://www.usdkg.com/blog/how-usdkg-builds-real-world-trust-from-gold-audits-to-transparent-reserve-verification"
+      ],
+      "rationale": "Current reserve composition with dated complete-denominator/liability scope is not published in the accessible archive: only Q4 2025 factual-findings report, explicitly no circulation as of its report date. The current site shows aggregate dollar claims without a portfolio as-of checkpoint; this cannot renew stale physical gold holdings or establish current backing attributions."
+    },
+    {
+      "id": "uw-yvusdc-yearn-9d891affca5b9062",
+      "assetId": "yvusdc-yearn",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:c99936da6a52cb955b1b8d35",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:57:08Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R50)",
+      "sources": [
+        {
+          "url": "https://curation.yearn.fi/report/yearn-yvusdc/",
+          "observedAt": "2026-10-03T22:54:30Z",
+          "datumAsOf": "2026-07-13",
+          "location": "Public issuer disclosure",
+          "excerpt": "A third funded strategy \u2014 stcUSD/USDC Pawn Broker Market (0xe63a2a) \u2014 was also discovered, holding ~14.9% of debt and active but not in the default withdrawal queue.",
+          "assertion": "A funded Pawn Broker leg lies outside normal queue; reported current/best-case withdrawal mechanics are not a maximum whole-allocation realization time."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://curation.yearn.fi/report/yearn-yvusdc/",
+        "https://curation.yearn.fi/report/yearn-yvdai/",
+        "https://docs.yearn.fi/getting-started/products/yvaults/v3",
+        "https://docs.yearn.fi/developers/v3/overview",
+        "https://docs.yearn.fi/developers/v3/vault_management",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x1ab62413e0cf2ebeb73da7d40c70e7202ae14467",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xe63a2abc24cd9538398d825a4bfe5778d25687df"
+      ],
+      "rationale": "Exact whole yvUSDC underlying protocol-position maximum liquidity horizon is not published. Pinned block 26114898 full strategy-event census reconciles all current debt, including nonqueue Pawn Broker debt6031606664395 of19503888453562. maxRedeem is conditional current liquidity, not an unconditional worst-case all-position realization bound; onchain timing is not USD final settlement."
+    },
+    {
+      "id": "uw-yvusdc-yearn-e8be1d1caa2e1408",
+      "assetId": "yvusdc-yearn",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "custodyEscrow",
+        "pillar": "backing",
+        "requiredDatum": "custodyEscrow",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:57:08Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R50)",
+      "sources": [
+        {
+          "url": "https://docs.yearn.fi/getting-started/products/yvaults/v3",
+          "observedAt": "2026-10-03T22:54:30Z",
+          "datumAsOf": null,
+          "location": "Public issuer disclosure",
+          "excerpt": "Yearn's v3 yVaults are a decentralized suite of yield-generating products built to fit any need.",
+          "assertion": "Technical contract custody and decentralized allocation do not disclose statutory segregation or insolvency rights for the whole mixed lending book."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.yearn.fi/getting-started/products/yvaults/v3",
+        "https://curation.yearn.fi/report/yearn-yvusdc/",
+        "https://curation.yearn.fi/report/yearn-yvdai/",
+        "https://yearn.fi",
+        "https://docs.yearn.fi/developers/v3/overview",
+        "https://docs.yearn.fi/developers/v3/vault_management",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xe63a2abc24cd9538398d825a4bfe5778d25687df"
+      ],
+      "rationale": "Whole-allocation legal custody/escrow safeguards, statutory segregation and bankruptcy-remoteness rights are not published for this yvUSDC lending book. Public contracts show technical custody/accounting and borrower transfers, not complete lender-of-record, borrower legal entity or insolvency rights. This is not evidence of adverse absence; no structural N/A or zero unknown custody is asserted."
     }
   ]
 }
