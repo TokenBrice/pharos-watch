@@ -8663,6 +8663,171 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "gldon-ondo",
+      "reviewedAt": "2026-10-03T22:47:03Z",
+      "expiresAt": "2027-10-03T22:47:03Z",
+      "reviewer": "W1R54 primary-source review",
+      "notes": "Canonical token creation establishes implementation history only, not public offering inception or independently verified uninterrupted operation. No throughput, stress recovery, reconciliation or incident-free claim.",
+      "sources": [
+        {
+          "sourceId": "canonical-creation",
+          "label": "Exact GLDon canonical token creation",
+          "publisher": "Ethereum / Etherscan",
+          "publishedAt": "2025-12-10",
+          "url": "https://etherscan.io/tx/0xd44893c63ea157f403239cb968ffee492e53423c283b42c222260882e5a1e2a1",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 9,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "canonical-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "iauon-ondo",
+      "reviewedAt": "2026-10-03T22:47:03Z",
+      "expiresAt": "2027-10-03T22:47:03Z",
+      "reviewer": "W1R54 primary-source review",
+      "notes": "Canonical token creation establishes implementation history only, not public offering inception or independently verified uninterrupted operation. No throughput, stress recovery, reconciliation or incident-free claim.",
+      "sources": [
+        {
+          "sourceId": "canonical-creation",
+          "label": "Exact IAUon canonical token creation",
+          "publisher": "Ethereum / Etherscan",
+          "publishedAt": "2025-07-24",
+          "url": "https://etherscan.io/tx/0x50df046231615544658a6e5efd5f80834a941fcd3e2966a15ea4c0e2c63bf170",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 14,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "canonical-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "slvon-ondo",
+      "reviewedAt": "2026-10-03T22:47:03Z",
+      "expiresAt": "2027-10-03T22:47:03Z",
+      "reviewer": "W1R54 primary-source review",
+      "notes": "Canonical token creation establishes implementation history only, not public offering inception or independently verified uninterrupted operation. No throughput, stress recovery, reconciliation or incident-free claim.",
+      "sources": [
+        {
+          "sourceId": "canonical-creation",
+          "label": "Exact SLVon canonical token creation",
+          "publisher": "Ethereum / Etherscan",
+          "publishedAt": "2025-07-24",
+          "url": "https://etherscan.io/tx/0xb7d2e1b4420955f99ccad9942cb003d18b71ee60e9030fbf7b00f58938033028",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 14,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "canonical-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usdon-ondo",
+      "reviewedAt": "2026-10-03T22:47:03Z",
+      "expiresAt": "2027-10-03T22:47:03Z",
+      "reviewer": "W1R54 primary-source review",
+      "notes": "Canonical token creation establishes implementation history only, not public offering inception or independently verified uninterrupted operation. No throughput, stress recovery, reconciliation or incident-free claim.",
+      "sources": [
+        {
+          "sourceId": "canonical-creation",
+          "label": "Exact USDon canonical token creation",
+          "publisher": "Ethereum / Etherscan",
+          "publishedAt": "2025-07-15",
+          "url": "https://etherscan.io/tx/0x411a465234683f5e527b4bae72ef52a065a75341a82fabef90c6bf2e5094f695",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 14,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "canonical-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "msusd-metronome",
+      "reviewedAt": "2026-10-03T22:47:03Z",
+      "expiresAt": "2027-10-03T22:47:03Z",
+      "reviewer": "W1R54 primary-source review",
+      "notes": "Canonical token creation establishes implementation history only, not public offering inception or independently verified uninterrupted operation. No throughput, stress recovery, reconciliation or incident-free claim.",
+      "sources": [
+        {
+          "sourceId": "canonical-creation",
+          "label": "Exact msUSD canonical token creation",
+          "publisher": "Ethereum / Etherscan",
+          "publishedAt": "2022-12-15",
+          "url": "https://etherscan.io/tx/0x291c8f09bd9f2ad50952575e547cabe5d6ed5fb444789e0102a9432d9a422e8a",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 45,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "canonical-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

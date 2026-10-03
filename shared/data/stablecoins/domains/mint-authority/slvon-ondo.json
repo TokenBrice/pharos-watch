@@ -317,15 +317,18 @@
           "solana:iy11ytbSGcUnrjE6Lfv78TFqxKyUESfku1FugS9ondo"
         ],
         "role": "proxy-admin",
-        "authorityType": "eoa",
+        "authorityType": "multisig",
         "address": "9ECeczLtFZDYE3NX6G7uNw5BUGjoJAu1kFyEihA5hMaM",
         "chain": "solana",
         "directMintAbility": "upgrade-only",
         "canRaiseCap": true,
-        "timelockDelaySec": 0,
-        "observedAt": "2026-08-16",
-        "observedBlock": 439724580,
-        "evidence": "At finalized Solana slot 439724580 on 2026-08-16, Ondo's GM program ProgramData account F4F1ZdqwmT4KfCfCnXrqLp9R6Liq4vEqJcs64xVKTKeU named 9ECeczLtFZDYE3NX6G7uNw5BUGjoJAu1kFyEihA5hMaM as upgrade authority. That funded, zero-data system account can replace native minting logic without an on-chain timelock.",
+        "threshold": 4,
+        "signerCount": 7,
+        "modulesOrGuardsStatus": "not-applicable",
+        "timelockDelaySec": 7200,
+        "observedAt": "2026-10-03",
+        "observedBlock": 453074463,
+        "evidence": "At finalized slot 453074463, one getMultipleAccounts observation binds the issuer GM program to program-data F4F1ZdqwmT4KfCfCnXrqLp9R6Liq4vEqJcs64xVKTKeU and upgrade authority 9ECeczLtFZDYE3NX6G7uNw5BUGjoJAu1kFyEihA5hMaM. Exact Squads v4 PDA derivation binds that off-curve authority to vault index 0 of multisig EfMUASGwCsPBafiPi8rwdZfUJSUt7pxAoxayR39PVpMr (bump 254). Decoded Multisig state has threshold 4, seven permission-mask-7 members, configured time_lock 7200 and zero config_authority. Finalized transaction 5XVxqQtnB44vcJXtMBfobzBzufc6ryVa7YGx4Mf2xNi2GJcMYFpqMq328KMWvxVy8fz8eUCYvNA9XLU2tnVRY8Zp independently executes GM role operations through this Squads vault. Bare system ownership did not prove EOA or absent delay. Current topology/delay are established; full spending-limit, reconfiguration and Squads upgrade/bypass closure and human independence are not. EVM modules/guards do not apply.",
         "sources": [
           {
             "label": "Solana mainnet RPC",
@@ -334,6 +337,14 @@
           {
             "label": "Ondo contract addresses",
             "url": "https://docs.ondo.finance/addresses"
+          },
+          {
+            "label": "Squads v4 account and vault derivation specification",
+            "url": "https://docs.squads.so/main/development/reference/accounts"
+          },
+          {
+            "label": "Exact controlling multisig account",
+            "url": "https://solscan.io/account/EfMUASGwCsPBafiPi8rwdZfUJSUt7pxAoxayR39PVpMr"
           }
         ]
       }
@@ -342,7 +353,7 @@
     "reconciliation": "periodic",
     "supervision": "attestation-only",
     "review": {
-      "evidence": "Sourcify verifies the Ethereum token and native Ethereum beacon, and pinned RPC reads resolve the Ethereum and BSC beacons, implementations, and 2-hour owner timelocks. Ethereum and BSC each have a documented native GMTokenManager path; their separate OndoOFT bridge minters are excluded from Mint Authority and reviewed under risk-review.bridgeRouteRisk. At finalized Solana slot 439724580, the SLVon Token-2022 mint named Ondo's audited GM-program PDA as native mint authority, while the upgradeable program named a single funded system-account EOA as its no-delay upgrade authority. HyperEVM representation upgrade administration is also excluded from Mint Authority. These observations close the native authority questions; centralized upgrade and mint paths remain scoring risks rather than evidence gaps. Economic-posture fields reviewed 2026-08-15: issuer-controlled direct minting plus a no-delay Solana upgrade EOA is economically unbounded, Ankura reconciles product liabilities to reserves daily, and independent attestation exists without a named prudential product supervisor.",
+      "evidence": "Sourcify verifies the Ethereum token and native Ethereum beacon, and pinned RPC reads resolve the Ethereum and BSC beacons, implementations, and 2-hour owner timelocks. Ethereum and BSC each have a documented native GMTokenManager path; their separate OndoOFT bridge minters are excluded from Mint Authority and reviewed under risk-review.bridgeRouteRisk. At finalized Solana slot 439724580, the SLVon Token-2022 mint named Ondo's audited GM-program PDA as native mint authority. At finalized slot 453074463, exact Squads v4 account decoding and vault derivation establish the shared GM upgrade authority as a 4-of-7 Squads vault with configured 7200-second delay, superseding the earlier bare-system-account EOA/no-delay inference; full execution/bypass closure and human key independence remain unverified. HyperEVM representation upgrade administration is also excluded from Mint Authority. Centralized upgrade and mint paths remain scoring risks rather than evidence gaps. Economic-posture fields remain issuer-controlled and economically unbounded, with Ankura product-liability reconciliation and independent attestation rather than a named prudential product supervisor.",
       "reviewer": "P2 mint-free cohort; OpenAI Codex NR-recovery review; Sol economic-posture batch 2026-08-15",
       "reviewedAt": "2026-08-16",
       "disposition": "scoreable",

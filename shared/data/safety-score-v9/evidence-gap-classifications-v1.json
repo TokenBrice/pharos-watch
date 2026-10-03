@@ -19221,6 +19221,206 @@
         "https://docs.avalonfinance.xyz/resources/micar-white-paper"
       ],
       "rationale": "No current whole-asset reserve composition is published for USDa. Docs disclose eligible collateral/LTV, custody brands and conversion mechanics; the rendered dashboard lists lending-pool TVL/supply/borrow but not collateral balances attributable to all outstanding USDa. Full legal terms and contract audit do not supply that census; the June 2026 MiCAR whitepaper is for AVL, not USDa. These metrics cannot be normalized into reserve shares."
+    },
+    {
+      "id": "uw-gldon-ondo-7b60c3ae2773a905",
+      "assetId": "gldon-ondo",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:01:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R54)",
+      "sources": [
+        {
+          "url": "https://docs.ondo.finance/ondo-stocks/trust-and-transparency.md",
+          "observedAt": "2026-10-03T22:59:08Z",
+          "datumAsOf": null,
+          "location": "Full Asset Backing and Security Interest",
+          "excerpt": "Ondo tokenized stocks are all fully backed by their underlying stocks and ETFs (together with cash in transit).",
+          "assertion": "Backing policy includes underlying securities plus transit cash; it does not disclose current GLDon, IAUon, SLVon or USDon-specific measured whole-book weights."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.ondo.finance/ondo-stocks/trust-and-transparency.md",
+        "https://docs.ondo.finance/ondo-stocks/legal-and-regulatory.md",
+        "https://docs.ondo.finance/ondo-stocks/available-assets.md",
+        "https://app.ondo.finance/api/v2/assets/gldon/info",
+        "https://app.ondo.finance/api/v2/assets/iauon/info",
+        "https://app.ondo.finance/api/v2/assets/slvon/info",
+        "https://cdn.sanity.io/files/8k2tqa6n/production/a598be5156bcda440276f01eea9258f82f851bd0.pdf",
+        "https://cdn.sanity.io/files/8k2tqa6n/production/f8568100c8d43609c8d83e6d57c7130d590711b0.pdf",
+        "https://cdn.sanity.io/files/8k2tqa6n/production/1e83310304939f644ad250b298c14f2a2ac6449c.pdf",
+        "https://cdn.sanity.io/files/8k2tqa6n/production/f22c30e6d14a8000abc4e1ad6f62d6cb41dc3da0.pdf",
+        "https://www.dropbox.com/scl/fo/jzkrw308mrhsasauqrjqq/AJxJak0F90kcwkADSN3DCD4?rlkey=nik1v5slekrzx5fbi0zan5sk3&st=t5vbvab8&dl=0",
+        "https://docs.ondo.finance/addresses.md"
+      ],
+      "rationale": "Exact current whole-book reserve composition per GLDon, IAUon, SLVon and USDon is not disclosed. Retrieved September 29 Ankura report aggregates stocks, USDY and cash and lists chain USDon liabilities, not token-specific backing allocation. Final Terms name underlying securities and allow additional collateral; ETF underlying holdings are not the issuer token book. No measured transit-cash or additional-collateral percentage supports a 100% ETF/brokerage-cash admission."
+    },
+    {
+      "id": "uw-iauon-ondo-6e95413f4628b16c",
+      "assetId": "iauon-ondo",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:01:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R54)",
+      "sources": [
+        {
+          "url": "https://docs.ondo.finance/ondo-stocks/trust-and-transparency.md",
+          "observedAt": "2026-10-03T22:59:08Z",
+          "datumAsOf": null,
+          "location": "Full Asset Backing and Security Interest",
+          "excerpt": "Ondo tokenized stocks are all fully backed by their underlying stocks and ETFs (together with cash in transit).",
+          "assertion": "Backing policy includes underlying securities plus transit cash; it does not disclose current GLDon, IAUon, SLVon or USDon-specific measured whole-book weights."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.ondo.finance/ondo-stocks/trust-and-transparency.md",
+        "https://docs.ondo.finance/ondo-stocks/legal-and-regulatory.md",
+        "https://docs.ondo.finance/ondo-stocks/available-assets.md",
+        "https://app.ondo.finance/api/v2/assets/gldon/info",
+        "https://app.ondo.finance/api/v2/assets/iauon/info",
+        "https://app.ondo.finance/api/v2/assets/slvon/info",
+        "https://cdn.sanity.io/files/8k2tqa6n/production/a598be5156bcda440276f01eea9258f82f851bd0.pdf",
+        "https://cdn.sanity.io/files/8k2tqa6n/production/f8568100c8d43609c8d83e6d57c7130d590711b0.pdf",
+        "https://cdn.sanity.io/files/8k2tqa6n/production/1e83310304939f644ad250b298c14f2a2ac6449c.pdf",
+        "https://cdn.sanity.io/files/8k2tqa6n/production/f22c30e6d14a8000abc4e1ad6f62d6cb41dc3da0.pdf",
+        "https://www.dropbox.com/scl/fo/jzkrw308mrhsasauqrjqq/AJxJak0F90kcwkADSN3DCD4?rlkey=nik1v5slekrzx5fbi0zan5sk3&st=t5vbvab8&dl=0",
+        "https://docs.ondo.finance/addresses.md"
+      ],
+      "rationale": "Exact current whole-book reserve composition per GLDon, IAUon, SLVon and USDon is not disclosed. Retrieved September 29 Ankura report aggregates stocks, USDY and cash and lists chain USDon liabilities, not token-specific backing allocation. Final Terms name underlying securities and allow additional collateral; ETF underlying holdings are not the issuer token book. No measured transit-cash or additional-collateral percentage supports a 100% ETF/brokerage-cash admission."
+    },
+    {
+      "id": "uw-slvon-ondo-b97ec32833fe39dc",
+      "assetId": "slvon-ondo",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:01:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R54)",
+      "sources": [
+        {
+          "url": "https://docs.ondo.finance/ondo-stocks/trust-and-transparency.md",
+          "observedAt": "2026-10-03T22:59:08Z",
+          "datumAsOf": null,
+          "location": "Full Asset Backing and Security Interest",
+          "excerpt": "Ondo tokenized stocks are all fully backed by their underlying stocks and ETFs (together with cash in transit).",
+          "assertion": "Backing policy includes underlying securities plus transit cash; it does not disclose current GLDon, IAUon, SLVon or USDon-specific measured whole-book weights."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.ondo.finance/ondo-stocks/trust-and-transparency.md",
+        "https://docs.ondo.finance/ondo-stocks/legal-and-regulatory.md",
+        "https://docs.ondo.finance/ondo-stocks/available-assets.md",
+        "https://app.ondo.finance/api/v2/assets/gldon/info",
+        "https://app.ondo.finance/api/v2/assets/iauon/info",
+        "https://app.ondo.finance/api/v2/assets/slvon/info",
+        "https://cdn.sanity.io/files/8k2tqa6n/production/a598be5156bcda440276f01eea9258f82f851bd0.pdf",
+        "https://cdn.sanity.io/files/8k2tqa6n/production/f8568100c8d43609c8d83e6d57c7130d590711b0.pdf",
+        "https://cdn.sanity.io/files/8k2tqa6n/production/1e83310304939f644ad250b298c14f2a2ac6449c.pdf",
+        "https://cdn.sanity.io/files/8k2tqa6n/production/f22c30e6d14a8000abc4e1ad6f62d6cb41dc3da0.pdf",
+        "https://www.dropbox.com/scl/fo/jzkrw308mrhsasauqrjqq/AJxJak0F90kcwkADSN3DCD4?rlkey=nik1v5slekrzx5fbi0zan5sk3&st=t5vbvab8&dl=0",
+        "https://docs.ondo.finance/addresses.md"
+      ],
+      "rationale": "Exact current whole-book reserve composition per GLDon, IAUon, SLVon and USDon is not disclosed. Retrieved September 29 Ankura report aggregates stocks, USDY and cash and lists chain USDon liabilities, not token-specific backing allocation. Final Terms name underlying securities and allow additional collateral; ETF underlying holdings are not the issuer token book. No measured transit-cash or additional-collateral percentage supports a 100% ETF/brokerage-cash admission."
+    },
+    {
+      "id": "uw-usdon-ondo-11c10b622fb6a282",
+      "assetId": "usdon-ondo",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:01:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R54)",
+      "sources": [
+        {
+          "url": "https://docs.ondo.finance/ondo-stocks/trust-and-transparency.md",
+          "observedAt": "2026-10-03T22:59:08Z",
+          "datumAsOf": null,
+          "location": "Full Asset Backing and Security Interest",
+          "excerpt": "Ondo tokenized stocks are all fully backed by their underlying stocks and ETFs (together with cash in transit).",
+          "assertion": "Backing policy includes underlying securities plus transit cash; it does not disclose current GLDon, IAUon, SLVon or USDon-specific measured whole-book weights."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.ondo.finance/ondo-stocks/trust-and-transparency.md",
+        "https://docs.ondo.finance/ondo-stocks/legal-and-regulatory.md",
+        "https://docs.ondo.finance/ondo-stocks/available-assets.md",
+        "https://app.ondo.finance/api/v2/assets/gldon/info",
+        "https://app.ondo.finance/api/v2/assets/iauon/info",
+        "https://app.ondo.finance/api/v2/assets/slvon/info",
+        "https://cdn.sanity.io/files/8k2tqa6n/production/a598be5156bcda440276f01eea9258f82f851bd0.pdf",
+        "https://cdn.sanity.io/files/8k2tqa6n/production/f8568100c8d43609c8d83e6d57c7130d590711b0.pdf",
+        "https://cdn.sanity.io/files/8k2tqa6n/production/1e83310304939f644ad250b298c14f2a2ac6449c.pdf",
+        "https://cdn.sanity.io/files/8k2tqa6n/production/f22c30e6d14a8000abc4e1ad6f62d6cb41dc3da0.pdf",
+        "https://www.dropbox.com/scl/fo/jzkrw308mrhsasauqrjqq/AJxJak0F90kcwkADSN3DCD4?rlkey=nik1v5slekrzx5fbi0zan5sk3&st=t5vbvab8&dl=0",
+        "https://docs.ondo.finance/addresses.md"
+      ],
+      "rationale": "Exact current whole-book reserve composition per GLDon, IAUon, SLVon and USDon is not disclosed. Retrieved September 29 Ankura report aggregates stocks, USDY and cash and lists chain USDon liabilities, not token-specific backing allocation. Final Terms name underlying securities and allow additional collateral; ETF underlying holdings are not the issuer token book. No measured transit-cash or additional-collateral percentage supports a 100% ETF/brokerage-cash admission."
+    },
+    {
+      "id": "uw-usdon-ondo-38f0f253d545671c",
+      "assetId": "usdon-ondo",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdon-ondo:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:01:11Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R54)",
+      "sources": [
+        {
+          "url": "https://docs.ondo.finance/ondo-stocks/fees-and-taxes.md",
+          "observedAt": "2026-10-03T22:59:08Z",
+          "datumAsOf": null,
+          "location": "What fees does Ondo Stocks charge?",
+          "excerpt": "Investors are responsible for their own gas costs.",
+          "assertion": "Issuer discusses quote-retained differences and user gas but no USDon-to-USDC standalone cost schedule or same-notional all-in upper bound."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.ondo.finance/ondo-stocks/investing-and-redeeming.md",
+        "https://docs.ondo.finance/ondo-stocks/fees-and-taxes.md",
+        "https://docs.ondo.finance/ondo-stocks/token-and-quote-pricing.md",
+        "https://docs.ondo.finance/ondo-stocks/available-assets.md",
+        "https://docs.ondo.finance/ondo-stocks/legal-and-regulatory.md",
+        "https://docs.ondo.finance/addresses.md",
+        "https://cdn.sanity.io/files/8k2tqa6n/production/f22c30e6d14a8000abc4e1ad6f62d6cb41dc3da0.pdf"
+      ],
+      "rationale": "Exact USDon platform conversion/redemption fee schedule and same-notional all-in cost bound remain unpublished. Current docs disclose liquidity-conditioned USDC swaps and user-paid gas, but no standalone USDon fee/minimum/maximum. ETF-token Final Terms' 0.1% underlying-market-price fee limit does not establish a USDon settlement-cash fee."
     }
   ]
 }
