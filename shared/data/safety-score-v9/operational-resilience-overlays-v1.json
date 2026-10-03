@@ -11276,6 +11276,171 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "said-gaib",
+      "reviewedAt": "2026-10-03T23:04:17Z",
+      "expiresAt": "2027-10-03T23:04:17Z",
+      "reviewer": "W1R83 unknown-wave research",
+      "notes": "Exact-token dated issuer launch establishes a conservative operating-history lower bound only. No independent continuity, stress redemptions, financial reconciliation or incident-free performance is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-token-launch",
+          "label": "AID and sAID exact contract launch",
+          "publisher": "GAIB",
+          "publishedAt": "2025-10-31",
+          "url": "https://blog.gaib.ai/the-ai-dollar-is-live/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 11,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-token-launch"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "aid-gaib",
+      "reviewedAt": "2026-10-03T23:04:17Z",
+      "expiresAt": "2027-10-03T23:04:17Z",
+      "reviewer": "W1R83 unknown-wave research",
+      "notes": "Exact-token dated issuer launch establishes a conservative operating-history lower bound only. No independent continuity, stress redemptions, financial reconciliation or incident-free performance is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-token-launch",
+          "label": "AID and sAID exact contract launch",
+          "publisher": "GAIB",
+          "publishedAt": "2025-10-31",
+          "url": "https://blog.gaib.ai/the-ai-dollar-is-live/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 11,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-token-launch"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "krwq-iq",
+      "reviewedAt": "2026-10-03T23:04:17Z",
+      "expiresAt": "2027-10-03T23:04:17Z",
+      "reviewer": "W1R83 unknown-wave research",
+      "notes": "Exact-token dated issuer launch establishes a conservative operating-history lower bound only. No independent continuity, stress redemptions, financial reconciliation or incident-free performance is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-token-launch",
+          "label": "KRWQ live launch on Base",
+          "publisher": "IQ",
+          "publishedAt": "2025-10-30",
+          "url": "https://blog.iqai.com/krwq-the-first-korean-won-stablecoin-on-base/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 11,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-token-launch"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "qcad-stablecorp",
+      "reviewedAt": "2026-10-03T23:16:10Z",
+      "expiresAt": "2027-10-03T23:16:10Z",
+      "reviewer": "W1R83 unknown-wave research",
+      "notes": "Exact-token dated issuer launch establishes a conservative operating-history lower bound only. No independent continuity, stress redemptions, financial reconciliation or incident-free performance is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-token-launch",
+          "label": "Exact token dated issuance/deployment evidence",
+          "publisher": "Stablecorp and Davidson & Company",
+          "publishedAt": "2026-07-15",
+          "url": "https://web.archive.org/web/20260927045524id_/https://www.sedarplus.ca/csa-party/records/document.html?id=cdb08e008e109f2cfd9f81ad62011f100ac1bd0d95a48ed4861aaaaaba974b5c",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 5,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-token-launch"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usdm-monetrix",
+      "reviewedAt": "2026-10-03T23:16:10Z",
+      "expiresAt": "2027-10-03T23:16:10Z",
+      "reviewer": "W1R83 unknown-wave research",
+      "notes": "Exact-token dated issuer launch establishes a conservative operating-history lower bound only. No independent continuity, stress redemptions, financial reconciliation or incident-free performance is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-token-launch",
+          "label": "Exact token dated issuance/deployment evidence",
+          "publisher": "Monetrix / HyperEVMScan",
+          "publishedAt": "2026-06-10",
+          "url": "https://hyperevmscan.io/tx/0x8ae34c4d6667f585110e44721cf920f1b797ab93d23da3091fd7f2eade5a96c5",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 3,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-token-launch"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }
