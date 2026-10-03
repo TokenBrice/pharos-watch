@@ -10385,6 +10385,138 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "jtrsy-anemoy",
+      "reviewedAt": "2026-10-03T23:06:37Z",
+      "expiresAt": "2027-10-03T23:00:00Z",
+      "reviewer": "Pharos unknown-wave W1R70",
+      "notes": "Exact-token dated operating/deployment lower bound only. No redemption throughput, stress recovery, independently verified reconciliation or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-token-evidence",
+          "label": "Exact JTRSY deployment creation transaction",
+          "publisher": "Ethereum Blockscout",
+          "publishedAt": "2024-08-05",
+          "url": "https://eth.blockscout.com/api/v2/transactions/0x503224f5582af888011900a2e5dcfbe57a7668de67f8b555ae0d9d3c8ddc742a",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 25,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-token-evidence"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "ftusd-flying-tulip",
+      "reviewedAt": "2026-10-03T23:06:37Z",
+      "expiresAt": "2027-10-03T23:00:00Z",
+      "reviewer": "Pharos unknown-wave W1R70",
+      "notes": "Exact-token dated operating/deployment lower bound only. No redemption throughput, stress recovery, independently verified reconciliation or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-token-evidence",
+          "label": "Issuer March update documents ftUSD launch on February 24",
+          "publisher": "Flying Tulip",
+          "publishedAt": "2026-03-27",
+          "url": "https://blog.flyingtulip.com/flying-tulip-march-update/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 7,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-token-evidence"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "filqa-fidelity-international",
+      "reviewedAt": "2026-10-03T23:06:37Z",
+      "expiresAt": "2027-10-03T23:00:00Z",
+      "reviewer": "Pharos unknown-wave W1R70",
+      "notes": "Exact-token dated operating/deployment lower bound only. No redemption throughput, stress recovery, independently verified reconciliation or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-token-evidence",
+          "label": "Issuer July factsheet records exact Class 1 ACC launch May 6",
+          "publisher": "Fidelity International",
+          "publishedAt": "2026-08-17",
+          "url": "https://www.fidelityinternational.com/legal/documents/en/hffs.en.xx.6470869.pdf",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 4,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-token-evidence"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "pmusd-precious-metals",
+      "reviewedAt": "2026-10-03T23:06:37Z",
+      "expiresAt": "2027-10-03T23:00:00Z",
+      "reviewer": "Pharos unknown-wave W1R70",
+      "notes": "Exact-token dated operating/deployment lower bound only. No redemption throughput, stress recovery, independently verified reconciliation or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-token-evidence",
+          "label": "Issuer June report records pmUSD pools operating from December 25",
+          "publisher": "RAAC",
+          "publishedAt": "2026-07-06",
+          "url": "https://blog.raac.io/research/market-report-june-2026",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 9,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-token-evidence"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

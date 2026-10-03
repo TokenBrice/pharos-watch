@@ -8420,30 +8420,41 @@
     {
       "assetId": "filqa-fidelity-international",
       "reviewedAt": "2026-10-03",
-      "reviewer": "Refine04 exact holder-transfer evidence",
+      "reviewer": "Pharos unknown-wave W1R70",
+      "transferScopeAttestation": {
+        "kind": "single-deployment-attribution",
+        "version": 1,
+        "reviewedAt": "2026-10-03",
+        "expiresAt": "2027-10-03",
+        "reviewer": "Pharos unknown-wave W1R70",
+        "deploymentKey": "ethereum:0x54a4fc78431f9201824643e99bec891bb7462a1d",
+        "exhaustiveLiability": true,
+        "sources": [
+          {
+            "label": "Exact Class 1 ACC factsheet: Networks Available Ethereum; ISIN KYG3R61G1088",
+            "url": "https://www.fidelityinternational.com/legal/documents/en/hffs.en.xx.6470869.pdf"
+          },
+          {
+            "label": "Governing prospectus: direct class share liability, not wrapped fund exposure",
+            "url": "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf"
+          }
+        ]
+      },
       "deployments": [
         {
           "chainId": "ethereum",
           "contractOrTokenId": "0x54a4fc78431f9201824643e99bec891bb7462a1d",
           "scope": "canonical",
           "posture": "permissioned",
-          "evidence": "At Ethereum block 26107703 the exact deployment points to verified SygToken implementation 0x7030fe438be6ed196b8886616bbf5a245c267339. Source implements blacklistTokenUser, forcedTransfer and pause under permission-manager authorization. Prospectus gives compulsory-redemption and registry correction powers and prohibits token transfers for on-chain investors. The prospectus explicitly rejects secondary token transfers for on-chain investors in the shareholder register; authorized holder exit is TA/distributor redemption. Native blacklistTokenUser,forcedTransfer and pause implement additional restrictions.",
+          "evidence": "Prospectus 14 September 2026 requires TA-approved wallets and expressly prohibits on-chain token transfer orders; the exact SygToken implementation supports whitelisted recipients and authorized forced transfers. This is restrictive holder-transfer posture, not a claim of redemption availability or immutable restrictions.",
           "sources": [
             {
-              "label": "Fidelity September 14, 2026 fund prospectus",
+              "label": "Governing prospectus token transfer and registry terms",
               "url": "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf"
             },
             {
-              "label": "Retrieved Fidelity prospectus text",
-              "url": "https://r.jina.ai/https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf"
-            },
-            {
-              "label": "Verified deployed token implementation",
+              "label": "Exact verified SygToken implementation",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7030fe438be6ed196b8886616bbf5a245c267339"
-            },
-            {
-              "label": "Ethereum token deployment",
-              "url": "https://etherscan.io/address/0x54a4fc78431f9201824643e99bec891bb7462a1d#code"
             }
           ]
         }
