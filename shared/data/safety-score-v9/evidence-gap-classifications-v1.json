@@ -12622,6 +12622,149 @@
         "https://eth.blockscout.com/api/v2/smart-contracts/0xe63a2abc24cd9538398d825a4bfe5778d25687df"
       ],
       "rationale": "Whole-allocation legal custody/escrow safeguards, statutory segregation and bankruptcy-remoteness rights are not published for this yvUSDC lending book. Public contracts show technical custody/accounting and borrower transfers, not complete lender-of-record, borrower legal entity or insolvency rights. This is not evidence of adverse absence; no structural N/A or zero unknown custody is asserted."
+    },
+    {
+      "id": "uw-gtusdcp-gauntlet-5645f77a228f1912",
+      "assetId": "gtusdcp-gauntlet",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:c3ae45d0586e5b326ae615c9",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:36Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R56)",
+      "sources": [
+        {
+          "url": "https://docs.morpho.org/curate/tutorials-v1/unwind-vault-v1.md",
+          "observedAt": "2026-10-03T22:46:25Z",
+          "datumAsOf": null,
+          "location": "Step 2: Remove Market Exposure",
+          "excerpt": "If a market is **illiquid** (high utilization), this step must be repeated incrementally as liquidity becomes available.",
+          "assertion": "The complete deployed position has conditional liquidity, not a promised whole-slice realization horizon."
+        },
+        {
+          "url": "https://docs.morpho.org/curate/concepts/liquidity.md",
+          "observedAt": "2026-10-03T22:46:25Z",
+          "datumAsOf": null,
+          "location": "The Liquidity Adapter",
+          "excerpt": "If there is no idle asset and no liquidity available on the liquidity adapter, the Morpho Vault V2 becomes illiquid.",
+          "assertion": "V2 withdrawals depend on adapter liquidity; no final repayment or complete-realization maximum is specified."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.gauntlet.xyz/",
+        "https://app.morpho.org/curator/gauntlet",
+        "https://docs.morpho.org/llms.txt",
+        "https://docs.morpho.org/curate/concepts/liquidity.md",
+        "https://docs.morpho.org/curate/tutorials-v1/unwind-vault-v1.md",
+        "https://docs.morpho.org/curate/tutorials-v2/unwind-vault-v2.md",
+        "https://docs.morpho.org/learn/resources/risks.md",
+        "https://storage.googleapis.com/gauntlet-public-web-assets/gauntlet-branded-vault-disclaimer-dec-2025.pdf",
+        "https://morpho.org/disclaimers/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x8c106eedad96553e64287a5a6839c3cc78afa3d0",
+        "https://base.blockscout.com/api/v2/smart-contracts/0xee8f4ec5672f09119b96ab6fb59c27e1b7e44b61",
+        "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x7c574174da4b2be3f705c6244b4bfa0815a8b3ed"
+      ],
+      "rationale": "The exact required datum is a liquidityHorizon for the entire deposited strategy slice, not transaction speed or today's idle fraction. Protocol unwind and liquidity terms, exact V2/V1 implementations, curator surface, risk documentation and governing disclaimer publish utilization-dependent access but no maximum full-slice realization interval. Dynamic liquidity cannot honestly be encoded as immediate, one-day or seven-days."
+    },
+    {
+      "id": "uw-gtusdc-gauntlet-0d92ece642cefc02",
+      "assetId": "gtusdc-gauntlet",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:c99936da6a52cb955b1b8d35",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:36Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R56)",
+      "sources": [
+        {
+          "url": "https://docs.morpho.org/curate/tutorials-v1/unwind-vault-v1.md",
+          "observedAt": "2026-10-03T22:46:25Z",
+          "datumAsOf": null,
+          "location": "Step 2: Remove Market Exposure",
+          "excerpt": "If a market is **illiquid** (high utilization), this step must be repeated incrementally as liquidity becomes available.",
+          "assertion": "The complete deployed position has conditional liquidity, not a promised whole-slice realization horizon."
+        },
+        {
+          "url": "https://docs.morpho.org/curate/concepts/liquidity.md",
+          "observedAt": "2026-10-03T22:46:25Z",
+          "datumAsOf": null,
+          "location": "The Liquidity Adapter",
+          "excerpt": "If there is no idle asset and no liquidity available on the liquidity adapter, the Morpho Vault V2 becomes illiquid.",
+          "assertion": "V2 withdrawals depend on adapter liquidity; no final repayment or complete-realization maximum is specified."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.gauntlet.xyz/",
+        "https://app.morpho.org/curator/gauntlet",
+        "https://docs.morpho.org/llms.txt",
+        "https://docs.morpho.org/curate/concepts/liquidity.md",
+        "https://docs.morpho.org/curate/tutorials-v1/unwind-vault-v1.md",
+        "https://docs.morpho.org/curate/tutorials-v2/unwind-vault-v2.md",
+        "https://docs.morpho.org/learn/resources/risks.md",
+        "https://storage.googleapis.com/gauntlet-public-web-assets/gauntlet-branded-vault-disclaimer-dec-2025.pdf",
+        "https://morpho.org/disclaimers/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x8c106eedad96553e64287a5a6839c3cc78afa3d0",
+        "https://base.blockscout.com/api/v2/smart-contracts/0xee8f4ec5672f09119b96ab6fb59c27e1b7e44b61",
+        "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x7c574174da4b2be3f705c6244b4bfa0815a8b3ed"
+      ],
+      "rationale": "The exact required datum is a liquidityHorizon for the entire deposited strategy slice, not transaction speed or today's idle fraction. Protocol unwind and liquidity terms, exact V2/V1 implementations, curator surface, risk documentation and governing disclaimer publish utilization-dependent access but no maximum full-slice realization interval. Dynamic liquidity cannot honestly be encoded as immediate, one-day or seven-days."
+    },
+    {
+      "id": "uw-usdu-usdu-finance-e11f36999845f7f6",
+      "assetId": "usdu-usdu-finance",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:e2e0f16e2be3da751dea6525",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:36Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R56)",
+      "sources": [
+        {
+          "url": "https://usdu.gitbook.io/docs/risk-management/redemption-liquidity.md",
+          "observedAt": "2026-10-03T22:46:29Z",
+          "datumAsOf": null,
+          "location": "What happens if liquidity is tight?",
+          "excerpt": "redemption may temporarily be delayed until borrowers repay.",
+          "assertion": "Issuer discloses borrower-dependent access but no maximum interval for the entire Morpho USDU Core vault-share position."
+        },
+        {
+          "url": "https://usdu.gitbook.io/docs/how-usdusdu-works/minting-and-redemption.md",
+          "observedAt": "2026-10-03T22:46:30Z",
+          "datumAsOf": null,
+          "location": "How Redemption works",
+          "excerpt": "Users can redeem either $USDu or $sUSDu at any time, as long as there is sufficient liquidity in the vault.",
+          "assertion": "No unconditional or timed whole-position realization guarantee is published."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://usdu.finance/transparency/",
+        "https://usdu.gitbook.io/docs/llms.txt",
+        "https://usdu.gitbook.io/docs/risk-management/redemption-liquidity.md",
+        "https://usdu.gitbook.io/docs/how-usdusdu-works/minting-and-redemption.md",
+        "https://usdu.gitbook.io/docs/verified-code-and-audits.md",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xce22b5fb17ccbc0c5d87dc2e0df47dd71e3adc0a",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xfb46481a9819e068af0eb64a2c2824fcecaaaa45",
+        "https://docs.morpho.org/curate/tutorials-v1/unwind-vault-v1.md"
+      ],
+      "rationale": "For the scoped Morpho USDU Core vault shares, issuer transparency identifies curated variable-rate lending and adapter-held shares. Issuer redemption terms, complete docs index, verified adapter/core source and underlying protocol unwind terms show liquidity-dependent access, but no full-position realization maximum or contractual SLA. The adapter's curator-only redemption is not a guaranteed immediate holder cash exit."
     }
   ]
 }

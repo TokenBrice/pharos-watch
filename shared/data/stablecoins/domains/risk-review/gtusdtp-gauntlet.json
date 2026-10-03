@@ -106,9 +106,9 @@
     ]
   },
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
+    "tier": "standard-external",
     "role": "collateral-pricing",
-    "summary": "Complete pinned adapter census: 8 Morpho markets, 8 distinct borrower oracle paths, plus separately reviewed oracle-free share accounting. External pricing branches cannot inherit the share-accounting exemption. No measured debt/liability shares, independent failover or heartbeat budget is invented.",
+    "summary": "Eight recorded Morpho borrower branches use external price inputs. At block 26114897 the two previously opaque oracles are EIP-1167 clones of verified MetaOracleDeviationTimelock, with pinned primary/backup Chainlink-compatible composers and exact feeds. Shared dependencies prevent an independent-redundancy claim; no heartbeat budget or measured debt shares are invented.",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",
@@ -139,9 +139,17 @@
       ]
     },
     "reviewedAt": "2026-10-03",
-    "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
+    "reviewer": "Unknown wave W1R56; resolves both opaque clone implementations with pinned primary/backup configuration",
     "confidence": "verified",
     "sources": [
+      {
+        "label": "Verified MetaOracleDeviationTimelock implementation behind both exact EIP-1167 clones",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9b4655239e91dc9e1f7599bb88fba41b4542de5b"
+      },
+      {
+        "label": "Pinned primary and backup configuration, composer feeds and price reads at Ethereum block 26114897",
+        "url": "https://eth.blockscout.com/block/26114897"
+      },
       {
         "label": "Exact ethereum block 26107704; independent role, Safe, gate and market census re-read 2026-10-03",
         "url": "https://etherscan.io/block/26107704"
@@ -503,8 +511,8 @@
       {
         "id": "oracle-0x9f983115741d0f7f2eae07831415057ad3de34d2",
         "label": "Morpho borrower oracle 0x9f983115741d0f7f2eae07831415057ad3de34d2",
-        "tier": "opaque-or-unknown",
-        "summary": "Exact adapter market census binds 0x4fe72543c5c95cd6b5f3cb516cd235ba882e2e705fe3424db6f99dfe5811d0d3 to this oracle and the recorded collateral/LLTV. Downstream feed/configuration topology remains unresolved: source is unavailable and standard composer getters revert; no redundancy, heartbeat or pricing-administrator claim is made.",
+        "tier": "standard-external",
+        "summary": "Market oracle is an exact EIP-1167 clone of verified MetaOracleDeviationTimelock 0x9b4655239e91dc9e1f7599bb88fba41b4542de5b. At block 26114897 primary/current=0x8c9464d99512dcd6f80be72aac20dafd9ea2c831 (BTC/USD); backup=0x0acdc416c592a592edf2e64b178aa8d4d47e05a8 (cbBTC/USD). Both are verified MorphoChainlinkOracleV2 composers; all other feed/vault inputs are zero. Deviation threshold=2%, challenge delay=7200 and healing delay=28800 seconds. No independent-redundancy or end-to-end freshness guarantee is asserted.",
         "collateralAssets": [
           "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf"
         ],
@@ -513,16 +521,24 @@
         ],
         "feeds": [
           {
-            "provider": "Unresolved exact market oracle; Blockscout source unavailable and Morpho oracleByAddress type Unknown",
-            "path": "price() for 0x4fe72543c5c95cd6b5f3cb516cd235ba882e2e705fe3424db6f99dfe5811d0d3",
-            "address": "0x9f983115741d0f7f2eae07831415057ad3de34d2",
+            "provider": "EACAggregatorProxy",
+            "path": "Primary MorphoChainlinkOracleV2 BASE_FEED_1: BTC / USD",
+            "address": "0x91d32e6f01d6473b596f54c6e304e06d774f86b2",
             "chain": "ethereum",
             "observedAt": "2026-10-03",
-            "observedBlock": 26107704
+            "observedBlock": 26114897
+          },
+          {
+            "provider": "EACAggregatorProxy",
+            "path": "Backup MorphoChainlinkOracleV2 BASE_FEED_1: cbBTC / USD",
+            "address": "0x2665701293fcbeb223d11a08d826563edcce423a",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03",
+            "observedBlock": 26114897
           }
         ],
         "observedAt": "2026-10-03",
-        "observedBlock": 26107704,
+        "observedBlock": 26114897,
         "collateralParameters": [
           {
             "asset": "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
@@ -533,6 +549,11 @@
         "backstop": "Reviewed Morpho liquidate has no protocol-funded insurance payment or mandatory external rescuer. No independent insurer or guaranteed liquidator capacity is established.",
         "shutdownOrBadDebtBehavior": "When liquidation exhausts borrower collateral, residual borrow shares/assets are removed and badDebtAssets reduces that market totalSupplyAssets. Vault adapter realAssets then carries supplier losses into share NAV; there is no guaranteed par redemption.",
         "sources": [
+          {"label": "Exact clone runtime selecting MetaOracleDeviationTimelock", "url": "https://eth.blockscout.com/address/0x9f983115741d0f7f2eae07831415057ad3de34d2"},
+          {"label": "Verified clone implementation and fallback/permissionless switching source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9b4655239e91dc9e1f7599bb88fba41b4542de5b"},
+          {"label": "Verified primary composer", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8c9464d99512dcd6f80be72aac20dafd9ea2c831"},
+          {"label": "Verified cbBTC backup composer", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0acdc416c592a592edf2e64b178aa8d4d47e05a8"},
+          {"label": "Pinned clone configuration and all composer/feed getters", "url": "https://eth.blockscout.com/block/26114897"},
           {
             "label": "Exact ethereum block 26107704; independent role, Safe, gate and market census re-read 2026-10-03",
             "url": "https://etherscan.io/block/26107704"
@@ -644,8 +665,8 @@
       {
         "id": "oracle-0xf1561bc4b3d1ba49053986fb9ee88d4fe22d0cf4",
         "label": "Morpho borrower oracle 0xf1561bc4b3d1ba49053986fb9ee88d4fe22d0cf4",
-        "tier": "opaque-or-unknown",
-        "summary": "Exact adapter market census binds 0x3c5a244b778095e1e1b2e44b7c2ecc9bf4fda9cd85cc22740e09205a7a4bf510 to this oracle and the recorded collateral/LLTV. Downstream feed/configuration topology remains unresolved: source is unavailable and standard composer getters revert; no redundancy, heartbeat or pricing-administrator claim is made.",
+        "tier": "standard-external",
+        "summary": "Market oracle is an exact EIP-1167 clone of verified MetaOracleDeviationTimelock 0x9b4655239e91dc9e1f7599bb88fba41b4542de5b. At block 26114897 primary/current=0x8c9464d99512dcd6f80be72aac20dafd9ea2c831 (BTC/USD); backup=0x09dbf9502d43445b33883837a51d06fc9b9cdec4 (WBTC/BTC multiplied by BTC/USD). Both are verified MorphoChainlinkOracleV2 composers; other feed/vault inputs are zero. Deviation threshold=2%, challenge delay=7200 and healing delay=28800 seconds. Shared BTC feeds preclude assuming independent redundancy; no heartbeat/freshness guarantee is asserted.",
         "collateralAssets": [
           "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599"
         ],
@@ -654,16 +675,32 @@
         ],
         "feeds": [
           {
-            "provider": "Unresolved exact market oracle; Blockscout source unavailable and Morpho oracleByAddress type Unknown",
-            "path": "price() for 0x3c5a244b778095e1e1b2e44b7c2ecc9bf4fda9cd85cc22740e09205a7a4bf510",
-            "address": "0xf1561bc4b3d1ba49053986fb9ee88d4fe22d0cf4",
+            "provider": "EACAggregatorProxy",
+            "path": "Primary composer BASE_FEED_1: BTC / USD",
+            "address": "0x91d32e6f01d6473b596f54c6e304e06d774f86b2",
             "chain": "ethereum",
             "observedAt": "2026-10-03",
-            "observedBlock": 26107704
+            "observedBlock": 26114897
+          },
+          {
+            "provider": "EACAggregatorProxy",
+            "path": "Backup composer BASE_FEED_1: WBTC / BTC",
+            "address": "0xfdfd9c85ad200c506cf9e21f1fd8dd01932fbb23",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03",
+            "observedBlock": 26114897
+          },
+          {
+            "provider": "EACAggregatorProxy",
+            "path": "Backup composer BASE_FEED_2: BTC / USD",
+            "address": "0xf4030086522a5beea4988f8ca5b36dbc97bee88c",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03",
+            "observedBlock": 26114897
           }
         ],
         "observedAt": "2026-10-03",
-        "observedBlock": 26107704,
+        "observedBlock": 26114897,
         "collateralParameters": [
           {
             "asset": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
@@ -674,6 +711,11 @@
         "backstop": "Reviewed Morpho liquidate has no protocol-funded insurance payment or mandatory external rescuer. No independent insurer or guaranteed liquidator capacity is established.",
         "shutdownOrBadDebtBehavior": "When liquidation exhausts borrower collateral, residual borrow shares/assets are removed and badDebtAssets reduces that market totalSupplyAssets. Vault adapter realAssets then carries supplier losses into share NAV; there is no guaranteed par redemption.",
         "sources": [
+          {"label": "Exact clone runtime selecting MetaOracleDeviationTimelock", "url": "https://eth.blockscout.com/address/0xf1561bc4b3d1ba49053986fb9ee88d4fe22d0cf4"},
+          {"label": "Verified clone implementation and fallback/permissionless switching source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9b4655239e91dc9e1f7599bb88fba41b4542de5b"},
+          {"label": "Verified primary composer", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8c9464d99512dcd6f80be72aac20dafd9ea2c831"},
+          {"label": "Verified WBTC/BTC and BTC/USD backup composer", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x09dbf9502d43445b33883837a51d06fc9b9cdec4"},
+          {"label": "Pinned clone configuration and all composer/feed getters", "url": "https://eth.blockscout.com/block/26114897"},
           {
             "label": "Exact ethereum block 26107704; independent role, Safe, gate and market census re-read 2026-10-03",
             "url": "https://etherscan.io/block/26107704"

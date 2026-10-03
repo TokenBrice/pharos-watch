@@ -5924,6 +5924,171 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "gtusdtp-gauntlet",
+      "reviewedAt": "2026-10-03T22:45:16Z",
+      "expiresAt": "2027-10-03T22:45:16Z",
+      "reviewer": "Unknown wave W1R56",
+      "notes": "Exact token contract creation establishes a dated deployment-history lower bound only. No redemption throughput, stress recovery, reserve reconciliation or incident-free performance is asserted. Creation is not proof of uninterrupted operation.",
+      "sources": [
+        {
+          "sourceId": "exact-contract-creation",
+          "label": "Exact token contract creation transaction",
+          "publisher": "Blockscout blockchain explorer",
+          "publishedAt": "2025-11-28",
+          "url": "https://eth.blockscout.com/api/v2/transactions/0xe97408a531687d53bb15d8dd01072949083540d116f4f50592afb6305b50ac7b",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 10,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-contract-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "gtusdcp-gauntlet",
+      "reviewedAt": "2026-10-03T22:45:16Z",
+      "expiresAt": "2027-10-03T22:45:16Z",
+      "reviewer": "Unknown wave W1R56",
+      "notes": "Exact token contract creation establishes a dated deployment-history lower bound only. No redemption throughput, stress recovery, reserve reconciliation or incident-free performance is asserted. Creation is not proof of uninterrupted operation.",
+      "sources": [
+        {
+          "sourceId": "exact-contract-creation",
+          "label": "Exact token contract creation transaction",
+          "publisher": "Blockscout blockchain explorer",
+          "publishedAt": "2025-09-30",
+          "url": "https://eth.blockscout.com/api/v2/transactions/0x2160dd09f6f594f34bb18beb50a8611329609e4edb94c695859a19f61b81fc17",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 12,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-contract-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "gtusdc-gauntlet",
+      "reviewedAt": "2026-10-03T22:45:16Z",
+      "expiresAt": "2027-10-03T22:45:16Z",
+      "reviewer": "Unknown wave W1R56",
+      "notes": "Exact token contract creation establishes a dated deployment-history lower bound only. No redemption throughput, stress recovery, reserve reconciliation or incident-free performance is asserted. Creation is not proof of uninterrupted operation.",
+      "sources": [
+        {
+          "sourceId": "exact-contract-creation",
+          "label": "Exact token contract creation transaction",
+          "publisher": "Blockscout blockchain explorer",
+          "publishedAt": "2024-03-05",
+          "url": "https://eth.blockscout.com/api/v2/transactions/0x94f2904b486e0ab5a0d6041f3a17791ca9ae6bff241ea87a73f737ff6bf8e708",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 30,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-contract-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usdu-usdu-finance",
+      "reviewedAt": "2026-10-03T22:45:16Z",
+      "expiresAt": "2027-10-03T22:45:16Z",
+      "reviewer": "Unknown wave W1R56",
+      "notes": "Exact token contract creation establishes a dated deployment-history lower bound only. No redemption throughput, stress recovery, reserve reconciliation or incident-free performance is asserted. Creation is not proof of uninterrupted operation.",
+      "sources": [
+        {
+          "sourceId": "exact-contract-creation",
+          "label": "Exact token contract creation transaction",
+          "publisher": "Blockscout blockchain explorer",
+          "publishedAt": "2025-07-04",
+          "url": "https://eth.blockscout.com/api/v2/transactions/0x7115b573c816e795739c4b093b31f33191aa77cfb6fdfcff98606f8450777a7e",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 14,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-contract-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "jpym-mento",
+      "reviewedAt": "2026-10-03T22:45:16Z",
+      "expiresAt": "2027-10-03T22:45:16Z",
+      "reviewer": "Unknown wave W1R56",
+      "notes": "Exact token contract creation establishes a dated deployment-history lower bound only. No redemption throughput, stress recovery, reserve reconciliation or incident-free performance is asserted. Creation is not proof of uninterrupted operation.",
+      "sources": [
+        {
+          "sourceId": "exact-contract-creation",
+          "label": "Exact token contract creation transaction",
+          "publisher": "Blockscout blockchain explorer",
+          "publishedAt": "2025-04-17",
+          "url": "https://celo.blockscout.com/api/v2/transactions/0x4d40763b4ff117025071be73268dc50ca92ecb669d3ea2f13301b523bad26eb9",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 17,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-contract-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }
