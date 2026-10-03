@@ -8366,6 +8366,171 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "cusd-cap",
+      "reviewedAt": "2026-10-03T22:49:43Z",
+      "expiresAt": "2027-10-03T22:49:43Z",
+      "reviewer": "Unknown-resolver W1R21",
+      "notes": "Dated exact-token launch/deployment establishes only a lower bound of full live calendar months. No independently verified operating continuity, throughput, stress recovery, reserve reconciliation or incident-free history is asserted. Cap source body dates launch August 18 2025; migrated page metadata is later.",
+      "sources": [
+        {
+          "sourceId": "exact-token-launch",
+          "label": "Cap public launch cUSD",
+          "publisher": "Cap",
+          "publishedAt": "2025-08-18",
+          "url": "https://www.cap.app/blog/a-new-dawn-for-stablecoins-cap-is-officially-live",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 13,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-token-launch"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "stcusd-cap",
+      "reviewedAt": "2026-10-03T22:49:43Z",
+      "expiresAt": "2027-10-03T22:49:43Z",
+      "reviewer": "Unknown-resolver W1R21",
+      "notes": "Dated exact-token launch/deployment establishes only a lower bound of full live calendar months. No independently verified operating continuity, throughput, stress recovery, reserve reconciliation or incident-free history is asserted. Cap source body dates launch August 18 2025; migrated page metadata is later.",
+      "sources": [
+        {
+          "sourceId": "exact-token-launch",
+          "label": "Cap public launch stcUSD staking path",
+          "publisher": "Cap",
+          "publishedAt": "2025-08-18",
+          "url": "https://www.cap.app/blog/a-new-dawn-for-stablecoins-cap-is-officially-live",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 13,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-token-launch"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usdsm-stable-mint",
+      "reviewedAt": "2026-10-03T22:49:43Z",
+      "expiresAt": "2027-10-03T22:49:43Z",
+      "reviewer": "Unknown-resolver W1R21",
+      "notes": "Dated exact-token launch/deployment establishes only a lower bound of full live calendar months. No independently verified operating continuity, throughput, stress recovery, reserve reconciliation or incident-free history is asserted. USDSM uses exact proxy creation, not parent company history.",
+      "sources": [
+        {
+          "sourceId": "exact-token-launch",
+          "label": "Native USDSM proxy creation",
+          "publisher": "Etherlink Blockscout",
+          "publishedAt": "2025-03-10",
+          "url": "https://explorer.etherlink.com/tx/0xbfa15c8b2e642904be8438a2b73d3c62e1fbe1375f3d422c0021bca316b6a39a",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 18,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-token-launch"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "ousd-open-standard",
+      "reviewedAt": "2026-10-03T22:49:43Z",
+      "expiresAt": "2027-10-03T22:49:43Z",
+      "reviewer": "Unknown-resolver W1R21",
+      "notes": "Dated exact-token launch/deployment establishes only a lower bound of full live calendar months. No independently verified operating continuity, throughput, stress recovery, reserve reconciliation or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-token-launch",
+          "label": "OUSD live launch",
+          "publisher": "Open Standard",
+          "publishedAt": "2026-09-30",
+          "url": "https://joinopenstandard.com/blog/ousd-is-live",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 0,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-token-launch"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "jpysc-sbi-startale",
+      "reviewedAt": "2026-10-03T22:49:43Z",
+      "expiresAt": "2027-10-03T22:49:43Z",
+      "reviewer": "Unknown-resolver W1R21",
+      "notes": "Dated exact-token launch/deployment establishes only a lower bound of full live calendar months. No independently verified operating continuity, throughput, stress recovery, reserve reconciliation or incident-free history is asserted. JPYSC history is the closed-loop token, not public-chain circulation.",
+      "sources": [
+        {
+          "sourceId": "exact-token-launch",
+          "label": "JPYSC exact closed-loop issuance launch",
+          "publisher": "Startale and SBI Group",
+          "publishedAt": "2026-06-24",
+          "url": "https://startale.com/ja/blog/jpysc-launch",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 3,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-token-launch"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

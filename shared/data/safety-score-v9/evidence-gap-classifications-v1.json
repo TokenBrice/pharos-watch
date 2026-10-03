@@ -18613,6 +18613,403 @@
         "https://skynet.certik.com/projects/alpha-partners"
       ],
       "rationale": "Exact current USDA reserve composition (asset identities and weights, providers/custody and report period) is not published in reviewed issuer website/scripts, full GitBook or official linked article archive. The dated article supplies only a general off-chain fiat-backing/audit claim. Preserve the synthetic 100% undisclosed slice and its very-high risk; do not infer an itemized cash portfolio or verified audit."
+    },
+    {
+      "id": "uw-cusd-cap-ba486ceab724e116",
+      "assetId": "cusd-cap",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:05b4dbd0d8f8ac6ece9620b2",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:04:35Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R21)",
+      "sources": [
+        {
+          "url": "https://tsr-db-bucket-1.s3.us-west-2.amazonaws.com/multiple_uploaded/1786984979_5IaeGU7K6R.pdf",
+          "observedAt": "2026-10-03T23:04:35Z",
+          "datumAsOf": "2026-08-14",
+          "location": "WTGXX prospectus, printed pages 108 and 112",
+          "excerpt": "The investment policies of the other investment companies may not be the same as those of the Fund",
+          "assertion": "The fund permits other government MMF shares; its 93-day limit on directly held Treasury securities is not an exhaustive maximum for the whole fund-share claim."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.cap.app/concepts/vault/fractional-reserves.md",
+        "https://www.wisdomtree.com/investments/resource-library",
+        "https://prospectusconnect.com/digital_funds",
+        "https://dataspanapi.wisdomtree.com/pdr/documents/WEBSITE_FUND_DETAILS/WDT/US/EN-US/WTGXX_3/",
+        "https://tsr-db-bucket-1.s3.us-west-2.amazonaws.com/multiple_uploaded/1786984979_5IaeGU7K6R.pdf"
+      ],
+      "rationale": "Exact WTGXX slice maturityDaysMax is not disclosed as a maximum of the whole held claim. The current prospectus limits direct Treasury holdings to 93 days but also permits cash, overnight repos and other government MMF shares, expressly noting different underlying policies. The FAQ's WAM and redemption schedules are not maximum maturity. No fixed maturity of the open-end fund share is stated; no 60/93-day scalar is inferred."
+    },
+    {
+      "id": "uw-cusd-cap-49ba8d7df1a8f9bb",
+      "assetId": "cusd-cap",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:9820e4da9360b19d9320efcf",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:04:35Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R21)",
+      "sources": [
+        {
+          "url": "https://docs.cap.app/overview/risks.md",
+          "observedAt": "2026-10-03T23:04:33Z",
+          "datumAsOf": null,
+          "location": "Liquidity risk",
+          "excerpt": "Redemptions are guaranteed at all times for cUSD holders. However, redemptions may be delayed if the reserve assets are fully utilized.",
+          "assertion": "Full utilization can delay reserve realization; no maximum time to unwind the complete borrowed reserve claim is specified."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.cap.app/overview/risks.md",
+        "https://docs.cap.app/concepts/vault.md",
+        "https://docs.cap.app/concepts/vault/fractional-reserves.md",
+        "https://docs.cap.app/overview/protocol-overview/stcusd-mechanics",
+        "https://docs.cap.app/developers/contracts/tokens.md",
+        "https://docs.cap.app/resources/terms-and-conditions/platform-terms-of-use.md",
+        "https://docs.cap.app/resources/audits.md"
+      ],
+      "rationale": "No maximum full-slice liquidation horizon is published for USDC including Aave/operator borrowing, or stcUSD's cUSD/operator-linked reserve claim. Transferability, liquid reserve buffers and local ERC-4626 withdrawal into cUSD do not establish full underlying realization. Protocol mechanics and risk disclosures acknowledge utilization-dependent delay without a completion bound; terms and audit index add no whole-claim SLA. No immediate/day-tier value is inferred."
+    },
+    {
+      "id": "uw-stcusd-cap-082a5a3a1f1468d8",
+      "assetId": "stcusd-cap",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:671d0c97b59e85f142a1cc4c",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:04:35Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R21)",
+      "sources": [
+        {
+          "url": "https://docs.cap.app/overview/risks.md",
+          "observedAt": "2026-10-03T23:04:33Z",
+          "datumAsOf": null,
+          "location": "Liquidity risk",
+          "excerpt": "Redemptions are guaranteed at all times for cUSD holders. However, redemptions may be delayed if the reserve assets are fully utilized.",
+          "assertion": "Full utilization can delay reserve realization; no maximum time to unwind the complete borrowed reserve claim is specified."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.cap.app/overview/risks.md",
+        "https://docs.cap.app/concepts/vault.md",
+        "https://docs.cap.app/concepts/vault/fractional-reserves.md",
+        "https://docs.cap.app/overview/protocol-overview/stcusd-mechanics",
+        "https://docs.cap.app/developers/contracts/tokens.md",
+        "https://docs.cap.app/resources/terms-and-conditions/platform-terms-of-use.md",
+        "https://docs.cap.app/resources/audits.md"
+      ],
+      "rationale": "No maximum full-slice liquidation horizon is published for USDC including Aave/operator borrowing, or stcUSD's cUSD/operator-linked reserve claim. Transferability, liquid reserve buffers and local ERC-4626 withdrawal into cUSD do not establish full underlying realization. Protocol mechanics and risk disclosures acknowledge utilization-dependent delay without a completion bound; terms and audit index add no whole-claim SLA. No immediate/day-tier value is inferred."
+    },
+    {
+      "id": "uw-usdsm-stable-mint-bf866766d87cb3ce",
+      "assetId": "usdsm-stable-mint",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:04:35Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R21)",
+      "sources": [
+        {
+          "url": "https://stablemint.io/stablecoins/",
+          "observedAt": "2026-10-03T23:04:33Z",
+          "datumAsOf": null,
+          "location": "Reserve structure / Backing",
+          "excerpt": "Every USDSM is backed 1:1 by Dollar denominated cash deposits and HQLA.",
+          "assertion": "The issuer states eligible classes but gives no dated whole-book amounts or actual allocation weights."
+        },
+        {
+          "url": "https://stablemint.io/faq/",
+          "observedAt": "2026-10-03T23:04:33Z",
+          "datumAsOf": null,
+          "location": "Are USDSM and EURSM backed by real money?",
+          "excerpt": "Under these requirements, a minimum of 30% of reserve funds must be held in segregated deposit accounts at EU credit institutions.",
+          "assertion": "This is a legal minimum, not the issuer's measured actual deposit allocation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://stablemint.io/stablecoins/",
+        "https://stablemint.io/faq/",
+        "https://www.stablemint.io/use-cases/treasury/",
+        "https://stablemint.io/legal/terms-conditions/",
+        "https://stablemintpublicdocs.blob.core.windows.net/docs/StableMint_Whitepaper_USD.html",
+        "https://docs.stablemint.io/llms.txt",
+        "https://docs.stablemint.io/feed/supply.md",
+        "https://docs.stablemint.io/guides/reports.md"
+      ],
+      "rationale": "No current measured whole-book USDSM reserve denominator and itemized amounts/weights are published on the issuer, FAQ, whitepaper, legal or developer reporting surfaces. 102% backing, cash/HQLA descriptions and three-bank safeguarding do not determine actual composition; the 30% deposit floor cannot be converted into 30/70 weights. Supply feeds and account transaction reports are not reserve reports."
+    },
+    {
+      "id": "uw-usdsm-stable-mint-a1277a4ad5387ead",
+      "assetId": "usdsm-stable-mint",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:04:35Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R21)",
+      "sources": [
+        {
+          "url": "https://docs.stablemint.io/feed/supply.md",
+          "observedAt": "2026-10-03T23:04:33Z",
+          "datumAsOf": null,
+          "location": "Supply feed",
+          "excerpt": "Total and circulating supply, aggregated across every chain.",
+          "assertion": "A signed supply feed is disclosed, not a cadence or independent mechanism reconciling all liabilities against actual reserves."
+        },
+        {
+          "url": "https://stablemint.io/faq/",
+          "observedAt": "2026-10-03T23:04:33Z",
+          "datumAsOf": null,
+          "location": "How are the reserves safeguarded?",
+          "excerpt": "As an authorised EMI, Stable Mint is subject to regular regulatory reporting requirements and examination of its reserve management practices.",
+          "assertion": "General regulatory reporting is described without an exact whole-supply reconciliation cadence."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://stablemint.io/stablecoins/",
+        "https://stablemint.io/faq/",
+        "https://stablemint.io/legal/terms-conditions/",
+        "https://stablemintpublicdocs.blob.core.windows.net/docs/StableMint_Whitepaper_USD.html",
+        "https://docs.stablemint.io/feed/supply.md",
+        "https://docs.stablemint.io/guides/reports.md",
+        "https://explorer.etherlink.com/api/v2/smart-contracts/0x7089856110b005a40e8d16da1da31313b0f60561"
+      ],
+      "rationale": "The exact whole-supply-versus-reserves reconciliation cadence/mechanism is not published. Mint-after-received-deposit, unique mint request IDs, signed on-chain supply, user account statements and unspecified regular regulatory reporting do not establish daily/monthly reconciliation of all four-chain liabilities against safeguarded assets. No reconciliation tier is inferred."
+    },
+    {
+      "id": "uw-usdsm-stable-mint-5dad619f00872d55",
+      "assetId": "usdsm-stable-mint",
+      "scope": {
+        "componentKey": "control:mint-meta:usdsm-stable-mint:5951c00b5ef7965fec9f",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:usdsm-stable-mint:5951c00b5ef7965fec9f",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:04:35Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R21)",
+      "sources": [
+        {
+          "url": "https://stablemint.io/stablecoins/",
+          "observedAt": "2026-10-03T23:04:33Z",
+          "datumAsOf": null,
+          "location": "Custody infrastructure",
+          "excerpt": "Utila MPC \u2014 key material distributed across multiple parties, never reconstructed in a single location",
+          "assertion": "No threshold, signer identities/independence, administrative recovery bypass or mapping of this policy to either privileged EOA is given."
+        },
+        {
+          "url": "https://stablemint.io/faq/",
+          "observedAt": "2026-10-03T23:04:33Z",
+          "datumAsOf": null,
+          "location": "How is my business account secured? / Custody",
+          "excerpt": "keys are split across multiple independent parties and never reconstructed.",
+          "assertion": "The general MPC statement does not provide the exact issuer-specific independent authorization quorum for privileged mint and upgrade keys."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://stablemint.io/stablecoins/",
+        "https://stablemint.io/faq/",
+        "https://stablemint.io/legal/terms-conditions/",
+        "https://stablemintpublicdocs.blob.core.windows.net/docs/StableMint_Whitepaper_USD.html",
+        "https://docs.stablemint.io/llms.txt",
+        "https://explorer.etherlink.com/api/v2/smart-contracts/0x7089856110b005a40e8d16da1da31313b0f60561",
+        "https://explorer.etherlink.com/api/v2/smart-contracts/0xe7f117f87fa650350c3e363ca2c644951d273d1f"
+      ],
+      "rationale": "For the exact scoped MPC questions on native upgrade/admin/minter EOA 0x1bb0b2666edd827f74b558136fdbe69e4ecec5fd and additional minter 0xab42b550b6d757f3d17eac8e045af095961d75bc, issuer materials publish no enforceable quorum, signer identities/independence, recovery bypass or proof the extra minter uses the same policy. Contract role gating cannot reveal off-chain MPC policy. This classification does not claim incident-free history or close aggregate adapter reach."
+    },
+    {
+      "id": "uw-usdsm-stable-mint-61e4297190eff829",
+      "assetId": "usdsm-stable-mint",
+      "scope": {
+        "componentKey": "control:mint-meta:usdsm-stable-mint:8ea62eea76364fb14c11",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:usdsm-stable-mint:8ea62eea76364fb14c11",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:04:35Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R21)",
+      "sources": [
+        {
+          "url": "https://stablemint.io/stablecoins/",
+          "observedAt": "2026-10-03T23:04:33Z",
+          "datumAsOf": null,
+          "location": "Custody infrastructure",
+          "excerpt": "Utila MPC \u2014 key material distributed across multiple parties, never reconstructed in a single location",
+          "assertion": "No threshold, signer identities/independence, administrative recovery bypass or mapping of this policy to either privileged EOA is given."
+        },
+        {
+          "url": "https://stablemint.io/faq/",
+          "observedAt": "2026-10-03T23:04:33Z",
+          "datumAsOf": null,
+          "location": "How is my business account secured? / Custody",
+          "excerpt": "keys are split across multiple independent parties and never reconstructed.",
+          "assertion": "The general MPC statement does not provide the exact issuer-specific independent authorization quorum for privileged mint and upgrade keys."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://stablemint.io/stablecoins/",
+        "https://stablemint.io/faq/",
+        "https://stablemint.io/legal/terms-conditions/",
+        "https://stablemintpublicdocs.blob.core.windows.net/docs/StableMint_Whitepaper_USD.html",
+        "https://docs.stablemint.io/llms.txt",
+        "https://explorer.etherlink.com/api/v2/smart-contracts/0x7089856110b005a40e8d16da1da31313b0f60561",
+        "https://explorer.etherlink.com/api/v2/smart-contracts/0xe7f117f87fa650350c3e363ca2c644951d273d1f"
+      ],
+      "rationale": "For the exact scoped MPC questions on native upgrade/admin/minter EOA 0x1bb0b2666edd827f74b558136fdbe69e4ecec5fd and additional minter 0xab42b550b6d757f3d17eac8e045af095961d75bc, issuer materials publish no enforceable quorum, signer identities/independence, recovery bypass or proof the extra minter uses the same policy. Contract role gating cannot reveal off-chain MPC policy. This classification does not claim incident-free history or close aggregate adapter reach."
+    },
+    {
+      "id": "uw-usdsm-stable-mint-bd334844770d4c52",
+      "assetId": "usdsm-stable-mint",
+      "scope": {
+        "componentKey": "control:mint-meta:usdsm-stable-mint:bbb3136e12def53ad156",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:usdsm-stable-mint:bbb3136e12def53ad156",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:04:35Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R21)",
+      "sources": [
+        {
+          "url": "https://stablemint.io/stablecoins/",
+          "observedAt": "2026-10-03T23:04:33Z",
+          "datumAsOf": null,
+          "location": "Custody infrastructure",
+          "excerpt": "Utila MPC \u2014 key material distributed across multiple parties, never reconstructed in a single location",
+          "assertion": "No threshold, signer identities/independence, administrative recovery bypass or mapping of this policy to either privileged EOA is given."
+        },
+        {
+          "url": "https://stablemint.io/faq/",
+          "observedAt": "2026-10-03T23:04:33Z",
+          "datumAsOf": null,
+          "location": "How is my business account secured? / Custody",
+          "excerpt": "keys are split across multiple independent parties and never reconstructed.",
+          "assertion": "The general MPC statement does not provide the exact issuer-specific independent authorization quorum for privileged mint and upgrade keys."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://stablemint.io/stablecoins/",
+        "https://stablemint.io/faq/",
+        "https://stablemint.io/legal/terms-conditions/",
+        "https://stablemintpublicdocs.blob.core.windows.net/docs/StableMint_Whitepaper_USD.html",
+        "https://docs.stablemint.io/llms.txt",
+        "https://explorer.etherlink.com/api/v2/smart-contracts/0x7089856110b005a40e8d16da1da31313b0f60561",
+        "https://explorer.etherlink.com/api/v2/smart-contracts/0xe7f117f87fa650350c3e363ca2c644951d273d1f"
+      ],
+      "rationale": "For the exact scoped MPC questions on native upgrade/admin/minter EOA 0x1bb0b2666edd827f74b558136fdbe69e4ecec5fd and additional minter 0xab42b550b6d757f3d17eac8e045af095961d75bc, issuer materials publish no enforceable quorum, signer identities/independence, recovery bypass or proof the extra minter uses the same policy. Contract role gating cannot reveal off-chain MPC policy. This classification does not claim incident-free history or close aggregate adapter reach."
+    },
+    {
+      "id": "uw-ousd-open-standard-b32e265680f477b6",
+      "assetId": "ousd-open-standard",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:1c4dd3588a3d275a0d87b130",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:04:35Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R21)",
+      "sources": [
+        {
+          "url": "https://reserves.bridge.xyz/ousd",
+          "observedAt": "2026-10-03T23:04:33Z",
+          "datumAsOf": "2026-10-03",
+          "location": "Reserve Assets and Investment Allocation footnote",
+          "excerpt": "Treasuries include money-market funds comprised of T-bill ladders with less than 3-month duration.",
+          "assertion": "The combined Treasury/MMF bucket supplies duration, not a maximum maturity for all holdings or the held fund-share claim."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://reserves.bridge.xyz/ousd",
+        "https://transparency.bridge.xyz/v0/stablecoins/ousd",
+        "https://joinopenstandard.com/blog/ousd-is-live",
+        "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
+        "https://apidocs.bridge.xyz/platform/issuance/faq",
+        "https://apidocs.bridge.xyz/platform/issuance/reserve-management.md"
+      ],
+      "rationale": "Exact maximum maturity of OUSD's combined Treasury reserve slice is undisclosed. The dashboard includes unspecified MMFs and reports sub-three-month duration; legal terms restrict direct bills to three months but also allow MMFs, repos and tokenized versions. No exhaustive fund/holding identities or maximum for the entire combined claim are provided. Duration and direct-bill policy are not a valid 90/93-day whole-slice maximum."
+    },
+    {
+      "id": "uw-ousd-open-standard-a3fb7c853c982c07",
+      "assetId": "ousd-open-standard",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:ousd-open-standard:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:04:35Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R21)",
+      "sources": [
+        {
+          "url": "https://apidocs.bridge.xyz/platform/orchestration/more/cutoffs.md",
+          "observedAt": "2026-10-03T23:04:33Z",
+          "datumAsOf": null,
+          "location": "USD Wire settlement notes",
+          "excerpt": "Please note that receiving banks may process wires at their own speed.",
+          "assertion": "Rail processing windows do not establish an exhaustive receipt-to-spendable-fiat maximum for the primary redemption route."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
+        "https://apidocs.bridge.xyz/platform/issuance/faq",
+        "https://apidocs.bridge.xyz/platform/issuance/minting-and-burning.md",
+        "https://apidocs.bridge.xyz/platform/issuance/reserve-management.md",
+        "https://apidocs.bridge.xyz/platform/orchestration/more/cutoffs.md",
+        "https://joinopenstandard.com/blog/ousd-is-live"
+      ],
+      "rationale": "No single whole-route maximum settlement time to final spendable USD is published. Legal terms promise processing within two business days only after compliance determination and except outside-control delay. API documentation distinguishes reserve release, rail sending, eligible ACH/FedNow windows and independent recipient-bank processing. None bounds the complete offchain-issuer redemption path for all supported users; no typical or calendar-converted SLA is inferred."
     }
   ]
 }
