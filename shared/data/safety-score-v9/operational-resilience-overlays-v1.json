@@ -8993,6 +8993,138 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "rusd-reservoir",
+      "reviewedAt": "2026-10-03T22:45:39Z",
+      "expiresAt": "2027-10-03T22:45:39Z",
+      "reviewer": "Pharos unknown resolver W1R27",
+      "notes": "Exact-token deployment history lower bound only; no redemption throughput, stress recovery, reserve reconciliation continuity or incident-free claim.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Exact canonical rUSD creation transaction, block 20564150",
+          "publisher": "Reservoir / Ethereum explorer",
+          "publishedAt": "2024-08-19",
+          "url": "https://eth.blockscout.com/tx/0x68cb9b6aff249384ea5578ef93e1d5ea2bbd6de18a2cbd019c8b02f2b36ed122",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 25,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "srusd-reservoir",
+      "reviewedAt": "2026-10-03T22:45:39Z",
+      "expiresAt": "2027-10-03T22:45:39Z",
+      "reviewer": "Pharos unknown resolver W1R27",
+      "notes": "Exact-wrapper deployment history lower bound only; parent history is not substituted. No redemption throughput, stress recovery, reserve reconciliation continuity or incident-free claim.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Exact canonical srUSD creation transaction, block 20564153",
+          "publisher": "Reservoir / Ethereum explorer",
+          "publishedAt": "2024-08-19",
+          "url": "https://eth.blockscout.com/tx/0x6ab6716629f2977ff1f4d52b18e3077f78e41d560f8a8f26bc100f065cd95ee2",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 25,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "pusd-polymarket",
+      "reviewedAt": "2026-10-03T22:45:39Z",
+      "expiresAt": "2027-10-03T22:45:39Z",
+      "reviewer": "Pharos unknown resolver W1R27",
+      "notes": "Exact-token live transfer observed at block 94908237; this proves only zero full months as a conservative lower bound, not an absence of older history. No performance or incident-free claim.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Exact pUSD live transfer observation at Polygon block 94908237",
+          "publisher": "Polymarket / Polygon explorer",
+          "publishedAt": "2026-10-03",
+          "url": "https://polygon.blockscout.com/tx/0xc3ac9aa1c7ca6f03d3b46e7b1106c3071a0a9ec0d95b0daf59caab44d5710ceb",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 0,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "susd-solayer",
+      "reviewedAt": "2026-10-03T22:45:39Z",
+      "expiresAt": "2027-10-03T22:45:39Z",
+      "reviewer": "Pharos unknown resolver W1R27",
+      "notes": "Issuer recap dated November 4 2024 confirms October sUSD launch; 22 full months lower bound. Page migration metadata is not treated as the original article date. No performance or incident-free claim.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Solayer October recap, article dated November 4 2024",
+          "publisher": "Solayer",
+          "publishedAt": "2024-11-04",
+          "url": "https://solayer.org/resources/blog/solayer-october-recap",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 22,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }
