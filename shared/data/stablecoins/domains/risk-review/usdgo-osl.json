@@ -17,10 +17,10 @@
     "reviewedAt": "2026-10-01"
   },
   "bridgeRouteRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "The authored Solana mint is verified native USDGO issuance. The issuer transparency page also lists Ethereum and Morph deployments, while the August report names an older Morph contract. Their transfer rails, controllers, and deployment continuity remain unresolved; this partial review does not establish asset-wide bridge coverage.",
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA21USDGO)",
+    "tier": "issuer-native-burn-mint",
+    "summary": "USDGO's current issuer-listed Solana, Ethereum and Morph deployments are native issuer claims. Pinned EVM implementation and complete mint/manager/upgrader role enumeration identify issuer-controlled EOAs, not escrow or message-verifier representation contracts. Native EVM authorities are recorded in Mint Authority; this does not claim independent signer custody or remove their unbounded upgrade and cap-raising power.",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Unknown wave W1R09 pinned native-deployment review",
     "confidence": "manual-review",
     "sources": [
       {
@@ -31,6 +31,11 @@
         "label": "USDGO issuer deployment transparency",
         "url": "https://www.usdgo.com/en/transparency"
       }
+      ,
+      {"label":"Anchorage covered stablecoin terms, supported blockchains and unauthorized versions","url":"https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-terms"},
+      {"label":"AnchorageTokenV2 verified implementation","url":"https://eth.blockscout.com/address/0xd8e25d31606e3f5b722396a936c76c028a8a72ab?tab=contract"},
+      {"label":"Ethereum RPC block 26114898","url":"https://ethereum-rpc.publicnode.com"},
+      {"label":"Morph RPC block 27764553","url":"https://rpc.morphl2.io"}
     ],
     "routes": [
       {
@@ -66,42 +71,50 @@
         "id": "ethereum:0x4cf5920df52f5b1f246e2e38e1786ae1cf03ecf5",
         "destinationChain": "ethereum",
         "contractAddress": "0x4cf5920df52f5b1f246e2e38e1786ae1cf03ecf5",
-        "protocol": "Issuer-listed deployment; transfer rail unresolved",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Issuer transparency lists this exact deployment; pinned symbol, name and six decimals match USDGO. Native-versus-representation issuance, transfer controls and continuity with the older Morph deployment remain unreviewed.",
-        "observedAt": "2026-10-01",
-        "observedBlock": 26095935,
+        "canonicalChain": "ethereum",
+        "protocol": "Anchorage issuer-native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Ethereum block 26114898 (0xacfd1635574095212e3ce1303b8b9d563339a7df9d9e22e32a1d08d80a248aaf), implementation 0xd8e25d31606e3f5b722396a936c76c028a8a72ab bytecode exactly matched verified AnchorageTokenV2. MINTER_BURNER_ROLE, MINTER_MANAGER_ROLE and UPGRADER_ROLE each had one EOA member, respectively 0x364366a7164fb518eafaa42af0c86eddab78e6f3, 0x42eed212815cbbbae09517cb13e6823a890da771 and 0x9341dc035608c77b3ace68662c0ef1bf8b568ff8; defaultAdmin was EOA 0xd93826bb299765c87d13aeba2a7e5d9b27a03956. This exact issuer-listed contract is native issuance, not external bridge representation.",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26114898,
         "sources": [
           {
             "label": "USDGO issuer deployment transparency",
             "url": "https://www.usdgo.com/en/transparency"
           }
+          ,
+          {"label":"AnchorageTokenV2 verified implementation","url":"https://eth.blockscout.com/address/0xd8e25d31606e3f5b722396a936c76c028a8a72ab?tab=contract"},
+          {"label":"Ethereum pinned RPC","url":"https://ethereum-rpc.publicnode.com"}
         ]
       },
       {
         "id": "morph-l2:0x4cf5920df52f5b1f246e2e38e1786ae1cf03ecf5",
         "destinationChain": "morph-l2",
         "contractAddress": "0x4cf5920df52f5b1f246e2e38e1786ae1cf03ecf5",
-        "protocol": "Issuer-listed deployment; transfer rail unresolved",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Issuer transparency lists this exact deployment; pinned symbol, name and six decimals match USDGO. Native-versus-representation issuance, transfer controls and continuity with the older Morph deployment remain unreviewed.",
-        "observedAt": "2026-10-01",
-        "observedBlock": 27634687,
+        "canonicalChain": "morph-l2",
+        "protocol": "Anchorage issuer-native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Morph block 27764553 (0xe046966c8da6ebdd8b98eb0d0407f3a2f92ec96584dffdca2a8151ddca1ef640), implementation 0xd8e25d31606e3f5b722396a936c76c028a8a72ab bytecode exactly matched verified AnchorageTokenV2. Enumerated minter, manager and upgrader roles each had one EOA, matching Ethereum; defaultAdmin also matched. The issuer's current registry lists this exact native deployment. The older August-report address is historical and is not substituted for this reviewed contract.",
+        "observedAt": "2026-10-03",
+        "observedBlock": 27764553,
         "sources": [
           {
             "label": "USDGO issuer deployment transparency",
             "url": "https://www.usdgo.com/en/transparency"
           }
+          ,
+          {"label":"AnchorageTokenV2 verified implementation","url":"https://eth.blockscout.com/address/0xd8e25d31606e3f5b722396a936c76c028a8a72ab?tab=contract"},
+          {"label":"Morph pinned RPC","url":"https://rpc.morphl2.io"}
         ]
       }
     ]

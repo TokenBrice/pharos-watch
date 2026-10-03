@@ -6914,6 +6914,138 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "usdgo-osl",
+      "reviewedAt": "2026-10-03T22:45:51Z",
+      "expiresAt": "2027-10-03T22:45:51Z",
+      "reviewer": "Unknown wave W1R09",
+      "notes": "Exact USDGO dated launch and initial live mint establish seven completed months as a lower bound only. No redemption throughput, stress recovery, reconciliation continuity or incident-free claim is established.",
+      "sources": [
+        {
+          "sourceId": "usdgo-launch",
+          "label": "OSL official USDGO launch",
+          "publisher": "OSL Group",
+          "publishedAt": "2026-02-10",
+          "url": "https://www.osl.com/hk-en/press-release/osl-group-officially-launches-regulated-enterprise-stablecoin-usdgo",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 7,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "usdgo-launch"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "jpyt-dephaser",
+      "reviewedAt": "2026-10-03T22:45:51Z",
+      "expiresAt": "2027-10-03T22:45:51Z",
+      "reviewer": "Unknown wave W1R09",
+      "notes": "Exact JPYT contract creation at Optimism block 126725791 on 2024-10-16 establishes 23 completed months as a lower bound. No performance, uninterrupted activity, financial reconciliation or incident absence is asserted.",
+      "sources": [
+        {
+          "sourceId": "jpyt-creation",
+          "label": "JPYT deployment transaction",
+          "publisher": "Optimism Blockscout",
+          "publishedAt": "2024-10-16",
+          "url": "https://explorer.optimism.io/tx/0x53669673e404f0415eb6373b0edc1b692d3389109978e5d502f5bb9ff298dac0",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 23,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "jpyt-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "rwausdi-multipli",
+      "reviewedAt": "2026-10-03T22:45:51Z",
+      "expiresAt": "2027-10-03T22:45:51Z",
+      "reviewer": "Unknown wave W1R09",
+      "notes": "Exact rwaUSDi proxy creation at Ethereum block 23864210 on 2025-11-23 establishes ten completed months as a lower bound. No parent protocol history, throughput, stress recovery, independent reconciliation continuity or incident-free claim is asserted.",
+      "sources": [
+        {
+          "sourceId": "rwausdi-creation",
+          "label": "rwaUSDi deployment transaction",
+          "publisher": "Ethereum Blockscout",
+          "publishedAt": "2025-11-23",
+          "url": "https://eth.blockscout.com/tx/0x1d2b91e085e9a3693adae7161a49a7c38a68ce212d83266a3e879fd89bcd3243",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 10,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "rwausdi-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "spusd-soulpeg",
+      "reviewedAt": "2026-10-03T23:02:06Z",
+      "expiresAt": "2027-10-03T23:02:06Z",
+      "reviewer": "Unknown wave W1R09",
+      "notes": "Exact SPUSD token creation at BSC block 55830511 on 2025-07-30 establishes fourteen completed months as a lower bound only. No parent protocol age, continuous activity, performance, reconciliation or incident absence is asserted.",
+      "sources": [
+        {
+          "sourceId": "spusd-creation",
+          "label": "SPUSD exact token creation transaction",
+          "publisher": "BNB Chain explorer",
+          "publishedAt": "2025-07-30",
+          "url": "https://bscscan.com/tx/0xf4e90511e88ef238cc13926a359d54b6ae06429912f397cb3299ec1fba64db2c",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 14,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "spusd-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

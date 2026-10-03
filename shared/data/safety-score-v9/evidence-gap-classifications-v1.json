@@ -14165,6 +14165,640 @@
         "https://docs.morpho.org/curate/concepts/roles/"
       ],
       "rationale": "Scoped question asks independently evidenced Safe signer independence and offchain key custody. Official governance, security/role docs, legal and financial disclosures name the exact curator/quorum but publish no identity-to-owner mapping, independent operator attestations, custody/recovery policy. Fresh block-pinned getOwners/getThreshold/modules confirm 3-of-5 cryptographic topology on both chains, not independent humans. Incident-state uncertainty remains a separate U and is not asserted resolved."
+    },
+    {
+      "id": "uw-usdgo-osl-0abaac0fa28fab5e",
+      "assetId": "usdgo-osl",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:574770005a05f4f65f9db412",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:06Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R09)",
+      "sources": [
+        {
+          "url": "https://learn.anchorage.com/08.31.26_USDGO_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf",
+          "observedAt": "2026-10-03T22:57:25Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Schedule II pp.5-6, cash, BUIDL and MMF rows",
+          "excerpt": "|a.|38151N205|N/A|$99,693,768|",
+          "assertion": "Attestation identifies MMF CUSIPs, demand-deposit cash and BUIDL shares, but gives no finite maximum maturityDaysMax for any held reserve instrument. Underlying portfolio WAM/mandates are not held-share maxima."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.usdgo.com/en/transparency",
+        "https://www.anchorage.com/platform/usdgo-reserve-attestations",
+        "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-terms",
+        "https://am.jpmorgan.com/us/en/asset-management/adv/products/jpmorgan-onchain-liquidity-token-money-market-fund-token-class-46655r119",
+        "https://connect.rightprospectus.com/JPMorgan/TVT/46655R119/SP?site=JPMorganv3&SPV=",
+        "https://am.gs.com/en-us/advisors/funds/detail/PV109514/38151N205/stablecoin-reserves-fund",
+        "https://securitize.io/blackrock/buidl"
+      ],
+      "rationale": "The admitted bank-deposit, money-market-fund and fund-share slices have no disclosed finite maturityDaysMax on the actual held instruments. Schedule II explicitly reports MMF maturity N/A, cash as demand deposits, BUIDL as daily-NAV fund shares. Issuer archive, governing covered-stablecoin terms and exact fund product/document surfaces disclose asset classes, NAV and redemption access, not a finite share/deposit maturity maximum. No zero, underlying Treasury mandate or current WAM is substituted."
+    },
+    {
+      "id": "uw-usdgo-osl-f1a030dfd88403a7",
+      "assetId": "usdgo-osl",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:982888a963b7e7f1156c100c",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:06Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R09)",
+      "sources": [
+        {
+          "url": "https://learn.anchorage.com/08.31.26_USDGO_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf",
+          "observedAt": "2026-10-03T22:57:25Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Schedule II pp.5-6, cash, BUIDL and MMF rows",
+          "excerpt": "|a.|38151N205|N/A|$99,693,768|",
+          "assertion": "Attestation identifies MMF CUSIPs, demand-deposit cash and BUIDL shares, but gives no finite maximum maturityDaysMax for any held reserve instrument. Underlying portfolio WAM/mandates are not held-share maxima."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.usdgo.com/en/transparency",
+        "https://www.anchorage.com/platform/usdgo-reserve-attestations",
+        "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-terms",
+        "https://am.jpmorgan.com/us/en/asset-management/adv/products/jpmorgan-onchain-liquidity-token-money-market-fund-token-class-46655r119",
+        "https://connect.rightprospectus.com/JPMorgan/TVT/46655R119/SP?site=JPMorganv3&SPV=",
+        "https://am.gs.com/en-us/advisors/funds/detail/PV109514/38151N205/stablecoin-reserves-fund",
+        "https://securitize.io/blackrock/buidl"
+      ],
+      "rationale": "The admitted bank-deposit, money-market-fund and fund-share slices have no disclosed finite maturityDaysMax on the actual held instruments. Schedule II explicitly reports MMF maturity N/A, cash as demand deposits, BUIDL as daily-NAV fund shares. Issuer archive, governing covered-stablecoin terms and exact fund product/document surfaces disclose asset classes, NAV and redemption access, not a finite share/deposit maturity maximum. No zero, underlying Treasury mandate or current WAM is substituted."
+    },
+    {
+      "id": "uw-usdgo-osl-6724ebacdd0e5aec",
+      "assetId": "usdgo-osl",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:b4e71849e8a3fe183e4d5308",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:06Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R09)",
+      "sources": [
+        {
+          "url": "https://learn.anchorage.com/08.31.26_USDGO_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf",
+          "observedAt": "2026-10-03T22:57:25Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Schedule II pp.5-6, cash, BUIDL and MMF rows",
+          "excerpt": "|a.|38151N205|N/A|$99,693,768|",
+          "assertion": "Attestation identifies MMF CUSIPs, demand-deposit cash and BUIDL shares, but gives no finite maximum maturityDaysMax for any held reserve instrument. Underlying portfolio WAM/mandates are not held-share maxima."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.usdgo.com/en/transparency",
+        "https://www.anchorage.com/platform/usdgo-reserve-attestations",
+        "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-terms",
+        "https://am.jpmorgan.com/us/en/asset-management/adv/products/jpmorgan-onchain-liquidity-token-money-market-fund-token-class-46655r119",
+        "https://connect.rightprospectus.com/JPMorgan/TVT/46655R119/SP?site=JPMorganv3&SPV=",
+        "https://am.gs.com/en-us/advisors/funds/detail/PV109514/38151N205/stablecoin-reserves-fund",
+        "https://securitize.io/blackrock/buidl"
+      ],
+      "rationale": "The admitted bank-deposit, money-market-fund and fund-share slices have no disclosed finite maturityDaysMax on the actual held instruments. Schedule II explicitly reports MMF maturity N/A, cash as demand deposits, BUIDL as daily-NAV fund shares. Issuer archive, governing covered-stablecoin terms and exact fund product/document surfaces disclose asset classes, NAV and redemption access, not a finite share/deposit maturity maximum. No zero, underlying Treasury mandate or current WAM is substituted."
+    },
+    {
+      "id": "uw-usdgo-osl-6366ea7fa67502ec",
+      "assetId": "usdgo-osl",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:c5b73e30cedd88a02ef6cf1a",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:06Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R09)",
+      "sources": [
+        {
+          "url": "https://learn.anchorage.com/08.31.26_USDGO_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf",
+          "observedAt": "2026-10-03T22:57:25Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Schedule II pp.5-6, cash, BUIDL and MMF rows",
+          "excerpt": "|a.|38151N205|N/A|$99,693,768|",
+          "assertion": "Attestation identifies MMF CUSIPs, demand-deposit cash and BUIDL shares, but gives no finite maximum maturityDaysMax for any held reserve instrument. Underlying portfolio WAM/mandates are not held-share maxima."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.usdgo.com/en/transparency",
+        "https://www.anchorage.com/platform/usdgo-reserve-attestations",
+        "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-terms",
+        "https://am.jpmorgan.com/us/en/asset-management/adv/products/jpmorgan-onchain-liquidity-token-money-market-fund-token-class-46655r119",
+        "https://connect.rightprospectus.com/JPMorgan/TVT/46655R119/SP?site=JPMorganv3&SPV=",
+        "https://am.gs.com/en-us/advisors/funds/detail/PV109514/38151N205/stablecoin-reserves-fund",
+        "https://securitize.io/blackrock/buidl"
+      ],
+      "rationale": "The admitted bank-deposit, money-market-fund and fund-share slices have no disclosed finite maturityDaysMax on the actual held instruments. Schedule II explicitly reports MMF maturity N/A, cash as demand deposits, BUIDL as daily-NAV fund shares. Issuer archive, governing covered-stablecoin terms and exact fund product/document surfaces disclose asset classes, NAV and redemption access, not a finite share/deposit maturity maximum. No zero, underlying Treasury mandate or current WAM is substituted."
+    },
+    {
+      "id": "uw-jpyt-dephaser-ca1577c14ebb72ca",
+      "assetId": "jpyt-dephaser",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:06Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R09)",
+      "sources": [
+        {
+          "url": "https://docs.dephaser.com/how-it-works/money-flow.md",
+          "observedAt": "2026-10-03T22:54:00Z",
+          "datumAsOf": null,
+          "location": "Transparent and Reliable Operations",
+          "excerpt": "every step of the transaction is recorded on the blockchain, ensuring full visibility for users.",
+          "assertion": "Issuer describes on-chain transaction visibility and Aave collateral, not a specified whole-supply reserve/liability financial-reconciliation cadence."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.dephaser.com/llms.txt",
+        "https://docs.dephaser.com/how-it-works/money-flow.md",
+        "https://docs.dephaser.com/how-it-works/reliable-yen-stablecoin.md",
+        "https://docs.dephaser.com/policy/terms-of-service.md",
+        "https://docs.dephaser.com/concept/audit.md",
+        "https://github.com/0xDephaser/contracts",
+        "https://raw.githubusercontent.com/0xDephaser/contracts/main/src/UsdtDepositManager.sol",
+        "https://explorer.optimism.io/address/0xc47da4cb96ce65a96844a01bfae509f9d5454534"
+      ],
+      "rationale": "No daily, periodic or continuous whole-supply financial reconciliation regime is disclosed. The source ledger increments/decrements deposited tokens and minted JPY, but the operator's fee/profit extraction and multiple managers mean those local counters are not an independent whole-liability backing reconciliation. Terms, complete issuer docs index, audit disclosure and public contract sources disclose automation/visibility without a financial comparison cadence."
+    },
+    {
+      "id": "uw-jpyt-dephaser-fae3e1d13db59119",
+      "assetId": "jpyt-dephaser",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:jpyt-dephaser:stablecoin-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:06Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R09)",
+      "sources": [
+        {
+          "url": "https://docs.dephaser.com/operation/redeem-usdt-usdc.md",
+          "observedAt": "2026-10-03T22:57:25Z",
+          "datumAsOf": null,
+          "location": "Redemption introduction and steps 4-7",
+          "excerpt": "The process of redeeming USDT or USDC takes only a few minutes to complete.",
+          "assertion": "Issuer describes a typical few-minute two-step conversion and exact USDT Optimism/USDC Base outputs, but supplies no numeric redemption fee schedule, guaranteed maximum settlement or per-slice bounded Aave liquidity horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.dephaser.com/llms.txt",
+        "https://docs.dephaser.com/operation/redeem-usdt-usdc.md",
+        "https://docs.dephaser.com/how-it-works/dex.md",
+        "https://docs.dephaser.com/how-it-works/money-flow.md",
+        "https://docs.dephaser.com/policy/terms-of-service.md",
+        "https://docs.dephaser.com/concept/audit.md",
+        "https://raw.githubusercontent.com/0xDephaser/contracts/main/src/UsdtDepositManager.sol"
+      ],
+      "rationale": "The exact stablecoin-redeem fee and hard completion SLA are not published. Few minutes is typical descriptive timing, not a maximum guarantee; gas is user-paid. Public manager source applies its configurable protocolFeeBps to deposits, not a disclosed deployed redemption rate, and withdraws from Aave before delayed execution. Neither actual USDT nor USDC reserve slice has a published bounded unwind horizon under available pool liquidity constraints. No typical timing or deposit fee is promoted into these maxima."
+    },
+    {
+      "id": "uw-jpyt-dephaser-8530b44747459f0d",
+      "assetId": "jpyt-dephaser",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:jpyt-dephaser:stablecoin-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:06Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R09)",
+      "sources": [
+        {
+          "url": "https://docs.dephaser.com/operation/redeem-usdt-usdc.md",
+          "observedAt": "2026-10-03T22:57:25Z",
+          "datumAsOf": null,
+          "location": "Redemption introduction and steps 4-7",
+          "excerpt": "The process of redeeming USDT or USDC takes only a few minutes to complete.",
+          "assertion": "Issuer describes a typical few-minute two-step conversion and exact USDT Optimism/USDC Base outputs, but supplies no numeric redemption fee schedule, guaranteed maximum settlement or per-slice bounded Aave liquidity horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.dephaser.com/llms.txt",
+        "https://docs.dephaser.com/operation/redeem-usdt-usdc.md",
+        "https://docs.dephaser.com/how-it-works/dex.md",
+        "https://docs.dephaser.com/how-it-works/money-flow.md",
+        "https://docs.dephaser.com/policy/terms-of-service.md",
+        "https://docs.dephaser.com/concept/audit.md",
+        "https://raw.githubusercontent.com/0xDephaser/contracts/main/src/UsdtDepositManager.sol"
+      ],
+      "rationale": "The exact stablecoin-redeem fee and hard completion SLA are not published. Few minutes is typical descriptive timing, not a maximum guarantee; gas is user-paid. Public manager source applies its configurable protocolFeeBps to deposits, not a disclosed deployed redemption rate, and withdraws from Aave before delayed execution. Neither actual USDT nor USDC reserve slice has a published bounded unwind horizon under available pool liquidity constraints. No typical timing or deposit fee is promoted into these maxima."
+    },
+    {
+      "id": "uw-jpyt-dephaser-42d8a37a3ffab0c8",
+      "assetId": "jpyt-dephaser",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:a2f4852919f76747cfcbfab8",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:06Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R09)",
+      "sources": [
+        {
+          "url": "https://docs.dephaser.com/operation/redeem-usdt-usdc.md",
+          "observedAt": "2026-10-03T22:57:25Z",
+          "datumAsOf": null,
+          "location": "Redemption introduction and steps 4-7",
+          "excerpt": "The process of redeeming USDT or USDC takes only a few minutes to complete.",
+          "assertion": "Issuer describes a typical few-minute two-step conversion and exact USDT Optimism/USDC Base outputs, but supplies no numeric redemption fee schedule, guaranteed maximum settlement or per-slice bounded Aave liquidity horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.dephaser.com/llms.txt",
+        "https://docs.dephaser.com/operation/redeem-usdt-usdc.md",
+        "https://docs.dephaser.com/how-it-works/dex.md",
+        "https://docs.dephaser.com/how-it-works/money-flow.md",
+        "https://docs.dephaser.com/policy/terms-of-service.md",
+        "https://docs.dephaser.com/concept/audit.md",
+        "https://raw.githubusercontent.com/0xDephaser/contracts/main/src/UsdtDepositManager.sol"
+      ],
+      "rationale": "The exact stablecoin-redeem fee and hard completion SLA are not published. Few minutes is typical descriptive timing, not a maximum guarantee; gas is user-paid. Public manager source applies its configurable protocolFeeBps to deposits, not a disclosed deployed redemption rate, and withdraws from Aave before delayed execution. Neither actual USDT nor USDC reserve slice has a published bounded unwind horizon under available pool liquidity constraints. No typical timing or deposit fee is promoted into these maxima."
+    },
+    {
+      "id": "uw-jpyt-dephaser-820a89ffc8953588",
+      "assetId": "jpyt-dephaser",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:a6af55f3a7b4b8f35f7f2e66",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:06Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R09)",
+      "sources": [
+        {
+          "url": "https://docs.dephaser.com/operation/redeem-usdt-usdc.md",
+          "observedAt": "2026-10-03T22:57:25Z",
+          "datumAsOf": null,
+          "location": "Redemption introduction and steps 4-7",
+          "excerpt": "The process of redeeming USDT or USDC takes only a few minutes to complete.",
+          "assertion": "Issuer describes a typical few-minute two-step conversion and exact USDT Optimism/USDC Base outputs, but supplies no numeric redemption fee schedule, guaranteed maximum settlement or per-slice bounded Aave liquidity horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.dephaser.com/llms.txt",
+        "https://docs.dephaser.com/operation/redeem-usdt-usdc.md",
+        "https://docs.dephaser.com/how-it-works/dex.md",
+        "https://docs.dephaser.com/how-it-works/money-flow.md",
+        "https://docs.dephaser.com/policy/terms-of-service.md",
+        "https://docs.dephaser.com/concept/audit.md",
+        "https://raw.githubusercontent.com/0xDephaser/contracts/main/src/UsdtDepositManager.sol"
+      ],
+      "rationale": "The exact stablecoin-redeem fee and hard completion SLA are not published. Few minutes is typical descriptive timing, not a maximum guarantee; gas is user-paid. Public manager source applies its configurable protocolFeeBps to deposits, not a disclosed deployed redemption rate, and withdraws from Aave before delayed execution. Neither actual USDT nor USDC reserve slice has a published bounded unwind horizon under available pool liquidity constraints. No typical timing or deposit fee is promoted into these maxima."
+    },
+    {
+      "id": "uw-rwausdi-multipli-4dd91782a8ed91c3",
+      "assetId": "rwausdi-multipli",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:rwausdi-multipli:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:06Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R09)",
+      "sources": [
+        {
+          "url": "https://docs.multipli.fi/rwausd/liquidity-classes-why-segmentation-by-design/rwausdi-the-institutional-credit-layer-for-tokenized-private-markets.md",
+          "observedAt": "2026-10-03T22:54:00Z",
+          "datumAsOf": null,
+          "location": "Core Problem and How rwaUSDi Works",
+          "excerpt": "Redemptions are scheduled, not instant",
+          "assertion": "Exact rwaUSDi docs describe delayed, asset-specific institutional schedules and longer tenors but publish no numeric maximum maturity for the four current reserves or holder-redemption SLA/fee."
+        },
+        {
+          "url": "https://docs.multipli.fi/legal/protocol-terms-of-use.md",
+          "observedAt": "2026-10-03T22:57:25Z",
+          "datumAsOf": "2026-06-19",
+          "location": "Section 8.3 Modification and Pass-Through",
+          "excerpt": "Protocol reserves the right to modify Protocol fees or pass through increases in third-party costs at any time.",
+          "assertion": "General protocol terms disclose categories and variable fee liability, not an exact applicable rwaUSDi offchain-issuer fee or completed-settlement maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.multipli.fi/llms.txt",
+        "https://docs.multipli.fi/rwausd/liquidity-classes-why-segmentation-by-design/rwausdi-the-institutional-credit-layer-for-tokenized-private-markets.md",
+        "https://docs.multipli.fi/risks/liquidity-and-redemption-risk.md",
+        "https://docs.multipli.fi/legal/protocol-terms-of-use.md",
+        "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/graph/reserve-breakdown",
+        "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/proofs",
+        "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/periodic-report?pageNo=1&offset=20",
+        "https://eth.blockscout.com/tx/0x1d2b91e085e9a3693adae7161a49a7c38a68ce212d83266a3e879fd89bcd3243"
+      ],
+      "rationale": "No finite maturityDaysMax is public for actual Li Mines, Gold, Real Estate or Cu Mines instruments. AFI's current reserve breakdown gives categories/values; proofs commit identifiers and values, not tenors or loan terms; weekly reports give solvency/peg totals. Exact institutional docs say scheduled bespoke exits without numerical maximum or fee schedule. General legal fees and liquid rwaUSD auction mechanics are not substituted for rwaUSDi holder terms. The admitted Gold 'other' slice is not silently reclassified as allocated bullion."
+    },
+    {
+      "id": "uw-rwausdi-multipli-dc2c6b53c5a1d339",
+      "assetId": "rwausdi-multipli",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:rwausdi-multipli:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:06Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R09)",
+      "sources": [
+        {
+          "url": "https://docs.multipli.fi/rwausd/liquidity-classes-why-segmentation-by-design/rwausdi-the-institutional-credit-layer-for-tokenized-private-markets.md",
+          "observedAt": "2026-10-03T22:54:00Z",
+          "datumAsOf": null,
+          "location": "Core Problem and How rwaUSDi Works",
+          "excerpt": "Redemptions are scheduled, not instant",
+          "assertion": "Exact rwaUSDi docs describe delayed, asset-specific institutional schedules and longer tenors but publish no numeric maximum maturity for the four current reserves or holder-redemption SLA/fee."
+        },
+        {
+          "url": "https://docs.multipli.fi/legal/protocol-terms-of-use.md",
+          "observedAt": "2026-10-03T22:57:25Z",
+          "datumAsOf": "2026-06-19",
+          "location": "Section 8.3 Modification and Pass-Through",
+          "excerpt": "Protocol reserves the right to modify Protocol fees or pass through increases in third-party costs at any time.",
+          "assertion": "General protocol terms disclose categories and variable fee liability, not an exact applicable rwaUSDi offchain-issuer fee or completed-settlement maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.multipli.fi/llms.txt",
+        "https://docs.multipli.fi/rwausd/liquidity-classes-why-segmentation-by-design/rwausdi-the-institutional-credit-layer-for-tokenized-private-markets.md",
+        "https://docs.multipli.fi/risks/liquidity-and-redemption-risk.md",
+        "https://docs.multipli.fi/legal/protocol-terms-of-use.md",
+        "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/graph/reserve-breakdown",
+        "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/proofs",
+        "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/periodic-report?pageNo=1&offset=20",
+        "https://eth.blockscout.com/tx/0x1d2b91e085e9a3693adae7161a49a7c38a68ce212d83266a3e879fd89bcd3243"
+      ],
+      "rationale": "No finite maturityDaysMax is public for actual Li Mines, Gold, Real Estate or Cu Mines instruments. AFI's current reserve breakdown gives categories/values; proofs commit identifiers and values, not tenors or loan terms; weekly reports give solvency/peg totals. Exact institutional docs say scheduled bespoke exits without numerical maximum or fee schedule. General legal fees and liquid rwaUSD auction mechanics are not substituted for rwaUSDi holder terms. The admitted Gold 'other' slice is not silently reclassified as allocated bullion."
+    },
+    {
+      "id": "uw-rwausdi-multipli-db81b3af33c5b2d8",
+      "assetId": "rwausdi-multipli",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:049788a93743d79096c9f5b4",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:06Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R09)",
+      "sources": [
+        {
+          "url": "https://docs.multipli.fi/rwausd/liquidity-classes-why-segmentation-by-design/rwausdi-the-institutional-credit-layer-for-tokenized-private-markets.md",
+          "observedAt": "2026-10-03T22:54:00Z",
+          "datumAsOf": null,
+          "location": "Core Problem and How rwaUSDi Works",
+          "excerpt": "Redemptions are scheduled, not instant",
+          "assertion": "Exact rwaUSDi docs describe delayed, asset-specific institutional schedules and longer tenors but publish no numeric maximum maturity for the four current reserves or holder-redemption SLA/fee."
+        },
+        {
+          "url": "https://docs.multipli.fi/legal/protocol-terms-of-use.md",
+          "observedAt": "2026-10-03T22:57:25Z",
+          "datumAsOf": "2026-06-19",
+          "location": "Section 8.3 Modification and Pass-Through",
+          "excerpt": "Protocol reserves the right to modify Protocol fees or pass through increases in third-party costs at any time.",
+          "assertion": "General protocol terms disclose categories and variable fee liability, not an exact applicable rwaUSDi offchain-issuer fee or completed-settlement maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.multipli.fi/llms.txt",
+        "https://docs.multipli.fi/rwausd/liquidity-classes-why-segmentation-by-design/rwausdi-the-institutional-credit-layer-for-tokenized-private-markets.md",
+        "https://docs.multipli.fi/risks/liquidity-and-redemption-risk.md",
+        "https://docs.multipli.fi/legal/protocol-terms-of-use.md",
+        "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/graph/reserve-breakdown",
+        "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/proofs",
+        "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/periodic-report?pageNo=1&offset=20",
+        "https://eth.blockscout.com/tx/0x1d2b91e085e9a3693adae7161a49a7c38a68ce212d83266a3e879fd89bcd3243"
+      ],
+      "rationale": "No finite maturityDaysMax is public for actual Li Mines, Gold, Real Estate or Cu Mines instruments. AFI's current reserve breakdown gives categories/values; proofs commit identifiers and values, not tenors or loan terms; weekly reports give solvency/peg totals. Exact institutional docs say scheduled bespoke exits without numerical maximum or fee schedule. General legal fees and liquid rwaUSD auction mechanics are not substituted for rwaUSDi holder terms. The admitted Gold 'other' slice is not silently reclassified as allocated bullion."
+    },
+    {
+      "id": "uw-rwausdi-multipli-8e33b2baebd69826",
+      "assetId": "rwausdi-multipli",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:2fc38e026d4a9e76c80ee919",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:06Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R09)",
+      "sources": [
+        {
+          "url": "https://docs.multipli.fi/rwausd/liquidity-classes-why-segmentation-by-design/rwausdi-the-institutional-credit-layer-for-tokenized-private-markets.md",
+          "observedAt": "2026-10-03T22:54:00Z",
+          "datumAsOf": null,
+          "location": "Core Problem and How rwaUSDi Works",
+          "excerpt": "Redemptions are scheduled, not instant",
+          "assertion": "Exact rwaUSDi docs describe delayed, asset-specific institutional schedules and longer tenors but publish no numeric maximum maturity for the four current reserves or holder-redemption SLA/fee."
+        },
+        {
+          "url": "https://docs.multipli.fi/legal/protocol-terms-of-use.md",
+          "observedAt": "2026-10-03T22:57:25Z",
+          "datumAsOf": "2026-06-19",
+          "location": "Section 8.3 Modification and Pass-Through",
+          "excerpt": "Protocol reserves the right to modify Protocol fees or pass through increases in third-party costs at any time.",
+          "assertion": "General protocol terms disclose categories and variable fee liability, not an exact applicable rwaUSDi offchain-issuer fee or completed-settlement maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.multipli.fi/llms.txt",
+        "https://docs.multipli.fi/rwausd/liquidity-classes-why-segmentation-by-design/rwausdi-the-institutional-credit-layer-for-tokenized-private-markets.md",
+        "https://docs.multipli.fi/risks/liquidity-and-redemption-risk.md",
+        "https://docs.multipli.fi/legal/protocol-terms-of-use.md",
+        "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/graph/reserve-breakdown",
+        "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/proofs",
+        "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/periodic-report?pageNo=1&offset=20",
+        "https://eth.blockscout.com/tx/0x1d2b91e085e9a3693adae7161a49a7c38a68ce212d83266a3e879fd89bcd3243"
+      ],
+      "rationale": "No finite maturityDaysMax is public for actual Li Mines, Gold, Real Estate or Cu Mines instruments. AFI's current reserve breakdown gives categories/values; proofs commit identifiers and values, not tenors or loan terms; weekly reports give solvency/peg totals. Exact institutional docs say scheduled bespoke exits without numerical maximum or fee schedule. General legal fees and liquid rwaUSD auction mechanics are not substituted for rwaUSDi holder terms. The admitted Gold 'other' slice is not silently reclassified as allocated bullion."
+    },
+    {
+      "id": "uw-rwausdi-multipli-f5fd5d26b376905d",
+      "assetId": "rwausdi-multipli",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:b8c47ee06ac13285a6474824",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:06Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R09)",
+      "sources": [
+        {
+          "url": "https://docs.multipli.fi/rwausd/liquidity-classes-why-segmentation-by-design/rwausdi-the-institutional-credit-layer-for-tokenized-private-markets.md",
+          "observedAt": "2026-10-03T22:54:00Z",
+          "datumAsOf": null,
+          "location": "Core Problem and How rwaUSDi Works",
+          "excerpt": "Redemptions are scheduled, not instant",
+          "assertion": "Exact rwaUSDi docs describe delayed, asset-specific institutional schedules and longer tenors but publish no numeric maximum maturity for the four current reserves or holder-redemption SLA/fee."
+        },
+        {
+          "url": "https://docs.multipli.fi/legal/protocol-terms-of-use.md",
+          "observedAt": "2026-10-03T22:57:25Z",
+          "datumAsOf": "2026-06-19",
+          "location": "Section 8.3 Modification and Pass-Through",
+          "excerpt": "Protocol reserves the right to modify Protocol fees or pass through increases in third-party costs at any time.",
+          "assertion": "General protocol terms disclose categories and variable fee liability, not an exact applicable rwaUSDi offchain-issuer fee or completed-settlement maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.multipli.fi/llms.txt",
+        "https://docs.multipli.fi/rwausd/liquidity-classes-why-segmentation-by-design/rwausdi-the-institutional-credit-layer-for-tokenized-private-markets.md",
+        "https://docs.multipli.fi/risks/liquidity-and-redemption-risk.md",
+        "https://docs.multipli.fi/legal/protocol-terms-of-use.md",
+        "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/graph/reserve-breakdown",
+        "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/proofs",
+        "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/periodic-report?pageNo=1&offset=20",
+        "https://eth.blockscout.com/tx/0x1d2b91e085e9a3693adae7161a49a7c38a68ce212d83266a3e879fd89bcd3243"
+      ],
+      "rationale": "No finite maturityDaysMax is public for actual Li Mines, Gold, Real Estate or Cu Mines instruments. AFI's current reserve breakdown gives categories/values; proofs commit identifiers and values, not tenors or loan terms; weekly reports give solvency/peg totals. Exact institutional docs say scheduled bespoke exits without numerical maximum or fee schedule. General legal fees and liquid rwaUSD auction mechanics are not substituted for rwaUSDi holder terms. The admitted Gold 'other' slice is not silently reclassified as allocated bullion."
+    },
+    {
+      "id": "uw-rwausdi-multipli-503fbbf4b91f0b84",
+      "assetId": "rwausdi-multipli",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:cdc61e7c755c198d7fd859d1",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:06Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R09)",
+      "sources": [
+        {
+          "url": "https://docs.multipli.fi/rwausd/liquidity-classes-why-segmentation-by-design/rwausdi-the-institutional-credit-layer-for-tokenized-private-markets.md",
+          "observedAt": "2026-10-03T22:54:00Z",
+          "datumAsOf": null,
+          "location": "Core Problem and How rwaUSDi Works",
+          "excerpt": "Redemptions are scheduled, not instant",
+          "assertion": "Exact rwaUSDi docs describe delayed, asset-specific institutional schedules and longer tenors but publish no numeric maximum maturity for the four current reserves or holder-redemption SLA/fee."
+        },
+        {
+          "url": "https://docs.multipli.fi/legal/protocol-terms-of-use.md",
+          "observedAt": "2026-10-03T22:57:25Z",
+          "datumAsOf": "2026-06-19",
+          "location": "Section 8.3 Modification and Pass-Through",
+          "excerpt": "Protocol reserves the right to modify Protocol fees or pass through increases in third-party costs at any time.",
+          "assertion": "General protocol terms disclose categories and variable fee liability, not an exact applicable rwaUSDi offchain-issuer fee or completed-settlement maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.multipli.fi/llms.txt",
+        "https://docs.multipli.fi/rwausd/liquidity-classes-why-segmentation-by-design/rwausdi-the-institutional-credit-layer-for-tokenized-private-markets.md",
+        "https://docs.multipli.fi/risks/liquidity-and-redemption-risk.md",
+        "https://docs.multipli.fi/legal/protocol-terms-of-use.md",
+        "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/graph/reserve-breakdown",
+        "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/proofs",
+        "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/periodic-report?pageNo=1&offset=20",
+        "https://eth.blockscout.com/tx/0x1d2b91e085e9a3693adae7161a49a7c38a68ce212d83266a3e879fd89bcd3243"
+      ],
+      "rationale": "No finite maturityDaysMax is public for actual Li Mines, Gold, Real Estate or Cu Mines instruments. AFI's current reserve breakdown gives categories/values; proofs commit identifiers and values, not tenors or loan terms; weekly reports give solvency/peg totals. Exact institutional docs say scheduled bespoke exits without numerical maximum or fee schedule. General legal fees and liquid rwaUSD auction mechanics are not substituted for rwaUSDi holder terms. The admitted Gold 'other' slice is not silently reclassified as allocated bullion."
+    },
+    {
+      "id": "uw-spusd-soulpeg-5683d9d3c65d5f8c",
+      "assetId": "spusd-soulpeg",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:06Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R09)",
+      "sources": [
+        {
+          "url": "https://sourcify.dev/server/v2/contract/56/0x6cb98d3d1a46941aecfa6aa9f048377b985e49df?fields=all",
+          "observedAt": "2026-10-03T22:56:07Z",
+          "datumAsOf": null,
+          "location": "contracts/StakeableAssetImpl.sol getProtocolStats and rewardMint",
+          "excerpt": "contractUSDCBalance = USDC.balanceOf(address(this));",
+          "assertion": "The verified live sUSDC implementation exposes local USDC balance and counters; operator reward minting has no USDC transfer. It discloses no independent whole-SPUSD/sUSDC liability-to-strategy backing reconciliation cadence."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.soulpeg.io/",
+        "https://docs.soulpeg.io/docs/spusd/overview",
+        "https://docs.soulpeg.io/docs/whitepaper/security-model",
+        "https://docs.soulpeg.io/docs/protocol/analytics-monitoring",
+        "https://docs.soulpeg.io/docs/protocol/contract-design",
+        "https://docs.soulpeg.io/docs/faq/audit-status",
+        "https://github.com/soulpeg-org/soulpeg-docs",
+        "https://sourcify.dev/server/v2/contract/56/0xc603ef9cab5e4131c52f6b8bcf06cc0568c32a24?fields=all",
+        "https://sourcify.dev/server/v2/contract/56/0x6cb98d3d1a46941aecfa6aa9f048377b985e49df?fields=all",
+        "https://bsc-dataseed.bnbchain.org"
+      ],
+      "rationale": "No whole-supply financial reconciliation regime/cadence is published in issuer docs, audit-status page or actual live underlying source. Daily deposit/mint counters and cumulative totalUSDCDeposited are not all-current-reserve reconciliation; getProtocolStats exposes only local USDC balance. At BSC block 125567996/hash 0x649a04431420960519fc04160d723856e2324dd4c6c50b2ecbc095110ac32ecf, ERC1967 slot points to this verified implementation. Documentation's Venus architecture is not itself financial evidence."
     }
   ]
 }
