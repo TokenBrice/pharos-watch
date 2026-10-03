@@ -9,7 +9,8 @@
       "assetClass": "treasury-bill",
       "issuerOrObligor": "United States Treasury",
       "riskFactors": ["duration", "liquidity", "custody"],
-      "liquidityHorizon": "seven-days"
+      "liquidityHorizon": "seven-days",
+      "maturityDaysMax": 88
     },
     {
       "sourceKey": "agora-independent-assurance:ausd:us-treasury-repos",
@@ -19,7 +20,8 @@
       "assetClass": "repo",
       "issuerOrObligor": "Undisclosed overnight repo counterparties",
       "riskFactors": ["counterparty", "liquidity", "custody"],
-      "liquidityHorizon": "one-day"
+      "liquidityHorizon": "one-day",
+      "maturityDaysMax": 1
     },
     {
       "sourceKey": "agora-independent-assurance:ausd:company-cash",
@@ -53,8 +55,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-30",
-    "reviewer": "Pharos August assurance report review",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Unknown wave W1R17 maximum maturity review of August 2026 Grant Thornton examination",
     "confidence": "verified",
     "sources": [
       {

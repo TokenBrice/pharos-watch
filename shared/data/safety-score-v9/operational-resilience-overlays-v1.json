@@ -1493,6 +1493,171 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "kau-kinesis",
+      "reviewedAt": "2026-10-03T22:46:49Z",
+      "expiresAt": "2027-10-03T22:46:49Z",
+      "reviewer": "Unknown wave W1R17 primary-source review",
+      "notes": "Exact token operating evidence establishes only a conservative 4-full-calendar-month lower bound from 2026-05-18. Parent/native-token history is not borrowed. No throughput, stress recovery, report continuity or incident-free performance is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-token-operation",
+          "label": "Kinesis ERC-20 KAU live Mercado Bitcoin announcement",
+          "publisher": "Kinesis",
+          "publishedAt": "2026-05-18",
+          "url": "https://kinesis.money/de/company-news/kau-kag-listed-on-mercado-bitcoin/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 4,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-token-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "kag-kinesis",
+      "reviewedAt": "2026-10-03T22:46:49Z",
+      "expiresAt": "2027-10-03T22:46:49Z",
+      "reviewer": "Unknown wave W1R17 primary-source review",
+      "notes": "Exact token operating evidence establishes only a conservative 5-full-calendar-month lower bound from 2026-04-23. Parent/native-token history is not borrowed. No throughput, stress recovery, report continuity or incident-free performance is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-token-operation",
+          "label": "Kinesis ERC-20 KAG live MEXC announcement",
+          "publisher": "Kinesis",
+          "publishedAt": "2026-04-23",
+          "url": "https://kinesis.money/fr/company-news/kag-listed-on-mexc-exchange/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 5,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-token-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "ausd-agora",
+      "reviewedAt": "2026-10-03T22:46:49Z",
+      "expiresAt": "2027-10-03T22:46:49Z",
+      "reviewer": "Unknown wave W1R17 primary-source review",
+      "notes": "Exact token operating evidence establishes only a conservative 10-full-calendar-month lower bound from 2025-11-13. Parent/native-token history is not borrowed. No throughput, stress recovery, report continuity or incident-free performance is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-token-operation",
+          "label": "AUSD borderless onchain operating announcement",
+          "publisher": "Agora",
+          "publishedAt": "2025-11-13",
+          "url": "https://www.agora.finance/blog/ausd-now-borderless-onchain",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 10,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-token-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "audx-aussie-dollar-token",
+      "reviewedAt": "2026-10-03T22:46:49Z",
+      "expiresAt": "2027-10-03T22:46:49Z",
+      "reviewer": "Unknown wave W1R17 primary-source review",
+      "notes": "Exact token operating evidence establishes only a conservative 11-full-calendar-month lower bound from 2025-10-24. Parent/native-token history is not borrowed. No throughput, stress recovery, report continuity or incident-free performance is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-token-operation",
+          "label": "AUDX September 2025 issuer reserve verification signed October 24",
+          "publisher": "TAU Pty Ltd",
+          "publishedAt": "2025-10-24",
+          "url": "https://www.audxtoken.com/_files/ugd/539754_fb119bc62cef4a07956237e085a6f2cc.pdf",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 11,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-token-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "mai-qidao",
+      "reviewedAt": "2026-10-03T22:46:49Z",
+      "expiresAt": "2027-10-03T22:46:49Z",
+      "reviewer": "Unknown wave W1R17 primary-source review",
+      "notes": "Exact token operating evidence establishes only a conservative 65-full-calendar-month lower bound from 2021-05-02. Parent/native-token history is not borrowed. No throughput, stress recovery, report continuity or incident-free performance is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-token-operation",
+          "label": "Exact MAI Polygon contract creation at block 13976458",
+          "publisher": "Polygon chain / Blockscout",
+          "publishedAt": "2021-05-02",
+          "url": "https://polygon.blockscout.com/tx/0x69bd0d0b0907a49684f1be06ed49639010d0c13ee54a1e7a9f08d2a5ad1afefe",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 65,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-token-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

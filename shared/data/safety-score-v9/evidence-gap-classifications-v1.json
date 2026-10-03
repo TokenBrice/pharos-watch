@@ -3158,6 +3158,552 @@
         "https://api.htdigitalassets.com/alm-stablecoin-db/metrics/current_reserves_amount"
       ],
       "rationale": "FCC discloses an ecosystem coverage calculation, not the exact required recurring common-clock mint/burn and liability-to-backing reconciliation cadence. Its feed sums three token supplies and public bonds plus restricted cash; input timestamps, restricted-cash reconciliation controls and complete movement procedure remain unpublished. Do not misclassify this as no reconciliation or dismiss the new coverage mechanism."
+    },
+    {
+      "id": "uw-kau-kinesis-981bdda91fe9acb5",
+      "assetId": "kau-kinesis",
+      "scope": {
+        "componentKey": "economic-control:bridge",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "economic-control:bridge",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:50:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R17)",
+      "sources": [
+        {
+          "url": "https://kmslabs.money/kms-labs-tcs/",
+          "observedAt": "2026-10-03T22:50:57Z",
+          "datumAsOf": null,
+          "location": "Sections 4 and 8",
+          "excerpt": "KMS Labs issues the Tokens only when fully backed by the Reserve (see Section 8)",
+          "assertion": "Issuer contractual backing promise is disclosed; exact native-side conservation/locking validation remains unpublished."
+        },
+        {
+          "url": "https://kmslabs.money/",
+          "observedAt": "2026-10-03T22:50:57Z",
+          "datumAsOf": null,
+          "location": "On-chain integrity / chain of integrity",
+          "excerpt": "KMS Labs ERC-20 reserve verification will be disclosed separately.",
+          "assertion": "Native physical reserve audit is explicitly not the independent ERC-20 reserve-to-liability verification."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://kmslabs.money/",
+        "https://kmslabs.money/kms-labs-tcs/",
+        "https://kmslabs.money/white-paper/",
+        "https://kinesis.money/audit-april-2026/",
+        "https://kinesis.money/about-us/documents/terms-of-use/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62"
+      ],
+      "rationale": "For the exact Ethereum kau-kinesis representation, issuer terms and whitepaper disclose custody backing and two-step redemption but no complete native-side locking/conservation verification or backend mint reconciliation necessary to establish a nonopaque bridge tier. Public ERC20F mint is role-gated, not reserve-gated. A disclosed reserve-wallet address does not establish this invariant; physical audits explicitly exclude wrapper verification."
+    },
+    {
+      "id": "uw-kau-kinesis-62983771898ccf48",
+      "assetId": "kau-kinesis",
+      "scope": {
+        "componentKey": "economic-control:bridge",
+        "exposureId": null,
+        "factorKey": "tier",
+        "pillar": "control",
+        "requiredDatum": "tier",
+        "routeKey": "bridge-meta:kau-kinesis:b4b937c5cec9401b893d"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:50:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R17)",
+      "sources": [
+        {
+          "url": "https://kmslabs.money/kms-labs-tcs/",
+          "observedAt": "2026-10-03T22:50:57Z",
+          "datumAsOf": null,
+          "location": "Sections 4 and 8",
+          "excerpt": "KMS Labs issues the Tokens only when fully backed by the Reserve (see Section 8)",
+          "assertion": "Issuer contractual backing promise is disclosed; exact native-side conservation/locking validation remains unpublished."
+        },
+        {
+          "url": "https://kmslabs.money/",
+          "observedAt": "2026-10-03T22:50:57Z",
+          "datumAsOf": null,
+          "location": "On-chain integrity / chain of integrity",
+          "excerpt": "KMS Labs ERC-20 reserve verification will be disclosed separately.",
+          "assertion": "Native physical reserve audit is explicitly not the independent ERC-20 reserve-to-liability verification."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://kmslabs.money/",
+        "https://kmslabs.money/kms-labs-tcs/",
+        "https://kmslabs.money/white-paper/",
+        "https://kinesis.money/audit-april-2026/",
+        "https://kinesis.money/about-us/documents/terms-of-use/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62"
+      ],
+      "rationale": "For the exact Ethereum kau-kinesis representation, issuer terms and whitepaper disclose custody backing and two-step redemption but no complete native-side locking/conservation verification or backend mint reconciliation necessary to establish a nonopaque bridge tier. Public ERC20F mint is role-gated, not reserve-gated. A disclosed reserve-wallet address does not establish this invariant; physical audits explicitly exclude wrapper verification."
+    },
+    {
+      "id": "uw-kau-kinesis-fa2a6c3a0dd11c47",
+      "assetId": "kau-kinesis",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:physical-to-usd:kau-kinesis"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:50:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R17)",
+      "sources": [
+        {
+          "url": "https://kmslabs.money/kms-labs-tcs/",
+          "observedAt": "2026-10-03T22:50:57Z",
+          "datumAsOf": null,
+          "location": "Section 5",
+          "excerpt": "KMS Labs makes no representation or warranty that there will be direct redemption mechanisms available at all times or that any redemption will be processed within any particular timeframe.",
+          "assertion": "No issuer maximum on the mandatory ERC-20-to-native leg, so neither physical delivery nor final USD completion is bounded."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://kmslabs.money/",
+        "https://kmslabs.money/kms-labs-tcs/",
+        "https://kmslabs.money/white-paper/",
+        "https://kinesis.money/about-us/documents/terms-of-use/",
+        "https://kinesis.money/about-us/fees/"
+      ],
+      "rationale": "No end-to-end settlement maximum is disclosed for the mandatory ERC-20-to-native redemption, native-to-physical delivery, or composed spendable-USD path. Binding KMS terms expressly disclaim any timeframe; Kinesis terms arrange delivery dates case by case. Targets or eventual physical entitlement cannot establish a completion SLA."
+    },
+    {
+      "id": "uw-kau-kinesis-5043fff0fbaf7ba0",
+      "assetId": "kau-kinesis",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:kau-kinesis:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:50:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R17)",
+      "sources": [
+        {
+          "url": "https://kmslabs.money/kms-labs-tcs/",
+          "observedAt": "2026-10-03T22:50:57Z",
+          "datumAsOf": null,
+          "location": "Section 5",
+          "excerpt": "KMS Labs makes no representation or warranty that there will be direct redemption mechanisms available at all times or that any redemption will be processed within any particular timeframe.",
+          "assertion": "No issuer maximum on the mandatory ERC-20-to-native leg, so neither physical delivery nor final USD completion is bounded."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://kmslabs.money/",
+        "https://kmslabs.money/kms-labs-tcs/",
+        "https://kmslabs.money/white-paper/",
+        "https://kinesis.money/about-us/documents/terms-of-use/",
+        "https://kinesis.money/about-us/fees/"
+      ],
+      "rationale": "No end-to-end settlement maximum is disclosed for the mandatory ERC-20-to-native redemption, native-to-physical delivery, or composed spendable-USD path. Binding KMS terms expressly disclaim any timeframe; Kinesis terms arrange delivery dates case by case. Targets or eventual physical entitlement cannot establish a completion SLA."
+    },
+    {
+      "id": "uw-kag-kinesis-d20b2e2f897012f4",
+      "assetId": "kag-kinesis",
+      "scope": {
+        "componentKey": "economic-control:bridge",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "economic-control:bridge",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:50:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R17)",
+      "sources": [
+        {
+          "url": "https://kmslabs.money/kms-labs-tcs/",
+          "observedAt": "2026-10-03T22:50:57Z",
+          "datumAsOf": null,
+          "location": "Sections 4 and 8",
+          "excerpt": "KMS Labs issues the Tokens only when fully backed by the Reserve (see Section 8)",
+          "assertion": "Issuer contractual backing promise is disclosed; exact native-side conservation/locking validation remains unpublished."
+        },
+        {
+          "url": "https://kmslabs.money/",
+          "observedAt": "2026-10-03T22:50:57Z",
+          "datumAsOf": null,
+          "location": "On-chain integrity / chain of integrity",
+          "excerpt": "KMS Labs ERC-20 reserve verification will be disclosed separately.",
+          "assertion": "Native physical reserve audit is explicitly not the independent ERC-20 reserve-to-liability verification."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://kmslabs.money/",
+        "https://kmslabs.money/kms-labs-tcs/",
+        "https://kmslabs.money/white-paper/",
+        "https://kinesis.money/audit-april-2026/",
+        "https://kinesis.money/about-us/documents/terms-of-use/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62"
+      ],
+      "rationale": "For the exact Ethereum kag-kinesis representation, issuer terms and whitepaper disclose custody backing and two-step redemption but no complete native-side locking/conservation verification or backend mint reconciliation necessary to establish a nonopaque bridge tier. Public ERC20F mint is role-gated, not reserve-gated. A disclosed reserve-wallet address does not establish this invariant; physical audits explicitly exclude wrapper verification."
+    },
+    {
+      "id": "uw-kag-kinesis-babf672c927cc8ea",
+      "assetId": "kag-kinesis",
+      "scope": {
+        "componentKey": "economic-control:bridge",
+        "exposureId": null,
+        "factorKey": "tier",
+        "pillar": "control",
+        "requiredDatum": "tier",
+        "routeKey": "bridge-meta:kag-kinesis:618a354b5cd98e20e0f8"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:50:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R17)",
+      "sources": [
+        {
+          "url": "https://kmslabs.money/kms-labs-tcs/",
+          "observedAt": "2026-10-03T22:50:57Z",
+          "datumAsOf": null,
+          "location": "Sections 4 and 8",
+          "excerpt": "KMS Labs issues the Tokens only when fully backed by the Reserve (see Section 8)",
+          "assertion": "Issuer contractual backing promise is disclosed; exact native-side conservation/locking validation remains unpublished."
+        },
+        {
+          "url": "https://kmslabs.money/",
+          "observedAt": "2026-10-03T22:50:57Z",
+          "datumAsOf": null,
+          "location": "On-chain integrity / chain of integrity",
+          "excerpt": "KMS Labs ERC-20 reserve verification will be disclosed separately.",
+          "assertion": "Native physical reserve audit is explicitly not the independent ERC-20 reserve-to-liability verification."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://kmslabs.money/",
+        "https://kmslabs.money/kms-labs-tcs/",
+        "https://kmslabs.money/white-paper/",
+        "https://kinesis.money/audit-april-2026/",
+        "https://kinesis.money/about-us/documents/terms-of-use/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62"
+      ],
+      "rationale": "For the exact Ethereum kag-kinesis representation, issuer terms and whitepaper disclose custody backing and two-step redemption but no complete native-side locking/conservation verification or backend mint reconciliation necessary to establish a nonopaque bridge tier. Public ERC20F mint is role-gated, not reserve-gated. A disclosed reserve-wallet address does not establish this invariant; physical audits explicitly exclude wrapper verification."
+    },
+    {
+      "id": "uw-kag-kinesis-eed4575f38b7263d",
+      "assetId": "kag-kinesis",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:physical-to-usd:kag-kinesis"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:50:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R17)",
+      "sources": [
+        {
+          "url": "https://kmslabs.money/kms-labs-tcs/",
+          "observedAt": "2026-10-03T22:50:57Z",
+          "datumAsOf": null,
+          "location": "Section 5",
+          "excerpt": "KMS Labs makes no representation or warranty that there will be direct redemption mechanisms available at all times or that any redemption will be processed within any particular timeframe.",
+          "assertion": "No issuer maximum on the mandatory ERC-20-to-native leg, so neither physical delivery nor final USD completion is bounded."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://kmslabs.money/",
+        "https://kmslabs.money/kms-labs-tcs/",
+        "https://kmslabs.money/white-paper/",
+        "https://kinesis.money/about-us/documents/terms-of-use/",
+        "https://kinesis.money/about-us/fees/"
+      ],
+      "rationale": "No end-to-end settlement maximum is disclosed for the mandatory ERC-20-to-native redemption, native-to-physical delivery, or composed spendable-USD path. Binding KMS terms expressly disclaim any timeframe; Kinesis terms arrange delivery dates case by case. Targets or eventual physical entitlement cannot establish a completion SLA."
+    },
+    {
+      "id": "uw-kag-kinesis-8ea27e35ec143c39",
+      "assetId": "kag-kinesis",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:kag-kinesis:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:50:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R17)",
+      "sources": [
+        {
+          "url": "https://kmslabs.money/kms-labs-tcs/",
+          "observedAt": "2026-10-03T22:50:57Z",
+          "datumAsOf": null,
+          "location": "Section 5",
+          "excerpt": "KMS Labs makes no representation or warranty that there will be direct redemption mechanisms available at all times or that any redemption will be processed within any particular timeframe.",
+          "assertion": "No issuer maximum on the mandatory ERC-20-to-native leg, so neither physical delivery nor final USD completion is bounded."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://kmslabs.money/",
+        "https://kmslabs.money/kms-labs-tcs/",
+        "https://kmslabs.money/white-paper/",
+        "https://kinesis.money/about-us/documents/terms-of-use/",
+        "https://kinesis.money/about-us/fees/"
+      ],
+      "rationale": "No end-to-end settlement maximum is disclosed for the mandatory ERC-20-to-native redemption, native-to-physical delivery, or composed spendable-USD path. Binding KMS terms expressly disclaim any timeframe; Kinesis terms arrange delivery dates case by case. Targets or eventual physical entitlement cannot establish a completion SLA."
+    },
+    {
+      "id": "uw-kag-kinesis-5bf85bcbeeee2a4a",
+      "assetId": "kag-kinesis",
+      "scope": {
+        "componentKey": "mechanism-review:assuranceAndReconciliation",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "mechanism-review:assuranceAndReconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:50:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R17)",
+      "sources": [
+        {
+          "url": "https://kmslabs.money/",
+          "observedAt": "2026-10-03T22:50:57Z",
+          "datumAsOf": null,
+          "location": "Silver (KAG) on Ethereum, Independent audits",
+          "excerpt": "Independent verification of ERC-20 KAG reserve holdings will be disclosed separately.",
+          "assertion": "Issuer explicitly distinguishes downstream physical audits from unpublished independent exact-wrapper reconciliation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://kmslabs.money/",
+        "https://kmslabs.money/kms-labs-tcs/",
+        "https://kmslabs.money/white-paper/",
+        "https://kinesis.money/audit-april-2026/",
+        "https://kinesis.money/audits/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62"
+      ],
+      "rationale": "Exact ERC-20 KAG reserve assurance and wrapper-liability reconciliation are not published. The issuer explicitly defers independent ERC-20 verification; Bureau Veritas reports cover downstream native bullion, not KMS wrapper reserves. Wallet identity and a live balance cannot supply independent matched wrapper reserve/liability scope."
+    },
+    {
+      "id": "uw-ausd-agora-265117b4ae7ae71c",
+      "assetId": "ausd-agora",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:05d32428c9edb7562d33255d",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:50:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R17)",
+      "sources": [
+        {
+          "url": "https://files.buildwithfern.com/agora.docs.buildwithfern.com/444c4f3a9642d6a9149e8fa9736469cd03192f55cc7ff3d2326117b0397875b5/docs/assets/2026%20Aug%20-%20Agora%20Dollar%20Reserve%20Report.pdf",
+          "observedAt": "2026-10-03T22:50:57Z",
+          "datumAsOf": "2026-08-31",
+          "location": "August 31 holdings, pages 6 and 9",
+          "excerpt": "Cash held in the Agora Reserve Fund at regulated financial institutions",
+          "assertion": "Separate fund/company cash amounts are disclosed, but no deposit tenor, maturity dates or maximum deposit terms."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.agora.finance/product/ausd",
+        "https://docs.agora.finance/developer/transparency",
+        "https://files.buildwithfern.com/agora.docs.buildwithfern.com/444c4f3a9642d6a9149e8fa9736469cd03192f55cc7ff3d2326117b0397875b5/docs/assets/2026%20Aug%20-%20Agora%20Dollar%20Reserve%20Report.pdf",
+        "https://static.agora.finance/termsofuse.pdf",
+        "https://docs.agora.finance/api/endpoints/routes/overview.md"
+      ],
+      "rationale": "Maximum maturity of company cash and reserve-fund bank deposits is undisclosed. The examination identifies balances at regulated institutions but provides no account contract, maturity schedule or maximum tenor for either cash slice; general reserve/redemption terms supply no deposit-specific limit. Do not assume sight deposits or zero days."
+    },
+    {
+      "id": "uw-ausd-agora-28180024833cb305",
+      "assetId": "ausd-agora",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:af355100f3a266b999a640d4",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:50:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R17)",
+      "sources": [
+        {
+          "url": "https://files.buildwithfern.com/agora.docs.buildwithfern.com/444c4f3a9642d6a9149e8fa9736469cd03192f55cc7ff3d2326117b0397875b5/docs/assets/2026%20Aug%20-%20Agora%20Dollar%20Reserve%20Report.pdf",
+          "observedAt": "2026-10-03T22:50:57Z",
+          "datumAsOf": "2026-08-31",
+          "location": "August 31 holdings, pages 6 and 9",
+          "excerpt": "Cash held in the Agora Reserve Fund at regulated financial institutions",
+          "assertion": "Separate fund/company cash amounts are disclosed, but no deposit tenor, maturity dates or maximum deposit terms."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.agora.finance/product/ausd",
+        "https://docs.agora.finance/developer/transparency",
+        "https://files.buildwithfern.com/agora.docs.buildwithfern.com/444c4f3a9642d6a9149e8fa9736469cd03192f55cc7ff3d2326117b0397875b5/docs/assets/2026%20Aug%20-%20Agora%20Dollar%20Reserve%20Report.pdf",
+        "https://static.agora.finance/termsofuse.pdf",
+        "https://docs.agora.finance/api/endpoints/routes/overview.md"
+      ],
+      "rationale": "Maximum maturity of company cash and reserve-fund bank deposits is undisclosed. The examination identifies balances at regulated institutions but provides no account contract, maturity schedule or maximum tenor for either cash slice; general reserve/redemption terms supply no deposit-specific limit. Do not assume sight deposits or zero days."
+    },
+    {
+      "id": "uw-ausd-agora-8b39295316ef5c6b",
+      "assetId": "ausd-agora",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:1d9108a3bccb66cf27bfbc68",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:50:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R17)",
+      "sources": [
+        {
+          "url": "https://files.buildwithfern.com/agora.docs.buildwithfern.com/444c4f3a9642d6a9149e8fa9736469cd03192f55cc7ff3d2326117b0397875b5/docs/assets/2026%20Aug%20-%20Agora%20Dollar%20Reserve%20Report.pdf",
+          "observedAt": "2026-10-03T22:50:57Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Stablecoin criteria page 9",
+          "excerpt": "Stablecoin balances included in the Fair Value of Reserve Assets consist of U.S. dollar\u2013 denominated stablecoins, including USD Coin (USDC) and PayPal USD (PYUSD)",
+          "assertion": "Identities and wallet custody are disclosed without a full-slice realization/withdrawal maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.agora.finance/product/ausd",
+        "https://docs.agora.finance/developer/transparency",
+        "https://files.buildwithfern.com/agora.docs.buildwithfern.com/444c4f3a9642d6a9149e8fa9736469cd03192f55cc7ff3d2326117b0397875b5/docs/assets/2026%20Aug%20-%20Agora%20Dollar%20Reserve%20Report.pdf",
+        "https://static.agora.finance/termsofuse.pdf",
+        "https://docs.agora.finance/api/endpoints/routes/overview.md"
+      ],
+      "rationale": "The combined USDC/PYUSD reserve slice has no published whole-position liquidity horizon. The examined report names tokens and controlled wallets but no individual split, applicable withdrawal entitlement, gates or full-slice final realization bound. Transfer speed and Agora holder redemption targets do not establish liquidity of this exact reserve basket."
+    },
+    {
+      "id": "uw-audx-aussie-dollar-token-8a654da977ceee3f",
+      "assetId": "audx-aussie-dollar-token",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:d23e645f88e6a4c1f6d2bbe6",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:50:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R17)",
+      "sources": [
+        {
+          "url": "https://www.audxtoken.com/_files/ugd/539754_e06dd9a1842d4b4a97777c64ed096bbe.pdf",
+          "observedAt": "2026-10-03T22:50:57Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Reserve report page 4",
+          "excerpt": "All AUDX Reserves are held in segregated accounts, separate from operational and corporate funds, and remain unencumbered at all times.",
+          "assertion": "Segregation and unencumbered status are disclosed, not deposit maturity or withdrawal/realization bounds."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.audxtoken.com/",
+        "https://www.audxtoken.com/transparency",
+        "https://www.audxtoken.com/_files/ugd/539754_e06dd9a1842d4b4a97777c64ed096bbe.pdf",
+        "https://www.audxtoken.com/_files/ugd/539754_29d0472241a840e6a2fb2c58512c50d7.pdf",
+        "https://www.audxtoken.com/about-us"
+      ],
+      "rationale": "For the designated AUDX bank-account reserve slice, maximum deposit maturity and whole-slice liquidity horizon are not disclosed. Monthly assurance confirms balances and segregation but no deposit contracts, sight/term split, tenor schedule or withdrawal maximum. Whitepaper terms allow reserve unavailability and delayed redemption; neither assurance nor redeemable-anytime marketing proves instant reserve realization."
+    },
+    {
+      "id": "uw-audx-aussie-dollar-token-471840093daf2bcf",
+      "assetId": "audx-aussie-dollar-token",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:d23e645f88e6a4c1f6d2bbe6",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:50:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R17)",
+      "sources": [
+        {
+          "url": "https://www.audxtoken.com/_files/ugd/539754_e06dd9a1842d4b4a97777c64ed096bbe.pdf",
+          "observedAt": "2026-10-03T22:50:57Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Reserve report page 4",
+          "excerpt": "All AUDX Reserves are held in segregated accounts, separate from operational and corporate funds, and remain unencumbered at all times.",
+          "assertion": "Segregation and unencumbered status are disclosed, not deposit maturity or withdrawal/realization bounds."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.audxtoken.com/",
+        "https://www.audxtoken.com/transparency",
+        "https://www.audxtoken.com/_files/ugd/539754_e06dd9a1842d4b4a97777c64ed096bbe.pdf",
+        "https://www.audxtoken.com/_files/ugd/539754_29d0472241a840e6a2fb2c58512c50d7.pdf",
+        "https://www.audxtoken.com/about-us"
+      ],
+      "rationale": "For the designated AUDX bank-account reserve slice, maximum deposit maturity and whole-slice liquidity horizon are not disclosed. Monthly assurance confirms balances and segregation but no deposit contracts, sight/term split, tenor schedule or withdrawal maximum. Whitepaper terms allow reserve unavailability and delayed redemption; neither assurance nor redeemable-anytime marketing proves instant reserve realization."
+    },
+    {
+      "id": "uw-audx-aussie-dollar-token-f869c4d87ef52c91",
+      "assetId": "audx-aussie-dollar-token",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:audx-aussie-dollar-token:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:50:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R17)",
+      "sources": [
+        {
+          "url": "https://www.audxtoken.com/_files/ugd/539754_29d0472241a840e6a2fb2c58512c50d7.pdf",
+          "observedAt": "2026-10-03T22:50:57Z",
+          "datumAsOf": null,
+          "location": "Terms of sale section 6, page 20",
+          "excerpt": "However, it may take several business days for any redemption to be completed.",
+          "assertion": "Several business days is not a completion maximum; the same clause permits further reserve-unavailability delays."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.audxtoken.com/",
+        "https://www.audxtoken.com/transparency",
+        "https://www.audxtoken.com/_files/ugd/539754_29d0472241a840e6a2fb2c58512c50d7.pdf",
+        "https://www.audxtoken.com/about-us"
+      ],
+      "rationale": "No final maximum redemption settlement SLA is published. Terms offer commercially reasonable prompt processing, say several business days, and reserve discretionary delays for illiquid, unavailable or lost reserves. Homepage redeemable-anytime is availability marketing, not a bounded bank-receipt deadline."
     }
   ]
 }
