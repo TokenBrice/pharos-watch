@@ -7330,145 +7330,6 @@
       "rationale": "No public exact all-in fee schedule or complete cost formula for the legacy USDv direct USDC redemption route was found. The legacy announcement describes qualified-holder mint/burn/redeem without a fee schedule; wind-down recommends market swaps without promising a direct-redemption price. Current docs and transaction fee UI concern the separate new token. Interface terms do not define the legacy API/direct-redemption schedule."
     },
     {
-      "id": "uw-a7a5-old-vector-3d3888e98ff54821",
-      "assetId": "a7a5-old-vector",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:a7a5-old-vector:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:52:15Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R16)",
-      "sources": [
-        {
-          "url": "https://www.a7a5.kg/User%20agreement%20en.pdf",
-          "observedAt": "2026-10-03T22:52:15Z",
-          "datumAsOf": null,
-          "location": "p.7, section 5.6",
-          "excerpt": "The Company, as well as the Payment Agent and/or the Virtual Asset Exchange Operator, may charge the User a fee (commission) when performing A7A5 purchase and sale operations.",
-          "assertion": "Section 5.6 leaves the fee amount to operation-specific disclosure; no public tariff or all-in same-notional bound."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.a7a5.kg/",
-        "https://www.a7a5.kg/User%20agreement%20en.pdf",
-        "https://docs.a7a5.io/help/faq.md",
-        "https://docs.a7a5.io/introduction-to-a7a5/ecosystem.md",
-        "https://docs.a7a5.io/legal/terms-of-use.md",
-        "https://docs.a7a5.io/llms.txt"
-      ],
-      "rationale": "The exact offchain A7A5-to-RUB redemption cost remains undisclosed: public issuer FAQ directs holders to accredited agents, and agent agreement sections 4.21-4.22 and 5.6 permit participant-specific fees disclosed in the account/operation. No public numeric tariff or evaluable formula for this rail was located."
-    },
-    {
-      "id": "uw-a7a5-old-vector-148c861a22e4f736",
-      "assetId": "a7a5-old-vector",
-      "scope": {
-        "componentKey": "reserve-composition",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "backing",
-        "requiredDatum": "reserve-composition",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:52:15Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R16)",
-      "sources": [
-        {
-          "url": "https://docs.a7a5.io/introduction-to-a7a5/readme.md",
-          "observedAt": "2026-10-03T22:52:15Z",
-          "datumAsOf": null,
-          "location": "What is A7A5?, opening reserve description",
-          "excerpt": "Fiat deposits in Roubles are held in top-tier banks with a correspondent network connected to",
-          "assertion": "Issuer identifies deposit class but not banks, balances, or weights."
-        },
-        {
-          "url": "https://docs.a7a5.io/legal/transparency.md",
-          "observedAt": "2026-10-03T22:52:15Z",
-          "datumAsOf": null,
-          "location": "Transparency, full substantive page",
-          "excerpt": "All A7A5 issuances are distributed to the market through licensed brokers and licensed centralized exchanges.",
-          "assertion": "Transparency text is issuance-distribution information, not a reserve composition."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.a7a5.io/transparency",
-        "https://www.a7a5.kg/transparency?lang=en",
-        "https://docs.a7a5.io/legal/transparency.md",
-        "https://docs.a7a5.io/legal/terms-of-use.md",
-        "https://docs.a7a5.io/llms.txt",
-        "https://docs.a7a5.io/introduction-to-a7a5/readme.md",
-        "https://docs.a7a5.io/legal/legal-framework.md",
-        "https://www.a7a5.kg/User%20agreement%20en.pdf",
-        "https://a7a5.kg/A7A5%20Whitepaper.pdf"
-      ],
-      "rationale": "No current whole-book reserve composition, scoped asset denominator, constituent banks/instruments or allocation weights are published on issuer/agent transparency, legal terms or documentation corpus. Terms describe deposits plus short-term assets without weights; network token supply is not reserve composition. The former report endpoints serve HTML, which is recorded as unavailable rather than itself proving non-disclosure."
-    },
-    {
-      "id": "uw-eur0-usual-9ae13ddbe2d6f818",
-      "assetId": "eur0-usual",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:c038a877ef5eef9f6f893919",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:52:15Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R16)",
-      "sources": [
-        {
-          "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
-          "observedAt": "2026-10-03T22:52:15Z",
-          "datumAsOf": "2026-09-01",
-          "location": "EUTBL investment policy table, prospectus p.26",
-          "excerpt": "Maximum residual life of securities and instruments",
-          "assertion": "Six-month limit governs underlying instruments, not a maturity of the held EUTBL fund-share claim."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
-        "https://docs.usual.money/resources-and-ecosystem/fact-sheets/usual-products/eur0.md",
-        "https://docs.usual.money/usual-products/usd0-stablecoin/eur0-stablecoin"
-      ],
-      "rationale": "The exact EUTBL fund-share maturityDaysMax is not disclosed. September 1 prospectus defines share ownership, open-ended subscriptions/redemptions, and six-month underlying instrument residual life; that underlying covenant and WAM/WAL are not the maturity of EUR0's fund-share holding. No share-level maximum term was found in the prospectus or issuer collateral terms."
-    },
-    {
-      "id": "uw-usdp-parallel-a0e6a0d6866da66e",
-      "assetId": "usdp-parallel",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdp-parallel:collateral-redeem"
-      },
-      "cause": "B",
-      "assertion": "required-data-public",
-      "reviewedAt": "2026-10-03T22:52:15Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R16)",
-      "sources": [
-        {
-          "url": "https://docs.parallel.best/products/parallel-v3/fees",
-          "observedAt": "2026-10-03T22:52:15Z",
-          "datumAsOf": null,
-          "location": "Redeeming, worked example",
-          "excerpt": "Redeeming 10 USDp returns assets worth about $9.65 (10 \u00d7 0.985 \u00d7 0.98) instead of the $9.85 a plain pro-rata share would give.",
-          "assertion": "Public proportional ratio/penalty formula is disclosed, but no captured same-notional stress-bound evaluation is available. Current reviewed-variable-cost schema does not encode this formula as a numerical fee bound; W15 permits B for disclosed unquantified fees."
-        }
-      ]
-    },
-    {
       "id": "uw-wusd-worldwide-f3f059c5de612f83",
       "assetId": "wusd-worldwide",
       "scope": {
@@ -8483,6 +8344,145 @@
         "https://eth.blockscout.com/api/v2/addresses/0xc273986a91e4bfc543610a5cb5860b7cfefb6cc0"
       ],
       "rationale": "No binding maturityDaysMax for the entire EURSAFO/GBPSAFO fund-share claim is published. The KIDs give a 99-year product term and the Articles permit extension. The one-month rule limits only unhedged exposure; the mandate admits perpetual bonds/equities and hedged longer-duration instruments. Overnight yield and ordinary D+1 redemption are not instrument maturity. Public signed holdings do not supply a share-level maximum; no numeric maximum is extrapolated."
+    },
+    {
+      "id": "uw-a7a5-old-vector-3d3888e98ff54821",
+      "assetId": "a7a5-old-vector",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:a7a5-old-vector:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:15Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R16)",
+      "sources": [
+        {
+          "url": "https://www.a7a5.kg/User%20agreement%20en.pdf",
+          "observedAt": "2026-10-03T22:52:15Z",
+          "datumAsOf": null,
+          "location": "p.7, section 5.6",
+          "excerpt": "The Company, as well as the Payment Agent and/or the Virtual Asset Exchange Operator, may charge the User a fee (commission) when performing A7A5 purchase and sale operations.",
+          "assertion": "Section 5.6 leaves the fee amount to operation-specific disclosure; no public tariff or all-in same-notional bound."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.a7a5.kg/",
+        "https://www.a7a5.kg/User%20agreement%20en.pdf",
+        "https://docs.a7a5.io/help/faq.md",
+        "https://docs.a7a5.io/introduction-to-a7a5/ecosystem.md",
+        "https://docs.a7a5.io/legal/terms-of-use.md",
+        "https://docs.a7a5.io/llms.txt"
+      ],
+      "rationale": "The exact offchain A7A5-to-RUB redemption cost remains undisclosed: public issuer FAQ directs holders to accredited agents, and agent agreement sections 4.21-4.22 and 5.6 permit participant-specific fees disclosed in the account/operation. No public numeric tariff or evaluable formula for this rail was located."
+    },
+    {
+      "id": "uw-a7a5-old-vector-148c861a22e4f736",
+      "assetId": "a7a5-old-vector",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:15Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R16)",
+      "sources": [
+        {
+          "url": "https://docs.a7a5.io/introduction-to-a7a5/readme.md",
+          "observedAt": "2026-10-03T22:52:15Z",
+          "datumAsOf": null,
+          "location": "What is A7A5?, opening reserve description",
+          "excerpt": "Fiat deposits in Roubles are held in top-tier banks with a correspondent network connected to",
+          "assertion": "Issuer identifies deposit class but not banks, balances, or weights."
+        },
+        {
+          "url": "https://docs.a7a5.io/legal/transparency.md",
+          "observedAt": "2026-10-03T22:52:15Z",
+          "datumAsOf": null,
+          "location": "Transparency, full substantive page",
+          "excerpt": "All A7A5 issuances are distributed to the market through licensed brokers and licensed centralized exchanges.",
+          "assertion": "Transparency text is issuance-distribution information, not a reserve composition."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.a7a5.io/transparency",
+        "https://www.a7a5.kg/transparency?lang=en",
+        "https://docs.a7a5.io/legal/transparency.md",
+        "https://docs.a7a5.io/legal/terms-of-use.md",
+        "https://docs.a7a5.io/llms.txt",
+        "https://docs.a7a5.io/introduction-to-a7a5/readme.md",
+        "https://docs.a7a5.io/legal/legal-framework.md",
+        "https://www.a7a5.kg/User%20agreement%20en.pdf",
+        "https://a7a5.kg/A7A5%20Whitepaper.pdf"
+      ],
+      "rationale": "No current whole-book reserve composition, scoped asset denominator, constituent banks/instruments or allocation weights are published on issuer/agent transparency, legal terms or documentation corpus. Terms describe deposits plus short-term assets without weights; network token supply is not reserve composition. The former report endpoints serve HTML, which is recorded as unavailable rather than itself proving non-disclosure."
+    },
+    {
+      "id": "uw-eur0-usual-9ae13ddbe2d6f818",
+      "assetId": "eur0-usual",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:c038a877ef5eef9f6f893919",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:15Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R16)",
+      "sources": [
+        {
+          "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+          "observedAt": "2026-10-03T22:52:15Z",
+          "datumAsOf": "2026-09-01",
+          "location": "EUTBL investment policy table, prospectus p.26",
+          "excerpt": "Maximum residual life of securities and instruments",
+          "assertion": "Six-month limit governs underlying instruments, not a maturity of the held EUTBL fund-share claim."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        "https://docs.usual.money/resources-and-ecosystem/fact-sheets/usual-products/eur0.md",
+        "https://docs.usual.money/usual-products/usd0-stablecoin/eur0-stablecoin"
+      ],
+      "rationale": "The exact EUTBL fund-share maturityDaysMax is not disclosed. September 1 prospectus defines share ownership, open-ended subscriptions/redemptions, and six-month underlying instrument residual life; that underlying covenant and WAM/WAL are not the maturity of EUR0's fund-share holding. No share-level maximum term was found in the prospectus or issuer collateral terms."
+    },
+    {
+      "id": "uw-usdp-parallel-a0e6a0d6866da66e",
+      "assetId": "usdp-parallel",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdp-parallel:collateral-redeem"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T22:52:15Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R16)",
+      "sources": [
+        {
+          "url": "https://docs.parallel.best/products/parallel-v3/fees",
+          "observedAt": "2026-10-03T22:52:15Z",
+          "datumAsOf": null,
+          "location": "Redeeming, worked example",
+          "excerpt": "Redeeming 10 USDp returns assets worth about $9.65 (10 \u00d7 0.985 \u00d7 0.98) instead of the $9.85 a plain pro-rata share would give.",
+          "assertion": "Public proportional ratio/penalty formula is disclosed, but no captured same-notional stress-bound evaluation is available. Current reviewed-variable-cost schema does not encode this formula as a numerical fee bound; W15 permits B for disclosed unquantified fees."
+        }
+      ]
     }
   ]
 }
