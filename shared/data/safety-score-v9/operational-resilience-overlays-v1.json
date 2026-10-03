@@ -4967,6 +4967,72 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "scrvusd-curve",
+      "reviewedAt": "2026-10-03T22:45:13Z",
+      "expiresAt": "2027-10-03T22:44:49Z",
+      "reviewer": "Unknown wave W1R36 primary-source review",
+      "notes": "Dated Curve primary source establishes launch on 2024-11-13; full elapsed calendar months are an issuer-reported eligibility lower bound only. No independently verified continuity, redemption throughput, stress recovery, financial reconciliation or incident-free history is asserted. Wrapper history is not borrowed from crvUSD.",
+      "sources": [
+        {
+          "sourceId": "curve-launch-history",
+          "label": "Curve exact-asset launch history",
+          "publisher": "Curve Finance",
+          "publishedAt": "2024-11-13",
+          "url": "https://news.curve.finance/introducing-scrvusd/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 22,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "curve-launch-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "crvusd-curve",
+      "reviewedAt": "2026-10-03T22:45:13Z",
+      "expiresAt": "2027-10-03T22:44:49Z",
+      "reviewer": "Unknown wave W1R36 primary-source review",
+      "notes": "Dated Curve primary source establishes launch on 2023-05-14; full elapsed calendar months are an issuer-reported eligibility lower bound only. No independently verified continuity, redemption throughput, stress recovery, financial reconciliation or incident-free history is asserted. Wrapper history is not borrowed from crvUSD.",
+      "sources": [
+        {
+          "sourceId": "curve-launch-history",
+          "label": "Curve exact-asset launch history",
+          "publisher": "Curve Finance",
+          "publishedAt": "2025-05-14",
+          "url": "https://news.curve.finance/crvusd-2-years-on/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 40,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "curve-launch-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }
