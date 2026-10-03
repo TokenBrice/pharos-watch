@@ -20056,6 +20056,56 @@
         "https://raw.githubusercontent.com/solayer-labs/solayer-improvement-proposal/main/audits/stablecoin/Halborn-audit-report-susd-program.pdf"
       ],
       "rationale": "The exact direct sUSD-to-USDC route has no published numerical all-in protocol/QLP redemption fee schedule or upper bound. Withdrawal docs mention only network fees; the RFQ commission statement concerns subscription quotes. Issuer legal/product/FAQ/technical pages, public withdrawal CLI/IDL, audit and current sunset notice do not define applicable redemption pricing. Pool.Fee and collectFee do not establish a withdrawal-charge formula; upstream OpenEden fees are not proven pass-through."
+    },
+    {
+      "id": "uw-gbpm-mento-399c731bd4062229",
+      "assetId": "gbpm-mento",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:d0993431e247ecc593cdc8db",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:07:14Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R96)",
+      "sources": [
+        {
+          "url": "https://docs.mento.org/mento-v3/build/smart-contracts/cdps",
+          "observedAt": "2026-10-03T23:06:47Z",
+          "datumAsOf": null,
+          "location": "FX Market Hours / Blocked While FX Markets Are Closed",
+          "excerpt": "When the FX market is closed, price-dependent CDP operations revert instead of using a stale weekend price.",
+          "assertion": "Collateral withdrawal, trove closing and standard redemption have market-hours gates; this does not promise realization of the entire USDm collateral position within any maximum horizon."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/mento-protocol/bold/main/README.md",
+          "observedAt": "2026-10-03T23:06:47Z",
+          "datumAsOf": null,
+          "location": "Redemption warning; BorrowerOperations; Closing the last Trove",
+          "excerpt": "The final redeemed amount may be less than the requested amount, and redeemers could pay a higher than needed redemption rate.",
+          "assertion": "The fork discloses conditional withdrawal/redemption mechanics but no whole-position liquidity realization maximum. Repaying borrower debt or an atomic successful transaction is not complete collateral liquidity."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.mento.org/",
+        "https://www.mento.org/privacy",
+        "https://app.mento.org/",
+        "https://reserve.mento.org/",
+        "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve",
+        "https://docs.mento.org/mento-v3/llms.txt",
+        "https://docs.mento.org/mento-v3/dive-deeper/the-reserve",
+        "https://docs.mento.org/mento-v3/dive-deeper/cdp",
+        "https://docs.mento.org/mento-v3/build/smart-contracts/cdps",
+        "https://docs.mento.org/mento-v3/build/mento-sdk/guides/borrow",
+        "https://docs.mento.org/mento-v3/dive-deeper/security/risk-overview",
+        "https://docs.mento.org/mento-v3/build/deployments/addresses",
+        "https://raw.githubusercontent.com/mento-protocol/bold/main/README.md"
+      ],
+      "rationale": "The exact missing datum is liquidityHorizon for the entire USDm CDP-collateral slice backing GBPm. Issuer site/legal navigation, full docs index, reserve dashboard/API, collateral withdrawal/redemption terms and fork mechanics disclose USDm collateral, debt repayment, collateral-ratio constraints, conditional amounts and weekend/holiday gates, but no whole-position maximum realization horizon. Stability Pool withdraw-anytime language concerns debt-token deposits, not the locked USDm collateral slice. No maximum is invented from transaction atomicity or ordinary market reopening."
     }
   ]
 }

@@ -9125,6 +9125,174 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "xofm-mento",
+      "reviewedAt": "2026-10-03T23:04:36Z",
+      "expiresAt": "2027-10-03T23:04:36Z",
+      "reviewer": "W1R96 primary-source operational-history review",
+      "notes": "Issuer-reported lower bound for the existing Celo XOFm liability, including its earlier ticker. The December 2025 announcement explicitly preserves existing contract addresses. History does not assert uninterrupted service, history of the later Monad deployment or current CDP mechanism, redeemed throughput, independent reserve reconciliation, or absence of incidents.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Dated live Mento currency roster",
+          "publisher": "Mento Labs",
+          "publishedAt": "2024-10-02",
+          "url": "https://www.mento.org/blog/expanding-the-ecosystem-for-non-usd-stablecoins",
+          "confidence": "issuer-reported"
+        },
+        {
+          "sourceId": "unchanged-contract-rebrand",
+          "label": "Ticker change preserves existing contracts",
+          "publisher": "Mento Labs",
+          "publishedAt": "2025-12-17",
+          "url": "https://www.mento.org/blog/a-new-chapter-in-multichain-fx-the-evolution-of-mento-stablecoins",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 24,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation",
+            "unchanged-contract-rebrand"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "kesm-mento",
+      "reviewedAt": "2026-10-03T23:04:36Z",
+      "expiresAt": "2027-10-03T23:04:36Z",
+      "reviewer": "W1R96 primary-source operational-history review",
+      "notes": "Issuer-reported lower bound for the existing Celo KESm liability, including its earlier ticker. The December 2025 announcement explicitly preserves existing contract addresses. History does not assert uninterrupted service, history of the later Monad deployment or current CDP mechanism, redeemed throughput, independent reserve reconciliation, or absence of incidents.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Dated live Mento currency roster",
+          "publisher": "Mento Labs",
+          "publishedAt": "2024-10-02",
+          "url": "https://www.mento.org/blog/expanding-the-ecosystem-for-non-usd-stablecoins",
+          "confidence": "issuer-reported"
+        },
+        {
+          "sourceId": "unchanged-contract-rebrand",
+          "label": "Ticker change preserves existing contracts",
+          "publisher": "Mento Labs",
+          "publishedAt": "2025-12-17",
+          "url": "https://www.mento.org/blog/a-new-chapter-in-multichain-fx-the-evolution-of-mento-stablecoins",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 24,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation",
+            "unchanged-contract-rebrand"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "chfm-mento",
+      "reviewedAt": "2026-10-03T23:04:36Z",
+      "expiresAt": "2027-10-03T23:04:36Z",
+      "reviewer": "W1R96 primary-source operational-history review",
+      "notes": "Issuer-reported lower bound for the existing Celo CHFm liability, including its earlier ticker. The December 2025 announcement explicitly preserves existing contract addresses. History does not assert uninterrupted service, history of the later Monad deployment or current CDP mechanism, redeemed throughput, independent reserve reconciliation, or absence of incidents.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Dated live Mento currency roster",
+          "publisher": "Mento Labs",
+          "publishedAt": "2025-06-06",
+          "url": "https://www.mento.org/blog/mento-expands-global-onchain-fx-access-with-three-new-decentralized-stablecoins",
+          "confidence": "issuer-reported"
+        },
+        {
+          "sourceId": "unchanged-contract-rebrand",
+          "label": "Ticker change preserves existing contracts",
+          "publisher": "Mento Labs",
+          "publishedAt": "2025-12-17",
+          "url": "https://www.mento.org/blog/a-new-chapter-in-multichain-fx-the-evolution-of-mento-stablecoins",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 15,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation",
+            "unchanged-contract-rebrand"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "gbpm-mento",
+      "reviewedAt": "2026-10-03T23:04:36Z",
+      "expiresAt": "2027-10-03T23:04:36Z",
+      "reviewer": "W1R96 primary-source operational-history review",
+      "notes": "Issuer-reported lower bound for the existing Celo GBPm liability, including its earlier ticker. The December 2025 announcement explicitly preserves existing contract addresses. History does not assert uninterrupted service, history of the later Monad deployment or current CDP mechanism, redeemed throughput, independent reserve reconciliation, or absence of incidents.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Dated live Mento currency roster",
+          "publisher": "Mento Labs",
+          "publishedAt": "2025-06-06",
+          "url": "https://www.mento.org/blog/mento-expands-global-onchain-fx-access-with-three-new-decentralized-stablecoins",
+          "confidence": "issuer-reported"
+        },
+        {
+          "sourceId": "unchanged-contract-rebrand",
+          "label": "Ticker change preserves existing contracts",
+          "publisher": "Mento Labs",
+          "publishedAt": "2025-12-17",
+          "url": "https://www.mento.org/blog/a-new-chapter-in-multichain-fx-the-evolution-of-mento-stablecoins",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 15,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation",
+            "unchanged-contract-rebrand"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }
