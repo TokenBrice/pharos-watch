@@ -23719,6 +23719,446 @@
         "https://docs.frax.com/frxusd/stake-and-unstake-quickstart-ethereum"
       ],
       "rationale": "Wrapper-local custodyEscrow segregation and bankruptcy-remoteness for the separate sfrxUSD strategy book are undisclosed. The complete current roster identifies venues, not enforceable custody or insolvency rights covering the book. Parent frxUSD FBO intentions cannot be transferred to sfrxUSD; the yield mandate and issuer terms provide no such complete instrument."
+    },
+    {
+      "id": "uw-euro3-3a-dao-321c4878ade1384d",
+      "assetId": "euro3-3a-dao",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:1f82d40342195bb6a9037804",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:31Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R77)",
+      "sources": [
+        {
+          "url": "https://ionian.gitbook.io/mendi-finance/protocol/collateral-and-reserves",
+          "observedAt": "2026-10-03T23:16:31Z",
+          "datumAsOf": null,
+          "location": "Issuer disclosure",
+          "excerpt": "meTokens are the primary means of interacting with the Mendi Finance Protocol",
+          "assertion": "Receipt tokens redeem through lending markets; this is not a whole-position realization maximum."
+        },
+        {
+          "url": "https://ionian.gitbook.io/mendi-finance/other-information/legal-disclaimer",
+          "observedAt": "2026-10-03T23:16:31Z",
+          "datumAsOf": null,
+          "location": "Issuer disclosure",
+          "excerpt": "The Website functionality is not guaranteed and could be disabled fully or in part without prior notice.",
+          "assertion": "No guaranteed whole-slice liquidity horizon is provided."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://ionian.gitbook.io/mendi-finance/llms.txt",
+        "https://ionian.gitbook.io/mendi-finance/protocol/developer-docs",
+        "https://ionian.gitbook.io/mendi-finance/protocol/collateral-and-reserves",
+        "https://ionian.gitbook.io/mendi-finance/protocol/contract-addresses",
+        "https://ionian.gitbook.io/mendi-finance/other-information/legal-disclaimer",
+        "https://lineascan.build/address/0x333D8b480BDB25eA7Be4Dd87EEB359988CE1b30D#code",
+        "https://docs.3adao.org/3a-protocol/protocol-documentation/euro3-coin"
+      ],
+      "rationale": "The whole EURO3-held meUSDC, meUSDT, mewETH and mewstETH receipt positions have no published maximum realization horizon. Mendi discloses exchange-rate accounting, redeem interfaces, collateral/reserve factors and market identities, but not a bound on all deposited collateral becoming available. Executable token redemption and partial liquid cash do not prove whole-position liquidity."
+    },
+    {
+      "id": "uw-euro3-3a-dao-45427e21415a7e6b",
+      "assetId": "euro3-3a-dao",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:a2ac0d11af44277391411a22",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:31Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R77)",
+      "sources": [
+        {
+          "url": "https://ionian.gitbook.io/mendi-finance/protocol/collateral-and-reserves",
+          "observedAt": "2026-10-03T23:16:31Z",
+          "datumAsOf": null,
+          "location": "Issuer disclosure",
+          "excerpt": "meTokens are the primary means of interacting with the Mendi Finance Protocol",
+          "assertion": "Receipt tokens redeem through lending markets; this is not a whole-position realization maximum."
+        },
+        {
+          "url": "https://ionian.gitbook.io/mendi-finance/other-information/legal-disclaimer",
+          "observedAt": "2026-10-03T23:16:31Z",
+          "datumAsOf": null,
+          "location": "Issuer disclosure",
+          "excerpt": "The Website functionality is not guaranteed and could be disabled fully or in part without prior notice.",
+          "assertion": "No guaranteed whole-slice liquidity horizon is provided."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://ionian.gitbook.io/mendi-finance/llms.txt",
+        "https://ionian.gitbook.io/mendi-finance/protocol/developer-docs",
+        "https://ionian.gitbook.io/mendi-finance/protocol/collateral-and-reserves",
+        "https://ionian.gitbook.io/mendi-finance/protocol/contract-addresses",
+        "https://ionian.gitbook.io/mendi-finance/other-information/legal-disclaimer",
+        "https://lineascan.build/address/0x333D8b480BDB25eA7Be4Dd87EEB359988CE1b30D#code",
+        "https://docs.3adao.org/3a-protocol/protocol-documentation/euro3-coin"
+      ],
+      "rationale": "The whole EURO3-held meUSDC, meUSDT, mewETH and mewstETH receipt positions have no published maximum realization horizon. Mendi discloses exchange-rate accounting, redeem interfaces, collateral/reserve factors and market identities, but not a bound on all deposited collateral becoming available. Executable token redemption and partial liquid cash do not prove whole-position liquidity."
+    },
+    {
+      "id": "uw-euro3-3a-dao-bb3b2b8c55111b72",
+      "assetId": "euro3-3a-dao",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:be7f7c95ff0dce99dc4c8f85",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:31Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R77)",
+      "sources": [
+        {
+          "url": "https://ionian.gitbook.io/mendi-finance/protocol/collateral-and-reserves",
+          "observedAt": "2026-10-03T23:16:31Z",
+          "datumAsOf": null,
+          "location": "Issuer disclosure",
+          "excerpt": "meTokens are the primary means of interacting with the Mendi Finance Protocol",
+          "assertion": "Receipt tokens redeem through lending markets; this is not a whole-position realization maximum."
+        },
+        {
+          "url": "https://ionian.gitbook.io/mendi-finance/other-information/legal-disclaimer",
+          "observedAt": "2026-10-03T23:16:31Z",
+          "datumAsOf": null,
+          "location": "Issuer disclosure",
+          "excerpt": "The Website functionality is not guaranteed and could be disabled fully or in part without prior notice.",
+          "assertion": "No guaranteed whole-slice liquidity horizon is provided."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://ionian.gitbook.io/mendi-finance/llms.txt",
+        "https://ionian.gitbook.io/mendi-finance/protocol/developer-docs",
+        "https://ionian.gitbook.io/mendi-finance/protocol/collateral-and-reserves",
+        "https://ionian.gitbook.io/mendi-finance/protocol/contract-addresses",
+        "https://ionian.gitbook.io/mendi-finance/other-information/legal-disclaimer",
+        "https://lineascan.build/address/0x333D8b480BDB25eA7Be4Dd87EEB359988CE1b30D#code",
+        "https://docs.3adao.org/3a-protocol/protocol-documentation/euro3-coin"
+      ],
+      "rationale": "The whole EURO3-held meUSDC, meUSDT, mewETH and mewstETH receipt positions have no published maximum realization horizon. Mendi discloses exchange-rate accounting, redeem interfaces, collateral/reserve factors and market identities, but not a bound on all deposited collateral becoming available. Executable token redemption and partial liquid cash do not prove whole-position liquidity."
+    },
+    {
+      "id": "uw-euro3-3a-dao-5058a139f9e9303a",
+      "assetId": "euro3-3a-dao",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:fc2f4cb0eb54c28349375c4e",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:31Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R77)",
+      "sources": [
+        {
+          "url": "https://ionian.gitbook.io/mendi-finance/protocol/collateral-and-reserves",
+          "observedAt": "2026-10-03T23:16:31Z",
+          "datumAsOf": null,
+          "location": "Issuer disclosure",
+          "excerpt": "meTokens are the primary means of interacting with the Mendi Finance Protocol",
+          "assertion": "Receipt tokens redeem through lending markets; this is not a whole-position realization maximum."
+        },
+        {
+          "url": "https://ionian.gitbook.io/mendi-finance/other-information/legal-disclaimer",
+          "observedAt": "2026-10-03T23:16:31Z",
+          "datumAsOf": null,
+          "location": "Issuer disclosure",
+          "excerpt": "The Website functionality is not guaranteed and could be disabled fully or in part without prior notice.",
+          "assertion": "No guaranteed whole-slice liquidity horizon is provided."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://ionian.gitbook.io/mendi-finance/llms.txt",
+        "https://ionian.gitbook.io/mendi-finance/protocol/developer-docs",
+        "https://ionian.gitbook.io/mendi-finance/protocol/collateral-and-reserves",
+        "https://ionian.gitbook.io/mendi-finance/protocol/contract-addresses",
+        "https://ionian.gitbook.io/mendi-finance/other-information/legal-disclaimer",
+        "https://lineascan.build/address/0x333D8b480BDB25eA7Be4Dd87EEB359988CE1b30D#code",
+        "https://docs.3adao.org/3a-protocol/protocol-documentation/euro3-coin"
+      ],
+      "rationale": "The whole EURO3-held meUSDC, meUSDT, mewETH and mewstETH receipt positions have no published maximum realization horizon. Mendi discloses exchange-rate accounting, redeem interfaces, collateral/reserve factors and market identities, but not a bound on all deposited collateral becoming available. Executable token redemption and partial liquid cash do not prove whole-position liquidity."
+    },
+    {
+      "id": "uw-gldt-gold-dao-df16e419ba08e7d1",
+      "assetId": "gldt-gold-dao",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:physical-to-usd:gldt-gold-dao"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:31Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R77)",
+      "sources": [
+        {
+          "url": "https://help.bity.com/en/articles/9680077-how-can-i-redeem-the-physical-gold-bar-from-my-nfts",
+          "observedAt": "2026-10-03T23:16:31Z",
+          "datumAsOf": null,
+          "location": "Issuer disclosure",
+          "excerpt": "Once the fee is paid, you will receive a receipt and confirmation of your appointment for the redemption.",
+          "assertion": "Appointment process has no final maximum release time."
+        },
+        {
+          "url": "https://help.bity.com/en/articles/9680058-how-can-i-resell-my-gld-nft",
+          "observedAt": "2026-10-03T23:16:31Z",
+          "datumAsOf": null,
+          "location": "Issuer disclosure",
+          "excerpt": "Once the transaction is confirmed, we will send the agreed USDT amount to your specified address.",
+          "assertion": "USDT resale lacks completion maximum or final USD conversion SLA."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.gold-dao.org/llms.txt",
+        "https://docs.gold-dao.org/legal/terms-of-service",
+        "https://docs.gold-dao.org/how-to/redeem-physical-gold",
+        "https://help.bity.com/en/articles/9680077-how-can-i-redeem-the-physical-gold-bar-from-my-nfts",
+        "https://help.bity.com/en/articles/9680058-how-can-i-resell-my-gld-nft",
+        "https://gold.bity.com/en",
+        "https://docs.gold-dao.org/tokens/gldt"
+      ],
+      "rationale": "Neither the issuer physical-redemption route nor the composed physical-to-spendable-USD route publishes an end-to-end maximum. KYC, reverse swap, appointment and physical pickup are disclosed without deadlines. NFT buyback pays USDT after confirmation without a maximum; it is not a final spendable USD SLA."
+    },
+    {
+      "id": "uw-gldt-gold-dao-8e6db88665bf73b3",
+      "assetId": "gldt-gold-dao",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:gldt-gold-dao:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:31Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R77)",
+      "sources": [
+        {
+          "url": "https://help.bity.com/en/articles/9680077-how-can-i-redeem-the-physical-gold-bar-from-my-nfts",
+          "observedAt": "2026-10-03T23:16:31Z",
+          "datumAsOf": null,
+          "location": "Issuer disclosure",
+          "excerpt": "Once the fee is paid, you will receive a receipt and confirmation of your appointment for the redemption.",
+          "assertion": "Appointment process has no final maximum release time."
+        },
+        {
+          "url": "https://help.bity.com/en/articles/9680058-how-can-i-resell-my-gld-nft",
+          "observedAt": "2026-10-03T23:16:31Z",
+          "datumAsOf": null,
+          "location": "Issuer disclosure",
+          "excerpt": "Once the transaction is confirmed, we will send the agreed USDT amount to your specified address.",
+          "assertion": "USDT resale lacks completion maximum or final USD conversion SLA."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.gold-dao.org/llms.txt",
+        "https://docs.gold-dao.org/legal/terms-of-service",
+        "https://docs.gold-dao.org/how-to/redeem-physical-gold",
+        "https://help.bity.com/en/articles/9680077-how-can-i-redeem-the-physical-gold-bar-from-my-nfts",
+        "https://help.bity.com/en/articles/9680058-how-can-i-resell-my-gld-nft",
+        "https://gold.bity.com/en",
+        "https://docs.gold-dao.org/tokens/gldt"
+      ],
+      "rationale": "Neither the issuer physical-redemption route nor the composed physical-to-spendable-USD route publishes an end-to-end maximum. KYC, reverse swap, appointment and physical pickup are disclosed without deadlines. NFT buyback pays USDT after confirmation without a maximum; it is not a final spendable USD SLA."
+    },
+    {
+      "id": "uw-gldt-gold-dao-4d85e1c0e1b31a90",
+      "assetId": "gldt-gold-dao",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:gldt-gold-dao:offchain-issuer"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T23:16:31Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R77)",
+      "sources": [
+        {
+          "url": "https://medium.com/@GoldDAO/gldt-launches-as-the-worlds-first-fully-gold-backed-decentralized-gold-token-governed-by-a-dao-45baa177d34b",
+          "observedAt": "2026-10-03T23:16:31Z",
+          "datumAsOf": "2024-10-30",
+          "location": "Issuer disclosure",
+          "excerpt": "Reverse Swap Fee: A flat fee of 1 GLDT applies for each reverse swap, regardless of the gold bar\u2019s size.",
+          "assertion": "Published token-denominated formula is not evaluated by the current offchain-issuer fee model; converting 1 GLDT plus CHF300 pickup requires notional, lot and captured FX handling."
+        },
+        {
+          "url": "https://help.bity.com/en/articles/9680077-how-can-i-redeem-the-physical-gold-bar-from-my-nfts",
+          "observedAt": "2026-10-03T23:16:31Z",
+          "datumAsOf": null,
+          "location": "Issuer disclosure",
+          "excerpt": "This fee applies regardless of the size or quantity of gold.",
+          "assertion": "CHF300 charge is disclosed, not an unknown fee; the model cannot represent an all-in USD charge without FX/lot evaluation."
+        }
+      ]
+    },
+    {
+      "id": "uw-gldt-gold-dao-3892111dfe422652",
+      "assetId": "gldt-gold-dao",
+      "scope": {
+        "componentKey": "mechanism-review:assuranceAndReconciliation",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "mechanism-review:assuranceAndReconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:31Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R77)",
+      "sources": [
+        {
+          "url": "https://docs.gold-dao.org/other/audit-reports",
+          "observedAt": "2026-10-03T23:16:31Z",
+          "datumAsOf": null,
+          "location": "Issuer disclosure",
+          "excerpt": "All the latest audit reports of the vaults, where the gold bars are stored, are uploaded here.",
+          "assertion": "Archive contains latest September 2025 physical-vault factual findings, not current GLDT supply reconciliation."
+        },
+        {
+          "url": "https://2669388926-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FhyYilEcr51QGR1f1ZQ8w%2Fuploads%2Fsq2DN60j11A1A0uL3tHX%2FAudit%20Report%2009-2025.pdf?alt=media&token=7a7a500e-1321-4e9d-8046-46ae8199e244",
+          "observedAt": "2026-10-03T23:16:31Z",
+          "datumAsOf": "2025-09-21",
+          "location": "KPMG report page 2",
+          "excerpt": "Because the above procedures do not constitute either an audit or a review made in accordance with Swiss Auditing Standards, we do not express any assurance on the 7.9 KG gold.",
+          "assertion": "KPMG report covers physical gold and certificates, not matched outstanding GLDT liabilities."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.gold-dao.org/llms.txt",
+        "https://docs.gold-dao.org/other/audit-reports",
+        "https://docs.gold-dao.org/legal/terms-of-service",
+        "https://docs.gold-dao.org/tokens/gldt",
+        "https://docs.gold-dao.org/resources/roadmap",
+        "https://gold.bity.com/en"
+      ],
+      "rationale": "No current exact-GLDT independent reserve-and-liability reconciliation is published on the reviewed issuer and vault-report archive. Latest linked KPMG artifact is dated September 21, 2025 and signed October 2, covers 7.9kg/790 GLD certificates with sampled serials, expressly no assurance, and does not reconcile GLDT outstanding supply. The GLD NFT book is not the exact GLDT liability denominator."
+    },
+    {
+      "id": "uw-usda-anzens-d6029bc2b679afc5",
+      "assetId": "usda-anzens",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usda-anzens:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:31Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R77)",
+      "sources": [
+        {
+          "url": "https://www.anzens.com/landing/terms-and-conditions",
+          "observedAt": "2026-10-03T23:16:31Z",
+          "datumAsOf": "2025-04-14",
+          "location": "Sections 12 and 19",
+          "excerpt": "The time it takes for you to receive the funds may vary depending on your chosen withdrawal method and the processing times of your bank or payment provider.",
+          "assertion": "Two business days to account credit and three-day withdrawal aim do not bound final funds receipt."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.anzens.com/landing/terms-and-conditions",
+        "https://www.anzens.com/",
+        "https://www.emurgo.io/press-news/anzens-is-live-usda-stablecoin-minting-access-is-here-cardano/"
+      ],
+      "rationale": "USDA-to-final-spendable-USD has no published maximum. Section 12 specifies two business days to Anzens account credit and aims for three business days for withdrawal processing, explicitly variable bank/payment timing and reasonable-efforts qualifications. Foreign account withdrawals use Encryptus. These are intermediate targets, not a final USD settlement guarantee."
+    },
+    {
+      "id": "uw-usda-anzens-be8b3a5bc9edd36d",
+      "assetId": "usda-anzens",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usda-anzens:offchain-issuer"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T23:16:31Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R77)",
+      "sources": [
+        {
+          "url": "https://www.anzens.com/landing/terms-and-conditions",
+          "observedAt": "2026-10-03T23:16:31Z",
+          "datumAsOf": "2025-04-14",
+          "location": "Section 15(e)",
+          "excerpt": "For US Domestic Wire, a Fee of $30 will apply and for International Wire, a Fee of $70 will apply (Please note that this is subject to change.)",
+          "assertion": "Applicable published flat wire schedule plus variable network/account fees is not evaluated at same notional by existing undisclosedReviewedFee model."
+        }
+      ]
+    },
+    {
+      "id": "uw-fidd-fidelity-2d05fb8170d647d4",
+      "assetId": "fidd-fidelity",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:680c1bc3d8d777289ef65a58",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:31Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R77)",
+      "sources": [
+        {
+          "url": "https://www.fidelitydigitalassets.com/fidd-terms",
+          "observedAt": "2026-10-03T23:16:31Z",
+          "datumAsOf": "2026-04-13",
+          "location": "Section 3(4)",
+          "excerpt": "deposit accounts at U.S. state or federally chartered depository institutions.",
+          "assertion": "Deposit mandate does not identify demand versus term deposits or maximum maturity."
+        },
+        {
+          "url": "https://fwc.widen.net/s/jgdsvvsknq/fidelity-digital-assets---fidd-reserve-attestation-report---august-2026",
+          "observedAt": "2026-10-03T23:16:31Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Report page 3; tables pages 6\u20138",
+          "excerpt": "Our procedures were limited to the quantity of outstanding FIDD and the related redemption assets and therefore do not constitute an audit or examination of Fidelity Digital Assets, National Association or its financial position.",
+          "assertion": "Report lists bank cash amounts separately from Treasury maturity roster; no deposit maturity term."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.fidelitydigitalassets.com/fidd-terms",
+        "https://www.fidelitydigitalassets.com/stablecoin",
+        "https://www.fidelitydigitalassets.com/stablecoin-developer-resources",
+        "https://fwc.widen.net/s/jgdsvvsknq/fidelity-digital-assets---fidd-reserve-attestation-report---august-2026"
+      ],
+      "rationale": "The BNY Mellon cash deposit slice has no disclosed contractual maximum maturity. August report lists amounts and bank identity but maturity dates only for Treasury CUSIPs; governing terms authorize deposit accounts without demand-deposit characterization or maturity constraint. Cash liquidity is not proof of zero maturity; the Treasury three-month mandate cannot be applied to deposits."
     }
   ]
 }

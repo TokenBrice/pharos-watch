@@ -10880,6 +10880,138 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "euro3-3a-dao",
+      "reviewedAt": "2026-10-03T23:08:34Z",
+      "expiresAt": "2027-10-03T23:08:34Z",
+      "reviewer": "W1R77 unknown-resolver",
+      "notes": "Exact-token issuer-reported live-history lower bound only; no independently verified continuity, incident-free history, redemption performance or reconciliation claim. Source confirms operation by the stated date, not necessarily first issuance.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Dated EURO3 vault migration confirms live loans",
+          "publisher": "3A DAO",
+          "publishedAt": "2023-11-24",
+          "url": "https://blog.3adao.org/unlocking-capital-efficiency-introducing-the-latest-vault-smart-contracts-506db6815a21",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 34,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "gldt-gold-dao",
+      "reviewedAt": "2026-10-03T23:08:34Z",
+      "expiresAt": "2027-10-03T23:08:34Z",
+      "reviewer": "W1R77 unknown-resolver",
+      "notes": "Exact-token issuer-reported live-history lower bound only; no independently verified continuity, incident-free history, redemption performance or reconciliation claim. Source confirms operation by the stated date, not necessarily first issuance.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Exact GLDT launch announcement",
+          "publisher": "Gold DAO",
+          "publishedAt": "2024-10-30",
+          "url": "https://medium.com/@GoldDAO/gldt-launches-as-the-worlds-first-fully-gold-backed-decentralized-gold-token-governed-by-a-dao-45baa177d34b",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 23,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usda-anzens",
+      "reviewedAt": "2026-10-03T23:08:34Z",
+      "expiresAt": "2027-10-03T23:08:34Z",
+      "reviewer": "W1R77 unknown-resolver",
+      "notes": "Exact-token issuer-reported live-history lower bound only; no independently verified continuity, incident-free history, redemption performance or reconciliation claim. Source confirms operation by the stated date, not necessarily first issuance.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Anzens USDA minting live announcement",
+          "publisher": "EMURGO / Anzens",
+          "publishedAt": "2025-03-21",
+          "url": "https://www.emurgo.io/press-news/anzens-is-live-usda-stablecoin-minting-access-is-here-cardano/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 18,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "fidd-fidelity",
+      "reviewedAt": "2026-10-03T23:08:34Z",
+      "expiresAt": "2027-10-03T23:08:34Z",
+      "reviewer": "W1R77 unknown-resolver",
+      "notes": "Exact-token issuer-reported live-history lower bound only; no independently verified continuity, incident-free history, redemption performance or reconciliation claim. Source confirms operation by the stated date, not necessarily first issuance.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "FIDD availability launch update",
+          "publisher": "Fidelity Digital Assets",
+          "publishedAt": "2026-02-04",
+          "url": "https://www.fidelitydigitalassets.com/research-and-insights/fidelity-investmentsr-expands-digital-asset-investment-lineup-stablecoin",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 7,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }
