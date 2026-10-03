@@ -14,20 +14,28 @@
         "custody",
         "market"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "over-seven-days"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "W1R12 primary-source liquidity review",
     "confidence": "probable",
     "sources": [
       {
         "label": "Spiko Pound product page",
         "url": "https://www.spiko.io/spiko-pound"
+      },
+      {
+        "label": "Spiko SICAV prospectus, 1 September 2026, SAFO redemption cap pages 61–63",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+      },
+      {
+        "label": "Exact GBP share KID, 29 July 2026",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/KID_gbpSAFO_EN.pdf"
       }
     ],
-    "rationale": "Spiko describes GBPSAFO as a tokenized GBP overnight total-return swap fund. Its product page identifies BNP Paribas as a counterparty, and the September 2026 prospectus permits bonds, equities and money-market instruments under total-return swaps; neither source supplies a dated current portfolio or counterparty-weight table.",
+    "rationale": "GBP overnight swap fund-share identity and BNP Paribas are disclosed. The September 2026 prospectus permits bonds, equities and money-market instruments under TRS. Ordinary redemptions settle D+1 business day after a 15:00 Paris cutoff, but the same share claim is subject to gates at 25% net redemptions, carried-over orders without priority, and up to 20 valuation days of capping over three months. The conservative whole-claim liquidity horizon is therefore over-seven-days, not an unconditional one-day stress realization guarantee. No composition weights or composition date were refreshed by this metadata-only review.",
     "compositionBasis": "Spiko GBP fund product disclosure",
     "compositionAsOf": "2026-07-15",
     "scope": "full-composition",

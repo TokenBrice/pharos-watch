@@ -3812,6 +3812,138 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "eursafo-spiko",
+      "reviewedAt": "2026-10-03T22:51:32Z",
+      "expiresAt": "2027-10-03T22:51:32Z",
+      "reviewer": "W1R12 primary-source review",
+      "notes": "Exact EUR token creation at Ethereum block 24540803 establishes a conservative seven full calendar months of deployment history. Creation is not first funded issuance or independently verified operating performance. No redemption throughput, stress recovery, reconciliation continuity or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "eur-token-creation",
+          "label": "EURSAFO exact token creation transaction",
+          "publisher": "Ethereum / Blockscout",
+          "publishedAt": "2026-02-26",
+          "url": "https://eth.blockscout.com/tx/0x248833502a605fbf998776675107c84e180e3b615bffefa06ed435a96e909d15",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 7,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "eur-token-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "chfsafo-spiko",
+      "reviewedAt": "2026-10-03T22:51:32Z",
+      "expiresAt": "2027-10-03T22:51:32Z",
+      "reviewer": "W1R12 primary-source review",
+      "notes": "Exact CHF token creation at Ethereum block 24540949 establishes seven full calendar months of deployment history. Creation is not first funded issuance or independently verified operating performance. No redemption throughput, stress recovery, reconciliation continuity or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "chf-token-creation",
+          "label": "CHFSAFO exact token creation transaction",
+          "publisher": "Ethereum / Blockscout",
+          "publishedAt": "2026-02-26",
+          "url": "https://eth.blockscout.com/tx/0x6d98798a86bde1112b6b3b905ddb86d7c4969278f6e69cc732bd988aa004c22a",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 7,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "chf-token-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "gbpsafo-spiko",
+      "reviewedAt": "2026-10-03T22:51:32Z",
+      "expiresAt": "2027-10-03T22:51:32Z",
+      "reviewer": "W1R12 primary-source review",
+      "notes": "Exact GBP token creation at Ethereum block 24540915 establishes seven full calendar months of deployment history. Creation is not first funded issuance or independently verified operating performance. No redemption throughput, stress recovery, reconciliation continuity or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "gbp-token-creation",
+          "label": "GBPSAFO exact token creation transaction",
+          "publisher": "Ethereum / Blockscout",
+          "publishedAt": "2026-02-26",
+          "url": "https://eth.blockscout.com/tx/0x1f9c4166cdcfa31f6fbeef93a0fa2d87fcac5ed601bc20ed9c6f9e8d59bed0a7",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 7,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "gbp-token-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "eurspkcc-spiko",
+      "reviewedAt": "2026-10-03T22:51:32Z",
+      "expiresAt": "2027-10-03T22:51:32Z",
+      "reviewer": "W1R12 primary-source review",
+      "notes": "Exact EUR hedged token creation at Ethereum block 22931219 establishes fourteen full calendar months of deployment history. Creation predates the fund's legal inception and is not first funded issuance or independently verified operating performance. No redemption throughput, stress recovery, reconciliation continuity or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "eur-carry-token-creation",
+          "label": "EURSPKCC exact token creation transaction",
+          "publisher": "Ethereum / Blockscout",
+          "publishedAt": "2025-07-16",
+          "url": "https://eth.blockscout.com/tx/0xc6546d23207e7025229e99212822c7d1f9d1e982bf0320fdfa3681f52e7e9f6e",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 14,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "eur-carry-token-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

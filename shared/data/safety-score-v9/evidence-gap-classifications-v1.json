@@ -8369,6 +8369,120 @@
         "https://supervalores.gob.pa/files/iper/pj_er/soc_inv/Sociedades_Inversion_Registradas_extranjero.pdf"
       ],
       "rationale": "Exact missing datum is a publicly documented supervisor and authorization boundary governing earnUSD mint/strategist operations. Linked terms identify Runtime Global S.A. but no regulator/license. Exact-entity search plus Panama SMV's current juridical register and August 31 manager, advisor, private-fund and foreign-offered-fund lists yield no match. Lido's no-supervision statement governs its interface only and is not transferred to the token. Supervision remains unknown, not none."
+    },
+    {
+      "id": "uw-eursafo-spiko-6c5125f8534cfa24",
+      "assetId": "eursafo-spiko",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:602e299779e194c1e9d4c440",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:55:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R12)",
+      "sources": [
+        {
+          "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+          "observedAt": "2026-10-03T22:49:44Z",
+          "datumAsOf": "2026-09-01",
+          "location": "SAFO investment strategy p.53 and fixed-income mandate p.54",
+          "excerpt": "No unhedged exposure to instruments with a maturity of more than one month is permitted.",
+          "assertion": "One-month rule covers unhedged exposure, not the maximum maturity of the entire fund-share claim or all hedged holdings."
+        },
+        {
+          "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+          "observedAt": "2026-10-03T22:49:44Z",
+          "datumAsOf": "2026-09-01",
+          "location": "Articles of Association, Article 28 p.79",
+          "excerpt": "The Board of Directors may, at any time and for any reason whatsoever, propose to an Extraordinary General Meeting the extension or early dissolution or liquidation of the SICAV or of one or more sub-funds.",
+          "assertion": "The 99-year corporate term is extendable; it is not a fixed maximum days-to-maturity of the EUR or GBP fund-share holding."
+        },
+        {
+          "url": "https://geco.amf-france.org/back-office/document/download/429960",
+          "observedAt": "2026-10-03T22:55:53Z",
+          "datumAsOf": "2026-06-30",
+          "location": "SAFO semiannual report, inventory of derivatives hedging share classes, p.42",
+          "excerpt": "SWP LEG GBP 171227",
+          "assertion": "The report associates this dated hedge with GBP ISIN FR0014015LF8 and separately reports the EUR hedge FR0014015LD3. Hedge dates do not define a maximum maturity for the entire redeemable fund-share claim."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.spiko.io/spiko-euro",
+        "https://www.spiko.io/spiko-pound",
+        "https://docs.spiko.io/documentation/product_overview/smart_cash/legal_documentation/",
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        "https://cdn.spiko.finance/legal_docs/EN/KID_eurSAFO_EN.pdf",
+        "https://cdn.spiko.finance/legal_docs/EN/KID_gbpSAFO_EN.pdf",
+        "https://geco.amf-france.org/back-office/document/download/429960",
+        "https://public-api.spiko.io/fund-assets/?fundId=59c2c924-ebf8-492d-a4b0-72d72ebf61e6",
+        "https://public-api.spiko.io/share-classes/eurSAFO",
+        "https://public-api.spiko.io/share-classes/gbpSAFO",
+        "https://eth.blockscout.com/api/v2/addresses/0x0990b149e915cb08e2143a5c6f669c907eddc8b0",
+        "https://eth.blockscout.com/api/v2/addresses/0xc273986a91e4bfc543610a5cb5860b7cfefb6cc0"
+      ],
+      "rationale": "No binding maturityDaysMax for the entire EURSAFO/GBPSAFO fund-share claim is published. The KIDs give a 99-year product term and the Articles permit extension. The one-month rule limits only unhedged exposure; the mandate admits perpetual bonds/equities and hedged longer-duration instruments. Overnight yield and ordinary D+1 redemption are not instrument maturity. Public signed holdings do not supply a share-level maximum; no numeric maximum is extrapolated."
+    },
+    {
+      "id": "uw-gbpsafo-spiko-c050d1f5df76d4f7",
+      "assetId": "gbpsafo-spiko",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:50bcd115a5fef0083dafcaee",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:55:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R12)",
+      "sources": [
+        {
+          "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+          "observedAt": "2026-10-03T22:49:44Z",
+          "datumAsOf": "2026-09-01",
+          "location": "SAFO investment strategy p.53 and fixed-income mandate p.54",
+          "excerpt": "No unhedged exposure to instruments with a maturity of more than one month is permitted.",
+          "assertion": "One-month rule covers unhedged exposure, not the maximum maturity of the entire fund-share claim or all hedged holdings."
+        },
+        {
+          "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+          "observedAt": "2026-10-03T22:49:44Z",
+          "datumAsOf": "2026-09-01",
+          "location": "Articles of Association, Article 28 p.79",
+          "excerpt": "The Board of Directors may, at any time and for any reason whatsoever, propose to an Extraordinary General Meeting the extension or early dissolution or liquidation of the SICAV or of one or more sub-funds.",
+          "assertion": "The 99-year corporate term is extendable; it is not a fixed maximum days-to-maturity of the EUR or GBP fund-share holding."
+        },
+        {
+          "url": "https://geco.amf-france.org/back-office/document/download/429960",
+          "observedAt": "2026-10-03T22:55:53Z",
+          "datumAsOf": "2026-06-30",
+          "location": "SAFO semiannual report, inventory of derivatives hedging share classes, p.42",
+          "excerpt": "SWP LEG GBP 171227",
+          "assertion": "The report associates this dated hedge with GBP ISIN FR0014015LF8 and separately reports the EUR hedge FR0014015LD3. Hedge dates do not define a maximum maturity for the entire redeemable fund-share claim."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.spiko.io/spiko-euro",
+        "https://www.spiko.io/spiko-pound",
+        "https://docs.spiko.io/documentation/product_overview/smart_cash/legal_documentation/",
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        "https://cdn.spiko.finance/legal_docs/EN/KID_eurSAFO_EN.pdf",
+        "https://cdn.spiko.finance/legal_docs/EN/KID_gbpSAFO_EN.pdf",
+        "https://geco.amf-france.org/back-office/document/download/429960",
+        "https://public-api.spiko.io/fund-assets/?fundId=59c2c924-ebf8-492d-a4b0-72d72ebf61e6",
+        "https://public-api.spiko.io/share-classes/eurSAFO",
+        "https://public-api.spiko.io/share-classes/gbpSAFO",
+        "https://eth.blockscout.com/api/v2/addresses/0x0990b149e915cb08e2143a5c6f669c907eddc8b0",
+        "https://eth.blockscout.com/api/v2/addresses/0xc273986a91e4bfc543610a5cb5860b7cfefb6cc0"
+      ],
+      "rationale": "No binding maturityDaysMax for the entire EURSAFO/GBPSAFO fund-share claim is published. The KIDs give a 99-year product term and the Articles permit extension. The one-month rule limits only unhedged exposure; the mandate admits perpetual bonds/equities and hedged longer-duration instruments. Overnight yield and ordinary D+1 redemption are not instrument maturity. Public signed holdings do not supply a share-level maximum; no numeric maximum is extrapolated."
     }
   ]
 }
