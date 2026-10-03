@@ -20482,6 +20482,316 @@
         "https://docs.rings.money/"
       ],
       "rationale": "No maximum final stablecoin delivery time is disclosed for scUSD queue redemption. Current issuer documentation contradicts itself on three versus five-day cooldown; neither is a completion SLA. Exact published queue source enforces maturity, expiry, pause and authorized solver calls, not guaranteed solving/funding. The old Rings docs redirect to a GitBook shell; current Trevee docs and exact queue source are the substantive reviewed surfaces."
+    },
+    {
+      "id": "uw-usdr-ring-2d61c37ad62ec8f7",
+      "assetId": "usdr-ring",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:08:41Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R74)",
+      "sources": [
+        {
+          "url": "https://docs.ring.exchange/concepts/overview",
+          "observedAt": "2026-10-03T23:08:41Z",
+          "datumAsOf": null,
+          "location": "Published documentation",
+          "excerpt": "Ring Protocol uses a wrapped asset layer called FEW to connect assets to trading and liquidity systems.",
+          "assertion": "Current product map discloses FEW and Ring Swap, not a current USDR backing/claim book."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/RingProtocol/docs/a7061d4fd0b539fca55db53871d193a386e086ad/docs/concepts/usdr-mint.md",
+          "observedAt": "2026-10-03T23:08:41Z",
+          "datumAsOf": null,
+          "location": "Published documentation",
+          "excerpt": "The mint contract does not redeem USDR back to stablecoins.",
+          "assertion": "Draft describes minting, not a deployed mainnet reserve inventory or liability reconciliation."
+        },
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4ea40dcee961675683e0a2e1721bd49cb9bca913",
+          "observedAt": "2026-10-03T23:08:41Z",
+          "datumAsOf": null,
+          "location": "source_code AssetToken.mint",
+          "excerpt": "function mint(address account, uint256 amount) external override onlyMinter {",
+          "assertion": "Exact USDR source has role-gated minting without a reserve-ledger or holder-redemption operation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.ring.exchange/llms.txt",
+        "https://docs.ring.exchange/concepts/overview",
+        "https://docs.ring.exchange/contracts/v2/deployments",
+        "https://docs.ring.exchange/security-and-risk",
+        "https://github.com/RingProtocol/audits",
+        "https://raw.githubusercontent.com/RingProtocol/docs/a7061d4fd0b539fca55db53871d193a386e086ad/docs/concepts/usdr-mint.md",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x4ea40dcee961675683e0a2e1721bd49cb9bca913"
+      ],
+      "rationale": "No dated whole-supply USDR liability-to-backing reconciliation procedure or cadence is disclosed. Token mint/burn code and FewToken unwrap accounting are not a financial supply/backing reconciliation; current docs and audit index do not publish that exact regime."
+    },
+    {
+      "id": "uw-usdr-ring-0691a6ffcb520a64",
+      "assetId": "usdr-ring",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:08:41Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R74)",
+      "sources": [
+        {
+          "url": "https://docs.ring.exchange/concepts/overview",
+          "observedAt": "2026-10-03T23:08:41Z",
+          "datumAsOf": null,
+          "location": "Published documentation",
+          "excerpt": "Ring Protocol uses a wrapped asset layer called FEW to connect assets to trading and liquidity systems.",
+          "assertion": "Current product map discloses FEW and Ring Swap, not a current USDR backing/claim book."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/RingProtocol/docs/a7061d4fd0b539fca55db53871d193a386e086ad/docs/concepts/usdr-mint.md",
+          "observedAt": "2026-10-03T23:08:41Z",
+          "datumAsOf": null,
+          "location": "Published documentation",
+          "excerpt": "The mint contract does not redeem USDR back to stablecoins.",
+          "assertion": "Draft describes minting, not a deployed mainnet reserve inventory or liability reconciliation."
+        },
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4ea40dcee961675683e0a2e1721bd49cb9bca913",
+          "observedAt": "2026-10-03T23:08:41Z",
+          "datumAsOf": null,
+          "location": "source_code AssetToken.mint",
+          "excerpt": "function mint(address account, uint256 amount) external override onlyMinter {",
+          "assertion": "Exact USDR source has role-gated minting without a reserve-ledger or holder-redemption operation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.ring.exchange/llms.txt",
+        "https://docs.ring.exchange/concepts/overview",
+        "https://docs.ring.exchange/contracts/v2/deployments",
+        "https://docs.ring.exchange/security-and-risk",
+        "https://github.com/RingProtocol/audits",
+        "https://raw.githubusercontent.com/RingProtocol/docs/a7061d4fd0b539fca55db53871d193a386e086ad/docs/concepts/usdr-mint.md",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x4ea40dcee961675683e0a2e1721bd49cb9bca913"
+      ],
+      "rationale": "No current whole-asset reserve inventory, allocation weights, reserve-address denominator or financial reserve report for tracked mainnet USDR is disclosed. The draft names input stablecoins without a mainnet deployment or measured backing book; legacy RUSD and FewToken underlying balances cannot be substituted."
+    },
+    {
+      "id": "uw-usdr-ring-f2d26a6969d7f5c3",
+      "assetId": "usdr-ring",
+      "scope": {
+        "componentKey": "mechanism-risk-review",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "mechanism-risk-review",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:08:41Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R74)",
+      "sources": [
+        {
+          "url": "https://docs.ring.exchange/concepts/overview",
+          "observedAt": "2026-10-03T23:08:41Z",
+          "datumAsOf": null,
+          "location": "Published documentation",
+          "excerpt": "Ring Protocol uses a wrapped asset layer called FEW to connect assets to trading and liquidity systems.",
+          "assertion": "Current product map discloses FEW and Ring Swap, not a current USDR backing/claim book."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/RingProtocol/docs/a7061d4fd0b539fca55db53871d193a386e086ad/docs/concepts/usdr-mint.md",
+          "observedAt": "2026-10-03T23:08:41Z",
+          "datumAsOf": null,
+          "location": "Published documentation",
+          "excerpt": "The mint contract does not redeem USDR back to stablecoins.",
+          "assertion": "Draft describes minting, not a deployed mainnet reserve inventory or liability reconciliation."
+        },
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4ea40dcee961675683e0a2e1721bd49cb9bca913",
+          "observedAt": "2026-10-03T23:08:41Z",
+          "datumAsOf": null,
+          "location": "source_code AssetToken.mint",
+          "excerpt": "function mint(address account, uint256 amount) external override onlyMinter {",
+          "assertion": "Exact USDR source has role-gated minting without a reserve-ledger or holder-redemption operation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.ring.exchange/llms.txt",
+        "https://docs.ring.exchange/concepts/overview",
+        "https://docs.ring.exchange/contracts/v2/deployments",
+        "https://docs.ring.exchange/security-and-risk",
+        "https://github.com/RingProtocol/audits",
+        "https://raw.githubusercontent.com/RingProtocol/docs/a7061d4fd0b539fca55db53871d193a386e086ad/docs/concepts/usdr-mint.md",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x4ea40dcee961675683e0a2e1721bd49cb9bca913"
+      ],
+      "rationale": "The tracked AssetToken/Core issuance is public, but the current economic holder claim and backing/redemption model remain undisclosed. The recovered draft has no mainnet deployment binding; current maintained product and deployment docs identify FEW/Ring Swap rather than a mainnet USDR reserve mechanism. Preserve unresolved archetype."
+    },
+    {
+      "id": "uw-audd-novatti-c9d17c22c07f5277",
+      "assetId": "audd-novatti",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:529fe21608ba96a8f9148ef2",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:08:41Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R74)",
+      "sources": [
+        {
+          "url": "https://www.audd.digital/wp-content/uploads/2026/02/202602_AUDD-PDS.pdf",
+          "observedAt": "2026-10-03T23:08:41Z",
+          "datumAsOf": "2026-02-10",
+          "location": "PDS section 2.2",
+          "excerpt": "All AUDD reserve funds are held as either cash in Australian dollars (in bank accounts with Australian authorised deposit-taking institutions or foreign banks) or cash equivalents denominated in Australian dollars (such as Australian government bonds).",
+          "assertion": "Permitted cash/cash-equivalent categories do not disclose maximum contractual tenor of the bank deposits."
+        },
+        {
+          "url": "https://www.audd.digital/wp-content/uploads/2026/09/AUDC-Agreed-upon-procedures-report-Aug26_.pdf",
+          "observedAt": "2026-10-03T23:08:41Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Reserve schedule p.4",
+          "excerpt": "100% cash",
+          "assertion": "Current scoped bank holdings disclosed without deposit term/maturity schedule."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.audd.digital/",
+        "https://www.audd.digital/transparency/",
+        "https://www.audd.digital/wp-content/uploads/2026/02/202602_AUDD-PDS.pdf",
+        "https://www.audd.digital/audd-terms-of-service/",
+        "https://devhub.audd.digital/docs/supported-blockchains"
+      ],
+      "rationale": "AUD bank-deposit slice maximum contractual maturity is not published in the current AUP schedule, PDS reserve mandate, terms or issuer technical/transparency disclosures. The published 100% cash classification and liquid-bank-balance statement are not proof of a zero-day or other maximum deposit tenor."
+    },
+    {
+      "id": "uw-audd-novatti-351fc5695980df93",
+      "assetId": "audd-novatti",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:audd-novatti:offchain-issuer"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T23:08:41Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R74)",
+      "sources": [
+        {
+          "url": "https://www.audd.digital/wp-content/uploads/2026/02/202602_AUDD-PDS.pdf",
+          "observedAt": "2026-10-03T23:08:41Z",
+          "datumAsOf": "2026-02-10",
+          "location": "PDS section 3.1(b)",
+          "excerpt": "For redemptions via AUDD Digital (or directly from AUDC when redemption via a Distributor is unavailable), redemption fees to an external bank account will range from 0.10% to 1.00%.",
+          "assertion": "W15: published applicable variable payout schedule is not evaluated at the captured holder/notional; configuration carries documentedVariableFee without a selected payout charge."
+        }
+      ]
+    },
+    {
+      "id": "uw-usdso-somnia-5e82239f76f9212e",
+      "assetId": "usdso-somnia",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "supervision",
+        "pillar": "control",
+        "requiredDatum": "supervision",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:56Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R74)",
+      "sources": [
+        {
+          "url": "https://somnia.network/usdso-terms-of-service",
+          "observedAt": "2026-10-03T23:09:56Z",
+          "datumAsOf": "2026-05-05",
+          "location": "section 3.1",
+          "excerpt": "USDso is issued exclusively by Frax Inc. and/or its affiliates (collectively, \u201cFrax\u201d).",
+          "assertion": "Legal issuer identity is Frax; the Somnia operator expressly disclaims issuer authorization."
+        },
+        {
+          "url": "https://gov.frax.finance/t/fip-432-transfer-of-compliance-collateral-management-of-frxusd-to-frax-inc/3748",
+          "observedAt": "2026-10-03T23:09:56Z",
+          "datumAsOf": "2025-07-07",
+          "location": "Background and Motivation",
+          "excerpt": "supporting FRAX Inc\u2019s pursuit of a payment stablecoin license",
+          "assertion": "Public governance describes pursuing licensing, not a granted supervised USDso issuing regime."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://somnia.network/usdso-stablecoin",
+        "https://somnia.network/usdso-terms-of-service",
+        "https://docs.frax.com/protocol/assets/frxusd/frxusd",
+        "https://gov.frax.finance/t/fip-432-transfer-of-compliance-collateral-management-of-frxusd-to-frax-inc/3748",
+        "https://www.occ.gov/",
+        "https://www.dfs.ny.gov/"
+      ],
+      "rationale": "Exact Frax Inc/affiliate issuer supervision applicable to USDso remains undisclosed: own terms identify Frax but no granted licence/activity, Frax issuer docs identify delegated compliance and regulated reserve custodians, and OCC/NYDFS name searches found no matching issuer approval. GENIUS-compatible and regulated underlying custodians are not issuer prudential supervision."
+    },
+    {
+      "id": "uw-usdso-somnia-6ca1a6049ebf7558",
+      "assetId": "usdso-somnia",
+      "scope": {
+        "componentKey": "control:mint-meta:usdso-somnia:41487c7fcef92f13148c",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:usdso-somnia:41487c7fcef92f13148c",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:56Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R74)",
+      "sources": [
+        {
+          "url": "https://somnia.network/usdso-terms-of-service",
+          "observedAt": "2026-10-03T23:09:56Z",
+          "datumAsOf": "2026-05-05",
+          "location": "section 5.3",
+          "excerpt": "The Company does not develop, deploy, audit, or maintain these smart contracts.",
+          "assertion": "Somnia terms disclaim contract responsibility; they do not disclose named Safe operators or signing custody policies."
+        },
+        {
+          "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedCustodian",
+          "observedAt": "2026-10-03T23:09:56Z",
+          "datumAsOf": null,
+          "location": "Published documentation",
+          "excerpt": "Configurable mint and redeem fees",
+          "assertion": "Technical docs explain protocol configuration rather than independently evidenced human key custody/signing policy."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://somnia.network/usdso-stablecoin",
+        "https://somnia.network/usdso-terms-of-service",
+        "https://docs.frax.com/fraxnet/branded-stablecoins/brandedCustodian",
+        "https://docs.frax.com/protocol/assets/frxusd/frxusd",
+        "https://explorer.somnia.network/api/v2/smart-contracts/0x690575465af47835b72c5b74c334234624cfd942",
+        "https://explorer.somnia.network/api/v2/smart-contracts/0xd2478f5db285e7d4f1a260c9f142168124d02370"
+      ],
+      "rationale": "The named scoped question asks independent human control, operational key custody and signing policy of the identified USDso 3-of-6 owner Safe. Issuer/product/terms/technical and exact implementation disclosures do not publish operator identities, independence or custody/signing attestation. Public address/quorum code is not those safeguards. Other incident and execution uncertainties remain U."
     }
   ]
 }

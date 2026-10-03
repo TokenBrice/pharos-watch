@@ -9626,6 +9626,138 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "usdso-somnia",
+      "reviewedAt": "2026-10-03T23:05:04Z",
+      "expiresAt": "2027-10-03T23:05:04Z",
+      "reviewer": "W1R74 primary-source research",
+      "notes": "Documented lower-bound exact-asset operating history only. No independent operating verification, stress redemption, reserve-report continuity or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-asset-live-history",
+          "label": "USDso live mainnet statement",
+          "publisher": "Somnia",
+          "publishedAt": "2026-09-01",
+          "url": "https://blog.somnia.network/p/investors-back-somnias-strategic",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 1,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-asset-live-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "bbqusdc-steakhouse-v2",
+      "reviewedAt": "2026-10-03T23:05:04Z",
+      "expiresAt": "2027-10-03T23:05:04Z",
+      "reviewer": "W1R74 primary-source research",
+      "notes": "Documented lower-bound exact-asset operating history only. No independent operating verification, stress redemption, reserve-report continuity or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-asset-live-history",
+          "label": "Exact VaultV2 creationTimestamp 1761601787",
+          "publisher": "Morpho",
+          "publishedAt": "2025-10-27",
+          "url": "https://api.morpho.org/graphql",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 11,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-asset-live-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "audd-novatti",
+      "reviewedAt": "2026-10-03T23:05:04Z",
+      "expiresAt": "2027-10-03T23:05:04Z",
+      "reviewer": "W1R74 primary-source research",
+      "notes": "Documented lower-bound exact-asset operating history only. No independent operating verification, stress redemption, reserve-report continuity or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-asset-live-history",
+          "label": "Dated newly launched AUDD statement",
+          "publisher": "AUDC",
+          "publishedAt": "2022-11-08",
+          "url": "https://www.audd.digital/the-building-blocks-that-make-audd-the-secure-stablecoin-of-the-future/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 46,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-asset-live-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usdr-ring",
+      "reviewedAt": "2026-10-03T23:05:04Z",
+      "expiresAt": "2027-10-03T23:05:04Z",
+      "reviewer": "W1R74 primary-source research",
+      "notes": "Documented lower-bound exact-asset operating history only. No independent operating verification, stress redemption, reserve-report continuity or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-asset-live-history",
+          "label": "Exact USDR contract creation block 23346662",
+          "publisher": "Ethereum blockchain",
+          "publishedAt": "2025-09-12",
+          "url": "https://eth.blockscout.com/api/v2/transactions/0x0a9de9ddd121fab64eea3fbdd1c8f38a3ffb785cb675ec7cb45603ca4cffcda6",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 12,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-asset-live-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }
