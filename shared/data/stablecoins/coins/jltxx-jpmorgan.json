@@ -62,5 +62,15 @@
     "scoring": { "maxSourceAgeSec": 432000 },
     "params": {}
   },
-  "launchDate": "2026-05-13"
+  "launchDate": "2026-05-13",
+  "status": "quarantined",
+  "listingStatusReview": {
+    "changedAt": "2026-10-03",
+    "reason": "Supply admission waits for a fresh jpmorgan-nav class-assets snapshot (0.5% scope gate), but the 16:11 and 20:11 UTC reserve syncs were lease-locked, so the missing row kept the stablecoins cache unsafe. Re-admit after a reserve sync completes.",
+    "reviewBy": "2026-10-10",
+    "source": {
+      "label": "JPMorgan JLTXX Token Class NAV and class assets",
+      "url": "https://am.jpmorgan.com/FundsMarketingHandler/slim/product.md?cusip=46655r119&country=us&role=adv&language=en"
+    }
+  }
 }
