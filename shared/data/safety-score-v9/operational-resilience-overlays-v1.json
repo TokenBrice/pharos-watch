@@ -416,6 +416,72 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "gho-aave",
+      "reviewedAt": "2026-10-03T22:32:22Z",
+      "expiresAt": "2027-10-03T22:00:00Z",
+      "reviewer": "Unknown-resolver PilotCdp",
+      "notes": "The dated August 2024 issuer page documents live GHO borrowing and bridging. The 25-month lower bound through this review is deliberately conservative, not an asserted launch date. Eligibility-only issuer-reported observation; no redemption throughput, stress recovery, independent financial reconciliation or incident-free history is established.",
+      "sources": [
+        {
+          "sourceId": "issuer-live-history",
+          "label": "Aave GHO facilitators",
+          "publisher": "Aave",
+          "publishedAt": "2024-08-09",
+          "url": "https://aave.com/help/gho-stablecoin/facilitators",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 25,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "issuer-live-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "sgho-aave",
+      "reviewedAt": "2026-10-03T22:32:22Z",
+      "expiresAt": "2027-10-03T22:00:00Z",
+      "reviewer": "Unknown-resolver PilotCdp",
+      "notes": "The June 2026 proposal explicitly describes the existing Ethereum ERC-4626 sGHO vault, not legacy stkGHO. Its operation is corroborated by current Aave documentation identifying catalog address 0xe1753f2e00940cc31213dd92013cf019dfe4ca1d. Three completed months are a lower bound, not parent-token history. Eligibility-only issuer-reported observation; no redemption throughput, stress recovery, independent financial reconciliation or incident-free history is established.",
+      "sources": [
+        {
+          "sourceId": "issuer-live-history",
+          "label": "TokenLogic: Launch sGHO Cross-Chain",
+          "publisher": "TokenLogic (Aave DAO service provider)",
+          "publishedAt": "2026-06-24",
+          "url": "https://governance.aave.com/t/arfc-launch-sgho-cross-chain/25217",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 3,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "issuer-live-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }
