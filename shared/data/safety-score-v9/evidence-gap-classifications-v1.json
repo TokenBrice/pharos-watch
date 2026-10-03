@@ -17070,6 +17070,371 @@
         "https://brl1.io/en/projects/stablecoin-lastreada-em-t%C3%ADtulos-do-governo-do-brasil-e-criada-pelo-mercado-bitcoin-bitso-foxbit-e-cainvest-estr%C3%A9ia-no-mercado"
       ],
       "rationale": "Complete issuer whitepaper, institutional mint/burn pages and launch/legal disclosures describe consortium eligibility and 1:1 BRL redemption, but publish no numeric redemption fee or complete formula for this issuer route. Zero BRL1/BRL trading fees advertised for member exchanges are not direct consortium redemption costs; no zero-cost assumption is authored."
+    },
+    {
+      "id": "uw-brlv-crown-1af5f7bcdee2bda7",
+      "assetId": "brlv-crown",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:ad982851599cb9933188f3d5",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:46Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R61)",
+      "sources": [
+        {
+          "url": "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_9_2026_b6d73237cb.pdf",
+          "observedAt": "2026-10-03T22:57:48Z",
+          "datumAsOf": "2026-09-30",
+          "location": "September 2026 PoR, p.1, section 3 reserve composition",
+          "excerpt": "Brazilian Treasury Bonds -|R$\u00a0211.011.738,24 55.82%|",
+          "assertion": "The dated itemized schedule publishes Treasury/ETF values but no instrument IDs, maximum remaining maturities or hard liquidation horizons."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.crown-brlv.com/en/transparency",
+        "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_9_2026_b6d73237cb.pdf",
+        "https://dfg4lo8c2lfcn.cloudfront.net/Crown_Termos_Plataforma_PT_db61e1ba28.pdf",
+        "https://docs.crown-brlv.com/whitepaper",
+        "https://docs.crown-brlv.com/llms.txt"
+      ],
+      "rationale": "Exact maturityDaysMax and liquidation horizon for the two Treasury/ETF slices remain undisclosed. The latest report only itemizes asset classes and values; terms and whitepaper disclose reserve assets and illiquidity risk, not slice-wide contractual maxima. T+3 holder bank payout is not a reserve liquidation bound."
+    },
+    {
+      "id": "uw-brlv-crown-1787296a2cde6813",
+      "assetId": "brlv-crown",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:ad982851599cb9933188f3d5",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:46Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R61)",
+      "sources": [
+        {
+          "url": "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_9_2026_b6d73237cb.pdf",
+          "observedAt": "2026-10-03T22:57:48Z",
+          "datumAsOf": "2026-09-30",
+          "location": "September 2026 PoR, p.1, section 3 reserve composition",
+          "excerpt": "Brazilian Treasury Bonds -|R$\u00a0211.011.738,24 55.82%|",
+          "assertion": "The dated itemized schedule publishes Treasury/ETF values but no instrument IDs, maximum remaining maturities or hard liquidation horizons."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.crown-brlv.com/en/transparency",
+        "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_9_2026_b6d73237cb.pdf",
+        "https://dfg4lo8c2lfcn.cloudfront.net/Crown_Termos_Plataforma_PT_db61e1ba28.pdf",
+        "https://docs.crown-brlv.com/whitepaper",
+        "https://docs.crown-brlv.com/llms.txt"
+      ],
+      "rationale": "Exact maturityDaysMax and liquidation horizon for the two Treasury/ETF slices remain undisclosed. The latest report only itemizes asset classes and values; terms and whitepaper disclose reserve assets and illiquidity risk, not slice-wide contractual maxima. T+3 holder bank payout is not a reserve liquidation bound."
+    },
+    {
+      "id": "uw-brlv-crown-f819331ee5dce6c5",
+      "assetId": "brlv-crown",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:e9dad50bdff131a3c8c00d85",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:46Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R61)",
+      "sources": [
+        {
+          "url": "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_9_2026_b6d73237cb.pdf",
+          "observedAt": "2026-10-03T22:57:48Z",
+          "datumAsOf": "2026-09-30",
+          "location": "September 2026 PoR, p.1, section 3 reserve composition",
+          "excerpt": "Brazilian Treasury Bonds -|R$\u00a0211.011.738,24 55.82%|",
+          "assertion": "The dated itemized schedule publishes Treasury/ETF values but no instrument IDs, maximum remaining maturities or hard liquidation horizons."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.crown-brlv.com/en/transparency",
+        "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_9_2026_b6d73237cb.pdf",
+        "https://dfg4lo8c2lfcn.cloudfront.net/Crown_Termos_Plataforma_PT_db61e1ba28.pdf",
+        "https://docs.crown-brlv.com/whitepaper",
+        "https://docs.crown-brlv.com/llms.txt"
+      ],
+      "rationale": "Exact maturityDaysMax and liquidation horizon for the two Treasury/ETF slices remain undisclosed. The latest report only itemizes asset classes and values; terms and whitepaper disclose reserve assets and illiquidity risk, not slice-wide contractual maxima. T+3 holder bank payout is not a reserve liquidation bound."
+    },
+    {
+      "id": "uw-brlv-crown-1f986e8778ad6025",
+      "assetId": "brlv-crown",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:e9dad50bdff131a3c8c00d85",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:46Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R61)",
+      "sources": [
+        {
+          "url": "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_9_2026_b6d73237cb.pdf",
+          "observedAt": "2026-10-03T22:57:48Z",
+          "datumAsOf": "2026-09-30",
+          "location": "September 2026 PoR, p.1, section 3 reserve composition",
+          "excerpt": "Brazilian Treasury Bonds -|R$\u00a0211.011.738,24 55.82%|",
+          "assertion": "The dated itemized schedule publishes Treasury/ETF values but no instrument IDs, maximum remaining maturities or hard liquidation horizons."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.crown-brlv.com/en/transparency",
+        "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_9_2026_b6d73237cb.pdf",
+        "https://dfg4lo8c2lfcn.cloudfront.net/Crown_Termos_Plataforma_PT_db61e1ba28.pdf",
+        "https://docs.crown-brlv.com/whitepaper",
+        "https://docs.crown-brlv.com/llms.txt"
+      ],
+      "rationale": "Exact maturityDaysMax and liquidation horizon for the two Treasury/ETF slices remain undisclosed. The latest report only itemizes asset classes and values; terms and whitepaper disclose reserve assets and illiquidity risk, not slice-wide contractual maxima. T+3 holder bank payout is not a reserve liquidation bound."
+    },
+    {
+      "id": "uw-brlv-crown-9aaa94c607aba6e2",
+      "assetId": "brlv-crown",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:brlv-crown:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:46Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R61)",
+      "sources": [
+        {
+          "url": "https://dfg4lo8c2lfcn.cloudfront.net/Crown_Termos_Plataforma_PT_db61e1ba28.pdf",
+          "observedAt": "2026-10-03T22:57:49Z",
+          "datumAsOf": "2026-09-18",
+          "location": "p.7, standard redemption fee clause",
+          "excerpt": "valor m\u00ednimo fixo ou taxa vari\u00e1vel de mercado, o que for maior",
+          "assertion": "The fee structure is disclosed, but neither numeric minimum nor variable-rate parameters nor all-in same-notional cap is public."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.crown-brlv.com/en/transparency",
+        "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_9_2026_b6d73237cb.pdf",
+        "https://dfg4lo8c2lfcn.cloudfront.net/Crown_Termos_Plataforma_PT_db61e1ba28.pdf",
+        "https://docs.crown-brlv.com/whitepaper",
+        "https://docs.crown-brlv.com/llms.txt",
+        "https://www.crown-brlv.com/taxas"
+      ],
+      "rationale": "Exact same-notional total redemption cost is undisclosed: terms permit max(fixed minimum, market-variable fee), payable under the platform tariff, without numerical parameters. The official linked public tariff resolves to 404; docs and current public reserve/terms archive supply no alternate numeric schedule. This is missing issuer tariff data, not an unsupported calculable public formula."
+    },
+    {
+      "id": "uw-usdfr-forest-road-4ea58c3a7d9ac3dd",
+      "assetId": "usdfr-forest-road",
+      "scope": {
+        "componentKey": "control:mint-meta:usdfr-forest-road:e55f36a3d94667588f1b",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:usdfr-forest-road:e55f36a3d94667588f1b",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:46Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R61)",
+      "sources": [
+        {
+          "url": "https://forestroadvault.com/docs/roles-and-governance",
+          "observedAt": "2026-10-03T22:57:49Z",
+          "datumAsOf": null,
+          "location": "Role roster, ATTESTER_ROLE",
+          "excerpt": "The m-of-n attester keys",
+          "assertion": "The authorized key role is public; human owners, custody model and signing policy/independence are not disclosed."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://forestroadvault.com",
+        "https://forestroadvault.com/docs/roles-and-governance",
+        "https://forestroadvault.com/docs/overview",
+        "https://forestroadvault.com/docs/addresses",
+        "https://forestroadvault.com/docs/audit",
+        "https://forestroadvault.com/docs/security",
+        "https://forestroadvault.com/transparency",
+        "https://forestroadvault.com/legal",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x870deb459512099e70e9a640cf3140a0d969fc18"
+      ],
+      "rationale": "The scoped controller question asks for custody and signing policy of its two observed oracle attester keys, not enumeration of onchain role bytes. Published verified code and roles specify key roster/threshold authorization but no human ownership, independent custody, or actual signing-policy attestations. Broader timelock census remains U separately."
+    },
+    {
+      "id": "uw-usdfr-forest-road-a629f500a2bb1558",
+      "assetId": "usdfr-forest-road",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:46Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R61)",
+      "sources": [
+        {
+          "url": "https://forestroadvault.com/docs/guarantees",
+          "observedAt": "2026-10-03T22:57:49Z",
+          "datumAsOf": null,
+          "location": "Reserve custody / backing reconciliation",
+          "excerpt": "Direct USDC donations never become recognized backing through\nreconciliation: the reconciliation function is intentionally one-way downward and only\nacknowledges a custody shortfall.",
+          "assertion": "Published reconciliation is internal USDC/loan accounting, not assurance of offchain receivables against whole USDfr liabilities."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://forestroadvault.com",
+        "https://forestroadvault.com/docs/guarantees",
+        "https://forestroadvault.com/docs/overview",
+        "https://forestroadvault.com/transparency",
+        "https://forestroadvault.com/docs/audit",
+        "https://forestroadvault.com/docs/security",
+        "https://forestroadvault.com/legal"
+      ],
+      "rationale": "Whole-liability offchain-book reconciliation cadence/scope is undisclosed. ReserveManager internally reconciles recognized USDC and attester-marked loans; the audit register labels predominantly internal engineering reviews. No named dated financial engagement reconciles all material receivables and total USDfr liabilities; smart-contract invariants are not financial assurance."
+    },
+    {
+      "id": "uw-usdfr-forest-road-f3c60a728092f3ac",
+      "assetId": "usdfr-forest-road",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "supervision",
+        "pillar": "control",
+        "requiredDatum": "supervision",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:46Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R61)",
+      "sources": [
+        {
+          "url": "https://forestroadvault.com/legal",
+          "observedAt": "2026-10-03T22:57:49Z",
+          "datumAsOf": null,
+          "location": "Definitive legal materials / instrument characterization",
+          "excerpt": "Token characterization is a matter for counsel.",
+          "assertion": "Public terms defer exact legal wrapper/instrument status to private definitive documents; exact USDfr issuer prudential supervision is not identified."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://forestroadvault.com",
+        "https://forestroadvault.com/legal",
+        "https://forestroadvault.com/risk",
+        "https://forestroadvault.com/docs/overview",
+        "https://forestroadvault.com/docs/status",
+        "https://forestroadvault.com/transparency",
+        "https://forestroad.com",
+        "https://files.brokercheck.finra.org/firm/firm_148232.pdf",
+        "https://reports.adviserinfo.sec.gov/reports/ADV/315600/PDF/315600.pdf"
+      ],
+      "rationale": "Exact USDfr legal issuer and its prudential supervisory scope are undisclosed in public definitive materials. FINRA identifies Forest Road Securities BD LLC and SEC ADV identifies Forest Road Asset Management LLC; neither establishes that entity as the USDfr issuer or supervisory oversight of token mint/reserve reconciliation. Affiliate securities/adviser registrations are not token-specific prudential authorization."
+    },
+    {
+      "id": "uw-nusd-neutrl-64ab1a9cadb9d03a",
+      "assetId": "nusd-neutrl",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:46Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R61)",
+      "sources": [
+        {
+          "url": "https://www.neutrl.finance/reserves",
+          "observedAt": "2026-10-03T22:58:04Z",
+          "datumAsOf": null,
+          "location": "Allocation, venues, reserve breakdown and solvency panels",
+          "excerpt": "Reserve figures are being recalibrated and will be updated soon.",
+          "assertion": "The current issuer dashboard explicitly withholds every measured allocation/coverage figure; qualitative strategies do not supply full reserve percentages."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.neutrl.finance",
+        "https://www.neutrl.finance/reserves",
+        "https://www.neutrl.finance/legal/terms-of-use",
+        "https://docs.neutrl.finance/resources-and-ecosystem/faq",
+        "https://docs.neutrl.finance/resources-and-ecosystem/audits",
+        "https://docs.neutrl.finance/protocol-design/backing",
+        "https://accountable.neutrl.finance",
+        "https://cache.accountable.capital/dashboard/neutrl"
+      ],
+      "rationale": "Current full NUSD reserve composition and a dated common denominator are undisclosed: the accessible issuer allocation, venue, breakdown and solvency panels explicitly say figures are being recalibrated. Documentation/legal terms give eligible strategies and discretion, not present percentages. Legacy Accountable failures corroborate missing coverage but are not the sole basis for C."
+    },
+    {
+      "id": "uw-nusd-neutrl-d393c0fea96f2f74",
+      "assetId": "nusd-neutrl",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:00:46Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R61)",
+      "sources": [
+        {
+          "url": "https://docs.neutrl.finance/resources-and-ecosystem/faq",
+          "observedAt": "2026-10-03T22:57:49Z",
+          "datumAsOf": null,
+          "location": "Transparency and Governance, accuracy bullets",
+          "excerpt": "Eventual implementation of **proof-of-reserve frameworks** for off-chain holdings",
+          "assertion": "Offchain proof-of-reserve is described as eventual, without a presently delivered whole-liability reconciliation engagement/cadence."
+        },
+        {
+          "url": "https://www.neutrl.finance/reserves",
+          "observedAt": "2026-10-03T22:58:04Z",
+          "datumAsOf": null,
+          "location": "Solvency / reserve coverage panel",
+          "excerpt": "Reserve figures are being recalibrated and will be updated soon.",
+          "assertion": "Current reserve versus NUSD coverage metrics are not being published."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.neutrl.finance",
+        "https://www.neutrl.finance/reserves",
+        "https://www.neutrl.finance/legal/terms-of-use",
+        "https://docs.neutrl.finance/resources-and-ecosystem/faq",
+        "https://docs.neutrl.finance/resources-and-ecosystem/audits",
+        "https://docs.neutrl.finance/protocol-design/backing",
+        "https://accountable.neutrl.finance",
+        "https://cache.accountable.capital/dashboard/neutrl"
+      ],
+      "rationale": "Whole-liability reconciliation scope/cadence for material offchain OTC/custody positions is undisclosed. FAQ describes eventual offchain proof-of-reserve, audits are contract-security engagements, and current solvency panels withhold measured coverage. Neither historical Dashboard claims nor chain custody movements prove ongoing reconciliation of all reserves to total NUSD liabilities."
     }
   ]
 }

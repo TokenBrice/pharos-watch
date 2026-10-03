@@ -3608,30 +3608,22 @@
     {
       "assetId": "brlv-crown",
       "archetype": "tbill",
-      "reviewedAt": "2026-07-20",
+      "reviewedAt": "2026-10-03",
       "sources": [
         {
-          "label": "Crown PT Platform Terms of Service, updated April 27, 2026 (bankruptcy-remote SPV, fiduciary assignment, security agent, and custody structure)",
-          "url": "https://dfg4lo8c2lfcn.cloudfront.net/Crown_PT_Platform_Terms_of_Service_f8e2317fef.pdf"
+          "label": "Binding Crown platform terms updated September 18 2026: reserve/SPV/security-agent claim, default triggers, limitations and pro-rata distribution; pp.9-13 and Annex I",
+          "url": "https://dfg4lo8c2lfcn.cloudfront.net/Crown_Termos_Plataforma_PT_db61e1ba28.pdf"
         },
         {
-          "label": "Crown BRLV product disclosure",
-          "url": "https://www.crown-brlv.com/en/"
+          "label": "Current BRLV September 30 2026 Fact Finance reserve/liability report",
+          "url": "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_9_2026_b6d73237cb.pdf"
         },
         {
-          "label": "Crown BRLV transparency disclosure (daily independent reserve attestation index)",
-          "url": "https://www.crown-brlv.com/transparencia/"
-        },
-        {
-          "label": "Fact Finance BRLV reserve report for May 2026 (100.20% collateralization, asset-class composition)",
-          "url": "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_5_2026_79d38795ea.pdf"
-        },
-        {
-          "label": "Crown BRLV whitepaper, March 2026 (LFT-only reserve policy, 1:1 Guarantee Ratio, 24/7 instant redemption)",
+          "label": "Crown BRLV reserve/mechanism whitepaper, March 2026",
           "url": "https://docs.crown-brlv.com/whitepaper"
         }
       ],
-      "notes": "Prior findings stand: binding Crown terms name bankruptcy-remote Luxembourg SPV Krona Two S.a r.l., Dutch stichting ownership with independent directors, fiduciary assignment for the collective benefit of holders, Vortx Servicos Fiduciarios as security agent with enforcement authority, Banco Genial custody, and a September 12, 2025 fiduciary-assignment agreement registered through SELIC/B3, and the May 2026 Fact Finance report independently reconciles R$372,522,515 of tokens to R$373,280,737.59 of reserves (100.20% collateralization, 99.99% Brazilian Treasury bonds), together supporting adequate fund claim and seniority; the referenced security agreement remains non-public and final regulator-supervised status was not established. New on 2026-07-20: the March 2026 whitepaper establishes the reserve policy — reserves exclusively in Letras Financeiras do Tesouro (Tesouro Selic floating-rate bonds), Tesouro Selic ETFs, and cash in segregated accounts with no private-credit or foreign-exchange exposure, 1:1 redemption at all times with 24/7 instant institutional subscription and redemption, and a 1:1 Guarantee Ratio requiring the fair market value of reserve assets to equal or exceed outstanding BRLY, monitored continuously by the security agent and verified daily by independent auditors — supporting limited duration and liquidity and limited NAV valuation. Duration and liquidity is limited because no WAM, maturity ladder, or holdings-level bond identity is published (the Fact Finance report gives only asset-class totals with no maturity breakdown) and the LFT-only composition is a policy claim corroborated only at category level. NAV valuation is limited because BRLV is a fixed R$1.00 par claim with no fund NAV; the reserve valuation mechanism is daily independent reconciliation by Fact Finance, a niche attestor performing balance comparison rather than an examination, and the bond pricing sources are undisclosed. Not established: maturity/WAM table, LFT-versus-LTN split at holdings level, redemption service-level terms beyond marketing, and any regulator-supervised examination.",
+      "notes": "Existing fundClaimAndSeniority adequate, navValuation limited and durationAndLiquidity limited findings are preserved, not independently promoted by this update. Current binding September 18 2026 terms name Krona Two reserve SPV, Banco Genial custody and Vortx independent security agent; Annex I identifies the September 12 2025 fiduciary-assignment agreement. Sections IV-V define insolvency/default/regulatory-intervention triggers, fifteen-business-day redemption-default cure, written holder/KYC and wallet-ownership proof, two-day acknowledgment/ten-day eligibility review, and ordered pro-rata BRL distribution from assigned reserves rather than Crown equity. This structured loss/default procedure plus the named executed service-agreement anchor supports limited lossRecoveryDesign only. Market loss, private-key loss, smart-contract exploits, regulatory blocks and force majeure are excluded. No insurance, externally funded recapitalization, independently demonstrated stressed recovery amounts or stronger whole-component recovery quality is inferred. September 30 report separately reconciles circulating BRLV and itemized reserve values; a normal T+3 business-day redemption target does not establish stressed recovery timing or an unconditional liquidation ceiling.",
       "metrics": {},
       "components": {
         "fundClaimAndSeniority": {
@@ -3641,6 +3633,9 @@
           "quality": "limited"
         },
         "durationAndLiquidity": {
+          "quality": "limited"
+        },
+        "lossRecoveryDesign": {
           "quality": "limited"
         }
       }

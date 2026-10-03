@@ -7904,6 +7904,138 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "brlv-crown",
+      "reviewedAt": "2026-10-03T22:47:38Z",
+      "expiresAt": "2027-10-03T22:47:38Z",
+      "reviewer": "Pharos unknown-wave W1R61",
+      "notes": "Exact token creation/first-mint date establishes a conservative deployment-history lower bound only. No independently verified operating continuity, stress redemptions, financial reconciliation, or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-token-inception",
+          "label": "Base BRLV proxy creation at block 32384535",
+          "publisher": "Blockscout",
+          "publishedAt": "2025-07-03",
+          "url": "https://base.blockscout.com/tx/0xac911f6bf2dbf8165a02cb6af277402311d897cf25b593523f1aec6da7de66dd",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 15,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-token-inception"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usdfr-forest-road",
+      "reviewedAt": "2026-10-03T22:47:38Z",
+      "expiresAt": "2027-10-03T22:47:38Z",
+      "reviewer": "Pharos unknown-wave W1R61",
+      "notes": "Exact token creation/first-mint date establishes a conservative deployment-history lower bound only. No independently verified operating continuity, stress redemptions, financial reconciliation, or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-token-inception",
+          "label": "Ethereum exact USDfr proxy creation at block 26006843",
+          "publisher": "Blockscout",
+          "publishedAt": "2026-09-18",
+          "url": "https://eth.blockscout.com/tx/0x0e8fd3954d94bdc94fa9aaed5582627617fc266e0caba45e7d63a258c627ca8e",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 0,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-token-inception"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "nusd-neutrl",
+      "reviewedAt": "2026-10-03T22:47:38Z",
+      "expiresAt": "2027-10-03T22:47:38Z",
+      "reviewer": "Pharos unknown-wave W1R61",
+      "notes": "Exact token creation/first-mint date establishes a conservative deployment-history lower bound only. No independently verified operating continuity, stress redemptions, financial reconciliation, or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-token-inception",
+          "label": "Ethereum NUSD CreateX creation at block 23495846",
+          "publisher": "Blockscout",
+          "publishedAt": "2025-10-03",
+          "url": "https://eth.blockscout.com/tx/0x374fb82be9df64de1a14e17221d0a5e1b2d5373b3bc1b2a8ec864602802c2673",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 12,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-token-inception"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "isc-international-stable-currency",
+      "reviewedAt": "2026-10-03T22:47:38Z",
+      "expiresAt": "2027-10-03T22:47:38Z",
+      "reviewer": "Pharos unknown-wave W1R61",
+      "notes": "Exact token creation/first-mint date establishes a conservative deployment-history lower bound only. No independently verified operating continuity, stress redemptions, financial reconciliation, or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-token-inception",
+          "label": "Exact ISC MintToChecked transaction at slot 231134762",
+          "publisher": "Solana blockchain",
+          "publishedAt": "2023-11-20",
+          "url": "https://explorer.solana.com/tx/59UCCne8eWbiVx3f74Tpx2mSn4CWGrSQ1U1SP66syLPN1eLBZcyAKfJWsPKyC9ns9feYcUfqgtyb3qQe8j5Ubvqr",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 34,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-token-inception"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

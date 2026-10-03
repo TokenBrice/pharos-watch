@@ -9190,14 +9190,14 @@
     {
       "assetId": "usdfr-forest-road",
       "reviewedAt": "2026-10-03",
-      "reviewer": "Refine05 primary-source and pinned-RPC review",
+      "reviewer": "W1R61 current complete Ethereum deployment-roster attribution",
       "deployments": [
         {
           "chainId": "ethereum",
           "contractOrTokenId": "0xcc07e7c4e5e35affd47b351e420a22c667d7f83d",
           "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "Exact Ethereum-only USDfr permits holding and transfers without the primary mint/redemption KYC allowlist, but ComplianceRegistry sanctions/jurisdiction blocklisting is checked on holder transfers and pause controls remain. Official mainnet roles explicitly distinguish primary KYC from transfer sanctions. No exhaustive liability attribution certificate or permissionless-hardened posture is asserted.",
+          "evidence": "Exact Ethereum-only USDfr permits holding and transfers without the primary mint/redemption KYC allowlist, but ComplianceRegistry sanctions/jurisdiction blocklisting is checked on holder transfers and pause controls remain. Official mainnet roles explicitly distinguish primary KYC from transfer sanctions. The official exhaustive 21-contract Ethereum mainnet roster identifies exactly one USDfr holder token and no cross-chain USDfr wrappers; sUSDfr and GROVE are distinct instruments. The scoped single-deployment certificate attributes USDfr liability to this canonical token, not permissionless-hardened posture.",
           "sources": [
             {
               "label": "Exact live USDfr roster and transfer/KYC distinction",
@@ -9213,7 +9213,26 @@
             }
           ]
         }
-      ]
+      ],
+      "transferScopeAttestation": {
+        "kind": "single-deployment-attribution",
+        "version": 1,
+        "reviewedAt": "2026-10-03",
+        "expiresAt": "2027-10-03",
+        "reviewer": "W1R61",
+        "deploymentKey": "ethereum:0xcc07e7c4e5e35affd47b351e420a22c667d7f83d",
+        "exhaustiveLiability": true,
+        "sources": [
+          {
+            "label": "Every contract: complete live Ethereum mainnet application roster, exact USDfr token and separate sUSDfr/GROVE instruments",
+            "url": "https://forestroadvault.com/docs/addresses"
+          },
+          {
+            "label": "Official Ethereum-only mainnet deployment status",
+            "url": "https://forestroadvault.com/docs/status"
+          }
+        ]
+      }
     },
     {
       "assetId": "usdr-rise",
