@@ -1,5 +1,43 @@
 {
   "id": "zaru-blocktower",
+  "oracleRisk": {
+    "tier": "oracleless",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "Native ZARU issuance follows validated rand deposits and redemption at one rand per token. The holder instrument is not a borrower position or variable-NAV share; reserve investment monitoring and secondary ZAR/USD quotes are not token mint or redemption price authorities.",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Pharos refinement Refine02 primary-source review",
+    "confidence": "verified",
+    "sources": [
+      {"label": "ZARU whitepaper 4.04, 4.08 and 4.17: deposit issuance and rand-par redemption", "url": "https://zaru.network/blog/zar-universal-white-paper"},
+      {"label": "Verified ERC20F role-gated native mint implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62"}
+    ],
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Pharos refinement Refine02 primary-source review",
+      "rationale": "Issuer-native fiat deposits, ordinary token minting and one-rand redemption do not create borrower collateral, liquidation branches or share NAV pricing. Verified EVM mint is only MINTER_ROLE; Solana is native Token-2022 minting. This does not exempt reserve financial valuation or custody from Backing review.",
+      "sources": [{"label": "ZARU issuer-native monetary instrument", "url": "https://zaru.network/blog/zar-universal-white-paper"}]
+    },
+    "paths": [
+      {
+        "id": "zaru-solana-fiat-par", "chain": "solana", "address": "2WvREMqcoxtGuKTyyuzVMH7xDkeH8mY6phduvUofPRXN", "pricingAuthority": "none",
+        "applicability": {"disposition": "not-applicable", "reviewedAt": "2026-10-03", "reviewer": "Pharos refinement Refine02 primary-source review", "confidence": "verified", "rationale": "The exact Token-2022 mint issues issuer fiat liabilities; no borrower liquidation or variable-NAV share exists.", "sources": [{"label": "ZARU whitepaper exact mint and native issuance", "url": "https://zaru.network/blog/zar-universal-white-paper"}]}
+      },
+      {
+        "id": "zaru-ethereum-fiat-par", "chain": "ethereum", "address": "0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5", "pricingAuthority": "none",
+        "applicability": {"disposition": "not-applicable", "reviewedAt": "2026-10-03", "reviewer": "Pharos refinement Refine02 primary-source review", "confidence": "verified", "rationale": "Verified ERC20F mint accepts issuer-authorized token amounts, not oracle-valued collateral or liquidation prices.", "sources": [{"label": "Verified ERC20F implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62"}]}
+      },
+      {
+        "id": "zaru-base-fiat-par", "chain": "base", "address": "0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5", "pricingAuthority": "none",
+        "applicability": {"disposition": "not-applicable", "reviewedAt": "2026-10-03", "reviewer": "Pharos refinement Refine02 primary-source review", "confidence": "verified", "rationale": "The bound Base ERC20F implementation has native role-controlled minting, not a borrower or NAV-price branch.", "sources": [{"label": "Verified ERC20F implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62"}]}
+      },
+      {
+        "id": "zaru-arc-fiat-par", "chain": "arc", "address": "0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5", "pricingAuthority": "none",
+        "applicability": {"disposition": "not-applicable", "reviewedAt": "2026-10-03", "reviewer": "Pharos refinement Refine02 primary-source review", "confidence": "verified", "rationale": "The bound Arc ERC20F implementation has native role-controlled minting; the incomplete role census does not convert this fiat claim into a borrower/NAV-price branch.", "sources": [{"label": "Verified ERC20F implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62"}]}
+      }
+    ]
+  },
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

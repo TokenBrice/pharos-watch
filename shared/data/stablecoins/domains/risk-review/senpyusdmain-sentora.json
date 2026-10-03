@@ -28,15 +28,15 @@
         "url": "https://api.morpho.org/graphql"
       }
     ],
-    "evidence": "Block 26107702: sendSharesGate(), receiveSharesGate() and receiveAssetsGate() are zero with permanently abdicated setters. Shares are locally permissionless under immutable VaultV2 source. sendAssetsGate() is zero but its setter is not abdicated and has zero timelock, so future cash-redemption access can change. Parent PYUSD issuer freeze exposure remains inherited.",
+    "evidence": "Block 26107702: sendSharesGate(), receiveSharesGate() and receiveAssetsGate() are zero with permanently abdicated setters. Shares are locally permissionless under immutable VaultV2 source. sendAssetsGate() is zero but its setter is not abdicated and has zero timelock; this gates deposits, not cash redemptions. receiveAssetsGate() is zero with a permanently abdicated setter. Parent PYUSD issuer freeze exposure remains inherited.",
     "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
     "reviewedAt": "2026-10-02"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "Only this native Ethereum vault-share deployment is authored. Reviewed exact deployment and issuer materials do not establish a vault-share bridge representation.",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Sol refinement 2026-10-03 (Refine10)",
     "confidence": "verified",
     "sources": [
       {
@@ -62,6 +62,1280 @@
       {
         "label": "Morpho exact-vault portfolio API",
         "url": "https://api.morpho.org/graphql"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xb576765fb15505433af24fee2c0325895c559fb2",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xb576765fb15505433af24fee2c0325895c559fb2",
+        "protocol": "Morpho Vault V2",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Exact immutable vault share totalSupply is created by deposit/mint and accrual fee accounting in this deployment. No share bridge or remote mint entrypoint appears in the reviewed implementation; parent-token bridge exposure remains inherited separately.",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107702,
+        "sources": [
+          {
+            "label": "Paypal USD Main exact vault",
+            "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2"
+          },
+          {
+            "label": "Exact verified VaultV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb576765fb15505433af24fee2c0325895c559fb2"
+          },
+          {
+            "label": "Exact current MorphoMarketV1AdapterV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc2a11ba52ad80124ccc60774c881f93738f334d4"
+          },
+          {
+            "label": "Morpho Vault V2 accounting and redemption mechanics",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "Ethereum RPC, pinned block 26107702",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Morpho exact-vault portfolio API",
+            "url": "https://api.morpho.org/graphql"
+          }
+        ]
+      }
+    ]
+  },
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "role": "collateral-pricing",
+    "branchModel": "multi-branch",
+    "summary": "Pinned block 26107702: 8 funded Morpho markets have exact oracle/LLTV identities and all six BASE/QUOTE feed/vault getter values. Vault accounting is verified price-feed-independent; borrower liquidation pricing remains applicable. Upstream feed administrator, heartbeat and mutable NAV-controller closure remain incomplete, so no standard-external or redundant tier is asserted.",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Paypal USD Main exact vault",
+        "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2"
+      },
+      {
+        "label": "Exact verified VaultV2 source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb576765fb15505433af24fee2c0325895c559fb2"
+      },
+      {
+        "label": "Exact current MorphoMarketV1AdapterV2 source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc2a11ba52ad80124ccc60774c881f93738f334d4"
+      },
+      {
+        "label": "Morpho Vault V2 accounting and redemption mechanics",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+      },
+      {
+        "label": "Ethereum RPC, pinned block 26107702",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Morpho exact-vault portfolio API",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Morpho borrower liquidation and loss socialization",
+        "url": "https://docs.morpho.org/learn/concepts/liquidation/"
+      },
+      {
+        "label": "Morpho price interface and oracle implementation",
+        "url": "https://docs.morpho.org/developers/contracts/oracles/"
+      },
+      {
+        "label": "Exact MorphoChainlinkOracleV2 and included ChainlinkDataFeedLib source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7681692a9f228fd7dac0679238d467729af4e9ca"
+      },
+      {
+        "label": "Exact MorphoChainlinkOracleV2 and included ChainlinkDataFeedLib source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9f02d619a875b0ca383d21772e136fc18b637916"
+      },
+      {
+        "label": "Exact MorphoChainlinkOracleV2 and included ChainlinkDataFeedLib source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe6212d05cb5af3c821fef1c1a233a678724f9e7e"
+      },
+      {
+        "label": "Exact MorphoChainlinkOracleV2 and included ChainlinkDataFeedLib source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc8043d248551ed19b33cbc89dccd69148c827039"
+      },
+      {
+        "label": "Exact MorphoChainlinkOracleV2 and included ChainlinkDataFeedLib source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0aeaa9320d78a5edb9387a08682d1738bcc64b1f"
+      },
+      {
+        "label": "Exact MorphoChainlinkOracleV2 and included ChainlinkDataFeedLib source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x221898da0890fc5fb6c890fcdc051fa97946ee11"
+      },
+      {
+        "label": "Exact MorphoChainlinkOracleV2 and included ChainlinkDataFeedLib source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4124b5cb815a21e26ff86c8a6a0a074c7fa2dd1d"
+      },
+      {
+        "label": "Exact MorphoChainlinkOracleV2 and included ChainlinkDataFeedLib source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x007db14ca0d171fa583955fef3917b2b9a95cf18"
+      }
+    ],
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+      "rationale": "Vault conversion is accounting-only, but every current funded lending market uses collateral-price-dependent liquidation. The borrower branches cannot be exempted merely because the wrapper is ERC-4626.",
+      "sources": [
+        {
+          "label": "Paypal USD Main exact vault",
+          "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2"
+        },
+        {
+          "label": "Exact verified VaultV2 source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb576765fb15505433af24fee2c0325895c559fb2"
+        },
+        {
+          "label": "Exact current MorphoMarketV1AdapterV2 source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc2a11ba52ad80124ccc60774c881f93738f334d4"
+        },
+        {
+          "label": "Morpho Vault V2 accounting and redemption mechanics",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+        },
+        {
+          "label": "Ethereum RPC, pinned block 26107702",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Morpho exact-vault portfolio API",
+          "url": "https://api.morpho.org/graphql"
+        }
+      ]
+    },
+    "paths": [
+      {
+        "id": "vault-accounting",
+        "chain": "ethereum",
+        "address": "0xb576765fb15505433af24fee2c0325895c559fb2",
+        "pricingAuthority": "none",
+        "applicability": {
+          "disposition": "not-applicable",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+          "confidence": "verified",
+          "rationale": "Exact VaultV2 conversion reads underlying token balance plus adapter realAssets and accrued fee shares; it calls no external spot-price feed. This exemption is limited to the vault accounting entrypoint, not its borrowers.",
+          "sources": [
+            {
+              "label": "Paypal USD Main exact vault",
+              "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2"
+            },
+            {
+              "label": "Exact verified VaultV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb576765fb15505433af24fee2c0325895c559fb2"
+            },
+            {
+              "label": "Exact current MorphoMarketV1AdapterV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc2a11ba52ad80124ccc60774c881f93738f334d4"
+            },
+            {
+              "label": "Morpho Vault V2 accounting and redemption mechanics",
+              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+            },
+            {
+              "label": "Ethereum RPC, pinned block 26107702",
+              "url": "https://ethereum-rpc.publicnode.com"
+            },
+            {
+              "label": "Morpho exact-vault portfolio API",
+              "url": "https://api.morpho.org/graphql"
+            }
+          ]
+        }
+      },
+      {
+        "id": "market-0xd8a8e6667f58aa9229e8979bd619742b1660ee856c200a93e407dbccb7222323",
+        "chain": "ethereum",
+        "address": "0x7681692a9f228fd7dac0679238d467729af4e9ca",
+        "pricingAuthority": "external-price",
+        "branchId": "0xd8a8e6667f58aa9229e8979bd619742b1660ee856c200a93e407dbccb7222323",
+        "applicability": {
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+          "confidence": "verified",
+          "rationale": "Morpho.idToMarketParams at block 26107702 binds this oracle to collateral 0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf with 86% LLTV and 1961954030411 raw lender assets.",
+          "sources": [
+            {
+              "label": "Paypal USD Main exact vault",
+              "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2"
+            },
+            {
+              "label": "Exact verified VaultV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb576765fb15505433af24fee2c0325895c559fb2"
+            },
+            {
+              "label": "Exact current MorphoMarketV1AdapterV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc2a11ba52ad80124ccc60774c881f93738f334d4"
+            },
+            {
+              "label": "Morpho Vault V2 accounting and redemption mechanics",
+              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+            },
+            {
+              "label": "Ethereum RPC, pinned block 26107702",
+              "url": "https://ethereum-rpc.publicnode.com"
+            },
+            {
+              "label": "Morpho exact-vault portfolio API",
+              "url": "https://api.morpho.org/graphql"
+            }
+          ]
+        }
+      },
+      {
+        "id": "market-0xf5c5df23559b0fb56560a7578ea17d81e245153ba64b8132df026c9358864d27",
+        "chain": "ethereum",
+        "address": "0x9f02d619a875b0ca383d21772e136fc18b637916",
+        "pricingAuthority": "external-price",
+        "branchId": "0xf5c5df23559b0fb56560a7578ea17d81e245153ba64b8132df026c9358864d27",
+        "applicability": {
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+          "confidence": "verified",
+          "rationale": "Morpho.idToMarketParams at block 26107702 binds this oracle to collateral 0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0 with 86% LLTV and 112485367498 raw lender assets.",
+          "sources": [
+            {
+              "label": "Paypal USD Main exact vault",
+              "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2"
+            },
+            {
+              "label": "Exact verified VaultV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb576765fb15505433af24fee2c0325895c559fb2"
+            },
+            {
+              "label": "Exact current MorphoMarketV1AdapterV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc2a11ba52ad80124ccc60774c881f93738f334d4"
+            },
+            {
+              "label": "Morpho Vault V2 accounting and redemption mechanics",
+              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+            },
+            {
+              "label": "Ethereum RPC, pinned block 26107702",
+              "url": "https://ethereum-rpc.publicnode.com"
+            },
+            {
+              "label": "Morpho exact-vault portfolio API",
+              "url": "https://api.morpho.org/graphql"
+            }
+          ]
+        }
+      },
+      {
+        "id": "market-0x90ef0c5a0dc7c4de4ad4585002d44e9d411d212d2f6258e94948beecf8b4c0d5",
+        "chain": "ethereum",
+        "address": "0xe6212d05cb5af3c821fef1c1a233a678724f9e7e",
+        "pricingAuthority": "external-price",
+        "branchId": "0x90ef0c5a0dc7c4de4ad4585002d44e9d411d212d2f6258e94948beecf8b4c0d5",
+        "applicability": {
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+          "confidence": "verified",
+          "rationale": "Morpho.idToMarketParams at block 26107702 binds this oracle to collateral 0x9d39a5de30e57443bff2a8307a4256c8797a3497 with 91.5% LLTV and 103731735960658 raw lender assets.",
+          "sources": [
+            {
+              "label": "Paypal USD Main exact vault",
+              "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2"
+            },
+            {
+              "label": "Exact verified VaultV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb576765fb15505433af24fee2c0325895c559fb2"
+            },
+            {
+              "label": "Exact current MorphoMarketV1AdapterV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc2a11ba52ad80124ccc60774c881f93738f334d4"
+            },
+            {
+              "label": "Morpho Vault V2 accounting and redemption mechanics",
+              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+            },
+            {
+              "label": "Ethereum RPC, pinned block 26107702",
+              "url": "https://ethereum-rpc.publicnode.com"
+            },
+            {
+              "label": "Morpho exact-vault portfolio API",
+              "url": "https://api.morpho.org/graphql"
+            }
+          ]
+        }
+      },
+      {
+        "id": "market-0xc9629945524f3fde56c7e8854a6c3d48e76b9d97236abbe73c750fcc7aeb8501",
+        "chain": "ethereum",
+        "address": "0xc8043d248551ed19b33cbc89dccd69148c827039",
+        "pricingAuthority": "external-price",
+        "branchId": "0xc9629945524f3fde56c7e8854a6c3d48e76b9d97236abbe73c750fcc7aeb8501",
+        "applicability": {
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+          "confidence": "verified",
+          "rationale": "Morpho.idToMarketParams at block 26107702 binds this oracle to collateral 0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b with 91.5% LLTV and 60281056301041 raw lender assets.",
+          "sources": [
+            {
+              "label": "Paypal USD Main exact vault",
+              "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2"
+            },
+            {
+              "label": "Exact verified VaultV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb576765fb15505433af24fee2c0325895c559fb2"
+            },
+            {
+              "label": "Exact current MorphoMarketV1AdapterV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc2a11ba52ad80124ccc60774c881f93738f334d4"
+            },
+            {
+              "label": "Morpho Vault V2 accounting and redemption mechanics",
+              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+            },
+            {
+              "label": "Ethereum RPC, pinned block 26107702",
+              "url": "https://ethereum-rpc.publicnode.com"
+            },
+            {
+              "label": "Morpho exact-vault portfolio API",
+              "url": "https://api.morpho.org/graphql"
+            }
+          ]
+        }
+      },
+      {
+        "id": "market-0x6a7e36eb088bd501d73f7ab4c5b8671358559341a78ce521c9e499dc0bc642b9",
+        "chain": "ethereum",
+        "address": "0x0aeaa9320d78a5edb9387a08682d1738bcc64b1f",
+        "pricingAuthority": "external-price",
+        "branchId": "0x6a7e36eb088bd501d73f7ab4c5b8671358559341a78ce521c9e499dc0bc642b9",
+        "applicability": {
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+          "confidence": "verified",
+          "rationale": "Morpho.idToMarketParams at block 26107702 binds this oracle to collateral 0x8236a87084f8b84306f72007f36f2618a5634494 with 86% LLTV and 6635533973 raw lender assets.",
+          "sources": [
+            {
+              "label": "Paypal USD Main exact vault",
+              "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2"
+            },
+            {
+              "label": "Exact verified VaultV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb576765fb15505433af24fee2c0325895c559fb2"
+            },
+            {
+              "label": "Exact current MorphoMarketV1AdapterV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc2a11ba52ad80124ccc60774c881f93738f334d4"
+            },
+            {
+              "label": "Morpho Vault V2 accounting and redemption mechanics",
+              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+            },
+            {
+              "label": "Ethereum RPC, pinned block 26107702",
+              "url": "https://ethereum-rpc.publicnode.com"
+            },
+            {
+              "label": "Morpho exact-vault portfolio API",
+              "url": "https://api.morpho.org/graphql"
+            }
+          ]
+        }
+      },
+      {
+        "id": "market-0x85d59152eeeab7ca024804895b358868d8dd1e134171be400d7792d5604a212c",
+        "chain": "ethereum",
+        "address": "0x221898da0890fc5fb6c890fcdc051fa97946ee11",
+        "pricingAuthority": "external-price",
+        "branchId": "0x85d59152eeeab7ca024804895b358868d8dd1e134171be400d7792d5604a212c",
+        "applicability": {
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+          "confidence": "verified",
+          "rationale": "Morpho.idToMarketParams at block 26107702 binds this oracle to collateral 0xcd5fe23c85820f7b72d0926fc9b05b43e359b7ee with 86% LLTV and 32382258324687 raw lender assets.",
+          "sources": [
+            {
+              "label": "Paypal USD Main exact vault",
+              "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2"
+            },
+            {
+              "label": "Exact verified VaultV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb576765fb15505433af24fee2c0325895c559fb2"
+            },
+            {
+              "label": "Exact current MorphoMarketV1AdapterV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc2a11ba52ad80124ccc60774c881f93738f334d4"
+            },
+            {
+              "label": "Morpho Vault V2 accounting and redemption mechanics",
+              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+            },
+            {
+              "label": "Ethereum RPC, pinned block 26107702",
+              "url": "https://ethereum-rpc.publicnode.com"
+            },
+            {
+              "label": "Morpho exact-vault portfolio API",
+              "url": "https://api.morpho.org/graphql"
+            }
+          ]
+        }
+      },
+      {
+        "id": "market-0xbe50eed784490d6c32f398902b55eb5e1bd5af89e1f554993ad5fea899be090b",
+        "chain": "ethereum",
+        "address": "0x4124b5cb815a21e26ff86c8a6a0a074c7fa2dd1d",
+        "pricingAuthority": "external-price",
+        "branchId": "0xbe50eed784490d6c32f398902b55eb5e1bd5af89e1f554993ad5fea899be090b",
+        "applicability": {
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+          "confidence": "verified",
+          "rationale": "Morpho.idToMarketParams at block 26107702 binds this oracle to collateral 0x2260fac5e5542a773aa44fbcfedf7c193bc2c599 with 86% LLTV and 1476204163880 raw lender assets.",
+          "sources": [
+            {
+              "label": "Paypal USD Main exact vault",
+              "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2"
+            },
+            {
+              "label": "Exact verified VaultV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb576765fb15505433af24fee2c0325895c559fb2"
+            },
+            {
+              "label": "Exact current MorphoMarketV1AdapterV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc2a11ba52ad80124ccc60774c881f93738f334d4"
+            },
+            {
+              "label": "Morpho Vault V2 accounting and redemption mechanics",
+              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+            },
+            {
+              "label": "Ethereum RPC, pinned block 26107702",
+              "url": "https://ethereum-rpc.publicnode.com"
+            },
+            {
+              "label": "Morpho exact-vault portfolio API",
+              "url": "https://api.morpho.org/graphql"
+            }
+          ]
+        }
+      },
+      {
+        "id": "market-0xe51f9aaad25d0e755429cf77076b3c2d37cb1228ed81f8a5482f2102c220eef5",
+        "chain": "ethereum",
+        "address": "0x007db14ca0d171fa583955fef3917b2b9a95cf18",
+        "pricingAuthority": "external-price",
+        "branchId": "0xe51f9aaad25d0e755429cf77076b3c2d37cb1228ed81f8a5482f2102c220eef5",
+        "applicability": {
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+          "confidence": "verified",
+          "rationale": "Morpho.idToMarketParams at block 26107702 binds this oracle to collateral 0x73e0c0d45e048d25fc26fa3159b0aa04bfa4db98 with 86% LLTV and 163721643657281 raw lender assets.",
+          "sources": [
+            {
+              "label": "Paypal USD Main exact vault",
+              "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2"
+            },
+            {
+              "label": "Exact verified VaultV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb576765fb15505433af24fee2c0325895c559fb2"
+            },
+            {
+              "label": "Exact current MorphoMarketV1AdapterV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc2a11ba52ad80124ccc60774c881f93738f334d4"
+            },
+            {
+              "label": "Morpho Vault V2 accounting and redemption mechanics",
+              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+            },
+            {
+              "label": "Ethereum RPC, pinned block 26107702",
+              "url": "https://ethereum-rpc.publicnode.com"
+            },
+            {
+              "label": "Morpho exact-vault portfolio API",
+              "url": "https://api.morpho.org/graphql"
+            }
+          ]
+        }
+      }
+    ],
+    "branches": [
+      {
+        "id": "0xd8a8e6667f58aa9229e8979bd619742b1660ee856c200a93e407dbccb7222323",
+        "label": "Morpho market 0xd8a8e6667f58aa9229e8979bd619742b1660ee856c200a93e407dbccb7222323",
+        "tier": "opaque-or-unknown",
+        "summary": "Exact market oracle 0x7681692a9f228fd7dac0679238d467729af4e9ca: MorphoChainlinkOracleV2; immutable input configuration {\"BASE_FEED_1\":\"0x2665701293fcbeb223d11a08d826563edcce423a\",\"BASE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_FEED_1\":\"0x8f1df6d7f2db73eece86a18b4381f4707b918fb1\",\"QUOTE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"BASE_VAULT\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_VAULT\":\"0x0000000000000000000000000000000000000000\"}. Upstream feed/embedded-vault authority is not fully closed.",
+        "collateralAssets": [
+          "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "MorphoChainlinkOracleV2",
+            "path": "price(): collateral/loan token conversion; scale 1e36",
+            "address": "0x7681692a9f228fd7dac0679238d467729af4e9ca",
+            "chain": "ethereum",
+            "observedAt": "2026-10-02",
+            "observedBlock": 26107702
+          },
+          {
+            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "path": "BASE_FEED_1",
+            "address": "0x2665701293fcbeb223d11a08d826563edcce423a",
+            "chain": "ethereum",
+            "observedAt": "2026-10-02",
+            "observedBlock": 26107702
+          },
+          {
+            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "path": "QUOTE_FEED_1",
+            "address": "0x8f1df6d7f2db73eece86a18b4381f4707b918fb1",
+            "chain": "ethereum",
+            "observedAt": "2026-10-02",
+            "observedBlock": 26107702
+          }
+        ],
+        "fallbackBehavior": "Verified MorphoChainlinkOracleV2 multiplies/divides fixed feed and ERC-4626 conversion inputs; no alternate fallback. Included ChainlinkDataFeedLib checks nonnegative answers but explicitly does not check staleness or min/max bounds. Upstream feed heartbeat and administrator guarantees remain unverified.",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107702,
+        "collateralParameters": [
+          {
+            "asset": "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
+            "maximumLtvPct": 86,
+            "note": "Liquidation LLTV from pinned idToMarketParams, not a legal collateral-recovery guarantee."
+          }
+        ],
+        "liquidationMechanism": "Morpho protocol liquidation permits third parties to repay unhealthy debt for collateral when oracle-valued LTV exceeds LLTV; exact collateral realization capacity is unverified.",
+        "backstop": "No exact-vault funded loss backstop was identified in the reviewed vault source and protocol documentation.",
+        "shutdownOrBadDebtBehavior": "Underlying bad debt reduces reported adapter realAssets; VaultV2 recognizes losses through pro-rata share-value depreciation. No legal recovery waterfall is established.",
+        "sources": [
+          {
+            "label": "Paypal USD Main exact vault",
+            "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2"
+          },
+          {
+            "label": "Exact verified VaultV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb576765fb15505433af24fee2c0325895c559fb2"
+          },
+          {
+            "label": "Exact current MorphoMarketV1AdapterV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc2a11ba52ad80124ccc60774c881f93738f334d4"
+          },
+          {
+            "label": "Morpho Vault V2 accounting and redemption mechanics",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "Ethereum RPC, pinned block 26107702",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Morpho exact-vault portfolio API",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho borrower liquidation and loss socialization",
+            "url": "https://docs.morpho.org/learn/concepts/liquidation/"
+          },
+          {
+            "label": "Morpho oracle conversion interface",
+            "url": "https://docs.morpho.org/developers/contracts/oracles/"
+          },
+          {
+            "label": "Exact MorphoChainlinkOracleV2 and included ChainlinkDataFeedLib source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7681692a9f228fd7dac0679238d467729af4e9ca"
+          }
+        ]
+      },
+      {
+        "id": "0xf5c5df23559b0fb56560a7578ea17d81e245153ba64b8132df026c9358864d27",
+        "label": "Morpho market 0xf5c5df23559b0fb56560a7578ea17d81e245153ba64b8132df026c9358864d27",
+        "tier": "opaque-or-unknown",
+        "summary": "Exact market oracle 0x9f02d619a875b0ca383d21772e136fc18b637916: MorphoChainlinkOracleV2; immutable input configuration {\"BASE_FEED_1\":\"0x4f67e4d9bd67efa28236013288737d39aef48e79\",\"BASE_FEED_2\":\"0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419\",\"QUOTE_FEED_1\":\"0x8f1df6d7f2db73eece86a18b4381f4707b918fb1\",\"QUOTE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"BASE_VAULT\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_VAULT\":\"0x0000000000000000000000000000000000000000\"}. Upstream feed/embedded-vault authority is not fully closed.",
+        "collateralAssets": [
+          "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "MorphoChainlinkOracleV2",
+            "path": "price(): collateral/loan token conversion; scale 1e36",
+            "address": "0x9f02d619a875b0ca383d21772e136fc18b637916",
+            "chain": "ethereum",
+            "observedAt": "2026-10-02",
+            "observedBlock": 26107702
+          },
+          {
+            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "path": "BASE_FEED_1",
+            "address": "0x4f67e4d9bd67efa28236013288737d39aef48e79",
+            "chain": "ethereum",
+            "observedAt": "2026-10-02",
+            "observedBlock": 26107702
+          },
+          {
+            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "path": "BASE_FEED_2",
+            "address": "0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419",
+            "chain": "ethereum",
+            "observedAt": "2026-10-02",
+            "observedBlock": 26107702
+          },
+          {
+            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "path": "QUOTE_FEED_1",
+            "address": "0x8f1df6d7f2db73eece86a18b4381f4707b918fb1",
+            "chain": "ethereum",
+            "observedAt": "2026-10-02",
+            "observedBlock": 26107702
+          }
+        ],
+        "fallbackBehavior": "Verified MorphoChainlinkOracleV2 multiplies/divides fixed feed and ERC-4626 conversion inputs; no alternate fallback. Included ChainlinkDataFeedLib checks nonnegative answers but explicitly does not check staleness or min/max bounds. Upstream feed heartbeat and administrator guarantees remain unverified.",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107702,
+        "collateralParameters": [
+          {
+            "asset": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+            "maximumLtvPct": 86,
+            "note": "Liquidation LLTV from pinned idToMarketParams, not a legal collateral-recovery guarantee."
+          }
+        ],
+        "liquidationMechanism": "Morpho protocol liquidation permits third parties to repay unhealthy debt for collateral when oracle-valued LTV exceeds LLTV; exact collateral realization capacity is unverified.",
+        "backstop": "No exact-vault funded loss backstop was identified in the reviewed vault source and protocol documentation.",
+        "shutdownOrBadDebtBehavior": "Underlying bad debt reduces reported adapter realAssets; VaultV2 recognizes losses through pro-rata share-value depreciation. No legal recovery waterfall is established.",
+        "sources": [
+          {
+            "label": "Paypal USD Main exact vault",
+            "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2"
+          },
+          {
+            "label": "Exact verified VaultV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb576765fb15505433af24fee2c0325895c559fb2"
+          },
+          {
+            "label": "Exact current MorphoMarketV1AdapterV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc2a11ba52ad80124ccc60774c881f93738f334d4"
+          },
+          {
+            "label": "Morpho Vault V2 accounting and redemption mechanics",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "Ethereum RPC, pinned block 26107702",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Morpho exact-vault portfolio API",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho borrower liquidation and loss socialization",
+            "url": "https://docs.morpho.org/learn/concepts/liquidation/"
+          },
+          {
+            "label": "Morpho oracle conversion interface",
+            "url": "https://docs.morpho.org/developers/contracts/oracles/"
+          },
+          {
+            "label": "Exact MorphoChainlinkOracleV2 and included ChainlinkDataFeedLib source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9f02d619a875b0ca383d21772e136fc18b637916"
+          }
+        ]
+      },
+      {
+        "id": "0x90ef0c5a0dc7c4de4ad4585002d44e9d411d212d2f6258e94948beecf8b4c0d5",
+        "label": "Morpho market 0x90ef0c5a0dc7c4de4ad4585002d44e9d411d212d2f6258e94948beecf8b4c0d5",
+        "tier": "opaque-or-unknown",
+        "summary": "Exact market oracle 0xe6212d05cb5af3c821fef1c1a233a678724f9e7e: MorphoChainlinkOracleV2; immutable input configuration {\"BASE_FEED_1\":\"0xa569d910839ae8865da8f8e70fffb0cba869f961\",\"BASE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_FEED_1\":\"0x8f1df6d7f2db73eece86a18b4381f4707b918fb1\",\"QUOTE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"BASE_VAULT\":\"0x9d39a5de30e57443bff2a8307a4256c8797a3497\",\"QUOTE_VAULT\":\"0x0000000000000000000000000000000000000000\"}. Upstream feed/embedded-vault authority is not fully closed.",
+        "collateralAssets": [
+          "0x9d39a5de30e57443bff2a8307a4256c8797a3497"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "MorphoChainlinkOracleV2",
+            "path": "price(): collateral/loan token conversion; scale 1e36",
+            "address": "0xe6212d05cb5af3c821fef1c1a233a678724f9e7e",
+            "chain": "ethereum",
+            "observedAt": "2026-10-02",
+            "observedBlock": 26107702
+          },
+          {
+            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "path": "BASE_FEED_1",
+            "address": "0xa569d910839ae8865da8f8e70fffb0cba869f961",
+            "chain": "ethereum",
+            "observedAt": "2026-10-02",
+            "observedBlock": 26107702
+          },
+          {
+            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "path": "QUOTE_FEED_1",
+            "address": "0x8f1df6d7f2db73eece86a18b4381f4707b918fb1",
+            "chain": "ethereum",
+            "observedAt": "2026-10-02",
+            "observedBlock": 26107702
+          },
+          {
+            "provider": "Embedded ERC-4626 conversion authority, administrator unreviewed",
+            "path": "BASE_VAULT",
+            "address": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+            "chain": "ethereum",
+            "observedAt": "2026-10-02",
+            "observedBlock": 26107702
+          }
+        ],
+        "fallbackBehavior": "Verified MorphoChainlinkOracleV2 multiplies/divides fixed feed and ERC-4626 conversion inputs; no alternate fallback. Included ChainlinkDataFeedLib checks nonnegative answers but explicitly does not check staleness or min/max bounds. Upstream feed heartbeat and administrator guarantees remain unverified.",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107702,
+        "collateralParameters": [
+          {
+            "asset": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+            "maximumLtvPct": 91.5,
+            "note": "Liquidation LLTV from pinned idToMarketParams, not a legal collateral-recovery guarantee."
+          }
+        ],
+        "liquidationMechanism": "Morpho protocol liquidation permits third parties to repay unhealthy debt for collateral when oracle-valued LTV exceeds LLTV; exact collateral realization capacity is unverified.",
+        "backstop": "No exact-vault funded loss backstop was identified in the reviewed vault source and protocol documentation.",
+        "shutdownOrBadDebtBehavior": "Underlying bad debt reduces reported adapter realAssets; VaultV2 recognizes losses through pro-rata share-value depreciation. No legal recovery waterfall is established.",
+        "sources": [
+          {
+            "label": "Paypal USD Main exact vault",
+            "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2"
+          },
+          {
+            "label": "Exact verified VaultV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb576765fb15505433af24fee2c0325895c559fb2"
+          },
+          {
+            "label": "Exact current MorphoMarketV1AdapterV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc2a11ba52ad80124ccc60774c881f93738f334d4"
+          },
+          {
+            "label": "Morpho Vault V2 accounting and redemption mechanics",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "Ethereum RPC, pinned block 26107702",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Morpho exact-vault portfolio API",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho borrower liquidation and loss socialization",
+            "url": "https://docs.morpho.org/learn/concepts/liquidation/"
+          },
+          {
+            "label": "Morpho oracle conversion interface",
+            "url": "https://docs.morpho.org/developers/contracts/oracles/"
+          },
+          {
+            "label": "Exact MorphoChainlinkOracleV2 and included ChainlinkDataFeedLib source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe6212d05cb5af3c821fef1c1a233a678724f9e7e"
+          }
+        ]
+      },
+      {
+        "id": "0xc9629945524f3fde56c7e8854a6c3d48e76b9d97236abbe73c750fcc7aeb8501",
+        "label": "Morpho market 0xc9629945524f3fde56c7e8854a6c3d48e76b9d97236abbe73c750fcc7aeb8501",
+        "tier": "opaque-or-unknown",
+        "summary": "Exact market oracle 0xc8043d248551ed19b33cbc89dccd69148c827039: MorphoChainlinkOracleV2; immutable input configuration {\"BASE_FEED_1\":\"0x8fffffd4afb6115b954bd326cbe7b4ba576818f6\",\"BASE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_FEED_1\":\"0x8f1df6d7f2db73eece86a18b4381f4707b918fb1\",\"QUOTE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"BASE_VAULT\":\"0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b\",\"QUOTE_VAULT\":\"0x0000000000000000000000000000000000000000\"}. Upstream feed/embedded-vault authority is not fully closed.",
+        "collateralAssets": [
+          "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "MorphoChainlinkOracleV2",
+            "path": "price(): collateral/loan token conversion; scale 1e36",
+            "address": "0xc8043d248551ed19b33cbc89dccd69148c827039",
+            "chain": "ethereum",
+            "observedAt": "2026-10-02",
+            "observedBlock": 26107702
+          },
+          {
+            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "path": "BASE_FEED_1",
+            "address": "0x8fffffd4afb6115b954bd326cbe7b4ba576818f6",
+            "chain": "ethereum",
+            "observedAt": "2026-10-02",
+            "observedBlock": 26107702
+          },
+          {
+            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "path": "QUOTE_FEED_1",
+            "address": "0x8f1df6d7f2db73eece86a18b4381f4707b918fb1",
+            "chain": "ethereum",
+            "observedAt": "2026-10-02",
+            "observedBlock": 26107702
+          },
+          {
+            "provider": "Embedded ERC-4626 conversion authority, administrator unreviewed",
+            "path": "BASE_VAULT",
+            "address": "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
+            "chain": "ethereum",
+            "observedAt": "2026-10-02",
+            "observedBlock": 26107702
+          }
+        ],
+        "fallbackBehavior": "Verified MorphoChainlinkOracleV2 multiplies/divides fixed feed and ERC-4626 conversion inputs; no alternate fallback. Included ChainlinkDataFeedLib checks nonnegative answers but explicitly does not check staleness or min/max bounds. Upstream feed heartbeat and administrator guarantees remain unverified.",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107702,
+        "collateralParameters": [
+          {
+            "asset": "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
+            "maximumLtvPct": 91.5,
+            "note": "Liquidation LLTV from pinned idToMarketParams, not a legal collateral-recovery guarantee."
+          }
+        ],
+        "liquidationMechanism": "Morpho protocol liquidation permits third parties to repay unhealthy debt for collateral when oracle-valued LTV exceeds LLTV; exact collateral realization capacity is unverified.",
+        "backstop": "No exact-vault funded loss backstop was identified in the reviewed vault source and protocol documentation.",
+        "shutdownOrBadDebtBehavior": "Underlying bad debt reduces reported adapter realAssets; VaultV2 recognizes losses through pro-rata share-value depreciation. No legal recovery waterfall is established.",
+        "sources": [
+          {
+            "label": "Paypal USD Main exact vault",
+            "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2"
+          },
+          {
+            "label": "Exact verified VaultV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb576765fb15505433af24fee2c0325895c559fb2"
+          },
+          {
+            "label": "Exact current MorphoMarketV1AdapterV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc2a11ba52ad80124ccc60774c881f93738f334d4"
+          },
+          {
+            "label": "Morpho Vault V2 accounting and redemption mechanics",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "Ethereum RPC, pinned block 26107702",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Morpho exact-vault portfolio API",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho borrower liquidation and loss socialization",
+            "url": "https://docs.morpho.org/learn/concepts/liquidation/"
+          },
+          {
+            "label": "Morpho oracle conversion interface",
+            "url": "https://docs.morpho.org/developers/contracts/oracles/"
+          },
+          {
+            "label": "Exact MorphoChainlinkOracleV2 and included ChainlinkDataFeedLib source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc8043d248551ed19b33cbc89dccd69148c827039"
+          }
+        ]
+      },
+      {
+        "id": "0x6a7e36eb088bd501d73f7ab4c5b8671358559341a78ce521c9e499dc0bc642b9",
+        "label": "Morpho market 0x6a7e36eb088bd501d73f7ab4c5b8671358559341a78ce521c9e499dc0bc642b9",
+        "tier": "opaque-or-unknown",
+        "summary": "Exact market oracle 0x0aeaa9320d78a5edb9387a08682d1738bcc64b1f: MorphoChainlinkOracleV2; immutable input configuration {\"BASE_FEED_1\":\"0xb415eaa355d8440ac7ecb602d3fb67ccc1f0bc81\",\"BASE_FEED_2\":\"0xf4030086522a5beea4988f8ca5b36dbc97bee88c\",\"QUOTE_FEED_1\":\"0x8f1df6d7f2db73eece86a18b4381f4707b918fb1\",\"QUOTE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"BASE_VAULT\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_VAULT\":\"0x0000000000000000000000000000000000000000\"}. Upstream feed/embedded-vault authority is not fully closed.",
+        "collateralAssets": [
+          "0x8236a87084f8b84306f72007f36f2618a5634494"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "MorphoChainlinkOracleV2",
+            "path": "price(): collateral/loan token conversion; scale 1e36",
+            "address": "0x0aeaa9320d78a5edb9387a08682d1738bcc64b1f",
+            "chain": "ethereum",
+            "observedAt": "2026-10-02",
+            "observedBlock": 26107702
+          },
+          {
+            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "path": "BASE_FEED_1",
+            "address": "0xb415eaa355d8440ac7ecb602d3fb67ccc1f0bc81",
+            "chain": "ethereum",
+            "observedAt": "2026-10-02",
+            "observedBlock": 26107702
+          },
+          {
+            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "path": "BASE_FEED_2",
+            "address": "0xf4030086522a5beea4988f8ca5b36dbc97bee88c",
+            "chain": "ethereum",
+            "observedAt": "2026-10-02",
+            "observedBlock": 26107702
+          },
+          {
+            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "path": "QUOTE_FEED_1",
+            "address": "0x8f1df6d7f2db73eece86a18b4381f4707b918fb1",
+            "chain": "ethereum",
+            "observedAt": "2026-10-02",
+            "observedBlock": 26107702
+          }
+        ],
+        "fallbackBehavior": "Verified MorphoChainlinkOracleV2 multiplies/divides fixed feed and ERC-4626 conversion inputs; no alternate fallback. Included ChainlinkDataFeedLib checks nonnegative answers but explicitly does not check staleness or min/max bounds. Upstream feed heartbeat and administrator guarantees remain unverified.",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107702,
+        "collateralParameters": [
+          {
+            "asset": "0x8236a87084f8b84306f72007f36f2618a5634494",
+            "maximumLtvPct": 86,
+            "note": "Liquidation LLTV from pinned idToMarketParams, not a legal collateral-recovery guarantee."
+          }
+        ],
+        "liquidationMechanism": "Morpho protocol liquidation permits third parties to repay unhealthy debt for collateral when oracle-valued LTV exceeds LLTV; exact collateral realization capacity is unverified.",
+        "backstop": "No exact-vault funded loss backstop was identified in the reviewed vault source and protocol documentation.",
+        "shutdownOrBadDebtBehavior": "Underlying bad debt reduces reported adapter realAssets; VaultV2 recognizes losses through pro-rata share-value depreciation. No legal recovery waterfall is established.",
+        "sources": [
+          {
+            "label": "Paypal USD Main exact vault",
+            "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2"
+          },
+          {
+            "label": "Exact verified VaultV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb576765fb15505433af24fee2c0325895c559fb2"
+          },
+          {
+            "label": "Exact current MorphoMarketV1AdapterV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc2a11ba52ad80124ccc60774c881f93738f334d4"
+          },
+          {
+            "label": "Morpho Vault V2 accounting and redemption mechanics",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "Ethereum RPC, pinned block 26107702",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Morpho exact-vault portfolio API",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho borrower liquidation and loss socialization",
+            "url": "https://docs.morpho.org/learn/concepts/liquidation/"
+          },
+          {
+            "label": "Morpho oracle conversion interface",
+            "url": "https://docs.morpho.org/developers/contracts/oracles/"
+          },
+          {
+            "label": "Exact MorphoChainlinkOracleV2 and included ChainlinkDataFeedLib source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0aeaa9320d78a5edb9387a08682d1738bcc64b1f"
+          }
+        ]
+      },
+      {
+        "id": "0x85d59152eeeab7ca024804895b358868d8dd1e134171be400d7792d5604a212c",
+        "label": "Morpho market 0x85d59152eeeab7ca024804895b358868d8dd1e134171be400d7792d5604a212c",
+        "tier": "opaque-or-unknown",
+        "summary": "Exact market oracle 0x221898da0890fc5fb6c890fcdc051fa97946ee11: MorphoChainlinkOracleV2; immutable input configuration {\"BASE_FEED_1\":\"0x5c9c449bbc9a6075a2c061df312a35fd1e05ff22\",\"BASE_FEED_2\":\"0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419\",\"QUOTE_FEED_1\":\"0x8f1df6d7f2db73eece86a18b4381f4707b918fb1\",\"QUOTE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"BASE_VAULT\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_VAULT\":\"0x0000000000000000000000000000000000000000\"}. Upstream feed/embedded-vault authority is not fully closed.",
+        "collateralAssets": [
+          "0xcd5fe23c85820f7b72d0926fc9b05b43e359b7ee"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "MorphoChainlinkOracleV2",
+            "path": "price(): collateral/loan token conversion; scale 1e36",
+            "address": "0x221898da0890fc5fb6c890fcdc051fa97946ee11",
+            "chain": "ethereum",
+            "observedAt": "2026-10-02",
+            "observedBlock": 26107702
+          },
+          {
+            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "path": "BASE_FEED_1",
+            "address": "0x5c9c449bbc9a6075a2c061df312a35fd1e05ff22",
+            "chain": "ethereum",
+            "observedAt": "2026-10-02",
+            "observedBlock": 26107702
+          },
+          {
+            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "path": "BASE_FEED_2",
+            "address": "0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419",
+            "chain": "ethereum",
+            "observedAt": "2026-10-02",
+            "observedBlock": 26107702
+          },
+          {
+            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "path": "QUOTE_FEED_1",
+            "address": "0x8f1df6d7f2db73eece86a18b4381f4707b918fb1",
+            "chain": "ethereum",
+            "observedAt": "2026-10-02",
+            "observedBlock": 26107702
+          }
+        ],
+        "fallbackBehavior": "Verified MorphoChainlinkOracleV2 multiplies/divides fixed feed and ERC-4626 conversion inputs; no alternate fallback. Included ChainlinkDataFeedLib checks nonnegative answers but explicitly does not check staleness or min/max bounds. Upstream feed heartbeat and administrator guarantees remain unverified.",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107702,
+        "collateralParameters": [
+          {
+            "asset": "0xcd5fe23c85820f7b72d0926fc9b05b43e359b7ee",
+            "maximumLtvPct": 86,
+            "note": "Liquidation LLTV from pinned idToMarketParams, not a legal collateral-recovery guarantee."
+          }
+        ],
+        "liquidationMechanism": "Morpho protocol liquidation permits third parties to repay unhealthy debt for collateral when oracle-valued LTV exceeds LLTV; exact collateral realization capacity is unverified.",
+        "backstop": "No exact-vault funded loss backstop was identified in the reviewed vault source and protocol documentation.",
+        "shutdownOrBadDebtBehavior": "Underlying bad debt reduces reported adapter realAssets; VaultV2 recognizes losses through pro-rata share-value depreciation. No legal recovery waterfall is established.",
+        "sources": [
+          {
+            "label": "Paypal USD Main exact vault",
+            "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2"
+          },
+          {
+            "label": "Exact verified VaultV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb576765fb15505433af24fee2c0325895c559fb2"
+          },
+          {
+            "label": "Exact current MorphoMarketV1AdapterV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc2a11ba52ad80124ccc60774c881f93738f334d4"
+          },
+          {
+            "label": "Morpho Vault V2 accounting and redemption mechanics",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "Ethereum RPC, pinned block 26107702",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Morpho exact-vault portfolio API",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho borrower liquidation and loss socialization",
+            "url": "https://docs.morpho.org/learn/concepts/liquidation/"
+          },
+          {
+            "label": "Morpho oracle conversion interface",
+            "url": "https://docs.morpho.org/developers/contracts/oracles/"
+          },
+          {
+            "label": "Exact MorphoChainlinkOracleV2 and included ChainlinkDataFeedLib source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x221898da0890fc5fb6c890fcdc051fa97946ee11"
+          }
+        ]
+      },
+      {
+        "id": "0xbe50eed784490d6c32f398902b55eb5e1bd5af89e1f554993ad5fea899be090b",
+        "label": "Morpho market 0xbe50eed784490d6c32f398902b55eb5e1bd5af89e1f554993ad5fea899be090b",
+        "tier": "opaque-or-unknown",
+        "summary": "Exact market oracle 0x4124b5cb815a21e26ff86c8a6a0a074c7fa2dd1d: MorphoChainlinkOracleV2; immutable input configuration {\"BASE_FEED_1\":\"0xfdfd9c85ad200c506cf9e21f1fd8dd01932fbb23\",\"BASE_FEED_2\":\"0xf4030086522a5beea4988f8ca5b36dbc97bee88c\",\"QUOTE_FEED_1\":\"0x8f1df6d7f2db73eece86a18b4381f4707b918fb1\",\"QUOTE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"BASE_VAULT\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_VAULT\":\"0x0000000000000000000000000000000000000000\"}. Upstream feed/embedded-vault authority is not fully closed.",
+        "collateralAssets": [
+          "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "MorphoChainlinkOracleV2",
+            "path": "price(): collateral/loan token conversion; scale 1e36",
+            "address": "0x4124b5cb815a21e26ff86c8a6a0a074c7fa2dd1d",
+            "chain": "ethereum",
+            "observedAt": "2026-10-02",
+            "observedBlock": 26107702
+          },
+          {
+            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "path": "BASE_FEED_1",
+            "address": "0xfdfd9c85ad200c506cf9e21f1fd8dd01932fbb23",
+            "chain": "ethereum",
+            "observedAt": "2026-10-02",
+            "observedBlock": 26107702
+          },
+          {
+            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "path": "BASE_FEED_2",
+            "address": "0xf4030086522a5beea4988f8ca5b36dbc97bee88c",
+            "chain": "ethereum",
+            "observedAt": "2026-10-02",
+            "observedBlock": 26107702
+          },
+          {
+            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "path": "QUOTE_FEED_1",
+            "address": "0x8f1df6d7f2db73eece86a18b4381f4707b918fb1",
+            "chain": "ethereum",
+            "observedAt": "2026-10-02",
+            "observedBlock": 26107702
+          }
+        ],
+        "fallbackBehavior": "Verified MorphoChainlinkOracleV2 multiplies/divides fixed feed and ERC-4626 conversion inputs; no alternate fallback. Included ChainlinkDataFeedLib checks nonnegative answers but explicitly does not check staleness or min/max bounds. Upstream feed heartbeat and administrator guarantees remain unverified.",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107702,
+        "collateralParameters": [
+          {
+            "asset": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+            "maximumLtvPct": 86,
+            "note": "Liquidation LLTV from pinned idToMarketParams, not a legal collateral-recovery guarantee."
+          }
+        ],
+        "liquidationMechanism": "Morpho protocol liquidation permits third parties to repay unhealthy debt for collateral when oracle-valued LTV exceeds LLTV; exact collateral realization capacity is unverified.",
+        "backstop": "No exact-vault funded loss backstop was identified in the reviewed vault source and protocol documentation.",
+        "shutdownOrBadDebtBehavior": "Underlying bad debt reduces reported adapter realAssets; VaultV2 recognizes losses through pro-rata share-value depreciation. No legal recovery waterfall is established.",
+        "sources": [
+          {
+            "label": "Paypal USD Main exact vault",
+            "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2"
+          },
+          {
+            "label": "Exact verified VaultV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb576765fb15505433af24fee2c0325895c559fb2"
+          },
+          {
+            "label": "Exact current MorphoMarketV1AdapterV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc2a11ba52ad80124ccc60774c881f93738f334d4"
+          },
+          {
+            "label": "Morpho Vault V2 accounting and redemption mechanics",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "Ethereum RPC, pinned block 26107702",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Morpho exact-vault portfolio API",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho borrower liquidation and loss socialization",
+            "url": "https://docs.morpho.org/learn/concepts/liquidation/"
+          },
+          {
+            "label": "Morpho oracle conversion interface",
+            "url": "https://docs.morpho.org/developers/contracts/oracles/"
+          },
+          {
+            "label": "Exact MorphoChainlinkOracleV2 and included ChainlinkDataFeedLib source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4124b5cb815a21e26ff86c8a6a0a074c7fa2dd1d"
+          }
+        ]
+      },
+      {
+        "id": "0xe51f9aaad25d0e755429cf77076b3c2d37cb1228ed81f8a5482f2102c220eef5",
+        "label": "Morpho market 0xe51f9aaad25d0e755429cf77076b3c2d37cb1228ed81f8a5482f2102c220eef5",
+        "tier": "opaque-or-unknown",
+        "summary": "Exact market oracle 0x007db14ca0d171fa583955fef3917b2b9a95cf18: MorphoChainlinkOracleV2; immutable input configuration {\"BASE_FEED_1\":\"0xf4030086522a5beea4988f8ca5b36dbc97bee88c\",\"BASE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_FEED_1\":\"0x8f1df6d7f2db73eece86a18b4381f4707b918fb1\",\"QUOTE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"BASE_VAULT\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_VAULT\":\"0x0000000000000000000000000000000000000000\"}. Upstream feed/embedded-vault authority is not fully closed.",
+        "collateralAssets": [
+          "0x73e0c0d45e048d25fc26fa3159b0aa04bfa4db98"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "MorphoChainlinkOracleV2",
+            "path": "price(): collateral/loan token conversion; scale 1e36",
+            "address": "0x007db14ca0d171fa583955fef3917b2b9a95cf18",
+            "chain": "ethereum",
+            "observedAt": "2026-10-02",
+            "observedBlock": 26107702
+          },
+          {
+            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "path": "BASE_FEED_1",
+            "address": "0xf4030086522a5beea4988f8ca5b36dbc97bee88c",
+            "chain": "ethereum",
+            "observedAt": "2026-10-02",
+            "observedBlock": 26107702
+          },
+          {
+            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "path": "QUOTE_FEED_1",
+            "address": "0x8f1df6d7f2db73eece86a18b4381f4707b918fb1",
+            "chain": "ethereum",
+            "observedAt": "2026-10-02",
+            "observedBlock": 26107702
+          }
+        ],
+        "fallbackBehavior": "Verified MorphoChainlinkOracleV2 multiplies/divides fixed feed and ERC-4626 conversion inputs; no alternate fallback. Included ChainlinkDataFeedLib checks nonnegative answers but explicitly does not check staleness or min/max bounds. Upstream feed heartbeat and administrator guarantees remain unverified.",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107702,
+        "collateralParameters": [
+          {
+            "asset": "0x73e0c0d45e048d25fc26fa3159b0aa04bfa4db98",
+            "maximumLtvPct": 86,
+            "note": "Liquidation LLTV from pinned idToMarketParams, not a legal collateral-recovery guarantee."
+          }
+        ],
+        "liquidationMechanism": "Morpho protocol liquidation permits third parties to repay unhealthy debt for collateral when oracle-valued LTV exceeds LLTV; exact collateral realization capacity is unverified.",
+        "backstop": "No exact-vault funded loss backstop was identified in the reviewed vault source and protocol documentation.",
+        "shutdownOrBadDebtBehavior": "Underlying bad debt reduces reported adapter realAssets; VaultV2 recognizes losses through pro-rata share-value depreciation. No legal recovery waterfall is established.",
+        "sources": [
+          {
+            "label": "Paypal USD Main exact vault",
+            "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2"
+          },
+          {
+            "label": "Exact verified VaultV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb576765fb15505433af24fee2c0325895c559fb2"
+          },
+          {
+            "label": "Exact current MorphoMarketV1AdapterV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc2a11ba52ad80124ccc60774c881f93738f334d4"
+          },
+          {
+            "label": "Morpho Vault V2 accounting and redemption mechanics",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "Ethereum RPC, pinned block 26107702",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Morpho exact-vault portfolio API",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho borrower liquidation and loss socialization",
+            "url": "https://docs.morpho.org/learn/concepts/liquidation/"
+          },
+          {
+            "label": "Morpho oracle conversion interface",
+            "url": "https://docs.morpho.org/developers/contracts/oracles/"
+          },
+          {
+            "label": "Exact MorphoChainlinkOracleV2 and included ChainlinkDataFeedLib source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x007db14ca0d171fa583955fef3917b2b9a95cf18"
+          }
+        ]
       }
     ]
   }

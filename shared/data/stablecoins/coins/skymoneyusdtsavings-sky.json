@@ -20,7 +20,7 @@
     "disposition": "resolved",
     "reviewedAt": "2026-10-02",
     "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "rationale": "The exact Ethereum deployment 0x23f5e9c35820f4bab695ac1f19c203cc3f8e1e11 is an immutable Morpho Vault V2 lender share over USDT. The holder has an operational pro-rata vault claim, not direct title to borrower collateral or a fiat claim. Its local conservation, allocation and recovery mechanics differ from the tracked parent.",
+    "rationale": "The exact Ethereum deployment 0x23f5e9c35820f4bab695ac1f19c203cc3f8e1e11 is an immutable Morpho Vault V2 lender share over USDT. The holder has an operational pro-rata vault claim, not direct title to borrower collateral or a fiat claim. Its local conservation, allocation and recovery mechanics differ from the tracked parent. Exact implementation creation is pinned by transaction 0x96ad4f7253a603dced0009beb518702260d31a4dc75dfa9216deaef6173b0a40, block 24568955, timestamp 2026-03-02T09:46:23+00:00, independently joined from Blockscout to RPC receipt and block timestamp on2026-10-03. This is the implementation launch, not issuer founding or parent-token launch.",
     "sources": [
       {
         "label": "Sky.money curated vault disclosure",
@@ -41,6 +41,10 @@
       {
         "label": "Morpho exact-vault accounting and controls GraphQL API",
         "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Exact implementation creation transaction",
+        "url": "https://eth.blockscout.com/tx/0x96ad4f7253a603dced0009beb518702260d31a4dc75dfa9216deaef6173b0a40"
       }
     ]
   },
@@ -62,8 +66,9 @@
       "decimals": 18
     }
   ],
-  "custodyModel": "onchain",
+  "custodyModel": "unknown",
   "governanceQuality": "wrapper",
+  "implementationLaunchDate": "2026-03-02",
   "yieldConfig": {
     "yieldSource": "Sky.money-curated Morpho USDT lending",
     "yieldType": "lending-vault"
@@ -93,7 +98,7 @@
         "expectedAssetAddress": "0xdac17f958d2ee523a2206206994597c13d831ec7"
       },
       "deployedExposure": {
-        "basis": "At Ethereum block 26107702 (2026-10-02T22:43:47+00:00), totalAssets=60340093.055146 USDT; totalSupply=59334016.791589 shares; convertToAssets(1e18)=1.016955999999999971 USDT; idle balance=0.000000 USDT. Complete current adapter census contains 1 adapter, 2 markets: 0x3274643db77a064abd3bc851de77556a4ad2e2f502f4f0c80845fa8f909ecf0b (sUSDS, LLTV 0.965): 0.020553 USDT lender claim; 0x26b178d49895f80ca3c39b2745efc4cd9adcddfcc73dae93e531e86977ec4d96 (sUSDS, LLTV 0.965): 60340093.034593 USDT lender claim. The API snapshot is separately observed and is not the pinned-block denominator. The reviewed slice includes both the idle parent token and the complete parent-denominated lender claim inventory.",
+        "basis": "At Ethereum block 26107702 (2026-10-02T22:43:47+00:00), totalAssets=60340093.055146 USDT; totalSupply=59334016.791589 shares; convertToAssets(1e18)=1.016956 USDT (raw 1016956 at 6 decimals); idle balance=0.000000 USDT. Complete current adapter census contains 1 adapter, 2 markets: 0x3274643db77a064abd3bc851de77556a4ad2e2f502f4f0c80845fa8f909ecf0b (sUSDS, LLTV 0.965): 0.020553 USDT lender claim; 0x26b178d49895f80ca3c39b2745efc4cd9adcddfcc73dae93e531e86977ec4d96 (sUSDS, LLTV 0.965): 60340093.034593 USDT lender claim. The API snapshot is separately observed and is not the pinned-block denominator. The reviewed slice includes both the idle parent token and the complete parent-denominated lender claim inventory.",
         "reviewedAt": "2026-10-02",
         "sourceUrl": "https://sky.money/vaults"
       },

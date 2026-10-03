@@ -596,7 +596,8 @@ describe("fetchErc4626SingleAssetReserves", () => {
     },
   ])("uses $source liquidity rather than idle underlying balance", async ({ source, key, liquidity, metadata }) => {
     const morphoVariables: unknown[] = [];
-    installErc4626Network({ idleBalance: 0, extraHandlers: [({ url, body }) => {
+    installErc4626Network({ idleBalance: 0, extraHandlers: [({ url, body, call }) => {
+      if (call?.data === "0xad468d11") return jsonResponse({ result: uint256Result(1) });
       if (url !== "https://api.morpho.org/graphql") return undefined;
       morphoVariables.push(body.variables);
       return jsonResponse({
@@ -632,7 +633,8 @@ describe("fetchErc4626SingleAssetReserves", () => {
   });
 
   it("falls back to idle capacity and degrades when Morpho V2 identity validation fails", async () => {
-    installErc4626Network({ extraHandlers: [({ url }) => {
+    installErc4626Network({ extraHandlers: [({ url, call }) => {
+      if (call?.data === "0xad468d11") return jsonResponse({ result: uint256Result(1) });
       if (url !== "https://api.morpho.org/graphql") return undefined;
       return jsonResponse({
         data: {
@@ -671,6 +673,66 @@ describe("fetchErc4626SingleAssetReserves", () => {
       },
     });
     expect(result.metadata).not.toHaveProperty("morphoVaultV2LiquidityRaw");
+  });
+
+  it("does not label an EUR underlying balance as USD capacity without FX valuation", async () => {
+    const asset = "0x5f7827fdeb7c20b443265fc2f40845b715385ff2";
+    installErc4626Network({ asset });
+    const result = await runTrackedVault("syrupusdc-maple", (config) => {
+      const cloned = asUnderlyingFixture(config);
+      cloned.params!.slice = {
+        ...(cloned.params!.slice as object),
+        coinId: "eurcv-societe-generale-forge",
+        expectedAssetAddress: asset,
+      };
+      return cloned;
+    });
+    expect(result.metadata).not.toHaveProperty("redemption.capacityUsd");
+    expect(result.metadata).not.toHaveProperty("redemptionCapacityRaw");
+    expect(result.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "erc4626-capacity-non-usd-unvalued", effect: "info" }),
+    ]));
+    expect(result.metadata?.totalAssetsRaw).toBe("100000000");
+  });
+
+  it.each([
+    { adapter: 0n, idle: 25_000_000n, reason: "zero", capacityUsd: 25 },
+    { adapter: 0n, idle: 0n, reason: "zero", capacityUsd: 0 },
+    { adapter: null, idle: 25_000_000n, reason: "unavailable", capacityUsd: 25 },
+    { adapter: 1n << 160n, idle: 25_000_000n, reason: "unavailable", capacityUsd: 25 },
+    { adapter: null, idle: null, reason: "unavailable", capacityUsd: null },
+  ])("bounds Morpho V2 liquidity to readable idle when its adapter is $reason (idle $idle)", async ({
+    adapter, idle, reason, capacityUsd,
+  }) => {
+    installErc4626Network({ idleBalance: idle, extraHandlers: [({ url, call }) => {
+      if (call?.data === "0xad468d11") {
+        return adapter == null ? null : jsonResponse({ result: uint256Result(adapter) });
+      }
+      if (url !== "https://api.morpho.org/graphql") return undefined;
+      return jsonResponse({ data: { vaultV2ByAddress: {
+        address: "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
+        listed: true,
+        asset: { address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" },
+        chain: { id: 1 },
+        liquidity: "90000000",
+        liquidityUsd: 90,
+        warnings: [],
+      } } });
+    }] });
+    const result = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "morpho-vault-v2", chainId: 1 }));
+    expect(result.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: `morpho-vault-v2-liquidity-adapter-${reason}` }),
+    ]));
+    expect(result.metadata).not.toHaveProperty("morphoVaultV2LiquidityRaw");
+    if (capacityUsd == null) {
+      expect(result.metadata).not.toHaveProperty("redemption.capacityUsd");
+      expect(result.metadata).not.toHaveProperty("redemptionCapacityRaw");
+    } else {
+      expect(result.metadata).toMatchObject({
+        redemptionCapacitySource: "erc4626-idle-underlying",
+        redemption: { capacityUsd, freshnessKind: "same-run-onchain" },
+      });
+    }
   });
 
   it("skips NAV ratio when totalSupply is zero but still emits readable idle capacity USD", async () => {

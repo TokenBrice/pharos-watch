@@ -69,6 +69,22 @@
         "label": "UBS Ethereum uMINT launch",
         "url": "https://www.ubs.com/global/en/media/display-page-ndp/en-20241101-first-tokenized-investment-fund.html"
       }
+    ],
+    "paths": [
+      {
+        "id": "ethereum:0xc06036793272219179f846ef6bfc3b16e820df0b",
+        "chain": "ethereum",
+        "address": "0xc06036793272219179f846ef6bfc3b16e820df0b",
+        "pricingAuthority": "internal-price",
+        "applicability": {
+          "disposition": "top-level-only",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine04 native class scope review",
+          "confidence": "limited",
+          "rationale": "The exact CMTAT_EVCC deployment records UBS USD class AT-acc ISIN SGXZ89386486 and represents a fund NAV claim, not borrower collateral. Public UBS issuance/redemption announcements support administered fund pricing, but the private offering memorandum, deployed NAVLink address and valuation-authority execution details remain unavailable; no external-oracle independence or complete valuation closure is asserted.",
+          "sources": [{"label": "Native verified CMTAT_EVCC", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc06036793272219179f846ef6bfc3b16e820df0b"}, {"label": "UBS production subscription and redemption", "url": "https://www.ubs.com/global/en/media/display-page-ndp/en-20251104-chainlink.html"}]
+        }
+      }
     ]
   }
 }

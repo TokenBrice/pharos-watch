@@ -1,5 +1,7 @@
 {
   "id": "syrupusdg-maple",
+  "launchDate": "2026-05-25",
+  "implementationLaunchDate": "2026-05-25",
   "name": "Maple syrupUSDG",
   "symbol": "syrupUSDG",
   "oneLiner": "syrupUSDG is Maple's USDG-denominated lending share; credit and strategy returns accrue to NAV, with exits served through a liquidity-dependent FIFO queue.",
@@ -58,6 +60,10 @@
     {
       "label": "Docs",
       "url": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md"
+    },
+    {
+      "label": "Exact syrupUSDG pool implementation launch, block 25173105 (2026-05-25T15:06:35Z); reusable manager code predates this product",
+      "url": "https://etherscan.io/tx/0x222aa17f8d67a806a5118feb5dc43233f05326f4fd8f423e072158ef7d25b70b"
     }
   ],
   "contracts": [

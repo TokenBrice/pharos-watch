@@ -49,6 +49,10 @@
       {
         "label": "Exact adapter partial source with matching deployed bytecode",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa2f362079dbc570a6df5bd04ad91002d17c0db9a"
+      },
+      {
+        "label": "Exact vault creationTimestamp 1785859775, creationBlockNumber 25682655; RPC block timestamp independently matches, reviewed 2026-10-03",
+        "url": "https://blue-api.morpho.org/graphql"
       }
     ]
   },
@@ -111,5 +115,6 @@
         "chainId": 1
       }
     }
-  }
+  },
+  "implementationLaunchDate": "2026-08-04"
 }

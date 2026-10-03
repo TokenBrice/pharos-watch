@@ -1,4 +1,12 @@
 {
+  "liveReservesConfig": {
+    "adapter": "matrixdock-stbt",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "stbt-matrixdock",
+    "display": { "url": "https://www.matrixdock.com/stbt", "label": "Matrixdock STBT issuer reserve dashboard" },
+    "inputs": { "primary": { "kind": "http-html", "url": "https://www.matrixdock.com/stbt" } }
+  },
   "id": "stbt-matrixdock",
   "name": "Matrixdock Short-Term Treasury Bill Token",
   "symbol": "STBT",
@@ -48,6 +56,14 @@
     {
       "label": "Docs",
       "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/treasury-bill-token-stbt/smart-contract/contract-address.md"
+    },
+    {
+      "label": "Current STBTv2 implementation creation, block 23193805 (2025-08-22)",
+      "url": "https://etherscan.io/tx/0x771e318a79a6ed1ad486c41c96a636eeb43e9e7ca2bf776b8bce6a8a71517b7d"
+    },
+    {
+      "label": "Current STBTv2 activation, block 23279728 (2025-09-03)",
+      "url": "https://etherscan.io/tx/0xc137039da347ca5ab92b990a2f496e5bb70c70a60216849e6e5904a67e4a8c85"
     }
   ],
   "jurisdiction": {
@@ -65,5 +81,6 @@
   "yieldConfig": {
     "yieldSource": "Matrixdock short-term Treasury portfolio",
     "yieldType": "rebase"
-  }
+  },
+  "implementationLaunchDate": "2025-09-03"
 }

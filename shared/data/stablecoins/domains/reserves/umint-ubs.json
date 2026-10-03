@@ -44,7 +44,7 @@
         "url": "https://etherscan.io/address/0xc06036793272219179f846ef6bfc3b16e820df0b#code"
       }
     ],
-    "rationale": "The 100% slice describes the authenticated whole fund-share claim, following BUIDL single-fund-share presentation. It does not invent underlying Treasury, repo, deposit or credit weights. Native tokenized participating shares in a Singapore VCC money-market sub-fund managed by UBS Asset Management (Singapore). The distributor names State Street Bank and Trust as custodian/administrator and high-quality money-market instruments; exact underlying strategy, private placement memorandum and current position weights are not publicly disclosed.",
+    "rationale": "The 100% slice describes the authenticated native Singapore VCC fund-share claim without inventing current portfolio weights. The March 20, 2025 DigiFT dossier names State Street as custodian/administrator and claims underlying-fund Moody's AAAmmf and Fitch AAA-mf assessments. Those historical distributor assertions have not been matched to an identified current rating-agency record and grant no independent-assurance credit. Exact underlying strategy, native PPM and current position weights remain private.",
     "compositionBasis": "Standing authenticated fund-share identity, not a current position-weighted portfolio or token-to-assets reconciliation",
     "scope": "classification-only",
     "knownUnknownExposure": "All current underlying position weights and complete token-to-fund asset/liability reconciliation remain unavailable. Named custodians and auditors do not prove current whole-book custody allocation or financial assurance.",

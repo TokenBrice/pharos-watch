@@ -3,7 +3,7 @@
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "none-resolved-mint",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "summary": "ethenaUSDC mints shares against USDC deposits and may mint fee shares through interest accounting. Vault parameter controls remain local; durable USDC issuance is inherited from Circle.",
     "inheritedFrom": "usdc-circle",
     "economicCapSemantics": "bounded",
@@ -21,7 +21,7 @@
           "url": "https://app.morpho.org/base/vault/0xbeeff0be997cca5b1c13a7433c2004637975739e"
         },
         {
-          "label": "Verified deployment code identity",
+          "label": "Partially verified VaultV2 source; deployed bytes match pinned RPC, not complete compiler verification",
           "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff0be997cca5b1c13a7433c2004637975739e"
         },
         {
@@ -43,6 +43,10 @@
         {
           "label": "Exact Morpho lending adapter",
           "url": "https://base.blockscout.com/api/v2/smart-contracts/0x8c47e3c9a99b819222e37b91635bb9fed29c5319"
+        },
+        {
+          "label": "Verified functional VaultV2 executable correspondence; no proxy or upgrade entrypoint",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c?fields=sources,compilation,runtimeBytecode"
         }
       ]
     },
@@ -64,7 +68,7 @@
             "url": "https://app.morpho.org/base/vault/0xbeeff0be997cca5b1c13a7433c2004637975739e"
           },
           {
-            "label": "Verified deployment code identity",
+            "label": "Partially verified VaultV2 source; deployed bytes match pinned RPC, not complete compiler verification",
             "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff0be997cca5b1c13a7433c2004637975739e"
           },
           {
@@ -88,7 +92,10 @@
             "url": "https://base.blockscout.com/api/v2/smart-contracts/0x8c47e3c9a99b819222e37b91635bb9fed29c5319"
           }
         ],
-        "evidence": "Ethena x Steakhouse USDC (ethenaUSDC) at base:0xbeeff0be997cca5b1c13a7433c2004637975739e is the current public ERC-4626 VaultV2 share over USDC 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913. Deposits transfer underlying before minting; interest accrual can mint configured fee shares and recognizes adapter losses. Holder rights are residual proportional code-enforced NAV redemption, not beneficial ownership of Circle reserves or proven statutory segregation. One current adapter 0x8c47e3c9a99b819222e37b91635bb9fed29c5319 holds 3 enumerated Morpho market IDs. Performance fee 5% of gains, management fee 0%; fee-share accrual is not discretionary minting of underlying USDC. EIP-1967 implementation, admin and beacon slots were zero."
+        "evidence": "Ethena x Steakhouse USDC (ethenaUSDC) at base:0xbeeff0be997cca5b1c13a7433c2004637975739e is the current public ERC-4626 VaultV2 share over USDC 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913. Deposits transfer underlying before minting; interest accrual can mint configured fee shares and recognizes adapter losses. Holder rights are residual proportional code-enforced NAV redemption, not beneficial ownership of Circle reserves or proven statutory segregation. One current adapter 0x8c47e3c9a99b819222e37b91635bb9fed29c5319 holds 3 enumerated Morpho market IDs. Performance fee 5% of gains, management fee 0%; fee-share accrual is not discretionary minting of underlying USDC. EIP-1967 implementation, admin and beacon slots were zero.",
+        "deploymentRefs": [
+          "base:0xbeeff0be997cca5b1c13a7433c2004637975739e"
+        ]
       },
       {
         "chain": "base",
@@ -106,7 +113,7 @@
             "url": "https://app.morpho.org/base/vault/0xbeeff0be997cca5b1c13a7433c2004637975739e"
           },
           {
-            "label": "Verified deployment code identity",
+            "label": "Partially verified VaultV2 source; deployed bytes match pinned RPC, not complete compiler verification",
             "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff0be997cca5b1c13a7433c2004637975739e"
           },
           {
@@ -134,7 +141,10 @@
             "url": "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md"
           }
         ],
-        "evidence": "Pinned owner() at base block 52095852 (0x31aeb6c), observed 2026-10-02T22:44:15.793112+00:00. Parameter and allocation control does not confer discretionary underlying USDC minting. Adapter addition and cap-increase delays: {\"addAdapter(address)\": 604800, \"increaseAbsoluteCap(bytes,uint256)\": 604800, \"setPerformanceFee(uint256)\": 0, \"setManagementFee(uint256)\": 0}. Fee selectors have their own zero delays; no blanket all-action timelock or signer independence is claimed. Supervisor owner 0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd; TIMELOCK 1209600 seconds applies to ownership/guardian removal, but curator replacement is immediate."
+        "evidence": "Pinned owner() at base block 52095852 (0x31aeb6c), observed 2026-10-02T22:44:15.793112+00:00. Parameter and allocation control does not confer discretionary underlying USDC minting. Adapter addition and cap-increase delays: {\"addAdapter(address)\": 604800, \"increaseAbsoluteCap(bytes,uint256)\": 604800, \"setPerformanceFee(uint256)\": 0, \"setManagementFee(uint256)\": 0}. Fee selectors have their own zero delays; no blanket all-action timelock or signer independence is claimed. Supervisor owner 0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd; TIMELOCK 1209600 seconds applies to ownership/guardian removal, but curator replacement is immediate.",
+        "deploymentRefs": [
+          "base:0xbeeff0be997cca5b1c13a7433c2004637975739e"
+        ]
       },
       {
         "chain": "base",
@@ -147,8 +157,17 @@
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
           "observedBlock": 52095852,
-          "observedAt": "2026-10-02",
-          "source": "onchain"
+          "observedAt": "2026-10-03",
+          "source": "onchain",
+          "owners": [
+            "0x8ae8ee5ad6eae89836b0070ebc47af06e3d7422b",
+            "0xf83db716a1ff12f9005f98f678d8be97b8bc81d6",
+            "0x0d61c8b6ca9669a36f351de3ae335e9689dd9c5b",
+            "0xcc771952fde840e30c6802734e5ad20479c2959f",
+            "0x387cde8598e1cbb297fdc5baeba5e5c5c2735344",
+            "0xe3fcee6b6cd564e073346f71394f60ec9adf5120"
+          ],
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99"
         },
         "directMintAbility": "parameter-only",
         "modulesOrGuardsStatus": "none-detected",
@@ -160,7 +179,7 @@
             "url": "https://app.morpho.org/base/vault/0xbeeff0be997cca5b1c13a7433c2004637975739e"
           },
           {
-            "label": "Verified deployment code identity",
+            "label": "Partially verified VaultV2 source; deployed bytes match pinned RPC, not complete compiler verification",
             "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff0be997cca5b1c13a7433c2004637975739e"
           },
           {
@@ -182,11 +201,18 @@
           {
             "label": "Exact Morpho lending adapter",
             "url": "https://base.blockscout.com/api/v2/smart-contracts/0x8c47e3c9a99b819222e37b91635bb9fed29c5319"
+          },
+          {
+            "label": "Exact base block 52095852; independent role, Safe, gate and market census re-read 2026-10-03",
+            "url": "https://basescan.org/block/52095852"
           }
         ],
-        "evidence": "Pinned curator() at base block 52095852 (0x31aeb6c), observed 2026-10-02T22:44:15.793112+00:00. Parameter and allocation control does not confer discretionary underlying USDC minting. Adapter addition and cap-increase delays: {\"addAdapter(address)\": 604800, \"increaseAbsoluteCap(bytes,uint256)\": 604800, \"setPerformanceFee(uint256)\": 0, \"setManagementFee(uint256)\": 0}. Fee selectors have their own zero delays; no blanket all-action timelock or signer independence is claimed. Safe threshold 2/6, enabled-module count 0, guard zero.",
+        "evidence": "Pinned curator() at base block 52095852 (0x31aeb6c), observed 2026-10-02T22:44:15.793112+00:00. Parameter and allocation control does not confer discretionary underlying USDC minting. Adapter addition and cap-increase delays: {\"addAdapter(address)\": 604800, \"increaseAbsoluteCap(bytes,uint256)\": 604800, \"setPerformanceFee(uint256)\": 0, \"setManagementFee(uint256)\": 0}. Fee selectors have their own zero delays; no blanket all-action timelock or signer independence is claimed. Safe threshold 2/6, enabled-module count 0, guard zero. Independently re-read 2026-10-03 at the same block: full 6-owner roster, module pagination ended at 0x1 with 0 enabled modules, zero guard, fallback handler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. No independent-human or key-custody attestation follows from owner addresses.",
         "threshold": 2,
-        "signerCount": 6
+        "signerCount": 6,
+        "deploymentRefs": [
+          "base:0xbeeff0be997cca5b1c13a7433c2004637975739e"
+        ]
       },
       {
         "chain": "base",
@@ -199,8 +225,21 @@
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
           "observedBlock": 52095852,
-          "observedAt": "2026-10-02",
-          "source": "onchain"
+          "observedAt": "2026-10-03",
+          "source": "onchain",
+          "owners": [
+            "0xc04f9610694a9e07e0d6a361bec53abeadf9cf9e",
+            "0x005398827d00c2951ffb52bd91164ef402bcf105",
+            "0x2e8c25a6f7f7f34666b998813abf97d8b617f111",
+            "0x5571a6fef340a9d26f1428684b9e893ea84b46ac",
+            "0x32e5cb1a68761a0cff88d4baa21e398422b5166e",
+            "0x21c1e5be991bf1544ca9759a601f66dc60083f7d",
+            "0x9a86713145f38cd688969c0ecc87b314b23254b2",
+            "0xbc27046213d34d4a153cf57a48c74d74239e8968",
+            "0x394e6ef80c6f4ad14a891a3987d8bd1387afa0b1",
+            "0x86bd534a95fb2cc36d526ba149464c4477315c32"
+          ],
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99"
         },
         "directMintAbility": "parameter-only",
         "threshold": 5,
@@ -214,7 +253,7 @@
             "url": "https://app.morpho.org/base/vault/0xbeeff0be997cca5b1c13a7433c2004637975739e"
           },
           {
-            "label": "Verified deployment code identity",
+            "label": "Partially verified VaultV2 source; deployed bytes match pinned RPC, not complete compiler verification",
             "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff0be997cca5b1c13a7433c2004637975739e"
           },
           {
@@ -240,9 +279,215 @@
           {
             "label": "Supervisor controls",
             "url": "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md"
+          },
+          {
+            "label": "Exact base block 52095852; independent role, Safe, gate and market census re-read 2026-10-03",
+            "url": "https://basescan.org/block/52095852"
           }
         ],
-        "evidence": "At base block 52095852 (0x31aeb6c), observed 2026-10-02T22:44:15.793112+00:00, supervisor.owner() returned this Safe, threshold 5/10, zero modules and guard. Immediate curator replacement remains available; signer independence was not established."
+        "evidence": "At base block 52095852 (0x31aeb6c), observed 2026-10-02T22:44:15.793112+00:00, supervisor.owner() returned this Safe, threshold 5/10, zero modules and guard. Immediate curator replacement remains available; signer independence was not established. Independently re-read 2026-10-03 at the same block: full 10-owner roster, module pagination ended at 0x1 with 0 enabled modules, zero guard, fallback handler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. No independent-human or key-custody attestation follows from owner addresses.",
+        "deploymentRefs": [
+          "base:0xbeeff0be997cca5b1c13a7433c2004637975739e"
+        ]
+      },
+      {
+        "chain": "base",
+        "address": "0x0000aeb716a0df7a9a1aad119b772644bc089da8",
+        "deploymentRefs": [
+          "base:0xbeeff0be997cca5b1c13a7433c2004637975739e"
+        ],
+        "label": "ethenaUSDC allocator 0x0000aeb716a0df7a9a1aad119b772644bc089da8",
+        "role": "other",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-03",
+        "observedBlock": 52095852,
+        "sources": [
+          {
+            "label": "Exact base block 52095852; independent role, Safe, gate and market census re-read 2026-10-03",
+            "url": "https://basescan.org/block/52095852"
+          },
+          {
+            "label": "Exact VaultV2 role-grant log history through pinned block",
+            "url": "https://base.blockscout.com/api?module=logs&action=getLogs&fromBlock=0&toBlock=52095852&address=0xbeeff0be997cca5b1c13a7433c2004637975739e"
+          },
+          {
+            "label": "Pinned VaultV2 deposit, fee share, role and loss-accounting source; partial deployment compiler correspondence",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          }
+        ],
+        "evidence": "Complete grant-log candidate census from genesis through the pinned block, followed by exact allocator mapping reads, proves this active holder. Allocator can allocate/deallocate within curator caps, choose liquidity adapter/data and maxRate; it cannot change immutable share mint logic or raise curator caps. Allocation loss and ordinary exit-liveness risk remain. Safe getOwners/getThreshold prove 1-of-6; module pagination terminates at 0x1 and guard=0x0000000000000000000000000000000000000000; fallback=0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4. Human independence and custody procedures are unestablished.",
+        "threshold": 1,
+        "signerCount": 6,
+        "safe": {
+          "owners": [
+            "0xfc615395336aade67fd853a0157001a215ea1279",
+            "0xf83db716a1ff12f9005f98f678d8be97b8bc81d6",
+            "0xe3fcee6b6cd564e073346f71394f60ec9adf5120",
+            "0x0d61c8b6ca9669a36f351de3ae335e9689dd9c5b",
+            "0x387cde8598e1cbb297fdc5baeba5e5c5c2735344",
+            "0xcc771952fde840e30c6802734e5ad20479c2959f"
+          ],
+          "threshold": 1,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 52095852,
+          "observedAt": "2026-10-03",
+          "source": "onchain",
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4"
+        }
+      },
+      {
+        "chain": "base",
+        "address": "0x1be9b8c406120b2c2b8990d0522cd226a3d60e36",
+        "deploymentRefs": [
+          "base:0xbeeff0be997cca5b1c13a7433c2004637975739e"
+        ],
+        "label": "ethenaUSDC allocator 0x1be9b8c406120b2c2b8990d0522cd226a3d60e36",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-03",
+        "observedBlock": 52095852,
+        "sources": [
+          {
+            "label": "Exact base block 52095852; independent role, Safe, gate and market census re-read 2026-10-03",
+            "url": "https://basescan.org/block/52095852"
+          },
+          {
+            "label": "Exact VaultV2 role-grant log history through pinned block",
+            "url": "https://base.blockscout.com/api?module=logs&action=getLogs&fromBlock=0&toBlock=52095852&address=0xbeeff0be997cca5b1c13a7433c2004637975739e"
+          },
+          {
+            "label": "Pinned VaultV2 deposit, fee share, role and loss-accounting source; partial deployment compiler correspondence",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          }
+        ],
+        "evidence": "Complete grant-log candidate census from genesis through the pinned block, followed by exact allocator mapping reads, proves this active holder. Allocator can allocate/deallocate within curator caps, choose liquidity adapter/data and maxRate; it cannot change immutable share mint logic or raise curator caps. Allocation loss and ordinary exit-liveness risk remain. Deployed code exists but Safe getters revert; exact internal operator/admin and arbitrary-call reach remain unestablished, rather than being inferred from contract presence."
+      },
+      {
+        "chain": "base",
+        "address": "0xaed282b8ad9257bb1272e93ae63a32a53621e412",
+        "deploymentRefs": [
+          "base:0xbeeff0be997cca5b1c13a7433c2004637975739e"
+        ],
+        "label": "ethenaUSDC allocator 0xaed282b8ad9257bb1272e93ae63a32a53621e412",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-03",
+        "observedBlock": 52095852,
+        "sources": [
+          {
+            "label": "Exact base block 52095852; independent role, Safe, gate and market census re-read 2026-10-03",
+            "url": "https://basescan.org/block/52095852"
+          },
+          {
+            "label": "Exact VaultV2 role-grant log history through pinned block",
+            "url": "https://base.blockscout.com/api?module=logs&action=getLogs&fromBlock=0&toBlock=52095852&address=0xbeeff0be997cca5b1c13a7433c2004637975739e"
+          },
+          {
+            "label": "Pinned VaultV2 deposit, fee share, role and loss-accounting source; partial deployment compiler correspondence",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          }
+        ],
+        "evidence": "Complete grant-log candidate census from genesis through the pinned block, followed by exact allocator mapping reads, proves this active holder. Allocator can allocate/deallocate within curator caps, choose liquidity adapter/data and maxRate; it cannot change immutable share mint logic or raise curator caps. Allocation loss and ordinary exit-liveness risk remain. Deployed code exists but Safe getters revert; exact internal operator/admin and arbitrary-call reach remain unestablished, rather than being inferred from contract presence."
+      },
+      {
+        "chain": "base",
+        "address": "0xbbf1ad10455eed600cd78a1702f7aca41c9abceb",
+        "deploymentRefs": [
+          "base:0xbeeff0be997cca5b1c13a7433c2004637975739e"
+        ],
+        "label": "ethenaUSDC allocator 0xbbf1ad10455eed600cd78a1702f7aca41c9abceb",
+        "role": "other",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 52095852,
+        "sources": [
+          {
+            "label": "Exact base block 52095852; independent role, Safe, gate and market census re-read 2026-10-03",
+            "url": "https://basescan.org/block/52095852"
+          },
+          {
+            "label": "Exact VaultV2 role-grant log history through pinned block",
+            "url": "https://base.blockscout.com/api?module=logs&action=getLogs&fromBlock=0&toBlock=52095852&address=0xbeeff0be997cca5b1c13a7433c2004637975739e"
+          },
+          {
+            "label": "Pinned VaultV2 deposit, fee share, role and loss-accounting source; partial deployment compiler correspondence",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          }
+        ],
+        "evidence": "Complete grant-log candidate census from genesis through the pinned block, followed by exact allocator mapping reads, proves this active holder. Allocator can allocate/deallocate within curator caps, choose liquidity adapter/data and maxRate; it cannot change immutable share mint logic or raise curator caps. Allocation loss and ordinary exit-liveness risk remain. eth_getCode is empty: this is a single-key EOA, not an asserted institutional or multisig custody path."
+      },
+      {
+        "chain": "base",
+        "address": "0xfc580f2a77e85f1f47b60f096d36fdc97ce2d827",
+        "deploymentRefs": [
+          "base:0xbeeff0be997cca5b1c13a7433c2004637975739e"
+        ],
+        "label": "ethenaUSDC allocator 0xfc580f2a77e85f1f47b60f096d36fdc97ce2d827",
+        "role": "other",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 52095852,
+        "sources": [
+          {
+            "label": "Exact base block 52095852; independent role, Safe, gate and market census re-read 2026-10-03",
+            "url": "https://basescan.org/block/52095852"
+          },
+          {
+            "label": "Exact VaultV2 role-grant log history through pinned block",
+            "url": "https://base.blockscout.com/api?module=logs&action=getLogs&fromBlock=0&toBlock=52095852&address=0xbeeff0be997cca5b1c13a7433c2004637975739e"
+          },
+          {
+            "label": "Pinned VaultV2 deposit, fee share, role and loss-accounting source; partial deployment compiler correspondence",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          }
+        ],
+        "evidence": "Complete grant-log candidate census from genesis through the pinned block, followed by exact allocator mapping reads, proves this active holder. Allocator can allocate/deallocate within curator caps, choose liquidity adapter/data and maxRate; it cannot change immutable share mint logic or raise curator caps. Allocation loss and ordinary exit-liveness risk remain. eth_getCode is empty: this is a single-key EOA, not an asserted institutional or multisig custody path."
+      },
+      {
+        "chain": "base",
+        "address": "0xfeed46c11f57b7126a773eec6ae9ca7ae1c03c9a",
+        "deploymentRefs": [
+          "base:0xbeeff0be997cca5b1c13a7433c2004637975739e"
+        ],
+        "label": "ethenaUSDC allocator 0xfeed46c11f57b7126a773eec6ae9ca7ae1c03c9a",
+        "role": "other",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 52095852,
+        "sources": [
+          {
+            "label": "Exact base block 52095852; independent role, Safe, gate and market census re-read 2026-10-03",
+            "url": "https://basescan.org/block/52095852"
+          },
+          {
+            "label": "Exact VaultV2 role-grant log history through pinned block",
+            "url": "https://base.blockscout.com/api?module=logs&action=getLogs&fromBlock=0&toBlock=52095852&address=0xbeeff0be997cca5b1c13a7433c2004637975739e"
+          },
+          {
+            "label": "Pinned VaultV2 deposit, fee share, role and loss-accounting source; partial deployment compiler correspondence",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          }
+        ],
+        "evidence": "Complete grant-log candidate census from genesis through the pinned block, followed by exact allocator mapping reads, proves this active holder. Allocator can allocate/deallocate within curator caps, choose liquidity adapter/data and maxRate; it cannot change immutable share mint logic or raise curator caps. Allocation loss and ordinary exit-liveness risk remain. eth_getCode is empty: this is a single-key EOA, not an asserted institutional or multisig custody path."
       }
     ],
     "review": {
@@ -253,7 +498,7 @@
           "url": "https://app.morpho.org/base/vault/0xbeeff0be997cca5b1c13a7433c2004637975739e"
         },
         {
-          "label": "Verified deployment code identity",
+          "label": "Partially verified VaultV2 source; deployed bytes match pinned RPC, not complete compiler verification",
           "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff0be997cca5b1c13a7433c2004637975739e"
         },
         {
@@ -275,14 +520,209 @@
         {
           "label": "Exact Morpho lending adapter",
           "url": "https://base.blockscout.com/api/v2/smart-contracts/0x8c47e3c9a99b819222e37b91635bb9fed29c5319"
+        },
+        {
+          "label": "Exact base block 52095852; independent role, Safe, gate and market census re-read 2026-10-03",
+          "url": "https://basescan.org/block/52095852"
+        },
+        {
+          "label": "Exact VaultV2 role-grant log history through pinned block",
+          "url": "https://base.blockscout.com/api?module=logs&action=getLogs&fromBlock=0&toBlock=52095852&address=0xbeeff0be997cca5b1c13a7433c2004637975739e"
+        },
+        {
+          "label": "Pinned VaultV2 deposit, fee share, role and loss-accounting source; partial deployment compiler correspondence",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+        },
+        {
+          "label": "Sourcify compiler output, source and declared immutable/runtime transformation layout; functional match re-derived for this exact pinned deployment",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c?fields=sources,compilation,runtimeBytecode"
+        },
+        {
+          "label": "Verified standard Safe CompatibilityFallbackHandler source, 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "url": "https://base.blockscout.com/api/v2/smart-contracts/0xfd0732dc9e303f09fcef3a7388ad10a83459ec99"
+        },
+        {
+          "label": "Verified standard Safe CompatibilityFallbackHandler source, 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4"
+        },
+        {
+          "label": "Exact named allocator deployment source and verification status",
+          "url": "https://base.blockscout.com/api/v2/smart-contracts/0x1be9b8c406120b2c2b8990d0522cd226a3d60e36"
+        },
+        {
+          "label": "Exact named allocator deployment source and verification status",
+          "url": "https://base.blockscout.com/api/v2/smart-contracts/0xaed282b8ad9257bb1272e93ae63a32a53621e412"
         }
       ],
-      "evidence": "Ethena x Steakhouse USDC (ethenaUSDC) at base:0xbeeff0be997cca5b1c13a7433c2004637975739e is the current public ERC-4626 VaultV2 share over USDC 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913. Deposits transfer underlying before minting; interest accrual can mint configured fee shares and recognizes adapter losses. Holder rights are residual proportional code-enforced NAV redemption, not beneficial ownership of Circle reserves or proven statutory segregation. One current adapter 0x8c47e3c9a99b819222e37b91635bb9fed29c5319 holds 3 enumerated Morpho market IDs. At base block 52095852 (0x31aeb6c), observed 2026-10-02T22:44:15.793112+00:00, receiveSharesGate, sendSharesGate and receiveAssetsGate were zero and all three setters were abdicated. Reviewed VaultV2 transfer/transferFrom and withdraw/redeem use these gates. sendAssetsGate was zero with its setter not abdicated; it governs deposit/mint, not direct withdrawal or transfer. Deposit-dependent in-kind paths can be constrained by it. USDC freeze exposure is inherited from usdc-circle; this is not a direct share blacklist claim. Local fee/curator authority is not USDC issuer supervision or reserve-liability reconciliation.",
-      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-      "reviewedAt": "2026-10-02",
-      "unresolvedQuestions": [
-        "Independent human signers and key-custody procedures are not established.",
-        "No exact-vault financial assurance or statutory holder priority was established."
+      "evidence": "Ethena x Steakhouse USDC (ethenaUSDC) at base:0xbeeff0be997cca5b1c13a7433c2004637975739e is the current public ERC-4626 VaultV2 share over USDC 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913. Deposits transfer underlying before minting; interest accrual can mint configured fee shares and recognizes adapter losses. Holder rights are residual proportional code-enforced NAV redemption, not beneficial ownership of Circle reserves or proven statutory segregation. One current adapter 0x8c47e3c9a99b819222e37b91635bb9fed29c5319 holds 3 enumerated Morpho market IDs. At base block 52095852 (0x31aeb6c), observed 2026-10-02T22:44:15.793112+00:00, receiveSharesGate, sendSharesGate and receiveAssetsGate were zero and all three setters were abdicated. Reviewed VaultV2 transfer/transferFrom and withdraw/redeem use these gates. sendAssetsGate was zero with its setter not abdicated; it governs deposit/mint, not direct withdrawal or transfer. Deposit-dependent in-kind paths can be constrained by it. USDC freeze exposure is inherited from usdc-circle; this is not a direct share blacklist claim. Local fee/curator authority is not USDC issuer supervision or reserve-liability reconciliation. Independent refinement reproduced exact deployed bytecode equality, owner/curator, all gate addresses and irreversible setters, per-selector delays, and full historical grant-event candidates with active mapping confirmation. Active allocators=0x0000aeb716a0df7a9a1aad119b772644bc089da8,0x1be9b8c406120b2c2b8990d0522cd226a3d60e36,0xaed282b8ad9257bb1272e93ae63a32a53621e412,0xbbf1ad10455eed600cd78a1702f7aca41c9abceb,0xfc580f2a77e85f1f47b60f096d36fdc97ce2d827,0xfeed46c11f57b7126a773eec6ae9ca7ae1c03c9a; active sentinels=. Owner/curator and added Safe rosters, terminating module pages, guards and nonzero fallback handlers are explicitly recorded. This closes role-address/quorum and coarse module-presence census, NOT execution-complete controller/alternate-call reach, custody attestation or financial/insolvency assurance. Independently reproduced functional compiler/runtime correspondence against Sourcify runtimeMatch=match (matchId 30034094, verifiedAt 2026-05-26T22:26:25Z, solc 0.8.28+commit.7893614a, viaIR, optimizer 100000). Only compiler-declared immutable offsets (asset AST37, decimals AST39, virtualShares AST41) and the 11-byte CBOR compiler tag at byte offset 21796 were masked; every remaining executable byte equals the Sourcify recompiled VaultV2 runtime. Each immutable occurrence separately equals this exact deployment asset()/decimals()/virtualShares() getter. Normalized runtime SHA-256=cf17ab0161388ea9277000e692e929216da2618e441c54bcd677def1000dd12e. This is functional source correspondence, not full metadata/creation-bytecode identity or a financial audit. Calibration 2026-10-03 preserves the following observations outside the umbrella census flag: Independent human control and key-custody procedures are not publicly established for the exact listed controller/signing addresses; no custody attestation is inferred from Safe quorum or empty EOA code. | Internal operator/admin and mutable-call target reach of allocator contracts 0x1be9b8c406120b2c2b8990d0522cd226a3d60e36, 0xaed282b8ad9257bb1272e93ae63a32a53621e412 are not execution-complete. Safe fallback handlers are identified but their complete executable noninterference is not certified. | No exact-vault independently signed financial assurance or enforceable statutory holder insolvency priority is established; this separate backing gap is not resolved by the mint-role census. Under calibration rule 3, the recorded none-detected module/guard census and standard CompatibilityFallbackHandler identities do not introduce a separately identified mint path; absence of an execution-complete noninterference certificate remains recorded, not treated as an unidentified authority. Mint-level reconciliation remains not-applicable to the reviewed immutable, deposit/fee-share accounting mechanism; the missing independently signed financial assurance and insolvency priority remain explicit Backing-domain gaps in the existing reserves/mechanism evidence. Known signer/quorum facts receive no inferred custody or human-independence credit. V2 calibration preserves the previous scoped observations and their exact controller references: base:0x1be9b8c406120b2c2b8990d0522cd226a3d60e36: This named allocator role holder is identified in the complete pinned VaultV2 role census, but its internal operator/admin and mutable-call target reach are not execution-complete. Which implementation, administrator and alternate execution targets can exercise this controller's allocation permissions? The uncertainty is local to this controller, not unidentified vault share minters. | base:0xaed282b8ad9257bb1272e93ae63a32a53621e412: This named allocator role holder is identified in the complete pinned VaultV2 role census, but its internal operator/admin and mutable-call target reach are not execution-complete. Which implementation, administrator and alternate execution targets can exercise this controller's allocation permissions? The uncertainty is local to this controller, not unidentified vault share minters. V2 correction: the exact deployment functional runtime equivalence proof closes the VaultV2 mint-code identity gap. Supply is issued by immutable deposit/fee-share accounting; reconciliation remains not-applicable to that mint mechanism and supervision remains none, with no financial-assurance or regulatory-supervision credit inferred. The two named allocator-contract internal operator/admin and mutable-target gaps concern authored parameter-only allocation permissions: verified VaultV2 code prevents them from replacing share mint logic or raising curator caps. These observations remain operational allocation/custody uncertainty, not unresolved mint/upgrade paths. V2 rule 1 records the existing signing-policy/human-independence/key-custody observations on every exact identified Safe/EOA control. No custody attestation or human independence is inferred, and no automatic multisig custody-pricing claim is made.",
+      "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
+      "reviewedAt": "2026-10-03",
+      "unresolvedQuestions": [],
+      "scopedQuestions": [
+        {
+          "controlRef": "base:0x827e86072b06674a077f592a531dce4590adecdb",
+          "question": "Which human independence, key-custody scheme and signing-policy approval boundary apply to the exact identified Safe owners? The observed roster/quorum and empty modules/guard do not establish independent humans or custody assurances.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
+          "sources": [
+            {
+              "label": "Exact Morpho Vault V2 deployment",
+              "url": "https://app.morpho.org/base/vault/0xbeeff0be997cca5b1c13a7433c2004637975739e"
+            },
+            {
+              "label": "Partially verified VaultV2 source; deployed bytes match pinned RPC, not complete compiler verification",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff0be997cca5b1c13a7433c2004637975739e"
+            },
+            {
+              "label": "Pinned base block 52095852",
+              "url": "https://basescan.org/block/52095852"
+            },
+            {
+              "label": "Morpho complete current vault inventory",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Morpho Vault V2 gates",
+              "url": "https://docs.morpho.org/curate/concepts/gates.md"
+            },
+            {
+              "label": "Morpho share accounting and loss realization",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            },
+            {
+              "label": "Exact Morpho lending adapter",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0x8c47e3c9a99b819222e37b91635bb9fed29c5319"
+            },
+            {
+              "label": "Exact base block 52095852; independent role, Safe, gate and market census re-read 2026-10-03",
+              "url": "https://basescan.org/block/52095852"
+            }
+          ]
+        },
+        {
+          "controlRef": "base:0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd",
+          "question": "Which human independence, key-custody scheme and signing-policy approval boundary apply to the exact identified Safe owners? The observed roster/quorum and empty modules/guard do not establish independent humans or custody assurances.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
+          "sources": [
+            {
+              "label": "Exact Morpho Vault V2 deployment",
+              "url": "https://app.morpho.org/base/vault/0xbeeff0be997cca5b1c13a7433c2004637975739e"
+            },
+            {
+              "label": "Partially verified VaultV2 source; deployed bytes match pinned RPC, not complete compiler verification",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff0be997cca5b1c13a7433c2004637975739e"
+            },
+            {
+              "label": "Pinned base block 52095852",
+              "url": "https://basescan.org/block/52095852"
+            },
+            {
+              "label": "Morpho complete current vault inventory",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Morpho Vault V2 gates",
+              "url": "https://docs.morpho.org/curate/concepts/gates.md"
+            },
+            {
+              "label": "Morpho share accounting and loss realization",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            },
+            {
+              "label": "Exact Morpho lending adapter",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0x8c47e3c9a99b819222e37b91635bb9fed29c5319"
+            },
+            {
+              "label": "Supervisor controls",
+              "url": "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md"
+            },
+            {
+              "label": "Exact base block 52095852; independent role, Safe, gate and market census re-read 2026-10-03",
+              "url": "https://basescan.org/block/52095852"
+            }
+          ]
+        },
+        {
+          "controlRef": "base:0x0000aeb716a0df7a9a1aad119b772644bc089da8",
+          "question": "Which human independence, key-custody scheme and signing-policy approval boundary apply to the exact identified Safe owners? The observed roster/quorum and empty modules/guard do not establish independent humans or custody assurances.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
+          "sources": [
+            {
+              "label": "Exact base block 52095852; independent role, Safe, gate and market census re-read 2026-10-03",
+              "url": "https://basescan.org/block/52095852"
+            },
+            {
+              "label": "Exact VaultV2 role-grant log history through pinned block",
+              "url": "https://base.blockscout.com/api?module=logs&action=getLogs&fromBlock=0&toBlock=52095852&address=0xbeeff0be997cca5b1c13a7433c2004637975739e"
+            },
+            {
+              "label": "Pinned VaultV2 deposit, fee share, role and loss-accounting source; partial deployment compiler correspondence",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            }
+          ]
+        },
+        {
+          "controlRef": "base:0xbbf1ad10455eed600cd78a1702f7aca41c9abceb",
+          "question": "Which human controller, key-custody scheme and signing-policy approval boundary apply to this exact identified EOA? Empty deployed code establishes an EOA, not independent human control or a custody attestation.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
+          "sources": [
+            {
+              "label": "Exact base block 52095852; independent role, Safe, gate and market census re-read 2026-10-03",
+              "url": "https://basescan.org/block/52095852"
+            },
+            {
+              "label": "Exact VaultV2 role-grant log history through pinned block",
+              "url": "https://base.blockscout.com/api?module=logs&action=getLogs&fromBlock=0&toBlock=52095852&address=0xbeeff0be997cca5b1c13a7433c2004637975739e"
+            },
+            {
+              "label": "Pinned VaultV2 deposit, fee share, role and loss-accounting source; partial deployment compiler correspondence",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            }
+          ]
+        },
+        {
+          "controlRef": "base:0xfc580f2a77e85f1f47b60f096d36fdc97ce2d827",
+          "question": "Which human controller, key-custody scheme and signing-policy approval boundary apply to this exact identified EOA? Empty deployed code establishes an EOA, not independent human control or a custody attestation.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
+          "sources": [
+            {
+              "label": "Exact base block 52095852; independent role, Safe, gate and market census re-read 2026-10-03",
+              "url": "https://basescan.org/block/52095852"
+            },
+            {
+              "label": "Exact VaultV2 role-grant log history through pinned block",
+              "url": "https://base.blockscout.com/api?module=logs&action=getLogs&fromBlock=0&toBlock=52095852&address=0xbeeff0be997cca5b1c13a7433c2004637975739e"
+            },
+            {
+              "label": "Pinned VaultV2 deposit, fee share, role and loss-accounting source; partial deployment compiler correspondence",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            }
+          ]
+        },
+        {
+          "controlRef": "base:0xfeed46c11f57b7126a773eec6ae9ca7ae1c03c9a",
+          "question": "Which human controller, key-custody scheme and signing-policy approval boundary apply to this exact identified EOA? Empty deployed code establishes an EOA, not independent human control or a custody attestation.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
+          "sources": [
+            {
+              "label": "Exact base block 52095852; independent role, Safe, gate and market census re-read 2026-10-03",
+              "url": "https://basescan.org/block/52095852"
+            },
+            {
+              "label": "Exact VaultV2 role-grant log history through pinned block",
+              "url": "https://base.blockscout.com/api?module=logs&action=getLogs&fromBlock=0&toBlock=52095852&address=0xbeeff0be997cca5b1c13a7433c2004637975739e"
+            },
+            {
+              "label": "Pinned VaultV2 deposit, fee share, role and loss-accounting source; partial deployment compiler correspondence",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            }
+          ]
+        }
       ]
     }
   }

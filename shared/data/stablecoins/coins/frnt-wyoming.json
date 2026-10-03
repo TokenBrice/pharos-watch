@@ -1,4 +1,12 @@
 {
+  "liveReservesConfig": {
+    "adapter": "frnt-ledgerlens",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "frnt-wyoming",
+    "display": { "url": "https://dashboard.ledgerlens.io/c/wystc", "label": "LedgerLens supplemental FRNT dashboard" },
+    "inputs": { "primary": { "kind": "http-json", "url": "https://dashboard.ledgerlens.io/_serverFn/48773d105fce9df473395d17bdd97f0cc8215fa6b7fa5355237e98db44e0ab8f" } }
+  },
   "id": "frnt-wyoming",
   "name": "Frontier Stable Token",
   "symbol": "FRNT",

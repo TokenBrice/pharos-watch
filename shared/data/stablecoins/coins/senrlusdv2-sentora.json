@@ -12,7 +12,7 @@
   "variantOf": "rlusd-ripple",
   "variantKind": "strategy-vault",
   "pegReferenceId": "rlusd-ripple",
-  "collateral": "RLUSD lending positions against cbBTC, FXRP, syrupUSDC, wstETH, USDe, weETH, kBTC, WBTC. Allocations change under curator controls; borrower collateral is distinct from the underlying deposited token.",
+  "collateral": "RLUSD lending positions against cbBTC, FXRP, syrupUSDC, wstETH, USDe, weETH, kBTC and WBTC, plus 1-wei lender dust positions against PT-sUSDE-13AUG2026 and WETH. Allocations change under curator controls; borrower collateral is distinct from the underlying deposited token.",
   "pegMechanism": "ERC-4626 deposit/mint and withdraw/redeem exchange shares for RLUSD at the current asset conversion rate. Lending interest, fees and realized losses change NAV. liquidityAdapter() is zero at the pinned review; ordinary cash redemptions use idle assets unless assets are first deallocated. Shared market liquidity and an in-kind position exit do not promise full-size cash redemption.",
   "mechanismArchetype": "protocol-position",
   "archetypeOverride": true,
@@ -20,7 +20,7 @@
     "disposition": "resolved",
     "reviewedAt": "2026-10-02",
     "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "rationale": "Exact Ethereum deployment 0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf is immutable VaultV2, issuing transferable ERC-4626 operational shares over RLUSD, not a direct fiat or parent-reserve ownership claim. asset(), decimals(), totalSupply(), convertToAssets() and ordinary one-share redeem simulation were reverified at Ethereum block 26107702. The protocol-position archetype intentionally differs from the fiat-cash parent.",
+    "rationale": "Exact Ethereum deployment 0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf is immutable VaultV2, issuing transferable ERC-4626 operational shares over RLUSD, not a direct fiat or parent-reserve ownership claim. asset(), decimals(), totalSupply(), convertToAssets() and ordinary one-share redeem simulation were reverified at Ethereum block 26107702. The protocol-position archetype intentionally differs from the fiat-cash parent. Exact deployment creation: Morpho vaultV2ByAddress creationBlockNumber=24587448, creationTimestamp=1772667719 (2026-03-04T23:41:59.000Z); independently retrieved 2026-10-03.",
     "sources": [
       {
         "label": "Sentora RLUSD Main exact vault",
@@ -107,5 +107,6 @@
       }
     }
   },
-  "launchDate": "2026-03-04"
+  "launchDate": "2026-03-04",
+  "implementationLaunchDate": "2026-03-04"
 }

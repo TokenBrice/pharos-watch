@@ -1,5 +1,39 @@
 {
   "id": "zarsc-supercoin",
+  "oracleRisk": {
+    "tier": "oracleless",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "ZARsc is a fixed-rand fiat liability on Token-2022, not a variable-NAV share or collateralized borrower market. Exchange price discovery is a secondary exit rail; it does not determine native mint amounts or change the issuer's one-rand reference.",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Pharos refinement Refine02 primary-source review",
+    "confidence": "verified",
+    "sources": [{"label": "Supercoin Terms 5-8: native Solana issuance, exchange exit and future par app redemption", "url": "https://www.supercoin.co.za/terms-of-service"}],
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Pharos refinement Refine02 primary-source review",
+      "rationale": "Terms define a one-rand reserve-backed token with no interest, security or collective-investment share. Holders do not open debt positions; native Token-2022 minting has no collateral liquidation or variable-NAV branch. Future direct app availability remains a separate Exit qualification.",
+      "sources": [{"label": "Supercoin binding issuance and redemption terms", "url": "https://www.supercoin.co.za/terms-of-service"}]
+    },
+    "paths": [{
+      "id": "zarsc-solana-fiat-par", "chain": "solana", "address": "5ekaHEqpRUXH4RoZVRMErdJE74bibWAzihMtPcjKyceQ", "pricingAuthority": "none",
+      "applicability": {"disposition": "not-applicable", "reviewedAt": "2026-10-03", "reviewer": "Pharos refinement Refine02 primary-source review", "confidence": "verified", "rationale": "Ordinary issuer-authorized Token-2022 minting represents a rand fiat claim, not borrower collateral or share-NAV pricing.", "sources": [{"label": "Supercoin issuer terms", "url": "https://www.supercoin.co.za/terms-of-service"}]}
+    }]
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "The reviewed exact ZARsc deployment is native Solana issuance. Terms permit future additional networks but identify no active bridge or representation; no mirror-stock liability partition is asserted.",
+    "reviewedAt": "2026-10-03", "reviewer": "Pharos refinement Refine02 primary-source and RPC review", "confidence": "verified",
+    "sources": [{"label": "Supercoin Terms 5.3 and issuer exact Solana mint footer", "url": "https://www.supercoin.co.za/terms-of-service"}],
+    "routes": [{
+      "id": "solana:5ekaHEqpRUXH4RoZVRMErdJE74bibWAzihMtPcjKyceQ", "destinationChain": "solana", "contractAddress": "5ekaHEqpRUXH4RoZVRMErdJE74bibWAzihMtPcjKyceQ",
+      "protocol": "Super Money native ZARsc", "issuanceModel": "native-issuance", "routeClass": "native", "riskTier": "single-chain-or-native", "semantics": "native-mint", "scope": "canonical",
+      "reviewDisposition": "reviewed", "reviewNote": "Issuer exact-mint binding and finalized Token-2022 account read at slot 452860529 identify native issuer minting. Prospective migration is not an existing bridge route.",
+      "controllerChain": "solana", "controllerAddress": "UuicDY26j4dUf5QraXJ99PwPzGwZjRWZmnxcyMhJAgk", "observedAt": "2026-10-03", "observedBlock": 452860529,
+      "sources": [{"label": "Issuer terms and exact deployment", "url": "https://www.supercoin.co.za/terms-of-service"}, {"label": "Solana exact mint", "url": "https://solscan.io/token/5ekaHEqpRUXH4RoZVRMErdJE74bibWAzihMtPcjKyceQ"}]
+    }]
+  },
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

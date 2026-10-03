@@ -4,8 +4,8 @@
     "mintPath": "wrapped-or-variant-inherited",
     "inheritedFrom": "xaut-tether",
     "authorityPosture": "unbounded-reconciliation-unknown",
-    "confidence": "manual-review",
-    "summary": "XGLD inherits XAUt issuer risk and adds local BNB operator minters; complete native minter and signing policy remain unverified.",
+    "confidence": "unknown",
+    "summary": "XGLD inherits XAUt issuer risk and adds two active BNB native minter contracts plus an owner that can replace that roster without a token-code upgrade. Token code is non-proxy; downstream owner signing and the older minter implementation remain unresolved.",
     "controls": [
       {
         "label": "Unitas BNB native XGLD minter administration",
@@ -17,8 +17,8 @@
         "deploymentRefs": [
           "bsc:0xe60106a5cab7e7c64830919d36ab20caaf50ac91"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 125374459,
+        "observedAt": "2026-10-03",
+        "observedBlock": 125441304,
         "sources": [
           {
             "label": "XGLD primary mechanism",
@@ -29,18 +29,86 @@
             "url": "https://basescan.org/address/0xea953ea6634d55dac6697c436b1e81a679db5882#code"
           },
           {
+            "label": "Exact non-proxy BNB XGLDToken verified source",
+            "url": "https://sourcify.dev/server/v2/contract/56/0xe60106a5cab7e7c64830919d36ab20caaf50ac91?fields=sources,abi,proxyResolution"
+          },
+          {
             "label": "BNB XGLD deployment",
             "url": "https://bscscan.com/address/0xe60106a5cab7e7c64830919d36ab20caaf50ac91"
           }
         ],
-        "evidence": "owner() returned this address at the pinned BNB block. The BNB runtime equals the verified Base XGLDToken runtime (13,191 bytes), whose owner can add/remove native minters and burners. Complete role holders and owner signing policy are unavailable; this is not a verified Safe threshold."
+        "evidence": "Pinned BNB block 125441304 confirms the owner and custom-contract code; getOwners/getThreshold revert, so no Safe quorum is inferred. Exact verified XGLDToken source has owner-only addMinter/removeMinter/addBurner/removeBurner and arbitrary-amount onlyMinter issuance. Creation-to-current MinterAdded/MinterRemoved/BurnerAdded/BurnerRemoved census (blocks 99201716–125441304) records two active minters 0x6e705a2e978a30dc92df69b428a333f6b82c0c0e and 0x2a9e3ea72575e05337a7703c8fad65a82a5b5865, two burners 0x82a7cc65dc43a9cd5b105581b954ef082595c361 and 0x2ac5abd45fea3d72afc1c68500ba4a677153003c, and no removal events. Each is checked against its current public mapping getter."
+      },
+      {
+        "label": "Unitas original BNB native minter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "chain": "bsc",
+        "address": "0x6e705a2e978a30dc92df69b428a333f6b82c0c0e",
+        "deploymentRefs": ["bsc:0xe60106a5cab7e7c64830919d36ab20caaf50ac91"],
+        "observedAt": "2026-10-03",
+        "observedBlock": 125441304,
+        "sources": [{
+          "label": "Active original minter; implementation not verified by Sourcify",
+          "url": "https://bscscan.com/address/0x6e705a2e978a30dc92df69b428a333f6b82c0c0e"
+        }],
+        "evidence": "Creation-to-current role-event census and minters(address)=true establish this durable native path. It has not been removed; its collateral/order enforcement and downstream mutable authority remain unverified."
+      },
+      {
+        "label": "Unitas XGLDMinting BNB native minter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "chain": "bsc",
+        "address": "0x2a9e3ea72575e05337a7703c8fad65a82a5b5865",
+        "deploymentRefs": ["bsc:0xe60106a5cab7e7c64830919d36ab20caaf50ac91"],
+        "observedAt": "2026-10-03",
+        "observedBlock": 125441304,
+        "sources": [{
+          "label": "Exact XGLDMinting verified source",
+          "url": "https://sourcify.dev/server/v2/contract/56/0x2a9e3ea72575e05337a7703c8fad65a82a5b5865?fields=sources,abi"
+        }],
+        "evidence": "Current minters(address)=true and xgld() bind this exact token. Source enforces secured signed orders and mutable per-block limits. exchangeRateProvider() binds 0x7bbe7fdcd6bdffd7f767a9531b6210b87b3e46e7; owner is the same custom 0x99997b... contract. This controller's restrictions cannot constrain its active predecessor or the token owner's ability to authorize a new arbitrary minter."
       }
     ],
+    "upgradeability": {
+      "model": "immutable",
+      "deploymentRefs": ["bsc:0xe60106a5cab7e7c64830919d36ab20caaf50ac91"],
+      "implementationAddresses": ["0xe60106a5cab7e7c64830919d36ab20caaf50ac91"],
+      "canChangeMintLogic": false,
+      "observedAt": "2026-10-03",
+      "observedBlock": 125441304,
+      "sources": [{
+        "label": "Exact BNB XGLDToken source and non-proxy resolution",
+        "url": "https://sourcify.dev/server/v2/contract/56/0xe60106a5cab7e7c64830919d36ab20caaf50ac91?fields=sources,abi,proxyResolution"
+      }]
+    },
     "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
     "supervision": "unknown",
     "review": {
       "sources": [
+        {
+          "label": "USDu sibling dated HT Digital collateral letter; exact Solana USDu scope",
+          "url": "https://unipayfi.github.io/POR/20260925_090008_HTD_PoR_for_Unitas.pdf"
+        },
+        {
+          "label": "Issuer USDu custodian-attestation report series",
+          "url": "https://api.unitas.so/api/usdu/custodian_attestations?source=solana"
+        },
+        {
+          "label": "Unitas USDu/sUSDu backing and reporting scope",
+          "url": "https://docs.unitas.so/backing-custody-and-security/overview.md"
+        },
+        {
+          "label": "Exact custom token-owner contract",
+          "url": "https://bscscan.com/address/0x99997b18733ff4a9d8e0b9c7d9dec59625f87228"
+        },
+        {
+          "label": "Exact active original minter; implementation remains unverified",
+          "url": "https://bscscan.com/address/0x6e705a2e978a30dc92df69b428a333f6b82c0c0e"
+        },
         {
           "label": "XGLD primary mechanism",
           "url": "https://docs.unitas.so/overview/xgld.md"
@@ -50,17 +118,29 @@
           "url": "https://basescan.org/address/0xea953ea6634d55dac6697c436b1e81a679db5882#code"
         },
         {
+          "label": "Exact BNB native token verified source",
+          "url": "https://sourcify.dev/server/v2/contract/56/0xe60106a5cab7e7c64830919d36ab20caaf50ac91?fields=sources,abi,proxyResolution"
+        },
+        {
+          "label": "Exact XGLDMinting verified source",
+          "url": "https://sourcify.dev/server/v2/contract/56/0x2a9e3ea72575e05337a7703c8fad65a82a5b5865?fields=sources,abi"
+        },
+        {
+          "label": "Unitas program audit index; exact XGLD coverage not established",
+          "url": "https://docs.unitas.so/resources/audits.md"
+        },
+        {
           "label": "BNB XGLD deployment",
           "url": "https://bscscan.com/address/0xe60106a5cab7e7c64830919d36ab20caaf50ac91"
         }
       ],
-      "evidence": "Issuer docs describe whitelisted native BNB minting against XAUt and strategy borrowing. Current owner and bytecode equality establish privileged mint authorization; no fully netted reserve/debt reconciliation, immutable supply cap or complete signing policy is established. Base OFT controls are recorded under Bridge Risk, not native mint authority.",
-      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-      "reviewedAt": "2026-10-02",
-      "disposition": "scoreable",
+      "evidence": "The complete native token-level role event census is resolved and both active minters remain inventoried. Exact non-proxy token source has no code-upgrade entrypoint, but owner can add arbitrary minters without delay; immutable token bytecode is not collateral-gated issuance. One minter has verified signed-order and NAV-rate logic; the original minter's current enforcement and the custom owner's signature policy remain unverified. Accountable publishes gross reserves versus token supply, not net NAV after borrowed USDT. Sibling USDu retains periodic reconciliation and attestation-only supervision on its Accountable dashboard and HT Digital report series. The retrieved 25 September 2026 HT Digital letter expressly covers USDu Solana mint 9ckR7pPPvyPadACDTzLwK2ZAEeUJ3qGSnzPs8bVaHrSy and assets held for USDu; it does not name either XGLD deployment or reconcile XGLD's borrowed-USDT liabilities. The backing/custody overview likewise scopes its monthly reports to USDu/sUSDu. No equivalent XGLD-specific HT Digital/administrator reconciliation was retrieved, so XGLD retains unknown reconciliation/supervision and unbounded-reconciliation-unknown posture rather than importing a different token's assurance. Program EVM audit listings are contextual, not proof that these exact XGLD deployments were audited. Base OFT controls belong to Bridge Risk.",
+      "reviewer": "Refine06 primary-source and pinned RPC review",
+      "reviewedAt": "2026-10-03",
+      "disposition": "unresolved",
       "unresolvedQuestions": [
-        "Complete native minter/burner roster and owner signing policy",
-        "Net position and borrowed-liability reconciliation"
+        "Custom owner contract 0x99997b18733ff4a9d8e0b9c7d9dec59625f87228 is identified, but its executable signature authorization, mutable target and bypass paths are not publicly verified. This is a gap in the named controller's implementation, not an unknown token-level minter census or a claim about human key-custody quality.",
+        "Active original minter 0x6e705a2e978a30dc92df69b428a333f6b82c0c0e is identified by the complete role census, but its collateral enforcement and downstream executable authority are not publicly verified."
       ]
     }
   }

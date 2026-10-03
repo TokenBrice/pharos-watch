@@ -1,5 +1,16 @@
 {
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "susdc-spark-v1",
+    "display": { "url": "https://docs.spark.finance/products/spark-savings", "label": "Reviewed Legacy V1 sUSDS position" },
+    "inputs": { "primary": { "kind": "onchain-evm", "chain": "ethereum", "rpcMode": "public-rpc" } },
+    "params": { "rpcUrl": "https://ethereum-rpc.publicnode.com" }
+  },
   "id": "susdc-spark-v1",
+  "launchDate": "2025-03-03",
+  "implementationLaunchDate": "2025-03-03",
   "name": "Spark USDC V1 (Legacy)",
   "symbol": "sUSDC",
   "oneLiner": "sUSDC is Spark's legacy USDC savings share, backed by sUSDS and redeemable through Sky PSM liquidity or an sUSDS escape hatch.",
@@ -64,6 +75,14 @@
     {
       "label": "Verified exact vault deployment and source",
       "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbc65ad17c5c0a2a4d159fa5a503f4992c7b545fe"
+    },
+    {
+      "label": "Exact Legacy vault creation, Ethereum block 21969024 (2025-03-03)",
+      "url": "https://etherscan.io/tx/0x549d8f23f755f10ac453949f7ce76f19cfd3007ca8402588fe66b0e54ada627c"
+    },
+    {
+      "label": "Current UsdcVault implementation creation, block 21969022 (2025-03-03)",
+      "url": "https://etherscan.io/tx/0x9f672438ec394503ed67287b58395ef2237769541004c11869c9080a9282f236"
     }
   ],
   "custodyModel": "unknown",

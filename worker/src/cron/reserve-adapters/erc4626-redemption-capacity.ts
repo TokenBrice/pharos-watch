@@ -9,6 +9,7 @@ import type { AdapterContext } from "./types";
 import {
   decodeAbiWordAt,
   decodeStrictAddressArrayWord,
+  decodeStrictAddressWord,
   decodeUint256Word,
 } from "./abi-decode";
 import {
@@ -16,6 +17,7 @@ import {
   fetchJsonPostWithRetry,
   fetchOnchainMulticall3,
   reserveDegradedWarning,
+  reserveInfoWarning,
   requireOnchainInput,
 } from "./helpers";
 import { multicallResultOrNull } from "./erc4626";
@@ -508,9 +510,24 @@ async function fetchMorphoVaultLiquidity(input: MorphoQueryInput): Promise<Capac
   }
 }
 
-function fetchMorphoVaultV2Liquidity(
-  input: MorphoProbeInput & { config: MorphoVaultV2RedemptionLiquidityConfig },
+async function fetchMorphoVaultV2Liquidity(
+  input: MorphoProbeInput & Pick<ObserveConfiguredErc4626CapacityInput, "call"> & {
+    config: MorphoVaultV2RedemptionLiquidityConfig;
+  },
 ): Promise<CapacityProbeResult> {
+  // Ordinary exit() can deallocate only through the vault's selected adapter.
+  // GraphQL liquidity alone is not callable withdrawal capacity when it is unset.
+  const adapter = decodeStrictAddressWord(await input.call("0xad468d11").catch(() => null));
+  if (adapter == null || adapter === "0x0000000000000000000000000000000000000000") {
+    const reason = adapter == null ? "unavailable" : "zero";
+    return {
+      capacityRaw: null,
+      warnings: [reserveInfoWarning(
+        `morpho-vault-v2-liquidity-adapter-${reason}`,
+        `Morpho V2 liquidityAdapter() ${reason}; only independently observed idle underlying is usable as capacity`,
+      )],
+    };
+  }
   return fetchMorphoVaultLiquidity({
     ...input,
     query: MORPHO_VAULT_V2_LIQUIDITY_QUERY,

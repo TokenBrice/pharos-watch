@@ -78,6 +78,7 @@ The page is organized into these sections, in order:
 - The pipeline summary should disclose that DEX pool challenges preserve independent protocol evidence before applying their bounded TVL coverage selection.
 - Supply & Price copy should disclose scoped FX-par redemption quotes and curated fail-closed on-chain supply repairs when they affect public `priceSource` or `supplySource` fields.
 - The reserve source roster includes Paxos/KPMG gold reserve examinations and Money on Chain DOC accounting reads on Rootstock; their runtime verification and admission limits are documented in `docs/live-reserves.md`.
+- Reserve Transparency also names LedgerLens / Wyoming FRNT, Coinbase ONED proof-of-reserves GraphQL, BlackRock BRSRV holdings CSV, Matrixdock STBT reserve page, Universal USDU, Supercoin ZARSC, Secured Finance USDFC, and Somnia BrandedCustodian.
 - Reserve copy should describe issuer/protocol APIs, proof portals, dashboards, and direct on-chain/accounting reads as source families; detailed adapter coverage belongs in `docs/live-reserves.md`.
 - Regulatory register copy should disclose both EU MiCA register/NCA sources and U.S. GENIUS implementation-watch sources when `/compliance/` surfaces them.
 - EUR stablecoin reference copy should disclose eurostablecoins.xyz when its coverage API is used for EUR-specific market-availability labels, chain-gap audits, or MiCA issuer cross-checks.

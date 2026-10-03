@@ -70,6 +70,10 @@
     {
       "label": "Prospectus",
       "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/E-CleanProspectus-ChinaAMCDigitalOFC-CN(September2026)_1789336483417.pdf"
+    },
+    {
+      "label": "CUMIU implementation creation, block 23038249 (2025-07-31)",
+      "url": "https://etherscan.io/tx/0xf2cfe5b23b0f54b1ea036e028011daad7d89315ef04c3413ac8d81582f992b53"
     }
   ],
   "jurisdiction": {
@@ -90,5 +94,6 @@
     "yieldSource": "ChinaAMC USD money-market portfolio",
     "yieldType": "nav-appreciation"
   },
-  "launchDate": "2025-08-13"
+  "launchDate": "2025-08-13",
+  "implementationLaunchDate": "2025-08-13"
 }

@@ -11,7 +11,7 @@
     "issuerDomicile": "United Kingdom",
     "foreignExceptionStatus": "unknown",
     "redemptionPolicyPresent": true,
-    "notes": "The review maps the exact token to its foreign issuer and does not establish U.S. distribution, official GENIUS approval/application or a registered foreign-issuer exception. Foreign licensing and reserve disclosures are not substituted for U.S. authorization. A complete U.S. negative-evidence census was not performed; authorization is unknown, not no-public-authorization-found.",
+    "notes": "The review maps the exact token to its foreign issuer and does not establish U.S. distribution, official GENIUS approval/application or a registered foreign-issuer exception. Agant's current company-page disclosure identifies FCA cryptoasset registration under the Money Laundering Regulations 2017, FRN 1037671, and explicitly excludes GBPA services from FSCS and FOS coverage. This is an issuer-disclosed AML registration, not evidence of prudential stablecoin authorization; the linked FCA register page returned a client-rendered loading shell in this review. Foreign licensing and reserve disclosures are not substituted for U.S. authorization. A complete U.S. negative-evidence census was not performed; authorization is unknown, not no-public-authorization-found.",
     "references": [
       {
         "label": "Agant GBPA token design",
@@ -36,6 +36,12 @@
         "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
         "sourceKind": "regulator-directory",
         "accessedAt": "2026-10-02"
+      },
+      {
+        "label": "Agant company-page regulatory footer: FCA FRN 1037671, MLR registration and FSCS/FOS exclusions",
+        "url": "https://www.agant.io/company/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-03"
       }
     ],
     "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",

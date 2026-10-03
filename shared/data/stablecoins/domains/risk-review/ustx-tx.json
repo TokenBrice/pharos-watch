@@ -12,8 +12,8 @@
         "url": "https://www.linkedin.com/feed/update/urn:li:ugcPost:7508604753505964033/"
       }
     ],
-    "evidence": "Brale explicitly supports denylist/freeze/clawback for token programs. USTX-specific enabled implementation is not yet disclosed; capability expectation only.",
+    "evidence": "Brale explicitly supports denylist/freeze/clawback for token programs. Its security page reports multi-party issuer-key control and threshold signing, SOC 2 Type II, annual AML/BSA audits and annual penetration testing. These are issuer-reported program-level controls, not a retrieved USTX-specific audit. USTX-specific enabled implementation, role holders and signing threshold are not disclosed; capability expectation only.",
     "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "reviewedAt": "2026-10-03"
   }
 }

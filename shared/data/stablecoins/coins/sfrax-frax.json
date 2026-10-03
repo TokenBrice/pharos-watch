@@ -20,7 +20,7 @@
     "disposition": "resolved",
     "reviewedAt": "2026-10-02",
     "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "rationale": "The exact Ethereum deployment 0xa663b02cf0a4b149d2ad41910cb81e23e1c41c32 is the fixed StakedFrax ERC-4626 implementation over legacy FRAX at 0x853d955acef822db058eb8505911ed77f175b99e. The holder has an operational pro-rata FRAX claim plus linear protocol-funded rewards, not direct title to Frax reserve assets. Local custody and reward accounting require a protocol-position review distinct from the parent.",
+    "rationale": "The exact Ethereum deployment 0xa663b02cf0a4b149d2ad41910cb81e23e1c41c32 is the fixed StakedFrax ERC-4626 implementation over legacy FRAX at 0x853d955acef822db058eb8505911ed77f175b99e. The holder has an operational pro-rata FRAX claim plus linear protocol-funded rewards, not direct title to Frax reserve assets. Local custody and reward accounting require a protocol-position review distinct from the parent. Exact implementation creation is pinned by transaction 0xecd4ab27bc3b4c300b11405fc6a156ee316ad3f4c24f63130cbcbc49ae6bef55, block 18378085, timestamp 2023-10-18T15:19:11+00:00, independently joined from Blockscout to RPC receipt and block timestamp on2026-10-03. This is the implementation launch, not issuer founding or parent-token launch.",
     "sources": [
       {
         "label": "Frax sFRAX staking and redemption documentation",
@@ -37,6 +37,10 @@
       {
         "label": "Pinned Frax reward accounting implementation",
         "url": "https://raw.githubusercontent.com/FraxFinance/staked-frax-erc4626/9e42ee6b39fb1c08c6dc3607707b8b190f2de58c/src/contracts/LinearRewardsErc4626.sol"
+      },
+      {
+        "label": "Exact implementation creation transaction",
+        "url": "https://eth.blockscout.com/tx/0xecd4ab27bc3b4c300b11405fc6a156ee316ad3f4c24f63130cbcbc49ae6bef55"
       }
     ]
   },
@@ -58,8 +62,9 @@
       "decimals": 18
     }
   ],
-  "custodyModel": "onchain",
+  "custodyModel": "unknown",
   "governanceQuality": "wrapper",
+  "implementationLaunchDate": "2023-10-18",
   "yieldConfig": {
     "yieldSource": "Frax protocol-funded weekly FRAX rewards",
     "yieldType": "nav-appreciation"

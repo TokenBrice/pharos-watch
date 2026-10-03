@@ -45,10 +45,14 @@
         }
       ]
     },
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Refine05 primary-source and pinned-RPC review",
     "confidence": "verified",
     "sources": [
+      {
+        "label": "USCC Chainlink NAV transport 0xaffd8f5578e8590665de561bde9e7badb99300d9, answer 11772765 at 2026-10-02T13:10:47Z; read at Ethereum block 26110192",
+        "url": "https://etherscan.io/address/0xaffd8f5578e8590665de561bde9e7badb99300d9"
+      },
       {
         "label": "USCC fund, service providers and October 1 holdings",
         "url": "https://superstate.com/assets/uscc"

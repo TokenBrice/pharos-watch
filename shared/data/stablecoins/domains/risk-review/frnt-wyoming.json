@@ -28,6 +28,37 @@
     "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
     "reviewedAt": "2026-10-02"
   },
+  "oracleRisk": {
+    "tier": "oracleless",
+    "summary": "FRNT is a fixed USD-par issuer claim. Native ERC20F issuance accepts a nominal quantity under MINTER_ROLE rather than computing NAV, collateral health or a borrower liquidation price. Reserve disclosure and the announced Chainlink PoR integration do not prove a live price-sensitive mint gate.",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Pharos refinement 2026-10-03 (Refine01)",
+      "rationale": "Commission reserve/redemption rules establish fixed-par fiat redemption. The verified ERC20F mint function checks MINTER_ROLE and recipient access, without a price feed, collateral valuation, holder NAV or borrower liquidation engine. Trust asset valuation remains Backing evidence, not a holder conversion oracle.",
+      "sources": [{"label": "Commission reserve and fixed-par redemption rules", "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"}, {"label": "Frontier native issuance source", "url": "https://raw.githubusercontent.com/wyostable/frontier-stable-token/main/contracts/fireblocks/ERC20F.sol"}]
+    },
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Pharos refinement 2026-10-03 (Refine01)",
+    "confidence": "verified",
+    "sources": [{"label": "Commission fixed-par claim rules", "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"}, {"label": "Exact deployed ERC20F implementation", "url": "https://etherscan.io/address/0x87b589879ab3e22de54c980396bd944ac2b5dc6c#code"}],
+    "paths": [{
+      "id": "frnt-ethereum-par",
+      "chain": "ethereum",
+      "address": "0x5e817f2abccb9095585d26c2a3ce234a440574fc",
+      "pricingAuthority": "none",
+      "applicability": {
+        "disposition": "not-applicable",
+        "reviewedAt": "2026-10-03",
+        "reviewer": "Pharos refinement 2026-10-03 (Refine01)",
+        "confidence": "verified",
+        "rationale": "The reviewed Ethereum native mint accepts a nominal token quantity under MINTER_ROLE and recipient-access checks, with fixed USD-par holder redemption and no borrower, NAV or collateral price branch.",
+        "sources": [{"label": "Exact deployed issuance implementation", "url": "https://etherscan.io/address/0x87b589879ab3e22de54c980396bd944ac2b5dc6c#code"}, {"label": "Commission fixed-par redemption rules", "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"}]
+      }
+    }]
+  },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "FRNT has eight native issuer deployment liabilities against one trust book. Current Commission technology materials designate Chainlink CCIP for cross-chain transfers, replacing the historical LayerZero rail. Current transfer-pool roles, limits and governance are not closed; Hedera transfer-rail participation is unresolved, despite a verified native deployment.",
@@ -334,6 +365,71 @@
         "evidence": "Pool owner() returns this Commission-native role administrator at Ethereum block 26107704. Verified TokenPool exposes owner-controlled applyChainUpdates, remote-pool updates, router changes and rate-limit administration. This shared controller's transfer-rail capabilities are authored only here; native role administration remains in Mint Authority. No timelock or signing-independence credit is established."
       },
       {
+        "id": "frnt-avalanche-ccip-pool",
+        "label": "FRNT Avalanche transfer pool",
+        "routeRefs": ["avalanche:0x5e817f2abccb9095585d26c2a3ce234a440574fc"],
+        "capabilities": ["bridge-mint", "bridge-burn"],
+        "controllerChain": "avalanche",
+        "controllerAddress": "0x4a3e3ed52b296988d1e4f1ceec020e0d751c567c",
+        "authorityType": "contract",
+        "observedAt": "2026-10-03",
+        "observedBlock": 96655718,
+        "sources": [{"label": "Exact Avalanche transfer-pool deployment", "url": "https://snowscan.xyz/address/0x4a3e3ed52b296988d1e4f1ceec020e0d751c567c"}],
+        "evidence": "Full token role-event census and pinned hasRole identify this contract as a MINTER_ROLE and BURNER_ROLE holder. getToken() returns the authored FRNT token; owner() is Commission admin 0x5e3372f9a1c04e789ef86df9ec35f87e000bb15b. Remote pool inventory, DON/RMN validation and configured limits remain unreviewed."
+      },
+      {
+        "id": "frnt-base-ccip-pool",
+        "label": "FRNT Base transfer pool",
+        "routeRefs": ["base:0x5e817f2abccb9095585d26c2a3ce234a440574fc"],
+        "capabilities": ["bridge-mint", "bridge-burn"],
+        "controllerChain": "base",
+        "controllerAddress": "0x792408ecd66c3db361c0fbdd3358846735ce966d",
+        "authorityType": "contract",
+        "observedAt": "2026-10-03",
+        "observedBlock": 52110947,
+        "sources": [{"label": "Exact Base transfer-pool deployment", "url": "https://basescan.org/address/0x792408ecd66c3db361c0fbdd3358846735ce966d"}],
+        "evidence": "Full token role-event census and pinned hasRole identify this contract as a MINTER_ROLE and BURNER_ROLE holder. getToken() returns the authored FRNT token; owner() is Commission admin 0x5e3372f9a1c04e789ef86df9ec35f87e000bb15b. Remote pool inventory, DON/RMN validation and configured limits remain unreviewed."
+      },
+      {
+        "id": "frnt-polygon-ccip-pool",
+        "label": "FRNT Polygon transfer pool",
+        "routeRefs": ["polygon:0x5e817f2abccb9095585d26c2a3ce234a440574fc"],
+        "capabilities": ["bridge-mint", "bridge-burn"],
+        "controllerChain": "polygon",
+        "controllerAddress": "0x0e861b4e950783b15168c6689eb1051242de876e",
+        "authorityType": "contract",
+        "observedAt": "2026-10-03",
+        "observedBlock": 94870735,
+        "sources": [{"label": "Exact Polygon transfer-pool deployment", "url": "https://polygonscan.com/address/0x0e861b4e950783b15168c6689eb1051242de876e"}],
+        "evidence": "Full token role-event census and pinned hasRole identify this contract as a MINTER_ROLE and BURNER_ROLE holder. getToken() returns the authored FRNT token; owner() is Commission admin 0x5e3372f9a1c04e789ef86df9ec35f87e000bb15b. Remote pool inventory, DON/RMN validation and configured limits remain unreviewed."
+      },
+      {
+        "id": "frnt-arbitrum-ccip-pool",
+        "label": "FRNT Arbitrum transfer pool",
+        "routeRefs": ["arbitrum:0x5e817f2abccb9095585d26c2a3ce234a440574fc"],
+        "capabilities": ["bridge-mint", "bridge-burn"],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0xd071062d0b99b78c7ce6d036c7c79aa2690ca9a7",
+        "authorityType": "contract",
+        "observedAt": "2026-10-03",
+        "observedBlock": 511231213,
+        "sources": [{"label": "Exact Arbitrum transfer-pool deployment", "url": "https://arbiscan.io/address/0xd071062d0b99b78c7ce6d036c7c79aa2690ca9a7"}],
+        "evidence": "Full token role-event census and pinned hasRole identify this contract as a MINTER_ROLE and BURNER_ROLE holder. getToken() returns the authored FRNT token; owner() is Commission admin 0x5e3372f9a1c04e789ef86df9ec35f87e000bb15b. Remote pool inventory, DON/RMN validation and configured limits remain unreviewed."
+      },
+      {
+        "id": "frnt-optimism-ccip-pool",
+        "label": "FRNT Optimism transfer pool",
+        "routeRefs": ["optimism:0x5e817f2abccb9095585d26c2a3ce234a440574fc"],
+        "capabilities": ["bridge-mint", "bridge-burn"],
+        "controllerChain": "optimism",
+        "controllerAddress": "0xeaa7e1f805747ae29d5618b568d1b044a8b37a01",
+        "authorityType": "contract",
+        "observedAt": "2026-10-03",
+        "observedBlock": 157706232,
+        "sources": [{"label": "Exact Optimism transfer-pool deployment", "url": "https://optimistic.etherscan.io/address/0xeaa7e1f805747ae29d5618b568d1b044a8b37a01"}],
+        "evidence": "Full token role-event census and pinned hasRole identify this contract as a MINTER_ROLE and BURNER_ROLE holder. getToken() returns the authored FRNT token; owner() is Commission admin 0x5e3372f9a1c04e789ef86df9ec35f87e000bb15b. Remote pool inventory, DON/RMN validation and configured limits remain unreviewed."
+      },
+      {
         "id": "frnt-current-ccip-transfer-rail",
         "label": "Commission-designated CCIP cross-chain transfer rail",
         "routeRefs": [
@@ -357,8 +453,8 @@
           "messaging:chainlink-ccip:frnt"
         ],
         "routeChecks": {
-          "onchainAmountBounds": "Native issuer mint remains available separately. Full current CCIP pool conservation and minter-role inventory are not verified.",
-          "trustedPeerOrRemote": "Ethereum BurnMintTokenPool 0xf077771c2a09ab77678e3945b07db8586d205340 and its owner are pinned separately; complete live remote-token/pool inventory and other-chain administrators remain unresolved.",
+          "onchainAmountBounds": "Full native token role-event inventories on six EVM chains identify issuer and chain-local pool mint paths. Native issuer mint remains independently available; full CCIP remote-lane conservation remains unreviewed.",
+          "trustedPeerOrRemote": "Exact Ethereum, Avalanche, Base, Polygon, Arbitrum and Optimism pool contracts and common owner are pinned separately. Complete live remote-token/pool inventory, Solana and Hedera transfer authority remain unresolved.",
           "rateLimits": "Current pool capacities, refill rates and authority to raise limits are not established.",
           "signingModel": "Commission names CCIP; no exact live DON/RMN quorum or independence is asserted.",
           "pausersAdminsUpgraders": "Pool/admin/upgrade closure is missing; historical LayerZero authority assumptions are not inherited."
@@ -370,7 +466,7 @@
             "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
           }
         ],
-        "evidence": "Current Commission technology disclosure names Chainlink CCIP. This records the actual designated transfer subsystem and known capabilities conservatively without asserting exact pool deployment or protections. The seven original native issuance lanes are the bounded reviewed route inventory; Hedera native issuance is verified, but its current messaging/transfer coverage is not."
+        "evidence": "Current Commission technology disclosure names Chainlink CCIP. Six EVM local pool identities, token bindings, mint/burn memberships and common Commission admin owner were corroborated at pinned October 3 blocks. This does not establish the current remote-pool inventory, DON/RMN quorum, configured limits, Solana bridge controller or Hedera messaging coverage. No historical LayerZero threshold is inherited."
       }
     ]
   }

@@ -1,5 +1,6 @@
 {
   "id": "sreusd-resupply",
+  "launchDate": "2025-08-20",
   "name": "Resupply Savings reUSD",
   "symbol": "sreUSD",
   "oneLiner": "sreUSD is Resupply's REUSD savings share, accruing protocol revenue and redeemable for REUSD without a local cooldown or penalty fee.",

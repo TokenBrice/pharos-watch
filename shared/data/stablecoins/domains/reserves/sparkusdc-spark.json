@@ -2,6 +2,7 @@
   "id": "sparkusdc-spark",
   "reserves": [
     {
+      "sourceKey": "erc4626-single-asset:base:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
       "name": "Idle Base USDC in Spark Morpho vault",
       "pct": 1.4819553725954864e-05,
       "risk": "low",
@@ -16,7 +17,11 @@
       "liquidityHorizon": "immediate"
     },
     {
+      "sourceKey": "erc4626-single-asset:base:0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a:deployed",
       "name": "Morpho USDC receivable in cbBTC-collateralized market",
+      "coinId": "usdc-circle",
+      "depType": "wrapper",
+      "blacklistable": true,
       "pct": 99.99998518044627,
       "risk": "high",
       "assetClass": "protocol-position",
@@ -57,16 +62,7 @@
     "compositionAsOf": "2026-10-02",
     "scope": "full-composition",
     "knownUnknownExposure": "No unresolved composition-link dispositions remain within the immediate position accounting denominator. This does not establish stressed realization, enforceable priority or independently reconciled ultimate backing; those protections remain unproven. Underlying issuer and protocol risk remains serial, and whole-book custody uncertainty is recorded separately in custodyProfile.",
-    "knownUnknownExposurePct": 0,
-    "nonLinkDispositions": [
-      {
-        "reserveIndex": 1,
-        "reserveName": "Morpho USDC receivable in cbBTC-collateralized market",
-        "pct": 99.99998518044627,
-        "disposition": "not-applicable",
-        "rationale": "This is a lender receivable from a borrower market, not directly owned stablecoin collateral. No collateral-token dependency weight is inferred from loan notional."
-      }
-    ]
+    "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
     "providers": [

@@ -55,6 +55,10 @@
     {
       "label": "UBS Ethereum uMINT launch",
       "url": "https://www.ubs.com/global/en/media/display-page-ndp/en-20241101-first-tokenized-investment-fund.html"
+    },
+    {
+      "label": "Native uMINT standalone contract creation, block 21091537 (2024-11-01)",
+      "url": "https://etherscan.io/tx/0x21e749199e5f709d4a201fb16a16e16c473118d25d5fc1096288a33f21f6c554"
     }
   ],
   "jurisdiction": {
@@ -74,6 +78,7 @@
     "yieldType": "nav-appreciation"
   },
   "launchDate": "2024-11-01",
+  "implementationLaunchDate": "2024-11-01",
   "notices": [
     {
       "type": "info",

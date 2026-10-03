@@ -26,7 +26,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/mechanism-review-overlays-v1.json",
-      "sha256": "37a10d6c75fc96b6cc8cd7e3aa201ae71f8f9e0b0d2d0d07937179a4a1fc38ec"
+      "sha256": "af283e580351cc501967e9cec6db80ddcc378e372b1cc8fedd0f761909037362"
     },
     {
       "path": "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
@@ -46,7 +46,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/wrapper-allocation-reviews-v1.json",
-      "sha256": "5cbc4405aeff55b46f5f767d5856ab7c1ff51848b604e700adfc5cb9775763ad"
+      "sha256": "64d8aea886dfcdbfa946ec0271f816586e439b72ebc6720ff530d5f22bee03c4"
     },
     {
       "path": "shared/lib/chains/index.ts",
@@ -102,7 +102,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/methodology-versions/constants.ts",
-      "sha256": "008a2fb1e1c9d7b566298b443451e8810ab3e9b08fd945b3754e38457c00d60e"
+      "sha256": "a9c862979f76303cb2ab1b51298a51ba3370173cb2ca1d735a6da5f9e8d642b4"
     },
     {
       "path": "shared/lib/methodology-versions/current-version.json",
@@ -134,7 +134,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/collateral-redeem.ts",
-      "sha256": "fc3727d70708f2bb7dc7788558d98393c3c9f0ec0133fbb3f35c5dcb067efe07"
+      "sha256": "9be40ded9f6f6371191e3245b8062ec5fdbf68295a776410e7327b095327c549"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/factory.ts",
@@ -182,7 +182,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/policies.ts",
-      "sha256": "edb00912ab6c30331365166040ebeb40a5fce63ef40655f32645d6238b2568a5"
+      "sha256": "5945a958285707052c311febc10bc0b3e748851d30177198d7978ad4d08f3799"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/psm-and-basket.ts",
@@ -190,7 +190,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/queue-redeem.ts",
-      "sha256": "9275eff6e879f3a3c02ea284e93f8bfdda15b211a0a919f682943af554266f93"
+      "sha256": "332f05e9dcdc2889d4a9967d91beb281b6a04ee4c2f3798d062375de22b315b0"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/review-dates.ts",
@@ -843,7 +843,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-03-block-26110811-shock-coverage.json.gz"
     }
   ],
-  "digest": "efd421e47e2ea672048a0b676041ff1ec587d06d81eec48ccd823cd5374b6baf"
+  "digest": "a205ff7c05538b36a3901f63c95722ca64ee7083348b5495636af307846d044c"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

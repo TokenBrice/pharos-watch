@@ -1,4 +1,14 @@
 {
+  "liveReservesConfig": {
+    "adapter": "accountable",
+    "version": 1,
+    "semantics": "protocol-reserve",
+    "breakerScope": "xgld-unitas",
+    "scoring": { "maxSourceAgeSec": 259200 },
+    "display": { "url": "https://accountable.unitas.so/?type=xgld", "label": "Unitas Accountable location observations" },
+    "inputs": { "primary": { "kind": "http-json", "url": "https://api-accountable.unitas.so/v1/dashboard?type=xgld" } },
+    "params": { "bucket": "reserves_split", "riskMap": {} }
+  },
   "id": "xgld-unitas",
   "name": "Unitas Gold",
   "symbol": "xGLD",
@@ -26,6 +36,7 @@
   ],
   "mechanismArchetype": "protocol-position",
   "custodyModel": "unknown",
+  "implementationLaunchDate": "2026-05-19",
   "oneLiner": "xGLD is Unitas’s XAUt-backed gold strategy position, earning NAV growth from borrowed USDT strategies with whitelisted redemption into XAUt.",
   "variantOf": "xaut-tether",
   "variantKind": "strategy-vault",
@@ -97,6 +108,10 @@
     {
       "label": "XGLD documentation",
       "url": "https://docs.unitas.so/overview/xgld.md"
+    },
+    {
+      "label": "BNB native deployment (block 99201716)",
+      "url": "https://bscscan.com/tx/0x566485655aa376b658b3a4e0dc680522fcbc579896ee583058c43cb3066446c0"
     },
     {
       "label": "Reserve dashboard",

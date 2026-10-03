@@ -1,5 +1,7 @@
 {
   "id": "susdat-saturn",
+  "launchDate": "2026-03-10",
+  "implementationLaunchDate": "2026-09-30",
   "name": "Saturn sUSDat",
   "symbol": "sUSDat",
   "oneLiner": "sUSDat is Saturn's USDat-denominated credit vault, backed mainly by STRCon exposure to Strategy preferred shares and exited through a withdrawal queue.",

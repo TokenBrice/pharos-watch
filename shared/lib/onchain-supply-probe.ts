@@ -106,6 +106,7 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "ethereum" },
     { chain: "arbitrum" },
     supplyProbeChain("monad"),
+    { chain: "base", allowZeroSupply: true },
   ],
   // Sygnum's native fund-unit tokens sum; Arbitrum is a live zero-supply leg.
   // Use the reviewed zkSync supply profile, not an inferred chain RPC.

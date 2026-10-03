@@ -61,12 +61,16 @@
       {
         "label": "April 2026 settlement and fee update",
         "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/announcements/stbt-custodian-and-conversion-fee-reduction-and-settlement-optimization.md"
+      },
+      {
+        "label": "Verified STBTv2 getLatestReserve issuer-feed implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe7efc5060b6ad57b68f5911eca6c5cd1952da152"
       }
     ],
     "rationale": "Issuer dashboard observed on 2026-10-02 attributes 95.00% of STBT to Treasury bills, 2.93% to USTB and 2.07% to BUIDL. These published liability-allocation weights total 100 and are not normalized from the separately shown USD 23,791,487.76 reserve NAV. Cash shown as surplus is not assigned a fabricated holder weight.",
     "compositionBasis": "Undated rounded issuer dashboard composition-of-STBT column, observed 2026-10-02",
     "scope": "full-composition",
-    "knownUnknownExposure": "Dashboard lacks an as-of timestamp and independently signed reserve-to-liability reconciliation. Native supply at block 26107703 is 23,595,622.754750904 units. Custodian/broker identities, encumbrances and current third-party token deployment identities are undisclosed. Legal terms permit affiliate borrowing/lending and give token holders no direct or indirect asset title.",
+    "knownUnknownExposure": "At Ethereum block 26110197 on October 3, 2026, getLatestReserve() returned raw 23791487760000000000000000 (18 decimals), USD 23,791,487.76, matching the observed dashboard NAV. This pins the getter state, not the reserve composition's valuation time: the getter returns no timestamp and the dashboard remains undated. No independently signed reserve-to-liability reconciliation is supplied. Custodian/broker identities, encumbrances and current third-party token deployment identities are undisclosed. Terms permit affiliate reuse and provide no holder asset title.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {

@@ -31,7 +31,7 @@
         "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x7616b08676117e1aab542e53fe3f7b12f7596d37"
       }
     ],
-    "rationale": "The 100% row identifies the disclosed one-token/one-fund-unit claim, not a retrieved current portfolio. Current constituent weights, fiduciary unit-to-token reconciliation and complete deposit/repo/subcustody allocations remain unknown. Historical WAM and maximum maturity are mandate context only.",
+    "rationale": "The 100% row identifies the disclosed one-token/one-fund-unit claim, not a retrieved current portfolio. The issuer's March 20, 2025 application reports underlying fund ratings Aaa-mf (Moody's) and AAAm (S&P) as of December 2024, same-day fund settlement and multiple cutoffs; these are dated mandate/credit context, not current FIUSD assurance or executable capacity. Current constituent weights, fiduciary unit-to-token reconciliation and complete deposit/repo/subcustody allocations remain unknown. Historical WAM and maximum maturity are mandate context only.",
     "compositionBasis": "Whole holder-instrument claim; no fabricated normalization of underlying positions",
     "scope": "full-composition",
     "knownUnknownExposure": "The 100% row identifies the disclosed one-token/one-fund-unit claim, not a retrieved current portfolio. Current constituent weights, fiduciary unit-to-token reconciliation and complete deposit/repo/subcustody allocations remain unknown. Historical WAM and maximum maturity are mandate context only.",

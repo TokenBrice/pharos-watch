@@ -28,6 +28,37 @@
     "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
     "reviewedAt": "2026-10-02"
   },
+  "oracleRisk": {
+    "tier": "oracleless",
+    "summary": "USDSM native issuance and redemption exchange USD at fixed par rather than a variable NAV or collateral-liquidation price. Native mint is role-gated and not price-oracle-gated; administrative mint authority and financial reserve assurance remain separate risks.",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Pharos refinement 2026-10-03 (Refine01)",
+      "rationale": "Terms sections 4, 8 and 9 define fixed-par USDSM claims without yield or NAV appreciation. The verified native USDSM.mint function checks MINTER_ROLE and request-ID reuse, with no external-price read, borrower debt position or collateral liquidation.",
+      "sources": [{"label": "Stable Mint fixed-par issuance and redemption terms", "url": "https://stablemint.io/legal/terms-conditions/"}, {"label": "Exact Etherlink native implementation", "url": "https://explorer.etherlink.com/api/v2/smart-contracts/0x7089856110b005a40e8d16da1da31313b0f60561"}]
+    },
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Pharos refinement 2026-10-03 (Refine01)",
+    "confidence": "verified",
+    "sources": [{"label": "Stable Mint fixed-par terms", "url": "https://stablemint.io/legal/terms-conditions/"}, {"label": "Verified native implementation", "url": "https://explorer.etherlink.com/api/v2/smart-contracts/0x7089856110b005a40e8d16da1da31313b0f60561"}],
+    "paths": [{
+      "id": "usdsm-native-par",
+      "chain": "etherlink",
+      "address": "0x6bde51212203ae5d592cc5180da2abbd41c922de",
+      "pricingAuthority": "none",
+      "applicability": {
+        "disposition": "not-applicable",
+        "reviewedAt": "2026-10-03",
+        "reviewer": "Pharos refinement 2026-10-03 (Refine01)",
+        "confidence": "verified",
+        "rationale": "The canonical token mints a requested nominal quantity under MINTER_ROLE, while the holder claim is fixed USD par. No variable conversion or borrower/liquidation branch exists in the verified native implementation.",
+        "sources": [{"label": "Exact native mint and transfer implementation", "url": "https://explorer.etherlink.com/api/v2/smart-contracts/0x7089856110b005a40e8d16da1da31313b0f60561"}, {"label": "Fixed-par issuer terms", "url": "https://stablemint.io/legal/terms-conditions/"}]
+      }
+    }]
+  },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "Etherlink supplies the native issuer liability; current issuer documentation identifies Ethereum, Base and Arbitrum as LayerZero V2 OFT interoperable deployments. Bridge token mint/burn, peer/DVN configuration and satellite upgrade/admin powers remain separately chargeable. Full live adapter inventory, validation thresholds and rate-limit governance are unresolved.",
@@ -179,6 +210,19 @@
     ],
     "controls": [
       {
+        "id": "usdsm-etherlink-minter-burner",
+        "label": "USDSM Etherlink bridge-only mint/burn middleware",
+        "routeRefs": ["etherlink:0x6bde51212203ae5d592cc5180da2abbd41c922de"],
+        "capabilities": ["bridge-mint", "bridge-burn"],
+        "controllerChain": "etherlink",
+        "controllerAddress": "0x28da1dfaf5dca1af226a2e56b834e8ec3c495c5a",
+        "authorityType": "contract",
+        "observedAt": "2026-10-03",
+        "observedBlock": 54814410,
+        "sources": [{"label": "Verified USDSMMinterBurner deployed source", "url": "https://explorer.etherlink.com/api/v2/smart-contracts/0x28da1dfaf5dca1af226a2e56b834e8ec3c495c5a"}],
+        "evidence": "Full native role history and pinned hasRole identify this as active MINTER_ROLE/BURNER_ROLE. Verified immutable-token middleware only accepts mint/burn from its one-time-configurable adapter; pinned adapter() returns 0xe7f117f87fa650350c3e363ca2c644951d273d1f. Full adapter peer/DVN/upgrade closure is not established. This authenticated transfer capability is reviewed under Bridge Risk, not duplicated as native issuer minting."
+      },
+      {
         "id": "usdsm-ethereum-direct-representation-minter",
         "label": "USDSM Ethereum direct representation minter",
         "routeRefs": ["ethereum:0x399b29975cbe313c56269cd5097f5ae097fa2741"],
@@ -226,7 +270,7 @@
         ],
         "routeChecks": {
           "onchainAmountBounds": "Issuer describes OFT burn-and-mint transfers; full adapter conservation checks and any mint bypass require further review.",
-          "trustedPeerOrRemote": "Live adapter addresses, all peer values and DVN configuration are not closed.",
+          "trustedPeerOrRemote": "Etherlink bridge-only middleware 0x28da1dfaf5dca1af226a2e56b834e8ec3c495c5a has one-time-set adapter 0xe7f117f87fa650350c3e363ca2c644951d273d1f. Other adapter addresses, complete peer values and DVN configuration remain unclosed.",
           "rateLimits": "Current chain-by-chain rate limits and authority to raise them are undisclosed.",
           "signingModel": "No published DVN threshold or signer independence was verified.",
           "pausersAdminsUpgraders": "Known satellite token administrators and proxy owners are separately identified below. No complete messaging-controller closure is claimed."

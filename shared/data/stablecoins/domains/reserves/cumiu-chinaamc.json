@@ -66,6 +66,10 @@
       {
         "label": "ChinaAMC August 2026 factsheet",
         "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/Factsheet_USDDTMMF_20260831_EN_1789617629732.pdf"
+      },
+      {
+        "label": "Issuer top-ten holdings as of October 2, 2026",
+        "url": "https://www.chinaamc.com.hk/detail?fundId=USDDMMF&fundName=ChinaAMC-USD-Digital-Money-Market-Fund-%28Tokenized-Unlisted-Class%29&lan=EN"
       }
     ],
     "rationale": "Weights use the complete USD sub-fund June 30 unaudited asset denominator of USD 603,917,339: financial assets 273,627,114, time deposits 291,695,739, cash/bank 36,386,722, other receivables/prepayments 2,207,764. Rounded percentages total 100. These shared sub-fund assets back Class I alongside other classes; they are not CUMIU token supply or current NAV.",
@@ -113,9 +117,41 @@
           "unitBasis": "USD gross assets of ChinaAMC USD sub-fund, all share classes",
           "sourceSha256": "405593172238852d552b317bb365c8bc1e044fb2efc46ffb8b0e2e74444ddaf9"
         }
+      },
+      {
+        "scopeId": "cumiu-usd-subfund-october-2026-top-ten",
+        "liabilityBookKey": "chinaamc-usd-subfund-all-share-classes",
+        "deploymentRefs": ["ethereum:0x85d38585c3ac08268f598282a84b7c0ddfc0d04f"],
+        "reviewer": "Refine04 primary-source review",
+        "confidence": "verified",
+        "sources": [{
+          "url": "https://www.chinaamc.com.hk/detail?fundId=USDDMMF&fundName=ChinaAMC-USD-Digital-Money-Market-Fund-%28Tokenized-Unlisted-Class%29&lan=EN",
+          "accessedAtSec": 1791011581,
+          "sha256": "df99652d93088a6aab77a651f2a445e40e5833b370e7c765e7e85b5f03f93982"
+        }],
+        "reviewedAtSec": 1791011581,
+        "expiresAtSec": 1791616381,
+        "sourceGeneration": "chinaamc-rendered-top-ten:df99652d93088a6aab77a651f2a445e40e5833b370e7c765e7e85b5f03f93982",
+        "sourceSha256": "df99652d93088a6aab77a651f2a445e40e5833b370e7c765e7e85b5f03f93982",
+        "completeness": "partial",
+        "obligations": [
+          {
+            "key": "published-top-ten",
+            "disposition": "included",
+            "reason": "Issuer table dated October 2, 2026 reports Credit Agricole CIB 23.85%, Standard Chartered HK bank cash 16.86%, UOB HK 8.71%, United Overseas Bank 5.33%, Huatai International Finance 5.29%, Bocom Leasing 3.51%, CSCIF HK 2.69%, ICBC Singapore 2.36%, China Cinda 2.16% and SMBC HK term deposit 1.79%. Published total is 72.54%; individually rounded rows sum to 72.55%. No normalization or inferred instrument identity is applied."
+          },
+          {
+            "key": "unpublished-portfolio-tail",
+            "disposition": "unresolved",
+            "reason": "The published top-ten total leaves 27.46% unidentified. This partial portfolio observation does not replace the full June balance-sheet composition or establish current Class I liability reconciliation. SHA-256 pins the rendered UTF-8 body text read, with a seven-day observation budget."
+          }
+        ],
+        "kind": "portfolio-observation",
+        "observedAtSec": 1790899200,
+        "wholeAssetDenominator": null
       }
     ],
-    "knownUnknownExposure": "Current weights are not established by this historical report. The broad financial-assets slice mixes instruments; receivables lack current recoverability evidence. August WAM is 50.85 days, not a maximum instrument tenor. No current complete token-to-fund liability reconciliation or exact distributor custody shares were retrieved.",
+    "knownUnknownExposure": "June category weights remain historical. The issuer's October 2 top-ten table covers a stated 72.54%, with 27.46% unidentified; named holdings include 16.86% bank cash and 23.85% Credit Agricole CIB exposure. This partial table does not provide a complete current category composition. August WAM 50.85 days is an average, not maximum tenor. Current complete Class I token-to-fund liability reconciliation and exact distributor custody shares remain unestablished.",
     "knownUnknownExposurePct": 45.6743,
     "nonLinkDispositions": [
       {

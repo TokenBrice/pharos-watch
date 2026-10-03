@@ -3,8 +3,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
-    "confidence": "manual-review",
-    "summary": "Universal issues USDU through configurable minter allowances; the masterMinter and the token/ProxyAdmin owner can authorize or replace issuance logic. Current key thresholds and minter caps are undisclosed.",
+    "confidence": "verified",
+    "summary": "At Ethereum block 26110183, USDU has two standing EOA minters with allowances of 500,000,000 and 469,238,483.27 USDU. An upgradeable MasterMinter controller contract manages these allowances; its owner and token/ProxyAdmin owner are the same EOA. Controller administration and immediate owner upgrades keep issuance economically unbounded; offchain key custody remains unverified.",
     "upgradeability": {
       "model": "transparent-proxy",
       "deploymentRefs": [
@@ -20,9 +20,10 @@
         "0x5316d447decb4f2d3d3d44cc95528c7336a33062"
       ],
       "canChangeMintLogic": true,
+      "delaySec": 0,
       "controlRef": "USDU token and ProxyAdmin owner",
-      "observedAt": "2026-10-02",
-      "observedBlock": 26107709,
+      "observedAt": "2026-10-03",
+      "observedBlock": 26110183,
       "sources": [
         {
           "label": "Exact-match USDU implementation source",
@@ -35,6 +36,10 @@
         {
           "label": "USDU mint and redemption whitepaper",
           "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf"
+        },
+        {
+          "label": "Verified token and MasterMinter ProxyAdmin source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5316d447decb4f2d3d3d44cc95528c7336a33062"
         }
       ]
     },
@@ -47,12 +52,12 @@
         ],
         "label": "USDU masterMinter",
         "role": "minter-admin",
-        "authorityType": "unknown",
+        "authorityType": "contract",
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
-        "modulesOrGuardsStatus": "unknown",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107709,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110183,
         "sources": [
           {
             "label": "Exact-match USDU implementation source",
@@ -65,9 +70,13 @@
           {
             "label": "USDU mint and redemption whitepaper",
             "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf"
+          },
+          {
+            "label": "Verified MasterMinter implementation and controller management source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe4972d660340cd915ae10b19064ca4854f7ca32f"
           }
         ],
-        "evidence": "Pinned masterMinter() returns this address. Exact-matched TokenV1 source exposes master-minter-only configureMinter and minting allowances; current minter enumeration, key custody and signer threshold are unresolved."
+        "evidence": "At block 26110183, token masterMinter() binds this transparent proxy; its implementation is 0xe4972d660340cd915ae10b19064ca4854f7ca32f and EIP-1967 admin is 0x5316d447decb4f2d3d3d44cc95528c7336a33062. getOwner() is 0x794e5b5a0a3375ff9dfaabd4e533c3adadc272c7; getControllerAdmin() is 0xbeffb4ae11b7066c8ffd45937ddba32ae2ab0cef; getMaxMinters()=6 and getMinterManager()=the USDU token. Full ControllerConfigured/ControllerRemoved history through this block identifies one active controller 0xc6739fc8f7758a5721cbe13f2dc2d0913b26298f. getMinters(address), not getMinters(), returns two addresses; both remain token isMinter=true. The verified controller can replace and increase allowances without a mandatory delay. Six is a per-controller minter-count parameter, not a token supply limit."
       },
       {
         "chain": "ethereum",
@@ -77,11 +86,13 @@
         ],
         "label": "USDU token and ProxyAdmin owner",
         "role": "proxy-admin",
-        "authorityType": "unknown",
-        "directMintAbility": "upgrade-only",
-        "modulesOrGuardsStatus": "unknown",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107709,
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110183,
         "sources": [
           {
             "label": "Exact-match USDU implementation source",
@@ -96,7 +107,63 @@
             "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf"
           }
         ],
-        "evidence": "Pinned getOwner() and ProxyAdmin.owner() return the same address; the live proxy implementation is 0x7df0b1f63e0a467b6aa95b4ed6d299dab9f73750. Authority key thresholds and upgrade delay are not proved."
+        "evidence": "At block 26110183, token getOwner(), MasterMinter getOwner() and their shared ProxyAdmin.owner() return this address; eth_getCode=0x. The token implementation is 0x7df0b1f63e0a467b6aa95b4ed6d299dab9f73750. Verified ProxyAdmin allows immediate owner-only upgrade and upgradeAndCall on both token and MasterMinter. Token owner can also replace masterMinter; MasterMinter owner can replace controllerAdmin and minterManager. An EOA is the observed onchain authority, not proof of independent MPC operators or an offchain hold period."
+      },
+      {
+        "label": "USDU MasterMinter controller administrator",
+        "chain": "ethereum",
+        "address": "0xbeffb4ae11b7066c8ffd45937ddba32ae2ab0cef",
+        "deploymentRefs": ["ethereum:0xe4ca6596d2c28014c6f89964f57838e0be9f369b"],
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110183,
+        "sources": [
+          {"label": "Verified MasterMinter ControllerAdmin and Controller source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe4972d660340cd915ae10b19064ca4854f7ca32f"},
+          {"label": "Ethereum pinned block 26110183", "url": "https://etherscan.io/block/26110183"}
+        ],
+        "evidence": "getControllerAdmin() returns this EOA, eth_getCode=0x and isController(address)=false. Verified configureController can activate a controller and assign a minter; setMaxNumberOfMinters changes the count parameter. The owner can replace this administrator. No enforced timelock is present in these functions."
+      },
+      {
+        "label": "USDU controller and first standing minter",
+        "chain": "ethereum",
+        "address": "0xc6739fc8f7758a5721cbe13f2dc2d0913b26298f",
+        "deploymentRefs": ["ethereum:0xe4ca6596d2c28014c6f89964f57838e0be9f369b"],
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110183,
+        "sources": [
+          {"label": "Verified MasterMinter controller source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe4972d660340cd915ae10b19064ca4854f7ca32f"},
+          {"label": "Ethereum pinned block 26110183", "url": "https://etherscan.io/block/26110183"}
+        ],
+        "evidence": "eth_getCode=0x; MasterMinter isController=true and token isMinter=true. getMinterAllowance=500000000000000 raw units (500,000,000 USDU). This controller is minterController for itself and for 0x934f15126f8749ec3d77f0e860ba2491900c317b. It can replace or increase both allowances, making the current numbers snapshots rather than irreversible supply bounds."
+      },
+      {
+        "label": "USDU second standing minter",
+        "chain": "ethereum",
+        "address": "0x934f15126f8749ec3d77f0e860ba2491900c317b",
+        "deploymentRefs": ["ethereum:0xe4ca6596d2c28014c6f89964f57838e0be9f369b"],
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110183,
+        "sources": [
+          {"label": "Verified MasterMinter controller source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe4972d660340cd915ae10b19064ca4854f7ca32f"},
+          {"label": "Ethereum pinned block 26110183", "url": "https://etherscan.io/block/26110183"}
+        ],
+        "evidence": "eth_getCode=0x and token isMinter=true. getMinterAllowance=469238483270000 raw units (469,238,483.27 USDU); minterController returns 0xc6739fc8f7758a5721cbe13f2dc2d0913b26298f. The controlling EOA, rather than this direct-minter permission, can replenish the allowance."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -127,15 +194,46 @@
         {
           "label": "USDU mint and redemption whitepaper",
           "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf"
+        },
+        {
+          "label": "Verified MasterMinter and current controller census",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe4972d660340cd915ae10b19064ca4854f7ca32f"
+        },
+        {
+          "label": "CertiK Aquanow USDU audit archive, delivered May 2, 2025",
+          "url": "https://v1.skynet.cdn.certik.com/projects/usdu"
         }
       ],
-      "evidence": "At Ethereum block 26107709 token and ProxyAdmin owner and masterMinter were re-read. Crowe monthly examinations reconcile independently bank-confirmed USD reserves to exact Ethereum token liabilities. ADGM FSRA register confirms active FSP250089 Issuing a Fiat-Referenced Token; Crowe identifies COBS19A.9 reserve-assurance requirements. These support periodic reconciliation and named prudential supervision, not a hard supply cap or proof of key custody.",
-      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-      "reviewedAt": "2026-10-02",
+      "evidence": "Ethereum block 26110183 closes token owner, shared ProxyAdmin owner, MasterMinter owner/controllerAdmin, one standing controller and two direct minters. Full token minter configuration/removal and master-minter change histories from creation through the pin returned two minter configurations, the initial MasterMinter change and no removals; MasterMinter controller history returned two configurations for the same controller and no removals. Current view calls confirm both minters and their replaceable allowances. Immediate owner upgrades remain adverse known facts. Crowe monthly examinations and active ADGM FSP250089 support periodic reserve reconciliation and prudential supervision, not a hard supply cap. The whitepaper cites a CertiK report dated May 6, 2025; CertiK's Aquanow USDU archive lists May 2 delivery. The 'universal-stable-digital-ultracoin' Skynet page is a different BNB-chain token, not contradictory audit evidence for Universal's Ethereum USDU. Exact current-deployment audit correspondence and independent MPC/operator custody remain unproved. Independent operators and key-custody arrangements for the owner, controller administrator and two minter EOAs are not established; the observed onchain accounts enforce no quorum or timelock and issuer MPC/hold-period claims remain unverified. The exact audited commit and complete CertiK report were not independently pinned. These key-custody and audit-provenance qualifications do not unset the independently verified current token/MasterMinter implementations and complete issuance/control census.",
+      "reviewer": "Pharos refinement Refine02 primary-source and RPC review",
+      "reviewedAt": "2026-10-03",
       "disposition": "scoreable",
-      "unresolvedQuestions": [
-        "Current authorized minter roster, issuance allowances and cap-change custody are not publicly pinned.",
-        "Owner/masterMinter signer thresholds, execution policy and upgrade timelock remain unresolved."
+      "unresolvedQuestions": [],
+      "scopedQuestions": [
+        {
+          "controlRef": "USDU token and ProxyAdmin owner",
+          "question": "Which independently verifiable human-independence, MPC/key-custody and signing-policy arrangements protect the identified token/MasterMinter/ProxyAdmin owner EOA? Issuer MPC and hold-period claims do not establish an enforced onchain quorum or delay.",
+          "reviewedAt": "2026-10-03", "reviewer": "Pharos refinement Refine02 primary-source and RPC review",
+          "sources": [{"label": "USDU issuer custody and execution whitepaper", "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf"}, {"label": "Verified current MasterMinter ownership", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe4972d660340cd915ae10b19064ca4854f7ca32f"}]
+        },
+        {
+          "controlRef": "USDU MasterMinter controller administrator",
+          "question": "Which independently verifiable human-independence, MPC/key-custody and signing-policy arrangements protect the identified controller-administrator EOA and its ability to activate minter controllers?",
+          "reviewedAt": "2026-10-03", "reviewer": "Pharos refinement Refine02 primary-source and RPC review",
+          "sources": [{"label": "USDU issuer custody and execution whitepaper", "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf"}, {"label": "Verified controller administration", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe4972d660340cd915ae10b19064ca4854f7ca32f"}]
+        },
+        {
+          "controlRef": "USDU controller and first standing minter",
+          "question": "Which independently verifiable human-independence, MPC/key-custody and signing-policy arrangements protect the identified first minter/controller EOA, including its authority to replace both minter allowances?",
+          "reviewedAt": "2026-10-03", "reviewer": "Pharos refinement Refine02 primary-source and RPC review",
+          "sources": [{"label": "USDU issuer custody and execution whitepaper", "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf"}, {"label": "Verified current minter controller", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe4972d660340cd915ae10b19064ca4854f7ca32f"}]
+        },
+        {
+          "controlRef": "USDU second standing minter",
+          "question": "Which independently verifiable human-independence, MPC/key-custody and signing-policy arrangements protect the identified second direct-minter EOA consuming its controller-authorized allowance?",
+          "reviewedAt": "2026-10-03", "reviewer": "Pharos refinement Refine02 primary-source and RPC review",
+          "sources": [{"label": "USDU issuer custody and execution whitepaper", "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf"}, {"label": "Verified current token minter mechanics", "url": "https://sourcify.dev/server/v2/contract/1/0x7df0b1f63e0a467b6aa95b4ed6d299dab9f73750?fields=all"}]
+        }
       ]
     }
   }

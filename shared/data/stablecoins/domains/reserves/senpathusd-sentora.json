@@ -48,6 +48,10 @@
       {
         "label": "Tempo TIP-20 restriction specification",
         "url": "https://docs.tempo.xyz/protocol/tip20/spec"
+      },
+      {
+        "label": "Sentora Terms of Use, June 2026, sections 4.3 and 21.4",
+        "url": "https://sentora.com/legal/terms-of-use"
       }
     ],
     "rationale": "At tempo block 42323768, asset() was 0x20c0000000000000000000000000000000000000, share decimals 18 and underlying decimals 6; totalAssets raw 38668628815373, totalSupply raw 19338159753529440843074671, idle raw 38165213421856, sole adapter market assets raw 503415393517, with an exact zero accounting difference. The only funded market lent pathUSD against cbBTC at 77% LLTV. The adapter position had zero borrowing and zero posted collateral. The single 100% slice records the verified denomination and position claim, not an invented allocation or underlying borrower-credit rating.",
@@ -68,13 +72,18 @@
         "name": "MorphoMarketV1AdapterV2 0x799cd096e5ebc436daecef85392b2ecf196dfbe6",
         "role": "other",
         "jurisdiction": "tempo"
+      },
+      {
+        "name": "Sentora Digital Holdings (BVI) Ltd, risk curator; issuer states it is not a custodian",
+        "role": "other",
+        "jurisdiction": "British Virgin Islands"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "permitted",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Sol refinement 2026-10-03 (Refine10)",
     "confidence": "verified",
     "sources": [
       {
@@ -100,8 +109,16 @@
       {
         "label": "Tempo TIP-20 restriction specification",
         "url": "https://docs.tempo.xyz/protocol/tip20/spec"
+      },
+      {
+        "label": "Sentora Terms of Use, June 2026, sections 4.3 and 21.4",
+        "url": "https://sentora.com/legal/terms-of-use"
+      },
+      {
+        "label": "Morpho Vault V2 and MarketV1AdapterV2 security audits; no financial assurance",
+        "url": "https://docs.morpho.org/get-started/resources/audits/"
       }
     ],
-    "uncertainty": "Immediate assets are held in on-chain vault and lender-position contracts; borrower collateral and upstream stablecoin reserve custody are separate exposures. No exact-share legal insolvency priority or whole-book off-chain collateral-custody safeguards were established. Lending reuse is explicit."
+    "uncertainty": "Immediate assets are held in on-chain vault and lender-position contracts; borrower collateral and upstream stablecoin reserve custody are separate exposures. No exact-share legal insolvency priority or whole-book off-chain collateral-custody safeguards were established. Lending reuse is explicit. June 2026 Sentora terms section 4.3 describes non-custodial vault configurations; section 21.4 specifies BVI governing law and arbitration. This is an issuer legal statement, not evidence of borrower collateral segregation or removal of observed curator powers."
   }
 }

@@ -622,11 +622,11 @@ describe("discovery native supply aggregates", () => {
     },
     {
       id: "pyusdx-moonpay",
-      contracts: ["ethereum", "arbitrum", "monad"].map((chain) => ({
+      contracts: ["ethereum", "arbitrum", "monad", "base"].map((chain) => ({
         chain, address: "0xebdb0942ce16386ab90718c7bd10c91cdb66b14d", decimals: 6,
       })),
-      supplies: [91_882_981_224_535n, 443_583_150_573n, 1_000_000n],
-      units: 92_326_565.375108,
+      supplies: [91_882_981_224_535n, 443_583_150_573n, 1_000_000n, 100_000n],
+      units: 92_326_565.475108,
     },
   ];
 

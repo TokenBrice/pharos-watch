@@ -216,7 +216,119 @@
             "url": "https://etherscan.io/address/0x9e396de3312d373b87f9bd8763fb48184b42aac0"
           }
         ],
-        "evidence": "Pinned block 26107702: getThreshold()=1, getOwners() contains sole signer 0x992592e073aa9b98daed79ee05c4af832e1d0abe, whose code is empty (EOA); no enabled modules and zero guard. This is single-key control, not an independent multi-signer quorum. Curator can configure allocation caps, fees and the send-assets gate. Fee and send-assets-gate actions have zero timelock; adding an adapter and increasing absolute caps have a three-day timelock. No arbitrary direct share mint is established."
+        "evidence": "Pinned block 26107702: getThreshold()=1, getOwners() contains sole signer 0x992592e073aa9b98daed79ee05c4af832e1d0abe, whose code is empty (EOA); no enabled modules and zero guard. This is single-key control, not an independent multi-signer quorum. Curator can configure allocation caps, fees and the send-assets gate. Fee and send-assets-gate actions have zero timelock; adding an adapter and increasing absolute caps have a three-day timelock. No arbitrary direct share mint is established. Source review distinguishes sendAssetsGate (deposits) from permanently abdicated receiveAssetsGate (withdrawals); no future gate-setting withdrawal power is claimed. At pinned block 26107702, full deployment-history role logs and current mapping reads establish allocator and sentinel authority. Allocator can allocate/deallocate within caps, change liquidityAdapter/data and maxRate without delay; this can affect future fee accrual and cash-exit routing but is not arbitrary share minting. Sentinel can deallocate, reduce caps and revoke pending changes.",
+        "timelockDelaySec": 0,
+        "capDescription": "addAdapter and increaseAbsoluteCap have 259200-second delay, but deposit-gate and management/performance fee setters have zero delay. A single blanket three-day delay does not cover curator economic authority."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xc4ba4e822c420452fe2bab93211208d3ccbd79d3",
+        "deploymentRefs": [
+          "ethereum:0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
+        ],
+        "label": "Sentora allocator 0xc4ba4e822c420452fe2bab93211208d3ccbd79d3",
+        "role": "other",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107702,
+        "sources": [
+          {
+            "label": "Sentora PRIME Main exact vault",
+            "url": "https://app.morpho.org/ethereum/vault/0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
+          },
+          {
+            "label": "Exact verified VaultV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
+          },
+          {
+            "label": "Exact current MorphoMarketV1AdapterV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x93d6393e66b56449b7926b9abfeb37606732de89"
+          },
+          {
+            "label": "Morpho Vault V2 accounting and redemption mechanics",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "Ethereum RPC, pinned block 26107702",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Morpho exact-vault portfolio API",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Sentora PRIME residential-credit case study",
+            "url": "https://sentora.com/case-studies/sentora-s-prime-main-vault-reaches-200m-in-pyusd-deposits-in-under-100-days"
+          },
+          {
+            "label": "Sentora Terms of Use, June 2026, sections 4.3 and 21.4",
+            "url": "https://sentora.com/legal/terms-of-use"
+          },
+          {
+            "label": "Exact RegistryList verified source; subregistry authority remains unresolved",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3696c5eae4a7ffd04ea163564571e9cd8ed9364e"
+          }
+        ],
+        "evidence": "At pinned block 26107702, full deployment-history role logs and current mapping reads establish allocator authority. Allocator can allocate/deallocate within caps, change liquidityAdapter/data and maxRate without delay; this can affect future fee accrual and cash-exit routing but is not arbitrary share minting. Sentinel can deallocate, reduce caps and revoke pending changes. Pinned account code is empty."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x74d1672d0b90f6e7c322dec9d5396ff6ace61618",
+        "deploymentRefs": [
+          "ethereum:0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
+        ],
+        "label": "Sentora sentinel 0x74d1672d0b90f6e7c322dec9d5396ff6ace61618",
+        "role": "other",
+        "authorityType": "eoa",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107702,
+        "sources": [
+          {
+            "label": "Sentora PRIME Main exact vault",
+            "url": "https://app.morpho.org/ethereum/vault/0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
+          },
+          {
+            "label": "Exact verified VaultV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
+          },
+          {
+            "label": "Exact current MorphoMarketV1AdapterV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x93d6393e66b56449b7926b9abfeb37606732de89"
+          },
+          {
+            "label": "Morpho Vault V2 accounting and redemption mechanics",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "Ethereum RPC, pinned block 26107702",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Morpho exact-vault portfolio API",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Sentora PRIME residential-credit case study",
+            "url": "https://sentora.com/case-studies/sentora-s-prime-main-vault-reaches-200m-in-pyusd-deposits-in-under-100-days"
+          },
+          {
+            "label": "Sentora Terms of Use, June 2026, sections 4.3 and 21.4",
+            "url": "https://sentora.com/legal/terms-of-use"
+          },
+          {
+            "label": "Exact RegistryList verified source; subregistry authority remains unresolved",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3696c5eae4a7ffd04ea163564571e9cd8ed9364e"
+          }
+        ],
+        "evidence": "At pinned block 26107702, full deployment-history role logs and current mapping reads establish sentinel authority. Allocator can allocate/deallocate within caps, change liquidityAdapter/data and maxRate without delay; this can affect future fee accrual and cash-exit routing but is not arbitrary share minting. Sentinel can deallocate, reduce caps and revoke pending changes. Pinned account code is empty."
       }
     ],
     "economicCapSemantics": "bounded",
@@ -252,14 +364,111 @@
         {
           "label": "Sentora PRIME residential-credit case study",
           "url": "https://sentora.com/case-studies/sentora-s-prime-main-vault-reaches-200m-in-pyusd-deposits-in-under-100-days"
+        },
+        {
+          "label": "Sentora Terms of Use, June 2026, sections 4.3 and 21.4",
+          "url": "https://sentora.com/legal/terms-of-use"
+        },
+        {
+          "label": "Exact RegistryList verified source; subregistry authority remains unresolved",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3696c5eae4a7ffd04ea163564571e9cd8ed9364e"
         }
       ],
-      "evidence": "Pinned block 26107702 confirms native asset, immutable source, zero proxy slots, separate 1-of-1 owner/curator Safes, empty signer EOA code, no modules and zero guards. performanceFee=150000000000000000; managementFee=0 (contract-native units). Fee-share issuance is not omitted; zero-delay fee and redemption-gate parameter changes remain concentrated economic controls. Parent reserve reports are not exact-vault financial reconciliation.",
-      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-      "reviewedAt": "2026-10-02",
+      "evidence": "Pinned block 26107702 confirms native asset, immutable source, zero proxy slots, separate 1-of-1 owner/curator Safes, empty signer EOA code, no modules and zero guards. performanceFee=150000000000000000; managementFee=0 (contract-native units). Fee-share issuance is not omitted; zero-delay fee and deposit-gate parameter changes remain concentrated economic controls. Parent reserve reports are not exact-vault financial reconciliation. Rechecked 2026-10-03 at the same pin: owner and curator each have threshold 1 and one owner; getModulesPaginated(0x1,100) reaches sentinel 0x1 with no modules. addAdapter and increaseAbsoluteCap delays are 259200s; setPerformanceFee, setManagementFee and setSendAssetsGate delays are zero. The sendAssetsGate restricts deposit/mint, not withdrawal/redeem; receiveAssetsGate and share-gate setters are permanently abdicated. Sentora terms assert non-custody but do not negate on-chain allocation and fee authority. Complete constructor-to-pin SetIsAllocator/SetIsSentinel log scan, followed by isAllocator/isSentinel reads, establishes allocators [0x9e396de3312d373b87f9bd8763fb48184b42aac0, 0xc4ba4e822c420452fe2bab93211208d3ccbd79d3] and sentinels [0x9e396de3312d373b87f9bd8763fb48184b42aac0, 0x74d1672d0b90f6e7c322dec9d5396ff6ace61618]. Registry 0x3696c5eae4a7ffd04ea163564571e9cd8ed9364e has owner 0xcba28b38103307ec8da98377fff9816c164f9afa and current subregistries [0xa31788949d0fe443d3d1033222fc9479499bc3f5, 0xcef9ee779ef9428f50bb7a21b3e3b4efdbc33844, 0xca38e878439e02f2feb364a2b36b52789f983727, 0xfb4d38d93736a040993c50aaac776a2be2cff8be]. Calibration v1 moved signer/key-custody nondisclosure outside the aggregate mint-closure flag; v2 records it on each identified owner/curator Safe as a sourced scoped question: Who controls the two sole signer EOAs organizationally, and what independently attested key custody protects them? Sentora terms do not identify the key holders. Calibration v2 restores the unresolved registry/subregistry authorization and any delegated allocator execution census to unresolvedQuestions; known controller types are not relabeled unknown. Reconciliation remains not-applicable to native asset-backed share/fee accounting; exact-vault financial assurance and holder recovery are Backing gaps. Supervision remains none, so no prudential or attestation-only credit is claimed.",
+      "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+      "reviewedAt": "2026-10-03",
       "unresolvedQuestions": [
-        "Signer organizational independence and key custody are undisclosed.",
-        "Complete latent authorization closure across future registry/adapters and upstream collateral control systems is not established."
+        "Current role census is complete, but registry owner 0xcba28b38103307ec8da98377fff9816c164f9afa and subregistry authority/bypass closure across [0xa31788949d0fe443d3d1033222fc9479499bc3f5, 0xcef9ee779ef9428f50bb7a21b3e3b4efdbc33844, 0xca38e878439e02f2feb364a2b36b52789f983727, 0xfb4d38d93736a040993c50aaac776a2be2cff8be] is not established."
+      ],
+      "scopedQuestions": [
+        {
+          "controlRef": "ethereum:0xe8c9c99ecad0686a14a00d8521c572281e938008",
+          "question": "The identified 1-of-1 Safe has sole signer 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9; the human or organizational key controller, independence from other Sentora role signers, and independently attested key custody/signing policy are undisclosed. Sentora terms do not identify the key holder.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+          "sources": [
+            {
+              "label": "Sentora PRIME Main exact vault",
+              "url": "https://app.morpho.org/ethereum/vault/0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
+            },
+            {
+              "label": "Exact verified VaultV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
+            },
+            {
+              "label": "Exact current MorphoMarketV1AdapterV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x93d6393e66b56449b7926b9abfeb37606732de89"
+            },
+            {
+              "label": "Morpho Vault V2 accounting and redemption mechanics",
+              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+            },
+            {
+              "label": "Ethereum RPC, pinned block 26107702",
+              "url": "https://ethereum-rpc.publicnode.com"
+            },
+            {
+              "label": "Morpho exact-vault portfolio API",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Sentora PRIME residential-credit case study",
+              "url": "https://sentora.com/case-studies/sentora-s-prime-main-vault-reaches-200m-in-pyusd-deposits-in-under-100-days"
+            },
+            {
+              "label": "Sentora owner 1-of-1 Safe",
+              "url": "https://etherscan.io/address/0xe8c9c99ecad0686a14a00d8521c572281e938008"
+            },
+            {
+              "label": "Sentora Terms of Use, June 2026, sections 4.3 and 21.4",
+              "url": "https://sentora.com/legal/terms-of-use"
+            }
+          ]
+        },
+        {
+          "controlRef": "ethereum:0x9e396de3312d373b87f9bd8763fb48184b42aac0",
+          "question": "The identified 1-of-1 Safe has sole signer 0x992592e073aa9b98daed79ee05c4af832e1d0abe; the human or organizational key controller, independence from other Sentora role signers, and independently attested key custody/signing policy are undisclosed. Sentora terms do not identify the key holder.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+          "sources": [
+            {
+              "label": "Sentora PRIME Main exact vault",
+              "url": "https://app.morpho.org/ethereum/vault/0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
+            },
+            {
+              "label": "Exact verified VaultV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
+            },
+            {
+              "label": "Exact current MorphoMarketV1AdapterV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x93d6393e66b56449b7926b9abfeb37606732de89"
+            },
+            {
+              "label": "Morpho Vault V2 accounting and redemption mechanics",
+              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+            },
+            {
+              "label": "Ethereum RPC, pinned block 26107702",
+              "url": "https://ethereum-rpc.publicnode.com"
+            },
+            {
+              "label": "Morpho exact-vault portfolio API",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Sentora PRIME residential-credit case study",
+              "url": "https://sentora.com/case-studies/sentora-s-prime-main-vault-reaches-200m-in-pyusd-deposits-in-under-100-days"
+            },
+            {
+              "label": "Sentora curator 1-of-1 Safe",
+              "url": "https://etherscan.io/address/0x9e396de3312d373b87f9bd8763fb48184b42aac0"
+            },
+            {
+              "label": "Sentora Terms of Use, June 2026, sections 4.3 and 21.4",
+              "url": "https://sentora.com/legal/terms-of-use"
+            }
+          ]
+        }
       ]
     }
   }

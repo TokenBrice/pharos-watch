@@ -47,7 +47,7 @@
     },
     "reviewedAt": "2026-10-02",
     "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "confidence": "limited",
+    "confidence": "verified",
     "sources": [
       {
         "label": "BlackRock July 31, 2026 OnChain share prospectus",
@@ -56,6 +56,50 @@
       {
         "label": "BlackRock BRSRV fund reporting",
         "url": "https://www.blackrock.com/cash/en-us/products/351891/blackrock-daily-reinvestment-stablecoin-reserve-vehicle"
+      }
+    ],
+    "paths": [
+      {
+        "id": "ethereum:0x3078bcf707e457d3af2f938a2a478bbeea50a942",
+        "chain": "ethereum",
+        "address": "0x3078bcf707e457d3af2f938a2a478bbeea50a942",
+        "pricingAuthority": "internal-price",
+        "applicability": {
+          "disposition": "top-level-only",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine04 exact native fund pricing review",
+          "confidence": "verified",
+          "rationale": "This native OnChain share uses the fund's administered daily NAV and dividend/reinvestment policy. Verified DSToken is an issuance/transfer register, not a borrower collateral-vault liquidation path. October 2 fund reporting gives $1 NAV; sponsor support is not assured. This pricing classification does not close controller/quorum or financial reconciliation questions.",
+          "sources": [{"label": "Exact Ethereum token implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc4ecf0307ff0c45c0546e0debedbbd0e47ac3354"}, {"label": "OnChain prospectus and common-class NAV", "url": "https://www.blackrock.com/cash/literature/prospectus/pro-brsrv.pdf"}]
+        }
+      },
+      {
+        "id": "tempo:0xe36e2e79beb1b7f618201eead6106a7d737695e3",
+        "chain": "tempo",
+        "address": "0xe36e2e79beb1b7f618201eead6106a7d737695e3",
+        "pricingAuthority": "internal-price",
+        "applicability": {
+          "disposition": "top-level-only",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine04 common-class NAV scope review",
+          "confidence": "verified",
+          "rationale": "The prospectus authorizes Tempo as a native register rail for the same OnChain class. Fund-administered NAV is common across rails; no separate borrower market or liquidation-price branch is evidenced. Zero stock at the earlier pin does not remove this deployment from scope. This legal pricing-scope conclusion does not assert Tempo implementation/signing closure.",
+          "sources": [{"label": "OnChain class supported rails and NAV policy", "url": "https://www.blackrock.com/cash/literature/prospectus/pro-brsrv.pdf"}]
+        }
+      },
+      {
+        "id": "solana:9rX4yuAirQkm5JC26v3oSfGencsxwjB8kkmgf2dwWe9N",
+        "chain": "solana",
+        "address": "9rX4yuAirQkm5JC26v3oSfGencsxwjB8kkmgf2dwWe9N",
+        "pricingAuthority": "internal-price",
+        "applicability": {
+          "disposition": "top-level-only",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine04 common-class NAV scope review",
+          "confidence": "verified",
+          "rationale": "This native Solana Token-2022 share is a supported rail of the same fund class and common administered NAV, not a collateralized wrapper or borrower liquidation branch. Zero stock at the earlier pin does not make native pricing inapplicable. Program signing/upgrade details remain Mint Authority questions, not a claim of independent NAV computation.",
+          "sources": [{"label": "OnChain class supported rails and NAV policy", "url": "https://www.blackrock.com/cash/literature/prospectus/pro-brsrv.pdf"}, {"label": "Exact native Solana mint", "url": "https://solscan.io/token/9rX4yuAirQkm5JC26v3oSfGencsxwjB8kkmgf2dwWe9N"}]
+        }
       }
     ]
   },

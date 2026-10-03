@@ -47,6 +47,10 @@
     {
       "label": "M0 PYUSDx token and reward issuance",
       "url": "https://docs.m0.org/raw/protocol/pyusdx/token-and-yield.md"
+    },
+    {
+      "label": "Exact Base PYUSDx native deployment",
+      "url": "https://basescan.org/address/0xebdb0942ce16386ab90718c7bd10c91cdb66b14d#code"
     }
   ],
   "jurisdiction": {
@@ -65,6 +69,11 @@
     },
     {
       "chain": "monad",
+      "address": "0xebdb0942ce16386ab90718c7bd10c91cdb66b14d",
+      "decimals": 6
+    },
+    {
+      "chain": "base",
       "address": "0xebdb0942ce16386ab90718c7bd10c91cdb66b14d",
       "decimals": 6
     }

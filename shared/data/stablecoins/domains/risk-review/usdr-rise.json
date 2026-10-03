@@ -22,10 +22,103 @@
       {
         "label": "M0 liquidity routes and issuer onboarding",
         "url": "https://docs.m0.org/build/accessing-liquidity"
+      },
+      {
+        "label": "M0 published EVM-extension security audits (framework scope only)",
+        "url": "https://docs.m0.org/resources/audits"
+      },
+      {
+        "label": "Guardian JMI/MYieldToOne/Freezable/SwapFacility code review, 2025-12-12; not a reserve audit or exact deployment certification",
+        "url": "https://github.com/m0-foundation/evm-m-extensions/blob/main/audits/JMI/M0_EVM-M_Extensions_Review_report.pdf"
       }
     ],
     "evidence": "At rise block 23375290, symbol/decimals and EIP-1967 implementation/admin were re-read. Local backing balance was 4,186,507.178834 M against 4,166,902.771484 USDR supply. The verified MYieldToOne/Freezable source exposes role-gated holder freezes and rejects frozen-account transfers and wrap/unwrap interactions. The current FREEZE_MANAGER and DEFAULT_ADMIN holder is the observed 2-of-3 operational Safe 0xb0ea3203b80d67c58f6709779c5fbac641aab769.",
     "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
     "reviewedAt": "2026-10-02"
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "Sole authored native child-token deployment. The reviewed local wrapping/custodian mint path issues the child on this chain; parent-token cross-chain and custody risks remain inherited. No global uncatalogued bridge-liability absence is asserted.",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Refine07",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "RISE Dollar product documentation (accessed 2026-10-02)",
+        "url": "https://docs.risechain.com/docs/rise-evm/usdr"
+      },
+      {
+        "label": "Verified token implementation",
+        "url": "https://explorer.risechain.com/api/v2/smart-contracts/0xf9733d0bf530b02929ab81cf78e7d0befd3a2d7b"
+      },
+      {
+        "label": "Pinned rise RPC at block 23375290",
+        "url": "https://rpc.risechain.com"
+      },
+      {
+        "label": "M0 published platform deployments",
+        "url": "https://docs.m0.org/resources/addresses/m0-platform"
+      },
+      {
+        "label": "M0 liquidity routes and issuer onboarding",
+        "url": "https://docs.m0.org/build/accessing-liquidity"
+      },
+      {
+        "label": "M0 published EVM-extension security audits (framework scope only)",
+        "url": "https://docs.m0.org/resources/audits"
+      },
+      {
+        "label": "Guardian JMI/MYieldToOne/Freezable/SwapFacility code review, 2025-12-12; not a reserve audit or exact deployment certification",
+        "url": "https://github.com/m0-foundation/evm-m-extensions/blob/main/audits/JMI/M0_EVM-M_Extensions_Review_report.pdf"
+      }
+    ],
+    "routes": [
+      {
+        "id": "rise:0x62b7f5a5be488ea58f660c5aff465647213bc6e9",
+        "destinationChain": "rise",
+        "canonicalChain": "rise",
+        "contractAddress": "0x62b7f5a5be488ea58f660c5aff465647213bc6e9",
+        "protocol": "M0 local extension",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "The sole authored child token is locally minted against parent-token custody. No child bridge path is established; this does not certify absence of uncatalogued integrations or parent bridge risks.",
+        "observedAt": "2026-10-02",
+        "observedBlock": 23375290,
+        "sources": [
+          {
+            "label": "RISE Dollar product documentation (accessed 2026-10-02)",
+            "url": "https://docs.risechain.com/docs/rise-evm/usdr"
+          },
+          {
+            "label": "Verified token implementation",
+            "url": "https://explorer.risechain.com/api/v2/smart-contracts/0xf9733d0bf530b02929ab81cf78e7d0befd3a2d7b"
+          },
+          {
+            "label": "Pinned rise RPC at block 23375290",
+            "url": "https://rpc.risechain.com"
+          },
+          {
+            "label": "M0 published platform deployments",
+            "url": "https://docs.m0.org/resources/addresses/m0-platform"
+          },
+          {
+            "label": "M0 liquidity routes and issuer onboarding",
+            "url": "https://docs.m0.org/build/accessing-liquidity"
+          },
+          {
+            "label": "M0 published EVM-extension security audits (framework scope only)",
+            "url": "https://docs.m0.org/resources/audits"
+          },
+          {
+            "label": "Guardian JMI/MYieldToOne/Freezable/SwapFacility code review, 2025-12-12; not a reserve audit or exact deployment certification",
+            "url": "https://github.com/m0-foundation/evm-m-extensions/blob/main/audits/JMI/M0_EVM-M_Extensions_Review_report.pdf"
+          }
+        ]
+      }
+    ]
   }
 }

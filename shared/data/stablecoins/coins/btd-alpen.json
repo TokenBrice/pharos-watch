@@ -27,7 +27,7 @@
   "status": "pre-launch",
   "announcedDate": "2025-05-08",
   "launchPhase": "announced",
-  "launchPhaseDetail": "Alpen announced BTD on May 8, 2025 as a BTC-only Liquity V2-derived stablecoin intended for immutable deployment on its Bitcoin ZK rollup. Its January 5, 2026 recap reiterates the deposit-BTC, set-interest, mint-BTD design and reports platform testnets; these do not establish a BTD production deployment or token audit. No issuer-stated dated BTD launch window or official token contract is established.",
+  "launchPhaseDetail": "Alpen announced BTD on May 8, 2025 as a BTC-only Liquity V2-derived stablecoin intended for immutable deployment on its Bitcoin ZK rollup. Its January 5, 2026 recap reiterates the deposit-BTC, set-interest, mint-BTD design. Alpen launched platform Testnet III on Bitcoin Signet on July 28 for partner integrations; its September 24 USDC/CCTP announcement still makes availability conditional on mainnet launch. These platform milestones do not establish a BTD deployment or token audit. No dated BTD launch window or official token contract is established.",
   "milestones": [
     {
       "date": "2025-05-08",
@@ -42,6 +42,20 @@
       "title": "Alpen recap reiterates BTD design and platform testnets",
       "sourceUrl": "https://www.alpen.org/blog/inside-alpens-2025",
       "description": "The recap describes the intended borrowing flow; platform testnets and infrastructure audits do not confirm a BTD token launch."
+    },
+    {
+      "date": "2026-07-28",
+      "type": "milestone",
+      "title": "Alpen launches partner-integration Testnet III on Bitcoin Signet",
+      "sourceUrl": "https://www.alpen.org/blog/partner-integration-testnet-iii",
+      "description": "More than 21 platform partners are integrating ahead of mainnet; no BTD production deployment is announced."
+    },
+    {
+      "date": "2026-09-24",
+      "type": "partnership",
+      "title": "Alpen announces USDC and CCTP for future mainnet",
+      "sourceUrl": "https://www.alpen.org/blog/usdc-is-coming-to-bitcoin",
+      "description": "Alpen says both will be available when mainnet launches. This platform partnership does not announce BTD issuance or a BTD launch date."
     }
   ]
 }

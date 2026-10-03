@@ -3,7 +3,7 @@
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "verified",
+    "confidence": "unknown",
     "summary": "Only the controller holds the reviewed USDfr mint role; KYC user deposits and authorized yield issuance are checked against ReserveManager backing. Forest-Road-controlled governance can replace UUPS mint logic after a 172800-second timelock; collateral marks and loan facts rely on approved attesters.",
     "upgradeability": {
       "model": "uups",
@@ -94,13 +94,21 @@
       }
     ],
     "economicCapSemantics": "bounded",
-    "reconciliation": "continuous",
+    "reconciliation": "internal-ledger",
     "supervision": "unknown",
     "review": {
-      "disposition": "scoreable",
-      "reviewedAt": "2026-10-02",
-      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "disposition": "unresolved",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Refine05 primary-source and pinned-RPC review",
       "sources": [
+        {
+          "label": "Complete USDfr token role history, 175 logs through pagination end",
+          "url": "https://eth.blockscout.com/api/v2/addresses/0xcc07e7c4e5e35affd47b351e420a22c667d7f83d/logs"
+        },
+        {
+          "label": "Complete attester role history and current threshold ABI",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x870deb459512099e70e9a640cf3140a0d969fc18"
+        },
         {
           "label": "Forest Road USDfr and credit-book mechanism",
           "url": "https://forestroadvault.com/docs/overview"
@@ -134,11 +142,18 @@
           "url": "https://forestroadvault.com/transparency"
         }
       ],
-      "evidence": "Ethereum-only native issuance is controller-gated and backing-checked, with mutable logic behind a two-day timelock controlled by the Forest Road treasury. Continuous onchain ledger reconciliation is accounting, not financial assurance of receivables. Open issuer-disclosed LMV-09 and LMV-11 economic findings, and newer disclosed LMV-12 through LMV-16 findings, remain adverse reviewed operating context; no claim of completed remediation is made.",
+      "evidence": "Exact USDfr grant/revoke event replay identifies only MintRedeemController 0x50ac018eb6400f247ffe0fa7f1d4e0e900cdb47c as MINTER and the timelock 0x28b36b6a48ed3f7409464c811a9ed538a824120e as DEFAULT_ADMIN/UPGRADER. The complete AttestationOracle history and membership checks at block 26110192 identify two attester keys, 0x759c2cd90594fdb114c5d37c5c3ea78a0033ed35 and 0xe2e544eded1189b8a5bda86a6f474011a397efb0; threshold is one for kinds 0/1 and two for kinds 2-9. Continuous ledger reconciliation is accounting, not financial assurance of receivables. The on-chain ReserveManager invariant and issuer-approved loan marks establish internal-ledger accounting only, not independent reconciliation of the material offchain book to total token liabilities, so no continuous financial-reconciliation rung is credited. Rechecked security disclosure includes Medium/Open LMV-18 from Round 75, in addition to LMV-09, LMV-11 and LMV-12..16. LMV-17 was withdrawn/refuted and is not a confirmed High finding. No remediation/retest closure is claimed. Attester key custody remains unverified despite the observed two-key roster and thresholds. Executed offchain collateral and token holder-priority instruments, and independent remediation/retest evidence for open economic findings, remain unavailable; these are backing/economic-loss gaps rather than an incomplete token mint-role census. Upstream governance-treasury/operations Safe signer and bypass closure remains incomplete: these upstream controllers have not been enumerated, so the complete mint/upgrade control census remains unresolved despite the named downstream governance timelock.",
       "unresolvedQuestions": [
-        "Complete current operational Safe/attester quorum, key custody and role closure.",
-        "Executed offchain collateral and token holder-priority instruments.",
-        "Independent remediation/retest evidence for open economic findings."
+        "Complete the unenumerated upstream governance-treasury/operations Safe signer and bypass census for the governance timelock's mint-logic replacement path."
+      ],
+      "scopedQuestions": [
+        {
+          "controlRef": "USDfr MintRedeemController",
+          "question": "Establish key-custody and signing-policy evidence for the two observed oracle attester keys whose marks authorize backing/yield accounting used by this mint controller; the current key roster and per-kind thresholds do not attest human independence.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine05 mint-authority calibration v2",
+          "sources": [{"label": "Verified current oracle authorization and thresholds", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x870deb459512099e70e9a640cf3140a0d969fc18"}, {"label": "Mint controller, authenticated marks and yield path", "url": "https://forestroadvault.com/docs/overview"}]
+        }
       ]
     }
   }

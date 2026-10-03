@@ -1,5 +1,35 @@
 {
   "id": "mxnt-tether",
+  "oracleRisk": {
+    "tier": "oracleless",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "MXNT native issuer minting and peso-par redemption do not use a borrower collateral oracle or variable token NAV. Shared-book reserve valuations and USD/MXN monitoring quotes are distinct from the token's mint and redemption price authority.",
+    "reviewedAt": "2026-10-03", "reviewer": "Pharos refinement Refine02 primary-source review", "confidence": "verified",
+    "sources": [{"label": "Verified owner-only TetherToken mint implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566"}, {"label": "Tether fiat-token holder terms", "url": "https://tether.to/en/legal/"}],
+    "branchApplicability": {
+      "disposition": "not-applicable", "reviewedAt": "2026-10-03", "reviewer": "Pharos refinement Refine02 primary-source review",
+      "rationale": "The exact Ethereum TetherToken accepts owner-authorized mint amounts rather than price-dependent collateral inputs. MXNT is a fixed-peso fiat-token obligation, not a borrower position or variable-NAV share; reserve portfolio valuation is reviewed separately under Backing.",
+      "sources": [{"label": "Verified TetherToken mint path", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566"}]
+    },
+    "paths": [{
+      "id": "mxnt-ethereum-fiat-par", "chain": "ethereum", "address": "0xed03ed872159e199065401b6d0d487d78d9464aa", "pricingAuthority": "none",
+      "applicability": {"disposition": "not-applicable", "reviewedAt": "2026-10-03", "reviewer": "Pharos refinement Refine02 primary-source review", "confidence": "verified", "rationale": "Owner-only mint and fixed-peso issuer redemption have no borrower-liquidation or variable token-NAV price input.", "sources": [{"label": "Tether exact implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566"}]}
+    }]
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "The authored active MXNT deployment is issuer-native Ethereum TetherToken. The excluded zero-supply Tron lead is not silently treated as a reviewed active deployment; no third-party bridge or exhaustive current liability partition is asserted.",
+    "reviewedAt": "2026-10-03", "reviewer": "Pharos refinement Refine02 primary-source and RPC review", "confidence": "probable",
+    "sources": [{"label": "Exact Ethereum TetherToken native mint implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566"}],
+    "routes": [{
+      "id": "ethereum:0xed03ed872159e199065401b6d0d487d78d9464aa", "destinationChain": "ethereum", "contractAddress": "0xed03ed872159e199065401b6d0d487d78d9464aa",
+      "protocol": "Tether native MXNT", "issuanceModel": "native-issuance", "routeClass": "native", "riskTier": "single-chain-or-native", "semantics": "native-mint", "scope": "canonical",
+      "reviewDisposition": "reviewed", "reviewNote": "Current Ethereum owner and verified TetherToken source establish native issuer-only minting, not a bridge representation.",
+      "controllerChain": "ethereum", "controllerAddress": "0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828", "observedAt": "2026-10-03", "observedBlock": 26110183,
+      "sources": [{"label": "Verified native token implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566"}]
+    }]
+  },
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

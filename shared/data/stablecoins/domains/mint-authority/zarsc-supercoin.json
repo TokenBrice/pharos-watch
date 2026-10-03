@@ -2,8 +2,8 @@
   "id": "zarsc-supercoin",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-reconciled",
-    "confidence": "manual-review",
+    "authorityPosture": "unbounded-reconciliation-unknown",
+    "confidence": "verified",
     "summary": "Native issuance remains under issuer authority. ZARsc uses a System Program Solana mint signer; Fireblocks custody does not prove an on-chain threshold.",
     "controls": [
       {
@@ -16,17 +16,18 @@
         "role": "direct-minter",
         "authorityType": "eoa",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": false,
+        "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-02",
-        "observedBlock": 452748073,
+        "observedAt": "2026-10-03",
+        "observedBlock": 452860529,
         "sources": [
           {
             "label": "Solana mint and authority observation",
             "url": "https://solscan.io/token/5ekaHEqpRUXH4RoZVRMErdJE74bibWAzihMtPcjKyceQ"
           }
         ],
-        "evidence": "Finalized mint account at slot 452748073 has decimals 6, supply 8177042.0, and mintAuthority UuicDY26j4dUf5QraXJ99PwPzGwZjRWZmnxcyMhJAgk. Authority read at slot 452748181 is a nonexecutable zero-data System Program account; no on-chain quorum is demonstrated."
+        "evidence": "Finalized mint read at slot 452860529 retains mintAuthority UuicDY26j4dUf5QraXJ99PwPzGwZjRWZmnxcyMhJAgk, decimals 6 and supply 8,177,042 ZARsc. Authority read at slot 452861255 is nonexecutable, zero-data and System Program owned, not an SPL multisig or PDA. Token-2022 minting has no issuer-authored numeric supply cap to raise and no code-enforced time delay. Creation transaction 3PacyyoqY8ik8smXoNF6ED6MLUt9Jxk9w7ie7vcrVqYouxcLwtyn5xdsRGKrMwV17xfjLWShhraik7Yb95Xdrx3r creates and initializes the exact mint at slot 361067527 on 2025-08-19. This is implementation age, not exchange-listing age."
       }
     ],
     "upgradeability": {
@@ -44,8 +45,8 @@
       "observedAt": "2026-10-02"
     },
     "economicCapSemantics": "unbounded",
-    "reconciliation": "periodic",
-    "supervision": "attestation-only",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
     "review": {
       "sources": [
         {
@@ -61,18 +62,18 @@
           "url": "https://solscan.io/token/5ekaHEqpRUXH4RoZVRMErdJE74bibWAzihMtPcjKyceQ"
         }
       ],
-      "evidence": "The named controls create native issuer liabilities without an independently enforced collateral cap. The issuer report archive publishes monthly AUP comparisons of Absa bank cash against issued supply less management-designated treasury circulation exclusions; this supports periodic reserve-to-circulation reconciliation, not prudential authorization.",
-      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-      "reviewedAt": "2026-10-02",
+      "evidence": "The sole native Solana mint authority and its ordinary-signature execution were independently re-read on 2026-10-03; issuer Fireblocks statements do not establish independent MPC operators, a cryptographic onchain quorum or hold period. The report archive links distinct May, June, July and August 2026 AUP comparisons of Absa cash to issued supply less management-designated treasury exclusions, documenting recurring reserve-to-management-defined-circulation comparisons. Earlier month labels repeat the same January report URL and are not counted as nine distinct engagements. AUP is not a financial assurance opinion or prudential authorization: those recurring factual comparisons do not establish independently assured total-holder-liability reconciliation or an independently pinned issuer-supervision regime. Reconciliation and supervision are therefore unknown rather than granting the periodic/attestation-only mint rung. Legal trust and bankruptcy protection remain unproved. Current issuer direct app redemption is not live; the two-business-day promise is future-only. Exchange liquidity and par execution are not guaranteed: the observed Orca pool was approximately USD16,000 with no observed 24-hour volume, and VALR volumes were small. Independent operators and Fireblocks key custody for the identified ordinary signer remain unverified; there is no onchain multisig threshold or timelock. Observed CoinGecko circulation differs from the historical report and issued total; retain fresh provider market cap rather than a raw minted-supply override. The requested 90-day chart covered only about nine days; ZAR FX normalization is required before depeg conclusions. FSP53458 remains an issuer/parent claim without an independently pinned regulator row. These key-custody, Backing, exit, market-data and supervision qualifications do not leave an unidentified native mint control.",
+      "reviewer": "Pharos refinement Refine02 primary-source and RPC review",
+      "reviewedAt": "2026-10-03",
       "disposition": "scoreable",
-      "unresolvedQuestions": [
-        "AUP has no audit/assurance opinion; legal trust/bankruptcy protection unproved.",
-        "Current issuer direct app redemption is not live; two-business-day promise is future-only.",
-        "Exchange liquidity/par execution not guaranteed; Orca pool ~USD16k and no observed 24h volume, VALR volumes small.",
-        "Solana authorities are ordinary signer accounts; no verified multisig threshold, key independence or timelock.",
-        "CG current circulation differs from historical report and issued total; use fresh CG market cap, no raw minted-supply override.",
-        "Requested 90-day chart spans only about nine days; normalize ZAR FX before depeg conclusions.",
-        "FSP53458 remains issuer/parent claim; no independently pinned regulator row."
+      "unresolvedQuestions": [],
+      "scopedQuestions": [
+        {
+          "controlRef": "Solana Token-2022 mint authority",
+          "question": "Which independently verifiable human-independence, Fireblocks key-custody/MPC and signing-policy arrangements protect the identified ordinary Solana mint signer? Its onchain account enforces neither a multisig quorum nor a timelock.",
+          "reviewedAt": "2026-10-03", "reviewer": "Pharos refinement Refine02 primary-source and RPC review",
+          "sources": [{"label": "Supercoin Fireblocks and custody terms", "url": "https://www.supercoin.co.za/terms-of-service"}, {"label": "Exact Solana mint and signer", "url": "https://solscan.io/token/5ekaHEqpRUXH4RoZVRMErdJE74bibWAzihMtPcjKyceQ"}]
+        }
       ]
     }
   }

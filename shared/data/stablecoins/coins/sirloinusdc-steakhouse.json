@@ -20,7 +20,7 @@
     "disposition": "resolved",
     "reviewedAt": "2026-10-02",
     "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "rationale": "The current holder claim is the operational ERC-4626 claim at base:0xbeeff2490feffa212fac2f6553682c219e6a8845, not direct ownership of the parent’s fiat reserves. Exact verified immutable VaultV2 code pulls underlying before user mint, can mint fee shares during interest accrual, and burns receipts against available underlying on exit. Reverified at block 52095842; parent fiat-cash protections remain upstream.",
+    "rationale": "The current holder claim is the operational ERC-4626 claim at base:0xbeeff2490feffa212fac2f6553682c219e6a8845, not direct ownership of the parent’s fiat reserves. Exact verified immutable VaultV2 code pulls underlying before user mint, can mint fee shares during interest accrual, and burns receipts against available underlying on exit. Reverified at block 52095842; parent fiat-cash protections remain upstream. Exact implementation creation is pinned by transaction 0x365e979eb98424e0fcedad75285d1c9ae4cd4be4a3a3841318666316f4082bf7, block 45427904, timestamp 2026-05-01T14:19:15+00:00, independently joined from Blockscout to RPC receipt and block timestamp on2026-10-03. This is the implementation launch, not issuer founding or parent-token launch.",
     "sources": [
       {
         "label": "Morpho exact Steakhouse High Yield USDC Edition deployment",
@@ -37,6 +37,10 @@
       {
         "label": "Steakhouse DeFi vault governing terms",
         "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
+      },
+      {
+        "label": "Exact implementation creation transaction",
+        "url": "https://base.blockscout.com/tx/0x365e979eb98424e0fcedad75285d1c9ae4cd4be4a3a3841318666316f4082bf7"
       }
     ]
   },
@@ -102,5 +106,6 @@
       }
     }
   },
-  "launchDate": "2026-05-01"
+  "launchDate": "2026-05-01",
+  "implementationLaunchDate": "2026-05-01"
 }

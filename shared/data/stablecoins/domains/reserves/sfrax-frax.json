@@ -21,8 +21,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Sol refinement Refine11",
     "confidence": "verified",
     "sources": [
       {
@@ -42,8 +42,8 @@
         "url": "https://raw.githubusercontent.com/FraxFinance/staked-frax-erc4626/9e42ee6b39fb1c08c6dc3607707b8b190f2de58c/src/contracts/LinearRewardsErc4626.sol"
       }
     ],
-    "rationale": "At Ethereum block 26107702, totalAssets=65181542.209163 FRAX, totalSupply=56157359.111527 sFRAX, convertToAssets(1e18)=1.160694577530154037 FRAX and FRAX balance=65471813.491358. Balance exceeds accounted assets by 290271.282195 FRAX; the pinned LinearRewards implementation classifies undistributed balance as rewards rather than external deployed assets. The 100% row is the current direct parent-denominated operational claim, not a claim that lending exposure is idle cash or that borrower collateral is owned directly by holders.",
-    "compositionBasis": "Fixed-block ERC-4626, underlying balance and complete adapter/market reads at Ethereum block 26107702; verified deployed source",
+    "rationale": "At Ethereum block 26107702, totalAssets=65181542.209163 FRAX, totalSupply=56157359.111527 sFRAX, convertToAssets(1e18)=1.160694577530153970 FRAX and FRAX balance=65471813.491358. Balance exceeds accounted assets by 290271.282195 FRAX; the pinned LinearRewards implementation classifies undistributed balance as rewards rather than external deployed assets. The 100% row is the current direct parent-denominated operational claim, not a claim that lending exposure is idle cash or that borrower collateral is owned directly by holders.",
+    "compositionBasis": "Fixed-block ERC-4626 share, direct FRAX balance and linear reward-accounting reads at Ethereum block 26107702; exact verified StakedFrax source has no adapter or market-census interface.",
     "compositionAsOf": "2026-10-02",
     "scope": "full-composition",
     "knownUnknownExposure": "Immediate wrapper claim and current positions are identified; independent financial reconciliation, enforceable segregation and insolvency priority remain undisclosed. Parent reserve risks are evaluated on the parent, not replicated as local custody.",

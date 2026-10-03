@@ -1,5 +1,7 @@
 {
   "id": "strusd-tori",
+  "launchDate": "2026-06-08",
+  "implementationLaunchDate": "2026-09-30",
   "name": "Tori Staked trUSD",
   "symbol": "strUSD",
   "oneLiner": "strUSD is Tori's trUSD savings vault, accruing trading rewards and returning trUSD after a seven-day cooldown.",

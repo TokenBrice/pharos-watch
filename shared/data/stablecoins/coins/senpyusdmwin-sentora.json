@@ -13,14 +13,14 @@
   "variantKind": "strategy-vault",
   "pegReferenceId": "pyusd-paypal",
   "collateral": "PYUSD held idle in an immutable Morpho Vault V2 and supplied by a MorphoMarketV1AdapterV2 to a mWIN-collateralized lending market. Allocations can change under curator controls.",
-  "pegMechanism": "ERC-4626 shares convert to PYUSD at the live assets-per-share rate. Interest increases and recognized losses reduce share value; withdrawals use idle assets and configured adapter liquidity rather than a fixed dollar promise.",
+  "pegMechanism": "ERC-4626 shares convert to PYUSD at the live assets-per-share rate. Interest, fees and recognized losses change share value. liquidityAdapter() is zero at pinned block 26107706; ordinary cash redemptions use idle assets unless assets are first deallocated. Shared market liquidity does not promise full-size cash redemption.",
   "mechanismArchetype": "protocol-position",
   "archetypeOverride": true,
   "mechanismArchetypeReview": {
     "disposition": "resolved",
     "reviewedAt": "2026-10-02",
     "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "rationale": "The current exact holder instrument ethereum:0x7cbcfc4f64be199ede6db1d916ddcdb69f666b57 is an immutable ERC-4626 operational claim on idle PYUSD plus Morpho lender positions, not a direct fiat reserve claim. Deposit/mint requires underlying assets and accrual can issue fee shares. At ethereum block 26107706, asset() was 0x6c3ea9036406852006290770bedfcaba0e23a0e8, share decimals 18 and underlying decimals 6; totalAssets raw 25441975740170, totalSupply raw 25389250769299894397889057, idle raw 2531230145, sole adapter market assets raw 25439444510025, with an exact zero accounting difference. The only funded market lent PYUSD against mWIN at 77% LLTV. The adapter position had zero borrowing and zero posted collateral.",
+    "rationale": "The current exact holder instrument ethereum:0x7cbcfc4f64be199ede6db1d916ddcdb69f666b57 is an immutable ERC-4626 operational claim on idle PYUSD plus Morpho lender positions, not a direct fiat reserve claim. Deposit/mint requires underlying assets and accrual can issue fee shares. At ethereum block 26107706, asset() was 0x6c3ea9036406852006290770bedfcaba0e23a0e8, share decimals 18 and underlying decimals 6; totalAssets raw 25441975740170, totalSupply raw 25389250769299894397889057, idle raw 2531230145, sole adapter market assets raw 25439444510025, with an exact zero accounting difference. The only funded market lent PYUSD against mWIN at 77% LLTV. The adapter position had zero borrowing and zero posted collateral. Exact deployment creation: Morpho vaultV2ByAddress creationBlockNumber=25654512, creationTimestamp=1785521015 (2026-07-31T18:03:35.000Z); independently retrieved 2026-10-03.",
     "sources": [
       {
         "label": "Exact Sentora vault",
@@ -45,6 +45,10 @@
       {
         "label": "Paxos USD stablecoin terms, section 3.5",
         "url": "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions"
+      },
+      {
+        "label": "Exact Morpho Vault V2 creation block and timestamp",
+        "url": "https://api.morpho.org/graphql"
       }
     ]
   },
@@ -112,5 +116,6 @@
       }
     }
   },
-  "launchDate": "2026-07-31"
+  "launchDate": "2026-07-31",
+  "implementationLaunchDate": "2026-07-31"
 }

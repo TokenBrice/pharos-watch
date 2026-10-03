@@ -3,7 +3,7 @@
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "none-resolved-mint",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "summary": "hyperUSDCa mints shares against USDC deposits and may mint fee shares through interest accounting. Vault parameter controls remain local; durable USDC issuance is inherited from Circle.",
     "inheritedFrom": "usdc-circle",
     "economicCapSemantics": "bounded",
@@ -88,7 +88,10 @@
             "url": "https://monadscan.com/address/0x068f22739a5f8a5c84619d7f355b678d00707908#code"
           }
         ],
-        "evidence": "Hyperithm USDC Apex (hyperUSDCa) at monad:0x78999cc96d2ba0341588c60ccb0e91c6c33cf371 is the current public ERC-4626 VaultV2 share over USDC 0x754704bc059f8c67012fed69bc8a327a5aafb603. Deposits transfer underlying before minting; interest accrual can mint configured fee shares and recognizes adapter losses. Holder rights are residual proportional code-enforced NAV redemption, not beneficial ownership of Circle reserves or proven statutory segregation. One current adapter 0x068f22739a5f8a5c84619d7f355b678d00707908 holds 7 enumerated Morpho market IDs. Performance fee 5% of gains, management fee 0%; fee-share accrual is not discretionary minting of underlying USDC. EIP-1967 implementation, admin and beacon slots were zero."
+        "evidence": "Hyperithm USDC Apex (hyperUSDCa) at monad:0x78999cc96d2ba0341588c60ccb0e91c6c33cf371 is the current public ERC-4626 VaultV2 share over USDC 0x754704bc059f8c67012fed69bc8a327a5aafb603. Deposits transfer underlying before minting; interest accrual can mint configured fee shares and recognizes adapter losses. Holder rights are residual proportional code-enforced NAV redemption, not beneficial ownership of Circle reserves or proven statutory segregation. One current adapter 0x068f22739a5f8a5c84619d7f355b678d00707908 holds 7 enumerated Morpho market IDs. Performance fee 5% of gains, management fee 0%; fee-share accrual is not discretionary minting of underlying USDC. EIP-1967 implementation, admin and beacon slots were zero.",
+        "deploymentRefs": [
+          "monad:0x78999cc96d2ba0341588c60ccb0e91c6c33cf371"
+        ]
       },
       {
         "chain": "monad",
@@ -102,7 +105,12 @@
           "guard": "0x0000000000000000000000000000000000000000",
           "observedBlock": 110016412,
           "observedAt": "2026-10-02",
-          "source": "onchain"
+          "source": "onchain",
+          "owners": [
+            "0x270427b58d0faf37eeb5c5bced0bb8aee696520b",
+            "0x56666f39d20ffe3ea2d07c717ec7d7f8e6ff514a",
+            "0x065c24b9508b82f465500256949799684e823fb0"
+          ]
         },
         "directMintAbility": "parameter-only",
         "modulesOrGuardsStatus": "none-detected",
@@ -136,11 +144,18 @@
           {
             "label": "Exact Morpho lending adapter",
             "url": "https://monadscan.com/address/0x068f22739a5f8a5c84619d7f355b678d00707908#code"
+          },
+          {
+            "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+            "url": "https://blue-api.morpho.org/graphql"
           }
         ],
-        "evidence": "Pinned owner() at monad block 110016412 (0x68eb79c), observed 2026-10-02T22:44:15.638184+00:00. Parameter and allocation control does not confer discretionary underlying USDC minting. Adapter addition and cap-increase delays: {\"addAdapter(address)\": 259200, \"increaseAbsoluteCap(bytes,uint256)\": 259200, \"setPerformanceFee(uint256)\": 0, \"setManagementFee(uint256)\": 0}. Fee selectors have their own zero delays; no blanket all-action timelock or signer independence is claimed. Safe threshold 2/3, enabled-module count 0, guard zero.",
+        "evidence": "Pinned owner() at monad block 110016412 (0x68eb79c), observed 2026-10-02T22:44:15.638184+00:00. Parameter and allocation control does not confer discretionary underlying USDC minting. Adapter addition and cap-increase delays: {\"addAdapter(address)\": 259200, \"increaseAbsoluteCap(bytes,uint256)\": 259200, \"setPerformanceFee(uint256)\": 0, \"setManagementFee(uint256)\": 0}. Fee selectors have their own zero delays; no blanket all-action timelock or signer independence is claimed. Safe threshold 2/3, enabled-module count 0, guard zero. Current API timelock census, independently reconfirmed by RPC on 2026-10-03 at block 110117695: setPerformanceFee(uint256)=0 sec; setManagementFee(uint256)=0 sec. No blanket all-action timelock is inferred.",
         "threshold": 2,
-        "signerCount": 3
+        "signerCount": 3,
+        "deploymentRefs": [
+          "monad:0x78999cc96d2ba0341588c60ccb0e91c6c33cf371"
+        ]
       },
       {
         "chain": "monad",
@@ -180,9 +195,42 @@
           {
             "label": "Exact Morpho lending adapter",
             "url": "https://monadscan.com/address/0x068f22739a5f8a5c84619d7f355b678d00707908#code"
+          },
+          {
+            "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+            "url": "https://blue-api.morpho.org/graphql"
           }
         ],
-        "evidence": "Pinned curator() at monad block 110016412 (0x68eb79c), observed 2026-10-02T22:44:15.638184+00:00. Parameter and allocation control does not confer discretionary underlying USDC minting. Adapter addition and cap-increase delays: {\"addAdapter(address)\": 259200, \"increaseAbsoluteCap(bytes,uint256)\": 259200, \"setPerformanceFee(uint256)\": 0, \"setManagementFee(uint256)\": 0}. Fee selectors have their own zero delays; no blanket all-action timelock or signer independence is claimed."
+        "evidence": "Pinned curator() at monad block 110016412 (0x68eb79c), observed 2026-10-02T22:44:15.638184+00:00. Parameter and allocation control does not confer discretionary underlying USDC minting. Adapter addition and cap-increase delays: {\"addAdapter(address)\": 259200, \"increaseAbsoluteCap(bytes,uint256)\": 259200, \"setPerformanceFee(uint256)\": 0, \"setManagementFee(uint256)\": 0}. Fee selectors have their own zero delays; no blanket all-action timelock or signer independence is claimed. Current API timelock census, independently reconfirmed by RPC on 2026-10-03 at block 110117695: setPerformanceFee(uint256)=0 sec; setManagementFee(uint256)=0 sec. No blanket all-action timelock is inferred.",
+        "deploymentRefs": [
+          "monad:0x78999cc96d2ba0341588c60ccb0e91c6c33cf371"
+        ]
+      },
+      {
+        "chain": "monad",
+        "address": "0x345e93f786e485b9f738b9a1a528c6eef1c73c5f",
+        "deploymentRefs": [
+          "monad:0x78999cc96d2ba0341588c60ccb0e91c6c33cf371"
+        ],
+        "label": "Hyperithm USDC Apex allocator 0x345e93f786e485b9f738b9a1a528c6eef1c73c5f",
+        "role": "governor",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 110117695,
+        "sources": [
+          {
+            "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+            "url": "https://blue-api.morpho.org/graphql"
+          },
+          {
+            "label": "monad RPC role/code census at block 110117695; credentials omitted",
+            "url": "https://rpc.monad.xyz"
+          }
+        ],
+        "evidence": "On 2026-10-03 at monad block 110117695, isAllocator(address) returned true. This role can allocate/deallocate within configured adapter/cap bounds, set liquidity adapter/data and maxRate; it cannot call arbitrary share mint or mint parent USDC."
       }
     ],
     "review": {
@@ -215,14 +263,125 @@
         {
           "label": "Exact Morpho lending adapter",
           "url": "https://monadscan.com/address/0x068f22739a5f8a5c84619d7f355b678d00707908#code"
+        },
+        {
+          "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+          "url": "https://blue-api.morpho.org/graphql"
+        },
+        {
+          "label": "ChainSecurity VaultV2 code assessment, 2025-09-16 (reference code, not financial assurance)",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/main/audits/2025-09-15-chainsecurity.pdf"
+        },
+        {
+          "label": "Cantina Managed adapter review, report 2025-12-15; final code tag 2025-12-04 (not exact-vault assurance)",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/main/audits/2025-12-04-market-v1-adapter-v2-spearbit.pdf"
+        },
+        {
+          "label": "Hyperithm Accountable issuer-book attestation; exact-vault scope unestablished",
+          "url": "https://accountable.hyperithm.com/"
         }
       ],
-      "evidence": "Hyperithm USDC Apex (hyperUSDCa) at monad:0x78999cc96d2ba0341588c60ccb0e91c6c33cf371 is the current public ERC-4626 VaultV2 share over USDC 0x754704bc059f8c67012fed69bc8a327a5aafb603. Deposits transfer underlying before minting; interest accrual can mint configured fee shares and recognizes adapter losses. Holder rights are residual proportional code-enforced NAV redemption, not beneficial ownership of Circle reserves or proven statutory segregation. One current adapter 0x068f22739a5f8a5c84619d7f355b678d00707908 holds 7 enumerated Morpho market IDs. At monad block 110016412 (0x68eb79c), observed 2026-10-02T22:44:15.638184+00:00, receiveSharesGate, sendSharesGate and receiveAssetsGate were zero and all three setters were abdicated. Reviewed VaultV2 transfer/transferFrom and withdraw/redeem use these gates. sendAssetsGate was zero with its setter not abdicated; it governs deposit/mint, not direct withdrawal or transfer. Deposit-dependent in-kind paths can be constrained by it. USDC freeze exposure is inherited from usdc-circle; this is not a direct share blacklist claim. Local fee/curator authority is not USDC issuer supervision or reserve-liability reconciliation.",
-      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-      "reviewedAt": "2026-10-02",
-      "unresolvedQuestions": [
-        "Independent human signers and key-custody procedures are not established.",
-        "No exact-vault financial assurance or statutory holder priority was established."
+      "evidence": "Hyperithm USDC Apex (hyperUSDCa) at monad:0x78999cc96d2ba0341588c60ccb0e91c6c33cf371 is the current public ERC-4626 VaultV2 share over USDC 0x754704bc059f8c67012fed69bc8a327a5aafb603. Deposits transfer underlying before minting; interest accrual can mint configured fee shares and recognizes adapter losses. Holder rights are residual proportional code-enforced NAV redemption, not beneficial ownership of Circle reserves or proven statutory segregation. One current adapter 0x068f22739a5f8a5c84619d7f355b678d00707908 holds 7 enumerated Morpho market IDs. At monad block 110016412 (0x68eb79c), observed 2026-10-02T22:44:15.638184+00:00, receiveSharesGate, sendSharesGate and receiveAssetsGate were zero and all three setters were abdicated. Reviewed VaultV2 transfer/transferFrom and withdraw/redeem use these gates. sendAssetsGate was zero with its setter not abdicated; it governs deposit/mint, not direct withdrawal or transfer. Deposit-dependent in-kind paths can be constrained by it. USDC freeze exposure is inherited from usdc-circle; this is not a direct share blacklist claim. Local fee/curator authority is not USDC issuer supervision or reserve-liability reconciliation. On 2026-10-03 the exact owner/curator returned by Morpho were independently reconfirmed by RPC. Published allocator/sentinel addresses were each checked with isAllocator/isSentinel at block 110117695. Selector-specific fee delays and the published role census are recorded below; no exhaustive module-permission or independent-human-signer closure is claimed. Calibration retention (2026-10-03): Independent human signers and key-custody procedures are not established. No exact-vault financial assurance or statutory holder priority was established. Mint reconciliation remains not-applicable to this deposit-backed local share/fee-share mechanism; independent financial assurance, reserve-to-liability reconciliation and holder insolvency priority remain separate Backing observations, not a claim that such assurance exists. Parent durable-token issuance is inherited and is not resolved by this local share review. Calibration v2 custody retention: signer independence, actual key custody and signing-policy questions are restored separately for each identified Safe/EOA controller; known controller addresses and quorum evidence do not establish the human/key-custody facts. Reconciliation remains not-applicable because this is a local deposit-backed ERC-4626 share/fee-share mechanism, not an issuer supply-to-reserve reconciliation regime; parent durable issuance and independent financial assurance are not established by this local review. Supervision remains none: no local prudential or assurance-opinion credit is claimed.",
+      "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
+      "reviewedAt": "2026-10-03",
+      "unresolvedQuestions": [],
+      "scopedQuestions": [
+        {
+          "controlRef": "monad:0xee7e9bb21d5589bf657b94083db2fa349a3918c8",
+          "question": "For this identified hyperUSDCa owner controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address and Safe quorum/owner inventory is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
+          "sources": [
+            {
+              "label": "Exact Morpho Vault V2 deployment",
+              "url": "https://app.morpho.org/monad/vault/0x78999cc96d2ba0341588c60ccb0e91c6c33cf371"
+            },
+            {
+              "label": "Verified deployment code identity",
+              "url": "https://monadscan.com/address/0x78999cc96d2ba0341588c60ccb0e91c6c33cf371#code"
+            },
+            {
+              "label": "Pinned monad block 110016412",
+              "url": "https://monadscan.com/block/110016412"
+            },
+            {
+              "label": "Morpho complete current vault inventory",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Morpho Vault V2 gates",
+              "url": "https://docs.morpho.org/curate/concepts/gates.md"
+            },
+            {
+              "label": "Morpho share accounting and loss realization",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            },
+            {
+              "label": "Exact Morpho lending adapter",
+              "url": "https://monadscan.com/address/0x068f22739a5f8a5c84619d7f355b678d00707908#code"
+            },
+            {
+              "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+              "url": "https://blue-api.morpho.org/graphql"
+            }
+          ]
+        },
+        {
+          "controlRef": "monad:0x75178137d3b4b9a0f771e0e149b00fb8167ba325",
+          "question": "For this identified hyperUSDCa curator controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
+          "sources": [
+            {
+              "label": "Exact Morpho Vault V2 deployment",
+              "url": "https://app.morpho.org/monad/vault/0x78999cc96d2ba0341588c60ccb0e91c6c33cf371"
+            },
+            {
+              "label": "Verified deployment code identity",
+              "url": "https://monadscan.com/address/0x78999cc96d2ba0341588c60ccb0e91c6c33cf371#code"
+            },
+            {
+              "label": "Pinned monad block 110016412",
+              "url": "https://monadscan.com/block/110016412"
+            },
+            {
+              "label": "Morpho complete current vault inventory",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Morpho Vault V2 gates",
+              "url": "https://docs.morpho.org/curate/concepts/gates.md"
+            },
+            {
+              "label": "Morpho share accounting and loss realization",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            },
+            {
+              "label": "Exact Morpho lending adapter",
+              "url": "https://monadscan.com/address/0x068f22739a5f8a5c84619d7f355b678d00707908#code"
+            },
+            {
+              "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+              "url": "https://blue-api.morpho.org/graphql"
+            }
+          ]
+        },
+        {
+          "controlRef": "monad:0x345e93f786e485b9f738b9a1a528c6eef1c73c5f",
+          "question": "For this identified Hyperithm USDC Apex allocator 0x345e93f786e485b9f738b9a1a528c6eef1c73c5f controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
+          "sources": [
+            {
+              "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+              "url": "https://blue-api.morpho.org/graphql"
+            },
+            {
+              "label": "monad RPC role/code census at block 110117695; credentials omitted",
+              "url": "https://rpc.monad.xyz"
+            }
+          ]
+        }
       ]
     }
   }

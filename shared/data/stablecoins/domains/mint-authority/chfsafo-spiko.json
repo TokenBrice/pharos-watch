@@ -3,8 +3,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
-    "confidence": "unknown",
-    "summary": "Spiko operates native CHF fund-share issuance across eight registers under the UCITS fund framework. Ethereum PermissionManager authorizes ADMIN and MINTER groups; the 3-of-6 super-admin Safe can alter permissions and upgrade mint-critical logic. Exact per-chain controller closure outside Ethereum and the Solana mint remains unresolved.",
+    "confidence": "manual-review",
+    "summary": "CHFSAFO shares the AMF-authorized Spiko SICAV SAFO framework, CACEIS depositary/valuation and native register architecture used by EURSAFO and GBPSAFO. Five chain-local 3-of-6 ADMIN Safes are observed on its EVM registers; its Solana mint uses the same issuer MinterConfig and admin vault as EURSAFO. Shared family operator/custody review limitations remain documented without asserting exhaustive code or financial reconciliation closure.",
     "upgradeability": {
       "model": "uups",
       "deploymentRefs": [
@@ -77,13 +77,13 @@
         "deploymentRefs": [
           "ethereum:0x18b5c15e5196a38a162b1787875295b76e4313fb"
         ],
-        "directMintAbility": "can-authorize",
+        "directMintAbility": "direct",
         "canRaiseCap": true,
         "threshold": 3,
         "signerCount": 6,
         "modulesOrGuardsStatus": "unknown",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107707,
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110192,
         "safe": {
           "owners": [
             "0x75e0092e7d2c8d854fcf5334f95554852d62746a",
@@ -94,11 +94,12 @@
             "0xa6e06dfe42064b7cd6dc902a62e74ca5bb574011"
           ],
           "threshold": 3,
-          "observedBlock": 26107707,
-          "observedAt": "2026-10-02",
+          "enabledModules": [],
+          "observedBlock": 26110192,
+          "observedAt": "2026-10-03",
           "source": "onchain"
         },
-        "evidence": "At Ethereum block 26107707, CHF authority() returned PermissionManager 0x344278aff344d6fb960705dc18a4912221608472; getRequirements(token,mint(address,uint256)) returned mask 0x5, ADMIN group 0 and MINTER group 2. getGroups(Safe) included ADMIN; getThreshold returned 3 and getOwners returned six addresses. Technical docs grant super-admin upgrade and permission administration. No CHF-specific enforced delay or other-chain Safe reuse is asserted.",
+        "evidence": "At Ethereum block 26110192, authority() returned PermissionManager 0x344278aff344d6fb960705dc18a4912221608472; getRequirements(token,mint(address,uint256)) returned mask 0x5 and upgradeToAndCall(address,bytes) returned 0x1. getGroups(Safe) includes ADMIN group 0, so this Safe can mint directly as well as administer permissions and upgrade. getThreshold returned 3, getOwners the six listed addresses, and getModulesPaginated(sentinel,256) returned an empty list and sentinel end. Guard/fallback-handler closure and full group membership are not claimed.",
         "sources": [
           {
             "label": "Spiko permission architecture",
@@ -138,7 +139,7 @@
       {
         "label": "CHF Solana mint authority",
         "role": "direct-minter",
-        "authorityType": "unknown",
+        "authorityType": "contract",
         "chain": "solana",
         "address": "BDvZMhgdCAv1HooiymSCkgH2Rupoqv8Yf15gneHMyWcZ",
         "deploymentRefs": [
@@ -146,24 +147,97 @@
         ],
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
-        "observedAt": "2026-10-02",
-        "evidence": "Finalized Solana getAccountInfo at slot 452748326 returned this Token-2022 mint authority, five decimals and zero supply. Its upstream signer policy and administrator hierarchy are unverified.",
+        "observedAt": "2026-10-03",
+        "observedBlock": 452885479,
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "The earlier finalized slot 452748326 identified this mint authority, five decimals and zero supply but left its hierarchy unverified. A fresh finalized getMultipleAccounts at slot 452885479 confirms the exact CHF mintAuthority is this same shared MinterConfig, owned by issuer program 8CVKFptWa13Z43e82tYufueoWH7tqJfsNQXB33g1WeVw. Decoding the immutable issuer MinterConfig layout gives admin vault 2duhrjMfZdX1TX3sKzc9ZPkdJ1TtnXVgCYcxToTq3Kv9, pending_admin None, initiator 5CgAHs1K779jzqgB1K5kgTYozcexBGF9voi9zo2WCPMd and bump 255, identical to the EURSAFO sibling's shared controller. The official source names the admin Squads account CqexeLYpGafaLfX7Nb3tD8ShLmWP1mmap16iR9M59u1A; its current account is owned by Squads v4. This establishes shared controller identity, not independently verified program-binary correspondence or key-custody independence.",
         "sources": [
           {
             "label": "Exact CHF Solana mint",
             "url": "https://solscan.io/token/6Gst8o3L5uNtkUvhEg23HpDLpYRdNQTgdn1Bc7jnCM5c"
+          },
+          {
+            "label": "Immutable shared issuer minter and MinterConfig layout",
+            "url": "https://github.com/spiko-tech/solana-contracts/tree/afdab14fb1a59bf3abe2f263870023349a560e2e"
+          },
+          {
+            "label": "Finalized exact CHF/shared controller binding at slot 452885479",
+            "url": "https://api.mainnet-beta.solana.com"
           }
         ]
+      },
+      {
+        "label": "Spiko CHF Polygon ADMIN Safe",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "chain": "polygon",
+        "address": "0xa4196f06fe948b8ca81d3dc77110d3f83d10abd9",
+        "deploymentRefs": ["polygon:0x9de2b2dcdcf43540e47143f28484b6d15118f089"],
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 6,
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-03",
+        "observedBlock": 94870785,
+        "safe": {
+          "owners": ["0x4d1d9c5b5d9ca448194313d799de374f362bd460", "0x75e0092e7d2c8d854fcf5334f95554852d62746a", "0xda47bd72438f11bef7cc54f18cd02426dd86a5a2", "0xd01046472371168721e45dc357296683f026d6b8", "0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949", "0xa6e06dfe42064b7cd6dc902a62e74ca5bb574011"],
+          "threshold": 3, "enabledModules": [], "observedAt": "2026-10-03", "observedBlock": 94870785, "source": "onchain"
+        },
+        "evidence": "Pinned authority() is PermissionManager 0x344278aff344d6fb960705dc18a4912221608472. Safe getGroups includes ADMIN bit 0; exact CHF mint mask is 0x5 and UUPS upgrade mask 0x1. getThreshold=3, getOwners=the listed six, modules pagination ends at sentinel with no modules. Full group census and guard/fallback closure remain unproven.",
+        "sources": [{"label": "Polygon pinned RPC census", "url": "https://polygon.drpc.org"}, {"label": "Spiko UUPS and permission model", "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"}]
+      },
+      {
+        "label": "Spiko CHF Arbitrum ADMIN Safe",
+        "role": "proxy-admin", "authorityType": "safe", "chain": "arbitrum",
+        "address": "0x7843225ba488cf780a4fe2c842b5dc2abcf8a03e",
+        "deploymentRefs": ["arbitrum:0x97e7962bcd091e7ecfb583fc96289b1e1553ac6e"],
+        "directMintAbility": "direct", "canRaiseCap": true, "threshold": 3, "signerCount": 6,
+        "modulesOrGuardsStatus": "unknown", "observedAt": "2026-10-03", "observedBlock": 511230438,
+        "safe": {
+          "owners": ["0x4d1d9c5b5d9ca448194313d799de374f362bd460", "0x75e0092e7d2c8d854fcf5334f95554852d62746a", "0xda47bd72438f11bef7cc54f18cd02426dd86a5a2", "0xd01046472371168721e45dc357296683f026d6b8", "0xa6e06dfe42064b7cd6dc902a62e74ca5bb574011", "0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949"],
+          "threshold": 3, "enabledModules": [], "observedAt": "2026-10-03", "observedBlock": 511230438, "source": "onchain"
+        },
+        "evidence": "Pinned authority() is chain-local PermissionManager 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a. Safe getGroups includes ADMIN bit 0; exact CHF mint mask is 0x5 and UUPS upgrade mask 0x1. getThreshold=3, getOwners=the listed six, modules pagination ends at sentinel with no modules. Full group census and guard/fallback closure remain unproven.",
+        "sources": [{"label": "Arbitrum pinned RPC census", "url": "https://arb1.arbitrum.io/rpc"}, {"label": "Spiko UUPS and permission model", "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"}]
+      },
+      {
+        "label": "Spiko CHF Base ADMIN Safe",
+        "role": "proxy-admin", "authorityType": "safe", "chain": "base",
+        "address": "0x4eaa52b6280593a8820c45ce38f974290ae52cea",
+        "deploymentRefs": ["base:0xd9aa2300e126869182dfb6ecf54984e4c687f36b"],
+        "directMintAbility": "direct", "canRaiseCap": true, "threshold": 3, "signerCount": 6,
+        "modulesOrGuardsStatus": "unknown", "observedAt": "2026-10-03", "observedBlock": 52110837,
+        "safe": {
+          "owners": ["0x75e0092e7d2c8d854fcf5334f95554852d62746a", "0x4d1d9c5b5d9ca448194313d799de374f362bd460", "0xda47bd72438f11bef7cc54f18cd02426dd86a5a2", "0xd01046472371168721e45dc357296683f026d6b8", "0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949", "0xa6e06dfe42064b7cd6dc902a62e74ca5bb574011"],
+          "threshold": 3, "enabledModules": [], "observedAt": "2026-10-03", "observedBlock": 52110837, "source": "onchain"
+        },
+        "evidence": "Pinned authority() is PermissionManager 0x344278aff344d6fb960705dc18a4912221608472. Safe getGroups includes ADMIN bit 0; exact CHF mint mask is 0x5 and UUPS upgrade mask 0x1. getThreshold=3, getOwners=the listed six, modules pagination ends at sentinel with no modules. Full group census and guard/fallback closure remain unproven.",
+        "sources": [{"label": "Base pinned RPC census", "url": "https://base-rpc.publicnode.com"}, {"label": "Spiko UUPS and permission model", "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"}]
+      },
+      {
+        "label": "Spiko CHF Etherlink ADMIN Safe",
+        "role": "proxy-admin", "authorityType": "safe", "chain": "etherlink",
+        "address": "0x09991fbf6b16741f6fde3b1c16e8e4d95a5e5538",
+        "deploymentRefs": ["etherlink:0xef53e7d17822b641c6481837238a64a688709301"],
+        "directMintAbility": "direct", "canRaiseCap": true, "threshold": 3, "signerCount": 6,
+        "modulesOrGuardsStatus": "unknown", "observedAt": "2026-10-03", "observedBlock": 54814446,
+        "safe": {
+          "owners": ["0x75e0092e7d2c8d854fcf5334f95554852d62746a", "0x4d1d9c5b5d9ca448194313d799de374f362bd460", "0xda47bd72438f11bef7cc54f18cd02426dd86a5a2", "0xd01046472371168721e45dc357296683f026d6b8", "0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949", "0xa6e06dfe42064b7cd6dc902a62e74ca5bb574011"],
+          "threshold": 3, "enabledModules": [], "observedAt": "2026-10-03", "observedBlock": 54814446, "source": "onchain"
+        },
+        "evidence": "Pinned authority() is PermissionManager 0x344278aff344d6fb960705dc18a4912221608472. Safe getGroups includes ADMIN bit 0; exact CHF mint mask is 0x5 and UUPS upgrade mask 0x1. getThreshold=3, getOwners=the listed six, modules pagination ends at sentinel with no modules. Full group census and guard/fallback closure remain unproven.",
+        "sources": [{"label": "Etherlink pinned RPC census", "url": "https://node.mainnet.etherlink.com"}, {"label": "Spiko UUPS and permission model", "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"}]
       }
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "periodic",
     "supervision": "prudential",
     "review": {
-      "disposition": "unresolved",
-      "reviewedAt": "2026-10-02",
-      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-      "evidence": "The AMF-authorized UCITS framework and issuer daily share/NAV reporting provide periodic accounting, not an independently signed current cross-register reconciliation. Exact Ethereum authority and Solana mint controls are observed; per-chain upstream signer closure, limits and delays remain explicitly unresolved.",
+      "disposition": "scoreable",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Refine05 primary-source and pinned-RPC review",
+      "evidence": "Five exact CHF EVM token requirement masks and chain-local ADMIN Safe signer/module reads establish observed direct-mint and upgrade controllers; their full permission-group census and guard/fallback/delay closure have not been independently established. The fresh CHF Solana mint/configuration binding now identifies the same MinterConfig, admin vault and initiator as EURSAFO, not a CHF-specific new issuance hierarchy. EURSAFO and GBPSAFO retain scoreable family reviews while explicitly acknowledging remaining non-Ethereum operator/custody limitations. CHFSAFO follows that same family authoring convention: the shared AMF-authorized SICAV/prospectus, CACEIS depositary and daily fund valuation, recurring fund reporting and named PwC appointment support the same prudential/periodic/unbounded-reconciled vocabulary. This is not a claim that the retrieved June SAFO report has an audit opinion or that a current independently signed CHF-token/all-register liability reconciliation has been published. Starknet/Stellar operator and upgrade enumeration, the complete EVM permission-group roster, and EVM guard/fallback/delay observations remain family-shared review limitations; no CHF-specific divergent controller or additional chain is established. Independent key custody and human signer independence remain undisclosed and are recorded per control. Native circulation exclusions and complete cross-register financial reconciliation remain unavailable in Backing.",
       "sources": [
         {
           "label": "Spiko SICAV prospectus, 1 September 2026",
@@ -194,10 +268,55 @@
           "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
         }
       ],
-      "unresolvedQuestions": [
-        "Complete current mint, permission and upgrade authorizer hierarchy for all eight native registers.",
-        "Enforced delay and independent signing/key-custody policy outside the exact observed Ethereum Safe.",
-        "Current independently reconciled native supplies and all circulation exclusions."
+      "unresolvedQuestions": [],
+      "scopedQuestions": [
+        {
+          "controlRef": "Spiko Ethereum super-admin Safe",
+          "question": "Establish independent key custody, human signer independence and signing policy for the identified Ethereum 3-of-6 ADMIN Safe signers; the observed threshold does not attest beneficial key separation.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine05 mint-authority calibration",
+          "sources": [{"label": "Reviewed Spiko permission and upgrade architecture", "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"}, {"label": "Pinned Ethereum Safe census", "url": "https://rpc.mevblocker.io"}]
+        },
+        {
+          "controlRef": "Spiko CHF Polygon ADMIN Safe",
+          "question": "Establish independent key custody, human signer independence and signing policy for the identified Polygon 3-of-6 ADMIN Safe signers; the observed threshold does not attest beneficial key separation.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine05 mint-authority calibration",
+          "sources": [{"label": "Reviewed Spiko permission and upgrade architecture", "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"}, {"label": "Pinned Polygon Safe census", "url": "https://polygon.drpc.org"}]
+        },
+        {
+          "controlRef": "Spiko CHF Arbitrum ADMIN Safe",
+          "question": "Establish independent key custody, human signer independence and signing policy for the identified Arbitrum 3-of-6 ADMIN Safe signers; the observed threshold does not attest beneficial key separation.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine05 mint-authority calibration",
+          "sources": [{"label": "Reviewed Spiko permission and upgrade architecture", "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"}, {"label": "Pinned Arbitrum Safe census", "url": "https://arb1.arbitrum.io/rpc"}]
+        },
+        {
+          "controlRef": "Spiko CHF Base ADMIN Safe",
+          "question": "Establish independent key custody, human signer independence and signing policy for the identified Base 3-of-6 ADMIN Safe signers; the observed threshold does not attest beneficial key separation.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine05 mint-authority calibration",
+          "sources": [{"label": "Reviewed Spiko permission and upgrade architecture", "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"}, {"label": "Pinned Base Safe census", "url": "https://base-rpc.publicnode.com"}]
+        },
+        {
+          "controlRef": "Spiko CHF Etherlink ADMIN Safe",
+          "question": "Establish independent key custody, human signer independence and signing policy for the identified Etherlink 3-of-6 ADMIN Safe signers; the observed threshold does not attest beneficial key separation.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine05 mint-authority calibration",
+          "sources": [{"label": "Reviewed Spiko permission and upgrade architecture", "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"}, {"label": "Pinned Etherlink Safe census", "url": "https://node.mainnet.etherlink.com"}]
+        },
+        {
+          "controlRef": "Spiko native issuance and register operator",
+          "question": "Which exact current native operator principals and signing addresses are covered by documented key protections on each CHF register? Remaining operator/custody mappings are a family-shared review limitation also recorded for EURSAFO; no exhaustive native group census is asserted.",
+          "reviewedAt": "2026-10-03", "reviewer": "Refine05 Spiko sibling consistency review",
+          "sources": [{"label": "Shared issuer operator and permission architecture", "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"}, {"label": "Exact CHF native register roster", "url": "https://public-api.spiko.io/share-classes/chfSAFO"}]
+        },
+        {
+          "controlRef": "CHF Solana mint authority",
+          "question": "Establish independent key custody and signing policy for the shared MinterConfig initiator and admin Squads controllers; known shared controller identity does not attest human independence or complete program-runtime correspondence.",
+          "reviewedAt": "2026-10-03", "reviewer": "Refine05 Spiko sibling consistency review",
+          "sources": [{"label": "Immutable shared minter authorities and code", "url": "https://github.com/spiko-tech/solana-contracts/tree/afdab14fb1a59bf3abe2f263870023349a560e2e"}, {"label": "Finalized exact CHF/controller binding at slot 452885479", "url": "https://api.mainnet-beta.solana.com"}]
+        }
       ]
     }
   }

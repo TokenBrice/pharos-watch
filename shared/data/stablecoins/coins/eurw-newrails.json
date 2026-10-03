@@ -65,6 +65,10 @@
     {
       "label": "Bank of Lithuania Newrails EMI and EMT issuer register",
       "url": "https://www.lb.lt/en/sfi-financial-market-participants/newrails-uab"
+    },
+    {
+      "label": "Monad deployment creation at block 61584206, March 15, 2026",
+      "url": "https://monadscan.com/tx/0x3fb231fb1a9045f86604727f233e9ff8885cdc6dec1e9f4f0567fa3f03592f47"
     }
   ],
   "jurisdiction": {
@@ -82,5 +86,6 @@
   "collateralQuality": "rwa",
   "custodyModel": "unknown",
   "governanceQuality": "regulated-entity",
-  "launchDate": "2026-02-10"
+  "launchDate": "2026-02-10",
+  "implementationLaunchDate": "2026-03-15"
 }

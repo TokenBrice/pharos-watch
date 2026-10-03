@@ -6,34 +6,6 @@ import { documentedVariableFee, fixedFee, issuerBase, sourceRef, sourceRefFull, 
  * diagnostic default, never an immediate buffer or documented-bound capacity.
  * Each route withholds scoring for its explicitly missing executable terms. */
 export const DISCOVERY_OFFCHAIN_ISSUER_CONFIGS: Record<string, RedemptionBackstopConfig> = {
-  "usdx-axis": {
-    ...issuerBase,
-    holderEligibility: "whitelisted-primary",
-    settlementModel: "days",
-    executionModel: "opaque",
-    outputAssetType: "stable-basket",
-    outputAssets: ["usdc-circle", "usdt-tether"],
-    capacityModel: { kind: "fixed-usd", amountUsd: 0, confidence: "dynamic" },
-    costModel: undisclosedReviewedFee("Axis publishes indicative RFQ targets and maxima, not binding signed-order fees; the actual accepted quote and governing terms control. No fixed 30/50 bps ceiling is inferred."),
-    reviewedAt: "2026-10-03",
-    v9RouteReviewTerms: {
-      scoringDisposition: "bounded-terms-gap",
-      missingScoringFields: ["capacity", "settlement", "cost"],
-      rationale: "Atomic settlement applies only after discretionary RFQ approval and operator submission. The indicative 2%-of-book/day and seven-day bands are not committed throughput, a completion SLA or a binding all-in fee bound.",
-      reviewedAt: "2026-10-03",
-      docs: [sourceRefFull("Axis primary-market route and indicative pricing", "https://docs.axis.to/usdx-the-synthetic-dollar/mint-and-redeem.md")],
-    },
-    docs: [
-      sourceRefFull("Axis primary-market redemption", "https://docs.axis.to/usdx-the-synthetic-dollar/mint-and-redeem.md"),
-      sourceRef("Axis eligibility", "https://docs.axis.to/resources-and-legal/eligibility-and-onboarding.md", ["access"]),
-      sourceRef("Axis terms", "https://www.axis.to/terms-of-service", ["settlement", "access"]),
-    ],
-    notes: [
-      "KYC/KYB-approved primary counterparties and authorized wallets only; U.S. persons excluded and EU/EEA enhanced due diligence applies. The $1 million initial participation minimum is not a per-redemption minimum. Holder-choice USDC/USDT outputs are not an equal-weight portfolio. No capacity adapter or static fallback is configured.",
-      "The holder route begins with issuer RFQ approval and operator submission, not a permissionless on-chain redemption; atomic token settlement is only the final execution step.",
-      "Zero modeled capacity is a conservative lower bound while executable output liquidity is unmeasured, not an observed empty vault; capacity remains an explicit scoring gap.",
-    ],
-  },
   "xgz-goldzip": {
     ...issuerBase,
     reviewedAt: "2026-10-03",
@@ -63,7 +35,7 @@ export const DISCOVERY_OFFCHAIN_ISSUER_CONFIGS: Record<string, RedemptionBacksto
     ],
     notes: [
       "Eligibility: AML compliance; Hong Kong residents excluded.",
-      "Minimum: 1,000 XGZ per eligible delivery bar; token unit is one gram.",
+      "Minimum: 1,000 XGZ per eligible delivery bar; each token represents one gross gram of 99.99%-fine gold. deliverableOuncesPerToken expresses fine-gold content (0.9999 grams / 31.1034768), while the token's nominal commodity unit is one gross gram.",
       "Do not borrow XAUT 430-token deposit or Swiss delivery terms. XGZ 1,000-token lot is 1kg nominal gold; no dealer-sale USD proceeds, fee or capacity is invented.",
       "No physical-to-USD composition is authored: delivery timing, vault pickup details and logistics cost are not bounded. Zero physical feeModel deductions mean no published USD deduction, not free delivery; the 0.01% transfer fee is not a redemption fee.",
       "Capacity and settlement categories are diagnostic defaults only; no immediate ratio, funded USD capacity, guaranteed settlement duration or all-in zero cost is inferred.",
@@ -209,11 +181,11 @@ export const DISCOVERY_OFFCHAIN_ISSUER_CONFIGS: Record<string, RedemptionBacksto
     settlementModel: "days",
     executionModel: "rules-based-nav",
     outputAssetType: "stable-single",
-    costModel: undisclosedReviewedFee("No Commission fee disclosed; LSP and payment-rail all-in charges are not quantified."),
+    costModel: undisclosedReviewedFee("Commission fee disclosed as zero; LSP and payment-rail all-in charges are not quantified."),
     v9RouteReviewTerms: {
       scoringDisposition: "bounded-terms-gap",
       missingScoringFields: ["capacity", "settlement", "cost"],
-      rationale: "Current executable LSP capacity and minimum are not public. Trust balance is eventual backing, not an immediate redemption-capacity measure. Commission submits the USD notional value promptly, no more than two Business Days for an authenticated approved-LSP Redemption Request made in business hours. Out-of-hours requests are treated as next-Business-Day requests. Section 4 permits delays for unforeseen circumstances; bank receipt time is not guaranteed by this submission deadline. No Commission fee disclosed; LSP and payment-rail all-in charges are not quantified. No current executable same-notional capacity, unconditional end-to-end settlement bound or all-in cost bound is established.",
+      rationale: "Current executable LSP capacity and minimum are not public. Trust balance is eventual backing, not an immediate redemption-capacity measure. Commission submits the USD notional value promptly, no more than two Business Days for an authenticated approved-LSP Redemption Request made in business hours. Out-of-hours requests are treated as next-Business-Day requests. Section 4 permits delays for unforeseen circumstances; bank receipt time is not guaranteed by this submission deadline. Commission fee disclosed as zero; LSP and payment-rail all-in charges are not quantified. No current executable same-notional capacity, unconditional end-to-end settlement bound or all-in cost bound is established.",
       reviewedAt: "2026-10-03",
       docs: [sourceRef("Wyoming reserve and redemption rules, Chapter 4", "https://stabletoken.wyo.gov/assets/media/reserves.pdf", ["route"])],
     },
@@ -303,12 +275,14 @@ export const DISCOVERY_OFFCHAIN_ISSUER_CONFIGS: Record<string, RedemptionBacksto
       sourceRef("Ondo investor redemption mechanics", "https://docs.ondo.finance/ondo-stocks/investing-and-redeeming.md", ["route", "capacity", "access", "settlement"]),
       sourceRefFull("GLDon Final Terms", "https://cdn.sanity.io/files/8k2tqa6n/production/a598be5156bcda440276f01eea9258f82f851bd0.pdf"),
       sourceRef("Ondo holder eligibility notes", "https://docs.ondo.finance/ondo-stocks/important-notes.md", ["access"]),
+      sourceRef("Ondo Stocks issuer and swapper contract addresses", "https://docs.ondo.finance/addresses.md", ["route", "capacity"]),
     ],
     notes: [
       "Eligibility: Onboarded eligible investors outside the United States; additional jurisdictional restrictions. USDon/USDC swap access is separately whitelisted.",
       "Minimum: Current operational docs state $1 redemption minimum; Final Terms state 0.01-USDC minimum subscription, a different scope.",
       "Same issuer family as IAUon/SLVon, but new retrieved docs identify USDon and liquidity-conditioned USDC settlement. Do not copy obsolete blanket days or imply ETF/physical gold delivery rights.",
-      "The complete token payout set is USDon and liquidity-conditioned USDC. These are alternative outputs, not an invented equal-weight portfolio or direct ownership/delivery of GLD ETF shares.",
+      "The modeled token payout choices are USDon and liquidity-conditioned USDC. These are alternative outputs, not an invented equal-weight portfolio or direct ownership/delivery of GLD ETF shares.",
+      "Ondo separately documents GMIssuerManager redemption into underlying securities through Alpaca's Instant Tokenization Network: Ethereum 0xec8bBB0c90c0B5F4D8240D0F7b49DA3b0aA41f4E and BNB Chain 0x341f9e6463161F0C90037Cbc0150DC54e6d1e06e. Holder eligibility, execution capacity and binding GLDon in-kind rights are unestablished; this rail is recorded without adding an output or upgrading exit scoring.",
       "Capacity and settlement categories are diagnostic defaults only; no immediate ratio, funded USD capacity, guaranteed settlement duration or all-in zero cost is inferred.",
     ],
   },

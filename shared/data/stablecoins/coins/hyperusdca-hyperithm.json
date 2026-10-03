@@ -2,6 +2,7 @@
   "id": "hyperusdca-hyperithm",
   "name": "Hyperithm USDC Apex",
   "symbol": "hyperUSDCa",
+  "implementationLaunchDate": "2026-01-09",
   "oneLiner": "hyperUSDCa is Hyperithm's USDC lending vault on Monad; shares earn borrower interest and redeem for liquid USDC, with credit losses reducing NAV.",
   "flags": {
     "backing": "crypto-backed",
@@ -49,6 +50,10 @@
       {
         "label": "Exact Morpho lending adapter",
         "url": "https://monadscan.com/address/0x068f22739a5f8a5c84619d7f355b678d00707908#code"
+      },
+      {
+        "label": "Exact vault creationTimestamp 1767929586, creationBlockNumber 47497571; RPC block timestamp independently matches, reviewed 2026-10-03",
+        "url": "https://blue-api.morpho.org/graphql"
       }
     ]
   },

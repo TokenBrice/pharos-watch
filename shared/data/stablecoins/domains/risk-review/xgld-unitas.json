@@ -24,11 +24,79 @@
     "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
     "reviewedAt": "2026-10-02"
   },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "summary": "At BNB block 125441304, active native minter 0x2a9e3ea72575e05337a7703c8fad65a82a5b5865 references XGLDExchangeRate 0x7bbe7fdcd6bdffd7f767a9531b6210b87b3e46e7. Exact verified source has RATE_UPDATER_ROLE-controlled monotonically increasing NAV (maximum 5 bps per update), no minimum update interval and no staleness/fallback guard in previewMint. Other collateral uses backend-signed token amounts. This is administered NAV, not an independently reconciled market oracle. BYBIT collateral/liquidation pricing and the original active native minter's pricing remain undisclosed.",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Refine06 primary-source and pinned RPC review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Exact active XGLDMinting pricing and signed-order source",
+        "url": "https://sourcify.dev/server/v2/contract/56/0x2a9e3ea72575e05337a7703c8fad65a82a5b5865?fields=sources,abi"
+      },
+      {
+        "label": "Exact XGLDExchangeRate updater and 5-bps rule",
+        "url": "https://sourcify.dev/server/v2/contract/56/0x7bbe7fdcd6bdffd7f767a9531b6210b87b3e46e7?fields=sources,abi"
+      },
+      {
+        "label": "Issuer XGLD borrowing and liquidation-risk disclosure",
+        "url": "https://docs.unitas.so/overview/xgld.md"
+      }
+    ],
+    "branchApplicability": {
+      "disposition": "unresolved",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Refine06 primary-source and pinned RPC review",
+      "rationale": "Native share-NAV pricing is verified, but XAUt-collateralized BYBIT borrowing creates an economically applicable liquidation path. Exact CEX feeds, LTV/liquidation rules, failover and stressed recovery are not publicly bound to XGLD; no top-level-only exemption is claimed.",
+      "sources": [{
+        "label": "XGLD XAUt borrowing strategy and liquidation controls",
+        "url": "https://docs.unitas.so/overview/xgld.md"
+      }]
+    },
+    "paths": [
+      {
+        "id": "xgld-bsc-share-nav",
+        "chain": "bsc",
+        "address": "0x2a9e3ea72575e05337a7703c8fad65a82a5b5865",
+        "pricingAuthority": "internal-price",
+        "applicability": {
+          "disposition": "unresolved",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine06 primary-source and pinned RPC review",
+          "confidence": "verified",
+          "rationale": "XAUt share conversion uses the exact manual rate-provider; signed orders supply other asset amounts. Full upstream borrowing/liquidation and original-minter pricing inventory remains unclosed.",
+          "sources": [{
+            "label": "Verified XGLDMinting price path",
+            "url": "https://sourcify.dev/server/v2/contract/56/0x2a9e3ea72575e05337a7703c8fad65a82a5b5865?fields=sources,abi"
+          }]
+        }
+      },
+      {
+        "id": "xgld-base-quantity-oft",
+        "chain": "base",
+        "address": "0xea953ea6634d55dac6697c436b1e81a679db5882",
+        "pricingAuthority": "none",
+        "applicability": {
+          "disposition": "not-applicable",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine06 primary-source and pinned RPC review",
+          "confidence": "verified",
+          "rationale": "Exact XGLDToken/OFT source transports token quantities and does not price collateral or execute borrower liquidations. This local exemption does not remove canonical BNB NAV or offchain borrowing risk.",
+          "sources": [{
+            "label": "Exact Base token and OFT source",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0xea953ea6634d55dac6697c436b1e81a679db5882?fields=sources,abi"
+          }]
+        }
+      }
+    ]
+  },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "BNB is the native XGLD mint/redemption deployment; Base is a LayerZero OFT representation. Reciprocal peers and endpoint are pinned, while DVN/delegate bypass controls, signer policy and conservation remain incomplete.",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "summary": "BNB native issuance and Base OFT routes are inventoried. At BNB block 125441304 and Base block 52110904, endpoint delegates equal the token owners; exact send/receive libraries and ULN DVN requirements are read. Controller signing/bypass policy and current economic liability partition remain unresolved.",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Refine06 primary-source and pinned RPC review",
     "confidence": "manual-review",
     "sources": [
       {
@@ -38,6 +106,18 @@
       {
         "label": "Verified XGLDToken source (equal BNB and Base runtime)",
         "url": "https://basescan.org/address/0xea953ea6634d55dac6697c436b1e81a679db5882#code"
+      },
+      {
+        "label": "Exact Base XGLDToken and LayerZero endpoint interface",
+        "url": "https://sourcify.dev/server/v2/contract/8453/0xea953ea6634d55dac6697c436b1e81a679db5882?fields=sources,abi"
+      },
+      {
+        "label": "BNB LayerZero endpoint deployment",
+        "url": "https://bscscan.com/address/0x1a44076050125825900e736c501f859c50fe728c"
+      },
+      {
+        "label": "Base LayerZero endpoint deployment",
+        "url": "https://basescan.org/address/0x1a44076050125825900e736c501f859c50fe728c"
       },
       {
         "label": "BNB XGLD deployment",
@@ -140,9 +220,9 @@
           }
         ],
         "routeChecks": {
-          "trustedPeerOrRemote": "Pinned peers(30184) matches the remote XGLD token; endpoint() is 0x1a44076050125825900e736c501f859c50fe728c. DVN and delegate bypass configuration remains unverified.",
+          "trustedPeerOrRemote": "peers(30184) binds Base; endpoint 0x1a44076050125825900e736c501f859c50fe728c at BNB block 125441304 has delegate 0x99997b18733ff4a9d8e0b9c7d9dec59625f87228. Send library 0x9f8c645f2d0b2159767bd6e0839de4be49e823de and receive library 0xb217266c3a98c8b2709ee26836c98cf12f6ccec1 both return ULN config: 20 confirmations; required DVNs 0xfa9ba83c102283958b997adc8b44ed3a3cdb5dda and 0xfd6865c841c2d64565562fcc7e05e619a30615f0; optional threshold 2 of 0x247624e2143504730aec22912ed41f092498bef2, 0x31f748a368a893bdb5abb67ec95f232507601a73, 0xf0a5c5306adbfd4e3dfd5d4b148b451c411d3878. DVN operator independence and delegate bypass census are not established.",
           "rateLimits": "No current token-specific rate-limit configuration is independently established.",
-          "pausersAdminsUpgraders": "owner() is 0x99997b18733ff4a9d8e0b9c7d9dec59625f87228. Owner signing threshold, delegate powers and complete local authorization roster remain unavailable."
+          "pausersAdminsUpgraders": "Token owner and endpoint delegate are 0x99997b18733ff4a9d8e0b9c7d9dec59625f87228. This custom contract's signing/bypass policy is not verified. Token-level native minter/burner census is separately recorded under Mint Authority."
         },
         "evidence": "Issuer documents LayerZero OFT. Current BNB and Base runtimes are byte-for-byte equal, with reciprocal exact remote peer bindings; endpoint and owner are directly read. No locked collateral conservation, immutable cap or favorable signer policy is inferred."
       },
@@ -177,9 +257,9 @@
           }
         ],
         "routeChecks": {
-          "trustedPeerOrRemote": "Pinned peers(30102) matches the remote XGLD token; endpoint() is 0x1a44076050125825900e736c501f859c50fe728c. DVN and delegate bypass configuration remains unverified.",
+          "trustedPeerOrRemote": "peers(30102) binds BNB; endpoint 0x1a44076050125825900e736c501f859c50fe728c at Base block 52110904 has delegate 0xbb984ce670100aa855f6152f88b26ee57f4ea82a. Send library 0xb5320b0b3a13cc860893e2bd79fcd7e13484dda2 and receive library 0xc70ab6f32772f59fbfc23889caf4ba3376c84baf0 both return ULN config: 20 confirmations; required DVNs 0x554833698ae0fb22ecc90b01222903fd62ca4b47 and 0x9e059a54699a285714207b43b055483e78faac25; optional threshold 2 of 0xa7b5189bca84cd304d8553977c7c614329750d99, 0xc2a0c36f5939a14966705c7cec813163faeea1f0, 0xcd37ca043f8479064e10635020c65ffc005d36f6. DVN operator independence and delegate bypass census are not established.",
           "rateLimits": "No current token-specific rate-limit configuration is independently established.",
-          "pausersAdminsUpgraders": "owner() is 0xbb984ce670100aa855f6152f88b26ee57f4ea82a. Owner signing threshold, delegate powers and complete local authorization roster remain unavailable."
+          "pausersAdminsUpgraders": "Token owner and endpoint delegate are 0xbb984ce670100aa855f6152f88b26ee57f4ea82a. Its complete signing policy, mutable peer/library/receive-timeout paths and bypass closure remain unverified."
         },
         "evidence": "Issuer documents LayerZero OFT. Current BNB and Base runtimes are byte-for-byte equal, with reciprocal exact remote peer bindings; endpoint and owner are directly read. No locked collateral conservation, immutable cap or favorable signer policy is inferred."
       }

@@ -12,26 +12,185 @@
     "evidence": "At Ethereum block 26108096 the implementation remained 0x2b7074cf6681382b70e239063931ebe83c0f4e0a. Its verified code has BLACKLISTER_ROLE, ENFORCER_ROLE, native blacklist checks, inherited USDat freeze checks and a seize function moving shares from blacklisted holders. Saturn's terms section 9 explicitly acknowledges a seize mechanism in USDat and sUSDat. BNB and Monad SaturnOFT representations enforce restricted transfers and DEFAULT_ADMIN_ROLE recoverFunds; allowlistMode() returned 1 on both at blocks 125385350 and 110032586. These are direct holder-control powers, not an inference from mint roles or centralized governance."
   },
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
+    "tier": "single-source-or-laggy",
     "role": "coin-price-feed",
     "branchModel": "single-path",
-    "summary": "The native share rate includes STRConModule recognized value; its deployed pricing and parameter authority is material to NAV and queued redemption. The V2 runbook identifies a guarded STRCon oracle, but this addition does not establish the complete current feed freshness, replacement authority and fail-closed inventory. No borrower liquidation branches or independently assured asset valuation are inferred.",
+    "summary": "Exact STRConModule oracle() is 0x8201ff053bb7c96c10fb9611934c14142b2702de. Wrapper primaryFeed=0xc353ac4b425f818ad87e228bf816e15c2173ac07, referenceFeed=0x67d4ae9f265270ae123c08d2657536771d19cd91, syntheticSharesOracle=0x9bc39db6fbb44b91a48b8d5a6c208b82b1741be6. These are the deployed STRCon inputs, not the two legacy STRC feeds on the key-addresses page. Immutable wrapper validates rounds, positive answers, synthetic share value/paused state and $20–150 underlying bounds; current reference-age bound is 93600 seconds (26h), deviation 100 bps, versus hard maxima 36h/1000bps. Primary round age has no equivalent elapsed-time bound, and the reference is a circuit breaker, never a fallback returned price. getPrice() reverted FeedDeviation (0xc7f602ab) at block 26110187: guard activity is verified but NAV is unavailable, not zero. Vault PARAMETER_MANAGER_ROLE can alter bounds/deviation/reference-age within caps and STRConModule.setOracle can replace this wrapper under the current one-hour timelock. EACAggregatorProxy feeds remain owner-replaceable upstream; their complete signer and heartbeat census is not established. This is top-level credit-vault NAV pricing, not a borrower liquidation system.",
     "reviewedAt": "2026-10-03",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "confidence": "limited",
+    "reviewer": "Sol refinement 2026-10-03 (Refine12, exact source and RPC census)",
+    "confidence": "verified",
     "branchApplicability": {
       "disposition": "top-level-only",
       "reviewedAt": "2026-10-03",
-      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewer": "Sol refinement 2026-10-03 (Refine12, exact source and RPC census)",
       "rationale": "Verified totalAssets sums USDat, vested surplus and STRConModule recognized value in a vault share rate. This is a top-level NAV authority, not a borrower collateral liquidation market.",
       "sources": [
-        { "label": "Deployed vault totalAssets formula", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2b7074cf6681382b70e239063931ebe83c0f4e0a" }
+        {
+          "label": "Deployed vault totalAssets formula",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2b7074cf6681382b70e239063931ebe83c0f4e0a"
+        },
+        {
+          "label": "Verified current STRCon fail-closed wrapper",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8201ff053bb7c96c10fb9611934c14142b2702de"
+        },
+        {
+          "label": "Verified current STRCon module and oracle replacement authority",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3c0f0b502aa7c2ed85620f7f52b8efb8049b1ecf"
+        },
+        {
+          "label": "Primary STRCon calculated price feed, not legacy STRC feed",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc353ac4b425f818ad87e228bf816e15c2173ac07"
+        },
+        {
+          "label": "Reference STRCon API feed, not legacy STRC feed",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x67d4ae9f265270ae123c08d2657536771d19cd91"
+        },
+        {
+          "label": "Ethereum current oracle getters and FeedDeviation pin",
+          "url": "https://etherscan.io/block/26110187"
+        }
       ]
     },
     "sources": [
-      { "label": "Saturn V2 oracle identity and configured guards", "url": "https://raw.githubusercontent.com/saturn-organization/saturn-yield-dollar/main/docs/v2-deployment-runbook.md" },
-      { "label": "Verified deployed STRCon module", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3c0f0b502aa7c2ed85620f7f52b8efb8049b1ecf" },
-      { "label": "Ethereum block 26108096", "url": "https://etherscan.io/block/26108096" }
+      {
+        "label": "Saturn V2 oracle identity and configured guards",
+        "url": "https://raw.githubusercontent.com/saturn-organization/saturn-yield-dollar/main/docs/v2-deployment-runbook.md"
+      },
+      {
+        "label": "Verified deployed STRCon module",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3c0f0b502aa7c2ed85620f7f52b8efb8049b1ecf"
+      },
+      {
+        "label": "Ethereum block 26108096",
+        "url": "https://etherscan.io/block/26108096"
+      },
+      {
+        "label": "Verified current STRCon fail-closed wrapper",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8201ff053bb7c96c10fb9611934c14142b2702de"
+      },
+      {
+        "label": "Verified current STRCon module and oracle replacement authority",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3c0f0b502aa7c2ed85620f7f52b8efb8049b1ecf"
+      },
+      {
+        "label": "Primary STRCon calculated price feed, not legacy STRC feed",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc353ac4b425f818ad87e228bf816e15c2173ac07"
+      },
+      {
+        "label": "Reference STRCon API feed, not legacy STRC feed",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x67d4ae9f265270ae123c08d2657536771d19cd91"
+      },
+      {
+        "label": "Ethereum current oracle getters and FeedDeviation pin",
+        "url": "https://etherscan.io/block/26110187"
+      }
+    ],
+    "paths": [
+      {
+        "id": "native-share-nav",
+        "chain": "ethereum",
+        "address": "0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
+        "pricingAuthority": "internal-price",
+        "applicability": {
+          "disposition": "top-level-only",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine12, exact source and RPC census)",
+          "confidence": "verified",
+          "rationale": "Deployed StakedUSDat totalAssets includes STRCon recognized value; exact module.oracle and wrapper feed getters bind this top-level NAV path. The credit vault has no borrower collateral/debt or local liquidation branch, but pricing remains applicable.",
+          "sources": [
+            {
+              "label": "Verified current STRCon fail-closed wrapper",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8201ff053bb7c96c10fb9611934c14142b2702de"
+            },
+            {
+              "label": "Verified current STRCon module and oracle replacement authority",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3c0f0b502aa7c2ed85620f7f52b8efb8049b1ecf"
+            },
+            {
+              "label": "Primary STRCon calculated price feed, not legacy STRC feed",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc353ac4b425f818ad87e228bf816e15c2173ac07"
+            },
+            {
+              "label": "Reference STRCon API feed, not legacy STRC feed",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x67d4ae9f265270ae123c08d2657536771d19cd91"
+            },
+            {
+              "label": "Ethereum current oracle getters and FeedDeviation pin",
+              "url": "https://etherscan.io/block/26110187"
+            }
+          ]
+        }
+      },
+      {
+        "id": "strcon-module-nav",
+        "chain": "ethereum",
+        "address": "0x3c0f0b502aa7c2ed85620f7f52b8efb8049b1ecf",
+        "pricingAuthority": "external-price",
+        "applicability": {
+          "disposition": "top-level-only",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine12, exact source and RPC census)",
+          "confidence": "verified",
+          "rationale": "Deployed StakedUSDat totalAssets includes STRCon recognized value; exact module.oracle and wrapper feed getters bind this top-level NAV path. The credit vault has no borrower collateral/debt or local liquidation branch, but pricing remains applicable.",
+          "sources": [
+            {
+              "label": "Verified current STRCon fail-closed wrapper",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8201ff053bb7c96c10fb9611934c14142b2702de"
+            },
+            {
+              "label": "Verified current STRCon module and oracle replacement authority",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3c0f0b502aa7c2ed85620f7f52b8efb8049b1ecf"
+            },
+            {
+              "label": "Primary STRCon calculated price feed, not legacy STRC feed",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc353ac4b425f818ad87e228bf816e15c2173ac07"
+            },
+            {
+              "label": "Reference STRCon API feed, not legacy STRC feed",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x67d4ae9f265270ae123c08d2657536771d19cd91"
+            },
+            {
+              "label": "Ethereum current oracle getters and FeedDeviation pin",
+              "url": "https://etherscan.io/block/26110187"
+            }
+          ]
+        }
+      },
+      {
+        "id": "strcon-guarded-price",
+        "chain": "ethereum",
+        "address": "0x8201ff053bb7c96c10fb9611934c14142b2702de",
+        "pricingAuthority": "external-price",
+        "applicability": {
+          "disposition": "top-level-only",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine12, exact source and RPC census)",
+          "confidence": "verified",
+          "rationale": "Deployed StakedUSDat totalAssets includes STRCon recognized value; exact module.oracle and wrapper feed getters bind this top-level NAV path. The credit vault has no borrower collateral/debt or local liquidation branch, but pricing remains applicable.",
+          "sources": [
+            {
+              "label": "Verified current STRCon fail-closed wrapper",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8201ff053bb7c96c10fb9611934c14142b2702de"
+            },
+            {
+              "label": "Verified current STRCon module and oracle replacement authority",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3c0f0b502aa7c2ed85620f7f52b8efb8049b1ecf"
+            },
+            {
+              "label": "Primary STRCon calculated price feed, not legacy STRC feed",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc353ac4b425f818ad87e228bf816e15c2173ac07"
+            },
+            {
+              "label": "Reference STRCon API feed, not legacy STRC feed",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x67d4ae9f265270ae123c08d2657536771d19cd91"
+            },
+            {
+              "label": "Ethereum current oracle getters and FeedDeviation pin",
+              "url": "https://etherscan.io/block/26110187"
+            }
+          ]
+        }
+      }
     ]
   },
   "bridgeRouteRisk": {

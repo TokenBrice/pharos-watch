@@ -22,6 +22,13 @@ import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters
 import { BTCFI_HANDLER_ROWS, BTCFI_MARKET_ROWS } from "./reserve-adapter-payloads.test-support";
 import { MAKINA_ALLOCATIONS_FIXTURE, makinaNetworkSpec } from "./makina-strategy.test-support";
 import { JPMORGAN_JLTXX_PUBLISHER_URL } from "../jpmorgan-nav";
+import { FRNT_LEDGERLENS_URL } from "../frnt-ledgerlens";
+import COINBASE_ONED_CAPTURE from "./fixtures/coinbase-oned-por.json";
+const BLACKROCK_BRSRV_URL = "https://www.blackrock.com/cash/en-us/products/351891/fund/1464253357814.ajax?fileType=csv&fileName=RSVXX_holdings&dataType=fund";
+const BLACKROCK_BRSRV_CAPTURE = readFileSync(new URL("./fixtures/blackrock-brsrv-holdings.txt", import.meta.url), "utf8")
+  .replace(/<!--[^]*?-->\r?\n/g, "");
+const MATRIXDOCK_STBT_URL = "https://www.matrixdock.com/stbt";
+const MATRIXDOCK_STBT_CAPTURE = readFileSync(new URL("./fixtures/matrixdock-stbt.html", import.meta.url), "utf8");
 
 export interface AdapterCorpusDrift {
   /** What the upstream changed, in the words of the failure it must produce. */
@@ -704,5 +711,75 @@ CORPUS_CASES["solomon-chancery"] = {
       },
     },
     outcome: "error",
+  },
+};
+
+const FRNT_LEDGERLENS_CAPTURE = JSON.parse(
+  readFileSync(new URL("./fixtures/frnt-ledgerlens.txt", import.meta.url), "utf8")
+    .replace(/<!--[^]*?-->\s*/g, ""),
+);
+CORPUS_CASES["frnt-ledgerlens"] = {
+  coinId: "frnt-wyoming",
+  nowSec: Date.parse("2026-10-03T06:35:30Z") / 1000,
+  network: { json: { [FRNT_LEDGERLENS_URL]: FRNT_LEDGERLENS_CAPTURE } },
+  drift: {
+    label: "FBO cash summary loses its measured amount",
+    network: {
+      json: {
+        [FRNT_LEDGERLENS_URL]: JSON.parse(
+          JSON.stringify(FRNT_LEDGERLENS_CAPTURE).replace('"s":51230.78', '"s":null'),
+        ),
+      },
+    },
+    outcome: "error",
+  },
+};
+
+CORPUS_CASES["coinbase-oned-por"] = {
+  coinId: "oned-gennius",
+  nowSec: Date.parse("2026-10-03T07:21:00Z") / 1000,
+  network: { json: { [COINBASE_ONED_CAPTURE.capture.sourceUrl]: COINBASE_ONED_CAPTURE.capture.payload } },
+  drift: {
+    label: "persisted query hash is no longer recognized",
+    outcome: "error",
+    network: {
+      json: {
+        [COINBASE_ONED_CAPTURE.capture.sourceUrl]: {
+          errors: [{ message: "PersistedQueryNotFound", extensions: { code: "PERSISTED_QUERY_NOT_FOUND" } }],
+        },
+      },
+    },
+  },
+};
+
+CORPUS_CASES["blackrock-brsrv-holdings"] = {
+  coinId: "brsrv-blackrock",
+  nowSec: Date.parse("2026-10-03T07:00:00Z") / 1000,
+  network: { html: { [BLACKROCK_BRSRV_URL]: BLACKROCK_BRSRV_CAPTURE } },
+  drift: {
+    label: "the securities market-value column is removed",
+    outcome: "error",
+    network: {
+      html: {
+        [BLACKROCK_BRSRV_URL]: BLACKROCK_BRSRV_CAPTURE
+          .replace("Market Value", "Changed Value"),
+      },
+    },
+  },
+};
+
+CORPUS_CASES["matrixdock-stbt"] = {
+  coinId: "stbt-matrixdock",
+  nowSec: Date.parse("2026-10-03T07:00:00Z") / 1000,
+  network: { html: { [MATRIXDOCK_STBT_URL]: MATRIXDOCK_STBT_CAPTURE } },
+  drift: {
+    label: "STBT supply is removed while reserve buckets remain",
+    outcome: "error",
+    network: {
+      html: {
+        [MATRIXDOCK_STBT_URL]: MATRIXDOCK_STBT_CAPTURE
+          .replace("stbt_total_supply", "unknown_supply"),
+      },
+    },
   },
 };

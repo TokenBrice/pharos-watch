@@ -41,6 +41,10 @@
       {
         "label": "arc fixed-block RPC observation 23952285",
         "url": "https://rpc.mainnet.arc.io"
+      },
+      {
+        "label": "Exact vault creationTimestamp 1786356160, creationBlockNumber 14844834; RPC block timestamp independently matches, reviewed 2026-10-03",
+        "url": "https://blue-api.morpho.org/graphql"
       }
     ]
   },
@@ -103,5 +107,6 @@
         "chainId": 5042
       }
     }
-  }
+  },
+  "implementationLaunchDate": "2026-08-10"
 }

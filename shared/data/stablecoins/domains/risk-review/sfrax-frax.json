@@ -1,5 +1,52 @@
 {
   "id": "sfrax-frax",
+  "oracleRisk": {
+    "tier": "oracleless",
+    "summary": "Exact immutable local share accounting holds legacy FRAX and distributes rewards without an external price read or borrower/liquidation branch. The IORB benchmark targets yield, not mint/redemption valuation. Parent FRAX exposure remains inherited.",
+    "branchModel": "single-path",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Sol refinement Refine11",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Exact verified StakedFrax and LinearRewardsErc4626 source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa663b02cf0a4b149d2ad41910cb81e23e1c41c32"
+      }
+    ],
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Sol refinement Refine11",
+      "rationale": "Exact immutable local share accounting holds legacy FRAX and distributes rewards without an external price read or borrower/liquidation branch. The IORB benchmark targets yield, not mint/redemption valuation. Parent FRAX exposure remains inherited.",
+      "sources": [
+        {
+          "label": "Exact verified StakedFrax and LinearRewardsErc4626 source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa663b02cf0a4b149d2ad41910cb81e23e1c41c32"
+        }
+      ]
+    },
+    "paths": [
+      {
+        "id": "local-share-accounting",
+        "chain": "ethereum",
+        "address": "0xa663b02cf0a4b149d2ad41910cb81e23e1c41c32",
+        "pricingAuthority": "none",
+        "applicability": {
+          "disposition": "not-applicable",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement Refine11",
+          "rationale": "Exact immutable local share accounting holds legacy FRAX and distributes rewards without an external price read or borrower/liquidation branch. The IORB benchmark targets yield, not mint/redemption valuation. Parent FRAX exposure remains inherited.",
+          "sources": [
+            {
+              "label": "Exact verified StakedFrax and LinearRewardsErc4626 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa663b02cf0a4b149d2ad41910cb81e23e1c41c32"
+            }
+          ],
+          "confidence": "verified"
+        }
+      }
+    ]
+  },
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
     "sources": [

@@ -2,26 +2,42 @@
   "id": "filqa-fidelity-international",
   "reserves": [
     {
-      "name": "Fidelity USD Digital Liquidity Fund SP accumulating shares",
-      "pct": 100,
+      "name": "Commercial paper",
+      "pct": 49.2,
       "risk": "medium",
-      "assetClass": "fund-share",
-      "issuerOrObligor": "Fidelity International Strategies Funds SPC",
-      "riskFactors": [
-        "counterparty",
-        "duration",
-        "liquidity",
-        "custody",
-        "credit",
-        "market"
-      ],
+      "assetClass": "public-credit",
+      "riskFactors": ["credit", "duration", "liquidity", "custody"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Certificates of deposit",
+      "pct": 25.1,
+      "risk": "medium",
+      "assetClass": "public-credit",
+      "riskFactors": ["credit", "counterparty", "duration", "custody"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Time deposits",
+      "pct": 17.6,
+      "risk": "low",
+      "assetClass": "bank-deposit",
+      "riskFactors": ["credit", "counterparty", "custody"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Cash",
+      "pct": 8,
+      "risk": "low",
+      "assetClass": "cash",
+      "riskFactors": ["counterparty", "custody"],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "confidence": "manual-review",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Refine04 primary-source review",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Fidelity September 14, 2026 fund prospectus",
@@ -38,20 +54,46 @@
       {
         "label": "Ethereum token deployment",
         "url": "https://etherscan.io/address/0x54a4fc78431f9201824643e99bec891bb7462a1d#code"
+      },
+      {
+        "label": "Fidelity July 31, 2026 asset allocation and duration factsheet",
+        "url": "https://www.fidelityinternational.com/legal/documents/en/hffs.en.xx.6470869.pdf"
       }
     ],
-    "rationale": "The 100% slice describes the authenticated whole fund-share claim, following BUIDL single-fund-share presentation. It does not invent underlying Treasury, repo, deposit or credit weights. Participating shares in the USD Digital Liquidity Fund SP of Fidelity International Strategies Funds SPC. Permitted investments include government and non-government money-market instruments, securitisations and asset-backed commercial paper, money-market funds and USD deposits; derivatives are permitted. J.P. Morgan SE Dublin Branch is depositary/custodian. Current position weights are unavailable.",
-    "compositionBasis": "Standing authenticated fund-share identity, not a current position-weighted portfolio or token-to-assets reconciliation",
-    "scope": "classification-only",
-    "knownUnknownExposure": "All current underlying position weights and complete token-to-fund asset/liability reconciliation remain unavailable. Named custodians and auditors do not prove current whole-book custody allocation or financial assurance.",
-    "knownUnknownExposurePct": 100,
+    "rationale": "Issuer factsheet dated July 31, 2026 reports CP 49.2%, CDs 25.1%, time deposits 17.6% and cash 8.0% of total net assets, 43 positions and USD 45m whole-fund size. Published weights sum to 99.9% because of rounding; no 0.1% asset or normalization is invented. WAM 41 days and WAL 59 days are measured averages, not maximum tenor. The factsheet identifies Class 1 ACC (FILQ-A), ISIN KYG3R61G1088 and a Moody's Aaa-mf fund assessment; its glossary explicitly says this is not a credit rating. These are issuer portfolio disclosures, not an independent token-to-fund reconciliation.",
+    "compositionBasis": "Published July 31, 2026 whole-fund asset-class percentages of total net assets",
+    "compositionAsOf": "2026-07-31",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Security-level counterparties, current October composition and complete Class 1 ACC token-to-fund asset/liability reconciliation remain unavailable. July whole-fund size is not FILQ-A current token liabilities. Named custodians and auditors do not prove account-level custody allocation or financial assurance.",
+    "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Fidelity USD Digital Liquidity Fund SP accumulating shares",
-        "pct": 100,
-        "disposition": "basket-needs-split",
-        "rationale": "The direct fund-share identity is authenticated, but current look-through security weights are unavailable. The entire fund-share basket remains unresolved for constituent-weight mapping; no tracked stablecoin constituent is asserted."
+        "reserveName": "Commercial paper",
+        "pct": 49.2,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Published off-chain money-market instrument category, not a tracked stablecoin."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "Certificates of deposit",
+        "pct": 25.1,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Published off-chain negotiable deposit instrument category, not a tracked stablecoin."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "Time deposits",
+        "pct": 17.6,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Published off-chain bank deposit category, not a tracked stablecoin."
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "Cash",
+        "pct": 8,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Published off-chain cash category, not a tracked stablecoin."
       }
     ]
   },

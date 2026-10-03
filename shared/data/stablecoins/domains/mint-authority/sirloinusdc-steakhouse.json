@@ -3,7 +3,7 @@
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "none-resolved-mint",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "summary": "sirloinUSDC user shares mint against deposited USDC; interest accrual can mint fee shares. Immutable core and owner/curator parameter powers do not create native USDC, whose issuance remains inherited.",
     "inheritedFrom": "usdc-circle",
     "economicCapSemantics": "bounded",
@@ -82,9 +82,13 @@
           {
             "label": "Morpho current vault identity and asset API",
             "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Verified VaultV2Supervisor",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x639bfa26472906ccd40513408284a8ad292bc5d6"
           }
         ],
-        "evidence": "owner() can replace curator and sentinels under the immutable core; owner internal authorization, key custody and signer independence remain unresolved."
+        "evidence": "owner() can replace curator and sentinels under the immutable core; owner internal authorization, key custody and signer independence remain unresolved. Independently verified VaultV2Supervisor.owner()=0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd and TIMELOCK()=1209600 at Base block 52095842. Verified source applies that delay only to setOwner and removeGuardian; setCurator is explicitly immediate. getGuardians(vault) returns 0x9e0fddda790651e6a05cd2de69e624b94c04eaf5, whose source-defined veto cannot mint. No universal 14-day execution delay is claimed."
       },
       {
         "chain": "base",
@@ -93,28 +97,90 @@
           "base:0xbeeff2490feffa212fac2f6553682c219e6a8845"
         ],
         "label": "sirloinUSDC curator",
-        "role": "cap-admin",
-        "authorityType": "contract",
+        "role": "governor",
+        "authorityType": "safe",
         "directMintAbility": "parameter-only",
-        "canRaiseCap": true,
-        "modulesOrGuardsStatus": "unknown",
-        "observedAt": "2026-10-02",
+        "threshold": 2,
+        "signerCount": 6,
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x8ae8ee5ad6eae89836b0070ebc47af06e3d7422b",
+            "0xf83db716a1ff12f9005f98f678d8be97b8bc81d6",
+            "0x0d61c8b6ca9669a36f351de3ae335e9689dd9c5b",
+            "0xcc771952fde840e30c6802734e5ad20479c2959f",
+            "0x387cde8598e1cbb297fdc5baeba5e5c5c2735344",
+            "0xe3fcee6b6cd564e073346f71394f60ec9adf5120"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 52095842,
+          "observedAt": "2026-10-03",
+          "source": "onchain"
+        },
+        "observedAt": "2026-10-03",
         "observedBlock": 52095842,
         "sources": [
           {
-            "label": "Morpho exact Steakhouse High Yield USDC Edition deployment",
-            "url": "https://app.morpho.org/base/vault/0xbeeff2490feffa212fac2f6553682c219e6a8845"
+            "label": "Exact current Safe controller",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x827e86072b06674a077f592a531dce4590adecdb"
           },
           {
-            "label": "Exact verified VaultV2 source (base, 0xbeeff2490feffa212fac2f6553682c219e6a8845)",
-            "url": "https://sourcify.dev/server/v2/contract/8453/0xbeeff2490feffa212fac2f6553682c219e6a8845?fields=all"
-          },
-          {
-            "label": "Morpho current vault identity and asset API",
-            "url": "https://api.morpho.org/graphql"
+            "label": "Exact vault source and native authorization",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff2490feffa212fac2f6553682c219e6a8845"
           }
         ],
-        "evidence": "curator() schedules adapter, allocation-cap, fee and gate changes. Allocation-cap increases were delayed 259200 seconds; both fee selectors had zero delay. User issuance remains asset-backed; fee governance can dilute shares. Ultimate controller authorization is not granted favorable credit."
+        "evidence": "Independently re-read at block 52095842 on 2026-10-03: getOwners and getThreshold give the listed quorum; getModulesPaginated(0x1,100) returned empty with terminal next=0x1, and the Safe guard slot was zero. This identifies cryptographic owners, not independent people or attested key custody. Parameter scope does not create native underlying stablecoin liabilities."
+      },
+      {
+        "chain": "base",
+        "address": "0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd",
+        "deploymentRefs": [
+          "base:0xbeeff2490feffa212fac2f6553682c219e6a8845"
+        ],
+        "label": "sirloinUSDC ultimate supervisor-owner Safe",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "threshold": 5,
+        "signerCount": 10,
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0xc04f9610694a9e07e0d6a361bec53abeadf9cf9e",
+            "0x005398827d00c2951ffb52bd91164ef402bcf105",
+            "0x2e8c25a6f7f7f34666b998813abf97d8b617f111",
+            "0x5571a6fef340a9d26f1428684b9e893ea84b46ac",
+            "0x32e5cb1a68761a0cff88d4baa21e398422b5166e",
+            "0x21c1e5be991bf1544ca9759a601f66dc60083f7d",
+            "0x9a86713145f38cd688969c0ecc87b314b23254b2",
+            "0xbc27046213d34d4a153cf57a48c74d74239e8968",
+            "0x394e6ef80c6f4ad14a891a3987d8bd1387afa0b1",
+            "0x86bd534a95fb2cc36d526ba149464c4477315c32"
+          ],
+          "threshold": 5,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 52095842,
+          "observedAt": "2026-10-03",
+          "source": "onchain"
+        },
+        "observedAt": "2026-10-03",
+        "observedBlock": 52095842,
+        "sources": [
+          {
+            "label": "Exact current Safe controller",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd"
+          },
+          {
+            "label": "Exact vault source and native authorization",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff2490feffa212fac2f6553682c219e6a8845"
+          }
+        ],
+        "evidence": "Independently re-read at block 52095842 on 2026-10-03: getOwners and getThreshold give the listed quorum; getModulesPaginated(0x1,100) returned empty with terminal next=0x1, and the Safe guard slot was zero. This identifies cryptographic owners, not independent people or attested key custody. Parameter scope does not create native underlying stablecoin liabilities."
       }
     ],
     "review": {
@@ -134,15 +200,50 @@
         {
           "label": "Steakhouse DeFi vault governing terms",
           "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
+        },
+        {
+          "label": "Exact deployment creation transaction and timestamp",
+          "url": "https://base.blockscout.com/tx/0x365e979eb98424e0fcedad75285d1c9ae4cd4be4a3a3841318666316f4082bf7"
         }
       ],
-      "evidence": "Fixed-block state and matched exact VaultV2 source bound asset-backed mint, fee-share mint and burn/redeem at base block 52095842. Parent mint authority remains inherited. Owner/curator control addresses and selector delays are current; internal authorization closure receives no favorable assumption.",
-      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-      "reviewedAt": "2026-10-02",
+      "evidence": "Fixed-block state and matched exact VaultV2 source bound asset-backed mint, fee-share mint and burn/redeem at base block 52095842. Parent mint authority remains inherited. Owner/curator control addresses and selector delays are current; internal authorization closure receives no favorable assumption. Exact implementation creation transaction 0x365e979eb98424e0fcedad75285d1c9ae4cd4be4a3a3841318666316f4082bf7, block 45427904, timestamp 2026-05-01T14:19:15+00:00, was independently joined from Blockscout creation identity to RPC transaction receipt and block timestamp; issuer founding and parent launch were not substituted. Current exact owner-to-Safe, curator-to-Safe and guardian census is recorded. Absence of independent financial assurance is retained in Backing research and is not an unresolved local share-issuance reconciliation question. Separate signer/key-custody observation, recorded per identified control rather than as an aggregate issuance-census gap: Safe signer independence and offchain key-custody attestations are not published; onchain ownership and quorum do not resolve those facts. Calibration v2 field re-justification: reconciliation=not-applicable describes the immutable deposit-backed local share mechanism and does not assert parent reserve-to-total-liability financial assurance; supervision=none grants no prudential-supervision credit. Source-defined share accounting and independent financial assurance retain separate scopes.",
+      "reviewer": "Sol refinement Refine11",
+      "reviewedAt": "2026-10-03",
       "disposition": "scoreable",
-      "unresolvedQuestions": [
-        "Ultimate owner/curator authorization closure, signer independence and key-custody attestations are not established.",
-        "No independently signed exact-vault financial reconciliation or prudential supervision is established."
+      "unresolvedQuestions": [],
+      "scopedQuestions": [
+        {
+          "controlRef": "base:0x827e86072b06674a077f592a531dce4590adecdb",
+          "question": "For sirloinUSDC curator (base:0x827e86072b06674a077f592a531dce4590adecdb): Safe signer independence and offchain key-custody attestations are not published; onchain ownership and quorum do not resolve those facts.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement Refine11",
+          "sources": [
+            {
+              "label": "Exact current Safe controller",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0x827e86072b06674a077f592a531dce4590adecdb"
+            },
+            {
+              "label": "Exact vault source and native authorization",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff2490feffa212fac2f6553682c219e6a8845"
+            }
+          ]
+        },
+        {
+          "controlRef": "base:0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd",
+          "question": "For sirloinUSDC ultimate supervisor-owner Safe (base:0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd): Safe signer independence and offchain key-custody attestations are not published; onchain ownership and quorum do not resolve those facts.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement Refine11",
+          "sources": [
+            {
+              "label": "Exact current Safe controller",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd"
+            },
+            {
+              "label": "Exact vault source and native authorization",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff2490feffa212fac2f6553682c219e6a8845"
+            }
+          ]
+        }
       ]
     }
   }

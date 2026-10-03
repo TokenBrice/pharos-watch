@@ -1,5 +1,7 @@
 {
   "id": "susdf-falcon",
+  "launchDate": "2025-02-10",
+  "implementationLaunchDate": "2025-02-10",
   "name": "Falcon Staked USDf",
   "symbol": "sUSDf",
   "oneLiner": "sUSDf is Falcon's USDf savings share, accruing strategy rewards and redeemable for USDf subject to admin restrictions and a configurable cooldown.",
@@ -63,6 +65,14 @@
     {
       "label": "Falcon platform terms",
       "url": "https://docs.falcon.finance/resources/terms-of-use.md"
+    },
+    {
+      "label": "Exact sUSDf proxy creation, block 21818186 (2025-02-10)",
+      "url": "https://etherscan.io/tx/0xb458a0e1de3702a106421e135633e2ce75912fcadf5dd07de36a0bce144c2208"
+    },
+    {
+      "label": "Current StakedUSDf implementation creation, block 21818183 (2025-02-10)",
+      "url": "https://etherscan.io/tx/0x5a2df881b030eb7487f008b44a943aa6b2c05523d3cd7476e4b9a9a1ff11ae8e"
     }
   ],
   "contracts": [

@@ -34,7 +34,7 @@
   },
   "oracleRisk": {
     "tier": "privileged-internal-pricing",
-    "summary": "Share conversion uses trUSD balance minus unvested rewards; authorized rewards and loss reports alter NAV. This is an upgradeable internal pricing authority, not an independent dollar oracle.",
+    "summary": "Share conversion uses trUSD balance minus unvested rewards; authorized rewards and loss reports alter NAV. This is an upgradeable internal pricing authority, not an independent dollar oracle. Sherlock (15–22 Jan 2026) and Nethermind (24–26 Mar 2026) explicitly covered strUSD/access/oracle integration; both predate the current implementation activated 30 Sep 2026, so current build/audit equivalence is not claimed. The public continuous bounty is up to $1M critical.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
@@ -96,6 +96,18 @@
       {
         "label": "Pinned Ethereum block 26107706",
         "url": "https://etherscan.io/block/26107706"
+      },
+      {
+        "label": "Tori audit scopes, dates and continuous bug bounty",
+        "url": "https://docs.tori.finance/security/audits.md"
+      },
+      {
+        "label": "Sherlock protocol report, audit 15–22 January 2026",
+        "url": "https://github.com/sherlock-protocol/sherlock-reports/blob/main/audits/2026.02.10%20-%20Final%20-%20Tori%20Finance%20Collaborative%20Audit%20Report%201770734349.pdf"
+      },
+      {
+        "label": "Nethermind full-protocol review, 24–26 March 2026",
+        "url": "https://github.com/NethermindEth/PublicAuditReports/blob/main/NM_0854_Tori.pdf"
       }
     ]
   },

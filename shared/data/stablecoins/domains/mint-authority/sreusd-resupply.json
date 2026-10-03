@@ -61,15 +61,37 @@
         {
           "label": "Ethereum block 26107704, pinned vault identity, supply, custody and NAV reads",
           "url": "https://etherscan.io/block/26107704"
+        },
+        {
+          "label": "Resupply dated audit index (scope is parent protocol, not savings vault)",
+          "url": "https://docs.resupply.finance/faq/audits.md"
+        },
+        {
+          "label": "yAudit RSUP/core review, 11 January 2025",
+          "url": "https://github.com/resupplyfi/resupply/blob/main/audits/rsup_yaudit_report.pdf"
+        },
+        {
+          "label": "ChainSecurity Resupply protocol review, 28 February 2025",
+          "url": "https://github.com/resupplyfi/resupply/blob/main/audits/ChainSecurity_Resupply_Resupply_audit.pdf"
+        },
+        {
+          "label": "Verified Resupply Core target-selector authorizer",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc07e000044f95655c11fda4cd37f70a94d7e0a7d"
+        },
+        {
+          "label": "SavingsReUSD creation transaction, 20 August 2025",
+          "url": "https://etherscan.io/tx/0x94c79307fa4ba4bcffdc270c3e28d31716308868e01cb338466d9b351ceb5355"
+        },
+        {
+          "label": "Core event replay and operator getter pin",
+          "url": "https://etherscan.io/block/26110187"
         }
       ],
-      "evidence": "At Ethereum block 26107704 (2026-10-02T22:44:11Z), asset() is 0x57ab1e0003f623289cd798b1824be09a793e4bec; decimals() is 18, totalSupply() is 27269498.885603778064 shares, totalAssets() is 28218576.035466793925 REUSD, and balanceOf(vault) is 28224015.272168319672 REUSD. convertToAssets(1e18) and previewRedeem(1e18) return 1.034803615345 REUSD. EIP-1967 implementation slot is zero and the verified source is a direct nonproxy deployment. owner() is immutable Core 0xc07e000044f95655c11fda4cd37f70a94d7e0a7d, whose voter() currently returns 0x11111111063874ce8dc6232cb5c1c849359476e6, differing from the deployment-manifest VOTER. No native privileged share minter is present. Existing bridge support cannot mint additional native liabilities.",
-      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-      "reviewedAt": "2026-10-02",
+      "evidence": "At Ethereum block 26107704 (2026-10-02T22:44:11Z), asset() is 0x57ab1e0003f623289cd798b1824be09a793e4bec; decimals() is 18, totalSupply() is 27269498.885603778064 shares, totalAssets() is 28218576.035466793925 REUSD, and balanceOf(vault) is 28224015.272168319672 REUSD. convertToAssets(1e18) and previewRedeem(1e18) return 1.034803615345 REUSD. EIP-1967 implementation slot is zero and the verified source is a direct nonproxy deployment. owner() is immutable Core 0xc07e000044f95655c11fda4cd37f70a94d7e0a7d, whose voter() currently returns 0x11111111063874ce8dc6232cb5c1c849359476e6, differing from the deployment-manifest VOTER. No native privileged share minter is present. Existing bridge support cannot mint additional native liabilities. Refinement at block 26110187: full Core OperatorSet genesis-to-pin replay contains 86 events and 23 currently authorized triples. No savings-specific operator target remains. Global authorizations (all hooks zero) are [[\"0xa4745e0b1f40ab3dcfd98f381835de591a8974e3\",\"0xe0a8f6f5\"],[\"0xa4745e0b1f40ab3dcfd98f381835de591a8974e3\",\"0x8456cb59\"],[\"0xa4745e0b1f40ab3dcfd98f381835de591a8974e3\",\"0xc91b040f\"],[\"0xa4745e0b1f40ab3dcfd98f381835de591a8974e3\",\"0x398d2ce9\"],[\"0xa4745e0b1f40ab3dcfd98f381835de591a8974e3\",\"0x193e3f0a\"],[\"0xa4745e0b1f40ab3dcfd98f381835de591a8974e3\",\"0x9265a7d5\"],[\"0x0950000465476f4470e74aed93e7dd414012bb7d\",\"0xe7a33174\"],[\"0xa4745e0b1f40ab3dcfd98f381835de591a8974e3\",\"0xaec35fdb\"]]; each active triple was checked against operatorPermissions. Core.execute permits the exact voter or explicitly authorized selector, never a new savings share-mint path; matched immutable native implementation has only deposit-backed mint plus lock/release OFT accounting. Parent yAudit (11 Jan 2025) and ChainSecurity (28 Feb 2025) reports predate the savings deployment and do not establish savings-specific audit coverage. Calibration 2026-10-03: non-census disclosure observations retained outside the umbrella mint-path flag: No independently dated security audit scoped to the exact SavingsReUSD contract deployed on 2025-08-20 has been identified; the published January/February 2025 protocol audits predate it.",
+      "reviewer": "Sol refinement 2026-10-03 (Refine12, exact source and RPC census)",
+      "reviewedAt": "2026-10-03",
       "disposition": "scoreable",
-      "unresolvedQuestions": [
-        "The complete current Core target/selector operator authorizer census and savings-specific independent code-audit scope remain unresolved."
-      ]
+      "unresolvedQuestions": []
     },
     "upgradeability": {
       "model": "immutable",

@@ -3,7 +3,7 @@
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "unknown",
-    "confidence": "unknown",
+    "confidence": "verified",
     "summary": "Keyrock Prime USDC mints USDC-backed deposit shares and may mint fee shares during accrual. Circle USDC issuance is inherited; owner and curator retain strategy parameter powers.",
     "inheritedFrom": "usdc-circle",
     "economicCapSemantics": "bounded",
@@ -79,17 +79,73 @@
           {
             "label": "arc fixed-block RPC observation 23952285",
             "url": "https://rpc.mainnet.arc.io"
+          },
+          {
+            "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+            "url": "https://blue-api.morpho.org/graphql"
           }
         ],
-        "evidence": "At arc block 23952285 (0x16d7b9d), captured 2026-10-02T22:44:09.665742+00:00, owner=0x3ab74ecc34760c0a81f55e0001be6068dcf1cc04; curator=0x26a17b96e9ca28d84c4e78f22b83a1ccea28ad21. Both owner and curator eth_getCode returned 0x; no multisignature or key-custody attestation is established. addAdapter delay=604800 sec; increaseAbsoluteCap delay=604800 sec; fee-setting delays=0. Fee rates performance=0.0, management=0.0.",
+        "evidence": "At arc block 23952285 (0x16d7b9d), captured 2026-10-02T22:44:09.665742+00:00, owner=0x3ab74ecc34760c0a81f55e0001be6068dcf1cc04; curator=0x26a17b96e9ca28d84c4e78f22b83a1ccea28ad21. Both owner and curator eth_getCode returned 0x; no multisignature or key-custody attestation is established. addAdapter delay=604800 sec; increaseAbsoluteCap delay=604800 sec; fee-setting delays=0. Fee rates performance=0.0, management=0.0. Current API timelock census, independently reconfirmed by RPC on 2026-10-03 at block 24012549: setPerformanceFee(uint256)=0 sec; setManagementFee(uint256)=0 sec. No blanket all-action timelock is inferred.",
         "failureDomainKeys": [
           "eoa:arc:0x3ab74ecc34760c0a81f55e0001be6068dcf1cc04"
         ]
+      },
+      {
+        "chain": "arc",
+        "address": "0x26a17b96e9ca28d84c4e78f22b83a1ccea28ad21",
+        "deploymentRefs": [
+          "arc:0x5befab92a5a3d60f578cb51eeb4e4fd50a1e3123"
+        ],
+        "label": "Keyrock Prime USDC curator and allocator parameter authority",
+        "role": "governor",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 24012549,
+        "sources": [
+          {
+            "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+            "url": "https://blue-api.morpho.org/graphql"
+          },
+          {
+            "label": "arc RPC role/code census at block 24012549; credentials omitted",
+            "url": "https://rpc.mainnet.arc.io"
+          }
+        ],
+        "evidence": "On 2026-10-03 at arc block 24012549, isAllocator(address) returned true. This role can allocate/deallocate within configured adapter/cap bounds, set liquidity adapter/data and maxRate; it cannot call arbitrary share mint or mint parent USDC. The same current curator() address was independently reconfirmed by RPC and Morpho API. It can submit adapter/cap/fee/gate/allocator changes and reduce caps or revoke pending operations. addAdapter and increaseAbsoluteCap delays are 604800 sec; setPerformanceFee and setManagementFee are zero-delay. Three holder-transfer/exit gate setters are permanently abdicated; the deposit-only sendAssetsGate setter is not. Single-key control and undisclosed key custody remain."
+      },
+      {
+        "chain": "arc",
+        "address": "0x4795276a961845eaabd98ad2595aed3c68aab37d",
+        "deploymentRefs": [
+          "arc:0x5befab92a5a3d60f578cb51eeb4e4fd50a1e3123"
+        ],
+        "label": "Keyrock Prime USDC sentinel 0x4795276a961845eaabd98ad2595aed3c68aab37d",
+        "role": "other",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 24012549,
+        "sources": [
+          {
+            "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+            "url": "https://blue-api.morpho.org/graphql"
+          },
+          {
+            "label": "arc RPC role/code census at block 24012549; credentials omitted",
+            "url": "https://rpc.mainnet.arc.io"
+          }
+        ],
+        "evidence": "On 2026-10-03 at arc block 24012549, isSentinel(address) returned true. This role can revoke pending changes, reduce allocation caps and deallocate; it cannot call arbitrary share mint or mint parent USDC."
       }
     ],
     "upgradeability": {
-      "model": "unknown",
-      "canChangeMintLogic": "unknown",
+      "model": "immutable",
+      "canChangeMintLogic": false,
       "observedAt": "2026-10-02",
       "observedBlock": 23952285,
       "sources": [
@@ -112,11 +168,27 @@
         {
           "label": "arc fixed-block RPC observation 23952285",
           "url": "https://rpc.mainnet.arc.io"
+        },
+        {
+          "label": "Exact Arc VaultV2 partial verified source and runtime correspondence at block 23952285",
+          "url": "https://explorer.arc.io/api/v2/smart-contracts/0x5befab92a5a3d60f578cb51eeb4e4fd50a1e3123"
+        },
+        {
+          "label": "Sourcify verified VaultV2 compiler/runtime reference; exact pinned target functional equivalence independently reproduced 2026-10-03",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c?fields=sources,compilation,runtimeBytecode"
+        },
+        {
+          "label": "Sourcify verified MorphoMarketV1AdapterV2 compiler/runtime reference; exact pinned target functional equivalence independently reproduced 2026-10-03",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0x812b71c33ae5eafebae967c5670e37eca3cab0ac?fields=sources,compilation,runtimeBytecode"
         }
+      ],
+      "controlRef": "Keyrock Prime USDC asset-backed share contract",
+      "deploymentRefs": [
+        "arc:0x5befab92a5a3d60f578cb51eeb4e4fd50a1e3123"
       ]
     },
     "review": {
-      "disposition": "unresolved",
+      "disposition": "scoreable",
       "sources": [
         {
           "label": "Keyrock Prime USDC exact vault identity and accounting",
@@ -137,14 +209,105 @@
         {
           "label": "arc fixed-block RPC observation 23952285",
           "url": "https://rpc.mainnet.arc.io"
+        },
+        {
+          "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+          "url": "https://blue-api.morpho.org/graphql"
+        },
+        {
+          "label": "ChainSecurity VaultV2 code assessment, 2025-09-16 (reference code, not financial assurance)",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/main/audits/2025-09-15-chainsecurity.pdf"
+        },
+        {
+          "label": "Cantina Managed adapter review, report 2025-12-15; final code tag 2025-12-04 (not exact-vault assurance)",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/main/audits/2025-12-04-market-v1-adapter-v2-spearbit.pdf"
+        },
+        {
+          "label": "Exact Arc VaultV2 partial verified source and runtime correspondence at block 23952285",
+          "url": "https://explorer.arc.io/api/v2/smart-contracts/0x5befab92a5a3d60f578cb51eeb4e4fd50a1e3123"
+        },
+        {
+          "label": "Keyrock corporate identity and 2017 incorporation; no address-to-human attribution",
+          "url": "https://keyrock.com/about-us/"
+        },
+        {
+          "label": "Sourcify verified VaultV2 compiler/runtime reference; exact pinned target functional equivalence independently reproduced 2026-10-03",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c?fields=sources,compilation,runtimeBytecode"
+        },
+        {
+          "label": "Sourcify verified MorphoMarketV1AdapterV2 compiler/runtime reference; exact pinned target functional equivalence independently reproduced 2026-10-03",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0x812b71c33ae5eafebae967c5670e37eca3cab0ac?fields=sources,compilation,runtimeBytecode"
         }
       ],
-      "evidence": "At arc block 23952285 (0x16d7b9d), captured 2026-10-02T22:44:09.665742+00:00, owner=0x3ab74ecc34760c0a81f55e0001be6068dcf1cc04; curator=0x26a17b96e9ca28d84c4e78f22b83a1ccea28ad21. Both owner and curator eth_getCode returned 0x; no multisignature or key-custody attestation is established. addAdapter delay=604800 sec; increaseAbsoluteCap delay=604800 sec; fee-setting delays=0. Fee rates performance=0.0, management=0.0. Local financial attestation or prudential supervision is not inherited from Circle. Arc factory/API and reference source identify VaultV2, but exact deployment source-to-bytecode completeness and mint-logic replacement protection remain unverified.",
-      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-      "reviewedAt": "2026-10-02",
-      "unresolvedQuestions": [
-        "Signer independence and actual key custody are undisclosed.",
-        "Obtain exact Arc deployed-code/source linkage before resolving local mint-logic immutability."
+      "evidence": "At arc block 23952285 (0x16d7b9d), captured 2026-10-02T22:44:09.665742+00:00, owner=0x3ab74ecc34760c0a81f55e0001be6068dcf1cc04; curator=0x26a17b96e9ca28d84c4e78f22b83a1ccea28ad21. Both owner and curator eth_getCode returned 0x; no multisignature or key-custody attestation is established. addAdapter delay=604800 sec; increaseAbsoluteCap delay=604800 sec; fee-setting delays=0. Fee rates performance=0.0, management=0.0. Local financial attestation or prudential supervision is not inherited from Circle. Arc factory/API and reference source identify VaultV2, but exact deployment source-to-bytecode completeness and mint-logic replacement protection remain unverified. On 2026-10-03 the exact owner/curator returned by Morpho were independently reconfirmed by RPC. Published allocator/sentinel addresses were each checked with isAllocator/isSentinel at block 24012549. Selector-specific fee delays and the published role census are recorded below; no exhaustive module-permission or independent-human-signer closure is claimed. Arc Blockscout now supplies partial exact-deployment VaultV2 source with no upgrade entrypoint/proxy and deployed_bytecode equal to RPC at block 23952285. It reports is_partially_verified=true and is_fully_verified=false; full compiler correspondence remains unproven. Calibration retention (2026-10-03): Signer independence and actual key custody are undisclosed. Exact deployed-bytecode equality and partial VaultV2 source are established; a full compiler/source verification and complete imported-source closure remain unproven on Arc. Calibration v2 (2026-10-03): Matching explorer-reported deployed bytecode to pinned RPC does not establish equality to a fully verified reference runtime. The previously scoped compiler/source-completeness gaps remain genuine local mint/authorization-path unknowns and are restored to the aggregate unresolved review; no unidentified signer custody is added to that aggregate flag. Calibration v2 custody retention: signer independence, actual key custody and signing-policy questions are restored separately for each identified Safe/EOA controller; known controller addresses and quorum evidence do not establish the human/key-custody facts. Reconciliation remains not-applicable because this is a local deposit-backed ERC-4626 share/fee-share mechanism, not an issuer supply-to-reserve reconciliation regime; parent durable issuance and independent financial assurance are not established by this local review. Supervision remains none: no local prudential or assurance-opinion credit is claimed. Independently reproduced functional compiler/runtime correspondence on 2026-10-03 at arc block 23952285 for exact VaultV2 0x5befab92a5a3d60f578cb51eeb4e4fd50a1e3123 and its complete one-adapter inventory 0x6adc3de83e00c4a74fda9403043828b831d0f5c3, also the observed liquidityAdapter. Vault reference is Sourcify chain 8453, 0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c, runtimeMatch=match, matchId 30034094, verifiedAt 2026-05-26T22:26:25Z; compiler solc 0.8.28+commit.7893614a, viaIR, optimizer 100000. Pinned target runtime length is 21808 bytes. Masked only compiler-declared immutable references AST37 asset (6 occurrences), AST39 decimals (1), AST41 virtualShares (5), and declared 12-byte CBOR auxdata including length trailer at byte offset 21796. All 12 immutable 32-byte occurrences independently match exact target getters: asset=0x3600000000000000000000000000000000000000, decimals=18, virtualShares=1000000000000. Every remaining executable runtime byte equals the verified reference recompiled runtime; normalized SHA-256=cf17ab0161388ea9277000e692e929216da2618e441c54bcd677def1000dd12e. Adapter independently matches a separate Sourcify-verified MorphoMarketV1AdapterV2 reference, chain 8453 0x812b71c33ae5eafebae967c5670e37eca3cab0ac, runtimeMatch=match, matchId 33231859, verifiedAt 2026-06-21T06:48:43Z, same compiler/viaIR/optimizer settings. Pinned adapter runtime length is 11784 bytes; masked only declared immutable AST2265 factory (1 occurrence), AST2267 parentVault (6), AST2269 asset (3), AST2271 morpho (4), AST2273 adapterId (2), AST2275 adaptiveCurveIrm (4), and 12-byte CBOR auxdata at offset 11772. All 20 immutable occurrences match exact same-block adapter getters: factory=0x6c2ff5114e45b50bc7195c2f1f87c98cbdad62cc; parentVault=0x5befab92a5a3d60f578cb51eeb4e4fd50a1e3123; asset=0x3600000000000000000000000000000000000000; morpho=0x34cd04070dd72b14e241112f6d83812df5af7fcd; adapterId=0xd824d33cd5ce301a0e5ccc18227fe4ad73093c512b89f384b56754c18289cf04; adaptiveCurveIrm=0xf02615d094fc02fc031c35fe705e175aa4653f20. Every remaining adapter executable byte equals its verified reference recompiled runtime; normalized SHA-256=355d973d7a246e5d4c02bb68e7415b9d62bf584a57f6101357b57c5d2fc40113. This closes the earlier partial-explorer/compiler source-identity unknown for this vault and its mint-accounting adapter under calibration v2 R4. It is functional executable correspondence, not complete target creation-bytecode/metadata identity or financial assurance. Previously recorded code-identity uncertainty is superseded by this direct proof; signer-custody and any separately listed Zodiac permission/unwrap execution gaps remain unresolved.",
+      "reviewer": "Sol functional runtime correspondence 2026-10-03 (Refine09)",
+      "reviewedAt": "2026-10-03",
+      "unresolvedQuestions": [],
+      "scopedQuestions": [
+        {
+          "controlRef": "arc:0x3ab74ecc34760c0a81f55e0001be6068dcf1cc04",
+          "question": "For this identified Keyrock Prime USDC owner parameter authority controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
+          "sources": [
+            {
+              "label": "Keyrock Prime USDC exact vault identity and accounting",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Morpho Vault V2 mechanism documentation",
+              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+            },
+            {
+              "label": "Pinned VaultV2 primary source, gate and loss semantics",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            },
+            {
+              "label": "Pinned MorphoMarketV1AdapterV2 primary source",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+            },
+            {
+              "label": "arc fixed-block RPC observation 23952285",
+              "url": "https://rpc.mainnet.arc.io"
+            },
+            {
+              "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+              "url": "https://blue-api.morpho.org/graphql"
+            }
+          ]
+        },
+        {
+          "controlRef": "arc:0x26a17b96e9ca28d84c4e78f22b83a1ccea28ad21",
+          "question": "For this identified Keyrock Prime USDC curator and allocator parameter authority controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
+          "sources": [
+            {
+              "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+              "url": "https://blue-api.morpho.org/graphql"
+            },
+            {
+              "label": "arc RPC role/code census at block 24012549; credentials omitted",
+              "url": "https://rpc.mainnet.arc.io"
+            }
+          ]
+        },
+        {
+          "controlRef": "arc:0x4795276a961845eaabd98ad2595aed3c68aab37d",
+          "question": "For this identified Keyrock Prime USDC sentinel 0x4795276a961845eaabd98ad2595aed3c68aab37d controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
+          "sources": [
+            {
+              "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+              "url": "https://blue-api.morpho.org/graphql"
+            },
+            {
+              "label": "arc RPC role/code census at block 24012549; credentials omitted",
+              "url": "https://rpc.mainnet.arc.io"
+            }
+          ]
+        }
       ]
     }
   }

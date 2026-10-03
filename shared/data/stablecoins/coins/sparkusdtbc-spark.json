@@ -1,4 +1,40 @@
 {
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "sparkusdtbc-spark",
+    "display": {
+      "url": "https://app.morpho.org/ethereum/vault/0xb0c424116172b55cbb6dd3136f5989f7959e5b91",
+      "label": "Spark Blue Chip USDT lender vault"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "Spark USDT idle underlying and Morpho lender claims",
+        "risk": "high",
+        "coinId": "usdt-tether",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0xdac17f958d2ee523a2206206994597c13d831ec7"
+      },
+      "deployedExposure": {
+        "basis": "Reviewed full native USDT-denominated lender claim through the sole MorphoMarketV1Adapter, covering wstETH-, WBTC-, sUSDS- and negligible cbBTC-secured markets. Those tokens are borrower collateral, not directly held vault reserves. The reviewed parent-denominated bucket includes idle USDT and deployed USDT receivables; it is not an idle-cash, independent-assurance or guaranteed-capacity claim.",
+        "reviewedAt": "2026-10-02",
+        "sourceUrl": "https://api.morpho.org/graphql"
+      },
+      "redemptionLiquidity": {
+        "source": "morpho-vault-v2",
+        "chainId": 1
+      },
+      "rpcUrl": "https://ethereum-rpc.publicnode.com"
+    }
+  },
   "id": "sparkusdtbc-spark",
   "name": "Spark Blue Chip USDT Vault",
   "symbol": "sparkUSDTbc",
@@ -18,7 +54,7 @@
     "disposition": "resolved",
     "reviewedAt": "2026-10-02",
     "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "rationale": "Exact ethereum holder instrument 0xb0c424116172b55cbb6dd3136f5989f7959e5b91 is an operational ERC-4626 protocol-position claim. USDT-denominated Morpho lending positions through a MorphoMarketV1Adapter, collateralized by wstETH, WBTC, sUSDS and a negligible cbBTC position; not directly held borrower collateral. Verified deployment code and native accounting distinguish this receipt from direct parent fiat ownership and from Spark Savings V2.",
+    "rationale": "Exact ethereum holder instrument 0xb0c424116172b55cbb6dd3136f5989f7959e5b91 is an operational ERC-4626 protocol-position claim. USDT-denominated Morpho lending positions through a MorphoMarketV1Adapter, collateralized by wstETH, WBTC, sUSDS and a negligible cbBTC position; not directly held borrower collateral. Verified deployment code and native accounting distinguish this receipt from direct parent fiat ownership and from Spark Savings V2. Exact implementation creation is pinned by transaction 0x9ddf415a09a25af3a72dd6a81acb61ab7771e7304a5cc50ce33b51f50ed6da95, block 24794487, timestamp 2026-04-02T21:02:35+00:00, independently joined from Blockscout to RPC receipt and block timestamp on2026-10-03. This is the implementation launch, not issuer founding or parent-token launch.",
     "sources": [
       {
         "label": "Morpho exact vault portfolio and control API, accessed 2026-10-02",
@@ -35,6 +71,10 @@
       {
         "label": "Morpho vault framework and holder exit mechanics",
         "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+      },
+      {
+        "label": "Exact implementation creation transaction",
+        "url": "https://eth.blockscout.com/tx/0x9ddf415a09a25af3a72dd6a81acb61ab7771e7304a5cc50ce33b51f50ed6da95"
       }
     ]
   },
@@ -64,6 +104,7 @@
   ],
   "custodyModel": "unknown",
   "governanceQuality": "wrapper",
+  "implementationLaunchDate": "2026-04-02",
   "yieldConfig": {
     "yieldSource": "Morpho lending interest net of vault fees",
     "yieldType": "lending-vault"

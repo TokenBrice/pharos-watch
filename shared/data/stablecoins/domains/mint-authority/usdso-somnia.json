@@ -18,8 +18,8 @@
         "authorityType": "safe",
         "directMintAbility": "upgrade-only",
         "modulesOrGuardsStatus": "unknown",
-        "observedAt": "2026-10-02",
-        "observedBlock": 428274392,
+        "observedAt": "2026-10-03",
+        "observedBlock": 428575187,
         "sources": [
           {
             "label": "USD Somnia product documentation (accessed 2026-10-02)",
@@ -48,15 +48,29 @@
           {
             "label": "Frax parent reserve balance sheet (issuer telemetry)",
             "url": "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
+          },
+          {
+            "label": "Exact Safe getOwners/getThreshold/modules pagination + guard/fallback storage at block 428575187, 2026-10-03",
+            "url": "https://api.infra.mainnet.somnia.network"
           }
         ],
-        "evidence": "At block 428274392, token EIP-1967 admin is 0x3281f2a1e0a3b818353f859c868c44748154b196, whose owner() returns 0x9527e19f55d1afce9f1e9edcea79552bf41983f9. Safe threshold and owner count were read at the same block; complete modules, guards, signer independence and key custody remain unresolved. At Somnia block 428274392, custodian owner() returned BrandedFactory proxy 0x63e89638743a409e2389f06a3f778a4570314d7d. Its owner field returned the same 3-of-6 Safe. The current BrandedCustodian code permits onlyOwner recoverERC20 of any token, including reserve frxUSD, and owner changes to caps, fees and isolated backing. No generic forwarding call for these functions was found in the current factory implementation, so direct Safe execution of the recovery function is not established. The Safe nevertheless owns both the factory ProxyAdmin (0xc1282f16dfb0ae563a93c40a406a583bd9a958a0) and custodian UpgradeableBeacon (0x251d07287c12707418a414b2c95436b4216b7bf4), enabling replacement of custody and issuance logic.",
+        "evidence": "At block 428274392, token EIP-1967 admin is 0x3281f2a1e0a3b818353f859c868c44748154b196, whose owner() returns 0x9527e19f55d1afce9f1e9edcea79552bf41983f9. Safe threshold and owner count were read at the same block; complete modules, guards, signer independence and key custody remain unresolved. At Somnia block 428274392, custodian owner() returned BrandedFactory proxy 0x63e89638743a409e2389f06a3f778a4570314d7d. Its owner field returned the same 3-of-6 Safe. The current BrandedCustodian code permits onlyOwner recoverERC20 of any token, including reserve frxUSD, and owner changes to caps, fees and isolated backing. No generic forwarding call for these functions was found in the current factory implementation, so direct Safe execution of the recovery function is not established. The Safe nevertheless owns both the factory ProxyAdmin (0xc1282f16dfb0ae563a93c40a406a583bd9a958a0) and custodian UpgradeableBeacon (0x251d07287c12707418a414b2c95436b4216b7bf4), enabling replacement of custody and issuance logic. Independent 2026-10-03 census at block 428575187: getOwners returned the authored 6 owners; threshold 3; getModulesPaginated(0x1,100) returned [] and terminal next=0x1; fallback handler 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4. Somnia guard storage response was empty 0x; no new zero-guard claim is made. Signer independence, operational key custody and executable fallback noninterference remain unestablished.",
         "canRaiseCap": true,
         "safe": {
           "threshold": 3,
-          "observedBlock": 428274392,
-          "observedAt": "2026-10-02",
-          "source": "onchain"
+          "observedBlock": 428575187,
+          "observedAt": "2026-10-03",
+          "source": "onchain",
+          "owners": [
+            "0x8d8290d49e88d16d81c6adf6c8774ed88762274a",
+            "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+            "0xcbc616d595d38483e6adc45c7e426f44bf230928",
+            "0x381e2495e683868f693aa5b1414f712f21d34b40",
+            "0x6e74053a3798e0fc9a9775f7995316b27f21c4d2",
+            "0x8da4e997e051605878c9c0b793c496556eacc2c0"
+          ],
+          "enabledModules": [],
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4"
         },
         "threshold": 3,
         "signerCount": 6
@@ -238,14 +252,56 @@
           "url": "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
         }
       ],
-      "evidence": "At somnia block 428274392, symbol/decimals and EIP-1967 implementation/admin were re-read. Local backing balance was 3,268,350.769507 frxUSD against 3,268,350.769507 USDso supply. The BrandedCustodian burns caller-owned USDso and returns frxUSD. At the pin, custodianTkn() was Somnia frxUSD 0x00000000d61733e7a393a10a5b48c311abe8f1e5; totalAssets(), brandedCoinMinted(), actual frxUSD custody and child supply matched. previewRedeem(1e18)=1e18, redeemFee()=0 and isolatedBackingEnabled()=false. The terms identify Frax Inc. and/or affiliates as issuer, disclaim Somnia fiat-redemption responsibility and exclude a holder yield entitlement. At Somnia block 428274392, custodian owner() returned BrandedFactory proxy 0x63e89638743a409e2389f06a3f778a4570314d7d. Its owner field returned the same 3-of-6 Safe. The current BrandedCustodian code permits onlyOwner recoverERC20 of any token, including reserve frxUSD, and owner changes to caps, fees and isolated backing. No generic forwarding call for these functions was found in the current factory implementation, so direct Safe execution of the recovery function is not established. The Safe nevertheless owns both the factory ProxyAdmin (0xc1282f16dfb0ae563a93c40a406a583bd9a958a0) and custodian UpgradeableBeacon (0x251d07287c12707418a414b2c95436b4216b7bf4), enabling replacement of custody and issuance logic.",
-      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-      "reviewedAt": "2026-10-02",
+      "evidence": "At somnia block 428274392, symbol/decimals and EIP-1967 implementation/admin were re-read. Local backing balance was 3,268,350.769507 frxUSD against 3,268,350.769507 USDso supply. The BrandedCustodian burns caller-owned USDso and returns frxUSD. At the pin, custodianTkn() was Somnia frxUSD 0x00000000d61733e7a393a10a5b48c311abe8f1e5; totalAssets(), brandedCoinMinted(), actual frxUSD custody and child supply matched. previewRedeem(1e18)=1e18, redeemFee()=0 and isolatedBackingEnabled()=false. The terms identify Frax Inc. and/or affiliates as issuer, disclaim Somnia fiat-redemption responsibility and exclude a holder yield entitlement. At Somnia block 428274392, custodian owner() returned BrandedFactory proxy 0x63e89638743a409e2389f06a3f778a4570314d7d. Its owner field returned the same 3-of-6 Safe. The current BrandedCustodian code permits onlyOwner recoverERC20 of any token, including reserve frxUSD, and owner changes to caps, fees and isolated backing. No generic forwarding call for these functions was found in the current factory implementation, so direct Safe execution of the recovery function is not established. The Safe nevertheless owns both the factory ProxyAdmin (0xc1282f16dfb0ae563a93c40a406a583bd9a958a0) and custodian UpgradeableBeacon (0x251d07287c12707418a414b2c95436b4216b7bf4), enabling replacement of custody and issuance logic. Calibration provenance (2026-10-03): original umbrella observations retained verbatim: [\"Close all live factory/minter role holders and custody administrative execution paths.\", \"Custodian owner remains the BrandedFactory and pendingOwner remains the Safe; whether owner-only recovery/configuration is currently executable through factory forwarding is not publicly resolved.\", \"Safe owners, threshold, terminal module pagination and fallback address are enumerated; the fresh Somnia guard read returned empty 0x, and fallback noninterference, signer independence and key custody remain unresolved.\"]. Human independence and key custody remain unverified and are priced by their dedicated control signals; financial/legal safeguards remain Backing-domain gaps. Calibration v2 (2026-10-03) reconsidered every prior removal and scoped move. Prior scoped observations retained verbatim: [\"Custodian owner remains the BrandedFactory and pendingOwner remains the Safe; whether owner-only recovery/configuration is currently executable through factory forwarding is not publicly resolved.\", \"The named USDso owner Safe has enumerated owners and terminal empty module pagination, but the fresh Somnia guard storage read returned empty 0x and executable identity/noninterference of fallback handler 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4 remains unverified. Human independence and key custody are separately preserved disclosure gaps.\"]. Genuine unknown implementation, controller authorization and unreadable execution state are retained as umbrella questions; identified-signer custody/independence is recorded per control, not asserted to be independently scored or resolved. Field re-justification: reconciliation=continuous describes the cited local parent-token custody and wrap/custodian supply-accounting mechanism only. It does not certify the upstream fiat/Treasury book, independent assurance or holder insolvency priority; supervision=unknown supplies no prudential or attestation-based credit.",
+      "reviewer": "Refine07 calibration v2 2026-10-03",
+      "reviewedAt": "2026-10-03",
       "disposition": "scoreable",
       "unresolvedQuestions": [
         "Close all live factory/minter role holders and custody administrative execution paths.",
-        "Verify the pending custodian ownership transfer and whether direct owner-only recovery/configuration can currently be executed through the factory.",
-        "Enumerate Safe modules, guards, signer independence and key custody; no threshold-only strength claim is made."
+        "Custodian owner remains the BrandedFactory and pendingOwner remains the Safe; whether owner-only recovery/configuration is currently executable through factory forwarding is not publicly resolved.",
+        "The named USDso owner Safe has enumerated owners and terminal empty module pagination, but the fresh Somnia guard storage read returned empty 0x and executable identity/noninterference of fallback handler 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4 remains unverified. Human independence and key custody are separately preserved disclosure gaps."
+      ],
+      "scopedQuestions": [
+        {
+          "controlRef": "USDso token ProxyAdmin owner",
+          "question": "Independent human control, operational key custody and signing policy of the identified USDso token ProxyAdmin owner at somnia:0x9527e19f55d1afce9f1e9edcea79552bf41983f9 are not publicly established; enumerated owners/threshold or a codeless EOA do not certify these safeguards.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine07 calibration v2 2026-10-03",
+          "sources": [
+            {
+              "label": "USD Somnia product documentation (accessed 2026-10-02)",
+              "url": "https://somnia.network/usdso-stablecoin"
+            },
+            {
+              "label": "Verified token implementation",
+              "url": "https://explorer.somnia.network/api/v2/smart-contracts/0x155384be16fa171e6d97e4136643a9ac31678d04"
+            },
+            {
+              "label": "Pinned somnia RPC at block 428274392",
+              "url": "https://api.infra.mainnet.somnia.network"
+            },
+            {
+              "label": "USDso terms: Frax issuer and no Somnia redemption/yield obligation",
+              "url": "https://somnia.network/usdso-terms-of-service"
+            },
+            {
+              "label": "Verified BrandedCustodian implementation",
+              "url": "https://explorer.somnia.network/api/v2/smart-contracts/0xd2478f5db285e7d4f1a260c9f142168124d02370"
+            },
+            {
+              "label": "Verified current BrandedFactory implementation",
+              "url": "https://explorer.somnia.network/api/v2/smart-contracts/0x690575465af47835b72c5b74c334234624cfd942"
+            },
+            {
+              "label": "Frax parent reserve balance sheet (issuer telemetry)",
+              "url": "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
+            },
+            {
+              "label": "Exact Safe getOwners/getThreshold/modules pagination + guard/fallback storage at block 428575187, 2026-10-03",
+              "url": "https://api.infra.mainnet.somnia.network"
+            }
+          ]
+        }
       ]
     }
   }

@@ -13,9 +13,20 @@
   "oracleRisk": {
     "tier": "privileged-internal-pricing",
     "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Refine05 primary-source and pinned-RPC review",
+      "rationale": "Exact CUSIP 46655R119 class 4397 publishes transaction NAV for fund subscriptions/redemptions. The holder instrument is a government money-market fund share, not a borrower/CDP liquidation system; external lending integrations do not create fund-level borrower pricing branches.",
+      "sources": [
+        { "label": "Exact JLTXX Token Class publisher: transaction NAV, fund identity and dealing cutoff", "url": "https://am.jpmorgan.com/FundsMarketingHandler/slim/product.md?cusip=46655r119&country=us&role=adv&language=en" },
+        { "label": "JLTXX prospectus and valuation terms", "url": "https://am.jpmorgan.com/JPMorgan/TVT/46655R119/P?site=JPMorganv3" }
+      ]
+    },
     "summary": "JLTXX transaction NAV is calculated and published by the fund for exact CUSIP46655R119, share class4397. Pharos reads that class publisher, not an independent market oracle or guaranteed $1 peg; the issuer can correct NAV and the publisher is a single off-chain availability dependency.",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Refine05 primary-source and pinned-RPC review",
     "confidence": "verified",
     "sources": [
       { "label": "JPMorgan Token Class NAV publisher", "url": "https://am.jpmorgan.com/FundsMarketingHandler/slim/product.md?cusip=46655r119&country=us&role=adv&language=en" },

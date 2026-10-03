@@ -3,8 +3,8 @@
   "name": "Aplauz WEUR",
   "symbol": "WEUR",
   "oneLiner": "WEUR is Aplauz's planned euro e-money token, with safeguarded reserves and par redemption; public circulation remains unverified.",
-  "collateral": "Planned 1:1 EUR reserve backing safeguarded through Stichting Aplauz Foundation: at least 30% cash deposits with EEA credit institutions and at most 70% highly liquid, low-risk EUR instruments. These are whitepaper commitments, not an observed current portfolio or independent reserve reconciliation.",
-  "pegMechanism": "Aplauz NL B.V. describes a direct, unconditional issuer claim redeemable at par by any holder after compliance checks. From receipt of WEUR to dispatch of EUR proceeds, redemption should generally not exceed five business days, subject to the disclosed exceptions. Ethereum and BNB Smart Chain are planned initial networks; production addresses are unpublished.",
+  "collateral": "Planned 1:1 EUR reserve backing safeguarded through Stichting Aplauz Foundation: at least 30% cash deposits with EEA credit institutions and at most 70% highly liquid, low-risk EUR instruments. The issuer names ABN AMRO for reserve banking and safeguarding, Fireblocks for digital-asset custody and transfer, Elliptic for AML analytics and Shufti for identity verification. These are issuer-claimed arrangements and whitepaper commitments, not an observed current portfolio or independent reserve reconciliation.",
+  "pegMechanism": "Aplauz NL B.V., Dutch company number 77446844, describes a direct issuer claim redeemable at par by any holder after onboarding and compliance checks. Its issuance/redemption terms v1.1 of 24 August 2026 specify no redemption minimum and a 100,000 WEUR minimum per initial issuance request. End-to-end redemption should not exceed five business days in most cases, but additional information requests or extraordinary circumstances can extend it; this is not an unconditional settlement maximum. Redemption-only applicants need an EEA EUR bank account; contracted clients may use eligible non-EEA bank accounts. Ethereum and BNB Smart Chain are planned initial networks; production addresses are unpublished.",
   "links": [
     {
       "label": "Website",
@@ -17,6 +17,14 @@
     {
       "label": "ESMA EMT issuer register",
       "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+    },
+    {
+      "label": "Specific issuance and redemption terms",
+      "url": "https://www.weur.io/protocol/weur-issuance-redemption-terms"
+    },
+    {
+      "label": "Redemption-only applicant terms",
+      "url": "https://www.weur.io/protocol/redemption-terms"
     }
   ],
   "jurisdiction": {

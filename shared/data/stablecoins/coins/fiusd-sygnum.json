@@ -1,4 +1,20 @@
 {
+  "liveReservesConfig": {
+    "adapter": "chainlink-nav",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "fiusd-sygnum",
+    "display": { "url": "https://era.zksync.network/address/0xc406104c42211abd1a2cd411ddd071511515bddd", "label": "FIUSD onchain NAV oracle" },
+    "inputs": { "primary": { "kind": "onchain-evm", "chain": "zksync", "rpcMode": "public-rpc" } },
+    "params": {
+      "navScope": "portfolio",
+      "oracleAddress": "0xc406104c42211abd1a2cd411ddd071511515bddd",
+      "tokenAddress": "0x2ab105a3ead22731082b790ca9a00d9a3a7627f9",
+      "assetLabel": "Fidelity ILF USD Fund Class G Acc unit exposure",
+      "assetRisk": "medium",
+      "rpcUrl": "https://mainnet.era.zksync.io"
+    }
+  },
   "id": "fiusd-sygnum",
   "name": "Sygnum FIUSD Liquidity Fund Token",
   "symbol": "FIUSD",
@@ -41,6 +57,10 @@
   },
   "links": [
     {
+      "label": "FIUSD zkSync proxy creation, 21 February 2024, block 27141850",
+      "url": "https://era.zksync.network/tx/0x71a851d8023d213b57ef1c5d9782151a3436380bf33ed1809aaead95fbe768b4"
+    },
+    {
       "label": "Issuer application and product terms",
       "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779"
     },
@@ -72,6 +92,7 @@
   "collateralQuality": "rwa",
   "custodyModel": "unknown",
   "governanceQuality": "single-entity",
+  "launchDate": "2024-02-21",
   "yieldConfig": {
     "yieldSource": "Fidelity ILF USD Fund Class G Acc NAV appreciation",
     "yieldType": "nav-appreciation"

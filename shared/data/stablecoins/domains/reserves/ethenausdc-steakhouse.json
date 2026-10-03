@@ -49,7 +49,7 @@
         "url": "https://app.morpho.org/base/vault/0xbeeff0be997cca5b1c13a7433c2004637975739e"
       },
       {
-        "label": "Verified deployment code identity",
+        "label": "Partially verified VaultV2 source; deployed bytes match pinned RPC, not complete compiler verification",
         "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff0be997cca5b1c13a7433c2004637975739e"
       },
       {
@@ -107,7 +107,7 @@
         "url": "https://app.morpho.org/base/vault/0xbeeff0be997cca5b1c13a7433c2004637975739e"
       },
       {
-        "label": "Verified deployment code identity",
+        "label": "Partially verified VaultV2 source; deployed bytes match pinned RPC, not complete compiler verification",
         "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff0be997cca5b1c13a7433c2004637975739e"
       },
       {

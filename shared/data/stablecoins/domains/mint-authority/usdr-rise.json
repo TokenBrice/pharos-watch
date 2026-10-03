@@ -17,9 +17,9 @@
         "role": "proxy-admin",
         "authorityType": "safe",
         "directMintAbility": "upgrade-only",
-        "modulesOrGuardsStatus": "unknown",
-        "observedAt": "2026-10-02",
-        "observedBlock": 23375290,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-03",
+        "observedBlock": 23405374,
         "sources": [
           {
             "label": "RISE Dollar product documentation (accessed 2026-10-02)",
@@ -40,15 +40,32 @@
           {
             "label": "M0 liquidity routes and issuer onboarding",
             "url": "https://docs.m0.org/build/accessing-liquidity"
+          },
+          {
+            "label": "Exact Safe getOwners/getThreshold/modules pagination + guard/fallback storage at block 23405374, 2026-10-03",
+            "url": "https://rpc.risechain.com"
           }
         ],
-        "evidence": "At block 23375290, token EIP-1967 admin is 0x286944bbf99ee9a2f631d821e8dc2212ddbd7e69, whose owner() returns 0xc588c10a90c942ee3476877c4bac3d798e724856. Safe threshold and owner count were read at the same block; complete modules, guards, signer independence and key custody remain unresolved.",
+        "evidence": "At block 23375290, token EIP-1967 admin is 0x286944bbf99ee9a2f631d821e8dc2212ddbd7e69, whose owner() returns 0xc588c10a90c942ee3476877c4bac3d798e724856. Safe threshold and owner count were read at the same block; complete modules, guards, signer independence and key custody remain unresolved. Independent 2026-10-03 census at block 23405374: getOwners returned the authored 8 owners; threshold 4; getModulesPaginated(0x1,100) returned [] and terminal next=0x1; fallback handler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. Guard storage returned a zero word. Signer independence, operational key custody and executable fallback noninterference remain unestablished.",
         "canRaiseCap": true,
         "safe": {
           "threshold": 4,
-          "observedBlock": 23375290,
-          "observedAt": "2026-10-02",
-          "source": "onchain"
+          "observedBlock": 23405374,
+          "observedAt": "2026-10-03",
+          "source": "onchain",
+          "owners": [
+            "0x6ce8a2b735884d00dfc8be9457392e6d49193dec",
+            "0xd2bb60256256d1e8195e29216fad75e6b8320d91",
+            "0x979f11a746eb1dd39b595dab58f2a87518eb02e2",
+            "0xd79c82e4b501a15313dbbf0faa9f926871be1292",
+            "0x0133bc9aac6104dbde751d3ee494af33cf33203b",
+            "0x30f011defd8d7142ede7ebf4e22db4bb0e64462e",
+            "0xfed6aaa2ff62a8f8fe98281c42b34d0d89830bd0",
+            "0xcc7a41fbda6779999355a11ec997a3ae4d4ec208"
+          ],
+          "enabledModules": [],
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "guard": "0x0000000000000000000000000000000000000000"
         },
         "threshold": 4,
         "signerCount": 8
@@ -102,9 +119,9 @@
         "role": "minter-admin",
         "authorityType": "safe",
         "directMintAbility": "can-authorize",
-        "modulesOrGuardsStatus": "unknown",
-        "observedAt": "2026-10-02",
-        "observedBlock": 23375290,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-03",
+        "observedBlock": 23405374,
         "sources": [
           {
             "label": "RISE Dollar product documentation (accessed 2026-10-02)",
@@ -125,14 +142,26 @@
           {
             "label": "M0 liquidity routes and issuer onboarding",
             "url": "https://docs.m0.org/build/accessing-liquidity"
+          },
+          {
+            "label": "Exact Safe getOwners/getThreshold/modules pagination + guard/fallback storage at block 23405374, 2026-10-03",
+            "url": "https://rpc.risechain.com"
           }
         ],
-        "evidence": "Fresh hasRole(DEFAULT_ADMIN_ROLE,Safe)=true. The Safe can grant/change the roles defined by the reviewed extension; JMI allowed-asset/cap administration can change eligible non-M inventory, but totalAssets() for current non-M inventory is zero.",
+        "evidence": "Fresh hasRole(DEFAULT_ADMIN_ROLE,Safe)=true. The Safe can grant/change the roles defined by the reviewed extension; JMI allowed-asset/cap administration can change eligible non-M inventory, but totalAssets() for current non-M inventory is zero. Independent 2026-10-03 census at block 23405374: getOwners returned the authored 3 owners; threshold 2; getModulesPaginated(0x1,100) returned [] and terminal next=0x1; fallback handler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. Guard storage returned a zero word. Signer independence, operational key custody and executable fallback noninterference remain unestablished.",
         "safe": {
           "threshold": 2,
-          "observedBlock": 23375290,
-          "observedAt": "2026-10-02",
-          "source": "onchain"
+          "observedBlock": 23405374,
+          "observedAt": "2026-10-03",
+          "source": "onchain",
+          "owners": [
+            "0x9b4010e9a203d8024f46c04f87edd69e77f37744",
+            "0x979f11a746eb1dd39b595dab58f2a87518eb02e2",
+            "0x737557dee7547e7d0cc02c256273d5c5839a5dde"
+          ],
+          "enabledModules": [],
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "guard": "0x0000000000000000000000000000000000000000"
         },
         "threshold": 2,
         "signerCount": 3,
@@ -204,15 +233,89 @@
         {
           "label": "M0 liquidity routes and issuer onboarding",
           "url": "https://docs.m0.org/build/accessing-liquidity"
+        },
+        {
+          "label": "M0 published EVM-extension security audits (framework scope only)",
+          "url": "https://docs.m0.org/resources/audits"
+        },
+        {
+          "label": "Guardian JMI/MYieldToOne/Freezable/SwapFacility code review, 2025-12-12; not a reserve audit or exact deployment certification",
+          "url": "https://github.com/m0-foundation/evm-m-extensions/blob/main/audits/JMI/M0_EVM-M_Extensions_Review_report.pdf"
         }
       ],
-      "evidence": "At rise block 23375290, symbol/decimals and EIP-1967 implementation/admin were re-read. Local backing balance was 4,186,507.178834 M against 4,166,902.771484 USDR supply. M-extension wrapping and unwrapping conserve the deposited M claim. The current SwapFacility restricts direct M output to approved swappers; an unprivileged sample canSwapViaPath(child,wM) returned true while child-to-M returned false. This is technical conversion eligibility, not a sent transaction or a cash redemption right. Local role/proxy reach is authored separately from inherited M authority and the parent bridge layer.",
-      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-      "reviewedAt": "2026-10-02",
+      "evidence": "At rise block 23375290, symbol/decimals and EIP-1967 implementation/admin were re-read. Local backing balance was 4,186,507.178834 M against 4,166,902.771484 USDR supply. M-extension wrapping and unwrapping conserve the deposited M claim. The current SwapFacility restricts direct M output to approved swappers; an unprivileged sample canSwapViaPath(child,wM) returned true while child-to-M returned false. This is technical conversion eligibility, not a sent transaction or a cash redemption right. Local role/proxy reach is authored separately from inherited M authority and the parent bridge layer. Calibration provenance (2026-10-03): original umbrella observations retained verbatim: [\"Close current SwapFacility upgrade/role-control reach and all extension operational role holders.\", \"Safe owner/threshold and terminal module pagination are enumerated; executable fallback-handler noninterference, independent human signers and key custody are not publicly established.\"]. Human independence and key custody remain unverified and are priced by their dedicated control signals; financial/legal safeguards remain Backing-domain gaps. Calibration v2 (2026-10-03) reconsidered every prior removal and scoped move. Prior scoped observations retained verbatim: [\"Close the current USDR local SwapFacility upgrade/role-control reach at rise:0xb6807116b3b1b321a390594e31ecd6e0076f6278; the local controller implementation and full permission/upgrade chain remain incompletely reviewed.\"]. Genuine unknown implementation, controller authorization and unreadable execution state are retained as umbrella questions; identified-signer custody/independence is recorded per control, not asserted to be independently scored or resolved. Field re-justification: reconciliation=continuous describes the cited local parent-token custody and wrap/custodian supply-accounting mechanism only. It does not certify the upstream fiat/Treasury book, independent assurance or holder insolvency priority; supervision=unknown supplies no prudential or attestation-based credit.",
+      "reviewer": "Refine07 calibration v2 2026-10-03",
+      "reviewedAt": "2026-10-03",
       "disposition": "scoreable",
       "unresolvedQuestions": [
-        "Close current SwapFacility upgrade/role-control reach and all extension operational role holders.",
-        "Enumerate operational and upgrade Safe modules/guards, signer independence and key custody; no threshold-only strength claim is made."
+        "Complete the USDR extension operational role-holder census on rise:0x62b7f5a5be488ea58f660c5aff465647213bc6e9; all live operational roles and their holders have not been exhaustively enumerated.",
+        "Close the current USDR local SwapFacility upgrade/role-control reach at rise:0xb6807116b3b1b321a390594e31ecd6e0076f6278; the local controller implementation and full permission/upgrade chain remain incompletely reviewed."
+      ],
+      "scopedQuestions": [
+        {
+          "controlRef": "USDR token ProxyAdmin owner",
+          "question": "Independent human control, operational key custody and signing policy of the identified USDR token ProxyAdmin owner at rise:0xc588c10a90c942ee3476877c4bac3d798e724856 are not publicly established; enumerated owners/threshold or a codeless EOA do not certify these safeguards.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine07 calibration v2 2026-10-03",
+          "sources": [
+            {
+              "label": "RISE Dollar product documentation (accessed 2026-10-02)",
+              "url": "https://docs.risechain.com/docs/rise-evm/usdr"
+            },
+            {
+              "label": "Verified token implementation",
+              "url": "https://explorer.risechain.com/api/v2/smart-contracts/0xf9733d0bf530b02929ab81cf78e7d0befd3a2d7b"
+            },
+            {
+              "label": "Pinned rise RPC at block 23375290",
+              "url": "https://rpc.risechain.com"
+            },
+            {
+              "label": "M0 published platform deployments",
+              "url": "https://docs.m0.org/resources/addresses/m0-platform"
+            },
+            {
+              "label": "M0 liquidity routes and issuer onboarding",
+              "url": "https://docs.m0.org/build/accessing-liquidity"
+            },
+            {
+              "label": "Exact Safe getOwners/getThreshold/modules pagination + guard/fallback storage at block 23405374, 2026-10-03",
+              "url": "https://rpc.risechain.com"
+            }
+          ]
+        },
+        {
+          "controlRef": "USDR operational DEFAULT_ADMIN Safe",
+          "question": "Independent human control, operational key custody and signing policy of the identified USDR operational DEFAULT_ADMIN Safe at rise:0xb0ea3203b80d67c58f6709779c5fbac641aab769 are not publicly established; enumerated owners/threshold or a codeless EOA do not certify these safeguards.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine07 calibration v2 2026-10-03",
+          "sources": [
+            {
+              "label": "RISE Dollar product documentation (accessed 2026-10-02)",
+              "url": "https://docs.risechain.com/docs/rise-evm/usdr"
+            },
+            {
+              "label": "Verified token implementation",
+              "url": "https://explorer.risechain.com/api/v2/smart-contracts/0xf9733d0bf530b02929ab81cf78e7d0befd3a2d7b"
+            },
+            {
+              "label": "Pinned rise RPC at block 23375290",
+              "url": "https://rpc.risechain.com"
+            },
+            {
+              "label": "M0 published platform deployments",
+              "url": "https://docs.m0.org/resources/addresses/m0-platform"
+            },
+            {
+              "label": "M0 liquidity routes and issuer onboarding",
+              "url": "https://docs.m0.org/build/accessing-liquidity"
+            },
+            {
+              "label": "Exact Safe getOwners/getThreshold/modules pagination + guard/fallback storage at block 23405374, 2026-10-03",
+              "url": "https://rpc.risechain.com"
+            }
+          ]
+        }
       ]
     }
   }

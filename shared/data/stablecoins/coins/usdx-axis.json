@@ -1,4 +1,14 @@
 {
+  "liveReservesConfig": {
+    "adapter": "accountable",
+    "version": 1,
+    "semantics": "protocol-reserve",
+    "breakerScope": "usdx-axis",
+    "scoring": { "maxSourceAgeSec": 259200 },
+    "display": { "url": "https://app.axis.to/transparency", "label": "Axis Accountable location observations" },
+    "inputs": { "primary": { "kind": "http-json", "url": "https://axis.accountable.capital:8443/dashboard" } },
+    "params": { "bucket": "reserves_split", "riskMap": {} }
+  },
   "id": "usdx-axis",
   "name": "Axis USD",
   "symbol": "USDx",
@@ -31,7 +41,8 @@
     { "label": "Website", "url": "https://www.axis.to/" },
     { "label": "Docs", "url": "https://docs.axis.to/" },
     { "label": "Transparency", "url": "https://app.axis.to/transparency" },
-    { "label": "Terms", "url": "https://www.axis.to/terms-of-service" }
+    { "label": "Terms", "url": "https://www.axis.to/terms-of-service" },
+    { "label": "Canonical V2 deployment, July 23, 2026", "url": "https://etherscan.io/tx/0xc50b87d6c87b63e5b8b97253aecd32724eed0b081afdf2732e654a027adf3432" }
   ],
   "jurisdiction": { "country": "British Virgin Islands" },
   "contracts": [
@@ -39,5 +50,7 @@
   ],
   "collateralQuality": "exotic",
   "custodyModel": "unknown",
-  "governanceQuality": "multisig"
+  "governanceQuality": "multisig",
+  "launchDate": "2026-07-23",
+  "implementationLaunchDate": "2026-07-23"
 }

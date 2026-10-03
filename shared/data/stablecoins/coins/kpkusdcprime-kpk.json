@@ -45,6 +45,10 @@
       {
         "label": "Exact current MorphoMarketV1AdapterV2 source",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1d511811aca9d8817a3e50f29cadff6243a02902"
+      },
+      {
+        "label": "Exact vault creationTimestamp 1761242519, creationBlockNumber 23641853; RPC block timestamp independently matches, reviewed 2026-10-03",
+        "url": "https://blue-api.morpho.org/graphql"
       }
     ]
   },
@@ -109,5 +113,6 @@
       }
     }
   },
-  "launchDate": "2025-10-23"
+  "launchDate": "2025-10-23",
+  "implementationLaunchDate": "2025-10-23"
 }

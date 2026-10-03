@@ -1,0 +1,82 @@
+{
+  "capture": {
+    "sourceUrl": "https://www.coinbase.com/graphql/query?operationName=ProofOfReservesPageQuery&extensions=%7B%22persistedQuery%22%3A%7B%22version%22%3A1%2C%22sha256Hash%22%3A%22f26fac8fa11e1fcab64476e3dc605758082acc19b13353841bd78fb57a0ba34a%22%7D%7D&variables=%7B%22reserveAssetTicker%22%3A%22USDC%22%2C%22wrappedAssetTicker%22%3A%22ONED%22%2C%22nativeCurrency%22%3A%22USD%22%7D",
+    "capturedAt": "2026-10-03T07:20:38.681Z",
+    "stamp": "<!-- captured-at: 2026-10-03T07:20:38Z -->",
+    "method": "Ordinary unauthenticated persisted GraphQL GET; x-apollo-operation-name: ProofOfReservesPageQuery",
+    "payload": {
+      "data": {
+        "assetBySymbol": {
+          "latestPrice": {
+            "price": "1",
+            "id": "TGF0ZXN0QXNzZXRQcmljZToyYjkyMzE1ZC1lYWI3LTViZWYtODRmYS0wODlhMTMxMzMzZjU6VVNE"
+          },
+          "priceDataForDay": {
+            "percentChange": 0
+          },
+          "id": "QXNzZXQ6djE6ZnVuZ2liaWxpdHk6Y29pbmJhc2U6dXVpZDoyYjkyMzE1ZC1lYWI3LTViZWYtODRmYS0wODlhMTMxMzMzZjU6"
+        },
+        "proofOfReserves": {
+          "lastUpdatedAt": "2026-10-03T07:20:20Z",
+          "reservesTotal": {
+            "currency": "USDC",
+            "amount": "11857520.082376"
+          },
+          "wrappedAssetsTotal": {
+            "amount": "11857520.01"
+          },
+          "wrappedAssetsByNetwork": [
+            {
+              "network": "base",
+              "currency": "ONED",
+              "contractAddress": "0x10ED0050b7A5d5e1E9Cc164F77a71d0bF69f64BD",
+              "amount": "11857520.01"
+            }
+          ],
+          "reserveAddresses": [
+            {
+              "address": "0x00F5a569C1529535A6148C05040d9d285bd1753F",
+              "balance": {
+                "network": "base",
+                "currency": "USDC",
+                "amount": "9447555.009641"
+              }
+            },
+            {
+              "address": "0xdDD31Db94bf1241BF4f7f4D45c7210a5122FCB81",
+              "balance": {
+                "network": "base",
+                "currency": "USDC",
+                "amount": "2359215.07257"
+              }
+            },
+            {
+              "address": "0x9e35E38AD902e68713E2e6F61F5ff765353BF0e6",
+              "balance": {
+                "network": "base",
+                "currency": "USDC",
+                "amount": "25000"
+              }
+            },
+            {
+              "address": "0x0d4C207b7064DaDd351354d452E55540672c9cf9",
+              "balance": {
+                "network": "base",
+                "currency": "USDC",
+                "amount": "25000"
+              }
+            },
+            {
+              "address": "0xe76Ea8226Cd6326e8CDefEFD9E7802361005688A",
+              "balance": {
+                "network": "base",
+                "currency": "USDC",
+                "amount": "750.000165"
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

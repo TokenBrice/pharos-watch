@@ -7,7 +7,7 @@
     "backing": "rwa-backed",
     "governance": "centralized"
   },
-  "collateral": "Pre-launch: tx promises full 1:1 backing for USTX issued by Brale. USTX-specific reserve allocation, custodians and independent reserve reports are undisclosed; Brale general reserve policies do not establish the token composition.",
+  "collateral": "Pre-launch: tx promises full 1:1 backing for USTX issued by Brale. Brale's program-level policy specifies segregated reserves held separately from corporate assets, daily reconciliation and monthly independent CPA attestations, with reserves in US Treasury bills of at most 90 days, government money market funds and bank deposits. These issuer commitments do not establish USTX-specific allocations, custodians or a retrieved independent reserve report.",
   "pegMechanism": "Planned native USD settlement asset on tx, issued by Brale. Exact USTX mint and redemption eligibility, fees, minimums, timing and capacity are unpublished. Brale general terms restrict purchases and redemptions to qualifying accounts and permit suspension.",
   "mechanismArchetype": "fiat-cash",
   "links": [

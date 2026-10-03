@@ -3,8 +3,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "Native fund issuance is privileged and administrator-controlled; current role-member independence and complete control closure are not publicly established.",
+    "confidence": "verified",
+    "summary": "Native standalone uMINT has one default-admin EOA and a separate minter/enforcer EOA. Mint bytecode is non-upgradeable, but roles, transfer rules and issuer accounting remain privileged.",
     "controls": [
       {
         "label": "Native uMINT role-gated issuance surface",
@@ -42,10 +42,49 @@
             "url": "https://etherscan.io/address/0xc06036793272219179f846ef6bfc3b16e820df0b#code"
           }
         ],
-        "evidence": "At Ethereum block 26107703 the native CMTAT_EVCC has decimals18, 115147.298 shares and zero EIP1967 implementation slot. Verified mint requires MINTER_ROLE; role-administration and rule-engine replacement remain privileged. Actual current minter/admin members, independence and signing threshold are unresolved; no standard proxy is not an immutability proof."
+        "evidence": "Deployment-to-block-26110197 role-event replay and hasRole checks establish default-admin 0xdac87349d8afd2989515deadb3692bb8edf749c4 and MINTER/ENFORCER 0x3797416c447778b514939362cf1b41bbe23dcf58; both are code-empty EOAs. Default admin inherits every role, including mint and TA force transfer. Verified standalone CMTAT_EVCC has no proxy, delegatecall fallback or mint-logic upgrade entrypoint. Privileged setRuleEngine changes transfer validation, not bytecode; no economic mint cap is implemented."
+      },
+      {
+        "label": "uMINT default-admin EOA",
+        "chain": "ethereum",
+        "address": "0xdac87349d8afd2989515deadb3692bb8edf749c4",
+        "deploymentRefs": ["ethereum:0xc06036793272219179f846ef6bfc3b16e820df0b"],
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110197,
+        "sources": [{"label": "uMINT standalone authorization source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc06036793272219179f846ef6bfc3b16e820df0b"}],
+        "evidence": "Exhaustive role-event replay and hasRole(DEFAULT_ADMIN_ROLE)=true; getCode=0x. Default admin has every role through AuthorizationModule, including uncapped mint, enforcement, TA force transfer and setRuleEngine. Organizational signer identity and custody are not attested."
+      },
+      {
+        "label": "uMINT minter and enforcer EOA",
+        "chain": "ethereum",
+        "address": "0x3797416c447778b514939362cf1b41bbe23dcf58",
+        "deploymentRefs": ["ethereum:0xc06036793272219179f846ef6bfc3b16e820df0b"],
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110197,
+        "sources": [{"label": "uMINT standalone authorization source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc06036793272219179f846ef6bfc3b16e820df0b"}],
+        "evidence": "Exhaustive role-event replay and pinned MINTER_ROLE/ENFORCER_ROLE membership confirm this EOA; getCode=0x. The admin can reassign roles. No cryptographic multisig or independently evidenced organizational threshold is inferred."
       }
     ],
-    "economicCapSemantics": "unknown",
+    "upgradeability": {
+      "model": "immutable",
+      "deploymentRefs": ["ethereum:0xc06036793272219179f846ef6bfc3b16e820df0b"],
+      "implementationAddresses": ["0xc06036793272219179f846ef6bfc3b16e820df0b"],
+      "canChangeMintLogic": false,
+      "observedAt": "2026-10-03",
+      "observedBlock": 26110197,
+      "sources": [{"label": "Verified standalone uMINT source and ABI (no code-replacement path)", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc06036793272219179f846ef6bfc3b16e820df0b"}]
+    },
+    "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
     "supervision": "unknown",
     "review": {
@@ -72,13 +111,25 @@
           "url": "https://etherscan.io/address/0xc06036793272219179f846ef6bfc3b16e820df0b#code"
         }
       ],
-      "evidence": "Identity and current stock reverified at Ethereum block 26107703 (2026-10-02T22:44:06.965406+00:00). Verified deployed code establishes privileged native mint/control capabilities, but no complete cap, reserve reconciliation, quorum or noninterference proof is asserted. Accumulating native Ethereum money-market fund share, subscribed and redeemed through authorized distributors such as DigiFT at NAV. UBS confirms an in-production subscription and redemption workflow. The 2025 distributor dossier describes daily T+0 dealing, but current contractual cutoffs, fees, minimums and unconditional capacity are not publicly established. DigiFT DR-uMINT is a separate receipt and is excluded from native identity and supply.",
-      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-      "reviewedAt": "2026-10-02",
-      "unresolvedQuestions": [
-        "Actual current MINTER/default-admin and enforcement role members",
-        "Native PPM, current financial reconciliation and role independence",
-        "Mutable rule-engine authority and full implementation closure"
+      "evidence": "At Ethereum block 26110197, complete role-event replay (seven grants/revocations) and direct hasRole/code reads resolve the current default-admin EOA 0xdac87349d8afd2989515deadb3692bb8edf749c4 and minter/enforcer EOA 0x3797416c447778b514939362cf1b41bbe23dcf58. Default admin inherits every role; standalone verified source has uncapped mint and mutable rule-engine authorization, but no code-replacement path. The native share is distinct from DigiFT depositary receipts. Public materials do not supply binding native PPM, current independent financial reconciliation, or organizational signing independence; immutable mint bytecode supplies none of those missing facts. Organizational identity, independence and MPC/HSM signing policies of the two identified EOA controllers remain undisclosed. Native PPM and current independent token-to-fund financial reconciliation remain private.",
+      "reviewer": "Refine04 pinned native role census",
+      "reviewedAt": "2026-10-03",
+      "unresolvedQuestions": [],
+      "scopedQuestions": [
+        {
+          "controlRef": "uMINT default-admin EOA",
+          "question": "Organizational identity, independence and MPC/HSM/signing policy of this identified default-admin EOA remain undisclosed; its on-chain role membership and uncapped native mint authority are established.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine04 calibration v2",
+          "sources": [{"label": "Verified standalone native authorization source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc06036793272219179f846ef6bfc3b16e820df0b"}]
+        },
+        {
+          "controlRef": "uMINT minter and enforcer EOA",
+          "question": "Organizational identity, independence and MPC/HSM/signing policy of this identified minter/enforcer EOA remain undisclosed. Its role membership is established, without any independently attested organizational signing threshold.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine04 calibration v2",
+          "sources": [{"label": "Verified standalone native authorization source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc06036793272219179f846ef6bfc3b16e820df0b"}]
+        }
       ]
     }
   }

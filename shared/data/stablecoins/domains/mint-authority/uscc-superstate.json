@@ -2,7 +2,7 @@
   "id": "uscc-superstate",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-reconciliation-unknown",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
     "summary": "Superstate controls native fund-share minting on Ethereum, Plume and Solana. EVM owner and proxy paths and the Solana mint key are centrally controlled; the public ledger is not independently reconciled against the full fund liabilities.",
     "controls": [
@@ -102,8 +102,8 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "unknown",
-    "supervision": "unknown",
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
     "upgradeability": {
       "model": "transparent-proxy",
       "deploymentRefs": [
@@ -152,17 +152,26 @@
           "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc"
         },
         {
+          "label": "USTB sibling's same NAV Fund Services / Superstate Services administrator and transfer-agent framework",
+          "url": "https://superstate.com/assets/ustb"
+        },
+        {
           "label": "Superstate deployments and administrative powers",
           "url": "https://docs.superstate.com/investors/smart-contracts"
         }
       ],
-      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-      "reviewedAt": "2026-10-02",
-      "evidence": "Official deployment and fund terms expressly permit direct tokenization of fund shares on all three networks. Fresh EVM owner, ProxyAdmin owner, implementation and Solana authority reads identify the adverse centralized mint paths. This differs from USTB Plume representation treatment: USCC current terms affirm direct tokenization on Plume. Cross-chain EVM burn/reissue is separately reviewed in Bridge Risk, and book-entry shares are excluded from the public token supply. No independent reserve-to-liability reconciliation or enforceable economic cap is claimed.",
-      "unresolvedQuestions": [
-        "Obtain a current signed full fund-to-native-token/book-entry reconciliation.",
-        "Establish Solana issuer key-custody and allowlist program upgrade/signing closure.",
-        "Obtain publicly enforceable complete fund liability and default-waterfall terms."
+      "reviewer": "Refine05 Superstate sibling consistency review",
+      "reviewedAt": "2026-10-03",
+      "evidence": "Official deployment and fund terms expressly permit direct tokenization of fund shares on all three networks. Fresh EVM owner, ProxyAdmin owner, implementation and Solana authority reads identify the adverse centralized mint paths. This differs from USTB Plume representation treatment: USCC current terms affirm direct tokenization on Plume. Cross-chain EVM burn/reissue is separately reviewed in Bridge Risk, and book-entry shares are excluded from the public token supply. USCC and USTB both name NAV Fund Services as NAV calculation agent and Superstate Services LLC as transfer agent, with native tokens or issuer book-entry ownership. Exact USCC terms describe each-business-day portfolio marking and outstanding shares derived from prior-day balances adjusted for subscriptions/redemptions. This is the same recurring administrator/transfer-agent evidence class used by the USTB catalog's periodic reconciliation convention. USCC names Ernst & Young LLP as auditor whereas USTB names PwC; the attestation-only authoring convention is aligned for the named external-auditor/administrator framework, not an assertion that a USTB/PwC report covers USCC. No current independently signed full fund-to-native-token/book-entry reconciliation, verified USCC audit opinion or enforceable economic cap is claimed. Publicly enforceable complete fund liability/default-waterfall terms remain unavailable, financial assurance and holder-priority gaps rather than unidentified mint paths. Solana issuer key custody remains unverified for the identified System-owned zero-data native mint-authority account. Allowlist program upgrade/signing closure remains unresolved holder-transfer machinery, not an additional native mint path attributed to that EOA.",
+      "unresolvedQuestions": [],
+      "scopedQuestions": [
+        {
+          "controlRef": "USCC Solana mint authority",
+          "question": "Establish issuer key-custody and signing-policy evidence for the identified Solana native mint-authority EOA; its System-owned zero-data account does not establish independent or hardened key custody.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine05 mint-authority calibration v2",
+          "sources": [{"label": "Exact USCC native Solana mint", "url": "https://explorer.solana.com/address/BTRR3sj1Bn2ZjuemgbeQ6SCtf84iXS81CS7UDTSxUCaK"}, {"label": "Issuer SVM mint versus allowlist-program design", "url": "https://docs.superstate.com/investors/smart-contracts"}]
+        }
       ]
     }
   }

@@ -1,4 +1,13 @@
 {
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "usdfr-forest-road",
+    "display": { "url": "https://forestroadvault.com/transparency", "label": "Reviewed Forest Road credit and idle USDC mix" },
+    "inputs": { "primary": { "kind": "onchain-evm", "chain": "ethereum", "rpcMode": "public-rpc" } },
+    "params": { "rpcUrl": "https://ethereum-rpc.publicnode.com" }
+  },
   "id": "usdfr-forest-road",
   "name": "Forest Road USDfr",
   "symbol": "USDfr",
@@ -41,6 +50,7 @@
   },
   "detailProvider": "coingecko",
   "geckoId": "forest-road-usdfr",
+  "launchDate": "2026-09-18",
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://forestroadvault.com/transparency",
@@ -49,6 +59,10 @@
     "cadence": "real-time"
   },
   "links": [
+    {
+      "label": "Exact USDfr proxy creation, 18 September 2026, block 26006843",
+      "url": "https://eth.blockscout.com/tx/0x0e8fd3954d94bdc94fa9aaed5582627617fc266e0caba45e7d63a258c627ca8e"
+    },
     {
       "label": "Website",
       "url": "https://forestroadvault.com"

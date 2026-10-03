@@ -18,8 +18,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Refine06 primary-source review",
     "confidence": "probable",
     "sources": [
       {
@@ -35,7 +35,7 @@
         "url": "https://app.ondo.finance/api/v2/assets/gldon/info"
       }
     ],
-    "rationale": "The 100% share-and-cash envelope mirrors IAUon and SLVon; issuer API Physical Gold weight describes the underlying ETF and is not a measured GLDON reserve mix. Final Terms permit Other Collateral and Additional Collateral, whose current usage is not established.",
+    "rationale": "The 100% share-and-cash envelope mirrors IAUon and SLVon; issuer API Physical Gold weight describes the underlying ETF, not a measured GLDON reserve mix. Final Terms permit Other Collateral and Additional Collateral, whose current usage is not established. Program trust disclosures require additional collateral beyond full backing at all times and describe a contractually obligated Ondo Foundation guarantee through Flux Finance, Inc. These are documented program commitments, not a measured GLDON overcollateralization ratio or a token-specific independent reconciliation.",
     "compositionBasis": "Issuer product and backing disclosures reopened 2026-10-02",
     "compositionAsOf": "2026-10-02",
     "scope": "full-composition",

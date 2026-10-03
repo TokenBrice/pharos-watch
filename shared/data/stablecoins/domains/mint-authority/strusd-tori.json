@@ -3,7 +3,7 @@
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "collateral-gated",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "summary": "Deposits mint trUSD-backed shares; the timelock can replace native share-mint logic and the admin controls rewards and cooldowns.",
     "inheritedFrom": "trusd-tori",
     "economicCapSemantics": "collateral-gated",
@@ -92,6 +92,90 @@
           }
         ],
         "evidence": "Current implementation _authorizeUpgrade requires TIMELOCK_ADMIN_ROLE. Pinned hasRole returned true for this timelock and false for the owner Safe; getMinDelay returned 86400. This path can replace native deposit and share-issuance constraints after the delay."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x0c6bbfd2d5666d44bf28580edeec0263692c8316",
+        "deploymentRefs": [
+          "ethereum:0x280839980a7ed0d7717f64125fe241012e5f5815"
+        ],
+        "label": "StakedTrUSD default-admin and upgrade proposer Safe",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "owners": [
+            "0x84e1091066fbcd48f2f2d8a2b7f1726812d167b3",
+            "0xfafe7fe2d5b7ffc92159df1d07ca4d27a6b99693",
+            "0xb5afef3ae424336de90ec1127ff7fec239b02b72",
+            "0x9a450e8787dd4c0d77f630d79469bbea64eb5506",
+            "0x53789955237a39024fc740a4344102d0d5117e53"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "observedBlock": 26110187,
+          "observedAt": "2026-10-03",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110187,
+        "sources": [
+          {
+            "label": "Tori strUSD staking and unstaking terms",
+            "url": "https://docs.tori.finance/products/strusd.md"
+          },
+          {
+            "label": "Tori canonical vault and CCIP deployments",
+            "url": "https://docs.tori.finance/resources/contracts.md"
+          },
+          {
+            "label": "Tori roles and timelock disclosure",
+            "url": "https://docs.tori.finance/security/roles.md"
+          },
+          {
+            "label": "Verified StakedTrUSD implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6561272e3ebc9f2e07cdb12b7c474db9132b977a"
+          },
+          {
+            "label": "Tori reserve ownership and holder-rights terms",
+            "url": "https://docs.tori.finance/legal/trusd-terms.md"
+          },
+          {
+            "label": "Pinned Ethereum block 26107706",
+            "url": "https://etherscan.io/block/26107706"
+          },
+          {
+            "label": "Tori audit scopes, dates and continuous bug bounty",
+            "url": "https://docs.tori.finance/security/audits.md"
+          },
+          {
+            "label": "Sherlock protocol report, audit 15–22 January 2026",
+            "url": "https://github.com/sherlock-protocol/sherlock-reports/blob/main/audits/2026.02.10%20-%20Final%20-%20Tori%20Finance%20Collaborative%20Audit%20Report%201770734349.pdf"
+          },
+          {
+            "label": "Nethermind full-protocol review, 24–26 March 2026",
+            "url": "https://github.com/NethermindEth/PublicAuditReports/blob/main/NM_0854_Tori.pdf"
+          },
+          {
+            "label": "Canonical vault creation transaction",
+            "url": "https://etherscan.io/tx/0x7ef450f4da28e1ae6ba7d6387e9ef1bfad7baa6be8b71a3bb9c44824e31ff102"
+          },
+          {
+            "label": "Current native implementation activation Upgraded event, 30 September 2026",
+            "url": "https://etherscan.io/tx/0xc38ba665458b0e07c6f57e761fecf5e0956e36f78a6d44bc6fc098c5ab99707d"
+          },
+          {
+            "label": "Complete role-event census and current membership pin",
+            "url": "https://etherscan.io/block/26110187"
+          }
+        ],
+        "evidence": "Complete native role census identifies this 3-of-5 Safe as DEFAULT_ADMIN, rewarder and blacklist manager and the timelock proposer. Owner identities are recorded; module pagination is empty with sentinel 0x1 and guard/module-guard slots zero. redistributeLockedAmount can burn/remint a restricted holder balance without increasing net supply; seizure and cooldown/loss powers remain adverse. The current exact implementation prevents this Safe from directly granting the upgrade role. Human signer independence is not asserted."
       }
     ],
     "review": {
@@ -119,11 +203,35 @@
         {
           "label": "Pinned Ethereum block 26107706",
           "url": "https://etherscan.io/block/26107706"
+        },
+        {
+          "label": "Tori audit scopes, dates and continuous bug bounty",
+          "url": "https://docs.tori.finance/security/audits.md"
+        },
+        {
+          "label": "Sherlock protocol report, audit 15–22 January 2026",
+          "url": "https://github.com/sherlock-protocol/sherlock-reports/blob/main/audits/2026.02.10%20-%20Final%20-%20Tori%20Finance%20Collaborative%20Audit%20Report%201770734349.pdf"
+        },
+        {
+          "label": "Nethermind full-protocol review, 24–26 March 2026",
+          "url": "https://github.com/NethermindEth/PublicAuditReports/blob/main/NM_0854_Tori.pdf"
+        },
+        {
+          "label": "Canonical vault creation transaction",
+          "url": "https://etherscan.io/tx/0x7ef450f4da28e1ae6ba7d6387e9ef1bfad7baa6be8b71a3bb9c44824e31ff102"
+        },
+        {
+          "label": "Current native implementation activation Upgraded event, 30 September 2026",
+          "url": "https://etherscan.io/tx/0xc38ba665458b0e07c6f57e761fecf5e0956e36f78a6d44bc6fc098c5ab99707d"
+        },
+        {
+          "label": "Complete role-event census and current membership pin",
+          "url": "https://etherscan.io/block/26110187"
         }
       ],
-      "evidence": "At Ethereum block 26107706, the UUPS implementation is 0x6561272e3ebc9f2e07cdb12b7c474db9132b977a. The current timelock 0xa952453e39f77108ee37c1b92de593f1c59a6ef4 holds TIMELOCK_ADMIN_ROLE and has 86400-second minimum delay; the owner Safe is 3-of-5 with no enabled modules and zero guard slots. Admin cooldown, blacklist/seizure and reward loss-write-down powers are retained, not counted as bridge issuance.",
-      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-      "reviewedAt": "2026-10-02",
+      "evidence": "At Ethereum block 26107706, the UUPS implementation is 0x6561272e3ebc9f2e07cdb12b7c474db9132b977a. The current timelock 0xa952453e39f77108ee37c1b92de593f1c59a6ef4 holds TIMELOCK_ADMIN_ROLE and has 86400-second minimum delay; the owner Safe is 3-of-5 with no enabled modules and zero guard slots. Admin cooldown, blacklist/seizure and reward loss-write-down powers are retained, not counted as bridge issuance. Full RoleGranted/RoleRevoked replay from proxy creation through block 26110187 and current hasRole checks resolve DEFAULT_ADMIN=0x0c6bbfd2d5666d44bf28580edeec0263692c8316, REWARDER=0x0c6bbfd2d5666d44bf28580edeec0263692c8316,0xa0c49ffa4b7941830235cde974d9b2a8420cd375, BLACKLIST_MANAGER=0x0c6bbfd2d5666d44bf28580edeec0263692c8316,0xb1e50b7a19b8f650a6ee77dc0ac52b88059fa169, TIMELOCK_ADMIN=0xa952453e39f77108ee37c1b92de593f1c59a6ef4. Timelock role replay/current getters resolve proposer 0x0c6bbfd2d5666d44bf28580edeec0263692c8316, executor 0x039e71e865a34bcaaebfc641291bec6517ea0ce7, canceller 0x60226cbb34445143e5f923abe2d42e5df852d065; delay=86400 seconds. Exact implementation blocks direct grantRole/revokeRole for TIMELOCK_ADMIN_ROLE; the initialized role changes only through setTimelockAdmin guarded by its current holder. pendingDefaultAdmin is zero and defaultAdminDelay=86400. Sherlock and Nethermind reports include strUSD staking/access/oracle integration; both predate the September 2026 implementation, so deployed build equivalence is not claimed. Continuous critical bug bounty is up to $1M; it is not financial assurance.",
+      "reviewer": "Sol refinement 2026-10-03 (Refine12, exact source and RPC census)",
+      "reviewedAt": "2026-10-03",
       "disposition": "scoreable"
     },
     "upgradeability": {

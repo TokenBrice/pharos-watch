@@ -20,7 +20,7 @@
     "disposition": "resolved",
     "reviewedAt": "2026-10-02",
     "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "rationale": "Exact Ethereum deployment 0xb576765fb15505433af24fee2c0325895c559fb2 is immutable VaultV2, issuing transferable ERC-4626 operational shares over PYUSD, not a direct fiat or parent-reserve ownership claim. asset(), decimals(), totalSupply(), convertToAssets() and ordinary one-share redeem simulation were reverified at Ethereum block 26107702. The protocol-position archetype intentionally differs from the fiat-cash parent.",
+    "rationale": "Exact Ethereum deployment 0xb576765fb15505433af24fee2c0325895c559fb2 is immutable VaultV2, issuing transferable ERC-4626 operational shares over PYUSD, not a direct fiat or parent-reserve ownership claim. asset(), decimals(), totalSupply(), convertToAssets() and ordinary one-share redeem simulation were reverified at Ethereum block 26107702. The protocol-position archetype intentionally differs from the fiat-cash parent. Exact deployment creation: Morpho vaultV2ByAddress creationBlockNumber=24025034, creationTimestamp=1765886495 (2025-12-16T12:01:35.000Z); independently retrieved 2026-10-03.",
     "sources": [
       {
         "label": "Paypal USD Main exact vault",
@@ -107,5 +107,6 @@
       }
     }
   },
-  "launchDate": "2025-12-16"
+  "launchDate": "2025-12-16",
+  "implementationLaunchDate": "2025-12-16"
 }

@@ -49,12 +49,16 @@
       {
         "label": "Ethereum RPC observation at block 26107703",
         "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Mellow named underlying conservative and experimental vaults",
+        "url": "https://docs.mellow.finance/lido-earn/earnusd"
       }
     ],
-    "rationale": "The entire holder instrument is an operational protocol-position claim. The deployed vault has two subvaults, unlike the one-subvault introduction text. No current look-through allocation is inferred from deposit assets or the USDC withdrawal denomination.",
+    "rationale": "The entire holder instrument is an operational protocol-position claim. The deployed vault has two subvaults, unlike the one-subvault introduction text. No current look-through allocation is inferred from deposit assets or the USDC withdrawal denomination. Mellow explicitly identifies earnUSDc (conservative, Ethereum/Base) and earnUSDe (experimental, Ethereum/Plasma/Mantle) as the two underlying vaults and USDC/USDT USD strategies. This establishes standing structure, not current allocation weights, encumbrances or whole-book assurance.",
     "compositionBasis": "Standing whole-token claim identity corroborated by exact deployed code and pinned chain state; not a measured look-through allocation",
     "scope": "full-composition",
-    "knownUnknownExposure": "Current strategy holdings, encumbrances, USDC/USDT mix and complete matched share-liability valuation are not established by the reviewed product documentation or deployment reads.",
+    "knownUnknownExposure": "Named earnUSDc and earnUSDe standing structure is public; current constituent holdings/weights, encumbrances, cross-chain allocation and complete matched share-liability valuation are still not established.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {

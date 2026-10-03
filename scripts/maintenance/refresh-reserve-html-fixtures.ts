@@ -64,6 +64,11 @@ const FIXTURE_SOURCES: readonly HtmlFixtureSource[] = [
     url: "https://www.sgforge.com/product/coinvertible/",
     fixture: "sgforge-coinvertible-eur.html",
   },
+  {
+    name: "Supercoin ZARSC assurance reports",
+    url: "https://www.supercoin.co.za/assurance-reports",
+    fixture: "zarsc-supercoin.html",
+  },
 ];
 
 // Sources deliberately not refreshed:

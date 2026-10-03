@@ -18,6 +18,9 @@ export interface ReserveNavPriceRow {
   metadata: string;
 }
 
+// Allows rounded issuer assets and modest cross-observation drift, not a missing funded leg.
+const JPMORGAN_CLASS_ASSETS_SUPPLY_TOLERANCE = 0.005;
+
 /** A successful fetch does not refresh the issuer/oracle evidence clock. */
 export function decodeReserveNavPrice(row: ReserveNavPriceRow, nowSec = Math.floor(Date.now() / 1000)): NavTelemetryQuote | null {
   if (!isReserveNavPriceSource(row.source) || !Number.isFinite(row.fetched_at) || row.fetched_at <= 0 ||
@@ -35,10 +38,28 @@ export function decodeReserveNavPrice(row: ReserveNavPriceRow, nowSec = Math.flo
   if (navPerToken == null || sourceTimestamp == null) return null;
   const freshness = validatePricingSourceFreshness({ source: row.source, observedAt: sourceTimestamp, observedAtMode: "upstream", nowSec });
   if (!freshness.accepted) return null;
+  const details = metadata.details as Record<string, unknown> | null | undefined;
+  const classAssetsUsd = row.source === "jpmorgan-nav" && metadata.freshnessMode === "verified" &&
+    details?.cusip === "46655R119" && details.shareClassNumber === "4397" && details.ticker === "JLTXX" &&
+    typeof details.dealingDate === "string" &&
+    Date.parse(`${details.dealingDate}T00:00:00Z`) / 1000 === sourceTimestamp
+    ? parsePositiveNumber(details.classAssetsUsd) : null;
   return {
     source: row.source, price: navPerToken, observedAt: Math.floor(sourceTimestamp), observedAtMode: "upstream",
-    metadata: { reserveFetchedAt: row.fetched_at, navPerToken },
+    metadata: { reserveFetchedAt: row.fetched_at, navPerToken, ...(classAssetsUsd != null ? { classAssetsUsd } : {}) },
   };
+}
+
+/** Class assets constrain on-chain scope; they never substitute for observed supply. */
+export function reserveNavSupplyScopeReason(
+  quote: NavTelemetryQuote | null,
+  onchainNavValuationUsd: number,
+): "class-assets-unavailable" | "invalid-onchain-valuation" | "class-assets-supply-divergence" | null {
+  const classAssetsUsd = parsePositiveNumber(quote?.metadata?.classAssetsUsd);
+  if (quote?.source !== "jpmorgan-nav" || classAssetsUsd == null) return "class-assets-unavailable";
+  if (!Number.isFinite(onchainNavValuationUsd) || onchainNavValuationUsd <= 0) return "invalid-onchain-valuation";
+  return Math.abs(onchainNavValuationUsd - classAssetsUsd) / classAssetsUsd <= JPMORGAN_CLASS_ASSETS_SUPPLY_TOLERANCE
+    ? null : "class-assets-supply-divergence";
 }
 
 /** Supply admission can use reserve NAV before the new asset is in the cache. */

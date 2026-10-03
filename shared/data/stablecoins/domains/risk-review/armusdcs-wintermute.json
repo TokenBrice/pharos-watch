@@ -39,8 +39,8 @@
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "Wintermute USDC Select has one reviewed native vault-share deployment; no second share deployment or bridge representation is established. Underlying collateral bridge/custody exposure is separate.",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Refine07",
     "confidence": "probable",
     "sources": [
       {
@@ -70,6 +70,653 @@
       {
         "label": "Exact adapter partial source with matching deployed bytecode",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3b9e060a2b05588126fda01b95e9485687fc91d7"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd",
+        "protocol": "Morpho Vault V2",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Sole authored native VaultV2 share deployment. No share bridge route is established by the current inventory; underlying collateral bridges and future integrations are separate.",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110193,
+        "sources": [
+          {
+            "label": "Adapter 0x3b9e060a2b05588126fda01b95e9485687fc91d7 marketIdsLength/marketIds census at ethereum block 26110193, 2026-10-03; adapter.morpho/idToMarketParams collateral/oracle/LLTV all independently match the API",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Morpho marketById chain-qualified collateral/oracle/LLTV and oracle.data feed inventory, accessed 2026-10-03",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Pinned Morpho Blue liquidation and bad-debt source (framework semantics, not exact deployment verification)",
+            "url": "https://raw.githubusercontent.com/morpho-org/morpho-blue/8f89ede29ec9d2cfa9688aa670346226a3571f06/src/Morpho.sol"
+          },
+          {
+            "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          }
+        ]
+      }
+    ]
+  },
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "All currently enumerated adapter markets have chain-qualified oracle paths and borrower-liquidation branches. Direct share accounting has no independent external price input. Exact oracle feed/rate control, freshness enforcement and fallback closure remain incomplete; no oracleless lending or high-quality feed claim is made.",
+    "role": "collateral-pricing",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Refine07",
+      "rationale": "The exact current lending adapter census establishes 6 borrower markets. Each remains price-sensitive through its configured collateral oracle, separately from direct share accounting.",
+      "sources": [
+        {
+          "label": "Adapter 0x3b9e060a2b05588126fda01b95e9485687fc91d7 marketIdsLength/marketIds census at ethereum block 26110193, 2026-10-03; adapter.morpho/idToMarketParams collateral/oracle/LLTV all independently match the API",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Morpho marketById chain-qualified collateral/oracle/LLTV and oracle.data feed inventory, accessed 2026-10-03",
+          "url": "https://api.morpho.org/graphql"
+        },
+        {
+          "label": "Pinned Morpho Blue liquidation and bad-debt source (framework semantics, not exact deployment verification)",
+          "url": "https://raw.githubusercontent.com/morpho-org/morpho-blue/8f89ede29ec9d2cfa9688aa670346226a3571f06/src/Morpho.sol"
+        },
+        {
+          "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Refine07",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "Adapter 0x3b9e060a2b05588126fda01b95e9485687fc91d7 marketIdsLength/marketIds census at ethereum block 26110193, 2026-10-03; adapter.morpho/idToMarketParams collateral/oracle/LLTV all independently match the API",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Morpho marketById chain-qualified collateral/oracle/LLTV and oracle.data feed inventory, accessed 2026-10-03",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Pinned Morpho Blue liquidation and bad-debt source (framework semantics, not exact deployment verification)",
+        "url": "https://raw.githubusercontent.com/morpho-org/morpho-blue/8f89ede29ec9d2cfa9688aa670346226a3571f06/src/Morpho.sol"
+      },
+      {
+        "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
+        "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+      }
+    ],
+    "branches": [
+      {
+        "id": "0x64d65c9a2d91c36d56fbc42d69e979335320169b3df63bf92789e2c8883fcc64",
+        "label": "cbBTC collateral market 0x64d65c9a",
+        "tier": "opaque-or-unknown",
+        "summary": "Exact collateral/oracle identity and LLTV are established. Nested valuation inputs, operator controls, feed staleness enforcement and fallback behavior remain incompletely reviewed; no independence or redundancy credit is claimed.",
+        "collateralAssets": [
+          "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "ChainlinkOracleV2 adapter (Morpho API classification; feed operator/custody not independently established)",
+            "path": "baseFeedOne of 0xa6d6950c9f177f1de7f7757fb33539e3ec60182a for market 0x64d65c9a2d91c36d56fbc42d69e979335320169b3df63bf92789e2c8883fcc64",
+            "address": "0xf4030086522a5beea4988f8ca5b36dbc97bee88c",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03"
+          }
+        ],
+        "fallbackBehavior": "Market consumes its configured IOracle.price(); nested-feed stale-price handling and fallback/bypass paths are not yet verified for this exact oracle.",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110193,
+        "collateralParameters": [
+          {
+            "asset": "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
+            "maximumLtvPct": 86.0,
+            "note": "Immutable market LLTV per Morpho marketById; this is loan-to-liquidation value, not a vault share mint cap."
+          }
+        ],
+        "liquidationMechanism": "Referenced Morpho Blue liquidate checks oracle-valued borrower health against LLTV, transfers seized collateral to the liquidator and requires loan-token repayment. Exact deployment bytecode equivalence is not newly certified.",
+        "backstop": "No exact-market funded insurance or discretionary rescue commitment was verified in the cited inventory; that fact remains unknown.",
+        "shutdownOrBadDebtBehavior": "Referenced Morpho Blue writes off remaining debt when borrower collateral reaches zero, subtracting badDebtAssets from totalSupplyAssets; VaultV2 NAV recognizes adapter losses. No guaranteed recovery is inferred.",
+        "sources": [
+          {
+            "label": "Adapter 0x3b9e060a2b05588126fda01b95e9485687fc91d7 marketIdsLength/marketIds census at ethereum block 26110193, 2026-10-03; adapter.morpho/idToMarketParams collateral/oracle/LLTV all independently match the API",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Morpho marketById chain-qualified collateral/oracle/LLTV and oracle.data feed inventory, accessed 2026-10-03",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Pinned Morpho Blue liquidation and bad-debt source (framework semantics, not exact deployment verification)",
+            "url": "https://raw.githubusercontent.com/morpho-org/morpho-blue/8f89ede29ec9d2cfa9688aa670346226a3571f06/src/Morpho.sol"
+          },
+          {
+            "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          }
+        ]
+      },
+      {
+        "id": "0x3a85e619751152991742810df6ec69ce473daef99e28a64ab2340d7b7ccfee49",
+        "label": "WBTC collateral market 0x3a85e619",
+        "tier": "opaque-or-unknown",
+        "summary": "Exact collateral/oracle identity and LLTV are established. Nested valuation inputs, operator controls, feed staleness enforcement and fallback behavior remain incompletely reviewed; no independence or redundancy credit is claimed.",
+        "collateralAssets": [
+          "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "ChainlinkOracle adapter (Morpho API classification; feed operator/custody not independently established)",
+            "path": "baseFeedOne of 0xdddd770badd886df3864029e4b377b5f6a2b6b83 for market 0x3a85e619751152991742810df6ec69ce473daef99e28a64ab2340d7b7ccfee49",
+            "address": "0xfdfd9c85ad200c506cf9e21f1fd8dd01932fbb23",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03"
+          },
+          {
+            "provider": "ChainlinkOracle adapter (Morpho API classification; feed operator/custody not independently established)",
+            "path": "baseFeedTwo of 0xdddd770badd886df3864029e4b377b5f6a2b6b83 for market 0x3a85e619751152991742810df6ec69ce473daef99e28a64ab2340d7b7ccfee49",
+            "address": "0xf4030086522a5beea4988f8ca5b36dbc97bee88c",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03"
+          },
+          {
+            "provider": "ChainlinkOracle adapter (Morpho API classification; feed operator/custody not independently established)",
+            "path": "quoteFeedOne of 0xdddd770badd886df3864029e4b377b5f6a2b6b83 for market 0x3a85e619751152991742810df6ec69ce473daef99e28a64ab2340d7b7ccfee49",
+            "address": "0x8fffffd4afb6115b954bd326cbe7b4ba576818f6",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03"
+          }
+        ],
+        "fallbackBehavior": "Market consumes its configured IOracle.price(); nested-feed stale-price handling and fallback/bypass paths are not yet verified for this exact oracle.",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110193,
+        "collateralParameters": [
+          {
+            "asset": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+            "maximumLtvPct": 86.0,
+            "note": "Immutable market LLTV per Morpho marketById; this is loan-to-liquidation value, not a vault share mint cap."
+          }
+        ],
+        "liquidationMechanism": "Referenced Morpho Blue liquidate checks oracle-valued borrower health against LLTV, transfers seized collateral to the liquidator and requires loan-token repayment. Exact deployment bytecode equivalence is not newly certified.",
+        "backstop": "No exact-market funded insurance or discretionary rescue commitment was verified in the cited inventory; that fact remains unknown.",
+        "shutdownOrBadDebtBehavior": "Referenced Morpho Blue writes off remaining debt when borrower collateral reaches zero, subtracting badDebtAssets from totalSupplyAssets; VaultV2 NAV recognizes adapter losses. No guaranteed recovery is inferred.",
+        "sources": [
+          {
+            "label": "Adapter 0x3b9e060a2b05588126fda01b95e9485687fc91d7 marketIdsLength/marketIds census at ethereum block 26110193, 2026-10-03; adapter.morpho/idToMarketParams collateral/oracle/LLTV all independently match the API",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Morpho marketById chain-qualified collateral/oracle/LLTV and oracle.data feed inventory, accessed 2026-10-03",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Pinned Morpho Blue liquidation and bad-debt source (framework semantics, not exact deployment verification)",
+            "url": "https://raw.githubusercontent.com/morpho-org/morpho-blue/8f89ede29ec9d2cfa9688aa670346226a3571f06/src/Morpho.sol"
+          },
+          {
+            "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          }
+        ]
+      },
+      {
+        "id": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+        "label": "PT-reUSD-10DEC2026 collateral market 0x1e9d6146",
+        "tier": "opaque-or-unknown",
+        "summary": "Exact collateral/oracle identity and LLTV are established. Nested valuation inputs, operator controls, feed staleness enforcement and fallback behavior remain incompletely reviewed; no independence or redundancy credit is claimed.",
+        "collateralAssets": [
+          "0xecfafdc7741323a945a163ed068b5a3c43483957"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "ChainlinkOracleV2 adapter (Morpho API classification; feed operator/custody not independently established)",
+            "path": "baseFeedOne of 0x217d6ddcdb95112c51657f6270e8c079cfdb51f0 for market 0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+            "address": "0x77ee147391eac11c92817e771860ff4aad265d89",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03"
+          }
+        ],
+        "fallbackBehavior": "Market consumes its configured IOracle.price(); nested-feed stale-price handling and fallback/bypass paths are not yet verified for this exact oracle.",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110193,
+        "collateralParameters": [
+          {
+            "asset": "0xecfafdc7741323a945a163ed068b5a3c43483957",
+            "maximumLtvPct": 91.5,
+            "note": "Immutable market LLTV per Morpho marketById; this is loan-to-liquidation value, not a vault share mint cap."
+          }
+        ],
+        "liquidationMechanism": "Referenced Morpho Blue liquidate checks oracle-valued borrower health against LLTV, transfers seized collateral to the liquidator and requires loan-token repayment. Exact deployment bytecode equivalence is not newly certified.",
+        "backstop": "No exact-market funded insurance or discretionary rescue commitment was verified in the cited inventory; that fact remains unknown.",
+        "shutdownOrBadDebtBehavior": "Referenced Morpho Blue writes off remaining debt when borrower collateral reaches zero, subtracting badDebtAssets from totalSupplyAssets; VaultV2 NAV recognizes adapter losses. No guaranteed recovery is inferred.",
+        "sources": [
+          {
+            "label": "Adapter 0x3b9e060a2b05588126fda01b95e9485687fc91d7 marketIdsLength/marketIds census at ethereum block 26110193, 2026-10-03; adapter.morpho/idToMarketParams collateral/oracle/LLTV all independently match the API",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Morpho marketById chain-qualified collateral/oracle/LLTV and oracle.data feed inventory, accessed 2026-10-03",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Pinned Morpho Blue liquidation and bad-debt source (framework semantics, not exact deployment verification)",
+            "url": "https://raw.githubusercontent.com/morpho-org/morpho-blue/8f89ede29ec9d2cfa9688aa670346226a3571f06/src/Morpho.sol"
+          },
+          {
+            "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          }
+        ]
+      },
+      {
+        "id": "0x1d09bf979a167075f5608686642fd3cdb458de742a234175892fa03f23693f6b",
+        "label": "v-wmtUSDC collateral market 0x1d09bf97",
+        "tier": "opaque-or-unknown",
+        "summary": "Exact collateral/oracle identity and LLTV are established. Nested valuation inputs, operator controls, feed staleness enforcement and fallback behavior remain incompletely reviewed; no independence or redundancy credit is claimed.",
+        "collateralAssets": [
+          "0xf65460b84c13eeb911303336ab0f9d63cc79839f"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "ChainlinkOracleV2 adapter (Morpho API classification; feed operator/custody not independently established)",
+            "path": "baseFeedOne of 0x6969a0296d9fec77e794651469e362105d2307e8 for market 0x1d09bf979a167075f5608686642fd3cdb458de742a234175892fa03f23693f6b",
+            "address": "0xe44dcf74ab26ec2e23c4f0922dcb9765379f0aae",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03"
+          }
+        ],
+        "fallbackBehavior": "Market consumes its configured IOracle.price(); nested-feed stale-price handling and fallback/bypass paths are not yet verified for this exact oracle.",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110193,
+        "collateralParameters": [
+          {
+            "asset": "0xf65460b84c13eeb911303336ab0f9d63cc79839f",
+            "maximumLtvPct": 86.0,
+            "note": "Immutable market LLTV per Morpho marketById; this is loan-to-liquidation value, not a vault share mint cap."
+          }
+        ],
+        "liquidationMechanism": "Referenced Morpho Blue liquidate checks oracle-valued borrower health against LLTV, transfers seized collateral to the liquidator and requires loan-token repayment. Exact deployment bytecode equivalence is not newly certified.",
+        "backstop": "No exact-market funded insurance or discretionary rescue commitment was verified in the cited inventory; that fact remains unknown.",
+        "shutdownOrBadDebtBehavior": "Referenced Morpho Blue writes off remaining debt when borrower collateral reaches zero, subtracting badDebtAssets from totalSupplyAssets; VaultV2 NAV recognizes adapter losses. No guaranteed recovery is inferred.",
+        "sources": [
+          {
+            "label": "Adapter 0x3b9e060a2b05588126fda01b95e9485687fc91d7 marketIdsLength/marketIds census at ethereum block 26110193, 2026-10-03; adapter.morpho/idToMarketParams collateral/oracle/LLTV all independently match the API",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Morpho marketById chain-qualified collateral/oracle/LLTV and oracle.data feed inventory, accessed 2026-10-03",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Pinned Morpho Blue liquidation and bad-debt source (framework semantics, not exact deployment verification)",
+            "url": "https://raw.githubusercontent.com/morpho-org/morpho-blue/8f89ede29ec9d2cfa9688aa670346226a3571f06/src/Morpho.sol"
+          },
+          {
+            "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          }
+        ]
+      },
+      {
+        "id": "0xc7e49dd404825da16988955201ed22ecf8a7b25f0337db8a698d70d7a9f343ea",
+        "label": "PT-USDat-14JAN2027 collateral market 0xc7e49dd4",
+        "tier": "opaque-or-unknown",
+        "summary": "Exact collateral/oracle identity and LLTV are established. Nested valuation inputs, operator controls, feed staleness enforcement and fallback behavior remain incompletely reviewed; no independence or redundancy credit is claimed.",
+        "collateralAssets": [
+          "0xba96292ee7673e3b546cc90db6d97111cd9a314f"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Unresolved feed/rate topology",
+            "path": "IOracle.price() at market oracle 0x034f45accb8949e55366bec6d4023d1c1e372dad; API returns null topology",
+            "address": "0x034f45accb8949e55366bec6d4023d1c1e372dad",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03"
+          }
+        ],
+        "fallbackBehavior": "Market consumes its configured IOracle.price(); nested-feed stale-price handling and fallback/bypass paths are not yet verified for this exact oracle.",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110193,
+        "collateralParameters": [
+          {
+            "asset": "0xba96292ee7673e3b546cc90db6d97111cd9a314f",
+            "maximumLtvPct": 91.5,
+            "note": "Immutable market LLTV per Morpho marketById; this is loan-to-liquidation value, not a vault share mint cap."
+          }
+        ],
+        "liquidationMechanism": "Referenced Morpho Blue liquidate checks oracle-valued borrower health against LLTV, transfers seized collateral to the liquidator and requires loan-token repayment. Exact deployment bytecode equivalence is not newly certified.",
+        "backstop": "No exact-market funded insurance or discretionary rescue commitment was verified in the cited inventory; that fact remains unknown.",
+        "shutdownOrBadDebtBehavior": "Referenced Morpho Blue writes off remaining debt when borrower collateral reaches zero, subtracting badDebtAssets from totalSupplyAssets; VaultV2 NAV recognizes adapter losses. No guaranteed recovery is inferred.",
+        "sources": [
+          {
+            "label": "Adapter 0x3b9e060a2b05588126fda01b95e9485687fc91d7 marketIdsLength/marketIds census at ethereum block 26110193, 2026-10-03; adapter.morpho/idToMarketParams collateral/oracle/LLTV all independently match the API",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Morpho marketById chain-qualified collateral/oracle/LLTV and oracle.data feed inventory, accessed 2026-10-03",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Pinned Morpho Blue liquidation and bad-debt source (framework semantics, not exact deployment verification)",
+            "url": "https://raw.githubusercontent.com/morpho-org/morpho-blue/8f89ede29ec9d2cfa9688aa670346226a3571f06/src/Morpho.sol"
+          },
+          {
+            "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          }
+        ]
+      },
+      {
+        "id": "0xb323495f7e4148be5643a4ea4a8221eef163e4bccfdedc2a6f4696baacbc86cc",
+        "label": "wstETH collateral market 0xb323495f",
+        "tier": "opaque-or-unknown",
+        "summary": "Exact collateral/oracle identity and LLTV are established. Nested valuation inputs, operator controls, feed staleness enforcement and fallback behavior remain incompletely reviewed; no independence or redundancy credit is claimed.",
+        "collateralAssets": [
+          "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "ChainlinkOracle adapter (Morpho API classification; feed operator/custody not independently established)",
+            "path": "baseFeedOne of 0x48f7e36eb6b826b2df4b2e630b62cd25e89e40e2 for market 0xb323495f7e4148be5643a4ea4a8221eef163e4bccfdedc2a6f4696baacbc86cc",
+            "address": "0x4f67e4d9bd67efa28236013288737d39aef48e79",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03"
+          },
+          {
+            "provider": "ChainlinkOracle adapter (Morpho API classification; feed operator/custody not independently established)",
+            "path": "quoteFeedOne of 0x48f7e36eb6b826b2df4b2e630b62cd25e89e40e2 for market 0xb323495f7e4148be5643a4ea4a8221eef163e4bccfdedc2a6f4696baacbc86cc",
+            "address": "0x986b5e1e1755e3c2440e960477f25201b0a8bbd4",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03"
+          }
+        ],
+        "fallbackBehavior": "Market consumes its configured IOracle.price(); nested-feed stale-price handling and fallback/bypass paths are not yet verified for this exact oracle.",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110193,
+        "collateralParameters": [
+          {
+            "asset": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+            "maximumLtvPct": 86.0,
+            "note": "Immutable market LLTV per Morpho marketById; this is loan-to-liquidation value, not a vault share mint cap."
+          }
+        ],
+        "liquidationMechanism": "Referenced Morpho Blue liquidate checks oracle-valued borrower health against LLTV, transfers seized collateral to the liquidator and requires loan-token repayment. Exact deployment bytecode equivalence is not newly certified.",
+        "backstop": "No exact-market funded insurance or discretionary rescue commitment was verified in the cited inventory; that fact remains unknown.",
+        "shutdownOrBadDebtBehavior": "Referenced Morpho Blue writes off remaining debt when borrower collateral reaches zero, subtracting badDebtAssets from totalSupplyAssets; VaultV2 NAV recognizes adapter losses. No guaranteed recovery is inferred.",
+        "sources": [
+          {
+            "label": "Adapter 0x3b9e060a2b05588126fda01b95e9485687fc91d7 marketIdsLength/marketIds census at ethereum block 26110193, 2026-10-03; adapter.morpho/idToMarketParams collateral/oracle/LLTV all independently match the API",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Morpho marketById chain-qualified collateral/oracle/LLTV and oracle.data feed inventory, accessed 2026-10-03",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Pinned Morpho Blue liquidation and bad-debt source (framework semantics, not exact deployment verification)",
+            "url": "https://raw.githubusercontent.com/morpho-org/morpho-blue/8f89ede29ec9d2cfa9688aa670346226a3571f06/src/Morpho.sol"
+          },
+          {
+            "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          }
+        ]
+      }
+    ],
+    "paths": [
+      {
+        "id": "ethereum:0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd",
+        "chain": "ethereum",
+        "address": "0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd",
+        "pricingAuthority": "none",
+        "applicability": {
+          "disposition": "not-applicable",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine07",
+          "confidence": "probable",
+          "rationale": "The referenced VaultV2 share accounting computes NAV from underlying assets and adapter realAssets, without a separate external price input on the deposit/mint/redeem accounting path. This exemption does not cover borrower collateral liquidation or nested-vault valuation. Exact-deployment verification caveats remain.",
+          "sources": [
+            {
+              "label": "Adapter 0x3b9e060a2b05588126fda01b95e9485687fc91d7 marketIdsLength/marketIds census at ethereum block 26110193, 2026-10-03; adapter.morpho/idToMarketParams collateral/oracle/LLTV all independently match the API",
+              "url": "https://ethereum-rpc.publicnode.com"
+            },
+            {
+              "label": "Morpho marketById chain-qualified collateral/oracle/LLTV and oracle.data feed inventory, accessed 2026-10-03",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Pinned Morpho Blue liquidation and bad-debt source (framework semantics, not exact deployment verification)",
+              "url": "https://raw.githubusercontent.com/morpho-org/morpho-blue/8f89ede29ec9d2cfa9688aa670346226a3571f06/src/Morpho.sol"
+            },
+            {
+              "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            }
+          ]
+        }
+      },
+      {
+        "id": "ethereum:0xa6d6950c9f177f1de7f7757fb33539e3ec60182a",
+        "chain": "ethereum",
+        "address": "0xa6d6950c9f177f1de7f7757fb33539e3ec60182a",
+        "pricingAuthority": "external-price",
+        "branchId": "0x64d65c9a2d91c36d56fbc42d69e979335320169b3df63bf92789e2c8883fcc64",
+        "applicability": {
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine07",
+          "confidence": "probable",
+          "rationale": "The configured oracle prices cbBTC borrower collateral in market 0x64d65c9a2d91c36d56fbc42d69e979335320169b3df63bf92789e2c8883fcc64; ERC-4626 accounting does not exempt this lending branch. Feed/operator/freshness topology remains bounded unknown.",
+          "sources": [
+            {
+              "label": "Adapter 0x3b9e060a2b05588126fda01b95e9485687fc91d7 marketIdsLength/marketIds census at ethereum block 26110193, 2026-10-03; adapter.morpho/idToMarketParams collateral/oracle/LLTV all independently match the API",
+              "url": "https://ethereum-rpc.publicnode.com"
+            },
+            {
+              "label": "Morpho marketById chain-qualified collateral/oracle/LLTV and oracle.data feed inventory, accessed 2026-10-03",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Pinned Morpho Blue liquidation and bad-debt source (framework semantics, not exact deployment verification)",
+              "url": "https://raw.githubusercontent.com/morpho-org/morpho-blue/8f89ede29ec9d2cfa9688aa670346226a3571f06/src/Morpho.sol"
+            },
+            {
+              "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            }
+          ]
+        }
+      },
+      {
+        "id": "ethereum:0xdddd770badd886df3864029e4b377b5f6a2b6b83",
+        "chain": "ethereum",
+        "address": "0xdddd770badd886df3864029e4b377b5f6a2b6b83",
+        "pricingAuthority": "external-price",
+        "branchId": "0x3a85e619751152991742810df6ec69ce473daef99e28a64ab2340d7b7ccfee49",
+        "applicability": {
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine07",
+          "confidence": "probable",
+          "rationale": "The configured oracle prices WBTC borrower collateral in market 0x3a85e619751152991742810df6ec69ce473daef99e28a64ab2340d7b7ccfee49; ERC-4626 accounting does not exempt this lending branch. Feed/operator/freshness topology remains bounded unknown.",
+          "sources": [
+            {
+              "label": "Adapter 0x3b9e060a2b05588126fda01b95e9485687fc91d7 marketIdsLength/marketIds census at ethereum block 26110193, 2026-10-03; adapter.morpho/idToMarketParams collateral/oracle/LLTV all independently match the API",
+              "url": "https://ethereum-rpc.publicnode.com"
+            },
+            {
+              "label": "Morpho marketById chain-qualified collateral/oracle/LLTV and oracle.data feed inventory, accessed 2026-10-03",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Pinned Morpho Blue liquidation and bad-debt source (framework semantics, not exact deployment verification)",
+              "url": "https://raw.githubusercontent.com/morpho-org/morpho-blue/8f89ede29ec9d2cfa9688aa670346226a3571f06/src/Morpho.sol"
+            },
+            {
+              "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            }
+          ]
+        }
+      },
+      {
+        "id": "ethereum:0x217d6ddcdb95112c51657f6270e8c079cfdb51f0",
+        "chain": "ethereum",
+        "address": "0x217d6ddcdb95112c51657f6270e8c079cfdb51f0",
+        "pricingAuthority": "external-price",
+        "branchId": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+        "applicability": {
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine07",
+          "confidence": "probable",
+          "rationale": "The configured oracle prices PT-reUSD-10DEC2026 borrower collateral in market 0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64; ERC-4626 accounting does not exempt this lending branch. Feed/operator/freshness topology remains bounded unknown.",
+          "sources": [
+            {
+              "label": "Adapter 0x3b9e060a2b05588126fda01b95e9485687fc91d7 marketIdsLength/marketIds census at ethereum block 26110193, 2026-10-03; adapter.morpho/idToMarketParams collateral/oracle/LLTV all independently match the API",
+              "url": "https://ethereum-rpc.publicnode.com"
+            },
+            {
+              "label": "Morpho marketById chain-qualified collateral/oracle/LLTV and oracle.data feed inventory, accessed 2026-10-03",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Pinned Morpho Blue liquidation and bad-debt source (framework semantics, not exact deployment verification)",
+              "url": "https://raw.githubusercontent.com/morpho-org/morpho-blue/8f89ede29ec9d2cfa9688aa670346226a3571f06/src/Morpho.sol"
+            },
+            {
+              "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            }
+          ]
+        }
+      },
+      {
+        "id": "ethereum:0x6969a0296d9fec77e794651469e362105d2307e8",
+        "chain": "ethereum",
+        "address": "0x6969a0296d9fec77e794651469e362105d2307e8",
+        "pricingAuthority": "external-price",
+        "branchId": "0x1d09bf979a167075f5608686642fd3cdb458de742a234175892fa03f23693f6b",
+        "applicability": {
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine07",
+          "confidence": "probable",
+          "rationale": "The configured oracle prices v-wmtUSDC borrower collateral in market 0x1d09bf979a167075f5608686642fd3cdb458de742a234175892fa03f23693f6b; ERC-4626 accounting does not exempt this lending branch. Feed/operator/freshness topology remains bounded unknown.",
+          "sources": [
+            {
+              "label": "Adapter 0x3b9e060a2b05588126fda01b95e9485687fc91d7 marketIdsLength/marketIds census at ethereum block 26110193, 2026-10-03; adapter.morpho/idToMarketParams collateral/oracle/LLTV all independently match the API",
+              "url": "https://ethereum-rpc.publicnode.com"
+            },
+            {
+              "label": "Morpho marketById chain-qualified collateral/oracle/LLTV and oracle.data feed inventory, accessed 2026-10-03",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Pinned Morpho Blue liquidation and bad-debt source (framework semantics, not exact deployment verification)",
+              "url": "https://raw.githubusercontent.com/morpho-org/morpho-blue/8f89ede29ec9d2cfa9688aa670346226a3571f06/src/Morpho.sol"
+            },
+            {
+              "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            }
+          ]
+        }
+      },
+      {
+        "id": "ethereum:0x034f45accb8949e55366bec6d4023d1c1e372dad",
+        "chain": "ethereum",
+        "address": "0x034f45accb8949e55366bec6d4023d1c1e372dad",
+        "pricingAuthority": "external-price",
+        "branchId": "0xc7e49dd404825da16988955201ed22ecf8a7b25f0337db8a698d70d7a9f343ea",
+        "applicability": {
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine07",
+          "confidence": "probable",
+          "rationale": "The configured oracle prices PT-USDat-14JAN2027 borrower collateral in market 0xc7e49dd404825da16988955201ed22ecf8a7b25f0337db8a698d70d7a9f343ea; ERC-4626 accounting does not exempt this lending branch. Feed/operator/freshness topology remains bounded unknown.",
+          "sources": [
+            {
+              "label": "Adapter 0x3b9e060a2b05588126fda01b95e9485687fc91d7 marketIdsLength/marketIds census at ethereum block 26110193, 2026-10-03; adapter.morpho/idToMarketParams collateral/oracle/LLTV all independently match the API",
+              "url": "https://ethereum-rpc.publicnode.com"
+            },
+            {
+              "label": "Morpho marketById chain-qualified collateral/oracle/LLTV and oracle.data feed inventory, accessed 2026-10-03",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Pinned Morpho Blue liquidation and bad-debt source (framework semantics, not exact deployment verification)",
+              "url": "https://raw.githubusercontent.com/morpho-org/morpho-blue/8f89ede29ec9d2cfa9688aa670346226a3571f06/src/Morpho.sol"
+            },
+            {
+              "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            }
+          ]
+        }
+      },
+      {
+        "id": "ethereum:0x48f7e36eb6b826b2df4b2e630b62cd25e89e40e2",
+        "chain": "ethereum",
+        "address": "0x48f7e36eb6b826b2df4b2e630b62cd25e89e40e2",
+        "pricingAuthority": "external-price",
+        "branchId": "0xb323495f7e4148be5643a4ea4a8221eef163e4bccfdedc2a6f4696baacbc86cc",
+        "applicability": {
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine07",
+          "confidence": "probable",
+          "rationale": "The configured oracle prices wstETH borrower collateral in market 0xb323495f7e4148be5643a4ea4a8221eef163e4bccfdedc2a6f4696baacbc86cc; ERC-4626 accounting does not exempt this lending branch. Feed/operator/freshness topology remains bounded unknown.",
+          "sources": [
+            {
+              "label": "Adapter 0x3b9e060a2b05588126fda01b95e9485687fc91d7 marketIdsLength/marketIds census at ethereum block 26110193, 2026-10-03; adapter.morpho/idToMarketParams collateral/oracle/LLTV all independently match the API",
+              "url": "https://ethereum-rpc.publicnode.com"
+            },
+            {
+              "label": "Morpho marketById chain-qualified collateral/oracle/LLTV and oracle.data feed inventory, accessed 2026-10-03",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Pinned Morpho Blue liquidation and bad-debt source (framework semantics, not exact deployment verification)",
+              "url": "https://raw.githubusercontent.com/morpho-org/morpho-blue/8f89ede29ec9d2cfa9688aa670346226a3571f06/src/Morpho.sol"
+            },
+            {
+              "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            }
+          ]
+        }
       }
     ]
   }

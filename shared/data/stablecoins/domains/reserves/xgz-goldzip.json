@@ -19,10 +19,14 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Refine06 primary-source review",
     "confidence": "probable",
     "sources": [
+      {
+        "label": "GoldZip issuer-claimed HKGX group affiliation",
+        "url": "https://goldzip.info/"
+      },
       {
         "label": "GoldZip physical gold claim",
         "url": "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf"
@@ -32,7 +36,7 @@
         "url": "https://goldzip.info/transparency/"
       }
     ],
-    "rationale": "The complete issuer-described reserve category is physical gold. The 100% category records the promised backing type and does not verify current bars, allocated title or reserve sufficiency.",
+    "rationale": "The complete issuer-described reserve category is physical gold; 100% records promised backing type, not verified bars, allocated title or sufficiency. Homepage identifies GoldZip Digital Pte. Ltd. as an HKGX group member and the litepaper describes issuance by an HKGX wholly owned subsidiary. HKGX both affiliates with the issuer and recognizes refiners/depositories: this related-party concentration is not independent custody or assurance. No current MinLaw register confirmation or PSPM credit is inferred from issuer marketing.",
     "compositionBasis": "Issuer product and backing disclosures reopened 2026-10-02",
     "compositionAsOf": "2026-10-02",
     "scope": "full-composition",

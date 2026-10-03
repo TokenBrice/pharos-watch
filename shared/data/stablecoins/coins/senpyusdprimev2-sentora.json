@@ -12,7 +12,7 @@
   "variantOf": "pyusd-paypal",
   "variantKind": "strategy-vault",
   "pegReferenceId": "pyusd-paypal",
-  "collateral": "PYUSD loans against Hastra PRIME collateral (0x19ebb35279a16207ec4ba82799cc64715065f7f6), described by Sentora as Figure home-equity credit exposure. The exact PRIME tracked identity and enforceable recovery priority are unresolved.",
+  "collateral": "PYUSD loans against the Hastra PRIME token (0x19ebb35279a16207ec4ba82799cc64715065f7f6; on-chain name Hastra PRIME), described by Sentora as Figure home-equity credit exposure. Enforceable collateral recovery priority remains unresolved.",
   "pegMechanism": "ERC-4626 deposit/mint and withdraw/redeem exchange shares for PYUSD at the current asset conversion rate. Lending interest, fees and realized losses change NAV. liquidityAdapter() is zero at the pinned review; ordinary cash redemptions use idle assets unless assets are first deallocated. Shared market liquidity and an in-kind position exit do not promise full-size cash redemption.",
   "mechanismArchetype": "protocol-position",
   "archetypeOverride": true,
@@ -20,7 +20,7 @@
     "disposition": "resolved",
     "reviewedAt": "2026-10-02",
     "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "rationale": "Exact Ethereum deployment 0xc21b08c16458202593d4d9b26b9984ee67b38bbd is immutable VaultV2, issuing transferable ERC-4626 operational shares over PYUSD, not a direct fiat or parent-reserve ownership claim. asset(), decimals(), totalSupply(), convertToAssets() and ordinary one-share redeem simulation were reverified at Ethereum block 26107702. The protocol-position archetype intentionally differs from the fiat-cash parent.",
+    "rationale": "Exact Ethereum deployment 0xc21b08c16458202593d4d9b26b9984ee67b38bbd is immutable VaultV2, issuing transferable ERC-4626 operational shares over PYUSD, not a direct fiat or parent-reserve ownership claim. asset(), decimals(), totalSupply(), convertToAssets() and ordinary one-share redeem simulation were reverified at Ethereum block 26107702. The protocol-position archetype intentionally differs from the fiat-cash parent. Exact deployment creation: Morpho vaultV2ByAddress creationBlockNumber=25052763, creationTimestamp=1778272391 (2026-05-08T20:33:11.000Z); independently retrieved 2026-10-03.",
     "sources": [
       {
         "label": "Sentora PRIME Main exact vault",
@@ -111,5 +111,6 @@
       }
     }
   },
-  "launchDate": "2026-05-08"
+  "launchDate": "2026-05-08",
+  "implementationLaunchDate": "2026-05-08"
 }

@@ -2,8 +2,8 @@
   "id": "oned-gennius",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Sol refinement Refine03",
     "sources": [
       {
         "label": "ONED native holder terms",
@@ -12,9 +12,21 @@
       {
         "label": "Verified current ONED implementation",
         "url": "https://basescan.org/address/0x57ab1e54fca80105a93a735b59f850f8420b5e2c#code"
+      },
+      {
+        "label": "Coinbase EVM Custom Stablecoin source",
+        "url": "https://github.com/coinbase/custom-stablecoin/blob/main/evm/src/Stablecoin.sol"
+      },
+      {
+        "label": "Coinbase transfer and blocklist technical reference",
+        "url": "https://docs.cdp.coinbase.com/custom-stablecoins/stablecoin-contract/reference"
+      },
+      {
+        "label": "Cantina EVM code-security audit (published 2026-04-07)",
+        "url": "https://github.com/coinbase/custom-stablecoin/blob/main/audits/cantina_coinbase_custom_stablecoin_mar2026.pdf"
       }
     ],
-    "evidence": "Native holder terms authorize operator blocklisting, freezing, seizure, forfeiture and destruction. Verified current Stablecoin implementation exposes BLOCKLIST_ROLE, blocklist, isBlocklisted and pause. At Base block 52095848, hasRole(BLOCKLIST_ROLE,0x2c34489fd3b7cc2a5dc4a47b34b117d3f62b6e9e)=true and paused()=false; holder-level control is directly evidenced, not merely inherited from USDC."
+    "evidence": "Base block 52110793 independently confirms hasRole(BLOCKLIST_ROLE,0x2c34489fd3b7cc2a5dc4a47b34b117d3f62b6e9e)=true and paused()=false. Coinbase technical reference states transfer/transferFrom fail for blocklisted accounts or global pause; role/event census corroborates the exact implementation's local restrictions. April 7 Cantina report reviews EVM Stablecoin, MutableBeaconProxy, Blocklist and RateLimit; this is code-security evidence, not financial assurance. August 2026 Cantina report covers Solana mint-controller only and does not support this Base deployment."
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",

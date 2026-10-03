@@ -65,9 +65,13 @@
       {
         "label": "Morpho exact-vault portfolio API",
         "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Sentora Terms of Use, June 2026, sections 4.3 and 21.4",
+        "url": "https://sentora.com/legal/terms-of-use"
       }
     ],
-    "rationale": "At block 26107702, asset()=0x8292bb45bf1ee4d140127049757c2e0ff06317ed; totalAssets=451873322385272395066245035, idle underlying=49667525480716097356989360, current adapter realAssets=402205796904556297709255675, in underlying smallest units. Idle plus adapter assets reconcile exactly to totalAssets. The 10 current pinned lender positions have zero borrow shares and zero posted collateral. RLUSD lending positions against cbBTC, FXRP, syrupUSDC, wstETH, USDe, weETH, kBTC, WBTC. Allocations change under curator controls; borrower collateral is distinct from the underlying deposited token. The parent link denotes denomination and inherited token risk, not ownership of the parent issuer reserves.",
+    "rationale": "At block 26107702, asset()=0x8292bb45bf1ee4d140127049757c2e0ff06317ed; totalAssets=451873322385272395066245035, idle underlying=49667525480716097356989360, current adapter realAssets=402205796904556297709255675, in underlying smallest units. Idle plus adapter assets reconcile exactly to totalAssets. The 10 current pinned lender positions have zero borrow shares and zero posted collateral. RLUSD lending positions against cbBTC, FXRP, syrupUSDC, wstETH, USDe, weETH, kBTC and WBTC, plus 1-wei lender dust positions against PT-sUSDE-13AUG2026 and WETH. Allocations change under curator controls; borrower collateral is distinct from the underlying deposited token. The parent link denotes denomination and inherited token risk, not ownership of the parent issuer reserves.",
     "compositionBasis": "Pinned exact vault underlying balance and sole adapter realAssets; percentages of totalAssets, rounded to four decimals",
     "compositionAsOf": "2026-10-02",
     "scope": "full-composition",
@@ -83,13 +87,18 @@
       {
         "name": "Morpho borrower markets",
         "role": "other"
+      },
+      {
+        "name": "Sentora Digital Holdings (BVI) Ltd, risk curator; issuer states it is not a custodian",
+        "role": "other",
+        "jurisdiction": "British Virgin Islands"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "permitted",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Sol refinement 2026-10-03 (Refine10)",
     "confidence": "probable",
     "sources": [
       {
@@ -115,8 +124,16 @@
       {
         "label": "Morpho exact-vault portfolio API",
         "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Sentora Terms of Use, June 2026, sections 4.3 and 21.4",
+        "url": "https://sentora.com/legal/terms-of-use"
+      },
+      {
+        "label": "Morpho Vault V2 and MarketV1AdapterV2 security audits; no financial assurance",
+        "url": "https://docs.morpho.org/get-started/resources/audits/"
       }
     ],
-    "uncertainty": "Immediate lender positions are held in contracts and intentionally reused as loans. No whole-book claim of exclusively on-chain ultimate collateral custody is made. Parent issuer custody remains inherited; underlying collateral legal/custody layers and recoveries are unresolved."
+    "uncertainty": "Immediate lender positions are held in contracts and intentionally reused as loans. No whole-book claim of exclusively on-chain ultimate collateral custody is made. Parent issuer custody remains inherited; underlying collateral legal/custody layers and recoveries are unresolved. June 2026 Sentora terms section 4.3 describes non-custodial vault configurations; section 21.4 specifies BVI governing law and arbitration. This is an issuer legal statement, not evidence of borrower collateral segregation or removal of observed curator powers."
   }
 }

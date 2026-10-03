@@ -33,7 +33,8 @@
     }
   ],
   "mechanismArchetype": "rwa-credit-fund",
-  "custodyModel": "unknown",
+  "custodyModel": "institutional-regulated",
+  "implementationLaunchDate": "2025-12-10",
   "oneLiner": "GLDON is Ondo’s NAV-style SPDR Gold Shares tracker, redeemable by eligible investors through issuer stablecoin rails without ETF delivery rights.",
   "collateral": "SPDR Gold Shares (GLD) ETF exposure and cash in transit held for Ondo Global Markets (BVI) Limited; tokenholders hold a debt-security claim rather than direct ETF shares.",
   "pegMechanism": "Total-return tracker of SPDR Gold Shares with issuer-calculated NAV and eligible-investor subscription/redemption. Ordinary redemption is to USDon; conversion to USDC depends on stablecoin-swapper liquidity. No fixed $1 peg or physical-gold redemption.",
@@ -76,6 +77,18 @@
     {
       "label": "Final Terms",
       "url": "https://cdn.sanity.io/files/8k2tqa6n/production/a598be5156bcda440276f01eea9258f82f851bd0.pdf"
+    },
+    {
+      "label": "GLDon Key Information Document (ISIN VGG7001ABQ63)",
+      "url": "https://cdn.sanity.io/files/8k2tqa6n/production/8008c418f50a3ecaf509fe80578eb9df5cca59e0.pdf"
+    },
+    {
+      "label": "May 2026 Base Prospectus Supplement",
+      "url": "https://cdn.sanity.io/files/8k2tqa6n/production/c526d3cb52fc1e92988e2db1b33d563864ad6b5d.pdf"
+    },
+    {
+      "label": "Ethereum deployment (block 23984676; implementation history, not public issue date)",
+      "url": "https://etherscan.io/tx/0xd44893c63ea157f403239cb968ffee492e53423c283b42c222260882e5a1e2a1"
     },
     {
       "label": "Important Notes",

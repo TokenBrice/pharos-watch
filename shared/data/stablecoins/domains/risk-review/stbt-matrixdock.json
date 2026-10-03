@@ -23,7 +23,7 @@
     "summary": "STBT native issue/distribution relies on an issuer-controlled reserve feed and mutable owner parameters; independent feed governance was not established.",
     "reviewedAt": "2026-10-02",
     "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "confidence": "limited",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Verified NAV or reserve-feed source",
@@ -45,6 +45,22 @@
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe7efc5060b6ad57b68f5911eca6c5cd1952da152"
         }
       ]
-    }
+    },
+    "paths": [
+      {
+        "id": "ethereum:0x530824da86689c9c17cdc2871ff29b058345b44a",
+        "chain": "ethereum",
+        "address": "0x530824da86689c9c17cdc2871ff29b058345b44a",
+        "pricingAuthority": "internal-price",
+        "applicability": {
+          "disposition": "top-level-only",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine04 deployed source review",
+          "confidence": "verified",
+          "rationale": "Native STBT uses privileged reserve updates and interest distribution, not collateral-vault liquidation branches. Block 26110197 getLatestReserve returns 23791487760000000000000000; the getter has no report timestamp. Selector-specific controller delays are 14400 seconds for issue/distributeInterests and 86400 seconds for implementation replacement. This establishes pricing authority and path scope, not reserve financial correctness.",
+          "sources": [{"label": "Exact STBT implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe7efc5060b6ad57b68f5911eca6c5cd1952da152"}, {"label": "Deployed selector-delay controller", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x22276a1bd16bc3052b362c2e0f65aace04ed6f99"}]
+        }
+      }
+    ]
   }
 }

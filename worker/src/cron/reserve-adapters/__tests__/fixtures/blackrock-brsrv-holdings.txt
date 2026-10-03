@@ -1,0 +1,23 @@
+<!-- captured-at: 2026-10-03T06:34:18Z -->
+<!-- source: https://www.blackrock.com/cash/en-us/products/351891/fund/1464253357814.ajax?fileType=csv&fileName=RSVXX_holdings&dataType=fund -->
+<!-- source-selection: complete CSV response; raw SHA-256 05aeda4ac50377c7eea27bf52ddca27d65cab5dbe879368b7cf0801d99429342 -->
+﻿Fund Holdings as of,"01-Oct-2026"
+ 
+Position Description,Asset Type,%Par,Par,Market Value,Final Maturity,Maturity/Reset
+"TRI-PARTY BOFA SECURITIES INC.","U.S. Treasury Repurchase Agreement","10.00","5,000,000.00","5,000,000.00","02-Oct-2026","02-Oct-2026"
+"TREASURY BILL","U.S. Treasury Debt","10.00","5,000,000.00","4,996,858.33","08-Oct-2026","08-Oct-2026"
+"TREASURY BILL","U.S. Treasury Debt","10.00","5,000,000.00","4,982,789.63","03-Nov-2026","03-Nov-2026"
+"TREASURY BILL","U.S. Treasury Debt","10.00","5,000,000.00","4,978,866.12","10-Nov-2026","10-Nov-2026"
+"TREASURY BILL","U.S. Treasury Debt","9.00","4,500,000.00","4,487,107.50","29-Oct-2026","29-Oct-2026"
+"TREASURY BILL","U.S. Treasury Debt","7.80","3,900,000.00","3,898,345.75","06-Oct-2026","06-Oct-2026"
+"TREASURY BILL","U.S. Treasury Debt","7.00","3,500,000.00","3,467,883.61","24-Dec-2026","24-Dec-2026"
+"TREASURY BILL","U.S. Treasury Debt","5.80","2,900,000.00","2,885,468.29","17-Nov-2026","17-Nov-2026"
+"TREASURY BILL","U.S. Treasury Debt","5.60","2,800,000.00","2,776,562.44","17-Dec-2026","17-Dec-2026"
+"TRI-PARTY CREDIT AGRICOLE CIB (NEW","U.S. Treasury Repurchase Agreement","4.00","2,000,000.00","2,000,000.00","02-Oct-2026","02-Oct-2026"
+"TREASURY BILL","U.S. Treasury Debt","4.00","2,000,000.00","1,997,681.60","13-Oct-2026","13-Oct-2026"
+"TREASURY BILL","U.S. Treasury Debt","4.00","2,000,000.00","1,996,184.25","20-Oct-2026","20-Oct-2026"
+"TREASURY BILL","U.S. Treasury Debt","4.00","2,000,000.00","1,991,062.57","12-Nov-2026","12-Nov-2026"
+"TRI-PARTY J.P. MORGAN SECURITIES L","U.S. Treasury Repurchase Agreement","4.00","2,000,000.00","2,000,000.00","02-Oct-2026","02-Oct-2026"
+"TREASURY BILL","U.S. Treasury Debt","2.80","1,400,000.00","1,398,081.04","15-Oct-2026","15-Oct-2026"
+"TREASURY BILL","U.S. Treasury Debt","2.00","1,000,000.00","996,326.94","05-Nov-2026","05-Nov-2026"
+ 

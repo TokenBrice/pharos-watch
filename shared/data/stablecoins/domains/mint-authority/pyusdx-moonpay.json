@@ -3,8 +3,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciliation-unknown",
-    "confidence": "manual-review",
-    "summary": "MoonPay issuance uses a mutable IssuerGateway, while the earner manager can mint rewards directly to any account. The same no-code issuer address controls token roles, rewards and ProxyAdmin on all three chains. A 300-second gateway delay does not constrain the reward or upgrade paths.",
+    "confidence": "verified",
+    "summary": "MoonPay issuance uses a mutable IssuerGateway, while the earner manager can mint rewards directly to any account. The same issuer address controls token roles, rewards and ProxyAdmin on all four catalogued chains. A 300-second gateway delay does not constrain the reward or upgrade paths. An additional 0G native deployment has zero supply at block46024355 and is evidenced but not registered.",
     "controls": [
       {
         "chain": "ethereum",
@@ -251,18 +251,55 @@
           }
         ],
         "evidence": "At block 110016384, DEFAULT_ADMIN_ROLE(owner)=true, earnerManager()=0x314160525f5ea6677d3908112ff9bd885f3bb78e, ProxyAdmin.owner()=0x314160525f5ea6677d3908112ff9bd885f3bb78e, eth_getCode(owner)=0x. Security and token/yield specifications document role granting and direct distributeReward() issuance. No MPC, HSM or multisignature safeguards are established by a no-code address."
+      },
+      {
+        "chain": "base",
+        "address": "0x693cc3305342b02ac1549b509a704ff944cd9499",
+        "deploymentRefs": ["base:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"],
+        "label": "PYUSDx Base IssuerGateway",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 52110793,
+        "sources": [{"label": "Exact Base native token and issuer roles", "url": "https://basescan.org/address/0xebdb0942ce16386ab90718c7bd10c91cdb66b14d#code"}],
+        "evidence": "Complete RoleGranted/RoleRevoked history from block0 through52110793 returned17events, leaving exactly IssuerGateway and Portal0xaad1466fe33d373189fb9dcc47270e608feee8a7 as ISSUER_ROLE members. Portal issuance is separately reviewed as burn/mint bridge authority."
+      },
+      {
+        "chain": "base",
+        "address": "0x314160525f5ea6677d3908112ff9bd885f3bb78e",
+        "deploymentRefs": ["base:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"],
+        "label": "PYUSDx Base issuer admin and earner manager",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "not-applicable",
+        "canRaiseCap": true,
+        "failureDomainKeys": ["entity:moonpay-pyusdx-issuer", "address:0x314160525f5ea6677d3908112ff9bd885f3bb78e"],
+        "bypassSurfaces": ["Direct reward issuance outside the IssuerGateway queue.", "DEFAULT_ADMIN_ROLE can replace the earner manager and grant issuer roles.", "Token ProxyAdmin owner can replace mint logic."],
+        "observedAt": "2026-10-03",
+        "observedBlock": 52110793,
+        "sources": [{"label": "Exact Base token authority and ProxyAdmin", "url": "https://basescan.org/address/0xebdb0942ce16386ab90718c7bd10c91cdb66b14d#code"}],
+        "evidence": "Complete17event role census leaves this sole DEFAULT_ADMIN_ROLE and RATE_LIMIT_MANAGER_ROLE member; earnerManager() and ProxyAdmin0xb8a874137df3d4b0f19490eb06cfbe6b6d35e581.owner() both independently return it. Native supply is100000raw(0.1PYUSDx); no financial reserve reconciliation or key-custody safeguards are inferred."
       }
     ],
     "upgradeability": {
       "model": "transparent-proxy",
       "deploymentRefs": [
-        "ethereum:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+        "ethereum:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d",
+        "arbitrum:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d",
+        "monad:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d",
+        "base:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
       ],
       "proxyAddresses": [
         "0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
       ],
       "implementationAddresses": [
-        "0x0568d0a74145fd557b3541897bc6878f5c6e9c8c"
+        "0x0568d0a74145fd557b3541897bc6878f5c6e9c8c",
+        "0x8dfb7c8ce5e67ace965520b134b4aca8fd71c5e0",
+        "0x411d482be645a807823bcc5f4e762d9c24c6966a",
+        "0x23ca665c8a73292fc7ac2cc4493d2ce883bba468"
       ],
       "adminAddresses": [
         "0xb8a874137df3d4b0f19490eb06cfbe6b6d35e581"
@@ -310,15 +347,62 @@
         {
           "label": "M0 PYUSDx token and reward issuance",
           "url": "https://docs.m0.org/raw/protocol/pyusdx/token-and-yield.md"
+        },
+        {
+          "label": "Ethereum PYUSDx exact token and role event history",
+          "url": "https://etherscan.io/address/0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+        },
+        {
+          "label": "Arbitrum PYUSDx exact token and role event history",
+          "url": "https://arbiscan.io/address/0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+        },
+        {
+          "label": "Monad PYUSDx exact token and role event history",
+          "url": "https://monadscan.com/address/0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+        },
+        {
+          "label": "Base native PYUSDx role census and current implementation",
+          "url": "https://basescan.org/address/0xebdb0942ce16386ab90718c7bd10c91cdb66b14d#code"
+        },
+        {
+          "label": "Known zero-supply 0G native token, block46024355",
+          "url": "https://chainscan.0g.ai/address/0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
         }
       ],
-      "evidence": "Pinned Ethereum, Arbitrum and Monad reads reproduced the issuer DEFAULT_ADMIN_ROLE, earner manager and ProxyAdmin owner at the same no-code address. Token implementations resolve respectively to 0x0568d0a74145fd557b3541897bc6878f5c6e9c8c, 0x8dfb7c8ce5e67ace965520b134b4aca8fd71c5e0 and 0x411d482be645a807823bcc5f4e762d9c24c6966a. Gateway delay is 300 seconds on each chain, but distributeReward() is an additional direct native supply path. The structured upgradeability snapshot is Ethereum-scoped; per-chain issuer controls record all three local upgrade powers. No token-specific independent reserve reconciliation or issuer supervision was established.",
-      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-      "reviewedAt": "2026-10-02",
+      "evidence": "Independent 2026-10-03 RPC census at Ethereum 26110185, Arbitrum 511230133 and Monad 110115415: complete token RoleGranted/RoleRevoked history from block zero returned 17 events per chain; applying grants and revokes leaves sole DEFAULT_ADMIN_ROLE and RATE_LIMIT_MANAGER_ROLE=0x314160525f5ea6677d3908112ff9bd885f3bb78e and exactly two ISSUER_ROLE members, IssuerGateway 0x693cc3305342b02ac1549b509a704ff944cd9499 and Portal 0xaad1466fe33d373189fb9dcc47270e608feee8a7. earnerManager() and token ProxyAdmin.owner() independently return the issuer address on each chain. EIP-1967 implementations resolve respectively to 0x0568d0a74145fd557b3541897bc6878f5c6e9c8c, 0x8dfb7c8ce5e67ace965520b134b4aca8fd71c5e0 and 0x411d482be645a807823bcc5f4e762d9c24c6966a; the structured upgrade inventory now covers all three exact deployments. Gateway delay remains distinct from reward and upgrade issuance. Financial reserve reconciliation and issuer key-custody safeguards are not established by this complete on-chain role census.",
+      "reviewer": "Sol refinement Refine03",
+      "reviewedAt": "2026-10-03",
       "disposition": "scoreable",
-      "unresolvedQuestions": [
-        "Issuer key custody and signer safeguards are undisclosed.",
-        "Token-specific financial reserve reconciliation and supervision are unresolved."
+      "unresolvedQuestions": [],
+      "scopedQuestions": [
+        {
+          "controlRef": "ethereum:0x314160525f5ea6677d3908112ff9bd885f3bb78e",
+          "question": "Issuer key custody and signer safeguards are undisclosed for this identified Ethereum issuer admin, earner manager and token ProxyAdmin owner. What MPC/HSM controls, beneficial signing authority and signing policy govern its mint-capable key?",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement Refine03",
+          "sources": [{"label": "Exact Ethereum native token and issuer roles", "url": "https://etherscan.io/address/0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"}, {"label": "PYUSDx compliance controls", "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"}]
+        },
+        {
+          "controlRef": "arbitrum:0x314160525f5ea6677d3908112ff9bd885f3bb78e",
+          "question": "Issuer key custody and signer safeguards are undisclosed for this identified Arbitrum issuer admin, earner manager and token ProxyAdmin owner. What MPC/HSM controls, beneficial signing authority and signing policy govern its mint-capable key?",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement Refine03",
+          "sources": [{"label": "Exact Arbitrum native token and issuer roles", "url": "https://arbiscan.io/address/0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"}, {"label": "PYUSDx compliance controls", "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"}]
+        },
+        {
+          "controlRef": "monad:0x314160525f5ea6677d3908112ff9bd885f3bb78e",
+          "question": "Issuer key custody and signer safeguards are undisclosed for this identified Monad issuer admin, earner manager and token ProxyAdmin owner. What MPC/HSM controls, beneficial signing authority and signing policy govern its mint-capable key?",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement Refine03",
+          "sources": [{"label": "Exact Monad native token and issuer roles", "url": "https://monadscan.com/address/0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"}, {"label": "PYUSDx compliance controls", "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"}]
+        },
+        {
+          "controlRef": "base:0x314160525f5ea6677d3908112ff9bd885f3bb78e",
+          "question": "Issuer key custody and signer safeguards are undisclosed for this identified Base issuer admin, earner manager and token ProxyAdmin owner. What MPC/HSM controls, beneficial signing authority and signing policy govern its mint-capable key?",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement Refine03",
+          "sources": [{"label": "Exact Base native token and issuer roles", "url": "https://basescan.org/address/0xebdb0942ce16386ab90718c7bd10c91cdb66b14d#code"}, {"label": "PYUSDx compliance controls", "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"}]
+        }
       ]
     }
   }

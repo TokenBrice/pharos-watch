@@ -24,7 +24,7 @@
     "tier": "privileged-internal-pricing",
     "role": "coin-price-feed",
     "branchModel": "single-path",
-    "summary": "CACEIS Fund Administration calculates daily fund NAV and Spiko publishes the exact CHF class NAV. Current chfSAFO totals show 2 October 2026 NAV CHF 1.000074. Exact CHF external feed, redundancy, failover and publisher authorizer closure were not verified; the EUR Chainlink address is not inherited.",
+    "summary": "CACEIS Fund Administration calculates daily fund NAV and Spiko publishes exact CHF class NAV. The chfSAFO totals and Spiko architecture identify a centrally originated fund-pricing path, not borrower-specific liquidation or a guaranteed peg. This verifies privileged internal pricing; no exact CHF external feed, redundancy, failover or publisher signer closure is credited.",
     "branchApplicability": {
       "disposition": "top-level-only",
       "reviewedAt": "2026-10-02",
@@ -45,9 +45,9 @@
         }
       ]
     },
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "confidence": "limited",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Refine05 primary-source and pinned-RPC review",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Spiko SICAV prospectus, 1 September 2026",

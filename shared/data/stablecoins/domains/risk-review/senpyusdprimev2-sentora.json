@@ -32,15 +32,15 @@
         "url": "https://sentora.com/case-studies/sentora-s-prime-main-vault-reaches-200m-in-pyusd-deposits-in-under-100-days"
       }
     ],
-    "evidence": "Block 26107702: sendSharesGate(), receiveSharesGate() and receiveAssetsGate() are zero with permanently abdicated setters. Shares are locally permissionless under immutable VaultV2 source. sendAssetsGate() is zero but its setter is not abdicated and has zero timelock, so future cash-redemption access can change. Parent PYUSD issuer freeze exposure remains inherited.",
+    "evidence": "Block 26107702: sendSharesGate(), receiveSharesGate() and receiveAssetsGate() are zero with permanently abdicated setters. Shares are locally permissionless under immutable VaultV2 source. sendAssetsGate() is zero but its setter is not abdicated and has zero timelock; this gates deposits, not cash redemptions. receiveAssetsGate() is zero with a permanently abdicated setter. Parent PYUSD issuer freeze exposure remains inherited.",
     "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
     "reviewedAt": "2026-10-02"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "Only this native Ethereum vault-share deployment is authored. Reviewed exact deployment and issuer materials do not establish a vault-share bridge representation.",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Sol refinement 2026-10-03 (Refine10)",
     "confidence": "verified",
     "sources": [
       {
@@ -70,6 +70,325 @@
       {
         "label": "Sentora PRIME residential-credit case study",
         "url": "https://sentora.com/case-studies/sentora-s-prime-main-vault-reaches-200m-in-pyusd-deposits-in-under-100-days"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xc21b08c16458202593d4d9b26b9984ee67b38bbd",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xc21b08c16458202593d4d9b26b9984ee67b38bbd",
+        "protocol": "Morpho Vault V2",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Exact immutable vault share totalSupply is created by deposit/mint and accrual fee accounting in this deployment. No share bridge or remote mint entrypoint appears in the reviewed implementation; parent-token bridge exposure remains inherited separately.",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107702,
+        "sources": [
+          {
+            "label": "Sentora PRIME Main exact vault",
+            "url": "https://app.morpho.org/ethereum/vault/0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
+          },
+          {
+            "label": "Exact verified VaultV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
+          },
+          {
+            "label": "Exact current MorphoMarketV1AdapterV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x93d6393e66b56449b7926b9abfeb37606732de89"
+          },
+          {
+            "label": "Morpho Vault V2 accounting and redemption mechanics",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "Ethereum RPC, pinned block 26107702",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Morpho exact-vault portfolio API",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Sentora PRIME residential-credit case study",
+            "url": "https://sentora.com/case-studies/sentora-s-prime-main-vault-reaches-200m-in-pyusd-deposits-in-under-100-days"
+          }
+        ]
+      }
+    ]
+  },
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "role": "collateral-pricing",
+    "branchModel": "multi-branch",
+    "summary": "Pinned block 26107702: 1 funded Morpho markets have exact oracle/LLTV identities and all six BASE/QUOTE feed/vault getter values. Vault accounting is verified price-feed-independent; borrower liquidation pricing remains applicable. Upstream feed administrator, heartbeat and mutable NAV-controller closure remain incomplete, so no standard-external or redundant tier is asserted.",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Sentora PRIME Main exact vault",
+        "url": "https://app.morpho.org/ethereum/vault/0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
+      },
+      {
+        "label": "Exact verified VaultV2 source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
+      },
+      {
+        "label": "Exact current MorphoMarketV1AdapterV2 source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x93d6393e66b56449b7926b9abfeb37606732de89"
+      },
+      {
+        "label": "Morpho Vault V2 accounting and redemption mechanics",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+      },
+      {
+        "label": "Ethereum RPC, pinned block 26107702",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Morpho exact-vault portfolio API",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Sentora PRIME residential-credit case study",
+        "url": "https://sentora.com/case-studies/sentora-s-prime-main-vault-reaches-200m-in-pyusd-deposits-in-under-100-days"
+      },
+      {
+        "label": "Morpho borrower liquidation and loss socialization",
+        "url": "https://docs.morpho.org/learn/concepts/liquidation/"
+      },
+      {
+        "label": "Morpho price interface and oracle implementation",
+        "url": "https://docs.morpho.org/developers/contracts/oracles/"
+      },
+      {
+        "label": "Exact MorphoChainlinkOracleV2 and included ChainlinkDataFeedLib source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x335e5718bc20028d5e357473a3736c187ca6b07e"
+      }
+    ],
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+      "rationale": "Vault conversion is accounting-only, but every current funded lending market uses collateral-price-dependent liquidation. The borrower branches cannot be exempted merely because the wrapper is ERC-4626.",
+      "sources": [
+        {
+          "label": "Sentora PRIME Main exact vault",
+          "url": "https://app.morpho.org/ethereum/vault/0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
+        },
+        {
+          "label": "Exact verified VaultV2 source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
+        },
+        {
+          "label": "Exact current MorphoMarketV1AdapterV2 source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x93d6393e66b56449b7926b9abfeb37606732de89"
+        },
+        {
+          "label": "Morpho Vault V2 accounting and redemption mechanics",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+        },
+        {
+          "label": "Ethereum RPC, pinned block 26107702",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Morpho exact-vault portfolio API",
+          "url": "https://api.morpho.org/graphql"
+        },
+        {
+          "label": "Sentora PRIME residential-credit case study",
+          "url": "https://sentora.com/case-studies/sentora-s-prime-main-vault-reaches-200m-in-pyusd-deposits-in-under-100-days"
+        }
+      ]
+    },
+    "paths": [
+      {
+        "id": "vault-accounting",
+        "chain": "ethereum",
+        "address": "0xc21b08c16458202593d4d9b26b9984ee67b38bbd",
+        "pricingAuthority": "none",
+        "applicability": {
+          "disposition": "not-applicable",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+          "confidence": "verified",
+          "rationale": "Exact VaultV2 conversion reads underlying token balance plus adapter realAssets and accrued fee shares; it calls no external spot-price feed. This exemption is limited to the vault accounting entrypoint, not its borrowers.",
+          "sources": [
+            {
+              "label": "Sentora PRIME Main exact vault",
+              "url": "https://app.morpho.org/ethereum/vault/0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
+            },
+            {
+              "label": "Exact verified VaultV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
+            },
+            {
+              "label": "Exact current MorphoMarketV1AdapterV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x93d6393e66b56449b7926b9abfeb37606732de89"
+            },
+            {
+              "label": "Morpho Vault V2 accounting and redemption mechanics",
+              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+            },
+            {
+              "label": "Ethereum RPC, pinned block 26107702",
+              "url": "https://ethereum-rpc.publicnode.com"
+            },
+            {
+              "label": "Morpho exact-vault portfolio API",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Sentora PRIME residential-credit case study",
+              "url": "https://sentora.com/case-studies/sentora-s-prime-main-vault-reaches-200m-in-pyusd-deposits-in-under-100-days"
+            }
+          ]
+        }
+      },
+      {
+        "id": "market-0x41c41d0c9aadbf4751f5ee215ed5a16954a4b34e1b70fca5393d4b08858fa3fa",
+        "chain": "ethereum",
+        "address": "0x335e5718bc20028d5e357473a3736c187ca6b07e",
+        "pricingAuthority": "external-price",
+        "branchId": "0x41c41d0c9aadbf4751f5ee215ed5a16954a4b34e1b70fca5393d4b08858fa3fa",
+        "applicability": {
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+          "confidence": "verified",
+          "rationale": "Morpho.idToMarketParams at block 26107702 binds this oracle to collateral 0x19ebb35279a16207ec4ba82799cc64715065f7f6 with 86% LLTV and 208834337230498 raw lender assets.",
+          "sources": [
+            {
+              "label": "Sentora PRIME Main exact vault",
+              "url": "https://app.morpho.org/ethereum/vault/0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
+            },
+            {
+              "label": "Exact verified VaultV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
+            },
+            {
+              "label": "Exact current MorphoMarketV1AdapterV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x93d6393e66b56449b7926b9abfeb37606732de89"
+            },
+            {
+              "label": "Morpho Vault V2 accounting and redemption mechanics",
+              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+            },
+            {
+              "label": "Ethereum RPC, pinned block 26107702",
+              "url": "https://ethereum-rpc.publicnode.com"
+            },
+            {
+              "label": "Morpho exact-vault portfolio API",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Sentora PRIME residential-credit case study",
+              "url": "https://sentora.com/case-studies/sentora-s-prime-main-vault-reaches-200m-in-pyusd-deposits-in-under-100-days"
+            }
+          ]
+        }
+      }
+    ],
+    "branches": [
+      {
+        "id": "0x41c41d0c9aadbf4751f5ee215ed5a16954a4b34e1b70fca5393d4b08858fa3fa",
+        "label": "Morpho market 0x41c41d0c9aadbf4751f5ee215ed5a16954a4b34e1b70fca5393d4b08858fa3fa",
+        "tier": "opaque-or-unknown",
+        "summary": "Exact market oracle 0x335e5718bc20028d5e357473a3736c187ca6b07e: MorphoChainlinkOracleV2; immutable input configuration {\"BASE_FEED_1\":\"0xf17c0edcaa28371e9c8012d7699bf40ecf0f58d1\",\"BASE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_FEED_1\":\"0x8f1df6d7f2db73eece86a18b4381f4707b918fb1\",\"QUOTE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"BASE_VAULT\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_VAULT\":\"0x0000000000000000000000000000000000000000\"}. Upstream feed/embedded-vault authority is not fully closed.",
+        "collateralAssets": [
+          "0x19ebb35279a16207ec4ba82799cc64715065f7f6"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "MorphoChainlinkOracleV2",
+            "path": "price(): collateral/loan token conversion; scale 1e36",
+            "address": "0x335e5718bc20028d5e357473a3736c187ca6b07e",
+            "chain": "ethereum",
+            "observedAt": "2026-10-02",
+            "observedBlock": 26107702
+          },
+          {
+            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "path": "BASE_FEED_1",
+            "address": "0xf17c0edcaa28371e9c8012d7699bf40ecf0f58d1",
+            "chain": "ethereum",
+            "observedAt": "2026-10-02",
+            "observedBlock": 26107702
+          },
+          {
+            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "path": "QUOTE_FEED_1",
+            "address": "0x8f1df6d7f2db73eece86a18b4381f4707b918fb1",
+            "chain": "ethereum",
+            "observedAt": "2026-10-02",
+            "observedBlock": 26107702
+          }
+        ],
+        "fallbackBehavior": "Verified MorphoChainlinkOracleV2 multiplies/divides fixed feed and ERC-4626 conversion inputs; no alternate fallback. Included ChainlinkDataFeedLib checks nonnegative answers but explicitly does not check staleness or min/max bounds. Upstream feed heartbeat and administrator guarantees remain unverified.",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107702,
+        "collateralParameters": [
+          {
+            "asset": "0x19ebb35279a16207ec4ba82799cc64715065f7f6",
+            "maximumLtvPct": 86,
+            "note": "Liquidation LLTV from pinned idToMarketParams, not a legal collateral-recovery guarantee."
+          }
+        ],
+        "liquidationMechanism": "Morpho protocol liquidation permits third parties to repay unhealthy debt for collateral when oracle-valued LTV exceeds LLTV; exact collateral realization capacity is unverified.",
+        "backstop": "No exact-vault funded loss backstop was identified in the reviewed vault source and protocol documentation.",
+        "shutdownOrBadDebtBehavior": "Underlying bad debt reduces reported adapter realAssets; VaultV2 recognizes losses through pro-rata share-value depreciation. No legal recovery waterfall is established.",
+        "sources": [
+          {
+            "label": "Sentora PRIME Main exact vault",
+            "url": "https://app.morpho.org/ethereum/vault/0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
+          },
+          {
+            "label": "Exact verified VaultV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
+          },
+          {
+            "label": "Exact current MorphoMarketV1AdapterV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x93d6393e66b56449b7926b9abfeb37606732de89"
+          },
+          {
+            "label": "Morpho Vault V2 accounting and redemption mechanics",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "Ethereum RPC, pinned block 26107702",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Morpho exact-vault portfolio API",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Sentora PRIME residential-credit case study",
+            "url": "https://sentora.com/case-studies/sentora-s-prime-main-vault-reaches-200m-in-pyusd-deposits-in-under-100-days"
+          },
+          {
+            "label": "Morpho borrower liquidation and loss socialization",
+            "url": "https://docs.morpho.org/learn/concepts/liquidation/"
+          },
+          {
+            "label": "Morpho oracle conversion interface",
+            "url": "https://docs.morpho.org/developers/contracts/oracles/"
+          },
+          {
+            "label": "Exact MorphoChainlinkOracleV2 and included ChainlinkDataFeedLib source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x335e5718bc20028d5e357473a3736c187ca6b07e"
+          }
+        ]
       }
     ]
   }

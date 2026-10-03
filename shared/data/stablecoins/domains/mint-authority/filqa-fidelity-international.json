@@ -3,8 +3,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "Native fund issuance is privileged and administrator-controlled; current role-member independence and complete control closure are not publicly established.",
+    "confidence": "verified",
+    "summary": "SygFactory authorization resolves to code-empty platform-admin, role-manager, operator and system accounts. The native token upgrade delay is one second; factory replacement takes 86400 seconds.",
     "controls": [
       {
         "label": "FILQ-A permission-manager authority",
@@ -16,10 +16,10 @@
         "role": "minter-admin",
         "authorityType": "contract",
         "directMintAbility": "can-authorize",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107703,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110197,
         "sources": [
           {
             "label": "Fidelity September 14, 2026 fund prospectus",
@@ -36,12 +36,112 @@
           {
             "label": "Ethereum token deployment",
             "url": "https://etherscan.io/address/0x54a4fc78431f9201824643e99bec891bb7462a1d#code"
+          },
+          {
+            "label": "Deployed SygFactory permission manager implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x11b2af61c6433e898f8a24138fc58318ce543aff"
           }
         ],
-        "evidence": "At Ethereum block 26107703 getPermissionManagerAddress returned this address and the implementation remained 0x7030fe438be6ed196b8886616bbf5a245c267339. Verified mint/burn require requiresAuth, and upgrade authorization requires this permission manager. Complete authorization roots, cap and deployed upgrade delay are unknown."
+        "evidence": "Block26110197 getTokenInfo returns actual groups [1,12,13], no custom group (the getter removes the storage count header). Full permission event replay and live group bitmaps identify four group1 OPERATOR and two group1 SYSTEM EOAs, enumerated below. Mint permission0xc0f uses two bits per role and admits MINTER_BURNER0/OPERATOR1/SYSTEM5, not PLATFORM_ADMIN3. There are no explicit MINTER_BURNER grants; operators/systems still mint. Global group0 role managers can grant native mint roles or alter token groups. Pinned canCall from native token verifies six mint accounts, rejects platform-admin direct mint; canCall in factory context verifies two role managers' updateMinterBurner permission and platform-admin upgradeToken permission. Token/factory timelock storage reads are1/86400seconds."
+      },
+      {
+        "label": "FILQ-A platform-admin EOA",
+        "chain": "ethereum",
+        "address": "0x61776319fc4c120e9b1ec41306f2db968be1e95f",
+        "deploymentRefs": ["ethereum:0x54a4fc78431f9201824643e99bec891bb7462a1d"],
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "timelockDelaySec": 1,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110197,
+        "sources": [{"label": "SygFactory authorization and token-upgrade source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x11b2af61c6433e898f8a24138fc58318ce543aff"}],
+        "evidence": "Pinned group0/group1 bitmap0x40 and getCode=0x identify platform administration. Native mint canCall is false for this account; factory-context canCall for upgradeToken(address,bytes) is true. It can replace native token logic through factory after the token's one-second delay. Factory replacement is separately86400seconds; financial/key-custody guarantees are not asserted."
+      },
+      {
+        "label": "FILQ-A group1 operator 1",
+        "chain": "ethereum", "address": "0xfe311cb41ec1c6b1195c8bca6744b47cbe27a917",
+        "deploymentRefs": ["ethereum:0x54a4fc78431f9201824643e99bec891bb7462a1d"],
+        "role": "direct-minter", "authorityType": "eoa", "directMintAbility": "direct",
+        "canRaiseCap": true, "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-03", "observedBlock": 26110197,
+        "sources": [{"label": "Exact SygFactory mint permission implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x11b2af61c6433e898f8a24138fc58318ce543aff"}],
+        "evidence": "Block26110197 group1 OPERATOR membership and empty code verified. canCall(account,mint(address,uint256)) from the exact native token is true; source has no economic collateral ceiling."
+      },
+      {
+        "label": "FILQ-A group1 operator 2",
+        "chain": "ethereum", "address": "0xe853a8ed4371af675440c3c69a0119948e5d8462",
+        "deploymentRefs": ["ethereum:0x54a4fc78431f9201824643e99bec891bb7462a1d"],
+        "role": "direct-minter", "authorityType": "eoa", "directMintAbility": "direct",
+        "canRaiseCap": true, "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-03", "observedBlock": 26110197,
+        "sources": [{"label": "Exact SygFactory mint permission implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x11b2af61c6433e898f8a24138fc58318ce543aff"}],
+        "evidence": "Block26110197 group1 OPERATOR membership and empty code verified. Native-context mint canCall is true; no economic collateral ceiling or organizational signing policy is asserted."
+      },
+      {
+        "label": "FILQ-A group1 operator 3",
+        "chain": "ethereum", "address": "0x87d64596a9a506d46f53abef0f80405795c6b409",
+        "deploymentRefs": ["ethereum:0x54a4fc78431f9201824643e99bec891bb7462a1d"],
+        "role": "direct-minter", "authorityType": "eoa", "directMintAbility": "direct",
+        "canRaiseCap": true, "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-03", "observedBlock": 26110197,
+        "sources": [{"label": "Exact SygFactory mint permission implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x11b2af61c6433e898f8a24138fc58318ce543aff"}],
+        "evidence": "Block26110197 group1 OPERATOR membership and empty code verified. Native-context mint canCall is true; no independent financial or key-custody guarantee is inferred."
+      },
+      {
+        "label": "FILQ-A group1 operator 4",
+        "chain": "ethereum", "address": "0xd66c5dca0957467043b20d283f77bc7b394206df",
+        "deploymentRefs": ["ethereum:0x54a4fc78431f9201824643e99bec891bb7462a1d"],
+        "role": "direct-minter", "authorityType": "eoa", "directMintAbility": "direct",
+        "canRaiseCap": true, "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-03", "observedBlock": 26110197,
+        "sources": [{"label": "Exact SygFactory mint permission implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x11b2af61c6433e898f8a24138fc58318ce543aff"}],
+        "evidence": "Block26110197 group1 OPERATOR membership and empty code verified. Native-context mint canCall is true; source is uncapped and privileged."
+      },
+      {
+        "label": "FILQ-A group1 system 1",
+        "chain": "ethereum", "address": "0x67ad5e9456dab8976d04d0d3dc5e26a1c3ae5eb7",
+        "deploymentRefs": ["ethereum:0x54a4fc78431f9201824643e99bec891bb7462a1d"],
+        "role": "direct-minter", "authorityType": "eoa", "directMintAbility": "direct",
+        "canRaiseCap": true, "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-03", "observedBlock": 26110197,
+        "sources": [{"label": "Exact SygFactory mint permission implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x11b2af61c6433e898f8a24138fc58318ce543aff"}],
+        "evidence": "Block26110197 group1 SYSTEM membership and empty code verified. Native-context mint canCall is true; role name SYSTEM does not prove an independent reconciliation or protected signing environment."
+      },
+      {
+        "label": "FILQ-A group1 system 2",
+        "chain": "ethereum", "address": "0xae74c811adfd40f13d5742f0c2516270e97df87c",
+        "deploymentRefs": ["ethereum:0x54a4fc78431f9201824643e99bec891bb7462a1d"],
+        "role": "direct-minter", "authorityType": "eoa", "directMintAbility": "direct",
+        "canRaiseCap": true, "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-03", "observedBlock": 26110197,
+        "sources": [{"label": "Exact SygFactory mint permission implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x11b2af61c6433e898f8a24138fc58318ce543aff"}],
+        "evidence": "Block26110197 group1 SYSTEM membership and empty code verified. Native-context mint canCall is true; no off-chain signing/quorum inference is made."
+      },
+      {
+        "label": "FILQ-A global role manager 1",
+        "chain": "ethereum", "address": "0x64294e70a34476e994e570af6b544f13542de165",
+        "deploymentRefs": ["ethereum:0x54a4fc78431f9201824643e99bec891bb7462a1d"],
+        "role": "minter-admin", "authorityType": "eoa", "directMintAbility": "can-authorize",
+        "canRaiseCap": true, "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-03", "observedBlock": 26110197,
+        "sources": [{"label": "Verified SygFactory role administration", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x11b2af61c6433e898f8a24138fc58318ce543aff"}],
+        "evidence": "Group0 ROLE_MANAGER membership and empty code verified. Native-context mint is false, but factory-context updateMinterBurner(uint16,address,bool) canCall is true and permits granting mint role to an arbitrary account in a native group."
+      },
+      {
+        "label": "FILQ-A global role manager 2",
+        "chain": "ethereum", "address": "0xcd766c796a6a97ce3efe95d7d86bbe6f6e775145",
+        "deploymentRefs": ["ethereum:0x54a4fc78431f9201824643e99bec891bb7462a1d"],
+        "role": "minter-admin", "authorityType": "eoa", "directMintAbility": "can-authorize",
+        "canRaiseCap": true, "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-03", "observedBlock": 26110197,
+        "sources": [{"label": "Verified SygFactory role administration", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x11b2af61c6433e898f8a24138fc58318ce543aff"}],
+        "evidence": "Group0 ROLE_MANAGER membership and empty code verified. Factory-context updateMinterBurner permission is true, while native-context direct mint is false; native mint can be authorized through mutable groups/role grants."
       }
     ],
-    "economicCapSemantics": "unknown",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
     "supervision": "unknown",
     "review": {
@@ -62,15 +162,71 @@
         {
           "label": "Ethereum token deployment",
           "url": "https://etherscan.io/address/0x54a4fc78431f9201824643e99bec891bb7462a1d#code"
+        },
+        {
+          "label": "Deployed SygFactory authorization and upgrade implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x11b2af61c6433e898f8a24138fc58318ce543aff"
         }
       ],
-      "evidence": "Identity and current stock reverified at Ethereum block 26107703 (2026-10-02T22:44:06.965406+00:00). Verified deployed code establishes privileged native mint/control capabilities, but no complete cap, reserve reconciliation, quorum or noninterference proof is asserted. Accumulating USD money-market share priced at daily NAV; normal valuation is at 21:00 UK time, with two valuation points only during a declared stressed market environment. On-chain investors exit by redemption through the transfer agent or Token Distributor: transfers of tokens are not accepted or recognized in the register. Usual market hours are 01:00 to 21:00 London on eligible weekdays; off-hours facilities depend on liquidity, and gates or suspension may apply.",
-      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-      "reviewedAt": "2026-10-02",
-      "unresolvedQuestions": [
-        "Permission-manager minter, admin and upgrader member census",
-        "Actual deployed UUPS upgrade delay and bypass paths",
-        "Current independent token-to-fund liability reconciliation"
+      "evidence": "Block26110197 full factory events and live group/code reads resolve native groups[1,12,13], no custom group, four OPERATOR and two SYSTEM EOAs with direct mint canCall=true. Mint permission0xc0f permits roles0/1/5 under the two-bit role encoding; PLATFORM_ADMIN3 cannot directly mint. Both global group0 role-manager EOAs have factory-context updateMinterBurner canCall=true and can authorize native mint. Global platform-admin can call upgradeToken(address,bytes), and token _authorizeUpgrade requires the factory. Token/factory ERC-7201 timelock slot+1 reads are1/86400seconds. Thus conservative concentrated-admin native issuance is scoreable; organizational identities, key custody, independent reconciliation and relief-qualifying noninterference are not established and grant no benefit. Organizational identities, independence and MPC/HSM/signing policies of enumerated platform-admin, role-manager, operator and system EOAs remain undisclosed. Current independent token-to-fund financial reconciliation and any relief-qualifying whole-topology noninterference guarantee remain unestablished.",
+      "reviewer": "Refine04 pinned permission and timelock census",
+      "reviewedAt": "2026-10-03",
+      "unresolvedQuestions": [],
+      "scopedQuestions": [
+        {
+          "controlRef": "FILQ-A platform-admin EOA",
+          "question": "Organizational identity, human independence and MPC/HSM/signing policy of the identified platform-admin EOA remain undisclosed; native upgrade authorization and its one-second token delay are established.",
+          "reviewedAt": "2026-10-03", "reviewer": "Refine04 calibration v2",
+          "sources": [{"label": "Verified factory platform/upgrade authorization", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x11b2af61c6433e898f8a24138fc58318ce543aff"}]
+        },
+        {
+          "controlRef": "FILQ-A group1 operator 1",
+          "question": "Organizational identity, human independence and MPC/HSM/signing policy of this identified operator EOA remain undisclosed; its native mint permission and code-empty state are established.",
+          "reviewedAt": "2026-10-03", "reviewer": "Refine04 calibration v2",
+          "sources": [{"label": "Verified factory native mint authorization", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x11b2af61c6433e898f8a24138fc58318ce543aff"}]
+        },
+        {
+          "controlRef": "FILQ-A group1 operator 2",
+          "question": "Organizational identity, human independence and MPC/HSM/signing policy of this identified operator EOA remain undisclosed; native OPERATOR mint authorization is established, not protected off-chain custody.",
+          "reviewedAt": "2026-10-03", "reviewer": "Refine04 calibration v2",
+          "sources": [{"label": "Verified factory native mint authorization", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x11b2af61c6433e898f8a24138fc58318ce543aff"}]
+        },
+        {
+          "controlRef": "FILQ-A group1 operator 3",
+          "question": "Organizational identity, human independence and MPC/HSM/signing policy of this identified operator EOA remain undisclosed, despite the closed on-chain native role and permission census.",
+          "reviewedAt": "2026-10-03", "reviewer": "Refine04 calibration v2",
+          "sources": [{"label": "Verified factory native mint authorization", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x11b2af61c6433e898f8a24138fc58318ce543aff"}]
+        },
+        {
+          "controlRef": "FILQ-A group1 operator 4",
+          "question": "Organizational identity, human independence and MPC/HSM/signing policy of this identified operator EOA remain undisclosed; the known direct native mint path does not attest organizational key controls.",
+          "reviewedAt": "2026-10-03", "reviewer": "Refine04 calibration v2",
+          "sources": [{"label": "Verified factory native mint authorization", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x11b2af61c6433e898f8a24138fc58318ce543aff"}]
+        },
+        {
+          "controlRef": "FILQ-A group1 system 1",
+          "question": "Organizational identity, human independence and MPC/HSM/signing policy of this identified SYSTEM-role EOA remain undisclosed; the role name does not prove a protected signing environment or independent reconciliation.",
+          "reviewedAt": "2026-10-03", "reviewer": "Refine04 calibration v2",
+          "sources": [{"label": "Verified factory native SYSTEM mint authorization", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x11b2af61c6433e898f8a24138fc58318ce543aff"}]
+        },
+        {
+          "controlRef": "FILQ-A group1 system 2",
+          "question": "Organizational identity, human independence and MPC/HSM/signing policy of this identified SYSTEM-role EOA remain undisclosed; its verified native mint permission supplies no off-chain signing/quorum attestation.",
+          "reviewedAt": "2026-10-03", "reviewer": "Refine04 calibration v2",
+          "sources": [{"label": "Verified factory native SYSTEM mint authorization", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x11b2af61c6433e898f8a24138fc58318ce543aff"}]
+        },
+        {
+          "controlRef": "FILQ-A global role manager 1",
+          "question": "Organizational identity, human independence and MPC/HSM/signing policy of this identified global role-manager EOA remain undisclosed; its mint-role grant authority is established on-chain.",
+          "reviewedAt": "2026-10-03", "reviewer": "Refine04 calibration v2",
+          "sources": [{"label": "Verified factory role-grant authorization", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x11b2af61c6433e898f8a24138fc58318ce543aff"}]
+        },
+        {
+          "controlRef": "FILQ-A global role manager 2",
+          "question": "Organizational identity, human independence and MPC/HSM/signing policy of this identified global role-manager EOA remain undisclosed; its verified authorization power does not establish an organizational quorum.",
+          "reviewedAt": "2026-10-03", "reviewer": "Refine04 calibration v2",
+          "sources": [{"label": "Verified factory role-grant authorization", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x11b2af61c6433e898f8a24138fc58318ce543aff"}]
+        }
       ]
     },
     "upgradeability": {
@@ -88,9 +244,10 @@
         "0x7427f3e0e32eb1ee19516aa5c6abc99267a3ec89"
       ],
       "canChangeMintLogic": true,
+      "delaySec": 1,
       "controlRef": "FILQ-A permission-manager authority",
-      "observedAt": "2026-10-02",
-      "observedBlock": 26107703,
+      "observedAt": "2026-10-03",
+      "observedBlock": 26110197,
       "sources": [
         {
           "label": "Fidelity September 14, 2026 fund prospectus",
@@ -107,6 +264,10 @@
         {
           "label": "Ethereum token deployment",
           "url": "https://etherscan.io/address/0x54a4fc78431f9201824643e99bec891bb7462a1d#code"
+        },
+        {
+          "label": "Verified SygFactory UUPS timelock and permission source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x11b2af61c6433e898f8a24138fc58318ce543aff"
         }
       ]
     }

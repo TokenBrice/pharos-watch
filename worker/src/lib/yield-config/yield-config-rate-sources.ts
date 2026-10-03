@@ -577,6 +577,15 @@ export const ON_CHAIN_RATE_CONFIGS: OnChainRateConfig[] = [
 export const PRICE_DERIVED_FALLBACK_IDS = new Set([
   "usdb-blast",
   "usda-avalon",
+  // Reviewed accumulating USD NAV shares. Keep explicit source ownership even
+  // though navToken metadata also enables this lane. APY remains unavailable
+  // until supply_history has the required 7-45 day priced comparison anchor.
+  "earnusd-lido",
+  "filqa-fidelity-international",
+  "fiusd-sygnum",
+  "cumiu-chinaamc",
+  "uscc-superstate",
+  "umint-ubs",
 ]);
 
 export const RATE_DERIVED_CONFIGS: RateDerivedConfig[] = [

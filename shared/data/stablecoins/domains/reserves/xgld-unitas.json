@@ -6,7 +6,7 @@
       "pct": 100,
       "risk": "high",
       "assetClass": "protocol-position",
-      "issuerOrObligor": "Unitas XGLD strategy operator; exact issuing legal entity undisclosed",
+      "issuerOrObligor": "Unitas XGLD strategy operator; Unipay Labs Limited is the platform operator, not an established XGLD issuing entity",
       "riskFactors": [
         "leverage",
         "basis",
@@ -20,20 +20,28 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Refine06 primary-source and Accountable review",
     "confidence": "probable",
     "sources": [
+      {
+        "label": "XGLD Accountable gross venue and token-supply observations",
+        "url": "https://api-accountable.unitas.so/v1/dashboard?type=xgld"
+      },
+      {
+        "label": "Unitas platform terms dated August 27 2026; USDu/sUSDu scope",
+        "url": "https://docs.unitas.so/resources/terms-of-service.md"
+      },
       {
         "label": "XGLD borrowing, vaults and OES strategy",
         "url": "https://docs.unitas.so/overview/xgld.md"
       }
     ],
-    "rationale": "100% denotes the complete disclosed strategy envelope, not measured XAUt or USDT weights. XAUt collateral, BYBIT Stake & Borrow and delta-neutral strategies are disclosed; gross asset values cannot establish net backing after debt.",
-    "compositionBasis": "Issuer product and backing disclosures reopened 2026-10-02",
-    "compositionAsOf": "2026-10-02",
+    "rationale": "100% denotes the complete disclosed strategy envelope, not measured XAUt or USDT net weights. XGLD Accountable dashboard reopened 2026-10-03 reports gross reserves USD 12,500,048.65: Binance USD 11,885,621.03 and BNB USD 614,427.62, against token-supply valuation USD 11,268,230.83 (ratio 1.109318). Its surplus is gross assets minus token liabilities, not debt-netted NAV. Binance is a reported venue, not proof of direct exchange possession because docs describe OES mirroring. Terms identify Unipay Labs Limited as platform operator under Singapore law but explicitly cover USDu/sUSDu, not an XGLD issuing entity.",
+    "compositionBasis": "Issuer strategy and gross Accountable venue disclosure; borrowed debt not netted",
+    "compositionAsOf": "2026-10-03",
     "scope": "full-composition",
-    "knownUnknownExposure": "Complete current positions, borrowed liabilities, custodians, legal segregation and net weights are not disclosed; no 100% XAUt collateral attribution is authored.",
+    "knownUnknownExposure": "Gross venue names are disclosed, but complete current positions, borrowed liabilities, immediate legal custodians, segregation and net weights are not; no 100% XAUt attribution or zero-debt solvency claim is authored.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -41,30 +49,42 @@
         "reserveName": "XAUt collateral and borrowed-USDT strategy book (net allocation undisclosed)",
         "pct": 100,
         "disposition": "basket-needs-split",
-        "rationale": "Complete current positions, borrowed liabilities, custodians, legal segregation and net weights are not disclosed; no 100% XAUt collateral attribution is authored."
+        "rationale": "Gross venue split is disclosed, but no borrowed-USDT liabilities, full strategy positions or net XAUt/USDT allocation permit splitting this economic envelope."
       }
     ]
   },
   "custodyProfile": {
     "providers": [
       {
-        "name": "Unitas Fund Vault / OES custody providers (identities and allocation undisclosed)",
+        "name": "Binance (Accountable-reported gross execution venue; direct custody not established)",
+        "role": "other"
+      },
+      {
+        "name": "Unitas Fund Vault / OES immediate legal custodians (XGLD identities unverified)",
         "role": "custodian"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Refine06 primary-source and Accountable review",
     "confidence": "probable",
     "sources": [
+      {
+        "label": "XGLD Accountable gross venue observations",
+        "url": "https://api-accountable.unitas.so/v1/dashboard?type=xgld"
+      },
+      {
+        "label": "Unitas USDu-context OES custody names and safeguards",
+        "url": "https://docs.unitas.so/backing-custody-and-security/off-exchange-settlement-oes-in-unitas.md"
+      },
       {
         "label": "XGLD borrowing, vaults and OES strategy",
         "url": "https://docs.unitas.so/overview/xgld.md"
       }
     ],
-    "uncertainty": "Complete current positions, borrowed liabilities, custodians, legal segregation and net weights are not disclosed; no 100% XAUt collateral attribution is authored.",
+    "uncertainty": "At the 2026-10-03 dashboard observation Binance represents about 95.1% of gross venue reserves, with the remainder on BNB; this is concentration evidence, not a legal-custodian or net-backing share. Program OES docs name Copper/Ceffu, segregated MPC cold storage and approximately hourly rebalancing in USDu context, but do not bind those providers or protections to XGLD. Exact Fund Vault addresses, XGLD legal custody/continuity, borrowed liabilities and net weights remain unverified.",
     "knownUnknownExposurePct": 100
   }
 }

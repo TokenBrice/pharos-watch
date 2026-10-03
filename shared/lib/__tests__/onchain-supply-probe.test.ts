@@ -379,7 +379,7 @@ describe("curated on-chain supply paths", () => {
     },
     {
       id: "pyusdx-moonpay",
-      contracts: ["ethereum", "arbitrum", "monad"].map((chain) => ({
+      contracts: ["ethereum", "arbitrum", "monad", "base"].map((chain) => ({
         chain, address: "0xebdb0942ce16386ab90718c7bd10c91cdb66b14d", decimals: 6,
       })),
     },

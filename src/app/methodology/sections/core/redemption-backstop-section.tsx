@@ -63,6 +63,14 @@ export function RedemptionBackstopMethodologySection() {
           finalized executable dollars by the same positive current supply, including daily scoring bounds;
           issuer-reported ratios cannot override that denominator.
         </p>
+        <p>
+          Morpho Vault V2 capacity requires a same-run read of the exact vault&apos;s selected liquidity adapter;
+          a zero or unreadable adapter permits only independently measured fresh idle underlying. Generic ERC-4626
+          balances denominated outside USD require same-path FX valuation before they can become dollar capacity;
+          otherwise capacity is unavailable while reserve evidence is retained. Newly reviewed routes do not turn
+          unmeasured liquidity into a fixed zero: absent telemetry remains unrated, and routes without an honest
+          capacity model remain source-reviewed but unconfigured.
+        </p>
         <MethodologyFacts
           facts={[
             { label: "Access", value: `${weights.access * 100}%` },

@@ -112,6 +112,10 @@ import { fetchZephyrScannerReserves } from "./zephyr-scanner";
 import { fetchOnreHoldingsCsvReserves } from "./onre-holdings-csv";
 import { fetchAvantReservesApiReserves } from "./avant-reserves-api";
 import { fetchAfiProofReserves } from "./afi-proof";
+import { fetchFrntLedgerlensReserves } from "./frnt-ledgerlens";
+import { fetchCoinbaseOnedPorReserves } from "./coinbase-oned-por";
+import { fetchBlackrockBrsrvHoldingsReserves } from "./blackrock-brsrv-holdings";
+import { fetchMatrixdockStbtReserves } from "./matrixdock-stbt";
 import type { AdapterFn, ReserveAdapterDefinition } from "./types";
 
 export type { AdapterContext, AdapterResult, AdapterFn, ReserveAdapterDefinition } from "./types";
@@ -235,6 +239,10 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS: Record<LiveReserveAdapterKey, Adapte
   "onre-holdings-csv": fetchOnreHoldingsCsvReserves,
   "avant-reserves-api": fetchAvantReservesApiReserves,
   "afi-proof": fetchAfiProofReserves,
+  "frnt-ledgerlens": fetchFrntLedgerlensReserves,
+  "coinbase-oned-por": fetchCoinbaseOnedPorReserves,
+  "blackrock-brsrv-holdings": fetchBlackrockBrsrvHoldingsReserves,
+  "matrixdock-stbt": fetchMatrixdockStbtReserves,
 };
 
 // Cast (not satisfies) below: Object.fromEntries widens keys to string, so the

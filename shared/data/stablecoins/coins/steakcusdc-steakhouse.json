@@ -1,5 +1,6 @@
 {
   "id": "steakcusdc-steakhouse",
+  "launchDate": "2026-06-19",
   "name": "Steakhouse Confidential Prime USDC",
   "symbol": "steakcUSDC",
   "oneLiner": "steakcUSDC is Steakhouse's public USDC vault share behind a confidential deposit surface; withdrawals use liquid USDC and losses reduce NAV.",

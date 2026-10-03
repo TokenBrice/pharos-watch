@@ -32,6 +32,116 @@
     "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
     "reviewedAt": "2026-10-02"
   },
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "VaultV2 NAV is onchain idle-plus-adapter accounting; the only funded lending market is RLUSD/WBTC at 86% LLTV. Its immutable MorphoChainlinkOracleV2 0xf58725eb213161e9054c97f970dc80b2d0327e8d composes Chainlink WBTC/BTC, BTC/USD and RLUSD/USD feeds. The local borrower branch is applicable despite oracle-free share arithmetic; no feed failover or consumer staleness bound exists in the reviewed oracle source.",
+    "role": "collateral-pricing",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Sol refinement 2026-10-03 (Refine13)",
+      "rationale": "At Ethereum block 26110183 the sole adapter and idToMarketParams pin identify the funded WBTC collateral market. Lender NAV inherits borrower liquidation and bad-debt outcomes, so a borrower branch is required.",
+      "sources": [
+        {
+          "label": "Market parameters and oracle/feed getters pinned at block 26110183",
+          "url": "https://etherscan.io/block/26110183"
+        },
+        {
+          "label": "Exact immutable borrower oracle and feed library",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf58725eb213161e9054c97f970dc80b2d0327e8d"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Sol refinement 2026-10-03 (Refine13)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Exact VaultV2 accounting source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfc8c624b6080a0a780583799f2a862de936f6e22"
+      },
+      {
+        "label": "Exact borrower oracle and immutable feed composition",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf58725eb213161e9054c97f970dc80b2d0327e8d"
+      },
+      {
+        "label": "Market/feed latestRoundData, description and decimals pin at block 26110183",
+        "url": "https://etherscan.io/block/26110183"
+      },
+      {
+        "label": "Morpho liquidation, bad debt and VaultV2 loss socialization",
+        "url": "https://docs.morpho.org/learn/concepts/liquidation/"
+      },
+      {
+        "label": "Morpho VaultV2 code-security audit roster, not financial assurance",
+        "url": "https://docs.morpho.org/get-started/resources/audits/"
+      }
+    ],
+    "branches": [
+      {
+        "id": "rlusd-wbtc-86",
+        "label": "RLUSD loan / WBTC collateral market a128dddc761075df",
+        "tier": "standard-external",
+        "summary": "idToMarketParams binds RLUSD, WBTC, oracle 0xf58725eb213161e9054c97f970dc80b2d0327e8d, IRM 0x870ac11d48b15db9a138cf899d20f13f79ba00bc and LLTV 860000000000000000. At block 26110183 oracle.price() returned 845747192858835850839479540234574584385117067048216. BASE_VAULT and QUOTE_VAULT are zero; QUOTE_FEED_2 is zero (unit multiplier). The three nonzero feed answers were WBTC/BTC 99940000, BTC/USD 8462780908991, RLUSD/USD 100002735 (all 8 decimals).",
+        "collateralAssets": ["WBTC"],
+        "chains": ["ethereum"],
+        "feeds": [
+          {
+            "provider": "Chainlink",
+            "path": "WBTC/BTC",
+            "address": "0xfdfd9c85ad200c506cf9e21f1fd8dd01932fbb23",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03",
+            "observedBlock": 26110183
+          },
+          {
+            "provider": "Chainlink",
+            "path": "BTC/USD",
+            "address": "0xf4030086522a5beea4988f8ca5b36dbc97bee88c",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03",
+            "observedBlock": 26110183
+          },
+          {
+            "provider": "Chainlink",
+            "path": "RLUSD/USD denominator",
+            "address": "0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03",
+            "observedBlock": 26110183
+          }
+        ],
+        "fallbackBehavior": "No alternate feed or failover: price() directly composes the configured latestRoundData answers. ChainlinkDataFeedLib checks nonnegative answers but deliberately does not check updatedAt or min/max bounds; no consumer staleness bound is claimed.",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110183,
+        "collateralParameters": [
+          {
+            "asset": "WBTC",
+            "maximumLtvPct": 86,
+            "note": "Immutable market LLTV, not a claim that every borrower currently uses this LTV."
+          }
+        ],
+        "liquidationMechanism": "Permissionless Morpho liquidation when borrower LTV exceeds 86%; liquidator repays debt in exchange for collateral plus the protocol-defined LLTV-dependent incentive.",
+        "backstop": "Borrower WBTC collateral and permissionless liquidation are the reviewed recovery resources; no independently funded exact-vault insurance or external recovery guarantee is established.",
+        "shutdownOrBadDebtBehavior": "Morpho bad debt reduces market supplier assets after collateral exhaustion. Adapter realAssets reports the reduced position; VaultV2 accrual socializes losses through lower assets per share. No administrator-set price fallback is present in this oracle.",
+        "sources": [
+          {
+            "label": "Exact oracle and immutable feed/library source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf58725eb213161e9054c97f970dc80b2d0327e8d"
+          },
+          {
+            "label": "Pinned market and feed observations",
+            "url": "https://etherscan.io/block/26110183"
+          },
+          {
+            "label": "Morpho liquidation and bad-debt rules",
+            "url": "https://docs.morpho.org/learn/concepts/liquidation/"
+          }
+        ]
+      }
+    ]
+  },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "Only the exact native ethereum vault-share deployment is authored. No share bridge representation is evidenced; upstream parent routes are separate inherited exposure.",

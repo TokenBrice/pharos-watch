@@ -23,8 +23,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Sol refinement Refine11",
     "confidence": "verified",
     "sources": [
       {
@@ -48,7 +48,7 @@
         "url": "https://api.morpho.org/graphql"
       }
     ],
-    "rationale": "At Ethereum block 26107702 (2026-10-02T22:43:47+00:00), totalAssets=60340093.055146 USDT; totalSupply=59334016.791589 shares; convertToAssets(1e18)=1.016955999999999971 USDT; idle balance=0.000000 USDT. Complete current adapter census contains 1 adapter, 2 markets: 0x3274643db77a064abd3bc851de77556a4ad2e2f502f4f0c80845fa8f909ecf0b (sUSDS, LLTV 0.965): 0.020553 USDT lender claim; 0x26b178d49895f80ca3c39b2745efc4cd9adcddfcc73dae93e531e86977ec4d96 (sUSDS, LLTV 0.965): 60340093.034593 USDT lender claim. The API snapshot is separately observed and is not the pinned-block denominator. The 100% row is the current direct parent-denominated operational claim, not a claim that lending exposure is idle cash or that borrower collateral is owned directly by holders.",
+    "rationale": "At Ethereum block 26107702 (2026-10-02T22:43:47+00:00), totalAssets=60340093.055146 USDT; totalSupply=59334016.791589 shares; convertToAssets(1e18)=1.016956 USDT; idle balance=0.000000 USDT. Complete current adapter census contains 1 adapter, 2 markets: 0x3274643db77a064abd3bc851de77556a4ad2e2f502f4f0c80845fa8f909ecf0b (sUSDS, LLTV 0.965): 0.020553 USDT lender claim; 0x26b178d49895f80ca3c39b2745efc4cd9adcddfcc73dae93e531e86977ec4d96 (sUSDS, LLTV 0.965): 60340093.034593 USDT lender claim. The API snapshot is separately observed and is not the pinned-block denominator. The 100% row is the current direct parent-denominated operational claim, not a claim that lending exposure is idle cash or that borrower collateral is owned directly by holders.",
     "compositionBasis": "Fixed-block ERC-4626, underlying balance and complete adapter/market reads at Ethereum block 26107702; verified deployed source",
     "compositionAsOf": "2026-10-02",
     "scope": "full-composition",

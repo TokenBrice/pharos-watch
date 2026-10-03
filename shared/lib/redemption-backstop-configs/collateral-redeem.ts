@@ -247,11 +247,11 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
     "usdso-somnia": defineCollateralConfig({
       outputAssetType: "stable-single",
       outputAssets: ["frxusd-frax"],
-      capacityModel: { kind: "fixed-usd", amountUsd: 0, confidence: "dynamic" },
+      capacityModel: { kind: "reserve-sync-metadata" },
       v9RouteReviewTerms: {
         scoringDisposition: "bounded-terms-gap",
         missingScoringFields: ["capacity"],
-        rationale: "Local frxUSD backing is verified, but no exact-route adapter measures current executable frxUSD output. Historical custody and child supply do not establish current redemption capacity.",
+        rationale: "Reviewed local frxUSD backing alone does not establish executable output. Current capacity requires fresh exact-custodian redemption telemetry; historical custody and child supply are not static capacity bounds.",
         reviewedAt: "2026-10-03",
         docs: [sourceRefFull("USD Somnia holder redemption", "https://somnia.network/usdso-stablecoin")],
       },
@@ -264,17 +264,17 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
       ],
       notes: [
         "The BrandedCustodian burns caller-owned USDso with allowance and returns Somnia frxUSD. Token freezes, available custody and isolated-backing configuration govern execution; isolatedBackingEnabled was false at the research pin.",
-        "Matching local frxUSD custody and child supply at Somnia block 428274392 is backing evidence, not a perpetual full-supply capacity bound or downstream fiat promise. No exact-route capacity/fee adapter or static fallback is configured.",
-        "Zero modeled capacity is a conservative lower bound while executable output liquidity is unmeasured, not an observed empty custodian; capacity remains an explicit scoring gap.",
+        "Matching local frxUSD custody and child supply at Somnia block 428274392 is backing evidence, not a perpetual full-supply capacity bound or downstream fiat promise. Capacity requires fresh exact-custodian frxUSD redemption telemetry; no static fallback is configured.",
+        "Without fresh exact-route telemetry, capacity remains missing rather than an observed zero.",
       ],
     }),
     "usdfc-secured-finance": defineCollateralConfig({
       outputAssets: ["asset:fil"],
-      capacityModel: { kind: "fixed-usd", amountUsd: 0, confidence: "dynamic" },
+      capacityModel: { kind: "reserve-sync-metadata" },
       v9RouteReviewTerms: {
         scoringDisposition: "bounded-terms-gap",
         missingScoringFields: ["capacity"],
-        rationale: "The FIL holder-redemption mechanism is verified, but current eligible Trove debt, collateral and oracle state are not measured by an exact-route adapter. No full-supply or historical FIL capacity is inferred.",
+        rationale: "The FIL holder-redemption mechanism is verified, but reviewed documentation alone does not establish current eligible Trove debt, collateral and oracle state. Fresh exact-route telemetry is required; no full-supply or historical FIL capacity is inferred.",
         reviewedAt: "2026-10-03",
         docs: [sourceRefFull("USDFC redemption mechanics", "https://docs.secured.finance/usdfc-stablecoin/core-mechanics/redemption")],
       },
@@ -286,8 +286,8 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
       ],
       notes: [
         "Any Filecoin holder may redeem into FIL when system TCR is at least 110% and the oracle is valid. Redemptions select eligible Troves by collateral ratio; a partial redemption stops before violating the 200 USDFC residual Trove debt floor. That floor is not a holder-wide minimum.",
-        "Executable capacity needs current eligible Trove debt, collateral and oracle/fee state. No exact-route reserve adapter, numeric FIL capacity, LUSD ETH capacity or full-supply fallback is configured.",
-        "Zero modeled capacity is a conservative lower bound while executable FIL redemption capacity is unmeasured, not an observed empty system; capacity remains an explicit scoring gap.",
+        "Executable capacity needs fresh current eligible Trove debt, collateral and oracle/fee telemetry. No historical numeric FIL capacity, LUSD ETH capacity or full-supply fallback is configured.",
+        "Without fresh exact-route telemetry, FIL redemption capacity remains missing rather than an observed zero.",
       ],
     }),
     "bold-liquity": defineLiveCollateralConfig({

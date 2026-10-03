@@ -19482,9 +19482,21 @@
         {
           "label": "arc fixed-block RPC observation 23952285",
           "url": "https://rpc.mainnet.arc.io"
+        },
+        {
+          "label": "Morpho published VaultV2 security audit index (framework scope only)",
+          "url": "https://docs.morpho.org/get-started/resources/audits/"
+        },
+        {
+          "label": "Morpho VaultV2 dated framework audit artifacts; no exact-vault financial assurance",
+          "url": "https://github.com/morpho-org/vault-v2/tree/main/audits"
+        },
+        {
+          "label": "Exact Arc VaultV2 partial source; explorer deployed bytecode equals RPC at block 24011393, full compiler verification unclaimed",
+          "url": "https://explorer.arc.io/api/v2/smart-contracts/0x8e357432cc12ff425c36432f312968aeb16112af"
         }
       ],
-      "notes": "At arc block 23952285 (0x16d7b9d), captured 2026-10-02T22:44:09.665742+00:00, totalSupply=89746600641673546252952918 atomic shares; accrueInterestView returned assets=89710295395927, pending performance shares=0, pending management shares=0. Idle USDC=0; complete adapter inventory sums to 89710295395927 USDC atomic units. Asset decimals=6, share decimals=18. convertToAssets(1e18)=999595 USDC atomic units. Complete inventory: [{\"address\": \"0xee0080203a76690bca40670dfd0cd1c30fab7c2c\", \"morpho\": \"0x34cd04070dd72b14e241112f6d83812df5af7fcd\", \"parentVault\": \"0x8e357432cc12ff425c36432f312968aeb16112af\", \"realAssets\": 89710295395927, \"forcePenaltyWad\": 0, \"markets\": [{\"marketId\": \"0xc2db905f174e5defcce01d321b09f15f78856a36a21b90cc7e1abbc29225815d\", \"loanToken\": \"0x3600000000000000000000000000000000000000\", \"collateralToken\": \"0x171a4217b86a807a64eb94757db6849fb4bdbaa0\", \"oracle\": \"0x2aa87ff48933ce6aba240bee916fc2e6ec1e51ab\", \"irm\": \"0xf02615d094fc02fc031c35fe705e175aa4653f20\", \"lltv\": 860000000000000000, \"supplyShares\": 89679518204334952418, \"borrowShares\": 0, \"postedCollateral\": 0, \"expectedSupplyAssets\": 89710295395927}]}]. HOLDER CLAIM limited: operational ERC4626 pro-rata claim supported by primary code, identity-bound API and pinned RPC. CONSERVATION limited: complete assets sum, minted liabilities and pending fee shares reconciled at the same block with reproducible asset units; no independent financial assurance. CUSTODY limited: exact current vault/adapter/Morpho position locations pinned. ALLOCATION limited: complete lender inventory and caps/role documentation, with zero adapter borrower shares/posted collateral in the enumerated markets; no favorable legal segregation or borrower-collateral custody inference. DEFAULT RECOVERY unavailable: losses reduce share NAV, but legal creditor priority and stressed collateral recovery remain unproven. At arc block 23952285 (0x16d7b9d), captured 2026-10-02T22:44:09.665742+00:00, owner=0x032a292de0127fdef849eff31b5b4df7e5f069c0; curator=0xec1a7a08b538c685f5d188d81e3545d69f1b4178. Both owner and curator eth_getCode returned 0x; no multisignature or key-custody attestation is established. addAdapter delay=604800 sec; increaseAbsoluteCap delay=604800 sec; fee-setting delays=0. Fee rates performance=0.0, management=0.0.",
+      "notes": "At arc block 23952285 (0x16d7b9d), captured 2026-10-02T22:44:09.665742+00:00, totalSupply=89746600641673546252952918 atomic shares; accrueInterestView returned assets=89710295395927, pending performance shares=0, pending management shares=0. Idle USDC=0; complete adapter inventory sums to 89710295395927 USDC atomic units. Asset decimals=6, share decimals=18. convertToAssets(1e18)=999595 USDC atomic units. Complete inventory: [{\"address\": \"0xee0080203a76690bca40670dfd0cd1c30fab7c2c\", \"morpho\": \"0x34cd04070dd72b14e241112f6d83812df5af7fcd\", \"parentVault\": \"0x8e357432cc12ff425c36432f312968aeb16112af\", \"realAssets\": 89710295395927, \"forcePenaltyWad\": 0, \"markets\": [{\"marketId\": \"0xc2db905f174e5defcce01d321b09f15f78856a36a21b90cc7e1abbc29225815d\", \"loanToken\": \"0x3600000000000000000000000000000000000000\", \"collateralToken\": \"0x171a4217b86a807a64eb94757db6849fb4bdbaa0\", \"oracle\": \"0x2aa87ff48933ce6aba240bee916fc2e6ec1e51ab\", \"irm\": \"0xf02615d094fc02fc031c35fe705e175aa4653f20\", \"lltv\": 860000000000000000, \"supplyShares\": 89679518204334952418, \"borrowShares\": 0, \"postedCollateral\": 0, \"expectedSupplyAssets\": 89710295395927}]}]. HOLDER CLAIM limited: operational ERC4626 pro-rata claim supported by primary code, identity-bound API and pinned RPC. CONSERVATION limited: complete assets sum, minted liabilities and pending fee shares reconciled at the same block with reproducible asset units; no independent financial assurance. CUSTODY limited: exact current vault/adapter/Morpho position locations pinned. ALLOCATION limited: complete lender inventory and caps/role documentation, with zero adapter borrower shares/posted collateral in the enumerated markets; no favorable legal segregation or borrower-collateral custody inference. DEFAULT RECOVERY unavailable: losses reduce share NAV, but legal creditor priority and stressed collateral recovery remain unproven. At arc block 23952285 (0x16d7b9d), captured 2026-10-02T22:44:09.665742+00:00, owner=0x032a292de0127fdef849eff31b5b4df7e5f069c0; curator=0xec1a7a08b538c685f5d188d81e3545d69f1b4178. Both owner and curator eth_getCode returned 0x; no multisignature or key-custody attestation is established. addAdapter delay=604800 sec; increaseAbsoluteCap delay=604800 sec; fee-setting delays=0. Fee rates performance=0.0, management=0.0. Supplemental source review 2026-10-03: framework security-audit references corroborate code semantics only; no exact-deployment audit, independent financial assurance or legal holder priority is inferred. Exact Arc explorer partial VaultV2 source is now linked and its deployed_bytecode matches RPC at block 24011393; full compiler verification remains unclaimed.",
       "metrics": {},
       "components": {
         "holderClaim": {
@@ -19542,9 +19554,17 @@
         {
           "label": "Vault holder exit and liquidity limits",
           "url": "https://docs.morpho.org/developers/earn/tutorials/assets-flow.md"
+        },
+        {
+          "label": "Morpho published VaultV2 security audit index (framework scope only)",
+          "url": "https://docs.morpho.org/get-started/resources/audits/"
+        },
+        {
+          "label": "Morpho VaultV2 dated framework audit artifacts; no exact-vault financial assurance",
+          "url": "https://github.com/morpho-org/vault-v2/tree/main/audits"
         }
       ],
-      "notes": "Steakhouse High Yield USDC (bbqUSDC) at ethereum:0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757 is the current public ERC-4626 VaultV2 share over USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48. Deposits transfer underlying before minting; interest accrual can mint configured fee shares and recognizes adapter losses. Holder rights are residual proportional code-enforced NAV redemption, not beneficial ownership of Circle reserves or proven statutory segregation. One current adapter 0xbfe734baab130048e20a64e800c4c2ec25756284 holds 10 enumerated Morpho market IDs. Evidence pin: ethereum block 26107704 (0x18e5f38), observed 2026-10-02T22:44:15.742108+00:00; totalAssets 45743313.031731 USDC and totalSupply 43515419.935051016510 shares; convertToAssets(1e18) 1.051197 USDC. Holder claim is limited to an operational residual share, without legal priority. Conservation uses the full same-block adapter market census, matching share liabilities and reproducible USDC-denominated NAV; market oracle/LLTV identities are retained in the allocation review. Position custody is limited to the current vault/adapter/Morpho inventory, not legal continuity or ultimate collateral custodians. Allocation is limited to the documented current lending and cap rights, with borrower-level custody/bridge/hedge tails unproven. Recovery is limited to code loss recognition, residual shareholder NAV and documented liquidity-bound withdraw/redeem/forceDeallocate; no funded guarantee, legal priority or full-supply stressed recovery is established. No exact-vault independent financial attestation was located, and the parent USDC report is not child assurance. At ethereum block 26107704 (0x18e5f38), observed 2026-10-02T22:44:15.742108+00:00, receiveSharesGate, sendSharesGate and receiveAssetsGate were zero and all three setters were abdicated. Reviewed VaultV2 transfer/transferFrom and withdraw/redeem use these gates. sendAssetsGate was zero with its setter not abdicated; it governs deposit/mint, not direct withdrawal or transfer. Deposit-dependent in-kind paths can be constrained by it. USDC freeze exposure is inherited from usdc-circle; this is not a direct share blacklist claim.",
+      "notes": "Steakhouse High Yield USDC (bbqUSDC) at ethereum:0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757 is the current public ERC-4626 VaultV2 share over USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48. Deposits transfer underlying before minting; interest accrual can mint configured fee shares and recognizes adapter losses. Holder rights are residual proportional code-enforced NAV redemption, not beneficial ownership of Circle reserves or proven statutory segregation. One current adapter 0xbfe734baab130048e20a64e800c4c2ec25756284 holds 10 enumerated Morpho market IDs. Evidence pin: ethereum block 26107704 (0x18e5f38), observed 2026-10-02T22:44:15.742108+00:00; totalAssets 45743313.031731 USDC and totalSupply 43515419.935051016510 shares; convertToAssets(1e18) 1.051197 USDC. Holder claim is limited to an operational residual share, without legal priority. Conservation uses the full same-block adapter market census, matching share liabilities and reproducible USDC-denominated NAV; market oracle/LLTV identities are retained in the allocation review. Position custody is limited to the current vault/adapter/Morpho inventory, not legal continuity or ultimate collateral custodians. Allocation is limited to the documented current lending and cap rights, with borrower-level custody/bridge/hedge tails unproven. Recovery is limited to code loss recognition, residual shareholder NAV and documented liquidity-bound withdraw/redeem/forceDeallocate; no funded guarantee, legal priority or full-supply stressed recovery is established. No exact-vault independent financial attestation was located, and the parent USDC report is not child assurance. At ethereum block 26107704 (0x18e5f38), observed 2026-10-02T22:44:15.742108+00:00, receiveSharesGate, sendSharesGate and receiveAssetsGate were zero and all three setters were abdicated. Reviewed VaultV2 transfer/transferFrom and withdraw/redeem use these gates. sendAssetsGate was zero with its setter not abdicated; it governs deposit/mint, not direct withdrawal or transfer. Deposit-dependent in-kind paths can be constrained by it. USDC freeze exposure is inherited from usdc-circle; this is not a direct share blacklist claim. Supplemental source review 2026-10-03: framework security-audit references corroborate code semantics only; no exact-deployment audit, independent financial assurance or legal holder priority is inferred.",
       "metrics": {},
       "components": {
         "holderClaim": {
@@ -19567,7 +19587,7 @@
     {
       "assetId": "brsrv-blackrock",
       "archetype": "tbill",
-      "reviewedAt": "2026-10-02",
+      "reviewedAt": "2026-10-03",
       "sources": [
         {
           "label": "BlackRock July 31, 2026 OnChain share prospectus",
@@ -19584,19 +19604,27 @@
         {
           "label": "Ethereum token deployment",
           "url": "https://etherscan.io/address/0x3078bcf707e457d3af2f938a2a478bbeea50a942#code"
+        },
+        {
+          "label": "Exact August 2026 N-MFP3 regulatory filing",
+          "url": "https://www.sec.gov/Archives/edgar/data/844779/000119312526384916/primary_doc.xml"
+        },
+        {
+          "label": "October 1 primary holdings CSV",
+          "url": "https://www.blackrock.com/cash/en-us/products/351891/fund/1464253357814.ajax?fileType=csv&fileName=RSVXX_holdings&dataType=fund"
         }
       ],
-      "notes": "Prospectus July 31, 2026 re-opened 2026-10-02: registered Rule 2a-7 government money-market fund, shared Securitize OnChain shareholder register, 100% cash/Treasury obligations of at most93days/Treasury overnight repo mandate, WAM<=60days/WAL<=120days and ordinary wire redemption. Named BNY custodian/accounting provider and Deloitte auditor do not establish current audit reconciliation. Ethereum block 26107703 reconfirms share identity and stock50293722.47; Tempo block 42323853 and Solana slot 452748384 show zero stock. Fund claim, NAV and duration are limited operational/legal-policy evidence with external deployment anchors, not independently reconciled seniority, stress liquidity or sponsor support. No latestReport is authored.",
+      "notes": "Refine04 October 3 review: July 31 OnChain prospectus establishes a registered Rule 2a-7 government money-market fund, shared Securitize shareholder register and Treasury/cash/overnight-repo mandate. Native stock pins remain Ethereum block26107703:50293722.47 shares; Tempo42323853 and Solana452748384:zero. Exact monthly N-MFP3 XML filed September8 for August31, seriesS000106600/LEI5299008QG0GNZ85LDG98, records one class, WAM16/WAL16 days,100% daily/weekly liquid assets and dated daily NAV observations, including shadow seriesNAV0.9995 on August18. This specific quarterly-or-better regulatory component disclosure admits adequate navValuation and durationAndLiquidity under the canonical evidence standard. FundClaimAndSeniority remains limited legal/operational evidence; named BNY/Deloitte are not current signed whole-token financial assurance. October1 primary holdings total49853218.07:40853218.07 Treasury bills and9000000 overnight repo (BofA5m,CA2m,JPM2m); October1 issuer WAM/WAL28 days and100% daily/weekly liquidity corroborate current portfolio observations without rewriting the August regulatory date. Neither disclosure reconciles October3 token liabilities, establishes seniority/stress liquidation/sponsor support or removes unavailable lossRecoveryDesign. No latestReport is authored. Class operating launchAugust3 is distinct from implementation creationJuly22.",
       "metrics": {},
       "components": {
         "fundClaimAndSeniority": {
           "quality": "limited"
         },
         "navValuation": {
-          "quality": "limited"
+          "quality": "adequate"
         },
         "durationAndLiquidity": {
-          "quality": "limited"
+          "quality": "adequate"
         },
         "lossRecoveryDesign": {
           "applicability": "unavailable",
@@ -19676,7 +19704,7 @@
           "url": "https://app.morpho.org/base/vault/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c"
         },
         {
-          "label": "Verified deployment code identity",
+          "label": "Partially verified VaultV2 source; deployed bytes match pinned RPC, not complete compiler verification",
           "url": "https://base.blockscout.com/api/v2/smart-contracts/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c"
         },
         {
@@ -19727,7 +19755,7 @@
     {
       "assetId": "cumiu-chinaamc",
       "archetype": "tbill",
-      "reviewedAt": "2026-10-02",
+      "reviewedAt": "2026-10-03",
       "sources": [
         {
           "label": "ChinaAMC September 2026 prospectus",
@@ -19758,7 +19786,7 @@
           "url": "https://coins.llama.fi/prices/current/ethereum:0x85d38585c3ac08268f598282a84b7c0ddfc0d04f"
         }
       ],
-      "notes": "Evidence observed 2026-10-02; Ethereum pin 26107703. KFS/prospectus identify Class I USD fund shares and statutory sub-fund segregation with foreign-enforcement and nominee-ledger caveats. June 30 itemized accounts and named Standard Chartered administration/custody corroborate limited fund claim and NAV evidence; daily on-chain NAV 104.5891 remains issuer-administered. WAM <=60 and WAL <=120 days, August WAM 50.85 days and daily dealing support limited duration/liquidity. No constant NAV or public intraday market is promised. Retrieved annual KPMG audit covers 2025 assets and liabilities, signed April 29/published April 30 2026. lossRecoveryDesign is omitted to retain report-driven annual-assurance treatment without a quarterly-or-better override.",
+      "notes": "Evidence observed 2026-10-02; Ethereum pin 26107703. KFS/prospectus identify Class I USD fund shares and statutory sub-fund segregation with foreign-enforcement and nominee-ledger caveats. June 30 itemized accounts and named Standard Chartered administration/custody corroborate limited fund claim and NAV evidence; daily on-chain NAV 104.5891 remains issuer-administered. WAM <=60 and WAL <=120 days, August WAM 50.85 days and daily dealing support limited duration/liquidity. No constant NAV or public intraday market is promised. Retrieved annual KPMG audit covers 2025 assets and liabilities, signed April 29/published April 30 2026. lossRecoveryDesign is omitted to retain report-driven annual-assurance treatment without a quarterly-or-better override. Refine04 observation October 3: October 2 top-ten disclosure names 72.54% of the USD subfund (individual rounded weights sum 72.55%); unresolved tail 27.46% prevents a fresh full-portfolio inference. Historical June full composition and dated KPMG legacy report treatment are retained; no observation substitutes for financial assurance.",
       "metrics": {},
       "components": {
         "fundClaimAndSeniority": {
@@ -19775,7 +19803,7 @@
     {
       "assetId": "earnusd-lido",
       "archetype": "protocol-position",
-      "reviewedAt": "2026-10-02",
+      "reviewedAt": "2026-10-03",
       "sources": [
         {
           "label": "Lido earnUSD holder deposits and withdrawals",
@@ -19808,6 +19836,10 @@
         {
           "label": "Lido internal Oracle reporting and privileged roles",
           "url": "https://docs.lido.fi/earn/architecture/oracle"
+        },
+        {
+          "label": "Mellow earnUSD two-underlying-vault structure; current weights/encumbrances unpublished",
+          "url": "https://docs.mellow.finance/lido-earn/earnusd"
         }
       ],
       "notes": "Sol addition batch 2026-10-03 (orchestrated). Exact-token admission is anchored by holder/deployment docs, verified BurnableTokenizedShareManager/Vault code and Ethereum block 26107703. The proxy has decimals18, supply 50902385.14796045, vault 0x014e6da8f283c4af65b2aa0f201438680a004452 and two subvaults. The operational claim is a compounded strategy share with documented request-and-claim USDC exits, supporting only limited holderClaim. No statutory reserve claim, fixed principal promise, complete allocation or independent financial reconciliation is inferred. Curator3-of-6 and zero timelock minimum supersede contradictory docs; no generic ERC-4626 adapter applies because asset()/totalAssets() revert.",
@@ -19828,8 +19860,8 @@
         },
         "encumbranceAndAllocation": {
           "applicability": "unavailable",
-          "rationale": "The issuer describes allocations and returns without a current complete identity-bound inventory, material weights, encumbrance/reuse scope or denominator; deposit/withdrawal denomination is not portfolio allocation.",
-          "sourceUrl": "https://docs.lido.fi/earn/"
+          "rationale": "Mellow identifies conservative earnUSDc (Ethereum/Base) and experimental earnUSDe (Ethereum/Plasma/Mantle), plus USDC/USDT strategy assets. This is disclosed standing structure, not a current complete identity-bound allocation inventory: material weights, encumbrance/reuse scope and matched denominator remain unavailable. No quality uplift or synthetic 50/50 allocation is inferred.",
+          "sourceUrl": "https://docs.mellow.finance/lido-earn/earnusd"
         },
         "defaultRecovery": {
           "applicability": "unavailable",
@@ -19848,7 +19880,7 @@
           "url": "https://app.morpho.org/base/vault/0xbeeff0be997cca5b1c13a7433c2004637975739e"
         },
         {
-          "label": "Verified deployment code identity",
+          "label": "Partially verified VaultV2 source; deployed bytes match pinned RPC, not complete compiler verification",
           "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff0be997cca5b1c13a7433c2004637975739e"
         },
         {
@@ -19943,7 +19975,7 @@
     {
       "assetId": "filqa-fidelity-international",
       "archetype": "tbill",
-      "reviewedAt": "2026-10-02",
+      "reviewedAt": "2026-10-03",
       "sources": [
         {
           "label": "Fidelity September 14, 2026 fund prospectus",
@@ -19960,9 +19992,17 @@
         {
           "label": "Ethereum token deployment",
           "url": "https://etherscan.io/address/0x54a4fc78431f9201824643e99bec891bb7462a1d#code"
+        },
+        {
+          "label": "July 31 Fidelity USD accumulating-class factsheet",
+          "url": "https://www.fidelityinternational.com/legal/documents/en/hffs.en.xx.6470869.pdf"
+        },
+        {
+          "label": "Accessible extracted original factsheet",
+          "url": "https://r.jina.ai/https://www.fidelityinternational.com/legal/documents/en/hffs.en.xx.6470869.pdf"
         }
       ],
-      "notes": "September14,2026 prospectus re-opened 2026-10-02 and bound by current getTokenURI at Ethereum block 26107703. Cayman SPC statutory portfolio segregation, daily21:00UK normal NAV, >=30% weekly liquidity/WAM<=60/WAL<=120 policy, JPMorgan depositary/accountant and accumulating share class establish limited component evidence. Credit/ABCP/securitisations and derivatives are permitted; no Treasury-only claim or current allocation is invented. On-chain transfer prohibition makes TA/distributor redemption the recognized exit; stress gates and off-hours conditional facilities remain. Current token getBundleData returned a bundle but is not a financial reconciliation. Deloitte named in prospectus supplies no signed current report. No latestReport is authored.",
+      "notes": "September14,2026 prospectus re-opened 2026-10-02 and bound by current getTokenURI at Ethereum block 26107703. Cayman SPC statutory portfolio segregation, daily21:00UK normal NAV, >=30% weekly liquidity/WAM<=60/WAL<=120 policy, JPMorgan depositary/accountant and accumulating share class establish limited component evidence. Credit/ABCP/securitisations and derivatives are permitted; no Treasury-only claim or current allocation is invented. On-chain transfer prohibition makes TA/distributor redemption the recognized exit; stress gates and off-hours conditional facilities remain. Current token getBundleData returned a bundle but is not a financial reconciliation. Deloitte named in prospectus supplies no signed current report. No latestReport is authored. Refine04 October3: July31 factsheet publishedAugust17 gives CP49.2%,CD25.1%,time deposits17.6%,cash8.0% (99.9% published rounding),43positions,WAM41/WAL59days,$45mfund assets;issuer-structured observations corroborated by exact native token keep NAV/duration at limited,not independent assurance. Accumulating class1launchMay6,2026/ISINKYG3R61G1088;CIMA regulated SPC. Moody Aaa-mf is explicitly an assessment,not a credit rating. Block26110197 configured BundleAggregatorProxy publishes matching classNAV101.4013 at timestamp1790975700,but native getPrice reverts;no working token-getter or independent reconciliation claim.",
       "metrics": {},
       "components": {
         "fundClaimAndSeniority": {
@@ -20105,7 +20145,7 @@
     {
       "assetId": "gldon-ondo",
       "archetype": "rwa-credit-fund",
-      "reviewedAt": "2026-10-02",
+      "reviewedAt": "2026-10-03",
       "sources": [
         {
           "label": "GLDon binding Final Terms dated March 26, 2026",
@@ -20126,6 +20166,10 @@
         {
           "label": "Ondo investor redemption rails",
           "url": "https://docs.ondo.finance/ondo-stocks/investing-and-redeeming.md"
+        },
+        {
+          "label": "GLDon KID; ISIN VGG7001ABQ63",
+          "url": "https://cdn.sanity.io/files/8k2tqa6n/production/8008c418f50a3ecaf509fe80578eb9df5cca59e0.pdf"
         }
       ],
       "metrics": {
@@ -20164,7 +20208,7 @@
           "quality": "limited"
         }
       },
-      "notes": "Mirrors the IAUon/SLVon rwa-credit-fund investment family with exact GLDon identity-bound Final Terms. Terms identify an open-ended debt security, limited-recourse issuer claim, investor put right, Alpaca and BitGo custody, and Ankura security agent; the prospectus and issuer disclosure provide the contractual claim and reporting structure. Daily reporting establishes a 1-day valuation cadence, not exact GLDon-specific net reserve reconciliation. Current share/cash/Other Collateral weights and aggregate-report liability attribution remain unavailable. Public $1 operational minimum and USDC swapper dependency differ from the Final Terms 0.01-USDC subscription minimum; no all-holder cash or physical-gold delivery route is assumed."
+      "notes": "Mirrors the IAUon/SLVon rwa-credit-fund investment family with exact GLDon identity-bound Final Terms. Terms identify an open-ended debt security, limited-recourse issuer claim, investor put right, Alpaca and BitGo custody, and Ankura security agent; the prospectus and issuer disclosure provide the contractual claim and reporting structure. Daily reporting establishes a 1-day valuation cadence, not exact GLDon-specific net reserve reconciliation. Current share/cash/Other Collateral weights and aggregate-report liability attribution remain unavailable. Public $1 operational minimum and USDC swapper dependency differ from the Final Terms 0.01-USDC subscription minimum; no all-holder cash or physical-gold delivery route is assumed. Reopened program disclosures confirm additional collateral above full backing and the Ondo Foundation/Flux guarantee. These commitments and named regulated custody do not establish a GLDon-specific measured reserve mix or independent financial reconciliation."
     },
     {
       "assetId": "gtusdtp-gauntlet",
@@ -20364,9 +20408,17 @@
         {
           "label": "Vault holder exit and liquidity limits",
           "url": "https://docs.morpho.org/developers/earn/tutorials/assets-flow.md"
+        },
+        {
+          "label": "ChainSecurity VaultV2 code assessment, 2025-09-16 (reference code, not financial assurance)",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/main/audits/2025-09-15-chainsecurity.pdf"
+        },
+        {
+          "label": "Cantina Managed adapter review, report 2025-12-15; final code tag 2025-12-04 (not exact-vault assurance)",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/main/audits/2025-12-04-market-v1-adapter-v2-spearbit.pdf"
         }
       ],
-      "notes": "Hyperithm USDC Apex (hyperUSDCa) at monad:0x78999cc96d2ba0341588c60ccb0e91c6c33cf371 is the current public ERC-4626 VaultV2 share over USDC 0x754704bc059f8c67012fed69bc8a327a5aafb603. Deposits transfer underlying before minting; interest accrual can mint configured fee shares and recognizes adapter losses. Holder rights are residual proportional code-enforced NAV redemption, not beneficial ownership of Circle reserves or proven statutory segregation. One current adapter 0x068f22739a5f8a5c84619d7f355b678d00707908 holds 7 enumerated Morpho market IDs. Evidence pin: monad block 110016412 (0x68eb79c), observed 2026-10-02T22:44:15.638184+00:00; totalAssets 50691589.059679 USDC and totalSupply 48736516.967017024755 shares; convertToAssets(1e18) 1.040115 USDC. Holder claim is limited to an operational residual share, without legal priority. Conservation uses the full same-block adapter market census, matching share liabilities and reproducible USDC-denominated NAV; market oracle/LLTV identities are retained in the allocation review. Position custody is limited to the current vault/adapter/Morpho inventory, not legal continuity or ultimate collateral custodians. Allocation is limited to the documented current lending and cap rights, with borrower-level custody/bridge/hedge tails unproven. Recovery is limited to code loss recognition, residual shareholder NAV and documented liquidity-bound withdraw/redeem/forceDeallocate; no funded guarantee, legal priority or full-supply stressed recovery is established. No exact-vault independent financial attestation was located, and the parent USDC report is not child assurance. At monad block 110016412 (0x68eb79c), observed 2026-10-02T22:44:15.638184+00:00, receiveSharesGate, sendSharesGate and receiveAssetsGate were zero and all three setters were abdicated. Reviewed VaultV2 transfer/transferFrom and withdraw/redeem use these gates. sendAssetsGate was zero with its setter not abdicated; it governs deposit/mint, not direct withdrawal or transfer. Deposit-dependent in-kind paths can be constrained by it. USDC freeze exposure is inherited from usdc-circle; this is not a direct share blacklist claim.",
+      "notes": "Hyperithm USDC Apex (hyperUSDCa) at monad:0x78999cc96d2ba0341588c60ccb0e91c6c33cf371 is the current public ERC-4626 VaultV2 share over USDC 0x754704bc059f8c67012fed69bc8a327a5aafb603. Deposits transfer underlying before minting; interest accrual can mint configured fee shares and recognizes adapter losses. Holder rights are residual proportional code-enforced NAV redemption, not beneficial ownership of Circle reserves or proven statutory segregation. One current adapter 0x068f22739a5f8a5c84619d7f355b678d00707908 holds 7 enumerated Morpho market IDs. Evidence pin: monad block 110016412 (0x68eb79c), observed 2026-10-02T22:44:15.638184+00:00; totalAssets 50691589.059679 USDC and totalSupply 48736516.967017028579124844 shares; convertToAssets(1e18) 1.040115 USDC. Holder claim is limited to an operational residual share, without legal priority. Conservation uses the full same-block adapter market census, matching share liabilities and reproducible USDC-denominated NAV; market oracle/LLTV identities are retained in the allocation review. Position custody is limited to the current vault/adapter/Morpho inventory, not legal continuity or ultimate collateral custodians. Allocation is limited to the documented current lending and cap rights, with borrower-level custody/bridge/hedge tails unproven. Recovery is limited to code loss recognition, residual shareholder NAV and documented liquidity-bound withdraw/redeem/forceDeallocate; no funded guarantee, legal priority or full-supply stressed recovery is established. No exact-vault independent financial attestation was located, and the parent USDC report is not child assurance. At monad block 110016412 (0x68eb79c), observed 2026-10-02T22:44:15.638184+00:00, receiveSharesGate, sendSharesGate and receiveAssetsGate were zero and all three setters were abdicated. Reviewed VaultV2 transfer/transferFrom and withdraw/redeem use these gates. sendAssetsGate was zero with its setter not abdicated; it governs deposit/mint, not direct withdrawal or transfer. Deposit-dependent in-kind paths can be constrained by it. USDC freeze exposure is inherited from usdc-circle; this is not a direct share blacklist claim. Reference code security reports: ChainSecurity 2025-09-16 and Cantina Managed 2025-12-15 (final adapter code tag 2025-12-04). These are not independent reserve-to-liability assurance, exact-vault audit coverage or default-recovery guarantees; existing component grades and evidence pin remain unchanged.",
       "metrics": {},
       "components": {
         "holderClaim": {
@@ -20414,9 +20466,17 @@
         {
           "label": "Exact current MorphoMarketV1AdapterV2 source",
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1d511811aca9d8817a3e50f29cadff6243a02902"
+        },
+        {
+          "label": "ChainSecurity VaultV2 code assessment, 2025-09-16 (reference code, not financial assurance)",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/main/audits/2025-09-15-chainsecurity.pdf"
+        },
+        {
+          "label": "Cantina Managed adapter review, report 2025-12-15; final code tag 2025-12-04 (not exact-vault assurance)",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/main/audits/2025-12-04-market-v1-adapter-v2-spearbit.pdf"
         }
       ],
-      "notes": "At Ethereum block 26107704, asset()=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, totalSupply()=28097145082426439535141891 raw 18-decimal shares and totalAssets()=29100078912490 raw 6-decimal USDC. One adapter 0x1d511811aca9d8817a3e50f29cadff6243a02902 enumerates 8 current market IDs; summed expectedSupplyAssets=29100078910236, idle underlying=2254; their sum equals totalAssets. All current positions have zero borrow shares and zero posted collateral. This is an operational proportional lending-position claim. It is not direct ownership of the parent issuer reserve, an independently signed financial reconciliation, or proof of legal segregation and insolvency priority. Blockscout is_fully_verified=false; bytecode equality is not a complete compiler/source verification. Limited holderClaim reflects exact code-enforced operational redemption; limited liabilityConservation reflects dated complete current assets/shares and reproducible expectedSupplyAssets accounting; limited positionCustody reflects all enumerated immediate on-chain lenders. Neither accounting NAV nor an upstream financial report grants vault legal or assurance credit. Selected-route liquidity observed 2026-10-02T22:44:52.884200+00:00 is $12770068.09, not a guarantee, DEX quote, same-notional executable depth or full-supply stressed capacity.",
+      "notes": "At Ethereum block 26107704, asset()=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, totalSupply()=28097145082426439535141891 raw 18-decimal shares and totalAssets()=29100078912490 raw 6-decimal USDC. One adapter 0x1d511811aca9d8817a3e50f29cadff6243a02902 enumerates 8 current market IDs; summed expectedSupplyAssets=29100078910236, idle underlying=2254; their sum equals totalAssets. All current positions have zero borrow shares and zero posted collateral. This is an operational proportional lending-position claim. It is not direct ownership of the parent issuer reserve, an independently signed financial reconciliation, or proof of legal segregation and insolvency priority. Blockscout is_fully_verified=false; bytecode equality is not a complete compiler/source verification. Limited holderClaim reflects exact code-enforced operational redemption; limited liabilityConservation reflects dated complete current assets/shares and reproducible expectedSupplyAssets accounting; limited positionCustody reflects all enumerated immediate on-chain lenders. Neither accounting NAV nor an upstream financial report grants vault legal or assurance credit. Selected-route liquidity observed 2026-10-02T22:44:52.884200+00:00 is $12770068.09, not a guarantee, DEX quote, same-notional executable depth or full-supply stressed capacity. Reference code security reports: ChainSecurity 2025-09-16 and Cantina Managed 2025-12-15 (final adapter code tag 2025-12-04). These are not independent reserve-to-liability assurance, exact-vault audit coverage or default-recovery guarantees; existing component grades and evidence pin remain unchanged.",
       "metrics": {},
       "components": {
         "holderClaim": {
@@ -20468,9 +20528,17 @@
         {
           "label": "Exact current MorphoMarketV1AdapterV2 source",
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4f74895557bea2de5d51d8c06e944da92dbc8550"
+        },
+        {
+          "label": "ChainSecurity VaultV2 code assessment, 2025-09-16 (reference code, not financial assurance)",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/main/audits/2025-09-15-chainsecurity.pdf"
+        },
+        {
+          "label": "Cantina Managed adapter review, report 2025-12-15; final code tag 2025-12-04 (not exact-vault assurance)",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/main/audits/2025-12-04-market-v1-adapter-v2-spearbit.pdf"
         }
       ],
-      "notes": "At Ethereum block 26107704, asset()=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, totalSupply()=9792630120840452584390720 raw 18-decimal shares and totalAssets()=10295065635649 raw 6-decimal USDC. One adapter 0x4f74895557bea2de5d51d8c06e944da92dbc8550 enumerates 5 current market IDs; summed expectedSupplyAssets=9983200606668, idle underlying=311865028981; their sum equals totalAssets. All current positions have zero borrow shares and zero posted collateral. This is an operational proportional lending-position claim. It is not direct ownership of the parent issuer reserve, an independently signed financial reconciliation, or proof of legal segregation and insolvency priority. Blockscout is_fully_verified=false; bytecode equality is not a complete compiler/source verification. Limited holderClaim reflects exact code-enforced operational redemption; limited liabilityConservation reflects dated complete current assets/shares and reproducible expectedSupplyAssets accounting; limited positionCustody reflects all enumerated immediate on-chain lenders. Neither accounting NAV nor an upstream financial report grants vault legal or assurance credit. Selected-route liquidity observed 2026-10-02T22:44:52.884200+00:00 is $1115988.79, not a guarantee, DEX quote, same-notional executable depth or full-supply stressed capacity.",
+      "notes": "At Ethereum block 26107704, asset()=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, totalSupply()=9792630120840452584390720 raw 18-decimal shares and totalAssets()=10295065635649 raw 6-decimal USDC. One adapter 0x4f74895557bea2de5d51d8c06e944da92dbc8550 enumerates 5 current market IDs; summed expectedSupplyAssets=9983200606668, idle underlying=311865028981; their sum equals totalAssets. All current positions have zero borrow shares and zero posted collateral. This is an operational proportional lending-position claim. It is not direct ownership of the parent issuer reserve, an independently signed financial reconciliation, or proof of legal segregation and insolvency priority. Blockscout is_fully_verified=false; bytecode equality is not a complete compiler/source verification. Limited holderClaim reflects exact code-enforced operational redemption; limited liabilityConservation reflects dated complete current assets/shares and reproducible expectedSupplyAssets accounting; limited positionCustody reflects all enumerated immediate on-chain lenders. Neither accounting NAV nor an upstream financial report grants vault legal or assurance credit. Selected-route liquidity observed 2026-10-02T22:44:52.884200+00:00 is $1115988.79, not a guarantee, DEX quote, same-notional executable depth or full-supply stressed capacity. Reference code security reports: ChainSecurity 2025-09-16 and Cantina Managed 2025-12-15 (final adapter code tag 2025-12-04). These are not independent reserve-to-liability assurance, exact-vault audit coverage or default-recovery guarantees; existing component grades and evidence pin remain unchanged.",
       "metrics": {},
       "components": {
         "holderClaim": {
@@ -20518,9 +20586,21 @@
         {
           "label": "arc fixed-block RPC observation 23952285",
           "url": "https://rpc.mainnet.arc.io"
+        },
+        {
+          "label": "ChainSecurity VaultV2 code assessment, 2025-09-16 (reference code, not financial assurance)",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/main/audits/2025-09-15-chainsecurity.pdf"
+        },
+        {
+          "label": "Cantina Managed adapter review, report 2025-12-15; final code tag 2025-12-04 (not exact-vault assurance)",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/main/audits/2025-12-04-market-v1-adapter-v2-spearbit.pdf"
+        },
+        {
+          "label": "Exact Arc VaultV2 partial verified source and runtime correspondence at block 23952285",
+          "url": "https://explorer.arc.io/api/v2/smart-contracts/0x5befab92a5a3d60f578cb51eeb4e4fd50a1e3123"
         }
       ],
-      "notes": "At arc block 23952285 (0x16d7b9d), captured 2026-10-02T22:44:09.665742+00:00, totalSupply=75004490745099738925640035 atomic shares; accrueInterestView returned assets=75012317730434, pending performance shares=0, pending management shares=0. Idle USDC=0; complete adapter inventory sums to 75012317730434 USDC atomic units. Asset decimals=6, share decimals=18. convertToAssets(1e18)=1000104 USDC atomic units. Complete inventory: [{\"address\": \"0x6adc3de83e00c4a74fda9403043828b831d0f5c3\", \"morpho\": \"0x34cd04070dd72b14e241112f6d83812df5af7fcd\", \"parentVault\": \"0x5befab92a5a3d60f578cb51eeb4e4fd50a1e3123\", \"realAssets\": 75012317730434, \"forcePenaltyWad\": 5000000000000000, \"markets\": [{\"marketId\": \"0xc2db905f174e5defcce01d321b09f15f78856a36a21b90cc7e1abbc29225815d\", \"loanToken\": \"0x3600000000000000000000000000000000000000\", \"collateralToken\": \"0x171a4217b86a807a64eb94757db6849fb4bdbaa0\", \"oracle\": \"0x2aa87ff48933ce6aba240bee916fc2e6ec1e51ab\", \"irm\": \"0xf02615d094fc02fc031c35fe705e175aa4653f20\", \"lltv\": 860000000000000000, \"supplyShares\": 74986583020004418199, \"borrowShares\": 0, \"postedCollateral\": 0, \"expectedSupplyAssets\": 75012317730434}]}]. HOLDER CLAIM limited: operational ERC4626 pro-rata claim supported by primary code, identity-bound API and pinned RPC. CONSERVATION limited: complete assets sum, minted liabilities and pending fee shares reconciled at the same block with reproducible asset units; no independent financial assurance. CUSTODY limited: exact current vault/adapter/Morpho position locations pinned. ALLOCATION limited: complete lender inventory and caps/role documentation, with zero adapter borrower shares/posted collateral in the enumerated markets; no favorable legal segregation or borrower-collateral custody inference. DEFAULT RECOVERY unavailable: losses reduce share NAV, but legal creditor priority and stressed collateral recovery remain unproven. At arc block 23952285 (0x16d7b9d), captured 2026-10-02T22:44:09.665742+00:00, owner=0x3ab74ecc34760c0a81f55e0001be6068dcf1cc04; curator=0x26a17b96e9ca28d84c4e78f22b83a1ccea28ad21. Both owner and curator eth_getCode returned 0x; no multisignature or key-custody attestation is established. addAdapter delay=604800 sec; increaseAbsoluteCap delay=604800 sec; fee-setting delays=0. Fee rates performance=0.0, management=0.0.",
+      "notes": "At arc block 23952285 (0x16d7b9d), captured 2026-10-02T22:44:09.665742+00:00, totalSupply=75004490745099738925640035 atomic shares; accrueInterestView returned assets=75012317730434, pending performance shares=0, pending management shares=0. Idle USDC=0; complete adapter inventory sums to 75012317730434 USDC atomic units. Asset decimals=6, share decimals=18. convertToAssets(1e18)=1000104 USDC atomic units. Complete inventory: [{\"address\": \"0x6adc3de83e00c4a74fda9403043828b831d0f5c3\", \"morpho\": \"0x34cd04070dd72b14e241112f6d83812df5af7fcd\", \"parentVault\": \"0x5befab92a5a3d60f578cb51eeb4e4fd50a1e3123\", \"realAssets\": 75012317730434, \"forcePenaltyWad\": 5000000000000000, \"markets\": [{\"marketId\": \"0xc2db905f174e5defcce01d321b09f15f78856a36a21b90cc7e1abbc29225815d\", \"loanToken\": \"0x3600000000000000000000000000000000000000\", \"collateralToken\": \"0x171a4217b86a807a64eb94757db6849fb4bdbaa0\", \"oracle\": \"0x2aa87ff48933ce6aba240bee916fc2e6ec1e51ab\", \"irm\": \"0xf02615d094fc02fc031c35fe705e175aa4653f20\", \"lltv\": 860000000000000000, \"supplyShares\": 74986583020004418199, \"borrowShares\": 0, \"postedCollateral\": 0, \"expectedSupplyAssets\": 75012317730434}]}]. HOLDER CLAIM limited: operational ERC4626 pro-rata claim supported by primary code, identity-bound API and pinned RPC. CONSERVATION limited: complete assets sum, minted liabilities and pending fee shares reconciled at the same block with reproducible asset units; no independent financial assurance. CUSTODY limited: exact current vault/adapter/Morpho position locations pinned. ALLOCATION limited: complete lender inventory and caps/role documentation, with zero adapter borrower shares/posted collateral in the enumerated markets; no favorable legal segregation or borrower-collateral custody inference. DEFAULT RECOVERY unavailable: losses reduce share NAV, but legal creditor priority and stressed collateral recovery remain unproven. At arc block 23952285 (0x16d7b9d), captured 2026-10-02T22:44:09.665742+00:00, owner=0x3ab74ecc34760c0a81f55e0001be6068dcf1cc04; curator=0x26a17b96e9ca28d84c4e78f22b83a1ccea28ad21. Both owner and curator eth_getCode returned 0x; no multisignature or key-custody attestation is established. addAdapter delay=604800 sec; increaseAbsoluteCap delay=604800 sec; fee-setting delays=0. Fee rates performance=0.0, management=0.0. Reference code security reports: ChainSecurity 2025-09-16 and Cantina Managed 2025-12-15 (final adapter code tag 2025-12-04). These are not independent reserve-to-liability assurance, exact-vault audit coverage or default-recovery guarantees; existing component grades and evidence pin remain unchanged.",
       "metrics": {},
       "components": {
         "holderClaim": {
@@ -20548,10 +20628,6 @@
       "reviewedAt": "2026-10-02",
       "sources": [
         {
-          "label": "Mantra USD product documentation (accessed 2026-10-02)",
-          "url": "https://mantrausd.com/"
-        },
-        {
           "label": "Verified token implementation",
           "url": "https://blockscout.mantrascan.io/api/v2/smart-contracts/0x9d7a7b406568668e7943740f5b370c86e13dcca8"
         },
@@ -20566,6 +20642,14 @@
         {
           "label": "M0 liquidity routes and issuer onboarding",
           "url": "https://docs.m0.org/build/accessing-liquidity"
+        },
+        {
+          "label": "M0 published EVM-extension security audits (framework scope only)",
+          "url": "https://docs.m0.org/resources/audits"
+        },
+        {
+          "label": "Guardian JMI/MYieldToOne/Freezable/SwapFacility code review, 2025-12-12; not a reserve audit or exact deployment certification",
+          "url": "https://github.com/m0-foundation/evm-m-extensions/blob/main/audits/JMI/M0_EVM-M_Extensions_Review_report.pdf"
         }
       ],
       "metrics": {},
@@ -20581,8 +20665,8 @@
         },
         "lossRecoveryDesign": {
           "applicability": "unavailable",
-          "rationale": "Reviewed M0 and Mantra USD disclosures do not publish enforceable child-holder insolvency priority, a current independently reconciled upstream Treasury book, or a child-specific loss-allocation/recapitalization commitment.",
-          "sourceUrl": "https://mantrausd.com/"
+          "rationale": "The reviewed M0 liquidity documentation describes technical swaps, solver inventory and issuer onboarding, but does not establish enforceable mantraUSD child-holder insolvency priority, child-specific loss allocation or a funded recapitalization commitment. Those recovery safeguards remain unverified.",
+          "sourceUrl": "https://docs.m0.org/build/accessing-liquidity"
         }
       },
       "collateralizationMeasurement": {
@@ -20591,7 +20675,7 @@
         "rationale": "At mantra block 18531313, symbol/decimals and EIP-1967 implementation/admin were re-read. Local backing balance was 439,646.447844 M against 434,703.845695 mantraUSD supply. This is a local parent-token conservation ratio, not upstream Treasury collateralization or reserve surplus credit.",
         "sourceUrl": "https://evm.mantrachain.io"
       },
-      "notes": "At mantra block 18531313, symbol/decimals and EIP-1967 implementation/admin were re-read. Local backing balance was 439,646.447844 M against 434,703.845695 mantraUSD supply. M-extension wrapping and unwrapping conserve the deposited M claim. The current SwapFacility restricts direct M output to approved swappers; an unprivileged sample canSwapViaPath(child,wM) returned true while child-to-M returned false. This is technical conversion eligibility, not a sent transaction or a cash redemption right. Claim/seniority is limited to the independently identity-bound technical parent-token claim; no enforceable fund-holder priority is asserted. NAV valuation is limited because parent-token accounting and the conversion method are reproducible on-chain but not independently administered or financially assured. Duration/liquidity is limited to observed parent inventory and the code-defined same-chain conversion route; upstream whole-book duration, solver inventory and fiat settlement are not measured. Loss recovery remains sourced unavailable, not measured-adverse by missing evidence. Current local proxy/role controls and direct-M approved-swapper restrictions remain separate from inherited parent risk."
+      "notes": "At mantra block 18531313, symbol/decimals and EIP-1967 implementation/admin were re-read. Local backing balance was 439,646.447844 M against 434,703.845695 mantraUSD supply. M-extension wrapping and unwrapping conserve the deposited M claim. The current SwapFacility restricts direct M output to approved swappers; an unprivileged sample canSwapViaPath(child,wM) returned true while child-to-M returned false. This is technical conversion eligibility, not a sent transaction or a cash redemption right. Claim/seniority is limited to the independently identity-bound technical parent-token claim; no enforceable fund-holder priority is asserted. NAV valuation is limited because parent-token accounting and the conversion method are reproducible on-chain but not independently administered or financially assured. Duration/liquidity is limited to observed parent inventory and the code-defined same-chain conversion route; upstream whole-book duration, solver inventory and fiat settlement are not measured. Loss recovery remains sourced unavailable, not measured-adverse by missing evidence. Current local proxy/role controls and direct-M approved-swapper restrictions remain separate from inherited parent risk. Supplemental source review 2026-10-03: framework security-audit references corroborate code semantics only; no exact-deployment audit, independent financial assurance or legal holder priority is inferred."
     },
     {
       "assetId": "mxnt-tether",
@@ -20780,9 +20864,17 @@
         {
           "label": "Tempo TIP-20 restriction specification",
           "url": "https://docs.tempo.xyz/protocol/tip20/spec"
+        },
+        {
+          "label": "Sentora Terms of Use, June 2026, sections 4.3 and 21.4",
+          "url": "https://sentora.com/legal/terms-of-use"
+        },
+        {
+          "label": "Morpho Vault V2 and MarketV1AdapterV2 security audits; no financial assurance",
+          "url": "https://docs.morpho.org/get-started/resources/audits/"
         }
       ],
-      "notes": "At tempo block 42323768, asset() was 0x20c0000000000000000000000000000000000000, share decimals 18 and underlying decimals 6; totalAssets raw 38668628815373, totalSupply raw 19338159753529440843074671, idle raw 38165213421856, sole adapter market assets raw 503415393517, with an exact zero accounting difference. The only funded market lent pathUSD against cbBTC at 77% LLTV. The adapter position had zero borrowing and zero posted collateral. convertToAssets(1e18) returned 1999602 raw pathUSD; a positive-balance holder 0x755b40dc87a1f445301d71e5313fc0f2f3781d14 simulated redeem(1e18,holder,holder) returning 1.9996020000000001 pathUSD. No transaction was broadcast. Claim, conservation and immediate position custody earn limited quality from exact source plus pinned complete accounting. No independent whole-vault signed reconciliation, legal priority or funded default backstop was established; missing legal allocation and recovery stay unavailable. Raw minted totalSupply excludes any not-yet-accrued fee shares as documented by VaultV2. Parent attestations and security audits are not vault financial assurance.",
+      "notes": "At tempo block 42323768, asset() was 0x20c0000000000000000000000000000000000000, share decimals 18 and underlying decimals 6; totalAssets raw 38668628815373, totalSupply raw 19338159753529440843074671, idle raw 38165213421856, sole adapter market assets raw 503415393517, with an exact zero accounting difference. The only funded market lent pathUSD against cbBTC at 77% LLTV. The adapter position had zero borrowing and zero posted collateral. convertToAssets(1e18) returned 1999602 raw pathUSD; a positive-balance holder 0x755b40dc87a1f445301d71e5313fc0f2f3781d14 simulated redeem(1e18,holder,holder) returning 1.9996020000000001 pathUSD. No transaction was broadcast. Claim, conservation and immediate position custody earn limited quality from exact source plus pinned complete accounting. No independent whole-vault signed reconciliation, legal priority or funded default backstop was established; missing legal allocation and recovery stay unavailable. Raw minted totalSupply excludes any not-yet-accrued fee shares as documented by VaultV2. Parent attestations and security audits are not vault financial assurance. Sentora June 2026 terms describe non-custodial vault configurations and BVI governing law. Those issuer terms and the dated VaultV2/MarketV1AdapterV2 code-security audit inventory do not establish collateral insolvency priority, funded recovery or financial assurance. receiveAssetsGate is withdrawal access; sendAssetsGate is deposit access. The Morpho audit index dates ChainSecurity and Blackthorn Vault V2 security reviews to 2025-09-15; those reports cover code security, not financial reserve-to-liability assurance.",
       "metrics": {},
       "components": {
         "holderClaim": {
@@ -20838,9 +20930,13 @@
         {
           "label": "Morpho security audits, not financial assurance",
           "url": "https://docs.morpho.org/get-started/resources/audits/"
+        },
+        {
+          "label": "Sentora Terms of Use, June 2026, sections 4.3 and 21.4",
+          "url": "https://sentora.com/legal/terms-of-use"
         }
       ],
-      "notes": "Exact native Ethereum VaultV2 0xb576765fb15505433af24fee2c0325895c559fb2, block 26107702. Holder claim is the ordinary operational ERC-4626 redemption, independently simulated for one share. Limited conservation: totalAssets=388049489417230 reconciles to idle=24375516077801 plus adapter realAssets=363673973339429; share supply=191836444570611445454375594. This is accounting identity, not independent asset-liability assurance. Limited position custody identifies the exact immutable vault and current lender adapter, without asserting ultimate collateral custody or legal segregation. Allocation and recovery remain sourced unavailable. PYUSD lending positions against cbBTC, WBTC, LBTC, syrupUSDC, wstETH, weETH, sUSDe, kBTC. Allocations change under curator controls; borrower collateral is distinct from the underlying deposited token. Owner and curator each retain single-EOA 1-of-1 Safe control; fee/redemption-gate actions have zero delay. Parent reserve reports and security audits do not upgrade this receipt.",
+      "notes": "Exact native Ethereum VaultV2 0xb576765fb15505433af24fee2c0325895c559fb2, block 26107702. Holder claim is the ordinary operational ERC-4626 redemption, independently simulated for one share. Limited conservation: totalAssets=388049489417230 reconciles to idle=24375516077801 plus adapter realAssets=363673973339429; share supply=191836444570611445454375594. This is accounting identity, not independent asset-liability assurance. Limited position custody identifies the exact immutable vault and current lender adapter, without asserting ultimate collateral custody or legal segregation. Allocation and recovery remain sourced unavailable. PYUSD lending positions against cbBTC, WBTC, LBTC, syrupUSDC, wstETH, weETH, sUSDe, kBTC. Allocations change under curator controls; borrower collateral is distinct from the underlying deposited token. Owner and curator each retain single-EOA 1-of-1 Safe control; fee/redemption-gate actions have zero delay. Parent reserve reports and security audits do not upgrade this receipt. Sentora June 2026 terms describe non-custodial vault configurations and BVI governing law. Those issuer terms and the dated VaultV2/MarketV1AdapterV2 code-security audit inventory do not establish collateral insolvency priority, funded recovery or financial assurance. receiveAssetsGate is withdrawal access; sendAssetsGate is deposit access. The Morpho audit index dates ChainSecurity and Blackthorn Vault V2 security reviews to 2025-09-15; those reports cover code security, not financial reserve-to-liability assurance.",
       "metrics": {},
       "components": {
         "holderClaim": {
@@ -20892,9 +20988,17 @@
         {
           "label": "Paxos USD stablecoin terms, section 3.5",
           "url": "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions"
+        },
+        {
+          "label": "Sentora Terms of Use, June 2026, sections 4.3 and 21.4",
+          "url": "https://sentora.com/legal/terms-of-use"
+        },
+        {
+          "label": "Morpho Vault V2 and MarketV1AdapterV2 security audits; no financial assurance",
+          "url": "https://docs.morpho.org/get-started/resources/audits/"
         }
       ],
-      "notes": "At ethereum block 26107706, asset() was 0x6c3ea9036406852006290770bedfcaba0e23a0e8, share decimals 18 and underlying decimals 6; totalAssets raw 25441975740170, totalSupply raw 25389250769299894397889057, idle raw 2531230145, sole adapter market assets raw 25439444510025, with an exact zero accounting difference. The only funded market lent PYUSD against mWIN at 77% LLTV. The adapter position had zero borrowing and zero posted collateral. convertToAssets(1e18) returned 1002075 raw PYUSD; a positive-balance holder 0xe16d7bd105b86e6eb1a40d525f57d2ae4bdb1a58 simulated redeem(1e18,holder,holder) returning 1.00207500000000005 PYUSD. No transaction was broadcast. Claim, conservation and immediate position custody earn limited quality from exact source plus pinned complete accounting. No independent whole-vault signed reconciliation, legal priority or funded default backstop was established; missing legal allocation and recovery stay unavailable. Raw minted totalSupply excludes any not-yet-accrued fee shares as documented by VaultV2. Parent attestations and security audits are not vault financial assurance.",
+      "notes": "At ethereum block 26107706, asset() was 0x6c3ea9036406852006290770bedfcaba0e23a0e8, share decimals 18 and underlying decimals 6; totalAssets raw 25441975740170, totalSupply raw 25389250769299894397889057, idle raw 2531230145, sole adapter market assets raw 25439444510025, with an exact zero accounting difference. The only funded market lent PYUSD against mWIN at 77% LLTV. The adapter position had zero borrowing and zero posted collateral. convertToAssets(1e18) returned 1002075 raw PYUSD; a positive-balance holder 0xe16d7bd105b86e6eb1a40d525f57d2ae4bdb1a58 simulated redeem(1e18,holder,holder) returning 1.00207500000000005 PYUSD. No transaction was broadcast. Claim, conservation and immediate position custody earn limited quality from exact source plus pinned complete accounting. No independent whole-vault signed reconciliation, legal priority or funded default backstop was established; missing legal allocation and recovery stay unavailable. Raw minted totalSupply excludes any not-yet-accrued fee shares as documented by VaultV2. Parent attestations and security audits are not vault financial assurance. Sentora June 2026 terms describe non-custodial vault configurations and BVI governing law. Those issuer terms and the dated VaultV2/MarketV1AdapterV2 code-security audit inventory do not establish collateral insolvency priority, funded recovery or financial assurance. receiveAssetsGate is withdrawal access; sendAssetsGate is deposit access. The Morpho audit index dates ChainSecurity and Blackthorn Vault V2 security reviews to 2025-09-15; those reports cover code security, not financial reserve-to-liability assurance.",
       "metrics": {},
       "components": {
         "holderClaim": {
@@ -20954,9 +21058,13 @@
         {
           "label": "Morpho security audits, not financial assurance",
           "url": "https://docs.morpho.org/get-started/resources/audits/"
+        },
+        {
+          "label": "Sentora Terms of Use, June 2026, sections 4.3 and 21.4",
+          "url": "https://sentora.com/legal/terms-of-use"
         }
       ],
-      "notes": "Exact native Ethereum VaultV2 0xc21b08c16458202593d4d9b26b9984ee67b38bbd, block 26107702. Holder claim is the ordinary operational ERC-4626 redemption, independently simulated for one share. Limited conservation: totalAssets=212994583350440 reconciles to idle=4160246119942 plus adapter realAssets=208834337230498; share supply=105190307028681249352539181. This is accounting identity, not independent asset-liability assurance. Limited position custody identifies the exact immutable vault and current lender adapter, without asserting ultimate collateral custody or legal segregation. Allocation and recovery remain sourced unavailable. PYUSD loans against Hastra PRIME collateral (0x19ebb35279a16207ec4ba82799cc64715065f7f6), described by Sentora as Figure home-equity credit exposure. The exact PRIME tracked identity and enforceable recovery priority are unresolved. Owner and curator each retain single-EOA 1-of-1 Safe control; fee/redemption-gate actions have zero delay. Parent reserve reports and security audits do not upgrade this receipt.",
+      "notes": "Exact native Ethereum VaultV2 0xc21b08c16458202593d4d9b26b9984ee67b38bbd, block 26107702. Holder claim is the ordinary operational ERC-4626 redemption, independently simulated for one share. Limited conservation: totalAssets=212994583350440 reconciles to idle=4160246119942 plus adapter realAssets=208834337230498; share supply=105190307028681249352539181. This is accounting identity, not independent asset-liability assurance. Limited position custody identifies the exact immutable vault and current lender adapter, without asserting ultimate collateral custody or legal segregation. Allocation and recovery remain sourced unavailable. PYUSD loans against the Hastra PRIME token (0x19ebb35279a16207ec4ba82799cc64715065f7f6; on-chain name Hastra PRIME), described by Sentora as Figure home-equity credit exposure. Enforceable collateral recovery priority remains unresolved. Owner and curator each retain single-EOA 1-of-1 Safe control; fee/redemption-gate actions have zero delay. Parent reserve reports and security audits do not upgrade this receipt. Sentora June 2026 terms describe non-custodial vault configurations and BVI governing law. Those issuer terms and the dated VaultV2/MarketV1AdapterV2 code-security audit inventory do not establish collateral insolvency priority, funded recovery or financial assurance. receiveAssetsGate is withdrawal access; sendAssetsGate is deposit access. The Morpho audit index dates ChainSecurity and Blackthorn Vault V2 security reviews to 2025-09-15; those reports cover code security, not financial reserve-to-liability assurance.",
       "metrics": {},
       "components": {
         "holderClaim": {
@@ -21008,9 +21116,17 @@
         {
           "label": "Paxos USD stablecoin terms, section 3.5",
           "url": "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions"
+        },
+        {
+          "label": "Sentora Terms of Use, June 2026, sections 4.3 and 21.4",
+          "url": "https://sentora.com/legal/terms-of-use"
+        },
+        {
+          "label": "Morpho Vault V2 and MarketV1AdapterV2 security audits; no financial assurance",
+          "url": "https://docs.morpho.org/get-started/resources/audits/"
         }
       ],
-      "notes": "At ethereum block 26107706, asset() was 0x6c3ea9036406852006290770bedfcaba0e23a0e8, share decimals 18 and underlying decimals 6; totalAssets raw 67088184134955, totalSupply raw 66674549755026886856443154, idle raw 2115765190647, sole adapter market assets raw 64972418944308, with an exact zero accounting difference. The only funded market lent PYUSD against Huma PST at 86% LLTV. The adapter position had zero borrowing and zero posted collateral. convertToAssets(1e18) returned 1006202 raw PYUSD; a positive-balance holder 0x46c9d333ba42f794ab5162995957f7732fc29d7d simulated redeem(1e18,holder,holder) returning 1.00620200000000004 PYUSD. No transaction was broadcast. Claim, conservation and immediate position custody earn limited quality from exact source plus pinned complete accounting. No independent whole-vault signed reconciliation, legal priority or funded default backstop was established; missing legal allocation and recovery stay unavailable. Raw minted totalSupply excludes any not-yet-accrued fee shares as documented by VaultV2. Parent attestations and security audits are not vault financial assurance.",
+      "notes": "At ethereum block 26107706, asset() was 0x6c3ea9036406852006290770bedfcaba0e23a0e8, share decimals 18 and underlying decimals 6; totalAssets raw 67088184134955, totalSupply raw 66674549755026886856443154, idle raw 2115765190647, sole adapter market assets raw 64972418944308, with an exact zero accounting difference. The only funded market lent PYUSD against Huma PST at 86% LLTV. The adapter position had zero borrowing and zero posted collateral. convertToAssets(1e18) returned 1006202 raw PYUSD; a positive-balance holder 0x46c9d333ba42f794ab5162995957f7732fc29d7d simulated redeem(1e18,holder,holder) returning 1.00620200000000004 PYUSD. No transaction was broadcast. Claim, conservation and immediate position custody earn limited quality from exact source plus pinned complete accounting. No independent whole-vault signed reconciliation, legal priority or funded default backstop was established; missing legal allocation and recovery stay unavailable. Raw minted totalSupply excludes any not-yet-accrued fee shares as documented by VaultV2. Parent attestations and security audits are not vault financial assurance. Sentora June 2026 terms describe non-custodial vault configurations and BVI governing law. Those issuer terms and the dated VaultV2/MarketV1AdapterV2 code-security audit inventory do not establish collateral insolvency priority, funded recovery or financial assurance. receiveAssetsGate is withdrawal access; sendAssetsGate is deposit access. The Morpho audit index dates ChainSecurity and Blackthorn Vault V2 security reviews to 2025-09-15; those reports cover code security, not financial reserve-to-liability assurance.",
       "metrics": {},
       "components": {
         "holderClaim": {
@@ -21066,9 +21182,13 @@
         {
           "label": "Morpho security audits, not financial assurance",
           "url": "https://docs.morpho.org/get-started/resources/audits/"
+        },
+        {
+          "label": "Sentora Terms of Use, June 2026, sections 4.3 and 21.4",
+          "url": "https://sentora.com/legal/terms-of-use"
         }
       ],
-      "notes": "Exact native Ethereum VaultV2 0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf, block 26107702. Holder claim is the ordinary operational ERC-4626 redemption, independently simulated for one share. Limited conservation: totalAssets=451873322385272395066245035 reconciles to idle=49667525480716097356989360 plus adapter realAssets=402205796904556297709255675; share supply=445977774185772181139741691. This is accounting identity, not independent asset-liability assurance. Limited position custody identifies the exact immutable vault and current lender adapter, without asserting ultimate collateral custody or legal segregation. Allocation and recovery remain sourced unavailable. RLUSD lending positions against cbBTC, FXRP, syrupUSDC, wstETH, USDe, weETH, kBTC, WBTC. Allocations change under curator controls; borrower collateral is distinct from the underlying deposited token. Owner and curator each retain single-EOA 1-of-1 Safe control; fee/redemption-gate actions have zero delay. Parent reserve reports and security audits do not upgrade this receipt.",
+      "notes": "Exact native Ethereum VaultV2 0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf, block 26107702. Holder claim is the ordinary operational ERC-4626 redemption, independently simulated for one share. Limited conservation: totalAssets=451873322385272395066245035 reconciles to idle=49667525480716097356989360 plus adapter realAssets=402205796904556297709255675; share supply=445977774185772181139741691. This is accounting identity, not independent asset-liability assurance. Limited position custody identifies the exact immutable vault and current lender adapter, without asserting ultimate collateral custody or legal segregation. Allocation and recovery remain sourced unavailable. RLUSD lending positions against cbBTC, FXRP, syrupUSDC, wstETH, USDe, weETH, kBTC and WBTC, plus 1-wei lender dust positions against PT-sUSDE-13AUG2026 and WETH. Allocations change under curator controls; borrower collateral is distinct from the underlying deposited token. Owner and curator each retain single-EOA 1-of-1 Safe control; fee/redemption-gate actions have zero delay. Parent reserve reports and security audits do not upgrade this receipt. Sentora June 2026 terms describe non-custodial vault configurations and BVI governing law. Those issuer terms and the dated VaultV2/MarketV1AdapterV2 code-security audit inventory do not establish collateral insolvency priority, funded recovery or financial assurance. receiveAssetsGate is withdrawal access; sendAssetsGate is deposit access. The Morpho audit index dates ChainSecurity and Blackthorn Vault V2 security reviews to 2025-09-15; those reports cover code security, not financial reserve-to-liability assurance.",
       "metrics": {},
       "components": {
         "holderClaim": {
@@ -21114,7 +21234,7 @@
           "url": "https://raw.githubusercontent.com/FraxFinance/staked-frax-erc4626/9e42ee6b39fb1c08c6dc3607707b8b190f2de58c/src/contracts/LinearRewardsErc4626.sol"
         }
       ],
-      "notes": "At Ethereum block 26107702, totalAssets=65181542.209163 FRAX, totalSupply=56157359.111527 sFRAX, convertToAssets(1e18)=1.160694577530154037 FRAX and FRAX balance=65471813.491358. Balance exceeds accounted assets by 290271.282195 FRAX; the pinned LinearRewards implementation classifies undistributed balance as rewards rather than external deployed assets. HolderClaim limited: exact operational pro-rata claim is corroborated by the deployed code and parent identity; enforceable legal priority is unproved. LiabilityConservation limited: complete dated underlying/adapter inventory, matching share denominator and reproducible conversion are externally anchored; this is operational accounting, not independent financial assurance. PositionCustody limited: current immediate vault and adapters are identified but legal segregation and continuity protections are unproved. EncumbranceAndAllocation limited: current complete positions and allocation/withdrawal rights are specified by deployed code; no independent reconciliation or external insolvency priority is asserted. DefaultRecovery unavailable: happy-path FRAX conversion and current excess balance do not establish stressed recovery.",
+      "notes": "At Ethereum block 26107702, totalAssets=65181542.209163 FRAX, totalSupply=56157359.111527 sFRAX, convertToAssets(1e18)=1.160694577530153970 FRAX and FRAX balance=65471813.491358. Balance exceeds accounted assets by 290271.282195 FRAX; the pinned LinearRewards implementation classifies undistributed balance as rewards rather than external deployed assets. HolderClaim limited: exact operational pro-rata claim is corroborated by the deployed code and parent identity; enforceable legal priority is unproved. LiabilityConservation limited: complete dated direct FRAX balance and linear-reward inventory, matching share denominator and reproducible conversion are externally anchored; this is operational accounting, not independent financial assurance. PositionCustody limited: current immediate vault and adapters are identified but legal segregation and continuity protections are unproved. EncumbranceAndAllocation limited: current complete positions and allocation/withdrawal rights are specified by deployed code; no independent reconciliation or external insolvency priority is asserted. DefaultRecovery unavailable: happy-path FRAX conversion and current excess balance do not establish stressed recovery.",
       "metrics": {},
       "components": {
         "holderClaim": {
@@ -21160,18 +21280,20 @@
         {
           "label": "Morpho Vault V2 holder exit and adapter mechanics",
           "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+        },
+        {
+          "label": "Exact MorphoMarketV1AdapterV2 and complete market accounting source",
+          "url": "https://base.blockscout.com/api/v2/smart-contracts/0x4a70dc70cef79f51cc7f79c08f863b2841311165"
         }
       ],
-      "notes": "Reverified 2026-10-02T22:43:54.379866+00:00, base block 52095842, exact vault 0xbeeff2490feffa212fac2f6553682c219e6a8845. RPC totalSupply 448220693243737493222108073 raw 18-decimal shares; totalAssets 453698737143084 raw 6-decimal USDC; convertToAssets(1e18) 1012221 raw. Sole adapter 0x4a70dc70cef79f51cc7f79c08f863b2841311165 and current Morpho API corroborate immediate custody. HolderClaim and positionCustody limited: exact primary operational code/terms plus independent chain anchors; no statutory fiat claim, legal segregation or independent financial assurance inferred. Conservation, encumbrance/allocation and default recovery stay sourced unavailable for the explicit scope gaps. Current performance fee 25% and management fee 0%; zero fee-selector delay is not a favorable control assurance. Parent financial reports and code-security audits are not exact-vault financial reports.",
+      "notes": "Reverified 2026-10-02T22:43:54.379866+00:00, base block 52095842, exact vault 0xbeeff2490feffa212fac2f6553682c219e6a8845. RPC totalSupply 448220693243737493222108073 raw 18-decimal shares; totalAssets 453698737143084 raw 6-decimal USDC; convertToAssets(1e18) 1012221 raw. Sole adapter 0x4a70dc70cef79f51cc7f79c08f863b2841311165 and current Morpho API corroborate immediate custody. HolderClaim and positionCustody limited: exact primary operational code/terms plus independent chain anchors; no statutory fiat claim, legal segregation or independent financial assurance inferred. LiabilityConservation is limited operational evidence from the complete same-block eight-market census and fee-adjusted denominator; encumbrance/allocation and default recovery remain sourced unavailable for enforceable-priority/funded-recovery gaps. Current performance fee 25% and management fee 0%; zero fee-selector delay is not a favorable control assurance. Parent financial reports and code-security audits are not exact-vault financial reports. At Base block 52095842, adapter marketIdsLength()=8; complete market census [{\"marketId\":\"0x29ae7ac08be3a58e11151fed74701fb8e6ffd8e76b1870cf17ad70f332752d0b\",\"expectedSupplyAssetsRaw\":\"32275015952884\"},{\"marketId\":\"0x54cf9be57fdfa6457a660991907434ff9d295c465a603a50126ff647d50b7354\",\"expectedSupplyAssetsRaw\":\"389345558126782\"},{\"marketId\":\"0x76629002c9fdb20fb2092053a4f22c5c65e04a81887218b9546f2a2d82b4c0a8\",\"expectedSupplyAssetsRaw\":\"97873691545\"},{\"marketId\":\"0xd4a903dc6d949519060c7707f9604fdc9772c046e05c2e3a8fce0bd7196e4109\",\"expectedSupplyAssetsRaw\":\"23400921893901\"},{\"marketId\":\"0xe458a501c1103ca3b256f2bcb45d223263fb34b6349d82675494ce3a94ce1327\",\"expectedSupplyAssetsRaw\":\"760160877384\"},{\"marketId\":\"0x9103c3b4e834476c9a62ea009ba2c884ee42e94e6e314a26f04d312434191836\",\"expectedSupplyAssetsRaw\":\"7368149242883\"},{\"marketId\":\"0x0ca10126f6c94cbd9cf0a48cc9516ae5e3dec5aa68303e6d988ee37c5149bf0d\",\"expectedSupplyAssetsRaw\":\"451057354796\"},{\"marketId\":\"0x2319fa118eb9f7353609796b6f70018a5384d42169503515da52bfa0b194c6ac\",\"expectedSupplyAssetsRaw\":\"2909\"}]. Their sum=453698737143084 USDC raw equals realAssets() and totalAssets(), with idle USDC=0. totalSupply=448220693243737493222108073 raw shares; accrueInterestView performanceFeeShares=274872574661233963, managementFeeShares=0, virtualShares=1000000000000. Integer previewRedeem=(453698737143084+1)*1e18/(448220693243737493222108073+274872574661233963+1000000000000), rounded down, reproduces convertToAssets(1e18)=1012221. This is operational same-block conservation, not independent financial assurance.",
       "metrics": {},
       "components": {
         "holderClaim": {
           "quality": "limited"
         },
         "liabilityConservation": {
-          "applicability": "unavailable",
-          "rationale": "Current RPC totalAssets/totalSupply and API adapter inventory are readable, but this review does not reproduce a same-time complete market-position valuation joined to the exact liability denominator. Independent signed exact-vault reconciliation and residual accounting scope are not disclosed in the reviewed material.",
-          "sourceUrl": "https://api.morpho.org/graphql"
+          "quality": "limited"
         },
         "positionCustody": {
           "quality": "limited"
@@ -21214,7 +21336,7 @@
           "url": "https://api.morpho.org/graphql"
         }
       ],
-      "notes": "At Ethereum block 26107702 (2026-10-02T22:43:47+00:00), totalAssets=37213041.517174 USDS; totalSupply=37094821.851264 shares; convertToAssets(1e18)=1.003186958718484956 USDS; idle balance=29771240.288112 USDS. Complete current adapter census contains 1 adapter, 3 markets: 0x9a8dab6de1059e6dc66c34b358764b70effb289e514e237f3161ffb09eaaf24f (PT-sUSDS-26NOV2026, LLTV 0.915): 2535545.351573 USDS lender claim; 0xb374528d44b6ab6e0cecc87e0481f45d892f38baec90c1d318851969ec14ea5f (wstETH, LLTV 0.86): 1323435.223921 USDS lender claim; 0x2f4ea313fb7df23a82c19d95e8b90acc8179bd053e0d9ef745cdf28d6a49499c (cbBTC, LLTV 0.86): 3582820.653569 USDS lender claim. The API snapshot is separately observed and is not the pinned-block denominator. HolderClaim limited: exact operational pro-rata claim is corroborated by the deployed code and parent identity; enforceable legal priority is unproved. LiabilityConservation limited: complete dated underlying/adapter inventory, matching share denominator and reproducible conversion are externally anchored; this is operational accounting, not independent financial assurance. PositionCustody limited: current immediate vault and adapters are identified but legal segregation and continuity protections are unproved. EncumbranceAndAllocation limited: current complete positions and allocation/withdrawal rights are specified by deployed code; no independent reconciliation or external insolvency priority is asserted. DefaultRecovery limited: VaultV2 realAssets/accrueInterest recognizes strategy losses into pro-rata share accounting and forceDeallocate supplies a code-defined in-kind exit process. No funded backstop, legal priority or guaranteed cash realization is claimed.",
+      "notes": "At Ethereum block 26107702 (2026-10-02T22:43:47+00:00), totalAssets=37213041.517174 USDS; totalSupply=37094821.851264 shares; convertToAssets(1e18)=1.003186958718484905 USDS; idle balance=29771240.288112 USDS. Complete current adapter census contains 1 adapter, 3 markets: 0x9a8dab6de1059e6dc66c34b358764b70effb289e514e237f3161ffb09eaaf24f (PT-sUSDS-26NOV2026, LLTV 0.915): 2535545.351573 USDS lender claim; 0xb374528d44b6ab6e0cecc87e0481f45d892f38baec90c1d318851969ec14ea5f (wstETH, LLTV 0.86): 1323435.223921 USDS lender claim; 0x2f4ea313fb7df23a82c19d95e8b90acc8179bd053e0d9ef745cdf28d6a49499c (cbBTC, LLTV 0.86): 3582820.653569 USDS lender claim. The API snapshot is separately observed and is not the pinned-block denominator. HolderClaim limited: exact operational pro-rata claim is corroborated by the deployed code and parent identity; enforceable legal priority is unproved. LiabilityConservation limited: complete dated underlying/adapter inventory, matching share denominator and reproducible conversion are externally anchored; this is operational accounting, not independent financial assurance. PositionCustody limited: current immediate vault and adapters are identified but legal segregation and continuity protections are unproved. EncumbranceAndAllocation limited: current complete positions and allocation/withdrawal rights are specified by deployed code; no independent reconciliation or external insolvency priority is asserted. DefaultRecovery limited: VaultV2 realAssets/accrueInterest recognizes strategy losses into pro-rata share accounting and forceDeallocate supplies a code-defined in-kind exit process. No funded backstop, legal priority or guaranteed cash realization is claimed.",
       "metrics": {},
       "components": {
         "holderClaim": {
@@ -21260,7 +21382,7 @@
           "url": "https://api.morpho.org/graphql"
         }
       ],
-      "notes": "At Ethereum block 26107702 (2026-10-02T22:43:47+00:00), totalAssets=60340093.055146 USDT; totalSupply=59334016.791589 shares; convertToAssets(1e18)=1.016955999999999971 USDT; idle balance=0.000000 USDT. Complete current adapter census contains 1 adapter, 2 markets: 0x3274643db77a064abd3bc851de77556a4ad2e2f502f4f0c80845fa8f909ecf0b (sUSDS, LLTV 0.965): 0.020553 USDT lender claim; 0x26b178d49895f80ca3c39b2745efc4cd9adcddfcc73dae93e531e86977ec4d96 (sUSDS, LLTV 0.965): 60340093.034593 USDT lender claim. The API snapshot is separately observed and is not the pinned-block denominator. HolderClaim limited: exact operational pro-rata claim is corroborated by the deployed code and parent identity; enforceable legal priority is unproved. LiabilityConservation limited: complete dated underlying/adapter inventory, matching share denominator and reproducible conversion are externally anchored; this is operational accounting, not independent financial assurance. PositionCustody limited: current immediate vault and adapters are identified but legal segregation and continuity protections are unproved. EncumbranceAndAllocation limited: current complete positions and allocation/withdrawal rights are specified by deployed code; no independent reconciliation or external insolvency priority is asserted. DefaultRecovery limited: VaultV2 realAssets/accrueInterest recognizes strategy losses into pro-rata share accounting and forceDeallocate supplies a code-defined in-kind exit process. No funded backstop, legal priority or guaranteed cash realization is claimed.",
+      "notes": "At Ethereum block 26107702 (2026-10-02T22:43:47+00:00), totalAssets=60340093.055146 USDT; totalSupply=59334016.791589 shares; convertToAssets(1e18)=1.016956 USDT; idle balance=0.000000 USDT. Complete current adapter census contains 1 adapter, 2 markets: 0x3274643db77a064abd3bc851de77556a4ad2e2f502f4f0c80845fa8f909ecf0b (sUSDS, LLTV 0.965): 0.020553 USDT lender claim; 0x26b178d49895f80ca3c39b2745efc4cd9adcddfcc73dae93e531e86977ec4d96 (sUSDS, LLTV 0.965): 60340093.034593 USDT lender claim. The API snapshot is separately observed and is not the pinned-block denominator. HolderClaim limited: exact operational pro-rata claim is corroborated by the deployed code and parent identity; enforceable legal priority is unproved. LiabilityConservation limited: complete dated underlying/adapter inventory, matching share denominator and reproducible conversion are externally anchored; this is operational accounting, not independent financial assurance. PositionCustody limited: current immediate vault and adapters are identified but legal segregation and continuity protections are unproved. EncumbranceAndAllocation limited: current complete positions and allocation/withdrawal rights are specified by deployed code; no independent reconciliation or external insolvency priority is asserted. DefaultRecovery limited: VaultV2 realAssets/accrueInterest recognizes strategy losses into pro-rata share accounting and forceDeallocate supplies a code-defined in-kind exit process. No funded backstop, legal priority or guaranteed cash realization is claimed.",
       "metrics": {},
       "components": {
         "holderClaim": {
@@ -21396,9 +21518,21 @@
         {
           "label": "Resupply multisig and admin permissions",
           "url": "https://docs.resupply.finance/faq/multisig-and-admin-permissions.md"
+        },
+        {
+          "label": "Resupply dated audit index (scope is parent protocol, not savings vault)",
+          "url": "https://docs.resupply.finance/faq/audits.md"
+        },
+        {
+          "label": "yAudit RSUP/core review, 11 January 2025",
+          "url": "https://github.com/resupplyfi/resupply/blob/main/audits/rsup_yaudit_report.pdf"
+        },
+        {
+          "label": "ChainSecurity Resupply protocol review, 28 February 2025",
+          "url": "https://github.com/resupplyfi/resupply/blob/main/audits/ChainSecurity_Resupply_Resupply_audit.pdf"
         }
       ],
-      "notes": "At Ethereum block 26107704 (2026-10-02T22:44:11Z), asset() is 0x57ab1e0003f623289cd798b1824be09a793e4bec; decimals() is 18, totalSupply() is 27269498.885603778064 shares, totalAssets() is 28218576.035466793925 REUSD, and balanceOf(vault) is 28224015.272168319672 REUSD. convertToAssets(1e18) and previewRedeem(1e18) return 1.034803615345 REUSD. SavingsReUSD totalAssets is stored assets plus streamed rewards; physical REUSD surplus is undistributed revenue, not an external strategy position. Both shares and underlying use 18 decimals. Verified OFT code escrows/releases existing shares, and the complete PeerSet event query is empty through this pin. Core voter differs from the published manifest; that discrepancy and operator-census gap are retained. HolderClaim, liabilityConservation and positionCustody are limited because official exact-token disclosures are corroborated by reproducible itemized onchain balances and liability/accounting reads, without independent component-scoped reconciliation or enforceable legal protections. Ordinary ERC-4626 exits do not prove stressed default recovery. Parent reserve and mechanism risks remain inherited; no upstream metrics or position metrics are fabricated.",
+      "notes": "At Ethereum block 26107704 (2026-10-02T22:44:11Z), asset() is 0x57ab1e0003f623289cd798b1824be09a793e4bec; decimals() is 18, totalSupply() is 27269498.885603778064 shares, totalAssets() is 28218576.035466793925 REUSD, and balanceOf(vault) is 28224015.272168319672 REUSD. convertToAssets(1e18) and previewRedeem(1e18) return 1.034803615345 REUSD. SavingsReUSD totalAssets is stored assets plus streamed rewards; physical REUSD surplus is undistributed revenue, not an external strategy position. Both shares and underlying use 18 decimals. Verified OFT code escrows/releases existing shares, and the complete PeerSet event query is empty through this pin. Core voter differs from the published manifest; that discrepancy and previous operator-census gap (closed by full Core event/getter replay on 2026-10-03) are retained. HolderClaim, liabilityConservation and positionCustody are limited because official exact-token disclosures are corroborated by reproducible itemized onchain balances and liability/accounting reads, without independent component-scoped reconciliation or enforceable legal protections. Ordinary ERC-4626 exits do not prove stressed default recovery. Parent reserve and mechanism risks remain inherited; no upstream metrics or position metrics are fabricated. Refinement: yAudit 11 Jan 2025 and ChainSecurity 28 Feb 2025 cover parent/core protocol and predate this savings vault; no savings-specific audit or financial-assurance upgrade follows.",
       "metrics": {},
       "components": {
         "holderClaim": {
@@ -21425,7 +21559,7 @@
     {
       "assetId": "stbt-matrixdock",
       "archetype": "tbill",
-      "reviewedAt": "2026-10-02",
+      "reviewedAt": "2026-10-03",
       "sources": [
         {
           "label": "STBT January 2025 terms",
@@ -21454,9 +21588,13 @@
         {
           "label": "Exact-contract price",
           "url": "https://coins.llama.fi/prices/current/ethereum:0x530824da86689c9c17cdc2871ff29b058345b44a"
+        },
+        {
+          "label": "Verified selector-delay issuance controller",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x22276a1bd16bc3052b362c2e0f65aace04ed6f99"
         }
       ],
-      "notes": "Evidence observed 2026-10-02; Ethereum pin 26107703. Product terms authenticate native STBT as unsecured Prometheus debt, corroborated by the live native contract and issuer itemized reserve dashboard; fundClaimAndSeniority remains limited without direct holder title. Daily rebasing and issuer NAV disclosures corroborated by on-chain supply/reserve budget support limited NAV, not independent assurance. Treasury mandate <=6 months, displayed <3-month holdings and dated T+0/T+2 rules support limited duration/liquidity. No current signed financial reconciliation was retrieved; Matrixdock gold/silver audits are not STBT assurance. Adjudication observed 90 daily contract-price samples spanning USD 0.952701921 to 1.046536520; no clean-peg, artifact or event-duration inference is made. STBT $1-target rebase semantics mirror BUIDL: navToken omitted, ordinary peg bounds retained.",
+      "notes": "Evidence observed 2026-10-02; Ethereum pin 26107703. Product terms authenticate native STBT as unsecured Prometheus debt, corroborated by the live native contract and issuer itemized reserve dashboard; fundClaimAndSeniority remains limited without direct holder title. Daily rebasing and issuer NAV disclosures corroborated by on-chain supply/reserve budget support limited NAV, not independent assurance. Treasury mandate <=6 months, displayed <3-month holdings and dated T+0/T+2 rules support limited duration/liquidity. No current signed financial reconciliation was retrieved; Matrixdock gold/silver audits are not STBT assurance. Adjudication observed 90 daily contract-price samples spanning USD 0.952701921 to 1.046536520; no clean-peg, artifact or event-duration inference is made. STBT $1-target rebase semantics mirror BUIDL: navToken omitted, ordinary peg bounds retained. Refine04 block 26110197: getLatestReserve is raw23791487760000000000000000 with no timestamp. Verified selector-delay controller imposes14400seconds on issuance/rebase and86400seconds on implementation replacement, notwithstanding getMinDelay=0. This is known technical control, not dated financial reconciliation or freshness of the reserve dashboard.",
       "metrics": {},
       "components": {
         "fundClaimAndSeniority": {
@@ -21665,9 +21803,21 @@
         {
           "label": "Pinned Ethereum block 26107706",
           "url": "https://etherscan.io/block/26107706"
+        },
+        {
+          "label": "Tori audit scopes, dates and continuous bug bounty",
+          "url": "https://docs.tori.finance/security/audits.md"
+        },
+        {
+          "label": "Sherlock protocol report, audit 15–22 January 2026",
+          "url": "https://github.com/sherlock-protocol/sherlock-reports/blob/main/audits/2026.02.10%20-%20Final%20-%20Tori%20Finance%20Collaborative%20Audit%20Report%201770734349.pdf"
+        },
+        {
+          "label": "Nethermind full-protocol review, 24–26 March 2026",
+          "url": "https://github.com/NethermindEth/PublicAuditReports/blob/main/NM_0854_Tori.pdf"
         }
       ],
-      "notes": "At Ethereum block 26107706 the vault has 43340867.809940872216080268 shares, 44539660.969214475465229229 accounted trUSD and 44539892.811952570703324467 actual trUSD. The 231.842738095238095238 difference exactly equals getUnvestedAmount. The 7972983.316441093630475194-share Ethereum CCIP escrow equals 7972979.911468970704952888 Monad plus 3.404972122925522306 Pharos shares at near-synchronous pinned blocks 110016528 and 19213616. These are Limited operational claim/conservation/custody anchors, not financial assurance or extra native supply. Burned cooldown shares become separate silo claims. Current source permits restricted-holder redistribution/seizure and rewarder loss reporting up to 500 bps once per 86400 seconds; these are adverse controls, not funded loss protection. Seven-day happy-path unstaking and parent discretionary repurchase do not establish enforceable insolvency priority or independent recovery resources.",
+      "notes": "At Ethereum block 26107706 the vault has 43340867.809940872216080268 shares, 44539660.969214475465229229 accounted trUSD and 44539892.811952570703324467 actual trUSD. The 231.842738095238095238 difference exactly equals getUnvestedAmount. The 7972983.316441093630475194-share Ethereum CCIP escrow equals 7972979.911468970704952888 Monad plus 3.404972122925522306 Pharos shares at near-synchronous pinned blocks 110016528 and 19213616. These are Limited operational claim/conservation/custody anchors, not financial assurance or extra native supply. Burned cooldown shares become separate silo claims. Current source permits restricted-holder redistribution/seizure and rewarder loss reporting up to 500 bps once per 86400 seconds; these are adverse controls, not funded loss protection. Seven-day happy-path unstaking and parent discretionary repurchase do not establish enforceable insolvency priority or independent recovery resources. Refinement: Sherlock 15–22 Jan 2026 and Nethermind 24–26 Mar 2026 scope includes staking/access/oracle integration; both predate the 30 Sep 2026 implementation activation, so exact current audit-build correspondence is not claimed. $1M critical bounty is code security, not financial reconciliation.",
       "metrics": {},
       "components": {
         "holderClaim": {
@@ -21694,7 +21844,7 @@
     {
       "assetId": "susdc-spark-v1",
       "archetype": "protocol-position",
-      "reviewedAt": "2026-10-02",
+      "reviewedAt": "2026-10-03",
       "sources": [
         {
           "label": "Spark Savings documentation distinguishes Legacy V1 from V2",
@@ -21715,9 +21865,13 @@
         {
           "label": "Credential-free RPC endpoint; pinned read in review notes",
           "url": "https://eth-mainnet.g.alchemy.com/v2/"
+        },
+        {
+          "label": "Fresh exact sUSDS custody / supply equality pin",
+          "url": "https://etherscan.io/block/26110183"
         }
       ],
-      "notes": "Observed 2026-10-02T22:43:52.688407+00:00 at ethereum block 26107702 (hash 0x292b4ed6cca79fa476bc17c9ef12dd938dbbf67f4a61564c2fe8f897e07390e6). Native totalSupply 161342339855641335323322489 (18 decimals), asset 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 (6 decimals), totalAssets 179331003650749, convertToAssets(10^18) 1111493. One-share redeem from actual holder 0xa09fe38187abecc2768b98b80ea30afbc2fbd774 returned 1111493 asset base units via eth_call at that same block; no transaction broadcast. sUSDS balance 161342339855641335323322489 equals native totalSupply exactly. The implementation values this held receipt by sUSDS.convertToAssets; it ignores 1004961 idle USDC base units and any USDS dust. The 100% row is the modeled ERC-4626 claim-accounting denominator, not a Sky system-wide collateral allocation. Limited holderClaim rests on primary deployed withdrawal code plus exact on-chain redemption. Limited liabilityConservation rests on dated operational position inventory, matching native share liabilities and reproducible ERC-4626 valuation, not financial assurance. Limited positionCustody identifies the exact immediate receipt/adapter/market contracts, without legal priority or ultimate custodian guarantees. Remaining applicable components are sourced unavailable. Metrics are empty as required for this native family.",
+      "notes": "Observed 2026-10-02T22:43:52.688407+00:00 at ethereum block 26107702 (hash 0x292b4ed6cca79fa476bc17c9ef12dd938dbbf67f4a61564c2fe8f897e07390e6). Native totalSupply 161342339855641335323322489 (18 decimals), asset 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 (6 decimals), totalAssets 179331003650749, convertToAssets(10^18) 1111493. One-share redeem from actual holder 0xa09fe38187abecc2768b98b80ea30afbc2fbd774 returned 1111493 asset base units via eth_call at that same block; no transaction broadcast. sUSDS balance 161342339855641335323322489 equals native totalSupply exactly. The implementation values this held receipt by sUSDS.convertToAssets; it ignores 1004961 idle USDC base units and any USDS dust. The 100% row is the modeled ERC-4626 claim-accounting denominator, not a Sky system-wide collateral allocation. Limited holderClaim rests on primary deployed withdrawal code plus exact on-chain redemption. Limited liabilityConservation rests on dated operational position inventory, matching native share liabilities and reproducible ERC-4626 valuation, not financial assurance. Limited positionCustody identifies the exact immediate receipt/adapter/market contracts, without legal priority or ultimate custodian guarantees. Remaining applicable components are sourced unavailable. Metrics are empty as required for this native family. Refinement 2026-10-03: issuer FAQ explicitly includes V1 in USDS backing and documents itemized Prime junior risk capital, Surplus Buffer and SKY recapitalization/loss socialization. At Ethereum block 26110183 held sUSDS.balanceOf(vault)=160860200603493672624544254 equals sUSDC totalSupply. Verified exit(shares,receiver,owner) burns local shares and transfers matching sUSDS without using USDC pocket liquidity. This supports only limited technical/upstream recovery design, not independently verified loss-resources adequacy or enforceable exact-holder insolvency priority. Planned srUSDS senior capital is not counted; V2 billion-dollar PSM marketing and exclusive vault liquidity are not inherited. Encumbrance/allocation remains unavailable.",
       "metrics": {},
       "components": {
         "holderClaim": {
@@ -21735,16 +21889,14 @@
           "sourceUrl": "https://docs.spark.finance/products/spark-savings"
         },
         "defaultRecovery": {
-          "applicability": "unavailable",
-          "rationale": "Ordinary withdrawals and one-share redemption are evidenced; independently verified funded default resources, enforceable stressed priority and whole-supply recovery are not disclosed for this exact receipt.",
-          "sourceUrl": "https://docs.spark.finance/products/spark-savings"
+          "quality": "limited"
         }
       }
     },
     {
       "assetId": "susdf-falcon",
       "archetype": "protocol-position",
-      "reviewedAt": "2026-10-02",
+      "reviewedAt": "2026-10-03",
       "sources": [
         {
           "label": "Falcon Finance savings documentation",
@@ -21769,9 +21921,21 @@
         {
           "label": "HT Digital 2026-09-28 USDf collateral letter, parent scope only",
           "url": "https://falcon.finance/api/media/file/Falcon%20Letter%20-%2028%20September%202026.pdf?prefix=media"
+        },
+        {
+          "label": "Current verified StakedUSDf implementation / native restriction gates",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0d132bee412e6619a4863aeedad97541bfda3f34"
+        },
+        {
+          "label": "Issuer exact-contract and informational-feed roster",
+          "url": "https://docs.falcon.finance/resources/smart-contracts.md"
+        },
+        {
+          "label": "Independent current implementation and role-history pin",
+          "url": "https://etherscan.io/block/26110183"
         }
       ],
-      "notes": "At Ethereum block 26107704 (2026-10-02T22:44:11Z), asset() is 0xfa2b947eec368f42195f24f36d2af29f7c24cec2; decimals() is 18, totalSupply() is 56876949.092047125101 shares, totalAssets() is 64669136.889719046652 USDf, and balanceOf(vault) is 64670233.223213575780 USDf. convertToAssets(1e18) and previewRedeem(1e18) return 1.137000804756 USDf. StakedUSDf totalAssets equals the vault USDf balance less unvested rewards. The withdrawal silo has zero USDf at the pin and cooldownDuration() is zero. The proxy implementation and 4-of-6 ProxyAdmin owner were re-pinned; holder restrictions and upgrade exposure remain material. The retrieved HT Digital letter is dated 2026-09-28 and covers parent USDf gross collateral, explicitly excluding security-interest testing. It is not current independent wrapper or net hedge/margin assurance. HolderClaim, liabilityConservation and positionCustody are limited because official exact-token disclosures are corroborated by reproducible itemized onchain balances and liability/accounting reads, without independent component-scoped reconciliation or enforceable legal protections. Ordinary ERC-4626 exits do not prove stressed default recovery. Parent reserve and mechanism risks remain inherited; no upstream metrics or position metrics are fabricated.",
+      "notes": "At Ethereum block 26107704 (2026-10-02T22:44:11Z), asset() is 0xfa2b947eec368f42195f24f36d2af29f7c24cec2; decimals() is 18, totalSupply() is 56876949.092047125101 shares, totalAssets() is 64669136.889719046652 USDf, and balanceOf(vault) is 64670233.223213575780 USDf. convertToAssets(1e18) and previewRedeem(1e18) return 1.137000804756 USDf. StakedUSDf totalAssets equals the vault USDf balance less unvested rewards. The withdrawal silo has zero USDf at the pin and cooldownDuration() is zero. The proxy implementation and 4-of-6 ProxyAdmin owner were re-pinned; holder restrictions and upgrade exposure remain material. The retrieved HT Digital letter is dated 2026-09-28 and covers parent USDf gross collateral, explicitly excluding security-interest testing. It is not current independent wrapper or net hedge/margin assurance. HolderClaim, liabilityConservation and positionCustody are limited because official exact-token disclosures are corroborated by reproducible itemized onchain balances and liability/accounting reads, without independent component-scoped reconciliation or enforceable legal protections. Ordinary ERC-4626 exits do not prove stressed default recovery. Parent reserve and mechanism risks remain inherited; no upstream metrics or position metrics are fabricated. Refinement 2026-10-03: verified StakedUSDf native _deposit/_withdraw gates are blacklist restrictions, not an address whitelist; the packet whitelist label is rejected for native USDf exits (issuer fiat exits are separate). Current implementation 0x0d132bee412e6619a4863aeedad97541bfda3f34 and sole admin/rewarder grant history are independently checked at Ethereum block 26110183. Informational published sUSDf/USDf and USDf/USD feeds exist, but native conversion uses ERC-4626 balance/supply arithmetic. Exact-holder default recovery and reserve financial-priority evidence remain unavailable; no assurance promotion.",
       "metrics": {},
       "components": {
         "holderClaim": {
@@ -21880,7 +22044,7 @@
     {
       "assetId": "sxsrlusd-sentora",
       "archetype": "protocol-position",
-      "reviewedAt": "2026-10-02",
+      "reviewedAt": "2026-10-03",
       "sources": [
         {
           "label": "Exact Sentora vault",
@@ -21905,9 +22069,13 @@
         {
           "label": "Ripple RLUSD terms, section 11.5",
           "url": "https://ripple.com/legal/stablecoin/"
+        },
+        {
+          "label": "Morpho VaultV2 security audit roster, code security only",
+          "url": "https://docs.morpho.org/get-started/resources/audits/"
         }
       ],
-      "notes": "At ethereum block 26107706, asset() was 0x8292bb45bf1ee4d140127049757c2e0ff06317ed, share decimals 18 and underlying decimals 18; totalAssets raw 250001199783394711178689552, totalSupply raw 249994918735505772044961482, idle raw 225673066061791758611500399, sole adapter market assets raw 24328133721602952567189153, with an exact zero accounting difference. The only funded market lent RLUSD against WBTC at 86% LLTV. The adapter position had zero borrowing and zero posted collateral. convertToAssets(1e18) returned 1000024825319142697 raw RLUSD; a positive-balance holder 0x1601843c5e9bc251a3272907010afa41fa18347e simulated redeem(1e18,holder,holder) returning 1.00002482531914261 RLUSD. No transaction was broadcast. Claim, conservation and immediate position custody earn limited quality from exact source plus pinned complete accounting. No independent whole-vault signed reconciliation, legal priority or funded default backstop was established; missing legal allocation and recovery stay unavailable. Raw minted totalSupply excludes any not-yet-accrued fee shares as documented by VaultV2. Parent attestations and security audits are not vault financial assurance.",
+      "notes": "At ethereum block 26107706, asset() was 0x8292bb45bf1ee4d140127049757c2e0ff06317ed, share decimals 18 and underlying decimals 18; totalAssets raw 250001199783394711178689552, totalSupply raw 249994918735505772044961482, idle raw 225673066061791758611500399, sole adapter market assets raw 24328133721602952567189153, with an exact zero accounting difference. The only funded market lent RLUSD against WBTC at 86% LLTV. The adapter position had zero borrowing and zero posted collateral. convertToAssets(1e18) returned 1000024825319142697 raw RLUSD; a positive-balance holder 0x1601843c5e9bc251a3272907010afa41fa18347e simulated redeem(1e18,holder,holder) returning 1.00002482531914261 RLUSD. No transaction was broadcast. Claim, conservation and immediate position custody earn limited quality from exact source plus pinned complete accounting. No independent whole-vault signed reconciliation, legal priority or funded default backstop was established; missing legal allocation and recovery stay unavailable. Raw minted totalSupply excludes any not-yet-accrued fee shares as documented by VaultV2. Parent attestations and security audits are not vault financial assurance. Refinement 2026-10-03 adds Morpho VaultV2 audit roster (ChainSecurity 2025-09-15, Blackthorn 2025-09-15, Spearbit 2025-11-08 as dated by issuer). These are code-security context only and do not provide financial reconciliation, current borrower-book quality or holder insolvency rights; component grades are unchanged.",
       "metrics": {},
       "components": {
         "holderClaim": {
@@ -21934,7 +22102,7 @@
     {
       "assetId": "syrupusdg-maple",
       "archetype": "rwa-credit-fund",
-      "reviewedAt": "2026-10-02",
+      "reviewedAt": "2026-10-03",
       "sources": [
         {
           "label": "Maple syrupUSDG legal claim and risk disclosures",
@@ -21967,9 +22135,13 @@
         {
           "label": "The Network Firm dashboard explicitly covers sibling syrupUSDC and syrupUSDT only",
           "url": "https://dashboard.ledgerlens.io/c/maple"
+        },
+        {
+          "label": "Maple security architecture / audits overview, not financial assurance",
+          "url": "https://docs.maple.finance/technical-resources/security"
         }
       ],
-      "notes": "Sol addition batch 2026-10-03 (orchestrated). Exact syrupUSDG pooled-credit issuer, pro-rata portfolio claim, mutable pool accounting, default/impairment recovery and FIFO withdrawal rail were reverified. Ethereum block 26107703 binds current USDG asset, 6-decimal share identity, totalSupply 188334976.708895 and totalAssets 190837163.740225. These are protocol accounting observations, not borrower-quality, custody or independent financial reconciliation. The Network Firm September 29 dashboard is scoped to syrupUSDC/syrupUSDT and supplies no syrupUSDG assurance. No sibling maturity, valuation cadence, collateral ratios or custodian allocations are reused.",
+      "notes": "Sol addition batch 2026-10-03 (orchestrated). Exact syrupUSDG pooled-credit issuer, pro-rata portfolio claim, mutable pool accounting, default/impairment recovery and FIFO withdrawal rail were reverified. Ethereum block 26107703 binds current USDG asset, 6-decimal share identity, totalSupply 188334976.708895 and totalAssets 190837163.740225. These are protocol accounting observations, not borrower-quality, custody or independent financial reconciliation. The Network Firm September 29 dashboard is scoped to syrupUSDC/syrupUSDT and supplies no syrupUSDG assurance. No sibling maturity, valuation cadence, collateral ratios or custodian allocations are reused. Refinement 2026-10-03: exact-product risk section 4.1 names Spearbit, Three Sigma and 0xMacro as protocol code auditors; section 5.1 restricts manager upgrades to authorized actors and DAO-approved versions, with possible sensitive-function delays. Code audits do not reconcile syrupUSDG credit liabilities and no assurance component is promoted.",
       "metrics": {
         "weightedAverageMaturityDays": null,
         "valuationCadenceDays": null
@@ -22019,7 +22191,7 @@
     {
       "assetId": "umint-ubs",
       "archetype": "tbill",
-      "reviewedAt": "2026-10-02",
+      "reviewedAt": "2026-10-03",
       "sources": [
         {
           "label": "DigiFT native uMINT disclosure within STEP2 application (March 20, 2025)",
@@ -22046,7 +22218,7 @@
           "url": "https://coins.llama.fi/prices/current/coingecko:ubs_umint_eth"
         }
       ],
-      "notes": "Native Ethereum fund-share identity re-opened 2026-10-02, anchored by UBS November4,2025 production subscription/redemption release and CMTAT_EVCC at Ethereum block 26107703. The token metadata says Class AT-acc(USD) Shares; stock115147.298. Native VCC participating-share mechanism earns only limited operational claim evidence, not legal seniority. Historical2025 distributor terms and named State Street/EY do not disclose current portfolio, private native PPM, independent NAV reconciliation or stress liquidity. DR wrapper terms and units are excluded. Runtime DL mirror at 2026-10-02T22:47:28.025833+00:00 returned107.345; stale JuneCGcap is rejected. No latestReport is authored.",
+      "notes": "Native Ethereum fund-share identity re-opened 2026-10-02, anchored by UBS November4,2025 production subscription/redemption release and CMTAT_EVCC at Ethereum block 26107703. The token metadata says Class AT-acc(USD) Shares; stock115147.298. Native VCC participating-share mechanism earns only limited operational claim evidence, not legal seniority. Historical2025 distributor terms and named State Street/EY do not disclose current portfolio, private native PPM, independent NAV reconciliation or stress liquidity. DR wrapper terms and units are excluded. Runtime DL mirror at 2026-10-02T22:47:28.025833+00:00 returned107.345; stale JuneCGcap is rejected. No latestReport is authored. Refine04 October3: standalone CMTAT_EVCC creation November1,2024 is verified,with no proxy code-replacement surface. The March20,2025 distributor post attributes Moody AAAmmf/FitchAAA-mf to a private underlying fund;these historical claims are not a current independently verified rating,exact underlying strategy identity,or portfolio/reconciliation evidence. Existing unavailable NAV/duration/recovery dispositions remain.",
       "metrics": {},
       "components": {
         "fundClaimAndSeniority": {
@@ -22173,6 +22345,22 @@
         {
           "label": "USDFC oracle failure design",
           "url": "https://docs.secured.finance/usdfc-stablecoin/core-mechanics/price-oracle"
+        },
+        {
+          "label": "Hexens core protocol audit (2024-12-30 to 2025-01-20)",
+          "url": "https://github.com/Secured-Finance/stablecoin-contracts/blob/develop/audits/2025-01-Hexens.pdf"
+        },
+        {
+          "label": "Decurity core protocol audit (2025-02-19 to 2025-03-05)",
+          "url": "https://github.com/Secured-Finance/stablecoin-contracts/blob/develop/audits/2025-03-Decurity.pdf"
+        },
+        {
+          "label": "Hexens EIP-2612/EIP-3009 token audit (2025-08-20 to 2025-08-28)",
+          "url": "https://github.com/Secured-Finance/stablecoin-contracts/blob/develop/audits/2025-08-Hexens.pdf"
+        },
+        {
+          "label": "Published contract upgrade history",
+          "url": "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts/contract-upgrade-history.md"
         }
       ],
       "notes": "Pinned Filecoin block 6422489 at 2026-10-02T22:44:30.000Z: ActivePool+DefaultPool FIL 482223.58559679135, debt 190455.53880860878, simulated PriceFeed.fetchPrice() 1.01878601USD/FIL; collateralization 2.5795135482604405. Stability Pool deposits 4016.2709990931035USDFC / entire system debt 190455.53880860878 = 0.021087709101120476. This denominator is all debt, not stressed liquidatable Troves or throughput. Earlier adjudication block6420750 had ~301% refreshed-price coverage; current collateral is lower and latest measurement replaces it. Docs support110%MCR,150%Recovery Mode and permissionless offset then redistribution. Limited liquidation/backstop quality reflects source/runtime equivalence gap and operator-dependent oracle fallback; no emergency shutdown or insolvency-loss guarantee was established. Single FIL market makes cross-branch isolation structurally inapplicable.",
@@ -22330,6 +22518,14 @@
         {
           "label": "M0 liquidity routes and issuer onboarding",
           "url": "https://docs.m0.org/build/accessing-liquidity"
+        },
+        {
+          "label": "M0 published EVM-extension security audits (framework scope only)",
+          "url": "https://docs.m0.org/resources/audits"
+        },
+        {
+          "label": "Guardian JMI/MYieldToOne/Freezable/SwapFacility code review, 2025-12-12; not a reserve audit or exact deployment certification",
+          "url": "https://github.com/m0-foundation/evm-m-extensions/blob/main/audits/JMI/M0_EVM-M_Extensions_Review_report.pdf"
         }
       ],
       "metrics": {},
@@ -22355,7 +22551,7 @@
         "rationale": "At rise block 23375290, symbol/decimals and EIP-1967 implementation/admin were re-read. Local backing balance was 4,186,507.178834 M against 4,166,902.771484 USDR supply. This is a local parent-token conservation ratio, not upstream Treasury collateralization or reserve surplus credit.",
         "sourceUrl": "https://rpc.risechain.com"
       },
-      "notes": "At rise block 23375290, symbol/decimals and EIP-1967 implementation/admin were re-read. Local backing balance was 4,186,507.178834 M against 4,166,902.771484 USDR supply. M-extension wrapping and unwrapping conserve the deposited M claim. The current SwapFacility restricts direct M output to approved swappers; an unprivileged sample canSwapViaPath(child,wM) returned true while child-to-M returned false. This is technical conversion eligibility, not a sent transaction or a cash redemption right. Claim/seniority is limited to the independently identity-bound technical parent-token claim; no enforceable fund-holder priority is asserted. NAV valuation is limited because parent-token accounting and the conversion method are reproducible on-chain but not independently administered or financially assured. Duration/liquidity is limited to observed parent inventory and the code-defined same-chain conversion route; upstream whole-book duration, solver inventory and fiat settlement are not measured. Loss recovery remains sourced unavailable, not measured-adverse by missing evidence. Current local proxy/role controls and direct-M approved-swapper restrictions remain separate from inherited parent risk."
+      "notes": "At rise block 23375290, symbol/decimals and EIP-1967 implementation/admin were re-read. Local backing balance was 4,186,507.178834 M against 4,166,902.771484 USDR supply. M-extension wrapping and unwrapping conserve the deposited M claim. The current SwapFacility restricts direct M output to approved swappers; an unprivileged sample canSwapViaPath(child,wM) returned true while child-to-M returned false. This is technical conversion eligibility, not a sent transaction or a cash redemption right. Claim/seniority is limited to the independently identity-bound technical parent-token claim; no enforceable fund-holder priority is asserted. NAV valuation is limited because parent-token accounting and the conversion method are reproducible on-chain but not independently administered or financially assured. Duration/liquidity is limited to observed parent inventory and the code-defined same-chain conversion route; upstream whole-book duration, solver inventory and fiat settlement are not measured. Loss recovery remains sourced unavailable, not measured-adverse by missing evidence. Current local proxy/role controls and direct-M approved-swapper restrictions remain separate from inherited parent risk. Supplemental source review 2026-10-03: framework security-audit references corroborate code semantics only; no exact-deployment audit, independent financial assurance or legal holder priority is inferred."
     },
     {
       "assetId": "usdsm-stable-mint",
@@ -22459,7 +22655,7 @@
     {
       "assetId": "usdu-universal",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-10-02",
+      "reviewedAt": "2026-10-03",
       "sources": [
         {
           "label": "Crowe August 2026 reserve examination",
@@ -22474,13 +22670,11 @@
           "url": "https://www.adgm.com/public-registers/fsra/firms/financial-firms/universal-digital-intl-limited-250089"
         }
       ],
-      "notes": "Crowe August2026 examination covers exact Ethereum token liabilities and bank-confirmed dollar deposits at August24 and31, with September18 signature. Assurance is left to proofOfReserves.latestReport, not overridden unavailable. Whitepaper identifies separate issuer reserve and distributor client-money accounts but does not establish enforceable whole-holder insolvency priority. The ADGM register corroborates professional-client issuance permissions, not a bankruptcy-remote reserve trust. Issuer account separation alone does not satisfy the legal-claim evidence standard. Crowe confirms reserve bank balances and the bank-deposit-only reserve class, but no independent custodian-replacement or continuity plan is available; custodyContinuity remains unavailable.",
+      "notes": "Reviewed 2026-10-03: January 30, 2026 whitepaper page 18, Treatment of USDU Holders in the Event of Insolvency, explicitly invokes FSRA COBS 19A.2.1 and 19A.11: reserve investments must be liquidated on insolvency/pooling and money distributed first to all outstanding holders pro rata at par, then other creditors. The primary ADGM register independently anchors issuer Universal Digital Intl Limited, active FSP250089, Issuing a Fiat-Referenced Token and no retail dealing. Crowe August examination provides itemized exact-token reserve-to-liability figures and bank confirmations. Combined issuer terms and verifiable regulator/examination anchors support limited claimAndSegregation, not a independently verified bankruptcy-remote trust or legal opinion. Custody replacement/recovery continuity remains sourced unavailable. Assurance is left to proofOfReserves.latestReport with its point-in-time dates and exclusions, not independently regraded by this legal claim.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
-          "applicability": "unavailable",
-          "rationale": "Issuer whitepaper separates reserve and client-money accounts; an enforceable holder claim, insolvency priority and independently verified legal segregation instrument are not established.",
-          "sourceUrl": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf"
+          "quality": "limited"
         },
         "custodyContinuity": {
           "applicability": "unavailable",
@@ -22570,7 +22764,7 @@
     {
       "assetId": "xgld-unitas",
       "archetype": "protocol-position",
-      "reviewedAt": "2026-10-02",
+      "reviewedAt": "2026-10-03",
       "sources": [
         {
           "label": "XGLD primary mechanism",
@@ -22583,6 +22777,10 @@
         {
           "label": "BNB XGLD deployment",
           "url": "https://bscscan.com/address/0xe60106a5cab7e7c64830919d36ab20caaf50ac91"
+        },
+        {
+          "label": "XGLD Accountable gross venue/supply observations",
+          "url": "https://api-accountable.unitas.so/v1/dashboard?type=xgld"
         }
       ],
       "metrics": {},
@@ -22597,7 +22795,7 @@
         },
         "positionCustody": {
           "applicability": "unavailable",
-          "rationale": "Docs identify Fund Vault/OES execution but omit complete current immediate custodians, vault addresses, provider allocation and continuity safeguards.",
+          "rationale": "Accountable discloses Binance-dominant gross execution venue plus BNB assets. Immediate legal custodian, complete Fund Vault addresses, net provider allocation and continuity safeguards remain unpublished; OES venue mirroring is not direct Binance custody.",
           "sourceUrl": "https://docs.unitas.so/overview/xgld.md"
         },
         "encumbranceAndAllocation": {
@@ -22611,12 +22809,12 @@
           "sourceUrl": "https://docs.unitas.so/overview/xgld.md"
         }
       },
-      "notes": "Exact-token operational claim is pinned by issuer deployments and current XGLD/6-decimal reads, supporting limited holderClaim only. Gross dashboard collateral ratios cannot establish zero borrowed debt or full net NAV. Parent XAUt reserve assurance cannot replace the position-specific conservation, custody, encumbrance and recovery facts."
+      "notes": "Exact-token operational claim is pinned by issuer deployments and current XGLD/6-decimal reads, supporting limited holderClaim only. Gross dashboard collateral ratios cannot establish zero borrowed debt or full net NAV. Parent XAUt reserve assurance cannot replace the position-specific conservation, custody, encumbrance and recovery facts. Accountable venue detail closes gross location disclosure only. About 95.1% of observed gross venue reserves are attributed to Binance; borrowed USDT is not netted and program Copper/Ceffu claims are USDu-context, not exact XGLD custody verification."
     },
     {
       "assetId": "xgz-goldzip",
       "archetype": "commodity-claim",
-      "reviewedAt": "2026-10-02",
+      "reviewedAt": "2026-10-03",
       "sources": [
         {
           "label": "GoldZip complete unit and physical-redemption terms",
@@ -22662,7 +22860,7 @@
           "quality": "limited"
         }
       },
-      "notes": "Limited operational one-gram gold claim and 1,000-XGZ delivery route are supported by the primary litepaper and issuer structured 39,000-token/39kg disclosure, externally anchored by current Ethereum supply and exact deployment. No strong allocated title, segregation, custodian continuity or independent assurance is inferred. AML and Hong Kong resident exclusions apply. The 0.01% sender transfer fee is not a disclosed physical redemption fee; delivery logistics, charges and throughput remain unavailable."
+      "notes": "Limited operational one-gram gold claim and 1,000-XGZ delivery route are supported by the primary litepaper and issuer structured 39,000-token/39kg disclosure, externally anchored by current Ethereum supply and exact deployment. No strong allocated title, segregation, custodian continuity or independent assurance is inferred. AML and Hong Kong resident exclusions apply. The 0.01% sender transfer fee is not a disclosed physical redemption fee; delivery logistics, charges and throughput remain unavailable. Issuer-claimed HKGX group affiliation creates related-party concentration in depository recognition and issuance, not an independent assurance anchor."
     },
     {
       "assetId": "zarsc-supercoin",
@@ -22758,9 +22956,37 @@
         {
           "label": "Published NFT queue procedure",
           "url": "https://saturncredit.gitbook.io/saturn-docs/solution/susdat-overview/staking-and-unstaking-process.md"
+        },
+        {
+          "label": "Saturn hosted audit index (including V2 draft security review)",
+          "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/transparency-and-audits.md"
+        },
+        {
+          "label": "Certora - Audit #2.pdf (downloaded and scope checked)",
+          "url": "https://3131394583-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FaoxN2WzhSM74tsJUct0C%2Fuploads%2FKNrnqGyTv1VPM2rbBIp0%2FCertora%20-%20Audit%20%232.pdf?alt=media&token=1249bd80-ea7f-4447-a7f3-ba2b5e21fd9d"
+        },
+        {
+          "label": "Certora - Formal Verification.pdf (downloaded and scope checked)",
+          "url": "https://3131394583-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FaoxN2WzhSM74tsJUct0C%2Fuploads%2FM1TsQVTqUghMuZSes4wu%2FCertora%20-%20Formal%20Verification.pdf?alt=media&token=923bdc63-98c3-49d7-92cc-f9e7c760d575"
+        },
+        {
+          "label": "Three Sigma - Audit #1.pdf (downloaded and scope checked)",
+          "url": "https://3131394583-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FaoxN2WzhSM74tsJUct0C%2Fuploads%2FPKsYColQZJy0e2AlTX7K%2FThree%20Sigma%20-%20Audit%20%231.pdf?alt=media&token=27dc0f4e-6882-4188-b46b-6f0b65f8ef9c"
+        },
+        {
+          "label": "Certora - Audit #3.pdf (downloaded and scope checked)",
+          "url": "https://3131394583-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FaoxN2WzhSM74tsJUct0C%2Fuploads%2FjP4Ej0FXvClHiADGwKLd%2FCertora%20-%20Audit%20%233.pdf?alt=media&token=a2fe3d9b-b81f-4e23-b40d-0b3aa3178646"
+        },
+        {
+          "label": "Certora - Saturn-sUSDat v2.pdf (downloaded and scope checked)",
+          "url": "https://3131394583-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FaoxN2WzhSM74tsJUct0C%2Fuploads%2FmH2VnHMcqzc5l5eygoPP%2FCertora%20-%20Saturn-sUSDat%20v2.pdf?alt=media&token=937d6687-03b4-4c9b-a525-5f180793a6a2"
+        },
+        {
+          "label": "Exact STRCon legal-documentation route (jurisdiction/eligibility gate observed)",
+          "url": "https://app.ondo.finance/legal-documentation?asset=strcon"
         }
       ],
-      "notes": "The direct USDat receipt is listing-eligible as a strategy-vault variant, but cannot inherit a cash-only backing description. The local rwa-credit-fund override explicitly models the 93.7977725084671% STRCon note slice and 6.202227491532897% USDat buffer. At Ethereum block 26108096, totalAssets 66,668,382.380280 exactly matched the actual USDat balance 4,134,924.740150 plus STRCon recognized value 62,533,457.640130, with the old mirror at zero. The vault held 594,182.9100530432 exact STRCon tokens. This is operational NAV reconciliation only, not independent securities/liabilities assurance. Credit quality, preferred-share/note/Saturn seniority and recovery stay sourced unavailable. No unavailable field is recast as structurally absent, no missing STRCon score is invented, and no family-level Ondo assurance is treated as a Saturn report. An honest NR outcome is acceptable under this assignment: the native mint review deliberately remains unresolved until role/bypass and financial-claim closure; no numeric or rated-with-ceilings outcome has been replayed. Public terms and exact Curve get_dy prove an ordinary tradable USDat-denominated NAV claim, distinguishing this instrument from a private nominal-par note.",
+      "notes": "The direct USDat receipt is listing-eligible as a strategy-vault variant, but cannot inherit a cash-only backing description. The local rwa-credit-fund override explicitly models the 93.7977725084671% STRCon note slice and 6.202227491532897% USDat buffer. At Ethereum block 26108096, totalAssets 66,668,382.380280 exactly matched the actual USDat balance 4,134,924.740150 plus STRCon recognized value 62,533,457.640130, with the old mirror at zero. The vault held 594,182.9100530432 exact STRCon tokens. This is operational NAV reconciliation only, not independent securities/liabilities assurance. Credit quality, preferred-share/note/Saturn seniority and recovery stay sourced unavailable. No unavailable field is recast as structurally absent, no missing STRCon score is invented, and no family-level Ondo assurance is treated as a Saturn report. An honest NR outcome is acceptable under this assignment: the native mint review deliberately remains unresolved until role/bypass and financial-claim closure; no numeric or rated-with-ceilings outcome has been replayed. Public terms and exact Curve get_dy prove an ordinary tradable USDat-denominated NAV claim, distinguishing this instrument from a private nominal-par note. Refinement: all five hosted code-security reports were downloaded. Certora V2 review (27 Jul–5 Aug 2026, commits 4157ff8/f9bb4f9) covers StakedUSDat, WithdrawalQueueERC721 and STRCon module/oracle/execution policy but is marked DRAFT. Earlier Three Sigma/Certora reports cover older structures; none proves current financial assurance, note-holder priority or post-migration legal recovery. Public access checked 2026-10-03: selecting STRCon on Ondo Legal Documentation opens a legal attestation requiring permitted jurisdiction, non-US/non-BVI status and issuer eligibility. No eligibility/location assertion was accepted or bypassed, so exact Final Terms, KID and enforceable note-holder recovery/seniority remain unverified rather than inferred from generic SPV language.",
       "metrics": {
         "weightedAverageMaturityDays": null,
         "valuationCadenceDays": null
@@ -22845,9 +23071,17 @@
         {
           "label": "Exact adapter partial source with matching deployed bytecode",
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3b9e060a2b05588126fda01b95e9485687fc91d7"
+        },
+        {
+          "label": "Morpho published VaultV2 security audit index (framework scope only)",
+          "url": "https://docs.morpho.org/get-started/resources/audits/"
+        },
+        {
+          "label": "Morpho VaultV2 dated framework audit artifacts; no exact-vault financial assurance",
+          "url": "https://github.com/morpho-org/vault-v2/tree/main/audits"
         }
       ],
-      "notes": "At ethereum block 26107703 (0x18e5f37), captured 2026-10-02T22:44:09.665742+00:00, totalSupply=44986944522361979656587662 atomic shares; accrueInterestView returned assets=45890229418936, pending performance shares=0, pending management shares=0. Idle USDC=0; complete adapter inventory sums to 45890229418936 USDC atomic units. Asset decimals=6, share decimals=18. convertToAssets(1e18)=1020078 USDC atomic units. Complete inventory: [{\"address\": \"0x3b9e060a2b05588126fda01b95e9485687fc91d7\", \"morpho\": \"0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb\", \"parentVault\": \"0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd\", \"realAssets\": 45890229418936, \"forcePenaltyWad\": 0, \"markets\": [{\"marketId\": \"0x64d65c9a2d91c36d56fbc42d69e979335320169b3df63bf92789e2c8883fcc64\", \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf\", \"oracle\": \"0xa6d6950c9f177f1de7f7757fb33539e3ec60182a\", \"irm\": \"0x870ac11d48b15db9a138cf899d20f13f79ba00bc\", \"lltv\": 860000000000000000, \"supplyShares\": 19762081268963204983, \"borrowShares\": 0, \"postedCollateral\": 0, \"expectedSupplyAssets\": 21627932886274}, {\"marketId\": \"0x3a85e619751152991742810df6ec69ce473daef99e28a64ab2340d7b7ccfee49\", \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0x2260fac5e5542a773aa44fbcfedf7c193bc2c599\", \"oracle\": \"0xdddd770badd886df3864029e4b377b5f6a2b6b83\", \"irm\": \"0x870ac11d48b15db9a138cf899d20f13f79ba00bc\", \"lltv\": 860000000000000000, \"supplyShares\": 5981586395425038726, \"borrowShares\": 0, \"postedCollateral\": 0, \"expectedSupplyAssets\": 6850804425213}, {\"marketId\": \"0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64\", \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0xecfafdc7741323a945a163ed068b5a3c43483957\", \"oracle\": \"0x217d6ddcdb95112c51657f6270e8c079cfdb51f0\", \"irm\": \"0x870ac11d48b15db9a138cf899d20f13f79ba00bc\", \"lltv\": 915000000000000000, \"supplyShares\": 9342754589439619372, \"borrowShares\": 0, \"postedCollateral\": 0, \"expectedSupplyAssets\": 9555695862104}, {\"marketId\": \"0x1d09bf979a167075f5608686642fd3cdb458de742a234175892fa03f23693f6b\", \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0xf65460b84c13eeb911303336ab0f9d63cc79839f\", \"oracle\": \"0x6969a0296d9fec77e794651469e362105d2307e8\", \"irm\": \"0x870ac11d48b15db9a138cf899d20f13f79ba00bc\", \"lltv\": 860000000000000000, \"supplyShares\": 4218924295173359585, \"borrowShares\": 0, \"postedCollateral\": 0, \"expectedSupplyAssets\": 4317057684931}, {\"marketId\": \"0xc7e49dd404825da16988955201ed22ecf8a7b25f0337db8a698d70d7a9f343ea\", \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0xba96292ee7673e3b546cc90db6d97111cd9a314f\", \"oracle\": \"0x034f45accb8949e55366bec6d4023d1c1e372dad\", \"irm\": \"0x870ac11d48b15db9a138cf899d20f13f79ba00bc\", \"lltv\": 915000000000000000, \"supplyShares\": 1220775663970720047, \"borrowShares\": 0, \"postedCollateral\": 0, \"expectedSupplyAssets\": 1227738367037}, {\"marketId\": \"0xb323495f7e4148be5643a4ea4a8221eef163e4bccfdedc2a6f4696baacbc86cc\", \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0\", \"oracle\": \"0x48f7e36eb6b826b2df4b2e630b62cd25e89e40e2\", \"irm\": \"0x870ac11d48b15db9a138cf899d20f13f79ba00bc\", \"lltv\": 860000000000000000, \"supplyShares\": 2016889611363463152, \"borrowShares\": 0, \"postedCollateral\": 0, \"expectedSupplyAssets\": 2311000193377}]}]. HOLDER CLAIM limited: operational ERC4626 pro-rata claim supported by primary code, identity-bound API and pinned RPC. CONSERVATION limited: complete assets sum, minted liabilities and pending fee shares reconciled at the same block with reproducible asset units; no independent financial assurance. CUSTODY limited: exact current vault/adapter/Morpho position locations pinned. ALLOCATION limited: complete lender inventory and caps/role documentation, with zero adapter borrower shares/posted collateral in the enumerated markets; no favorable legal segregation or borrower-collateral custody inference. DEFAULT RECOVERY unavailable: losses reduce share NAV, but legal creditor priority and stressed collateral recovery remain unproven. At ethereum block 26107703 (0x18e5f37), captured 2026-10-02T22:44:09.665742+00:00, owner=0xb83a77677c51aaf6c45b0b64199eae6938559e5e; curator=0x4687e45bb5518a995913a24bb2816fe2031d74d8. Owner getThreshold=4, owners=6, enabled modules empty and guard zero; signer independence unestablished. addAdapter delay=604800 sec; increaseAbsoluteCap delay=604800 sec; fee-setting delays=0. Fee rates performance=0.0, management=0.0.",
+      "notes": "At ethereum block 26107703 (0x18e5f37), captured 2026-10-02T22:44:09.665742+00:00, totalSupply=44986944522361979656587662 atomic shares; accrueInterestView returned assets=45890229418936, pending performance shares=0, pending management shares=0. Idle USDC=0; complete adapter inventory sums to 45890229418936 USDC atomic units. Asset decimals=6, share decimals=18. convertToAssets(1e18)=1020078 USDC atomic units. Complete inventory: [{\"address\": \"0x3b9e060a2b05588126fda01b95e9485687fc91d7\", \"morpho\": \"0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb\", \"parentVault\": \"0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd\", \"realAssets\": 45890229418936, \"forcePenaltyWad\": 0, \"markets\": [{\"marketId\": \"0x64d65c9a2d91c36d56fbc42d69e979335320169b3df63bf92789e2c8883fcc64\", \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf\", \"oracle\": \"0xa6d6950c9f177f1de7f7757fb33539e3ec60182a\", \"irm\": \"0x870ac11d48b15db9a138cf899d20f13f79ba00bc\", \"lltv\": 860000000000000000, \"supplyShares\": 19762081268963204983, \"borrowShares\": 0, \"postedCollateral\": 0, \"expectedSupplyAssets\": 21627932886274}, {\"marketId\": \"0x3a85e619751152991742810df6ec69ce473daef99e28a64ab2340d7b7ccfee49\", \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0x2260fac5e5542a773aa44fbcfedf7c193bc2c599\", \"oracle\": \"0xdddd770badd886df3864029e4b377b5f6a2b6b83\", \"irm\": \"0x870ac11d48b15db9a138cf899d20f13f79ba00bc\", \"lltv\": 860000000000000000, \"supplyShares\": 5981586395425038726, \"borrowShares\": 0, \"postedCollateral\": 0, \"expectedSupplyAssets\": 6850804425213}, {\"marketId\": \"0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64\", \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0xecfafdc7741323a945a163ed068b5a3c43483957\", \"oracle\": \"0x217d6ddcdb95112c51657f6270e8c079cfdb51f0\", \"irm\": \"0x870ac11d48b15db9a138cf899d20f13f79ba00bc\", \"lltv\": 915000000000000000, \"supplyShares\": 9342754589439619372, \"borrowShares\": 0, \"postedCollateral\": 0, \"expectedSupplyAssets\": 9555695862104}, {\"marketId\": \"0x1d09bf979a167075f5608686642fd3cdb458de742a234175892fa03f23693f6b\", \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0xf65460b84c13eeb911303336ab0f9d63cc79839f\", \"oracle\": \"0x6969a0296d9fec77e794651469e362105d2307e8\", \"irm\": \"0x870ac11d48b15db9a138cf899d20f13f79ba00bc\", \"lltv\": 860000000000000000, \"supplyShares\": 4218924295173359585, \"borrowShares\": 0, \"postedCollateral\": 0, \"expectedSupplyAssets\": 4317057684931}, {\"marketId\": \"0xc7e49dd404825da16988955201ed22ecf8a7b25f0337db8a698d70d7a9f343ea\", \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0xba96292ee7673e3b546cc90db6d97111cd9a314f\", \"oracle\": \"0x034f45accb8949e55366bec6d4023d1c1e372dad\", \"irm\": \"0x870ac11d48b15db9a138cf899d20f13f79ba00bc\", \"lltv\": 915000000000000000, \"supplyShares\": 1220775663970720047, \"borrowShares\": 0, \"postedCollateral\": 0, \"expectedSupplyAssets\": 1227738367037}, {\"marketId\": \"0xb323495f7e4148be5643a4ea4a8221eef163e4bccfdedc2a6f4696baacbc86cc\", \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0\", \"oracle\": \"0x48f7e36eb6b826b2df4b2e630b62cd25e89e40e2\", \"irm\": \"0x870ac11d48b15db9a138cf899d20f13f79ba00bc\", \"lltv\": 860000000000000000, \"supplyShares\": 2016889611363463152, \"borrowShares\": 0, \"postedCollateral\": 0, \"expectedSupplyAssets\": 2311000193377}]}]. HOLDER CLAIM limited: operational ERC4626 pro-rata claim supported by primary code, identity-bound API and pinned RPC. CONSERVATION limited: complete assets sum, minted liabilities and pending fee shares reconciled at the same block with reproducible asset units; no independent financial assurance. CUSTODY limited: exact current vault/adapter/Morpho position locations pinned. ALLOCATION limited: complete lender inventory and caps/role documentation, with zero adapter borrower shares/posted collateral in the enumerated markets; no favorable legal segregation or borrower-collateral custody inference. DEFAULT RECOVERY unavailable: losses reduce share NAV, but legal creditor priority and stressed collateral recovery remain unproven. At ethereum block 26107703 (0x18e5f37), captured 2026-10-02T22:44:09.665742+00:00, owner=0xb83a77677c51aaf6c45b0b64199eae6938559e5e; curator=0x4687e45bb5518a995913a24bb2816fe2031d74d8. Owner getThreshold=4, owners=6, enabled modules empty and guard zero; signer independence unestablished. addAdapter delay=604800 sec; increaseAbsoluteCap delay=604800 sec; fee-setting delays=0. Fee rates performance=0.0, management=0.0. Supplemental source review 2026-10-03: framework security-audit references corroborate code semantics only; no exact-deployment audit, independent financial assurance or legal holder priority is inferred. Collateral-label correction: v-wmtUSDC is 0xf65460b84c13eeb911303336ab0f9d63cc79839f (market 0x1d09bf97...), while 0xba96292e... is PT-USDat-14JAN2027 (market 0xc7e49dd...). The numeric pinned market inventory above is unchanged.",
       "metrics": {},
       "components": {
         "holderClaim": {
@@ -22901,9 +23135,17 @@
         {
           "label": "Exact adapter partial source with matching deployed bytecode",
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa2f362079dbc570a6df5bd04ad91002d17c0db9a"
+        },
+        {
+          "label": "ChainSecurity VaultV2 code assessment, 2025-09-16 (reference code, not financial assurance)",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/main/audits/2025-09-15-chainsecurity.pdf"
+        },
+        {
+          "label": "Cantina Managed adapter review, report 2025-12-15; final code tag 2025-12-04 (not exact-vault assurance)",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/main/audits/2025-12-04-market-v1-adapter-v2-spearbit.pdf"
         }
       ],
-      "notes": "At ethereum block 26107703 (0x18e5f37), captured 2026-10-02T22:44:09.665742+00:00, totalSupply=57223770882007511486234678 atomic shares; accrueInterestView returned assets=57750429995940, pending performance shares=41086454487993768052, pending management shares=0. Idle USDC=0; complete adapter inventory sums to 57750429995940 USDC atomic units. Asset decimals=6, share decimals=18. convertToAssets(1e18)=1009202 USDC atomic units. Complete inventory: [{\"address\": \"0xa2f362079dbc570a6df5bd04ad91002d17c0db9a\", \"morpho\": \"0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb\", \"parentVault\": \"0x55c1b6e461a6334b567baf0feb5d728715446f05\", \"realAssets\": 57750429995940, \"forcePenaltyWad\": 0, \"markets\": [{\"marketId\": \"0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64\", \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0xecfafdc7741323a945a163ed068b5a3c43483957\", \"oracle\": \"0x217d6ddcdb95112c51657f6270e8c079cfdb51f0\", \"irm\": \"0x870ac11d48b15db9a138cf899d20f13f79ba00bc\", \"lltv\": 915000000000000000, \"supplyShares\": 33848863077322661882, \"borrowShares\": 0, \"postedCollateral\": 0, \"expectedSupplyAssets\": 34620350748645}, {\"marketId\": \"0x22fe4c688161863c73571a2b8db65cc11a4a6bceee4f0dea4aa83e4b784f1bd9\", \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0xdc169abe56461a2e0c034da431ac2a3ebf596094\", \"oracle\": \"0x3464a61a68c486241fe07201c913f055bdce35bf\", \"irm\": \"0x870ac11d48b15db9a138cf899d20f13f79ba00bc\", \"lltv\": 915000000000000000, \"supplyShares\": 15343483352575785149, \"borrowShares\": 0, \"postedCollateral\": 0, \"expectedSupplyAssets\": 15454826109602}, {\"marketId\": \"0x5613b170ded221c588b6e9637b910f49e5508680ceede207f44aa72e5c46cb05\", \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0xb195b618ea52b77cb2a58846f452f59f8dfa9390\", \"oracle\": \"0xf8b29e7e9c00ce531434775f7923cc9fbca01b08\", \"irm\": \"0x870ac11d48b15db9a138cf899d20f13f79ba00bc\", \"lltv\": 915000000000000000, \"supplyShares\": 7647734340045359012, \"borrowShares\": 0, \"postedCollateral\": 0, \"expectedSupplyAssets\": 7675253137693}]}]. HOLDER CLAIM limited: operational ERC4626 pro-rata claim supported by primary code, identity-bound API and pinned RPC. CONSERVATION limited: complete assets sum, minted liabilities and pending fee shares reconciled at the same block with reproducible asset units; no independent financial assurance. CUSTODY limited: exact current vault/adapter/Morpho position locations pinned. ALLOCATION limited: complete lender inventory and caps/role documentation, with zero adapter borrower shares/posted collateral in the enumerated markets; no favorable legal segregation or borrower-collateral custody inference. DEFAULT RECOVERY unavailable: losses reduce share NAV, but legal creditor priority and stressed collateral recovery remain unproven. At ethereum block 26107703 (0x18e5f37), captured 2026-10-02T22:44:09.665742+00:00, owner=0xb83a77677c51aaf6c45b0b64199eae6938559e5e; curator=0x4687e45bb5518a995913a24bb2816fe2031d74d8. Owner getThreshold=4, owners=6, enabled modules empty and guard zero; signer independence unestablished. addAdapter delay=604800 sec; increaseAbsoluteCap delay=259200 sec; fee-setting delays=0. Fee rates performance=0.05, management=0.0.",
+      "notes": "At ethereum block 26107703 (0x18e5f37), captured 2026-10-02T22:44:09.665742+00:00, totalSupply=57223770882007511486234678 atomic shares; accrueInterestView returned assets=57750429995940, pending performance shares=41086454487993768052, pending management shares=0. Idle USDC=0; complete adapter inventory sums to 57750429995940 USDC atomic units. Asset decimals=6, share decimals=18. convertToAssets(1e18)=1009202 USDC atomic units. Complete inventory: [{\"address\": \"0xa2f362079dbc570a6df5bd04ad91002d17c0db9a\", \"morpho\": \"0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb\", \"parentVault\": \"0x55c1b6e461a6334b567baf0feb5d728715446f05\", \"realAssets\": 57750429995940, \"forcePenaltyWad\": 0, \"markets\": [{\"marketId\": \"0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64\", \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0xecfafdc7741323a945a163ed068b5a3c43483957\", \"oracle\": \"0x217d6ddcdb95112c51657f6270e8c079cfdb51f0\", \"irm\": \"0x870ac11d48b15db9a138cf899d20f13f79ba00bc\", \"lltv\": 915000000000000000, \"supplyShares\": 33848863077322661882, \"borrowShares\": 0, \"postedCollateral\": 0, \"expectedSupplyAssets\": 34620350748645}, {\"marketId\": \"0x22fe4c688161863c73571a2b8db65cc11a4a6bceee4f0dea4aa83e4b784f1bd9\", \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0xdc169abe56461a2e0c034da431ac2a3ebf596094\", \"oracle\": \"0x3464a61a68c486241fe07201c913f055bdce35bf\", \"irm\": \"0x870ac11d48b15db9a138cf899d20f13f79ba00bc\", \"lltv\": 915000000000000000, \"supplyShares\": 15343483352575785149, \"borrowShares\": 0, \"postedCollateral\": 0, \"expectedSupplyAssets\": 15454826109602}, {\"marketId\": \"0x5613b170ded221c588b6e9637b910f49e5508680ceede207f44aa72e5c46cb05\", \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0xb195b618ea52b77cb2a58846f452f59f8dfa9390\", \"oracle\": \"0xf8b29e7e9c00ce531434775f7923cc9fbca01b08\", \"irm\": \"0x870ac11d48b15db9a138cf899d20f13f79ba00bc\", \"lltv\": 915000000000000000, \"supplyShares\": 7647734340045359012, \"borrowShares\": 0, \"postedCollateral\": 0, \"expectedSupplyAssets\": 7675253137693}]}]. HOLDER CLAIM limited: operational ERC4626 pro-rata claim supported by primary code, identity-bound API and pinned RPC. CONSERVATION limited: complete assets sum, minted liabilities and pending fee shares reconciled at the same block with reproducible asset units; no independent financial assurance. CUSTODY limited: exact current vault/adapter/Morpho position locations pinned. ALLOCATION limited: complete lender inventory and caps/role documentation, with zero adapter borrower shares/posted collateral in the enumerated markets; no favorable legal segregation or borrower-collateral custody inference. DEFAULT RECOVERY unavailable: losses reduce share NAV, but legal creditor priority and stressed collateral recovery remain unproven. At ethereum block 26107703 (0x18e5f37), captured 2026-10-02T22:44:09.665742+00:00, owner=0xb83a77677c51aaf6c45b0b64199eae6938559e5e; curator=0x4687e45bb5518a995913a24bb2816fe2031d74d8. Owner getThreshold=4, owners=6, enabled modules empty and guard zero; signer independence unestablished. addAdapter delay=604800 sec; increaseAbsoluteCap delay=259200 sec; fee-setting delays=0. Fee rates performance=0.05, management=0.0. Reference code security reports: ChainSecurity 2025-09-16 and Cantina Managed 2025-12-15 (final adapter code tag 2025-12-04). These are not independent reserve-to-liability assurance, exact-vault audit coverage or default-recovery guarantees; existing component grades and evidence pin remain unchanged.",
       "metrics": {},
       "components": {
         "holderClaim": {

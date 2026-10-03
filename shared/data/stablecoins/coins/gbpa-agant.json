@@ -76,6 +76,14 @@
     {
       "label": "Nephos GBPA reserve attestation as of September 30, 2026",
       "url": "https://security.agant.io/doc/trust?rid=6abea083a941a8650c35ebf8&r=lz53fv2d0lk02myddnbz7&download=true"
+    },
+    {
+      "label": "Ethereum GBPA deployment, January 25, 2026",
+      "url": "https://etherscan.io/tx/0x2104d4b08186624b758335bc4938c070438e81874feff7a2dd1535b900a4a954"
+    },
+    {
+      "label": "Current Ethereum implementation activated at block 25438318, July 1, 2026",
+      "url": "https://etherscan.io/block/25438318"
     }
   ],
   "jurisdiction": {
@@ -110,5 +118,7 @@
   ],
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
-  "governanceQuality": "single-entity"
+  "governanceQuality": "single-entity",
+  "launchDate": "2026-01-25",
+  "implementationLaunchDate": "2026-07-01"
 }

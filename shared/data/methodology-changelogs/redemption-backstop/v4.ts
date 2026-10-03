@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const REDEMPTION_BACKSTOP_V4: readonly MethodologyChangelogEntry[] = [
   {
+    version: "4.46",
+    title: "Executable vault capacity and unavailable-evidence cutover",
+    date: "2026-10-03",
+    effectiveAt: 1790985600,
+    summary:
+      "Morpho Vault V2 capacity now requires a same-run selected-liquidity-adapter read, generic ERC-4626 capacity no longer labels non-USD underlying units as dollars, and newly reviewed routes keep unmeasured capacity unavailable rather than publishing a fixed zero.",
+    impact: [
+      "The exact Morpho Vault V2 liquidityAdapter() is read in the same run before protocol API liquidity can enter capacity. A zero or unreadable adapter restricts capacity to independently observed fresh idle underlying, with morpho-vault-v2-liquidity-adapter-zero or morpho-vault-v2-liquidity-adapter-unavailable; unreadable idle leaves capacity unavailable.",
+      "Generic non-USD ERC-4626 underlying without same-path FX valuation emits no capacityUsd and names erc4626-capacity-non-usd-unvalued. wiTRY loses nominal TRY-as-USD capacity telemetry while retaining its reserve evidence, and the new EURCV vault cannot publish nominal euros as dollars.",
+      "New reviewed routes no longer use fixed-usd zero for unmeasured liquidity. Exact-output reserve-sync routes have no static fallback and publish missing-capacity when telemetry is absent; routes without an honest capacity model remain source-reviewed unconfigured instead of resolving an invented zero.",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "4.45",
     title: "Producing evidence clocks and one capacity denominator",
     date: "2026-09-27",

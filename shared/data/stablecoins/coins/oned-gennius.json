@@ -1,4 +1,17 @@
 {
+  "liveReservesConfig": {
+    "adapter": "coinbase-oned-por",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "oned-gennius",
+    "display": { "url": "https://www.coinbase.com/en-in/oned/proof-of-reserves", "label": "Coinbase ONED USDC reserves" },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://www.coinbase.com/graphql/query?operationName=ProofOfReservesPageQuery&extensions=%7B%22persistedQuery%22%3A%7B%22version%22%3A1%2C%22sha256Hash%22%3A%22f26fac8fa11e1fcab64476e3dc605758082acc19b13353841bd78fb57a0ba34a%22%7D%7D&variables=%7B%22reserveAssetTicker%22%3A%22USDC%22%2C%22wrappedAssetTicker%22%3A%22ONED%22%2C%22nativeCurrency%22%3A%22USD%22%7D"
+      }
+    }
+  },
   "id": "oned-gennius",
   "name": "ONED USD",
   "symbol": "ONED",
@@ -39,6 +52,8 @@
     "attestorTier": "self",
     "cadence": "real-time"
   },
+  "launchDate": "2026-04-14",
+  "implementationLaunchDate": "2026-04-14",
   "links": [
     {
       "label": "Website",
@@ -63,6 +78,26 @@
     {
       "label": "Verified current ONED implementation",
       "url": "https://basescan.org/address/0x57ab1e54fca80105a93a735b59f850f8420b5e2c#code"
+    },
+    {
+      "label": "ONED token creation (Base block 44701636, 2026-04-14)",
+      "url": "https://basescan.org/tx/0x56d0ddbbc9172bf76344d49b454dc201b06d9fbe4e5947ba3e8bd5d3fa65eace"
+    },
+    {
+      "label": "Current Stablecoin implementation creation (Base block 44529098, 2026-04-10)",
+      "url": "https://basescan.org/tx/0xdf8261617af351e5ffcfcf737a34377a891385f23fe3807833e8893e21b27ae5"
+    },
+    {
+      "label": "Coinbase Custom Stablecoin source",
+      "url": "https://github.com/coinbase/custom-stablecoin"
+    },
+    {
+      "label": "Coinbase Custom Stablecoin technical reference",
+      "url": "https://docs.cdp.coinbase.com/custom-stablecoins/stablecoin-contract/reference"
+    },
+    {
+      "label": "Cantina EVM code-security audit (2026-03-30 to 2026-04-02; published 2026-04-07)",
+      "url": "https://github.com/coinbase/custom-stablecoin/blob/main/audits/cantina_coinbase_custom_stablecoin_mar2026.pdf"
     }
   ],
   "contracts": [

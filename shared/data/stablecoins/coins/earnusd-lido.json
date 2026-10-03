@@ -12,7 +12,7 @@
   "variantOf": "usdc-circle",
   "variantKind": "strategy-vault",
   "pegReferenceId": "usdc-circle",
-  "collateral": "Proportional operational share of the Lido EarnUSD vault and Mellow-curated dollar-denominated protocol strategies; current underlying allocation remains undisclosed in reviewed evidence",
+  "collateral": "Lido/Mellow earnUSD MetaVault allocates across earnUSDc (conservative) and earnUSDe (experimental) underlying vaults; USDC/USDT deposits and USDC withdrawal denomination do not establish current allocation weights, holdings or encumbrances.",
   "pegMechanism": "Returns compound into vault shares using privileged oracle reports. Deposits and request-and-claim withdrawals are processed by queues; the documented USDC withdrawal wait is typically about three days, not a guaranteed maximum.",
   "mechanismArchetype": "protocol-position",
   "archetypeOverride": true,
@@ -49,6 +49,18 @@
       {
         "label": "Ethereum RPC observation at block 26107703",
         "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Mellow earnUSD underlying-vault structure; weights undisclosed",
+        "url": "https://docs.mellow.finance/lido-earn/earnusd"
+      },
+      {
+        "label": "Exact earnUSD share deployment creation transaction, Ethereum block 24602425, 2026-03-07T01:54:35Z",
+        "url": "https://etherscan.io/tx/0x5097bdcbdf5be3b9b9e4210d2938d411bc1391bd498eb30c5b373471e3e7300e"
+      },
+      {
+        "label": "Exact current earnUSD ShareManager implementation activation Upgraded event, block 24602425, 2026-03-07",
+        "url": "https://etherscan.io/tx/0x5097bdcbdf5be3b9b9e4210d2938d411bc1391bd498eb30c5b373471e3e7300e"
       }
     ]
   },
@@ -104,5 +116,7 @@
         "reason": "Documented USDC settlement for earnUSD vault-share withdrawals"
       }
     ]
-  }
+  },
+  "launchDate": "2026-03-07",
+  "implementationLaunchDate": "2026-03-07"
 }

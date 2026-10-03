@@ -3,7 +3,7 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
+    "confidence": "unknown",
     "summary": "Native fund issuance is privileged and administrator-controlled; current role-member independence and complete control closure are not publicly established.",
     "controls": [
       {
@@ -16,8 +16,8 @@
         ],
         "role": "proxy-admin",
         "authorityType": "eoa",
-        "directMintAbility": "upgrade-only",
-        "canRaiseCap": "unknown",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
         "failureDomainKeys": [
           "eoa:evm:0xe01605f6b6dc593b7d2917f4a0940db2a625b09e"
@@ -42,7 +42,7 @@
             "url": "https://etherscan.io/address/0x3078bcf707e457d3af2f938a2a478bbeea50a942#code"
           }
         ],
-        "evidence": "At Ethereum block 26107703 owner() returned this code-empty EOA. Tempo block 42323853 returned the same owner. Verified DSToken _authorizeUpgrade is onlyMaster, and onlyMaster allows owner or trust-service MASTER. No on-chain delay is present in that function. Mint issuer/master members and off-chain key custody are not fully enumerated."
+        "evidence": "Ethereum block 26110197: token owner and TrustService 0x6c0e8dfb1682a1659a1ab9add9d43058be132921 MASTER role both resolve to this code-empty EOA. It can call native issueTokens directly, change services and replace token/trust logic immediately. Full trust role-event replay and getRole confirm this sole MASTER; previous masters were removed. Tempo's earlier pin reports the same owner but not an exhaustive chain-local role census."
       },
       {
         "label": "BRSRV Ethereum native issuance service surface",
@@ -76,7 +76,7 @@
             "url": "https://etherscan.io/address/0x3078bcf707e457d3af2f938a2a478bbeea50a942#code"
           }
         ],
-        "evidence": "The verified DSToken implementation routes issueTokens through token issuance and compliance services. onlyIssuerOrAbove gates authorized issuer/master issuance; the complete current role census and economic cap are not established."
+        "evidence": "At block 26110197 the exact Ethereum TrustService role census has sole MASTER 0xe01605f6b6dc593b7d2917f4a0940db2a625b09e; six ISSUERs: 0x2160509a7cecf79a12f1fbbce1c8574fdc8a3154, 0xbead86b75e62fbb62fc9c58f15a4f6836639a681, 0x6c1662bb346f80fda68e970331ef5cb4803de733, 0xfd08aaf0366dab1ccb398f88ee433d058f0eb0d5, 0x3bef25a65d55e1a77a92a3b55c5b8c010130e8e4 and 0x5072ed40eba6be38c2370cad1cb1df0202924e53; TRANSFER_AGENT 0xa9994621f1c3ee59846df756488229e8efdcb8bf. All getRole values match exhaustive add/remove-event replay. First four issuers are proxies; latter two, MASTER and TRANSFER_AGENT have empty code. Proxies resolve to TokenIssuer 0x4ef34664ccbf1979180a9f3cb21f033e069713ba, WalletRegistrar 0xb886f567219a39b49a68115207787dce0a10b9e6, and unverified implementations 0x9394de9e0e1c7274da58a6b6ae246182a23c347f / 0x77305a8503a576f61f6c8639c8cb287b6b751840. Full proxy execution closure is not established."
       },
       {
         "label": "BRSRV Tempo native issuance service surface",
@@ -116,7 +116,7 @@
           "solana:9rX4yuAirQkm5JC26v3oSfGencsxwjB8kkmgf2dwWe9N"
         ],
         "role": "direct-minter",
-        "authorityType": "unknown",
+        "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "unknown",
@@ -134,16 +134,20 @@
           {
             "label": "BRSRV Solana mint",
             "url": "https://solscan.io/token/9rX4yuAirQkm5JC26v3oSfGencsxwjB8kkmgf2dwWe9N"
+          },
+          {
+            "label": "Solana finalized authority and upgradeable-program reads",
+            "url": "https://solana-rpc.publicnode.com"
           }
         ],
-        "evidence": "Finalized Solana slot 452748384 reports this mint/freeze authority and permanent delegate on the exact Token-2022 mint, decimals 6, zero supply. Authority-account type, actual signing path and program-upgrade closure are not established."
+        "evidence": "Earlier finalized slot 452748384 reports this mint/freeze authority and permanent delegate on the Token-2022 mint. Finalized slot 452863785 getAccountInfo establishes this as a 73-byte non-executable program-owned authority account, owned by 7tXjmbkZVY3Gmg9kDBebcNXT1yC5pyoxxXVLwdbv9tvP. Slot 452863819 identifies that executable program as BPF-upgradeable with ProgramData 7u9rE6ESU4c831q4tGQBDA12zpVjRruEHYjT25mKN7V1; slot 452863856 identifies upgrade authority 8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6. Program source, signing rules and upgrade-authority quorum remain unestablished; no EOA or immutability inference is made."
       }
     ],
     "economicCapSemantics": "unknown",
     "reconciliation": "unknown",
     "supervision": "unknown",
     "review": {
-      "disposition": "scoreable",
+      "disposition": "unresolved",
       "sources": [
         {
           "label": "BlackRock July 31, 2026 OnChain share prospectus",
@@ -160,15 +164,49 @@
         {
           "label": "Ethereum token deployment",
           "url": "https://etherscan.io/address/0x3078bcf707e457d3af2f938a2a478bbeea50a942#code"
+        },
+        {
+          "label": "Verified Ethereum TrustService authority source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xcf5f7cec13168144b82ef83fda638e81938c218b"
+        },
+        {
+          "label": "Solana finalized program/account reads",
+          "url": "https://solana-rpc.publicnode.com"
+        },
+        {
+          "label": "Chronicle token-specific BUIDL proof-of-asset dashboard",
+          "url": "https://chroniclelabs.org/dashboard/proof-of-asset/blackrock-buidl"
+        },
+        {
+          "label": "Chronicle current verified-fund coverage inventory",
+          "url": "https://chroniclelabs.org/dashboard/proof-of-asset"
+        },
+        {
+          "label": "Chronicle source-level asset verification methodology",
+          "url": "https://docs.chroniclelabs.org/Products/VerifiedAssetOracle/proofOfAssets"
         }
       ],
-      "evidence": "Identity and current stock reverified at Ethereum block 26107703 (2026-10-02T22:44:06.965406+00:00). Verified deployed code establishes privileged native mint/control capabilities, but no complete cap, reserve reconciliation, quorum or noninterference proof is asserted. Registered government money-market OnChain share targeting $1 NAV, with daily income reinvested in additional shares. Securitize administers whitelisted subscriptions, transfers and redemptions. Good-order redemption requests received before 5 p.m. Eastern on eligible business days ordinarily settle by same-day federal-funds wire when the custodian is open; the fund reserves up to seven days. Redemption processing remains available off-chain during blockchain outages. Sponsor support and principal preservation are not guaranteed.",
-      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-      "reviewedAt": "2026-10-02",
+      "evidence": "Ethereum block 26110197 native TrustService RoleAdded/RoleRemoved replay and getRole/code checks resolve one MASTER, six ISSUERs and one TRANSFER_AGENT listed in the native service control. Four issuer contracts are ERC-1967 proxies, two with unverified current implementations; issuer role membership is known but complete implementation authorization/bypass closure is not. MASTER can mint and immediately upgrade both token and trust service. Solana finalized account reads bind the mint authority to executable upgradeable program 7tXjmbkZVY3Gmg9kDBebcNXT1yC5pyoxxXVLwdbv9tvP and ProgramData upgrade authority 8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6; they do not prove signing policy. Tempo native path remains independently unresolved. Daily issuer portfolio/NAV publication supplies no current independently signed token-liability reconciliation. Organizational key custody of the four identified Ethereum ISSUER proxies remains unestablished. Current independently signed whole-token fund reconciliation remains unavailable. Sibling comparison on 2026-10-03: BUIDL's attestation-only supervision, continuous reconciliation and unbounded-reconciled posture cite Chronicle's BUIDL-specific proof-of-asset service. Chronicle's methodology describes independently validated data sourced from custodians, NAV administrators or authorized agents and published on-chain; its rendered fund directory and BUIDL dashboard identify BlackRock USD Institutional Digital Liquidity Fund/BUIDL, not BlackRock Daily Reinvestment Stablecoin Reserve Vehicle/BRSRV/RSVXX. No BRSRV-specific coverage entry or equivalent continuous source-level verification series was established in that inventory or the reviewed BRSRV primary disclosures. The common Securitize transfer agent and similar programmable-share administration do not establish that Chronicle's BUIDL assurance also covers this distinct fund. BRSRV's daily issuer holdings/NAV and monthly SEC N-MFP3 portfolio/NAV disclosure do not themselves supply the missing whole-token continuous reserve/liability verification. Reconciliation and supervision therefore remain unknown, with concentrated-admin posture and the separately unresolved technical paths retained rather than inheriting the sibling's product-scoped assurance.",
+      "reviewer": "Refine04 pinned EVM roles and Solana program observations",
+      "reviewedAt": "2026-10-03",
       "unresolvedQuestions": [
-        "Complete Ethereum and Tempo issuer/master role census and key custody",
-        "Tempo implementation and Solana mint-critical program execution/upgrade closure",
-        "Current independently signed whole-token fund reconciliation"
+        "The whole Tempo native deployment's issuer/master role census remains unestablished.",
+        "Complete issuance execution and upstream authorization paths of the four identified Ethereum ISSUER proxies remain unestablished, including unverified implementations 0x9394de9e0e1c7274da58a6b6ae246182a23c347f and 0x77305a8503a576f61f6c8639c8cb287b6b751840; no deployed-runtime equivalence proof to a verified reference closes those paths.",
+        "Implementation execution closure of the identified Tempo native issuance surface remains unestablished, independently of the missing chain-wide issuer/master census.",
+        "Source and executable authorization/signing/quorum paths of the identified Solana mint-authority program 7tXjmbkZVY3Gmg9kDBebcNXT1yC5pyoxxXVLwdbv9tvP remain unestablished, including the ProgramData upgrade-authority path."
+      ],
+      "scopedQuestions": [
+        {
+          "controlRef": "BRSRV Ethereum native issuance service surface",
+          "question": "Organizational key custody and human independence for the four identified Ethereum ISSUER proxy authorities remain unestablished. This custody observation does not close their separate mint/upgrade execution and upstream-authorization unknowns, which remain aggregate unresolvedQuestions.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine04 calibration v2",
+          "sources": [
+            {"label": "Exact Ethereum native token implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc4ecf0307ff0c45c0546e0debedbbd0e47ac3354"},
+            {"label": "Identified unverified issuer implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9394de9e0e1c7274da58a6b6ae246182a23c347f"},
+            {"label": "Second identified unverified issuer implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x77305a8503a576f61f6c8639c8cb287b6b751840"}
+          ]
+        }
       ]
     },
     "upgradeability": {
@@ -189,6 +227,7 @@
         "0xe01605f6b6dc593b7d2917f4a0940db2a625b09e"
       ],
       "canChangeMintLogic": true,
+      "delaySec": 0,
       "controlRef": "BRSRV EVM master and upgrade owner",
       "observedAt": "2026-10-02",
       "sources": [

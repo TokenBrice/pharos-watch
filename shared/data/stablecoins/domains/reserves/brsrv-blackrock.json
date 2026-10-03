@@ -2,24 +2,30 @@
   "id": "brsrv-blackrock",
   "reserves": [
     {
-      "name": "BlackRock Daily Reinvestment Stablecoin Reserve Vehicle fund shares",
-      "pct": 100,
+      "name": "U.S. Treasury bills",
+      "pct": 81.947,
+      "risk": "very-low",
+      "assetClass": "treasury-bill",
+      "issuerOrObligor": "United States Treasury",
+      "riskFactors": ["duration", "liquidity", "custody"],
+      "liquidityHorizon": "unknown",
+      "maturityDaysMax": 93
+    },
+    {
+      "name": "Overnight Treasury-secured tri-party repurchase agreements",
+      "pct": 18.053,
       "risk": "low",
-      "assetClass": "fund-share",
-      "issuerOrObligor": "BlackRock Funds",
-      "riskFactors": [
-        "counterparty",
-        "duration",
-        "liquidity",
-        "custody"
-      ],
-      "liquidityHorizon": "seven-days"
+      "assetClass": "repo",
+      "issuerOrObligor": "BofA Securities, Credit Agricole CIB and J.P. Morgan Securities",
+      "riskFactors": ["counterparty", "custody", "legal"],
+      "liquidityHorizon": "one-day",
+      "maturityDaysMax": 1
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "confidence": "manual-review",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Refine04 primary-source review",
+    "confidence": "verified",
     "sources": [
       {
         "label": "BlackRock July 31, 2026 OnChain share prospectus",
@@ -36,20 +42,32 @@
       {
         "label": "Ethereum token deployment",
         "url": "https://etherscan.io/address/0x3078bcf707e457d3af2f938a2a478bbeea50a942#code"
+      },
+      {
+        "label": "BlackRock complete holdings CSV as of October 1, 2026",
+        "url": "https://www.blackrock.com/cash/en-us/products/351891/fund/1464253357814.ajax?fileType=csv&fileName=RSVXX_holdings&dataType=fund"
       }
     ],
-    "rationale": "The 100% slice describes the authenticated whole fund-share claim, following BUIDL single-fund-share presentation. It does not invent underlying Treasury, repo, deposit or credit weights. Cash, U.S. Treasury obligations with no more than 93 days to maturity, and Treasury-secured overnight repurchase agreements in BlackRock Daily Reinvestment Stablecoin Reserve Vehicle; BNY Mellon is custodian and accounting-services provider, Securitize is transfer agent. Current security-level weights are not established.",
-    "compositionBasis": "Standing authenticated fund-share identity, not a current position-weighted portfolio or token-to-assets reconciliation",
-    "scope": "classification-only",
-    "knownUnknownExposure": "All current underlying position weights and complete token-to-fund asset/liability reconciliation remain unavailable. Named custodians and auditors do not prove current whole-book custody allocation or financial assurance.",
-    "knownUnknownExposurePct": 100,
+    "rationale": "The October 1, 2026 holdings CSV publishes 13 Treasury bills with market value USD 40,853,218.07 and three overnight Treasury repos totaling USD 9,000,000, for USD 49,853,218.07 total listed holdings. Percentages use market value rather than the CSV's par percentages: 81.947% bills and 18.053% repo after rounding. Repo counterparties are BofA Securities (USD 5m), Credit Agricole CIB (USD 2m) and J.P. Morgan Securities (USD 2m). Bills mature October 6 through December 24, 2026; the 93-day maximum is the prospectus mandate, not WAM. The fund page separately reports WAM/WAL 28 days and daily/weekly liquid assets 100% as of October 1. These issuer observations do not reconcile the October 1 portfolio to October 3 on-chain shares or provide financial assurance.",
+    "compositionBasis": "October 1, 2026 itemized holdings, normalized by published security market values",
+    "compositionAsOf": "2026-10-01",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Current whole-token liability reconciliation and account-level custody, collateral and recovery agreements remain unavailable. Portfolio and token stock have different observation dates; their difference is not a measured shortfall. Named auditors do not establish a signed financial report.",
+    "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "BlackRock Daily Reinvestment Stablecoin Reserve Vehicle fund shares",
-        "pct": 100,
-        "disposition": "basket-needs-split",
-        "rationale": "The direct fund-share identity is authenticated, but current look-through security weights are unavailable. The entire fund-share basket remains unresolved for constituent-weight mapping; no tracked stablecoin constituent is asserted."
+        "reserveName": "U.S. Treasury bills",
+        "pct": 81.947,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Itemized U.S. Treasury securities are exogenous assets, not tracked stablecoins."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "Overnight Treasury-secured tri-party repurchase agreements",
+        "pct": 18.053,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Itemized off-chain secured repo claims are exogenous assets, not tracked stablecoins."
       }
     ]
   },
@@ -76,7 +94,7 @@
         "url": "https://www.blackrock.com/cash/en-us/products/351891/blackrock-daily-reinvestment-stablecoin-reserve-vehicle"
       }
     ],
-    "uncertainty": "The prospectus names BNY Mellon as fund custodian and accounting-services provider. Subcustody, repo-counterparty and account-level allocations, complete segregation and recovery arrangements are not established.",
+    "uncertainty": "The prospectus names BNY Mellon as fund custodian and accounting-services provider. The October 1 holdings identify BofA Securities, Credit Agricole CIB and J.P. Morgan Securities repo counterparties, but subcustody, collateral-account safeguards, complete segregation and recovery agreements remain unestablished.",
     "knownUnknownExposurePct": 100
   }
 }

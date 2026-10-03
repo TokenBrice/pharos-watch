@@ -3,8 +3,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "CUMIU supply and NAV are controlled by a default-admin EOA with immediate UUPS upgrade authority.",
+    "confidence": "verified",
+    "summary": "CUMIU has two default-admin EOAs with immediate mint and UUPS replacement authority, plus two separately granted minter EOAs; organizational key custody remains undisclosed.",
     "controls": [
       {
         "chain": "ethereum",
@@ -18,15 +18,61 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107703,
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110197,
         "sources": [
           {
             "label": "Verified deployed mint implementation",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x37686928ddf77be20fc4199f03f0638d90d9907e"
           }
         ],
-        "evidence": "Pinned block 26107703: hasRole(DEFAULT_ADMIN_ROLE) returned true and getCode returned 0x for this administrator. Verified CMTAT source grants DEFAULT_ADMIN all roles including mint and direct UUPS upgrade authority. Organizational key custody and other role holders are not proved."
+        "evidence": "Full deployment-to-block-26110197 RoleGranted/RoleRevoked/RoleAdminChanged census contains four grant events and no revocations/admin changes. hasRole(DEFAULT_ADMIN_ROLE) and code-empty account state confirm this EOA. AuthorizationModule grants every role to default admins; _authorizeUpgrade permits immediate UUPS replacement."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x5c943b2b881af70af571098a228d92cbcc2b5ba2",
+        "deploymentRefs": ["ethereum:0x85d38585c3ac08268f598282a84b7c0ddfc0d04f"],
+        "label": "CUMIU second default administrator",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110197,
+        "sources": [{"label": "CUMIU deployed authorization and upgrade source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x37686928ddf77be20fc4199f03f0638d90d9907e"}],
+        "evidence": "Full role-event census and pinned hasRole(DEFAULT_ADMIN_ROLE)=true establish this second administrator. getCode=0x. Default admins can mint, administer roles, freeze and replace mint logic without a delay; no independent human or MPC/HSM custody is inferred."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x7ba63cdc16abfbe4838eee04aff4150749a21bd8",
+        "deploymentRefs": ["ethereum:0x85d38585c3ac08268f598282a84b7c0ddfc0d04f"],
+        "label": "CUMIU first delegated minter",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110197,
+        "sources": [{"label": "CUMIU deployed mint and NAV source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x37686928ddf77be20fc4199f03f0638d90d9907e"}],
+        "evidence": "Full role-event census and pinned hasRole(MINTER_ROLE)=true identify this additional code-empty EOA. MINTER_ROLE gates uncapped mint and issuer NAV update; no economic collateral gate or custody threshold is inferred."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xb99123ccab3e0110742cede9271953c6803947d4",
+        "deploymentRefs": ["ethereum:0x85d38585c3ac08268f598282a84b7c0ddfc0d04f"],
+        "label": "CUMIU second delegated minter",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110197,
+        "sources": [{"label": "CUMIU deployed mint and NAV source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x37686928ddf77be20fc4199f03f0638d90d9907e"}],
+        "evidence": "Full role-event census and pinned hasRole(MINTER_ROLE)=true identify this additional code-empty EOA. MINTER_ROLE gates uncapped mint and issuer NAV update; no economic collateral gate or custody threshold is inferred."
       }
     ],
     "upgradeability": {
@@ -41,13 +87,14 @@
         "0x37686928ddf77be20fc4199f03f0638d90d9907e"
       ],
       "adminAddresses": [
-        "0x407374be435ed278fca44be695d32f0230fe46e3"
+        "0x407374be435ed278fca44be695d32f0230fe46e3",
+        "0x5c943b2b881af70af571098a228d92cbcc2b5ba2"
       ],
       "canChangeMintLogic": true,
       "delaySec": 0,
       "controlRef": "CUMIU default administrator",
-      "observedAt": "2026-10-02",
-      "observedBlock": 26107703,
+      "observedAt": "2026-10-03",
+      "observedBlock": 26110197,
       "sources": [
         {
           "label": "Deployed upgrade authorization",
@@ -59,8 +106,9 @@
     "reconciliation": "internal-ledger",
     "supervision": "unknown",
     "review": {
-      "reviewedAt": "2026-10-02",
-      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Refine04 pinned role-event census",
+      "disposition": "scoreable",
       "sources": [
         {
           "label": "Deployed mint implementation",
@@ -71,9 +119,37 @@
           "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/E-CleanProspectus-ChinaAMCDigitalOFC-CN(September2026)_1789336483417.pdf"
         }
       ],
-      "evidence": "Pinned block 26107703: hasRole(DEFAULT_ADMIN_ROLE) returned true and getCode returned 0x for this administrator. Verified CMTAT source grants DEFAULT_ADMIN all roles including mint and direct UUPS upgrade authority. Organizational key custody and other role holders are not proved. Legal KFS identifies off-chain shareholder registration independently verified by the manager; this is internal-ledger reconciliation, not continuous reserve assurance.",
-      "unresolvedQuestions": [
-        "Full role-holder/controller census and organizational signing/key-custody policies remain undisclosed."
+      "evidence": "At block 26110197, exhaustive native role-event replay and hasRole checks establish two default-admin EOAs (0x407374be435ed278fca44be695d32f0230fe46e3, 0x5c943b2b881af70af571098a228d92cbcc2b5ba2) and two delegated MINTER_ROLE EOAs (0x7ba63cdc16abfbe4838eee04aff4150749a21bd8, 0xb99123ccab3e0110742cede9271953c6803947d4). No other explicit role grants occur; default administrators inherit all roles. Verified source establishes immediate UUPS upgrades and unbounded native minting. Legal shareholder registration supports internal-ledger reconciliation only. The on-chain census is closed; organizational identity, human independence and key-custody policies are not publicly attested. Organizational ownership, independence and MPC/HSM/signing policies of the four identified EOA controllers are not publicly attested. The September 14, 2026 prospectus tokenization section specifically discloses Administrator reconciliation of book-entry and blockchain transactions on at least a daily basis, triggered by a transaction, matching tokenized-share counts/ownership in the official register to Tokens on the Digital Platform. This supports internal-ledger only: it is token-to-share-register reconciliation, not a disclosed continuous or periodic supply-to-reserve financial reconciliation or independent financial assurance. Supervision remains unknown; fund authorization alone is not prudential mint supervision.",
+      "unresolvedQuestions": [],
+      "scopedQuestions": [
+        {
+          "controlRef": "CUMIU default administrator",
+          "question": "Organizational ownership, human independence and MPC/HSM/signing policy of this identified default-admin EOA are not publicly attested; on-chain role identity and immediate mint/upgrade powers are established.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine04 calibration v2",
+          "sources": [{"label": "Verified native authorization and upgrade implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x37686928ddf77be20fc4199f03f0638d90d9907e"}]
+        },
+        {
+          "controlRef": "CUMIU second default administrator",
+          "question": "Organizational ownership, human independence and MPC/HSM/signing policy of this identified second default-admin EOA are not publicly attested; its on-chain role identity is established.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine04 calibration v2",
+          "sources": [{"label": "Verified native authorization and upgrade implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x37686928ddf77be20fc4199f03f0638d90d9907e"}]
+        },
+        {
+          "controlRef": "CUMIU first delegated minter",
+          "question": "Organizational ownership, human independence and MPC/HSM/signing policy of this identified delegated-minter EOA remain unattested, notwithstanding its verified native MINTER_ROLE membership.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine04 calibration v2",
+          "sources": [{"label": "Verified native mint and NAV implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x37686928ddf77be20fc4199f03f0638d90d9907e"}]
+        },
+        {
+          "controlRef": "CUMIU second delegated minter",
+          "question": "Organizational ownership, human independence and MPC/HSM/signing policy of this identified second delegated-minter EOA remain unattested; source and pinned role membership establish its on-chain mint authority only.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine04 calibration v2",
+          "sources": [{"label": "Verified native mint and NAV implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x37686928ddf77be20fc4199f03f0638d90d9907e"}]
+        }
       ]
     }
   }

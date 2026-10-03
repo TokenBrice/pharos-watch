@@ -39,6 +39,10 @@
       {
         "label": "Pinned Gnosis block 48557408",
         "url": "https://gnosis.blockscout.com/block/48557408"
+      },
+      {
+        "label": "SavingsXDai creation transaction 2023-09-28T11:21:40Z, Gnosis block 30195209",
+        "url": "https://gnosis.blockscout.com/tx/0xaf1e7513a4e5f219f195249c370a8babf0039eee866969ec86deeb9235a52066"
       }
     ]
   },
@@ -96,5 +100,6 @@
       }
     }
   },
-  "archetypeOverride": true
+  "archetypeOverride": true,
+  "implementationLaunchDate": "2023-09-28"
 }

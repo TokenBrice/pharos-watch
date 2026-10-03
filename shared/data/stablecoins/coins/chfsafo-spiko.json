@@ -76,6 +76,10 @@
   },
   "links": [
     {
+      "label": "CHF Ethereum register creation, 26 February 2026, block 24540949",
+      "url": "https://eth.blockscout.com/tx/0x6d98798a86bde1112b6b3b905ddb86d7c4969278f6e69cc732bd988aa004c22a"
+    },
+    {
       "label": "Website",
       "url": "https://www.spiko.io/"
     },
@@ -142,6 +146,7 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
+  "launchDate": "2026-02-26",
   "yieldConfig": {
     "yieldSource": "Spiko Amundi Overnight Swap Fund CHF NAV",
     "yieldType": "nav-appreciation"

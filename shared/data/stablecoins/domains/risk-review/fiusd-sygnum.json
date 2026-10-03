@@ -8,19 +8,23 @@
         "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779"
       },
       {
+        "label": "Exact verified zkSync implementation with byte-for-byte deployed artifact match at block 72316592",
+        "url": "https://zksync2-mainnet-explorer.zksync.io/contract_verification/info/0x8dd51341147a2d50566b9910f515689d3decaee8"
+      },
+      {
         "label": "Verified deployed Arbitrum implementation",
         "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x7616b08676117e1aab542e53fe3f7b12f7596d37"
       }
     ],
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02",
-    "evidence": "Sygnum requires whitelisted professional-investor custodial wallets. Verified current Arbitrum implementation source additionally exposes operator-only toggleFreeze and privileged confiscate, establishing a direct holder-control surface without claiming independently verified zkSync ABI equivalence."
+    "reviewer": "Refine05 primary-source and pinned-RPC review",
+    "reviewedAt": "2026-10-03",
+    "evidence": "Sygnum requires whitelisted professional-investor custodial wallets. Verified current implementations on both zkSync and Arbitrum expose operator-only toggleFreeze and privileged confiscate plus whitelist transfer checks. The zkSync published verification artifact exactly matches eth_getCode at block 72316592, resolving the earlier unverified zkSync implementation equivalence; Arbitrum implementation is bound at block 511230438. This establishes holder control, not complete proxy-bypass or independent financial reconciliation."
   },
   "oracleRisk": {
     "tier": "privileged-internal-pricing",
     "role": "coin-price-feed",
     "branchModel": "single-path",
-    "summary": "JPMorgan calculates Fidelity ILF NAV and communicates it through Chainlink. Each native token references an on-chain price-feed oracle, but that transport does not independently reconcile Sygnum token units.",
+    "summary": "JPMorgan calculates Fidelity ILF NAV, relayed through Chainlink rather than independently reconciling Sygnum units. At zkSync block 72316592 getPriceFeedOracle() binds 0xc406104c42211abd1a2cd411ddd071511515bddd, description Fidelity USD NAV, decimals 18, answer 12048.93. Arbitrum's same getter points to verified TokenFactory 0x1953c28d04a0107725309908a3719e8cb46c92d6, where description/decimals/latestRoundData revert; no working Arbitrum feed or verified exemption is credited.",
     "branchApplicability": {
       "disposition": "top-level-only",
       "reviewedAt": "2026-10-02",
@@ -37,10 +41,54 @@
         }
       ]
     },
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "paths": [
+      {
+        "id": "fiusd-zksync-fund-nav",
+        "chain": "zksync",
+        "address": "0x2ab105a3ead22731082b790ca9a00d9a3a7627f9",
+        "pricingAuthority": "internal-price",
+        "applicability": {
+          "disposition": "top-level-only",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine05 primary-source and pinned-RPC review",
+          "confidence": "verified",
+          "rationale": "Issuer terms price a one-fund-unit security at fund NAV. Current exact token getter binds the Chainlink Fidelity USD NAV transport; this is top-level fund subscription/redemption pricing, not a fund-operated borrower liquidation branch. It is not a reserve-to-liability reconciliation.",
+          "sources": [
+            { "label": "Sygnum issuer FIUSD application", "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779" },
+            { "label": "zkSync pinned token getter and feed round at block 72316592", "url": "https://mainnet.era.zksync.io" }
+          ]
+        }
+      },
+      {
+        "id": "fiusd-arbitrum-nav-configuration",
+        "chain": "arbitrum",
+        "address": "0xcded6b899edba762d793f44ed295248049440e1e",
+        "pricingAuthority": "unknown",
+        "applicability": {
+          "disposition": "unresolved",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine05 primary-source and pinned-RPC review",
+          "confidence": "limited",
+          "rationale": "At block 511230438 getPriceFeedOracle() returns a verified TokenFactory, not a working AggregatorV3: description, decimals and latestRoundData revert. Zero current native supply does not establish oracle non-applicability or final disabled issuance. Exact operative NAV authority/configuration for this deployment remains missing.",
+          "sources": [
+            { "label": "Exact Arbitrum configured target is TokenFactory", "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x1953c28d04a0107725309908a3719e8cb46c92d6" },
+            { "label": "Arbitrum pinned token getter and target call failures", "url": "https://arb1.arbitrum.io/rpc" }
+          ]
+        }
+      }
+    ],
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Refine05 primary-source and pinned-RPC review",
     "confidence": "limited",
     "sources": [
+      {
+        "label": "FIUSD zkSync exact Chainlink Fidelity USD NAV transport 0xc406104c42211abd1a2cd411ddd071511515bddd",
+        "url": "https://era.zksync.network/address/0xc406104c42211abd1a2cd411ddd071511515bddd"
+      },
+      {
+        "label": "FIUSD Arbitrum configured price target is verified TokenFactory, not a working AggregatorV3",
+        "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x1953c28d04a0107725309908a3719e8cb46c92d6"
+      },
       {
         "label": "Sygnum issuer-authored FIUSD application dated March 20, 2025",
         "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779"

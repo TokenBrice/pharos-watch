@@ -63,6 +63,961 @@
         "label": "Exact current MorphoMarketV1AdapterV2 source",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4f74895557bea2de5d51d8c06e944da92dbc8550"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13",
+        "protocol": "Morpho Vault V2",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Exact native ERC-4626 asset-backed share deployment; parent USDC and borrower collateral bridge/custody exposures are separate. No share bridge representation is established by this inventory.",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110242,
+        "sources": [
+          {
+            "label": "Exact KPK USDC Yield V2 Morpho Vault V2 deployment",
+            "url": "https://app.morpho.org/ethereum/vault/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+          },
+          {
+            "label": "Partially verified VaultV2 source; explorer deployed bytecode matches pinned RPC",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+          },
+          {
+            "label": "Ethereum RPC pinned block 26107704, observed 2026-10-02T22:44:52.884200+00:00",
+            "url": "https://eth-mainnet.g.alchemy.com"
+          },
+          {
+            "label": "Morpho itemized vault and adapter data observed 2026-10-02T22:44:52.884200+00:00",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho gate semantics and irreversible abdication",
+            "url": "https://docs.morpho.org/curate/concepts/gates.md"
+          },
+          {
+            "label": "Exact current MorphoMarketV1AdapterV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4f74895557bea2de5d51d8c06e944da92dbc8550"
+          },
+          {
+            "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+            "url": "https://blue-api.morpho.org/graphql"
+          }
+        ]
+      }
+    ]
+  },
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "Vault share NAV uses internal asset/share accounting; underlying active Morpho borrower markets require collateral pricing. Exact market/oracle identities and LLTVs are inventoried, including nonzero dust; underlying feed administrators, update/staleness safeguards and complete fallback topology remain unverified. API type names alone do not establish oracle quality. Historical zero-supply positions are excluded from this current-exposure review.",
+    "role": "collateral-pricing",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Sol refinement 2026-10-03 (Refine09)",
+      "rationale": "ERC-4626 accounting is not a borrower-oracle exemption. The current adapter exposes USDC loans secured by oracle-valued collateral, with separate liquidation branches.",
+      "sources": [
+        {
+          "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+          "url": "https://blue-api.morpho.org/graphql"
+        },
+        {
+          "label": "Morpho market oracle interface, immutable market oracle identity and source selection",
+          "url": "https://docs.morpho.org/learn/concepts/oracle/"
+        },
+        {
+          "label": "Morpho oracle-driven liquidation and VaultV2 proportional loss realization",
+          "url": "https://docs.morpho.org/learn/concepts/liquidation/"
+        },
+        {
+          "label": "Exact KPK USDC Yield V2 Morpho Vault V2 deployment",
+          "url": "https://app.morpho.org/ethereum/vault/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+        },
+        {
+          "label": "Partially verified VaultV2 source; explorer deployed bytecode matches pinned RPC",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+        },
+        {
+          "label": "Ethereum RPC pinned block 26107704, observed 2026-10-02T22:44:52.884200+00:00",
+          "url": "https://eth-mainnet.g.alchemy.com"
+        },
+        {
+          "label": "Morpho itemized vault and adapter data observed 2026-10-02T22:44:52.884200+00:00",
+          "url": "https://api.morpho.org/graphql"
+        },
+        {
+          "label": "Morpho gate semantics and irreversible abdication",
+          "url": "https://docs.morpho.org/curate/concepts/gates.md"
+        },
+        {
+          "label": "Exact current MorphoMarketV1AdapterV2 source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4f74895557bea2de5d51d8c06e944da92dbc8550"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Sol refinement 2026-10-03 (Refine09)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+        "url": "https://blue-api.morpho.org/graphql"
+      },
+      {
+        "label": "Morpho market oracle interface, immutable market oracle identity and source selection",
+        "url": "https://docs.morpho.org/learn/concepts/oracle/"
+      },
+      {
+        "label": "Morpho oracle-driven liquidation and VaultV2 proportional loss realization",
+        "url": "https://docs.morpho.org/learn/concepts/liquidation/"
+      },
+      {
+        "label": "Exact KPK USDC Yield V2 Morpho Vault V2 deployment",
+        "url": "https://app.morpho.org/ethereum/vault/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+      },
+      {
+        "label": "Partially verified VaultV2 source; explorer deployed bytecode matches pinned RPC",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+      },
+      {
+        "label": "Ethereum RPC pinned block 26107704, observed 2026-10-02T22:44:52.884200+00:00",
+        "url": "https://eth-mainnet.g.alchemy.com"
+      },
+      {
+        "label": "Morpho itemized vault and adapter data observed 2026-10-02T22:44:52.884200+00:00",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Morpho gate semantics and irreversible abdication",
+        "url": "https://docs.morpho.org/curate/concepts/gates.md"
+      },
+      {
+        "label": "Exact current MorphoMarketV1AdapterV2 source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4f74895557bea2de5d51d8c06e944da92dbc8550"
+      }
+    ],
+    "branches": [
+      {
+        "id": "market-34377fc4f617c51818e92c79df31ff270c6a91bc94ad32e367fdf59b9f4ac5dd",
+        "label": "weETH / USDC",
+        "tier": "opaque-or-unknown",
+        "summary": "Morpho API identifies weETH collateral 0xcd5fe23c85820f7b72d0926fc9b05b43e359b7ee, market 0x34377fc4f617c51818e92c79df31ff270c6a91bc94ad32e367fdf59b9f4ac5dd, oracle 0xa3a7a3cefee206f9d7fe00ec3c83324ed4228411, type ChainlinkOracleV2. Current nonzero supply exposure is established; upstream feed/admin/staleness and per-oracle fallback controls remain unverified. Independently read Morpho 0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb idToMarketParams(bytes32) at block 26110242 confirmed the exact oracle and LLTV; price() returned raw 2960620043535041308419566336. A returned price proves callability of pricing at this block, not feed freshness, liquidator execution or safe topology. Current Morpho oracleByAddress publishes baseFeedOne=0x4270e1817576bba4b640466be79a408ef128f828, baseFeedTwo=0xc0053f3fbccd593758258334dfce24c2a9a673ad, quoteFeedOne=0xc3866d726c204c0836e0677a31973c649888973d. This improves the exact feed inventory; heartbeat/staleness enforcement, conversion-leg controls and complete privileged/manual update powers have not been established.",
+        "collateralAssets": [
+          "weETH"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Morpho market oracle (ChainlinkOracleV2 API classification; upstream topology unverified)",
+            "path": "Collateral/USDC price() for market 0x34377fc4f617c51818e92c79df31ff270c6a91bc94ad32e367fdf59b9f4ac5dd",
+            "address": "0xa3a7a3cefee206f9d7fe00ec3c83324ed4228411",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03",
+            "observedBlock": 26110242
+          },
+          {
+            "provider": "Chainlink-compatible composite leg (provider/admin/update policy unverified)",
+            "path": "baseFeedOne of 0xa3a7a3cefee206f9d7fe00ec3c83324ed4228411 ; API decimals=18",
+            "address": "0x4270e1817576bba4b640466be79a408ef128f828",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03"
+          },
+          {
+            "provider": "Chainlink-compatible composite leg (provider/admin/update policy unverified)",
+            "path": "baseFeedTwo of 0xa3a7a3cefee206f9d7fe00ec3c83324ed4228411 ; API decimals=8",
+            "address": "0xc0053f3fbccd593758258334dfce24c2a9a673ad",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03"
+          },
+          {
+            "provider": "Chainlink-compatible composite leg (provider/admin/update policy unverified)",
+            "path": "quoteFeedOne of 0xa3a7a3cefee206f9d7fe00ec3c83324ed4228411 ; API decimals=12",
+            "address": "0xc3866d726c204c0836e0677a31973c649888973d",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03"
+          }
+        ],
+        "fallbackBehavior": "Morpho core invokes the configured market oracle price(); no alternate core oracle is selected. Any fallback or staleness rejection inside this exact oracle remains unverified.",
+        "collateralParameters": [
+          {
+            "asset": "weETH",
+            "maximumLtvPct": 77.0,
+            "note": "Immutable market liquidation loan-to-value from Morpho API, not vault utilization or a liquidation execution guarantee."
+          }
+        ],
+        "liquidationMechanism": "Any external liquidator may repay debt and receive collateral when oracle-valued LTV exceeds LLTV. Actual callability and stressed sale execution on this exact feed were not measured.",
+        "liquidationState": "unknown",
+        "backstop": "The reviewed code/documentation establishes permissionless incentivized liquidation; no funded exact-market recovery backstop was established.",
+        "shutdownOrBadDebtBehavior": "Morpho losses reduce the adapter claim; VaultV2 accrual realizes reduced realAssets as proportional share-price depreciation. No exact-market funded shutdown recovery or legal priority is established.",
+        "sources": [
+          {
+            "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+            "url": "https://blue-api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho market oracle interface, immutable market oracle identity and source selection",
+            "url": "https://docs.morpho.org/learn/concepts/oracle/"
+          },
+          {
+            "label": "Morpho oracle-driven liquidation and VaultV2 proportional loss realization",
+            "url": "https://docs.morpho.org/learn/concepts/liquidation/"
+          },
+          {
+            "label": "ethereum idToMarketParams and exact price() archive calls at block 26110242, read 2026-10-03; credentials omitted",
+            "url": "https://eth-mainnet.g.alchemy.com"
+          }
+        ],
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110242
+      },
+      {
+        "id": "market-bbf7ce1b40d32d3e3048f5cf27eeaa6de8cb27b80194690aab191a63381d8c99",
+        "label": "siUSD / USDC",
+        "tier": "opaque-or-unknown",
+        "summary": "Morpho API identifies siUSD collateral 0xdbdc1ef57537e34680b898e1febd3d68c7389bcb, market 0xbbf7ce1b40d32d3e3048f5cf27eeaa6de8cb27b80194690aab191a63381d8c99, oracle 0xd2cc46b9b2d761502ef933320ecf0268ec0dfa6d, type ChainlinkOracleV2. Current nonzero supply exposure is established; upstream feed/admin/staleness and per-oracle fallback controls remain unverified. Independently read Morpho 0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb idToMarketParams(bytes32) at block 26110242 confirmed the exact oracle and LLTV; price() returned raw 1092471270000000000000000. A returned price proves callability of pricing at this block, not feed freshness, liquidator execution or safe topology. Current Morpho oracleByAddress publishes baseFeedOne=0xf81aa28a4f68124683afada81e8ebbf6e2867067, quoteFeedOne=0xc3866d726c204c0836e0677a31973c649888973d, baseOracleVault=0xdbdc1ef57537e34680b898e1febd3d68c7389bcb. This improves the exact feed inventory; heartbeat/staleness enforcement, conversion-leg controls and complete privileged/manual update powers have not been established.",
+        "collateralAssets": [
+          "siUSD"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Morpho market oracle (ChainlinkOracleV2 API classification; upstream topology unverified)",
+            "path": "Collateral/USDC price() for market 0xbbf7ce1b40d32d3e3048f5cf27eeaa6de8cb27b80194690aab191a63381d8c99",
+            "address": "0xd2cc46b9b2d761502ef933320ecf0268ec0dfa6d",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03",
+            "observedBlock": 26110242
+          },
+          {
+            "provider": "Chainlink-compatible composite leg (provider/admin/update policy unverified)",
+            "path": "baseFeedOne of 0xd2cc46b9b2d761502ef933320ecf0268ec0dfa6d ; API decimals=18",
+            "address": "0xf81aa28a4f68124683afada81e8ebbf6e2867067",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03"
+          },
+          {
+            "provider": "Chainlink-compatible composite leg (provider/admin/update policy unverified)",
+            "path": "quoteFeedOne of 0xd2cc46b9b2d761502ef933320ecf0268ec0dfa6d ; API decimals=12",
+            "address": "0xc3866d726c204c0836e0677a31973c649888973d",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03"
+          },
+          {
+            "provider": "ERC-4626 conversion leg (exact controls unverified)",
+            "path": "baseOracleVault of 0xd2cc46b9b2d761502ef933320ecf0268ec0dfa6d",
+            "address": "0xdbdc1ef57537e34680b898e1febd3d68c7389bcb",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03"
+          }
+        ],
+        "fallbackBehavior": "Morpho core invokes the configured market oracle price(); no alternate core oracle is selected. Any fallback or staleness rejection inside this exact oracle remains unverified.",
+        "collateralParameters": [
+          {
+            "asset": "siUSD",
+            "maximumLtvPct": 91.5,
+            "note": "Immutable market liquidation loan-to-value from Morpho API, not vault utilization or a liquidation execution guarantee."
+          }
+        ],
+        "liquidationMechanism": "Any external liquidator may repay debt and receive collateral when oracle-valued LTV exceeds LLTV. Actual callability and stressed sale execution on this exact feed were not measured.",
+        "liquidationState": "unknown",
+        "backstop": "The reviewed code/documentation establishes permissionless incentivized liquidation; no funded exact-market recovery backstop was established.",
+        "shutdownOrBadDebtBehavior": "Morpho losses reduce the adapter claim; VaultV2 accrual realizes reduced realAssets as proportional share-price depreciation. No exact-market funded shutdown recovery or legal priority is established.",
+        "sources": [
+          {
+            "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+            "url": "https://blue-api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho market oracle interface, immutable market oracle identity and source selection",
+            "url": "https://docs.morpho.org/learn/concepts/oracle/"
+          },
+          {
+            "label": "Morpho oracle-driven liquidation and VaultV2 proportional loss realization",
+            "url": "https://docs.morpho.org/learn/concepts/liquidation/"
+          },
+          {
+            "label": "ethereum idToMarketParams and exact price() archive calls at block 26110242, read 2026-10-03; credentials omitted",
+            "url": "https://eth-mainnet.g.alchemy.com"
+          }
+        ],
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110242
+      },
+      {
+        "id": "market-0ff9c1f2b9cb037ecb14029cbacd3a94470458cf5c6884f09c46ae354765d789",
+        "label": "srNUSD / USDC",
+        "tier": "opaque-or-unknown",
+        "summary": "Morpho API identifies srNUSD collateral 0x65a44528e8868166401ea08b549e19552af589db, market 0x0ff9c1f2b9cb037ecb14029cbacd3a94470458cf5c6884f09c46ae354765d789, oracle 0x9e1031d287416b45c89d62780768d35df24df4be, type Unknown. Current nonzero supply exposure is established; upstream feed/admin/staleness and per-oracle fallback controls remain unverified. Independently read Morpho 0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb idToMarketParams(bytes32) at block 26110242 confirmed the exact oracle and LLTV; price() returned raw 1239711522681028678000000. A returned price proves callability of pricing at this block, not feed freshness, liquidator execution or safe topology. Morpho oracleByAddress returned no structured upstream feed/vault topology for this oracle, so API disclosure does not close this branch.",
+        "collateralAssets": [
+          "srNUSD"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Morpho market oracle (Unknown API classification; upstream topology unverified)",
+            "path": "Collateral/USDC price() for market 0x0ff9c1f2b9cb037ecb14029cbacd3a94470458cf5c6884f09c46ae354765d789",
+            "address": "0x9e1031d287416b45c89d62780768d35df24df4be",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03",
+            "observedBlock": 26110242
+          }
+        ],
+        "fallbackBehavior": "Morpho core invokes the configured market oracle price(); no alternate core oracle is selected. Any fallback or staleness rejection inside this exact oracle remains unverified.",
+        "collateralParameters": [
+          {
+            "asset": "srNUSD",
+            "maximumLtvPct": 91.5,
+            "note": "Immutable market liquidation loan-to-value from Morpho API, not vault utilization or a liquidation execution guarantee."
+          }
+        ],
+        "liquidationMechanism": "Any external liquidator may repay debt and receive collateral when oracle-valued LTV exceeds LLTV. Actual callability and stressed sale execution on this exact feed were not measured.",
+        "liquidationState": "unknown",
+        "backstop": "The reviewed code/documentation establishes permissionless incentivized liquidation; no funded exact-market recovery backstop was established.",
+        "shutdownOrBadDebtBehavior": "Morpho losses reduce the adapter claim; VaultV2 accrual realizes reduced realAssets as proportional share-price depreciation. No exact-market funded shutdown recovery or legal priority is established.",
+        "sources": [
+          {
+            "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+            "url": "https://blue-api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho market oracle interface, immutable market oracle identity and source selection",
+            "url": "https://docs.morpho.org/learn/concepts/oracle/"
+          },
+          {
+            "label": "Morpho oracle-driven liquidation and VaultV2 proportional loss realization",
+            "url": "https://docs.morpho.org/learn/concepts/liquidation/"
+          },
+          {
+            "label": "ethereum idToMarketParams and exact price() archive calls at block 26110242, read 2026-10-03; credentials omitted",
+            "url": "https://eth-mainnet.g.alchemy.com"
+          }
+        ],
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110242
+      },
+      {
+        "id": "market-e07d416323a1afbfe0bf2fe27ffb549ff565cf5c86d21b79fc60664038e597c9",
+        "label": "savUSD / USDC",
+        "tier": "opaque-or-unknown",
+        "summary": "Morpho API identifies savUSD collateral 0xb8d89678e75a973e74698c976716308abb8a46a4, market 0xe07d416323a1afbfe0bf2fe27ffb549ff565cf5c86d21b79fc60664038e597c9, oracle 0x839940de5043e7c6edaf063714afe7f20de5ff12, type ChainlinkOracleV2. Current nonzero supply exposure is established; upstream feed/admin/staleness and per-oracle fallback controls remain unverified. Independently read Morpho 0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb idToMarketParams(bytes32) at block 26110242 confirmed the exact oracle and LLTV; price() returned raw 1205614824672297253000000. A returned price proves callability of pricing at this block, not feed freshness, liquidator execution or safe topology. Current Morpho oracleByAddress publishes baseFeedOne=0x9fbb7d07ae32b3f75c2a5805c2153243a2532589. This improves the exact feed inventory; heartbeat/staleness enforcement, conversion-leg controls and complete privileged/manual update powers have not been established.",
+        "collateralAssets": [
+          "savUSD"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Morpho market oracle (ChainlinkOracleV2 API classification; upstream topology unverified)",
+            "path": "Collateral/USDC price() for market 0xe07d416323a1afbfe0bf2fe27ffb549ff565cf5c86d21b79fc60664038e597c9",
+            "address": "0x839940de5043e7c6edaf063714afe7f20de5ff12",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03",
+            "observedBlock": 26110242
+          },
+          {
+            "provider": "Chainlink-compatible composite leg (provider/admin/update policy unverified)",
+            "path": "baseFeedOne of 0x839940de5043e7c6edaf063714afe7f20de5ff12 ; API decimals=18",
+            "address": "0x9fbb7d07ae32b3f75c2a5805c2153243a2532589",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03"
+          }
+        ],
+        "fallbackBehavior": "Morpho core invokes the configured market oracle price(); no alternate core oracle is selected. Any fallback or staleness rejection inside this exact oracle remains unverified.",
+        "collateralParameters": [
+          {
+            "asset": "savUSD",
+            "maximumLtvPct": 91.5,
+            "note": "Immutable market liquidation loan-to-value from Morpho API, not vault utilization or a liquidation execution guarantee."
+          }
+        ],
+        "liquidationMechanism": "Any external liquidator may repay debt and receive collateral when oracle-valued LTV exceeds LLTV. Actual callability and stressed sale execution on this exact feed were not measured.",
+        "liquidationState": "unknown",
+        "backstop": "The reviewed code/documentation establishes permissionless incentivized liquidation; no funded exact-market recovery backstop was established.",
+        "shutdownOrBadDebtBehavior": "Morpho losses reduce the adapter claim; VaultV2 accrual realizes reduced realAssets as proportional share-price depreciation. No exact-market funded shutdown recovery or legal priority is established.",
+        "sources": [
+          {
+            "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+            "url": "https://blue-api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho market oracle interface, immutable market oracle identity and source selection",
+            "url": "https://docs.morpho.org/learn/concepts/oracle/"
+          },
+          {
+            "label": "Morpho oracle-driven liquidation and VaultV2 proportional loss realization",
+            "url": "https://docs.morpho.org/learn/concepts/liquidation/"
+          },
+          {
+            "label": "ethereum idToMarketParams and exact price() archive calls at block 26110242, read 2026-10-03; credentials omitted",
+            "url": "https://eth-mainnet.g.alchemy.com"
+          }
+        ],
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110242
+      },
+      {
+        "id": "market-acc49fbf58feb1ac971acce68f8adc177c43682d6a7087bbd4991a05cb7a2c67",
+        "label": "srRoyUSDC / USDC",
+        "tier": "opaque-or-unknown",
+        "summary": "Morpho API identifies srRoyUSDC collateral 0xcd9f5907f92818bc06c9ad70217f089e190d2a32, market 0xacc49fbf58feb1ac971acce68f8adc177c43682d6a7087bbd4991a05cb7a2c67, oracle 0x86a807dc5e689f78e280b18413001ca0c2426ab0, type ChainlinkOracleV2. Current nonzero supply exposure is established; upstream feed/admin/staleness and per-oracle fallback controls remain unverified. Independently read Morpho 0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb idToMarketParams(bytes32) at block 26110242 confirmed the exact oracle and LLTV; price() returned raw 1030741860000000000000000000000000000. A returned price proves callability of pricing at this block, not feed freshness, liquidator execution or safe topology. Current Morpho oracleByAddress publishes baseOracleVault=0xcd9f5907f92818bc06c9ad70217f089e190d2a32. This improves the exact feed inventory; heartbeat/staleness enforcement, conversion-leg controls and complete privileged/manual update powers have not been established.",
+        "collateralAssets": [
+          "srRoyUSDC"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Morpho market oracle (ChainlinkOracleV2 API classification; upstream topology unverified)",
+            "path": "Collateral/USDC price() for market 0xacc49fbf58feb1ac971acce68f8adc177c43682d6a7087bbd4991a05cb7a2c67",
+            "address": "0x86a807dc5e689f78e280b18413001ca0c2426ab0",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03",
+            "observedBlock": 26110242
+          },
+          {
+            "provider": "ERC-4626 conversion leg (exact controls unverified)",
+            "path": "baseOracleVault of 0x86a807dc5e689f78e280b18413001ca0c2426ab0",
+            "address": "0xcd9f5907f92818bc06c9ad70217f089e190d2a32",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03"
+          }
+        ],
+        "fallbackBehavior": "Morpho core invokes the configured market oracle price(); no alternate core oracle is selected. Any fallback or staleness rejection inside this exact oracle remains unverified.",
+        "collateralParameters": [
+          {
+            "asset": "srRoyUSDC",
+            "maximumLtvPct": 91.5,
+            "note": "Immutable market liquidation loan-to-value from Morpho API, not vault utilization or a liquidation execution guarantee."
+          }
+        ],
+        "liquidationMechanism": "Any external liquidator may repay debt and receive collateral when oracle-valued LTV exceeds LLTV. Actual callability and stressed sale execution on this exact feed were not measured.",
+        "liquidationState": "unknown",
+        "backstop": "The reviewed code/documentation establishes permissionless incentivized liquidation; no funded exact-market recovery backstop was established.",
+        "shutdownOrBadDebtBehavior": "Morpho losses reduce the adapter claim; VaultV2 accrual realizes reduced realAssets as proportional share-price depreciation. No exact-market funded shutdown recovery or legal priority is established.",
+        "sources": [
+          {
+            "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+            "url": "https://blue-api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho market oracle interface, immutable market oracle identity and source selection",
+            "url": "https://docs.morpho.org/learn/concepts/oracle/"
+          },
+          {
+            "label": "Morpho oracle-driven liquidation and VaultV2 proportional loss realization",
+            "url": "https://docs.morpho.org/learn/concepts/liquidation/"
+          },
+          {
+            "label": "ethereum idToMarketParams and exact price() archive calls at block 26110242, read 2026-10-03; credentials omitted",
+            "url": "https://eth-mainnet.g.alchemy.com"
+          }
+        ],
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110242
+      },
+      {
+        "id": "market-973e9dd45799efe8775417bcc420a3ab84a583587b2108985746e2fe201d0c83",
+        "label": "YFI / USDC",
+        "tier": "opaque-or-unknown",
+        "summary": "Morpho API identifies YFI collateral 0x0bc529c00c6401aef6d220be8c6ea1667f6ad93e, market 0x973e9dd45799efe8775417bcc420a3ab84a583587b2108985746e2fe201d0c83, oracle 0x637060c43e0bf6ab68ab59e7ad72cee45ce84ad5, type ChainlinkOracleV2. Current nonzero supply exposure is established; upstream feed/admin/staleness and per-oracle fallback controls remain unverified. Independently read Morpho 0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb idToMarketParams(bytes32) at block 26110242 confirmed the exact oracle and LLTV; price() returned raw 2647783823933107006387554322. A returned price proves callability of pricing at this block, not feed freshness, liquidator execution or safe topology. Current Morpho oracleByAddress publishes baseFeedOne=0xa027702dbb89fbd58938e4324ac03b58d812b0e1, quoteFeedOne=0x8fffffd4afb6115b954bd326cbe7b4ba576818f6. This improves the exact feed inventory; heartbeat/staleness enforcement, conversion-leg controls and complete privileged/manual update powers have not been established.",
+        "collateralAssets": [
+          "YFI"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Morpho market oracle (ChainlinkOracleV2 API classification; upstream topology unverified)",
+            "path": "Collateral/USDC price() for market 0x973e9dd45799efe8775417bcc420a3ab84a583587b2108985746e2fe201d0c83",
+            "address": "0x637060c43e0bf6ab68ab59e7ad72cee45ce84ad5",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03",
+            "observedBlock": 26110242
+          },
+          {
+            "provider": "Chainlink-compatible composite leg (provider/admin/update policy unverified)",
+            "path": "baseFeedOne of 0x637060c43e0bf6ab68ab59e7ad72cee45ce84ad5 ; API decimals=8",
+            "address": "0xa027702dbb89fbd58938e4324ac03b58d812b0e1",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03"
+          },
+          {
+            "provider": "Chainlink-compatible composite leg (provider/admin/update policy unverified)",
+            "path": "quoteFeedOne of 0x637060c43e0bf6ab68ab59e7ad72cee45ce84ad5 ; API decimals=8",
+            "address": "0x8fffffd4afb6115b954bd326cbe7b4ba576818f6",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03"
+          }
+        ],
+        "fallbackBehavior": "Morpho core invokes the configured market oracle price(); no alternate core oracle is selected. Any fallback or staleness rejection inside this exact oracle remains unverified.",
+        "collateralParameters": [
+          {
+            "asset": "YFI",
+            "maximumLtvPct": 77.0,
+            "note": "Immutable market liquidation loan-to-value from Morpho API, not vault utilization or a liquidation execution guarantee."
+          }
+        ],
+        "liquidationMechanism": "Any external liquidator may repay debt and receive collateral when oracle-valued LTV exceeds LLTV. Actual callability and stressed sale execution on this exact feed were not measured.",
+        "liquidationState": "unknown",
+        "backstop": "The reviewed code/documentation establishes permissionless incentivized liquidation; no funded exact-market recovery backstop was established.",
+        "shutdownOrBadDebtBehavior": "Morpho losses reduce the adapter claim; VaultV2 accrual realizes reduced realAssets as proportional share-price depreciation. No exact-market funded shutdown recovery or legal priority is established.",
+        "sources": [
+          {
+            "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+            "url": "https://blue-api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho market oracle interface, immutable market oracle identity and source selection",
+            "url": "https://docs.morpho.org/learn/concepts/oracle/"
+          },
+          {
+            "label": "Morpho oracle-driven liquidation and VaultV2 proportional loss realization",
+            "url": "https://docs.morpho.org/learn/concepts/liquidation/"
+          },
+          {
+            "label": "ethereum idToMarketParams and exact price() archive calls at block 26110242, read 2026-10-03; credentials omitted",
+            "url": "https://eth-mainnet.g.alchemy.com"
+          }
+        ],
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110242
+      },
+      {
+        "id": "market-702b7ec7628de2622e51e1bb34a7e6ad9e95f3a25a2ed361e4ce621f23f5e642",
+        "label": "PT-cUSD-23JUL2026 / USDC",
+        "tier": "opaque-or-unknown",
+        "summary": "Morpho API identifies PT-cUSD-23JUL2026 collateral 0x928fb6ed39100a92b2480f5cbb93453f98d9f4ce, market 0x702b7ec7628de2622e51e1bb34a7e6ad9e95f3a25a2ed361e4ce621f23f5e642, oracle 0x25b30502467639e8fa118451105269e9b9813dd2, type ChainlinkOracleV2. Current nonzero supply exposure is established; upstream feed/admin/staleness and per-oracle fallback controls remain unverified. Independently read Morpho 0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb idToMarketParams(bytes32) at block 26110242 confirmed the exact oracle and LLTV; price() returned raw 999979777876677051090364. A returned price proves callability of pricing at this block, not feed freshness, liquidator execution or safe topology. Current Morpho oracleByAddress publishes baseFeedOne=0xf0aeb0e394833e5b320fec5b16cb7668616ca5c4, baseFeedTwo=0x9a5a3c3ed0361505cc1d4e824b3854de5724434a, quoteFeedOne=0xeef31c7d9f2e82e8a497b140cc60cc082be4b94e. This improves the exact feed inventory; heartbeat/staleness enforcement, conversion-leg controls and complete privileged/manual update powers have not been established.",
+        "collateralAssets": [
+          "PT-cUSD-23JUL2026"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Morpho market oracle (ChainlinkOracleV2 API classification; upstream topology unverified)",
+            "path": "Collateral/USDC price() for market 0x702b7ec7628de2622e51e1bb34a7e6ad9e95f3a25a2ed361e4ce621f23f5e642",
+            "address": "0x25b30502467639e8fa118451105269e9b9813dd2",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03",
+            "observedBlock": 26110242
+          },
+          {
+            "provider": "Chainlink-compatible composite leg (provider/admin/update policy unverified)",
+            "path": "baseFeedOne of 0x25b30502467639e8fa118451105269e9b9813dd2 ; API decimals=18",
+            "address": "0xf0aeb0e394833e5b320fec5b16cb7668616ca5c4",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03"
+          },
+          {
+            "provider": "Chainlink-compatible composite leg (provider/admin/update policy unverified)",
+            "path": "baseFeedTwo of 0x25b30502467639e8fa118451105269e9b9813dd2 ; API decimals=8",
+            "address": "0x9a5a3c3ed0361505cc1d4e824b3854de5724434a",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03"
+          },
+          {
+            "provider": "Chainlink-compatible composite leg (provider/admin/update policy unverified)",
+            "path": "quoteFeedOne of 0x25b30502467639e8fa118451105269e9b9813dd2 ; API decimals=8",
+            "address": "0xeef31c7d9f2e82e8a497b140cc60cc082be4b94e",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03"
+          }
+        ],
+        "fallbackBehavior": "Morpho core invokes the configured market oracle price(); no alternate core oracle is selected. Any fallback or staleness rejection inside this exact oracle remains unverified.",
+        "collateralParameters": [
+          {
+            "asset": "PT-cUSD-23JUL2026",
+            "maximumLtvPct": 91.5,
+            "note": "Immutable market liquidation loan-to-value from Morpho API, not vault utilization or a liquidation execution guarantee."
+          }
+        ],
+        "liquidationMechanism": "Any external liquidator may repay debt and receive collateral when oracle-valued LTV exceeds LLTV. Actual callability and stressed sale execution on this exact feed were not measured.",
+        "liquidationState": "unknown",
+        "backstop": "The reviewed code/documentation establishes permissionless incentivized liquidation; no funded exact-market recovery backstop was established.",
+        "shutdownOrBadDebtBehavior": "Morpho losses reduce the adapter claim; VaultV2 accrual realizes reduced realAssets as proportional share-price depreciation. No exact-market funded shutdown recovery or legal priority is established.",
+        "sources": [
+          {
+            "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+            "url": "https://blue-api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho market oracle interface, immutable market oracle identity and source selection",
+            "url": "https://docs.morpho.org/learn/concepts/oracle/"
+          },
+          {
+            "label": "Morpho oracle-driven liquidation and VaultV2 proportional loss realization",
+            "url": "https://docs.morpho.org/learn/concepts/liquidation/"
+          },
+          {
+            "label": "ethereum idToMarketParams and exact price() archive calls at block 26110242, read 2026-10-03; credentials omitted",
+            "url": "https://eth-mainnet.g.alchemy.com"
+          }
+        ],
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110242
+      },
+      {
+        "id": "market-88ab06d43b089e574bbe312deee6cdb292702c3a2e765059492c34b1cd298acf",
+        "label": "ftUSD / USDC",
+        "tier": "opaque-or-unknown",
+        "summary": "Morpho API identifies ftUSD collateral 0xf7d85ec4e7710f71992752eac2111312e73e9c9c, market 0x88ab06d43b089e574bbe312deee6cdb292702c3a2e765059492c34b1cd298acf, oracle 0x7887afbe7581eb01b3d91d80c198b0275feab779, type ChainlinkOracleV2. Current nonzero supply exposure is established; upstream feed/admin/staleness and per-oracle fallback controls remain unverified. Independently read Morpho 0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb idToMarketParams(bytes32) at block 26110242 confirmed the exact oracle and LLTV; price() returned raw 999116701302684070589132509895258511. A returned price proves callability of pricing at this block, not feed freshness, liquidator execution or safe topology. Current Morpho oracleByAddress publishes baseFeedOne=0xa69f7a38b6c91a4bc2477f097dc8a1f16daadff8, quoteFeedOne=0x37be050e75c7f0a80f0e8abbfc2c4ff826728caa. This improves the exact feed inventory; heartbeat/staleness enforcement, conversion-leg controls and complete privileged/manual update powers have not been established.",
+        "collateralAssets": [
+          "ftUSD"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Morpho market oracle (ChainlinkOracleV2 API classification; upstream topology unverified)",
+            "path": "Collateral/USDC price() for market 0x88ab06d43b089e574bbe312deee6cdb292702c3a2e765059492c34b1cd298acf",
+            "address": "0x7887afbe7581eb01b3d91d80c198b0275feab779",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03",
+            "observedBlock": 26110242
+          },
+          {
+            "provider": "Chainlink-compatible composite leg (provider/admin/update policy unverified)",
+            "path": "baseFeedOne of 0x7887afbe7581eb01b3d91d80c198b0275feab779 ; API decimals=8",
+            "address": "0xa69f7a38b6c91a4bc2477f097dc8a1f16daadff8",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03"
+          },
+          {
+            "provider": "Chainlink-compatible composite leg (provider/admin/update policy unverified)",
+            "path": "quoteFeedOne of 0x7887afbe7581eb01b3d91d80c198b0275feab779 ; API decimals=8",
+            "address": "0x37be050e75c7f0a80f0e8abbfc2c4ff826728caa",
+            "chain": "ethereum",
+            "observedAt": "2026-10-03"
+          }
+        ],
+        "fallbackBehavior": "Morpho core invokes the configured market oracle price(); no alternate core oracle is selected. Any fallback or staleness rejection inside this exact oracle remains unverified.",
+        "collateralParameters": [
+          {
+            "asset": "ftUSD",
+            "maximumLtvPct": 86.0,
+            "note": "Immutable market liquidation loan-to-value from Morpho API, not vault utilization or a liquidation execution guarantee."
+          }
+        ],
+        "liquidationMechanism": "Any external liquidator may repay debt and receive collateral when oracle-valued LTV exceeds LLTV. Actual callability and stressed sale execution on this exact feed were not measured.",
+        "liquidationState": "unknown",
+        "backstop": "The reviewed code/documentation establishes permissionless incentivized liquidation; no funded exact-market recovery backstop was established.",
+        "shutdownOrBadDebtBehavior": "Morpho losses reduce the adapter claim; VaultV2 accrual realizes reduced realAssets as proportional share-price depreciation. No exact-market funded shutdown recovery or legal priority is established.",
+        "sources": [
+          {
+            "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+            "url": "https://blue-api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho market oracle interface, immutable market oracle identity and source selection",
+            "url": "https://docs.morpho.org/learn/concepts/oracle/"
+          },
+          {
+            "label": "Morpho oracle-driven liquidation and VaultV2 proportional loss realization",
+            "url": "https://docs.morpho.org/learn/concepts/liquidation/"
+          },
+          {
+            "label": "ethereum idToMarketParams and exact price() archive calls at block 26110242, read 2026-10-03; credentials omitted",
+            "url": "https://eth-mainnet.g.alchemy.com"
+          }
+        ],
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110242
+      }
+    ],
+    "paths": [
+      {
+        "id": "vault-nav",
+        "chain": "ethereum",
+        "address": "0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13",
+        "pricingAuthority": "internal-price",
+        "applicability": {
+          "disposition": "top-level-only",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine09)",
+          "confidence": "probable",
+          "rationale": "The exact vault uses accrued totalAssets and totalSupply plus pending fee shares to convert deposits/redemptions; borrower pricing remains in the separate market paths below.",
+          "sources": [
+            {
+              "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+              "url": "https://blue-api.morpho.org/graphql"
+            },
+            {
+              "label": "Morpho market oracle interface, immutable market oracle identity and source selection",
+              "url": "https://docs.morpho.org/learn/concepts/oracle/"
+            },
+            {
+              "label": "Morpho oracle-driven liquidation and VaultV2 proportional loss realization",
+              "url": "https://docs.morpho.org/learn/concepts/liquidation/"
+            },
+            {
+              "label": "Exact KPK USDC Yield V2 Morpho Vault V2 deployment",
+              "url": "https://app.morpho.org/ethereum/vault/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+            },
+            {
+              "label": "Partially verified VaultV2 source; explorer deployed bytecode matches pinned RPC",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+            },
+            {
+              "label": "Ethereum RPC pinned block 26107704, observed 2026-10-02T22:44:52.884200+00:00",
+              "url": "https://eth-mainnet.g.alchemy.com"
+            },
+            {
+              "label": "Morpho itemized vault and adapter data observed 2026-10-02T22:44:52.884200+00:00",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Morpho gate semantics and irreversible abdication",
+              "url": "https://docs.morpho.org/curate/concepts/gates.md"
+            },
+            {
+              "label": "Exact current MorphoMarketV1AdapterV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4f74895557bea2de5d51d8c06e944da92dbc8550"
+            }
+          ]
+        }
+      },
+      {
+        "id": "market-34377fc4f617c51818e92c79df31ff270c6a91bc94ad32e367fdf59b9f4ac5dd",
+        "chain": "ethereum",
+        "address": "0xa3a7a3cefee206f9d7fe00ec3c83324ed4228411",
+        "pricingAuthority": "external-price",
+        "branchId": "market-34377fc4f617c51818e92c79df31ff270c6a91bc94ad32e367fdf59b9f4ac5dd",
+        "applicability": {
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine09)",
+          "confidence": "probable",
+          "rationale": "This active lender exposure depends on the exact market collateral oracle for borrowing capacity and liquidation, despite the vault having no own borrowing position.",
+          "sources": [
+            {
+              "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+              "url": "https://blue-api.morpho.org/graphql"
+            },
+            {
+              "label": "Morpho market oracle interface, immutable market oracle identity and source selection",
+              "url": "https://docs.morpho.org/learn/concepts/oracle/"
+            },
+            {
+              "label": "Morpho oracle-driven liquidation and VaultV2 proportional loss realization",
+              "url": "https://docs.morpho.org/learn/concepts/liquidation/"
+            }
+          ]
+        }
+      },
+      {
+        "id": "market-bbf7ce1b40d32d3e3048f5cf27eeaa6de8cb27b80194690aab191a63381d8c99",
+        "chain": "ethereum",
+        "address": "0xd2cc46b9b2d761502ef933320ecf0268ec0dfa6d",
+        "pricingAuthority": "external-price",
+        "branchId": "market-bbf7ce1b40d32d3e3048f5cf27eeaa6de8cb27b80194690aab191a63381d8c99",
+        "applicability": {
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine09)",
+          "confidence": "probable",
+          "rationale": "This active lender exposure depends on the exact market collateral oracle for borrowing capacity and liquidation, despite the vault having no own borrowing position.",
+          "sources": [
+            {
+              "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+              "url": "https://blue-api.morpho.org/graphql"
+            },
+            {
+              "label": "Morpho market oracle interface, immutable market oracle identity and source selection",
+              "url": "https://docs.morpho.org/learn/concepts/oracle/"
+            },
+            {
+              "label": "Morpho oracle-driven liquidation and VaultV2 proportional loss realization",
+              "url": "https://docs.morpho.org/learn/concepts/liquidation/"
+            }
+          ]
+        }
+      },
+      {
+        "id": "market-0ff9c1f2b9cb037ecb14029cbacd3a94470458cf5c6884f09c46ae354765d789",
+        "chain": "ethereum",
+        "address": "0x9e1031d287416b45c89d62780768d35df24df4be",
+        "pricingAuthority": "external-price",
+        "branchId": "market-0ff9c1f2b9cb037ecb14029cbacd3a94470458cf5c6884f09c46ae354765d789",
+        "applicability": {
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine09)",
+          "confidence": "probable",
+          "rationale": "This active lender exposure depends on the exact market collateral oracle for borrowing capacity and liquidation, despite the vault having no own borrowing position.",
+          "sources": [
+            {
+              "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+              "url": "https://blue-api.morpho.org/graphql"
+            },
+            {
+              "label": "Morpho market oracle interface, immutable market oracle identity and source selection",
+              "url": "https://docs.morpho.org/learn/concepts/oracle/"
+            },
+            {
+              "label": "Morpho oracle-driven liquidation and VaultV2 proportional loss realization",
+              "url": "https://docs.morpho.org/learn/concepts/liquidation/"
+            }
+          ]
+        }
+      },
+      {
+        "id": "market-e07d416323a1afbfe0bf2fe27ffb549ff565cf5c86d21b79fc60664038e597c9",
+        "chain": "ethereum",
+        "address": "0x839940de5043e7c6edaf063714afe7f20de5ff12",
+        "pricingAuthority": "external-price",
+        "branchId": "market-e07d416323a1afbfe0bf2fe27ffb549ff565cf5c86d21b79fc60664038e597c9",
+        "applicability": {
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine09)",
+          "confidence": "probable",
+          "rationale": "This active lender exposure depends on the exact market collateral oracle for borrowing capacity and liquidation, despite the vault having no own borrowing position.",
+          "sources": [
+            {
+              "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+              "url": "https://blue-api.morpho.org/graphql"
+            },
+            {
+              "label": "Morpho market oracle interface, immutable market oracle identity and source selection",
+              "url": "https://docs.morpho.org/learn/concepts/oracle/"
+            },
+            {
+              "label": "Morpho oracle-driven liquidation and VaultV2 proportional loss realization",
+              "url": "https://docs.morpho.org/learn/concepts/liquidation/"
+            }
+          ]
+        }
+      },
+      {
+        "id": "market-acc49fbf58feb1ac971acce68f8adc177c43682d6a7087bbd4991a05cb7a2c67",
+        "chain": "ethereum",
+        "address": "0x86a807dc5e689f78e280b18413001ca0c2426ab0",
+        "pricingAuthority": "external-price",
+        "branchId": "market-acc49fbf58feb1ac971acce68f8adc177c43682d6a7087bbd4991a05cb7a2c67",
+        "applicability": {
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine09)",
+          "confidence": "probable",
+          "rationale": "This active lender exposure depends on the exact market collateral oracle for borrowing capacity and liquidation, despite the vault having no own borrowing position.",
+          "sources": [
+            {
+              "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+              "url": "https://blue-api.morpho.org/graphql"
+            },
+            {
+              "label": "Morpho market oracle interface, immutable market oracle identity and source selection",
+              "url": "https://docs.morpho.org/learn/concepts/oracle/"
+            },
+            {
+              "label": "Morpho oracle-driven liquidation and VaultV2 proportional loss realization",
+              "url": "https://docs.morpho.org/learn/concepts/liquidation/"
+            }
+          ]
+        }
+      },
+      {
+        "id": "market-973e9dd45799efe8775417bcc420a3ab84a583587b2108985746e2fe201d0c83",
+        "chain": "ethereum",
+        "address": "0x637060c43e0bf6ab68ab59e7ad72cee45ce84ad5",
+        "pricingAuthority": "external-price",
+        "branchId": "market-973e9dd45799efe8775417bcc420a3ab84a583587b2108985746e2fe201d0c83",
+        "applicability": {
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine09)",
+          "confidence": "probable",
+          "rationale": "This active lender exposure depends on the exact market collateral oracle for borrowing capacity and liquidation, despite the vault having no own borrowing position.",
+          "sources": [
+            {
+              "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+              "url": "https://blue-api.morpho.org/graphql"
+            },
+            {
+              "label": "Morpho market oracle interface, immutable market oracle identity and source selection",
+              "url": "https://docs.morpho.org/learn/concepts/oracle/"
+            },
+            {
+              "label": "Morpho oracle-driven liquidation and VaultV2 proportional loss realization",
+              "url": "https://docs.morpho.org/learn/concepts/liquidation/"
+            }
+          ]
+        }
+      },
+      {
+        "id": "market-702b7ec7628de2622e51e1bb34a7e6ad9e95f3a25a2ed361e4ce621f23f5e642",
+        "chain": "ethereum",
+        "address": "0x25b30502467639e8fa118451105269e9b9813dd2",
+        "pricingAuthority": "external-price",
+        "branchId": "market-702b7ec7628de2622e51e1bb34a7e6ad9e95f3a25a2ed361e4ce621f23f5e642",
+        "applicability": {
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine09)",
+          "confidence": "probable",
+          "rationale": "This active lender exposure depends on the exact market collateral oracle for borrowing capacity and liquidation, despite the vault having no own borrowing position.",
+          "sources": [
+            {
+              "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+              "url": "https://blue-api.morpho.org/graphql"
+            },
+            {
+              "label": "Morpho market oracle interface, immutable market oracle identity and source selection",
+              "url": "https://docs.morpho.org/learn/concepts/oracle/"
+            },
+            {
+              "label": "Morpho oracle-driven liquidation and VaultV2 proportional loss realization",
+              "url": "https://docs.morpho.org/learn/concepts/liquidation/"
+            }
+          ]
+        }
+      },
+      {
+        "id": "market-88ab06d43b089e574bbe312deee6cdb292702c3a2e765059492c34b1cd298acf",
+        "chain": "ethereum",
+        "address": "0x7887afbe7581eb01b3d91d80c198b0275feab779",
+        "pricingAuthority": "external-price",
+        "branchId": "market-88ab06d43b089e574bbe312deee6cdb292702c3a2e765059492c34b1cd298acf",
+        "applicability": {
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine09)",
+          "confidence": "probable",
+          "rationale": "This active lender exposure depends on the exact market collateral oracle for borrowing capacity and liquidation, despite the vault having no own borrowing position.",
+          "sources": [
+            {
+              "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+              "url": "https://blue-api.morpho.org/graphql"
+            },
+            {
+              "label": "Morpho market oracle interface, immutable market oracle identity and source selection",
+              "url": "https://docs.morpho.org/learn/concepts/oracle/"
+            },
+            {
+              "label": "Morpho oracle-driven liquidation and VaultV2 proportional loss realization",
+              "url": "https://docs.morpho.org/learn/concepts/liquidation/"
+            }
+          ]
+        }
+      }
     ]
   }
 }

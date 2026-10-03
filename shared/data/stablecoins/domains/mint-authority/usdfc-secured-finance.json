@@ -3,7 +3,7 @@
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "concentrated-admin",
-    "confidence": "verified",
+    "confidence": "unknown",
     "summary": "BorrowerOperations issues USDFC against FIL Troves, but a live 2-of-3 Safe controls token ownership and the ProxyAdmin that can replace mint logic.",
     "upgradeability": {
       "model": "transparent-proxy",
@@ -137,15 +137,68 @@
         {
           "label": "Upgradeable DebtToken source",
           "url": "https://raw.githubusercontent.com/Secured-Finance/stablecoin-contracts/develop/contracts/DebtToken.sol"
+        },
+        {
+          "label": "Hexens core code-security audit (2025-01)",
+          "url": "https://github.com/Secured-Finance/stablecoin-contracts/blob/develop/audits/2025-01-Hexens.pdf"
+        },
+        {
+          "label": "Decurity core code-security audit (2025-03)",
+          "url": "https://github.com/Secured-Finance/stablecoin-contracts/blob/develop/audits/2025-03-Decurity.pdf"
+        },
+        {
+          "label": "Hexens EIP-2612/EIP-3009 upgrade audit (2025-08)",
+          "url": "https://github.com/Secured-Finance/stablecoin-contracts/blob/develop/audits/2025-08-Hexens.pdf"
+        },
+        {
+          "label": "Published Safe-executed oracle upgrade history",
+          "url": "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts/contract-upgrade-history.md"
+        },
+        {
+          "label": "Current DebtToken verification metadata (partial, not full)",
+          "url": "https://filecoin.blockscout.com/api/v2/smart-contracts/0x584c1fa4ab299ae8f7154fce5b1bea7bddacfd0b"
         }
       ],
-      "evidence": "Read at Filecoin block 6422489 (2026-10-02T22:44:30.000Z): token owner and live ProxyAdmin owner share the 2-of-3 Safe. No timelock is established; collateral-gated economic semantics would overstate the mutable mint path. Financial reserve reconciliation is not applicable to native FIL collateral.",
-      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-      "reviewedAt": "2026-10-02",
-      "disposition": "scoreable",
+      "evidence": "Token owner(), Safe getThreshold() and getOwners() were independently re-read at Filecoin block 6423483 on 2026-10-03: the same 2-of-3 Safe controls token ownership. Published September 2026 upgrade-history transactions demonstrate exercised Safe upgrade authority. Three dated Hexens/Decurity code audits cover core and token-authorization logic, not financial reserves or signer independence. Safe signer independence remains unverified. Current implementation Blockscout metadata explicitly has is_partially_verified=true and is_fully_verified=false; the audit links do not close exact executable correspondence. No enforceable upgrade timelock is established, so collateral-gated economic semantics would overstate the mutable mint path. Financial reserve reconciliation is not applicable to native FIL collateral.",
+      "reviewer": "Sol refinement Refine03",
+      "reviewedAt": "2026-10-03",
+      "disposition": "unresolved",
       "unresolvedQuestions": [
-        "Safe signer independence and any upgrade delay remain unverified.",
-        "Exact DebtToken source-to-runtime-bytecode equivalence remains unproved."
+        "Does the exact current DebtToken implementation 0x584c1fa4ab299ae8f7154fce5b1bea7bddacfd0b runtime match the reviewed mint-authorizer source that restricts mint() to the identified BorrowerOperations contract? Blockscout reports partial rather than full verification, and no proof that deployed runtime equals a verified reference is established; exact mint-path source-to-runtime-bytecode equivalence remains unproved."
+      ],
+      "scopedQuestions": [
+        {
+          "controlRef": "USDFC owner and ProxyAdmin-owner Safe",
+          "question": "Is any enforceable delay imposed on this identified Safe's upgrade authority over the exact USDFC token proxy? No enforceable upgrade timelock is established by the current sources; signer independence is separately retained in evidence, not treated as missing control identity.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement Refine03",
+          "sources": [
+            {
+              "label": "Identified Filecoin Safe and ProxyAdmin-owner relationship",
+              "url": "https://api.node.glif.io/rpc/v1"
+            },
+            {
+              "label": "Safe-executed USDFC upgrade history",
+              "url": "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts/contract-upgrade-history.md"
+            }
+          ]
+        },
+        {
+          "controlRef": "USDFC owner and ProxyAdmin-owner Safe",
+          "question": "Safe signer independence remains unverified. What beneficial signer identities, key-custody safeguards and signing policy protect this identified 2-of-3 Safe's token ownership and ProxyAdmin-owner authority? Its on-chain owners and quorum do not establish independent human control.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement Refine03",
+          "sources": [
+            {
+              "label": "Identified Safe owner set and quorum",
+              "url": "https://api.node.glif.io/rpc/v1"
+            },
+            {
+              "label": "Published Safe-executed upgrade history",
+              "url": "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts/contract-upgrade-history.md"
+            }
+          ]
+        }
       ]
     }
   }

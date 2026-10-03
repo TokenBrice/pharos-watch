@@ -35,23 +35,23 @@
         "threshold": 3,
         "signerCount": 5,
         "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107703,
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110188,
         "safe": {
           "owners": ["0xae89fd944a412a3e1f6a8dec586f9a040e8d69a3", "0x79170f93ca5d2d3cb56c3cdff84015960259c41a", "0xc39fdd5c692f8778f7357e7f6cb72f359b96151b", "0x1623016a129e3acd16cb4a56d215e60f7f7a7027", "0x73a50922f75a2e4a7cdb949489738f23251b7fb7"],
           "threshold": 3,
           "enabledModules": [],
           "guard": null,
-          "observedBlock": 26107703,
-          "observedAt": "2026-10-02",
+          "observedBlock": 26110188,
+          "observedAt": "2026-10-03",
           "source": "onchain"
         },
         "sources": [
           { "label": "Axis vault privileged parameters", "url": "https://docs.axis.to/reference/access-control.md" },
           { "label": "Axis vault accounting restrictions", "url": "https://docs.axis.to/reference/staking-contracts.md" },
-          { "label": "Pinned Safe and vault-admin membership reads", "url": "https://etherscan.io/block/26107703" }
+          { "label": "Complete vault-role census and Safe observation at block 26110188", "url": "https://etherscan.io/block/26110188" }
         ],
-        "evidence": "StakedUSDx.hasRole(DEFAULT_ADMIN_ROLE, Safe) returned true at block 26107703. The Safe threshold was 3 with five owners, an empty completely paginated module list and a zero standard guard slot. Docs authorize reward, cooldown, servicing-policy and deposit-pause configuration; rescueTokens cannot dip into requiredAssets. These direct admin actions are not delayed by the proxy-upgrade timelock. Full service-role membership and signer independence remain unproved."
+        "evidence": "Complete deployment-to-block-26110188 RoleGranted/RoleRevoked history identifies the Safe as sole DEFAULT_ADMIN_ROLE, PAUSER_ROLE and RESTRICTION_ROLE holder; REWARD_MANAGER_ROLE has the Safe and 0x14de0d47605e16bd6db3a8f0f95dfb26329de38e; REDEMPTION_SERVICER_ROLE has the Safe and 0x714ed1a0ea47ba4afb59165e0a72f6c5c57646f1. All active memberships were corroborated with hasRole. The Safe remains 3-of-5 with empty completely paginated modules and zero standard guard. Its fallback handler is 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99; executable bypass reach and signer independence remain unreviewed. Non-upgrade parameter actions are immediate."
       },
       {
         "chain": "ethereum",
@@ -63,14 +63,14 @@
         "directMintAbility": "upgrade-only",
         "timelockDelaySec": 172800,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107703,
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110188,
         "sources": [
           { "label": "Axis proxy-upgrade authority", "url": "https://docs.axis.to/reference/access-control.md" },
           { "label": "Vault ProxyAdmin", "url": "https://etherscan.io/address/0x50606ecc0c9dc5c6b3bf25ffbdd8433730fc46ea#code" },
-          { "label": "Pinned Ethereum owner and delay reads", "url": "https://etherscan.io/block/26107703" }
+          { "label": "Complete timelock-role census through block 26110188", "url": "https://etherscan.io/block/26110188" }
         ],
-        "evidence": "At block 26107703, the vault's EIP-1967 admin was 0x50606ecc0c9dc5c6b3bf25ffbdd8433730fc46ea and its owner() was the published TimelockController, whose getMinDelay() returned 172800 seconds. The implementation slot was 0x1d8191c20c06c5628f1a977bc6d6afe7dd541cf2. A future implementation can replace share accounting and issuance rules; complete proposer/executor and bypass closure is not asserted."
+        "evidence": "The vault's EIP-1967 admin is ProxyAdmin 0x50606ecc0c9dc5c6b3bf25ffbdd8433730fc46ea, owned by this TimelockController with getMinDelay=172800. Complete RoleGranted/RoleRevoked history since deployment through block 26110188 identifies self-only DEFAULT_ADMIN_ROLE and the governance Safe as sole proposer, executor and canceller; each active membership was corroborated by hasRole. The vault implementation remains 0x1d8191c20c06c5628f1a977bc6d6afe7dd541cf2, activated at initial July 23 deployment. This delay does not constrain direct Safe parameter actions."
       }
     ],
     "economicCapSemantics": "bounded",
@@ -98,13 +98,27 @@
         { "label": "Axis vault accounting", "url": "https://docs.axis.to/reference/staking-contracts.md" },
         { "label": "Axis privileged roles", "url": "https://docs.axis.to/reference/access-control.md" },
         { "label": "Axis canonical contract roster", "url": "https://docs.axis.to/reference/contract-addresses.md" },
-        { "label": "Ethereum observation block 26107703", "url": "https://etherscan.io/block/26107703" }
+        { "label": "Ethereum complete vault and timelock role census through block 26110188", "url": "https://etherscan.io/block/26110188" },
+        { "label": "Exact StakedUSDx implementation source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1d8191c20c06c5628f1a977bc6d6afe7dd541cf2" },
+        { "label": "Exact standard Safe CompatibilityFallbackHandler deployed source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfd0732dc9e303f09fcef3a7388ad10a83459ec99" }
       ],
-      "evidence": "The canonical Ethereum V2 share token and its USDx underlying were reverified at block 26107703, hash 0x1af27eeae8f8788fa7897fa456addc58ffc0e2e5f01befe9a58256167e5aeb9d (October 2, 2026, 22:43:59 UTC). Native parent issuance remains on usdx-axis. Local deposits and request cancellations are asset-backed share accounting, not a privileged base-liability mint path. Upgrade and policy controls remain explicitly reviewed despite mint-scoped none-resolved-mint. The seven-day cooldown is an eligibility threshold, with servicing and claims independently pausable; those holder-exit controls do not imply a separate supply minter.",
-      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-      "reviewedAt": "2026-10-02",
+      "evidence": "The complete canonical V2 role-event history and current hasRole calls resolve current service, reward, restriction, admin and timelock memberships at block 26110188. Local shares mint through asset-backed deposit accounting and pending-request cancellation; there is no unrestricted share-minter role in the verified implementation. The same 3-of-5 Safe is timelock proposer/executor/canceller and directly controls vault parameters. The known nonzero Safe fallback handler has not received execution-complete review. Parent USDx retains direct Safe mint and offchain reserve-reconciliation risk. Seven-day cooldown eligibility grants no guaranteed servicing completion. The exact verified handler source identifies standard Safe CompatibilityFallbackHandler; the generic handler noninterference question is not a separate native mint-identity gap when modules and the standard guard are none-detected. Independent signer/key-custody evidence remains unavailable. Servicing guarantees belong to redemption review, and inherited parent issuance and reserve uncertainty remain on the parent and Backing domains rather than making this complete local mint census unresolved.",
+      "reviewer": "Pharos refinement 2026-10-03 (Refine01)",
+      "reviewedAt": "2026-10-03",
       "disposition": "scoreable",
-      "unresolvedQuestions": ["Complete current service, reward and restriction role membership", "Timelock proposer/executor inventory and nonstandard Safe bypass closure", "Guaranteed servicing completion after cooldown", "Inherited parent issuance and offchain reserve reconciliation gaps"]
+      "unresolvedQuestions": [],
+      "scopedQuestions": [
+        {
+          "controlRef": "Axis StakedUSDx parameter governance Safe",
+          "question": "What independent signer, key-custody and recovery evidence establishes separation of this observed 3-of-5 Safe's owners? The same Safe controls immediate vault parameters and timelock proposals/execution; onchain quorum does not establish human independence.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)",
+          "sources": [
+            { "label": "Vault privileged governance and upgrade roles", "url": "https://docs.axis.to/reference/access-control.md" },
+            { "label": "Pinned complete vault-role and Safe observation", "url": "https://etherscan.io/block/26110188" }
+          ]
+        }
+      ]
     }
   }
 }

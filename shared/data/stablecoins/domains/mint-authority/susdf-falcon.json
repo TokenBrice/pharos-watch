@@ -55,15 +55,23 @@
         "signerCount": 6,
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
+          "owners": [
+            "0x804016c31e52805eb00e0ef42126fd3e980a0b33",
+            "0xf4161ed9cfa2ac91068556387f9ce225fce6893f",
+            "0xe313dbd8693d656fe760ba3e766c80eb08f06734",
+            "0xa91472acc85272fd4119a946796aaf6c8392b0c",
+            "0x276c580545293da6c7c0fdd12038cc75accbd211",
+            "0xa76095b4a145055c3cc46ed64dd1bcf8a8544e6c"
+          ],
           "threshold": 4,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "observedBlock": 26107704,
-          "observedAt": "2026-10-02",
+          "observedBlock": 26110183,
+          "observedAt": "2026-10-03",
           "source": "onchain"
         },
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107704,
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110183,
         "sources": [
           {
             "label": "Falcon Finance savings documentation",
@@ -88,9 +96,17 @@
           {
             "label": "Falcon ProxyAdmin",
             "url": "https://etherscan.io/address/0x16a2605c026bfe4f4b7f4471933714d9b2149ace"
+          },
+          {
+            "label": "Exact proxy deployed bytecode embeds immutable ProxyAdmin",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc8cf6d7991f15525488b2a83df53468d682ba4b0"
+          },
+          {
+            "label": "Fresh role and Safe census at Ethereum block 26110183",
+            "url": "https://etherscan.io/block/26110183"
           }
         ],
-        "evidence": "Pinned ProxyAdmin.owner() returns this Safe; getThreshold() = 4, getOwners() contains six owners, getModulesPaginated() is empty and both Safe guard storage slots are zero. It can replace the native sUSDf implementation; no enforced universal timelock is established."
+        "evidence": "At Ethereum block 26110183 (2026-10-03T07:01:47Z), the proxy deployed bytecode embeds immutable ProxyAdmin 0x16a2605c026bfe4f4b7f4471933714d9b2149ace, whose owner() is this Safe. getThreshold() is 4; getOwners() returned the six listed addresses; getModulesPaginated(0x1,100) returned no modules and sentinel next=0x1; the guard storage slot is zero. The deployment-to-pin RoleGranted/RoleRevoked census contains exactly two grants and no revokes: this Safe holds DEFAULT_ADMIN_ROLE, and 0x8af2efa47efb2095b80d82577c597186ea2fffea holds REWARDER_ROLE. hasRole confirms both. Reward transfer requires deposited USDf; only this Safe can replace mint logic through ProxyAdmin or set restrictions, vesting and cooldown. There is no timelock in the verified upgrade path. Human signer independence and key custody remain undisclosed and receive no credit."
       }
     ],
     "economicCapSemantics": "raiseable",
@@ -113,15 +129,33 @@
         {
           "label": "Ethereum block 26107704, pinned vault identity, supply, custody and NAV reads",
           "url": "https://etherscan.io/block/26107704"
+        },
+        {
+          "label": "Exact proxy bytecode and immutable ProxyAdmin binding",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc8cf6d7991f15525488b2a83df53468d682ba4b0"
+        },
+        {
+          "label": "Fresh complete local role census and Safe quorum at block 26110183",
+          "url": "https://etherscan.io/block/26110183"
         }
       ],
-      "evidence": "At Ethereum block 26107704 (2026-10-02T22:44:11Z), asset() is 0xfa2b947eec368f42195f24f36d2af29f7c24cec2; decimals() is 18, totalSupply() is 56876949.092047125101 shares, totalAssets() is 64669136.889719046652 USDf, and balanceOf(vault) is 64670233.223213575780 USDf. convertToAssets(1e18) and previewRedeem(1e18) return 1.137000804756 USDf. EIP-1967 implementation is 0x0d132bee412e6619a4863aeedad97541bfda3f34; admin is ProxyAdmin 0x16a2605c026bfe4f4b7f4471933714d9b2149ace, owned by 4-of-6 Safe 0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7. hasRole(DEFAULT_ADMIN_ROLE, Safe) is true. No enabled modules or guards were detected at the pin. Local upgrades can replace share issuance constraints; parent USDf issuance stays inherited.",
-      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-      "reviewedAt": "2026-10-02",
+      "evidence": "Local issuance-authority census independently reverified at Ethereum block 26110183 (2026-10-03T07:01:47Z): all RoleGranted/RoleRevoked events from creation block 21818186 identify only DEFAULT_ADMIN_ROLE held by 4-of-6 Safe 0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7 and REWARDER_ROLE held by official rewards distributor 0x8af2efa47efb2095b80d82577c597186ea2fffea; both remain active by hasRole. Source limits ordinary minting to underlying deposits and rewards to transferred USDf. The proxy bytecode embeds immutable ProxyAdmin 0x16a2605c026bfe4f4b7f4471933714d9b2149ace, owner()=the same Safe; upgrade logic has no timelock. Safe owners, threshold, empty paginated modules and zero guard were re-read. The technical local authority inventory is resolved; signer independence, offchain key custody and parent financial assurance are not established or credited.",
+      "reviewer": "Sol refinement 2026-10-03 (Refine13)",
+      "reviewedAt": "2026-10-03",
       "disposition": "scoreable",
-      "unresolvedQuestions": [
-        "Signer independence, key custody and any offchain upgrade-delay policy are undisclosed."
-      ]
+      "scopedQuestions": [
+        {
+          "controlRef": "Falcon Safe local sUSDf ProxyAdmin owner",
+          "question": "What human signer independence, signing policy and key-custody assurance support the identified Falcon 4-of-6 Safe owners? The verified owner addresses, threshold, empty modules and zero guard do not establish these custody facts.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine13)",
+          "sources": [
+            {"label": "Exact Falcon Safe controller", "url": "https://etherscan.io/address/0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7"},
+            {"label": "Pinned identified role and Safe census", "url": "https://etherscan.io/block/26110183"}
+          ]
+        }
+      ],
+      "unresolvedQuestions": []
     },
     "upgradeability": {
       "model": "transparent-proxy",
@@ -140,8 +174,8 @@
       ],
       "canChangeMintLogic": true,
       "controlRef": "Falcon Safe local sUSDf ProxyAdmin owner",
-      "observedAt": "2026-10-02",
-      "observedBlock": 26107704,
+      "observedAt": "2026-10-03",
+      "observedBlock": 26110183,
       "sources": [
         {
           "label": "Falcon Finance savings documentation",
@@ -158,6 +192,14 @@
         {
           "label": "Ethereum block 26107704, pinned vault identity, supply, custody and NAV reads",
           "url": "https://etherscan.io/block/26107704"
+        },
+        {
+          "label": "Transparent proxy immutable ProxyAdmin binding in deployed bytecode",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc8cf6d7991f15525488b2a83df53468d682ba4b0"
+        },
+        {
+          "label": "ProxyAdmin.owner and Safe census at Ethereum block 26110183",
+          "url": "https://etherscan.io/block/26110183"
         }
       ]
     }

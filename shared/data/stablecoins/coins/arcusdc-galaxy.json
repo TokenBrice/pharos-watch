@@ -1,5 +1,6 @@
 {
   "id": "arcusdc-galaxy",
+  "launchDate": "2026-06-12",
   "name": "Galaxy USDC",
   "symbol": "arcUSDC",
   "oneLiner": "arcUSDC is Galaxy's USDC lending vault on Arc; shares redeem at NAV when liquidity is available and bear strategy losses.",
@@ -18,9 +19,9 @@
   "archetypeOverride": true,
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "rationale": "Galaxy USDC at arc:0x8e357432cc12ff425c36432f312968aeb16112af is an ERC-4626 share over USDC with a code-enforced pro-rata claim on the current Morpho lending inventory. The claim bears lending losses and liquidity constraints, so protocol-position intentionally differs from the fiat-cash parent and older Morpho precedents. At arc block 23952285 (0x16d7b9d), captured 2026-10-02T22:44:09.665742+00:00, totalSupply=89746600641673546252952918 atomic shares; accrueInterestView returned assets=89710295395927, pending performance shares=0, pending management shares=0. Idle USDC=0; complete adapter inventory sums to 89710295395927 USDC atomic units. Asset decimals=6, share decimals=18. convertToAssets(1e18)=999595 USDC atomic units. ",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Refine07 primary-source review 2026-10-03",
+    "rationale": "Galaxy USDC at arc:0x8e357432cc12ff425c36432f312968aeb16112af is an ERC-4626 share over USDC with a code-enforced pro-rata claim on the current Morpho lending inventory. The claim bears lending losses and liquidity constraints, so protocol-position intentionally differs from the fiat-cash parent and older Morpho precedents. At arc block 23952285 (0x16d7b9d), captured 2026-10-02T22:44:09.665742+00:00, totalSupply=89746600641673546252952918 atomic shares; accrueInterestView returned assets=89710295395927, pending performance shares=0, pending management shares=0. Idle USDC=0; complete adapter inventory sums to 89710295395927 USDC atomic units. Asset decimals=6, share decimals=18. convertToAssets(1e18)=999595 USDC atomic units.  The exact deployment launch date is 2026-06-12, established by Morpho creationTimestamp for this chain-qualified vault address (1781277053). Published VaultV2 framework security audits corroborate the referenced semantics; source-to-bytecode completeness and financial assurance are separate facts. Exact official Arc explorer partial VaultV2 source and deployed bytecode matching pinned RPC are now available; full compiler verification remains unclaimed.",
     "sources": [
       {
         "label": "Galaxy USDC exact vault identity and accounting",
@@ -41,6 +42,22 @@
       {
         "label": "arc fixed-block RPC observation 23952285",
         "url": "https://rpc.mainnet.arc.io"
+      },
+      {
+        "label": "Morpho published VaultV2 security audit index (framework scope only)",
+        "url": "https://docs.morpho.org/get-started/resources/audits/"
+      },
+      {
+        "label": "Morpho VaultV2 dated framework audit artifacts; no exact-vault financial assurance",
+        "url": "https://github.com/morpho-org/vault-v2/tree/main/audits"
+      },
+      {
+        "label": "Exact VaultV2 address on chainId 5042: creationTimestamp=1781277053, accessed 2026-10-03",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Exact Arc VaultV2 partial source; explorer deployed bytecode equals RPC at block 24011393, full compiler verification unclaimed",
+        "url": "https://explorer.arc.io/api/v2/smart-contracts/0x8e357432cc12ff425c36432f312968aeb16112af"
       }
     ]
   },

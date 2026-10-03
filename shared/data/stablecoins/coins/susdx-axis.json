@@ -4,6 +4,17 @@
   "symbol": "sUSDx",
   "oneLiner": "sUSDx is Axis's USDx rewards vault; vested rewards raise its share value, while exits require a cooldown and permissioned queue servicing.",
   "mechanismArchetype": "synthetic-delta-neutral",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Pharos refinement 2026-10-03 (Refine01)",
+    "rationale": "The exact Ethereum StakedUSDx V2 implementation is an asset-backed USDx rewards wrapper. Its backing archetype follows the canonical synthetic-delta-neutral USDx parent; local share accounting and async exits are reviewed separately. The reviewed V2 implementation was activated at vault deployment on July 23, 2026.",
+    "sources": [
+      {"label": "Exact V2 vault deployment", "url": "https://etherscan.io/tx/0xdf82a52bbd1c7082c9c0523c25e47b9c4bd02bebcc1110bbb31ddeebe4de9791"},
+      {"label": "Axis canonical vault accounting", "url": "https://docs.axis.to/reference/staking-contracts.md"},
+      {"label": "Parent synthetic-dollar backing model", "url": "https://docs.axis.to/backing-reserves-and-transparency/backing-custody-transparency.md"}
+    ]
+  },
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent",
@@ -21,7 +32,8 @@
     { "label": "Website", "url": "https://www.axis.to/" },
     { "label": "Stake and unstake", "url": "https://docs.axis.to/susdx-the-rewards-vault/stake-and-unstake.md" },
     { "label": "Vault accounting reference", "url": "https://docs.axis.to/reference/staking-contracts.md" },
-    { "label": "Transparency", "url": "https://app.axis.to/transparency" }
+    { "label": "Transparency", "url": "https://app.axis.to/transparency" },
+    { "label": "Canonical V2 vault deployment, July 23, 2026", "url": "https://etherscan.io/tx/0xdf82a52bbd1c7082c9c0523c25e47b9c4bd02bebcc1110bbb31ddeebe4de9791" }
   ],
   "jurisdiction": { "country": "British Virgin Islands" },
   "contracts": [
@@ -30,5 +42,7 @@
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
   "governanceQuality": "wrapper",
-  "yieldConfig": { "yieldSource": "Vested USDx rewards funded from Axis's market-neutral trading results", "yieldType": "nav-appreciation" }
+  "yieldConfig": { "yieldSource": "Vested USDx rewards funded from Axis's market-neutral trading results", "yieldType": "nav-appreciation" },
+  "launchDate": "2026-07-23",
+  "implementationLaunchDate": "2026-07-23"
 }

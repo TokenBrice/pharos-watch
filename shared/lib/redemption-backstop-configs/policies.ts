@@ -43,6 +43,22 @@ const SCOREABLE_REDEMPTION_FRESHNESS_KINDS = new Set<RedemptionLiveFreshnessKind
 
 export const REDEMPTION_BACKSTOP_POLICY_ENTRIES: readonly RedemptionBackstopPolicyEntry[] = [
   {
+    kind: "unused-live-redemption-telemetry",
+    stablecoinId: "usdr-rise",
+    reason:
+      "The M-wrapper producer measures native-M backing and a sampled approved-swapper cohort, not executable wM output through the reviewed same-chain holder route. Native-M telemetry must not be attributed to wM capacity; the route remains source-reviewed unconfigured.",
+    owner: POLICY_OWNER,
+    reviewedAt: "2026-10-03",
+  },
+  {
+    kind: "unused-live-redemption-telemetry",
+    stablecoinId: "mantrausd-mantra",
+    reason:
+      "The M-wrapper producer measures native-M backing and a sampled approved-swapper cohort, not executable wM output through the reviewed same-chain holder route. Native-M telemetry must not be attributed to wM capacity; the route remains source-reviewed unconfigured.",
+    owner: POLICY_OWNER,
+    reviewedAt: "2026-10-03",
+  },
+  {
     kind: "unverified-freshness",
     stablecoinId: "frxusd-frax",
     reason: "Frax redemption telemetry is sourced from protocol reserve state but lacks a verified source timestamp.",
@@ -137,9 +153,9 @@ export const REDEMPTION_BACKSTOP_POLICY_ENTRIES: readonly RedemptionBackstopPoli
     kind: "unused-live-redemption-telemetry",
     stablecoinId: "witry-brix",
     reason:
-      "wiTRY's ERC-4626 wrapper feed exposes vault redemption capacity, but no public holder-facing redemption route has been reviewed for the TRY-denominated fund; the telemetry is reserve evidence only until a route is configured.",
+      "wiTRY's ERC-4626 wrapper feed is reserve evidence only: the TRY-denominated underlying has no same-path USD valuation, so nominal TRY is not emitted as USD capacity. A public holder-facing redemption route also remains unreviewed.",
     owner: POLICY_OWNER,
-    reviewedAt: "2026-09-09",
+    reviewedAt: "2026-10-03",
   },
   {
     kind: "unused-live-redemption-telemetry",

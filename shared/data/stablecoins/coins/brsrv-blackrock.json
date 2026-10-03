@@ -1,4 +1,12 @@
 {
+  "liveReservesConfig": {
+    "adapter": "blackrock-brsrv-holdings",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "brsrv-blackrock",
+    "display": { "url": "https://www.blackrock.com/cash/en-us/products/351891/blackrock-daily-reinvestment-stablecoin-reserve-vehicle", "label": "BlackRock BRSRV securities holdings" },
+    "inputs": { "primary": { "kind": "http-html", "url": "https://www.blackrock.com/cash/en-us/products/351891/fund/1464253357814.ajax?fileType=csv&fileName=RSVXX_holdings&dataType=fund" } }
+  },
   "id": "brsrv-blackrock",
   "name": "BlackRock Daily Reinvestment Stablecoin Reserve Vehicle",
   "symbol": "BRSRV",
@@ -10,7 +18,7 @@
     "rwa": true,
     "navToken": true
   },
-  "collateral": "Cash, U.S. Treasury obligations with no more than 93 days to maturity, and Treasury-secured overnight repurchase agreements in BlackRock Daily Reinvestment Stablecoin Reserve Vehicle; BNY Mellon is custodian and accounting-services provider, Securitize is transfer agent. Current security-level weights are not established.",
+  "collateral": "U.S. Treasury obligations with no more than 93 days to maturity and Treasury-secured overnight repurchase agreements in BlackRock Daily Reinvestment Stablecoin Reserve Vehicle. October 1, 2026 holdings comprise 81.95% Treasury bills and 18.05% overnight repo by market value; BNY Mellon is custodian and accounting-services provider, Securitize is transfer agent.",
   "pegMechanism": "Registered government money-market OnChain share targeting $1 NAV, with daily income reinvested in additional shares. Securitize administers whitelisted subscriptions, transfers and redemptions. Good-order redemption requests received before 5 p.m. Eastern on eligible business days ordinarily settle by same-day federal-funds wire when the custodian is open; the fund reserves up to seven days. Redemption processing remains available off-chain during blockchain outages. Sponsor support and principal preservation are not guaranteed.",
   "mechanismArchetype": "tbill",
   "mechanismArchetypeReview": {
@@ -47,6 +55,10 @@
     {
       "label": "BlackRock BRSRV fund reporting",
       "url": "https://www.blackrock.com/cash/en-us/products/351891/blackrock-daily-reinvestment-stablecoin-reserve-vehicle"
+    },
+    {
+      "label": "BRSRV implementation creation, block 25590450 (2026-07-22)",
+      "url": "https://etherscan.io/tx/0xab19cf9580d67e03a6673838b4adaf06e6fd9ecd5e44827348972d9f1eb477b1"
     }
   ],
   "jurisdiction": {
@@ -83,5 +95,7 @@
     "provider": "BlackRock daily fund NAV and liquidity reporting; prospectus names Deloitte & Touche LLP, but no current signed financial report was retrieved",
     "attestorTier": "self",
     "cadence": "daily-nav"
-  }
+  },
+  "launchDate": "2026-08-03",
+  "implementationLaunchDate": "2026-08-03"
 }

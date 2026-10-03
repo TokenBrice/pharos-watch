@@ -19,6 +19,7 @@
   ],
   "mechanismArchetype": "commodity-claim",
   "custodyModel": "unknown",
+  "implementationLaunchDate": "2025-08-27",
   "oneLiner": "XGZ is GoldZip’s physical-gold token, representing one gram of 99.99% fine gold with AML-gated delivery from 1,000 tokens.",
   "commodityOunces": 0.03215074656862798,
   "collateral": "Issuer-reported physical 99.99% fine gold stored in HKGX-recognised third-party depositories; one gram per XGZ.",
@@ -57,6 +58,10 @@
     {
       "label": "Litepaper",
       "url": "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf"
+    },
+    {
+      "label": "Ethereum deployment (block 23231220)",
+      "url": "https://etherscan.io/tx/0x5e46309c7e9e59eb3270789e817276325353cf71178e516c1b6306c166660bd8"
     },
     {
       "label": "Transparency",

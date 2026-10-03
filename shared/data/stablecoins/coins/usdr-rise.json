@@ -1,5 +1,24 @@
 {
+  "liveReservesConfig": {
+    "adapter": "m0-wrapper-underlying",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "usdr-rise",
+    "display": { "url": "https://docs.risechain.com/docs/rise-evm/usdr", "label": "RISE Dollar M custody" },
+    "inputs": { "primary": { "kind": "onchain-evm", "chain": "rise", "rpcMode": "public-rpc" } },
+    "params": {
+      "mode": "m-extension",
+      "wrapperAddress": "0x62b7f5a5be488ea58f660c5aff465647213bc6e9",
+      "expectedMTokenAddress": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
+      "expectedSwapFacilityAddress": "0xb6807116b3b1b321a390594e31ecd6e0076f6278",
+      "swapperAddress": "0x0000000000000000000000000000000000000001",
+      "slice": { "name": "M token held by RISE Dollar", "risk": "low", "coinId": "m-m0", "depType": "wrapper" },
+      "sourceUrls": ["https://docs.risechain.com/docs/rise-evm/usdr", "https://docs.m0.org/resources/addresses/m0-platform", "https://explorer.risechain.com/api/v2/smart-contracts/0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E"],
+      "rpcUrl": "https://rpc.risechain.com"
+    }
+  },
   "id": "usdr-rise",
+  "launchDate": "2026-05-12",
   "name": "RISE Dollar",
   "symbol": "USDR",
   "oneLiner": "RISE's USDR wraps M0's M on RISE; public conversion is to wM, while direct M output requires an approved swapper.",
@@ -42,8 +61,8 @@
     "cadence": "real-time"
   },
   "dependencyReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Refine07 primary-source review 2026-10-03",
     "confidence": "verified",
     "sources": [
       {
@@ -65,9 +84,21 @@
       {
         "label": "M0 liquidity routes and issuer onboarding",
         "url": "https://docs.m0.org/build/accessing-liquidity"
+      },
+      {
+        "label": "M0 published EVM-extension security audits (framework scope only)",
+        "url": "https://docs.m0.org/resources/audits"
+      },
+      {
+        "label": "Guardian JMI/MYieldToOne/Freezable/SwapFacility code review, 2025-12-12; not a reserve audit or exact deployment certification",
+        "url": "https://github.com/m0-foundation/evm-m-extensions/blob/main/audits/JMI/M0_EVM-M_Extensions_Review_report.pdf"
+      },
+      {
+        "label": "Exact USDR first-code block 10977621 (2026-05-12T10:56:20Z); block 10977620 code=0x",
+        "url": "https://rpc.risechain.com"
       }
     ],
-    "rationale": "At rise block 23375290, symbol/decimals and EIP-1967 implementation/admin were re-read. Local backing balance was 4,186,507.178834 M against 4,166,902.771484 USDR supply. M-extension wrapping and unwrapping conserve the deposited M claim. The current SwapFacility restricts direct M output to approved swappers; an unprivileged sample canSwapViaPath(child,wM) returned true while child-to-M returned false. This is technical conversion eligibility, not a sent transaction or a cash redemption right.",
+    "rationale": "At rise block 23375290, symbol/decimals and EIP-1967 implementation/admin were re-read. Local backing balance was 4,186,507.178834 M against 4,166,902.771484 USDR supply. M-extension wrapping and unwrapping conserve the deposited M claim. The current SwapFacility restricts direct M output to approved swappers; an unprivileged sample canSwapViaPath(child,wM) returned true while child-to-M returned false. This is technical conversion eligibility, not a sent transaction or a cash redemption right. The exact deployment launch date is 2026-05-12, established by the first-code block boundary. The Guardian report dated 2025-12-12 covers JMI and changes to MYieldToOne, Freezable and SwapFacility at its named audit commits; this is framework corroboration, not exact deployed-commit certification, custody assurance or reserve-to-liability audit.",
     "relationships": [
       {
         "id": "m-m0",

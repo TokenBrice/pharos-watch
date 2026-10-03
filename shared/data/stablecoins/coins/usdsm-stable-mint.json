@@ -7,6 +7,16 @@
   "collateral": "Issuer-disclosed U.S. dollar cash deposits and high-quality liquid financial assets; current banks, asset weights and independently reconciled backing are undisclosed",
   "pegMechanism": "Legal-person participants mint against received USD deposits; legal and natural holders can request par USD redemption after AML/KYC onboarding. Etherlink is the primary deployment, with LayerZero V2 burn-and-mint interoperability across Ethereum, Base and Arbitrum.",
   "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Pharos refinement 2026-10-03 (Refine01)",
+    "rationale": "Issuer terms define a fixed-par USD electronic-money claim backed by fiat deposits and liquid financial assets, without holder NAV appreciation or borrower collateral positions. This supports fiat-cash classification without claiming itemized current reserves. Current native implementation 0x7089856110b005a40e8d16da1da31313b0f60561 was activated July 22, 2025 in the pinned proxy upgrade event.",
+    "sources": [
+      {"label": "Fixed-par fiat backing and issuance/redemption terms", "url": "https://stablemint.io/legal/terms-conditions/"},
+      {"label": "Exact current native implementation activation", "url": "https://explorer.etherlink.com/tx/0x79054def2dbd7078c92ef98844d4fbb7fa849db09a03e1cd4d79e8bf0af5bbcf"}
+    ]
+  },
   "llamaId": "411",
   "detailProvider": "defillama",
   "geckoId": "stable-mint-usd",
@@ -14,7 +24,9 @@
   "links": [
     { "label": "Website", "url": "https://stablemint.io/stablecoins/" },
     { "label": "USDSM whitepaper", "url": "https://stablemintpublicdocs.blob.core.windows.net/docs/StableMint_Whitepaper_USD.html" },
-    { "label": "Issuance and redemption terms", "url": "https://stablemint.io/legal/terms-conditions/" }
+    { "label": "Issuance and redemption terms", "url": "https://stablemint.io/legal/terms-conditions/" },
+    { "label": "Native Etherlink deployment, March 10, 2025", "url": "https://explorer.etherlink.com/tx/0xbfa15c8b2e642904be8438a2b73d3c62e1fbe1375f3d422c0021bca316b6a39a" },
+    { "label": "Current implementation activation at Etherlink block 21653650, July 22, 2025", "url": "https://explorer.etherlink.com/address/0x6bde51212203ae5d592cc5180da2abbd41c922de" }
   ],
   "jurisdiction": { "country": "Malta", "regulator": "MFSA", "license": "Electronic Money Institution" },
   "contracts": [
@@ -25,5 +37,7 @@
   ],
   "collateralQuality": "rwa",
   "custodyModel": "unknown",
-  "governanceQuality": "regulated-entity"
+  "governanceQuality": "regulated-entity",
+  "launchDate": "2025-03-10",
+  "implementationLaunchDate": "2025-07-22"
 }

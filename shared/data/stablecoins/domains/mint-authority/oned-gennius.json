@@ -3,7 +3,7 @@
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "summary": "ONED native issuance is role-gated and subject to mutable per-minter rate limits. Separate no-code default-admin and beacon-owner addresses can authorize issuance or replace mint logic; the observed 24-hour default-admin transfer delay is not a global mint or upgrade delay.",
     "controls": [
       {
@@ -16,7 +16,7 @@
         "role": "direct-minter",
         "authorityType": "eoa",
         "directMintAbility": "cap-limited",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-10-02",
         "observedBlock": 52095848,
@@ -46,6 +46,9 @@
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
+        "bypassSurfaces": [
+          "DEFAULT_ADMIN_ROLE can immediately replace the beacon using upgradeBeaconToAndCall; the 86400-second delay applies only to admin transfer."
+        ],
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-10-02",
         "observedBlock": 52095848,
@@ -92,6 +95,31 @@
           }
         ],
         "evidence": "At Base block 52095848, Beacon owner() returns this address; implementation()=0x57ab1e54fca80105a93a735b59f850f8420b5e2c. Beacon ownership can replace token logic; token default-admin upgradeBeaconToAndCall is an additional replacement surface. eth_getCode(controller)=0x. A no-code address does not establish single-person or MPC key custody."
+      },
+      {
+        "chain": "base",
+        "address": "0x6627aae9c802204695dd323d22fdf437867f4f17",
+        "deploymentRefs": ["base:0x10ed0050b7a5d5e1e9cc164f77a71d0bf69f64bd"],
+        "label": "ONED mint rate-limit administrator",
+        "role": "cap-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 52110793,
+        "failureDomainKeys": ["entity:coinbase-oned-issuance"],
+        "sources": [
+          {
+            "label": "Mint rate-limit role grant at Base block 44701909",
+            "url": "https://basescan.org/tx/0xe9307193bdd4e5bd0590b78be41d47ff2b7968f3a9ecddf08d095e3b867d7201"
+          },
+          {
+            "label": "Coinbase EVM Stablecoin role and rate-limit source",
+            "url": "https://github.com/coinbase/custom-stablecoin/blob/main/evm/src/Stablecoin.sol"
+          }
+        ],
+        "evidence": "Complete RoleGranted/RoleRevoked log census from creation block 44701636 through 52110793 finds this sole MINT_RATE_LIMIT_ROLE member and no revocations. hasRole(MINT_RATE_LIMIT_ROLE,address)=true and eth_getCode(address)=0x at 52110793. configureMinter can raise the numeric allowance and resets remaining capacity to the full limit; it cannot grant MINT_ROLE."
       }
     ],
     "upgradeability": {
@@ -106,7 +134,8 @@
         "0x57ab1e54fca80105a93a735b59f850f8420b5e2c"
       ],
       "adminAddresses": [
-        "0x57ab1ec39f403e6946c944812888bf77fd64f0af"
+        "0x8b6fed2d19076f96004df41c78c771b45f4dc71b",
+        "0x9446ce5c9e8b47d7e6cb229a42eaae32d4e8aaf9"
       ],
       "canChangeMintLogic": true,
       "controlRef": "ONED beacon owner",
@@ -119,7 +148,7 @@
         }
       ]
     },
-    "economicCapSemantics": "raiseable",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
     "supervision": "unknown",
     "review": {
@@ -143,15 +172,54 @@
         {
           "label": "Verified current ONED implementation",
           "url": "https://basescan.org/address/0x57ab1e54fca80105a93a735b59f850f8420b5e2c#code"
+        },
+        {
+          "label": "Coinbase Custom Stablecoin source and role permissions",
+          "url": "https://github.com/coinbase/custom-stablecoin/blob/main/evm/src/Stablecoin.sol"
+        },
+        {
+          "label": "Cantina EVM security review, published 2026-04-07",
+          "url": "https://github.com/coinbase/custom-stablecoin/blob/main/audits/cantina_coinbase_custom_stablecoin_mar2026.pdf"
+        },
+        {
+          "label": "Mint rate-limit role grant",
+          "url": "https://basescan.org/tx/0xe9307193bdd4e5bd0590b78be41d47ff2b7968f3a9ecddf08d095e3b867d7201"
         }
       ],
-      "evidence": "At Base block 52095848, the authorized minter held MINT_ROLE with 5000000 ONED remaining mint allowance. Default admin was 0x9446ce5c9e8b47d7e6cb229a42eaae32d4e8aaf9, admin-transfer delay 86400 seconds, and the beacon owner was 0x8b6fed2d19076f96004df41c78c771b45f4dc71b; all three controller addresses had no EVM bytecode. The Coinbase dashboard reserve-to-supply snapshot is reproducible but does not establish a financially assured issuer reconciliation process or token-specific prudential supervision.",
-      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-      "reviewedAt": "2026-10-02",
+      "evidence": "Base creation block 44701636 through current block 52110793 complete RoleGranted/RoleRevoked census returned ten grants and no revocations: sole MINT_ROLE=0x026bbff480a3dfde0f60ec525029c746fbb0f485, sole MINT_RATE_LIMIT_ROLE=0x6627aae9c802204695dd323d22fdf437867f4f17, sole DEFAULT_ADMIN_ROLE=0x9446ce5c9e8b47d7e6cb229a42eaae32d4e8aaf9. Current hasRole checks confirmed mint and rate-limit memberships; both controllers have no code. Beacon owner() was independently re-read as 0x8b6fed2d19076f96004df41c78c771b45f4dc71b. Source grants the default admin immediate beacon replacement and rate-limit mutation; beacon owner can replace the shared implementation, so the raiseable minter allowance does not bound aggregate economic issuance. The 86400-second delay is admin-transfer-only. Coinbase's reserve dashboard does not establish independent financial assurance or prudential supervision; the April Cantina audit is code security only. MPC/HSM safeguards and beneficial signer identity of the mint, rate-limit, default-admin and beacon-owner keys remain undisclosed. Token-specific financial reserve reconciliation process and prudential supervision remain undisclosed; Gennius platform operator terms alone do not resolve regulated issuer identity.",
+      "reviewer": "Sol refinement Refine03",
+      "reviewedAt": "2026-10-03",
       "disposition": "scoreable",
-      "unresolvedQuestions": [
-        "Controller MPC/HSM safeguards and complete mint-rate-limit authority membership are undisclosed.",
-        "Independent whole-token financial reconciliation and legal issuer entity are unresolved."
+      "unresolvedQuestions": [],
+      "scopedQuestions": [
+        {
+          "controlRef": "ONED authorized minter",
+          "question": "MPC/HSM safeguards and beneficial signer identity of the identified mint key remain undisclosed. What key-custody and signing-policy controls protect this exact MINT_ROLE holder? Its no-code account does not establish single-person or independent MPC control.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement Refine03",
+          "sources": [{"label": "Exact ONED Base mint-role deployment", "url": "https://basescan.org/address/0x10ed0050b7a5d5e1e9cc164f77a71d0bf69f64bd"}, {"label": "Reviewed EVM role semantics", "url": "https://github.com/coinbase/custom-stablecoin/blob/main/evm/src/Stablecoin.sol"}]
+        },
+        {
+          "controlRef": "ONED mint rate-limit administrator",
+          "question": "MPC/HSM safeguards and beneficial signer identity of the identified rate-limit key remain undisclosed. What key-custody and signing-policy controls protect this exact MINT_RATE_LIMIT_ROLE holder's power to raise mutable issuance allowances?",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement Refine03",
+          "sources": [{"label": "Exact rate-limit role grant", "url": "https://basescan.org/tx/0xe9307193bdd4e5bd0590b78be41d47ff2b7968f3a9ecddf08d095e3b867d7201"}, {"label": "Reviewed EVM rate-limit semantics", "url": "https://github.com/coinbase/custom-stablecoin/blob/main/evm/src/Stablecoin.sol"}]
+        },
+        {
+          "controlRef": "ONED default admin",
+          "question": "MPC/HSM safeguards and beneficial signer identity of the identified default-admin key remain undisclosed. What key-custody and signing-policy controls protect its minter-authorization and immediate beacon-replacement authority? The admin-transfer delay does not establish these safeguards.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement Refine03",
+          "sources": [{"label": "Exact ONED default-admin deployment", "url": "https://basescan.org/address/0x10ed0050b7a5d5e1e9cc164f77a71d0bf69f64bd"}, {"label": "Reviewed EVM admin and upgrade semantics", "url": "https://github.com/coinbase/custom-stablecoin/blob/main/evm/src/Stablecoin.sol"}]
+        },
+        {
+          "controlRef": "ONED beacon owner",
+          "question": "MPC/HSM safeguards and beneficial signer identity of the identified beacon-owner key remain undisclosed. What key-custody and signing-policy controls protect its power to replace the shared ONED token implementation?",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement Refine03",
+          "sources": [{"label": "Exact shared ONED beacon", "url": "https://basescan.org/address/0x57ab1ec39f403e6946c944812888bf77fd64f0af"}, {"label": "Verified ONED implementation", "url": "https://basescan.org/address/0x57ab1e54fca80105a93a735b59f850f8420b5e2c#code"}]
+        }
       ]
     }
   }

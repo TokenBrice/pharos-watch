@@ -23,8 +23,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Sol refinement Refine11",
     "confidence": "verified",
     "sources": [
       {
@@ -42,10 +42,14 @@
       {
         "label": "Steakhouse DeFi vault governing terms",
         "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
+      },
+      {
+        "label": "Exact MorphoMarketV1AdapterV2 source and eight-market accounting surface",
+        "url": "https://base.blockscout.com/api/v2/smart-contracts/0x4a70dc70cef79f51cc7f79c08f863b2841311165"
       }
     ],
-    "rationale": "Exact asset, 18 share decimals, 6 underlying decimals, positive totalAssets and totalSupply were independently read at base block 52095842. Sole adapter 0x4a70dc70cef79f51cc7f79c08f863b2841311165 matches the current Morpho API. The complete direct reserve relationship is the USDC-denominated protocol position, not idle fiat or an independently attested loan book.",
-    "compositionBasis": "Standing underlying-asset relationship corroborated by fixed-block RPC and exact Morpho current deployment inventory",
+    "rationale": "Exact asset, 18 share decimals, 6 underlying decimals, positive totalAssets and totalSupply were independently read at base block 52095842. Sole adapter 0x4a70dc70cef79f51cc7f79c08f863b2841311165 matches the current Morpho API. The complete direct reserve relationship is the USDC-denominated protocol position, not idle fiat or an independently attested loan book. At Base block 52095842, adapter marketIdsLength()=8; complete market census [{\"marketId\":\"0x29ae7ac08be3a58e11151fed74701fb8e6ffd8e76b1870cf17ad70f332752d0b\",\"expectedSupplyAssetsRaw\":\"32275015952884\"},{\"marketId\":\"0x54cf9be57fdfa6457a660991907434ff9d295c465a603a50126ff647d50b7354\",\"expectedSupplyAssetsRaw\":\"389345558126782\"},{\"marketId\":\"0x76629002c9fdb20fb2092053a4f22c5c65e04a81887218b9546f2a2d82b4c0a8\",\"expectedSupplyAssetsRaw\":\"97873691545\"},{\"marketId\":\"0xd4a903dc6d949519060c7707f9604fdc9772c046e05c2e3a8fce0bd7196e4109\",\"expectedSupplyAssetsRaw\":\"23400921893901\"},{\"marketId\":\"0xe458a501c1103ca3b256f2bcb45d223263fb34b6349d82675494ce3a94ce1327\",\"expectedSupplyAssetsRaw\":\"760160877384\"},{\"marketId\":\"0x9103c3b4e834476c9a62ea009ba2c884ee42e94e6e314a26f04d312434191836\",\"expectedSupplyAssetsRaw\":\"7368149242883\"},{\"marketId\":\"0x0ca10126f6c94cbd9cf0a48cc9516ae5e3dec5aa68303e6d988ee37c5149bf0d\",\"expectedSupplyAssetsRaw\":\"451057354796\"},{\"marketId\":\"0x2319fa118eb9f7353609796b6f70018a5384d42169503515da52bfa0b194c6ac\",\"expectedSupplyAssetsRaw\":\"2909\"}]. Their sum=453698737143084 USDC raw equals realAssets() and totalAssets(), with idle USDC=0. totalSupply=448220693243737493222108073 raw shares; accrueInterestView performanceFeeShares=274872574661233963, managementFeeShares=0, virtualShares=1000000000000. Integer previewRedeem=(453698737143084+1)*1e18/(448220693243737493222108073+274872574661233963+1000000000000), rounded down, reproduces convertToAssets(1e18)=1012221. This is operational same-block conservation, not independent financial assurance.",
+    "compositionBasis": "Complete same-block eight-market asset census, zero idle USDC, accrued fee-adjusted share denominator and exact integer NAV at Base block 52095842; exact verified VaultV2 and adapter source.",
     "compositionAsOf": "2026-10-02",
     "scope": "full-composition",
     "knownUnknownExposure": "Borrower collateral allocations and realizable stress exit vary. The 100% underlying-token claim does not assert any collateral-market weighting, signed reconciliation, legal segregation or funded recovery.",
