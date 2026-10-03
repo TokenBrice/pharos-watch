@@ -3083,292 +3083,6 @@
       "rationale": "No published whole-position realization horizon for the aggregate HBAR collateral across Troves and Stability Pool was located. Borrowing, repayment, liquidation/redistribution and redemption mechanics disclose encumbrance and distinct claims but no maximum for realizing the entire scoped collateral into USD. Atomic HBAR redemption alone does not establish immediate liquidity of the whole reserve slice. Preserve unknown rather than infer zero-day liquidity from native HBAR transferability."
     },
     {
-      "id": "uw-idrx-idrx-c553907909eb3415",
-      "assetId": "idrx-idrx",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:idrx-idrx:offchain-issuer"
-      },
-      "cause": "B",
-      "assertion": "required-data-public",
-      "reviewedAt": "2026-10-03T22:48:43Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R22)",
-      "sources": [
-        {
-          "url": "https://docs.idrx.co/services/fees",
-          "observedAt": "2026-10-03T22:48:43Z",
-          "datumAsOf": null,
-          "location": "Redeem (IDRX \u2192 IDR) fee table",
-          "excerpt": "Redeem fees are deducted from the IDR amount you receive.",
-          "assertion": "Rp5,000 below Rp250m; Rp35,000 at/above, with bank-dependent RTGS fallback. Public flat-IDR formula is not evaluated at USD stress notionals by the existing documentedVariableFee model (W15)."
-        }
-      ]
-    },
-    {
-      "id": "uw-uscc-superstate-553ffbe0bde60ee3",
-      "assetId": "uscc-superstate",
-      "scope": {
-        "componentKey": "reserve-composition",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "backing",
-        "requiredDatum": "reserve-composition",
-        "routeKey": null
-      },
-      "cause": "B",
-      "assertion": "required-data-public",
-      "reviewedAt": "2026-10-03T22:48:43Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R22)",
-      "sources": [
-        {
-          "url": "https://superstate.com/assets/uscc",
-          "observedAt": "2026-10-03T22:48:43Z",
-          "datumAsOf": "2026-10-01",
-          "location": "Holdings table, Cme Ether Future Oct26 and USDC rows",
-          "excerpt": "Portfolio holdings are shown as of the date indicated and are unaudited.",
-          "assertion": "Whole current portfolio publishes signed NAV percentages, including Ether future -0.90% and USDC -1.49%. ReserveSlice requires nonnegative pct; a net long/short NAV book cannot be honestly normalized into its long-only schema."
-        }
-      ]
-    },
-    {
-      "id": "uw-idrx-idrx-1b1d928ee27e879e",
-      "assetId": "idrx-idrx",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:2fb48797045babd839df7961",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:48:43Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R22)",
-      "sources": [
-        {
-          "url": "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20August%202026.pdf",
-          "observedAt": "2026-10-03T22:48:43Z",
-          "datumAsOf": "2026-08-28",
-          "location": "Appendix 1 pp. 5\u20139 and 13; bank/ORI030 supporting images visually inspected",
-          "excerpt": "the Company's designated ORI030 (secondary) account",
-          "assertion": "Report identifies ORI030 secondary balance and Ina/BRI accounts; Ina images show GIRO/GIRO PREMI. No ORI030 series/ISIN/maturity or sale-completion horizon, or bank-account maturity maximum appears."
-        },
-        {
-          "url": "https://app.idrx.co/assets/docs/idrx-terms-n-condition-en.pdf",
-          "observedAt": "2026-10-03T22:48:43Z",
-          "datumAsOf": "2026-05-04",
-          "location": "Definitions and service terms",
-          "excerpt": "IDRX reserves the right to modify, update, or discontinue part or all of the services on the Platform at any time with or without prior notice, at its discretion.",
-          "assertion": "Customer redemption/service terms do not disclose terms of the exact underlying reserve bank accounts or a realizability bound on the GHP ORI030 secondary position."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://idrx.co/en",
-        "https://idrx.co/en/docs",
-        "https://idrx.co/api/documents?page=1&take=100",
-        "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20August%202026.pdf",
-        "https://docs.idrx.co/introduction/readme",
-        "https://docs.idrx.co/llms.txt",
-        "https://docs.idrx.co/services/fees",
-        "https://app.idrx.co/assets/docs/idrx-terms-n-condition-en.pdf"
-      ],
-      "rationale": "Exact ORI030 maturityDaysMax and liquidityHorizon and Ina/BRI account maturityDaysMax are not disclosed in the issuer site, report archive/current AUP with visually inspected bank/ORI appendices, whitepaper landing/docs, or governing customer terms. ORI030 is an aggregate secondary account label, not a series/ISIN; a general government-security maturity cannot be assigned to it. Bank balance/GIRO disclosure is not an explicit maturity maximum. No fabricated zero or maturity extrapolation is used."
-    },
-    {
-      "id": "uw-idrx-idrx-171b73550960d26a",
-      "assetId": "idrx-idrx",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:2fb48797045babd839df7961",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:48:43Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R22)",
-      "sources": [
-        {
-          "url": "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20August%202026.pdf",
-          "observedAt": "2026-10-03T22:48:43Z",
-          "datumAsOf": "2026-08-28",
-          "location": "Appendix 1 pp. 5\u20139 and 13; bank/ORI030 supporting images visually inspected",
-          "excerpt": "the Company's designated ORI030 (secondary) account",
-          "assertion": "Report identifies ORI030 secondary balance and Ina/BRI accounts; Ina images show GIRO/GIRO PREMI. No ORI030 series/ISIN/maturity or sale-completion horizon, or bank-account maturity maximum appears."
-        },
-        {
-          "url": "https://app.idrx.co/assets/docs/idrx-terms-n-condition-en.pdf",
-          "observedAt": "2026-10-03T22:48:43Z",
-          "datumAsOf": "2026-05-04",
-          "location": "Definitions and service terms",
-          "excerpt": "IDRX reserves the right to modify, update, or discontinue part or all of the services on the Platform at any time with or without prior notice, at its discretion.",
-          "assertion": "Customer redemption/service terms do not disclose terms of the exact underlying reserve bank accounts or a realizability bound on the GHP ORI030 secondary position."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://idrx.co/en",
-        "https://idrx.co/en/docs",
-        "https://idrx.co/api/documents?page=1&take=100",
-        "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20August%202026.pdf",
-        "https://docs.idrx.co/introduction/readme",
-        "https://docs.idrx.co/llms.txt",
-        "https://docs.idrx.co/services/fees",
-        "https://app.idrx.co/assets/docs/idrx-terms-n-condition-en.pdf"
-      ],
-      "rationale": "Exact ORI030 maturityDaysMax and liquidityHorizon and Ina/BRI account maturityDaysMax are not disclosed in the issuer site, report archive/current AUP with visually inspected bank/ORI appendices, whitepaper landing/docs, or governing customer terms. ORI030 is an aggregate secondary account label, not a series/ISIN; a general government-security maturity cannot be assigned to it. Bank balance/GIRO disclosure is not an explicit maturity maximum. No fabricated zero or maturity extrapolation is used."
-    },
-    {
-      "id": "uw-idrx-idrx-5f448584b6631db4",
-      "assetId": "idrx-idrx",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:49785466b99abe3671ca321f",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:48:43Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R22)",
-      "sources": [
-        {
-          "url": "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20August%202026.pdf",
-          "observedAt": "2026-10-03T22:48:43Z",
-          "datumAsOf": "2026-08-28",
-          "location": "Appendix 1 pp. 5\u20139 and 13; bank/ORI030 supporting images visually inspected",
-          "excerpt": "the Company's designated ORI030 (secondary) account",
-          "assertion": "Report identifies ORI030 secondary balance and Ina/BRI accounts; Ina images show GIRO/GIRO PREMI. No ORI030 series/ISIN/maturity or sale-completion horizon, or bank-account maturity maximum appears."
-        },
-        {
-          "url": "https://app.idrx.co/assets/docs/idrx-terms-n-condition-en.pdf",
-          "observedAt": "2026-10-03T22:48:43Z",
-          "datumAsOf": "2026-05-04",
-          "location": "Definitions and service terms",
-          "excerpt": "IDRX reserves the right to modify, update, or discontinue part or all of the services on the Platform at any time with or without prior notice, at its discretion.",
-          "assertion": "Customer redemption/service terms do not disclose terms of the exact underlying reserve bank accounts or a realizability bound on the GHP ORI030 secondary position."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://idrx.co/en",
-        "https://idrx.co/en/docs",
-        "https://idrx.co/api/documents?page=1&take=100",
-        "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20August%202026.pdf",
-        "https://docs.idrx.co/introduction/readme",
-        "https://docs.idrx.co/llms.txt",
-        "https://docs.idrx.co/services/fees",
-        "https://app.idrx.co/assets/docs/idrx-terms-n-condition-en.pdf"
-      ],
-      "rationale": "Exact ORI030 maturityDaysMax and liquidityHorizon and Ina/BRI account maturityDaysMax are not disclosed in the issuer site, report archive/current AUP with visually inspected bank/ORI appendices, whitepaper landing/docs, or governing customer terms. ORI030 is an aggregate secondary account label, not a series/ISIN; a general government-security maturity cannot be assigned to it. Bank balance/GIRO disclosure is not an explicit maturity maximum. No fabricated zero or maturity extrapolation is used."
-    },
-    {
-      "id": "uw-idrx-idrx-6315e4807d4ae26a",
-      "assetId": "idrx-idrx",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:6844e403a5152afde98fcc71",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:48:43Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R22)",
-      "sources": [
-        {
-          "url": "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20August%202026.pdf",
-          "observedAt": "2026-10-03T22:48:43Z",
-          "datumAsOf": "2026-08-28",
-          "location": "Appendix 1 pp. 5\u20139 and 13; bank/ORI030 supporting images visually inspected",
-          "excerpt": "the Company's designated ORI030 (secondary) account",
-          "assertion": "Report identifies ORI030 secondary balance and Ina/BRI accounts; Ina images show GIRO/GIRO PREMI. No ORI030 series/ISIN/maturity or sale-completion horizon, or bank-account maturity maximum appears."
-        },
-        {
-          "url": "https://app.idrx.co/assets/docs/idrx-terms-n-condition-en.pdf",
-          "observedAt": "2026-10-03T22:48:43Z",
-          "datumAsOf": "2026-05-04",
-          "location": "Definitions and service terms",
-          "excerpt": "IDRX reserves the right to modify, update, or discontinue part or all of the services on the Platform at any time with or without prior notice, at its discretion.",
-          "assertion": "Customer redemption/service terms do not disclose terms of the exact underlying reserve bank accounts or a realizability bound on the GHP ORI030 secondary position."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://idrx.co/en",
-        "https://idrx.co/en/docs",
-        "https://idrx.co/api/documents?page=1&take=100",
-        "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20August%202026.pdf",
-        "https://docs.idrx.co/introduction/readme",
-        "https://docs.idrx.co/llms.txt",
-        "https://docs.idrx.co/services/fees",
-        "https://app.idrx.co/assets/docs/idrx-terms-n-condition-en.pdf"
-      ],
-      "rationale": "Exact ORI030 maturityDaysMax and liquidityHorizon and Ina/BRI account maturityDaysMax are not disclosed in the issuer site, report archive/current AUP with visually inspected bank/ORI appendices, whitepaper landing/docs, or governing customer terms. ORI030 is an aggregate secondary account label, not a series/ISIN; a general government-security maturity cannot be assigned to it. Bank balance/GIRO disclosure is not an explicit maturity maximum. No fabricated zero or maturity extrapolation is used."
-    },
-    {
-      "id": "uw-sbold-k3-capital-b918fd8fbbfb3509",
-      "assetId": "sbold-k3-capital",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:c967128e84e617e34aef61e0",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:51:20Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R22)",
-      "sources": [
-        {
-          "url": "https://k3-capital.gitbook.io/sbold/technical-details/interactions",
-          "observedAt": "2026-10-03T22:51:20Z",
-          "datumAsOf": null,
-          "location": "Collateral exposure restrictions / Withdraw",
-          "excerpt": "In such cases, the protocol temporarily restricts the deposit and withdraw operations to avoid increasing exposure further and to maintain healthy system dynamics.",
-          "assertion": "Collateral gates are disclosed but no time bound on restored withdrawal or full-position liquidation/swap completion is promised."
-        },
-        {
-          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x50bd66d59911f5e086ec87ae43c811e0d059dd11",
-          "observedAt": "2026-10-03T22:51:20Z",
-          "datumAsOf": null,
-          "location": "sBold.sol _maxWithdraw/_maxRedeem and _checkCollHealth",
-          "excerpt": "if (!success || paused()) return 0;",
-          "assertion": "Exact deployed source gates withdrawal on oracle success, pause and collateral health; no deadline makes the whole protocol position realizable in a fixed horizon."
-        },
-        {
-          "url": "https://dedaub.com/audits/k3-capital/sbold-may-19-2025/",
-          "observedAt": "2026-10-03T22:51:20Z",
-          "datumAsOf": "2025-05-19",
-          "location": "P1: operability relies on BOLD liquidity",
-          "excerpt": "some users attempting to redeem their sBOLD may be unable to do so until BOLD liquidity returns to adequate levels on-chain.",
-          "assertion": "Independent audit corroborates market-dependent withdrawal restoration rather than a specified maximum realization time."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://k3-capital.gitbook.io/sbold/llms.txt",
-        "https://k3-capital.gitbook.io/sbold/introducing-sbold",
-        "https://k3-capital.gitbook.io/sbold/liquity-v2-design",
-        "https://k3-capital.gitbook.io/sbold/technical-details",
-        "https://k3-capital.gitbook.io/sbold/technical-details/interactions",
-        "https://k3-capital.gitbook.io/sbold/audit-reports",
-        "https://www.chainsecurity.com/security-audit/k3-sbold",
-        "https://dedaub.com/audits/k3-capital/sbold-may-19-2025/",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x50bd66d59911f5e086ec87ae43c811e0d059dd11"
-      ],
-      "rationale": "Exact whole-slice liquidityHorizon for the BOLD-in-Stability-Pools position has no published guaranteed realization bound. Official product/technical/interaction docs, source and both audit disclosures show conditional collateral/pausing/oracle and market-liquidity gates, not a deadline. Atomic successful withdraw calls do not imply the entire scoped position is immediately available; no scalar immediate or fabricated seven-day bound is authored."
-    },
-    {
       "id": "uw-reusd-re-protocol-f88abb858b5d6f9e",
       "assetId": "reusd-re-protocol",
       "scope": {
@@ -5142,355 +4856,6 @@
         "https://www.bankingcircle.com/banking-circle-launches-the-first-bank-backed-mica-compliant-stablecoin-euri/"
       ],
       "rationale": "Current EURI-specific reserve holdings/weights and as-of denominator are not published on the issuer transparency/audit index, whitepaper or bank annual-accounts surfaces. Legal cash/cash-equivalent eligibility and 1:1 EY-attestation claims do not supply a current measured mix; the linked smart-contract audit and consolidated bank balance sheet are not EURI reserve attestations. The old static 100% mixed class is not date-bumped."
-    },
-    {
-      "id": "uw-thusd-theo-be974cb6665e0309",
-      "assetId": "thusd-theo",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:651f0355c23e76f1f43f9175",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:56:45Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R37)",
-      "sources": [
-        {
-          "url": "https://theo.xyz/articles/how-thusd-works-gold-carry-trade-explained",
-          "observedAt": "2026-10-03T22:56:45Z",
-          "datumAsOf": "2026-06-04",
-          "location": "Yield Stream 1: The Gold Lease",
-          "excerpt": "the borrower returns the same physical gold at the end of the term, plus interest.",
-          "assertion": "Gold leases are term-based; neither the longest lease term nor whole-position stressed cash settlement is specified."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://theo.xyz/thbill",
-        "https://docs.theo.xyz/products/thbill.md",
-        "https://docs.theo.xyz/products/thbill/mint-and-redeem.md",
-        "https://docs.theo.xyz/products/thbill/wellington-ultra.md",
-        "https://docs.theo.xyz/products/thbill/fidelity-filq.md",
-        "https://docs.theo.xyz/legal/terms.md",
-        "https://app.theo.xyz/transparency",
-        "https://docs.theo.xyz/developers/deployed-addresses.md",
-        "https://theo.xyz/articles/how-thusd-works-gold-carry-trade-explained",
-        "https://docs.theo.xyz/products/thusd.md",
-        "https://docs.theo.xyz/products/thusd/mint-and-redeem.md"
-      ],
-      "rationale": "For the exact gold-carry reserve slice, maturityDaysMax and liquidityHorizon remain undisclosed. Lease terms, maturity-ladder construction, futures-market depth, and institutional counterparties are described, but no numerical longest lease term or bounded whole-slice cash-realization horizon is published. Market depth and collateral insurance are not liquidity guarantees."
-    },
-    {
-      "id": "uw-thusd-theo-be1bbc87b3174dd1",
-      "assetId": "thusd-theo",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:651f0355c23e76f1f43f9175",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:56:45Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R37)",
-      "sources": [
-        {
-          "url": "https://theo.xyz/articles/how-thusd-works-gold-carry-trade-explained",
-          "observedAt": "2026-10-03T22:56:45Z",
-          "datumAsOf": "2026-06-04",
-          "location": "Yield Stream 1: The Gold Lease",
-          "excerpt": "the borrower returns the same physical gold at the end of the term, plus interest.",
-          "assertion": "Gold leases are term-based; neither the longest lease term nor whole-position stressed cash settlement is specified."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://theo.xyz/thbill",
-        "https://docs.theo.xyz/products/thbill.md",
-        "https://docs.theo.xyz/products/thbill/mint-and-redeem.md",
-        "https://docs.theo.xyz/products/thbill/wellington-ultra.md",
-        "https://docs.theo.xyz/products/thbill/fidelity-filq.md",
-        "https://docs.theo.xyz/legal/terms.md",
-        "https://app.theo.xyz/transparency",
-        "https://docs.theo.xyz/developers/deployed-addresses.md",
-        "https://theo.xyz/articles/how-thusd-works-gold-carry-trade-explained",
-        "https://docs.theo.xyz/products/thusd.md",
-        "https://docs.theo.xyz/products/thusd/mint-and-redeem.md"
-      ],
-      "rationale": "For the exact gold-carry reserve slice, maturityDaysMax and liquidityHorizon remain undisclosed. Lease terms, maturity-ladder construction, futures-market depth, and institutional counterparties are described, but no numerical longest lease term or bounded whole-slice cash-realization horizon is published. Market depth and collateral insurance are not liquidity guarantees."
-    },
-    {
-      "id": "uw-thusd-theo-c45595d265e57fe2",
-      "assetId": "thusd-theo",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:9c0f8b4554581ebba8504c2e",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:56:45Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R37)",
-      "sources": [
-        {
-          "url": "https://docs.theo.xyz/products/thbill/mint-and-redeem.md",
-          "observedAt": "2026-10-03T22:56:45Z",
-          "datumAsOf": null,
-          "location": "What holders receive",
-          "excerpt": "Holders have no claim on the underlying fund units or the securities held by those funds.",
-          "assertion": "The reserve claim is thBILL, not direct Treasury ownership; underlying fund short duration does not establish a claim maximum."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://theo.xyz/thbill",
-        "https://docs.theo.xyz/products/thbill.md",
-        "https://docs.theo.xyz/products/thbill/mint-and-redeem.md",
-        "https://docs.theo.xyz/products/thbill/wellington-ultra.md",
-        "https://docs.theo.xyz/products/thbill/fidelity-filq.md",
-        "https://docs.theo.xyz/legal/terms.md",
-        "https://app.theo.xyz/transparency",
-        "https://docs.theo.xyz/developers/deployed-addresses.md",
-        "https://theo.xyz/articles/how-thusd-works-gold-carry-trade-explained"
-      ],
-      "rationale": "For thUSD\u2019s exact thBILL reserve slice, no contractual maturityDaysMax or bounded whole-position liquidityHorizon is disclosed. ULTRA/FILQ custody and daily NAV are published; thBILL docs advertise T+1 while the website advertises T+0, neither a stress-inclusive hard maximum. Holders have no direct fund-unit claim. Short-duration fund language cannot be converted into a maturity maximum."
-    },
-    {
-      "id": "uw-thusd-theo-39c4bae2da0cced3",
-      "assetId": "thusd-theo",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:9c0f8b4554581ebba8504c2e",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:56:45Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R37)",
-      "sources": [
-        {
-          "url": "https://docs.theo.xyz/products/thbill/mint-and-redeem.md",
-          "observedAt": "2026-10-03T22:56:45Z",
-          "datumAsOf": null,
-          "location": "What holders receive",
-          "excerpt": "Holders have no claim on the underlying fund units or the securities held by those funds.",
-          "assertion": "The reserve claim is thBILL, not direct Treasury ownership; underlying fund short duration does not establish a claim maximum."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://theo.xyz/thbill",
-        "https://docs.theo.xyz/products/thbill.md",
-        "https://docs.theo.xyz/products/thbill/mint-and-redeem.md",
-        "https://docs.theo.xyz/products/thbill/wellington-ultra.md",
-        "https://docs.theo.xyz/products/thbill/fidelity-filq.md",
-        "https://docs.theo.xyz/legal/terms.md",
-        "https://app.theo.xyz/transparency",
-        "https://docs.theo.xyz/developers/deployed-addresses.md",
-        "https://theo.xyz/articles/how-thusd-works-gold-carry-trade-explained"
-      ],
-      "rationale": "For thUSD\u2019s exact thBILL reserve slice, no contractual maturityDaysMax or bounded whole-position liquidityHorizon is disclosed. ULTRA/FILQ custody and daily NAV are published; thBILL docs advertise T+1 while the website advertises T+0, neither a stress-inclusive hard maximum. Holders have no direct fund-unit claim. Short-duration fund language cannot be converted into a maturity maximum."
-    },
-    {
-      "id": "uw-thusd-theo-3c902d363b2296d4",
-      "assetId": "thusd-theo",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:56:45Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R37)",
-      "sources": [
-        {
-          "url": "https://docs.theo.xyz/security-and-transparency/overview.md",
-          "observedAt": "2026-10-03T22:56:45Z",
-          "datumAsOf": null,
-          "location": "Opening transparency description",
-          "excerpt": "ongoing attestations conducted by third-party auditors.",
-          "assertion": "Generic ongoing attestations do not establish a periodic token-liability versus complete backing reconciliation procedure."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://theo.xyz/thbill",
-        "https://docs.theo.xyz/products/thbill.md",
-        "https://docs.theo.xyz/products/thbill/mint-and-redeem.md",
-        "https://docs.theo.xyz/products/thbill/wellington-ultra.md",
-        "https://docs.theo.xyz/products/thbill/fidelity-filq.md",
-        "https://docs.theo.xyz/legal/terms.md",
-        "https://app.theo.xyz/transparency",
-        "https://docs.theo.xyz/developers/deployed-addresses.md",
-        "https://docs.theo.xyz/security-and-transparency/overview.md",
-        "https://docs.theo.xyz/products/thusd/mint-and-redeem.md",
-        "https://theo.xyz/articles/how-thusd-works-gold-carry-trade-explained",
-        "https://theo-api.theo.xyz/v1/public/thbill/historical/7"
-      ],
-      "rationale": "For each asset\u2019s mint reconciliation datum, no explicit periodic whole-supply liability/backing reconciliation procedure and frequency is disclosed. Dashboard reserve and custody attestations, fund NAV reporting, contract roles, signed mint orders, and partial API composition are available; none proves recurring reconciliation of all minted and cross-chain liabilities to the complete offchain asset book. Daily fund NAV is not token-liability reconciliation."
-    },
-    {
-      "id": "uw-thbill-theo-25d89d02afdf42b1",
-      "assetId": "thbill-theo",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:56:45Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R37)",
-      "sources": [
-        {
-          "url": "https://docs.theo.xyz/security-and-transparency/overview.md",
-          "observedAt": "2026-10-03T22:56:45Z",
-          "datumAsOf": null,
-          "location": "Opening transparency description",
-          "excerpt": "ongoing attestations conducted by third-party auditors.",
-          "assertion": "Generic ongoing attestations do not establish a periodic token-liability versus complete backing reconciliation procedure."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://theo.xyz/thbill",
-        "https://docs.theo.xyz/products/thbill.md",
-        "https://docs.theo.xyz/products/thbill/mint-and-redeem.md",
-        "https://docs.theo.xyz/products/thbill/wellington-ultra.md",
-        "https://docs.theo.xyz/products/thbill/fidelity-filq.md",
-        "https://docs.theo.xyz/legal/terms.md",
-        "https://app.theo.xyz/transparency",
-        "https://docs.theo.xyz/developers/deployed-addresses.md",
-        "https://docs.theo.xyz/security-and-transparency/overview.md",
-        "https://docs.theo.xyz/products/thusd/mint-and-redeem.md",
-        "https://theo.xyz/articles/how-thusd-works-gold-carry-trade-explained",
-        "https://theo-api.theo.xyz/v1/public/thbill/historical/7"
-      ],
-      "rationale": "For each asset\u2019s mint reconciliation datum, no explicit periodic whole-supply liability/backing reconciliation procedure and frequency is disclosed. Dashboard reserve and custody attestations, fund NAV reporting, contract roles, signed mint orders, and partial API composition are available; none proves recurring reconciliation of all minted and cross-chain liabilities to the complete offchain asset book. Daily fund NAV is not token-liability reconciliation."
-    },
-    {
-      "id": "uw-thbill-theo-36cb489ecddee446",
-      "assetId": "thbill-theo",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:thbill-theo:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:56:45Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R37)",
-      "sources": [
-        {
-          "url": "https://docs.theo.xyz/products/thbill/mint-and-redeem.md",
-          "observedAt": "2026-10-03T22:56:45Z",
-          "datumAsOf": null,
-          "location": "What holders receive",
-          "excerpt": "Redemption settles in stablecoins.",
-          "assertion": "Output USDC/USDT and KYC access are disclosed, but no applicable redemption fee schedule or formula is supplied."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://theo.xyz/thbill",
-        "https://docs.theo.xyz/products/thbill.md",
-        "https://docs.theo.xyz/products/thbill/mint-and-redeem.md",
-        "https://docs.theo.xyz/products/thbill/wellington-ultra.md",
-        "https://docs.theo.xyz/products/thbill/fidelity-filq.md",
-        "https://docs.theo.xyz/legal/terms.md",
-        "https://app.theo.xyz/transparency",
-        "https://docs.theo.xyz/developers/deployed-addresses.md"
-      ],
-      "rationale": "The exact thBILL offchain-issuer redemption cost has no published numeric fee, complete bound, or evaluable fee formula in the product, mint/redeem, legal, transparency, or fund pages reviewed. Institutional KYC/KYB access and USDC/USDT payout are described without redemption tariffs. Fund management expenses and claimed net APY are not holder redemption charges; no zero fee is inferred."
-    },
-    {
-      "id": "uw-myrc-blox-a39480f870f6993a",
-      "assetId": "myrc-blox",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:159bb5cd984bd7b0423ab087",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:56:45Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R37)",
-      "sources": [
-        {
-          "url": "https://media.halogen.my/fund/hsmlf/info-memorandum.pdf",
-          "observedAt": "2026-10-03T22:56:45Z",
-          "datumAsOf": "2025-08-25",
-          "location": "Chapter 4.2 Investment Policy and Strategy, page 16",
-          "excerpt": "The Fund\u2019s average investment duration shall not be more than one (1) year.",
-          "assertion": "Average duration is not maximum instrument maturity; fund units have no fixed termination date or contractual maximum."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.blox.my/myrc",
-        "https://www.blox.my/myrc/transparency",
-        "https://www.blox.my/policies/product-term-sheet",
-        "https://www.blox.my/policies/user-agreement",
-        "https://docs.blox.my/user/burn-myrc",
-        "https://docs.blox.my/api/wallet-api/overview",
-        "https://cdn.blox.my/attestations/2026/Blox%20Attestation%20Report-2026-08-August.pdf",
-        "https://www.halogen.my/fund/halogen-shariah-myr-liquid-fund",
-        "https://media.halogen.my/fund/hsmlf/info-memorandum.pdf",
-        "https://media.halogen.my/fund/hsmlf/fact-sheet-august-2026.pdf"
-      ],
-      "rationale": "For MYRC\u2019s exact Halogen liquid-fund reserve slice, maturityDaysMax is not disclosed. The full governing memorandum permits sukuk, deposits and other collective schemes and caps average duration at one year, not maximum maturity or fund-unit claim term. The actual factsheet and MYRC reserve attestation disclose allocation/value without a maximum. No 365-day maximum is inferred from a portfolio average."
-    },
-    {
-      "id": "uw-myrc-blox-03f8d22252c47847",
-      "assetId": "myrc-blox",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:myrc-blox:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:56:45Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R37)",
-      "sources": [
-        {
-          "url": "https://www.blox.my/policies/user-agreement",
-          "observedAt": "2026-10-03T22:56:45Z",
-          "datumAsOf": "2025-04-01",
-          "location": "Clause 12.5 processing and banking delays",
-          "excerpt": "the Company makes no representations or warranties regarding the amount of time needed to complete processing",
-          "assertion": "The agreement expressly disclaims a bounded processing time; T+1 user guidance is a usual target, not a maximum."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.blox.my/myrc",
-        "https://www.blox.my/myrc/transparency",
-        "https://www.blox.my/policies/product-term-sheet",
-        "https://www.blox.my/policies/user-agreement",
-        "https://docs.blox.my/user/burn-myrc",
-        "https://docs.blox.my/api/wallet-api/overview"
-      ],
-      "rationale": "The exact MYRC offchain-issuer route has no end-to-end maximum settlement SLA. User docs say next working day and API docs say usually T+1, with requests after 5 PM/weekends processed next working day. Governing Clause 12.5 expressly disclaims any particular processing time and lists banking/third-party delays. A usual target or working-day convention cannot support settlementDaysMax."
     },
     {
       "id": "uw-pyusdx-moonpay-6416874446d0d55b",
@@ -14836,261 +14201,6 @@
         "https://www.dnb.nl/en/public-register/information-detail/?registerCode=WFTEG&relationNumber=R186418"
       ],
       "rationale": "The admitted August 30 composition exposes five previously masked reserve gaps. Current issuer snapshot, complete USDQ whitepaper, archive, terms, deployments and regulator register do not disclose the unexplained 1% composition, cash-bank identities, deposit/bond maximum maturity days or exact bond-slice realization bound. Do not attribute the 1% to rounding, identify a Tier 1 bank by inference, convert short-term to a numeric cap, or reuse issuer processing/wind-down schedules as a reserve-asset liquidation guarantee."
-    },
-    {
-      "id": "uw-kpkusdcprime-kpk-45c4592b28ce00dc",
-      "assetId": "kpkusdcprime-kpk",
-      "scope": {
-        "componentKey": "control:mint-meta:kpkusdcprime-kpk:24331f596e6740ef6dbd",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:kpkusdcprime-kpk:24331f596e6740ef6dbd",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:13:56Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R82)",
-      "sources": [
-        {
-          "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
-          "observedAt": "2026-10-03T23:13:55Z",
-          "datumAsOf": null,
-          "location": "Manual signers and Per-vault Curator Safe",
-          "excerpt": "Beyond automation, the remaining signers on Curator Safes are **KPK team members**.",
-          "assertion": "Publishes team membership, hardware-wallet/hash inspection practices and shared signer set, but not an address-to-person roster or evidence of independent human/key control for the exact manual EOAs and Safe signers."
-        },
-        {
-          "url": "https://docs.kpk.io/vaults/vaults/morpho.md",
-          "observedAt": "2026-10-03T23:13:55Z",
-          "datumAsOf": null,
-          "location": "Governance and control / Key settings and roles",
-          "excerpt": "**Owner and sentinel:** Security Council Safe (5/8)",
-          "assertion": "Names the exact Security Council, curator quorum and Deployer 1/2/3 addresses, but no independently controlled human signer roster or per-address key custody attestation."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://kpk.io/about",
-        "https://kpk.io/reports",
-        "https://kpk.io/terms-of-service",
-        "https://kpk.io/blog/permissions-layer",
-        "https://docs.kpk.io/llms.txt",
-        "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
-        "https://docs.kpk.io/vaults/infrastructure/automation.md",
-        "https://docs.kpk.io/vaults/vaults/morpho.md",
-        "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-prime.md",
-        "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-yield.md",
-        "https://docs.kpk.io/changelog/readme.md",
-        "https://docs.kpk.io/vaults/resources/legal/morpho-disclaimer.md",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
-      ],
-      "rationale": "The exact scoped questions ask for independent human signers/operators and actual key custody. KPK discloses manual team signers, named deployer addresses, shared curator signer sets, quorum and signing practices. Its issuer site, reports index, legal terms, complete docs index, signer/automation architecture and governance archive do not map all exact manual/Security Council signer addresses to independently controlled people or provide per-key custody evidence. Automation EOAs are excluded because their signer-vault custody is positively disclosed."
-    },
-    {
-      "id": "uw-kpkusdcprime-kpk-d3c201a0d2db06da",
-      "assetId": "kpkusdcprime-kpk",
-      "scope": {
-        "componentKey": "control:mint-meta:kpkusdcprime-kpk:5c24ae0d92003a4b2ade",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:kpkusdcprime-kpk:5c24ae0d92003a4b2ade",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:13:56Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R82)",
-      "sources": [
-        {
-          "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
-          "observedAt": "2026-10-03T23:13:55Z",
-          "datumAsOf": null,
-          "location": "Manual signers and Per-vault Curator Safe",
-          "excerpt": "Beyond automation, the remaining signers on Curator Safes are **KPK team members**.",
-          "assertion": "Publishes team membership, hardware-wallet/hash inspection practices and shared signer set, but not an address-to-person roster or evidence of independent human/key control for the exact manual EOAs and Safe signers."
-        },
-        {
-          "url": "https://docs.kpk.io/vaults/vaults/morpho.md",
-          "observedAt": "2026-10-03T23:13:55Z",
-          "datumAsOf": null,
-          "location": "Governance and control / Key settings and roles",
-          "excerpt": "**Owner and sentinel:** Security Council Safe (5/8)",
-          "assertion": "Names the exact Security Council, curator quorum and Deployer 1/2/3 addresses, but no independently controlled human signer roster or per-address key custody attestation."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://kpk.io/about",
-        "https://kpk.io/reports",
-        "https://kpk.io/terms-of-service",
-        "https://kpk.io/blog/permissions-layer",
-        "https://docs.kpk.io/llms.txt",
-        "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
-        "https://docs.kpk.io/vaults/infrastructure/automation.md",
-        "https://docs.kpk.io/vaults/vaults/morpho.md",
-        "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-prime.md",
-        "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-yield.md",
-        "https://docs.kpk.io/changelog/readme.md",
-        "https://docs.kpk.io/vaults/resources/legal/morpho-disclaimer.md",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
-      ],
-      "rationale": "The exact scoped questions ask for independent human signers/operators and actual key custody. KPK discloses manual team signers, named deployer addresses, shared curator signer sets, quorum and signing practices. Its issuer site, reports index, legal terms, complete docs index, signer/automation architecture and governance archive do not map all exact manual/Security Council signer addresses to independently controlled people or provide per-key custody evidence. Automation EOAs are excluded because their signer-vault custody is positively disclosed."
-    },
-    {
-      "id": "uw-kpkusdcprime-kpk-c681589bc26a80cb",
-      "assetId": "kpkusdcprime-kpk",
-      "scope": {
-        "componentKey": "control:mint-meta:kpkusdcprime-kpk:649994baf2e468d6620f",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:kpkusdcprime-kpk:649994baf2e468d6620f",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:13:56Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R82)",
-      "sources": [
-        {
-          "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
-          "observedAt": "2026-10-03T23:13:55Z",
-          "datumAsOf": null,
-          "location": "Manual signers and Per-vault Curator Safe",
-          "excerpt": "Beyond automation, the remaining signers on Curator Safes are **KPK team members**.",
-          "assertion": "Publishes team membership, hardware-wallet/hash inspection practices and shared signer set, but not an address-to-person roster or evidence of independent human/key control for the exact manual EOAs and Safe signers."
-        },
-        {
-          "url": "https://docs.kpk.io/vaults/vaults/morpho.md",
-          "observedAt": "2026-10-03T23:13:55Z",
-          "datumAsOf": null,
-          "location": "Governance and control / Key settings and roles",
-          "excerpt": "**Owner and sentinel:** Security Council Safe (5/8)",
-          "assertion": "Names the exact Security Council, curator quorum and Deployer 1/2/3 addresses, but no independently controlled human signer roster or per-address key custody attestation."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://kpk.io/about",
-        "https://kpk.io/reports",
-        "https://kpk.io/terms-of-service",
-        "https://kpk.io/blog/permissions-layer",
-        "https://docs.kpk.io/llms.txt",
-        "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
-        "https://docs.kpk.io/vaults/infrastructure/automation.md",
-        "https://docs.kpk.io/vaults/vaults/morpho.md",
-        "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-prime.md",
-        "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-yield.md",
-        "https://docs.kpk.io/changelog/readme.md",
-        "https://docs.kpk.io/vaults/resources/legal/morpho-disclaimer.md",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
-      ],
-      "rationale": "The exact scoped questions ask for independent human signers/operators and actual key custody. KPK discloses manual team signers, named deployer addresses, shared curator signer sets, quorum and signing practices. Its issuer site, reports index, legal terms, complete docs index, signer/automation architecture and governance archive do not map all exact manual/Security Council signer addresses to independently controlled people or provide per-key custody evidence. Automation EOAs are excluded because their signer-vault custody is positively disclosed."
-    },
-    {
-      "id": "uw-kpkusdcprime-kpk-7766d1e6d398e034",
-      "assetId": "kpkusdcprime-kpk",
-      "scope": {
-        "componentKey": "control:mint-meta:kpkusdcprime-kpk:bdbe200d7a58feec6700",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:kpkusdcprime-kpk:bdbe200d7a58feec6700",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:13:56Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R82)",
-      "sources": [
-        {
-          "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
-          "observedAt": "2026-10-03T23:13:55Z",
-          "datumAsOf": null,
-          "location": "Manual signers and Per-vault Curator Safe",
-          "excerpt": "Beyond automation, the remaining signers on Curator Safes are **KPK team members**.",
-          "assertion": "Publishes team membership, hardware-wallet/hash inspection practices and shared signer set, but not an address-to-person roster or evidence of independent human/key control for the exact manual EOAs and Safe signers."
-        },
-        {
-          "url": "https://docs.kpk.io/vaults/vaults/morpho.md",
-          "observedAt": "2026-10-03T23:13:55Z",
-          "datumAsOf": null,
-          "location": "Governance and control / Key settings and roles",
-          "excerpt": "**Owner and sentinel:** Security Council Safe (5/8)",
-          "assertion": "Names the exact Security Council, curator quorum and Deployer 1/2/3 addresses, but no independently controlled human signer roster or per-address key custody attestation."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://kpk.io/about",
-        "https://kpk.io/reports",
-        "https://kpk.io/terms-of-service",
-        "https://kpk.io/blog/permissions-layer",
-        "https://docs.kpk.io/llms.txt",
-        "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
-        "https://docs.kpk.io/vaults/infrastructure/automation.md",
-        "https://docs.kpk.io/vaults/vaults/morpho.md",
-        "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-prime.md",
-        "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-yield.md",
-        "https://docs.kpk.io/changelog/readme.md",
-        "https://docs.kpk.io/vaults/resources/legal/morpho-disclaimer.md",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
-      ],
-      "rationale": "The exact scoped questions ask for independent human signers/operators and actual key custody. KPK discloses manual team signers, named deployer addresses, shared curator signer sets, quorum and signing practices. Its issuer site, reports index, legal terms, complete docs index, signer/automation architecture and governance archive do not map all exact manual/Security Council signer addresses to independently controlled people or provide per-key custody evidence. Automation EOAs are excluded because their signer-vault custody is positively disclosed."
-    },
-    {
-      "id": "uw-kpkusdcprime-kpk-97f3ddbaff9309e3",
-      "assetId": "kpkusdcprime-kpk",
-      "scope": {
-        "componentKey": "control:mint-meta:kpkusdcprime-kpk:c7e4a54684495b41d32c",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:kpkusdcprime-kpk:c7e4a54684495b41d32c",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:13:56Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R82)",
-      "sources": [
-        {
-          "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
-          "observedAt": "2026-10-03T23:13:55Z",
-          "datumAsOf": null,
-          "location": "Manual signers and Per-vault Curator Safe",
-          "excerpt": "Beyond automation, the remaining signers on Curator Safes are **KPK team members**.",
-          "assertion": "Publishes team membership, hardware-wallet/hash inspection practices and shared signer set, but not an address-to-person roster or evidence of independent human/key control for the exact manual EOAs and Safe signers."
-        },
-        {
-          "url": "https://docs.kpk.io/vaults/vaults/morpho.md",
-          "observedAt": "2026-10-03T23:13:55Z",
-          "datumAsOf": null,
-          "location": "Governance and control / Key settings and roles",
-          "excerpt": "**Owner and sentinel:** Security Council Safe (5/8)",
-          "assertion": "Names the exact Security Council, curator quorum and Deployer 1/2/3 addresses, but no independently controlled human signer roster or per-address key custody attestation."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://kpk.io/about",
-        "https://kpk.io/reports",
-        "https://kpk.io/terms-of-service",
-        "https://kpk.io/blog/permissions-layer",
-        "https://docs.kpk.io/llms.txt",
-        "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
-        "https://docs.kpk.io/vaults/infrastructure/automation.md",
-        "https://docs.kpk.io/vaults/vaults/morpho.md",
-        "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-prime.md",
-        "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-yield.md",
-        "https://docs.kpk.io/changelog/readme.md",
-        "https://docs.kpk.io/vaults/resources/legal/morpho-disclaimer.md",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
-      ],
-      "rationale": "The exact scoped questions ask for independent human signers/operators and actual key custody. KPK discloses manual team signers, named deployer addresses, shared curator signer sets, quorum and signing practices. Its issuer site, reports index, legal terms, complete docs index, signer/automation architecture and governance archive do not map all exact manual/Security Council signer addresses to independently controlled people or provide per-key custody evidence. Automation EOAs are excluded because their signer-vault custody is positively disclosed."
     },
     {
       "id": "uw-zaru-blocktower-ba1560f82a3602ec",
@@ -34563,6 +33673,1055 @@
         "https://docs.centrifuge.io/developer/protocol/deployments/"
       ],
       "rationale": "No full-notional final fiat settlement SLA for the Anemoy ACRDX issuer route is published. Standard quarterly liquidity and underlying limited repurchase offers are not a maximum completion bound. Fission immediate USDC liquidity is a different provider/route and cannot substitute for offchain issuer settlement."
+    },
+    {
+      "id": "uw-kpkusdcprime-kpk-ff355f530929f147",
+      "assetId": "kpkusdcprime-kpk",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:c99936da6a52cb955b1b8d35",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:46:43Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R16)",
+      "sources": [
+        {
+          "url": "https://docs.kpk.io/vaults/infrastructure/automation.md",
+          "observedAt": "2026-10-03T23:46:43Z",
+          "datumAsOf": null,
+          "location": "Exit agent / June 9 Cap soft-shutdown example",
+          "excerpt": "Where a market's liquidity was partly committed to borrowers, the agent withdrew what was available, and the rest followed as borrowers repaid.",
+          "assertion": "Borrower repayment governs realizability; liquidity targets and automated exits do not publish a maximum horizon for the whole USDC lending-position slice."
+        },
+        {
+          "url": "https://docs.kpk.io/vaults/resources/legal/morpho-disclaimer.md",
+          "observedAt": "2026-10-03T23:46:43Z",
+          "datumAsOf": null,
+          "location": "Limitation of liability",
+          "excerpt": "KPK has no contractual obligations to Vault users and accepts no responsibility for any losses, damages, or claims arising out of or in connection with the Vaults.",
+          "assertion": "No contractual whole-slice liquidity horizon accompanies the exact vault target."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-prime.md",
+        "https://docs.kpk.io/vaults/vaults/morpho.md",
+        "https://docs.kpk.io/vaults/infrastructure/automation.md",
+        "https://docs.kpk.io/vaults/resources/legal/morpho-disclaimer.md",
+        "https://kpk.io/about",
+        "https://kpk.io/reports",
+        "https://kpk.io/terms-of-service",
+        "https://kpk.io/blog/permissions-layer",
+        "https://docs.kpk.io/llms.txt",
+        "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+        "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-yield.md",
+        "https://docs.kpk.io/changelog/readme.md",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+      ],
+      "rationale": "The exact whole USDC Morpho lending-position liquidityHorizon is undisclosed. Beyond wave 1 liquidity targets, the issuer documents an actual partial deallocation where remaining withdrawals followed borrower repayment; normal withdrawal uses one liquidity-adapter market and forceDeallocate still requires available market liquidity. The reviewed contracts, legal disclaimer, exact product pages, risk/governance docs and reports disclose no maximum time for the entire slice to become realizable. No immediate horizon is inferred from targets."
+    },
+    {
+      "id": "uw-kpkusdcyield-kpk-b4c97333e1fd7812",
+      "assetId": "kpkusdcyield-kpk",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:c99936da6a52cb955b1b8d35",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:46:43Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R16)",
+      "sources": [
+        {
+          "url": "https://docs.kpk.io/vaults/infrastructure/automation.md",
+          "observedAt": "2026-10-03T23:46:43Z",
+          "datumAsOf": null,
+          "location": "Exit agent / June 9 Cap soft-shutdown example",
+          "excerpt": "Where a market's liquidity was partly committed to borrowers, the agent withdrew what was available, and the rest followed as borrowers repaid.",
+          "assertion": "Borrower repayment governs realizability; liquidity targets and automated exits do not publish a maximum horizon for the whole USDC lending-position slice."
+        },
+        {
+          "url": "https://docs.kpk.io/vaults/resources/legal/morpho-disclaimer.md",
+          "observedAt": "2026-10-03T23:46:43Z",
+          "datumAsOf": null,
+          "location": "Limitation of liability",
+          "excerpt": "KPK has no contractual obligations to Vault users and accepts no responsibility for any losses, damages, or claims arising out of or in connection with the Vaults.",
+          "assertion": "No contractual whole-slice liquidity horizon accompanies the exact vault target."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-yield.md",
+        "https://docs.kpk.io/vaults/vaults/morpho.md",
+        "https://docs.kpk.io/vaults/infrastructure/automation.md",
+        "https://docs.kpk.io/vaults/resources/legal/morpho-disclaimer.md",
+        "https://kpk.io/about",
+        "https://kpk.io/reports",
+        "https://kpk.io/terms-of-service",
+        "https://kpk.io/blog/permissions-layer",
+        "https://docs.kpk.io/llms.txt",
+        "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+        "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-prime.md",
+        "https://docs.kpk.io/changelog/readme.md",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+      ],
+      "rationale": "The exact whole USDC Morpho lending-position liquidityHorizon is undisclosed. Beyond wave 1 liquidity targets, the issuer documents an actual partial deallocation where remaining withdrawals followed borrower repayment; normal withdrawal uses one liquidity-adapter market and forceDeallocate still requires available market liquidity. The reviewed contracts, legal disclaimer, exact product pages, risk/governance docs and reports disclose no maximum time for the entire slice to become realizable. No immediate horizon is inferred from targets."
+    },
+    {
+      "id": "uw-thbill-theo-5ae2d84c18fcab98",
+      "assetId": "thbill-theo",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:49:55Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R16)",
+      "sources": [
+        {
+          "url": "https://docs.theo.xyz/products/thbill/how-thbill-generates-yield.md",
+          "observedAt": "2026-10-03T23:49:55Z",
+          "datumAsOf": null,
+          "location": "Allocation between funds",
+          "excerpt": "The split between ULTRA and FILQ is managed by Theo and is not fixed. It moves with capacity, settlement timing, and rate differences between the two.",
+          "assertion": "Discloses a variable two-fund basket, not current full-book fund-unit allocation or reconciled pending claims."
+        },
+        {
+          "url": "https://theo-api.theo.xyz/v1/public/thbill/historical/7",
+          "observedAt": "2026-10-03T23:49:55Z",
+          "datumAsOf": null,
+          "location": "Latest composition / pending",
+          "excerpt": "\"tUltra\": 36104378.057591684",
+          "assertion": "Issuer wrapper API categories disclose pending tUltra but no current FILQ allocation, pending-to-settled unit reconciliation, or complete cross-deployment liability denominator."
+        },
+        {
+          "url": "https://docs.theo.xyz/products/thbill/mint-and-redeem.md",
+          "observedAt": "2026-10-03T23:49:55Z",
+          "datumAsOf": null,
+          "location": "What holders receive",
+          "excerpt": "Holders have no claim on the underlying fund units or the securities held by those funds.",
+          "assertion": "Wrapper accounting and underlying fund units are distinct claims; the selected API book cannot be normalized into full backing."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://theo.xyz/thbill",
+        "https://app.theo.xyz/transparency",
+        "https://theo-api.theo.xyz/v1/public/thbill/historical/7",
+        "https://docs.theo.xyz/llms.txt",
+        "https://docs.theo.xyz/products/thbill.md",
+        "https://docs.theo.xyz/products/thbill/how-thbill-generates-yield.md",
+        "https://docs.theo.xyz/products/thbill/mint-and-redeem.md",
+        "https://docs.theo.xyz/products/thbill/wellington-ultra.md",
+        "https://docs.theo.xyz/products/thbill/fidelity-filq.md",
+        "https://docs.theo.xyz/legal/terms.md",
+        "https://docs.theo.xyz/developers/deployed-addresses.md",
+        "https://etherscan.io/address/0x5FA487BCa6158c64046B2813623e20755091DA0b#tokenBalances"
+      ],
+      "rationale": "Current complete thBILL reserve composition is undisclosed: reviewed issuer product/yield/fund pages identify variable ULTRA/FILQ backing but no current allocation. The wrapper API exposes ULTRA, USDC and mostly pending tUltra without joining pending claims to settled fund units or the whole cross-deployment liability book. Transparency reports thUSD reserves, not a full thBILL book. Existing pinned token balances remain selected evidence. Full-denominator current fund allocation cannot be recovered from these disclosures; no partial-book normalization or weight/date refresh is applied."
+    },
+    {
+      "id": "uw-idrx-idrx-c553907909eb3415",
+      "assetId": "idrx-idrx",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:idrx-idrx:offchain-issuer"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T22:48:43Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R22)",
+      "sources": [
+        {
+          "url": "https://docs.idrx.co/services/fees",
+          "observedAt": "2026-10-03T22:48:43Z",
+          "datumAsOf": null,
+          "location": "Redeem (IDRX \u2192 IDR) fee table",
+          "excerpt": "Redeem fees are deducted from the IDR amount you receive.",
+          "assertion": "Rp5,000 below Rp250m; Rp35,000 at/above, with bank-dependent RTGS fallback. Public flat-IDR formula is not evaluated at USD stress notionals by the existing documentedVariableFee model (W15)."
+        }
+      ]
+    },
+    {
+      "id": "uw-uscc-superstate-553ffbe0bde60ee3",
+      "assetId": "uscc-superstate",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T22:48:43Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R22)",
+      "sources": [
+        {
+          "url": "https://superstate.com/assets/uscc",
+          "observedAt": "2026-10-03T22:48:43Z",
+          "datumAsOf": "2026-10-01",
+          "location": "Holdings table, Cme Ether Future Oct26 and USDC rows",
+          "excerpt": "Portfolio holdings are shown as of the date indicated and are unaudited.",
+          "assertion": "Whole current portfolio publishes signed NAV percentages, including Ether future -0.90% and USDC -1.49%. ReserveSlice requires nonnegative pct; a net long/short NAV book cannot be honestly normalized into its long-only schema."
+        }
+      ]
+    },
+    {
+      "id": "uw-idrx-idrx-1b1d928ee27e879e",
+      "assetId": "idrx-idrx",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:2fb48797045babd839df7961",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:48:43Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R22)",
+      "sources": [
+        {
+          "url": "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20August%202026.pdf",
+          "observedAt": "2026-10-03T22:48:43Z",
+          "datumAsOf": "2026-08-28",
+          "location": "Appendix 1 pp. 5\u20139 and 13; bank/ORI030 supporting images visually inspected",
+          "excerpt": "the Company's designated ORI030 (secondary) account",
+          "assertion": "Report identifies ORI030 secondary balance and Ina/BRI accounts; Ina images show GIRO/GIRO PREMI. No ORI030 series/ISIN/maturity or sale-completion horizon, or bank-account maturity maximum appears."
+        },
+        {
+          "url": "https://app.idrx.co/assets/docs/idrx-terms-n-condition-en.pdf",
+          "observedAt": "2026-10-03T22:48:43Z",
+          "datumAsOf": "2026-05-04",
+          "location": "Definitions and service terms",
+          "excerpt": "IDRX reserves the right to modify, update, or discontinue part or all of the services on the Platform at any time with or without prior notice, at its discretion.",
+          "assertion": "Customer redemption/service terms do not disclose terms of the exact underlying reserve bank accounts or a realizability bound on the GHP ORI030 secondary position."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://idrx.co/en",
+        "https://idrx.co/en/docs",
+        "https://idrx.co/api/documents?page=1&take=100",
+        "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20August%202026.pdf",
+        "https://docs.idrx.co/introduction/readme",
+        "https://docs.idrx.co/llms.txt",
+        "https://docs.idrx.co/services/fees",
+        "https://app.idrx.co/assets/docs/idrx-terms-n-condition-en.pdf"
+      ],
+      "rationale": "Exact ORI030 maturityDaysMax and liquidityHorizon and Ina/BRI account maturityDaysMax are not disclosed in the issuer site, report archive/current AUP with visually inspected bank/ORI appendices, whitepaper landing/docs, or governing customer terms. ORI030 is an aggregate secondary account label, not a series/ISIN; a general government-security maturity cannot be assigned to it. Bank balance/GIRO disclosure is not an explicit maturity maximum. No fabricated zero or maturity extrapolation is used."
+    },
+    {
+      "id": "uw-idrx-idrx-171b73550960d26a",
+      "assetId": "idrx-idrx",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:2fb48797045babd839df7961",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:48:43Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R22)",
+      "sources": [
+        {
+          "url": "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20August%202026.pdf",
+          "observedAt": "2026-10-03T22:48:43Z",
+          "datumAsOf": "2026-08-28",
+          "location": "Appendix 1 pp. 5\u20139 and 13; bank/ORI030 supporting images visually inspected",
+          "excerpt": "the Company's designated ORI030 (secondary) account",
+          "assertion": "Report identifies ORI030 secondary balance and Ina/BRI accounts; Ina images show GIRO/GIRO PREMI. No ORI030 series/ISIN/maturity or sale-completion horizon, or bank-account maturity maximum appears."
+        },
+        {
+          "url": "https://app.idrx.co/assets/docs/idrx-terms-n-condition-en.pdf",
+          "observedAt": "2026-10-03T22:48:43Z",
+          "datumAsOf": "2026-05-04",
+          "location": "Definitions and service terms",
+          "excerpt": "IDRX reserves the right to modify, update, or discontinue part or all of the services on the Platform at any time with or without prior notice, at its discretion.",
+          "assertion": "Customer redemption/service terms do not disclose terms of the exact underlying reserve bank accounts or a realizability bound on the GHP ORI030 secondary position."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://idrx.co/en",
+        "https://idrx.co/en/docs",
+        "https://idrx.co/api/documents?page=1&take=100",
+        "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20August%202026.pdf",
+        "https://docs.idrx.co/introduction/readme",
+        "https://docs.idrx.co/llms.txt",
+        "https://docs.idrx.co/services/fees",
+        "https://app.idrx.co/assets/docs/idrx-terms-n-condition-en.pdf"
+      ],
+      "rationale": "Exact ORI030 maturityDaysMax and liquidityHorizon and Ina/BRI account maturityDaysMax are not disclosed in the issuer site, report archive/current AUP with visually inspected bank/ORI appendices, whitepaper landing/docs, or governing customer terms. ORI030 is an aggregate secondary account label, not a series/ISIN; a general government-security maturity cannot be assigned to it. Bank balance/GIRO disclosure is not an explicit maturity maximum. No fabricated zero or maturity extrapolation is used."
+    },
+    {
+      "id": "uw-idrx-idrx-5f448584b6631db4",
+      "assetId": "idrx-idrx",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:49785466b99abe3671ca321f",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:48:43Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R22)",
+      "sources": [
+        {
+          "url": "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20August%202026.pdf",
+          "observedAt": "2026-10-03T22:48:43Z",
+          "datumAsOf": "2026-08-28",
+          "location": "Appendix 1 pp. 5\u20139 and 13; bank/ORI030 supporting images visually inspected",
+          "excerpt": "the Company's designated ORI030 (secondary) account",
+          "assertion": "Report identifies ORI030 secondary balance and Ina/BRI accounts; Ina images show GIRO/GIRO PREMI. No ORI030 series/ISIN/maturity or sale-completion horizon, or bank-account maturity maximum appears."
+        },
+        {
+          "url": "https://app.idrx.co/assets/docs/idrx-terms-n-condition-en.pdf",
+          "observedAt": "2026-10-03T22:48:43Z",
+          "datumAsOf": "2026-05-04",
+          "location": "Definitions and service terms",
+          "excerpt": "IDRX reserves the right to modify, update, or discontinue part or all of the services on the Platform at any time with or without prior notice, at its discretion.",
+          "assertion": "Customer redemption/service terms do not disclose terms of the exact underlying reserve bank accounts or a realizability bound on the GHP ORI030 secondary position."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://idrx.co/en",
+        "https://idrx.co/en/docs",
+        "https://idrx.co/api/documents?page=1&take=100",
+        "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20August%202026.pdf",
+        "https://docs.idrx.co/introduction/readme",
+        "https://docs.idrx.co/llms.txt",
+        "https://docs.idrx.co/services/fees",
+        "https://app.idrx.co/assets/docs/idrx-terms-n-condition-en.pdf"
+      ],
+      "rationale": "Exact ORI030 maturityDaysMax and liquidityHorizon and Ina/BRI account maturityDaysMax are not disclosed in the issuer site, report archive/current AUP with visually inspected bank/ORI appendices, whitepaper landing/docs, or governing customer terms. ORI030 is an aggregate secondary account label, not a series/ISIN; a general government-security maturity cannot be assigned to it. Bank balance/GIRO disclosure is not an explicit maturity maximum. No fabricated zero or maturity extrapolation is used."
+    },
+    {
+      "id": "uw-idrx-idrx-6315e4807d4ae26a",
+      "assetId": "idrx-idrx",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:6844e403a5152afde98fcc71",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:48:43Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R22)",
+      "sources": [
+        {
+          "url": "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20August%202026.pdf",
+          "observedAt": "2026-10-03T22:48:43Z",
+          "datumAsOf": "2026-08-28",
+          "location": "Appendix 1 pp. 5\u20139 and 13; bank/ORI030 supporting images visually inspected",
+          "excerpt": "the Company's designated ORI030 (secondary) account",
+          "assertion": "Report identifies ORI030 secondary balance and Ina/BRI accounts; Ina images show GIRO/GIRO PREMI. No ORI030 series/ISIN/maturity or sale-completion horizon, or bank-account maturity maximum appears."
+        },
+        {
+          "url": "https://app.idrx.co/assets/docs/idrx-terms-n-condition-en.pdf",
+          "observedAt": "2026-10-03T22:48:43Z",
+          "datumAsOf": "2026-05-04",
+          "location": "Definitions and service terms",
+          "excerpt": "IDRX reserves the right to modify, update, or discontinue part or all of the services on the Platform at any time with or without prior notice, at its discretion.",
+          "assertion": "Customer redemption/service terms do not disclose terms of the exact underlying reserve bank accounts or a realizability bound on the GHP ORI030 secondary position."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://idrx.co/en",
+        "https://idrx.co/en/docs",
+        "https://idrx.co/api/documents?page=1&take=100",
+        "https://idrx-prod-public-docs.s3.ap-southeast-3.amazonaws.com/Reserve%20Transparency%20Report%20IDRX%20August%202026.pdf",
+        "https://docs.idrx.co/introduction/readme",
+        "https://docs.idrx.co/llms.txt",
+        "https://docs.idrx.co/services/fees",
+        "https://app.idrx.co/assets/docs/idrx-terms-n-condition-en.pdf"
+      ],
+      "rationale": "Exact ORI030 maturityDaysMax and liquidityHorizon and Ina/BRI account maturityDaysMax are not disclosed in the issuer site, report archive/current AUP with visually inspected bank/ORI appendices, whitepaper landing/docs, or governing customer terms. ORI030 is an aggregate secondary account label, not a series/ISIN; a general government-security maturity cannot be assigned to it. Bank balance/GIRO disclosure is not an explicit maturity maximum. No fabricated zero or maturity extrapolation is used."
+    },
+    {
+      "id": "uw-sbold-k3-capital-b918fd8fbbfb3509",
+      "assetId": "sbold-k3-capital",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:c967128e84e617e34aef61e0",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:20Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R22)",
+      "sources": [
+        {
+          "url": "https://k3-capital.gitbook.io/sbold/technical-details/interactions",
+          "observedAt": "2026-10-03T22:51:20Z",
+          "datumAsOf": null,
+          "location": "Collateral exposure restrictions / Withdraw",
+          "excerpt": "In such cases, the protocol temporarily restricts the deposit and withdraw operations to avoid increasing exposure further and to maintain healthy system dynamics.",
+          "assertion": "Collateral gates are disclosed but no time bound on restored withdrawal or full-position liquidation/swap completion is promised."
+        },
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x50bd66d59911f5e086ec87ae43c811e0d059dd11",
+          "observedAt": "2026-10-03T22:51:20Z",
+          "datumAsOf": null,
+          "location": "sBold.sol _maxWithdraw/_maxRedeem and _checkCollHealth",
+          "excerpt": "if (!success || paused()) return 0;",
+          "assertion": "Exact deployed source gates withdrawal on oracle success, pause and collateral health; no deadline makes the whole protocol position realizable in a fixed horizon."
+        },
+        {
+          "url": "https://dedaub.com/audits/k3-capital/sbold-may-19-2025/",
+          "observedAt": "2026-10-03T22:51:20Z",
+          "datumAsOf": "2025-05-19",
+          "location": "P1: operability relies on BOLD liquidity",
+          "excerpt": "some users attempting to redeem their sBOLD may be unable to do so until BOLD liquidity returns to adequate levels on-chain.",
+          "assertion": "Independent audit corroborates market-dependent withdrawal restoration rather than a specified maximum realization time."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://k3-capital.gitbook.io/sbold/llms.txt",
+        "https://k3-capital.gitbook.io/sbold/introducing-sbold",
+        "https://k3-capital.gitbook.io/sbold/liquity-v2-design",
+        "https://k3-capital.gitbook.io/sbold/technical-details",
+        "https://k3-capital.gitbook.io/sbold/technical-details/interactions",
+        "https://k3-capital.gitbook.io/sbold/audit-reports",
+        "https://www.chainsecurity.com/security-audit/k3-sbold",
+        "https://dedaub.com/audits/k3-capital/sbold-may-19-2025/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x50bd66d59911f5e086ec87ae43c811e0d059dd11"
+      ],
+      "rationale": "Exact whole-slice liquidityHorizon for the BOLD-in-Stability-Pools position has no published guaranteed realization bound. Official product/technical/interaction docs, source and both audit disclosures show conditional collateral/pausing/oracle and market-liquidity gates, not a deadline. Atomic successful withdraw calls do not imply the entire scoped position is immediately available; no scalar immediate or fabricated seven-day bound is authored."
+    },
+    {
+      "id": "uw-thusd-theo-be974cb6665e0309",
+      "assetId": "thusd-theo",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:651f0355c23e76f1f43f9175",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R37)",
+      "sources": [
+        {
+          "url": "https://theo.xyz/articles/how-thusd-works-gold-carry-trade-explained",
+          "observedAt": "2026-10-03T22:56:45Z",
+          "datumAsOf": "2026-06-04",
+          "location": "Yield Stream 1: The Gold Lease",
+          "excerpt": "the borrower returns the same physical gold at the end of the term, plus interest.",
+          "assertion": "Gold leases are term-based; neither the longest lease term nor whole-position stressed cash settlement is specified."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://theo.xyz/thbill",
+        "https://docs.theo.xyz/products/thbill.md",
+        "https://docs.theo.xyz/products/thbill/mint-and-redeem.md",
+        "https://docs.theo.xyz/products/thbill/wellington-ultra.md",
+        "https://docs.theo.xyz/products/thbill/fidelity-filq.md",
+        "https://docs.theo.xyz/legal/terms.md",
+        "https://app.theo.xyz/transparency",
+        "https://docs.theo.xyz/developers/deployed-addresses.md",
+        "https://theo.xyz/articles/how-thusd-works-gold-carry-trade-explained",
+        "https://docs.theo.xyz/products/thusd.md",
+        "https://docs.theo.xyz/products/thusd/mint-and-redeem.md"
+      ],
+      "rationale": "For the exact gold-carry reserve slice, maturityDaysMax and liquidityHorizon remain undisclosed. Lease terms, maturity-ladder construction, futures-market depth, and institutional counterparties are described, but no numerical longest lease term or bounded whole-slice cash-realization horizon is published. Market depth and collateral insurance are not liquidity guarantees."
+    },
+    {
+      "id": "uw-thusd-theo-be1bbc87b3174dd1",
+      "assetId": "thusd-theo",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:651f0355c23e76f1f43f9175",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R37)",
+      "sources": [
+        {
+          "url": "https://theo.xyz/articles/how-thusd-works-gold-carry-trade-explained",
+          "observedAt": "2026-10-03T22:56:45Z",
+          "datumAsOf": "2026-06-04",
+          "location": "Yield Stream 1: The Gold Lease",
+          "excerpt": "the borrower returns the same physical gold at the end of the term, plus interest.",
+          "assertion": "Gold leases are term-based; neither the longest lease term nor whole-position stressed cash settlement is specified."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://theo.xyz/thbill",
+        "https://docs.theo.xyz/products/thbill.md",
+        "https://docs.theo.xyz/products/thbill/mint-and-redeem.md",
+        "https://docs.theo.xyz/products/thbill/wellington-ultra.md",
+        "https://docs.theo.xyz/products/thbill/fidelity-filq.md",
+        "https://docs.theo.xyz/legal/terms.md",
+        "https://app.theo.xyz/transparency",
+        "https://docs.theo.xyz/developers/deployed-addresses.md",
+        "https://theo.xyz/articles/how-thusd-works-gold-carry-trade-explained",
+        "https://docs.theo.xyz/products/thusd.md",
+        "https://docs.theo.xyz/products/thusd/mint-and-redeem.md"
+      ],
+      "rationale": "For the exact gold-carry reserve slice, maturityDaysMax and liquidityHorizon remain undisclosed. Lease terms, maturity-ladder construction, futures-market depth, and institutional counterparties are described, but no numerical longest lease term or bounded whole-slice cash-realization horizon is published. Market depth and collateral insurance are not liquidity guarantees."
+    },
+    {
+      "id": "uw-thusd-theo-c45595d265e57fe2",
+      "assetId": "thusd-theo",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:9c0f8b4554581ebba8504c2e",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R37)",
+      "sources": [
+        {
+          "url": "https://docs.theo.xyz/products/thbill/mint-and-redeem.md",
+          "observedAt": "2026-10-03T22:56:45Z",
+          "datumAsOf": null,
+          "location": "What holders receive",
+          "excerpt": "Holders have no claim on the underlying fund units or the securities held by those funds.",
+          "assertion": "The reserve claim is thBILL, not direct Treasury ownership; underlying fund short duration does not establish a claim maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://theo.xyz/thbill",
+        "https://docs.theo.xyz/products/thbill.md",
+        "https://docs.theo.xyz/products/thbill/mint-and-redeem.md",
+        "https://docs.theo.xyz/products/thbill/wellington-ultra.md",
+        "https://docs.theo.xyz/products/thbill/fidelity-filq.md",
+        "https://docs.theo.xyz/legal/terms.md",
+        "https://app.theo.xyz/transparency",
+        "https://docs.theo.xyz/developers/deployed-addresses.md",
+        "https://theo.xyz/articles/how-thusd-works-gold-carry-trade-explained"
+      ],
+      "rationale": "For thUSD\u2019s exact thBILL reserve slice, no contractual maturityDaysMax or bounded whole-position liquidityHorizon is disclosed. ULTRA/FILQ custody and daily NAV are published; thBILL docs advertise T+1 while the website advertises T+0, neither a stress-inclusive hard maximum. Holders have no direct fund-unit claim. Short-duration fund language cannot be converted into a maturity maximum."
+    },
+    {
+      "id": "uw-thusd-theo-39c4bae2da0cced3",
+      "assetId": "thusd-theo",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:9c0f8b4554581ebba8504c2e",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R37)",
+      "sources": [
+        {
+          "url": "https://docs.theo.xyz/products/thbill/mint-and-redeem.md",
+          "observedAt": "2026-10-03T22:56:45Z",
+          "datumAsOf": null,
+          "location": "What holders receive",
+          "excerpt": "Holders have no claim on the underlying fund units or the securities held by those funds.",
+          "assertion": "The reserve claim is thBILL, not direct Treasury ownership; underlying fund short duration does not establish a claim maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://theo.xyz/thbill",
+        "https://docs.theo.xyz/products/thbill.md",
+        "https://docs.theo.xyz/products/thbill/mint-and-redeem.md",
+        "https://docs.theo.xyz/products/thbill/wellington-ultra.md",
+        "https://docs.theo.xyz/products/thbill/fidelity-filq.md",
+        "https://docs.theo.xyz/legal/terms.md",
+        "https://app.theo.xyz/transparency",
+        "https://docs.theo.xyz/developers/deployed-addresses.md",
+        "https://theo.xyz/articles/how-thusd-works-gold-carry-trade-explained"
+      ],
+      "rationale": "For thUSD\u2019s exact thBILL reserve slice, no contractual maturityDaysMax or bounded whole-position liquidityHorizon is disclosed. ULTRA/FILQ custody and daily NAV are published; thBILL docs advertise T+1 while the website advertises T+0, neither a stress-inclusive hard maximum. Holders have no direct fund-unit claim. Short-duration fund language cannot be converted into a maturity maximum."
+    },
+    {
+      "id": "uw-thusd-theo-3c902d363b2296d4",
+      "assetId": "thusd-theo",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R37)",
+      "sources": [
+        {
+          "url": "https://docs.theo.xyz/security-and-transparency/overview.md",
+          "observedAt": "2026-10-03T22:56:45Z",
+          "datumAsOf": null,
+          "location": "Opening transparency description",
+          "excerpt": "ongoing attestations conducted by third-party auditors.",
+          "assertion": "Generic ongoing attestations do not establish a periodic token-liability versus complete backing reconciliation procedure."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://theo.xyz/thbill",
+        "https://docs.theo.xyz/products/thbill.md",
+        "https://docs.theo.xyz/products/thbill/mint-and-redeem.md",
+        "https://docs.theo.xyz/products/thbill/wellington-ultra.md",
+        "https://docs.theo.xyz/products/thbill/fidelity-filq.md",
+        "https://docs.theo.xyz/legal/terms.md",
+        "https://app.theo.xyz/transparency",
+        "https://docs.theo.xyz/developers/deployed-addresses.md",
+        "https://docs.theo.xyz/security-and-transparency/overview.md",
+        "https://docs.theo.xyz/products/thusd/mint-and-redeem.md",
+        "https://theo.xyz/articles/how-thusd-works-gold-carry-trade-explained",
+        "https://theo-api.theo.xyz/v1/public/thbill/historical/7"
+      ],
+      "rationale": "For each asset\u2019s mint reconciliation datum, no explicit periodic whole-supply liability/backing reconciliation procedure and frequency is disclosed. Dashboard reserve and custody attestations, fund NAV reporting, contract roles, signed mint orders, and partial API composition are available; none proves recurring reconciliation of all minted and cross-chain liabilities to the complete offchain asset book. Daily fund NAV is not token-liability reconciliation."
+    },
+    {
+      "id": "uw-thbill-theo-25d89d02afdf42b1",
+      "assetId": "thbill-theo",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R37)",
+      "sources": [
+        {
+          "url": "https://docs.theo.xyz/security-and-transparency/overview.md",
+          "observedAt": "2026-10-03T22:56:45Z",
+          "datumAsOf": null,
+          "location": "Opening transparency description",
+          "excerpt": "ongoing attestations conducted by third-party auditors.",
+          "assertion": "Generic ongoing attestations do not establish a periodic token-liability versus complete backing reconciliation procedure."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://theo.xyz/thbill",
+        "https://docs.theo.xyz/products/thbill.md",
+        "https://docs.theo.xyz/products/thbill/mint-and-redeem.md",
+        "https://docs.theo.xyz/products/thbill/wellington-ultra.md",
+        "https://docs.theo.xyz/products/thbill/fidelity-filq.md",
+        "https://docs.theo.xyz/legal/terms.md",
+        "https://app.theo.xyz/transparency",
+        "https://docs.theo.xyz/developers/deployed-addresses.md",
+        "https://docs.theo.xyz/security-and-transparency/overview.md",
+        "https://docs.theo.xyz/products/thusd/mint-and-redeem.md",
+        "https://theo.xyz/articles/how-thusd-works-gold-carry-trade-explained",
+        "https://theo-api.theo.xyz/v1/public/thbill/historical/7"
+      ],
+      "rationale": "For each asset\u2019s mint reconciliation datum, no explicit periodic whole-supply liability/backing reconciliation procedure and frequency is disclosed. Dashboard reserve and custody attestations, fund NAV reporting, contract roles, signed mint orders, and partial API composition are available; none proves recurring reconciliation of all minted and cross-chain liabilities to the complete offchain asset book. Daily fund NAV is not token-liability reconciliation."
+    },
+    {
+      "id": "uw-thbill-theo-36cb489ecddee446",
+      "assetId": "thbill-theo",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:thbill-theo:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R37)",
+      "sources": [
+        {
+          "url": "https://docs.theo.xyz/products/thbill/mint-and-redeem.md",
+          "observedAt": "2026-10-03T22:56:45Z",
+          "datumAsOf": null,
+          "location": "What holders receive",
+          "excerpt": "Redemption settles in stablecoins.",
+          "assertion": "Output USDC/USDT and KYC access are disclosed, but no applicable redemption fee schedule or formula is supplied."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://theo.xyz/thbill",
+        "https://docs.theo.xyz/products/thbill.md",
+        "https://docs.theo.xyz/products/thbill/mint-and-redeem.md",
+        "https://docs.theo.xyz/products/thbill/wellington-ultra.md",
+        "https://docs.theo.xyz/products/thbill/fidelity-filq.md",
+        "https://docs.theo.xyz/legal/terms.md",
+        "https://app.theo.xyz/transparency",
+        "https://docs.theo.xyz/developers/deployed-addresses.md"
+      ],
+      "rationale": "The exact thBILL offchain-issuer redemption cost has no published numeric fee, complete bound, or evaluable fee formula in the product, mint/redeem, legal, transparency, or fund pages reviewed. Institutional KYC/KYB access and USDC/USDT payout are described without redemption tariffs. Fund management expenses and claimed net APY are not holder redemption charges; no zero fee is inferred."
+    },
+    {
+      "id": "uw-myrc-blox-a39480f870f6993a",
+      "assetId": "myrc-blox",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:159bb5cd984bd7b0423ab087",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R37)",
+      "sources": [
+        {
+          "url": "https://media.halogen.my/fund/hsmlf/info-memorandum.pdf",
+          "observedAt": "2026-10-03T22:56:45Z",
+          "datumAsOf": "2025-08-25",
+          "location": "Chapter 4.2 Investment Policy and Strategy, page 16",
+          "excerpt": "The Fund\u2019s average investment duration shall not be more than one (1) year.",
+          "assertion": "Average duration is not maximum instrument maturity; fund units have no fixed termination date or contractual maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.blox.my/myrc",
+        "https://www.blox.my/myrc/transparency",
+        "https://www.blox.my/policies/product-term-sheet",
+        "https://www.blox.my/policies/user-agreement",
+        "https://docs.blox.my/user/burn-myrc",
+        "https://docs.blox.my/api/wallet-api/overview",
+        "https://cdn.blox.my/attestations/2026/Blox%20Attestation%20Report-2026-08-August.pdf",
+        "https://www.halogen.my/fund/halogen-shariah-myr-liquid-fund",
+        "https://media.halogen.my/fund/hsmlf/info-memorandum.pdf",
+        "https://media.halogen.my/fund/hsmlf/fact-sheet-august-2026.pdf"
+      ],
+      "rationale": "For MYRC\u2019s exact Halogen liquid-fund reserve slice, maturityDaysMax is not disclosed. The full governing memorandum permits sukuk, deposits and other collective schemes and caps average duration at one year, not maximum maturity or fund-unit claim term. The actual factsheet and MYRC reserve attestation disclose allocation/value without a maximum. No 365-day maximum is inferred from a portfolio average."
+    },
+    {
+      "id": "uw-myrc-blox-03f8d22252c47847",
+      "assetId": "myrc-blox",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:myrc-blox:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R37)",
+      "sources": [
+        {
+          "url": "https://www.blox.my/policies/user-agreement",
+          "observedAt": "2026-10-03T22:56:45Z",
+          "datumAsOf": "2025-04-01",
+          "location": "Clause 12.5 processing and banking delays",
+          "excerpt": "the Company makes no representations or warranties regarding the amount of time needed to complete processing",
+          "assertion": "The agreement expressly disclaims a bounded processing time; T+1 user guidance is a usual target, not a maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.blox.my/myrc",
+        "https://www.blox.my/myrc/transparency",
+        "https://www.blox.my/policies/product-term-sheet",
+        "https://www.blox.my/policies/user-agreement",
+        "https://docs.blox.my/user/burn-myrc",
+        "https://docs.blox.my/api/wallet-api/overview"
+      ],
+      "rationale": "The exact MYRC offchain-issuer route has no end-to-end maximum settlement SLA. User docs say next working day and API docs say usually T+1, with requests after 5 PM/weekends processed next working day. Governing Clause 12.5 expressly disclaims any particular processing time and lists banking/third-party delays. A usual target or working-day convention cannot support settlementDaysMax."
+    },
+    {
+      "id": "uw-kpkusdcprime-kpk-45c4592b28ce00dc",
+      "assetId": "kpkusdcprime-kpk",
+      "scope": {
+        "componentKey": "control:mint-meta:kpkusdcprime-kpk:24331f596e6740ef6dbd",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:kpkusdcprime-kpk:24331f596e6740ef6dbd",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:13:56Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R82)",
+      "sources": [
+        {
+          "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+          "observedAt": "2026-10-03T23:13:55Z",
+          "datumAsOf": null,
+          "location": "Manual signers and Per-vault Curator Safe",
+          "excerpt": "Beyond automation, the remaining signers on Curator Safes are **KPK team members**.",
+          "assertion": "Publishes team membership, hardware-wallet/hash inspection practices and shared signer set, but not an address-to-person roster or evidence of independent human/key control for the exact manual EOAs and Safe signers."
+        },
+        {
+          "url": "https://docs.kpk.io/vaults/vaults/morpho.md",
+          "observedAt": "2026-10-03T23:13:55Z",
+          "datumAsOf": null,
+          "location": "Governance and control / Key settings and roles",
+          "excerpt": "**Owner and sentinel:** Security Council Safe (5/8)",
+          "assertion": "Names the exact Security Council, curator quorum and Deployer 1/2/3 addresses, but no independently controlled human signer roster or per-address key custody attestation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://kpk.io/about",
+        "https://kpk.io/reports",
+        "https://kpk.io/terms-of-service",
+        "https://kpk.io/blog/permissions-layer",
+        "https://docs.kpk.io/llms.txt",
+        "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+        "https://docs.kpk.io/vaults/infrastructure/automation.md",
+        "https://docs.kpk.io/vaults/vaults/morpho.md",
+        "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-prime.md",
+        "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-yield.md",
+        "https://docs.kpk.io/changelog/readme.md",
+        "https://docs.kpk.io/vaults/resources/legal/morpho-disclaimer.md",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+      ],
+      "rationale": "The exact scoped questions ask for independent human signers/operators and actual key custody. KPK discloses manual team signers, named deployer addresses, shared curator signer sets, quorum and signing practices. Its issuer site, reports index, legal terms, complete docs index, signer/automation architecture and governance archive do not map all exact manual/Security Council signer addresses to independently controlled people or provide per-key custody evidence. Automation EOAs are excluded because their signer-vault custody is positively disclosed."
+    },
+    {
+      "id": "uw-kpkusdcprime-kpk-d3c201a0d2db06da",
+      "assetId": "kpkusdcprime-kpk",
+      "scope": {
+        "componentKey": "control:mint-meta:kpkusdcprime-kpk:5c24ae0d92003a4b2ade",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:kpkusdcprime-kpk:5c24ae0d92003a4b2ade",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:13:56Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R82)",
+      "sources": [
+        {
+          "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+          "observedAt": "2026-10-03T23:13:55Z",
+          "datumAsOf": null,
+          "location": "Manual signers and Per-vault Curator Safe",
+          "excerpt": "Beyond automation, the remaining signers on Curator Safes are **KPK team members**.",
+          "assertion": "Publishes team membership, hardware-wallet/hash inspection practices and shared signer set, but not an address-to-person roster or evidence of independent human/key control for the exact manual EOAs and Safe signers."
+        },
+        {
+          "url": "https://docs.kpk.io/vaults/vaults/morpho.md",
+          "observedAt": "2026-10-03T23:13:55Z",
+          "datumAsOf": null,
+          "location": "Governance and control / Key settings and roles",
+          "excerpt": "**Owner and sentinel:** Security Council Safe (5/8)",
+          "assertion": "Names the exact Security Council, curator quorum and Deployer 1/2/3 addresses, but no independently controlled human signer roster or per-address key custody attestation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://kpk.io/about",
+        "https://kpk.io/reports",
+        "https://kpk.io/terms-of-service",
+        "https://kpk.io/blog/permissions-layer",
+        "https://docs.kpk.io/llms.txt",
+        "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+        "https://docs.kpk.io/vaults/infrastructure/automation.md",
+        "https://docs.kpk.io/vaults/vaults/morpho.md",
+        "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-prime.md",
+        "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-yield.md",
+        "https://docs.kpk.io/changelog/readme.md",
+        "https://docs.kpk.io/vaults/resources/legal/morpho-disclaimer.md",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+      ],
+      "rationale": "The exact scoped questions ask for independent human signers/operators and actual key custody. KPK discloses manual team signers, named deployer addresses, shared curator signer sets, quorum and signing practices. Its issuer site, reports index, legal terms, complete docs index, signer/automation architecture and governance archive do not map all exact manual/Security Council signer addresses to independently controlled people or provide per-key custody evidence. Automation EOAs are excluded because their signer-vault custody is positively disclosed."
+    },
+    {
+      "id": "uw-kpkusdcprime-kpk-c681589bc26a80cb",
+      "assetId": "kpkusdcprime-kpk",
+      "scope": {
+        "componentKey": "control:mint-meta:kpkusdcprime-kpk:649994baf2e468d6620f",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:kpkusdcprime-kpk:649994baf2e468d6620f",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:13:56Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R82)",
+      "sources": [
+        {
+          "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+          "observedAt": "2026-10-03T23:13:55Z",
+          "datumAsOf": null,
+          "location": "Manual signers and Per-vault Curator Safe",
+          "excerpt": "Beyond automation, the remaining signers on Curator Safes are **KPK team members**.",
+          "assertion": "Publishes team membership, hardware-wallet/hash inspection practices and shared signer set, but not an address-to-person roster or evidence of independent human/key control for the exact manual EOAs and Safe signers."
+        },
+        {
+          "url": "https://docs.kpk.io/vaults/vaults/morpho.md",
+          "observedAt": "2026-10-03T23:13:55Z",
+          "datumAsOf": null,
+          "location": "Governance and control / Key settings and roles",
+          "excerpt": "**Owner and sentinel:** Security Council Safe (5/8)",
+          "assertion": "Names the exact Security Council, curator quorum and Deployer 1/2/3 addresses, but no independently controlled human signer roster or per-address key custody attestation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://kpk.io/about",
+        "https://kpk.io/reports",
+        "https://kpk.io/terms-of-service",
+        "https://kpk.io/blog/permissions-layer",
+        "https://docs.kpk.io/llms.txt",
+        "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+        "https://docs.kpk.io/vaults/infrastructure/automation.md",
+        "https://docs.kpk.io/vaults/vaults/morpho.md",
+        "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-prime.md",
+        "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-yield.md",
+        "https://docs.kpk.io/changelog/readme.md",
+        "https://docs.kpk.io/vaults/resources/legal/morpho-disclaimer.md",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+      ],
+      "rationale": "The exact scoped questions ask for independent human signers/operators and actual key custody. KPK discloses manual team signers, named deployer addresses, shared curator signer sets, quorum and signing practices. Its issuer site, reports index, legal terms, complete docs index, signer/automation architecture and governance archive do not map all exact manual/Security Council signer addresses to independently controlled people or provide per-key custody evidence. Automation EOAs are excluded because their signer-vault custody is positively disclosed."
+    },
+    {
+      "id": "uw-kpkusdcprime-kpk-7766d1e6d398e034",
+      "assetId": "kpkusdcprime-kpk",
+      "scope": {
+        "componentKey": "control:mint-meta:kpkusdcprime-kpk:bdbe200d7a58feec6700",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:kpkusdcprime-kpk:bdbe200d7a58feec6700",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:13:56Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R82)",
+      "sources": [
+        {
+          "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+          "observedAt": "2026-10-03T23:13:55Z",
+          "datumAsOf": null,
+          "location": "Manual signers and Per-vault Curator Safe",
+          "excerpt": "Beyond automation, the remaining signers on Curator Safes are **KPK team members**.",
+          "assertion": "Publishes team membership, hardware-wallet/hash inspection practices and shared signer set, but not an address-to-person roster or evidence of independent human/key control for the exact manual EOAs and Safe signers."
+        },
+        {
+          "url": "https://docs.kpk.io/vaults/vaults/morpho.md",
+          "observedAt": "2026-10-03T23:13:55Z",
+          "datumAsOf": null,
+          "location": "Governance and control / Key settings and roles",
+          "excerpt": "**Owner and sentinel:** Security Council Safe (5/8)",
+          "assertion": "Names the exact Security Council, curator quorum and Deployer 1/2/3 addresses, but no independently controlled human signer roster or per-address key custody attestation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://kpk.io/about",
+        "https://kpk.io/reports",
+        "https://kpk.io/terms-of-service",
+        "https://kpk.io/blog/permissions-layer",
+        "https://docs.kpk.io/llms.txt",
+        "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+        "https://docs.kpk.io/vaults/infrastructure/automation.md",
+        "https://docs.kpk.io/vaults/vaults/morpho.md",
+        "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-prime.md",
+        "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-yield.md",
+        "https://docs.kpk.io/changelog/readme.md",
+        "https://docs.kpk.io/vaults/resources/legal/morpho-disclaimer.md",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+      ],
+      "rationale": "The exact scoped questions ask for independent human signers/operators and actual key custody. KPK discloses manual team signers, named deployer addresses, shared curator signer sets, quorum and signing practices. Its issuer site, reports index, legal terms, complete docs index, signer/automation architecture and governance archive do not map all exact manual/Security Council signer addresses to independently controlled people or provide per-key custody evidence. Automation EOAs are excluded because their signer-vault custody is positively disclosed."
+    },
+    {
+      "id": "uw-kpkusdcprime-kpk-97f3ddbaff9309e3",
+      "assetId": "kpkusdcprime-kpk",
+      "scope": {
+        "componentKey": "control:mint-meta:kpkusdcprime-kpk:c7e4a54684495b41d32c",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:kpkusdcprime-kpk:c7e4a54684495b41d32c",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:13:56Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R82)",
+      "sources": [
+        {
+          "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+          "observedAt": "2026-10-03T23:13:55Z",
+          "datumAsOf": null,
+          "location": "Manual signers and Per-vault Curator Safe",
+          "excerpt": "Beyond automation, the remaining signers on Curator Safes are **KPK team members**.",
+          "assertion": "Publishes team membership, hardware-wallet/hash inspection practices and shared signer set, but not an address-to-person roster or evidence of independent human/key control for the exact manual EOAs and Safe signers."
+        },
+        {
+          "url": "https://docs.kpk.io/vaults/vaults/morpho.md",
+          "observedAt": "2026-10-03T23:13:55Z",
+          "datumAsOf": null,
+          "location": "Governance and control / Key settings and roles",
+          "excerpt": "**Owner and sentinel:** Security Council Safe (5/8)",
+          "assertion": "Names the exact Security Council, curator quorum and Deployer 1/2/3 addresses, but no independently controlled human signer roster or per-address key custody attestation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://kpk.io/about",
+        "https://kpk.io/reports",
+        "https://kpk.io/terms-of-service",
+        "https://kpk.io/blog/permissions-layer",
+        "https://docs.kpk.io/llms.txt",
+        "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+        "https://docs.kpk.io/vaults/infrastructure/automation.md",
+        "https://docs.kpk.io/vaults/vaults/morpho.md",
+        "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-prime.md",
+        "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-yield.md",
+        "https://docs.kpk.io/changelog/readme.md",
+        "https://docs.kpk.io/vaults/resources/legal/morpho-disclaimer.md",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+      ],
+      "rationale": "The exact scoped questions ask for independent human signers/operators and actual key custody. KPK discloses manual team signers, named deployer addresses, shared curator signer sets, quorum and signing practices. Its issuer site, reports index, legal terms, complete docs index, signer/automation architecture and governance archive do not map all exact manual/Security Council signer addresses to independently controlled people or provide per-key custody evidence. Automation EOAs are excluded because their signer-vault custody is positively disclosed."
     }
   ]
 }
