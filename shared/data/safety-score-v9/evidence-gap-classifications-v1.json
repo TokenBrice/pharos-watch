@@ -3002,710 +3002,6 @@
       "rationale": "The ETH/LST, BTC and SOL/XRP/BNB/Gold positions are disclosed as aggregate assets and venues, not complete realization/closeout schedules. No enforceable whole-slice liquidity horizon is published. The mixed Other claim retains class other because Gold identity and per-position hedge instrument scope remain unitemized; its exact maximum term cannot be established. ETH/BTC maturity is separately left structural N/A, not C. Native transferability, proposed hedges and typical PnL cycles are not whole-position USD liquidity bounds."
     },
     {
-      "id": "uw-usdx-hex-trust-e6ef208a803d361c",
-      "assetId": "usdx-hex-trust",
-      "scope": {
-        "componentKey": "reserve-composition",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "backing",
-        "requiredDatum": "reserve-composition",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:53:50Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R04)",
-      "sources": [
-        {
-          "url": "https://flare.network/news/flare-confidential-compute-makes-private-institutional-data-usable-onchain-starting-with-hex-trusts-usdx",
-          "observedAt": "2026-10-03T22:51:06Z",
-          "datumAsOf": "2026-09-30",
-          "location": "First application: Proof of Reserves for USDX",
-          "excerpt": "Only that result is published.",
-          "assertion": "Coverage conclusion is published, not reserve components or a dated category allocation."
-        },
-        {
-          "url": "https://www.htdigitalassets.com/",
-          "observedAt": "2026-10-03T22:51:06Z",
-          "datumAsOf": null,
-          "location": "Current Reserves in USD",
-          "excerpt": "Updating Reserves in USD",
-          "assertion": "Issuer publishes a placeholder, not a current composition."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.htdigitalassets.com/",
-        "https://www.htdigitalassets.com/disclaimer",
-        "https://flare.network/news/flare-confidential-compute-makes-private-institutional-data-usable-onchain-starting-with-hex-trusts-usdx",
-        "https://api.htdigitalassets.com/alm-stablecoin-db/metrics/current_reserves_amount",
-        "https://www.hextrust.com/resources-collection/hex-trusts-usdx-launches-with-clearpool-on-flare-network"
-      ],
-      "rationale": "Current whole-book reserve composition and category weights remain undisclosed. Issuer describes Treasury/cash backing; the September 30 FCC mechanism deliberately keeps component balances private and publishes only coverage. The public bond-reserve API is an aggregate, not a complete dated holdings denominator."
-    },
-    {
-      "id": "uw-usdx-hex-trust-6eee7f74d6aad2de",
-      "assetId": "usdx-hex-trust",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdx-hex-trust:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:53:50Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R04)",
-      "sources": [
-        {
-          "url": "https://www.htdigitalassets.com/disclaimer",
-          "observedAt": "2026-10-03T22:51:06Z",
-          "datumAsOf": null,
-          "location": "Disclaimer 2",
-          "excerpt": "Minting and Redemption of USDX requires the successful completion of HTMI\u2019s onboarding procedures",
-          "assertion": "Direct issuer redemption requires separately executed agreements, with no published applicable fee schedule."
-        },
-        {
-          "url": "https://www.htdigitalassets.com/",
-          "observedAt": "2026-10-03T22:51:06Z",
-          "datumAsOf": null,
-          "location": "Redeem 1:1 Anytime",
-          "excerpt": "USDX is tradable on exchanges and redeemable 1:1 by approved parties anytime.",
-          "assertion": "Par redemption statement does not establish complete same-notional fees."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.htdigitalassets.com/",
-        "https://www.htdigitalassets.com/disclaimer",
-        "https://www.hextrust.com/legal-privacy/aura-terms-of-service"
-      ],
-      "rationale": "Exact direct HTMI offchain USDX redemption cost is not published: issuer/FAQ/disclaimer and Hex Trust help/legal surfaces disclose approved-party redemption and separate agreements but no applicable numeric or formula fee schedule. Aura account withdrawal charges are another rail and cannot establish direct issuer fees."
-    },
-    {
-      "id": "uw-sbc-brale-c61f7ea3be2d1264",
-      "assetId": "sbc-brale",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:sbc-brale:offchain-issuer"
-      },
-      "cause": "B",
-      "assertion": "required-data-public",
-      "reviewedAt": "2026-10-03T22:51:06Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R04)",
-      "sources": [
-        {
-          "url": "https://brale.xyz/pricing",
-          "observedAt": "2026-10-03T22:51:06Z",
-          "datumAsOf": null,
-          "location": "Pricing FAQ",
-          "excerpt": "Brale charges 0 bps on standard money movement.",
-          "assertion": "Published fee schedule requires rail-specific flat payout fees plus actual gas +20%; existing captured generic route does not evaluate this same-notional schedule."
-        },
-        {
-          "url": "https://brale.xyz/pricing",
-          "observedAt": "2026-10-03T22:51:06Z",
-          "datumAsOf": null,
-          "location": "API product features",
-          "excerpt": "Offchain transfersSend RTP, wire, or ACH payouts$2per RTP$20per Wire25\u00a2per ACH",
-          "assertion": "Exact applicable public variable schedule is not a uniform fixed-bps route cost."
-        }
-      ]
-    },
-    {
-      "id": "uw-usdx-hex-trust-e73b8d341ef3c196",
-      "assetId": "usdx-hex-trust",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:53:50Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R04)",
-      "sources": [
-        {
-          "url": "https://flare.network/news/flare-confidential-compute-makes-private-institutional-data-usable-onchain-starting-with-hex-trusts-usdx",
-          "observedAt": "2026-10-03T22:51:06Z",
-          "datumAsOf": "2026-09-30",
-          "location": "First application: Proof of Reserves for USDX",
-          "excerpt": "The extension reads both inside the TEE, checks their combined total against USDX supply across the ecosystem, and signs a result showing whether USDX is backed 1:1 or better.",
-          "assertion": "A reserve-coverage check is disclosed, but common-clock input reconciliation, mint/burn movements and a recurring whole-supply procedure cadence are not."
-        },
-        {
-          "url": "https://www.htdigitalassets.com/disclaimer",
-          "observedAt": "2026-10-03T22:51:06Z",
-          "datumAsOf": null,
-          "location": "Disclaimer 15",
-          "excerpt": "we strive to provide accurate and up-to-date information regarding the reserves backing our assets",
-          "assertion": "Issuer does not guarantee real-time availability of reserve disclosures."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.htdigitalassets.com/",
-        "https://www.htdigitalassets.com/disclaimer",
-        "https://flare.network/news/flare-confidential-compute-makes-private-institutional-data-usable-onchain-starting-with-hex-trusts-usdx",
-        "https://songbird-systems-explorer.flare.rocks/price-feeds/custom?feed=0x21555344582f555344000000000000000000000000&endTime=1790772738",
-        "https://api.htdigitalassets.com/alm-stablecoin-db/metrics/current_reserves_amount"
-      ],
-      "rationale": "FCC discloses an ecosystem coverage calculation, not the exact required recurring common-clock mint/burn and liability-to-backing reconciliation cadence. Its feed sums three token supplies and public bonds plus restricted cash; input timestamps, restricted-cash reconciliation controls and complete movement procedure remain unpublished. Do not misclassify this as no reconciliation or dismiss the new coverage mechanism."
-    },
-    {
-      "id": "uw-kau-kinesis-981bdda91fe9acb5",
-      "assetId": "kau-kinesis",
-      "scope": {
-        "componentKey": "economic-control:bridge",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "economic-control:bridge",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:50:57Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R17)",
-      "sources": [
-        {
-          "url": "https://kmslabs.money/kms-labs-tcs/",
-          "observedAt": "2026-10-03T22:50:57Z",
-          "datumAsOf": null,
-          "location": "Sections 4 and 8",
-          "excerpt": "KMS Labs issues the Tokens only when fully backed by the Reserve (see Section 8)",
-          "assertion": "Issuer contractual backing promise is disclosed; exact native-side conservation/locking validation remains unpublished."
-        },
-        {
-          "url": "https://kmslabs.money/",
-          "observedAt": "2026-10-03T22:50:57Z",
-          "datumAsOf": null,
-          "location": "On-chain integrity / chain of integrity",
-          "excerpt": "KMS Labs ERC-20 reserve verification will be disclosed separately.",
-          "assertion": "Native physical reserve audit is explicitly not the independent ERC-20 reserve-to-liability verification."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://kmslabs.money/",
-        "https://kmslabs.money/kms-labs-tcs/",
-        "https://kmslabs.money/white-paper/",
-        "https://kinesis.money/audit-april-2026/",
-        "https://kinesis.money/about-us/documents/terms-of-use/",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62"
-      ],
-      "rationale": "For the exact Ethereum kau-kinesis representation, issuer terms and whitepaper disclose custody backing and two-step redemption but no complete native-side locking/conservation verification or backend mint reconciliation necessary to establish a nonopaque bridge tier. Public ERC20F mint is role-gated, not reserve-gated. A disclosed reserve-wallet address does not establish this invariant; physical audits explicitly exclude wrapper verification."
-    },
-    {
-      "id": "uw-kau-kinesis-62983771898ccf48",
-      "assetId": "kau-kinesis",
-      "scope": {
-        "componentKey": "economic-control:bridge",
-        "exposureId": null,
-        "factorKey": "tier",
-        "pillar": "control",
-        "requiredDatum": "tier",
-        "routeKey": "bridge-meta:kau-kinesis:b4b937c5cec9401b893d"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:50:57Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R17)",
-      "sources": [
-        {
-          "url": "https://kmslabs.money/kms-labs-tcs/",
-          "observedAt": "2026-10-03T22:50:57Z",
-          "datumAsOf": null,
-          "location": "Sections 4 and 8",
-          "excerpt": "KMS Labs issues the Tokens only when fully backed by the Reserve (see Section 8)",
-          "assertion": "Issuer contractual backing promise is disclosed; exact native-side conservation/locking validation remains unpublished."
-        },
-        {
-          "url": "https://kmslabs.money/",
-          "observedAt": "2026-10-03T22:50:57Z",
-          "datumAsOf": null,
-          "location": "On-chain integrity / chain of integrity",
-          "excerpt": "KMS Labs ERC-20 reserve verification will be disclosed separately.",
-          "assertion": "Native physical reserve audit is explicitly not the independent ERC-20 reserve-to-liability verification."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://kmslabs.money/",
-        "https://kmslabs.money/kms-labs-tcs/",
-        "https://kmslabs.money/white-paper/",
-        "https://kinesis.money/audit-april-2026/",
-        "https://kinesis.money/about-us/documents/terms-of-use/",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62"
-      ],
-      "rationale": "For the exact Ethereum kau-kinesis representation, issuer terms and whitepaper disclose custody backing and two-step redemption but no complete native-side locking/conservation verification or backend mint reconciliation necessary to establish a nonopaque bridge tier. Public ERC20F mint is role-gated, not reserve-gated. A disclosed reserve-wallet address does not establish this invariant; physical audits explicitly exclude wrapper verification."
-    },
-    {
-      "id": "uw-kau-kinesis-fa2a6c3a0dd11c47",
-      "assetId": "kau-kinesis",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:physical-to-usd:kau-kinesis"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:50:57Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R17)",
-      "sources": [
-        {
-          "url": "https://kmslabs.money/kms-labs-tcs/",
-          "observedAt": "2026-10-03T22:50:57Z",
-          "datumAsOf": null,
-          "location": "Section 5",
-          "excerpt": "KMS Labs makes no representation or warranty that there will be direct redemption mechanisms available at all times or that any redemption will be processed within any particular timeframe.",
-          "assertion": "No issuer maximum on the mandatory ERC-20-to-native leg, so neither physical delivery nor final USD completion is bounded."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://kmslabs.money/",
-        "https://kmslabs.money/kms-labs-tcs/",
-        "https://kmslabs.money/white-paper/",
-        "https://kinesis.money/about-us/documents/terms-of-use/",
-        "https://kinesis.money/about-us/fees/"
-      ],
-      "rationale": "No end-to-end settlement maximum is disclosed for the mandatory ERC-20-to-native redemption, native-to-physical delivery, or composed spendable-USD path. Binding KMS terms expressly disclaim any timeframe; Kinesis terms arrange delivery dates case by case. Targets or eventual physical entitlement cannot establish a completion SLA."
-    },
-    {
-      "id": "uw-kau-kinesis-5043fff0fbaf7ba0",
-      "assetId": "kau-kinesis",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:kau-kinesis:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:50:57Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R17)",
-      "sources": [
-        {
-          "url": "https://kmslabs.money/kms-labs-tcs/",
-          "observedAt": "2026-10-03T22:50:57Z",
-          "datumAsOf": null,
-          "location": "Section 5",
-          "excerpt": "KMS Labs makes no representation or warranty that there will be direct redemption mechanisms available at all times or that any redemption will be processed within any particular timeframe.",
-          "assertion": "No issuer maximum on the mandatory ERC-20-to-native leg, so neither physical delivery nor final USD completion is bounded."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://kmslabs.money/",
-        "https://kmslabs.money/kms-labs-tcs/",
-        "https://kmslabs.money/white-paper/",
-        "https://kinesis.money/about-us/documents/terms-of-use/",
-        "https://kinesis.money/about-us/fees/"
-      ],
-      "rationale": "No end-to-end settlement maximum is disclosed for the mandatory ERC-20-to-native redemption, native-to-physical delivery, or composed spendable-USD path. Binding KMS terms expressly disclaim any timeframe; Kinesis terms arrange delivery dates case by case. Targets or eventual physical entitlement cannot establish a completion SLA."
-    },
-    {
-      "id": "uw-kag-kinesis-d20b2e2f897012f4",
-      "assetId": "kag-kinesis",
-      "scope": {
-        "componentKey": "economic-control:bridge",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "economic-control:bridge",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:50:57Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R17)",
-      "sources": [
-        {
-          "url": "https://kmslabs.money/kms-labs-tcs/",
-          "observedAt": "2026-10-03T22:50:57Z",
-          "datumAsOf": null,
-          "location": "Sections 4 and 8",
-          "excerpt": "KMS Labs issues the Tokens only when fully backed by the Reserve (see Section 8)",
-          "assertion": "Issuer contractual backing promise is disclosed; exact native-side conservation/locking validation remains unpublished."
-        },
-        {
-          "url": "https://kmslabs.money/",
-          "observedAt": "2026-10-03T22:50:57Z",
-          "datumAsOf": null,
-          "location": "On-chain integrity / chain of integrity",
-          "excerpt": "KMS Labs ERC-20 reserve verification will be disclosed separately.",
-          "assertion": "Native physical reserve audit is explicitly not the independent ERC-20 reserve-to-liability verification."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://kmslabs.money/",
-        "https://kmslabs.money/kms-labs-tcs/",
-        "https://kmslabs.money/white-paper/",
-        "https://kinesis.money/audit-april-2026/",
-        "https://kinesis.money/about-us/documents/terms-of-use/",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62"
-      ],
-      "rationale": "For the exact Ethereum kag-kinesis representation, issuer terms and whitepaper disclose custody backing and two-step redemption but no complete native-side locking/conservation verification or backend mint reconciliation necessary to establish a nonopaque bridge tier. Public ERC20F mint is role-gated, not reserve-gated. A disclosed reserve-wallet address does not establish this invariant; physical audits explicitly exclude wrapper verification."
-    },
-    {
-      "id": "uw-kag-kinesis-babf672c927cc8ea",
-      "assetId": "kag-kinesis",
-      "scope": {
-        "componentKey": "economic-control:bridge",
-        "exposureId": null,
-        "factorKey": "tier",
-        "pillar": "control",
-        "requiredDatum": "tier",
-        "routeKey": "bridge-meta:kag-kinesis:618a354b5cd98e20e0f8"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:50:57Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R17)",
-      "sources": [
-        {
-          "url": "https://kmslabs.money/kms-labs-tcs/",
-          "observedAt": "2026-10-03T22:50:57Z",
-          "datumAsOf": null,
-          "location": "Sections 4 and 8",
-          "excerpt": "KMS Labs issues the Tokens only when fully backed by the Reserve (see Section 8)",
-          "assertion": "Issuer contractual backing promise is disclosed; exact native-side conservation/locking validation remains unpublished."
-        },
-        {
-          "url": "https://kmslabs.money/",
-          "observedAt": "2026-10-03T22:50:57Z",
-          "datumAsOf": null,
-          "location": "On-chain integrity / chain of integrity",
-          "excerpt": "KMS Labs ERC-20 reserve verification will be disclosed separately.",
-          "assertion": "Native physical reserve audit is explicitly not the independent ERC-20 reserve-to-liability verification."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://kmslabs.money/",
-        "https://kmslabs.money/kms-labs-tcs/",
-        "https://kmslabs.money/white-paper/",
-        "https://kinesis.money/audit-april-2026/",
-        "https://kinesis.money/about-us/documents/terms-of-use/",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62"
-      ],
-      "rationale": "For the exact Ethereum kag-kinesis representation, issuer terms and whitepaper disclose custody backing and two-step redemption but no complete native-side locking/conservation verification or backend mint reconciliation necessary to establish a nonopaque bridge tier. Public ERC20F mint is role-gated, not reserve-gated. A disclosed reserve-wallet address does not establish this invariant; physical audits explicitly exclude wrapper verification."
-    },
-    {
-      "id": "uw-kag-kinesis-eed4575f38b7263d",
-      "assetId": "kag-kinesis",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:physical-to-usd:kag-kinesis"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:50:57Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R17)",
-      "sources": [
-        {
-          "url": "https://kmslabs.money/kms-labs-tcs/",
-          "observedAt": "2026-10-03T22:50:57Z",
-          "datumAsOf": null,
-          "location": "Section 5",
-          "excerpt": "KMS Labs makes no representation or warranty that there will be direct redemption mechanisms available at all times or that any redemption will be processed within any particular timeframe.",
-          "assertion": "No issuer maximum on the mandatory ERC-20-to-native leg, so neither physical delivery nor final USD completion is bounded."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://kmslabs.money/",
-        "https://kmslabs.money/kms-labs-tcs/",
-        "https://kmslabs.money/white-paper/",
-        "https://kinesis.money/about-us/documents/terms-of-use/",
-        "https://kinesis.money/about-us/fees/"
-      ],
-      "rationale": "No end-to-end settlement maximum is disclosed for the mandatory ERC-20-to-native redemption, native-to-physical delivery, or composed spendable-USD path. Binding KMS terms expressly disclaim any timeframe; Kinesis terms arrange delivery dates case by case. Targets or eventual physical entitlement cannot establish a completion SLA."
-    },
-    {
-      "id": "uw-kag-kinesis-8ea27e35ec143c39",
-      "assetId": "kag-kinesis",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:kag-kinesis:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:50:57Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R17)",
-      "sources": [
-        {
-          "url": "https://kmslabs.money/kms-labs-tcs/",
-          "observedAt": "2026-10-03T22:50:57Z",
-          "datumAsOf": null,
-          "location": "Section 5",
-          "excerpt": "KMS Labs makes no representation or warranty that there will be direct redemption mechanisms available at all times or that any redemption will be processed within any particular timeframe.",
-          "assertion": "No issuer maximum on the mandatory ERC-20-to-native leg, so neither physical delivery nor final USD completion is bounded."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://kmslabs.money/",
-        "https://kmslabs.money/kms-labs-tcs/",
-        "https://kmslabs.money/white-paper/",
-        "https://kinesis.money/about-us/documents/terms-of-use/",
-        "https://kinesis.money/about-us/fees/"
-      ],
-      "rationale": "No end-to-end settlement maximum is disclosed for the mandatory ERC-20-to-native redemption, native-to-physical delivery, or composed spendable-USD path. Binding KMS terms expressly disclaim any timeframe; Kinesis terms arrange delivery dates case by case. Targets or eventual physical entitlement cannot establish a completion SLA."
-    },
-    {
-      "id": "uw-kag-kinesis-5bf85bcbeeee2a4a",
-      "assetId": "kag-kinesis",
-      "scope": {
-        "componentKey": "mechanism-review:assuranceAndReconciliation",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "backing",
-        "requiredDatum": "mechanism-review:assuranceAndReconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:50:57Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R17)",
-      "sources": [
-        {
-          "url": "https://kmslabs.money/",
-          "observedAt": "2026-10-03T22:50:57Z",
-          "datumAsOf": null,
-          "location": "Silver (KAG) on Ethereum, Independent audits",
-          "excerpt": "Independent verification of ERC-20 KAG reserve holdings will be disclosed separately.",
-          "assertion": "Issuer explicitly distinguishes downstream physical audits from unpublished independent exact-wrapper reconciliation."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://kmslabs.money/",
-        "https://kmslabs.money/kms-labs-tcs/",
-        "https://kmslabs.money/white-paper/",
-        "https://kinesis.money/audit-april-2026/",
-        "https://kinesis.money/audits/",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62"
-      ],
-      "rationale": "Exact ERC-20 KAG reserve assurance and wrapper-liability reconciliation are not published. The issuer explicitly defers independent ERC-20 verification; Bureau Veritas reports cover downstream native bullion, not KMS wrapper reserves. Wallet identity and a live balance cannot supply independent matched wrapper reserve/liability scope."
-    },
-    {
-      "id": "uw-ausd-agora-265117b4ae7ae71c",
-      "assetId": "ausd-agora",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:05d32428c9edb7562d33255d",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:50:57Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R17)",
-      "sources": [
-        {
-          "url": "https://files.buildwithfern.com/agora.docs.buildwithfern.com/444c4f3a9642d6a9149e8fa9736469cd03192f55cc7ff3d2326117b0397875b5/docs/assets/2026%20Aug%20-%20Agora%20Dollar%20Reserve%20Report.pdf",
-          "observedAt": "2026-10-03T22:50:57Z",
-          "datumAsOf": "2026-08-31",
-          "location": "August 31 holdings, pages 6 and 9",
-          "excerpt": "Cash held in the Agora Reserve Fund at regulated financial institutions",
-          "assertion": "Separate fund/company cash amounts are disclosed, but no deposit tenor, maturity dates or maximum deposit terms."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.agora.finance/product/ausd",
-        "https://docs.agora.finance/developer/transparency",
-        "https://files.buildwithfern.com/agora.docs.buildwithfern.com/444c4f3a9642d6a9149e8fa9736469cd03192f55cc7ff3d2326117b0397875b5/docs/assets/2026%20Aug%20-%20Agora%20Dollar%20Reserve%20Report.pdf",
-        "https://static.agora.finance/termsofuse.pdf",
-        "https://docs.agora.finance/api/endpoints/routes/overview.md"
-      ],
-      "rationale": "Maximum maturity of company cash and reserve-fund bank deposits is undisclosed. The examination identifies balances at regulated institutions but provides no account contract, maturity schedule or maximum tenor for either cash slice; general reserve/redemption terms supply no deposit-specific limit. Do not assume sight deposits or zero days."
-    },
-    {
-      "id": "uw-ausd-agora-28180024833cb305",
-      "assetId": "ausd-agora",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:af355100f3a266b999a640d4",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:50:57Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R17)",
-      "sources": [
-        {
-          "url": "https://files.buildwithfern.com/agora.docs.buildwithfern.com/444c4f3a9642d6a9149e8fa9736469cd03192f55cc7ff3d2326117b0397875b5/docs/assets/2026%20Aug%20-%20Agora%20Dollar%20Reserve%20Report.pdf",
-          "observedAt": "2026-10-03T22:50:57Z",
-          "datumAsOf": "2026-08-31",
-          "location": "August 31 holdings, pages 6 and 9",
-          "excerpt": "Cash held in the Agora Reserve Fund at regulated financial institutions",
-          "assertion": "Separate fund/company cash amounts are disclosed, but no deposit tenor, maturity dates or maximum deposit terms."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.agora.finance/product/ausd",
-        "https://docs.agora.finance/developer/transparency",
-        "https://files.buildwithfern.com/agora.docs.buildwithfern.com/444c4f3a9642d6a9149e8fa9736469cd03192f55cc7ff3d2326117b0397875b5/docs/assets/2026%20Aug%20-%20Agora%20Dollar%20Reserve%20Report.pdf",
-        "https://static.agora.finance/termsofuse.pdf",
-        "https://docs.agora.finance/api/endpoints/routes/overview.md"
-      ],
-      "rationale": "Maximum maturity of company cash and reserve-fund bank deposits is undisclosed. The examination identifies balances at regulated institutions but provides no account contract, maturity schedule or maximum tenor for either cash slice; general reserve/redemption terms supply no deposit-specific limit. Do not assume sight deposits or zero days."
-    },
-    {
-      "id": "uw-ausd-agora-8b39295316ef5c6b",
-      "assetId": "ausd-agora",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:1d9108a3bccb66cf27bfbc68",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:50:57Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R17)",
-      "sources": [
-        {
-          "url": "https://files.buildwithfern.com/agora.docs.buildwithfern.com/444c4f3a9642d6a9149e8fa9736469cd03192f55cc7ff3d2326117b0397875b5/docs/assets/2026%20Aug%20-%20Agora%20Dollar%20Reserve%20Report.pdf",
-          "observedAt": "2026-10-03T22:50:57Z",
-          "datumAsOf": "2026-08-31",
-          "location": "Stablecoin criteria page 9",
-          "excerpt": "Stablecoin balances included in the Fair Value of Reserve Assets consist of U.S. dollar\u2013 denominated stablecoins, including USD Coin (USDC) and PayPal USD (PYUSD)",
-          "assertion": "Identities and wallet custody are disclosed without a full-slice realization/withdrawal maximum."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.agora.finance/product/ausd",
-        "https://docs.agora.finance/developer/transparency",
-        "https://files.buildwithfern.com/agora.docs.buildwithfern.com/444c4f3a9642d6a9149e8fa9736469cd03192f55cc7ff3d2326117b0397875b5/docs/assets/2026%20Aug%20-%20Agora%20Dollar%20Reserve%20Report.pdf",
-        "https://static.agora.finance/termsofuse.pdf",
-        "https://docs.agora.finance/api/endpoints/routes/overview.md"
-      ],
-      "rationale": "The combined USDC/PYUSD reserve slice has no published whole-position liquidity horizon. The examined report names tokens and controlled wallets but no individual split, applicable withdrawal entitlement, gates or full-slice final realization bound. Transfer speed and Agora holder redemption targets do not establish liquidity of this exact reserve basket."
-    },
-    {
-      "id": "uw-audx-aussie-dollar-token-8a654da977ceee3f",
-      "assetId": "audx-aussie-dollar-token",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:d23e645f88e6a4c1f6d2bbe6",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:50:57Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R17)",
-      "sources": [
-        {
-          "url": "https://www.audxtoken.com/_files/ugd/539754_e06dd9a1842d4b4a97777c64ed096bbe.pdf",
-          "observedAt": "2026-10-03T22:50:57Z",
-          "datumAsOf": "2026-08-31",
-          "location": "Reserve report page 4",
-          "excerpt": "All AUDX Reserves are held in segregated accounts, separate from operational and corporate funds, and remain unencumbered at all times.",
-          "assertion": "Segregation and unencumbered status are disclosed, not deposit maturity or withdrawal/realization bounds."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.audxtoken.com/",
-        "https://www.audxtoken.com/transparency",
-        "https://www.audxtoken.com/_files/ugd/539754_e06dd9a1842d4b4a97777c64ed096bbe.pdf",
-        "https://www.audxtoken.com/_files/ugd/539754_29d0472241a840e6a2fb2c58512c50d7.pdf",
-        "https://www.audxtoken.com/about-us"
-      ],
-      "rationale": "For the designated AUDX bank-account reserve slice, maximum deposit maturity and whole-slice liquidity horizon are not disclosed. Monthly assurance confirms balances and segregation but no deposit contracts, sight/term split, tenor schedule or withdrawal maximum. Whitepaper terms allow reserve unavailability and delayed redemption; neither assurance nor redeemable-anytime marketing proves instant reserve realization."
-    },
-    {
-      "id": "uw-audx-aussie-dollar-token-471840093daf2bcf",
-      "assetId": "audx-aussie-dollar-token",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:d23e645f88e6a4c1f6d2bbe6",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:50:57Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R17)",
-      "sources": [
-        {
-          "url": "https://www.audxtoken.com/_files/ugd/539754_e06dd9a1842d4b4a97777c64ed096bbe.pdf",
-          "observedAt": "2026-10-03T22:50:57Z",
-          "datumAsOf": "2026-08-31",
-          "location": "Reserve report page 4",
-          "excerpt": "All AUDX Reserves are held in segregated accounts, separate from operational and corporate funds, and remain unencumbered at all times.",
-          "assertion": "Segregation and unencumbered status are disclosed, not deposit maturity or withdrawal/realization bounds."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.audxtoken.com/",
-        "https://www.audxtoken.com/transparency",
-        "https://www.audxtoken.com/_files/ugd/539754_e06dd9a1842d4b4a97777c64ed096bbe.pdf",
-        "https://www.audxtoken.com/_files/ugd/539754_29d0472241a840e6a2fb2c58512c50d7.pdf",
-        "https://www.audxtoken.com/about-us"
-      ],
-      "rationale": "For the designated AUDX bank-account reserve slice, maximum deposit maturity and whole-slice liquidity horizon are not disclosed. Monthly assurance confirms balances and segregation but no deposit contracts, sight/term split, tenor schedule or withdrawal maximum. Whitepaper terms allow reserve unavailability and delayed redemption; neither assurance nor redeemable-anytime marketing proves instant reserve realization."
-    },
-    {
-      "id": "uw-audx-aussie-dollar-token-f869c4d87ef52c91",
-      "assetId": "audx-aussie-dollar-token",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:audx-aussie-dollar-token:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:50:57Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R17)",
-      "sources": [
-        {
-          "url": "https://www.audxtoken.com/_files/ugd/539754_29d0472241a840e6a2fb2c58512c50d7.pdf",
-          "observedAt": "2026-10-03T22:50:57Z",
-          "datumAsOf": null,
-          "location": "Terms of sale section 6, page 20",
-          "excerpt": "However, it may take several business days for any redemption to be completed.",
-          "assertion": "Several business days is not a completion maximum; the same clause permits further reserve-unavailability delays."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.audxtoken.com/",
-        "https://www.audxtoken.com/transparency",
-        "https://www.audxtoken.com/_files/ugd/539754_29d0472241a840e6a2fb2c58512c50d7.pdf",
-        "https://www.audxtoken.com/about-us"
-      ],
-      "rationale": "No final maximum redemption settlement SLA is published. Terms offer commercially reasonable prompt processing, say several business days, and reserve discretionary delays for illiquid, unavailable or lost reserves. Homepage redeemable-anytime is availability marketing, not a bounded bank-receipt deadline."
-    },
-    {
       "id": "uw-apxusd-apyx-290836adf4ac21c5",
       "assetId": "apxusd-apyx",
       "scope": {
@@ -10924,211 +10220,6 @@
         "https://rootstock.blockscout.com/api/v2/smart-contracts/0x47f5014115d3bb29B20b5168Ee75050D6f8c3Bf1"
       ],
       "rationale": "No final maximum for the retained USDRIF queue-redeem route is published. V3 has minimum queue delay, dynamic throttles, coverage/oracle conditions and TasksRunner execution; none guarantees completion. Verified current MocQueue source also publishes maxOperWaitingBlk: it makes an operation executable even without a price update, but does not ensure that the privileged guard executes it or that bucket redemption succeeds. Legacy docs describe 90-day settlement intervals, not a V3 SLA. No eligibility delay, minimum or average is encoded as a final-settlement maximum."
-    },
-    {
-      "id": "uw-yusd-yieldfi-352eda412973867f",
-      "assetId": "yusd-yieldfi",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:56:16Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R45)",
-      "sources": [
-        {
-          "url": "https://docs.yield.fi/due-diligence-questionaire/operational-control",
-          "observedAt": "2026-10-03T22:54:54Z",
-          "datumAsOf": null,
-          "location": "Accounting, NAV & Reporting",
-          "excerpt": "Reconciles token supply vs Vault net assets and flags breaks",
-          "assertion": "Publishes an internal software control objective, not an exact yUSD common-clock whole-liability reconciliation cadence."
-        },
-        {
-          "url": "https://docs.yield.fi/legal-documents/token-terms/yusd",
-          "observedAt": "2026-10-03T22:54:54Z",
-          "datumAsOf": null,
-          "location": "Sections 7.1, 7.2, 12",
-          "excerpt": "Valuation frequency. Minimum twice per week.",
-          "assertion": "NAV valuation frequency is disclosed; it is not whole-supply reserve reconciliation cadence."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.yield.fi/legal-documents/token-terms/yusd",
-        "https://docs.yield.fi/due-diligence-questionaire/operational-control",
-        "https://docs.yield.fi/prime-analytics/transparency-and-analytics",
-        "https://docs.yield.fi/legal-documents/terms-and-conditions",
-        "https://docs.yield.fi/due-diligence-questionaire/flow-of-funds",
-        "https://v2.yield.fi/transparency",
-        "https://docs.yield.fi/resources/legacy-smart-contract-addresses",
-        "https://etherscan.io/address/0x19ebd191f7a24ece672ba13a302212b5ef7f35cb#code"
-      ],
-      "rationale": "Exact yUSD whole-supply backing reconciliation cadence, common checkpoint and inclusion of every mint/burn and off-vault position remain undisclosed. NAV frequency, generic software objectives, user ledgers and Prime reserve analytics do not establish that exact procedure. Preserve unknown rather than assert no reconciliation."
-    },
-    {
-      "id": "uw-yusd-yieldfi-49db6695b25ecccc",
-      "assetId": "yusd-yieldfi",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:yusd-yieldfi:stablecoin-redeem"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:56:16Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R45)",
-      "sources": [
-        {
-          "url": "https://docs.yield.fi/legal-documents/token-terms/yusd",
-          "observedAt": "2026-10-03T22:54:54Z",
-          "datumAsOf": null,
-          "location": "Section 8.2",
-          "excerpt": "Delays may occur due to Market Disruption, illiquidity, compliance, or operational constraints.",
-          "assertion": "T+2 is expressly a processing target, not a final maximum settlement guarantee."
-        },
-        {
-          "url": "https://docs.yield.fi/legal-documents/terms-and-conditions",
-          "observedAt": "2026-10-03T22:54:54Z",
-          "datumAsOf": null,
-          "location": "Condition 9.3",
-          "excerpt": "Timing, processing windows, and SLAs are described in Token Terms, are subject to change without prior notice",
-          "assertion": "General timing terms preserve conditional delays."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.yield.fi/legal-documents/token-terms/yusd",
-        "https://docs.yield.fi/legal-documents/terms-and-conditions",
-        "https://docs.yield.fi/faqs",
-        "https://docs.yield.fi/defi-integration/primary-and-secondary-liquidity",
-        "https://v2.yield.fi/transparency"
-      ],
-      "rationale": "No unconditional final spendable-USDC settlement maximum is published for the onchain yUSD queued redemption. The specific T+2 processing target is qualified by disruption, illiquidity, compliance and operations; it is not a calendar-day SLA."
-    },
-    {
-      "id": "uw-usdpt-western-union-e6e68e13b05bdbe4",
-      "assetId": "usdpt-western-union",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdpt-western-union:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:56:16Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R45)",
-      "sources": [
-        {
-          "url": "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-terms",
-          "observedAt": "2026-10-03T22:54:54Z",
-          "datumAsOf": "2025-10-13",
-          "location": "Section 6 Timing",
-          "excerpt": "ADB uses commercially reasonable efforts to process redemption requests promptly.",
-          "assertion": "Only reasonable-efforts processing is promised; no numeric final USD settlement maximum."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-terms",
-        "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-service-fee-schedule",
-        "https://www.westernunion.com/global/en/digital-assets-stablecoin.html",
-        "https://www.anchorage.com/platform/usdpt-reserve-attestations-anchorage-digital",
-        "https://developers.anchorage.com/docs/settlement-process"
-      ],
-      "rationale": "No maximum time to final USD delivery is published for USDPT client redemption. Covered Stablecoin Terms section 6 permits compliance, liquidity, technical and operational delays; Solana transfer speed is not issuer bank-redemption settlement."
-    },
-    {
-      "id": "uw-usdpt-western-union-4e17b76d6e1f5539",
-      "assetId": "usdpt-western-union",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:47dbdcc0d92288beae0b6332",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:56:16Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R45)",
-      "sources": [
-        {
-          "url": "https://learn.anchorage.com/08.31.26_USDPT_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf",
-          "observedAt": "2026-10-03T22:54:54Z",
-          "datumAsOf": "2026-08-31",
-          "location": "Schedule II, page 5",
-          "excerpt": "Demand deposit accounts at FDIC-insured depository institutions, held directly",
-          "assertion": "Demand deposit category is disclosed without a fixed maximum contractual term."
-        },
-        {
-          "url": "https://learn.anchorage.com/08.31.26_USDPT_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf",
-          "observedAt": "2026-10-03T22:54:54Z",
-          "datumAsOf": "2026-08-31",
-          "location": "Schedule II, page 5",
-          "excerpt": "Money market funds hold investments in cash, cash equivalents, and short-term debt securities.",
-          "assertion": "Both held fund-share CUSIPs have Maturity Date N/A; no finite share-claim maturity maximum is disclosed."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.anchorage.com/platform/usdpt-reserve-attestations-anchorage-digital",
-        "https://learn.anchorage.com/08.31.26_USDPT_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf",
-        "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-terms",
-        "https://www.sec.gov/Archives/edgar/data/1659326/000119312526217424/d44657d485bpos.htm",
-        "https://www.blackrock.com/cash/en-us/products/282772/fed-trust-%28institutional%29-fund"
-      ],
-      "rationale": "No finite maturityDaysMax for the actual demand-deposit claims or held money-market-fund share claims is published. The report gives demand deposits and fund Maturity Date N/A, not portfolio maxima. Underlying bill limits/WAM/WAL do not establish expiry of the fund-share claims. Do not invent zero or apply an underlying mandate across the mixed fund bucket."
-    },
-    {
-      "id": "uw-usdpt-western-union-d411f37e55f00d50",
-      "assetId": "usdpt-western-union",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:d13fcab416f093397ce8fabd",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:56:16Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R45)",
-      "sources": [
-        {
-          "url": "https://learn.anchorage.com/08.31.26_USDPT_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf",
-          "observedAt": "2026-10-03T22:54:54Z",
-          "datumAsOf": "2026-08-31",
-          "location": "Schedule II, page 5",
-          "excerpt": "Demand deposit accounts at FDIC-insured depository institutions, held directly",
-          "assertion": "Demand deposit category is disclosed without a fixed maximum contractual term."
-        },
-        {
-          "url": "https://learn.anchorage.com/08.31.26_USDPT_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf",
-          "observedAt": "2026-10-03T22:54:54Z",
-          "datumAsOf": "2026-08-31",
-          "location": "Schedule II, page 5",
-          "excerpt": "Money market funds hold investments in cash, cash equivalents, and short-term debt securities.",
-          "assertion": "Both held fund-share CUSIPs have Maturity Date N/A; no finite share-claim maturity maximum is disclosed."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.anchorage.com/platform/usdpt-reserve-attestations-anchorage-digital",
-        "https://learn.anchorage.com/08.31.26_USDPT_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf",
-        "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-terms",
-        "https://www.sec.gov/Archives/edgar/data/1659326/000119312526217424/d44657d485bpos.htm",
-        "https://www.blackrock.com/cash/en-us/products/282772/fed-trust-%28institutional%29-fund"
-      ],
-      "rationale": "No finite maturityDaysMax for the actual demand-deposit claims or held money-market-fund share claims is published. The report gives demand deposits and fund Maturity Date N/A, not portfolio maxima. Underlying bill limits/WAM/WAL do not establish expiry of the fund-share claims. Do not invent zero or apply an underlying mandate across the mixed fund bucket."
     },
     {
       "id": "uw-fpi-frax-118cc1b45dbc5ce3",
@@ -28021,135 +27112,6 @@
       "rationale": "Collateral is liquid USDC, but USDCx holders realize it through remote burn intents, independent attestations and release. Technical/API/code/legal/fee documents give the sequence, not a maximum end-to-end realization window. Underlying USDC immediacy cannot be copied onto the cross-chain escrow slice."
     },
     {
-      "id": "uw-zys-zephyr-protocol-f0b4abdcbfadac2e",
-      "assetId": "zys-zephyr-protocol",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:fd346d791b2a1ffe7526dc30",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:20:56Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R72)",
-      "sources": [
-        {
-          "url": "https://raw.githubusercontent.com/ZephyrProtocol/zephyr/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_config.h",
-          "observedAt": "2026-10-03T23:20:54Z",
-          "datumAsOf": null,
-          "location": "Native consensus configuration, spendable age and difficulty target",
-          "excerpt": "#define CRYPTONOTE_DEFAULT_TX_SPENDABLE_AGE             10",
-          "assertion": "A spendability age in blocks is disclosed, not a guaranteed elapsed-time whole-slice realization horizon."
-        },
-        {
-          "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc",
-          "observedAt": "2026-10-03T23:20:55Z",
-          "datumAsOf": "2026-10-03",
-          "location": "on_chain reserve snapshot",
-          "excerpt": "\"reserve_height\": 877372",
-          "assertion": "Snapshot discloses balances and reserve ratio, not a whole-position realization SLA."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://zephyrprotocol.com/docs/zephyr_whitepaper.pdf",
-        "https://zephyrprotocol.com/documentation",
-        "https://raw.githubusercontent.com/ZephyrProtocol/zephyr/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_config.h",
-        "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc",
-        "https://zephyrprotocol.com/documentation/scanner-api",
-        "https://zephyrprotocol.com/blog/2024-09-30-Zephyr-Protocol-v2-0-0-ZSD-Yield-Hardfork-Annoucement"
-      ],
-      "rationale": "No hard whole-position liquidity/realization horizon is published for the ZSD yield reserve backing ZYS shares. Native conversion availability and block-based output spendability do not guarantee an elapsed-time full-position realization at a known value; the published reserve snapshot only measures balances. No fixed one-day or immediate bound is inferred from target block time."
-    },
-    {
-      "id": "uw-zsd-zephyr-protocol-6b6e9c91949391e0",
-      "assetId": "zsd-zephyr-protocol",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:269781b362b9fc8899c60d27",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:20:56Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R72)",
-      "sources": [
-        {
-          "url": "https://raw.githubusercontent.com/ZephyrProtocol/zephyr/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_config.h",
-          "observedAt": "2026-10-03T23:20:54Z",
-          "datumAsOf": null,
-          "location": "Native consensus configuration, spendable age and difficulty target",
-          "excerpt": "#define CRYPTONOTE_DEFAULT_TX_SPENDABLE_AGE             10",
-          "assertion": "A spendability age in blocks is disclosed, not a guaranteed elapsed-time whole-slice realization horizon."
-        },
-        {
-          "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc",
-          "observedAt": "2026-10-03T23:20:55Z",
-          "datumAsOf": "2026-10-03",
-          "location": "on_chain reserve snapshot",
-          "excerpt": "\"reserve_height\": 877372",
-          "assertion": "Snapshot discloses balances and reserve ratio, not a whole-position realization SLA."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://zephyrprotocol.com/docs/zephyr_whitepaper.pdf",
-        "https://zephyrprotocol.com/documentation",
-        "https://raw.githubusercontent.com/ZephyrProtocol/zephyr/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_config.h",
-        "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc",
-        "https://zephyrprotocol.com/documentation/scanner-api",
-        "https://zephyrprotocol.com/blog/2024-09-30-Zephyr-Protocol-v2-0-0-ZSD-Yield-Hardfork-Annoucement"
-      ],
-      "rationale": "No hard whole-position liquidity/realization horizon is published for the ZEPH protocol reserve. Native conversion availability and block-based output spendability do not guarantee an elapsed-time full-position realization at a known value; the published reserve snapshot only measures balances. No fixed one-day or immediate bound is inferred from target block time."
-    },
-    {
-      "id": "uw-eurw-newrails-1128818c29525c34",
-      "assetId": "eurw-newrails",
-      "scope": {
-        "componentKey": "reserve-composition",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "backing",
-        "requiredDatum": "reserve-composition",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:20:56Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R72)",
-      "sources": [
-        {
-          "url": "https://cmpl-docs.newrails.xyz/docs/Newrails%20EURW%20WP%202026-05-26.xhtml",
-          "observedAt": "2026-10-03T23:20:55Z",
-          "datumAsOf": "2026-06-25",
-          "location": "D.1 Reserve policy",
-          "excerpt": "A minimum of 30% of client funds will be held in a safeguarding account in cash, in Euros, with a reputable European regulated credit institution.",
-          "assertion": "Policy minimum is not observed portfolio weight or a dated full-denominator reserve schedule."
-        },
-        {
-          "url": "https://www.newrails.xyz/en/platform/eurw",
-          "observedAt": "2026-10-03T23:20:56Z",
-          "datumAsOf": null,
-          "location": "Trust and transparency",
-          "excerpt": "Monthly attestation reports published publicly.",
-          "assertion": "Issuer claims published reports, but linked public download/archive provides whitepaper, audit and policies rather than a dated reserve allocation report."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.newrails.xyz/en/platform/eurw",
-        "https://www.newrails.xyz/en/download-centre",
-        "https://cmpl-docs.newrails.xyz/docs/Newrails%20EURW%20WP%202026-05-26.xhtml",
-        "https://cmpl-docs.newrails.xyz/docs/Hacken_Newrails_SCA_Newrails_Stablecoin_Feb2026_P_2026_2028_2_20260312.pdf",
-        "https://www.newrails.xyz/en/hubs/euro-stablecoin",
-        "https://www.lb.lt/en/sfi-financial-market-participants/newrails-uab"
-      ],
-      "rationale": "The exact current EURW reserve composition, measured whole-asset weights and named holding/custodian allocation are not disclosed in the accessed primary public archive. The whitepaper gives a >=30% cash/<=70% permitted-investment policy; the current guide says cash and overnight deposits. Neither supplies a dated observed reserve schedule. Do not convert the policy into fabricated 30/70 weights or admit the undisclosed placeholder as measured composition."
-    },
-    {
       "id": "uw-dola-inverse-finance-8bb098f39f400f4b",
       "assetId": "dola-inverse-finance",
       "scope": {
@@ -31184,6 +30146,1114 @@
         "https://base.blockscout.com/api/v2/smart-contracts/0xba515304d8153c4b162dc79f867e152df9c127eb"
       ],
       "rationale": "Issuer publishes a seven-day bonding minimum and buffer-dependent claim, but no guaranteed funding or end-to-end final delivery deadline for the queue route. The full contract architecture and integration corpus contain no maximum funded settlement SLA. Do not turn an unlock minimum into a completion maximum."
+    },
+    {
+      "id": "uw-xo-exodus-43bdf208a4f5aba4",
+      "assetId": "xo-exodus",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "custodyEscrow",
+        "pillar": "backing",
+        "requiredDatum": "custodyEscrow",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:49:51Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R17)",
+      "sources": [
+        {
+          "url": "https://www.moonpay.com/legal/stablecoin_terms",
+          "observedAt": "2026-10-03T23:49:51Z",
+          "datumAsOf": null,
+          "location": "Section 5.1, Reserve Management",
+          "excerpt": "We may modify our reserve management program from time to time.",
+          "assertion": "Reserve segregation is disclosed; exact XO custody coverage and reuse restrictions are not specified."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.moonpay.com/legal/stablecoin_terms",
+        "https://www.xocash.com/",
+        "https://docs.m0.org/protocol/solana",
+        "https://docs.m0.org/resources/addresses/m0-platform",
+        "https://dashboard.m0.org/",
+        "https://www.exodus.com/support/en/articles/12626651-getting-started-with-exodus-pay"
+      ],
+      "rationale": "MoonPay discloses segregated reserve accounts, but no XO-specific named custodians, complete provider coverage or statutory insolvency structure. Its contract permits reserve-program changes. These missing legal coverage facts prevent the custody route from establishing the whole local dimension; technical pure-wrapper certification remains separately blocked."
+    },
+    {
+      "id": "uw-xo-exodus-26ded3e06b517c8a",
+      "assetId": "xo-exodus",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "rehypothecationCorrelation",
+        "pillar": "backing",
+        "requiredDatum": "rehypothecationCorrelation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:49:51Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R17)",
+      "sources": [
+        {
+          "url": "https://www.moonpay.com/legal/stablecoin_terms",
+          "observedAt": "2026-10-03T23:49:51Z",
+          "datumAsOf": null,
+          "location": "Section 5.1, Reserve Management",
+          "excerpt": "We may modify our reserve management program from time to time.",
+          "assertion": "Reserve segregation is disclosed; exact XO custody coverage and reuse restrictions are not specified."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.moonpay.com/legal/stablecoin_terms",
+        "https://www.xocash.com/",
+        "https://docs.m0.org/protocol/solana",
+        "https://docs.m0.org/resources/addresses/m0-platform",
+        "https://dashboard.m0.org/",
+        "https://www.exodus.com/support/en/articles/12626651-getting-started-with-exodus-pay"
+      ],
+      "rationale": "The Stablecoin Terms disclose reserve segregation and discretionary program changes, but no XO-specific prohibition, permission conditions or complete encumbrance/reuse policy. Marketing full backing and the parent M reserve policy do not settle the local holder-contract reuse rights. No reuse prohibition is inferred."
+    },
+    {
+      "id": "uw-usdx-hex-trust-e6ef208a803d361c",
+      "assetId": "usdx-hex-trust",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:50Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R04)",
+      "sources": [
+        {
+          "url": "https://flare.network/news/flare-confidential-compute-makes-private-institutional-data-usable-onchain-starting-with-hex-trusts-usdx",
+          "observedAt": "2026-10-03T22:51:06Z",
+          "datumAsOf": "2026-09-30",
+          "location": "First application: Proof of Reserves for USDX",
+          "excerpt": "Only that result is published.",
+          "assertion": "Coverage conclusion is published, not reserve components or a dated category allocation."
+        },
+        {
+          "url": "https://www.htdigitalassets.com/",
+          "observedAt": "2026-10-03T22:51:06Z",
+          "datumAsOf": null,
+          "location": "Current Reserves in USD",
+          "excerpt": "Updating Reserves in USD",
+          "assertion": "Issuer publishes a placeholder, not a current composition."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.htdigitalassets.com/",
+        "https://www.htdigitalassets.com/disclaimer",
+        "https://flare.network/news/flare-confidential-compute-makes-private-institutional-data-usable-onchain-starting-with-hex-trusts-usdx",
+        "https://api.htdigitalassets.com/alm-stablecoin-db/metrics/current_reserves_amount",
+        "https://www.hextrust.com/resources-collection/hex-trusts-usdx-launches-with-clearpool-on-flare-network"
+      ],
+      "rationale": "Current whole-book reserve composition and category weights remain undisclosed. Issuer describes Treasury/cash backing; the September 30 FCC mechanism deliberately keeps component balances private and publishes only coverage. The public bond-reserve API is an aggregate, not a complete dated holdings denominator."
+    },
+    {
+      "id": "uw-usdx-hex-trust-6eee7f74d6aad2de",
+      "assetId": "usdx-hex-trust",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdx-hex-trust:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:50Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R04)",
+      "sources": [
+        {
+          "url": "https://www.htdigitalassets.com/disclaimer",
+          "observedAt": "2026-10-03T22:51:06Z",
+          "datumAsOf": null,
+          "location": "Disclaimer 2",
+          "excerpt": "Minting and Redemption of USDX requires the successful completion of HTMI\u2019s onboarding procedures",
+          "assertion": "Direct issuer redemption requires separately executed agreements, with no published applicable fee schedule."
+        },
+        {
+          "url": "https://www.htdigitalassets.com/",
+          "observedAt": "2026-10-03T22:51:06Z",
+          "datumAsOf": null,
+          "location": "Redeem 1:1 Anytime",
+          "excerpt": "USDX is tradable on exchanges and redeemable 1:1 by approved parties anytime.",
+          "assertion": "Par redemption statement does not establish complete same-notional fees."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.htdigitalassets.com/",
+        "https://www.htdigitalassets.com/disclaimer",
+        "https://www.hextrust.com/legal-privacy/aura-terms-of-service"
+      ],
+      "rationale": "Exact direct HTMI offchain USDX redemption cost is not published: issuer/FAQ/disclaimer and Hex Trust help/legal surfaces disclose approved-party redemption and separate agreements but no applicable numeric or formula fee schedule. Aura account withdrawal charges are another rail and cannot establish direct issuer fees."
+    },
+    {
+      "id": "uw-sbc-brale-c61f7ea3be2d1264",
+      "assetId": "sbc-brale",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:sbc-brale:offchain-issuer"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T22:51:06Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R04)",
+      "sources": [
+        {
+          "url": "https://brale.xyz/pricing",
+          "observedAt": "2026-10-03T22:51:06Z",
+          "datumAsOf": null,
+          "location": "Pricing FAQ",
+          "excerpt": "Brale charges 0 bps on standard money movement.",
+          "assertion": "Published fee schedule requires rail-specific flat payout fees plus actual gas +20%; existing captured generic route does not evaluate this same-notional schedule."
+        },
+        {
+          "url": "https://brale.xyz/pricing",
+          "observedAt": "2026-10-03T22:51:06Z",
+          "datumAsOf": null,
+          "location": "API product features",
+          "excerpt": "Offchain transfersSend RTP, wire, or ACH payouts$2per RTP$20per Wire25\u00a2per ACH",
+          "assertion": "Exact applicable public variable schedule is not a uniform fixed-bps route cost."
+        }
+      ]
+    },
+    {
+      "id": "uw-usdx-hex-trust-e73b8d341ef3c196",
+      "assetId": "usdx-hex-trust",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:50Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R04)",
+      "sources": [
+        {
+          "url": "https://flare.network/news/flare-confidential-compute-makes-private-institutional-data-usable-onchain-starting-with-hex-trusts-usdx",
+          "observedAt": "2026-10-03T22:51:06Z",
+          "datumAsOf": "2026-09-30",
+          "location": "First application: Proof of Reserves for USDX",
+          "excerpt": "The extension reads both inside the TEE, checks their combined total against USDX supply across the ecosystem, and signs a result showing whether USDX is backed 1:1 or better.",
+          "assertion": "A reserve-coverage check is disclosed, but common-clock input reconciliation, mint/burn movements and a recurring whole-supply procedure cadence are not."
+        },
+        {
+          "url": "https://www.htdigitalassets.com/disclaimer",
+          "observedAt": "2026-10-03T22:51:06Z",
+          "datumAsOf": null,
+          "location": "Disclaimer 15",
+          "excerpt": "we strive to provide accurate and up-to-date information regarding the reserves backing our assets",
+          "assertion": "Issuer does not guarantee real-time availability of reserve disclosures."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.htdigitalassets.com/",
+        "https://www.htdigitalassets.com/disclaimer",
+        "https://flare.network/news/flare-confidential-compute-makes-private-institutional-data-usable-onchain-starting-with-hex-trusts-usdx",
+        "https://songbird-systems-explorer.flare.rocks/price-feeds/custom?feed=0x21555344582f555344000000000000000000000000&endTime=1790772738",
+        "https://api.htdigitalassets.com/alm-stablecoin-db/metrics/current_reserves_amount"
+      ],
+      "rationale": "FCC discloses an ecosystem coverage calculation, not the exact required recurring common-clock mint/burn and liability-to-backing reconciliation cadence. Its feed sums three token supplies and public bonds plus restricted cash; input timestamps, restricted-cash reconciliation controls and complete movement procedure remain unpublished. Do not misclassify this as no reconciliation or dismiss the new coverage mechanism."
+    },
+    {
+      "id": "uw-kau-kinesis-981bdda91fe9acb5",
+      "assetId": "kau-kinesis",
+      "scope": {
+        "componentKey": "economic-control:bridge",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "economic-control:bridge",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:50:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R17)",
+      "sources": [
+        {
+          "url": "https://kmslabs.money/kms-labs-tcs/",
+          "observedAt": "2026-10-03T22:50:57Z",
+          "datumAsOf": null,
+          "location": "Sections 4 and 8",
+          "excerpt": "KMS Labs issues the Tokens only when fully backed by the Reserve (see Section 8)",
+          "assertion": "Issuer contractual backing promise is disclosed; exact native-side conservation/locking validation remains unpublished."
+        },
+        {
+          "url": "https://kmslabs.money/",
+          "observedAt": "2026-10-03T22:50:57Z",
+          "datumAsOf": null,
+          "location": "On-chain integrity / chain of integrity",
+          "excerpt": "KMS Labs ERC-20 reserve verification will be disclosed separately.",
+          "assertion": "Native physical reserve audit is explicitly not the independent ERC-20 reserve-to-liability verification."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://kmslabs.money/",
+        "https://kmslabs.money/kms-labs-tcs/",
+        "https://kmslabs.money/white-paper/",
+        "https://kinesis.money/audit-april-2026/",
+        "https://kinesis.money/about-us/documents/terms-of-use/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62"
+      ],
+      "rationale": "For the exact Ethereum kau-kinesis representation, issuer terms and whitepaper disclose custody backing and two-step redemption but no complete native-side locking/conservation verification or backend mint reconciliation necessary to establish a nonopaque bridge tier. Public ERC20F mint is role-gated, not reserve-gated. A disclosed reserve-wallet address does not establish this invariant; physical audits explicitly exclude wrapper verification."
+    },
+    {
+      "id": "uw-kau-kinesis-62983771898ccf48",
+      "assetId": "kau-kinesis",
+      "scope": {
+        "componentKey": "economic-control:bridge",
+        "exposureId": null,
+        "factorKey": "tier",
+        "pillar": "control",
+        "requiredDatum": "tier",
+        "routeKey": "bridge-meta:kau-kinesis:b4b937c5cec9401b893d"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:50:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R17)",
+      "sources": [
+        {
+          "url": "https://kmslabs.money/kms-labs-tcs/",
+          "observedAt": "2026-10-03T22:50:57Z",
+          "datumAsOf": null,
+          "location": "Sections 4 and 8",
+          "excerpt": "KMS Labs issues the Tokens only when fully backed by the Reserve (see Section 8)",
+          "assertion": "Issuer contractual backing promise is disclosed; exact native-side conservation/locking validation remains unpublished."
+        },
+        {
+          "url": "https://kmslabs.money/",
+          "observedAt": "2026-10-03T22:50:57Z",
+          "datumAsOf": null,
+          "location": "On-chain integrity / chain of integrity",
+          "excerpt": "KMS Labs ERC-20 reserve verification will be disclosed separately.",
+          "assertion": "Native physical reserve audit is explicitly not the independent ERC-20 reserve-to-liability verification."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://kmslabs.money/",
+        "https://kmslabs.money/kms-labs-tcs/",
+        "https://kmslabs.money/white-paper/",
+        "https://kinesis.money/audit-april-2026/",
+        "https://kinesis.money/about-us/documents/terms-of-use/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62"
+      ],
+      "rationale": "For the exact Ethereum kau-kinesis representation, issuer terms and whitepaper disclose custody backing and two-step redemption but no complete native-side locking/conservation verification or backend mint reconciliation necessary to establish a nonopaque bridge tier. Public ERC20F mint is role-gated, not reserve-gated. A disclosed reserve-wallet address does not establish this invariant; physical audits explicitly exclude wrapper verification."
+    },
+    {
+      "id": "uw-kau-kinesis-fa2a6c3a0dd11c47",
+      "assetId": "kau-kinesis",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:physical-to-usd:kau-kinesis"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:50:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R17)",
+      "sources": [
+        {
+          "url": "https://kmslabs.money/kms-labs-tcs/",
+          "observedAt": "2026-10-03T22:50:57Z",
+          "datumAsOf": null,
+          "location": "Section 5",
+          "excerpt": "KMS Labs makes no representation or warranty that there will be direct redemption mechanisms available at all times or that any redemption will be processed within any particular timeframe.",
+          "assertion": "No issuer maximum on the mandatory ERC-20-to-native leg, so neither physical delivery nor final USD completion is bounded."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://kmslabs.money/",
+        "https://kmslabs.money/kms-labs-tcs/",
+        "https://kmslabs.money/white-paper/",
+        "https://kinesis.money/about-us/documents/terms-of-use/",
+        "https://kinesis.money/about-us/fees/"
+      ],
+      "rationale": "No end-to-end settlement maximum is disclosed for the mandatory ERC-20-to-native redemption, native-to-physical delivery, or composed spendable-USD path. Binding KMS terms expressly disclaim any timeframe; Kinesis terms arrange delivery dates case by case. Targets or eventual physical entitlement cannot establish a completion SLA."
+    },
+    {
+      "id": "uw-kau-kinesis-5043fff0fbaf7ba0",
+      "assetId": "kau-kinesis",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:kau-kinesis:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:50:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R17)",
+      "sources": [
+        {
+          "url": "https://kmslabs.money/kms-labs-tcs/",
+          "observedAt": "2026-10-03T22:50:57Z",
+          "datumAsOf": null,
+          "location": "Section 5",
+          "excerpt": "KMS Labs makes no representation or warranty that there will be direct redemption mechanisms available at all times or that any redemption will be processed within any particular timeframe.",
+          "assertion": "No issuer maximum on the mandatory ERC-20-to-native leg, so neither physical delivery nor final USD completion is bounded."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://kmslabs.money/",
+        "https://kmslabs.money/kms-labs-tcs/",
+        "https://kmslabs.money/white-paper/",
+        "https://kinesis.money/about-us/documents/terms-of-use/",
+        "https://kinesis.money/about-us/fees/"
+      ],
+      "rationale": "No end-to-end settlement maximum is disclosed for the mandatory ERC-20-to-native redemption, native-to-physical delivery, or composed spendable-USD path. Binding KMS terms expressly disclaim any timeframe; Kinesis terms arrange delivery dates case by case. Targets or eventual physical entitlement cannot establish a completion SLA."
+    },
+    {
+      "id": "uw-kag-kinesis-d20b2e2f897012f4",
+      "assetId": "kag-kinesis",
+      "scope": {
+        "componentKey": "economic-control:bridge",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "economic-control:bridge",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:50:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R17)",
+      "sources": [
+        {
+          "url": "https://kmslabs.money/kms-labs-tcs/",
+          "observedAt": "2026-10-03T22:50:57Z",
+          "datumAsOf": null,
+          "location": "Sections 4 and 8",
+          "excerpt": "KMS Labs issues the Tokens only when fully backed by the Reserve (see Section 8)",
+          "assertion": "Issuer contractual backing promise is disclosed; exact native-side conservation/locking validation remains unpublished."
+        },
+        {
+          "url": "https://kmslabs.money/",
+          "observedAt": "2026-10-03T22:50:57Z",
+          "datumAsOf": null,
+          "location": "On-chain integrity / chain of integrity",
+          "excerpt": "KMS Labs ERC-20 reserve verification will be disclosed separately.",
+          "assertion": "Native physical reserve audit is explicitly not the independent ERC-20 reserve-to-liability verification."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://kmslabs.money/",
+        "https://kmslabs.money/kms-labs-tcs/",
+        "https://kmslabs.money/white-paper/",
+        "https://kinesis.money/audit-april-2026/",
+        "https://kinesis.money/about-us/documents/terms-of-use/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62"
+      ],
+      "rationale": "For the exact Ethereum kag-kinesis representation, issuer terms and whitepaper disclose custody backing and two-step redemption but no complete native-side locking/conservation verification or backend mint reconciliation necessary to establish a nonopaque bridge tier. Public ERC20F mint is role-gated, not reserve-gated. A disclosed reserve-wallet address does not establish this invariant; physical audits explicitly exclude wrapper verification."
+    },
+    {
+      "id": "uw-kag-kinesis-babf672c927cc8ea",
+      "assetId": "kag-kinesis",
+      "scope": {
+        "componentKey": "economic-control:bridge",
+        "exposureId": null,
+        "factorKey": "tier",
+        "pillar": "control",
+        "requiredDatum": "tier",
+        "routeKey": "bridge-meta:kag-kinesis:618a354b5cd98e20e0f8"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:50:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R17)",
+      "sources": [
+        {
+          "url": "https://kmslabs.money/kms-labs-tcs/",
+          "observedAt": "2026-10-03T22:50:57Z",
+          "datumAsOf": null,
+          "location": "Sections 4 and 8",
+          "excerpt": "KMS Labs issues the Tokens only when fully backed by the Reserve (see Section 8)",
+          "assertion": "Issuer contractual backing promise is disclosed; exact native-side conservation/locking validation remains unpublished."
+        },
+        {
+          "url": "https://kmslabs.money/",
+          "observedAt": "2026-10-03T22:50:57Z",
+          "datumAsOf": null,
+          "location": "On-chain integrity / chain of integrity",
+          "excerpt": "KMS Labs ERC-20 reserve verification will be disclosed separately.",
+          "assertion": "Native physical reserve audit is explicitly not the independent ERC-20 reserve-to-liability verification."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://kmslabs.money/",
+        "https://kmslabs.money/kms-labs-tcs/",
+        "https://kmslabs.money/white-paper/",
+        "https://kinesis.money/audit-april-2026/",
+        "https://kinesis.money/about-us/documents/terms-of-use/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62"
+      ],
+      "rationale": "For the exact Ethereum kag-kinesis representation, issuer terms and whitepaper disclose custody backing and two-step redemption but no complete native-side locking/conservation verification or backend mint reconciliation necessary to establish a nonopaque bridge tier. Public ERC20F mint is role-gated, not reserve-gated. A disclosed reserve-wallet address does not establish this invariant; physical audits explicitly exclude wrapper verification."
+    },
+    {
+      "id": "uw-kag-kinesis-eed4575f38b7263d",
+      "assetId": "kag-kinesis",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:physical-to-usd:kag-kinesis"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:50:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R17)",
+      "sources": [
+        {
+          "url": "https://kmslabs.money/kms-labs-tcs/",
+          "observedAt": "2026-10-03T22:50:57Z",
+          "datumAsOf": null,
+          "location": "Section 5",
+          "excerpt": "KMS Labs makes no representation or warranty that there will be direct redemption mechanisms available at all times or that any redemption will be processed within any particular timeframe.",
+          "assertion": "No issuer maximum on the mandatory ERC-20-to-native leg, so neither physical delivery nor final USD completion is bounded."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://kmslabs.money/",
+        "https://kmslabs.money/kms-labs-tcs/",
+        "https://kmslabs.money/white-paper/",
+        "https://kinesis.money/about-us/documents/terms-of-use/",
+        "https://kinesis.money/about-us/fees/"
+      ],
+      "rationale": "No end-to-end settlement maximum is disclosed for the mandatory ERC-20-to-native redemption, native-to-physical delivery, or composed spendable-USD path. Binding KMS terms expressly disclaim any timeframe; Kinesis terms arrange delivery dates case by case. Targets or eventual physical entitlement cannot establish a completion SLA."
+    },
+    {
+      "id": "uw-kag-kinesis-8ea27e35ec143c39",
+      "assetId": "kag-kinesis",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:kag-kinesis:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:50:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R17)",
+      "sources": [
+        {
+          "url": "https://kmslabs.money/kms-labs-tcs/",
+          "observedAt": "2026-10-03T22:50:57Z",
+          "datumAsOf": null,
+          "location": "Section 5",
+          "excerpt": "KMS Labs makes no representation or warranty that there will be direct redemption mechanisms available at all times or that any redemption will be processed within any particular timeframe.",
+          "assertion": "No issuer maximum on the mandatory ERC-20-to-native leg, so neither physical delivery nor final USD completion is bounded."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://kmslabs.money/",
+        "https://kmslabs.money/kms-labs-tcs/",
+        "https://kmslabs.money/white-paper/",
+        "https://kinesis.money/about-us/documents/terms-of-use/",
+        "https://kinesis.money/about-us/fees/"
+      ],
+      "rationale": "No end-to-end settlement maximum is disclosed for the mandatory ERC-20-to-native redemption, native-to-physical delivery, or composed spendable-USD path. Binding KMS terms expressly disclaim any timeframe; Kinesis terms arrange delivery dates case by case. Targets or eventual physical entitlement cannot establish a completion SLA."
+    },
+    {
+      "id": "uw-kag-kinesis-5bf85bcbeeee2a4a",
+      "assetId": "kag-kinesis",
+      "scope": {
+        "componentKey": "mechanism-review:assuranceAndReconciliation",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "mechanism-review:assuranceAndReconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:50:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R17)",
+      "sources": [
+        {
+          "url": "https://kmslabs.money/",
+          "observedAt": "2026-10-03T22:50:57Z",
+          "datumAsOf": null,
+          "location": "Silver (KAG) on Ethereum, Independent audits",
+          "excerpt": "Independent verification of ERC-20 KAG reserve holdings will be disclosed separately.",
+          "assertion": "Issuer explicitly distinguishes downstream physical audits from unpublished independent exact-wrapper reconciliation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://kmslabs.money/",
+        "https://kmslabs.money/kms-labs-tcs/",
+        "https://kmslabs.money/white-paper/",
+        "https://kinesis.money/audit-april-2026/",
+        "https://kinesis.money/audits/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62"
+      ],
+      "rationale": "Exact ERC-20 KAG reserve assurance and wrapper-liability reconciliation are not published. The issuer explicitly defers independent ERC-20 verification; Bureau Veritas reports cover downstream native bullion, not KMS wrapper reserves. Wallet identity and a live balance cannot supply independent matched wrapper reserve/liability scope."
+    },
+    {
+      "id": "uw-ausd-agora-265117b4ae7ae71c",
+      "assetId": "ausd-agora",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:05d32428c9edb7562d33255d",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:50:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R17)",
+      "sources": [
+        {
+          "url": "https://files.buildwithfern.com/agora.docs.buildwithfern.com/444c4f3a9642d6a9149e8fa9736469cd03192f55cc7ff3d2326117b0397875b5/docs/assets/2026%20Aug%20-%20Agora%20Dollar%20Reserve%20Report.pdf",
+          "observedAt": "2026-10-03T22:50:57Z",
+          "datumAsOf": "2026-08-31",
+          "location": "August 31 holdings, pages 6 and 9",
+          "excerpt": "Cash held in the Agora Reserve Fund at regulated financial institutions",
+          "assertion": "Separate fund/company cash amounts are disclosed, but no deposit tenor, maturity dates or maximum deposit terms."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.agora.finance/product/ausd",
+        "https://docs.agora.finance/developer/transparency",
+        "https://files.buildwithfern.com/agora.docs.buildwithfern.com/444c4f3a9642d6a9149e8fa9736469cd03192f55cc7ff3d2326117b0397875b5/docs/assets/2026%20Aug%20-%20Agora%20Dollar%20Reserve%20Report.pdf",
+        "https://static.agora.finance/termsofuse.pdf",
+        "https://docs.agora.finance/api/endpoints/routes/overview.md"
+      ],
+      "rationale": "Maximum maturity of company cash and reserve-fund bank deposits is undisclosed. The examination identifies balances at regulated institutions but provides no account contract, maturity schedule or maximum tenor for either cash slice; general reserve/redemption terms supply no deposit-specific limit. Do not assume sight deposits or zero days."
+    },
+    {
+      "id": "uw-ausd-agora-28180024833cb305",
+      "assetId": "ausd-agora",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:af355100f3a266b999a640d4",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:50:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R17)",
+      "sources": [
+        {
+          "url": "https://files.buildwithfern.com/agora.docs.buildwithfern.com/444c4f3a9642d6a9149e8fa9736469cd03192f55cc7ff3d2326117b0397875b5/docs/assets/2026%20Aug%20-%20Agora%20Dollar%20Reserve%20Report.pdf",
+          "observedAt": "2026-10-03T22:50:57Z",
+          "datumAsOf": "2026-08-31",
+          "location": "August 31 holdings, pages 6 and 9",
+          "excerpt": "Cash held in the Agora Reserve Fund at regulated financial institutions",
+          "assertion": "Separate fund/company cash amounts are disclosed, but no deposit tenor, maturity dates or maximum deposit terms."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.agora.finance/product/ausd",
+        "https://docs.agora.finance/developer/transparency",
+        "https://files.buildwithfern.com/agora.docs.buildwithfern.com/444c4f3a9642d6a9149e8fa9736469cd03192f55cc7ff3d2326117b0397875b5/docs/assets/2026%20Aug%20-%20Agora%20Dollar%20Reserve%20Report.pdf",
+        "https://static.agora.finance/termsofuse.pdf",
+        "https://docs.agora.finance/api/endpoints/routes/overview.md"
+      ],
+      "rationale": "Maximum maturity of company cash and reserve-fund bank deposits is undisclosed. The examination identifies balances at regulated institutions but provides no account contract, maturity schedule or maximum tenor for either cash slice; general reserve/redemption terms supply no deposit-specific limit. Do not assume sight deposits or zero days."
+    },
+    {
+      "id": "uw-ausd-agora-8b39295316ef5c6b",
+      "assetId": "ausd-agora",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:1d9108a3bccb66cf27bfbc68",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:50:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R17)",
+      "sources": [
+        {
+          "url": "https://files.buildwithfern.com/agora.docs.buildwithfern.com/444c4f3a9642d6a9149e8fa9736469cd03192f55cc7ff3d2326117b0397875b5/docs/assets/2026%20Aug%20-%20Agora%20Dollar%20Reserve%20Report.pdf",
+          "observedAt": "2026-10-03T22:50:57Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Stablecoin criteria page 9",
+          "excerpt": "Stablecoin balances included in the Fair Value of Reserve Assets consist of U.S. dollar\u2013 denominated stablecoins, including USD Coin (USDC) and PayPal USD (PYUSD)",
+          "assertion": "Identities and wallet custody are disclosed without a full-slice realization/withdrawal maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.agora.finance/product/ausd",
+        "https://docs.agora.finance/developer/transparency",
+        "https://files.buildwithfern.com/agora.docs.buildwithfern.com/444c4f3a9642d6a9149e8fa9736469cd03192f55cc7ff3d2326117b0397875b5/docs/assets/2026%20Aug%20-%20Agora%20Dollar%20Reserve%20Report.pdf",
+        "https://static.agora.finance/termsofuse.pdf",
+        "https://docs.agora.finance/api/endpoints/routes/overview.md"
+      ],
+      "rationale": "The combined USDC/PYUSD reserve slice has no published whole-position liquidity horizon. The examined report names tokens and controlled wallets but no individual split, applicable withdrawal entitlement, gates or full-slice final realization bound. Transfer speed and Agora holder redemption targets do not establish liquidity of this exact reserve basket."
+    },
+    {
+      "id": "uw-audx-aussie-dollar-token-8a654da977ceee3f",
+      "assetId": "audx-aussie-dollar-token",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:d23e645f88e6a4c1f6d2bbe6",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:50:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R17)",
+      "sources": [
+        {
+          "url": "https://www.audxtoken.com/_files/ugd/539754_e06dd9a1842d4b4a97777c64ed096bbe.pdf",
+          "observedAt": "2026-10-03T22:50:57Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Reserve report page 4",
+          "excerpt": "All AUDX Reserves are held in segregated accounts, separate from operational and corporate funds, and remain unencumbered at all times.",
+          "assertion": "Segregation and unencumbered status are disclosed, not deposit maturity or withdrawal/realization bounds."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.audxtoken.com/",
+        "https://www.audxtoken.com/transparency",
+        "https://www.audxtoken.com/_files/ugd/539754_e06dd9a1842d4b4a97777c64ed096bbe.pdf",
+        "https://www.audxtoken.com/_files/ugd/539754_29d0472241a840e6a2fb2c58512c50d7.pdf",
+        "https://www.audxtoken.com/about-us"
+      ],
+      "rationale": "For the designated AUDX bank-account reserve slice, maximum deposit maturity and whole-slice liquidity horizon are not disclosed. Monthly assurance confirms balances and segregation but no deposit contracts, sight/term split, tenor schedule or withdrawal maximum. Whitepaper terms allow reserve unavailability and delayed redemption; neither assurance nor redeemable-anytime marketing proves instant reserve realization."
+    },
+    {
+      "id": "uw-audx-aussie-dollar-token-471840093daf2bcf",
+      "assetId": "audx-aussie-dollar-token",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:d23e645f88e6a4c1f6d2bbe6",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:50:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R17)",
+      "sources": [
+        {
+          "url": "https://www.audxtoken.com/_files/ugd/539754_e06dd9a1842d4b4a97777c64ed096bbe.pdf",
+          "observedAt": "2026-10-03T22:50:57Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Reserve report page 4",
+          "excerpt": "All AUDX Reserves are held in segregated accounts, separate from operational and corporate funds, and remain unencumbered at all times.",
+          "assertion": "Segregation and unencumbered status are disclosed, not deposit maturity or withdrawal/realization bounds."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.audxtoken.com/",
+        "https://www.audxtoken.com/transparency",
+        "https://www.audxtoken.com/_files/ugd/539754_e06dd9a1842d4b4a97777c64ed096bbe.pdf",
+        "https://www.audxtoken.com/_files/ugd/539754_29d0472241a840e6a2fb2c58512c50d7.pdf",
+        "https://www.audxtoken.com/about-us"
+      ],
+      "rationale": "For the designated AUDX bank-account reserve slice, maximum deposit maturity and whole-slice liquidity horizon are not disclosed. Monthly assurance confirms balances and segregation but no deposit contracts, sight/term split, tenor schedule or withdrawal maximum. Whitepaper terms allow reserve unavailability and delayed redemption; neither assurance nor redeemable-anytime marketing proves instant reserve realization."
+    },
+    {
+      "id": "uw-audx-aussie-dollar-token-f869c4d87ef52c91",
+      "assetId": "audx-aussie-dollar-token",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:audx-aussie-dollar-token:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:50:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R17)",
+      "sources": [
+        {
+          "url": "https://www.audxtoken.com/_files/ugd/539754_29d0472241a840e6a2fb2c58512c50d7.pdf",
+          "observedAt": "2026-10-03T22:50:57Z",
+          "datumAsOf": null,
+          "location": "Terms of sale section 6, page 20",
+          "excerpt": "However, it may take several business days for any redemption to be completed.",
+          "assertion": "Several business days is not a completion maximum; the same clause permits further reserve-unavailability delays."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.audxtoken.com/",
+        "https://www.audxtoken.com/transparency",
+        "https://www.audxtoken.com/_files/ugd/539754_29d0472241a840e6a2fb2c58512c50d7.pdf",
+        "https://www.audxtoken.com/about-us"
+      ],
+      "rationale": "No final maximum redemption settlement SLA is published. Terms offer commercially reasonable prompt processing, say several business days, and reserve discretionary delays for illiquid, unavailable or lost reserves. Homepage redeemable-anytime is availability marketing, not a bounded bank-receipt deadline."
+    },
+    {
+      "id": "uw-yusd-yieldfi-352eda412973867f",
+      "assetId": "yusd-yieldfi",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:16Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R45)",
+      "sources": [
+        {
+          "url": "https://docs.yield.fi/due-diligence-questionaire/operational-control",
+          "observedAt": "2026-10-03T22:54:54Z",
+          "datumAsOf": null,
+          "location": "Accounting, NAV & Reporting",
+          "excerpt": "Reconciles token supply vs Vault net assets and flags breaks",
+          "assertion": "Publishes an internal software control objective, not an exact yUSD common-clock whole-liability reconciliation cadence."
+        },
+        {
+          "url": "https://docs.yield.fi/legal-documents/token-terms/yusd",
+          "observedAt": "2026-10-03T22:54:54Z",
+          "datumAsOf": null,
+          "location": "Sections 7.1, 7.2, 12",
+          "excerpt": "Valuation frequency. Minimum twice per week.",
+          "assertion": "NAV valuation frequency is disclosed; it is not whole-supply reserve reconciliation cadence."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.yield.fi/legal-documents/token-terms/yusd",
+        "https://docs.yield.fi/due-diligence-questionaire/operational-control",
+        "https://docs.yield.fi/prime-analytics/transparency-and-analytics",
+        "https://docs.yield.fi/legal-documents/terms-and-conditions",
+        "https://docs.yield.fi/due-diligence-questionaire/flow-of-funds",
+        "https://v2.yield.fi/transparency",
+        "https://docs.yield.fi/resources/legacy-smart-contract-addresses",
+        "https://etherscan.io/address/0x19ebd191f7a24ece672ba13a302212b5ef7f35cb#code"
+      ],
+      "rationale": "Exact yUSD whole-supply backing reconciliation cadence, common checkpoint and inclusion of every mint/burn and off-vault position remain undisclosed. NAV frequency, generic software objectives, user ledgers and Prime reserve analytics do not establish that exact procedure. Preserve unknown rather than assert no reconciliation."
+    },
+    {
+      "id": "uw-yusd-yieldfi-49db6695b25ecccc",
+      "assetId": "yusd-yieldfi",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:yusd-yieldfi:stablecoin-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:16Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R45)",
+      "sources": [
+        {
+          "url": "https://docs.yield.fi/legal-documents/token-terms/yusd",
+          "observedAt": "2026-10-03T22:54:54Z",
+          "datumAsOf": null,
+          "location": "Section 8.2",
+          "excerpt": "Delays may occur due to Market Disruption, illiquidity, compliance, or operational constraints.",
+          "assertion": "T+2 is expressly a processing target, not a final maximum settlement guarantee."
+        },
+        {
+          "url": "https://docs.yield.fi/legal-documents/terms-and-conditions",
+          "observedAt": "2026-10-03T22:54:54Z",
+          "datumAsOf": null,
+          "location": "Condition 9.3",
+          "excerpt": "Timing, processing windows, and SLAs are described in Token Terms, are subject to change without prior notice",
+          "assertion": "General timing terms preserve conditional delays."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.yield.fi/legal-documents/token-terms/yusd",
+        "https://docs.yield.fi/legal-documents/terms-and-conditions",
+        "https://docs.yield.fi/faqs",
+        "https://docs.yield.fi/defi-integration/primary-and-secondary-liquidity",
+        "https://v2.yield.fi/transparency"
+      ],
+      "rationale": "No unconditional final spendable-USDC settlement maximum is published for the onchain yUSD queued redemption. The specific T+2 processing target is qualified by disruption, illiquidity, compliance and operations; it is not a calendar-day SLA."
+    },
+    {
+      "id": "uw-usdpt-western-union-e6e68e13b05bdbe4",
+      "assetId": "usdpt-western-union",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdpt-western-union:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:16Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R45)",
+      "sources": [
+        {
+          "url": "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-terms",
+          "observedAt": "2026-10-03T22:54:54Z",
+          "datumAsOf": "2025-10-13",
+          "location": "Section 6 Timing",
+          "excerpt": "ADB uses commercially reasonable efforts to process redemption requests promptly.",
+          "assertion": "Only reasonable-efforts processing is promised; no numeric final USD settlement maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-terms",
+        "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-service-fee-schedule",
+        "https://www.westernunion.com/global/en/digital-assets-stablecoin.html",
+        "https://www.anchorage.com/platform/usdpt-reserve-attestations-anchorage-digital",
+        "https://developers.anchorage.com/docs/settlement-process"
+      ],
+      "rationale": "No maximum time to final USD delivery is published for USDPT client redemption. Covered Stablecoin Terms section 6 permits compliance, liquidity, technical and operational delays; Solana transfer speed is not issuer bank-redemption settlement."
+    },
+    {
+      "id": "uw-usdpt-western-union-4e17b76d6e1f5539",
+      "assetId": "usdpt-western-union",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:47dbdcc0d92288beae0b6332",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:16Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R45)",
+      "sources": [
+        {
+          "url": "https://learn.anchorage.com/08.31.26_USDPT_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf",
+          "observedAt": "2026-10-03T22:54:54Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Schedule II, page 5",
+          "excerpt": "Demand deposit accounts at FDIC-insured depository institutions, held directly",
+          "assertion": "Demand deposit category is disclosed without a fixed maximum contractual term."
+        },
+        {
+          "url": "https://learn.anchorage.com/08.31.26_USDPT_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf",
+          "observedAt": "2026-10-03T22:54:54Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Schedule II, page 5",
+          "excerpt": "Money market funds hold investments in cash, cash equivalents, and short-term debt securities.",
+          "assertion": "Both held fund-share CUSIPs have Maturity Date N/A; no finite share-claim maturity maximum is disclosed."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.anchorage.com/platform/usdpt-reserve-attestations-anchorage-digital",
+        "https://learn.anchorage.com/08.31.26_USDPT_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf",
+        "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-terms",
+        "https://www.sec.gov/Archives/edgar/data/1659326/000119312526217424/d44657d485bpos.htm",
+        "https://www.blackrock.com/cash/en-us/products/282772/fed-trust-%28institutional%29-fund"
+      ],
+      "rationale": "No finite maturityDaysMax for the actual demand-deposit claims or held money-market-fund share claims is published. The report gives demand deposits and fund Maturity Date N/A, not portfolio maxima. Underlying bill limits/WAM/WAL do not establish expiry of the fund-share claims. Do not invent zero or apply an underlying mandate across the mixed fund bucket."
+    },
+    {
+      "id": "uw-usdpt-western-union-d411f37e55f00d50",
+      "assetId": "usdpt-western-union",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:d13fcab416f093397ce8fabd",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:16Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R45)",
+      "sources": [
+        {
+          "url": "https://learn.anchorage.com/08.31.26_USDPT_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf",
+          "observedAt": "2026-10-03T22:54:54Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Schedule II, page 5",
+          "excerpt": "Demand deposit accounts at FDIC-insured depository institutions, held directly",
+          "assertion": "Demand deposit category is disclosed without a fixed maximum contractual term."
+        },
+        {
+          "url": "https://learn.anchorage.com/08.31.26_USDPT_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf",
+          "observedAt": "2026-10-03T22:54:54Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Schedule II, page 5",
+          "excerpt": "Money market funds hold investments in cash, cash equivalents, and short-term debt securities.",
+          "assertion": "Both held fund-share CUSIPs have Maturity Date N/A; no finite share-claim maturity maximum is disclosed."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.anchorage.com/platform/usdpt-reserve-attestations-anchorage-digital",
+        "https://learn.anchorage.com/08.31.26_USDPT_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf",
+        "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-terms",
+        "https://www.sec.gov/Archives/edgar/data/1659326/000119312526217424/d44657d485bpos.htm",
+        "https://www.blackrock.com/cash/en-us/products/282772/fed-trust-%28institutional%29-fund"
+      ],
+      "rationale": "No finite maturityDaysMax for the actual demand-deposit claims or held money-market-fund share claims is published. The report gives demand deposits and fund Maturity Date N/A, not portfolio maxima. Underlying bill limits/WAM/WAL do not establish expiry of the fund-share claims. Do not invent zero or apply an underlying mandate across the mixed fund bucket."
+    },
+    {
+      "id": "uw-zys-zephyr-protocol-f0b4abdcbfadac2e",
+      "assetId": "zys-zephyr-protocol",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:fd346d791b2a1ffe7526dc30",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:20:56Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R72)",
+      "sources": [
+        {
+          "url": "https://raw.githubusercontent.com/ZephyrProtocol/zephyr/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_config.h",
+          "observedAt": "2026-10-03T23:20:54Z",
+          "datumAsOf": null,
+          "location": "Native consensus configuration, spendable age and difficulty target",
+          "excerpt": "#define CRYPTONOTE_DEFAULT_TX_SPENDABLE_AGE             10",
+          "assertion": "A spendability age in blocks is disclosed, not a guaranteed elapsed-time whole-slice realization horizon."
+        },
+        {
+          "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc",
+          "observedAt": "2026-10-03T23:20:55Z",
+          "datumAsOf": "2026-10-03",
+          "location": "on_chain reserve snapshot",
+          "excerpt": "\"reserve_height\": 877372",
+          "assertion": "Snapshot discloses balances and reserve ratio, not a whole-position realization SLA."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://zephyrprotocol.com/docs/zephyr_whitepaper.pdf",
+        "https://zephyrprotocol.com/documentation",
+        "https://raw.githubusercontent.com/ZephyrProtocol/zephyr/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_config.h",
+        "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc",
+        "https://zephyrprotocol.com/documentation/scanner-api",
+        "https://zephyrprotocol.com/blog/2024-09-30-Zephyr-Protocol-v2-0-0-ZSD-Yield-Hardfork-Annoucement"
+      ],
+      "rationale": "No hard whole-position liquidity/realization horizon is published for the ZSD yield reserve backing ZYS shares. Native conversion availability and block-based output spendability do not guarantee an elapsed-time full-position realization at a known value; the published reserve snapshot only measures balances. No fixed one-day or immediate bound is inferred from target block time."
+    },
+    {
+      "id": "uw-zsd-zephyr-protocol-6b6e9c91949391e0",
+      "assetId": "zsd-zephyr-protocol",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:269781b362b9fc8899c60d27",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:20:56Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R72)",
+      "sources": [
+        {
+          "url": "https://raw.githubusercontent.com/ZephyrProtocol/zephyr/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_config.h",
+          "observedAt": "2026-10-03T23:20:54Z",
+          "datumAsOf": null,
+          "location": "Native consensus configuration, spendable age and difficulty target",
+          "excerpt": "#define CRYPTONOTE_DEFAULT_TX_SPENDABLE_AGE             10",
+          "assertion": "A spendability age in blocks is disclosed, not a guaranteed elapsed-time whole-slice realization horizon."
+        },
+        {
+          "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc",
+          "observedAt": "2026-10-03T23:20:55Z",
+          "datumAsOf": "2026-10-03",
+          "location": "on_chain reserve snapshot",
+          "excerpt": "\"reserve_height\": 877372",
+          "assertion": "Snapshot discloses balances and reserve ratio, not a whole-position realization SLA."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://zephyrprotocol.com/docs/zephyr_whitepaper.pdf",
+        "https://zephyrprotocol.com/documentation",
+        "https://raw.githubusercontent.com/ZephyrProtocol/zephyr/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_config.h",
+        "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc",
+        "https://zephyrprotocol.com/documentation/scanner-api",
+        "https://zephyrprotocol.com/blog/2024-09-30-Zephyr-Protocol-v2-0-0-ZSD-Yield-Hardfork-Annoucement"
+      ],
+      "rationale": "No hard whole-position liquidity/realization horizon is published for the ZEPH protocol reserve. Native conversion availability and block-based output spendability do not guarantee an elapsed-time full-position realization at a known value; the published reserve snapshot only measures balances. No fixed one-day or immediate bound is inferred from target block time."
+    },
+    {
+      "id": "uw-eurw-newrails-1128818c29525c34",
+      "assetId": "eurw-newrails",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:20:56Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R72)",
+      "sources": [
+        {
+          "url": "https://cmpl-docs.newrails.xyz/docs/Newrails%20EURW%20WP%202026-05-26.xhtml",
+          "observedAt": "2026-10-03T23:20:55Z",
+          "datumAsOf": "2026-06-25",
+          "location": "D.1 Reserve policy",
+          "excerpt": "A minimum of 30% of client funds will be held in a safeguarding account in cash, in Euros, with a reputable European regulated credit institution.",
+          "assertion": "Policy minimum is not observed portfolio weight or a dated full-denominator reserve schedule."
+        },
+        {
+          "url": "https://www.newrails.xyz/en/platform/eurw",
+          "observedAt": "2026-10-03T23:20:56Z",
+          "datumAsOf": null,
+          "location": "Trust and transparency",
+          "excerpt": "Monthly attestation reports published publicly.",
+          "assertion": "Issuer claims published reports, but linked public download/archive provides whitepaper, audit and policies rather than a dated reserve allocation report."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.newrails.xyz/en/platform/eurw",
+        "https://www.newrails.xyz/en/download-centre",
+        "https://cmpl-docs.newrails.xyz/docs/Newrails%20EURW%20WP%202026-05-26.xhtml",
+        "https://cmpl-docs.newrails.xyz/docs/Hacken_Newrails_SCA_Newrails_Stablecoin_Feb2026_P_2026_2028_2_20260312.pdf",
+        "https://www.newrails.xyz/en/hubs/euro-stablecoin",
+        "https://www.lb.lt/en/sfi-financial-market-participants/newrails-uab"
+      ],
+      "rationale": "The exact current EURW reserve composition, measured whole-asset weights and named holding/custodian allocation are not disclosed in the accessed primary public archive. The whitepaper gives a >=30% cash/<=70% permitted-investment policy; the current guide says cash and overnight deposits. Neither supplies a dated observed reserve schedule. Do not convert the policy into fabricated 30/70 weights or admit the undisclosed placeholder as measured composition."
     }
   ]
 }

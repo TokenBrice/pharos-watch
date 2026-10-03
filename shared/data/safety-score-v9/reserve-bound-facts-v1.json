@@ -388,6 +388,62 @@
           }
         ]
       }
+    ],
+    "kag-kinesis": [
+      {
+        "factKey": "kag-kinesis:native-token-reserve:maturity-applicability",
+        "scope": {
+          "kind": "exposure",
+          "exposureKey": "chainlink-por:feed:0x3f0543aa057bcaea152fe9462cb3ffab305a6f8d"
+        },
+        "asOfSec": 1791071391,
+        "publisher": "KMS Labs S.A.",
+        "sourceUrls": [
+          "https://kmslabs.money/kms-labs-tcs/",
+          "https://kmslabs.money/"
+        ],
+        "assertion": "Sections 3, 5 and 8 identify the entire immediate reserve as native Kinesis tokens held for 1:1 discretionary redemption. This is a continuing token claim, with no debt principal or fixed contractual repayment date. Maturity is not applicable to this claim; this does not establish immediate liquidity or directly allocated bullion ownership.",
+        "contentDigest": "8da1b93d6c8f932242e329b33a06d2285eacd3a8ebf548efa6f723d01d05161c",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Pharos unknown-wave W2R17",
+          "confidence": "high"
+        },
+        "kind": "maturity-applicability",
+        "claimId": "kag-kinesis:kms-native-reserve-claim",
+        "conclusion": "not-applicable",
+        "governingInstrument": "KMS Labs KAU and KAG Terms and Conditions, sections 3, 5 and 8; section 2(j) gives these terms precedence",
+        "allInScope": true
+      }
+    ],
+    "kau-kinesis": [
+      {
+        "factKey": "kau-kinesis:native-token-reserve:maturity-applicability",
+        "scope": {
+          "kind": "exposure",
+          "exposureKey": "chainlink-por:feed:0xab5dd7dd7669072a1ef27c0ba241120a27a1aec3"
+        },
+        "asOfSec": 1791071391,
+        "publisher": "KMS Labs S.A.",
+        "sourceUrls": [
+          "https://kmslabs.money/kms-labs-tcs/",
+          "https://kmslabs.money/"
+        ],
+        "assertion": "Sections 3, 5 and 8 identify the entire immediate reserve as native Kinesis tokens held for 1:1 discretionary redemption. This is a continuing token claim, with no debt principal or fixed contractual repayment date. Maturity is not applicable to this claim; this does not establish immediate liquidity or directly allocated bullion ownership.",
+        "contentDigest": "8da1b93d6c8f932242e329b33a06d2285eacd3a8ebf548efa6f723d01d05161c",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Pharos unknown-wave W2R17",
+          "confidence": "high"
+        },
+        "kind": "maturity-applicability",
+        "claimId": "kau-kinesis:kms-native-reserve-claim",
+        "conclusion": "not-applicable",
+        "governingInstrument": "KMS Labs KAU and KAG Terms and Conditions, sections 3, 5 and 8; section 2(j) gives these terms precedence",
+        "allInScope": true
+      }
     ]
   }
 }
