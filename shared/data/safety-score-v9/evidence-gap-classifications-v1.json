@@ -7624,388 +7624,6 @@
       "rationale": "No maximum final stablecoin delivery time is disclosed for scUSD queue redemption. Current issuer documentation contradicts itself on three versus five-day cooldown; neither is a completion SLA. Exact published queue source enforces maturity, expiry, pause and authorized solver calls, not guaranteed solving/funding. The old Rings docs redirect to a GitBook shell; current Trevee docs and exact queue source are the substantive reviewed surfaces."
     },
     {
-      "id": "uw-wcop-ripio-08688d04a82f3b7b",
-      "assetId": "wcop-ripio",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:07:56Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R94)",
-      "sources": [
-        {
-          "url": "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf",
-          "observedAt": "2026-10-03T23:04:31Z",
-          "datumAsOf": null,
-          "location": "Version 1.0, October 2025; Economic model & collateralization, page 2",
-          "excerpt": "Strict reconciliation processes are kept, and issuer may publish independent third-party attestations periodically to ensure transparency and proof of backing.",
-          "assertion": "An internal-process assertion and optional periodic publication do not identify a whole-supply reconciliation cadence, clock, operator or exclusions."
-        },
-        {
-          "url": "https://action.ripio.com/en/wfiat-attestations",
-          "observedAt": "2026-10-03T23:04:31Z",
-          "datumAsOf": "2026-06-30",
-          "location": "Public report index",
-          "excerpt": "Third-party verification of reserve balances for every wFIAT stablecoin issued on-chain.",
-          "assertion": "June 2026 reports exist for wBRL, wMXN, wCOP and wCLP; none for wPEN. Point-in-time reports do not themselves establish a recurring whole-supply procedure."
-        },
-        {
-          "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/Aug%202026/Token%20wCOP%2006.30.2026%20Certification%20vf.pdf?hsLang=en",
-          "observedAt": "2026-10-03T23:04:31Z",
-          "datumAsOf": "2026-06-30",
-          "location": "Professional Work Performed and Other Clarifications, pages 1-2",
-          "excerpt": "The information contained herein refers solely to the wCOP token.",
-          "assertion": "The accountant checks dated on-chain issuance/burn records and bank statements, including Celo; it is an asset-specific snapshot, not a published ongoing cadence."
-        },
-        {
-          "url": "https://github.com/ripio/latam-stables",
-          "observedAt": "2026-10-03T23:07:56Z",
-          "datumAsOf": null,
-          "location": "README, Bridge Contracts / Architecture",
-          "excerpt": "The bridge infrastructure enables cross-chain token transfers using a burn-and-mint mechanism.",
-          "assertion": "Technical mint/burn and bridge accounting are disclosed, but do not reconcile every fiat backing position and token liability on a recurring common clock."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.ripio.com/en/cryptos/local-stablecoins",
-        "https://action.ripio.com/en/wfiat-attestations",
-        "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf",
-        "https://terms.ripio.com/",
-        "https://terms.ripio.com/co/wallet",
-        "https://terms.ripio.com/br/wallet",
-        "https://terms.ripio.com/mx/wallet",
-        "https://terms.ripio.com/cl/wallet",
-        "https://www.ripio.com/en/seguridad",
-        "https://github.com/ripio/latam-stables",
-        "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinterBridge.sol",
-        "https://celo.blockscout.com/api/v2/smart-contracts/0x8a1d45e102e886510e891d2ec656a708991e2d76",
-        "https://celo.blockscout.com/api/v2/smart-contracts/0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652"
-      ],
-      "rationale": "For each named wFIAT asset, no documented recurring whole-supply liability-to-fiat-backing reconciliation cadence, common clock, process operator and complete scope was found. The whitepaper claims strict internal processes and optional attestations; March/June report endpoints are historical snapshots, not evidence of every intervening period or a defined recurring regime. June certificates for wBRL/wMXN/wCOP/wCLP were read individually; wCLP has contradictory currency/date text. Exchange custody PoR, bridge counters and ERC20 supply are not this datum. Explicit unknown scalars are preserved."
-    },
-    {
-      "id": "uw-wclp-ripio-ca6ecfd27618a5d5",
-      "assetId": "wclp-ripio",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:07:56Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R94)",
-      "sources": [
-        {
-          "url": "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf",
-          "observedAt": "2026-10-03T23:04:31Z",
-          "datumAsOf": null,
-          "location": "Version 1.0, October 2025; Economic model & collateralization, page 2",
-          "excerpt": "Strict reconciliation processes are kept, and issuer may publish independent third-party attestations periodically to ensure transparency and proof of backing.",
-          "assertion": "An internal-process assertion and optional periodic publication do not identify a whole-supply reconciliation cadence, clock, operator or exclusions."
-        },
-        {
-          "url": "https://action.ripio.com/en/wfiat-attestations",
-          "observedAt": "2026-10-03T23:04:31Z",
-          "datumAsOf": "2026-06-30",
-          "location": "Public report index",
-          "excerpt": "Third-party verification of reserve balances for every wFIAT stablecoin issued on-chain.",
-          "assertion": "June 2026 reports exist for wBRL, wMXN, wCOP and wCLP; none for wPEN. Point-in-time reports do not themselves establish a recurring whole-supply procedure."
-        },
-        {
-          "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/Aug%202026/Token%20wCOP%2006.30.2026%20Certification%20vf.pdf?hsLang=en",
-          "observedAt": "2026-10-03T23:04:31Z",
-          "datumAsOf": "2026-06-30",
-          "location": "Professional Work Performed and Other Clarifications, pages 1-2",
-          "excerpt": "The information contained herein refers solely to the wCOP token.",
-          "assertion": "The accountant checks dated on-chain issuance/burn records and bank statements, including Celo; it is an asset-specific snapshot, not a published ongoing cadence."
-        },
-        {
-          "url": "https://github.com/ripio/latam-stables",
-          "observedAt": "2026-10-03T23:07:56Z",
-          "datumAsOf": null,
-          "location": "README, Bridge Contracts / Architecture",
-          "excerpt": "The bridge infrastructure enables cross-chain token transfers using a burn-and-mint mechanism.",
-          "assertion": "Technical mint/burn and bridge accounting are disclosed, but do not reconcile every fiat backing position and token liability on a recurring common clock."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.ripio.com/en/cryptos/local-stablecoins",
-        "https://action.ripio.com/en/wfiat-attestations",
-        "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf",
-        "https://terms.ripio.com/",
-        "https://terms.ripio.com/co/wallet",
-        "https://terms.ripio.com/br/wallet",
-        "https://terms.ripio.com/mx/wallet",
-        "https://terms.ripio.com/cl/wallet",
-        "https://www.ripio.com/en/seguridad",
-        "https://github.com/ripio/latam-stables",
-        "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinterBridge.sol",
-        "https://celo.blockscout.com/api/v2/smart-contracts/0x8a1d45e102e886510e891d2ec656a708991e2d76",
-        "https://celo.blockscout.com/api/v2/smart-contracts/0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652"
-      ],
-      "rationale": "For each named wFIAT asset, no documented recurring whole-supply liability-to-fiat-backing reconciliation cadence, common clock, process operator and complete scope was found. The whitepaper claims strict internal processes and optional attestations; March/June report endpoints are historical snapshots, not evidence of every intervening period or a defined recurring regime. June certificates for wBRL/wMXN/wCOP/wCLP were read individually; wCLP has contradictory currency/date text. Exchange custody PoR, bridge counters and ERC20 supply are not this datum. Explicit unknown scalars are preserved."
-    },
-    {
-      "id": "uw-wmxn-ripio-96541a2ce107df3e",
-      "assetId": "wmxn-ripio",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:07:56Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R94)",
-      "sources": [
-        {
-          "url": "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf",
-          "observedAt": "2026-10-03T23:04:31Z",
-          "datumAsOf": null,
-          "location": "Version 1.0, October 2025; Economic model & collateralization, page 2",
-          "excerpt": "Strict reconciliation processes are kept, and issuer may publish independent third-party attestations periodically to ensure transparency and proof of backing.",
-          "assertion": "An internal-process assertion and optional periodic publication do not identify a whole-supply reconciliation cadence, clock, operator or exclusions."
-        },
-        {
-          "url": "https://action.ripio.com/en/wfiat-attestations",
-          "observedAt": "2026-10-03T23:04:31Z",
-          "datumAsOf": "2026-06-30",
-          "location": "Public report index",
-          "excerpt": "Third-party verification of reserve balances for every wFIAT stablecoin issued on-chain.",
-          "assertion": "June 2026 reports exist for wBRL, wMXN, wCOP and wCLP; none for wPEN. Point-in-time reports do not themselves establish a recurring whole-supply procedure."
-        },
-        {
-          "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/Aug%202026/Token%20wCOP%2006.30.2026%20Certification%20vf.pdf?hsLang=en",
-          "observedAt": "2026-10-03T23:04:31Z",
-          "datumAsOf": "2026-06-30",
-          "location": "Professional Work Performed and Other Clarifications, pages 1-2",
-          "excerpt": "The information contained herein refers solely to the wCOP token.",
-          "assertion": "The accountant checks dated on-chain issuance/burn records and bank statements, including Celo; it is an asset-specific snapshot, not a published ongoing cadence."
-        },
-        {
-          "url": "https://github.com/ripio/latam-stables",
-          "observedAt": "2026-10-03T23:07:56Z",
-          "datumAsOf": null,
-          "location": "README, Bridge Contracts / Architecture",
-          "excerpt": "The bridge infrastructure enables cross-chain token transfers using a burn-and-mint mechanism.",
-          "assertion": "Technical mint/burn and bridge accounting are disclosed, but do not reconcile every fiat backing position and token liability on a recurring common clock."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.ripio.com/en/cryptos/local-stablecoins",
-        "https://action.ripio.com/en/wfiat-attestations",
-        "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf",
-        "https://terms.ripio.com/",
-        "https://terms.ripio.com/co/wallet",
-        "https://terms.ripio.com/br/wallet",
-        "https://terms.ripio.com/mx/wallet",
-        "https://terms.ripio.com/cl/wallet",
-        "https://www.ripio.com/en/seguridad",
-        "https://github.com/ripio/latam-stables",
-        "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinterBridge.sol",
-        "https://celo.blockscout.com/api/v2/smart-contracts/0x8a1d45e102e886510e891d2ec656a708991e2d76",
-        "https://celo.blockscout.com/api/v2/smart-contracts/0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652"
-      ],
-      "rationale": "For each named wFIAT asset, no documented recurring whole-supply liability-to-fiat-backing reconciliation cadence, common clock, process operator and complete scope was found. The whitepaper claims strict internal processes and optional attestations; March/June report endpoints are historical snapshots, not evidence of every intervening period or a defined recurring regime. June certificates for wBRL/wMXN/wCOP/wCLP were read individually; wCLP has contradictory currency/date text. Exchange custody PoR, bridge counters and ERC20 supply are not this datum. Explicit unknown scalars are preserved."
-    },
-    {
-      "id": "uw-wpen-ripio-7707d5a07a78c3d9",
-      "assetId": "wpen-ripio",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:07:56Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R94)",
-      "sources": [
-        {
-          "url": "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf",
-          "observedAt": "2026-10-03T23:04:31Z",
-          "datumAsOf": null,
-          "location": "Version 1.0, October 2025; Economic model & collateralization, page 2",
-          "excerpt": "Strict reconciliation processes are kept, and issuer may publish independent third-party attestations periodically to ensure transparency and proof of backing.",
-          "assertion": "An internal-process assertion and optional periodic publication do not identify a whole-supply reconciliation cadence, clock, operator or exclusions."
-        },
-        {
-          "url": "https://action.ripio.com/en/wfiat-attestations",
-          "observedAt": "2026-10-03T23:04:31Z",
-          "datumAsOf": "2026-06-30",
-          "location": "Public report index",
-          "excerpt": "Third-party verification of reserve balances for every wFIAT stablecoin issued on-chain.",
-          "assertion": "June 2026 reports exist for wBRL, wMXN, wCOP and wCLP; none for wPEN. Point-in-time reports do not themselves establish a recurring whole-supply procedure."
-        },
-        {
-          "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/Aug%202026/Token%20wCOP%2006.30.2026%20Certification%20vf.pdf?hsLang=en",
-          "observedAt": "2026-10-03T23:04:31Z",
-          "datumAsOf": "2026-06-30",
-          "location": "Professional Work Performed and Other Clarifications, pages 1-2",
-          "excerpt": "The information contained herein refers solely to the wCOP token.",
-          "assertion": "The accountant checks dated on-chain issuance/burn records and bank statements, including Celo; it is an asset-specific snapshot, not a published ongoing cadence."
-        },
-        {
-          "url": "https://github.com/ripio/latam-stables",
-          "observedAt": "2026-10-03T23:07:56Z",
-          "datumAsOf": null,
-          "location": "README, Bridge Contracts / Architecture",
-          "excerpt": "The bridge infrastructure enables cross-chain token transfers using a burn-and-mint mechanism.",
-          "assertion": "Technical mint/burn and bridge accounting are disclosed, but do not reconcile every fiat backing position and token liability on a recurring common clock."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.ripio.com/en/cryptos/local-stablecoins",
-        "https://action.ripio.com/en/wfiat-attestations",
-        "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf",
-        "https://terms.ripio.com/",
-        "https://terms.ripio.com/co/wallet",
-        "https://terms.ripio.com/br/wallet",
-        "https://terms.ripio.com/mx/wallet",
-        "https://terms.ripio.com/cl/wallet",
-        "https://www.ripio.com/en/seguridad",
-        "https://github.com/ripio/latam-stables",
-        "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinterBridge.sol",
-        "https://celo.blockscout.com/api/v2/smart-contracts/0x8a1d45e102e886510e891d2ec656a708991e2d76",
-        "https://celo.blockscout.com/api/v2/smart-contracts/0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652"
-      ],
-      "rationale": "For each named wFIAT asset, no documented recurring whole-supply liability-to-fiat-backing reconciliation cadence, common clock, process operator and complete scope was found. The whitepaper claims strict internal processes and optional attestations; March/June report endpoints are historical snapshots, not evidence of every intervening period or a defined recurring regime. June certificates for wBRL/wMXN/wCOP/wCLP were read individually; wCLP has contradictory currency/date text. Exchange custody PoR, bridge counters and ERC20 supply are not this datum. Explicit unknown scalars are preserved."
-    },
-    {
-      "id": "uw-wbrl-ripio-2fc604956b1fa3c9",
-      "assetId": "wbrl-ripio",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:07:56Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R94)",
-      "sources": [
-        {
-          "url": "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf",
-          "observedAt": "2026-10-03T23:04:31Z",
-          "datumAsOf": null,
-          "location": "Version 1.0, October 2025; Economic model & collateralization, page 2",
-          "excerpt": "Strict reconciliation processes are kept, and issuer may publish independent third-party attestations periodically to ensure transparency and proof of backing.",
-          "assertion": "An internal-process assertion and optional periodic publication do not identify a whole-supply reconciliation cadence, clock, operator or exclusions."
-        },
-        {
-          "url": "https://action.ripio.com/en/wfiat-attestations",
-          "observedAt": "2026-10-03T23:04:31Z",
-          "datumAsOf": "2026-06-30",
-          "location": "Public report index",
-          "excerpt": "Third-party verification of reserve balances for every wFIAT stablecoin issued on-chain.",
-          "assertion": "June 2026 reports exist for wBRL, wMXN, wCOP and wCLP; none for wPEN. Point-in-time reports do not themselves establish a recurring whole-supply procedure."
-        },
-        {
-          "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/Aug%202026/Token%20wCOP%2006.30.2026%20Certification%20vf.pdf?hsLang=en",
-          "observedAt": "2026-10-03T23:04:31Z",
-          "datumAsOf": "2026-06-30",
-          "location": "Professional Work Performed and Other Clarifications, pages 1-2",
-          "excerpt": "The information contained herein refers solely to the wCOP token.",
-          "assertion": "The accountant checks dated on-chain issuance/burn records and bank statements, including Celo; it is an asset-specific snapshot, not a published ongoing cadence."
-        },
-        {
-          "url": "https://github.com/ripio/latam-stables",
-          "observedAt": "2026-10-03T23:07:56Z",
-          "datumAsOf": null,
-          "location": "README, Bridge Contracts / Architecture",
-          "excerpt": "The bridge infrastructure enables cross-chain token transfers using a burn-and-mint mechanism.",
-          "assertion": "Technical mint/burn and bridge accounting are disclosed, but do not reconcile every fiat backing position and token liability on a recurring common clock."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.ripio.com/en/cryptos/local-stablecoins",
-        "https://action.ripio.com/en/wfiat-attestations",
-        "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf",
-        "https://terms.ripio.com/",
-        "https://terms.ripio.com/co/wallet",
-        "https://terms.ripio.com/br/wallet",
-        "https://terms.ripio.com/mx/wallet",
-        "https://terms.ripio.com/cl/wallet",
-        "https://www.ripio.com/en/seguridad",
-        "https://github.com/ripio/latam-stables",
-        "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinterBridge.sol",
-        "https://celo.blockscout.com/api/v2/smart-contracts/0x8a1d45e102e886510e891d2ec656a708991e2d76",
-        "https://celo.blockscout.com/api/v2/smart-contracts/0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652"
-      ],
-      "rationale": "For each named wFIAT asset, no documented recurring whole-supply liability-to-fiat-backing reconciliation cadence, common clock, process operator and complete scope was found. The whitepaper claims strict internal processes and optional attestations; March/June report endpoints are historical snapshots, not evidence of every intervening period or a defined recurring regime. June certificates for wBRL/wMXN/wCOP/wCLP were read individually; wCLP has contradictory currency/date text. Exchange custody PoR, bridge counters and ERC20 supply are not this datum. Explicit unknown scalars are preserved."
-    },
-    {
-      "id": "uw-wpen-ripio-ce35f196d88943be",
-      "assetId": "wpen-ripio",
-      "scope": {
-        "componentKey": "reserve-composition",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "backing",
-        "requiredDatum": "reserve-composition",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:07:56Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R94)",
-      "sources": [
-        {
-          "url": "https://www.ripio.com/en/cryptos/local-stablecoins",
-          "observedAt": "2026-10-03T23:04:31Z",
-          "datumAsOf": null,
-          "location": "Available local stablecoins and What does wrapped mean",
-          "excerpt": "backed by liquid instruments denominated in the local currency",
-          "assertion": "wPEN and PEN are identified, but broad local-currency backing does not disclose dated holdings, amounts, instrument weights or a whole-book denominator."
-        },
-        {
-          "url": "https://action.ripio.com/en/wfiat-attestations",
-          "observedAt": "2026-10-03T23:04:31Z",
-          "datumAsOf": "2026-06-30",
-          "location": "Complete public attestation index",
-          "excerpt": "wCLP Attestation: June 2026",
-          "assertion": "The index lists wARS, wBRL, wMXN, wCOP and wCLP June certifications, with no wPEN certificate; sibling reports cannot supply its book."
-        },
-        {
-          "url": "https://www.ripio.com/en/seguridad",
-          "observedAt": "2026-10-03T23:07:56Z",
-          "datumAsOf": null,
-          "location": "Proof of Reserves",
-          "excerpt": "We only display balances held in cold wallets managed by Ripio.",
-          "assertion": "Exchange customer-crypto custody balances are a different denominator from wPEN's fiat reserve book."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.ripio.com/en/cryptos/local-stablecoins",
-        "https://action.ripio.com/en/wfiat-attestations",
-        "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf",
-        "https://action.ripio.com/es/blog/las-stablecoins-wfiat-ya-estan-disponibles-en-celo",
-        "https://terms.ripio.com/",
-        "https://www.ripio.com/en/seguridad",
-        "https://github.com/ripio/latam-stables"
-      ],
-      "rationale": "The exact wPEN whole-asset reserve composition is not publicly disclosed on the searched issuer, legal, technical and attestation surfaces: no dated PEN reserve balances, instrument shares, or measurable denominator/tail. General 1:1 claims and the wPEN on-chain dashboard establish denomination/activity, not bank holdings. No Peru legal page is linked from the issuer terms index; the attempted /pe/wallet 404 is not relied on as non-disclosure evidence. No sibling reserve weights are transferred."
-    },
-    {
       "id": "uw-xgld-unitas-2a23121b3ee490f8",
       "assetId": "xgld-unitas",
       "scope": {
@@ -28674,395 +28292,6 @@
       "rationale": "No maximum liquidityHorizon for the entire DSR/DAI yield-manager position is published. Block 26115205 binds the manager to the reviewed implementation and sole DSR provider; availableBalance is zero. DSR exits synchronously when called, but current manager unstake and finalization are admin-gated without forced deadlines. Official mechanism, withdrawal guidance and legal governance bylaws supply no whole-position realization SLA. Neither immediate nor seven-days is justified."
     },
     {
-      "id": "uw-fxsave-f-x-protocol-aef6423aa209a73d",
-      "assetId": "fxsave-f-x-protocol",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:fxsave-f-x-protocol:stablecoin-redeem"
-      },
-      "cause": "B",
-      "assertion": "required-data-public",
-      "reviewedAt": "2026-10-03T23:02:12Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
-      "sources": [
-        {
-          "url": "https://fxprotocol.gitbook.io/fx-docs/developers/integrating-fxsave.md",
-          "observedAt": "2026-10-03T23:02:11Z",
-          "datumAsOf": null,
-          "location": "Scenario 2: Redeeming fxUSD",
-          "excerpt": "USDC needs to be swapped into fxUSD via the converter.",
-          "assertion": "Published fxUSD-only route combines mutable instantRedeemFeeRatio with converter execution. Current producer stores a documented formula but cannot evaluate same-notional net fxUSD cost; fixed 100 bps would omit conversion."
-        },
-        {
-          "url": "https://fxprotocol.gitbook.io/fx-docs/f-x-protocol-mechanisms/fees.md",
-          "observedAt": "2026-10-03T23:02:11Z",
-          "datumAsOf": null,
-          "location": "Stability Pool fees",
-          "excerpt": "1%",
-          "assertion": "Published early-exit component is not the complete converter-dependent same-notional cost."
-        }
-      ]
-    },
-    {
-      "id": "uw-fxsave-f-x-protocol-6e98aa6dbec79939",
-      "assetId": "fxsave-f-x-protocol",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:45c8a74a34f217637ae5efe5",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:02:12Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
-      "sources": [
-        {
-          "url": "https://fxprotocol.gitbook.io/fx-docs/developers/integrating-fxsave.md",
-          "observedAt": "2026-10-03T23:02:11Z",
-          "datumAsOf": null,
-          "location": "Method 2, Step 1",
-          "excerpt": "After redeeming, you will receive the corresponding amount of fxSP tokens.",
-          "assertion": "Native redemption returns a pool receipt, not USD. Atomic basket exits and a cooldown exist; no whole strategy-position final-value realization bound is published."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://fxprotocol.gitbook.io/fx-docs/llms.txt",
-        "https://fxprotocol.gitbook.io/fx-docs/f-x-protocol-mechanisms/stability-pool.md",
-        "https://fxprotocol.gitbook.io/fx-docs/guides/how-to-unstake-from-the-stability-pool.md",
-        "https://fxprotocol.gitbook.io/fx-docs/developers/integrating-fxsave.md",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xe4031e271809d20074e4bef1caeefec5f710e8a6",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x9cfefd90d4c8428d4cbac9baaa6d52c6ba7897f9",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0xd023aac0e2d46c93d4c6e8e2a449bf2d4687804f"
-      ],
-      "rationale": "The exact whole-slice liquidityHorizon of fxSAVE deployed strategy positions is not disclosed. Documentation and current contracts specify receipt redemption, cooldown and basket conversions, but no all-position realization horizon at a known USD value. The pinned onchain principal census establishes custody, not market conversion or Aave withdrawal capacity."
-    },
-    {
-      "id": "uw-fxusd-f-x-protocol-9a3b142ddcdc37f1",
-      "assetId": "fxusd-f-x-protocol",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:0137717dd14ab3c851abe172",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:02:12Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
-      "sources": [
-        {
-          "url": "https://fxprotocol.gitbook.io/fx-docs/developers/processing-the-rebalances-and-liquidations/long-pool-integration.md",
-          "observedAt": "2026-10-03T23:02:11Z",
-          "datumAsOf": null,
-          "location": "3. CreditNote Received",
-          "excerpt": "If it happens that the long pool does not have enough collateral in the contract",
-          "assertion": "Liquidation can deliver credit notes when collateral is lent to short pools; no full WBTC/wstETH branch realization deadline is stated."
-        },
-        {
-          "url": "https://docs.lido.fi/contracts/withdrawal-queue-erc721/",
-          "observedAt": "2026-10-03T23:02:12Z",
-          "datumAsOf": null,
-          "location": "Finalization",
-          "excerpt": "If there is enough ether to fulfill the request.",
-          "assertion": "Lido withdrawal depends on available ETH and oracle finalization, not an unconditional wstETH whole-position deadline."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://fxprotocol.gitbook.io/fx-docs/llms.txt",
-        "https://fxprotocol.gitbook.io/fx-docs/risk-management/advanced-peg-protection-mechanisms/understanding-the-redemption-mechanism.md",
-        "https://fxprotocol.gitbook.io/fx-docs/developers/processing-the-rebalances-and-liquidations/long-pool-integration.md",
-        "https://fxprotocol.gitbook.io/fx-docs/developers/processing-the-rebalances-and-liquidations/creditnotes.md",
-        "https://wbtc.network/",
-        "https://docs.lido.fi/contracts/withdrawal-queue-erc721/",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x9cfefd90d4c8428d4cbac9baaa6d52c6ba7897f9"
-      ],
-      "rationale": "Neither WBTC nor wstETH collateral exposure has a published whole-slice liquidityHorizon. The protocol documents conditional rebalances/liquidations and credit-note substitution. Redemption, underlying market access and Lido queue finalization do not establish a guaranteed realization horizon for the entire scoped branch."
-    },
-    {
-      "id": "uw-fxusd-f-x-protocol-e0e863aac7054d55",
-      "assetId": "fxusd-f-x-protocol",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:67b0ca334fe4dd4b5475cf7d",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:02:12Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
-      "sources": [
-        {
-          "url": "https://fxprotocol.gitbook.io/fx-docs/developers/processing-the-rebalances-and-liquidations/long-pool-integration.md",
-          "observedAt": "2026-10-03T23:02:11Z",
-          "datumAsOf": null,
-          "location": "3. CreditNote Received",
-          "excerpt": "If it happens that the long pool does not have enough collateral in the contract",
-          "assertion": "Liquidation can deliver credit notes when collateral is lent to short pools; no full WBTC/wstETH branch realization deadline is stated."
-        },
-        {
-          "url": "https://docs.lido.fi/contracts/withdrawal-queue-erc721/",
-          "observedAt": "2026-10-03T23:02:12Z",
-          "datumAsOf": null,
-          "location": "Finalization",
-          "excerpt": "If there is enough ether to fulfill the request.",
-          "assertion": "Lido withdrawal depends on available ETH and oracle finalization, not an unconditional wstETH whole-position deadline."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://fxprotocol.gitbook.io/fx-docs/llms.txt",
-        "https://fxprotocol.gitbook.io/fx-docs/risk-management/advanced-peg-protection-mechanisms/understanding-the-redemption-mechanism.md",
-        "https://fxprotocol.gitbook.io/fx-docs/developers/processing-the-rebalances-and-liquidations/long-pool-integration.md",
-        "https://fxprotocol.gitbook.io/fx-docs/developers/processing-the-rebalances-and-liquidations/creditnotes.md",
-        "https://wbtc.network/",
-        "https://docs.lido.fi/contracts/withdrawal-queue-erc721/",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x9cfefd90d4c8428d4cbac9baaa6d52c6ba7897f9"
-      ],
-      "rationale": "Neither WBTC nor wstETH collateral exposure has a published whole-slice liquidityHorizon. The protocol documents conditional rebalances/liquidations and credit-note substitution. Redemption, underlying market access and Lido queue finalization do not establish a guaranteed realization horizon for the entire scoped branch."
-    },
-    {
-      "id": "uw-fxd-fathom-ad30a9d40bbf4091",
-      "assetId": "fxd-fathom",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:01ba9e9e0b5953570d4e52f0",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:02:12Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
-      "sources": [
-        {
-          "url": "https://docs.stakexdc.com/docs/liquid-staking/withdrawals",
-          "observedAt": "2026-10-03T23:02:12Z",
-          "datumAsOf": null,
-          "location": "The queue is public \u2014 position, not a date",
-          "excerpt": "No settlement date is shown or promised",
-          "assertion": "psXDC queues depend on funding tranches and masternode unbonding; approximately 35 days is not a promised whole-position horizon."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.fathom.fi/llms.txt",
-        "https://docs.fathom.fi/fxd-stablecoin/deployments/xdc-network.md",
-        "https://docs.fathom.fi/fxd-stablecoin/risk-management.md",
-        "https://docs.fathom.fi/terms-of-service.md",
-        "https://docs.stakexdc.com/docs/liquid-staking/architecture",
-        "https://docs.stakexdc.com/docs/liquid-staking/withdrawals",
-        "https://xdcscan.com/block/107486464"
-      ],
-      "rationale": "No exact full psXDC-collateral slice liquidityHorizon is published. Fathom exposes collateral pools and conditional liquidation; PrimeStaked publishes instant-or-queued withdrawal rules, funding lanes and approximate unbonding, expressly without a settlement date. Neither establishes full scoped FXD collateral realization at a known value."
-    },
-    {
-      "id": "uw-fxd-fathom-9fd17e515d0559f4",
-      "assetId": "fxd-fathom",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:63ca7f2ed31b0df9b4bedb9b",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:02:12Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
-      "sources": [
-        {
-          "url": "https://docs.fathom.fi/terms-of-service.md",
-          "observedAt": "2026-10-03T23:02:11Z",
-          "datumAsOf": "2024-04-09",
-          "location": "8.4 Not Registered with the SEC or Any Other Agency",
-          "excerpt": "we do not (and cannot) guarantee market best pricing or best execution through our Products",
-          "assertion": "Published third-party market execution does not establish the entire WXDC collateral slice realization horizon."
-        },
-        {
-          "url": "https://docs.fathom.fi/fxd-stablecoin/risk-management.md",
-          "observedAt": "2026-10-03T23:02:12Z",
-          "datumAsOf": null,
-          "location": "Liquidation Risks",
-          "excerpt": "Governance decides on the Close Factor value",
-          "assertion": "Conditional partial liquidations do not promise all-position USD availability."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.fathom.fi/introduction.md",
-        "https://docs.fathom.fi/llms.txt",
-        "https://docs.fathom.fi/fxd-stablecoin/deployments/xdc-network.md",
-        "https://docs.fathom.fi/fxd-stablecoin/user-guides/repay-and-close-fxd-position.md",
-        "https://docs.fathom.fi/fxd-stablecoin/risk-management.md",
-        "https://docs.fathom.fi/terms-of-service.md",
-        "https://xdcscan.com/block/107486464"
-      ],
-      "rationale": "No exact whole WXDC collateral pool liquidityHorizon is published in Fathom deployment, repayment, risk, liquidation or legal sources. Onchain unwrap/transfer and borrower debt closure are not a bound for final realization of all FXD backing; the protocol explicitly relies on third-party liquidity and disclaims best execution."
-    },
-    {
-      "id": "uw-fxd-fathom-60af023bdc795070",
-      "assetId": "fxd-fathom",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:90c347f557383f87fc8fa7cf",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:02:12Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
-      "sources": [
-        {
-          "url": "https://comtechgold.com/assets/pdf/Terms_and_Conditions.pdf",
-          "observedAt": "2026-10-03T23:02:12Z",
-          "datumAsOf": "2022-08-23",
-          "location": "8.1 Redemption of Digital Gold to physical gold",
-          "excerpt": "You may instruct the Digitization Entity to convert Digital Gold to physical gold from the Gold Reserves of a minimum quantity of one kilogram",
-          "assertion": "CGO physical redemption has a 1 kg minimum; no guaranteed final USD liquidation or delivery deadline is specified."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.fathom.fi/fxd-stablecoin/deployments/xdc-network.md",
-        "https://docs.fathom.fi/fxd-stablecoin/risk-management.md",
-        "https://docs.fathom.fi/terms-of-service.md",
-        "https://comtechgold.com/assets/pdf/Terms_and_Conditions.pdf",
-        "https://comtechgold.com/assets/pdf/cgo_whitepaper_v1.pdf",
-        "https://xdcscan.com/block/107486464"
-      ],
-      "rationale": "No exact full CGO collateral slice liquidityHorizon is disclosed. Fathom documents conditional liquidation; Comtech terms describe minimum-size gold conversion, identification, delivery and variable charges without a final-delivery or USD settlement bound. Current measured Fathom CGO holding is far below the physical redemption minimum."
-    },
-    {
-      "id": "uw-bc3m-backed-0fe86a7c3cd04e82",
-      "assetId": "bc3m-backed",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:bc3m-backed:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:02:12Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
-      "sources": [
-        {
-          "url": "https://cdn.prod.website-files.com/655f3efc4be468487052e35a/6a748b81c9b1aca19a11c102_Backed_Assets_Base%20Prospectus_20260727.pdf",
-          "observedAt": "2026-10-03T23:02:12Z",
-          "datumAsOf": "2026-07-27",
-          "location": "VI.v.c Settlement, p.115",
-          "excerpt": "Until the fifth Business Day following the receipt of the Investor's Products (i.e. T+5)",
-          "assertion": "T+5 bounds instructions/liquidation steps, not final bank receipt; VIII.ii permits payment postponement without a finite cap."
-        },
-        {
-          "url": "https://cdn.prod.website-files.com/655f3efc4be468487052e35a/6a748b81c9b1aca19a11c102_Backed_Assets_Base%20Prospectus_20260727.pdf",
-          "observedAt": "2026-10-03T23:02:12Z",
-          "datumAsOf": "2026-07-27",
-          "location": "VIII.ii.b Underlying Illiquidity, p.118",
-          "excerpt": "May postpone the determination (fixing) and/or the payment of the relevant Redemption Amount accordingly",
-          "assertion": "No finite calendar-second final-settlement SLA is imposed when collateral is illiquid."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://assets.backed.fi/products/bc3m",
-        "https://assets.backed.fi/legal-documentation",
-        "https://cdn.prod.website-files.com/655f3efc4be468487052e35a/6a748b81c9b1aca19a11c102_Backed_Assets_Base%20Prospectus_20260727.pdf",
-        "https://backed.fi/news-updates/the-future-is-xstocks-upgrading-btokens",
-        "https://www.amundi.fr/fr_part/dl/doc/prospectus/FR0010754200/FRA/FRA",
-        "https://www.amundietf.it/pdfDocuments/annual-report/FR0010754200/ENG/20250630",
-        "https://eth.blockscout.com/tx/0xed24a874126443f07e7976ea89d84499999346ef574b78d4b2dd3daf9bb84128"
-      ],
-      "rationale": "The exact settlementSlaSec for final bC3M redemption proceeds is not disclosed. T+5 business days concerns deactivation, collateral sale, amount calculation and payment instructions; it is not a final-receipt SLA. Underlying-illiquidity terms permit payment postponement for the number of business days the issuer determines necessary. Wind-down notice keeps standard redemption, not a new finite SLA."
-    },
-    {
-      "id": "uw-bc3m-backed-d52d3adf7e9860f3",
-      "assetId": "bc3m-backed",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:5b88ab39ffe7a05d24df56b5",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:02:12Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
-      "sources": [
-        {
-          "url": "https://www.amundi.fr/fr_part/dl/doc/prospectus/FR0010754200/FRA/FRA",
-          "observedAt": "2026-10-03T23:02:12Z",
-          "datumAsOf": "2026-04-16",
-          "location": "R\u00e8glement Article 3, p.29",
-          "excerpt": "le rachat par le Fonds de ses parts, comme l\u2019\u00e9mission de parts nouvelles, peuvent \u00eatre suspendus",
-          "assertion": "Five-day post-valuation settlement can extend to 30 days, and redemptions can also be suspended; no whole-slice unconditional horizon."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://assets.backed.fi/products/bc3m",
-        "https://assets.backed.fi/legal-documentation",
-        "https://cdn.prod.website-files.com/655f3efc4be468487052e35a/6a748b81c9b1aca19a11c102_Backed_Assets_Base%20Prospectus_20260727.pdf",
-        "https://backed.fi/news-updates/the-future-is-xstocks-upgrading-btokens",
-        "https://www.amundi.fr/fr_part/dl/doc/prospectus/FR0010754200/FRA/FRA",
-        "https://www.amundietf.it/pdfDocuments/annual-report/FR0010754200/ENG/20250630",
-        "https://eth.blockscout.com/tx/0xed24a874126443f07e7976ea89d84499999346ef574b78d4b2dd3daf9bb84128"
-      ],
-      "rationale": "No exact whole ETF-share reserve liquidityHorizon is published. Primary orders normally settle J+2, regulations allow five days after valuation and up to 30 days in exceptional asset sales; gates and temporary suspension occur before final payment. These conditional schedules do not bound the entire bC3M backing slice under all admitted restrictions."
-    },
-    {
-      "id": "uw-bc3m-backed-0dac2ca6802cc7d1",
-      "assetId": "bc3m-backed",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:5b88ab39ffe7a05d24df56b5",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:02:12Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
-      "sources": [
-        {
-          "url": "https://www.amundi.fr/fr_part/dl/doc/prospectus/FR0010754200/FRA/FRA",
-          "observedAt": "2026-10-03T23:02:12Z",
-          "datumAsOf": "2026-04-16",
-          "location": "R\u00e8glement Article 1, p.28",
-          "excerpt": "La dur\u00e9e du Fonds est de 99 ans \u00e0 compter de sa cr\u00e9ation, sauf dans les cas de dissolution anticip\u00e9e ou de la prorogation pr\u00e9vue au pr\u00e9sent r\u00e8glement.",
-          "assertion": "Fund duration can be extended and is not a nonextendable maximum maturity of its shares; 0\u20136 months is the bond-index mandate."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://assets.backed.fi/products/bc3m",
-        "https://assets.backed.fi/legal-documentation",
-        "https://cdn.prod.website-files.com/655f3efc4be468487052e35a/6a748b81c9b1aca19a11c102_Backed_Assets_Base%20Prospectus_20260727.pdf",
-        "https://backed.fi/news-updates/the-future-is-xstocks-upgrading-btokens",
-        "https://www.amundi.fr/fr_part/dl/doc/prospectus/FR0010754200/FRA/FRA",
-        "https://www.amundietf.it/pdfDocuments/annual-report/FR0010754200/ENG/20250630",
-        "https://eth.blockscout.com/tx/0xed24a874126443f07e7976ea89d84499999346ef574b78d4b2dd3daf9bb84128"
-      ],
-      "rationale": "No finite maximum maturityDaysMax of the fund-share claim is disclosed. This is a fund-share reserve, not individual bills: the 0\u20136 month index mandate is not share maturity. The fund has a 99-year organizational life expressly subject to extension, so neither 180 days nor a conversion of 99 years is a hard share-claim maximum."
-    },
-    {
       "id": "uw-usdf-astherus-48ff6349cb8f32be",
       "assetId": "usdf-astherus",
       "scope": {
@@ -31013,131 +30242,6 @@
         "https://sourcify.dev/server/v2/contract/56/0xb4d3c1bb59be7b419af4e10e9b240f425782b22a?fields=sources,abi"
       ],
       "rationale": "Exact whole-book custodyEscrow legal holder claim, segregation and insolvency rights are not disclosed. Site/docs/repository/exact source identify controlled reserves and treasury sweeps but no custodian legal terms or recipient-level legal protections. No statutory remoteness, knownUnknownExposurePct=0 or fully-onchain exemption is inferred."
-    },
-    {
-      "id": "uw-rlusd-ripple-bd0b8d90aa367daa",
-      "assetId": "rlusd-ripple",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:rlusd-ripple:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:37:19Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (PilotFiat)",
-      "sources": [
-        {
-          "url": "https://ripple.com/legal/stablecoin/",
-          "observedAt": "2026-10-03T22:35:16Z",
-          "datumAsOf": "2024-10-03",
-          "location": "Section 11.10",
-          "excerpt": "Although a Customer can always redeem one (1) RLUSD for 1 U.S. dollar ($1) with Ripple, less Fees, Ripple cannot control how third parties quote or value RLUSD",
-          "assertion": "Public terms reserve Fees but do not publish an applicable numeric issuer redemption tariff."
-        },
-        {
-          "url": "https://docs.ripple.com/products/stablecoin/user-interface/tutorials/redeem-rlusd",
-          "observedAt": "2026-10-03T22:35:16Z",
-          "datumAsOf": null,
-          "location": "Prerequisites",
-          "excerpt": "Ensure you have sufficient XRP or ETH in your wallet(s) to cover the network fees required for redemptions.",
-          "assertion": "Network fees are acknowledged; this is not an issuer-fee schedule or complete same-notional cost bound."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://ripple.com/legal/stablecoin/",
-        "https://ripple.com/reports/rlusd-whitepaper.pdf",
-        "https://docs.ripple.com/products/stablecoin/user-interface/tutorials/redeem-rlusd",
-        "https://ripple.com/products/stablecoin/transparency/",
-        "https://cdn.sanity.io/files/ior4a5y3/production/4981331c98a2bb203c0c9ab2584e8b2a0da80938.pdf/RLUSD%20Attestation%20Report%20(Aug)_Final%20Signed.pdf",
-        "https://www.dfs.ny.gov/industry_guidance/industry_letters/il20220608_issuance_stablecoins"
-      ],
-      "rationale": "The exact offchain-issuer RLUSD cost remains unquantified: public User Terms expressly reserve Fees and direct customers to a separate Customer Agreement, while issuer redemption docs, whitepaper, report archive and NYDFS guidance disclose no applicable numeric issuer tariff or complete all-in same-notional fee formula. Public network gas mechanics do not disclose that missing issuer charge."
-    },
-    {
-      "id": "uw-paxg-paxos-f19a39ffcbde37e9",
-      "assetId": "paxg-paxos",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:paxg-paxos:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:37:19Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (PilotFiat)",
-      "sources": [
-        {
-          "url": "https://www.paxos.com/terms-and-conditions/pax-gold-terms-conditions",
-          "observedAt": "2026-10-03T22:35:20Z",
-          "datumAsOf": "2025-12-12",
-          "location": "Sections 11.4.3 and 11.5",
-          "excerpt": "You are responsible for delivery and once your bars are in the possession of the delivery service you choose, then Paxos will have been deemed to have fulfilled its obligation for delivery.",
-          "assertion": "Physical gold redemption defines handoff to the customer-selected carrier, but no maximum for issuer bar release or completed delivery is stated."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.paxos.com/pax-gold",
-        "https://www.paxos.com/paxg-whitepaper.pdf",
-        "https://www.paxos.com/paxg-transparency",
-        "https://framerusercontent.com/assets/9bk8TbTXouqOrpoxLSn5XIf7Ufo.pdf",
-        "https://www.paxos.com/terms-and-conditions/pax-gold-terms-conditions",
-        "https://docs.paxos.com/guides/dashboard/paxg",
-        "https://support.paxos.com/articles/2330993057-daily-deposits-withdrawal-schedule",
-        "https://support.paxos.com/articles/7442970352-how-to-submit-a-usd-fiat-withdrawal-to-a-bank-account"
-      ],
-      "rationale": "The exact captured offchain-issuer route outputs physical commodity:xau, not bank USD. Public terms section 11.4 require at least 430 PAXG per bar and customer-arranged delivery, with issuer delivery obligation fulfilled at carrier handoff; section 11.5 offers commercially reasonable efforts and several business days without a binding maximum. Product, whitepaper, dashboard guide, reserve archive and support surfaces publish no end-to-end maximum for this physical-gold channel. Fiat wire guidelines cannot answer it."
-    },
-    {
-      "id": "uw-paxg-paxos-f1accd2694a0102a",
-      "assetId": "paxg-paxos",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:bb342ba2193c0fceb94f272f",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:37:19Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (PilotFiat)",
-      "sources": [
-        {
-          "url": "https://framerusercontent.com/assets/9bk8TbTXouqOrpoxLSn5XIf7Ufo.pdf",
-          "observedAt": "2026-10-03T22:35:22Z",
-          "datumAsOf": "2026-08-31",
-          "location": "Exhibit B, page 6",
-          "excerpt": "The Company purchases their gold from StoneX Group Inc., a company registered in England and Wales (StoneX).",
-          "assertion": "Full allocated-gold quantity and sourcing/vault institutions are disclosed, not a whole-position USD realization horizon."
-        },
-        {
-          "url": "https://www.paxos.com/terms-and-conditions/pax-gold-terms-conditions",
-          "observedAt": "2026-10-03T22:35:20Z",
-          "datumAsOf": "2025-12-12",
-          "location": "Section 11.5",
-          "excerpt": "Paxos will make commercially reasonable efforts to convert and/or redeem your PAXG quickly.",
-          "assertion": "Customer conversion effort is not a guaranteed realization horizon for the entire reserve gold position."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.paxos.com/pax-gold",
-        "https://www.paxos.com/paxg-whitepaper.pdf",
-        "https://www.paxos.com/paxg-transparency",
-        "https://framerusercontent.com/assets/9bk8TbTXouqOrpoxLSn5XIf7Ufo.pdf",
-        "https://www.paxos.com/terms-and-conditions/pax-gold-terms-conditions",
-        "https://docs.paxos.com/guides/dashboard/paxg",
-        "https://support.paxos.com/articles/2330993057-daily-deposits-withdrawal-schedule",
-        "https://support.paxos.com/articles/7442970352-how-to-submit-a-usd-fiat-withdrawal-to-a-bank-account"
-      ],
-      "rationale": "The exact whole-slice liquidityHorizon for allocated reserve gold is undisclosed. The full August gold inventory, vault/source identities, whitepaper, terms, dashboard docs, product FAQ and redemption/wire help disclose ownership and customer conversion mechanisms but no funded or enforceable time bound to realize the entire scoped gold position into USD. Instant token transfer, indicative quotes and market-wide gold volume cannot establish immediate whole-book liquidity."
     },
     {
       "id": "uw-usdx-hex-trust-e6ef208a803d361c",
@@ -36524,6 +35628,1140 @@
           "assertion": "Deployment registry binds the legacy USBD collateral redemption mechanism; do not import the new USDC collar-loan fee schedule as USBD terms."
         }
       ]
+    },
+    {
+      "id": "uw-wcop-ripio-4be291ceacb20ff2",
+      "assetId": "wcop-ripio",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:46:41Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R07)",
+      "sources": [
+        {
+          "url": "https://action.ripio.com/en/wfiat-attestations",
+          "observedAt": "2026-10-03T23:46:41Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Report index, wBRL/wMXN/wCOP/wCLP entries",
+          "excerpt": "wCOP Attestation: June 2026",
+          "assertion": "The current issuer archive still lists June 30 certificates for each of the four currencies, not a newer whole-book composition."
+        },
+        {
+          "url": "https://www.ripio.com/en/cryptos/local-stablecoins",
+          "observedAt": "2026-10-03T23:46:41Z",
+          "datumAsOf": null,
+          "location": "What does wrapped mean / Releases and Updates",
+          "excerpt": "backed by liquid instruments denominated in the local currency",
+          "assertion": "Current product disclosure gives a backing-category claim and historical March bank balances, not current measured allocations or a current reserve denominator."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://action.ripio.com/en/wfiat-attestations",
+        "https://www.ripio.com/en/cryptos/local-stablecoins",
+        "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf",
+        "https://terms.ripio.com/co/wallet",
+        "https://terms.ripio.com/br/wallet",
+        "https://terms.ripio.com/cl/wallet",
+        "https://terms.ripio.com/mx/wallet",
+        "https://action.ripio.com/en/blog/wfiat-stablecoins-now-live-on-celo",
+        "https://github.com/ripio/latam-stables",
+        "https://celo.blockscout.com/api/v2/addresses/0x8a1d45e102e886510e891d2ec656a708991e2d76/logs"
+      ],
+      "rationale": "No current whole-asset reserve composition/denominator is publicly disclosed for these four assets. Wave 2 re-fetched the issuer archive/product/Celo announcement and searched for newer reports; the latest archive remains June 30. Wave-1 individually read June certificates and legal/whitepaper surfaces are reused. Those AUP snapshots are outside the 38-day admission window and cannot enter named-attestor admission. Token supply/bridge logs disclose liabilities, not today's offchain reserve book; no date bump, normalization or assurance relabel is warranted."
+    },
+    {
+      "id": "uw-wbrl-ripio-201ba3fe97eb374c",
+      "assetId": "wbrl-ripio",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:46:41Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R07)",
+      "sources": [
+        {
+          "url": "https://action.ripio.com/en/wfiat-attestations",
+          "observedAt": "2026-10-03T23:46:41Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Report index, wBRL/wMXN/wCOP/wCLP entries",
+          "excerpt": "wCOP Attestation: June 2026",
+          "assertion": "The current issuer archive still lists June 30 certificates for each of the four currencies, not a newer whole-book composition."
+        },
+        {
+          "url": "https://www.ripio.com/en/cryptos/local-stablecoins",
+          "observedAt": "2026-10-03T23:46:41Z",
+          "datumAsOf": null,
+          "location": "What does wrapped mean / Releases and Updates",
+          "excerpt": "backed by liquid instruments denominated in the local currency",
+          "assertion": "Current product disclosure gives a backing-category claim and historical March bank balances, not current measured allocations or a current reserve denominator."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://action.ripio.com/en/wfiat-attestations",
+        "https://www.ripio.com/en/cryptos/local-stablecoins",
+        "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf",
+        "https://terms.ripio.com/co/wallet",
+        "https://terms.ripio.com/br/wallet",
+        "https://terms.ripio.com/cl/wallet",
+        "https://terms.ripio.com/mx/wallet",
+        "https://action.ripio.com/en/blog/wfiat-stablecoins-now-live-on-celo",
+        "https://github.com/ripio/latam-stables",
+        "https://celo.blockscout.com/api/v2/addresses/0x8a1d45e102e886510e891d2ec656a708991e2d76/logs"
+      ],
+      "rationale": "No current whole-asset reserve composition/denominator is publicly disclosed for these four assets. Wave 2 re-fetched the issuer archive/product/Celo announcement and searched for newer reports; the latest archive remains June 30. Wave-1 individually read June certificates and legal/whitepaper surfaces are reused. Those AUP snapshots are outside the 38-day admission window and cannot enter named-attestor admission. Token supply/bridge logs disclose liabilities, not today's offchain reserve book; no date bump, normalization or assurance relabel is warranted."
+    },
+    {
+      "id": "uw-wclp-ripio-25d3217d6c985a26",
+      "assetId": "wclp-ripio",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:46:41Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R07)",
+      "sources": [
+        {
+          "url": "https://action.ripio.com/en/wfiat-attestations",
+          "observedAt": "2026-10-03T23:46:41Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Report index, wBRL/wMXN/wCOP/wCLP entries",
+          "excerpt": "wCOP Attestation: June 2026",
+          "assertion": "The current issuer archive still lists June 30 certificates for each of the four currencies, not a newer whole-book composition."
+        },
+        {
+          "url": "https://www.ripio.com/en/cryptos/local-stablecoins",
+          "observedAt": "2026-10-03T23:46:41Z",
+          "datumAsOf": null,
+          "location": "What does wrapped mean / Releases and Updates",
+          "excerpt": "backed by liquid instruments denominated in the local currency",
+          "assertion": "Current product disclosure gives a backing-category claim and historical March bank balances, not current measured allocations or a current reserve denominator."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://action.ripio.com/en/wfiat-attestations",
+        "https://www.ripio.com/en/cryptos/local-stablecoins",
+        "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf",
+        "https://terms.ripio.com/co/wallet",
+        "https://terms.ripio.com/br/wallet",
+        "https://terms.ripio.com/cl/wallet",
+        "https://terms.ripio.com/mx/wallet",
+        "https://action.ripio.com/en/blog/wfiat-stablecoins-now-live-on-celo",
+        "https://github.com/ripio/latam-stables",
+        "https://celo.blockscout.com/api/v2/addresses/0x8a1d45e102e886510e891d2ec656a708991e2d76/logs"
+      ],
+      "rationale": "No current whole-asset reserve composition/denominator is publicly disclosed for these four assets. Wave 2 re-fetched the issuer archive/product/Celo announcement and searched for newer reports; the latest archive remains June 30. Wave-1 individually read June certificates and legal/whitepaper surfaces are reused. Those AUP snapshots are outside the 38-day admission window and cannot enter named-attestor admission. Token supply/bridge logs disclose liabilities, not today's offchain reserve book; no date bump, normalization or assurance relabel is warranted."
+    },
+    {
+      "id": "uw-wmxn-ripio-7748a8be13665436",
+      "assetId": "wmxn-ripio",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:46:41Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R07)",
+      "sources": [
+        {
+          "url": "https://action.ripio.com/en/wfiat-attestations",
+          "observedAt": "2026-10-03T23:46:41Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Report index, wBRL/wMXN/wCOP/wCLP entries",
+          "excerpt": "wCOP Attestation: June 2026",
+          "assertion": "The current issuer archive still lists June 30 certificates for each of the four currencies, not a newer whole-book composition."
+        },
+        {
+          "url": "https://www.ripio.com/en/cryptos/local-stablecoins",
+          "observedAt": "2026-10-03T23:46:41Z",
+          "datumAsOf": null,
+          "location": "What does wrapped mean / Releases and Updates",
+          "excerpt": "backed by liquid instruments denominated in the local currency",
+          "assertion": "Current product disclosure gives a backing-category claim and historical March bank balances, not current measured allocations or a current reserve denominator."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://action.ripio.com/en/wfiat-attestations",
+        "https://www.ripio.com/en/cryptos/local-stablecoins",
+        "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf",
+        "https://terms.ripio.com/co/wallet",
+        "https://terms.ripio.com/br/wallet",
+        "https://terms.ripio.com/cl/wallet",
+        "https://terms.ripio.com/mx/wallet",
+        "https://action.ripio.com/en/blog/wfiat-stablecoins-now-live-on-celo",
+        "https://github.com/ripio/latam-stables",
+        "https://celo.blockscout.com/api/v2/addresses/0x8a1d45e102e886510e891d2ec656a708991e2d76/logs"
+      ],
+      "rationale": "No current whole-asset reserve composition/denominator is publicly disclosed for these four assets. Wave 2 re-fetched the issuer archive/product/Celo announcement and searched for newer reports; the latest archive remains June 30. Wave-1 individually read June certificates and legal/whitepaper surfaces are reused. Those AUP snapshots are outside the 38-day admission window and cannot enter named-attestor admission. Token supply/bridge logs disclose liabilities, not today's offchain reserve book; no date bump, normalization or assurance relabel is warranted."
+    },
+    {
+      "id": "uw-pyusd-paypal-81f4dc01be7bf26e",
+      "assetId": "pyusd-paypal",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:78d2dcff04be18da849b2698",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:46:41Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R07)",
+      "sources": [
+        {
+          "url": "https://framerusercontent.com/assets/VdMoM8qevL5j7tgTTmLhkemRdY.pdf",
+          "observedAt": "2026-10-03T23:46:41Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Exhibit B, Cash, page 8",
+          "excerpt": "the uninsured FDIC demand deposits at commercial banks totaled $86,780,193 and $110,919,918, respectively.",
+          "assertion": "Demand deposits are explicitly identified for the uninsured portion. Total August cash is $111,173,415; the report does not give an exhaustive all-account contractual tenor or maturity roster."
+        },
+        {
+          "url": "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions",
+          "observedAt": "2026-10-03T23:46:41Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Section 3.2.1.1, Cash Management",
+          "excerpt": "fiat currency held in FDIC-insured bank accounts",
+          "assertion": "The permitted cash category and segregation terms do not impose an all-account numerical deposit maturity maximum."
+        },
+        {
+          "url": "https://www.paxos.com/terms-and-conditions/fdic-pass-through-insurance-disclosures",
+          "observedAt": "2026-10-03T23:46:41Z",
+          "datumAsOf": "2025-12-12",
+          "location": "Depositories and deposit placement networks",
+          "excerpt": "Paxos may utilize deposit placement networks operated by IntraFi Network LLC and Reich & Tang Deposit Solutions, LLC",
+          "assertion": "The legal bank/network roster is not a PYUSD-specific account-tenor schedule and does not supply the whole cash-slice maturity maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.paxos.com/pyusd-transparency",
+        "https://framerusercontent.com/assets/VdMoM8qevL5j7tgTTmLhkemRdY.pdf",
+        "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions",
+        "https://www.paxos.com/terms-and-conditions/fdic-pass-through-insurance-disclosures",
+        "https://www.dfs.ny.gov/industry_guidance/industry_letters/il20220608_issuance_stablecoins"
+      ],
+      "rationale": "No whole-slice numerical maturityDaysMax is disclosed for PYUSD's bank deposits. The examination expressly labels $110,919,918 of $111,173,415 as uninsured demand deposits, but does not provide a contractual maturity roster for every insured/network account or an all-account tenor mandate. Terms, deposit-placement disclosures, the current archive and referenced reserve guidance add no exact maximum. Demand claims have no scheduled maturity; do not fabricate zero, reclassify the bank claim as cash, or extend the demand-deposit description beyond its stated scope."
+    },
+    {
+      "id": "uw-rlusd-ripple-bd0b8d90aa367daa",
+      "assetId": "rlusd-ripple",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:rlusd-ripple:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:37:19Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (PilotFiat)",
+      "sources": [
+        {
+          "url": "https://ripple.com/legal/stablecoin/",
+          "observedAt": "2026-10-03T22:35:16Z",
+          "datumAsOf": "2024-10-03",
+          "location": "Section 11.10",
+          "excerpt": "Although a Customer can always redeem one (1) RLUSD for 1 U.S. dollar ($1) with Ripple, less Fees, Ripple cannot control how third parties quote or value RLUSD",
+          "assertion": "Public terms reserve Fees but do not publish an applicable numeric issuer redemption tariff."
+        },
+        {
+          "url": "https://docs.ripple.com/products/stablecoin/user-interface/tutorials/redeem-rlusd",
+          "observedAt": "2026-10-03T22:35:16Z",
+          "datumAsOf": null,
+          "location": "Prerequisites",
+          "excerpt": "Ensure you have sufficient XRP or ETH in your wallet(s) to cover the network fees required for redemptions.",
+          "assertion": "Network fees are acknowledged; this is not an issuer-fee schedule or complete same-notional cost bound."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://ripple.com/legal/stablecoin/",
+        "https://ripple.com/reports/rlusd-whitepaper.pdf",
+        "https://docs.ripple.com/products/stablecoin/user-interface/tutorials/redeem-rlusd",
+        "https://ripple.com/products/stablecoin/transparency/",
+        "https://cdn.sanity.io/files/ior4a5y3/production/4981331c98a2bb203c0c9ab2584e8b2a0da80938.pdf/RLUSD%20Attestation%20Report%20(Aug)_Final%20Signed.pdf",
+        "https://www.dfs.ny.gov/industry_guidance/industry_letters/il20220608_issuance_stablecoins"
+      ],
+      "rationale": "The exact offchain-issuer RLUSD cost remains unquantified: public User Terms expressly reserve Fees and direct customers to a separate Customer Agreement, while issuer redemption docs, whitepaper, report archive and NYDFS guidance disclose no applicable numeric issuer tariff or complete all-in same-notional fee formula. Public network gas mechanics do not disclose that missing issuer charge."
+    },
+    {
+      "id": "uw-paxg-paxos-f19a39ffcbde37e9",
+      "assetId": "paxg-paxos",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:paxg-paxos:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:37:19Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (PilotFiat)",
+      "sources": [
+        {
+          "url": "https://www.paxos.com/terms-and-conditions/pax-gold-terms-conditions",
+          "observedAt": "2026-10-03T22:35:20Z",
+          "datumAsOf": "2025-12-12",
+          "location": "Sections 11.4.3 and 11.5",
+          "excerpt": "You are responsible for delivery and once your bars are in the possession of the delivery service you choose, then Paxos will have been deemed to have fulfilled its obligation for delivery.",
+          "assertion": "Physical gold redemption defines handoff to the customer-selected carrier, but no maximum for issuer bar release or completed delivery is stated."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.paxos.com/pax-gold",
+        "https://www.paxos.com/paxg-whitepaper.pdf",
+        "https://www.paxos.com/paxg-transparency",
+        "https://framerusercontent.com/assets/9bk8TbTXouqOrpoxLSn5XIf7Ufo.pdf",
+        "https://www.paxos.com/terms-and-conditions/pax-gold-terms-conditions",
+        "https://docs.paxos.com/guides/dashboard/paxg",
+        "https://support.paxos.com/articles/2330993057-daily-deposits-withdrawal-schedule",
+        "https://support.paxos.com/articles/7442970352-how-to-submit-a-usd-fiat-withdrawal-to-a-bank-account"
+      ],
+      "rationale": "The exact captured offchain-issuer route outputs physical commodity:xau, not bank USD. Public terms section 11.4 require at least 430 PAXG per bar and customer-arranged delivery, with issuer delivery obligation fulfilled at carrier handoff; section 11.5 offers commercially reasonable efforts and several business days without a binding maximum. Product, whitepaper, dashboard guide, reserve archive and support surfaces publish no end-to-end maximum for this physical-gold channel. Fiat wire guidelines cannot answer it."
+    },
+    {
+      "id": "uw-paxg-paxos-f1accd2694a0102a",
+      "assetId": "paxg-paxos",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:bb342ba2193c0fceb94f272f",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:37:19Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (PilotFiat)",
+      "sources": [
+        {
+          "url": "https://framerusercontent.com/assets/9bk8TbTXouqOrpoxLSn5XIf7Ufo.pdf",
+          "observedAt": "2026-10-03T22:35:22Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Exhibit B, page 6",
+          "excerpt": "The Company purchases their gold from StoneX Group Inc., a company registered in England and Wales (StoneX).",
+          "assertion": "Full allocated-gold quantity and sourcing/vault institutions are disclosed, not a whole-position USD realization horizon."
+        },
+        {
+          "url": "https://www.paxos.com/terms-and-conditions/pax-gold-terms-conditions",
+          "observedAt": "2026-10-03T22:35:20Z",
+          "datumAsOf": "2025-12-12",
+          "location": "Section 11.5",
+          "excerpt": "Paxos will make commercially reasonable efforts to convert and/or redeem your PAXG quickly.",
+          "assertion": "Customer conversion effort is not a guaranteed realization horizon for the entire reserve gold position."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.paxos.com/pax-gold",
+        "https://www.paxos.com/paxg-whitepaper.pdf",
+        "https://www.paxos.com/paxg-transparency",
+        "https://framerusercontent.com/assets/9bk8TbTXouqOrpoxLSn5XIf7Ufo.pdf",
+        "https://www.paxos.com/terms-and-conditions/pax-gold-terms-conditions",
+        "https://docs.paxos.com/guides/dashboard/paxg",
+        "https://support.paxos.com/articles/2330993057-daily-deposits-withdrawal-schedule",
+        "https://support.paxos.com/articles/7442970352-how-to-submit-a-usd-fiat-withdrawal-to-a-bank-account"
+      ],
+      "rationale": "The exact whole-slice liquidityHorizon for allocated reserve gold is undisclosed. The full August gold inventory, vault/source identities, whitepaper, terms, dashboard docs, product FAQ and redemption/wire help disclose ownership and customer conversion mechanisms but no funded or enforceable time bound to realize the entire scoped gold position into USD. Instant token transfer, indicative quotes and market-wide gold volume cannot establish immediate whole-book liquidity."
+    },
+    {
+      "id": "uw-fxsave-f-x-protocol-aef6423aa209a73d",
+      "assetId": "fxsave-f-x-protocol",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:fxsave-f-x-protocol:stablecoin-redeem"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T23:02:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
+      "sources": [
+        {
+          "url": "https://fxprotocol.gitbook.io/fx-docs/developers/integrating-fxsave.md",
+          "observedAt": "2026-10-03T23:02:11Z",
+          "datumAsOf": null,
+          "location": "Scenario 2: Redeeming fxUSD",
+          "excerpt": "USDC needs to be swapped into fxUSD via the converter.",
+          "assertion": "Published fxUSD-only route combines mutable instantRedeemFeeRatio with converter execution. Current producer stores a documented formula but cannot evaluate same-notional net fxUSD cost; fixed 100 bps would omit conversion."
+        },
+        {
+          "url": "https://fxprotocol.gitbook.io/fx-docs/f-x-protocol-mechanisms/fees.md",
+          "observedAt": "2026-10-03T23:02:11Z",
+          "datumAsOf": null,
+          "location": "Stability Pool fees",
+          "excerpt": "1%",
+          "assertion": "Published early-exit component is not the complete converter-dependent same-notional cost."
+        }
+      ]
+    },
+    {
+      "id": "uw-fxsave-f-x-protocol-6e98aa6dbec79939",
+      "assetId": "fxsave-f-x-protocol",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:45c8a74a34f217637ae5efe5",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
+      "sources": [
+        {
+          "url": "https://fxprotocol.gitbook.io/fx-docs/developers/integrating-fxsave.md",
+          "observedAt": "2026-10-03T23:02:11Z",
+          "datumAsOf": null,
+          "location": "Method 2, Step 1",
+          "excerpt": "After redeeming, you will receive the corresponding amount of fxSP tokens.",
+          "assertion": "Native redemption returns a pool receipt, not USD. Atomic basket exits and a cooldown exist; no whole strategy-position final-value realization bound is published."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://fxprotocol.gitbook.io/fx-docs/llms.txt",
+        "https://fxprotocol.gitbook.io/fx-docs/f-x-protocol-mechanisms/stability-pool.md",
+        "https://fxprotocol.gitbook.io/fx-docs/guides/how-to-unstake-from-the-stability-pool.md",
+        "https://fxprotocol.gitbook.io/fx-docs/developers/integrating-fxsave.md",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xe4031e271809d20074e4bef1caeefec5f710e8a6",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x9cfefd90d4c8428d4cbac9baaa6d52c6ba7897f9",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xd023aac0e2d46c93d4c6e8e2a449bf2d4687804f"
+      ],
+      "rationale": "The exact whole-slice liquidityHorizon of fxSAVE deployed strategy positions is not disclosed. Documentation and current contracts specify receipt redemption, cooldown and basket conversions, but no all-position realization horizon at a known USD value. The pinned onchain principal census establishes custody, not market conversion or Aave withdrawal capacity."
+    },
+    {
+      "id": "uw-fxusd-f-x-protocol-9a3b142ddcdc37f1",
+      "assetId": "fxusd-f-x-protocol",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:0137717dd14ab3c851abe172",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
+      "sources": [
+        {
+          "url": "https://fxprotocol.gitbook.io/fx-docs/developers/processing-the-rebalances-and-liquidations/long-pool-integration.md",
+          "observedAt": "2026-10-03T23:02:11Z",
+          "datumAsOf": null,
+          "location": "3. CreditNote Received",
+          "excerpt": "If it happens that the long pool does not have enough collateral in the contract",
+          "assertion": "Liquidation can deliver credit notes when collateral is lent to short pools; no full WBTC/wstETH branch realization deadline is stated."
+        },
+        {
+          "url": "https://docs.lido.fi/contracts/withdrawal-queue-erc721/",
+          "observedAt": "2026-10-03T23:02:12Z",
+          "datumAsOf": null,
+          "location": "Finalization",
+          "excerpt": "If there is enough ether to fulfill the request.",
+          "assertion": "Lido withdrawal depends on available ETH and oracle finalization, not an unconditional wstETH whole-position deadline."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://fxprotocol.gitbook.io/fx-docs/llms.txt",
+        "https://fxprotocol.gitbook.io/fx-docs/risk-management/advanced-peg-protection-mechanisms/understanding-the-redemption-mechanism.md",
+        "https://fxprotocol.gitbook.io/fx-docs/developers/processing-the-rebalances-and-liquidations/long-pool-integration.md",
+        "https://fxprotocol.gitbook.io/fx-docs/developers/processing-the-rebalances-and-liquidations/creditnotes.md",
+        "https://wbtc.network/",
+        "https://docs.lido.fi/contracts/withdrawal-queue-erc721/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x9cfefd90d4c8428d4cbac9baaa6d52c6ba7897f9"
+      ],
+      "rationale": "Neither WBTC nor wstETH collateral exposure has a published whole-slice liquidityHorizon. The protocol documents conditional rebalances/liquidations and credit-note substitution. Redemption, underlying market access and Lido queue finalization do not establish a guaranteed realization horizon for the entire scoped branch."
+    },
+    {
+      "id": "uw-fxusd-f-x-protocol-e0e863aac7054d55",
+      "assetId": "fxusd-f-x-protocol",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:67b0ca334fe4dd4b5475cf7d",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
+      "sources": [
+        {
+          "url": "https://fxprotocol.gitbook.io/fx-docs/developers/processing-the-rebalances-and-liquidations/long-pool-integration.md",
+          "observedAt": "2026-10-03T23:02:11Z",
+          "datumAsOf": null,
+          "location": "3. CreditNote Received",
+          "excerpt": "If it happens that the long pool does not have enough collateral in the contract",
+          "assertion": "Liquidation can deliver credit notes when collateral is lent to short pools; no full WBTC/wstETH branch realization deadline is stated."
+        },
+        {
+          "url": "https://docs.lido.fi/contracts/withdrawal-queue-erc721/",
+          "observedAt": "2026-10-03T23:02:12Z",
+          "datumAsOf": null,
+          "location": "Finalization",
+          "excerpt": "If there is enough ether to fulfill the request.",
+          "assertion": "Lido withdrawal depends on available ETH and oracle finalization, not an unconditional wstETH whole-position deadline."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://fxprotocol.gitbook.io/fx-docs/llms.txt",
+        "https://fxprotocol.gitbook.io/fx-docs/risk-management/advanced-peg-protection-mechanisms/understanding-the-redemption-mechanism.md",
+        "https://fxprotocol.gitbook.io/fx-docs/developers/processing-the-rebalances-and-liquidations/long-pool-integration.md",
+        "https://fxprotocol.gitbook.io/fx-docs/developers/processing-the-rebalances-and-liquidations/creditnotes.md",
+        "https://wbtc.network/",
+        "https://docs.lido.fi/contracts/withdrawal-queue-erc721/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x9cfefd90d4c8428d4cbac9baaa6d52c6ba7897f9"
+      ],
+      "rationale": "Neither WBTC nor wstETH collateral exposure has a published whole-slice liquidityHorizon. The protocol documents conditional rebalances/liquidations and credit-note substitution. Redemption, underlying market access and Lido queue finalization do not establish a guaranteed realization horizon for the entire scoped branch."
+    },
+    {
+      "id": "uw-fxd-fathom-ad30a9d40bbf4091",
+      "assetId": "fxd-fathom",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:01ba9e9e0b5953570d4e52f0",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
+      "sources": [
+        {
+          "url": "https://docs.stakexdc.com/docs/liquid-staking/withdrawals",
+          "observedAt": "2026-10-03T23:02:12Z",
+          "datumAsOf": null,
+          "location": "The queue is public \u2014 position, not a date",
+          "excerpt": "No settlement date is shown or promised",
+          "assertion": "psXDC queues depend on funding tranches and masternode unbonding; approximately 35 days is not a promised whole-position horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.fathom.fi/llms.txt",
+        "https://docs.fathom.fi/fxd-stablecoin/deployments/xdc-network.md",
+        "https://docs.fathom.fi/fxd-stablecoin/risk-management.md",
+        "https://docs.fathom.fi/terms-of-service.md",
+        "https://docs.stakexdc.com/docs/liquid-staking/architecture",
+        "https://docs.stakexdc.com/docs/liquid-staking/withdrawals",
+        "https://xdcscan.com/block/107486464"
+      ],
+      "rationale": "No exact full psXDC-collateral slice liquidityHorizon is published. Fathom exposes collateral pools and conditional liquidation; PrimeStaked publishes instant-or-queued withdrawal rules, funding lanes and approximate unbonding, expressly without a settlement date. Neither establishes full scoped FXD collateral realization at a known value."
+    },
+    {
+      "id": "uw-fxd-fathom-9fd17e515d0559f4",
+      "assetId": "fxd-fathom",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:63ca7f2ed31b0df9b4bedb9b",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
+      "sources": [
+        {
+          "url": "https://docs.fathom.fi/terms-of-service.md",
+          "observedAt": "2026-10-03T23:02:11Z",
+          "datumAsOf": "2024-04-09",
+          "location": "8.4 Not Registered with the SEC or Any Other Agency",
+          "excerpt": "we do not (and cannot) guarantee market best pricing or best execution through our Products",
+          "assertion": "Published third-party market execution does not establish the entire WXDC collateral slice realization horizon."
+        },
+        {
+          "url": "https://docs.fathom.fi/fxd-stablecoin/risk-management.md",
+          "observedAt": "2026-10-03T23:02:12Z",
+          "datumAsOf": null,
+          "location": "Liquidation Risks",
+          "excerpt": "Governance decides on the Close Factor value",
+          "assertion": "Conditional partial liquidations do not promise all-position USD availability."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.fathom.fi/introduction.md",
+        "https://docs.fathom.fi/llms.txt",
+        "https://docs.fathom.fi/fxd-stablecoin/deployments/xdc-network.md",
+        "https://docs.fathom.fi/fxd-stablecoin/user-guides/repay-and-close-fxd-position.md",
+        "https://docs.fathom.fi/fxd-stablecoin/risk-management.md",
+        "https://docs.fathom.fi/terms-of-service.md",
+        "https://xdcscan.com/block/107486464"
+      ],
+      "rationale": "No exact whole WXDC collateral pool liquidityHorizon is published in Fathom deployment, repayment, risk, liquidation or legal sources. Onchain unwrap/transfer and borrower debt closure are not a bound for final realization of all FXD backing; the protocol explicitly relies on third-party liquidity and disclaims best execution."
+    },
+    {
+      "id": "uw-fxd-fathom-60af023bdc795070",
+      "assetId": "fxd-fathom",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:90c347f557383f87fc8fa7cf",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
+      "sources": [
+        {
+          "url": "https://comtechgold.com/assets/pdf/Terms_and_Conditions.pdf",
+          "observedAt": "2026-10-03T23:02:12Z",
+          "datumAsOf": "2022-08-23",
+          "location": "8.1 Redemption of Digital Gold to physical gold",
+          "excerpt": "You may instruct the Digitization Entity to convert Digital Gold to physical gold from the Gold Reserves of a minimum quantity of one kilogram",
+          "assertion": "CGO physical redemption has a 1 kg minimum; no guaranteed final USD liquidation or delivery deadline is specified."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.fathom.fi/fxd-stablecoin/deployments/xdc-network.md",
+        "https://docs.fathom.fi/fxd-stablecoin/risk-management.md",
+        "https://docs.fathom.fi/terms-of-service.md",
+        "https://comtechgold.com/assets/pdf/Terms_and_Conditions.pdf",
+        "https://comtechgold.com/assets/pdf/cgo_whitepaper_v1.pdf",
+        "https://xdcscan.com/block/107486464"
+      ],
+      "rationale": "No exact full CGO collateral slice liquidityHorizon is disclosed. Fathom documents conditional liquidation; Comtech terms describe minimum-size gold conversion, identification, delivery and variable charges without a final-delivery or USD settlement bound. Current measured Fathom CGO holding is far below the physical redemption minimum."
+    },
+    {
+      "id": "uw-bc3m-backed-0fe86a7c3cd04e82",
+      "assetId": "bc3m-backed",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:bc3m-backed:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
+      "sources": [
+        {
+          "url": "https://cdn.prod.website-files.com/655f3efc4be468487052e35a/6a748b81c9b1aca19a11c102_Backed_Assets_Base%20Prospectus_20260727.pdf",
+          "observedAt": "2026-10-03T23:02:12Z",
+          "datumAsOf": "2026-07-27",
+          "location": "VI.v.c Settlement, p.115",
+          "excerpt": "Until the fifth Business Day following the receipt of the Investor's Products (i.e. T+5)",
+          "assertion": "T+5 bounds instructions/liquidation steps, not final bank receipt; VIII.ii permits payment postponement without a finite cap."
+        },
+        {
+          "url": "https://cdn.prod.website-files.com/655f3efc4be468487052e35a/6a748b81c9b1aca19a11c102_Backed_Assets_Base%20Prospectus_20260727.pdf",
+          "observedAt": "2026-10-03T23:02:12Z",
+          "datumAsOf": "2026-07-27",
+          "location": "VIII.ii.b Underlying Illiquidity, p.118",
+          "excerpt": "May postpone the determination (fixing) and/or the payment of the relevant Redemption Amount accordingly",
+          "assertion": "No finite calendar-second final-settlement SLA is imposed when collateral is illiquid."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://assets.backed.fi/products/bc3m",
+        "https://assets.backed.fi/legal-documentation",
+        "https://cdn.prod.website-files.com/655f3efc4be468487052e35a/6a748b81c9b1aca19a11c102_Backed_Assets_Base%20Prospectus_20260727.pdf",
+        "https://backed.fi/news-updates/the-future-is-xstocks-upgrading-btokens",
+        "https://www.amundi.fr/fr_part/dl/doc/prospectus/FR0010754200/FRA/FRA",
+        "https://www.amundietf.it/pdfDocuments/annual-report/FR0010754200/ENG/20250630",
+        "https://eth.blockscout.com/tx/0xed24a874126443f07e7976ea89d84499999346ef574b78d4b2dd3daf9bb84128"
+      ],
+      "rationale": "The exact settlementSlaSec for final bC3M redemption proceeds is not disclosed. T+5 business days concerns deactivation, collateral sale, amount calculation and payment instructions; it is not a final-receipt SLA. Underlying-illiquidity terms permit payment postponement for the number of business days the issuer determines necessary. Wind-down notice keeps standard redemption, not a new finite SLA."
+    },
+    {
+      "id": "uw-bc3m-backed-d52d3adf7e9860f3",
+      "assetId": "bc3m-backed",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:5b88ab39ffe7a05d24df56b5",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
+      "sources": [
+        {
+          "url": "https://www.amundi.fr/fr_part/dl/doc/prospectus/FR0010754200/FRA/FRA",
+          "observedAt": "2026-10-03T23:02:12Z",
+          "datumAsOf": "2026-04-16",
+          "location": "R\u00e8glement Article 3, p.29",
+          "excerpt": "le rachat par le Fonds de ses parts, comme l\u2019\u00e9mission de parts nouvelles, peuvent \u00eatre suspendus",
+          "assertion": "Five-day post-valuation settlement can extend to 30 days, and redemptions can also be suspended; no whole-slice unconditional horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://assets.backed.fi/products/bc3m",
+        "https://assets.backed.fi/legal-documentation",
+        "https://cdn.prod.website-files.com/655f3efc4be468487052e35a/6a748b81c9b1aca19a11c102_Backed_Assets_Base%20Prospectus_20260727.pdf",
+        "https://backed.fi/news-updates/the-future-is-xstocks-upgrading-btokens",
+        "https://www.amundi.fr/fr_part/dl/doc/prospectus/FR0010754200/FRA/FRA",
+        "https://www.amundietf.it/pdfDocuments/annual-report/FR0010754200/ENG/20250630",
+        "https://eth.blockscout.com/tx/0xed24a874126443f07e7976ea89d84499999346ef574b78d4b2dd3daf9bb84128"
+      ],
+      "rationale": "No exact whole ETF-share reserve liquidityHorizon is published. Primary orders normally settle J+2, regulations allow five days after valuation and up to 30 days in exceptional asset sales; gates and temporary suspension occur before final payment. These conditional schedules do not bound the entire bC3M backing slice under all admitted restrictions."
+    },
+    {
+      "id": "uw-bc3m-backed-0dac2ca6802cc7d1",
+      "assetId": "bc3m-backed",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:5b88ab39ffe7a05d24df56b5",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R46)",
+      "sources": [
+        {
+          "url": "https://www.amundi.fr/fr_part/dl/doc/prospectus/FR0010754200/FRA/FRA",
+          "observedAt": "2026-10-03T23:02:12Z",
+          "datumAsOf": "2026-04-16",
+          "location": "R\u00e8glement Article 1, p.28",
+          "excerpt": "La dur\u00e9e du Fonds est de 99 ans \u00e0 compter de sa cr\u00e9ation, sauf dans les cas de dissolution anticip\u00e9e ou de la prorogation pr\u00e9vue au pr\u00e9sent r\u00e8glement.",
+          "assertion": "Fund duration can be extended and is not a nonextendable maximum maturity of its shares; 0\u20136 months is the bond-index mandate."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://assets.backed.fi/products/bc3m",
+        "https://assets.backed.fi/legal-documentation",
+        "https://cdn.prod.website-files.com/655f3efc4be468487052e35a/6a748b81c9b1aca19a11c102_Backed_Assets_Base%20Prospectus_20260727.pdf",
+        "https://backed.fi/news-updates/the-future-is-xstocks-upgrading-btokens",
+        "https://www.amundi.fr/fr_part/dl/doc/prospectus/FR0010754200/FRA/FRA",
+        "https://www.amundietf.it/pdfDocuments/annual-report/FR0010754200/ENG/20250630",
+        "https://eth.blockscout.com/tx/0xed24a874126443f07e7976ea89d84499999346ef574b78d4b2dd3daf9bb84128"
+      ],
+      "rationale": "No finite maximum maturityDaysMax of the fund-share claim is disclosed. This is a fund-share reserve, not individual bills: the 0\u20136 month index mandate is not share maturity. The fund has a 99-year organizational life expressly subject to extension, so neither 180 days nor a conversion of 99 years is a hard share-claim maximum."
+    },
+    {
+      "id": "uw-wcop-ripio-08688d04a82f3b7b",
+      "assetId": "wcop-ripio",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:07:56Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R94)",
+      "sources": [
+        {
+          "url": "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf",
+          "observedAt": "2026-10-03T23:04:31Z",
+          "datumAsOf": null,
+          "location": "Version 1.0, October 2025; Economic model & collateralization, page 2",
+          "excerpt": "Strict reconciliation processes are kept, and issuer may publish independent third-party attestations periodically to ensure transparency and proof of backing.",
+          "assertion": "An internal-process assertion and optional periodic publication do not identify a whole-supply reconciliation cadence, clock, operator or exclusions."
+        },
+        {
+          "url": "https://action.ripio.com/en/wfiat-attestations",
+          "observedAt": "2026-10-03T23:04:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Public report index",
+          "excerpt": "Third-party verification of reserve balances for every wFIAT stablecoin issued on-chain.",
+          "assertion": "June 2026 reports exist for wBRL, wMXN, wCOP and wCLP; none for wPEN. Point-in-time reports do not themselves establish a recurring whole-supply procedure."
+        },
+        {
+          "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/Aug%202026/Token%20wCOP%2006.30.2026%20Certification%20vf.pdf?hsLang=en",
+          "observedAt": "2026-10-03T23:04:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Professional Work Performed and Other Clarifications, pages 1-2",
+          "excerpt": "The information contained herein refers solely to the wCOP token.",
+          "assertion": "The accountant checks dated on-chain issuance/burn records and bank statements, including Celo; it is an asset-specific snapshot, not a published ongoing cadence."
+        },
+        {
+          "url": "https://github.com/ripio/latam-stables",
+          "observedAt": "2026-10-03T23:07:56Z",
+          "datumAsOf": null,
+          "location": "README, Bridge Contracts / Architecture",
+          "excerpt": "The bridge infrastructure enables cross-chain token transfers using a burn-and-mint mechanism.",
+          "assertion": "Technical mint/burn and bridge accounting are disclosed, but do not reconcile every fiat backing position and token liability on a recurring common clock."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.ripio.com/en/cryptos/local-stablecoins",
+        "https://action.ripio.com/en/wfiat-attestations",
+        "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf",
+        "https://terms.ripio.com/",
+        "https://terms.ripio.com/co/wallet",
+        "https://terms.ripio.com/br/wallet",
+        "https://terms.ripio.com/mx/wallet",
+        "https://terms.ripio.com/cl/wallet",
+        "https://www.ripio.com/en/seguridad",
+        "https://github.com/ripio/latam-stables",
+        "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinterBridge.sol",
+        "https://celo.blockscout.com/api/v2/smart-contracts/0x8a1d45e102e886510e891d2ec656a708991e2d76",
+        "https://celo.blockscout.com/api/v2/smart-contracts/0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652"
+      ],
+      "rationale": "For each named wFIAT asset, no documented recurring whole-supply liability-to-fiat-backing reconciliation cadence, common clock, process operator and complete scope was found. The whitepaper claims strict internal processes and optional attestations; March/June report endpoints are historical snapshots, not evidence of every intervening period or a defined recurring regime. June certificates for wBRL/wMXN/wCOP/wCLP were read individually; wCLP has contradictory currency/date text. Exchange custody PoR, bridge counters and ERC20 supply are not this datum. Explicit unknown scalars are preserved."
+    },
+    {
+      "id": "uw-wclp-ripio-ca6ecfd27618a5d5",
+      "assetId": "wclp-ripio",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:07:56Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R94)",
+      "sources": [
+        {
+          "url": "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf",
+          "observedAt": "2026-10-03T23:04:31Z",
+          "datumAsOf": null,
+          "location": "Version 1.0, October 2025; Economic model & collateralization, page 2",
+          "excerpt": "Strict reconciliation processes are kept, and issuer may publish independent third-party attestations periodically to ensure transparency and proof of backing.",
+          "assertion": "An internal-process assertion and optional periodic publication do not identify a whole-supply reconciliation cadence, clock, operator or exclusions."
+        },
+        {
+          "url": "https://action.ripio.com/en/wfiat-attestations",
+          "observedAt": "2026-10-03T23:04:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Public report index",
+          "excerpt": "Third-party verification of reserve balances for every wFIAT stablecoin issued on-chain.",
+          "assertion": "June 2026 reports exist for wBRL, wMXN, wCOP and wCLP; none for wPEN. Point-in-time reports do not themselves establish a recurring whole-supply procedure."
+        },
+        {
+          "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/Aug%202026/Token%20wCOP%2006.30.2026%20Certification%20vf.pdf?hsLang=en",
+          "observedAt": "2026-10-03T23:04:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Professional Work Performed and Other Clarifications, pages 1-2",
+          "excerpt": "The information contained herein refers solely to the wCOP token.",
+          "assertion": "The accountant checks dated on-chain issuance/burn records and bank statements, including Celo; it is an asset-specific snapshot, not a published ongoing cadence."
+        },
+        {
+          "url": "https://github.com/ripio/latam-stables",
+          "observedAt": "2026-10-03T23:07:56Z",
+          "datumAsOf": null,
+          "location": "README, Bridge Contracts / Architecture",
+          "excerpt": "The bridge infrastructure enables cross-chain token transfers using a burn-and-mint mechanism.",
+          "assertion": "Technical mint/burn and bridge accounting are disclosed, but do not reconcile every fiat backing position and token liability on a recurring common clock."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.ripio.com/en/cryptos/local-stablecoins",
+        "https://action.ripio.com/en/wfiat-attestations",
+        "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf",
+        "https://terms.ripio.com/",
+        "https://terms.ripio.com/co/wallet",
+        "https://terms.ripio.com/br/wallet",
+        "https://terms.ripio.com/mx/wallet",
+        "https://terms.ripio.com/cl/wallet",
+        "https://www.ripio.com/en/seguridad",
+        "https://github.com/ripio/latam-stables",
+        "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinterBridge.sol",
+        "https://celo.blockscout.com/api/v2/smart-contracts/0x8a1d45e102e886510e891d2ec656a708991e2d76",
+        "https://celo.blockscout.com/api/v2/smart-contracts/0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652"
+      ],
+      "rationale": "For each named wFIAT asset, no documented recurring whole-supply liability-to-fiat-backing reconciliation cadence, common clock, process operator and complete scope was found. The whitepaper claims strict internal processes and optional attestations; March/June report endpoints are historical snapshots, not evidence of every intervening period or a defined recurring regime. June certificates for wBRL/wMXN/wCOP/wCLP were read individually; wCLP has contradictory currency/date text. Exchange custody PoR, bridge counters and ERC20 supply are not this datum. Explicit unknown scalars are preserved."
+    },
+    {
+      "id": "uw-wmxn-ripio-96541a2ce107df3e",
+      "assetId": "wmxn-ripio",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:07:56Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R94)",
+      "sources": [
+        {
+          "url": "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf",
+          "observedAt": "2026-10-03T23:04:31Z",
+          "datumAsOf": null,
+          "location": "Version 1.0, October 2025; Economic model & collateralization, page 2",
+          "excerpt": "Strict reconciliation processes are kept, and issuer may publish independent third-party attestations periodically to ensure transparency and proof of backing.",
+          "assertion": "An internal-process assertion and optional periodic publication do not identify a whole-supply reconciliation cadence, clock, operator or exclusions."
+        },
+        {
+          "url": "https://action.ripio.com/en/wfiat-attestations",
+          "observedAt": "2026-10-03T23:04:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Public report index",
+          "excerpt": "Third-party verification of reserve balances for every wFIAT stablecoin issued on-chain.",
+          "assertion": "June 2026 reports exist for wBRL, wMXN, wCOP and wCLP; none for wPEN. Point-in-time reports do not themselves establish a recurring whole-supply procedure."
+        },
+        {
+          "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/Aug%202026/Token%20wCOP%2006.30.2026%20Certification%20vf.pdf?hsLang=en",
+          "observedAt": "2026-10-03T23:04:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Professional Work Performed and Other Clarifications, pages 1-2",
+          "excerpt": "The information contained herein refers solely to the wCOP token.",
+          "assertion": "The accountant checks dated on-chain issuance/burn records and bank statements, including Celo; it is an asset-specific snapshot, not a published ongoing cadence."
+        },
+        {
+          "url": "https://github.com/ripio/latam-stables",
+          "observedAt": "2026-10-03T23:07:56Z",
+          "datumAsOf": null,
+          "location": "README, Bridge Contracts / Architecture",
+          "excerpt": "The bridge infrastructure enables cross-chain token transfers using a burn-and-mint mechanism.",
+          "assertion": "Technical mint/burn and bridge accounting are disclosed, but do not reconcile every fiat backing position and token liability on a recurring common clock."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.ripio.com/en/cryptos/local-stablecoins",
+        "https://action.ripio.com/en/wfiat-attestations",
+        "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf",
+        "https://terms.ripio.com/",
+        "https://terms.ripio.com/co/wallet",
+        "https://terms.ripio.com/br/wallet",
+        "https://terms.ripio.com/mx/wallet",
+        "https://terms.ripio.com/cl/wallet",
+        "https://www.ripio.com/en/seguridad",
+        "https://github.com/ripio/latam-stables",
+        "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinterBridge.sol",
+        "https://celo.blockscout.com/api/v2/smart-contracts/0x8a1d45e102e886510e891d2ec656a708991e2d76",
+        "https://celo.blockscout.com/api/v2/smart-contracts/0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652"
+      ],
+      "rationale": "For each named wFIAT asset, no documented recurring whole-supply liability-to-fiat-backing reconciliation cadence, common clock, process operator and complete scope was found. The whitepaper claims strict internal processes and optional attestations; March/June report endpoints are historical snapshots, not evidence of every intervening period or a defined recurring regime. June certificates for wBRL/wMXN/wCOP/wCLP were read individually; wCLP has contradictory currency/date text. Exchange custody PoR, bridge counters and ERC20 supply are not this datum. Explicit unknown scalars are preserved."
+    },
+    {
+      "id": "uw-wpen-ripio-7707d5a07a78c3d9",
+      "assetId": "wpen-ripio",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:07:56Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R94)",
+      "sources": [
+        {
+          "url": "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf",
+          "observedAt": "2026-10-03T23:04:31Z",
+          "datumAsOf": null,
+          "location": "Version 1.0, October 2025; Economic model & collateralization, page 2",
+          "excerpt": "Strict reconciliation processes are kept, and issuer may publish independent third-party attestations periodically to ensure transparency and proof of backing.",
+          "assertion": "An internal-process assertion and optional periodic publication do not identify a whole-supply reconciliation cadence, clock, operator or exclusions."
+        },
+        {
+          "url": "https://action.ripio.com/en/wfiat-attestations",
+          "observedAt": "2026-10-03T23:04:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Public report index",
+          "excerpt": "Third-party verification of reserve balances for every wFIAT stablecoin issued on-chain.",
+          "assertion": "June 2026 reports exist for wBRL, wMXN, wCOP and wCLP; none for wPEN. Point-in-time reports do not themselves establish a recurring whole-supply procedure."
+        },
+        {
+          "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/Aug%202026/Token%20wCOP%2006.30.2026%20Certification%20vf.pdf?hsLang=en",
+          "observedAt": "2026-10-03T23:04:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Professional Work Performed and Other Clarifications, pages 1-2",
+          "excerpt": "The information contained herein refers solely to the wCOP token.",
+          "assertion": "The accountant checks dated on-chain issuance/burn records and bank statements, including Celo; it is an asset-specific snapshot, not a published ongoing cadence."
+        },
+        {
+          "url": "https://github.com/ripio/latam-stables",
+          "observedAt": "2026-10-03T23:07:56Z",
+          "datumAsOf": null,
+          "location": "README, Bridge Contracts / Architecture",
+          "excerpt": "The bridge infrastructure enables cross-chain token transfers using a burn-and-mint mechanism.",
+          "assertion": "Technical mint/burn and bridge accounting are disclosed, but do not reconcile every fiat backing position and token liability on a recurring common clock."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.ripio.com/en/cryptos/local-stablecoins",
+        "https://action.ripio.com/en/wfiat-attestations",
+        "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf",
+        "https://terms.ripio.com/",
+        "https://terms.ripio.com/co/wallet",
+        "https://terms.ripio.com/br/wallet",
+        "https://terms.ripio.com/mx/wallet",
+        "https://terms.ripio.com/cl/wallet",
+        "https://www.ripio.com/en/seguridad",
+        "https://github.com/ripio/latam-stables",
+        "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinterBridge.sol",
+        "https://celo.blockscout.com/api/v2/smart-contracts/0x8a1d45e102e886510e891d2ec656a708991e2d76",
+        "https://celo.blockscout.com/api/v2/smart-contracts/0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652"
+      ],
+      "rationale": "For each named wFIAT asset, no documented recurring whole-supply liability-to-fiat-backing reconciliation cadence, common clock, process operator and complete scope was found. The whitepaper claims strict internal processes and optional attestations; March/June report endpoints are historical snapshots, not evidence of every intervening period or a defined recurring regime. June certificates for wBRL/wMXN/wCOP/wCLP were read individually; wCLP has contradictory currency/date text. Exchange custody PoR, bridge counters and ERC20 supply are not this datum. Explicit unknown scalars are preserved."
+    },
+    {
+      "id": "uw-wbrl-ripio-2fc604956b1fa3c9",
+      "assetId": "wbrl-ripio",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:07:56Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R94)",
+      "sources": [
+        {
+          "url": "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf",
+          "observedAt": "2026-10-03T23:04:31Z",
+          "datumAsOf": null,
+          "location": "Version 1.0, October 2025; Economic model & collateralization, page 2",
+          "excerpt": "Strict reconciliation processes are kept, and issuer may publish independent third-party attestations periodically to ensure transparency and proof of backing.",
+          "assertion": "An internal-process assertion and optional periodic publication do not identify a whole-supply reconciliation cadence, clock, operator or exclusions."
+        },
+        {
+          "url": "https://action.ripio.com/en/wfiat-attestations",
+          "observedAt": "2026-10-03T23:04:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Public report index",
+          "excerpt": "Third-party verification of reserve balances for every wFIAT stablecoin issued on-chain.",
+          "assertion": "June 2026 reports exist for wBRL, wMXN, wCOP and wCLP; none for wPEN. Point-in-time reports do not themselves establish a recurring whole-supply procedure."
+        },
+        {
+          "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/Aug%202026/Token%20wCOP%2006.30.2026%20Certification%20vf.pdf?hsLang=en",
+          "observedAt": "2026-10-03T23:04:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Professional Work Performed and Other Clarifications, pages 1-2",
+          "excerpt": "The information contained herein refers solely to the wCOP token.",
+          "assertion": "The accountant checks dated on-chain issuance/burn records and bank statements, including Celo; it is an asset-specific snapshot, not a published ongoing cadence."
+        },
+        {
+          "url": "https://github.com/ripio/latam-stables",
+          "observedAt": "2026-10-03T23:07:56Z",
+          "datumAsOf": null,
+          "location": "README, Bridge Contracts / Architecture",
+          "excerpt": "The bridge infrastructure enables cross-chain token transfers using a burn-and-mint mechanism.",
+          "assertion": "Technical mint/burn and bridge accounting are disclosed, but do not reconcile every fiat backing position and token liability on a recurring common clock."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.ripio.com/en/cryptos/local-stablecoins",
+        "https://action.ripio.com/en/wfiat-attestations",
+        "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf",
+        "https://terms.ripio.com/",
+        "https://terms.ripio.com/co/wallet",
+        "https://terms.ripio.com/br/wallet",
+        "https://terms.ripio.com/mx/wallet",
+        "https://terms.ripio.com/cl/wallet",
+        "https://www.ripio.com/en/seguridad",
+        "https://github.com/ripio/latam-stables",
+        "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinterBridge.sol",
+        "https://celo.blockscout.com/api/v2/smart-contracts/0x8a1d45e102e886510e891d2ec656a708991e2d76",
+        "https://celo.blockscout.com/api/v2/smart-contracts/0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652"
+      ],
+      "rationale": "For each named wFIAT asset, no documented recurring whole-supply liability-to-fiat-backing reconciliation cadence, common clock, process operator and complete scope was found. The whitepaper claims strict internal processes and optional attestations; March/June report endpoints are historical snapshots, not evidence of every intervening period or a defined recurring regime. June certificates for wBRL/wMXN/wCOP/wCLP were read individually; wCLP has contradictory currency/date text. Exchange custody PoR, bridge counters and ERC20 supply are not this datum. Explicit unknown scalars are preserved."
+    },
+    {
+      "id": "uw-wpen-ripio-ce35f196d88943be",
+      "assetId": "wpen-ripio",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:07:56Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R94)",
+      "sources": [
+        {
+          "url": "https://www.ripio.com/en/cryptos/local-stablecoins",
+          "observedAt": "2026-10-03T23:04:31Z",
+          "datumAsOf": null,
+          "location": "Available local stablecoins and What does wrapped mean",
+          "excerpt": "backed by liquid instruments denominated in the local currency",
+          "assertion": "wPEN and PEN are identified, but broad local-currency backing does not disclose dated holdings, amounts, instrument weights or a whole-book denominator."
+        },
+        {
+          "url": "https://action.ripio.com/en/wfiat-attestations",
+          "observedAt": "2026-10-03T23:04:31Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Complete public attestation index",
+          "excerpt": "wCLP Attestation: June 2026",
+          "assertion": "The index lists wARS, wBRL, wMXN, wCOP and wCLP June certifications, with no wPEN certificate; sibling reports cannot supply its book."
+        },
+        {
+          "url": "https://www.ripio.com/en/seguridad",
+          "observedAt": "2026-10-03T23:07:56Z",
+          "datumAsOf": null,
+          "location": "Proof of Reserves",
+          "excerpt": "We only display balances held in cold wallets managed by Ripio.",
+          "assertion": "Exchange customer-crypto custody balances are a different denominator from wPEN's fiat reserve book."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.ripio.com/en/cryptos/local-stablecoins",
+        "https://action.ripio.com/en/wfiat-attestations",
+        "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf",
+        "https://action.ripio.com/es/blog/las-stablecoins-wfiat-ya-estan-disponibles-en-celo",
+        "https://terms.ripio.com/",
+        "https://www.ripio.com/en/seguridad",
+        "https://github.com/ripio/latam-stables"
+      ],
+      "rationale": "The exact wPEN whole-asset reserve composition is not publicly disclosed on the searched issuer, legal, technical and attestation surfaces: no dated PEN reserve balances, instrument shares, or measurable denominator/tail. General 1:1 claims and the wPEN on-chain dashboard establish denomination/activity, not bank holdings. No Peru legal page is linked from the issuer terms index; the attempted /pe/wallet 404 is not relied on as non-disclosure evidence. No sibling reserve weights are transferred."
     }
   ]
 }

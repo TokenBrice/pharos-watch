@@ -326,10 +326,10 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Ripio's 2026-07-31 Celo announcement and GeckoTerminal identify this address as wCOP (Colombian Peso) with 18 decimals and live supply. The reviewed Celo bridge-adapter read at block 75019312 shows Safe-controlled minting, but no token-level mint path or conservation proof establishes native issuance versus a bridge representation; the route remains unresolved.",
+        "reviewNote": "Wave-2 census: the complete Celo token log response ends at proxy creation (2026-06-01) with next_page_params=null and identifies four mints. June 5 (100 WCOP) and September 9 (30,000,000 WCOP) call the native LimitedMinter 0xd168cfbbe260d48cd119497a9a2ee8482080c5e7; July 31 (999,943 WCOP) and September 11 (2,999,943 WCOP) call BridgeDeposit.fulfillBridgeMint. Both bridge mints match published source burns on Worldchain and Ethereum after the 57 WCOP fee. This proves a mixed native-issuance/burn-mint deployment, not a conserved bridge-only representation. June reserve evidence cannot reconcile the September 9 native issuance, and the current six-chain native mint review omits the Celo LimitedMinter/Safe reach; aggregate incident-free and liability-scope conclusions remain unestablished. The issuer also announces Arc deployment, outside the reviewed route census. Preserve unresolved admission pending complete scope and native issuance reconciliation; no known supply share is asserted.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-09-04",
-        "observedBlock": 75019312,
+        "observedAt": "2026-10-03",
+        "observedBlock": 79168012,
         "sources": [
           {
             "label": "Ripio wFIAT Celo launch announcement",
@@ -342,6 +342,26 @@
           {
             "label": "Celo JSON-RPC fixed reads",
             "url": "https://forno.celo.org"
+          },
+          {
+            "label": "Complete Celo WCOP historical event census",
+            "url": "https://celo.blockscout.com/api/v2/addresses/0x8a1d45e102e886510e891d2ec656a708991e2d76/logs"
+          },
+          {
+            "label": "Celo September 9 native mint through LimitedMinter",
+            "url": "https://celo.blockscout.com/api/v2/transactions/0x360b9132599b878fbbe4e9d24b641297b0dc23f5d756ca148db23e6623e835ce"
+          },
+          {
+            "label": "Ethereum source burn for Celo September 11 fulfillment",
+            "url": "https://eth.blockscout.com/api/v2/transactions/0xe2f10e5143c9710262b0de93a431885c76aec82d5b46062f4c2be337baf1afaa"
+          },
+          {
+            "label": "Worldchain source burn for Celo July 31 fulfillment",
+            "url": "https://worldchain-mainnet.explorer.alchemy.com/api/v2/transactions/0x433819ca4ec8710de1fcbb4cac7e05f9f6d1a14000d30926420e29b48542c380"
+          },
+          {
+            "label": "Ripio Arc mainnet expansion announcement",
+            "url": "https://launchpad.ripio.com/blog/ripios-wfiat-stablecoins-go-live-on-arc-public-mainnet-from-day-one"
           }
         ]
       }
