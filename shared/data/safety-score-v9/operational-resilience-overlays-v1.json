@@ -284,6 +284,138 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "arcusdc-galaxy",
+      "reviewedAt": "2026-10-03T22:34:02Z",
+      "expiresAt": "2027-10-03T22:34:02Z",
+      "reviewer": "PilotVaults primary-source exact-vault review",
+      "notes": "Exact Arc chainId 5042 vault 0x8e357432cc12ff425c36432f312968aeb16112af: Morpho historical totalSupply is positive on 2026-07-01; current totalSupply and totalAssets are positive. The 3-month lower bound concerns this deployment only, not parent-token or curator longevity. Historical API observations are issuer-reported and do not certify uninterrupted operation, settled stress withdrawals, assurance continuity or an incident-free history. Performance claims remain unestablished.",
+      "sources": [
+        {
+          "sourceId": "morpho-exact-vault-live-history",
+          "label": "Morpho exact arcUSDC historical totalSupply and current vault state, fetched 2026-10-03T22:31:01Z",
+          "publisher": "Morpho Association",
+          "publishedAt": "2026-10-03",
+          "url": "https://api.morpho.org/graphql",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 3,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "morpho-exact-vault-live-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "gusdcq-galaxy",
+      "reviewedAt": "2026-10-03T22:34:02Z",
+      "expiresAt": "2027-10-03T22:34:02Z",
+      "reviewer": "PilotVaults primary-source exact-vault review",
+      "notes": "Exact Ethereum chainId 1 vault 0x91600e31fbedc72433d4a57f16639cfe661be7d8: Morpho historical totalSupply is positive on 2026-05-01; current totalSupply and totalAssets are positive. The 5-month lower bound concerns this deployment only, not parent-token or curator longevity. Historical API observations are issuer-reported and do not certify uninterrupted operation, settled stress withdrawals, assurance continuity or an incident-free history. Performance claims remain unestablished.",
+      "sources": [
+        {
+          "sourceId": "morpho-exact-vault-live-history",
+          "label": "Morpho exact gUSDCq historical totalSupply and current vault state, fetched 2026-10-03T22:31:01Z",
+          "publisher": "Morpho Association",
+          "publishedAt": "2026-10-03",
+          "url": "https://api.morpho.org/graphql",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 5,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "morpho-exact-vault-live-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "gusdtq-galaxy",
+      "reviewedAt": "2026-10-03T22:34:02Z",
+      "expiresAt": "2027-10-03T22:34:02Z",
+      "reviewer": "PilotVaults primary-source exact-vault review",
+      "notes": "Exact Ethereum chainId 1 vault 0x71ffb6a81786ec285d429d531cf655107b9d878d: Morpho historical totalSupply is positive on 2026-05-01; current totalSupply and totalAssets are positive. The 5-month lower bound concerns this deployment only, not parent-token or curator longevity. Historical API observations are issuer-reported and do not certify uninterrupted operation, settled stress withdrawals, assurance continuity or an incident-free history. Performance claims remain unestablished.",
+      "sources": [
+        {
+          "sourceId": "morpho-exact-vault-live-history",
+          "label": "Morpho exact gUSDTq historical totalSupply and current vault state, fetched 2026-10-03T22:31:01Z",
+          "publisher": "Morpho Association",
+          "publishedAt": "2026-10-03",
+          "url": "https://api.morpho.org/graphql",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 5,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "morpho-exact-vault-live-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "armusdcs-wintermute",
+      "reviewedAt": "2026-10-03T22:34:02Z",
+      "expiresAt": "2027-10-03T22:34:02Z",
+      "reviewer": "PilotVaults primary-source exact-vault review",
+      "notes": "Exact Ethereum chainId 1 vault 0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd: Morpho historical totalSupply is positive on 2026-05-01; current totalSupply and totalAssets are positive. The 5-month lower bound concerns this deployment only, not parent-token or curator longevity. Historical API observations are issuer-reported and do not certify uninterrupted operation, settled stress withdrawals, assurance continuity or an incident-free history. Performance claims remain unestablished.",
+      "sources": [
+        {
+          "sourceId": "morpho-exact-vault-live-history",
+          "label": "Morpho exact armUSDCs historical totalSupply and current vault state, fetched 2026-10-03T22:31:01Z",
+          "publisher": "Morpho Association",
+          "publishedAt": "2026-10-03",
+          "url": "https://api.morpho.org/graphql",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 5,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "morpho-exact-vault-live-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }
