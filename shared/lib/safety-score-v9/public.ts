@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { internV9PublicCauseGaps, finalizeV9PublicCauseGaps, type V9InternedPublicCardDraft, type V9UninternedPublic, type V9UninternedPublicCard } from "./public-cause-interning";
 import {
   SafetyScoreV9CurrentCardSchema,
@@ -1085,10 +1086,40 @@ export function buildSafetyScoreV9Response(args: BuildSafetyScoreV9ResponseArgs)
   const ordered = [...args.results].sort((left, right) => compareText(left.trace.assetId, right.trace.assetId));
   const traces = ordered.map((result) => result.trace);
   const first = traces[0]!;
-  const { cards, foreignCauseGaps } = finalizeV9PublicCauseGaps(ordered.map(projectSafetyScoreV9CardUnchecked));
+  const { cards, foreignCauseGaps } = finalizeV9PublicCauseGaps(ordered.map((result, index) => {
+    try {
+      const { card, foreignCauseGaps: foreign } = projectSafetyScoreV9Card(result);
+      const { foreignCauseGapRefs: _localRefs, ...draft } = card;
+      return { ...draft, foreignCauseGaps: foreign };
+    } catch (error) {
+      if (!(error instanceof z.ZodError)) throw error;
+      throw new z.ZodError(error.issues.map((issue) => ({
+        ...issue,
+        path: ["cards", index, ...issue.path],
+      })));
+    }
+  }));
   const notRatedIds = cards.filter((card) => card.ratingStatus === "not-rated").map((card) => card.id);
   const pipelineGapIds = cards.filter((card) => card.ratingStatus === "pipeline-gap").map((card) => card.id);
-  return SafetyScoreV9CurrentResponseSchema.parse({
+  const commonModeGroups = args.commonModeGroups === undefined
+    ? undefined
+    : projectSafetyScoreV9CommonModeGroups(args.commonModeGroups, ordered, cards);
+  const resultDigest = computeV9ResultDigest(traces);
+  // Projection and identity are complete. Release our working references
+  // without mutating the caller's results or argument object.
+  ordered.length = 0;
+  traces.length = 0;
+  args = { ...args, results: [] };
+  // Each card passed the full single-card schema before the deterministic
+  // publication-wide foreign-reference remap. Admit those owned identities
+  // without cloning the complete graph again; envelope refinements still
+  // validate every reference against the publication's actual gap authority.
+  const admittedCards = new WeakSet<object>(cards);
+  const responseSchema = SafetyScoreV9CurrentResponseSchema.safeExtend({
+    cards: z.array(z.custom<SafetyScoreV9CurrentCard>((value) =>
+      value !== null && typeof value === "object" && admittedCards.has(value))),
+  });
+  return responseSchema.parse({
     model: "v9-critical-path",
     schemaVersion: 6,
     lifecycle: "active",
@@ -1097,7 +1128,7 @@ export function buildSafetyScoreV9Response(args: BuildSafetyScoreV9ResponseArgs)
     publicationGenerationId: args.publicationGenerationId,
     baseInputGenerationId: first.baseInputGenerationId,
     factSetDigest: first.factSetDigest,
-    resultDigest: computeV9ResultDigest(traces),
+    resultDigest,
     policy: { id: first.policyId, semanticDigest: first.policyDigest },
     evaluationBuildDigest: first.evaluationBuildDigest,
     sourceGenerations: canonicalSourceGenerations(first.sourceGenerations),
@@ -1113,8 +1144,6 @@ export function buildSafetyScoreV9Response(args: BuildSafetyScoreV9ResponseArgs)
     },
     cards,
     foreignCauseGaps,
-    ...(args.commonModeGroups === undefined ? {} : {
-      commonModeGroups: projectSafetyScoreV9CommonModeGroups(args.commonModeGroups, ordered, cards),
-    }),
+    ...(commonModeGroups === undefined ? {} : { commonModeGroups }),
   });
 }

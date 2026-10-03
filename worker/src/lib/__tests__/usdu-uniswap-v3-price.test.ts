@@ -51,6 +51,11 @@ describe("Universal USD exact Uniswap v3 recovery", () => {
     expect(result?.price).toBeCloseTo(1.000298588359182, 12);
     expect(isPublicImpactCircuitKey(usduUniswapV3Provider.liveCircuitSource!)).toBe(false);
   });
+  it("limits recovery to Universal USD rather than other USDU deployments", () => {
+    expect(usduUniswapV3Provider.matches("usdu-universal")).toBe(true);
+    expect(usduUniswapV3Provider.matches("usdu-unitas")).toBe(false);
+    expect(usduUniswapV3Provider.matches("usdu-usdu-finance")).toBe(false);
+  });
   it.each([
     { overrides: { 0: encode("address", [USDU]) }, reason: "identity" },
     { overrides: { 3: encode("uint256", [500n]) }, reason: "identity" },

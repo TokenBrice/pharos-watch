@@ -15,6 +15,7 @@
         "role": "wrapper",
         "authorityType": "contract",
         "directMintAbility": "none",
+        "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-10-02",
         "observedBlock": 26107703,

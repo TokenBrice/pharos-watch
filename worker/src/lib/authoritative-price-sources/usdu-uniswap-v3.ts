@@ -1,9 +1,9 @@
-import { decodeAbiParameters, encodeAbiParameters, keccak256, parseAbiParameters, toFunctionSelector } from "viem/utils";
+import { decodeAbiParameters, encodeAbiParameters, parseAbiParameters, toFunctionSelector } from "viem/utils";
 import { CIRCUIT_SOURCE, DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../constants";
-import { fetchEvmBlockNumber, fetchEvmBlockHeader, fetchEvmRpcBatch } from "../evm-rpc";
+import { fetchEvmBlockHeader, fetchEvmRpcBatch } from "../evm-rpc";
 import { throwIfAborted } from "../abort";
 import { hasPublishableCurrentPrice } from "../price-publication-state";
-import { getPublicFallbackRpcUrls } from "../public-rpc-registry";
+import { fetchPinnedEthereumRuntime } from "./pinned-ethereum-runtime";
 import { resolveTrustedOverrideParent, type CurrentPriceOverride, type LivePriceContext, type PriceSourceProvider } from "./helpers";
 
 const USDU = "0xe4ca6596d2c28014c6f89964f57838e0be9f369b";
@@ -42,19 +42,9 @@ export async function fetchUsduUniswapV3Price(context: LivePriceContext, signal?
   if (!parent) return reject("parent-unavailable");
   const age = Math.floor(Date.now() / 1000) - parent.trustedParent.observedAt;
   if (age < 0 || age >= 300) return reject("parent-age");
-  const options = { signal, chainRpcs: context.chainRpcs, extraRpcUrls: getPublicFallbackRpcUrls("ethereum"), maxRetries: 0 };
-  const block = await fetchEvmBlockNumber("ethereum", options);
-  if (block == null) return reject("block-unavailable");
-  const head = await fetchEvmBlockHeader("ethereum", block, options);
-  const now = Math.floor(Date.now() / 1000);
-  if (!head || head.timestamp > now || now - head.timestamp >= 300) return reject("block-age");
-  const tag = `0x${block.toString(16)}`;
-  // Serial, body-consumed RPC batches occupy one connection per authoritative lane.
-  const codes = await fetchEvmRpcBatch("ethereum", REVIEWED_RUNTIME.map(([address]) => ({ method: "eth_getCode", params: [address, tag] })), options);
-  throwIfAborted(signal);
-  if (!codes || codes.length !== REVIEWED_RUNTIME.length || codes.some((code, i) =>
-    typeof code !== "string" || code.length % 2 !== 0 || !/^0x[0-9a-fA-F]+$/.test(code) ||
-    keccak256(code as `0x${string}`) !== REVIEWED_RUNTIME[i][1])) return reject("runtime-code");
+  const pinned = await fetchPinnedEthereumRuntime(context, REVIEWED_RUNTIME, reject, signal);
+  if (!pinned) return null;
+  const { options, block, head, tag } = pinned;
   // Direct eth_call preserves QuoterV2 callback/sender semantics. V3 pool balances
   // are real token inventory (including fees), never virtual sqrtPrice/L reserves.
   const calls = [
