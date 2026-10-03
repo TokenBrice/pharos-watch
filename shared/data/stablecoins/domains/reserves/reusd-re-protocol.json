@@ -104,12 +104,12 @@
       "assetClass": "protocol-position",
       "issuerOrObligor": "Sky savings protocol",
       "riskFactors": ["counterparty", "smart-contract", "liquidity"],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "one-day"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-30",
-    "reviewer": "Dependency map WS1.B3 publication-gate review of current issuer metrics",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Dependency map WS1.B3 publication-gate review; Unknown wave W1R30 sUSDS liquidity classification",
     "confidence": "manual-review",
     "sources": [
       {
@@ -129,11 +129,19 @@
         "url": "https://docs.re.xyz/products/about-reusde.md"
       },
       {
+        "label": "Sky sUSDS withdrawal entitlement: position redeemable to USDS at any time",
+        "url": "https://sky.money/susds"
+      },
+      {
+        "label": "Sky developer sUSDS ERC-4626 withdrawal mechanism",
+        "url": "https://developers.skyeco.com/protocol/tokens/susds/"
+      },
+      {
         "label": "Historical TNF assets-only AUP, period 2025-10-31, signed 2025-12-17; excludes reUSD/reUSDe backing and does not attest this live composition",
         "url": "https://storage.googleapis.com/foundation-files/AUP-Report-2025.pdf"
       }
     ],
-    "rationale": "The current issuer metrics payload includes byAsset.reusd and byAsset.reusde on-chain numerators, but publishes offchain_capital as a protocol aggregate. It does not supply the attributable off-chain denominator and quantified tranche waterfall needed to turn these numerators into reUSD backing percentages. The measured protocol-pooled composition is retained as unlinked context. Every token link is withheld, including sUSDe (NC-116), so a reviewed overlay cannot turn protocol percentages into tranche dependencies.",
+    "rationale": "The current issuer metrics payload includes byAsset.reusd and byAsset.reusde on-chain numerators, but publishes offchain_capital as a protocol aggregate. It does not supply the attributable off-chain denominator and quantified tranche waterfall needed to turn these numerators into reUSD backing percentages. The measured protocol-pooled composition is retained as unlinked context. Every token link is withheld, including sUSDe (NC-116), so a reviewed overlay cannot turn protocol percentages into tranche dependencies. On 2026-10-03 only sUSDS liquidity metadata was newly researched: Sky documents fee-free ERC-4626 withdrawal to USDS at any time with no lockup, supporting the conservative one-day realization class, not guaranteed fiat settlement. No weights, composition clock or tranche attribution were refreshed.",
     "compositionBasis": "Protocol-pooled Re Metrics embedded payload captured 2026-09-30, normalized without rounding. These percentages describe protocol holdings, not attributable reUSD tranche backing.",
     "compositionAsOf": "2026-09-30",
     "scope": "classification-only",

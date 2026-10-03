@@ -4796,6 +4796,545 @@
         "https://financial.skyeco.com/usds/savings"
       ],
       "rationale": "The whole admitted slice combines idle underlying and Morpho lender claims. Issuer FAQs, governing terms section 1.9, product risks, Morpho withdrawal/audit documentation and exact vault/adapter source disclose liquidity-dependent ordinary withdrawal and separate force-deallocation, but publish no full-slice realization horizon or maximum repayment/withdrawal completion time. Complete pinned adapter census shows live lending exposure; idle balance cannot establish immediate liquidity for the entire mixed slice. Conditional current balances are not a time guarantee."
+    },
+    {
+      "id": "uw-reusd-re-protocol-f88abb858b5d6f9e",
+      "assetId": "reusd-re-protocol",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:4dfb91e8806b59cd54dfd4fa",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:19Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R30)",
+      "sources": [
+        {
+          "url": "https://storage.googleapis.com/re-files-production/docs/ppm_v2.pdf",
+          "observedAt": "2026-10-03T22:53:19Z",
+          "datumAsOf": "2026-03-16",
+          "location": "Maturity, p.64",
+          "excerpt": "The Final Redemption Date of each Note is not fixed and may fall significantly before or after the expected redemption date at the time the Note is entered into.",
+          "assertion": "PPM explicitly makes note redemption unfixed; it does not give a maximum covering the entire off-chain insurance slice."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://storage.googleapis.com/re-files-production/docs/ppm_v2.pdf",
+        "https://docs.re.xyz/glossary-and-reference/legal-structure.md",
+        "https://docs.re.xyz/transparency-and-data-show-me-the-receipts/audits-attestations-custody-structure.md",
+        "https://www.coverre.com",
+        "https://app.re.xyz/transparency",
+        "https://docs.re.xyz/how-reinsurance-works/underwriting-reserving-and-timing.md"
+      ],
+      "rationale": "maturityDaysMax for the whole off-chain insurance/reinsurance-capital slice is not disclosed. The PPM permits non-fixed final dates and new instruments; descriptions of individual note programmes or actuarial release lags cannot establish a portfolio-wide maximum."
+    },
+    {
+      "id": "uw-reusd-re-protocol-a99286583673ac5e",
+      "assetId": "reusd-re-protocol",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:19Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R30)",
+      "sources": [
+        {
+          "url": "https://docs.re.xyz/minting-and-redemptions/redemptions.md",
+          "observedAt": "2026-10-03T22:53:19Z",
+          "datumAsOf": null,
+          "location": "Published product disclosure",
+          "excerpt": "Offchain trust balances (all held with an independent bank/custodian) are verified daily by The Network Firm via read-only account access, with results published through a Chainlink oracle.",
+          "assertion": "Daily trust-balance verification does not publish reconciliation of complete reUSD liabilities to attributable on/offchain reserves."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.re.xyz/minting-and-redemptions/redemptions.md",
+        "https://docs.re.xyz/transparency-and-data-show-me-the-receipts/audits-attestations-custody-structure.md",
+        "https://storage.googleapis.com/re-files-production/docs/ppm_v2.pdf",
+        "https://docs.re.xyz/glossary-and-reference/legal-structure.md",
+        "https://app.re.xyz/metrics",
+        "https://storage.googleapis.com/foundation-files/AUP-Report-2025.pdf",
+        "https://docs.re.xyz/products/smart-contracts.md"
+      ],
+      "rationale": "The exact issuance-to-backing reconciliation for reUSD is undisclosed. Daily bank-balance checking, historical TNF agreed-upon procedures (not token-backing assurance), NAV calculation and pooled metrics do not reconcile current token liabilities, tranche attribution and the complete reserve denominator."
+    },
+    {
+      "id": "uw-reusd-re-protocol-e7d19b95ca7d819f",
+      "assetId": "reusd-re-protocol",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:reusd-re-protocol:queue-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:19Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R30)",
+      "sources": [
+        {
+          "url": "https://docs.re.xyz/minting-and-redemptions/redemptions.md",
+          "observedAt": "2026-10-03T22:53:19Z",
+          "datumAsOf": null,
+          "location": "Published product disclosure",
+          "excerpt": "Refer to current fee schedule",
+          "assertion": "Redemption page defers to a fee schedule; it does not give the complete currently applicable queue-redemption charge."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.re.xyz/minting-and-redemptions/redemptions.md",
+        "https://docs.re.xyz/glossary-and-reference/legal-structure.md",
+        "https://storage.googleapis.com/re-files-production/docs/ppm_v2.pdf",
+        "https://re.xyz/terms",
+        "https://re.xyz/disclosure",
+        "https://app.re.xyz/transparency"
+      ],
+      "rationale": "The exact complete current queue-redemption cost is undisclosed in the reviewed public documents. Earlier starting-at 6 bps metadata is a floor, not an all-in current fee; current docs defer to a fee schedule and binding offering terms allow adjustments."
+    },
+    {
+      "id": "uw-reusd-re-protocol-2dd91b57d1ea1201",
+      "assetId": "reusd-re-protocol",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:reusd-re-protocol:queue-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:19Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R30)",
+      "sources": [
+        {
+          "url": "https://storage.googleapis.com/re-files-production/docs/token_agreement_reUSD_v2.pdf",
+          "observedAt": "2026-10-03T22:53:19Z",
+          "datumAsOf": null,
+          "location": "Registered Holders & Redemption Rights, p.5",
+          "excerpt": "Redemption requests remain in queue if unfulfilled and roll over to subsequent redemption dates while maintaining queue position.",
+          "assertion": "The binding agreement explicitly allows rolling queue requests without a maximum completion interval."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.re.xyz/minting-and-redemptions/redemptions.md",
+        "https://storage.googleapis.com/re-files-production/docs/ppm_v2.pdf",
+        "https://docs.re.xyz/glossary-and-reference/legal-structure.md",
+        "https://storage.googleapis.com/re-files-production/docs/token_agreement_reUSD_v2.pdf",
+        "https://app.re.xyz/transparency"
+      ],
+      "rationale": "Maximum full-notional reUSD queue settlement time is not disclosed. Quarterly windows are opportunities, not a completion SLA; binding terms allow unfulfilled requests to roll over and impose no obligation to liquidate backing for redemptions."
+    },
+    {
+      "id": "uw-aa-falconx-mev-capital-a8ac635c7488da3c",
+      "assetId": "aa-falconx-mev-capital",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:b09ebd2c39712d16fa442be7",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:19Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R30)",
+      "sources": [
+        {
+          "url": "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
+          "observedAt": "2026-10-03T22:53:19Z",
+          "datumAsOf": "2026-07-31",
+          "location": "Published product disclosure",
+          "excerpt": "Master Loan Agreement with clear lender protections and covenants",
+          "assertion": "Issuer identifies the exact Ethereum FalconX vault and a binding MLA, but does not publish the MLA or complete economic terms."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
+        "https://docs.pareto.credit/product/users/lenders/guides/onboarding.md",
+        "https://docs.pareto.credit/developers/addresses/product/credit-vaults.md",
+        "https://docs.pareto.credit/product/credit-vaults.md",
+        "https://docs.pareto.credit/product/credit-vaults/live-vaults.md",
+        "https://docs.pareto.credit/product/users/lenders/guides/redeem.md",
+        "https://docs.pareto.credit/developer/security/audits.md",
+        "https://www.falconx.io/terms-of-agreement",
+        "https://www.falconx.io/newsroom/falconx-and-sygnum-bank-partner-to-bridge-regulated-banking-and-on-chain-tokenized-credit",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xba971ca6d4966870cbe9f032ae9c6e6546d2ee"
+      ],
+      "rationale": "A maximum maturity covering the exact Ethereum FalconX facility is undisclosed. The live-vault table describes a different Optimism vault and monthly renewal/withdrawal cycles; it is not a maximum maturity for the Ethereum obligor claim. The exact MLA and amendments are not publicly supplied."
+    },
+    {
+      "id": "uw-aa-falconx-mev-capital-981ab5ece67a30d5",
+      "assetId": "aa-falconx-mev-capital",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:19Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R30)",
+      "sources": [
+        {
+          "url": "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
+          "observedAt": "2026-10-03T22:53:19Z",
+          "datumAsOf": "2026-07-31",
+          "location": "Published product disclosure",
+          "excerpt": "Reporting rails that allow lenders to independently verify position status, accruals, and payment history at any time",
+          "assertion": "Position and payment transparency is disclosed, but full Ethereum issuance-to-underlying-borrower-assets reconciliation is not."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
+        "https://docs.pareto.credit/product/users/lenders/guides/onboarding.md",
+        "https://docs.pareto.credit/developers/addresses/product/credit-vaults.md",
+        "https://docs.pareto.credit/product/credit-vaults.md",
+        "https://docs.pareto.credit/product/credit-vaults/live-vaults.md",
+        "https://docs.pareto.credit/product/users/lenders/guides/redeem.md",
+        "https://docs.pareto.credit/developer/security/audits.md",
+        "https://www.falconx.io/terms-of-agreement",
+        "https://www.falconx.io/newsroom/falconx-and-sygnum-bank-partner-to-bridge-regulated-banking-and-on-chain-tokenized-credit",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xba971ca6d4966870cbe9f032ae9c6e6546d2ee"
+      ],
+      "rationale": "Exact Ethereum AA_FalconXUSDC issuance-to-backing reconciliation is undisclosed. Onchain accrual/payment visibility and generic collateral monitoring do not publish an independently verified complete reconciliation of token liabilities with the offchain SPV loan book and collateral."
+    },
+    {
+      "id": "uw-aa-falconx-mev-capital-ba38ec6f1a5caf1a",
+      "assetId": "aa-falconx-mev-capital",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "custodyEscrow",
+        "pillar": "backing",
+        "requiredDatum": "custodyEscrow",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:19Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R30)",
+      "sources": [
+        {
+          "url": "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
+          "observedAt": "2026-10-03T22:53:19Z",
+          "datumAsOf": "2026-07-31",
+          "location": "Published product disclosure",
+          "excerpt": "Master Loan Agreement with clear lender protections and covenants",
+          "assertion": "Issuer identifies the exact Ethereum FalconX vault and a binding MLA, but does not publish the MLA or complete economic terms."
+        },
+        {
+          "url": "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
+          "observedAt": "2026-10-03T22:53:19Z",
+          "datumAsOf": "2026-07-31",
+          "location": "Published product disclosure",
+          "excerpt": "The SPV is designed to lend funds to trading firms and hedge funds, utilizing FalconX\u2019s sophisticated (overcollateralized) lending framework and risk assessment engine to ensure robust risk management.",
+          "assertion": "Onward borrower lending and an SPV are disclosed, but custody coverage, complete local debt bounds and contract reuse permissions are not."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
+        "https://docs.pareto.credit/product/users/lenders/guides/onboarding.md",
+        "https://docs.pareto.credit/developers/addresses/product/credit-vaults.md",
+        "https://docs.pareto.credit/product/credit-vaults.md",
+        "https://docs.pareto.credit/product/credit-vaults/live-vaults.md",
+        "https://docs.pareto.credit/product/users/lenders/guides/redeem.md",
+        "https://docs.pareto.credit/developer/security/audits.md",
+        "https://www.falconx.io/terms-of-agreement",
+        "https://www.falconx.io/newsroom/falconx-and-sygnum-bank-partner-to-bridge-regulated-banking-and-on-chain-tokenized-credit",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xba971ca6d4966870cbe9f032ae9c6e6546d2ee"
+      ],
+      "rationale": "Whole-book custody/insolvency protections, local leverage bound and legally permitted capital reuse of the exact Ethereum FalconX claim are undisclosed. Public SPV/first-loss descriptions identify structure, not full custody allocation/security perfection or total SPV liabilities. External holder looping is not wrapper-local leverage. The MLA is not publicly supplied."
+    },
+    {
+      "id": "uw-aa-falconx-mev-capital-4c9fe700d4b9ed54",
+      "assetId": "aa-falconx-mev-capital",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "leverage",
+        "pillar": "backing",
+        "requiredDatum": "leverage",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:19Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R30)",
+      "sources": [
+        {
+          "url": "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
+          "observedAt": "2026-10-03T22:53:19Z",
+          "datumAsOf": "2026-07-31",
+          "location": "Published product disclosure",
+          "excerpt": "Master Loan Agreement with clear lender protections and covenants",
+          "assertion": "Issuer identifies the exact Ethereum FalconX vault and a binding MLA, but does not publish the MLA or complete economic terms."
+        },
+        {
+          "url": "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
+          "observedAt": "2026-10-03T22:53:19Z",
+          "datumAsOf": "2026-07-31",
+          "location": "Published product disclosure",
+          "excerpt": "The SPV is designed to lend funds to trading firms and hedge funds, utilizing FalconX\u2019s sophisticated (overcollateralized) lending framework and risk assessment engine to ensure robust risk management.",
+          "assertion": "Onward borrower lending and an SPV are disclosed, but custody coverage, complete local debt bounds and contract reuse permissions are not."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
+        "https://docs.pareto.credit/product/users/lenders/guides/onboarding.md",
+        "https://docs.pareto.credit/developers/addresses/product/credit-vaults.md",
+        "https://docs.pareto.credit/product/credit-vaults.md",
+        "https://docs.pareto.credit/product/credit-vaults/live-vaults.md",
+        "https://docs.pareto.credit/product/users/lenders/guides/redeem.md",
+        "https://docs.pareto.credit/developer/security/audits.md",
+        "https://www.falconx.io/terms-of-agreement",
+        "https://www.falconx.io/newsroom/falconx-and-sygnum-bank-partner-to-bridge-regulated-banking-and-on-chain-tokenized-credit",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xba971ca6d4966870cbe9f032ae9c6e6546d2ee"
+      ],
+      "rationale": "Whole-book custody/insolvency protections, local leverage bound and legally permitted capital reuse of the exact Ethereum FalconX claim are undisclosed. Public SPV/first-loss descriptions identify structure, not full custody allocation/security perfection or total SPV liabilities. External holder looping is not wrapper-local leverage. The MLA is not publicly supplied."
+    },
+    {
+      "id": "uw-aa-falconx-mev-capital-80fb365dd61cd371",
+      "assetId": "aa-falconx-mev-capital",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "rehypothecationCorrelation",
+        "pillar": "backing",
+        "requiredDatum": "rehypothecationCorrelation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:19Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R30)",
+      "sources": [
+        {
+          "url": "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
+          "observedAt": "2026-10-03T22:53:19Z",
+          "datumAsOf": "2026-07-31",
+          "location": "Published product disclosure",
+          "excerpt": "Master Loan Agreement with clear lender protections and covenants",
+          "assertion": "Issuer identifies the exact Ethereum FalconX vault and a binding MLA, but does not publish the MLA or complete economic terms."
+        },
+        {
+          "url": "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
+          "observedAt": "2026-10-03T22:53:19Z",
+          "datumAsOf": "2026-07-31",
+          "location": "Published product disclosure",
+          "excerpt": "The SPV is designed to lend funds to trading firms and hedge funds, utilizing FalconX\u2019s sophisticated (overcollateralized) lending framework and risk assessment engine to ensure robust risk management.",
+          "assertion": "Onward borrower lending and an SPV are disclosed, but custody coverage, complete local debt bounds and contract reuse permissions are not."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
+        "https://docs.pareto.credit/product/users/lenders/guides/onboarding.md",
+        "https://docs.pareto.credit/developers/addresses/product/credit-vaults.md",
+        "https://docs.pareto.credit/product/credit-vaults.md",
+        "https://docs.pareto.credit/product/credit-vaults/live-vaults.md",
+        "https://docs.pareto.credit/product/users/lenders/guides/redeem.md",
+        "https://docs.pareto.credit/developer/security/audits.md",
+        "https://www.falconx.io/terms-of-agreement",
+        "https://www.falconx.io/newsroom/falconx-and-sygnum-bank-partner-to-bridge-regulated-banking-and-on-chain-tokenized-credit",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xba971ca6d4966870cbe9f032ae9c6e6546d2ee"
+      ],
+      "rationale": "Whole-book custody/insolvency protections, local leverage bound and legally permitted capital reuse of the exact Ethereum FalconX claim are undisclosed. Public SPV/first-loss descriptions identify structure, not full custody allocation/security perfection or total SPV liabilities. External holder looping is not wrapper-local leverage. The MLA is not publicly supplied."
+    },
+    {
+      "id": "uw-aa-falconx-mev-capital-1f9d95b7a042aeaa",
+      "assetId": "aa-falconx-mev-capital",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:aa-falconx-mev-capital:stablecoin-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:19Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R30)",
+      "sources": [
+        {
+          "url": "https://docs.pareto.credit/product/users/lenders/guides/onboarding.md",
+          "observedAt": "2026-10-03T22:53:19Z",
+          "datumAsOf": null,
+          "location": "Published product disclosure",
+          "excerpt": "Before depositing, users are required to sign two agreements:",
+          "assertion": "Onboarding requires product-specific MLA terms; generic queue descriptions and the Optimism schedule do not establish Ethereum exit cost or maximum completion."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
+        "https://docs.pareto.credit/product/users/lenders/guides/onboarding.md",
+        "https://docs.pareto.credit/developers/addresses/product/credit-vaults.md",
+        "https://docs.pareto.credit/product/credit-vaults.md",
+        "https://docs.pareto.credit/product/credit-vaults/live-vaults.md",
+        "https://docs.pareto.credit/product/users/lenders/guides/redeem.md",
+        "https://docs.pareto.credit/developer/security/audits.md",
+        "https://www.falconx.io/terms-of-agreement",
+        "https://www.falconx.io/newsroom/falconx-and-sygnum-bank-partner-to-bridge-regulated-banking-and-on-chain-tokenized-credit",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xba971ca6d4966870cbe9f032ae9c6e6546d2ee"
+      ],
+      "rationale": "The complete exact Ethereum AA_FalconXUSDC redemption fee schedule and maximum full-notional settlement/withdrawal terms are not publicly disclosed. Generic cycle-end queue mechanics and early-exit examples do not bound borrower nonpayment or provide Ethereum-specific MLA charges; the named monthly schedule is Optimism."
+    },
+    {
+      "id": "uw-aa-falconx-mev-capital-487637d875075304",
+      "assetId": "aa-falconx-mev-capital",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:aa-falconx-mev-capital:stablecoin-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:19Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R30)",
+      "sources": [
+        {
+          "url": "https://docs.pareto.credit/product/users/lenders/guides/onboarding.md",
+          "observedAt": "2026-10-03T22:53:19Z",
+          "datumAsOf": null,
+          "location": "Published product disclosure",
+          "excerpt": "Before depositing, users are required to sign two agreements:",
+          "assertion": "Onboarding requires product-specific MLA terms; generic queue descriptions and the Optimism schedule do not establish Ethereum exit cost or maximum completion."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
+        "https://docs.pareto.credit/product/users/lenders/guides/onboarding.md",
+        "https://docs.pareto.credit/developers/addresses/product/credit-vaults.md",
+        "https://docs.pareto.credit/product/credit-vaults.md",
+        "https://docs.pareto.credit/product/credit-vaults/live-vaults.md",
+        "https://docs.pareto.credit/product/users/lenders/guides/redeem.md",
+        "https://docs.pareto.credit/developer/security/audits.md",
+        "https://www.falconx.io/terms-of-agreement",
+        "https://www.falconx.io/newsroom/falconx-and-sygnum-bank-partner-to-bridge-regulated-banking-and-on-chain-tokenized-credit",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xba971ca6d4966870cbe9f032ae9c6e6546d2ee"
+      ],
+      "rationale": "The complete exact Ethereum AA_FalconXUSDC redemption fee schedule and maximum full-notional settlement/withdrawal terms are not publicly disclosed. Generic cycle-end queue mechanics and early-exit examples do not bound borrower nonpayment or provide Ethereum-specific MLA charges; the named monthly schedule is Optimism."
+    },
+    {
+      "id": "uw-aa-falconx-mev-capital-519504b77c3ee633",
+      "assetId": "aa-falconx-mev-capital",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "withdrawalTerms",
+        "pillar": "backing",
+        "requiredDatum": "withdrawalTerms",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:19Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R30)",
+      "sources": [
+        {
+          "url": "https://docs.pareto.credit/product/users/lenders/guides/onboarding.md",
+          "observedAt": "2026-10-03T22:53:19Z",
+          "datumAsOf": null,
+          "location": "Published product disclosure",
+          "excerpt": "Before depositing, users are required to sign two agreements:",
+          "assertion": "Onboarding requires product-specific MLA terms; generic queue descriptions and the Optimism schedule do not establish Ethereum exit cost or maximum completion."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://paragraph.com/@pareto/private-credit-legacy-underwriting",
+        "https://docs.pareto.credit/product/users/lenders/guides/onboarding.md",
+        "https://docs.pareto.credit/developers/addresses/product/credit-vaults.md",
+        "https://docs.pareto.credit/product/credit-vaults.md",
+        "https://docs.pareto.credit/product/credit-vaults/live-vaults.md",
+        "https://docs.pareto.credit/product/users/lenders/guides/redeem.md",
+        "https://docs.pareto.credit/developer/security/audits.md",
+        "https://www.falconx.io/terms-of-agreement",
+        "https://www.falconx.io/newsroom/falconx-and-sygnum-bank-partner-to-bridge-regulated-banking-and-on-chain-tokenized-credit",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xba971ca6d4966870cbe9f032ae9c6e6546d2ee"
+      ],
+      "rationale": "The complete exact Ethereum AA_FalconXUSDC redemption fee schedule and maximum full-notional settlement/withdrawal terms are not publicly disclosed. Generic cycle-end queue mechanics and early-exit examples do not bound borrower nonpayment or provide Ethereum-specific MLA charges; the named monthly schedule is Optimism."
+    },
+    {
+      "id": "uw-yousd-yield-optimizer-6b6f122b7fc54510",
+      "assetId": "yousd-yield-optimizer",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:5cae943dc263b0125f41d763",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:55:23Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R30)",
+      "sources": [
+        {
+          "url": "https://docs.yo.xyz/protocol/risks.md",
+          "observedAt": "2026-10-03T22:53:19Z",
+          "datumAsOf": null,
+          "location": "Liquidity and strategy risk",
+          "excerpt": "Most of the time, you can redeem your assets instantly.",
+          "assertion": "Routine user redemption expectation does not disclose a maximum realization horizon covering every deployed strategy position."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.yo.xyz/protocol/risks.md",
+        "https://docs.yo.xyz/protocol/yo-protocol.md",
+        "https://docs.yo.xyz/protocol/yo-v2-security-framework.md",
+        "https://docs.yo.xyz/protocol/contract-addresses.md",
+        "https://docs.yo.xyz/user-guides/how-to-withdraw-from-yo.md",
+        "https://api.yo.xyz/api/v1/vault/base/0x0000000f2eb9f69274678c76222b35eec7588a65",
+        "https://risk.yo.xyz/api/v1/public/vault/base/0x0000000f2eb9f69274678c76222b35eec7588a65/exposure",
+        "https://base.blockscout.com/api/v2/smart-contracts/0xc84a6e01bff58996540f1abc22355a9dfe0d78dc"
+      ],
+      "rationale": "The maximum asset-realization liquidityHorizon of the complete deployed yoUSD strategy slice is undisclosed. The 24-hour user-withdrawal description is not a bound on all strategy realizations during chain/bridge outages or illiquid pools. Verified fulfillRedeem depends on operator liquidity; neither API publishes per-position enforceable maximum release terms."
+    },
+    {
+      "id": "uw-doc-money-on-chain-cd4e119ecfbbfdc7",
+      "assetId": "doc-money-on-chain",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:doc-money-on-chain:collateral-redeem"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T22:56:36Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R30)",
+      "sources": [
+        {
+          "url": "https://docs.moneyonchain.com/main-rbtc-contract/integration-with-moc-platform/fees-calculation.md",
+          "observedAt": "2026-10-03T22:55:23Z",
+          "datumAsOf": null,
+          "location": "Fees calculation: redemption in RBTC",
+          "excerpt": "btcReceived = totalBtc - totalBtc * CommissionReturnStruct.btcCommission - totalBtc * CommissionReturnStruct.btcMarkup - interests",
+          "assertion": "W15: applicable account/vendor/fee-token formula is public, but the Pharos route does not evaluate calculateCommissionsWithPrices and current MoCInrate/vendor inputs for the stress notional."
+        }
+      ]
     }
   ]
 }

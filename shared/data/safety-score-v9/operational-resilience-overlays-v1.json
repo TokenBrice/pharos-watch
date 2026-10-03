@@ -2294,6 +2294,138 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "reusd-re-protocol",
+      "reviewedAt": "2026-10-03T22:47:08Z",
+      "expiresAt": "2027-10-03T23:59:59Z",
+      "reviewer": "Unknown wave W1R30",
+      "notes": "Dated issuer announcement proves exact reUSD was already operating and bridgeable from Ethereum by 2026-08-11. This is a conservative lower bound, not its earliest launch date or verified uninterrupted history. No redemption throughput, stress recovery, reserve reconciliation or incident-free claim is established.",
+      "sources": [
+        {
+          "sourceId": "dated-live-evidence",
+          "label": "reUSD live on Solana",
+          "publisher": "Re Protocol",
+          "publishedAt": "2026-08-11",
+          "url": "https://re.xyz/insights/reusd-live-on-solana",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 1,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-evidence"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "aa-falconx-mev-capital",
+      "reviewedAt": "2026-10-03T22:47:08Z",
+      "expiresAt": "2027-10-03T23:59:59Z",
+      "reviewer": "Unknown wave W1R30",
+      "notes": "Dated Pareto announcement identifies AA_FalconXUSDC and links the exact Ethereum token 0xc26a6fa2c37b38e549a4a1807543801db684f99c as operating collateral. This lower bound is not inherited FalconX company or Optimism predecessor history. No redemption throughput, stress recovery, reserve reconciliation or incident-free claim is established.",
+      "sources": [
+        {
+          "sourceId": "dated-live-evidence",
+          "label": "Exact AA_FalconXUSDC collateral integration announcement",
+          "publisher": "Pareto",
+          "publishedAt": "2025-09-17",
+          "url": "https://paragraph.com/@pareto/pareto-structured-products-falconx-m11credit-termfinance",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 12,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-evidence"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "doc-money-on-chain",
+      "reviewedAt": "2026-10-03T22:47:08Z",
+      "expiresAt": "2027-10-03T23:59:59Z",
+      "reviewer": "Unknown wave W1R30",
+      "notes": "Issuer historical account dates Rootstock deployment to 2019-10-05 and explicitly records buying pizza with DOC shortly afterwards. Lower-bound token operating history only; this is not a claim that the present upgraded implementation is seven years old. No redemption throughput, stress recovery, reserve reconciliation or incident-free claim is established.",
+      "sources": [
+        {
+          "sourceId": "dated-live-evidence",
+          "label": "Money On Chain milestones: DOC mainnet deployment",
+          "publisher": "Money On Chain",
+          "publishedAt": "2023-11-09",
+          "url": "https://moneyonchain.com/money-on-chain-milestones/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 83,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-evidence"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "yousd-yield-optimizer",
+      "reviewedAt": "2026-10-03T22:47:08Z",
+      "expiresAt": "2027-10-03T23:59:59Z",
+      "reviewer": "Unknown wave W1R30",
+      "notes": "Explorer creation transaction identifies the exact catalog Base yoUSD proxy at 0x0000000f2eb9f69274678c76222b35eec7588a65 and timestamp 2025-04-17T14:55:33Z. Creation-history lower bound accepted at issuer-reported confidence; no parent or generic YO company history is used. No redemption throughput, stress recovery, reserve reconciliation or incident-free claim is established.",
+      "sources": [
+        {
+          "sourceId": "dated-live-evidence",
+          "label": "Exact Base yoUSD creation transaction at block 29056193",
+          "publisher": "Base Blockscout",
+          "publishedAt": "2025-04-17",
+          "url": "https://base.blockscout.com/tx/0x4e5abfb06cb99bbf2dcf5b829dc7fded3429727f7b0e6e7fd126d18cf4aa9c34",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 17,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-evidence"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }
