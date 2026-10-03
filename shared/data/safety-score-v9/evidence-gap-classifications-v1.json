@@ -7599,446 +7599,6 @@
       "rationale": "Maximum full-position liquidation/withdrawal horizons for the live Bnb_smartchain, Binance and Solana hedge slices are not disclosed. Hourly hedge rebalancing, onchain balances and whitelisted redemption descriptions do not establish realization deadlines for these scoped positions."
     },
     {
-      "id": "uw-euro3-3a-dao-321c4878ade1384d",
-      "assetId": "euro3-3a-dao",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:1f82d40342195bb6a9037804",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:16:31Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R77)",
-      "sources": [
-        {
-          "url": "https://ionian.gitbook.io/mendi-finance/protocol/collateral-and-reserves",
-          "observedAt": "2026-10-03T23:16:31Z",
-          "datumAsOf": null,
-          "location": "Issuer disclosure",
-          "excerpt": "meTokens are the primary means of interacting with the Mendi Finance Protocol",
-          "assertion": "Receipt tokens redeem through lending markets; this is not a whole-position realization maximum."
-        },
-        {
-          "url": "https://ionian.gitbook.io/mendi-finance/other-information/legal-disclaimer",
-          "observedAt": "2026-10-03T23:16:31Z",
-          "datumAsOf": null,
-          "location": "Issuer disclosure",
-          "excerpt": "The Website functionality is not guaranteed and could be disabled fully or in part without prior notice.",
-          "assertion": "No guaranteed whole-slice liquidity horizon is provided."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://ionian.gitbook.io/mendi-finance/llms.txt",
-        "https://ionian.gitbook.io/mendi-finance/protocol/developer-docs",
-        "https://ionian.gitbook.io/mendi-finance/protocol/collateral-and-reserves",
-        "https://ionian.gitbook.io/mendi-finance/protocol/contract-addresses",
-        "https://ionian.gitbook.io/mendi-finance/other-information/legal-disclaimer",
-        "https://lineascan.build/address/0x333D8b480BDB25eA7Be4Dd87EEB359988CE1b30D#code",
-        "https://docs.3adao.org/3a-protocol/protocol-documentation/euro3-coin"
-      ],
-      "rationale": "The whole EURO3-held meUSDC, meUSDT, mewETH and mewstETH receipt positions have no published maximum realization horizon. Mendi discloses exchange-rate accounting, redeem interfaces, collateral/reserve factors and market identities, but not a bound on all deposited collateral becoming available. Executable token redemption and partial liquid cash do not prove whole-position liquidity."
-    },
-    {
-      "id": "uw-euro3-3a-dao-45427e21415a7e6b",
-      "assetId": "euro3-3a-dao",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:a2ac0d11af44277391411a22",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:16:31Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R77)",
-      "sources": [
-        {
-          "url": "https://ionian.gitbook.io/mendi-finance/protocol/collateral-and-reserves",
-          "observedAt": "2026-10-03T23:16:31Z",
-          "datumAsOf": null,
-          "location": "Issuer disclosure",
-          "excerpt": "meTokens are the primary means of interacting with the Mendi Finance Protocol",
-          "assertion": "Receipt tokens redeem through lending markets; this is not a whole-position realization maximum."
-        },
-        {
-          "url": "https://ionian.gitbook.io/mendi-finance/other-information/legal-disclaimer",
-          "observedAt": "2026-10-03T23:16:31Z",
-          "datumAsOf": null,
-          "location": "Issuer disclosure",
-          "excerpt": "The Website functionality is not guaranteed and could be disabled fully or in part without prior notice.",
-          "assertion": "No guaranteed whole-slice liquidity horizon is provided."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://ionian.gitbook.io/mendi-finance/llms.txt",
-        "https://ionian.gitbook.io/mendi-finance/protocol/developer-docs",
-        "https://ionian.gitbook.io/mendi-finance/protocol/collateral-and-reserves",
-        "https://ionian.gitbook.io/mendi-finance/protocol/contract-addresses",
-        "https://ionian.gitbook.io/mendi-finance/other-information/legal-disclaimer",
-        "https://lineascan.build/address/0x333D8b480BDB25eA7Be4Dd87EEB359988CE1b30D#code",
-        "https://docs.3adao.org/3a-protocol/protocol-documentation/euro3-coin"
-      ],
-      "rationale": "The whole EURO3-held meUSDC, meUSDT, mewETH and mewstETH receipt positions have no published maximum realization horizon. Mendi discloses exchange-rate accounting, redeem interfaces, collateral/reserve factors and market identities, but not a bound on all deposited collateral becoming available. Executable token redemption and partial liquid cash do not prove whole-position liquidity."
-    },
-    {
-      "id": "uw-euro3-3a-dao-bb3b2b8c55111b72",
-      "assetId": "euro3-3a-dao",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:be7f7c95ff0dce99dc4c8f85",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:16:31Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R77)",
-      "sources": [
-        {
-          "url": "https://ionian.gitbook.io/mendi-finance/protocol/collateral-and-reserves",
-          "observedAt": "2026-10-03T23:16:31Z",
-          "datumAsOf": null,
-          "location": "Issuer disclosure",
-          "excerpt": "meTokens are the primary means of interacting with the Mendi Finance Protocol",
-          "assertion": "Receipt tokens redeem through lending markets; this is not a whole-position realization maximum."
-        },
-        {
-          "url": "https://ionian.gitbook.io/mendi-finance/other-information/legal-disclaimer",
-          "observedAt": "2026-10-03T23:16:31Z",
-          "datumAsOf": null,
-          "location": "Issuer disclosure",
-          "excerpt": "The Website functionality is not guaranteed and could be disabled fully or in part without prior notice.",
-          "assertion": "No guaranteed whole-slice liquidity horizon is provided."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://ionian.gitbook.io/mendi-finance/llms.txt",
-        "https://ionian.gitbook.io/mendi-finance/protocol/developer-docs",
-        "https://ionian.gitbook.io/mendi-finance/protocol/collateral-and-reserves",
-        "https://ionian.gitbook.io/mendi-finance/protocol/contract-addresses",
-        "https://ionian.gitbook.io/mendi-finance/other-information/legal-disclaimer",
-        "https://lineascan.build/address/0x333D8b480BDB25eA7Be4Dd87EEB359988CE1b30D#code",
-        "https://docs.3adao.org/3a-protocol/protocol-documentation/euro3-coin"
-      ],
-      "rationale": "The whole EURO3-held meUSDC, meUSDT, mewETH and mewstETH receipt positions have no published maximum realization horizon. Mendi discloses exchange-rate accounting, redeem interfaces, collateral/reserve factors and market identities, but not a bound on all deposited collateral becoming available. Executable token redemption and partial liquid cash do not prove whole-position liquidity."
-    },
-    {
-      "id": "uw-euro3-3a-dao-5058a139f9e9303a",
-      "assetId": "euro3-3a-dao",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:fc2f4cb0eb54c28349375c4e",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:16:31Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R77)",
-      "sources": [
-        {
-          "url": "https://ionian.gitbook.io/mendi-finance/protocol/collateral-and-reserves",
-          "observedAt": "2026-10-03T23:16:31Z",
-          "datumAsOf": null,
-          "location": "Issuer disclosure",
-          "excerpt": "meTokens are the primary means of interacting with the Mendi Finance Protocol",
-          "assertion": "Receipt tokens redeem through lending markets; this is not a whole-position realization maximum."
-        },
-        {
-          "url": "https://ionian.gitbook.io/mendi-finance/other-information/legal-disclaimer",
-          "observedAt": "2026-10-03T23:16:31Z",
-          "datumAsOf": null,
-          "location": "Issuer disclosure",
-          "excerpt": "The Website functionality is not guaranteed and could be disabled fully or in part without prior notice.",
-          "assertion": "No guaranteed whole-slice liquidity horizon is provided."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://ionian.gitbook.io/mendi-finance/llms.txt",
-        "https://ionian.gitbook.io/mendi-finance/protocol/developer-docs",
-        "https://ionian.gitbook.io/mendi-finance/protocol/collateral-and-reserves",
-        "https://ionian.gitbook.io/mendi-finance/protocol/contract-addresses",
-        "https://ionian.gitbook.io/mendi-finance/other-information/legal-disclaimer",
-        "https://lineascan.build/address/0x333D8b480BDB25eA7Be4Dd87EEB359988CE1b30D#code",
-        "https://docs.3adao.org/3a-protocol/protocol-documentation/euro3-coin"
-      ],
-      "rationale": "The whole EURO3-held meUSDC, meUSDT, mewETH and mewstETH receipt positions have no published maximum realization horizon. Mendi discloses exchange-rate accounting, redeem interfaces, collateral/reserve factors and market identities, but not a bound on all deposited collateral becoming available. Executable token redemption and partial liquid cash do not prove whole-position liquidity."
-    },
-    {
-      "id": "uw-gldt-gold-dao-df16e419ba08e7d1",
-      "assetId": "gldt-gold-dao",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:physical-to-usd:gldt-gold-dao"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:16:31Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R77)",
-      "sources": [
-        {
-          "url": "https://help.bity.com/en/articles/9680077-how-can-i-redeem-the-physical-gold-bar-from-my-nfts",
-          "observedAt": "2026-10-03T23:16:31Z",
-          "datumAsOf": null,
-          "location": "Issuer disclosure",
-          "excerpt": "Once the fee is paid, you will receive a receipt and confirmation of your appointment for the redemption.",
-          "assertion": "Appointment process has no final maximum release time."
-        },
-        {
-          "url": "https://help.bity.com/en/articles/9680058-how-can-i-resell-my-gld-nft",
-          "observedAt": "2026-10-03T23:16:31Z",
-          "datumAsOf": null,
-          "location": "Issuer disclosure",
-          "excerpt": "Once the transaction is confirmed, we will send the agreed USDT amount to your specified address.",
-          "assertion": "USDT resale lacks completion maximum or final USD conversion SLA."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.gold-dao.org/llms.txt",
-        "https://docs.gold-dao.org/legal/terms-of-service",
-        "https://docs.gold-dao.org/how-to/redeem-physical-gold",
-        "https://help.bity.com/en/articles/9680077-how-can-i-redeem-the-physical-gold-bar-from-my-nfts",
-        "https://help.bity.com/en/articles/9680058-how-can-i-resell-my-gld-nft",
-        "https://gold.bity.com/en",
-        "https://docs.gold-dao.org/tokens/gldt"
-      ],
-      "rationale": "Neither the issuer physical-redemption route nor the composed physical-to-spendable-USD route publishes an end-to-end maximum. KYC, reverse swap, appointment and physical pickup are disclosed without deadlines. NFT buyback pays USDT after confirmation without a maximum; it is not a final spendable USD SLA."
-    },
-    {
-      "id": "uw-gldt-gold-dao-8e6db88665bf73b3",
-      "assetId": "gldt-gold-dao",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:gldt-gold-dao:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:16:31Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R77)",
-      "sources": [
-        {
-          "url": "https://help.bity.com/en/articles/9680077-how-can-i-redeem-the-physical-gold-bar-from-my-nfts",
-          "observedAt": "2026-10-03T23:16:31Z",
-          "datumAsOf": null,
-          "location": "Issuer disclosure",
-          "excerpt": "Once the fee is paid, you will receive a receipt and confirmation of your appointment for the redemption.",
-          "assertion": "Appointment process has no final maximum release time."
-        },
-        {
-          "url": "https://help.bity.com/en/articles/9680058-how-can-i-resell-my-gld-nft",
-          "observedAt": "2026-10-03T23:16:31Z",
-          "datumAsOf": null,
-          "location": "Issuer disclosure",
-          "excerpt": "Once the transaction is confirmed, we will send the agreed USDT amount to your specified address.",
-          "assertion": "USDT resale lacks completion maximum or final USD conversion SLA."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.gold-dao.org/llms.txt",
-        "https://docs.gold-dao.org/legal/terms-of-service",
-        "https://docs.gold-dao.org/how-to/redeem-physical-gold",
-        "https://help.bity.com/en/articles/9680077-how-can-i-redeem-the-physical-gold-bar-from-my-nfts",
-        "https://help.bity.com/en/articles/9680058-how-can-i-resell-my-gld-nft",
-        "https://gold.bity.com/en",
-        "https://docs.gold-dao.org/tokens/gldt"
-      ],
-      "rationale": "Neither the issuer physical-redemption route nor the composed physical-to-spendable-USD route publishes an end-to-end maximum. KYC, reverse swap, appointment and physical pickup are disclosed without deadlines. NFT buyback pays USDT after confirmation without a maximum; it is not a final spendable USD SLA."
-    },
-    {
-      "id": "uw-gldt-gold-dao-4d85e1c0e1b31a90",
-      "assetId": "gldt-gold-dao",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:gldt-gold-dao:offchain-issuer"
-      },
-      "cause": "B",
-      "assertion": "required-data-public",
-      "reviewedAt": "2026-10-03T23:16:31Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R77)",
-      "sources": [
-        {
-          "url": "https://medium.com/@GoldDAO/gldt-launches-as-the-worlds-first-fully-gold-backed-decentralized-gold-token-governed-by-a-dao-45baa177d34b",
-          "observedAt": "2026-10-03T23:16:31Z",
-          "datumAsOf": "2024-10-30",
-          "location": "Issuer disclosure",
-          "excerpt": "Reverse Swap Fee: A flat fee of 1 GLDT applies for each reverse swap, regardless of the gold bar\u2019s size.",
-          "assertion": "Published token-denominated formula is not evaluated by the current offchain-issuer fee model; converting 1 GLDT plus CHF300 pickup requires notional, lot and captured FX handling."
-        },
-        {
-          "url": "https://help.bity.com/en/articles/9680077-how-can-i-redeem-the-physical-gold-bar-from-my-nfts",
-          "observedAt": "2026-10-03T23:16:31Z",
-          "datumAsOf": null,
-          "location": "Issuer disclosure",
-          "excerpt": "This fee applies regardless of the size or quantity of gold.",
-          "assertion": "CHF300 charge is disclosed, not an unknown fee; the model cannot represent an all-in USD charge without FX/lot evaluation."
-        }
-      ]
-    },
-    {
-      "id": "uw-gldt-gold-dao-3892111dfe422652",
-      "assetId": "gldt-gold-dao",
-      "scope": {
-        "componentKey": "mechanism-review:assuranceAndReconciliation",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "backing",
-        "requiredDatum": "mechanism-review:assuranceAndReconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:16:31Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R77)",
-      "sources": [
-        {
-          "url": "https://docs.gold-dao.org/other/audit-reports",
-          "observedAt": "2026-10-03T23:16:31Z",
-          "datumAsOf": null,
-          "location": "Issuer disclosure",
-          "excerpt": "All the latest audit reports of the vaults, where the gold bars are stored, are uploaded here.",
-          "assertion": "Archive contains latest September 2025 physical-vault factual findings, not current GLDT supply reconciliation."
-        },
-        {
-          "url": "https://2669388926-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FhyYilEcr51QGR1f1ZQ8w%2Fuploads%2Fsq2DN60j11A1A0uL3tHX%2FAudit%20Report%2009-2025.pdf?alt=media&token=7a7a500e-1321-4e9d-8046-46ae8199e244",
-          "observedAt": "2026-10-03T23:16:31Z",
-          "datumAsOf": "2025-09-21",
-          "location": "KPMG report page 2",
-          "excerpt": "Because the above procedures do not constitute either an audit or a review made in accordance with Swiss Auditing Standards, we do not express any assurance on the 7.9 KG gold.",
-          "assertion": "KPMG report covers physical gold and certificates, not matched outstanding GLDT liabilities."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.gold-dao.org/llms.txt",
-        "https://docs.gold-dao.org/other/audit-reports",
-        "https://docs.gold-dao.org/legal/terms-of-service",
-        "https://docs.gold-dao.org/tokens/gldt",
-        "https://docs.gold-dao.org/resources/roadmap",
-        "https://gold.bity.com/en"
-      ],
-      "rationale": "No current exact-GLDT independent reserve-and-liability reconciliation is published on the reviewed issuer and vault-report archive. Latest linked KPMG artifact is dated September 21, 2025 and signed October 2, covers 7.9kg/790 GLD certificates with sampled serials, expressly no assurance, and does not reconcile GLDT outstanding supply. The GLD NFT book is not the exact GLDT liability denominator."
-    },
-    {
-      "id": "uw-usda-anzens-d6029bc2b679afc5",
-      "assetId": "usda-anzens",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usda-anzens:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:16:31Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R77)",
-      "sources": [
-        {
-          "url": "https://www.anzens.com/landing/terms-and-conditions",
-          "observedAt": "2026-10-03T23:16:31Z",
-          "datumAsOf": "2025-04-14",
-          "location": "Sections 12 and 19",
-          "excerpt": "The time it takes for you to receive the funds may vary depending on your chosen withdrawal method and the processing times of your bank or payment provider.",
-          "assertion": "Two business days to account credit and three-day withdrawal aim do not bound final funds receipt."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.anzens.com/landing/terms-and-conditions",
-        "https://www.anzens.com/",
-        "https://www.emurgo.io/press-news/anzens-is-live-usda-stablecoin-minting-access-is-here-cardano/"
-      ],
-      "rationale": "USDA-to-final-spendable-USD has no published maximum. Section 12 specifies two business days to Anzens account credit and aims for three business days for withdrawal processing, explicitly variable bank/payment timing and reasonable-efforts qualifications. Foreign account withdrawals use Encryptus. These are intermediate targets, not a final USD settlement guarantee."
-    },
-    {
-      "id": "uw-usda-anzens-be8b3a5bc9edd36d",
-      "assetId": "usda-anzens",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usda-anzens:offchain-issuer"
-      },
-      "cause": "B",
-      "assertion": "required-data-public",
-      "reviewedAt": "2026-10-03T23:16:31Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R77)",
-      "sources": [
-        {
-          "url": "https://www.anzens.com/landing/terms-and-conditions",
-          "observedAt": "2026-10-03T23:16:31Z",
-          "datumAsOf": "2025-04-14",
-          "location": "Section 15(e)",
-          "excerpt": "For US Domestic Wire, a Fee of $30 will apply and for International Wire, a Fee of $70 will apply (Please note that this is subject to change.)",
-          "assertion": "Applicable published flat wire schedule plus variable network/account fees is not evaluated at same notional by existing undisclosedReviewedFee model."
-        }
-      ]
-    },
-    {
-      "id": "uw-fidd-fidelity-2d05fb8170d647d4",
-      "assetId": "fidd-fidelity",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:680c1bc3d8d777289ef65a58",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:16:31Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R77)",
-      "sources": [
-        {
-          "url": "https://www.fidelitydigitalassets.com/fidd-terms",
-          "observedAt": "2026-10-03T23:16:31Z",
-          "datumAsOf": "2026-04-13",
-          "location": "Section 3(4)",
-          "excerpt": "deposit accounts at U.S. state or federally chartered depository institutions.",
-          "assertion": "Deposit mandate does not identify demand versus term deposits or maximum maturity."
-        },
-        {
-          "url": "https://fwc.widen.net/s/jgdsvvsknq/fidelity-digital-assets---fidd-reserve-attestation-report---august-2026",
-          "observedAt": "2026-10-03T23:16:31Z",
-          "datumAsOf": "2026-08-31",
-          "location": "Report page 3; tables pages 6\u20138",
-          "excerpt": "Our procedures were limited to the quantity of outstanding FIDD and the related redemption assets and therefore do not constitute an audit or examination of Fidelity Digital Assets, National Association or its financial position.",
-          "assertion": "Report lists bank cash amounts separately from Treasury maturity roster; no deposit maturity term."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.fidelitydigitalassets.com/fidd-terms",
-        "https://www.fidelitydigitalassets.com/stablecoin",
-        "https://www.fidelitydigitalassets.com/stablecoin-developer-resources",
-        "https://fwc.widen.net/s/jgdsvvsknq/fidelity-digital-assets---fidd-reserve-attestation-report---august-2026"
-      ],
-      "rationale": "The BNY Mellon cash deposit slice has no disclosed contractual maximum maturity. August report lists amounts and bank identity but maturity dates only for Treasury CUSIPs; governing terms authorize deposit accounts without demand-deposit characterization or maturity constraint. Cash liquidity is not proof of zero maturity; the Treasury three-month mandate cannot be applied to deposits."
-    },
-    {
       "id": "uw-gbpa-agant-0013c532d5a15e5c",
       "assetId": "gbpa-agant",
       "scope": {
@@ -29713,258 +29273,6 @@
       "rationale": "Exact missing datum is full scoped realization horizon for nTBILL USDC, USDT, JTRSY and USTB, not token transfer speed or vault-user queue timing. Exact positions identify multi-chain USDC, BNB/Plasma USDT claims and Plume funds. Nest operations/legal, Circle/Tether redemption conditions and fund dealing/risk surfaces provide conditional eligibility/liquidity, not asset/chain-complete realization bounds for these rows. No final cash or whole-position scalar is inferred from liquidAssets labels or daily redemption access."
     },
     {
-      "id": "uw-nopal-nest-3dab9c6a4d8e0460",
-      "assetId": "nopal-nest",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:nopal-nest:queue-redeem"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:51:00Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R62)",
-      "sources": [
-        {
-          "url": "https://docs.nest.credit/about/liquidity-and-redemptions",
-          "observedAt": "2026-10-03T22:45:46Z",
-          "datumAsOf": null,
-          "location": "Queued (Asynchronous) Redemption",
-          "excerpt": "Larger withdrawals, or redemptions submitted when available liquidity is limited, may require additional time as positions are unwound in an orderly manner.",
-          "assertion": "Typical T+2 to T+5 ranges are qualified; no unconditional final settlement maximum for the modeled nOPAL/nBASIS queued exit is established."
-        },
-        {
-          "url": "https://docs.nest.credit/about/vault-operations-and-valuation",
-          "observedAt": "2026-10-03T22:45:46Z",
-          "datumAsOf": null,
-          "location": "Standard Redemption",
-          "excerpt": "A user submits a redemption request, and the vault processes that request as liquidity becomes available.",
-          "assertion": "Completion remains liquidity-dependent rather than a guaranteed SLA."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.nest.credit/",
-        "https://docs.nest.credit/about/available-vaults",
-        "https://docs.nest.credit/about/liquidity-and-redemptions",
-        "https://docs.nest.credit/about/vault-operations-and-valuation",
-        "https://docs.nest.credit/security-and-compliance/terms-and-conditions",
-        "https://docs.nest.credit/developers/integration-guides/nopal",
-        "https://docs.nest.credit/developers/actions-api/reference/vaults/slug/redeem/quote/post",
-        "https://api.nest.credit/v1/vaults/nest-basis-vault",
-        "https://api.nest.credit/v1/vaults/nest-opal-vault",
-        "https://github.com/plumenetwork/nest-protocol/blob/main/contracts/README.md"
-      ],
-      "rationale": "The exact datum is final queued-redemption settlement maximum at the modeled notional. Reviewed legal terms, integration/API flow, vault directory, liquidity policy and permissioned fulfillment documentation publish estimates and liquidity-dependent processing, not a binding asset-specific completion maximum. Current nOPAL T+1 is explicitly an estimate; typical hour/T+2\u2013T+5 figures are not guaranteed. nBASIS remains in the exact registry but is absent from the current Arc-only directory."
-    },
-    {
-      "id": "uw-nbasis-nest-6f7a192f3a41646b",
-      "assetId": "nbasis-nest",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:nbasis-nest:queue-redeem"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:51:00Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R62)",
-      "sources": [
-        {
-          "url": "https://docs.nest.credit/about/liquidity-and-redemptions",
-          "observedAt": "2026-10-03T22:45:46Z",
-          "datumAsOf": null,
-          "location": "Queued (Asynchronous) Redemption",
-          "excerpt": "Larger withdrawals, or redemptions submitted when available liquidity is limited, may require additional time as positions are unwound in an orderly manner.",
-          "assertion": "Typical T+2 to T+5 ranges are qualified; no unconditional final settlement maximum for the modeled nOPAL/nBASIS queued exit is established."
-        },
-        {
-          "url": "https://docs.nest.credit/about/vault-operations-and-valuation",
-          "observedAt": "2026-10-03T22:45:46Z",
-          "datumAsOf": null,
-          "location": "Standard Redemption",
-          "excerpt": "A user submits a redemption request, and the vault processes that request as liquidity becomes available.",
-          "assertion": "Completion remains liquidity-dependent rather than a guaranteed SLA."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.nest.credit/",
-        "https://docs.nest.credit/about/available-vaults",
-        "https://docs.nest.credit/about/liquidity-and-redemptions",
-        "https://docs.nest.credit/about/vault-operations-and-valuation",
-        "https://docs.nest.credit/security-and-compliance/terms-and-conditions",
-        "https://docs.nest.credit/developers/integration-guides/nopal",
-        "https://docs.nest.credit/developers/actions-api/reference/vaults/slug/redeem/quote/post",
-        "https://api.nest.credit/v1/vaults/nest-basis-vault",
-        "https://api.nest.credit/v1/vaults/nest-opal-vault",
-        "https://github.com/plumenetwork/nest-protocol/blob/main/contracts/README.md"
-      ],
-      "rationale": "The exact datum is final queued-redemption settlement maximum at the modeled notional. Reviewed legal terms, integration/API flow, vault directory, liquidity policy and permissioned fulfillment documentation publish estimates and liquidity-dependent processing, not a binding asset-specific completion maximum. Current nOPAL T+1 is explicitly an estimate; typical hour/T+2\u2013T+5 figures are not guaranteed. nBASIS remains in the exact registry but is absent from the current Arc-only directory."
-    },
-    {
-      "id": "uw-nbasis-nest-3ad3ab86cf507742",
-      "assetId": "nbasis-nest",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:215f3e73e97f6f3aa668dcb6",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:51:00Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R62)",
-      "sources": [
-        {
-          "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc",
-          "observedAt": "2026-10-03T22:45:46Z",
-          "datumAsOf": null,
-          "location": "Fund information and Documents",
-          "excerpt": "Fund documents and statements are available in the Investor Portal.",
-          "assertion": "Public USCC terms disclose NAV and daily dealing but no maturity maximum for the fund-share claim held by nBASIS."
-        },
-        {
-          "url": "https://superstate.com/assets/ustb",
-          "observedAt": "2026-10-03T22:45:46Z",
-          "datumAsOf": "2026-09-21",
-          "location": "About USTB and holdings",
-          "excerpt": "Ownership in the Fund is represented by USTB, held either as a token or in book-entry record keeping.",
-          "assertion": "Treasury holding maturity dates are not the maturity of the USTB fund-share claim."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://api.nest.credit/v1/vaults/nest-basis-vault/positions",
-        "https://superstate.com/assets/uscc",
-        "https://superstate.com/assets/ustb",
-        "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc",
-        "https://docs.superstate.com/investors/tokenized-funds/available-funds/invesco-ustb",
-        "https://docs.superstate.com/investors/tokenized-funds/redeem",
-        "https://superstate.com/assets/uscc#disclaimers",
-        "https://superstate.com/assets/ustb#disclaimers"
-      ],
-      "rationale": "Exact missing datum: maximum maturity days of nBASIS's USCC and USTB fund-share claims, not futures/T-bills in their underlying portfolios. Public issuer fund pages, current holdings, legal risk disclosures and investor dealing docs identify rolling NAV shares with liquidity schedules, not a hard termination/maturity maximum. Definitive investor documents are supplied privately through the Investor Portal; no public claim-level maximum was located. Do not use a Treasury holding maturity or WAM as a share maturity."
-    },
-    {
-      "id": "uw-nbasis-nest-88f4423aa534e97a",
-      "assetId": "nbasis-nest",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:e83e3d84c18208edc253be48",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:51:00Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R62)",
-      "sources": [
-        {
-          "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc",
-          "observedAt": "2026-10-03T22:45:46Z",
-          "datumAsOf": null,
-          "location": "Fund information and Documents",
-          "excerpt": "Fund documents and statements are available in the Investor Portal.",
-          "assertion": "Public USCC terms disclose NAV and daily dealing but no maturity maximum for the fund-share claim held by nBASIS."
-        },
-        {
-          "url": "https://superstate.com/assets/ustb",
-          "observedAt": "2026-10-03T22:45:46Z",
-          "datumAsOf": "2026-09-21",
-          "location": "About USTB and holdings",
-          "excerpt": "Ownership in the Fund is represented by USTB, held either as a token or in book-entry record keeping.",
-          "assertion": "Treasury holding maturity dates are not the maturity of the USTB fund-share claim."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://api.nest.credit/v1/vaults/nest-basis-vault/positions",
-        "https://superstate.com/assets/uscc",
-        "https://superstate.com/assets/ustb",
-        "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc",
-        "https://docs.superstate.com/investors/tokenized-funds/available-funds/invesco-ustb",
-        "https://docs.superstate.com/investors/tokenized-funds/redeem",
-        "https://superstate.com/assets/uscc#disclaimers",
-        "https://superstate.com/assets/ustb#disclaimers"
-      ],
-      "rationale": "Exact missing datum: maximum maturity days of nBASIS's USCC and USTB fund-share claims, not futures/T-bills in their underlying portfolios. Public issuer fund pages, current holdings, legal risk disclosures and investor dealing docs identify rolling NAV shares with liquidity schedules, not a hard termination/maturity maximum. Definitive investor documents are supplied privately through the Investor Portal; no public claim-level maximum was located. Do not use a Treasury holding maturity or WAM as a share maturity."
-    },
-    {
-      "id": "uw-nopal-nest-6dd90e76d5279677",
-      "assetId": "nopal-nest",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:nopal-nest:queue-redeem"
-      },
-      "cause": "B",
-      "assertion": "required-data-public",
-      "reviewedAt": "2026-10-03T22:56:50Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R62)",
-      "sources": [
-        {
-          "url": "https://api.nest.credit/v1/actions/vaults/nest-opal-vault/redeem/quote",
-          "observedAt": "2026-10-03T22:51:00Z",
-          "datumAsOf": null,
-          "location": "Read-only POST: chainId 98866, redemptionType nest, shareAmount 100000000000, redemptionAsset 0x222365ef19f7947e5484218551b56bb3965aa7af",
-          "excerpt": "\"feeAmount\":\"16532985\",\"fees\":{\"ratePpm\":150,\"flatAmount\":\"0\",\"maxRatePpm\":1500,\"maxFlatAmount\":\"0\"}",
-          "assertion": "Published dynamic queued-redemption fee: percentage plus flat amount, quoted for the exact nOPAL route. Current static issuer-API basket producer does not evaluate this per chain/output/notional; W15 disclosed-unquantified, not universal zero or known all-in fee."
-        },
-        {
-          "url": "https://github.com/plumenetwork/nest-protocol/blob/main/contracts/libraries/NestVaultRedeemLogic.sol",
-          "observedAt": "2026-10-03T22:56:50Z",
-          "datumAsOf": null,
-          "location": "executeFulfillRedeem",
-          "excerpt": "_amountReceived.calculatePostFeeAmounts(_feeConfig.rate, _feeConfig.flat);",
-          "assertion": "The applicable asynchronous-redemption formula is public. Need live fee/rate parameters and a same-notional quote evaluation; a static asset-wide fixed-bps field cannot encode the multi-chain formula observation."
-        }
-      ]
-    },
-    {
-      "id": "uw-nbasis-nest-4249c0717ef50632",
-      "assetId": "nbasis-nest",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:nbasis-nest:queue-redeem"
-      },
-      "cause": "B",
-      "assertion": "required-data-public",
-      "reviewedAt": "2026-10-03T22:56:50Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R62)",
-      "sources": [
-        {
-          "url": "https://api.nest.credit/v1/actions/vaults/nest-basis-vault/redeem/quote",
-          "observedAt": "2026-10-03T22:51:00Z",
-          "datumAsOf": null,
-          "location": "Read-only POST: chainId 98866, redemptionType nest, shareAmount 100000000000, redemptionAsset 0x222365ef19f7947e5484218551b56bb3965aa7af",
-          "excerpt": "\"feeAmount\":\"0\",\"fees\":{\"ratePpm\":0,\"flatAmount\":\"0\",\"maxRatePpm\":0,\"maxFlatAmount\":\"0\"}",
-          "assertion": "Exact live nBASIS queued-exit fee parameters are public under the documented rate-plus-flat formula. The fixed basket producer lacks chain/output/notional quote evaluation; W15 B does not claim zero all-in cost or future fixed fee."
-        },
-        {
-          "url": "https://github.com/plumenetwork/nest-protocol/blob/main/contracts/README.md",
-          "observedAt": "2026-10-03T22:51:00Z",
-          "datumAsOf": null,
-          "location": "Async redemption and Fees",
-          "excerpt": "Vault fees then apply to individual deposits, async-redemption fulfillments, and instant redemptions.",
-          "assertion": "The public fee schedule is configuration-driven and route-specific. Static global fixedFee(0) would overstate the observed one-chain quote and omit gas or other output-chain parameters."
-        }
-      ]
-    },
-    {
       "id": "uw-idrt-rupiah-token-cd6ec83654e6bda2",
       "assetId": "idrt-rupiah-token",
       "scope": {
@@ -30671,120 +29979,6 @@
         "https://drive.google.com/file/d/1GMwfOw_XXHKXOXopqU8_QGu_y5ozM9hV/preview"
       ],
       "rationale": "No current whole-issued-AID composition is disclosed across product/API/terms, rendered dashboard and recovered September 1 deployment attestation. Cash ratio divides redeemer/minter cash by only circulating AID, excluding staked liabilities; GPU report totals assets without AID-specific attribution. Cannot normalize those scoped quantities to 100% of all issued AID."
-    },
-    {
-      "id": "uw-nwisdom-nest-521beb0be2fd5dae",
-      "assetId": "nwisdom-nest",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:nwisdom-nest:queue-redeem"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:15:38Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R91)",
-      "sources": [
-        {
-          "url": "https://docs.nest.credit/about/liquidity-and-redemptions/",
-          "observedAt": "2026-10-03T23:10:17Z",
-          "datumAsOf": null,
-          "location": "Queued (Asynchronous) Redemption",
-          "excerpt": "Larger withdrawals, or redemptions submitted when available liquidity is limited, may require additional time as positions are unwound in an orderly manner.",
-          "assertion": "Generic T+2 to T+5 estimates expressly admit additional time; no binding end-to-end maximum for any of these three legacy vaults is stated."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.nest.credit/",
-        "https://docs.nest.credit/about/available-vaults/",
-        "https://docs.nest.credit/about/liquidity-and-redemptions/",
-        "https://docs.nest.credit/about/vault-operations-and-valuation",
-        "https://docs.nest.credit/security-and-compliance/terms-and-conditions/",
-        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/contracts/README.md",
-        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/nTBILL.json",
-        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/nWISDOM.json",
-        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/inALPHA.json"
-      ],
-      "rationale": "The exact same-notional queue-redemption settlement maximum for nWISDOM, nTBILL and inALPHA is undisclosed. Public policy provides estimates for most strategies and expressly allows larger/illiquid exits additional time. Current vault directory omits these legacy assets; legal terms and contract/config disclosures publish no completion deadline. Async fulfillment is permissioned and can be partial. No generic estimate is converted into a guaranteed SLA."
-    },
-    {
-      "id": "uw-ntbill-nest-0575b59d662a2046",
-      "assetId": "ntbill-nest",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:ntbill-nest:queue-redeem"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:15:38Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R91)",
-      "sources": [
-        {
-          "url": "https://docs.nest.credit/about/liquidity-and-redemptions/",
-          "observedAt": "2026-10-03T23:10:17Z",
-          "datumAsOf": null,
-          "location": "Queued (Asynchronous) Redemption",
-          "excerpt": "Larger withdrawals, or redemptions submitted when available liquidity is limited, may require additional time as positions are unwound in an orderly manner.",
-          "assertion": "Generic T+2 to T+5 estimates expressly admit additional time; no binding end-to-end maximum for any of these three legacy vaults is stated."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.nest.credit/",
-        "https://docs.nest.credit/about/available-vaults/",
-        "https://docs.nest.credit/about/liquidity-and-redemptions/",
-        "https://docs.nest.credit/about/vault-operations-and-valuation",
-        "https://docs.nest.credit/security-and-compliance/terms-and-conditions/",
-        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/contracts/README.md",
-        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/nTBILL.json",
-        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/nWISDOM.json",
-        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/inALPHA.json"
-      ],
-      "rationale": "The exact same-notional queue-redemption settlement maximum for nWISDOM, nTBILL and inALPHA is undisclosed. Public policy provides estimates for most strategies and expressly allows larger/illiquid exits additional time. Current vault directory omits these legacy assets; legal terms and contract/config disclosures publish no completion deadline. Async fulfillment is permissioned and can be partial. No generic estimate is converted into a guaranteed SLA."
-    },
-    {
-      "id": "uw-inalpha-nest-68c96dffccd97cf1",
-      "assetId": "inalpha-nest",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:inalpha-nest:queue-redeem"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:15:38Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R91)",
-      "sources": [
-        {
-          "url": "https://docs.nest.credit/about/liquidity-and-redemptions/",
-          "observedAt": "2026-10-03T23:10:17Z",
-          "datumAsOf": null,
-          "location": "Queued (Asynchronous) Redemption",
-          "excerpt": "Larger withdrawals, or redemptions submitted when available liquidity is limited, may require additional time as positions are unwound in an orderly manner.",
-          "assertion": "Generic T+2 to T+5 estimates expressly admit additional time; no binding end-to-end maximum for any of these three legacy vaults is stated."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.nest.credit/",
-        "https://docs.nest.credit/about/available-vaults/",
-        "https://docs.nest.credit/about/liquidity-and-redemptions/",
-        "https://docs.nest.credit/about/vault-operations-and-valuation",
-        "https://docs.nest.credit/security-and-compliance/terms-and-conditions/",
-        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/contracts/README.md",
-        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/nTBILL.json",
-        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/nWISDOM.json",
-        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/inALPHA.json"
-      ],
-      "rationale": "The exact same-notional queue-redemption settlement maximum for nWISDOM, nTBILL and inALPHA is undisclosed. Public policy provides estimates for most strategies and expressly allows larger/illiquid exits additional time. Current vault directory omits these legacy assets; legal terms and contract/config disclosures publish no completion deadline. Async fulfillment is permissioned and can be partial. No generic estimate is converted into a guaranteed SLA."
     },
     {
       "id": "uw-fiusd-sygnum-9f0eef162e280502",
@@ -36940,6 +36134,848 @@
         "https://eth.blockscout.com/api/v2/smart-contracts/0x82948060c4b72684bededec342350ab344975145"
       ],
       "rationale": "Exact aggregate USDC protocol-position slice spans Morpho and Curve strategies. Official docs disclose utilization-dependent withdrawals and a buffer-based holder redemption process; itemized API discloses only current partial liquidity. No fixed horizon for realizing the entire aggregate reserve basket is published. Do not substitute the 10-minute/24-hour holder processing statement or onchain execution speed for full-slice liquidity."
+    },
+    {
+      "id": "uw-nwisdom-nest-f922e4f5f2f8681f",
+      "assetId": "nwisdom-nest",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:ed6e93f487e18ca61e54071b",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:54:40Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R39)",
+      "sources": [
+        {
+          "url": "https://tsr-db-bucket-1.s3.us-west-2.amazonaws.com/multiple_uploaded/1786984979_5IaeGU7K6R.pdf",
+          "observedAt": "2026-10-03T23:54:40Z",
+          "datumAsOf": "2026-08-14",
+          "location": "CRDYX prospectus pp.98\u2013100; index vehicle eligibility p.99",
+          "excerpt": "be perpetual (i.e., without set maturity or termination dates such as target or term funds)",
+          "assertion": "Governing CRDYX strategy selects perpetual CEF/BDC/REIT vehicles; no contractual maximum maturity for the CRDYX fund-share claim is disclosed. Underlying loan maturities are not the share maturity."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://api.nest.credit/v1/vaults/nest-wisdom-vault/positions",
+        "https://www.wisdomtreeconnect.com/digital-funds/fixed-income/crdyx",
+        "https://www.wisdomtreeconnect.com/prospectus-regulatory-reports",
+        "https://prospectusconnect.com/digital_funds",
+        "https://tsr-db-bucket-1.s3.us-west-2.amazonaws.com/multiple_uploaded/1786984979_5IaeGU7K6R.pdf",
+        "https://docs.nest.credit/about/vault-operations-and-valuation",
+        "https://docs.nest.credit/security-and-compliance/terms-and-conditions"
+      ],
+      "rationale": "Exact datum: maximum maturity days of the WisdomTree CRDYX fund-share exposure, not the underlying private loans. Wave 2 recovered the governing prospectus through the institutional issuer directory and public S3 document, resolving wave 1\u2019s failed prospectus access. Its investment strategy, share recordkeeping and dealing provisions publish no share-level maturity maximum; index vehicles are expressly perpetual. Neither a finite numeric maximum nor underlying loan maturity/WAM can be substituted."
+    },
+    {
+      "id": "uw-nopal-nest-3dab9c6a4d8e0460",
+      "assetId": "nopal-nest",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:nopal-nest:queue-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:00Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R62)",
+      "sources": [
+        {
+          "url": "https://docs.nest.credit/about/liquidity-and-redemptions",
+          "observedAt": "2026-10-03T22:45:46Z",
+          "datumAsOf": null,
+          "location": "Queued (Asynchronous) Redemption",
+          "excerpt": "Larger withdrawals, or redemptions submitted when available liquidity is limited, may require additional time as positions are unwound in an orderly manner.",
+          "assertion": "Typical T+2 to T+5 ranges are qualified; no unconditional final settlement maximum for the modeled nOPAL/nBASIS queued exit is established."
+        },
+        {
+          "url": "https://docs.nest.credit/about/vault-operations-and-valuation",
+          "observedAt": "2026-10-03T22:45:46Z",
+          "datumAsOf": null,
+          "location": "Standard Redemption",
+          "excerpt": "A user submits a redemption request, and the vault processes that request as liquidity becomes available.",
+          "assertion": "Completion remains liquidity-dependent rather than a guaranteed SLA."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.nest.credit/",
+        "https://docs.nest.credit/about/available-vaults",
+        "https://docs.nest.credit/about/liquidity-and-redemptions",
+        "https://docs.nest.credit/about/vault-operations-and-valuation",
+        "https://docs.nest.credit/security-and-compliance/terms-and-conditions",
+        "https://docs.nest.credit/developers/integration-guides/nopal",
+        "https://docs.nest.credit/developers/actions-api/reference/vaults/slug/redeem/quote/post",
+        "https://api.nest.credit/v1/vaults/nest-basis-vault",
+        "https://api.nest.credit/v1/vaults/nest-opal-vault",
+        "https://github.com/plumenetwork/nest-protocol/blob/main/contracts/README.md"
+      ],
+      "rationale": "The exact datum is final queued-redemption settlement maximum at the modeled notional. Reviewed legal terms, integration/API flow, vault directory, liquidity policy and permissioned fulfillment documentation publish estimates and liquidity-dependent processing, not a binding asset-specific completion maximum. Current nOPAL T+1 is explicitly an estimate; typical hour/T+2\u2013T+5 figures are not guaranteed. nBASIS remains in the exact registry but is absent from the current Arc-only directory."
+    },
+    {
+      "id": "uw-nbasis-nest-6f7a192f3a41646b",
+      "assetId": "nbasis-nest",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:nbasis-nest:queue-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:00Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R62)",
+      "sources": [
+        {
+          "url": "https://docs.nest.credit/about/liquidity-and-redemptions",
+          "observedAt": "2026-10-03T22:45:46Z",
+          "datumAsOf": null,
+          "location": "Queued (Asynchronous) Redemption",
+          "excerpt": "Larger withdrawals, or redemptions submitted when available liquidity is limited, may require additional time as positions are unwound in an orderly manner.",
+          "assertion": "Typical T+2 to T+5 ranges are qualified; no unconditional final settlement maximum for the modeled nOPAL/nBASIS queued exit is established."
+        },
+        {
+          "url": "https://docs.nest.credit/about/vault-operations-and-valuation",
+          "observedAt": "2026-10-03T22:45:46Z",
+          "datumAsOf": null,
+          "location": "Standard Redemption",
+          "excerpt": "A user submits a redemption request, and the vault processes that request as liquidity becomes available.",
+          "assertion": "Completion remains liquidity-dependent rather than a guaranteed SLA."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.nest.credit/",
+        "https://docs.nest.credit/about/available-vaults",
+        "https://docs.nest.credit/about/liquidity-and-redemptions",
+        "https://docs.nest.credit/about/vault-operations-and-valuation",
+        "https://docs.nest.credit/security-and-compliance/terms-and-conditions",
+        "https://docs.nest.credit/developers/integration-guides/nopal",
+        "https://docs.nest.credit/developers/actions-api/reference/vaults/slug/redeem/quote/post",
+        "https://api.nest.credit/v1/vaults/nest-basis-vault",
+        "https://api.nest.credit/v1/vaults/nest-opal-vault",
+        "https://github.com/plumenetwork/nest-protocol/blob/main/contracts/README.md"
+      ],
+      "rationale": "The exact datum is final queued-redemption settlement maximum at the modeled notional. Reviewed legal terms, integration/API flow, vault directory, liquidity policy and permissioned fulfillment documentation publish estimates and liquidity-dependent processing, not a binding asset-specific completion maximum. Current nOPAL T+1 is explicitly an estimate; typical hour/T+2\u2013T+5 figures are not guaranteed. nBASIS remains in the exact registry but is absent from the current Arc-only directory."
+    },
+    {
+      "id": "uw-nbasis-nest-3ad3ab86cf507742",
+      "assetId": "nbasis-nest",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:215f3e73e97f6f3aa668dcb6",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:00Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R62)",
+      "sources": [
+        {
+          "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc",
+          "observedAt": "2026-10-03T22:45:46Z",
+          "datumAsOf": null,
+          "location": "Fund information and Documents",
+          "excerpt": "Fund documents and statements are available in the Investor Portal.",
+          "assertion": "Public USCC terms disclose NAV and daily dealing but no maturity maximum for the fund-share claim held by nBASIS."
+        },
+        {
+          "url": "https://superstate.com/assets/ustb",
+          "observedAt": "2026-10-03T22:45:46Z",
+          "datumAsOf": "2026-09-21",
+          "location": "About USTB and holdings",
+          "excerpt": "Ownership in the Fund is represented by USTB, held either as a token or in book-entry record keeping.",
+          "assertion": "Treasury holding maturity dates are not the maturity of the USTB fund-share claim."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://api.nest.credit/v1/vaults/nest-basis-vault/positions",
+        "https://superstate.com/assets/uscc",
+        "https://superstate.com/assets/ustb",
+        "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc",
+        "https://docs.superstate.com/investors/tokenized-funds/available-funds/invesco-ustb",
+        "https://docs.superstate.com/investors/tokenized-funds/redeem",
+        "https://superstate.com/assets/uscc#disclaimers",
+        "https://superstate.com/assets/ustb#disclaimers"
+      ],
+      "rationale": "Exact missing datum: maximum maturity days of nBASIS's USCC and USTB fund-share claims, not futures/T-bills in their underlying portfolios. Public issuer fund pages, current holdings, legal risk disclosures and investor dealing docs identify rolling NAV shares with liquidity schedules, not a hard termination/maturity maximum. Definitive investor documents are supplied privately through the Investor Portal; no public claim-level maximum was located. Do not use a Treasury holding maturity or WAM as a share maturity."
+    },
+    {
+      "id": "uw-nbasis-nest-88f4423aa534e97a",
+      "assetId": "nbasis-nest",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:e83e3d84c18208edc253be48",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:00Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R62)",
+      "sources": [
+        {
+          "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc",
+          "observedAt": "2026-10-03T22:45:46Z",
+          "datumAsOf": null,
+          "location": "Fund information and Documents",
+          "excerpt": "Fund documents and statements are available in the Investor Portal.",
+          "assertion": "Public USCC terms disclose NAV and daily dealing but no maturity maximum for the fund-share claim held by nBASIS."
+        },
+        {
+          "url": "https://superstate.com/assets/ustb",
+          "observedAt": "2026-10-03T22:45:46Z",
+          "datumAsOf": "2026-09-21",
+          "location": "About USTB and holdings",
+          "excerpt": "Ownership in the Fund is represented by USTB, held either as a token or in book-entry record keeping.",
+          "assertion": "Treasury holding maturity dates are not the maturity of the USTB fund-share claim."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://api.nest.credit/v1/vaults/nest-basis-vault/positions",
+        "https://superstate.com/assets/uscc",
+        "https://superstate.com/assets/ustb",
+        "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc",
+        "https://docs.superstate.com/investors/tokenized-funds/available-funds/invesco-ustb",
+        "https://docs.superstate.com/investors/tokenized-funds/redeem",
+        "https://superstate.com/assets/uscc#disclaimers",
+        "https://superstate.com/assets/ustb#disclaimers"
+      ],
+      "rationale": "Exact missing datum: maximum maturity days of nBASIS's USCC and USTB fund-share claims, not futures/T-bills in their underlying portfolios. Public issuer fund pages, current holdings, legal risk disclosures and investor dealing docs identify rolling NAV shares with liquidity schedules, not a hard termination/maturity maximum. Definitive investor documents are supplied privately through the Investor Portal; no public claim-level maximum was located. Do not use a Treasury holding maturity or WAM as a share maturity."
+    },
+    {
+      "id": "uw-nopal-nest-6dd90e76d5279677",
+      "assetId": "nopal-nest",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:nopal-nest:queue-redeem"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T22:56:50Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R62)",
+      "sources": [
+        {
+          "url": "https://api.nest.credit/v1/actions/vaults/nest-opal-vault/redeem/quote",
+          "observedAt": "2026-10-03T22:51:00Z",
+          "datumAsOf": null,
+          "location": "Read-only POST: chainId 98866, redemptionType nest, shareAmount 100000000000, redemptionAsset 0x222365ef19f7947e5484218551b56bb3965aa7af",
+          "excerpt": "\"feeAmount\":\"16532985\",\"fees\":{\"ratePpm\":150,\"flatAmount\":\"0\",\"maxRatePpm\":1500,\"maxFlatAmount\":\"0\"}",
+          "assertion": "Published dynamic queued-redemption fee: percentage plus flat amount, quoted for the exact nOPAL route. Current static issuer-API basket producer does not evaluate this per chain/output/notional; W15 disclosed-unquantified, not universal zero or known all-in fee."
+        },
+        {
+          "url": "https://github.com/plumenetwork/nest-protocol/blob/main/contracts/libraries/NestVaultRedeemLogic.sol",
+          "observedAt": "2026-10-03T22:56:50Z",
+          "datumAsOf": null,
+          "location": "executeFulfillRedeem",
+          "excerpt": "_amountReceived.calculatePostFeeAmounts(_feeConfig.rate, _feeConfig.flat);",
+          "assertion": "The applicable asynchronous-redemption formula is public. Need live fee/rate parameters and a same-notional quote evaluation; a static asset-wide fixed-bps field cannot encode the multi-chain formula observation."
+        }
+      ]
+    },
+    {
+      "id": "uw-nbasis-nest-4249c0717ef50632",
+      "assetId": "nbasis-nest",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:nbasis-nest:queue-redeem"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T22:56:50Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R62)",
+      "sources": [
+        {
+          "url": "https://api.nest.credit/v1/actions/vaults/nest-basis-vault/redeem/quote",
+          "observedAt": "2026-10-03T22:51:00Z",
+          "datumAsOf": null,
+          "location": "Read-only POST: chainId 98866, redemptionType nest, shareAmount 100000000000, redemptionAsset 0x222365ef19f7947e5484218551b56bb3965aa7af",
+          "excerpt": "\"feeAmount\":\"0\",\"fees\":{\"ratePpm\":0,\"flatAmount\":\"0\",\"maxRatePpm\":0,\"maxFlatAmount\":\"0\"}",
+          "assertion": "Exact live nBASIS queued-exit fee parameters are public under the documented rate-plus-flat formula. The fixed basket producer lacks chain/output/notional quote evaluation; W15 B does not claim zero all-in cost or future fixed fee."
+        },
+        {
+          "url": "https://github.com/plumenetwork/nest-protocol/blob/main/contracts/README.md",
+          "observedAt": "2026-10-03T22:51:00Z",
+          "datumAsOf": null,
+          "location": "Async redemption and Fees",
+          "excerpt": "Vault fees then apply to individual deposits, async-redemption fulfillments, and instant redemptions.",
+          "assertion": "The public fee schedule is configuration-driven and route-specific. Static global fixedFee(0) would overstate the observed one-chain quote and omit gas or other output-chain parameters."
+        }
+      ]
+    },
+    {
+      "id": "uw-euro3-3a-dao-321c4878ade1384d",
+      "assetId": "euro3-3a-dao",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:1f82d40342195bb6a9037804",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:31Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R77)",
+      "sources": [
+        {
+          "url": "https://ionian.gitbook.io/mendi-finance/protocol/collateral-and-reserves",
+          "observedAt": "2026-10-03T23:16:31Z",
+          "datumAsOf": null,
+          "location": "Issuer disclosure",
+          "excerpt": "meTokens are the primary means of interacting with the Mendi Finance Protocol",
+          "assertion": "Receipt tokens redeem through lending markets; this is not a whole-position realization maximum."
+        },
+        {
+          "url": "https://ionian.gitbook.io/mendi-finance/other-information/legal-disclaimer",
+          "observedAt": "2026-10-03T23:16:31Z",
+          "datumAsOf": null,
+          "location": "Issuer disclosure",
+          "excerpt": "The Website functionality is not guaranteed and could be disabled fully or in part without prior notice.",
+          "assertion": "No guaranteed whole-slice liquidity horizon is provided."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://ionian.gitbook.io/mendi-finance/llms.txt",
+        "https://ionian.gitbook.io/mendi-finance/protocol/developer-docs",
+        "https://ionian.gitbook.io/mendi-finance/protocol/collateral-and-reserves",
+        "https://ionian.gitbook.io/mendi-finance/protocol/contract-addresses",
+        "https://ionian.gitbook.io/mendi-finance/other-information/legal-disclaimer",
+        "https://lineascan.build/address/0x333D8b480BDB25eA7Be4Dd87EEB359988CE1b30D#code",
+        "https://docs.3adao.org/3a-protocol/protocol-documentation/euro3-coin"
+      ],
+      "rationale": "The whole EURO3-held meUSDC, meUSDT, mewETH and mewstETH receipt positions have no published maximum realization horizon. Mendi discloses exchange-rate accounting, redeem interfaces, collateral/reserve factors and market identities, but not a bound on all deposited collateral becoming available. Executable token redemption and partial liquid cash do not prove whole-position liquidity."
+    },
+    {
+      "id": "uw-euro3-3a-dao-45427e21415a7e6b",
+      "assetId": "euro3-3a-dao",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:a2ac0d11af44277391411a22",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:31Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R77)",
+      "sources": [
+        {
+          "url": "https://ionian.gitbook.io/mendi-finance/protocol/collateral-and-reserves",
+          "observedAt": "2026-10-03T23:16:31Z",
+          "datumAsOf": null,
+          "location": "Issuer disclosure",
+          "excerpt": "meTokens are the primary means of interacting with the Mendi Finance Protocol",
+          "assertion": "Receipt tokens redeem through lending markets; this is not a whole-position realization maximum."
+        },
+        {
+          "url": "https://ionian.gitbook.io/mendi-finance/other-information/legal-disclaimer",
+          "observedAt": "2026-10-03T23:16:31Z",
+          "datumAsOf": null,
+          "location": "Issuer disclosure",
+          "excerpt": "The Website functionality is not guaranteed and could be disabled fully or in part without prior notice.",
+          "assertion": "No guaranteed whole-slice liquidity horizon is provided."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://ionian.gitbook.io/mendi-finance/llms.txt",
+        "https://ionian.gitbook.io/mendi-finance/protocol/developer-docs",
+        "https://ionian.gitbook.io/mendi-finance/protocol/collateral-and-reserves",
+        "https://ionian.gitbook.io/mendi-finance/protocol/contract-addresses",
+        "https://ionian.gitbook.io/mendi-finance/other-information/legal-disclaimer",
+        "https://lineascan.build/address/0x333D8b480BDB25eA7Be4Dd87EEB359988CE1b30D#code",
+        "https://docs.3adao.org/3a-protocol/protocol-documentation/euro3-coin"
+      ],
+      "rationale": "The whole EURO3-held meUSDC, meUSDT, mewETH and mewstETH receipt positions have no published maximum realization horizon. Mendi discloses exchange-rate accounting, redeem interfaces, collateral/reserve factors and market identities, but not a bound on all deposited collateral becoming available. Executable token redemption and partial liquid cash do not prove whole-position liquidity."
+    },
+    {
+      "id": "uw-euro3-3a-dao-bb3b2b8c55111b72",
+      "assetId": "euro3-3a-dao",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:be7f7c95ff0dce99dc4c8f85",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:31Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R77)",
+      "sources": [
+        {
+          "url": "https://ionian.gitbook.io/mendi-finance/protocol/collateral-and-reserves",
+          "observedAt": "2026-10-03T23:16:31Z",
+          "datumAsOf": null,
+          "location": "Issuer disclosure",
+          "excerpt": "meTokens are the primary means of interacting with the Mendi Finance Protocol",
+          "assertion": "Receipt tokens redeem through lending markets; this is not a whole-position realization maximum."
+        },
+        {
+          "url": "https://ionian.gitbook.io/mendi-finance/other-information/legal-disclaimer",
+          "observedAt": "2026-10-03T23:16:31Z",
+          "datumAsOf": null,
+          "location": "Issuer disclosure",
+          "excerpt": "The Website functionality is not guaranteed and could be disabled fully or in part without prior notice.",
+          "assertion": "No guaranteed whole-slice liquidity horizon is provided."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://ionian.gitbook.io/mendi-finance/llms.txt",
+        "https://ionian.gitbook.io/mendi-finance/protocol/developer-docs",
+        "https://ionian.gitbook.io/mendi-finance/protocol/collateral-and-reserves",
+        "https://ionian.gitbook.io/mendi-finance/protocol/contract-addresses",
+        "https://ionian.gitbook.io/mendi-finance/other-information/legal-disclaimer",
+        "https://lineascan.build/address/0x333D8b480BDB25eA7Be4Dd87EEB359988CE1b30D#code",
+        "https://docs.3adao.org/3a-protocol/protocol-documentation/euro3-coin"
+      ],
+      "rationale": "The whole EURO3-held meUSDC, meUSDT, mewETH and mewstETH receipt positions have no published maximum realization horizon. Mendi discloses exchange-rate accounting, redeem interfaces, collateral/reserve factors and market identities, but not a bound on all deposited collateral becoming available. Executable token redemption and partial liquid cash do not prove whole-position liquidity."
+    },
+    {
+      "id": "uw-euro3-3a-dao-5058a139f9e9303a",
+      "assetId": "euro3-3a-dao",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:fc2f4cb0eb54c28349375c4e",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:31Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R77)",
+      "sources": [
+        {
+          "url": "https://ionian.gitbook.io/mendi-finance/protocol/collateral-and-reserves",
+          "observedAt": "2026-10-03T23:16:31Z",
+          "datumAsOf": null,
+          "location": "Issuer disclosure",
+          "excerpt": "meTokens are the primary means of interacting with the Mendi Finance Protocol",
+          "assertion": "Receipt tokens redeem through lending markets; this is not a whole-position realization maximum."
+        },
+        {
+          "url": "https://ionian.gitbook.io/mendi-finance/other-information/legal-disclaimer",
+          "observedAt": "2026-10-03T23:16:31Z",
+          "datumAsOf": null,
+          "location": "Issuer disclosure",
+          "excerpt": "The Website functionality is not guaranteed and could be disabled fully or in part without prior notice.",
+          "assertion": "No guaranteed whole-slice liquidity horizon is provided."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://ionian.gitbook.io/mendi-finance/llms.txt",
+        "https://ionian.gitbook.io/mendi-finance/protocol/developer-docs",
+        "https://ionian.gitbook.io/mendi-finance/protocol/collateral-and-reserves",
+        "https://ionian.gitbook.io/mendi-finance/protocol/contract-addresses",
+        "https://ionian.gitbook.io/mendi-finance/other-information/legal-disclaimer",
+        "https://lineascan.build/address/0x333D8b480BDB25eA7Be4Dd87EEB359988CE1b30D#code",
+        "https://docs.3adao.org/3a-protocol/protocol-documentation/euro3-coin"
+      ],
+      "rationale": "The whole EURO3-held meUSDC, meUSDT, mewETH and mewstETH receipt positions have no published maximum realization horizon. Mendi discloses exchange-rate accounting, redeem interfaces, collateral/reserve factors and market identities, but not a bound on all deposited collateral becoming available. Executable token redemption and partial liquid cash do not prove whole-position liquidity."
+    },
+    {
+      "id": "uw-gldt-gold-dao-df16e419ba08e7d1",
+      "assetId": "gldt-gold-dao",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:physical-to-usd:gldt-gold-dao"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:31Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R77)",
+      "sources": [
+        {
+          "url": "https://help.bity.com/en/articles/9680077-how-can-i-redeem-the-physical-gold-bar-from-my-nfts",
+          "observedAt": "2026-10-03T23:16:31Z",
+          "datumAsOf": null,
+          "location": "Issuer disclosure",
+          "excerpt": "Once the fee is paid, you will receive a receipt and confirmation of your appointment for the redemption.",
+          "assertion": "Appointment process has no final maximum release time."
+        },
+        {
+          "url": "https://help.bity.com/en/articles/9680058-how-can-i-resell-my-gld-nft",
+          "observedAt": "2026-10-03T23:16:31Z",
+          "datumAsOf": null,
+          "location": "Issuer disclosure",
+          "excerpt": "Once the transaction is confirmed, we will send the agreed USDT amount to your specified address.",
+          "assertion": "USDT resale lacks completion maximum or final USD conversion SLA."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.gold-dao.org/llms.txt",
+        "https://docs.gold-dao.org/legal/terms-of-service",
+        "https://docs.gold-dao.org/how-to/redeem-physical-gold",
+        "https://help.bity.com/en/articles/9680077-how-can-i-redeem-the-physical-gold-bar-from-my-nfts",
+        "https://help.bity.com/en/articles/9680058-how-can-i-resell-my-gld-nft",
+        "https://gold.bity.com/en",
+        "https://docs.gold-dao.org/tokens/gldt"
+      ],
+      "rationale": "Neither the issuer physical-redemption route nor the composed physical-to-spendable-USD route publishes an end-to-end maximum. KYC, reverse swap, appointment and physical pickup are disclosed without deadlines. NFT buyback pays USDT after confirmation without a maximum; it is not a final spendable USD SLA."
+    },
+    {
+      "id": "uw-gldt-gold-dao-8e6db88665bf73b3",
+      "assetId": "gldt-gold-dao",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:gldt-gold-dao:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:31Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R77)",
+      "sources": [
+        {
+          "url": "https://help.bity.com/en/articles/9680077-how-can-i-redeem-the-physical-gold-bar-from-my-nfts",
+          "observedAt": "2026-10-03T23:16:31Z",
+          "datumAsOf": null,
+          "location": "Issuer disclosure",
+          "excerpt": "Once the fee is paid, you will receive a receipt and confirmation of your appointment for the redemption.",
+          "assertion": "Appointment process has no final maximum release time."
+        },
+        {
+          "url": "https://help.bity.com/en/articles/9680058-how-can-i-resell-my-gld-nft",
+          "observedAt": "2026-10-03T23:16:31Z",
+          "datumAsOf": null,
+          "location": "Issuer disclosure",
+          "excerpt": "Once the transaction is confirmed, we will send the agreed USDT amount to your specified address.",
+          "assertion": "USDT resale lacks completion maximum or final USD conversion SLA."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.gold-dao.org/llms.txt",
+        "https://docs.gold-dao.org/legal/terms-of-service",
+        "https://docs.gold-dao.org/how-to/redeem-physical-gold",
+        "https://help.bity.com/en/articles/9680077-how-can-i-redeem-the-physical-gold-bar-from-my-nfts",
+        "https://help.bity.com/en/articles/9680058-how-can-i-resell-my-gld-nft",
+        "https://gold.bity.com/en",
+        "https://docs.gold-dao.org/tokens/gldt"
+      ],
+      "rationale": "Neither the issuer physical-redemption route nor the composed physical-to-spendable-USD route publishes an end-to-end maximum. KYC, reverse swap, appointment and physical pickup are disclosed without deadlines. NFT buyback pays USDT after confirmation without a maximum; it is not a final spendable USD SLA."
+    },
+    {
+      "id": "uw-gldt-gold-dao-4d85e1c0e1b31a90",
+      "assetId": "gldt-gold-dao",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:gldt-gold-dao:offchain-issuer"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T23:16:31Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R77)",
+      "sources": [
+        {
+          "url": "https://medium.com/@GoldDAO/gldt-launches-as-the-worlds-first-fully-gold-backed-decentralized-gold-token-governed-by-a-dao-45baa177d34b",
+          "observedAt": "2026-10-03T23:16:31Z",
+          "datumAsOf": "2024-10-30",
+          "location": "Issuer disclosure",
+          "excerpt": "Reverse Swap Fee: A flat fee of 1 GLDT applies for each reverse swap, regardless of the gold bar\u2019s size.",
+          "assertion": "Published token-denominated formula is not evaluated by the current offchain-issuer fee model; converting 1 GLDT plus CHF300 pickup requires notional, lot and captured FX handling."
+        },
+        {
+          "url": "https://help.bity.com/en/articles/9680077-how-can-i-redeem-the-physical-gold-bar-from-my-nfts",
+          "observedAt": "2026-10-03T23:16:31Z",
+          "datumAsOf": null,
+          "location": "Issuer disclosure",
+          "excerpt": "This fee applies regardless of the size or quantity of gold.",
+          "assertion": "CHF300 charge is disclosed, not an unknown fee; the model cannot represent an all-in USD charge without FX/lot evaluation."
+        }
+      ]
+    },
+    {
+      "id": "uw-gldt-gold-dao-3892111dfe422652",
+      "assetId": "gldt-gold-dao",
+      "scope": {
+        "componentKey": "mechanism-review:assuranceAndReconciliation",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "mechanism-review:assuranceAndReconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:31Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R77)",
+      "sources": [
+        {
+          "url": "https://docs.gold-dao.org/other/audit-reports",
+          "observedAt": "2026-10-03T23:16:31Z",
+          "datumAsOf": null,
+          "location": "Issuer disclosure",
+          "excerpt": "All the latest audit reports of the vaults, where the gold bars are stored, are uploaded here.",
+          "assertion": "Archive contains latest September 2025 physical-vault factual findings, not current GLDT supply reconciliation."
+        },
+        {
+          "url": "https://2669388926-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FhyYilEcr51QGR1f1ZQ8w%2Fuploads%2Fsq2DN60j11A1A0uL3tHX%2FAudit%20Report%2009-2025.pdf?alt=media&token=7a7a500e-1321-4e9d-8046-46ae8199e244",
+          "observedAt": "2026-10-03T23:16:31Z",
+          "datumAsOf": "2025-09-21",
+          "location": "KPMG report page 2",
+          "excerpt": "Because the above procedures do not constitute either an audit or a review made in accordance with Swiss Auditing Standards, we do not express any assurance on the 7.9 KG gold.",
+          "assertion": "KPMG report covers physical gold and certificates, not matched outstanding GLDT liabilities."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.gold-dao.org/llms.txt",
+        "https://docs.gold-dao.org/other/audit-reports",
+        "https://docs.gold-dao.org/legal/terms-of-service",
+        "https://docs.gold-dao.org/tokens/gldt",
+        "https://docs.gold-dao.org/resources/roadmap",
+        "https://gold.bity.com/en"
+      ],
+      "rationale": "No current exact-GLDT independent reserve-and-liability reconciliation is published on the reviewed issuer and vault-report archive. Latest linked KPMG artifact is dated September 21, 2025 and signed October 2, covers 7.9kg/790 GLD certificates with sampled serials, expressly no assurance, and does not reconcile GLDT outstanding supply. The GLD NFT book is not the exact GLDT liability denominator."
+    },
+    {
+      "id": "uw-usda-anzens-d6029bc2b679afc5",
+      "assetId": "usda-anzens",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usda-anzens:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:31Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R77)",
+      "sources": [
+        {
+          "url": "https://www.anzens.com/landing/terms-and-conditions",
+          "observedAt": "2026-10-03T23:16:31Z",
+          "datumAsOf": "2025-04-14",
+          "location": "Sections 12 and 19",
+          "excerpt": "The time it takes for you to receive the funds may vary depending on your chosen withdrawal method and the processing times of your bank or payment provider.",
+          "assertion": "Two business days to account credit and three-day withdrawal aim do not bound final funds receipt."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.anzens.com/landing/terms-and-conditions",
+        "https://www.anzens.com/",
+        "https://www.emurgo.io/press-news/anzens-is-live-usda-stablecoin-minting-access-is-here-cardano/"
+      ],
+      "rationale": "USDA-to-final-spendable-USD has no published maximum. Section 12 specifies two business days to Anzens account credit and aims for three business days for withdrawal processing, explicitly variable bank/payment timing and reasonable-efforts qualifications. Foreign account withdrawals use Encryptus. These are intermediate targets, not a final USD settlement guarantee."
+    },
+    {
+      "id": "uw-usda-anzens-be8b3a5bc9edd36d",
+      "assetId": "usda-anzens",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usda-anzens:offchain-issuer"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T23:16:31Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R77)",
+      "sources": [
+        {
+          "url": "https://www.anzens.com/landing/terms-and-conditions",
+          "observedAt": "2026-10-03T23:16:31Z",
+          "datumAsOf": "2025-04-14",
+          "location": "Section 15(e)",
+          "excerpt": "For US Domestic Wire, a Fee of $30 will apply and for International Wire, a Fee of $70 will apply (Please note that this is subject to change.)",
+          "assertion": "Applicable published flat wire schedule plus variable network/account fees is not evaluated at same notional by existing undisclosedReviewedFee model."
+        }
+      ]
+    },
+    {
+      "id": "uw-fidd-fidelity-2d05fb8170d647d4",
+      "assetId": "fidd-fidelity",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:680c1bc3d8d777289ef65a58",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:31Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R77)",
+      "sources": [
+        {
+          "url": "https://www.fidelitydigitalassets.com/fidd-terms",
+          "observedAt": "2026-10-03T23:16:31Z",
+          "datumAsOf": "2026-04-13",
+          "location": "Section 3(4)",
+          "excerpt": "deposit accounts at U.S. state or federally chartered depository institutions.",
+          "assertion": "Deposit mandate does not identify demand versus term deposits or maximum maturity."
+        },
+        {
+          "url": "https://fwc.widen.net/s/jgdsvvsknq/fidelity-digital-assets---fidd-reserve-attestation-report---august-2026",
+          "observedAt": "2026-10-03T23:16:31Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Report page 3; tables pages 6\u20138",
+          "excerpt": "Our procedures were limited to the quantity of outstanding FIDD and the related redemption assets and therefore do not constitute an audit or examination of Fidelity Digital Assets, National Association or its financial position.",
+          "assertion": "Report lists bank cash amounts separately from Treasury maturity roster; no deposit maturity term."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.fidelitydigitalassets.com/fidd-terms",
+        "https://www.fidelitydigitalassets.com/stablecoin",
+        "https://www.fidelitydigitalassets.com/stablecoin-developer-resources",
+        "https://fwc.widen.net/s/jgdsvvsknq/fidelity-digital-assets---fidd-reserve-attestation-report---august-2026"
+      ],
+      "rationale": "The BNY Mellon cash deposit slice has no disclosed contractual maximum maturity. August report lists amounts and bank identity but maturity dates only for Treasury CUSIPs; governing terms authorize deposit accounts without demand-deposit characterization or maturity constraint. Cash liquidity is not proof of zero maturity; the Treasury three-month mandate cannot be applied to deposits."
+    },
+    {
+      "id": "uw-nwisdom-nest-521beb0be2fd5dae",
+      "assetId": "nwisdom-nest",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:nwisdom-nest:queue-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:38Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R91)",
+      "sources": [
+        {
+          "url": "https://docs.nest.credit/about/liquidity-and-redemptions/",
+          "observedAt": "2026-10-03T23:10:17Z",
+          "datumAsOf": null,
+          "location": "Queued (Asynchronous) Redemption",
+          "excerpt": "Larger withdrawals, or redemptions submitted when available liquidity is limited, may require additional time as positions are unwound in an orderly manner.",
+          "assertion": "Generic T+2 to T+5 estimates expressly admit additional time; no binding end-to-end maximum for any of these three legacy vaults is stated."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.nest.credit/",
+        "https://docs.nest.credit/about/available-vaults/",
+        "https://docs.nest.credit/about/liquidity-and-redemptions/",
+        "https://docs.nest.credit/about/vault-operations-and-valuation",
+        "https://docs.nest.credit/security-and-compliance/terms-and-conditions/",
+        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/contracts/README.md",
+        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/nTBILL.json",
+        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/nWISDOM.json",
+        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/inALPHA.json"
+      ],
+      "rationale": "The exact same-notional queue-redemption settlement maximum for nWISDOM, nTBILL and inALPHA is undisclosed. Public policy provides estimates for most strategies and expressly allows larger/illiquid exits additional time. Current vault directory omits these legacy assets; legal terms and contract/config disclosures publish no completion deadline. Async fulfillment is permissioned and can be partial. No generic estimate is converted into a guaranteed SLA."
+    },
+    {
+      "id": "uw-ntbill-nest-0575b59d662a2046",
+      "assetId": "ntbill-nest",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:ntbill-nest:queue-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:38Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R91)",
+      "sources": [
+        {
+          "url": "https://docs.nest.credit/about/liquidity-and-redemptions/",
+          "observedAt": "2026-10-03T23:10:17Z",
+          "datumAsOf": null,
+          "location": "Queued (Asynchronous) Redemption",
+          "excerpt": "Larger withdrawals, or redemptions submitted when available liquidity is limited, may require additional time as positions are unwound in an orderly manner.",
+          "assertion": "Generic T+2 to T+5 estimates expressly admit additional time; no binding end-to-end maximum for any of these three legacy vaults is stated."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.nest.credit/",
+        "https://docs.nest.credit/about/available-vaults/",
+        "https://docs.nest.credit/about/liquidity-and-redemptions/",
+        "https://docs.nest.credit/about/vault-operations-and-valuation",
+        "https://docs.nest.credit/security-and-compliance/terms-and-conditions/",
+        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/contracts/README.md",
+        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/nTBILL.json",
+        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/nWISDOM.json",
+        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/inALPHA.json"
+      ],
+      "rationale": "The exact same-notional queue-redemption settlement maximum for nWISDOM, nTBILL and inALPHA is undisclosed. Public policy provides estimates for most strategies and expressly allows larger/illiquid exits additional time. Current vault directory omits these legacy assets; legal terms and contract/config disclosures publish no completion deadline. Async fulfillment is permissioned and can be partial. No generic estimate is converted into a guaranteed SLA."
+    },
+    {
+      "id": "uw-inalpha-nest-68c96dffccd97cf1",
+      "assetId": "inalpha-nest",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:inalpha-nest:queue-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:38Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R91)",
+      "sources": [
+        {
+          "url": "https://docs.nest.credit/about/liquidity-and-redemptions/",
+          "observedAt": "2026-10-03T23:10:17Z",
+          "datumAsOf": null,
+          "location": "Queued (Asynchronous) Redemption",
+          "excerpt": "Larger withdrawals, or redemptions submitted when available liquidity is limited, may require additional time as positions are unwound in an orderly manner.",
+          "assertion": "Generic T+2 to T+5 estimates expressly admit additional time; no binding end-to-end maximum for any of these three legacy vaults is stated."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.nest.credit/",
+        "https://docs.nest.credit/about/available-vaults/",
+        "https://docs.nest.credit/about/liquidity-and-redemptions/",
+        "https://docs.nest.credit/about/vault-operations-and-valuation",
+        "https://docs.nest.credit/security-and-compliance/terms-and-conditions/",
+        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/contracts/README.md",
+        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/nTBILL.json",
+        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/nWISDOM.json",
+        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/inALPHA.json"
+      ],
+      "rationale": "The exact same-notional queue-redemption settlement maximum for nWISDOM, nTBILL and inALPHA is undisclosed. Public policy provides estimates for most strategies and expressly allows larger/illiquid exits additional time. Current vault directory omits these legacy assets; legal terms and contract/config disclosures publish no completion deadline. Async fulfillment is permissioned and can be partial. No generic estimate is converted into a guaranteed SLA."
     }
   ]
 }
