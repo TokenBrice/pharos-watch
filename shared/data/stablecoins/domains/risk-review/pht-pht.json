@@ -516,13 +516,14 @@
         "protocol": "APACX issuer-deployed LayerZero OFT",
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
-        "riskTier": "opaque-or-unknown",
+        "riskTier": "external-validated-network",
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "At Polygon block 94756020 on 2026-10-01, the proxy retained implementation 0x98210a4b34eafd668838108c99ad13a2b4340618, LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c, and owner 0xc6f1cfa1b5840e5afe56f7b7ef3c52c3bcda06c5. Polygon peers(30101) points to Ethereum adapter 0x567a173bb4baf009d13222759330c1a84b667bd2; at Ethereum block 26095930, that adapter's peers(30109) points back to Polygon PHT. This supersedes the earlier zero peer, but is not an execution or supply-conservation proof. Owner-controlled UUPS replacement remains without a resolved timelock or multisig.",
+        "reviewNote": "At Polygon block 94908462 (2026-10-03T22:50:44Z), implementation remained 0x98210a4b34eafd668838108c99ad13a2b4340618 and owner remained 0xc6f1cfa1b5840e5afe56f7b7ef3c52c3bcda06c5. Sourcify's exact PhtOFTUpgradeable/OFTUpgradeable/OAppReceiverUpgradeable source enforces endpoint and trusted-peer authentication before mint credit, burns outbound amounts, and allows owner-only UUPS replacement. EndpointV2 remains 0x1a44076050125825900e736c501f859c50fe728c and Ethereum peer 30101 remains 0x567a173bb4baf009d13222759330c1a84b667bd2. Effective Ethereum-lane send/receive ULN configurations require four DVNs, no optional DVNs, and 120/15 confirmations respectively. This establishes external-validated-network topology, not executable whole-supply conservation or protective limits. The endpoint delegate is separately 0x76db01fc4fc21dd20f37bdf17dbe2d53e14bf1a2; owner-controlled replacement risk remains unbounded.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-01",
+        "observedAt": "2026-10-03",
+        "observedBlock": 94908462,
         "sourceChain": "ethereum",
         "canonicalChain": "ethereum",
         "failureDomainKeys": [
@@ -540,6 +541,10 @@
           {
             "label": "Polygon PHT implementation Sourcify",
             "url": "https://sourcify.dev/server/v2/contract/137/0x98210a4b34eafd668838108c99ad13a2b4340618?fields=sources,compilation,abi"
+          },
+          {
+            "label": "Polygon dRPC fixed-block implementation, endpoint, peer, delegate and effective send/receive ULN configuration reads at block 94908462 (2026-10-03T22:50:44Z)",
+            "url": "https://polygon.drpc.org"
           }
         ]
       },

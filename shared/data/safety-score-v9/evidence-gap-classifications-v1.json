@@ -10830,6 +10830,355 @@
         "https://www.bankingcircle.com/banking-circle-launches-the-first-bank-backed-mica-compliant-stablecoin-euri/"
       ],
       "rationale": "Current EURI-specific reserve holdings/weights and as-of denominator are not published on the issuer transparency/audit index, whitepaper or bank annual-accounts surfaces. Legal cash/cash-equivalent eligibility and 1:1 EY-attestation claims do not supply a current measured mix; the linked smart-contract audit and consolidated bank balance sheet are not EURI reserve attestations. The old static 100% mixed class is not date-bumped."
+    },
+    {
+      "id": "uw-thusd-theo-be974cb6665e0309",
+      "assetId": "thusd-theo",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:651f0355c23e76f1f43f9175",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R37)",
+      "sources": [
+        {
+          "url": "https://theo.xyz/articles/how-thusd-works-gold-carry-trade-explained",
+          "observedAt": "2026-10-03T22:56:45Z",
+          "datumAsOf": "2026-06-04",
+          "location": "Yield Stream 1: The Gold Lease",
+          "excerpt": "the borrower returns the same physical gold at the end of the term, plus interest.",
+          "assertion": "Gold leases are term-based; neither the longest lease term nor whole-position stressed cash settlement is specified."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://theo.xyz/thbill",
+        "https://docs.theo.xyz/products/thbill.md",
+        "https://docs.theo.xyz/products/thbill/mint-and-redeem.md",
+        "https://docs.theo.xyz/products/thbill/wellington-ultra.md",
+        "https://docs.theo.xyz/products/thbill/fidelity-filq.md",
+        "https://docs.theo.xyz/legal/terms.md",
+        "https://app.theo.xyz/transparency",
+        "https://docs.theo.xyz/developers/deployed-addresses.md",
+        "https://theo.xyz/articles/how-thusd-works-gold-carry-trade-explained",
+        "https://docs.theo.xyz/products/thusd.md",
+        "https://docs.theo.xyz/products/thusd/mint-and-redeem.md"
+      ],
+      "rationale": "For the exact gold-carry reserve slice, maturityDaysMax and liquidityHorizon remain undisclosed. Lease terms, maturity-ladder construction, futures-market depth, and institutional counterparties are described, but no numerical longest lease term or bounded whole-slice cash-realization horizon is published. Market depth and collateral insurance are not liquidity guarantees."
+    },
+    {
+      "id": "uw-thusd-theo-be1bbc87b3174dd1",
+      "assetId": "thusd-theo",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:651f0355c23e76f1f43f9175",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R37)",
+      "sources": [
+        {
+          "url": "https://theo.xyz/articles/how-thusd-works-gold-carry-trade-explained",
+          "observedAt": "2026-10-03T22:56:45Z",
+          "datumAsOf": "2026-06-04",
+          "location": "Yield Stream 1: The Gold Lease",
+          "excerpt": "the borrower returns the same physical gold at the end of the term, plus interest.",
+          "assertion": "Gold leases are term-based; neither the longest lease term nor whole-position stressed cash settlement is specified."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://theo.xyz/thbill",
+        "https://docs.theo.xyz/products/thbill.md",
+        "https://docs.theo.xyz/products/thbill/mint-and-redeem.md",
+        "https://docs.theo.xyz/products/thbill/wellington-ultra.md",
+        "https://docs.theo.xyz/products/thbill/fidelity-filq.md",
+        "https://docs.theo.xyz/legal/terms.md",
+        "https://app.theo.xyz/transparency",
+        "https://docs.theo.xyz/developers/deployed-addresses.md",
+        "https://theo.xyz/articles/how-thusd-works-gold-carry-trade-explained",
+        "https://docs.theo.xyz/products/thusd.md",
+        "https://docs.theo.xyz/products/thusd/mint-and-redeem.md"
+      ],
+      "rationale": "For the exact gold-carry reserve slice, maturityDaysMax and liquidityHorizon remain undisclosed. Lease terms, maturity-ladder construction, futures-market depth, and institutional counterparties are described, but no numerical longest lease term or bounded whole-slice cash-realization horizon is published. Market depth and collateral insurance are not liquidity guarantees."
+    },
+    {
+      "id": "uw-thusd-theo-c45595d265e57fe2",
+      "assetId": "thusd-theo",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:9c0f8b4554581ebba8504c2e",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R37)",
+      "sources": [
+        {
+          "url": "https://docs.theo.xyz/products/thbill/mint-and-redeem.md",
+          "observedAt": "2026-10-03T22:56:45Z",
+          "datumAsOf": null,
+          "location": "What holders receive",
+          "excerpt": "Holders have no claim on the underlying fund units or the securities held by those funds.",
+          "assertion": "The reserve claim is thBILL, not direct Treasury ownership; underlying fund short duration does not establish a claim maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://theo.xyz/thbill",
+        "https://docs.theo.xyz/products/thbill.md",
+        "https://docs.theo.xyz/products/thbill/mint-and-redeem.md",
+        "https://docs.theo.xyz/products/thbill/wellington-ultra.md",
+        "https://docs.theo.xyz/products/thbill/fidelity-filq.md",
+        "https://docs.theo.xyz/legal/terms.md",
+        "https://app.theo.xyz/transparency",
+        "https://docs.theo.xyz/developers/deployed-addresses.md",
+        "https://theo.xyz/articles/how-thusd-works-gold-carry-trade-explained"
+      ],
+      "rationale": "For thUSD\u2019s exact thBILL reserve slice, no contractual maturityDaysMax or bounded whole-position liquidityHorizon is disclosed. ULTRA/FILQ custody and daily NAV are published; thBILL docs advertise T+1 while the website advertises T+0, neither a stress-inclusive hard maximum. Holders have no direct fund-unit claim. Short-duration fund language cannot be converted into a maturity maximum."
+    },
+    {
+      "id": "uw-thusd-theo-39c4bae2da0cced3",
+      "assetId": "thusd-theo",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:9c0f8b4554581ebba8504c2e",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R37)",
+      "sources": [
+        {
+          "url": "https://docs.theo.xyz/products/thbill/mint-and-redeem.md",
+          "observedAt": "2026-10-03T22:56:45Z",
+          "datumAsOf": null,
+          "location": "What holders receive",
+          "excerpt": "Holders have no claim on the underlying fund units or the securities held by those funds.",
+          "assertion": "The reserve claim is thBILL, not direct Treasury ownership; underlying fund short duration does not establish a claim maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://theo.xyz/thbill",
+        "https://docs.theo.xyz/products/thbill.md",
+        "https://docs.theo.xyz/products/thbill/mint-and-redeem.md",
+        "https://docs.theo.xyz/products/thbill/wellington-ultra.md",
+        "https://docs.theo.xyz/products/thbill/fidelity-filq.md",
+        "https://docs.theo.xyz/legal/terms.md",
+        "https://app.theo.xyz/transparency",
+        "https://docs.theo.xyz/developers/deployed-addresses.md",
+        "https://theo.xyz/articles/how-thusd-works-gold-carry-trade-explained"
+      ],
+      "rationale": "For thUSD\u2019s exact thBILL reserve slice, no contractual maturityDaysMax or bounded whole-position liquidityHorizon is disclosed. ULTRA/FILQ custody and daily NAV are published; thBILL docs advertise T+1 while the website advertises T+0, neither a stress-inclusive hard maximum. Holders have no direct fund-unit claim. Short-duration fund language cannot be converted into a maturity maximum."
+    },
+    {
+      "id": "uw-thusd-theo-3c902d363b2296d4",
+      "assetId": "thusd-theo",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R37)",
+      "sources": [
+        {
+          "url": "https://docs.theo.xyz/security-and-transparency/overview.md",
+          "observedAt": "2026-10-03T22:56:45Z",
+          "datumAsOf": null,
+          "location": "Opening transparency description",
+          "excerpt": "ongoing attestations conducted by third-party auditors.",
+          "assertion": "Generic ongoing attestations do not establish a periodic token-liability versus complete backing reconciliation procedure."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://theo.xyz/thbill",
+        "https://docs.theo.xyz/products/thbill.md",
+        "https://docs.theo.xyz/products/thbill/mint-and-redeem.md",
+        "https://docs.theo.xyz/products/thbill/wellington-ultra.md",
+        "https://docs.theo.xyz/products/thbill/fidelity-filq.md",
+        "https://docs.theo.xyz/legal/terms.md",
+        "https://app.theo.xyz/transparency",
+        "https://docs.theo.xyz/developers/deployed-addresses.md",
+        "https://docs.theo.xyz/security-and-transparency/overview.md",
+        "https://docs.theo.xyz/products/thusd/mint-and-redeem.md",
+        "https://theo.xyz/articles/how-thusd-works-gold-carry-trade-explained",
+        "https://theo-api.theo.xyz/v1/public/thbill/historical/7"
+      ],
+      "rationale": "For each asset\u2019s mint reconciliation datum, no explicit periodic whole-supply liability/backing reconciliation procedure and frequency is disclosed. Dashboard reserve and custody attestations, fund NAV reporting, contract roles, signed mint orders, and partial API composition are available; none proves recurring reconciliation of all minted and cross-chain liabilities to the complete offchain asset book. Daily fund NAV is not token-liability reconciliation."
+    },
+    {
+      "id": "uw-thbill-theo-25d89d02afdf42b1",
+      "assetId": "thbill-theo",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R37)",
+      "sources": [
+        {
+          "url": "https://docs.theo.xyz/security-and-transparency/overview.md",
+          "observedAt": "2026-10-03T22:56:45Z",
+          "datumAsOf": null,
+          "location": "Opening transparency description",
+          "excerpt": "ongoing attestations conducted by third-party auditors.",
+          "assertion": "Generic ongoing attestations do not establish a periodic token-liability versus complete backing reconciliation procedure."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://theo.xyz/thbill",
+        "https://docs.theo.xyz/products/thbill.md",
+        "https://docs.theo.xyz/products/thbill/mint-and-redeem.md",
+        "https://docs.theo.xyz/products/thbill/wellington-ultra.md",
+        "https://docs.theo.xyz/products/thbill/fidelity-filq.md",
+        "https://docs.theo.xyz/legal/terms.md",
+        "https://app.theo.xyz/transparency",
+        "https://docs.theo.xyz/developers/deployed-addresses.md",
+        "https://docs.theo.xyz/security-and-transparency/overview.md",
+        "https://docs.theo.xyz/products/thusd/mint-and-redeem.md",
+        "https://theo.xyz/articles/how-thusd-works-gold-carry-trade-explained",
+        "https://theo-api.theo.xyz/v1/public/thbill/historical/7"
+      ],
+      "rationale": "For each asset\u2019s mint reconciliation datum, no explicit periodic whole-supply liability/backing reconciliation procedure and frequency is disclosed. Dashboard reserve and custody attestations, fund NAV reporting, contract roles, signed mint orders, and partial API composition are available; none proves recurring reconciliation of all minted and cross-chain liabilities to the complete offchain asset book. Daily fund NAV is not token-liability reconciliation."
+    },
+    {
+      "id": "uw-thbill-theo-36cb489ecddee446",
+      "assetId": "thbill-theo",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:thbill-theo:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R37)",
+      "sources": [
+        {
+          "url": "https://docs.theo.xyz/products/thbill/mint-and-redeem.md",
+          "observedAt": "2026-10-03T22:56:45Z",
+          "datumAsOf": null,
+          "location": "What holders receive",
+          "excerpt": "Redemption settles in stablecoins.",
+          "assertion": "Output USDC/USDT and KYC access are disclosed, but no applicable redemption fee schedule or formula is supplied."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://theo.xyz/thbill",
+        "https://docs.theo.xyz/products/thbill.md",
+        "https://docs.theo.xyz/products/thbill/mint-and-redeem.md",
+        "https://docs.theo.xyz/products/thbill/wellington-ultra.md",
+        "https://docs.theo.xyz/products/thbill/fidelity-filq.md",
+        "https://docs.theo.xyz/legal/terms.md",
+        "https://app.theo.xyz/transparency",
+        "https://docs.theo.xyz/developers/deployed-addresses.md"
+      ],
+      "rationale": "The exact thBILL offchain-issuer redemption cost has no published numeric fee, complete bound, or evaluable fee formula in the product, mint/redeem, legal, transparency, or fund pages reviewed. Institutional KYC/KYB access and USDC/USDT payout are described without redemption tariffs. Fund management expenses and claimed net APY are not holder redemption charges; no zero fee is inferred."
+    },
+    {
+      "id": "uw-myrc-blox-a39480f870f6993a",
+      "assetId": "myrc-blox",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:159bb5cd984bd7b0423ab087",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R37)",
+      "sources": [
+        {
+          "url": "https://media.halogen.my/fund/hsmlf/info-memorandum.pdf",
+          "observedAt": "2026-10-03T22:56:45Z",
+          "datumAsOf": "2025-08-25",
+          "location": "Chapter 4.2 Investment Policy and Strategy, page 16",
+          "excerpt": "The Fund\u2019s average investment duration shall not be more than one (1) year.",
+          "assertion": "Average duration is not maximum instrument maturity; fund units have no fixed termination date or contractual maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.blox.my/myrc",
+        "https://www.blox.my/myrc/transparency",
+        "https://www.blox.my/policies/product-term-sheet",
+        "https://www.blox.my/policies/user-agreement",
+        "https://docs.blox.my/user/burn-myrc",
+        "https://docs.blox.my/api/wallet-api/overview",
+        "https://cdn.blox.my/attestations/2026/Blox%20Attestation%20Report-2026-08-August.pdf",
+        "https://www.halogen.my/fund/halogen-shariah-myr-liquid-fund",
+        "https://media.halogen.my/fund/hsmlf/info-memorandum.pdf",
+        "https://media.halogen.my/fund/hsmlf/fact-sheet-august-2026.pdf"
+      ],
+      "rationale": "For MYRC\u2019s exact Halogen liquid-fund reserve slice, maturityDaysMax is not disclosed. The full governing memorandum permits sukuk, deposits and other collective schemes and caps average duration at one year, not maximum maturity or fund-unit claim term. The actual factsheet and MYRC reserve attestation disclose allocation/value without a maximum. No 365-day maximum is inferred from a portfolio average."
+    },
+    {
+      "id": "uw-myrc-blox-03f8d22252c47847",
+      "assetId": "myrc-blox",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:myrc-blox:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:45Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R37)",
+      "sources": [
+        {
+          "url": "https://www.blox.my/policies/user-agreement",
+          "observedAt": "2026-10-03T22:56:45Z",
+          "datumAsOf": "2025-04-01",
+          "location": "Clause 12.5 processing and banking delays",
+          "excerpt": "the Company makes no representations or warranties regarding the amount of time needed to complete processing",
+          "assertion": "The agreement expressly disclaims a bounded processing time; T+1 user guidance is a usual target, not a maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.blox.my/myrc",
+        "https://www.blox.my/myrc/transparency",
+        "https://www.blox.my/policies/product-term-sheet",
+        "https://www.blox.my/policies/user-agreement",
+        "https://docs.blox.my/user/burn-myrc",
+        "https://docs.blox.my/api/wallet-api/overview"
+      ],
+      "rationale": "The exact MYRC offchain-issuer route has no end-to-end maximum settlement SLA. User docs say next working day and API docs say usually T+1, with requests after 5 PM/weekends processed next working day. Governing Clause 12.5 expressly disclaims any particular processing time and lists banking/third-party delays. A usual target or working-day convention cannot support settlementDaysMax."
     }
   ]
 }
