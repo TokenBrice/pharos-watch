@@ -5,7 +5,7 @@ export const DEPEG_DEWS_V6: readonly MethodologyChangelogEntry[] = [
     version: "6.31",
     title: "Trusted-price coverage bounds depeg time; thin-supply deviations are observed",
     date: "2026-10-03",
-    effectiveAt: 1791041400,
+    effectiveAt: 1791040052,
     summary: "Open incidents accrue off-peg time only between recorded continuous trusted observations. Blind and unrecorded legacy-open spans are unknown, not off peg or verified stability; observed current deviations no longer depend on the $1M event-creation floor.",
     impact: [
       "Additive migration 0255 preserves old-Worker queries and records trusted off-peg and at-par intervals, the latest trusted price clock, and three-state observation metadata without a historical backfill",
