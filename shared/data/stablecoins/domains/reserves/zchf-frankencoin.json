@@ -142,7 +142,7 @@
       "risk": "medium",
       "coinId": "paxg-paxos",
       "depType": "collateral",
-      "assetClass": "commodity-allocated",
+      "assetClass": "tokenized-security",
       "issuerOrObligor": "Paxos Trust Company",
       "riskFactors": [
         "market",
@@ -243,8 +243,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Pharos dependency-map review W3; Unknown-resolver PilotCdp PAXG classification review",
+    "reviewedAt": "2026-09-30",
+    "reviewer": "Pharos dependency-map review W3",
     "confidence": "verified",
     "sources": [
       {
@@ -274,13 +274,9 @@
       {
         "label": "Ethereum RPC: ysyBOLD asset() at block 26089449 (2026-09-30)",
         "url": "https://ethereum-rpc.publicnode.com"
-      },
-      {
-        "label": "Paxos PAX Gold: allocated physical gold ownership",
-        "url": "https://www.paxos.com/pax-gold"
       }
     ],
-    "rationale": "Historical weights retain the 2026-09-04 active collateral capture valued through Frankencoin's CHF price mapping. At Ethereum block 26089449, ysyBOLD asset() returned the tracked yBOLD contract 0x9f4330700a36b29952869fac9b33f45eedd8a3d8, corroborating Yearn's current vault record. The held ysyBOLD vault-share intermediary is explicit while the canonical ybold-yearn collateral dependency and 0.1% historical share are retained. The October 3 classification-only research within this full-composition review corrects PAXG to commodity-allocated: Paxos directly documents ownership of specifically allocated physical gold, not a tokenized security. No weight or composition date is refreshed; XAUt remains separately unrefined.",
+    "rationale": "Historical weights retain the 2026-09-04 active collateral capture valued through Frankencoin's CHF price mapping. At Ethereum block 26089449, ysyBOLD asset() returned the tracked yBOLD contract 0x9f4330700a36b29952869fac9b33f45eedd8a3d8, corroborating Yearn's current vault record. The held ysyBOLD vault-share intermediary is now explicit while the canonical ybold-yearn collateral dependency and 0.1% historical share are retained. PAXG and XAUt remain exact tracked upstreams; other rows remain classified exogenous collateral.",
     "compositionBasis": "Retained 2026-09-04 Frankencoin collateral balances and prices; ysyBOLD-to-yBOLD identity refreshed by fixed-block asset() read on 2026-09-30",
     "compositionAsOf": "2026-09-04",
     "scope": "full-composition",
