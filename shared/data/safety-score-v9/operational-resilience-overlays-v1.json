@@ -6551,6 +6551,105 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "syrupusdc-maple",
+      "reviewedAt": "2026-10-03T22:45:52Z",
+      "expiresAt": "2027-10-03T23:59:59Z",
+      "reviewer": "W1R13 primary-source unknown-wave review",
+      "notes": "Exact-product issuer-reported live-operation lower bound only; not independent assurance or incident-free history. Throughput, reconciliation and stress performance remain unestablished.",
+      "sources": [
+        {
+          "sourceId": "maple-exact-product-live-history",
+          "label": "Syrup Integrates with Pendle",
+          "publisher": "Maple Finance",
+          "publishedAt": "2024-10-15",
+          "url": "https://maple.finance/insights/syrup-integrates-with-pendle",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 23,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "maple-exact-product-live-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "syrupusdg-maple",
+      "reviewedAt": "2026-10-03T22:45:52Z",
+      "expiresAt": "2027-10-03T23:59:59Z",
+      "reviewer": "W1R13 primary-source unknown-wave review",
+      "notes": "Exact-product issuer-reported live-operation lower bound only; not independent assurance or incident-free history. Throughput, reconciliation and stress performance remain unestablished.",
+      "sources": [
+        {
+          "sourceId": "maple-exact-product-live-history",
+          "label": "Maple launches syrupUSDG",
+          "publisher": "Maple Finance",
+          "publishedAt": "2026-07-01",
+          "url": "https://maple.finance/insights/syrupusdg",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 3,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "maple-exact-product-live-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "syrupusdt-maple",
+      "reviewedAt": "2026-10-03T22:45:52Z",
+      "expiresAt": "2027-10-03T23:59:59Z",
+      "reviewer": "W1R13 primary-source unknown-wave review",
+      "notes": "Exact-product issuer-reported live-operation lower bound only; not independent assurance or incident-free history. Throughput, reconciliation and stress performance remain unestablished.",
+      "sources": [
+        {
+          "sourceId": "maple-exact-product-live-history",
+          "label": "USDT now live on Syrup",
+          "publisher": "Maple Finance",
+          "publishedAt": "2024-09-10",
+          "url": "https://maple.finance/insights/usdt-now-live-on-syrup",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 24,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "maple-exact-product-live-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

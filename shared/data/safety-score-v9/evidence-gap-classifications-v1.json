@@ -13501,6 +13501,380 @@
         "https://eth.blockscout.com/api/v2/smart-contracts/0xa2f362079dbc570a6df5bd04ad91002d17c0db9a"
       ],
       "rationale": "The exact missing datum is an entire-position liquidity horizon for this vault's USDC lending-reserve slice. Exact deployed vault/adapter code and current allocation enumerate idle USDC plus three lending markets, without a contractual repayment or full-realization deadline. Morpho documentation makes asset exit conditional on available liquidity, and in-kind exit transfers the exposure rather than realizes USDC. General Pendle terms provide no unconditional realization SLA. Current withdrawable amounts are separate producer-owned observations, not a published whole-slice timing bound."
+    },
+    {
+      "id": "uw-syrupusdc-maple-a8b811fe43c55cd0",
+      "assetId": "syrupusdc-maple",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:syrupusdc-maple:queue-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:46Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R13)",
+      "sources": [
+        {
+          "url": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md",
+          "observedAt": "2026-10-03T22:56:46Z",
+          "datumAsOf": null,
+          "location": "2.3 Liquidity and Withdrawal Risk",
+          "excerpt": "There is no guaranteed maximum withdrawal period.",
+          "assertion": "FIFO withdrawals depend on available liquidity; no binding maximum settlement time."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md",
+        "https://docs.maple.finance/syrupusdc-usdt-usdg-for-lenders/introduction.md",
+        "https://docs.maple.finance/legal/interface-terms-of-use-syrupusdc-and-syrupusdt.md",
+        "https://app.maple.finance/earn/details",
+        "https://dashboard.ledgerlens.io/c/maple",
+        "https://docsend.com/view/s/pb32b6hxt6jkz8vw",
+        "https://docs.maple.finance/syrupusdc-usdt-usdg-for-lenders/faq.md",
+        "https://docs.maple.finance/syrupusdc-usdt-usdg-for-lenders/risk.md"
+      ],
+      "rationale": "Exact queue-redeem maximum settlement is not published. The FAQ marketing maximum of 30 days is contradicted by the exact-product consolidated risk terms explicitly disclaiming any guaranteed maximum; average under 24 hours is not an SLA."
+    },
+    {
+      "id": "uw-syrupusdt-maple-ae14fd7124b405fc",
+      "assetId": "syrupusdt-maple",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:syrupusdt-maple:queue-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:46Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R13)",
+      "sources": [
+        {
+          "url": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md",
+          "observedAt": "2026-10-03T22:56:46Z",
+          "datumAsOf": null,
+          "location": "2.3 Liquidity and Withdrawal Risk",
+          "excerpt": "There is no guaranteed maximum withdrawal period.",
+          "assertion": "FIFO withdrawals depend on available liquidity; no binding maximum settlement time."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md",
+        "https://docs.maple.finance/syrupusdc-usdt-usdg-for-lenders/introduction.md",
+        "https://docs.maple.finance/legal/interface-terms-of-use-syrupusdc-and-syrupusdt.md",
+        "https://app.maple.finance/earn/details",
+        "https://dashboard.ledgerlens.io/c/maple",
+        "https://docsend.com/view/s/pb32b6hxt6jkz8vw",
+        "https://docs.maple.finance/syrupusdc-usdt-usdg-for-lenders/faq.md",
+        "https://docs.maple.finance/syrupusdc-usdt-usdg-for-lenders/risk.md"
+      ],
+      "rationale": "Exact queue-redeem maximum settlement is not published. The FAQ marketing maximum of 30 days is contradicted by the exact-product consolidated risk terms explicitly disclaiming any guaranteed maximum; average under 24 hours is not an SLA."
+    },
+    {
+      "id": "uw-syrupusdc-maple-c8eb3bd0273c42e9",
+      "assetId": "syrupusdc-maple",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "custodyEscrow",
+        "pillar": "backing",
+        "requiredDatum": "custodyEscrow",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:46Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R13)",
+      "sources": [
+        {
+          "url": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md",
+          "observedAt": "2026-10-03T22:56:46Z",
+          "datumAsOf": null,
+          "location": "6.3 Entity Structure",
+          "excerpt": "The assets and liabilities of each entity are ring-fenced by statute.",
+          "assertion": "SP legal ring-fencing is disclosed, not full immediate custody/escrow coverage."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md",
+        "https://docs.maple.finance/syrupusdc-usdt-usdg-for-lenders/introduction.md",
+        "https://docs.maple.finance/legal/interface-terms-of-use-syrupusdc-and-syrupusdt.md",
+        "https://app.maple.finance/earn/details",
+        "https://dashboard.ledgerlens.io/c/maple",
+        "https://docsend.com/view/s/pb32b6hxt6jkz8vw",
+        "https://docsend.com/view/pb32b6hxt6jkz8vw/d/vs4sat9eq6cyi2hh",
+        "https://docs.maple.finance/legal/borrower-mla.md"
+      ],
+      "rationale": "Whole-wrapper custodyEscrow coverage remains undisclosed: legal SP separation does not certify the complete current custodian/escrow census or withdrawal/sweep rights. USDT CME memo names Ripple Prime and segregated CME margin for one sleeve, not all loan collateral and supporting strategies. The details dashboard and collateral assurance do not establish that missing coverage."
+    },
+    {
+      "id": "uw-syrupusdg-maple-101582bb9e795b50",
+      "assetId": "syrupusdg-maple",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "custodyEscrow",
+        "pillar": "backing",
+        "requiredDatum": "custodyEscrow",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:46Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R13)",
+      "sources": [
+        {
+          "url": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md",
+          "observedAt": "2026-10-03T22:56:46Z",
+          "datumAsOf": null,
+          "location": "6.3 Entity Structure",
+          "excerpt": "The assets and liabilities of each entity are ring-fenced by statute.",
+          "assertion": "SP legal ring-fencing is disclosed, not full immediate custody/escrow coverage."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md",
+        "https://docs.maple.finance/syrupusdc-usdt-usdg-for-lenders/introduction.md",
+        "https://docs.maple.finance/legal/interface-terms-of-use-syrupusdc-and-syrupusdt.md",
+        "https://app.maple.finance/earn/details",
+        "https://dashboard.ledgerlens.io/c/maple",
+        "https://docsend.com/view/s/pb32b6hxt6jkz8vw",
+        "https://docsend.com/view/pb32b6hxt6jkz8vw/d/vs4sat9eq6cyi2hh",
+        "https://docs.maple.finance/legal/borrower-mla.md"
+      ],
+      "rationale": "Whole-wrapper custodyEscrow coverage remains undisclosed: legal SP separation does not certify the complete current custodian/escrow census or withdrawal/sweep rights. USDT CME memo names Ripple Prime and segregated CME margin for one sleeve, not all loan collateral and supporting strategies. The details dashboard and collateral assurance do not establish that missing coverage."
+    },
+    {
+      "id": "uw-syrupusdt-maple-afe3db14d4070f7b",
+      "assetId": "syrupusdt-maple",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "custodyEscrow",
+        "pillar": "backing",
+        "requiredDatum": "custodyEscrow",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:46Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R13)",
+      "sources": [
+        {
+          "url": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md",
+          "observedAt": "2026-10-03T22:56:46Z",
+          "datumAsOf": null,
+          "location": "6.3 Entity Structure",
+          "excerpt": "The assets and liabilities of each entity are ring-fenced by statute.",
+          "assertion": "SP legal ring-fencing is disclosed, not full immediate custody/escrow coverage."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md",
+        "https://docs.maple.finance/syrupusdc-usdt-usdg-for-lenders/introduction.md",
+        "https://docs.maple.finance/legal/interface-terms-of-use-syrupusdc-and-syrupusdt.md",
+        "https://app.maple.finance/earn/details",
+        "https://dashboard.ledgerlens.io/c/maple",
+        "https://docsend.com/view/s/pb32b6hxt6jkz8vw",
+        "https://docsend.com/view/pb32b6hxt6jkz8vw/d/vs4sat9eq6cyi2hh",
+        "https://docs.maple.finance/legal/borrower-mla.md"
+      ],
+      "rationale": "Whole-wrapper custodyEscrow coverage remains undisclosed: legal SP separation does not certify the complete current custodian/escrow census or withdrawal/sweep rights. USDT CME memo names Ripple Prime and segregated CME margin for one sleeve, not all loan collateral and supporting strategies. The details dashboard and collateral assurance do not establish that missing coverage."
+    },
+    {
+      "id": "uw-syrupusdc-maple-60cd6cfe99cfd94f",
+      "assetId": "syrupusdc-maple",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "leverage",
+        "pillar": "backing",
+        "requiredDatum": "leverage",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:46Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R13)",
+      "sources": [
+        {
+          "url": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md",
+          "observedAt": "2026-10-03T22:56:46Z",
+          "datumAsOf": null,
+          "location": "1.3 How Yield is Generated",
+          "excerpt": "Capital may also be allocated to supporting yield strategies, including but not limited to futures basis trading, other delta-neutral or market-neutral approaches, and liquidity provision in decentralized finance protocols.",
+          "assertion": "Strategy possibilities are disclosed without whole-wrapper leverage denominator."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md",
+        "https://docs.maple.finance/syrupusdc-usdt-usdg-for-lenders/introduction.md",
+        "https://docs.maple.finance/legal/interface-terms-of-use-syrupusdc-and-syrupusdt.md",
+        "https://app.maple.finance/earn/details",
+        "https://dashboard.ledgerlens.io/c/maple",
+        "https://docsend.com/view/s/pb32b6hxt6jkz8vw",
+        "https://docsend.com/view/pb32b6hxt6jkz8vw/d/vs4sat9eq6cyi2hh",
+        "https://docs.maple.finance/technical-resources/pools/accounting/pool-accounting.md",
+        "https://docs.maple.finance/technical-resources/strategies/defi-strategies.md"
+      ],
+      "rationale": "Exact whole-wrapper leverage/encumbrance coverage remains undisclosed. USDT CME memo discloses a leveraged futures sleeve (roughly 2.8x-4.5x) and prime-broker financing, so no unlevered inference is made; sleeve terms do not establish current complete lending/DeFi coverage for any of the three pools. Native share accounting and generic strategy code cannot close that denominator."
+    },
+    {
+      "id": "uw-syrupusdg-maple-2b4a3124557de18a",
+      "assetId": "syrupusdg-maple",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "leverage",
+        "pillar": "backing",
+        "requiredDatum": "leverage",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:46Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R13)",
+      "sources": [
+        {
+          "url": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md",
+          "observedAt": "2026-10-03T22:56:46Z",
+          "datumAsOf": null,
+          "location": "1.3 How Yield is Generated",
+          "excerpt": "Capital may also be allocated to supporting yield strategies, including but not limited to futures basis trading, other delta-neutral or market-neutral approaches, and liquidity provision in decentralized finance protocols.",
+          "assertion": "Strategy possibilities are disclosed without whole-wrapper leverage denominator."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md",
+        "https://docs.maple.finance/syrupusdc-usdt-usdg-for-lenders/introduction.md",
+        "https://docs.maple.finance/legal/interface-terms-of-use-syrupusdc-and-syrupusdt.md",
+        "https://app.maple.finance/earn/details",
+        "https://dashboard.ledgerlens.io/c/maple",
+        "https://docsend.com/view/s/pb32b6hxt6jkz8vw",
+        "https://docsend.com/view/pb32b6hxt6jkz8vw/d/vs4sat9eq6cyi2hh",
+        "https://docs.maple.finance/technical-resources/pools/accounting/pool-accounting.md",
+        "https://docs.maple.finance/technical-resources/strategies/defi-strategies.md"
+      ],
+      "rationale": "Exact whole-wrapper leverage/encumbrance coverage remains undisclosed. USDT CME memo discloses a leveraged futures sleeve (roughly 2.8x-4.5x) and prime-broker financing, so no unlevered inference is made; sleeve terms do not establish current complete lending/DeFi coverage for any of the three pools. Native share accounting and generic strategy code cannot close that denominator."
+    },
+    {
+      "id": "uw-syrupusdt-maple-718a404043956f43",
+      "assetId": "syrupusdt-maple",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "leverage",
+        "pillar": "backing",
+        "requiredDatum": "leverage",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:46Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R13)",
+      "sources": [
+        {
+          "url": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md",
+          "observedAt": "2026-10-03T22:56:46Z",
+          "datumAsOf": null,
+          "location": "1.3 How Yield is Generated",
+          "excerpt": "Capital may also be allocated to supporting yield strategies, including but not limited to futures basis trading, other delta-neutral or market-neutral approaches, and liquidity provision in decentralized finance protocols.",
+          "assertion": "Strategy possibilities are disclosed without whole-wrapper leverage denominator."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md",
+        "https://docs.maple.finance/syrupusdc-usdt-usdg-for-lenders/introduction.md",
+        "https://docs.maple.finance/legal/interface-terms-of-use-syrupusdc-and-syrupusdt.md",
+        "https://app.maple.finance/earn/details",
+        "https://dashboard.ledgerlens.io/c/maple",
+        "https://docsend.com/view/s/pb32b6hxt6jkz8vw",
+        "https://docsend.com/view/pb32b6hxt6jkz8vw/d/vs4sat9eq6cyi2hh",
+        "https://docs.maple.finance/technical-resources/pools/accounting/pool-accounting.md",
+        "https://docs.maple.finance/technical-resources/strategies/defi-strategies.md"
+      ],
+      "rationale": "Exact whole-wrapper leverage/encumbrance coverage remains undisclosed. USDT CME memo discloses a leveraged futures sleeve (roughly 2.8x-4.5x) and prime-broker financing, so no unlevered inference is made; sleeve terms do not establish current complete lending/DeFi coverage for any of the three pools. Native share accounting and generic strategy code cannot close that denominator."
+    },
+    {
+      "id": "uw-syrupusdg-maple-6bbe464b2293b503",
+      "assetId": "syrupusdg-maple",
+      "scope": {
+        "componentKey": "economic-control:oracle",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "economic-control:oracle",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:46Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R13)",
+      "sources": [
+        {
+          "url": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md",
+          "observedAt": "2026-10-03T22:56:46Z",
+          "datumAsOf": null,
+          "location": "4.2 Oracle and Price Feed Risk",
+          "excerpt": "The Maple Protocol and its associated strategies may rely on oracles or price feeds to determine the value of collateral, trigger margin calls, or execute liquidations.",
+          "assertion": "Oracle dependency exists conditionally across borrower and strategy positions."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md",
+        "https://docs.maple.finance/syrupusdc-usdt-usdg-for-lenders/introduction.md",
+        "https://docs.maple.finance/legal/interface-terms-of-use-syrupusdc-and-syrupusdt.md",
+        "https://app.maple.finance/earn/details",
+        "https://dashboard.ledgerlens.io/c/maple",
+        "https://docsend.com/view/s/pb32b6hxt6jkz8vw",
+        "https://docs.maple.finance/technical-resources/pools/accounting/pool-accounting.md",
+        "https://docs.maple.finance/technical-resources/security/list-of-assumptions.md",
+        "https://docsend.com/view/s/pb32b6hxt6jkz8vw/f/j3yeh5ws39nstkhb"
+      ],
+      "rationale": "Exact complete syrupUSDG funded borrower/strategy oracle-feed census and stale-price/override policy remain undisclosed. Native pool NAV derives from assets and impairments rather than a share-price feed, but that does not prove all backing positions are oracle-independent. The public USDG monthly archive is empty; generic Chainlink assumptions are not exact current feed coverage."
+    },
+    {
+      "id": "uw-syrupusdt-maple-49ed8f1b39943bda",
+      "assetId": "syrupusdt-maple",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:57:31Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R13)",
+      "sources": [
+        {
+          "url": "https://docs.maple.finance/technical-resources/pools/accounting/pool-accounting.md",
+          "observedAt": "2026-10-03T22:57:31Z",
+          "datumAsOf": null,
+          "location": "Pool accounting overview",
+          "excerpt": "Total pool value is represented using `totalAssets`.",
+          "assertion": "Native totalAssets accounting is not independent whole supply/backing reconciliation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md",
+        "https://docs.maple.finance/syrupusdc-usdt-usdg-for-lenders/introduction.md",
+        "https://docs.maple.finance/legal/interface-terms-of-use-syrupusdc-and-syrupusdt.md",
+        "https://app.maple.finance/earn/details",
+        "https://dashboard.ledgerlens.io/c/maple",
+        "https://docsend.com/view/s/pb32b6hxt6jkz8vw",
+        "https://docs.maple.finance/integrate/technical-resources/collateral-and-yield-disclosure.md",
+        "https://docs.maple.finance/technical-resources/pools/accounting/pool-accounting.md"
+      ],
+      "rationale": "Exact syrupUSDT whole circulating share supply-to-net-backing reconciliation scope, cadence and exception handling are not disclosed. NetworkFirm verifies aggregate USDC/USDT loan collateral, not all loan principal, idle funds, strategies, bridged liabilities and impairment-adjusted share supply. Public native accounting and collateral graphs do not close that reconciliation scope."
     }
   ]
 }
