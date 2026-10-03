@@ -4761,6 +4761,44 @@
           "url": "https://rpc.soniclabs.com"
         }
       ]
+    },
+    {
+      "assetId": "sgho-aave",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2026-11-03",
+      "reviewer": "Unknown-wave W2R15",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "none",
+      "rationale": "At Ethereum block 26115189 the sGHO implementation slot is 0xff229a0bbb614a284de8ae0e41e5974878fd7c04 and its deployed runtime exactly matches verified sGho source (sha256:e423396300f91cac63610a024c9475f19c840bf5f21f1025807425c13164c190). asset() is canonical GHO; all accrued share liabilities total 169328708290748641117422971 base units and idle GHO balance is 169571243167769586626153497, covering the full claim with surplus. The complete current source has no strategy, borrowing or reuse methods; underlying GHO rescue is prohibited by maxRescue. Funding of accrued yield is onchain idle GHO, not an inferred offchain receivable. Proxy upgrade/role powers remain separately scored; no legal segregation or remoteness is asserted.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0xe1753f2e00940cc31213dd92013cf019dfe4ca1d",
+          "function": "ERC1967 implementation/asset()/totalAssets()/GHO.balanceOf(vault)",
+          "value": "implementation=0xff229a0bbb614a284de8ae0e41e5974878fd7c04; asset=0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f; totalAssets=169328708290748641117422971; idleGHO=169571243167769586626153497; blockHash=0x421e3fd830afb34692ec64b834a8cf78e19206dd4c248416e2ebfdadbd94c47a",
+          "block": 26115189
+        }
+      ],
+      "sources": [
+        {
+          "label": "Verified sGho implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xff229a0bbb614a284de8ae0e41e5974878fd7c04"
+        },
+        {
+          "label": "Verified transparent proxy",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe1753f2e00940cc31213dd92013cf019dfe4ca1d"
+        },
+        {
+          "label": "Aave sGHO mechanism",
+          "url": "https://aave.com/docs/ecosystem/gho/sgho"
+        },
+        {
+          "label": "Dwellir Ethereum archive RPC (block 26115189)",
+          "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+        }
+      ]
     }
   ]
 }
