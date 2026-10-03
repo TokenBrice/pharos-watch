@@ -24159,6 +24159,120 @@
         "https://fwc.widen.net/s/jgdsvvsknq/fidelity-digital-assets---fidd-reserve-attestation-report---august-2026"
       ],
       "rationale": "The BNY Mellon cash deposit slice has no disclosed contractual maximum maturity. August report lists amounts and bank identity but maturity dates only for Treasury CUSIPs; governing terms authorize deposit accounts without demand-deposit characterization or maturity constraint. Cash liquidity is not proof of zero maturity; the Treasury three-month mandate cannot be applied to deposits."
+    },
+    {
+      "id": "uw-cgusd-cygnus-finance-85b6f4975dba8149",
+      "assetId": "cgusd-cygnus-finance",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:12:31Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R68)",
+      "sources": [
+        {
+          "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/token-and-contract/cgusd/how-it-works.md",
+          "observedAt": "2026-10-03T23:02:55Z",
+          "datumAsOf": null,
+          "location": "Supply/NAV paragraph",
+          "excerpt": "The total issuance of cgUSD remains consistent with the net value of its asset portfolio",
+          "assertion": "Daily NAV synchronization is described, not dated whole-supply financial reconciliation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.cygnus.finance/",
+        "https://wiki.cygnus.finance/whitepaper/llms.txt",
+        "https://wiki.cygnus.finance/whitepaper/legal/interface-terms-of-use.md",
+        "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/why-cygnus.md",
+        "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/token-and-contract/smart-contract-audits.md",
+        "https://base.blockscout.com/api/v2/addresses/0xca72827a3d211cfd8f6b00ac98824872b72cab49"
+      ],
+      "rationale": "cgUSD whole-supply mint/reserve reconciliation is undisclosed across official website, complete wiki index, reserve policy, rebase/NAV formula, redemption/NFT liabilities, oracle, legal terms and audit index. Banking-day NAV synchronization lacks a dated reserve-account/register reconciliation covering issued and pending claims with operator, common cutoff, procedure and demonstrated cadence. A code audit, supply or TVL is not financial reconciliation."
+    },
+    {
+      "id": "uw-cgusd-cygnus-finance-d7053f7f907e2d65",
+      "assetId": "cgusd-cygnus-finance",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:12:31Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R68)",
+      "sources": [
+        {
+          "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/why-cygnus.md",
+          "observedAt": "2026-10-03T23:12:31Z",
+          "datumAsOf": null,
+          "location": "On-chain liquid assets",
+          "excerpt": "In order to protect all users' needs for quick redemption, a small portion of the assets will stay on the chain as liquid assets.",
+          "assertion": "Reserve categories and unquantified liquidity are disclosed, not dated whole-book holdings/amounts/weights."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.cygnus.finance/",
+        "https://wiki.cygnus.finance/whitepaper/llms.txt",
+        "https://wiki.cygnus.finance/whitepaper/legal/interface-terms-of-use.md",
+        "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/why-cygnus.md",
+        "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/token-and-contract/cgusd.md",
+        "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/token-and-contract/smart-contract-audits.md",
+        "https://base.blockscout.com/api/v2/addresses/0xca72827a3d211cfd8f6b00ac98824872b72cab49"
+      ],
+      "rationale": "No current whole-asset reserve composition/denominator is disclosed in website, wiki reserve/NAV/oracle/redemption pages, legal terms or audit index. Policy permits bills, fund/ETF/repo exposures, transit, on-chain liquidity and a buffer but gives no dated actual holdings/weights or confirmed off-chain balances. Observable supply cannot establish the off-chain book. Preserve the old unsplit probable sidecar rather than invent percentages."
+    },
+    {
+      "id": "uw-cgusd-cygnus-finance-89f96349d2ff4b1e",
+      "assetId": "cgusd-cygnus-finance",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:cgusd-cygnus-finance:queue-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:12:31Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R68)",
+      "sources": [
+        {
+          "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/faq/withdrawals",
+          "observedAt": "2026-10-03T23:02:55Z",
+          "datumAsOf": null,
+          "location": "Questions 7 and 8",
+          "excerpt": "Under normal circumstances, the cgUSD/wcgUSD withdrawal period can take anywhere between 5-7 days.",
+          "assertion": "Normal-duration guidance is not an unconditional maximum to claimable USDC."
+        },
+        {
+          "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/why-cygnus.md",
+          "observedAt": "2026-10-03T23:12:31Z",
+          "datumAsOf": null,
+          "location": "Assets in Transit",
+          "excerpt": "will still result in the transit time not being determined by Cygnus.",
+          "assertion": "Third-party transit uncertainty remains; no funded end-to-end SLA is stated."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.cygnus.finance/",
+        "https://wiki.cygnus.finance/whitepaper/llms.txt",
+        "https://wiki.cygnus.finance/whitepaper/legal/interface-terms-of-use.md",
+        "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/protocol-mechanics/redemption.md",
+        "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/faq/withdrawals",
+        "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/why-cygnus.md"
+      ],
+      "rationale": "Queue-redeem end-to-end settlement maximum is unpublished. FAQ gives two business days for sales, three for conversion and normal 5-7 days; mechanics gives typically 2-5 days followed by an oracle update/claim. Policy explicitly disclaims deterministic transit timing. Website and legal terms add no funded request-to-spendable-USDC upper guarantee. Do not convert normal windows, business-day legs or oracle batching into a calendar-second maximum."
     }
   ]
 }

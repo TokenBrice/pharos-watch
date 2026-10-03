@@ -11012,6 +11012,105 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "fusd-finchain",
+      "reviewedAt": "2026-10-03T23:07:01Z",
+      "expiresAt": "2027-10-03T23:07:01Z",
+      "reviewer": "W1R68",
+      "notes": "Seven full calendar months from the exact FUSD issuer launch announcement on 2026-02-10 to this review. Eligibility-only lower bound; no throughput, reconciliation performance, stress recovery or incident-free claim.",
+      "sources": [
+        {
+          "sourceId": "fusd-launch",
+          "label": "FinChain official FUSD launch release",
+          "publisher": "Finchain Holdings (Cayman) Limited",
+          "publishedAt": "2026-02-10",
+          "url": "https://www.prnewswire.com/news-releases/fosun-wealth-holdings-finchain-has-reached-a-deep-strategic-cooperation-with-avalanche-302683507.html",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 7,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "fusd-launch"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usd3-reserve-protocol",
+      "reviewedAt": "2026-10-03T23:07:01Z",
+      "expiresAt": "2027-10-03T23:07:01Z",
+      "reviewer": "W1R68",
+      "notes": "Twenty full calendar months from the January 2025 exact USD3 operating report to this review, a conservative lower bound rather than claimed launch age. No throughput, stress recovery, financial assurance or incident-free claim.",
+      "sources": [
+        {
+          "sourceId": "usd3-operation-report",
+          "label": "USD3 Q4 2024 operating report",
+          "publisher": "Reserve Protocol community governance",
+          "publishedAt": "2025-01-12",
+          "url": "https://forum.reserve.org/t/report-usd3-quarterly-report-q4-2024/1053",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 20,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "usd3-operation-report"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "cgusd-cygnus-finance",
+      "reviewedAt": "2026-10-03T23:07:01Z",
+      "expiresAt": "2027-10-03T23:07:01Z",
+      "reviewer": "W1R68",
+      "notes": "Thirty-one full calendar months from exact cgUSD Base contract creation at block 10814542 on 2024-02-20. Explorer creation history is used at the weakest issuer-reported confidence for eligibility only; no redemption, assurance or incident-free performance asserted.",
+      "sources": [
+        {
+          "sourceId": "cgusd-creation",
+          "label": "Exact cgUSD contract creation transaction",
+          "publisher": "Base Blockscout",
+          "publishedAt": "2024-02-20",
+          "url": "https://base.blockscout.com/tx/0x3657dd8c0ac04db85a7c9f2b5d64b4376c07ad5ba9e829f024842e4abd51c387",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 31,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "cgusd-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }
