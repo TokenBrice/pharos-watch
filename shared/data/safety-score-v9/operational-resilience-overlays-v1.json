@@ -7739,6 +7739,171 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "usdx-axis",
+      "reviewedAt": "2026-10-03T22:48:02Z",
+      "expiresAt": "2027-10-03T22:48:02Z",
+      "reviewer": "Unknown wave W1R63",
+      "notes": "Exact tracked token operating-history lower bound from 2026-07-23; 2 completed calendar months through 2026-10-03. No redemption throughput, stress recovery, independent reconciliation continuity or incident-free assertion is made. Creation/issuer launch evidence is not independent financial assurance.",
+      "sources": [
+        {
+          "sourceId": "dated-live-history",
+          "label": "Exact canonical USDx V2 creation, Ethereum block 25597984",
+          "publisher": "Ethereum deployment record",
+          "publishedAt": "2026-07-23",
+          "url": "https://etherscan.io/tx/0xc50b87d6c87b63e5b8b97253aecd32724eed0b081afdf2732e654a027adf3432",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 2,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "susdx-axis",
+      "reviewedAt": "2026-10-03T22:48:02Z",
+      "expiresAt": "2027-10-03T22:48:02Z",
+      "reviewer": "Unknown wave W1R63",
+      "notes": "Exact tracked token operating-history lower bound from 2026-07-23; 2 completed calendar months through 2026-10-03. No redemption throughput, stress recovery, independent reconciliation continuity or incident-free assertion is made. Creation/issuer launch evidence is not independent financial assurance.",
+      "sources": [
+        {
+          "sourceId": "dated-live-history",
+          "label": "Exact StakedUSDx V2 creation, Ethereum block 25597991",
+          "publisher": "Ethereum deployment record",
+          "publishedAt": "2026-07-23",
+          "url": "https://etherscan.io/tx/0xdf82a52bbd1c7082c9c0523c25e47b9c4bd02bebcc1110bbb31ddeebe4de9791",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 2,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "bnusd-balanced",
+      "reviewedAt": "2026-10-03T22:48:02Z",
+      "expiresAt": "2027-10-03T22:48:02Z",
+      "reviewer": "Unknown wave W1R63",
+      "notes": "Exact tracked token operating-history lower bound from 2021-04-26; 65 completed calendar months through 2026-10-03. No redemption throughput, stress recovery, independent reconciliation continuity or incident-free assertion is made. History concerns legacy ICON bnUSD(old), not distinct Sonic bnUSD or the v2 money market.",
+      "sources": [
+        {
+          "sourceId": "dated-live-history",
+          "label": "Official live announcement explicitly offering Balanced Dollar borrowing",
+          "publisher": "Balanced",
+          "publishedAt": "2021-04-26",
+          "url": "https://blog.balanced.network/balanced-is-live/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 65,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "brl1-brl1",
+      "reviewedAt": "2026-10-03T22:48:02Z",
+      "expiresAt": "2027-10-03T22:48:02Z",
+      "reviewer": "Unknown wave W1R63",
+      "notes": "Exact tracked token operating-history lower bound from 2025-03-10; 18 completed calendar months through 2026-10-03. No redemption throughput, stress recovery, independent reconciliation continuity or incident-free assertion is made. Creation/issuer launch evidence is not independent financial assurance.",
+      "sources": [
+        {
+          "sourceId": "dated-live-history",
+          "label": "Issuer archived launch article with explicit March 10 2025 publication date",
+          "publisher": "BRL1",
+          "publishedAt": "2025-03-10",
+          "url": "https://brl1.io/en/projects/stablecoin-lastreada-em-t%C3%ADtulos-do-governo-do-brasil-e-criada-pelo-mercado-bitcoin-bitso-foxbit-e-cainvest-estr%C3%A9ia-no-mercado",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 18,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "susd-hedgecore",
+      "reviewedAt": "2026-10-03T22:52:34Z",
+      "expiresAt": "2027-10-03T22:52:34Z",
+      "reviewer": "Unknown wave W1R63",
+      "notes": "Exact tracked sUSD contract first appears at BSC block 64260119, creation receipt 0x2247956f...a7f554, timestamp 2025-10-11T14:55:50Z. Binary archival code census proves no code at preceding block and the receipt matches the full catalog address. 11 completed calendar months through 2026-10-03; no performance, independent reconciliation or absence-of-incidents claim.",
+      "sources": [
+        {
+          "sourceId": "exact-susd-creation",
+          "label": "Exact sUSD creation at BSC block 64260119 (archival code boundary and matching creation receipt)",
+          "publisher": "BNB Chain deployment record",
+          "publishedAt": "2025-10-11",
+          "url": "https://bscscan.com/tx/0x2247956fb0bc5abb96c552dbf2d87d53eb3606644c6238572501505856a7f554",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 11,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-susd-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

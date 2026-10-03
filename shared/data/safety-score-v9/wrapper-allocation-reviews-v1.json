@@ -4612,6 +4612,44 @@
           "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
         }
       ]
+    },
+    {
+      "assetId": "susdx-axis",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2027-01-01",
+      "reviewer": "Unknown wave W1R63",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "none",
+      "rationale": "At Ethereum block 26114911, the exact V2 proxy resolves to 0x1d8191c20c06c5628f1a977bc6d6afe7dd541cf2 and runtime bytecode matches the verified Blockscout implementation. The complete vault source and ERC4626 inheritance hold USDx locally: no strategy, lending, approval or borrowing surface; funded rewards and pending/claimable redemption buckets remain in-vault. USDx balance equals requiredAssets including every bucket, not totalAssets alone. rescueTokens can move only unrelated tokens or USDx surplus. This is contract-local custody/reuse proof only; USDx offchain venue/hedge custody stays upstream, and upgrade, restriction and privileged servicing risks are retained.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0xeb892628d1e58bc475a6dcb7f5dbc4f591632aa4",
+          "function": "asset()/totalAssets()/getVaultState()/USDx.balanceOf(vault)/EIP1967 implementation",
+          "value": "asset=0xa1fa7777974312f7d801a8880714a218f76233f8; implementation=0x1d8191c20c06c5628f1a977bc6d6afe7dd541cf2; totalAssets=39015027241547914633100010; USDx balance=requiredAssets=40738539091023113803933058; pending=1702985576228196866250572; claimable=8898773247002304514680; solvent=true; deployed implementation runtime matches verified source",
+          "block": 26114911
+        }
+      ],
+      "sources": [
+        {
+          "label": "Exact verified StakedUSDx implementation and complete inherited sources",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1d8191c20c06c5628f1a977bc6d6afe7dd541cf2"
+        },
+        {
+          "label": "Issuer V2 single-asset and in-vault accounting description",
+          "url": "https://docs.axis.to/reference/staking-contracts.md"
+        },
+        {
+          "label": "Pinned Ethereum state",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Pinned Ethereum block",
+          "url": "https://etherscan.io/block/26114911"
+        }
+      ]
     }
   ]
 }

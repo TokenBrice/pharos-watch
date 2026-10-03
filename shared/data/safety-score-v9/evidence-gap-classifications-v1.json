@@ -16586,6 +16586,490 @@
         "https://sourcify.dev/server/v2/contract/4663/0x44abc1d6ccff2696d98890b92e2157af242179c2?fields=all"
       ],
       "rationale": "The exact whole-position liquidityHorizon for this denominated Morpho lending claim is not disclosed as a guaranteed maximum. Product liquidity targets and instant/Repo marketing do not promise realization of every lender claim; verified exit and adapter code depend on available idle/market liquidity and borrower repayments. Legal terms disclaim operator custody and performance obligations. No timed full-position realization covenant or attestation is published on the searched issuer/docs/legal/contract surfaces."
+    },
+    {
+      "id": "uw-usdx-axis-62c8e997af7b0333",
+      "assetId": "usdx-axis",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:03:21Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R63)",
+      "sources": [
+        {
+          "url": "https://docs.axis.to/backing-reserves-and-transparency/backing-custody-transparency.md",
+          "observedAt": "2026-10-03T23:03:17Z",
+          "datumAsOf": null,
+          "location": "Offchain backing evidence and How to evaluate transparency",
+          "excerpt": "reconciliation between reserves, liabilities, and USDx supply.",
+          "assertion": "The issuer names the required reconciliation evidence but publishes no whole-issuance-ledger procedure and recurring cadence."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.axis.to/llms.txt",
+        "https://docs.axis.to/backing-reserves-and-transparency/backing-custody-transparency.md",
+        "https://app.axis.to/transparency",
+        "https://axis.accountable.capital:8443/dashboard",
+        "https://www.axis.to/terms-of-service",
+        "https://www.openzeppelin.com/news/axis-coordinate-v2-contracts-audit",
+        "https://etherscan.io/address/0xa1fa7777974312f7d801a8880714a218f76233f8"
+      ],
+      "rationale": "Accountable's dated exchange-reserve and aggregate supply snapshots and the current transparency dashboard are real backing evidence, not a published recurring procedure reconciling every V2/legacy liability, mint/burn movement and offchain issuance ledger on a common clock. Legal terms and the contract audit do not supply that missing procedure/cadence. Preserve reconciliation unknown; do not assert no reconciliation exists."
+    },
+    {
+      "id": "uw-usdx-axis-b41173b9e6e1a1cb",
+      "assetId": "usdx-axis",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "supervision",
+        "pillar": "control",
+        "requiredDatum": "supervision",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:03:21Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R63)",
+      "sources": [
+        {
+          "url": "https://www.axis.to/terms-of-service",
+          "observedAt": "2026-10-03T23:03:17Z",
+          "datumAsOf": "2026-07-26",
+          "location": "1.1 Scope of Terms",
+          "excerpt": "issuance and redemption of relevant digital assets provided by Coordinate Origin Limited, a company incorporated under the laws of the British Virgin Islands",
+          "assertion": "Exact issuer and jurisdiction are disclosed, but not a prudential regulator, licence identity or activity covering USDx or sUSDx."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.axis.to/terms-of-service",
+        "https://docs.axis.to/resources-and-legal/compliance.md",
+        "https://docs.axis.to/llms.txt",
+        "https://app.axis.to/transparency",
+        "https://www.bvifsc.vg/regulated-entities",
+        "https://www.bvifsc.vg/public-search",
+        "https://eservices.mas.gov.sg/fid",
+        "https://www.axis.to/insights"
+      ],
+      "rationale": "Issuer terms identify BVI Coordinate Origin and Singapore platform operator Coordinate Labs, but disclose no licence/regulator/activity for either stablecoin claim. Exact-name official-domain searches found no matching disclosure. BVI direct register access failed; that failure is not proof of absence. Reviewed issuer legal/compliance, documentation and transparency surfaces do not establish the exact applicable supervision identity/scope; leave supervision unknown, not none."
+    },
+    {
+      "id": "uw-susdx-axis-3da1afa3285e23be",
+      "assetId": "susdx-axis",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "supervision",
+        "pillar": "control",
+        "requiredDatum": "supervision",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:03:21Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R63)",
+      "sources": [
+        {
+          "url": "https://www.axis.to/terms-of-service",
+          "observedAt": "2026-10-03T23:03:17Z",
+          "datumAsOf": "2026-07-26",
+          "location": "1.1 Scope of Terms",
+          "excerpt": "issuance and redemption of relevant digital assets provided by Coordinate Origin Limited, a company incorporated under the laws of the British Virgin Islands",
+          "assertion": "Exact issuer and jurisdiction are disclosed, but not a prudential regulator, licence identity or activity covering USDx or sUSDx."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.axis.to/terms-of-service",
+        "https://docs.axis.to/resources-and-legal/compliance.md",
+        "https://docs.axis.to/llms.txt",
+        "https://app.axis.to/transparency",
+        "https://www.bvifsc.vg/regulated-entities",
+        "https://www.bvifsc.vg/public-search",
+        "https://eservices.mas.gov.sg/fid",
+        "https://www.axis.to/insights"
+      ],
+      "rationale": "Issuer terms identify BVI Coordinate Origin and Singapore platform operator Coordinate Labs, but disclose no licence/regulator/activity for either stablecoin claim. Exact-name official-domain searches found no matching disclosure. BVI direct register access failed; that failure is not proof of absence. Reviewed issuer legal/compliance, documentation and transparency surfaces do not establish the exact applicable supervision identity/scope; leave supervision unknown, not none."
+    },
+    {
+      "id": "uw-usdx-axis-7f2de1ea9794f250",
+      "assetId": "usdx-axis",
+      "scope": {
+        "componentKey": "control:mint-meta:usdx-axis:31ba20b1b4bb0d83b120",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:usdx-axis:31ba20b1b4bb0d83b120",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:03:21Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R63)",
+      "sources": [
+        {
+          "url": "https://docs.axis.to/backing-reserves-and-transparency/security.md",
+          "observedAt": "2026-10-03T23:03:17Z",
+          "datumAsOf": null,
+          "location": "Key management",
+          "excerpt": "Key material is managed with **AWS KMS**.",
+          "assertion": "Issuer KMS/hardware-wallet safeguards are disclosed; independent operator/signatory separation, signing/recovery policies and custody assurance are not."
+        },
+        {
+          "url": "https://docs.axis.to/technical-and-architecture/governance.md",
+          "observedAt": "2026-10-03T23:03:17Z",
+          "datumAsOf": null,
+          "location": "Admin authority and risk direction",
+          "excerpt": "a geographically-distributed **3-of-5** signer set spread across stakeholders inside and outside the Axis Labs team.",
+          "assertion": "Team/external participation and quorum do not identify the five independent human control domains or independent recovery authority."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.axis.to/backing-reserves-and-transparency/security.md",
+        "https://docs.axis.to/technical-and-architecture/governance.md",
+        "https://docs.axis.to/reference/access-control.md",
+        "https://docs.axis.to/reference/contract-addresses.md",
+        "https://www.openzeppelin.com/news/axis-coordinate-v2-contracts-audit",
+        "https://www.axis.to/terms-of-service",
+        "https://app.axis.to/transparency",
+        "https://etherscan.io/address/0xdeb538917b1c1ae6b81550a6c42a66d818cc6d6d"
+      ],
+      "rationale": "These two exact scoped questions ask for independent signer/operator identity, signing-key custody and recovery-policy separation, not the public 3-of-5 roster or AWS KMS product name. Issuer security/governance and canonical audit disclose operational safeguards but no independent policy/custody attestation or human independence/recovery evidence for these exact authorities. Preserve the scoped questions and unbounded Safe mint finding; no protective quorum credit is inferred."
+    },
+    {
+      "id": "uw-usdx-axis-58976c76cd601f74",
+      "assetId": "usdx-axis",
+      "scope": {
+        "componentKey": "control:mint-meta:usdx-axis:5eff7a6bd9bd3c5bf8a4",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:usdx-axis:5eff7a6bd9bd3c5bf8a4",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:03:21Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R63)",
+      "sources": [
+        {
+          "url": "https://docs.axis.to/backing-reserves-and-transparency/security.md",
+          "observedAt": "2026-10-03T23:03:17Z",
+          "datumAsOf": null,
+          "location": "Key management",
+          "excerpt": "Key material is managed with **AWS KMS**.",
+          "assertion": "Issuer KMS/hardware-wallet safeguards are disclosed; independent operator/signatory separation, signing/recovery policies and custody assurance are not."
+        },
+        {
+          "url": "https://docs.axis.to/technical-and-architecture/governance.md",
+          "observedAt": "2026-10-03T23:03:17Z",
+          "datumAsOf": null,
+          "location": "Admin authority and risk direction",
+          "excerpt": "a geographically-distributed **3-of-5** signer set spread across stakeholders inside and outside the Axis Labs team.",
+          "assertion": "Team/external participation and quorum do not identify the five independent human control domains or independent recovery authority."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.axis.to/backing-reserves-and-transparency/security.md",
+        "https://docs.axis.to/technical-and-architecture/governance.md",
+        "https://docs.axis.to/reference/access-control.md",
+        "https://docs.axis.to/reference/contract-addresses.md",
+        "https://www.openzeppelin.com/news/axis-coordinate-v2-contracts-audit",
+        "https://www.axis.to/terms-of-service",
+        "https://app.axis.to/transparency",
+        "https://etherscan.io/address/0xdeb538917b1c1ae6b81550a6c42a66d818cc6d6d"
+      ],
+      "rationale": "These two exact scoped questions ask for independent signer/operator identity, signing-key custody and recovery-policy separation, not the public 3-of-5 roster or AWS KMS product name. Issuer security/governance and canonical audit disclose operational safeguards but no independent policy/custody attestation or human independence/recovery evidence for these exact authorities. Preserve the scoped questions and unbounded Safe mint finding; no protective quorum credit is inferred."
+    },
+    {
+      "id": "uw-brl1-brl1-77d2b3d77c477f79",
+      "assetId": "brl1-brl1",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:bea1ccf4ef428e476c3a81d2",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:03:21Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R63)",
+      "sources": [
+        {
+          "url": "https://drive.google.com/uc?export=download&id=1BuRUC6u3UTzf17kOChhKby_L9hE5IU73",
+          "observedAt": "2026-10-03T23:03:19Z",
+          "datumAsOf": "2026-10-01",
+          "location": "Proof of Reserves report, p.2 Reserve Composition",
+          "excerpt": "All assets backing the BRL1 tokens are deposited in a segregated account at Banco XP",
+          "assertion": "The current whole-book report gives cash/LFT/repo amounts and custodian, but no maximum contractual terms or slice-specific liquidation horizons."
+        },
+        {
+          "url": "https://drive.google.com/uc?export=download&id=1aOuxzC0DAiRKuUDklpifvdxMsSqR06Vr",
+          "observedAt": "2026-10-03T23:03:21Z",
+          "datumAsOf": "2025-02-24",
+          "location": "Whitepaper, reserve policy and mint/redemption sections",
+          "excerpt": "Users can request to redeem BRL1 in exchange for fiat, with tokens being burned before the release of funds.",
+          "assertion": "Holder fiat redemption describes claim mechanics, not repo/LFT realizability or maximum maturities of the reserve instruments."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://brl1.io/en/",
+        "https://brl1.io/en/como_funciona",
+        "https://brl1.io/en/seguranca_compliance",
+        "https://drive.google.com/uc?export=download&id=1BuRUC6u3UTzf17kOChhKby_L9hE5IU73",
+        "https://drive.google.com/uc?export=download&id=1aOuxzC0DAiRKuUDklpifvdxMsSqR06Vr",
+        "https://polygonscan.com/token/0x5C067C80C00eCd2345b05E83A3e758eF799C40B5"
+      ],
+      "rationale": "The October 1 self-prepared whole-book report and full whitepaper disclose reserve classes, values and Banco XP segregation. Neither provides maximum repo/LFT contractual maturity, bank-deposit contractual tenure, or a bounded repo/LFT realization horizon. Generic highly liquid/short-term language and holder 1:1 redemption do not quantify these five exact reserve factors. No WAM-to-maximum inference or zero maturity is authored."
+    },
+    {
+      "id": "uw-brl1-brl1-f8ff8e58048107f6",
+      "assetId": "brl1-brl1",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:bea1ccf4ef428e476c3a81d2",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:03:21Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R63)",
+      "sources": [
+        {
+          "url": "https://drive.google.com/uc?export=download&id=1BuRUC6u3UTzf17kOChhKby_L9hE5IU73",
+          "observedAt": "2026-10-03T23:03:19Z",
+          "datumAsOf": "2026-10-01",
+          "location": "Proof of Reserves report, p.2 Reserve Composition",
+          "excerpt": "All assets backing the BRL1 tokens are deposited in a segregated account at Banco XP",
+          "assertion": "The current whole-book report gives cash/LFT/repo amounts and custodian, but no maximum contractual terms or slice-specific liquidation horizons."
+        },
+        {
+          "url": "https://drive.google.com/uc?export=download&id=1aOuxzC0DAiRKuUDklpifvdxMsSqR06Vr",
+          "observedAt": "2026-10-03T23:03:21Z",
+          "datumAsOf": "2025-02-24",
+          "location": "Whitepaper, reserve policy and mint/redemption sections",
+          "excerpt": "Users can request to redeem BRL1 in exchange for fiat, with tokens being burned before the release of funds.",
+          "assertion": "Holder fiat redemption describes claim mechanics, not repo/LFT realizability or maximum maturities of the reserve instruments."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://brl1.io/en/",
+        "https://brl1.io/en/como_funciona",
+        "https://brl1.io/en/seguranca_compliance",
+        "https://drive.google.com/uc?export=download&id=1BuRUC6u3UTzf17kOChhKby_L9hE5IU73",
+        "https://drive.google.com/uc?export=download&id=1aOuxzC0DAiRKuUDklpifvdxMsSqR06Vr",
+        "https://polygonscan.com/token/0x5C067C80C00eCd2345b05E83A3e758eF799C40B5"
+      ],
+      "rationale": "The October 1 self-prepared whole-book report and full whitepaper disclose reserve classes, values and Banco XP segregation. Neither provides maximum repo/LFT contractual maturity, bank-deposit contractual tenure, or a bounded repo/LFT realization horizon. Generic highly liquid/short-term language and holder 1:1 redemption do not quantify these five exact reserve factors. No WAM-to-maximum inference or zero maturity is authored."
+    },
+    {
+      "id": "uw-brl1-brl1-416415cf31a78c19",
+      "assetId": "brl1-brl1",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:d100f7d9dde687efb652d217",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:03:21Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R63)",
+      "sources": [
+        {
+          "url": "https://drive.google.com/uc?export=download&id=1BuRUC6u3UTzf17kOChhKby_L9hE5IU73",
+          "observedAt": "2026-10-03T23:03:19Z",
+          "datumAsOf": "2026-10-01",
+          "location": "Proof of Reserves report, p.2 Reserve Composition",
+          "excerpt": "All assets backing the BRL1 tokens are deposited in a segregated account at Banco XP",
+          "assertion": "The current whole-book report gives cash/LFT/repo amounts and custodian, but no maximum contractual terms or slice-specific liquidation horizons."
+        },
+        {
+          "url": "https://drive.google.com/uc?export=download&id=1aOuxzC0DAiRKuUDklpifvdxMsSqR06Vr",
+          "observedAt": "2026-10-03T23:03:21Z",
+          "datumAsOf": "2025-02-24",
+          "location": "Whitepaper, reserve policy and mint/redemption sections",
+          "excerpt": "Users can request to redeem BRL1 in exchange for fiat, with tokens being burned before the release of funds.",
+          "assertion": "Holder fiat redemption describes claim mechanics, not repo/LFT realizability or maximum maturities of the reserve instruments."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://brl1.io/en/",
+        "https://brl1.io/en/como_funciona",
+        "https://brl1.io/en/seguranca_compliance",
+        "https://drive.google.com/uc?export=download&id=1BuRUC6u3UTzf17kOChhKby_L9hE5IU73",
+        "https://drive.google.com/uc?export=download&id=1aOuxzC0DAiRKuUDklpifvdxMsSqR06Vr",
+        "https://polygonscan.com/token/0x5C067C80C00eCd2345b05E83A3e758eF799C40B5"
+      ],
+      "rationale": "The October 1 self-prepared whole-book report and full whitepaper disclose reserve classes, values and Banco XP segregation. Neither provides maximum repo/LFT contractual maturity, bank-deposit contractual tenure, or a bounded repo/LFT realization horizon. Generic highly liquid/short-term language and holder 1:1 redemption do not quantify these five exact reserve factors. No WAM-to-maximum inference or zero maturity is authored."
+    },
+    {
+      "id": "uw-brl1-brl1-f85753e23c6cc260",
+      "assetId": "brl1-brl1",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:d100f7d9dde687efb652d217",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:03:21Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R63)",
+      "sources": [
+        {
+          "url": "https://drive.google.com/uc?export=download&id=1BuRUC6u3UTzf17kOChhKby_L9hE5IU73",
+          "observedAt": "2026-10-03T23:03:19Z",
+          "datumAsOf": "2026-10-01",
+          "location": "Proof of Reserves report, p.2 Reserve Composition",
+          "excerpt": "All assets backing the BRL1 tokens are deposited in a segregated account at Banco XP",
+          "assertion": "The current whole-book report gives cash/LFT/repo amounts and custodian, but no maximum contractual terms or slice-specific liquidation horizons."
+        },
+        {
+          "url": "https://drive.google.com/uc?export=download&id=1aOuxzC0DAiRKuUDklpifvdxMsSqR06Vr",
+          "observedAt": "2026-10-03T23:03:21Z",
+          "datumAsOf": "2025-02-24",
+          "location": "Whitepaper, reserve policy and mint/redemption sections",
+          "excerpt": "Users can request to redeem BRL1 in exchange for fiat, with tokens being burned before the release of funds.",
+          "assertion": "Holder fiat redemption describes claim mechanics, not repo/LFT realizability or maximum maturities of the reserve instruments."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://brl1.io/en/",
+        "https://brl1.io/en/como_funciona",
+        "https://brl1.io/en/seguranca_compliance",
+        "https://drive.google.com/uc?export=download&id=1BuRUC6u3UTzf17kOChhKby_L9hE5IU73",
+        "https://drive.google.com/uc?export=download&id=1aOuxzC0DAiRKuUDklpifvdxMsSqR06Vr",
+        "https://polygonscan.com/token/0x5C067C80C00eCd2345b05E83A3e758eF799C40B5"
+      ],
+      "rationale": "The October 1 self-prepared whole-book report and full whitepaper disclose reserve classes, values and Banco XP segregation. Neither provides maximum repo/LFT contractual maturity, bank-deposit contractual tenure, or a bounded repo/LFT realization horizon. Generic highly liquid/short-term language and holder 1:1 redemption do not quantify these five exact reserve factors. No WAM-to-maximum inference or zero maturity is authored."
+    },
+    {
+      "id": "uw-brl1-brl1-665fdf7574e29047",
+      "assetId": "brl1-brl1",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:dc86771b2d1524f2cb07b444",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:03:21Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R63)",
+      "sources": [
+        {
+          "url": "https://drive.google.com/uc?export=download&id=1BuRUC6u3UTzf17kOChhKby_L9hE5IU73",
+          "observedAt": "2026-10-03T23:03:19Z",
+          "datumAsOf": "2026-10-01",
+          "location": "Proof of Reserves report, p.2 Reserve Composition",
+          "excerpt": "All assets backing the BRL1 tokens are deposited in a segregated account at Banco XP",
+          "assertion": "The current whole-book report gives cash/LFT/repo amounts and custodian, but no maximum contractual terms or slice-specific liquidation horizons."
+        },
+        {
+          "url": "https://drive.google.com/uc?export=download&id=1aOuxzC0DAiRKuUDklpifvdxMsSqR06Vr",
+          "observedAt": "2026-10-03T23:03:21Z",
+          "datumAsOf": "2025-02-24",
+          "location": "Whitepaper, reserve policy and mint/redemption sections",
+          "excerpt": "Users can request to redeem BRL1 in exchange for fiat, with tokens being burned before the release of funds.",
+          "assertion": "Holder fiat redemption describes claim mechanics, not repo/LFT realizability or maximum maturities of the reserve instruments."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://brl1.io/en/",
+        "https://brl1.io/en/como_funciona",
+        "https://brl1.io/en/seguranca_compliance",
+        "https://drive.google.com/uc?export=download&id=1BuRUC6u3UTzf17kOChhKby_L9hE5IU73",
+        "https://drive.google.com/uc?export=download&id=1aOuxzC0DAiRKuUDklpifvdxMsSqR06Vr",
+        "https://polygonscan.com/token/0x5C067C80C00eCd2345b05E83A3e758eF799C40B5"
+      ],
+      "rationale": "The October 1 self-prepared whole-book report and full whitepaper disclose reserve classes, values and Banco XP segregation. Neither provides maximum repo/LFT contractual maturity, bank-deposit contractual tenure, or a bounded repo/LFT realization horizon. Generic highly liquid/short-term language and holder 1:1 redemption do not quantify these five exact reserve factors. No WAM-to-maximum inference or zero maturity is authored."
+    },
+    {
+      "id": "uw-brl1-brl1-63c3a9793ae07346",
+      "assetId": "brl1-brl1",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:03:21Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R63)",
+      "sources": [
+        {
+          "url": "https://drive.google.com/uc?export=download&id=1BuRUC6u3UTzf17kOChhKby_L9hE5IU73",
+          "observedAt": "2026-10-03T23:03:19Z",
+          "datumAsOf": "2026-10-01",
+          "location": "p.2 Methodology",
+          "excerpt": "The data reflect the exact balance of the reserves as of the reference date, compared with the total number of tokens issued and in circulation on the public blockchain.",
+          "assertion": "A real dated reserve-to-total-supply comparison is disclosed; the recurring complete mint/burn/register reconciliation procedure and cadence are not."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://brl1.io/en/",
+        "https://brl1.io/en/como_funciona",
+        "https://brl1.io/en/seguranca_compliance",
+        "https://drive.google.com/uc?export=download&id=1BuRUC6u3UTzf17kOChhKby_L9hE5IU73",
+        "https://drive.google.com/uc?export=download&id=1aOuxzC0DAiRKuUDklpifvdxMsSqR06Vr",
+        "https://polygonscan.com/token/0x5C067C80C00eCd2345b05E83A3e758eF799C40B5"
+      ],
+      "rationale": "The latest report genuinely compares Banco XP reserves with total Polygon supply at October 1 block 94777137; it is not ignored. It states internal reconciliation and unaudited status, but neither report nor whitepaper specifies a recurring common-clock procedure/cadence covering every mint/burn and liability/register movement. An isolated comparison and proposed regular attestations do not establish the required continuous/periodic regime. Preserve internal-ledger, not none."
+    },
+    {
+      "id": "uw-brl1-brl1-5ea3bc310a4f1c7c",
+      "assetId": "brl1-brl1",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:brl1-brl1:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:03:21Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R63)",
+      "sources": [
+        {
+          "url": "https://drive.google.com/uc?export=download&id=1aOuxzC0DAiRKuUDklpifvdxMsSqR06Vr",
+          "observedAt": "2026-10-03T23:03:21Z",
+          "datumAsOf": "2025-02-24",
+          "location": "p.7 Direct minting and redemption",
+          "excerpt": "While direct minting and redemption are only available through the consortium",
+          "assertion": "Consortium access and burn-before-fiat mechanics are published, but no direct issuer redemption fee schedule or evaluable fee formula."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://brl1.io/en/",
+        "https://brl1.io/en/como_funciona",
+        "https://brl1.io/en/seguranca_compliance",
+        "https://drive.google.com/uc?export=download&id=1aOuxzC0DAiRKuUDklpifvdxMsSqR06Vr",
+        "https://brl1.io/en/projects/stablecoin-lastreada-em-t%C3%ADtulos-do-governo-do-brasil-e-criada-pelo-mercado-bitcoin-bitso-foxbit-e-cainvest-estr%C3%A9ia-no-mercado"
+      ],
+      "rationale": "Complete issuer whitepaper, institutional mint/burn pages and launch/legal disclosures describe consortium eligibility and 1:1 BRL redemption, but publish no numeric redemption fee or complete formula for this issuer route. Zero BRL1/BRL trading fees advertised for member exchanges are not direct consortium redemption costs; no zero-cost assumption is authored."
     }
   ]
 }
