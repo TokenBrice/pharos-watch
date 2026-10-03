@@ -9758,6 +9758,72 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "alusd-alchemix",
+      "reviewedAt": "2026-10-03T23:05:32Z",
+      "expiresAt": "2027-10-03T23:05:32Z",
+      "reviewer": "W1R86 primary-source unknown resolver",
+      "notes": "Dated exact-token operating/deployment evidence supplies an eligibility-only lower bound. No throughput, settlement performance, reconciliation continuity or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-history",
+          "label": "Alchemix issuer year review documents 27 February 2021 launch and alUSD operation",
+          "publisher": "Alchemix",
+          "publishedAt": "2021-12-21",
+          "url": "https://alchemixfi.substack.com/p/the-year-in-review",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 67,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "oned-gennius",
+      "reviewedAt": "2026-10-03T23:05:32Z",
+      "expiresAt": "2027-10-03T23:05:32Z",
+      "reviewer": "W1R86 primary-source unknown resolver",
+      "notes": "Dated exact-token operating/deployment evidence supplies an eligibility-only lower bound. No throughput, settlement performance, reconciliation continuity or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-live-history",
+          "label": "ONED exact Base token deployment at block 44701636",
+          "publisher": "BaseScan deployment record",
+          "publishedAt": "2026-04-14",
+          "url": "https://basescan.org/tx/0x56d0ddbbc9172bf76344d49b454dc201b06d9fbe4e5947ba3e8bd5d3fa65eace",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 5,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

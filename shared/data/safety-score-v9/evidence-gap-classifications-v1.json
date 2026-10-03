@@ -20792,6 +20792,178 @@
         "https://explorer.somnia.network/api/v2/smart-contracts/0xd2478f5db285e7d4f1a260c9f142168124d02370"
       ],
       "rationale": "The named scoped question asks independent human control, operational key custody and signing policy of the identified USDso 3-of-6 owner Safe. Issuer/product/terms/technical and exact implementation disclosures do not publish operator identities, independence or custody/signing attestation. Public address/quorum code is not those safeguards. Other incident and execution uncertainties remain U."
+    },
+    {
+      "id": "uw-oned-gennius-a145877ca6d652d9",
+      "assetId": "oned-gennius",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:09Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R86)",
+      "sources": [
+        {
+          "url": "https://www.coinbase.com/en-in/oned/proof-of-reserves",
+          "observedAt": "2026-10-03T23:08:04Z",
+          "datumAsOf": null,
+          "location": "ONED reserve dashboard",
+          "excerpt": "ONED is a Custom Stablecoin backed 1:1 by USDC held by Coinbase.",
+          "assertion": "Discloses reserve asset and reserve/supply comparison, not ledger reconciliation process."
+        },
+        {
+          "url": "https://www.coinbase.com/legal/user_agreement/united_states",
+          "observedAt": "2026-10-03T23:08:06Z",
+          "datumAsOf": null,
+          "location": "Appendix 4 sections 13.1\u201313.4",
+          "excerpt": "The Reserve Asset backing a CCS is held by Coinbase as a custodial asset for the benefit of holders of such CCS, and ownership of and title to these assets shall remain with the holders and not transfer to Coinbase.",
+          "assertion": "Custom stablecoin liability and custody terms do not specify complete financial reconciliation cadence."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://oned.global/",
+        "https://oned.global/#/end-user-terms-and-conditions",
+        "https://tc.oned.global/#/oned",
+        "https://www.coinbase.com/en-in/oned/proof-of-reserves",
+        "https://www.coinbase.com/legal/user_agreement/united_states",
+        "https://docs.cdp.coinbase.com/custom-stablecoins/stablecoin-contract/reference",
+        "https://github.com/coinbase/custom-stablecoin",
+        "https://www.coinbase.com/legal/licenses",
+        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses"
+      ],
+      "rationale": "The ONED dashboard compares USDC reserves and ONED token supply, but no dated operator procedure/cadence reconciling all mint/burn movements, custodial ledger obligations and reserves at a common clock is disclosed. A displayed snapshot, API balance and code-security audit are not whole-liability financial reconciliation. Preserve explicit unknown."
+    },
+    {
+      "id": "uw-oned-gennius-2a7484c20c688cdd",
+      "assetId": "oned-gennius",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "supervision",
+        "pillar": "control",
+        "requiredDatum": "supervision",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:09Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R86)",
+      "sources": [
+        {
+          "url": "https://www.coinbase.com/legal/licenses",
+          "observedAt": "2026-10-03T23:08:08Z",
+          "datumAsOf": null,
+          "location": "Licenses and disclosures",
+          "excerpt": "Coinbase, Inc. is licensed in the following US jurisdictions:",
+          "assertion": "Nearby legal-entity licences exist; generic Coinbase licences do not identify the ONED-specific prudential issuer regime."
+        },
+        {
+          "url": "https://www.coinbase.com/legal/user_agreement/united_states",
+          "observedAt": "2026-10-03T23:08:06Z",
+          "datumAsOf": null,
+          "location": "Appendix 4 sections 13.1\u201313.4",
+          "excerpt": "certain Digital Assets that are issued by Coinbase or its affiliates but bear the branding of third-party partners",
+          "assertion": "CCS issued by Coinbase or affiliates; no ONED-specific licensed entity/regulator is named."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://oned.global/",
+        "https://oned.global/#/end-user-terms-and-conditions",
+        "https://tc.oned.global/#/oned",
+        "https://www.coinbase.com/en-in/oned/proof-of-reserves",
+        "https://www.coinbase.com/legal/user_agreement/united_states",
+        "https://docs.cdp.coinbase.com/custom-stablecoins/stablecoin-contract/reference",
+        "https://github.com/coinbase/custom-stablecoin",
+        "https://www.coinbase.com/legal/licenses",
+        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses"
+      ],
+      "rationale": "The exact ONED issuer/claim prudential supervision remains undisclosed. Coinbase publishes money-transmitter/virtual-currency licences and a separately chartered custody affiliate; CCS terms permit issuance by Coinbase or affiliates without naming the ONED-specific licensed issuer or regime. Gennius platform terms name the operator, not a token issuer licence. The DFS roster confirms entity licences but does not establish ONED claim coverage; do not infer prudential supervision or none."
+    },
+    {
+      "id": "uw-oned-gennius-4c469a4d75416e9c",
+      "assetId": "oned-gennius",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:90308dcc4432d587bc59bb81",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:09Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R86)",
+      "sources": [
+        {
+          "url": "https://www.coinbase.com/legal/user_agreement/united_states",
+          "observedAt": "2026-10-03T23:08:06Z",
+          "datumAsOf": null,
+          "location": "Appendix 4 sections 13.1\u201313.4",
+          "excerpt": "Requests to redeem CCS (which, for the avoidance of doubt, will result in Coinbase converting such CCS and depositing the corresponding Reserve Asset to your Digital Asset Wallet on a 1:1 basis, minus any Coinbase fees) may not be processed immediately.",
+          "assertion": "CCS custody and redemption restrictions provide no bounded completion maximum."
+        },
+        {
+          "url": "https://www.coinbase.com/en-in/oned/proof-of-reserves",
+          "observedAt": "2026-10-03T23:08:04Z",
+          "datumAsOf": null,
+          "location": "ONED reserve dashboard",
+          "excerpt": "ONED is a Custom Stablecoin backed 1:1 by USDC held by Coinbase.",
+          "assertion": "Identifies USDC backing but supplies no entire-position availability horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://oned.global/",
+        "https://oned.global/#/end-user-terms-and-conditions",
+        "https://tc.oned.global/#/oned",
+        "https://www.coinbase.com/en-in/oned/proof-of-reserves",
+        "https://www.coinbase.com/legal/user_agreement/united_states",
+        "https://docs.cdp.coinbase.com/custom-stablecoins/stablecoin-contract/reference",
+        "https://github.com/coinbase/custom-stablecoin",
+        "https://www.coinbase.com/legal/licenses",
+        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses"
+      ],
+      "rationale": "No whole-slice USDC realization/withdrawal maximum is published for the ONED reserve. Custodial USDC is disclosed, but CCS redemption requests may not be processed immediately and can be paused/refused; Coinbase disclaims liquidity backstopping. A 1:1 conversion and transferable USDC do not prove immediate availability of the entire custodied reserve."
+    },
+    {
+      "id": "uw-alusd-alchemix-e3803bc4636cd11f",
+      "assetId": "alusd-alchemix",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:alusd-alchemix:queue-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:09:09Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R86)",
+      "sources": [
+        {
+          "url": "https://v2-docs.alchemix.fi/resources/guides/the-transmuter-elaborated",
+          "observedAt": "2026-10-03T23:08:09Z",
+          "datumAsOf": null,
+          "location": "Flow Rate",
+          "excerpt": "The flow rate is set by governance and is a per-second MAXIMUM rate of flow",
+          "assertion": "Legacy buffer flow limitation discloses process, not a guaranteed final DAI completion maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://v2-docs.alchemix.fi/alchemix-ecosystem/transmuter",
+        "https://v2-docs.alchemix.fi/resources/guides/the-transmuter-elaborated",
+        "https://docs.alchemix.fi/user/concepts/transmuter",
+        "https://docs.alchemix.fi/user/faq",
+        "https://docs.alchemix.fi/user/concepts/fees"
+      ],
+      "rationale": "The captured legacy alUSD-to-DAI queue route has no published final maximum: governance flow rate is a maximum on funds entering the Transmuter, conditional on actual buffered funds, harvest and repayment. It is not a guaranteed completion minimum/SLA. Current V3 fixed-term MYT payout is a different route and cannot establish a maximum for the retained DAI route."
     }
   ]
 }
