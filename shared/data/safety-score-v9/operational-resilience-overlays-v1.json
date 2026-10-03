@@ -11606,6 +11606,138 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "fiusd-sygnum",
+      "reviewedAt": "2026-10-03T23:04:47Z",
+      "expiresAt": "2027-10-03T23:00:00Z",
+      "reviewer": "W1R65 primary-source unknown-wave review",
+      "notes": "Eligibility-only lower bound from exact-token dated operating evidence. No redemption performance, independent reserve-reconciliation continuity or incident-free claim is established.",
+      "sources": [
+        {
+          "sourceId": "dated-token-operation",
+          "label": "Dated exact FIUSD application establishes live balances on both native chains",
+          "publisher": "Sygnum Bank AG",
+          "publishedAt": "2025-03-20",
+          "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 18,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-token-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "krusdc-keyrock",
+      "reviewedAt": "2026-10-03T23:04:47Z",
+      "expiresAt": "2027-10-03T23:00:00Z",
+      "reviewer": "W1R65 primary-source unknown-wave review",
+      "notes": "Eligibility-only lower bound from exact-token dated operating evidence. No redemption performance, independent reserve-reconciliation continuity or incident-free claim is established.",
+      "sources": [
+        {
+          "sourceId": "dated-token-operation",
+          "label": "Exact Keyrock Prime USDC creationTimestamp 1786356160 at block 14844834",
+          "publisher": "Morpho",
+          "publishedAt": "2026-08-10",
+          "url": "https://blue-api.morpho.org/graphql",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 1,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-token-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "xgz-goldzip",
+      "reviewedAt": "2026-10-03T23:04:47Z",
+      "expiresAt": "2027-10-03T23:00:00Z",
+      "reviewer": "W1R65 primary-source unknown-wave review",
+      "notes": "Eligibility-only lower bound from exact-token dated operating evidence. No redemption performance, independent reserve-reconciliation continuity or incident-free claim is established.",
+      "sources": [
+        {
+          "sourceId": "dated-token-operation",
+          "label": "Issuer token launch press release linked by official GoldZip news index",
+          "publisher": "GoldZip Digital Pte. Ltd.",
+          "publishedAt": "2025-12-23",
+          "url": "https://www.theblock.co/press-releases/383531/hkgx-backed-goldzip-launches-xgz-asias-first-gold-token-supported-by-a-leading-gold-exchange",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 9,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-token-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usp-pikudao",
+      "reviewedAt": "2026-10-03T23:04:47Z",
+      "expiresAt": "2027-10-03T23:00:00Z",
+      "reviewer": "W1R65 primary-source unknown-wave review",
+      "notes": "Eligibility-only lower bound from exact-token dated operating evidence. No redemption performance, independent reserve-reconciliation continuity or incident-free claim is established.",
+      "sources": [
+        {
+          "sourceId": "dated-token-operation",
+          "label": "Dated USP operating newsletter establishes live token minting and TVL",
+          "publisher": "PikuDAO",
+          "publishedAt": "2026-01-02",
+          "url": "https://piku.co/blog/pikup-vol4",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 9,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-token-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

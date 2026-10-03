@@ -103,7 +103,7 @@
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "internal-ledger",
-    "supervision": "unknown",
+    "supervision": "prudential",
     "upgradeability": {
       "model": "unknown",
       "deploymentRefs": [
@@ -148,13 +148,17 @@
           "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779"
         },
         {
+          "label": "FINMA authorised banks register, Sygnum Bank AG, 3 October 2026",
+          "url": "https://www.finma.ch/en/~/media/finma/dokumente/bewilligungstraeger/pdf/beh.pdf?sc_lang=en"
+        },
+        {
           "label": "Verified deployed Arbitrum implementation",
           "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x7616b08676117e1aab542e53fe3f7b12f7596d37"
         }
       ],
-      "reviewer": "Refine05 primary-source and pinned-RPC review",
+      "reviewer": "Refine05 primary-source and pinned-RPC review; W1R65 exact issuer-supervision review",
       "reviewedAt": "2026-10-03",
-      "evidence": "Current registry mutation history and positive member reads now close the operator/admin/system/relay roster on both chains, and verified zkSync implementation/registry artifacts exactly match deployed bytes. Native operator minting is not collateral-capped; Arbitrum proxy administration is a single EOA while zkSync has a 3-of-6 Safe. Sygnum's disclosed daily CBS/database/blockchain report supports internal-ledger semantics only. The 2480-unit provider/native supply contradiction and independently signed token-to-unit reconciliation remain unresolved; no financial assurance or human/key independence is claimed. Issuer key custody remains undisclosed despite the identified operator/admin rosters and is recorded per control. The native cross-chain reallocation and burn-conservation policy remains unpublished, a liability reconciliation gap retained outside the mint census. The named zkSync proxy-admin Safe still requires a guard/fallback-handler census and exact proxy-runtime upgrade/bypass verification beyond current EIP-1967 slots. These are genuine technical mint/upgrade path gaps behind a known-authority control, so the umbrella remains unresolved even though the operator census and implementation/registry bytecode identity are closed.",
+      "evidence": "Current registry mutation history and positive member reads now close the operator/admin/system/relay roster on both chains, and verified zkSync implementation/registry artifacts exactly match deployed bytes. Native operator minting is not collateral-capped; Arbitrum proxy administration is a single EOA while zkSync has a 3-of-6 Safe. Sygnum's disclosed daily CBS/database/blockchain report supports internal-ledger semantics only. The 2480-unit provider/native supply contradiction and independently signed token-to-unit reconciliation remain unresolved; no financial assurance or human/key independence is claimed. Issuer key custody remains undisclosed despite the identified operator/admin rosters and is recorded per control. The native cross-chain reallocation and burn-conservation policy remains unpublished, a liability reconciliation gap retained outside the mint census. The named zkSync proxy-admin Safe still requires a guard/fallback-handler census and exact proxy-runtime upgrade/bypass verification beyond current EIP-1967 slots. These are genuine technical mint/upgrade path gaps behind a known-authority control, so the umbrella remains unresolved even though the operator census and implementation/registry bytecode identity are closed. W1R65 reviewed the FINMA register dated 3 October 2026, which lists exact issuer Sygnum Bank AG in Zurich as an authorised Bank, category 5. The issuer application E.3 explicitly identifies Sygnum Bank AG as token issuer and prudential FINMA supervision; this establishes issuer supervision, not direct FIUSD product approval or token-to-unit reconciliation.",
       "unresolvedQuestions": [
         "Complete the FIUSD zkSync proxy-admin Safe guard/fallback-handler census; enabled-module pagination ended empty, but no standard-handler or absence-of-bypass closure has been established.",
         "Verify the administered FIUSD zkSync proxy runtime's upgrade/bypass implementation beyond its current EIP-1967 slots; verified implementation/registry artifact matches do not verify the proxy wrapper."

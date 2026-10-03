@@ -25276,6 +25276,357 @@
           "assertion": "Exact local XPYUSD wrapper issuer is xtokens, not an inferred Paxos claim. Current live adapter supplies no sourceKey; classification-only metadata cannot join this new live slice to the static sidecar."
         }
       ]
+    },
+    {
+      "id": "uw-fiusd-sygnum-be5090dcc822f82e",
+      "assetId": "fiusd-sygnum",
+      "scope": {
+        "componentKey": "control:mint-meta:fiusd-sygnum:199dcf2d2ac7c4452660",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:fiusd-sygnum:199dcf2d2ac7c4452660",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:18:29Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R65)",
+      "sources": [
+        {
+          "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779",
+          "observedAt": "2026-10-03T23:17:28Z",
+          "datumAsOf": "2025-03-20",
+          "location": "H.5 tokenization application/AWS access safeguards",
+          "excerpt": "Sygnum assigns different access levels to internal users such as administrators, operators, etc.",
+          "assertion": "MFA, VPN, personal whitelisted wallets and AWS four-eye access review are disclosed, but do not map independent key custody/beneficial signer identities to the exact two registries, admin EOA or Safe."
+        },
+        {
+          "url": "https://www.sygnum.com/help/tokenization/where-will-my-tokens-be-secured/",
+          "observedAt": "2026-10-03T23:18:22Z",
+          "datumAsOf": "2026-06-15",
+          "location": "Custody FAQ, updated June 2026",
+          "excerpt": "critical key material stored in Switzerland",
+          "assertion": "General custody architecture and an annual ISAE audit are disclosed, not a per-FIUSD privileged-control signing policy or independently held signer keys."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779",
+        "https://www.sygnum.com/help/tokenization/where-will-my-tokens-be-secured/",
+        "https://www.sygnum.com/help/custody/how-are-wallets-secured-at-sygnum/",
+        "https://github.com/sygnumbank/solidity-equity-token-contracts",
+        "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xbf9060880363a61e7462039aa8a4aa98fe486067",
+        "https://zksync2-mainnet-explorer.zksync.io/contract_verification/info/0x159d8a100d5a869edda532626fde7737056c06c5",
+        "https://mainnet.era.zksync.io",
+        "https://arb1.arbitrum.io/rpc"
+      ],
+      "rationale": "Exact privileged-control key custody, beneficial human independence and signing/recovery policy remain undisclosed for both named operator registries, the Arbitrum proxy-admin EOA and zkSync 3-of-6 Safe. Public onchain rosters prove addresses/quorum only; general custody HSM/MPC, ISAE, client-wallet and AWS safeguards do not prove these specific issuer/admin keys are independently held. No favorable key-hardening inference is made."
+    },
+    {
+      "id": "uw-fiusd-sygnum-f5ec73be6ff0e44d",
+      "assetId": "fiusd-sygnum",
+      "scope": {
+        "componentKey": "control:mint-meta:fiusd-sygnum:494929369feac8fc23ef",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:fiusd-sygnum:494929369feac8fc23ef",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:18:29Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R65)",
+      "sources": [
+        {
+          "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779",
+          "observedAt": "2026-10-03T23:17:28Z",
+          "datumAsOf": "2025-03-20",
+          "location": "H.5 tokenization application/AWS access safeguards",
+          "excerpt": "Sygnum assigns different access levels to internal users such as administrators, operators, etc.",
+          "assertion": "MFA, VPN, personal whitelisted wallets and AWS four-eye access review are disclosed, but do not map independent key custody/beneficial signer identities to the exact two registries, admin EOA or Safe."
+        },
+        {
+          "url": "https://www.sygnum.com/help/tokenization/where-will-my-tokens-be-secured/",
+          "observedAt": "2026-10-03T23:18:22Z",
+          "datumAsOf": "2026-06-15",
+          "location": "Custody FAQ, updated June 2026",
+          "excerpt": "critical key material stored in Switzerland",
+          "assertion": "General custody architecture and an annual ISAE audit are disclosed, not a per-FIUSD privileged-control signing policy or independently held signer keys."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779",
+        "https://www.sygnum.com/help/tokenization/where-will-my-tokens-be-secured/",
+        "https://www.sygnum.com/help/custody/how-are-wallets-secured-at-sygnum/",
+        "https://github.com/sygnumbank/solidity-equity-token-contracts",
+        "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xbf9060880363a61e7462039aa8a4aa98fe486067",
+        "https://zksync2-mainnet-explorer.zksync.io/contract_verification/info/0x159d8a100d5a869edda532626fde7737056c06c5",
+        "https://mainnet.era.zksync.io",
+        "https://arb1.arbitrum.io/rpc"
+      ],
+      "rationale": "Exact privileged-control key custody, beneficial human independence and signing/recovery policy remain undisclosed for both named operator registries, the Arbitrum proxy-admin EOA and zkSync 3-of-6 Safe. Public onchain rosters prove addresses/quorum only; general custody HSM/MPC, ISAE, client-wallet and AWS safeguards do not prove these specific issuer/admin keys are independently held. No favorable key-hardening inference is made."
+    },
+    {
+      "id": "uw-fiusd-sygnum-71f1cae4d191e4ad",
+      "assetId": "fiusd-sygnum",
+      "scope": {
+        "componentKey": "control:mint-meta:fiusd-sygnum:505e5a6b88cfec593817",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:fiusd-sygnum:505e5a6b88cfec593817",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:18:29Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R65)",
+      "sources": [
+        {
+          "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779",
+          "observedAt": "2026-10-03T23:17:28Z",
+          "datumAsOf": "2025-03-20",
+          "location": "H.5 tokenization application/AWS access safeguards",
+          "excerpt": "Sygnum assigns different access levels to internal users such as administrators, operators, etc.",
+          "assertion": "MFA, VPN, personal whitelisted wallets and AWS four-eye access review are disclosed, but do not map independent key custody/beneficial signer identities to the exact two registries, admin EOA or Safe."
+        },
+        {
+          "url": "https://www.sygnum.com/help/tokenization/where-will-my-tokens-be-secured/",
+          "observedAt": "2026-10-03T23:18:22Z",
+          "datumAsOf": "2026-06-15",
+          "location": "Custody FAQ, updated June 2026",
+          "excerpt": "critical key material stored in Switzerland",
+          "assertion": "General custody architecture and an annual ISAE audit are disclosed, not a per-FIUSD privileged-control signing policy or independently held signer keys."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779",
+        "https://www.sygnum.com/help/tokenization/where-will-my-tokens-be-secured/",
+        "https://www.sygnum.com/help/custody/how-are-wallets-secured-at-sygnum/",
+        "https://github.com/sygnumbank/solidity-equity-token-contracts",
+        "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xbf9060880363a61e7462039aa8a4aa98fe486067",
+        "https://zksync2-mainnet-explorer.zksync.io/contract_verification/info/0x159d8a100d5a869edda532626fde7737056c06c5",
+        "https://mainnet.era.zksync.io",
+        "https://arb1.arbitrum.io/rpc"
+      ],
+      "rationale": "Exact privileged-control key custody, beneficial human independence and signing/recovery policy remain undisclosed for both named operator registries, the Arbitrum proxy-admin EOA and zkSync 3-of-6 Safe. Public onchain rosters prove addresses/quorum only; general custody HSM/MPC, ISAE, client-wallet and AWS safeguards do not prove these specific issuer/admin keys are independently held. No favorable key-hardening inference is made."
+    },
+    {
+      "id": "uw-fiusd-sygnum-539cbb7afe7802e8",
+      "assetId": "fiusd-sygnum",
+      "scope": {
+        "componentKey": "control:mint-meta:fiusd-sygnum:524d35c52371ad977ac2",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:fiusd-sygnum:524d35c52371ad977ac2",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:18:29Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R65)",
+      "sources": [
+        {
+          "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779",
+          "observedAt": "2026-10-03T23:17:28Z",
+          "datumAsOf": "2025-03-20",
+          "location": "H.5 tokenization application/AWS access safeguards",
+          "excerpt": "Sygnum assigns different access levels to internal users such as administrators, operators, etc.",
+          "assertion": "MFA, VPN, personal whitelisted wallets and AWS four-eye access review are disclosed, but do not map independent key custody/beneficial signer identities to the exact two registries, admin EOA or Safe."
+        },
+        {
+          "url": "https://www.sygnum.com/help/tokenization/where-will-my-tokens-be-secured/",
+          "observedAt": "2026-10-03T23:18:22Z",
+          "datumAsOf": "2026-06-15",
+          "location": "Custody FAQ, updated June 2026",
+          "excerpt": "critical key material stored in Switzerland",
+          "assertion": "General custody architecture and an annual ISAE audit are disclosed, not a per-FIUSD privileged-control signing policy or independently held signer keys."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779",
+        "https://www.sygnum.com/help/tokenization/where-will-my-tokens-be-secured/",
+        "https://www.sygnum.com/help/custody/how-are-wallets-secured-at-sygnum/",
+        "https://github.com/sygnumbank/solidity-equity-token-contracts",
+        "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xbf9060880363a61e7462039aa8a4aa98fe486067",
+        "https://zksync2-mainnet-explorer.zksync.io/contract_verification/info/0x159d8a100d5a869edda532626fde7737056c06c5",
+        "https://mainnet.era.zksync.io",
+        "https://arb1.arbitrum.io/rpc"
+      ],
+      "rationale": "Exact privileged-control key custody, beneficial human independence and signing/recovery policy remain undisclosed for both named operator registries, the Arbitrum proxy-admin EOA and zkSync 3-of-6 Safe. Public onchain rosters prove addresses/quorum only; general custody HSM/MPC, ISAE, client-wallet and AWS safeguards do not prove these specific issuer/admin keys are independently held. No favorable key-hardening inference is made."
+    },
+    {
+      "id": "uw-xgz-goldzip-f88fa709e1414227",
+      "assetId": "xgz-goldzip",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:18:29Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R65)",
+      "sources": [
+        {
+          "url": "https://goldzip.info/transparency/",
+          "observedAt": "2026-10-03T23:18:23Z",
+          "datumAsOf": null,
+          "location": "Transparency report downloads",
+          "excerpt": "Full Report Download (Coming Soon)",
+          "assertion": "The public report archive offers no dated auditor-signed gold-to-token reconciliation or current independently specified full reserve inventory/valuation denominator."
+        },
+        {
+          "url": "https://goldzip.info/faq/",
+          "observedAt": "2026-10-03T23:18:25Z",
+          "datumAsOf": null,
+          "location": "Gold backing FAQ",
+          "excerpt": "1 gram",
+          "assertion": "The public FAQ gives gold-unit backing claims but no dated full reserve schedule or independently signed reconciliation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://goldzip.info/transparency/",
+        "https://goldzip.info/faq/",
+        "https://goldzip.info/",
+        "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf",
+        "https://goldzip.info/news/",
+        "https://sourcify.dev/server/v2/contract/1/0x29ed41cb1013a4df63d87b82346b384847db7511?fields=sources,abi",
+        "https://etherscan.io/token/0x69af64f409c08e9076bf7f3ed9db3a7409717161",
+        "https://acd.mlaw.gov.sg/regulated-dealers/regulation-coverage/"
+      ],
+      "rationale": "A dated complete XGZ reserve inventory/valuation denominator and independently signed gold-to-token liability reconciliation are not published in the issuer site, FAQ, litepaper or transparency archive. Allocation lookup and downloadable reports are explicitly coming soon. Undated 39kg/39000-token marketing totals and regular-audit claims are not a dated complete reserve attestation; public mint/burn source proves token accounting, not physical inventory."
+    },
+    {
+      "id": "uw-xgz-goldzip-b8b339aefef12c3b",
+      "assetId": "xgz-goldzip",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:18:29Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R65)",
+      "sources": [
+        {
+          "url": "https://goldzip.info/transparency/",
+          "observedAt": "2026-10-03T23:18:23Z",
+          "datumAsOf": null,
+          "location": "Transparency report downloads",
+          "excerpt": "Full Report Download (Coming Soon)",
+          "assertion": "The public report archive offers no dated auditor-signed gold-to-token reconciliation or current independently specified full reserve inventory/valuation denominator."
+        },
+        {
+          "url": "https://goldzip.info/faq/",
+          "observedAt": "2026-10-03T23:18:25Z",
+          "datumAsOf": null,
+          "location": "Gold backing FAQ",
+          "excerpt": "1 gram",
+          "assertion": "The public FAQ gives gold-unit backing claims but no dated full reserve schedule or independently signed reconciliation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://goldzip.info/transparency/",
+        "https://goldzip.info/faq/",
+        "https://goldzip.info/",
+        "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf",
+        "https://goldzip.info/news/",
+        "https://sourcify.dev/server/v2/contract/1/0x29ed41cb1013a4df63d87b82346b384847db7511?fields=sources,abi",
+        "https://etherscan.io/token/0x69af64f409c08e9076bf7f3ed9db3a7409717161",
+        "https://acd.mlaw.gov.sg/regulated-dealers/regulation-coverage/"
+      ],
+      "rationale": "A dated complete XGZ reserve inventory/valuation denominator and independently signed gold-to-token liability reconciliation are not published in the issuer site, FAQ, litepaper or transparency archive. Allocation lookup and downloadable reports are explicitly coming soon. Undated 39kg/39000-token marketing totals and regular-audit claims are not a dated complete reserve attestation; public mint/burn source proves token accounting, not physical inventory."
+    },
+    {
+      "id": "uw-usp-pikudao-dbfc5d0186db7a37",
+      "assetId": "usp-pikudao",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:18:29Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R65)",
+      "sources": [
+        {
+          "url": "https://piku.co/blog/pikup-vol14",
+          "observedAt": "2026-10-03T23:18:28Z",
+          "datumAsOf": "2026-05-07",
+          "location": "BMMF Proof of Solvency: Live On-Chain",
+          "excerpt": "Every USP holder can now confirm in real time that the largest single piece of their backing is solvent and properly collateralized.",
+          "assertion": "This is solvency verification for one BMMF allocation, not independent reconciliation of all USP backing against circulating USP liabilities."
+        },
+        {
+          "url": "https://docs.piku.co/piku/piku-finance/security-and-risks/audits.md",
+          "observedAt": "2026-10-03T23:18:28Z",
+          "datumAsOf": null,
+          "location": "Reports / Omega Security",
+          "excerpt": "Token, Oracle, Funding, and Payment Processor Upgrades",
+          "assertion": "Published audits are contract-security reviews rather than signed financial assurance reconciling the whole USP reserve book and token liabilities."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.piku.co/piku/llms.txt",
+        "https://docs.piku.co/piku/piku-finance/vaults/usp-yield-vault/reserve-backing.md",
+        "https://docs.piku.co/piku/piku-finance/vaults/usp-yield-vault/usp-backing-wallets.md",
+        "https://docs.piku.co/piku/piku-finance/security-and-risks/audits.md",
+        "https://docs.piku.co/piku/terms-of-use.md",
+        "https://piku.co/blog",
+        "https://piku.co/blog/pikup-vol14",
+        "https://dune.com/piku_dao/pikudao-usp-analytics",
+        "https://public-api.piku.co/v1/tokens/usp"
+      ],
+      "rationale": "Exact independently signed whole-USP asset/liability reconciliation, its financial-assurance scope and cadence are not disclosed. Official terms/docs, wallets, newsletters and Dune publish strategies, wallets, NAV, token supply and TVL; the independently verified BMMF proof is one strategy only, while published Piku audits are contract security scope. Neither substitutes for assurance covering the whole USP backing denominator."
+    },
+    {
+      "id": "uw-krusdc-keyrock-230b3a57a35af04a",
+      "assetId": "krusdc-keyrock",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:f0352c3f9d025c8040c4af93",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:18:29Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R65)",
+      "sources": [
+        {
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "observedAt": "2026-10-03T23:18:29Z",
+          "datumAsOf": null,
+          "location": "In-Kind Redemptions with forceDeallocate",
+          "excerpt": "It does not withdraw assets out of the Morpho protocol; instead, it shifts the user\u2019s exposure from the vault to the underlying positions, even when those positions are illiquid.",
+          "assertion": "Docs disclose liquidity-dependent cash exits and emergency in-kind positions, but no finite maximum cash realization horizon for the lender position."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://app.morpho.org/arc/vault/0x5befab92a5a3d60f578cb51eeb4e4fd50a1e3123",
+        "https://docs.morpho.org/learn/concepts/vault-v2/",
+        "https://sourcify.dev/server/v2/contract/8453/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c?fields=sources,compilation,runtimeBytecode",
+        "https://sourcify.dev/server/v2/contract/8453/0x812b71c33ae5eafebae967c5670e37eca3cab0ac?fields=sources,compilation,runtimeBytecode",
+        "https://rpc.mainnet.arc.io",
+        "https://docs.morpho.org/learn/resources/risks/"
+      ],
+      "rationale": "The exact protocol-position slice has no published bounded maximum cash liquidity horizon. Ordinary cash withdrawal depends on available USDC in the active Morpho market; borrower demand/repayment is open-ended and full source contains no contractual cash-settlement deadline. forceDeallocate can obtain an underlying position, not a cash-realization SLA. A current liquidity reading cannot be converted to a fixed maximum horizon."
     }
   ]
 }

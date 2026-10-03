@@ -4650,6 +4650,58 @@
           "url": "https://etherscan.io/block/26114911"
         }
       ]
+    },
+    {
+      "assetId": "krusdc-keyrock",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2026-11-03",
+      "reviewer": "W1R65 exact-runtime and whole-adapter pinned review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "mixed-overcollateralized-lending",
+      "rationale": "At Arc block 24125299 the complete one-adapter roster holds one cirBTC/USDC Morpho supply position. Idle USDC is zero and adapter realAssets=expectedSupplyAssets=totalAssets=75014198155132. Borrow shares and collateral are zero. Exact vault and adapter executable runtimes match Sourcify recompiled references outside compiler-declared immutable slots and CBOR metadata. Full source has no local borrow/collateral-entry path; lending and underlying collateral/USDC custody risks remain, with mutable future allocation policy not claimed safe or immutable.",
+      "observations": [
+        {
+          "chain": "arc",
+          "address": "0x5befab92a5a3d60f578cb51eeb4e4fd50a1e3123",
+          "function": "adaptersLength()/adapters(0)/totalAssets()/USDC.balanceOf(vault)",
+          "value": "1/0x6adc3de83e00c4a74fda9403043828b831d0f5c3; totalAssets=75014198155132; idle=0",
+          "block": 24125299
+        },
+        {
+          "chain": "arc",
+          "address": "0x6adc3de83e00c4a74fda9403043828b831d0f5c3",
+          "function": "parentVault()/marketIdsLength()/realAssets()/expectedSupplyAssets(bytes32)",
+          "value": "parentVault=0x5befab92a5a3d60f578cb51eeb4e4fd50a1e3123; markets=1; marketId=0xc2db905f174e5defcce01d321b09f15f78856a36a21b90cc7e1abbc29225815d; realAssets=expectedSupplyAssets=75014198155132",
+          "block": 24125299
+        },
+        {
+          "chain": "arc",
+          "address": "0x34cd04070dd72b14e241112f6d83812df5af7fcd",
+          "function": "position(bytes32,address)/idToMarketParams(bytes32)",
+          "value": "Adapter position supplyShares=74986583020004418199; borrowShares=0; collateral=0; loan=USDC; collateral=cirBTC; LLTV=860000000000000000",
+          "block": 24125299
+        }
+      ],
+      "sources": [
+        {
+          "label": "Exact vault listing",
+          "url": "https://app.morpho.org/arc/vault/0x5befab92a5a3d60f578cb51eeb4e4fd50a1e3123"
+        },
+        {
+          "label": "Pinned Arc complete roster/accounting and code reads",
+          "url": "https://rpc.mainnet.arc.io"
+        },
+        {
+          "label": "Verified VaultV2 compiler reference",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c?fields=sources,compilation,runtimeBytecode"
+        },
+        {
+          "label": "Verified Morpho adapter compiler reference",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0x812b71c33ae5eafebae967c5670e37eca3cab0ac?fields=sources,compilation,runtimeBytecode"
+        }
+      ]
     }
   ]
 }

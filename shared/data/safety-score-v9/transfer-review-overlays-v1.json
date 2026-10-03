@@ -9413,22 +9413,49 @@
     {
       "assetId": "xgz-goldzip",
       "reviewedAt": "2026-10-03",
-      "reviewer": "Refine06 exact-source and pinned RPC review",
+      "reviewer": "W1R65 exact verified implementation and proxy slot review",
+      "transferScopeAttestation": {
+        "kind": "single-deployment-attribution",
+        "version": 1,
+        "reviewedAt": "2026-10-03",
+        "expiresAt": "2026-11-03",
+        "reviewer": "W1R65 current issuer exhaustive canonical liability review",
+        "deploymentKey": "ethereum:0x69af64f409c08e9076bf7f3ed9db3a7409717161",
+        "exhaustiveLiability": true,
+        "sources": [
+          {
+            "label": "Issuer Product Facts identifies current Ethereum ERC-20 deployment and supply",
+            "url": "https://goldzip.info/"
+          },
+          {
+            "label": "Issuer transparency deployment and gold-token liability scope",
+            "url": "https://goldzip.info/transparency/"
+          },
+          {
+            "label": "Issuer litepaper technical and gold liability definition",
+            "url": "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf"
+          }
+        ]
+      },
       "deployments": [
         {
           "chainId": "ethereum",
           "contractOrTokenId": "0x69af64f409c08e9076bf7f3ed9db3a7409717161",
           "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "Exact HKGXToken _update rejects frozen sender/recipient, and all transfers are whenNotPaused; privileged roles expose freezeAccount/unfreezeAccount/forceBurn and owner can pause. At Ethereum block 26110184 paused()=false and getFeeRate()=1 basis point. Current unpaused state and nominal transfer permission do not remove restriction authority; issuer physical-delivery AML and Hong Kong residency gates are separate.",
+          "evidence": "Ethereum block 26114996 EIP-1967 implementation slot points to verified HKGXToken 0x29ed41cb1013a4df63d87b82346b384847db7511. Full _update rejects frozen sender and recipient; whenNotPaused blocks transfers; freezeAccount requires FREEZE_ROLE; pause is owner-only. Exact owner=0xd173e69192b9ff22069aa913ef6e6e94b19f0778. Current official issuer site identifies only canonical Ethereum ERC-20 issuance.",
           "sources": [
             {
-              "label": "Exact verified HKGXToken transfer restrictions",
+              "label": "Exact HKGXToken full verified implementation",
               "url": "https://sourcify.dev/server/v2/contract/1/0x29ed41cb1013a4df63d87b82346b384847db7511?fields=sources,abi"
             },
             {
-              "label": "Exact holder token deployment",
-              "url": "https://etherscan.io/address/0x69af64f409c08e9076bf7f3ed9db3a7409717161"
+              "label": "Current issuer canonical Ethereum identity",
+              "url": "https://goldzip.info/"
+            },
+            {
+              "label": "Pinned proxy implementation slot and owner reads",
+              "url": "https://ethereum-rpc.publicnode.com"
             }
           ]
         }
