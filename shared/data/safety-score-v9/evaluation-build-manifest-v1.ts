@@ -6,7 +6,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
   "files": [
     {
       "path": "shared/data/safety-score-v9/access-lookthrough-reviews-v1.json",
-      "sha256": "a966363d152c0509f92a2e5abf032aef4d1af39452e3804a5a839efc5548064b"
+      "sha256": "f6c8853672eb1b7bc8be82bda62d707d73b64c01df8e682ea02a466a8d3a04cd"
     },
     {
       "path": "shared/data/safety-score-v9/chain-maturity-reviews-v1.ts",
@@ -14,7 +14,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/evidence-gap-classifications-v1.json",
-      "sha256": "6e0ece5ce0188625a6f4e546bca25954fa1b960a8fdc34c5ecd1a6707e03b188"
+      "sha256": "4cb920638fe5e10ca610b8d1ed5ed8abf7d70de7be7639fb1da5a4c73348a457"
     },
     {
       "path": "shared/data/safety-score-v9/exit-execution-model-reviews-v1.json",
@@ -26,7 +26,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/mechanism-review-overlays-v1.json",
-      "sha256": "af283e580351cc501967e9cec6db80ddcc378e372b1cc8fedd0f761909037362"
+      "sha256": "7f8fec30a02f7fa88be61485a6fb4eb6267201de8e086fdb591f9d9e00fc1bcc"
     },
     {
       "path": "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
@@ -34,7 +34,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/operational-resilience-overlays-v1.json",
-      "sha256": "9cc6303f04317993d82c59b14dd826781da5f42c1eb00f3dbe8055d3fc225850"
+      "sha256": "884ded41bfcfc96843d7f96b0b300ca4032ba1b0cd0f6e46d65aa64f5ed014e9"
     },
     {
       "path": "shared/data/safety-score-v9/reserve-bound-facts-v1.json",
@@ -46,7 +46,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/wrapper-allocation-reviews-v1.json",
-      "sha256": "64d8aea886dfcdbfa946ec0271f816586e439b72ebc6720ff530d5f22bee03c4"
+      "sha256": "e585a142dffd790ff409d56b8d29bc7e02add2ec45f106a3282700b1e60e82eb"
     },
     {
       "path": "shared/lib/chains/index.ts",
@@ -843,7 +843,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-03-block-26110811-shock-coverage.json.gz"
     }
   ],
-  "digest": "fd544b71f004a8350c1d62cb8eefa8a351b5ed8b42b9b97e556ad5b675716666"
+  "digest": "dd06d15685c86f5611a6acf711df57631df05a0b1f77faf169889c960e6f363b"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
