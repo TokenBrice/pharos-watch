@@ -410,15 +410,157 @@
       "risk": "very-high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Velodrome Finance"
+    },
+    {
+      "sourceKey": "frax-balance-sheet:wavax",
+      "name": "WAVAX",
+      "pct": 0,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Avalanche wrapped AVAX contract"
+    },
+    {
+      "sourceKey": "frax-balance-sheet:op",
+      "name": "OP",
+      "pct": 0,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Optimism"
+    },
+    {
+      "sourceKey": "frax-balance-sheet:ausd",
+      "name": "AUSD (Agora Dollar)",
+      "pct": 0,
+      "risk": "low",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Agora"
+    },
+    {
+      "sourceKey": "frax-balance-sheet:crvusd",
+      "name": "sfrxUSD/scrvUSD Curve LP",
+      "pct": 0,
+      "risk": "medium",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Curve Finance"
+    },
+    {
+      "sourceKey": "frax-balance-sheet:axlfrxeth",
+      "name": "axlfrxETH",
+      "pct": 0,
+      "risk": "medium",
+      "assetClass": "protocol-position"
+    },
+    {
+      "sourceKey": "frax-balance-sheet:wpol",
+      "name": "WPOL",
+      "pct": 0,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Polygon wrapped POL contract"
+    },
+    {
+      "sourceKey": "frax-balance-sheet:the",
+      "name": "THE",
+      "pct": 0,
+      "risk": "very-high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Thena vote escrow"
+    },
+    {
+      "sourceKey": "frax-balance-sheet:sdt",
+      "name": "SDT",
+      "pct": 0,
+      "risk": "very-high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Stake DAO vote escrow"
+    },
+    {
+      "sourceKey": "frax-balance-sheet:ram",
+      "name": "RAM",
+      "pct": 0,
+      "risk": "very-high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Ramses vote escrow"
+    },
+    {
+      "sourceKey": "frax-balance-sheet:bnb",
+      "name": "BNB",
+      "pct": 0,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "BNB Chain"
+    },
+    {
+      "sourceKey": "frax-balance-sheet:stkaave",
+      "name": "stkAAVE",
+      "pct": 0,
+      "risk": "very-high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Aave Safety Module"
+    },
+    {
+      "sourceKey": "frax-balance-sheet:avax",
+      "name": "AVAX",
+      "pct": 0,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Avalanche"
+    },
+    {
+      "sourceKey": "frax-balance-sheet:matic",
+      "name": "MATIC",
+      "pct": 0,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Polygon"
+    },
+    {
+      "sourceKey": "frax-balance-sheet:zz",
+      "name": "ZZ",
+      "pct": 0,
+      "risk": "very-high",
+      "assetClass": "cryptoasset"
+    },
+    {
+      "sourceKey": "frax-balance-sheet:multi",
+      "name": "MULTI",
+      "pct": 0,
+      "risk": "very-high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Multichain vote escrow"
+    },
+    {
+      "sourceKey": "frax-balance-sheet:uscc",
+      "name": "USCC (Superstate crypto arbitrage)",
+      "pct": 0,
+      "risk": "medium",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Bitwise Crypto Carry Fund"
+    },
+    {
+      "sourceKey": "frax-balance-sheet:chr",
+      "name": "CHR",
+      "pct": 0,
+      "risk": "very-high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Chronos vote escrow"
+    },
+    {
+      "sourceKey": "frax-balance-sheet:zk",
+      "name": "ZK",
+      "pct": 0,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "ZKsync"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-12",
-    "reviewer": "Pharos reserve research (live classification alignment refresh)",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Unknown-wave W1R53 primary-source classification review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Frax balance-sheet API",
+        "label": "Frax balance-sheet API; observed 2026-10-03, source as-of 2026-10-03T22:23:47Z",
         "url": "https://api.frax.finance/v2/frax/balance-sheet/latest"
       },
       {
@@ -440,13 +582,25 @@
       {
         "label": "Velodrome Finance tokenomics (published 2023-06-22)",
         "url": "https://docs.velodrome.finance/tokenomics"
+      },
+      {
+        "label": "USCC exact Ethereum token contract",
+        "url": "https://docs.superstate.com/investors/smart-contracts"
+      },
+      {
+        "label": "Bitwise Crypto Carry Fund share structure",
+        "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc"
+      },
+      {
+        "label": "Agora AUSD exact deployments",
+        "url": "https://docs.agora.finance/developer/contract-deployments"
       }
     ],
-    "rationale": "Reconciled to the live Frax balance-sheet adapter snapshot fetched on 2026-08-12. The reviewed scaffold mirrors the 26 adapter names and one-decimal weights captured on that date. Every displayed source symbol in that review is joined to a reviewed classification; WBNB is retained as its dedicated 0.1% cryptoasset slice and no residual displayed bucket remains. The current producer also reports the exact row \"VELO (locked veNFT #4976)\". The 2023-06-22 Velodrome Finance tokenomics page identifies VELO's vote-escrowed veVELO as a governance position, so the row is classified as a Velodrome Finance protocol-position. The adapter's very-high risk value is retained, while no liquidity horizon or risk-factor detail is added because the source does not publish those terms.",
+    "rationale": "The 2026-08-12 full-composition scaffold and its percentages are preserved as history, not refreshed holdings. On 2026-10-03 the official balance-sheet API identified additional exact token/position rows: native and wrapped volatile cryptoassets, Agora AUSD, USCC fund shares, Curve LP, staked AAVE, bridged frxETH and vote-escrow positions for Chronos, Multichain, Ramses, Stake DAO and Thena. Added zero-percent source-keyed metadata rows join those live categories without asserting any new composition weight. USCC contract identity and current Bitwise fund-share issuer are independently confirmed by Superstate documentation. Contract locks and LP placement do not prove a whole-position liquidation horizon; no zero maturity, immediate liquidity or unverified bridge obligor is inferred.",
     "compositionBasis": "Official Frax balance-sheet asset rows aggregated by symbol at the response's pinned multi-chain observation blocks",
     "compositionAsOf": "2026-08-12",
     "scope": "full-composition",
-    "knownUnknownExposure": "Every slice displayed by the captured live adapter is issuer-identified and either linked to a tracked asset or explicitly classified; no residual reserve identity remains unclassified.",
+    "knownUnknownExposure": "Historical weights remain dated 2026-08-12. Additional keyed classifications describe current source categories, but the source-total remainder and whole-position liquidity horizons are unresolved; the zero-percent metadata rows do not quantify these unknowns.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {

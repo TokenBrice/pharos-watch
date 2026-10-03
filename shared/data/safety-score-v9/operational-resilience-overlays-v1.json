@@ -6518,6 +6518,39 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "frax-frax",
+      "reviewedAt": "2026-10-03T22:50:21Z",
+      "expiresAt": "2027-10-03T22:50:21Z",
+      "reviewer": "Unknown-wave W1R53",
+      "notes": "Official FAQ dates the exact legacy FRAX launch to 2020-12-20. Full calendar-month lower bound only; age is not assurance or performance. Redemption throughput, stress recovery, financial reconciliation continuity and incident history are not established by this sparse review. Source publishedAt records the dated launch event stated by the FAQ, not an invented page modification date.",
+      "sources": [
+        {
+          "sourceId": "frax-official-dated-launch",
+          "label": "Frax official FAQ: FRAX launched December 20th 2020",
+          "publisher": "Frax Finance",
+          "publishedAt": "2020-12-20",
+          "url": "https://docs.frax.finance/guides-faq/faq",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 69,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "frax-official-dated-launch"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }
