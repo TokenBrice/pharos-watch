@@ -3092,34 +3092,15 @@
     },
     {
       "assetId": "kgst-kyrgyz-som",
-      "transferScopeAttestation": {
-        "kind": "single-deployment-attribution",
-        "version": 1,
-        "reviewedAt": "2026-09-21",
-        "expiresAt": "2027-09-21",
-        "reviewer": "Claude curation campaign 2026-09-21 (ChainSupplyAttribution)",
-        "deploymentKey": "bsc:0x94be0bba8e1e303fe998c9360b57b826f1a4f828",
-        "exhaustiveLiability": true,
-        "sources": [
-          {
-            "label": "Pinned contract code, totalSupply and decimals at block 123182997 (0xb520fcf3f617ba3023f7f15c6b9cd30435e3b7945b993eb07866cf3e3496a1ac); reviewed sole registry liability deployment, no representation routes",
-            "url": "https://bsc-rpc.publicnode.com"
-          },
-          {
-            "label": "Exact deployed liability token",
-            "url": "https://bscscan.com/address/0x94be0bba8e1e303fe998c9360b57b826f1a4f828"
-          }
-        ]
-      },
-      "reviewedAt": "2026-07-30",
-      "reviewer": "Grok T28 safety-v9 unknown-reduction w2",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "W2R34 exact TRON executable and BSC source review",
       "deployments": [
         {
           "chainId": "bsc",
           "contractOrTokenId": "0x94be0bba8e1e303fe998c9360b57b826f1a4f828",
           "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "At BSC block 113079584, EIP-1967 implementation=0xa903a6c1c3bd45927542823528a6fa73a2a410e2 and admin=0xcb628ce396f8f6ffbfae48721fe02a668a9a718b; owner()=2/5 Safe 0xb94f9247bd181fc9aca4d8694fb3774ed99be5d5. Sourcify-exact Stablecoin implementation overrides _transfer with whenNotPaused + notFrozen(from/to); freeze/unfreeze and pause/unpause are onlyOwner. paused() was false. Denylist (not default-deny allowlist) ⇒ restrictable rather than permissioned.",
+          "evidence": "Existing BSC observation retained: block113079584 implementation0xa903a6c1c3bd45927542823528a6fa73a2a410e2, admin0xcb628ce396f8f6ffbfae48721fe02a668a9a718b; owner2/5 Safe0xb94f9247bd181fc9aca4d8694fb3774ed99be5d5. Exact Stablecoin source enforces pause and sender/recipient frozen guards in _transfer. This deployment is not an exhaustive single liability because TRON also exists.",
           "sources": [
             {
               "label": "Sourcify KGST Stablecoin implementation",
@@ -3134,8 +3115,29 @@
               "url": "https://bscscan.com/address/0xb94f9247bd181fc9aca4d8694fb3774ed99be5d5"
             },
             {
-              "label": "BSC block 113079584",
+              "label": "BSC block113079584",
               "url": "https://bscscan.com/block/113079584"
+            }
+          ]
+        },
+        {
+          "chainId": "tron",
+          "contractOrTokenId": "TN3cfcFhLrdNZhMdHZVZ4z2XFWb7uB9CXg",
+          "scope": "material-bridge",
+          "posture": "restrictable",
+          "evidence": "TronScan proxy metadata fetched2026-10-03 binds KGST proxy to Stablecoin implementationTR9KpxsZ2F94ZnbwHR148d7U5mrFneKMtt. Returned verified creation bytecode copies runtime from offset0xec. Runtime selector0xa9059cbb dispatches to0x1603: pause guard0x1fa3, sender and recipient frozen mapping slot0x66 checks reverting FrozenAddress, then transfer0x2052. freezeAccount0xf26c159f dispatches0x1d64 and pause0x8456cb59 dispatches0x1392; both call owner guard0x1f71. This is executable denylist/pause enforcement, not an inference from function names. Route's native-versus-representation liability semantics and authoritative material-supply accounting remain unresolved; material-bridge scope ensures it is not discarded as additional.",
+          "sources": [
+            {
+              "label": "Exact KGST TRON proxy/implementation binding",
+              "url": "https://apilist.tronscanapi.com/api/contract?contract=TN3cfcFhLrdNZhMdHZVZ4z2XFWb7uB9CXg"
+            },
+            {
+              "label": "Exact Stablecoin implementation verified bytecode and ABI",
+              "url": "https://apilist.tronscanapi.com/api/contracts/code?contract=TR9KpxsZ2F94ZnbwHR148d7U5mrFneKMtt"
+            },
+            {
+              "label": "NAVA TRON integration notice",
+              "url": "https://www.nava.gov.kg/articles/20260502-binance-KGST-TRON-NEWS"
             }
           ]
         }
