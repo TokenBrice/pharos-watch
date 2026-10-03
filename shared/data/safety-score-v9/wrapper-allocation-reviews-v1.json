@@ -4432,6 +4432,51 @@
           "url": "https://ethereum-rpc.publicnode.com"
         }
       ]
+    },
+    {
+      "assetId": "strusd-tori",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2026-11-03",
+      "reviewer": "W1R10 pinned source and allocation review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "liquidation-loss-absorption",
+      "rationale": "Wrapper-local assets are trUSD in the native vault and immutable cooldown silo; remote shares are CCIP lockbox representations, not new offchain allocation. Exact current implementation bytecode matches verified source. No lending, borrowing or strategy invocation exists in current vault/silo code. Rewarder reportLoss burns backing (up to 5% daily), so local loss absorption is retained rather than claiming no capital reuse. Native UUPS and bridge admin risk remain in control facts; parent institutional reserve custody is inherited, not waived.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0x280839980a7ed0d7717f64125fe241012e5f5815",
+          "function": "asset()/totalAssets()/getUnvestedAmount()/trUSD.balanceOf(vault)/implementation slot",
+          "value": "At block hash 0x41c1bba8d166f0293e51d435a4c76d26de77842bf66aa9ac007b35dc283c1d2f, asset=0xd0580192e98ea6ceb9c7b6191ed2e27560911697; implementation=0x6561272e3ebc9f2e07cdb12b7c474db9132b977a; totalAssets=44531376055240242183014596; unvested=265443134920634920634; balance=44531641498375162817935230; exact equality assets+unvested=balance; deployed implementation code equals verified runtime.",
+          "block": 26114894
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xf7c0d8853e69dcd37ee7599c6280d2632f3360b4",
+          "function": "STAKING_VAULT()/TRUSD()/trUSD.balanceOf(silo)",
+          "value": "stakingVault=0x280839980a7ed0d7717f64125fe241012e5f5815; trUSD=0xd0580192e98ea6ceb9c7b6191ed2e27560911697; balance=8319266235792763720873811; only vault can withdraw; rescue forbids native trUSD. Current source provides no borrowing/lending surface.",
+          "block": 26114894
+        }
+      ],
+      "sources": [
+        {
+          "label": "Exact verified vault and included immutable silo source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6561272e3ebc9f2e07cdb12b7c474db9132b977a"
+        },
+        {
+          "label": "Pinned observation block",
+          "url": "https://eth.blockscout.com/block/26114894"
+        },
+        {
+          "label": "Ethereum RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Official canonical and bridge census",
+          "url": "https://docs.tori.finance/resources/contracts.md"
+        }
+      ]
     }
   ]
 }

@@ -16070,6 +16070,354 @@
           "assertion": "The public fee schedule is configuration-driven and route-specific. Static global fixedFee(0) would overstate the observed one-chain quote and omit gas or other output-chain parameters."
         }
       ]
+    },
+    {
+      "id": "uw-trusd-tori-c3d2ce30d4fbc341",
+      "assetId": "trusd-tori",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:6c1df6b2263f2978daadbc8e",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:42Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R10)",
+      "sources": [
+        {
+          "url": "https://cache.accountable.capital/dashboard/tori",
+          "observedAt": "2026-10-03T22:51:42Z",
+          "datumAsOf": "2026-10-01",
+          "location": "data.maturity",
+          "excerpt": "\"weighted_average_maturity_days\": 5.64",
+          "assertion": "Publishes portfolio WAM, not a maximum for the money-market or equity-arbitrage slice."
+        },
+        {
+          "url": "https://docs.tori.finance/strategy/overview.md",
+          "observedAt": "2026-10-03T22:51:42Z",
+          "datumAsOf": null,
+          "location": "Money markets",
+          "excerpt": "Capital goes into high-quality, short-duration instruments at wholesale rates across global markets.",
+          "assertion": "No maximum contractual term or exhaustive maturity roster for either private strategy slice."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://tori.finance/",
+        "https://docs.tori.finance/llms.txt",
+        "https://docs.tori.finance/strategy/overview.md",
+        "https://docs.tori.finance/solution/backing.md",
+        "https://docs.tori.finance/legal/trusd-terms.md",
+        "https://docs.tori.finance/legal/trusd-protocol.md",
+        "https://cache.accountable.capital/dashboard/tori",
+        "https://app.tori.finance/api/solvency",
+        "https://docs.tori.finance/resources/contracts.md"
+      ],
+      "rationale": "Exact per-slice maturityDaysMax is not disclosed for money-market instruments or equity-arbitrage positions. The dashboard gives only portfolio WAM; underlying private instrument rosters and futures expiries are not published. Neither short duration nor illustrative futures trades is a hard maximum."
+    },
+    {
+      "id": "uw-trusd-tori-af7ed452c849db63",
+      "assetId": "trusd-tori",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:f9fcc8f2a9052d47c7a508b1",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:42Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R10)",
+      "sources": [
+        {
+          "url": "https://cache.accountable.capital/dashboard/tori",
+          "observedAt": "2026-10-03T22:51:42Z",
+          "datumAsOf": "2026-10-01",
+          "location": "data.maturity",
+          "excerpt": "\"weighted_average_maturity_days\": 5.64",
+          "assertion": "Publishes portfolio WAM, not a maximum for the money-market or equity-arbitrage slice."
+        },
+        {
+          "url": "https://docs.tori.finance/strategy/overview.md",
+          "observedAt": "2026-10-03T22:51:42Z",
+          "datumAsOf": null,
+          "location": "Money markets",
+          "excerpt": "Capital goes into high-quality, short-duration instruments at wholesale rates across global markets.",
+          "assertion": "No maximum contractual term or exhaustive maturity roster for either private strategy slice."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://tori.finance/",
+        "https://docs.tori.finance/llms.txt",
+        "https://docs.tori.finance/strategy/overview.md",
+        "https://docs.tori.finance/solution/backing.md",
+        "https://docs.tori.finance/legal/trusd-terms.md",
+        "https://docs.tori.finance/legal/trusd-protocol.md",
+        "https://cache.accountable.capital/dashboard/tori",
+        "https://app.tori.finance/api/solvency",
+        "https://docs.tori.finance/resources/contracts.md"
+      ],
+      "rationale": "Exact per-slice maturityDaysMax is not disclosed for money-market instruments or equity-arbitrage positions. The dashboard gives only portfolio WAM; underlying private instrument rosters and futures expiries are not published. Neither short duration nor illustrative futures trades is a hard maximum."
+    },
+    {
+      "id": "uw-u-united-stables-e56e3da27cb12e4e",
+      "assetId": "u-united-stables",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:9f11b68634c98d9720d24b43",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:42Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R10)",
+      "sources": [
+        {
+          "url": "https://u.tech/terms/",
+          "observedAt": "2026-10-03T22:51:42Z",
+          "datumAsOf": "2025-12-18",
+          "location": "3.2",
+          "excerpt": "United Stables does not provide any assurance regarding the exact composition, custodial structure, or liquidity profile of the Reserves at any given time.",
+          "assertion": "No binding whole-mixed-bucket maximum or liquidation guarantee."
+        },
+        {
+          "url": "https://www.u.tech/assets/audit-report/United%20Stables%20-%20Assurance%20%26%20Reserves%20Report%20Jul%202026.pdf",
+          "observedAt": "2026-10-03T22:51:42Z",
+          "datumAsOf": "2026-07-31",
+          "location": "Notes 6 and 10, reserve report pp.6\u20137",
+          "excerpt": "The Company holds shares in the Fund and does not hold the underlying US Treasury obligations directly.",
+          "assertion": "Actual report includes fund-share claims, RWUSD and bank accounts; underlying Treasury maturity is not a maturity of those shares."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://u.tech/",
+        "https://www.u.tech/resources/white-paper/",
+        "https://u.tech/terms/",
+        "https://www.u.tech/transparency/audit-report/",
+        "https://www.u.tech/por/",
+        "https://u.tech/u-client-api/v1/public/u/por",
+        "https://www.u.tech/ecosystem/multichain/",
+        "https://www.u.tech/assets/audit-report/United%20Stables%20-%20Assurance%20%26%20Reserves%20Report%20Jul%202026.pdf"
+      ],
+      "rationale": "Exact whole-slice maturityDaysMax and liquidityHorizon remain unpublished. Whitepaper under-90-day deposits/six-month Treasuries are intended policy, superseded by discretionary terms and not a binding maximum on the actual mixed slice (including opaque MMF shares and RWUSD). 24\u201348-hour liquidation is a normal-market selection aim, not a whole-position maximum."
+    },
+    {
+      "id": "uw-u-united-stables-b779d17dbd8066ce",
+      "assetId": "u-united-stables",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:9f11b68634c98d9720d24b43",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:42Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R10)",
+      "sources": [
+        {
+          "url": "https://u.tech/terms/",
+          "observedAt": "2026-10-03T22:51:42Z",
+          "datumAsOf": "2025-12-18",
+          "location": "3.2",
+          "excerpt": "United Stables does not provide any assurance regarding the exact composition, custodial structure, or liquidity profile of the Reserves at any given time.",
+          "assertion": "No binding whole-mixed-bucket maximum or liquidation guarantee."
+        },
+        {
+          "url": "https://www.u.tech/assets/audit-report/United%20Stables%20-%20Assurance%20%26%20Reserves%20Report%20Jul%202026.pdf",
+          "observedAt": "2026-10-03T22:51:42Z",
+          "datumAsOf": "2026-07-31",
+          "location": "Notes 6 and 10, reserve report pp.6\u20137",
+          "excerpt": "The Company holds shares in the Fund and does not hold the underlying US Treasury obligations directly.",
+          "assertion": "Actual report includes fund-share claims, RWUSD and bank accounts; underlying Treasury maturity is not a maturity of those shares."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://u.tech/",
+        "https://www.u.tech/resources/white-paper/",
+        "https://u.tech/terms/",
+        "https://www.u.tech/transparency/audit-report/",
+        "https://www.u.tech/por/",
+        "https://u.tech/u-client-api/v1/public/u/por",
+        "https://www.u.tech/ecosystem/multichain/",
+        "https://www.u.tech/assets/audit-report/United%20Stables%20-%20Assurance%20%26%20Reserves%20Report%20Jul%202026.pdf"
+      ],
+      "rationale": "Exact whole-slice maturityDaysMax and liquidityHorizon remain unpublished. Whitepaper under-90-day deposits/six-month Treasuries are intended policy, superseded by discretionary terms and not a binding maximum on the actual mixed slice (including opaque MMF shares and RWUSD). 24\u201348-hour liquidation is a normal-market selection aim, not a whole-position maximum."
+    },
+    {
+      "id": "uw-u-united-stables-412ac90c86851db5",
+      "assetId": "u-united-stables",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:u-united-stables:stablecoin-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:42Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R10)",
+      "sources": [
+        {
+          "url": "https://u.tech/terms/",
+          "observedAt": "2026-10-03T22:51:42Z",
+          "datumAsOf": "2025-12-18",
+          "location": "8.2",
+          "excerpt": "Such fees will be disclosed to the Mint User prior to the completion of any transaction, or will be included in the net amount of Tokens issued or assets delivered upon Redemption.",
+          "assertion": "Lists gas, execution/settlement and operational costs without an applicable public numeric schedule."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://u.tech/",
+        "https://www.u.tech/resources/white-paper/",
+        "https://u.tech/terms/",
+        "https://www.u.tech/transparency/audit-report/",
+        "https://www.u.tech/por/",
+        "https://u.tech/u-client-api/v1/public/u/por",
+        "https://www.u.tech/ecosystem/multichain/",
+        "https://www.u.tech/assets/audit-report/United%20Stables%20-%20Assurance%20%26%20Reserves%20Report%20Jul%202026.pdf"
+      ],
+      "rationale": "The exact route cost schedule/all-in fee bound for approved Mint Users is not public. Terms promise transaction-specific disclosure and permit changes; whitepaper nominal-fee language supplies neither numeric amount nor evaluable formula. No fee archive or account schedule is linked on the issuer surfaces."
+    },
+    {
+      "id": "uw-u-united-stables-ebfb8be1a4ff0b78",
+      "assetId": "u-united-stables",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "output",
+        "pillar": "exit",
+        "requiredDatum": "output",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:u-united-stables:stablecoin-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:42Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R10)",
+      "sources": [
+        {
+          "url": "https://u.tech/terms/",
+          "observedAt": "2026-10-03T22:51:42Z",
+          "datumAsOf": "2025-12-18",
+          "location": "6.3",
+          "excerpt": "United Stables may satisfy redemption requests using any eligible reserve asset, including cash or stablecoins, in its sole discretion.",
+          "assertion": "USD/USDC/USDT are examples, not a complete guaranteed payout set or issuer-selected branch."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://u.tech/",
+        "https://www.u.tech/resources/white-paper/",
+        "https://u.tech/terms/",
+        "https://www.u.tech/transparency/audit-report/",
+        "https://www.u.tech/por/",
+        "https://u.tech/u-client-api/v1/public/u/por",
+        "https://www.u.tech/ecosystem/multichain/",
+        "https://www.u.tech/assets/audit-report/United%20Stables%20-%20Assurance%20%26%20Reserves%20Report%20Jul%202026.pdf"
+      ],
+      "rationale": "Complete selected output identity/basket for this issuer-discretionary route is not disclosed. Terms permit cash or any approved eligible reserve asset; whitepaper permits fiat or approved stablecoins but does not bind a complete output set. No same-notional basket may be invented from reserve holdings."
+    },
+    {
+      "id": "uw-usdn-smardex-978d8b64f6483376",
+      "assetId": "usdn-smardex",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdn-smardex:collateral-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:42Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R10)",
+      "sources": [
+        {
+          "url": "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol/faq.md",
+          "observedAt": "2026-10-03T22:51:42Z",
+          "datumAsOf": null,
+          "location": "Redeem USDN",
+          "excerpt": "If you can't [redeem](/ultimate-synthetic-delta-neutral/the-usdn-protocol/glossary.md#redeem) USDN, it\u2019s due to a protocol imbalance between the vault side and the long side.",
+          "assertion": "Discloses balance gates but no maximum time until balance restores."
+        },
+        {
+          "url": "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol/inside-the-protocol/1.-providing-a-price.md",
+          "observedAt": "2026-10-03T22:51:42Z",
+          "datumAsOf": null,
+          "location": "Two-Step Mechanism",
+          "excerpt": "After a minimum of 24 seconds, the user must validate their action.",
+          "assertion": "Minimum and oracle windows are not maximum completion from arbitrary gated redemption requests."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://smardex.io/",
+        "https://docs.smardex.io/llms.txt",
+        "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol/faq.md",
+        "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol/protocol-parameters.md",
+        "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol/fees/protocol-fees.md",
+        "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol/vault-side/vault-overview.md",
+        "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol/inside-the-protocol/1.-providing-a-price.md",
+        "https://docs.smardex.io/ultimate-synthetic-delta-neutral/tutorials/how-to-mint-and-redeem-usdn.md",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x271df5517a4daacb7cab988aa64d23debda4c498"
+      ],
+      "rationale": "No end-to-end settlement maximum or entire wstETH vault liquidityHorizon is disclosed. Imbalance can block initiating redemption until other users mint or close longs; oracle validator windows constrain a successfully initiated action, not time to resolve an imbalance or liquidate the entire vault. A transferable underlying token does not remove those gates."
+    },
+    {
+      "id": "uw-usdn-smardex-0ddd11d1de9cf6c9",
+      "assetId": "usdn-smardex",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:0221a08ec9cd9a2735a6b745",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:42Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R10)",
+      "sources": [
+        {
+          "url": "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol/faq.md",
+          "observedAt": "2026-10-03T22:51:42Z",
+          "datumAsOf": null,
+          "location": "Redeem USDN",
+          "excerpt": "If you can't [redeem](/ultimate-synthetic-delta-neutral/the-usdn-protocol/glossary.md#redeem) USDN, it\u2019s due to a protocol imbalance between the vault side and the long side.",
+          "assertion": "Discloses balance gates but no maximum time until balance restores."
+        },
+        {
+          "url": "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol/inside-the-protocol/1.-providing-a-price.md",
+          "observedAt": "2026-10-03T22:51:42Z",
+          "datumAsOf": null,
+          "location": "Two-Step Mechanism",
+          "excerpt": "After a minimum of 24 seconds, the user must validate their action.",
+          "assertion": "Minimum and oracle windows are not maximum completion from arbitrary gated redemption requests."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://smardex.io/",
+        "https://docs.smardex.io/llms.txt",
+        "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol/faq.md",
+        "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol/protocol-parameters.md",
+        "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol/fees/protocol-fees.md",
+        "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol/vault-side/vault-overview.md",
+        "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol/inside-the-protocol/1.-providing-a-price.md",
+        "https://docs.smardex.io/ultimate-synthetic-delta-neutral/tutorials/how-to-mint-and-redeem-usdn.md",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x271df5517a4daacb7cab988aa64d23debda4c498"
+      ],
+      "rationale": "No end-to-end settlement maximum or entire wstETH vault liquidityHorizon is disclosed. Imbalance can block initiating redemption until other users mint or close longs; oracle validator windows constrain a successfully initiated action, not time to resolve an imbalance or liquidate the entire vault. A transferable underlying token does not remove those gates."
     }
   ]
 }

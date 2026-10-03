@@ -7475,6 +7475,138 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "trusd-tori",
+      "reviewedAt": "2026-10-03T22:45:59Z",
+      "expiresAt": "2027-10-03T22:45:59Z",
+      "reviewer": "W1R10 primary-source research",
+      "notes": "Exact token deployment or native launch establishes a conservative calendar-month history lower bound only. No stress throughput, recovery, independent reconciliation, or incident-free performance is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-token-origin",
+          "label": "Exact token creation transaction",
+          "publisher": "Ethereum chain / Blockscout",
+          "publishedAt": "2026-06-08",
+          "url": "https://eth.blockscout.com/tx/0x80e2db11e43b547e1e77ab10ca8fb79849bb1694005bf5b9a3c2c47df93f92c7",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 3,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-token-origin"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "strusd-tori",
+      "reviewedAt": "2026-10-03T22:45:59Z",
+      "expiresAt": "2027-10-03T22:45:59Z",
+      "reviewer": "W1R10 primary-source research",
+      "notes": "Exact token deployment or native launch establishes a conservative calendar-month history lower bound only. No stress throughput, recovery, independent reconciliation, or incident-free performance is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-token-origin",
+          "label": "Exact token creation transaction",
+          "publisher": "Ethereum chain / Blockscout",
+          "publishedAt": "2026-06-08",
+          "url": "https://eth.blockscout.com/tx/0x7ef450f4da28e1ae6ba7d6387e9ef1bfad7baa6be8b71a3bb9c44824e31ff102",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 3,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-token-origin"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usdn-smardex",
+      "reviewedAt": "2026-10-03T22:45:59Z",
+      "expiresAt": "2027-10-03T22:45:59Z",
+      "reviewer": "W1R10 primary-source research",
+      "notes": "Exact token deployment or native launch establishes a conservative calendar-month history lower bound only. No stress throughput, recovery, independent reconciliation, or incident-free performance is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-token-origin",
+          "label": "Exact token creation transaction",
+          "publisher": "Ethereum chain / Blockscout",
+          "publishedAt": "2024-12-19",
+          "url": "https://eth.blockscout.com/tx/0x37bb50943f3d1a778ea28bb502fde053470f4ed326731c832865b32e8f22dc56",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 21,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-token-origin"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "u-united-stables",
+      "reviewedAt": "2026-10-03T22:45:59Z",
+      "expiresAt": "2027-10-03T22:45:59Z",
+      "reviewer": "W1R10 primary-source research",
+      "notes": "Exact token deployment or native launch establishes a conservative calendar-month history lower bound only. No stress throughput, recovery, independent reconciliation, or incident-free performance is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-token-origin",
+          "label": "Native U launch announcement",
+          "publisher": "BNB Chain",
+          "publishedAt": "2025-12-18",
+          "url": "https://www.bnbchain.org/en/blog/united-stables-launches-u-as-a-native-stablecoin-on-bnb-chain",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 9,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-token-origin"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }
