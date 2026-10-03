@@ -5901,258 +5901,6 @@
       ]
     },
     {
-      "id": "uw-nopal-nest-3dab9c6a4d8e0460",
-      "assetId": "nopal-nest",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:nopal-nest:queue-redeem"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:51:00Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R62)",
-      "sources": [
-        {
-          "url": "https://docs.nest.credit/about/liquidity-and-redemptions",
-          "observedAt": "2026-10-03T22:45:46Z",
-          "datumAsOf": null,
-          "location": "Queued (Asynchronous) Redemption",
-          "excerpt": "Larger withdrawals, or redemptions submitted when available liquidity is limited, may require additional time as positions are unwound in an orderly manner.",
-          "assertion": "Typical T+2 to T+5 ranges are qualified; no unconditional final settlement maximum for the modeled nOPAL/nBASIS queued exit is established."
-        },
-        {
-          "url": "https://docs.nest.credit/about/vault-operations-and-valuation",
-          "observedAt": "2026-10-03T22:45:46Z",
-          "datumAsOf": null,
-          "location": "Standard Redemption",
-          "excerpt": "A user submits a redemption request, and the vault processes that request as liquidity becomes available.",
-          "assertion": "Completion remains liquidity-dependent rather than a guaranteed SLA."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.nest.credit/",
-        "https://docs.nest.credit/about/available-vaults",
-        "https://docs.nest.credit/about/liquidity-and-redemptions",
-        "https://docs.nest.credit/about/vault-operations-and-valuation",
-        "https://docs.nest.credit/security-and-compliance/terms-and-conditions",
-        "https://docs.nest.credit/developers/integration-guides/nopal",
-        "https://docs.nest.credit/developers/actions-api/reference/vaults/slug/redeem/quote/post",
-        "https://api.nest.credit/v1/vaults/nest-basis-vault",
-        "https://api.nest.credit/v1/vaults/nest-opal-vault",
-        "https://github.com/plumenetwork/nest-protocol/blob/main/contracts/README.md"
-      ],
-      "rationale": "The exact datum is final queued-redemption settlement maximum at the modeled notional. Reviewed legal terms, integration/API flow, vault directory, liquidity policy and permissioned fulfillment documentation publish estimates and liquidity-dependent processing, not a binding asset-specific completion maximum. Current nOPAL T+1 is explicitly an estimate; typical hour/T+2\u2013T+5 figures are not guaranteed. nBASIS remains in the exact registry but is absent from the current Arc-only directory."
-    },
-    {
-      "id": "uw-nbasis-nest-6f7a192f3a41646b",
-      "assetId": "nbasis-nest",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:nbasis-nest:queue-redeem"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:51:00Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R62)",
-      "sources": [
-        {
-          "url": "https://docs.nest.credit/about/liquidity-and-redemptions",
-          "observedAt": "2026-10-03T22:45:46Z",
-          "datumAsOf": null,
-          "location": "Queued (Asynchronous) Redemption",
-          "excerpt": "Larger withdrawals, or redemptions submitted when available liquidity is limited, may require additional time as positions are unwound in an orderly manner.",
-          "assertion": "Typical T+2 to T+5 ranges are qualified; no unconditional final settlement maximum for the modeled nOPAL/nBASIS queued exit is established."
-        },
-        {
-          "url": "https://docs.nest.credit/about/vault-operations-and-valuation",
-          "observedAt": "2026-10-03T22:45:46Z",
-          "datumAsOf": null,
-          "location": "Standard Redemption",
-          "excerpt": "A user submits a redemption request, and the vault processes that request as liquidity becomes available.",
-          "assertion": "Completion remains liquidity-dependent rather than a guaranteed SLA."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.nest.credit/",
-        "https://docs.nest.credit/about/available-vaults",
-        "https://docs.nest.credit/about/liquidity-and-redemptions",
-        "https://docs.nest.credit/about/vault-operations-and-valuation",
-        "https://docs.nest.credit/security-and-compliance/terms-and-conditions",
-        "https://docs.nest.credit/developers/integration-guides/nopal",
-        "https://docs.nest.credit/developers/actions-api/reference/vaults/slug/redeem/quote/post",
-        "https://api.nest.credit/v1/vaults/nest-basis-vault",
-        "https://api.nest.credit/v1/vaults/nest-opal-vault",
-        "https://github.com/plumenetwork/nest-protocol/blob/main/contracts/README.md"
-      ],
-      "rationale": "The exact datum is final queued-redemption settlement maximum at the modeled notional. Reviewed legal terms, integration/API flow, vault directory, liquidity policy and permissioned fulfillment documentation publish estimates and liquidity-dependent processing, not a binding asset-specific completion maximum. Current nOPAL T+1 is explicitly an estimate; typical hour/T+2\u2013T+5 figures are not guaranteed. nBASIS remains in the exact registry but is absent from the current Arc-only directory."
-    },
-    {
-      "id": "uw-nbasis-nest-3ad3ab86cf507742",
-      "assetId": "nbasis-nest",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:215f3e73e97f6f3aa668dcb6",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:51:00Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R62)",
-      "sources": [
-        {
-          "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc",
-          "observedAt": "2026-10-03T22:45:46Z",
-          "datumAsOf": null,
-          "location": "Fund information and Documents",
-          "excerpt": "Fund documents and statements are available in the Investor Portal.",
-          "assertion": "Public USCC terms disclose NAV and daily dealing but no maturity maximum for the fund-share claim held by nBASIS."
-        },
-        {
-          "url": "https://superstate.com/assets/ustb",
-          "observedAt": "2026-10-03T22:45:46Z",
-          "datumAsOf": "2026-09-21",
-          "location": "About USTB and holdings",
-          "excerpt": "Ownership in the Fund is represented by USTB, held either as a token or in book-entry record keeping.",
-          "assertion": "Treasury holding maturity dates are not the maturity of the USTB fund-share claim."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://api.nest.credit/v1/vaults/nest-basis-vault/positions",
-        "https://superstate.com/assets/uscc",
-        "https://superstate.com/assets/ustb",
-        "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc",
-        "https://docs.superstate.com/investors/tokenized-funds/available-funds/invesco-ustb",
-        "https://docs.superstate.com/investors/tokenized-funds/redeem",
-        "https://superstate.com/assets/uscc#disclaimers",
-        "https://superstate.com/assets/ustb#disclaimers"
-      ],
-      "rationale": "Exact missing datum: maximum maturity days of nBASIS's USCC and USTB fund-share claims, not futures/T-bills in their underlying portfolios. Public issuer fund pages, current holdings, legal risk disclosures and investor dealing docs identify rolling NAV shares with liquidity schedules, not a hard termination/maturity maximum. Definitive investor documents are supplied privately through the Investor Portal; no public claim-level maximum was located. Do not use a Treasury holding maturity or WAM as a share maturity."
-    },
-    {
-      "id": "uw-nbasis-nest-88f4423aa534e97a",
-      "assetId": "nbasis-nest",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:e83e3d84c18208edc253be48",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:51:00Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R62)",
-      "sources": [
-        {
-          "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc",
-          "observedAt": "2026-10-03T22:45:46Z",
-          "datumAsOf": null,
-          "location": "Fund information and Documents",
-          "excerpt": "Fund documents and statements are available in the Investor Portal.",
-          "assertion": "Public USCC terms disclose NAV and daily dealing but no maturity maximum for the fund-share claim held by nBASIS."
-        },
-        {
-          "url": "https://superstate.com/assets/ustb",
-          "observedAt": "2026-10-03T22:45:46Z",
-          "datumAsOf": "2026-09-21",
-          "location": "About USTB and holdings",
-          "excerpt": "Ownership in the Fund is represented by USTB, held either as a token or in book-entry record keeping.",
-          "assertion": "Treasury holding maturity dates are not the maturity of the USTB fund-share claim."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://api.nest.credit/v1/vaults/nest-basis-vault/positions",
-        "https://superstate.com/assets/uscc",
-        "https://superstate.com/assets/ustb",
-        "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc",
-        "https://docs.superstate.com/investors/tokenized-funds/available-funds/invesco-ustb",
-        "https://docs.superstate.com/investors/tokenized-funds/redeem",
-        "https://superstate.com/assets/uscc#disclaimers",
-        "https://superstate.com/assets/ustb#disclaimers"
-      ],
-      "rationale": "Exact missing datum: maximum maturity days of nBASIS's USCC and USTB fund-share claims, not futures/T-bills in their underlying portfolios. Public issuer fund pages, current holdings, legal risk disclosures and investor dealing docs identify rolling NAV shares with liquidity schedules, not a hard termination/maturity maximum. Definitive investor documents are supplied privately through the Investor Portal; no public claim-level maximum was located. Do not use a Treasury holding maturity or WAM as a share maturity."
-    },
-    {
-      "id": "uw-nopal-nest-6dd90e76d5279677",
-      "assetId": "nopal-nest",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:nopal-nest:queue-redeem"
-      },
-      "cause": "B",
-      "assertion": "required-data-public",
-      "reviewedAt": "2026-10-03T22:56:50Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R62)",
-      "sources": [
-        {
-          "url": "https://api.nest.credit/v1/actions/vaults/nest-opal-vault/redeem/quote",
-          "observedAt": "2026-10-03T22:51:00Z",
-          "datumAsOf": null,
-          "location": "Read-only POST: chainId 98866, redemptionType nest, shareAmount 100000000000, redemptionAsset 0x222365ef19f7947e5484218551b56bb3965aa7af",
-          "excerpt": "\"feeAmount\":\"16532985\",\"fees\":{\"ratePpm\":150,\"flatAmount\":\"0\",\"maxRatePpm\":1500,\"maxFlatAmount\":\"0\"}",
-          "assertion": "Published dynamic queued-redemption fee: percentage plus flat amount, quoted for the exact nOPAL route. Current static issuer-API basket producer does not evaluate this per chain/output/notional; W15 disclosed-unquantified, not universal zero or known all-in fee."
-        },
-        {
-          "url": "https://github.com/plumenetwork/nest-protocol/blob/main/contracts/libraries/NestVaultRedeemLogic.sol",
-          "observedAt": "2026-10-03T22:56:50Z",
-          "datumAsOf": null,
-          "location": "executeFulfillRedeem",
-          "excerpt": "_amountReceived.calculatePostFeeAmounts(_feeConfig.rate, _feeConfig.flat);",
-          "assertion": "The applicable asynchronous-redemption formula is public. Need live fee/rate parameters and a same-notional quote evaluation; a static asset-wide fixed-bps field cannot encode the multi-chain formula observation."
-        }
-      ]
-    },
-    {
-      "id": "uw-nbasis-nest-4249c0717ef50632",
-      "assetId": "nbasis-nest",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:nbasis-nest:queue-redeem"
-      },
-      "cause": "B",
-      "assertion": "required-data-public",
-      "reviewedAt": "2026-10-03T22:56:50Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R62)",
-      "sources": [
-        {
-          "url": "https://api.nest.credit/v1/actions/vaults/nest-basis-vault/redeem/quote",
-          "observedAt": "2026-10-03T22:51:00Z",
-          "datumAsOf": null,
-          "location": "Read-only POST: chainId 98866, redemptionType nest, shareAmount 100000000000, redemptionAsset 0x222365ef19f7947e5484218551b56bb3965aa7af",
-          "excerpt": "\"feeAmount\":\"0\",\"fees\":{\"ratePpm\":0,\"flatAmount\":\"0\",\"maxRatePpm\":0,\"maxFlatAmount\":\"0\"}",
-          "assertion": "Exact live nBASIS queued-exit fee parameters are public under the documented rate-plus-flat formula. The fixed basket producer lacks chain/output/notional quote evaluation; W15 B does not claim zero all-in cost or future fixed fee."
-        },
-        {
-          "url": "https://github.com/plumenetwork/nest-protocol/blob/main/contracts/README.md",
-          "observedAt": "2026-10-03T22:51:00Z",
-          "datumAsOf": null,
-          "location": "Async redemption and Fees",
-          "excerpt": "Vault fees then apply to individual deposits, async-redemption fulfillments, and instant redemptions.",
-          "assertion": "The public fee schedule is configuration-driven and route-specific. Static global fixedFee(0) would overstate the observed one-chain quote and omit gas or other output-chain parameters."
-        }
-      ]
-    },
-    {
       "id": "uw-trusd-tori-c3d2ce30d4fbc341",
       "assetId": "trusd-tori",
       "scope": {
@@ -8973,120 +8721,6 @@
         "https://unipayfi.github.io/POR/20260925_090008_HTD_PoR_for_Unitas.pdf"
       ],
       "rationale": "Maximum full-position liquidation/withdrawal horizons for the live Bnb_smartchain, Binance and Solana hedge slices are not disclosed. Hourly hedge rebalancing, onchain balances and whitelisted redemption descriptions do not establish realization deadlines for these scoped positions."
-    },
-    {
-      "id": "uw-nwisdom-nest-521beb0be2fd5dae",
-      "assetId": "nwisdom-nest",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:nwisdom-nest:queue-redeem"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:15:38Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R91)",
-      "sources": [
-        {
-          "url": "https://docs.nest.credit/about/liquidity-and-redemptions/",
-          "observedAt": "2026-10-03T23:10:17Z",
-          "datumAsOf": null,
-          "location": "Queued (Asynchronous) Redemption",
-          "excerpt": "Larger withdrawals, or redemptions submitted when available liquidity is limited, may require additional time as positions are unwound in an orderly manner.",
-          "assertion": "Generic T+2 to T+5 estimates expressly admit additional time; no binding end-to-end maximum for any of these three legacy vaults is stated."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.nest.credit/",
-        "https://docs.nest.credit/about/available-vaults/",
-        "https://docs.nest.credit/about/liquidity-and-redemptions/",
-        "https://docs.nest.credit/about/vault-operations-and-valuation",
-        "https://docs.nest.credit/security-and-compliance/terms-and-conditions/",
-        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/contracts/README.md",
-        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/nTBILL.json",
-        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/nWISDOM.json",
-        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/inALPHA.json"
-      ],
-      "rationale": "The exact same-notional queue-redemption settlement maximum for nWISDOM, nTBILL and inALPHA is undisclosed. Public policy provides estimates for most strategies and expressly allows larger/illiquid exits additional time. Current vault directory omits these legacy assets; legal terms and contract/config disclosures publish no completion deadline. Async fulfillment is permissioned and can be partial. No generic estimate is converted into a guaranteed SLA."
-    },
-    {
-      "id": "uw-ntbill-nest-0575b59d662a2046",
-      "assetId": "ntbill-nest",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:ntbill-nest:queue-redeem"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:15:38Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R91)",
-      "sources": [
-        {
-          "url": "https://docs.nest.credit/about/liquidity-and-redemptions/",
-          "observedAt": "2026-10-03T23:10:17Z",
-          "datumAsOf": null,
-          "location": "Queued (Asynchronous) Redemption",
-          "excerpt": "Larger withdrawals, or redemptions submitted when available liquidity is limited, may require additional time as positions are unwound in an orderly manner.",
-          "assertion": "Generic T+2 to T+5 estimates expressly admit additional time; no binding end-to-end maximum for any of these three legacy vaults is stated."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.nest.credit/",
-        "https://docs.nest.credit/about/available-vaults/",
-        "https://docs.nest.credit/about/liquidity-and-redemptions/",
-        "https://docs.nest.credit/about/vault-operations-and-valuation",
-        "https://docs.nest.credit/security-and-compliance/terms-and-conditions/",
-        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/contracts/README.md",
-        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/nTBILL.json",
-        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/nWISDOM.json",
-        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/inALPHA.json"
-      ],
-      "rationale": "The exact same-notional queue-redemption settlement maximum for nWISDOM, nTBILL and inALPHA is undisclosed. Public policy provides estimates for most strategies and expressly allows larger/illiquid exits additional time. Current vault directory omits these legacy assets; legal terms and contract/config disclosures publish no completion deadline. Async fulfillment is permissioned and can be partial. No generic estimate is converted into a guaranteed SLA."
-    },
-    {
-      "id": "uw-inalpha-nest-68c96dffccd97cf1",
-      "assetId": "inalpha-nest",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:inalpha-nest:queue-redeem"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:15:38Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R91)",
-      "sources": [
-        {
-          "url": "https://docs.nest.credit/about/liquidity-and-redemptions/",
-          "observedAt": "2026-10-03T23:10:17Z",
-          "datumAsOf": null,
-          "location": "Queued (Asynchronous) Redemption",
-          "excerpt": "Larger withdrawals, or redemptions submitted when available liquidity is limited, may require additional time as positions are unwound in an orderly manner.",
-          "assertion": "Generic T+2 to T+5 estimates expressly admit additional time; no binding end-to-end maximum for any of these three legacy vaults is stated."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.nest.credit/",
-        "https://docs.nest.credit/about/available-vaults/",
-        "https://docs.nest.credit/about/liquidity-and-redemptions/",
-        "https://docs.nest.credit/about/vault-operations-and-valuation",
-        "https://docs.nest.credit/security-and-compliance/terms-and-conditions/",
-        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/contracts/README.md",
-        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/nTBILL.json",
-        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/nWISDOM.json",
-        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/inALPHA.json"
-      ],
-      "rationale": "The exact same-notional queue-redemption settlement maximum for nWISDOM, nTBILL and inALPHA is undisclosed. Public policy provides estimates for most strategies and expressly allows larger/illiquid exits additional time. Current vault directory omits these legacy assets; legal terms and contract/config disclosures publish no completion deadline. Async fulfillment is permissioned and can be partial. No generic estimate is converted into a guaranteed SLA."
     },
     {
       "id": "uw-euro3-3a-dao-321c4878ade1384d",
@@ -24801,198 +24435,6 @@
       "rationale": "Current docs claim USDC backing and reserve-lock minting but publish no dated measured whole-WEUSD book/denominator or recurring common-clock reconciliation covering all native deployments, mint/burn and cross-chain reserves/deficits. Security audits, transaction monitoring and local reserve getter ABIs do not establish that financial scope. Prior conflicting basket descriptions remain unresolved; no 100% USDC composition or favorable reconciliation is invented."
     },
     {
-      "id": "uw-usdm-monetrix-4666f87fa6422b40",
-      "assetId": "usdm-monetrix",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdm-monetrix:queue-redeem"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:08:53Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R83)",
-      "sources": [
-        {
-          "url": "https://doc.monetrix.xyz/resources/terms-and-disclaimer.md",
-          "observedAt": "2026-10-03T23:08:53Z",
-          "datumAsOf": null,
-          "location": "Issuer published terms / guide",
-          "excerpt": "Monetrix does not guarantee a fixed yield, fixed return, or fixed redemption timing.",
-          "assertion": "Three-day cooldown is a configurable earliest claim time, not a guaranteed final funded settlement maximum."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.monetrix.xyz/app/transparency",
-        "https://api.monetrix.xyz/data/api/collateral",
-        "https://doc.monetrix.xyz/guide/getting-started/redeem.md",
-        "https://doc.monetrix.xyz/guide/getting-started/faq.md",
-        "https://doc.monetrix.xyz/risk-and-security/audits-and-contracts.md",
-        "https://doc.monetrix.xyz/resources/terms-and-disclaimer.md"
-      ],
-      "rationale": "No end-to-end maximum for final delivered USDC is published for queue-redeem. The guide documents governance-adjustable three-day cooldown and claim call; FAQ says liquidity must be realized from positions, and current legal notice expressly denies fixed timing. This does not assert no redemption or zero capacity."
-    },
-    {
-      "id": "uw-krwq-iq-d4d7dfc23c949165",
-      "assetId": "krwq-iq",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:krwq-iq:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:08:53Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R83)",
-      "sources": [
-        {
-          "url": "https://www.krwq.cash/terms",
-          "observedAt": "2026-10-03T23:08:53Z",
-          "datumAsOf": "2026-06-03",
-          "location": "Issuer published terms / guide",
-          "excerpt": "Access to certain features, including minting and redemption, may be restricted to whitelisted or verified participants",
-          "assertion": "Terms disclose redemption eligibility but no applicable institution/fiat-redemption fee schedule."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.krwq.cash/",
-        "https://www.krwq.cash/mint",
-        "https://www.krwq.cash/whitepaper.pdf",
-        "https://www.krwq.cash/transparency",
-        "https://www.krwq.cash/terms",
-        "https://www.krwq.cash/disclaimer",
-        "https://www.krwq.cash/api/custodian-assets",
-        "https://github.com/KRWQcash/.github/blob/7bf83efba994a555ca1f63b352ed28e91ff3fd44/profile/README.md"
-      ],
-      "rationale": "The exact offchain-issuer cost datum is undisclosed: no numeric institutional fiat-redemption fee, applicable formula/minimum or all-in partner/bank/FX charge schedule is published across site, mint UI, whitepaper, terms and transparency. Whitepaper network-transfer costs are not fees for institutional fiat redemption. No zero-fee inference."
-    },
-    {
-      "id": "uw-said-gaib-9c9d0a787af9334e",
-      "assetId": "said-gaib",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:said-gaib:stablecoin-redeem"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:16:10Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R83)",
-      "sources": [
-        {
-          "url": "https://drive.google.com/file/d/1GMwfOw_XXHKXOXopqU8_QGu_y5ozM9hV/preview",
-          "observedAt": "2026-10-03T23:16:10Z",
-          "datumAsOf": null,
-          "location": "sAID Vault Strategy Memorandum, p.5 Redemptions, rendered Drive preview",
-          "excerpt": "All redemptions remain subject to the liquidity, asset composition, and operational parameters determined at the sole discretion of the Company.",
-          "assertion": "Memorandum p.5 permits caps, freezes, deferral until liquidity restored and discretionary alternative payout; monthly cohort is not guaranteed final settlement."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://gaib.ai/",
-        "https://docs.gaib.ai/llms.txt",
-        "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid",
-        "https://docs.gaib.ai/products/gaib-products/staked-ai-dollar-said",
-        "https://aid.gaib.ai/transparency",
-        "https://docs.gaib.ai/products/gaib-products/transparency.md",
-        "https://docs.gaib.ai/products/gaib-products/protocol-public-api.md",
-        "https://docs.gaib.ai/legal/disclaimers-and-risk-disclosures.md",
-        "https://docs.gaib.ai/legal/terms-of-use/annex-to-gaib-term-of-use.md",
-        "https://drive.google.com/file/d/17Uy4SCY9-D-R3kf-4-atUn_9nR4HeGeC/preview",
-        "https://drive.google.com/file/d/1GMwfOw_XXHKXOXopqU8_QGu_y5ozM9hV/preview"
-      ],
-      "rationale": "The stablecoin-redeem route has no published end-to-end funded completion maximum. Current product docs schedule liquidity on month-three day one, but memorandum p.5 explicitly permits temporary freezes and deferral until liquidity returns. No enforceable SLA overrides that discretion. Source preview recovered despite disabled download; no inaccessible-source inference."
-    },
-    {
-      "id": "uw-aid-gaib-335fdbd69be631ff",
-      "assetId": "aid-gaib",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:16:10Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R83)",
-      "sources": [
-        {
-          "url": "https://drive.google.com/file/d/17Uy4SCY9-D-R3kf-4-atUn_9nR4HeGeC/preview",
-          "observedAt": "2026-10-03T23:16:10Z",
-          "datumAsOf": "2026-09-01",
-          "location": "McMillan Woods limited-assurance report, pages 1\u20133, rendered Drive preview",
-          "excerpt": "Total Assets Reviewed: USD 18.7 million",
-          "assertion": "McMillan Woods report p.2 totals deployed GPU assets; p.3 recalculates deployed capital, not minted AID liabilities/backing on a common clock."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://gaib.ai/",
-        "https://docs.gaib.ai/llms.txt",
-        "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid",
-        "https://docs.gaib.ai/products/gaib-products/staked-ai-dollar-said",
-        "https://aid.gaib.ai/transparency",
-        "https://docs.gaib.ai/products/gaib-products/transparency.md",
-        "https://docs.gaib.ai/products/gaib-products/protocol-public-api.md",
-        "https://docs.gaib.ai/legal/disclaimers-and-risk-disclosures.md",
-        "https://docs.gaib.ai/legal/terms-of-use/annex-to-gaib-term-of-use.md",
-        "https://drive.google.com/file/d/17Uy4SCY9-D-R3kf-4-atUn_9nR4HeGeC/preview",
-        "https://drive.google.com/file/d/1GMwfOw_XXHKXOXopqU8_QGu_y5ozM9hV/preview"
-      ],
-      "rationale": "No dated whole-issued-AID supply-to-backing reconciliation and actual cadence is published. September 1 Spiceflow limited assurance covers deployed financing assets, not AID mint/burn liabilities or every chain. Dashboard separates circulating AID cash from staked AID; NAV/public API counters and deployment report do not establish the required whole-supply procedure."
-    },
-    {
-      "id": "uw-aid-gaib-2a98f8015ffcf1aa",
-      "assetId": "aid-gaib",
-      "scope": {
-        "componentKey": "reserve-composition",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "backing",
-        "requiredDatum": "reserve-composition",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:16:10Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R83)",
-      "sources": [
-        {
-          "url": "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid.md",
-          "observedAt": "2026-10-03T23:16:10Z",
-          "datumAsOf": null,
-          "location": "Issuer published terms / guide",
-          "excerpt": "AI Dollar (AID) is a **synthetic dollar** fully backed by the U.S. Treasuries and stable assets",
-          "assertion": "Product names broad backing classes but does not publish current whole-issued-AID itemized composition/denominator."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://gaib.ai/",
-        "https://docs.gaib.ai/llms.txt",
-        "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid",
-        "https://docs.gaib.ai/products/gaib-products/staked-ai-dollar-said",
-        "https://aid.gaib.ai/transparency",
-        "https://docs.gaib.ai/products/gaib-products/transparency.md",
-        "https://docs.gaib.ai/products/gaib-products/protocol-public-api.md",
-        "https://docs.gaib.ai/legal/disclaimers-and-risk-disclosures.md",
-        "https://docs.gaib.ai/legal/terms-of-use/annex-to-gaib-term-of-use.md",
-        "https://drive.google.com/file/d/17Uy4SCY9-D-R3kf-4-atUn_9nR4HeGeC/preview",
-        "https://drive.google.com/file/d/1GMwfOw_XXHKXOXopqU8_QGu_y5ozM9hV/preview"
-      ],
-      "rationale": "No current whole-issued-AID composition is disclosed across product/API/terms, rendered dashboard and recovered September 1 deployment attestation. Cash ratio divides redeemer/minter cash by only circulating AID, excluding staked liabilities; GPU report totals assets without AID-specific attribution. Cannot normalize those scoped quantities to 100% of all issued AID."
-    },
-    {
       "id": "uw-wusd-worldwide-f3f059c5de612f83",
       "assetId": "wusd-worldwide",
       "scope": {
@@ -25893,522 +25335,6 @@
         "https://solscan.io/account/D4AiKFxjZBrhd6MeRAAj6wNxFcZJuRMBrXW9UpqeS8Ax"
       ],
       "rationale": "No public exact all-in fee schedule or complete cost formula for the legacy USDv direct USDC redemption route was found. The legacy announcement describes qualified-holder mint/burn/redeem without a fee schedule; wind-down recommends market swaps without promising a direct-redemption price. Current docs and transaction fee UI concern the separate new token. Interface terms do not define the legacy API/direct-redemption schedule."
-    },
-    {
-      "id": "uw-idrt-rupiah-token-cd6ec83654e6bda2",
-      "assetId": "idrt-rupiah-token",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:idrt-rupiah-token:offchain-issuer"
-      },
-      "cause": "B",
-      "assertion": "required-data-public",
-      "reviewedAt": "2026-10-03T23:21:02Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R75)",
-      "sources": [
-        {
-          "url": "https://rupiahtoken.com/faq/berapa-biaya-pencairan-idrt-ke-idr",
-          "observedAt": "2026-10-03T23:18:49Z",
-          "datumAsOf": null,
-          "location": "Issuer disclosure",
-          "excerpt": "Biaya penarikan (withdrawal fee) IDRT ke IDR adalah 0,5% + biaya transfer bank Rp 6500,- (jika ada)",
-          "assertion": "Published 50 bps plus conditional IDR 6,500 formula requires same-notional FX and applicability evaluation; current undisclosedReviewedFee model does not evaluate it."
-        }
-      ]
-    },
-    {
-      "id": "uw-idrt-rupiah-token-8652780fedbd2ef8",
-      "assetId": "idrt-rupiah-token",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:a04ce16f6cdeba9c7105a50e",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:21:02Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R75)",
-      "sources": [
-        {
-          "url": "https://s3.ap-southeast-1.amazonaws.com/content.rupiahtoken.com/AUP_PT_Rupiah_Token_Indonesia_FPE_Aug_31_2026_70d8e0d4cf.pdf?updated_at=2026-09-29T09:04:00.517Z",
-          "observedAt": "2026-10-03T23:18:49Z",
-          "datumAsOf": "2026-08-31",
-          "location": "Appendix 1, procedure 3",
-          "excerpt": "Obtain a copy of the bank statements and deposit certificates for each bank account and time deposits used as collateral for Rupiah Token at the end of each month.",
-          "assertion": "AUP discloses bank accounts and time deposits, but no certificate maturity dates, contractual maximum or whole-slice realizability bound."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://rupiahtoken.com/",
-        "https://rupiahtoken.com/faq",
-        "https://rupiahtoken.com/legal/terms",
-        "https://rupiahtoken.com/whitepaper.pdf",
-        "https://s3.ap-southeast-1.amazonaws.com/content.rupiahtoken.com/AUP_PT_Rupiah_Token_Indonesia_FPE_Aug_31_2026_70d8e0d4cf.pdf?updated_at=2026-09-29T09:04:00.517Z",
-        "https://rupiahtoken.com/faq/dimana-cadangan-uang-backing-rupiah-token-disimpan-apa-buktinya"
-      ],
-      "rationale": "Maximum contractual deposit maturity and entire-slice liquidation horizon for IDR bank accounts/time deposits are not disclosed. The August AUP names the types and aggregate collateral; FAQ, whitepaper and redemption disclosures do not publish the deposit certificates, lock/early-break terms or maturity ladder. Holder redemption mechanics are not reserve liquidation proof."
-    },
-    {
-      "id": "uw-idrt-rupiah-token-15c57e783254758a",
-      "assetId": "idrt-rupiah-token",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:a04ce16f6cdeba9c7105a50e",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:21:02Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R75)",
-      "sources": [
-        {
-          "url": "https://s3.ap-southeast-1.amazonaws.com/content.rupiahtoken.com/AUP_PT_Rupiah_Token_Indonesia_FPE_Aug_31_2026_70d8e0d4cf.pdf?updated_at=2026-09-29T09:04:00.517Z",
-          "observedAt": "2026-10-03T23:18:49Z",
-          "datumAsOf": "2026-08-31",
-          "location": "Appendix 1, procedure 3",
-          "excerpt": "Obtain a copy of the bank statements and deposit certificates for each bank account and time deposits used as collateral for Rupiah Token at the end of each month.",
-          "assertion": "AUP discloses bank accounts and time deposits, but no certificate maturity dates, contractual maximum or whole-slice realizability bound."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://rupiahtoken.com/",
-        "https://rupiahtoken.com/faq",
-        "https://rupiahtoken.com/legal/terms",
-        "https://rupiahtoken.com/whitepaper.pdf",
-        "https://s3.ap-southeast-1.amazonaws.com/content.rupiahtoken.com/AUP_PT_Rupiah_Token_Indonesia_FPE_Aug_31_2026_70d8e0d4cf.pdf?updated_at=2026-09-29T09:04:00.517Z",
-        "https://rupiahtoken.com/faq/dimana-cadangan-uang-backing-rupiah-token-disimpan-apa-buktinya"
-      ],
-      "rationale": "Maximum contractual deposit maturity and entire-slice liquidation horizon for IDR bank accounts/time deposits are not disclosed. The August AUP names the types and aggregate collateral; FAQ, whitepaper and redemption disclosures do not publish the deposit certificates, lock/early-break terms or maturity ladder. Holder redemption mechanics are not reserve liquidation proof."
-    },
-    {
-      "id": "uw-usdu-universal-70710eb41ecaaa20",
-      "assetId": "usdu-universal",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:9aa6907919efd87e0fbde46b",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:21:02Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R75)",
-      "sources": [
-        {
-          "url": "https://cdn.prod.website-files.com/68cf1072d23d4d5b68d8f496/6aba3d94e9697870784a49e5_Final%20USDU%20Examination%20Report%20-%20August%202026%20Countersigned.pdf",
-          "observedAt": "2026-10-03T23:18:49Z",
-          "datumAsOf": "2026-08-31",
-          "location": "Reserve report notes",
-          "excerpt": "USDU reserves will only be invested in fiat deposits in UAE Central Bank regulated Banks",
-          "assertion": "Deposit category is disclosed without contractual maturity or reserve-account withdrawal/realization maximum."
-        },
-        {
-          "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf",
-          "observedAt": "2026-10-03T23:18:49Z",
-          "datumAsOf": "2026-01-30",
-          "location": "Page 10",
-          "excerpt": "Typically burning and redemption will take 2 business days, following the completion of any required customer due diligence.",
-          "assertion": "Typical customer redemption is not a bank-deposit maturity or entire reserve realization covenant."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.universal.ae/",
-        "https://www.universal.ae/transparency",
-        "https://cdn.prod.website-files.com/68cf1072d23d4d5b68d8f496/6aba3d94e9697870784a49e5_Final%20USDU%20Examination%20Report%20-%20August%202026%20Countersigned.pdf",
-        "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf",
-        "https://www.adgm.com/public-registers/fsra/firms/financial-firms/universal-digital-intl-limited-250089"
-      ],
-      "rationale": "The USD bank-deposit slice has no disclosed contractual maturity maximum or full-book realization horizon. Crowe confirms aggregate bank balances without account terms. Whitepaper reserve mandate, transparency archive, issuer banking disclosures and FSRA register do not supply deposit certificates or withdrawal/lock terms; typical client redemption is not reserve liquidity."
-    },
-    {
-      "id": "uw-usdu-universal-6bc842b99a7e8e6e",
-      "assetId": "usdu-universal",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:9aa6907919efd87e0fbde46b",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:21:02Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R75)",
-      "sources": [
-        {
-          "url": "https://cdn.prod.website-files.com/68cf1072d23d4d5b68d8f496/6aba3d94e9697870784a49e5_Final%20USDU%20Examination%20Report%20-%20August%202026%20Countersigned.pdf",
-          "observedAt": "2026-10-03T23:18:49Z",
-          "datumAsOf": "2026-08-31",
-          "location": "Reserve report notes",
-          "excerpt": "USDU reserves will only be invested in fiat deposits in UAE Central Bank regulated Banks",
-          "assertion": "Deposit category is disclosed without contractual maturity or reserve-account withdrawal/realization maximum."
-        },
-        {
-          "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf",
-          "observedAt": "2026-10-03T23:18:49Z",
-          "datumAsOf": "2026-01-30",
-          "location": "Page 10",
-          "excerpt": "Typically burning and redemption will take 2 business days, following the completion of any required customer due diligence.",
-          "assertion": "Typical customer redemption is not a bank-deposit maturity or entire reserve realization covenant."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.universal.ae/",
-        "https://www.universal.ae/transparency",
-        "https://cdn.prod.website-files.com/68cf1072d23d4d5b68d8f496/6aba3d94e9697870784a49e5_Final%20USDU%20Examination%20Report%20-%20August%202026%20Countersigned.pdf",
-        "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf",
-        "https://www.adgm.com/public-registers/fsra/firms/financial-firms/universal-digital-intl-limited-250089"
-      ],
-      "rationale": "The USD bank-deposit slice has no disclosed contractual maturity maximum or full-book realization horizon. Crowe confirms aggregate bank balances without account terms. Whitepaper reserve mandate, transparency archive, issuer banking disclosures and FSRA register do not supply deposit certificates or withdrawal/lock terms; typical client redemption is not reserve liquidity."
-    },
-    {
-      "id": "uw-vchf-vnx-f9f0e4372b4f1498",
-      "assetId": "vchf-vnx",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:vchf-vnx:offchain-issuer"
-      },
-      "cause": "B",
-      "assertion": "required-data-public",
-      "reviewedAt": "2026-10-03T23:21:02Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R75)",
-      "sources": [
-        {
-          "url": "https://prod-global-terms.s3.sa-east-1.amazonaws.com/VNX-Global-Terms.pdf",
-          "observedAt": "2026-10-03T23:19:52Z",
-          "datumAsOf": null,
-          "location": "Annex III C, fiat withdrawal fees",
-          "excerpt": "Every time you withdraw fiat funds from your Platform User Account you will be charged the fee in the amount of GBP 30 and CHF 30 for SWIFT transfers.",
-          "assertion": "Public CHF 30 SWIFT fee plus conditional unused-funds percentage requires FX and account-history scenario evaluation, absent from current route cost model."
-        }
-      ]
-    },
-    {
-      "id": "uw-vchf-vnx-6d00ae72f2dbfd80",
-      "assetId": "vchf-vnx",
-      "scope": {
-        "componentKey": "reserve-composition",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "backing",
-        "requiredDatum": "reserve-composition",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:21:02Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R75)",
-      "sources": [
-        {
-          "url": "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf",
-          "observedAt": "2026-10-03T23:19:52Z",
-          "datumAsOf": "2026-08-31",
-          "location": "Sections 2.1-2.3",
-          "excerpt": "For purposes of this report, the Covered Stablecoins are limited to the VCHF and VGBP tokens listed below on the identified blockchains.",
-          "assertion": "Scoped report covers six VCHF chains, not a reconciled all-deployment token liability perimeter."
-        },
-        {
-          "url": "https://vnx.gitbook.io/vnx-global/transparency/standards-and-contracts.md",
-          "observedAt": "2026-10-03T23:19:52Z",
-          "datumAsOf": null,
-          "location": "Overview and VCHF contract registry",
-          "excerpt": "Every deployment listed below represents the same underlying claim against VNX's segregated reserves.",
-          "assertion": "Current registry additionally lists Tezos while the examined VCHF schedule omits Tezos; older catalog deployments also lack an explicit current liability bridge."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://vnx.li/",
-        "https://vnx.io/swiss-franc",
-        "https://faq.vnx.io/en/",
-        "https://vnx.gitbook.io/vnx-global/transparency/audits.md",
-        "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf",
-        "https://prod-global-terms.s3.sa-east-1.amazonaws.com/VNX-Global-Terms.pdf",
-        "https://vnx.gitbook.io/vnx-global/transparency/standards-and-contracts.md",
-        "https://vnx.gitbook.io/vnx-global/institutional/reserve/reserve-management.md"
-      ],
-      "rationale": "The current whole-VCHF reserve composition, whole-supply reconciliation cadence and assurance join remain undisclosed across all retained liabilities. Apex publishes a genuine CHF cash examination for six chains, but omits registry-listed Tezos and gives no reconciliation of legacy catalog deployments, excluded supply and migration into this covered book. Daily valuation and monthly scoped examinations do not establish that missing whole-liability perimeter."
-    },
-    {
-      "id": "uw-vchf-vnx-87b280d41e0226d5",
-      "assetId": "vchf-vnx",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:21:02Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R75)",
-      "sources": [
-        {
-          "url": "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf",
-          "observedAt": "2026-10-03T23:19:52Z",
-          "datumAsOf": "2026-08-31",
-          "location": "Sections 2.1-2.3",
-          "excerpt": "For purposes of this report, the Covered Stablecoins are limited to the VCHF and VGBP tokens listed below on the identified blockchains.",
-          "assertion": "Scoped report covers six VCHF chains, not a reconciled all-deployment token liability perimeter."
-        },
-        {
-          "url": "https://vnx.gitbook.io/vnx-global/transparency/standards-and-contracts.md",
-          "observedAt": "2026-10-03T23:19:52Z",
-          "datumAsOf": null,
-          "location": "Overview and VCHF contract registry",
-          "excerpt": "Every deployment listed below represents the same underlying claim against VNX's segregated reserves.",
-          "assertion": "Current registry additionally lists Tezos while the examined VCHF schedule omits Tezos; older catalog deployments also lack an explicit current liability bridge."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://vnx.li/",
-        "https://vnx.io/swiss-franc",
-        "https://faq.vnx.io/en/",
-        "https://vnx.gitbook.io/vnx-global/transparency/audits.md",
-        "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf",
-        "https://prod-global-terms.s3.sa-east-1.amazonaws.com/VNX-Global-Terms.pdf",
-        "https://vnx.gitbook.io/vnx-global/transparency/standards-and-contracts.md",
-        "https://vnx.gitbook.io/vnx-global/institutional/reserve/reserve-management.md"
-      ],
-      "rationale": "The current whole-VCHF reserve composition, whole-supply reconciliation cadence and assurance join remain undisclosed across all retained liabilities. Apex publishes a genuine CHF cash examination for six chains, but omits registry-listed Tezos and gives no reconciliation of legacy catalog deployments, excluded supply and migration into this covered book. Daily valuation and monthly scoped examinations do not establish that missing whole-liability perimeter."
-    },
-    {
-      "id": "uw-vchf-vnx-559f1e6d00625760",
-      "assetId": "vchf-vnx",
-      "scope": {
-        "componentKey": "mechanism-review:assuranceAndReconciliation",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "backing",
-        "requiredDatum": "mechanism-review:assuranceAndReconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:21:02Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R75)",
-      "sources": [
-        {
-          "url": "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf",
-          "observedAt": "2026-10-03T23:19:52Z",
-          "datumAsOf": "2026-08-31",
-          "location": "Sections 2.1-2.3",
-          "excerpt": "For purposes of this report, the Covered Stablecoins are limited to the VCHF and VGBP tokens listed below on the identified blockchains.",
-          "assertion": "Scoped report covers six VCHF chains, not a reconciled all-deployment token liability perimeter."
-        },
-        {
-          "url": "https://vnx.gitbook.io/vnx-global/transparency/standards-and-contracts.md",
-          "observedAt": "2026-10-03T23:19:52Z",
-          "datumAsOf": null,
-          "location": "Overview and VCHF contract registry",
-          "excerpt": "Every deployment listed below represents the same underlying claim against VNX's segregated reserves.",
-          "assertion": "Current registry additionally lists Tezos while the examined VCHF schedule omits Tezos; older catalog deployments also lack an explicit current liability bridge."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://vnx.li/",
-        "https://vnx.io/swiss-franc",
-        "https://faq.vnx.io/en/",
-        "https://vnx.gitbook.io/vnx-global/transparency/audits.md",
-        "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf",
-        "https://prod-global-terms.s3.sa-east-1.amazonaws.com/VNX-Global-Terms.pdf",
-        "https://vnx.gitbook.io/vnx-global/transparency/standards-and-contracts.md",
-        "https://vnx.gitbook.io/vnx-global/institutional/reserve/reserve-management.md"
-      ],
-      "rationale": "The current whole-VCHF reserve composition, whole-supply reconciliation cadence and assurance join remain undisclosed across all retained liabilities. Apex publishes a genuine CHF cash examination for six chains, but omits registry-listed Tezos and gives no reconciliation of legacy catalog deployments, excluded supply and migration into this covered book. Daily valuation and monthly scoped examinations do not establish that missing whole-liability perimeter."
-    },
-    {
-      "id": "uw-vnxau-vnx-3e0cd4acdd66e9ad",
-      "assetId": "vnxau-vnx",
-      "scope": {
-        "componentKey": "reserve-composition",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "backing",
-        "requiredDatum": "reserve-composition",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:21:02Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R75)",
-      "sources": [
-        {
-          "url": "https://vnx.li/vnxau-transparency",
-          "observedAt": "2026-10-03T23:19:52Z",
-          "datumAsOf": null,
-          "location": "Audit reports, 31.12.2025",
-          "excerpt": "Gold reserve report on VNXAU gold tokens \u2014 examination of management assertions",
-          "assertion": "Current archive exposes December 31, 2025 report only; current exact full-book composition/reconciliation is not provided."
-        },
-        {
-          "url": "https://vnx.li/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf",
-          "observedAt": "2026-10-03T23:19:52Z",
-          "datumAsOf": "2025-12-31",
-          "location": "Restrictions on procedures, page 7",
-          "excerpt": "Any activity prior to or after that date or time was not considered when testing the assertions described above.",
-          "assertion": "Historical AUP cannot establish current expanded VNXAU deployment supply-to-gold reconciliation."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://vnx.li/",
-        "https://vnx.li/vnxau",
-        "https://vnx.li/vnxau-transparency",
-        "https://vnx.li/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf",
-        "https://vnx.io/gold",
-        "https://vnx.gitbook.io/vnx-global/vnx-ecosystem/vnxau.md"
-      ],
-      "rationale": "Current whole-VNXAU reserve composition and assurance/reconciliation for the expanded mint perimeter are not published. The issuer discloses one gram allocated gold and a December 2025 AUP covering five historical deployments; the current case study/transparency names a different four-chain set and no newer full-book report. Historical gold grams cannot be re-dated or treated as a current whole-liability reserve schedule."
-    },
-    {
-      "id": "uw-vnxau-vnx-4c466d398750a000",
-      "assetId": "vnxau-vnx",
-      "scope": {
-        "componentKey": "mechanism-review:assuranceAndReconciliation",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "backing",
-        "requiredDatum": "mechanism-review:assuranceAndReconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:21:02Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R75)",
-      "sources": [
-        {
-          "url": "https://vnx.li/vnxau-transparency",
-          "observedAt": "2026-10-03T23:19:52Z",
-          "datumAsOf": null,
-          "location": "Audit reports, 31.12.2025",
-          "excerpt": "Gold reserve report on VNXAU gold tokens \u2014 examination of management assertions",
-          "assertion": "Current archive exposes December 31, 2025 report only; current exact full-book composition/reconciliation is not provided."
-        },
-        {
-          "url": "https://vnx.li/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf",
-          "observedAt": "2026-10-03T23:19:52Z",
-          "datumAsOf": "2025-12-31",
-          "location": "Restrictions on procedures, page 7",
-          "excerpt": "Any activity prior to or after that date or time was not considered when testing the assertions described above.",
-          "assertion": "Historical AUP cannot establish current expanded VNXAU deployment supply-to-gold reconciliation."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://vnx.li/",
-        "https://vnx.li/vnxau",
-        "https://vnx.li/vnxau-transparency",
-        "https://vnx.li/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf",
-        "https://vnx.io/gold",
-        "https://vnx.gitbook.io/vnx-global/vnx-ecosystem/vnxau.md"
-      ],
-      "rationale": "Current whole-VNXAU reserve composition and assurance/reconciliation for the expanded mint perimeter are not published. The issuer discloses one gram allocated gold and a December 2025 AUP covering five historical deployments; the current case study/transparency names a different four-chain set and no newer full-book report. Historical gold grams cannot be re-dated or treated as a current whole-liability reserve schedule."
-    },
-    {
-      "id": "uw-usdv-solomon-v2-3628b08607274051",
-      "assetId": "usdv-solomon-v2",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:21:02Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R75)",
-      "sources": [
-        {
-          "url": "https://docs.solomonlabs.org/usdv/transparency-and-risk",
-          "observedAt": "2026-10-03T23:19:52Z",
-          "datumAsOf": null,
-          "location": "Issuer disclosure",
-          "excerpt": "The USDv dashboard is intended to show:",
-          "assertion": "Dashboard publishes supply and reserves, not a dated full on/offchain asset/liability reconciliation procedure and recurring cadence."
-        },
-        {
-          "url": "https://docs.solomonlabs.org/usdv/peg-stability-and-reserves",
-          "observedAt": "2026-10-03T23:19:52Z",
-          "datumAsOf": null,
-          "location": "Issuer disclosure",
-          "excerpt": "Reserve composition can change based on supply, redemption needs, market liquidity, counterparty access, risk management, and program requirements.",
-          "assertion": "Reserve management description is not whole-supply reconciliation evidence."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://solomonlabs.org/",
-        "https://docs.solomonlabs.org/usdv/peg-stability-and-reserves",
-        "https://docs.solomonlabs.org/usdv/transparency-and-risk",
-        "https://docs.solomonlabs.org/usdv/audits-and-security",
-        "https://app.solomonlabs.org/stats",
-        "https://github.com/SolomonLabs/chancery-integrity-records/blob/main/docs/AUTHORITIES.md",
-        "https://solomonlabs.org/terms-of-use",
-        "https://blog.solomonlabs.org/p/winding-down-the-original-usdv"
-      ],
-      "rationale": "No documented recurring whole-new-USDv supply-to-backing reconciliation is disclosed. Current dashboard balances, Chancery PDA accounting, authority documentation and security audits do not reconcile every on/offchain reserve, mint/burn flow and outstanding liability on a common clock/cadence. The legacy beta article describes an older distinct token and cannot establish new-token reconciliation."
-    },
-    {
-      "id": "uw-usdv-solomon-v2-3237766bbbfd32ee",
-      "assetId": "usdv-solomon-v2",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "supervision",
-        "pillar": "control",
-        "requiredDatum": "supervision",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:21:02Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R75)",
-      "sources": [
-        {
-          "url": "https://solomonlabs.org/terms-of-use",
-          "observedAt": "2026-10-03T23:19:52Z",
-          "datumAsOf": "2026-07-15",
-          "location": "Sections 1-4",
-          "excerpt": "\u201cSolomon Labs\u201d is a brand term only and is not a legal entity.",
-          "assertion": "Brand/IP owner/interface operator identification does not establish exact new-USDv issuing entity or applicable issuer prudential regime."
-        },
-        {
-          "url": "https://solomonlabs.org/terms-of-use",
-          "observedAt": "2026-10-03T23:19:52Z",
-          "datumAsOf": "2026-07-15",
-          "location": "Section 2",
-          "excerpt": "These are main-website Terms only.",
-          "assertion": "Terms exclude separate issuer/redemption arrangements; interface regulatory disclaimer cannot be encoded as reviewed absence of issuer supervision."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://solomonlabs.org/",
-        "https://solomonlabs.org/terms-of-use",
-        "https://docs.solomonlabs.org/usdv/peg-stability-and-reserves",
-        "https://docs.solomonlabs.org/usdv/transparency-and-risk",
-        "https://docs.solomonlabs.org/usdv/acquiring-and-redeeming",
-        "https://github.com/SolomonLabs/chancery-integrity-records/blob/main/docs/AUTHORITIES.md",
-        "https://solomondao.org/"
-      ],
-      "rationale": "The exact new-USDv legal issuer and licence/activity covering its token issuance are undisclosed. Main-site terms name Panama interface operator Genesee and Marshall Islands IP owner SOLOMON DAO LLC but expressly separate issuer arrangements. Token docs, legal terms, current authority/deployment disclosure and scoped issuer/regulatory search establish no issuer register identity; no supervision:none inference is made."
     },
     {
       "id": "uw-ousg-ondo-finance-e3e325828f85cd55",
@@ -35660,6 +34586,1494 @@
         "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/why-cygnus.md"
       ],
       "rationale": "Queue-redeem end-to-end settlement maximum is unpublished. FAQ gives two business days for sales, three for conversion and normal 5-7 days; mechanics gives typically 2-5 days followed by an oracle update/claim. Policy explicitly disclaims deterministic transit timing. Website and legal terms add no funded request-to-spendable-USDC upper guarantee. Do not convert normal windows, business-day legs or oracle batching into a calendar-second maximum."
+    },
+    {
+      "id": "uw-nbasis-nest-25f86f426677ed79",
+      "assetId": "nbasis-nest",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:215f3e73e97f6f3aa668dcb6",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:55:06Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R52)",
+      "sources": [
+        {
+          "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc.md",
+          "observedAt": "2026-10-03T23:49:10Z",
+          "datumAsOf": null,
+          "location": "Redeeming",
+          "excerpt": "Proceeds are delivered T+1 for requests received before 5pm ET, or T+2 after.",
+          "assertion": "USCC publishes market-day dealing; it does not establish a whole nBASIS position calendar-day realization bound."
+        },
+        {
+          "url": "https://superstate.com/assets/ustb",
+          "observedAt": "2026-10-03T23:49:10Z",
+          "datumAsOf": null,
+          "location": "Summary of Risk Factors: Protocol Redeem",
+          "excerpt": "Timing is not guaranteed; despite references to \u201cinstantaneous,\u201d transactions may be delayed due to blockchain, network, cybersecurity, or other operational disruptions, and the functionality is limited to the Ethereum blockchain.",
+          "assertion": "Direct issuer risk disclosure expressly rejects a guaranteed instantaneous execution bound; Nest holds Plume USTB."
+        },
+        {
+          "url": "https://docs.nest.credit/about/vault-operations-and-valuation",
+          "observedAt": "2026-10-03T23:49:10Z",
+          "datumAsOf": null,
+          "location": "Standard/Instant Redemption",
+          "excerpt": "Instant redemption availability is not guaranteed. It depends on current vault liquidity, supported redemption assets, chain-specific balances, and vault configuration.",
+          "assertion": "Published availability is conditional; no entire-position per-slice realization maximum is stated."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.nest.credit/about/vault-operations-and-valuation",
+        "https://docs.nest.credit/about/liquidity-and-redemptions",
+        "https://docs.nest.credit/security-and-compliance/terms-and-conditions",
+        "https://docs.nest.credit/security-and-compliance/audits",
+        "https://airtable.com/appXyH9re7Q1awigg/shrcPf6VbAJk1SXj9",
+        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/contracts/operators/README.md",
+        "https://api.nest.credit/v1/vaults/nest-basis-vault/positions",
+        "https://docs.superstate.com/investors/tokenized-funds/redeem",
+        "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc.md",
+        "https://docs.superstate.com/investors/tokenized-funds/available-funds/invesco-ustb.md",
+        "https://superstate.com/assets/ustb",
+        "https://bitwiseinvestments.com/crypto-funds/uscc"
+      ],
+      "rationale": "Exact missing datum is whole-position liquidityHorizon for nBASIS USCC and USTB claims. New manager overview and USTB risk disclosures distinguish daily dealing from guaranteed timing: Protocol Redeem is Ethereum-only, dynamically capped and suspendable. Exact Nest positions are on Plume. Public fund, redemption, risk, Nest operations/legal and audit surfaces publish no Nest-specific full-position bound. Offering materials are private; no calendar maximum is inferred from market-day T+1/T+2 or daily liquidity."
+    },
+    {
+      "id": "uw-nbasis-nest-eb1de6c5c9b48e6a",
+      "assetId": "nbasis-nest",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:e83e3d84c18208edc253be48",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:55:06Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R52)",
+      "sources": [
+        {
+          "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc.md",
+          "observedAt": "2026-10-03T23:49:10Z",
+          "datumAsOf": null,
+          "location": "Redeeming",
+          "excerpt": "Proceeds are delivered T+1 for requests received before 5pm ET, or T+2 after.",
+          "assertion": "USCC publishes market-day dealing; it does not establish a whole nBASIS position calendar-day realization bound."
+        },
+        {
+          "url": "https://superstate.com/assets/ustb",
+          "observedAt": "2026-10-03T23:49:10Z",
+          "datumAsOf": null,
+          "location": "Summary of Risk Factors: Protocol Redeem",
+          "excerpt": "Timing is not guaranteed; despite references to \u201cinstantaneous,\u201d transactions may be delayed due to blockchain, network, cybersecurity, or other operational disruptions, and the functionality is limited to the Ethereum blockchain.",
+          "assertion": "Direct issuer risk disclosure expressly rejects a guaranteed instantaneous execution bound; Nest holds Plume USTB."
+        },
+        {
+          "url": "https://docs.nest.credit/about/vault-operations-and-valuation",
+          "observedAt": "2026-10-03T23:49:10Z",
+          "datumAsOf": null,
+          "location": "Standard/Instant Redemption",
+          "excerpt": "Instant redemption availability is not guaranteed. It depends on current vault liquidity, supported redemption assets, chain-specific balances, and vault configuration.",
+          "assertion": "Published availability is conditional; no entire-position per-slice realization maximum is stated."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.nest.credit/about/vault-operations-and-valuation",
+        "https://docs.nest.credit/about/liquidity-and-redemptions",
+        "https://docs.nest.credit/security-and-compliance/terms-and-conditions",
+        "https://docs.nest.credit/security-and-compliance/audits",
+        "https://airtable.com/appXyH9re7Q1awigg/shrcPf6VbAJk1SXj9",
+        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/contracts/operators/README.md",
+        "https://api.nest.credit/v1/vaults/nest-basis-vault/positions",
+        "https://docs.superstate.com/investors/tokenized-funds/redeem",
+        "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc.md",
+        "https://docs.superstate.com/investors/tokenized-funds/available-funds/invesco-ustb.md",
+        "https://superstate.com/assets/ustb",
+        "https://bitwiseinvestments.com/crypto-funds/uscc"
+      ],
+      "rationale": "Exact missing datum is whole-position liquidityHorizon for nBASIS USCC and USTB claims. New manager overview and USTB risk disclosures distinguish daily dealing from guaranteed timing: Protocol Redeem is Ethereum-only, dynamically capped and suspendable. Exact Nest positions are on Plume. Public fund, redemption, risk, Nest operations/legal and audit surfaces publish no Nest-specific full-position bound. Offering materials are private; no calendar maximum is inferred from market-day T+1/T+2 or daily liquidity."
+    },
+    {
+      "id": "uw-ntbill-nest-0eb5183f5460baa1",
+      "assetId": "ntbill-nest",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:2cce8743e14829a87010c3f5",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:55:06Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R52)",
+      "sources": [
+        {
+          "url": "https://docs.nest.credit/about/vault-operations-and-valuation",
+          "observedAt": "2026-10-03T23:49:10Z",
+          "datumAsOf": null,
+          "location": "Standard/Instant Redemption",
+          "excerpt": "Instant redemption availability is not guaranteed. It depends on current vault liquidity, supported redemption assets, chain-specific balances, and vault configuration.",
+          "assertion": "Published availability is conditional; no entire-position per-slice realization maximum is stated."
+        },
+        {
+          "url": "https://anemoy.io/funds/jtrsy",
+          "observedAt": "2026-10-03T23:49:10Z",
+          "datumAsOf": null,
+          "location": "Daily Liquidity",
+          "excerpt": "The fund balances monthly, offers daily redemptions, holds US T-Bills with a max maturity of 6-months, and focuses on maximizing interest rates and minimizing price and duration risks.",
+          "assertion": "Daily dealing is disclosed; no all-position Plume redemption-to-final-output maximum is published."
+        },
+        {
+          "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/invesco-ustb.md",
+          "observedAt": "2026-10-03T23:49:10Z",
+          "datumAsOf": null,
+          "location": "Redeeming",
+          "excerpt": "Proceeds are delivered immediately (including non-business days, subject to available liquidity) for payout requests in USDC, or same-day for USD if received before 1pm ET.",
+          "assertion": "Issuer payout terms are liquidity-dependent rather than an unconditional whole-position horizon."
+        },
+        {
+          "url": "https://www.circle.com/legal/usdc-terms",
+          "observedAt": "2026-10-03T23:55:06Z",
+          "datumAsOf": "2025-12-12",
+          "location": "Section 2: User Type B",
+          "excerpt": "You may not redeem USDC with Circle unless and until you open a Circle Mint account.",
+          "assertion": "Direct fiat redemption is eligibility-gated; these terms do not certify Nest's all-chain scoped USDC balance realization horizon."
+        },
+        {
+          "url": "https://tether.to/en/legal/",
+          "observedAt": "2026-10-03T23:55:06Z",
+          "datumAsOf": "2026-02-26",
+          "location": "Section 4.5: Risk of Wrapped or Bridged Tokens",
+          "excerpt": "These Digital Tokens are not Tether Tokens.",
+          "assertion": "Tether distinguishes third-party wrapped claims from directly redeemable tokens; the BNB/Plasma Nest balance row is not certified by Tether's fiat-redemption terms."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.nest.credit/about/vault-operations-and-valuation",
+        "https://docs.nest.credit/about/liquidity-and-redemptions",
+        "https://docs.nest.credit/security-and-compliance/terms-and-conditions",
+        "https://docs.nest.credit/security-and-compliance/audits",
+        "https://airtable.com/appXyH9re7Q1awigg/shrcPf6VbAJk1SXj9",
+        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/contracts/operators/README.md",
+        "https://api.nest.credit/v1/vaults/nest-treasury-vault/positions",
+        "https://docs.superstate.com/investors/tokenized-funds/redeem",
+        "https://docs.superstate.com/investors/tokenized-funds/available-funds/invesco-ustb.md",
+        "https://superstate.com/assets/ustb",
+        "https://anemoy.io/funds/jtrsy",
+        "https://www.circle.com/legal/usdc-terms",
+        "https://tether.to/en/legal/",
+        "https://docs.plume.org/plume/tokens/plume-usd"
+      ],
+      "rationale": "Exact missing datum is full scoped realization horizon for nTBILL USDC, USDT, JTRSY and USTB, not token transfer speed or vault-user queue timing. Exact positions identify multi-chain USDC, BNB/Plasma USDT claims and Plume funds. Nest operations/legal, Circle/Tether redemption conditions and fund dealing/risk surfaces provide conditional eligibility/liquidity, not asset/chain-complete realization bounds for these rows. No final cash or whole-position scalar is inferred from liquidAssets labels or daily redemption access."
+    },
+    {
+      "id": "uw-ntbill-nest-a82cc12f5b12eb4d",
+      "assetId": "ntbill-nest",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:7ba55b514c082fa673049734",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:55:06Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R52)",
+      "sources": [
+        {
+          "url": "https://docs.nest.credit/about/vault-operations-and-valuation",
+          "observedAt": "2026-10-03T23:49:10Z",
+          "datumAsOf": null,
+          "location": "Standard/Instant Redemption",
+          "excerpt": "Instant redemption availability is not guaranteed. It depends on current vault liquidity, supported redemption assets, chain-specific balances, and vault configuration.",
+          "assertion": "Published availability is conditional; no entire-position per-slice realization maximum is stated."
+        },
+        {
+          "url": "https://anemoy.io/funds/jtrsy",
+          "observedAt": "2026-10-03T23:49:10Z",
+          "datumAsOf": null,
+          "location": "Daily Liquidity",
+          "excerpt": "The fund balances monthly, offers daily redemptions, holds US T-Bills with a max maturity of 6-months, and focuses on maximizing interest rates and minimizing price and duration risks.",
+          "assertion": "Daily dealing is disclosed; no all-position Plume redemption-to-final-output maximum is published."
+        },
+        {
+          "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/invesco-ustb.md",
+          "observedAt": "2026-10-03T23:49:10Z",
+          "datumAsOf": null,
+          "location": "Redeeming",
+          "excerpt": "Proceeds are delivered immediately (including non-business days, subject to available liquidity) for payout requests in USDC, or same-day for USD if received before 1pm ET.",
+          "assertion": "Issuer payout terms are liquidity-dependent rather than an unconditional whole-position horizon."
+        },
+        {
+          "url": "https://www.circle.com/legal/usdc-terms",
+          "observedAt": "2026-10-03T23:55:06Z",
+          "datumAsOf": "2025-12-12",
+          "location": "Section 2: User Type B",
+          "excerpt": "You may not redeem USDC with Circle unless and until you open a Circle Mint account.",
+          "assertion": "Direct fiat redemption is eligibility-gated; these terms do not certify Nest's all-chain scoped USDC balance realization horizon."
+        },
+        {
+          "url": "https://tether.to/en/legal/",
+          "observedAt": "2026-10-03T23:55:06Z",
+          "datumAsOf": "2026-02-26",
+          "location": "Section 4.5: Risk of Wrapped or Bridged Tokens",
+          "excerpt": "These Digital Tokens are not Tether Tokens.",
+          "assertion": "Tether distinguishes third-party wrapped claims from directly redeemable tokens; the BNB/Plasma Nest balance row is not certified by Tether's fiat-redemption terms."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.nest.credit/about/vault-operations-and-valuation",
+        "https://docs.nest.credit/about/liquidity-and-redemptions",
+        "https://docs.nest.credit/security-and-compliance/terms-and-conditions",
+        "https://docs.nest.credit/security-and-compliance/audits",
+        "https://airtable.com/appXyH9re7Q1awigg/shrcPf6VbAJk1SXj9",
+        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/contracts/operators/README.md",
+        "https://api.nest.credit/v1/vaults/nest-treasury-vault/positions",
+        "https://docs.superstate.com/investors/tokenized-funds/redeem",
+        "https://docs.superstate.com/investors/tokenized-funds/available-funds/invesco-ustb.md",
+        "https://superstate.com/assets/ustb",
+        "https://anemoy.io/funds/jtrsy",
+        "https://www.circle.com/legal/usdc-terms",
+        "https://tether.to/en/legal/",
+        "https://docs.plume.org/plume/tokens/plume-usd"
+      ],
+      "rationale": "Exact missing datum is full scoped realization horizon for nTBILL USDC, USDT, JTRSY and USTB, not token transfer speed or vault-user queue timing. Exact positions identify multi-chain USDC, BNB/Plasma USDT claims and Plume funds. Nest operations/legal, Circle/Tether redemption conditions and fund dealing/risk surfaces provide conditional eligibility/liquidity, not asset/chain-complete realization bounds for these rows. No final cash or whole-position scalar is inferred from liquidAssets labels or daily redemption access."
+    },
+    {
+      "id": "uw-ntbill-nest-1cc1d10d6989f0ef",
+      "assetId": "ntbill-nest",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:9b0b1f54a7f7ddb167a426d6",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:55:06Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R52)",
+      "sources": [
+        {
+          "url": "https://docs.nest.credit/about/vault-operations-and-valuation",
+          "observedAt": "2026-10-03T23:49:10Z",
+          "datumAsOf": null,
+          "location": "Standard/Instant Redemption",
+          "excerpt": "Instant redemption availability is not guaranteed. It depends on current vault liquidity, supported redemption assets, chain-specific balances, and vault configuration.",
+          "assertion": "Published availability is conditional; no entire-position per-slice realization maximum is stated."
+        },
+        {
+          "url": "https://anemoy.io/funds/jtrsy",
+          "observedAt": "2026-10-03T23:49:10Z",
+          "datumAsOf": null,
+          "location": "Daily Liquidity",
+          "excerpt": "The fund balances monthly, offers daily redemptions, holds US T-Bills with a max maturity of 6-months, and focuses on maximizing interest rates and minimizing price and duration risks.",
+          "assertion": "Daily dealing is disclosed; no all-position Plume redemption-to-final-output maximum is published."
+        },
+        {
+          "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/invesco-ustb.md",
+          "observedAt": "2026-10-03T23:49:10Z",
+          "datumAsOf": null,
+          "location": "Redeeming",
+          "excerpt": "Proceeds are delivered immediately (including non-business days, subject to available liquidity) for payout requests in USDC, or same-day for USD if received before 1pm ET.",
+          "assertion": "Issuer payout terms are liquidity-dependent rather than an unconditional whole-position horizon."
+        },
+        {
+          "url": "https://www.circle.com/legal/usdc-terms",
+          "observedAt": "2026-10-03T23:55:06Z",
+          "datumAsOf": "2025-12-12",
+          "location": "Section 2: User Type B",
+          "excerpt": "You may not redeem USDC with Circle unless and until you open a Circle Mint account.",
+          "assertion": "Direct fiat redemption is eligibility-gated; these terms do not certify Nest's all-chain scoped USDC balance realization horizon."
+        },
+        {
+          "url": "https://tether.to/en/legal/",
+          "observedAt": "2026-10-03T23:55:06Z",
+          "datumAsOf": "2026-02-26",
+          "location": "Section 4.5: Risk of Wrapped or Bridged Tokens",
+          "excerpt": "These Digital Tokens are not Tether Tokens.",
+          "assertion": "Tether distinguishes third-party wrapped claims from directly redeemable tokens; the BNB/Plasma Nest balance row is not certified by Tether's fiat-redemption terms."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.nest.credit/about/vault-operations-and-valuation",
+        "https://docs.nest.credit/about/liquidity-and-redemptions",
+        "https://docs.nest.credit/security-and-compliance/terms-and-conditions",
+        "https://docs.nest.credit/security-and-compliance/audits",
+        "https://airtable.com/appXyH9re7Q1awigg/shrcPf6VbAJk1SXj9",
+        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/contracts/operators/README.md",
+        "https://api.nest.credit/v1/vaults/nest-treasury-vault/positions",
+        "https://docs.superstate.com/investors/tokenized-funds/redeem",
+        "https://docs.superstate.com/investors/tokenized-funds/available-funds/invesco-ustb.md",
+        "https://superstate.com/assets/ustb",
+        "https://anemoy.io/funds/jtrsy",
+        "https://www.circle.com/legal/usdc-terms",
+        "https://tether.to/en/legal/",
+        "https://docs.plume.org/plume/tokens/plume-usd"
+      ],
+      "rationale": "Exact missing datum is full scoped realization horizon for nTBILL USDC, USDT, JTRSY and USTB, not token transfer speed or vault-user queue timing. Exact positions identify multi-chain USDC, BNB/Plasma USDT claims and Plume funds. Nest operations/legal, Circle/Tether redemption conditions and fund dealing/risk surfaces provide conditional eligibility/liquidity, not asset/chain-complete realization bounds for these rows. No final cash or whole-position scalar is inferred from liquidAssets labels or daily redemption access."
+    },
+    {
+      "id": "uw-ntbill-nest-c4e6ef12b19385b3",
+      "assetId": "ntbill-nest",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:e83e3d84c18208edc253be48",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:55:06Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R52)",
+      "sources": [
+        {
+          "url": "https://docs.nest.credit/about/vault-operations-and-valuation",
+          "observedAt": "2026-10-03T23:49:10Z",
+          "datumAsOf": null,
+          "location": "Standard/Instant Redemption",
+          "excerpt": "Instant redemption availability is not guaranteed. It depends on current vault liquidity, supported redemption assets, chain-specific balances, and vault configuration.",
+          "assertion": "Published availability is conditional; no entire-position per-slice realization maximum is stated."
+        },
+        {
+          "url": "https://anemoy.io/funds/jtrsy",
+          "observedAt": "2026-10-03T23:49:10Z",
+          "datumAsOf": null,
+          "location": "Daily Liquidity",
+          "excerpt": "The fund balances monthly, offers daily redemptions, holds US T-Bills with a max maturity of 6-months, and focuses on maximizing interest rates and minimizing price and duration risks.",
+          "assertion": "Daily dealing is disclosed; no all-position Plume redemption-to-final-output maximum is published."
+        },
+        {
+          "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/invesco-ustb.md",
+          "observedAt": "2026-10-03T23:49:10Z",
+          "datumAsOf": null,
+          "location": "Redeeming",
+          "excerpt": "Proceeds are delivered immediately (including non-business days, subject to available liquidity) for payout requests in USDC, or same-day for USD if received before 1pm ET.",
+          "assertion": "Issuer payout terms are liquidity-dependent rather than an unconditional whole-position horizon."
+        },
+        {
+          "url": "https://www.circle.com/legal/usdc-terms",
+          "observedAt": "2026-10-03T23:55:06Z",
+          "datumAsOf": "2025-12-12",
+          "location": "Section 2: User Type B",
+          "excerpt": "You may not redeem USDC with Circle unless and until you open a Circle Mint account.",
+          "assertion": "Direct fiat redemption is eligibility-gated; these terms do not certify Nest's all-chain scoped USDC balance realization horizon."
+        },
+        {
+          "url": "https://tether.to/en/legal/",
+          "observedAt": "2026-10-03T23:55:06Z",
+          "datumAsOf": "2026-02-26",
+          "location": "Section 4.5: Risk of Wrapped or Bridged Tokens",
+          "excerpt": "These Digital Tokens are not Tether Tokens.",
+          "assertion": "Tether distinguishes third-party wrapped claims from directly redeemable tokens; the BNB/Plasma Nest balance row is not certified by Tether's fiat-redemption terms."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.nest.credit/about/vault-operations-and-valuation",
+        "https://docs.nest.credit/about/liquidity-and-redemptions",
+        "https://docs.nest.credit/security-and-compliance/terms-and-conditions",
+        "https://docs.nest.credit/security-and-compliance/audits",
+        "https://airtable.com/appXyH9re7Q1awigg/shrcPf6VbAJk1SXj9",
+        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/contracts/operators/README.md",
+        "https://api.nest.credit/v1/vaults/nest-treasury-vault/positions",
+        "https://docs.superstate.com/investors/tokenized-funds/redeem",
+        "https://docs.superstate.com/investors/tokenized-funds/available-funds/invesco-ustb.md",
+        "https://superstate.com/assets/ustb",
+        "https://anemoy.io/funds/jtrsy",
+        "https://www.circle.com/legal/usdc-terms",
+        "https://tether.to/en/legal/",
+        "https://docs.plume.org/plume/tokens/plume-usd"
+      ],
+      "rationale": "Exact missing datum is full scoped realization horizon for nTBILL USDC, USDT, JTRSY and USTB, not token transfer speed or vault-user queue timing. Exact positions identify multi-chain USDC, BNB/Plasma USDT claims and Plume funds. Nest operations/legal, Circle/Tether redemption conditions and fund dealing/risk surfaces provide conditional eligibility/liquidity, not asset/chain-complete realization bounds for these rows. No final cash or whole-position scalar is inferred from liquidAssets labels or daily redemption access."
+    },
+    {
+      "id": "uw-nopal-nest-3dab9c6a4d8e0460",
+      "assetId": "nopal-nest",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:nopal-nest:queue-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:00Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R62)",
+      "sources": [
+        {
+          "url": "https://docs.nest.credit/about/liquidity-and-redemptions",
+          "observedAt": "2026-10-03T22:45:46Z",
+          "datumAsOf": null,
+          "location": "Queued (Asynchronous) Redemption",
+          "excerpt": "Larger withdrawals, or redemptions submitted when available liquidity is limited, may require additional time as positions are unwound in an orderly manner.",
+          "assertion": "Typical T+2 to T+5 ranges are qualified; no unconditional final settlement maximum for the modeled nOPAL/nBASIS queued exit is established."
+        },
+        {
+          "url": "https://docs.nest.credit/about/vault-operations-and-valuation",
+          "observedAt": "2026-10-03T22:45:46Z",
+          "datumAsOf": null,
+          "location": "Standard Redemption",
+          "excerpt": "A user submits a redemption request, and the vault processes that request as liquidity becomes available.",
+          "assertion": "Completion remains liquidity-dependent rather than a guaranteed SLA."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.nest.credit/",
+        "https://docs.nest.credit/about/available-vaults",
+        "https://docs.nest.credit/about/liquidity-and-redemptions",
+        "https://docs.nest.credit/about/vault-operations-and-valuation",
+        "https://docs.nest.credit/security-and-compliance/terms-and-conditions",
+        "https://docs.nest.credit/developers/integration-guides/nopal",
+        "https://docs.nest.credit/developers/actions-api/reference/vaults/slug/redeem/quote/post",
+        "https://api.nest.credit/v1/vaults/nest-basis-vault",
+        "https://api.nest.credit/v1/vaults/nest-opal-vault",
+        "https://github.com/plumenetwork/nest-protocol/blob/main/contracts/README.md"
+      ],
+      "rationale": "The exact datum is final queued-redemption settlement maximum at the modeled notional. Reviewed legal terms, integration/API flow, vault directory, liquidity policy and permissioned fulfillment documentation publish estimates and liquidity-dependent processing, not a binding asset-specific completion maximum. Current nOPAL T+1 is explicitly an estimate; typical hour/T+2\u2013T+5 figures are not guaranteed. nBASIS remains in the exact registry but is absent from the current Arc-only directory."
+    },
+    {
+      "id": "uw-nbasis-nest-6f7a192f3a41646b",
+      "assetId": "nbasis-nest",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:nbasis-nest:queue-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:00Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R62)",
+      "sources": [
+        {
+          "url": "https://docs.nest.credit/about/liquidity-and-redemptions",
+          "observedAt": "2026-10-03T22:45:46Z",
+          "datumAsOf": null,
+          "location": "Queued (Asynchronous) Redemption",
+          "excerpt": "Larger withdrawals, or redemptions submitted when available liquidity is limited, may require additional time as positions are unwound in an orderly manner.",
+          "assertion": "Typical T+2 to T+5 ranges are qualified; no unconditional final settlement maximum for the modeled nOPAL/nBASIS queued exit is established."
+        },
+        {
+          "url": "https://docs.nest.credit/about/vault-operations-and-valuation",
+          "observedAt": "2026-10-03T22:45:46Z",
+          "datumAsOf": null,
+          "location": "Standard Redemption",
+          "excerpt": "A user submits a redemption request, and the vault processes that request as liquidity becomes available.",
+          "assertion": "Completion remains liquidity-dependent rather than a guaranteed SLA."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.nest.credit/",
+        "https://docs.nest.credit/about/available-vaults",
+        "https://docs.nest.credit/about/liquidity-and-redemptions",
+        "https://docs.nest.credit/about/vault-operations-and-valuation",
+        "https://docs.nest.credit/security-and-compliance/terms-and-conditions",
+        "https://docs.nest.credit/developers/integration-guides/nopal",
+        "https://docs.nest.credit/developers/actions-api/reference/vaults/slug/redeem/quote/post",
+        "https://api.nest.credit/v1/vaults/nest-basis-vault",
+        "https://api.nest.credit/v1/vaults/nest-opal-vault",
+        "https://github.com/plumenetwork/nest-protocol/blob/main/contracts/README.md"
+      ],
+      "rationale": "The exact datum is final queued-redemption settlement maximum at the modeled notional. Reviewed legal terms, integration/API flow, vault directory, liquidity policy and permissioned fulfillment documentation publish estimates and liquidity-dependent processing, not a binding asset-specific completion maximum. Current nOPAL T+1 is explicitly an estimate; typical hour/T+2\u2013T+5 figures are not guaranteed. nBASIS remains in the exact registry but is absent from the current Arc-only directory."
+    },
+    {
+      "id": "uw-nbasis-nest-3ad3ab86cf507742",
+      "assetId": "nbasis-nest",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:215f3e73e97f6f3aa668dcb6",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:00Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R62)",
+      "sources": [
+        {
+          "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc",
+          "observedAt": "2026-10-03T22:45:46Z",
+          "datumAsOf": null,
+          "location": "Fund information and Documents",
+          "excerpt": "Fund documents and statements are available in the Investor Portal.",
+          "assertion": "Public USCC terms disclose NAV and daily dealing but no maturity maximum for the fund-share claim held by nBASIS."
+        },
+        {
+          "url": "https://superstate.com/assets/ustb",
+          "observedAt": "2026-10-03T22:45:46Z",
+          "datumAsOf": "2026-09-21",
+          "location": "About USTB and holdings",
+          "excerpt": "Ownership in the Fund is represented by USTB, held either as a token or in book-entry record keeping.",
+          "assertion": "Treasury holding maturity dates are not the maturity of the USTB fund-share claim."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://api.nest.credit/v1/vaults/nest-basis-vault/positions",
+        "https://superstate.com/assets/uscc",
+        "https://superstate.com/assets/ustb",
+        "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc",
+        "https://docs.superstate.com/investors/tokenized-funds/available-funds/invesco-ustb",
+        "https://docs.superstate.com/investors/tokenized-funds/redeem",
+        "https://superstate.com/assets/uscc#disclaimers",
+        "https://superstate.com/assets/ustb#disclaimers"
+      ],
+      "rationale": "Exact missing datum: maximum maturity days of nBASIS's USCC and USTB fund-share claims, not futures/T-bills in their underlying portfolios. Public issuer fund pages, current holdings, legal risk disclosures and investor dealing docs identify rolling NAV shares with liquidity schedules, not a hard termination/maturity maximum. Definitive investor documents are supplied privately through the Investor Portal; no public claim-level maximum was located. Do not use a Treasury holding maturity or WAM as a share maturity."
+    },
+    {
+      "id": "uw-nbasis-nest-88f4423aa534e97a",
+      "assetId": "nbasis-nest",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:e83e3d84c18208edc253be48",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:51:00Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R62)",
+      "sources": [
+        {
+          "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc",
+          "observedAt": "2026-10-03T22:45:46Z",
+          "datumAsOf": null,
+          "location": "Fund information and Documents",
+          "excerpt": "Fund documents and statements are available in the Investor Portal.",
+          "assertion": "Public USCC terms disclose NAV and daily dealing but no maturity maximum for the fund-share claim held by nBASIS."
+        },
+        {
+          "url": "https://superstate.com/assets/ustb",
+          "observedAt": "2026-10-03T22:45:46Z",
+          "datumAsOf": "2026-09-21",
+          "location": "About USTB and holdings",
+          "excerpt": "Ownership in the Fund is represented by USTB, held either as a token or in book-entry record keeping.",
+          "assertion": "Treasury holding maturity dates are not the maturity of the USTB fund-share claim."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://api.nest.credit/v1/vaults/nest-basis-vault/positions",
+        "https://superstate.com/assets/uscc",
+        "https://superstate.com/assets/ustb",
+        "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc",
+        "https://docs.superstate.com/investors/tokenized-funds/available-funds/invesco-ustb",
+        "https://docs.superstate.com/investors/tokenized-funds/redeem",
+        "https://superstate.com/assets/uscc#disclaimers",
+        "https://superstate.com/assets/ustb#disclaimers"
+      ],
+      "rationale": "Exact missing datum: maximum maturity days of nBASIS's USCC and USTB fund-share claims, not futures/T-bills in their underlying portfolios. Public issuer fund pages, current holdings, legal risk disclosures and investor dealing docs identify rolling NAV shares with liquidity schedules, not a hard termination/maturity maximum. Definitive investor documents are supplied privately through the Investor Portal; no public claim-level maximum was located. Do not use a Treasury holding maturity or WAM as a share maturity."
+    },
+    {
+      "id": "uw-nopal-nest-6dd90e76d5279677",
+      "assetId": "nopal-nest",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:nopal-nest:queue-redeem"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T22:56:50Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R62)",
+      "sources": [
+        {
+          "url": "https://api.nest.credit/v1/actions/vaults/nest-opal-vault/redeem/quote",
+          "observedAt": "2026-10-03T22:51:00Z",
+          "datumAsOf": null,
+          "location": "Read-only POST: chainId 98866, redemptionType nest, shareAmount 100000000000, redemptionAsset 0x222365ef19f7947e5484218551b56bb3965aa7af",
+          "excerpt": "\"feeAmount\":\"16532985\",\"fees\":{\"ratePpm\":150,\"flatAmount\":\"0\",\"maxRatePpm\":1500,\"maxFlatAmount\":\"0\"}",
+          "assertion": "Published dynamic queued-redemption fee: percentage plus flat amount, quoted for the exact nOPAL route. Current static issuer-API basket producer does not evaluate this per chain/output/notional; W15 disclosed-unquantified, not universal zero or known all-in fee."
+        },
+        {
+          "url": "https://github.com/plumenetwork/nest-protocol/blob/main/contracts/libraries/NestVaultRedeemLogic.sol",
+          "observedAt": "2026-10-03T22:56:50Z",
+          "datumAsOf": null,
+          "location": "executeFulfillRedeem",
+          "excerpt": "_amountReceived.calculatePostFeeAmounts(_feeConfig.rate, _feeConfig.flat);",
+          "assertion": "The applicable asynchronous-redemption formula is public. Need live fee/rate parameters and a same-notional quote evaluation; a static asset-wide fixed-bps field cannot encode the multi-chain formula observation."
+        }
+      ]
+    },
+    {
+      "id": "uw-nbasis-nest-4249c0717ef50632",
+      "assetId": "nbasis-nest",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:nbasis-nest:queue-redeem"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T22:56:50Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R62)",
+      "sources": [
+        {
+          "url": "https://api.nest.credit/v1/actions/vaults/nest-basis-vault/redeem/quote",
+          "observedAt": "2026-10-03T22:51:00Z",
+          "datumAsOf": null,
+          "location": "Read-only POST: chainId 98866, redemptionType nest, shareAmount 100000000000, redemptionAsset 0x222365ef19f7947e5484218551b56bb3965aa7af",
+          "excerpt": "\"feeAmount\":\"0\",\"fees\":{\"ratePpm\":0,\"flatAmount\":\"0\",\"maxRatePpm\":0,\"maxFlatAmount\":\"0\"}",
+          "assertion": "Exact live nBASIS queued-exit fee parameters are public under the documented rate-plus-flat formula. The fixed basket producer lacks chain/output/notional quote evaluation; W15 B does not claim zero all-in cost or future fixed fee."
+        },
+        {
+          "url": "https://github.com/plumenetwork/nest-protocol/blob/main/contracts/README.md",
+          "observedAt": "2026-10-03T22:51:00Z",
+          "datumAsOf": null,
+          "location": "Async redemption and Fees",
+          "excerpt": "Vault fees then apply to individual deposits, async-redemption fulfillments, and instant redemptions.",
+          "assertion": "The public fee schedule is configuration-driven and route-specific. Static global fixedFee(0) would overstate the observed one-chain quote and omit gas or other output-chain parameters."
+        }
+      ]
+    },
+    {
+      "id": "uw-idrt-rupiah-token-cd6ec83654e6bda2",
+      "assetId": "idrt-rupiah-token",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:idrt-rupiah-token:offchain-issuer"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T23:21:02Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R75)",
+      "sources": [
+        {
+          "url": "https://rupiahtoken.com/faq/berapa-biaya-pencairan-idrt-ke-idr",
+          "observedAt": "2026-10-03T23:18:49Z",
+          "datumAsOf": null,
+          "location": "Issuer disclosure",
+          "excerpt": "Biaya penarikan (withdrawal fee) IDRT ke IDR adalah 0,5% + biaya transfer bank Rp 6500,- (jika ada)",
+          "assertion": "Published 50 bps plus conditional IDR 6,500 formula requires same-notional FX and applicability evaluation; current undisclosedReviewedFee model does not evaluate it."
+        }
+      ]
+    },
+    {
+      "id": "uw-idrt-rupiah-token-8652780fedbd2ef8",
+      "assetId": "idrt-rupiah-token",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:a04ce16f6cdeba9c7105a50e",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:21:02Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R75)",
+      "sources": [
+        {
+          "url": "https://s3.ap-southeast-1.amazonaws.com/content.rupiahtoken.com/AUP_PT_Rupiah_Token_Indonesia_FPE_Aug_31_2026_70d8e0d4cf.pdf?updated_at=2026-09-29T09:04:00.517Z",
+          "observedAt": "2026-10-03T23:18:49Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Appendix 1, procedure 3",
+          "excerpt": "Obtain a copy of the bank statements and deposit certificates for each bank account and time deposits used as collateral for Rupiah Token at the end of each month.",
+          "assertion": "AUP discloses bank accounts and time deposits, but no certificate maturity dates, contractual maximum or whole-slice realizability bound."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://rupiahtoken.com/",
+        "https://rupiahtoken.com/faq",
+        "https://rupiahtoken.com/legal/terms",
+        "https://rupiahtoken.com/whitepaper.pdf",
+        "https://s3.ap-southeast-1.amazonaws.com/content.rupiahtoken.com/AUP_PT_Rupiah_Token_Indonesia_FPE_Aug_31_2026_70d8e0d4cf.pdf?updated_at=2026-09-29T09:04:00.517Z",
+        "https://rupiahtoken.com/faq/dimana-cadangan-uang-backing-rupiah-token-disimpan-apa-buktinya"
+      ],
+      "rationale": "Maximum contractual deposit maturity and entire-slice liquidation horizon for IDR bank accounts/time deposits are not disclosed. The August AUP names the types and aggregate collateral; FAQ, whitepaper and redemption disclosures do not publish the deposit certificates, lock/early-break terms or maturity ladder. Holder redemption mechanics are not reserve liquidation proof."
+    },
+    {
+      "id": "uw-idrt-rupiah-token-15c57e783254758a",
+      "assetId": "idrt-rupiah-token",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:a04ce16f6cdeba9c7105a50e",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:21:02Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R75)",
+      "sources": [
+        {
+          "url": "https://s3.ap-southeast-1.amazonaws.com/content.rupiahtoken.com/AUP_PT_Rupiah_Token_Indonesia_FPE_Aug_31_2026_70d8e0d4cf.pdf?updated_at=2026-09-29T09:04:00.517Z",
+          "observedAt": "2026-10-03T23:18:49Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Appendix 1, procedure 3",
+          "excerpt": "Obtain a copy of the bank statements and deposit certificates for each bank account and time deposits used as collateral for Rupiah Token at the end of each month.",
+          "assertion": "AUP discloses bank accounts and time deposits, but no certificate maturity dates, contractual maximum or whole-slice realizability bound."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://rupiahtoken.com/",
+        "https://rupiahtoken.com/faq",
+        "https://rupiahtoken.com/legal/terms",
+        "https://rupiahtoken.com/whitepaper.pdf",
+        "https://s3.ap-southeast-1.amazonaws.com/content.rupiahtoken.com/AUP_PT_Rupiah_Token_Indonesia_FPE_Aug_31_2026_70d8e0d4cf.pdf?updated_at=2026-09-29T09:04:00.517Z",
+        "https://rupiahtoken.com/faq/dimana-cadangan-uang-backing-rupiah-token-disimpan-apa-buktinya"
+      ],
+      "rationale": "Maximum contractual deposit maturity and entire-slice liquidation horizon for IDR bank accounts/time deposits are not disclosed. The August AUP names the types and aggregate collateral; FAQ, whitepaper and redemption disclosures do not publish the deposit certificates, lock/early-break terms or maturity ladder. Holder redemption mechanics are not reserve liquidation proof."
+    },
+    {
+      "id": "uw-usdu-universal-70710eb41ecaaa20",
+      "assetId": "usdu-universal",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:9aa6907919efd87e0fbde46b",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:21:02Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R75)",
+      "sources": [
+        {
+          "url": "https://cdn.prod.website-files.com/68cf1072d23d4d5b68d8f496/6aba3d94e9697870784a49e5_Final%20USDU%20Examination%20Report%20-%20August%202026%20Countersigned.pdf",
+          "observedAt": "2026-10-03T23:18:49Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Reserve report notes",
+          "excerpt": "USDU reserves will only be invested in fiat deposits in UAE Central Bank regulated Banks",
+          "assertion": "Deposit category is disclosed without contractual maturity or reserve-account withdrawal/realization maximum."
+        },
+        {
+          "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf",
+          "observedAt": "2026-10-03T23:18:49Z",
+          "datumAsOf": "2026-01-30",
+          "location": "Page 10",
+          "excerpt": "Typically burning and redemption will take 2 business days, following the completion of any required customer due diligence.",
+          "assertion": "Typical customer redemption is not a bank-deposit maturity or entire reserve realization covenant."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.universal.ae/",
+        "https://www.universal.ae/transparency",
+        "https://cdn.prod.website-files.com/68cf1072d23d4d5b68d8f496/6aba3d94e9697870784a49e5_Final%20USDU%20Examination%20Report%20-%20August%202026%20Countersigned.pdf",
+        "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf",
+        "https://www.adgm.com/public-registers/fsra/firms/financial-firms/universal-digital-intl-limited-250089"
+      ],
+      "rationale": "The USD bank-deposit slice has no disclosed contractual maturity maximum or full-book realization horizon. Crowe confirms aggregate bank balances without account terms. Whitepaper reserve mandate, transparency archive, issuer banking disclosures and FSRA register do not supply deposit certificates or withdrawal/lock terms; typical client redemption is not reserve liquidity."
+    },
+    {
+      "id": "uw-usdu-universal-6bc842b99a7e8e6e",
+      "assetId": "usdu-universal",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:9aa6907919efd87e0fbde46b",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:21:02Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R75)",
+      "sources": [
+        {
+          "url": "https://cdn.prod.website-files.com/68cf1072d23d4d5b68d8f496/6aba3d94e9697870784a49e5_Final%20USDU%20Examination%20Report%20-%20August%202026%20Countersigned.pdf",
+          "observedAt": "2026-10-03T23:18:49Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Reserve report notes",
+          "excerpt": "USDU reserves will only be invested in fiat deposits in UAE Central Bank regulated Banks",
+          "assertion": "Deposit category is disclosed without contractual maturity or reserve-account withdrawal/realization maximum."
+        },
+        {
+          "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf",
+          "observedAt": "2026-10-03T23:18:49Z",
+          "datumAsOf": "2026-01-30",
+          "location": "Page 10",
+          "excerpt": "Typically burning and redemption will take 2 business days, following the completion of any required customer due diligence.",
+          "assertion": "Typical customer redemption is not a bank-deposit maturity or entire reserve realization covenant."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.universal.ae/",
+        "https://www.universal.ae/transparency",
+        "https://cdn.prod.website-files.com/68cf1072d23d4d5b68d8f496/6aba3d94e9697870784a49e5_Final%20USDU%20Examination%20Report%20-%20August%202026%20Countersigned.pdf",
+        "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf",
+        "https://www.adgm.com/public-registers/fsra/firms/financial-firms/universal-digital-intl-limited-250089"
+      ],
+      "rationale": "The USD bank-deposit slice has no disclosed contractual maturity maximum or full-book realization horizon. Crowe confirms aggregate bank balances without account terms. Whitepaper reserve mandate, transparency archive, issuer banking disclosures and FSRA register do not supply deposit certificates or withdrawal/lock terms; typical client redemption is not reserve liquidity."
+    },
+    {
+      "id": "uw-vchf-vnx-f9f0e4372b4f1498",
+      "assetId": "vchf-vnx",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:vchf-vnx:offchain-issuer"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T23:21:02Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R75)",
+      "sources": [
+        {
+          "url": "https://prod-global-terms.s3.sa-east-1.amazonaws.com/VNX-Global-Terms.pdf",
+          "observedAt": "2026-10-03T23:19:52Z",
+          "datumAsOf": null,
+          "location": "Annex III C, fiat withdrawal fees",
+          "excerpt": "Every time you withdraw fiat funds from your Platform User Account you will be charged the fee in the amount of GBP 30 and CHF 30 for SWIFT transfers.",
+          "assertion": "Public CHF 30 SWIFT fee plus conditional unused-funds percentage requires FX and account-history scenario evaluation, absent from current route cost model."
+        }
+      ]
+    },
+    {
+      "id": "uw-vchf-vnx-6d00ae72f2dbfd80",
+      "assetId": "vchf-vnx",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:21:02Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R75)",
+      "sources": [
+        {
+          "url": "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf",
+          "observedAt": "2026-10-03T23:19:52Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Sections 2.1-2.3",
+          "excerpt": "For purposes of this report, the Covered Stablecoins are limited to the VCHF and VGBP tokens listed below on the identified blockchains.",
+          "assertion": "Scoped report covers six VCHF chains, not a reconciled all-deployment token liability perimeter."
+        },
+        {
+          "url": "https://vnx.gitbook.io/vnx-global/transparency/standards-and-contracts.md",
+          "observedAt": "2026-10-03T23:19:52Z",
+          "datumAsOf": null,
+          "location": "Overview and VCHF contract registry",
+          "excerpt": "Every deployment listed below represents the same underlying claim against VNX's segregated reserves.",
+          "assertion": "Current registry additionally lists Tezos while the examined VCHF schedule omits Tezos; older catalog deployments also lack an explicit current liability bridge."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://vnx.li/",
+        "https://vnx.io/swiss-franc",
+        "https://faq.vnx.io/en/",
+        "https://vnx.gitbook.io/vnx-global/transparency/audits.md",
+        "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf",
+        "https://prod-global-terms.s3.sa-east-1.amazonaws.com/VNX-Global-Terms.pdf",
+        "https://vnx.gitbook.io/vnx-global/transparency/standards-and-contracts.md",
+        "https://vnx.gitbook.io/vnx-global/institutional/reserve/reserve-management.md"
+      ],
+      "rationale": "The current whole-VCHF reserve composition, whole-supply reconciliation cadence and assurance join remain undisclosed across all retained liabilities. Apex publishes a genuine CHF cash examination for six chains, but omits registry-listed Tezos and gives no reconciliation of legacy catalog deployments, excluded supply and migration into this covered book. Daily valuation and monthly scoped examinations do not establish that missing whole-liability perimeter."
+    },
+    {
+      "id": "uw-vchf-vnx-87b280d41e0226d5",
+      "assetId": "vchf-vnx",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:21:02Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R75)",
+      "sources": [
+        {
+          "url": "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf",
+          "observedAt": "2026-10-03T23:19:52Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Sections 2.1-2.3",
+          "excerpt": "For purposes of this report, the Covered Stablecoins are limited to the VCHF and VGBP tokens listed below on the identified blockchains.",
+          "assertion": "Scoped report covers six VCHF chains, not a reconciled all-deployment token liability perimeter."
+        },
+        {
+          "url": "https://vnx.gitbook.io/vnx-global/transparency/standards-and-contracts.md",
+          "observedAt": "2026-10-03T23:19:52Z",
+          "datumAsOf": null,
+          "location": "Overview and VCHF contract registry",
+          "excerpt": "Every deployment listed below represents the same underlying claim against VNX's segregated reserves.",
+          "assertion": "Current registry additionally lists Tezos while the examined VCHF schedule omits Tezos; older catalog deployments also lack an explicit current liability bridge."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://vnx.li/",
+        "https://vnx.io/swiss-franc",
+        "https://faq.vnx.io/en/",
+        "https://vnx.gitbook.io/vnx-global/transparency/audits.md",
+        "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf",
+        "https://prod-global-terms.s3.sa-east-1.amazonaws.com/VNX-Global-Terms.pdf",
+        "https://vnx.gitbook.io/vnx-global/transparency/standards-and-contracts.md",
+        "https://vnx.gitbook.io/vnx-global/institutional/reserve/reserve-management.md"
+      ],
+      "rationale": "The current whole-VCHF reserve composition, whole-supply reconciliation cadence and assurance join remain undisclosed across all retained liabilities. Apex publishes a genuine CHF cash examination for six chains, but omits registry-listed Tezos and gives no reconciliation of legacy catalog deployments, excluded supply and migration into this covered book. Daily valuation and monthly scoped examinations do not establish that missing whole-liability perimeter."
+    },
+    {
+      "id": "uw-vchf-vnx-559f1e6d00625760",
+      "assetId": "vchf-vnx",
+      "scope": {
+        "componentKey": "mechanism-review:assuranceAndReconciliation",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "mechanism-review:assuranceAndReconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:21:02Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R75)",
+      "sources": [
+        {
+          "url": "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf",
+          "observedAt": "2026-10-03T23:19:52Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Sections 2.1-2.3",
+          "excerpt": "For purposes of this report, the Covered Stablecoins are limited to the VCHF and VGBP tokens listed below on the identified blockchains.",
+          "assertion": "Scoped report covers six VCHF chains, not a reconciled all-deployment token liability perimeter."
+        },
+        {
+          "url": "https://vnx.gitbook.io/vnx-global/transparency/standards-and-contracts.md",
+          "observedAt": "2026-10-03T23:19:52Z",
+          "datumAsOf": null,
+          "location": "Overview and VCHF contract registry",
+          "excerpt": "Every deployment listed below represents the same underlying claim against VNX's segregated reserves.",
+          "assertion": "Current registry additionally lists Tezos while the examined VCHF schedule omits Tezos; older catalog deployments also lack an explicit current liability bridge."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://vnx.li/",
+        "https://vnx.io/swiss-franc",
+        "https://faq.vnx.io/en/",
+        "https://vnx.gitbook.io/vnx-global/transparency/audits.md",
+        "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf",
+        "https://prod-global-terms.s3.sa-east-1.amazonaws.com/VNX-Global-Terms.pdf",
+        "https://vnx.gitbook.io/vnx-global/transparency/standards-and-contracts.md",
+        "https://vnx.gitbook.io/vnx-global/institutional/reserve/reserve-management.md"
+      ],
+      "rationale": "The current whole-VCHF reserve composition, whole-supply reconciliation cadence and assurance join remain undisclosed across all retained liabilities. Apex publishes a genuine CHF cash examination for six chains, but omits registry-listed Tezos and gives no reconciliation of legacy catalog deployments, excluded supply and migration into this covered book. Daily valuation and monthly scoped examinations do not establish that missing whole-liability perimeter."
+    },
+    {
+      "id": "uw-vnxau-vnx-3e0cd4acdd66e9ad",
+      "assetId": "vnxau-vnx",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:21:02Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R75)",
+      "sources": [
+        {
+          "url": "https://vnx.li/vnxau-transparency",
+          "observedAt": "2026-10-03T23:19:52Z",
+          "datumAsOf": null,
+          "location": "Audit reports, 31.12.2025",
+          "excerpt": "Gold reserve report on VNXAU gold tokens \u2014 examination of management assertions",
+          "assertion": "Current archive exposes December 31, 2025 report only; current exact full-book composition/reconciliation is not provided."
+        },
+        {
+          "url": "https://vnx.li/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf",
+          "observedAt": "2026-10-03T23:19:52Z",
+          "datumAsOf": "2025-12-31",
+          "location": "Restrictions on procedures, page 7",
+          "excerpt": "Any activity prior to or after that date or time was not considered when testing the assertions described above.",
+          "assertion": "Historical AUP cannot establish current expanded VNXAU deployment supply-to-gold reconciliation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://vnx.li/",
+        "https://vnx.li/vnxau",
+        "https://vnx.li/vnxau-transparency",
+        "https://vnx.li/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf",
+        "https://vnx.io/gold",
+        "https://vnx.gitbook.io/vnx-global/vnx-ecosystem/vnxau.md"
+      ],
+      "rationale": "Current whole-VNXAU reserve composition and assurance/reconciliation for the expanded mint perimeter are not published. The issuer discloses one gram allocated gold and a December 2025 AUP covering five historical deployments; the current case study/transparency names a different four-chain set and no newer full-book report. Historical gold grams cannot be re-dated or treated as a current whole-liability reserve schedule."
+    },
+    {
+      "id": "uw-vnxau-vnx-4c466d398750a000",
+      "assetId": "vnxau-vnx",
+      "scope": {
+        "componentKey": "mechanism-review:assuranceAndReconciliation",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "mechanism-review:assuranceAndReconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:21:02Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R75)",
+      "sources": [
+        {
+          "url": "https://vnx.li/vnxau-transparency",
+          "observedAt": "2026-10-03T23:19:52Z",
+          "datumAsOf": null,
+          "location": "Audit reports, 31.12.2025",
+          "excerpt": "Gold reserve report on VNXAU gold tokens \u2014 examination of management assertions",
+          "assertion": "Current archive exposes December 31, 2025 report only; current exact full-book composition/reconciliation is not provided."
+        },
+        {
+          "url": "https://vnx.li/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf",
+          "observedAt": "2026-10-03T23:19:52Z",
+          "datumAsOf": "2025-12-31",
+          "location": "Restrictions on procedures, page 7",
+          "excerpt": "Any activity prior to or after that date or time was not considered when testing the assertions described above.",
+          "assertion": "Historical AUP cannot establish current expanded VNXAU deployment supply-to-gold reconciliation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://vnx.li/",
+        "https://vnx.li/vnxau",
+        "https://vnx.li/vnxau-transparency",
+        "https://vnx.li/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf",
+        "https://vnx.io/gold",
+        "https://vnx.gitbook.io/vnx-global/vnx-ecosystem/vnxau.md"
+      ],
+      "rationale": "Current whole-VNXAU reserve composition and assurance/reconciliation for the expanded mint perimeter are not published. The issuer discloses one gram allocated gold and a December 2025 AUP covering five historical deployments; the current case study/transparency names a different four-chain set and no newer full-book report. Historical gold grams cannot be re-dated or treated as a current whole-liability reserve schedule."
+    },
+    {
+      "id": "uw-usdv-solomon-v2-3628b08607274051",
+      "assetId": "usdv-solomon-v2",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:21:02Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R75)",
+      "sources": [
+        {
+          "url": "https://docs.solomonlabs.org/usdv/transparency-and-risk",
+          "observedAt": "2026-10-03T23:19:52Z",
+          "datumAsOf": null,
+          "location": "Issuer disclosure",
+          "excerpt": "The USDv dashboard is intended to show:",
+          "assertion": "Dashboard publishes supply and reserves, not a dated full on/offchain asset/liability reconciliation procedure and recurring cadence."
+        },
+        {
+          "url": "https://docs.solomonlabs.org/usdv/peg-stability-and-reserves",
+          "observedAt": "2026-10-03T23:19:52Z",
+          "datumAsOf": null,
+          "location": "Issuer disclosure",
+          "excerpt": "Reserve composition can change based on supply, redemption needs, market liquidity, counterparty access, risk management, and program requirements.",
+          "assertion": "Reserve management description is not whole-supply reconciliation evidence."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://solomonlabs.org/",
+        "https://docs.solomonlabs.org/usdv/peg-stability-and-reserves",
+        "https://docs.solomonlabs.org/usdv/transparency-and-risk",
+        "https://docs.solomonlabs.org/usdv/audits-and-security",
+        "https://app.solomonlabs.org/stats",
+        "https://github.com/SolomonLabs/chancery-integrity-records/blob/main/docs/AUTHORITIES.md",
+        "https://solomonlabs.org/terms-of-use",
+        "https://blog.solomonlabs.org/p/winding-down-the-original-usdv"
+      ],
+      "rationale": "No documented recurring whole-new-USDv supply-to-backing reconciliation is disclosed. Current dashboard balances, Chancery PDA accounting, authority documentation and security audits do not reconcile every on/offchain reserve, mint/burn flow and outstanding liability on a common clock/cadence. The legacy beta article describes an older distinct token and cannot establish new-token reconciliation."
+    },
+    {
+      "id": "uw-usdv-solomon-v2-3237766bbbfd32ee",
+      "assetId": "usdv-solomon-v2",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "supervision",
+        "pillar": "control",
+        "requiredDatum": "supervision",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:21:02Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R75)",
+      "sources": [
+        {
+          "url": "https://solomonlabs.org/terms-of-use",
+          "observedAt": "2026-10-03T23:19:52Z",
+          "datumAsOf": "2026-07-15",
+          "location": "Sections 1-4",
+          "excerpt": "\u201cSolomon Labs\u201d is a brand term only and is not a legal entity.",
+          "assertion": "Brand/IP owner/interface operator identification does not establish exact new-USDv issuing entity or applicable issuer prudential regime."
+        },
+        {
+          "url": "https://solomonlabs.org/terms-of-use",
+          "observedAt": "2026-10-03T23:19:52Z",
+          "datumAsOf": "2026-07-15",
+          "location": "Section 2",
+          "excerpt": "These are main-website Terms only.",
+          "assertion": "Terms exclude separate issuer/redemption arrangements; interface regulatory disclaimer cannot be encoded as reviewed absence of issuer supervision."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://solomonlabs.org/",
+        "https://solomonlabs.org/terms-of-use",
+        "https://docs.solomonlabs.org/usdv/peg-stability-and-reserves",
+        "https://docs.solomonlabs.org/usdv/transparency-and-risk",
+        "https://docs.solomonlabs.org/usdv/acquiring-and-redeeming",
+        "https://github.com/SolomonLabs/chancery-integrity-records/blob/main/docs/AUTHORITIES.md",
+        "https://solomondao.org/"
+      ],
+      "rationale": "The exact new-USDv legal issuer and licence/activity covering its token issuance are undisclosed. Main-site terms name Panama interface operator Genesee and Marshall Islands IP owner SOLOMON DAO LLC but expressly separate issuer arrangements. Token docs, legal terms, current authority/deployment disclosure and scoped issuer/regulatory search establish no issuer register identity; no supervision:none inference is made."
+    },
+    {
+      "id": "uw-usdm-monetrix-4666f87fa6422b40",
+      "assetId": "usdm-monetrix",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdm-monetrix:queue-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:08:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R83)",
+      "sources": [
+        {
+          "url": "https://doc.monetrix.xyz/resources/terms-and-disclaimer.md",
+          "observedAt": "2026-10-03T23:08:53Z",
+          "datumAsOf": null,
+          "location": "Issuer published terms / guide",
+          "excerpt": "Monetrix does not guarantee a fixed yield, fixed return, or fixed redemption timing.",
+          "assertion": "Three-day cooldown is a configurable earliest claim time, not a guaranteed final funded settlement maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.monetrix.xyz/app/transparency",
+        "https://api.monetrix.xyz/data/api/collateral",
+        "https://doc.monetrix.xyz/guide/getting-started/redeem.md",
+        "https://doc.monetrix.xyz/guide/getting-started/faq.md",
+        "https://doc.monetrix.xyz/risk-and-security/audits-and-contracts.md",
+        "https://doc.monetrix.xyz/resources/terms-and-disclaimer.md"
+      ],
+      "rationale": "No end-to-end maximum for final delivered USDC is published for queue-redeem. The guide documents governance-adjustable three-day cooldown and claim call; FAQ says liquidity must be realized from positions, and current legal notice expressly denies fixed timing. This does not assert no redemption or zero capacity."
+    },
+    {
+      "id": "uw-krwq-iq-d4d7dfc23c949165",
+      "assetId": "krwq-iq",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:krwq-iq:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:08:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R83)",
+      "sources": [
+        {
+          "url": "https://www.krwq.cash/terms",
+          "observedAt": "2026-10-03T23:08:53Z",
+          "datumAsOf": "2026-06-03",
+          "location": "Issuer published terms / guide",
+          "excerpt": "Access to certain features, including minting and redemption, may be restricted to whitelisted or verified participants",
+          "assertion": "Terms disclose redemption eligibility but no applicable institution/fiat-redemption fee schedule."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.krwq.cash/",
+        "https://www.krwq.cash/mint",
+        "https://www.krwq.cash/whitepaper.pdf",
+        "https://www.krwq.cash/transparency",
+        "https://www.krwq.cash/terms",
+        "https://www.krwq.cash/disclaimer",
+        "https://www.krwq.cash/api/custodian-assets",
+        "https://github.com/KRWQcash/.github/blob/7bf83efba994a555ca1f63b352ed28e91ff3fd44/profile/README.md"
+      ],
+      "rationale": "The exact offchain-issuer cost datum is undisclosed: no numeric institutional fiat-redemption fee, applicable formula/minimum or all-in partner/bank/FX charge schedule is published across site, mint UI, whitepaper, terms and transparency. Whitepaper network-transfer costs are not fees for institutional fiat redemption. No zero-fee inference."
+    },
+    {
+      "id": "uw-said-gaib-9c9d0a787af9334e",
+      "assetId": "said-gaib",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:said-gaib:stablecoin-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:10Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R83)",
+      "sources": [
+        {
+          "url": "https://drive.google.com/file/d/1GMwfOw_XXHKXOXopqU8_QGu_y5ozM9hV/preview",
+          "observedAt": "2026-10-03T23:16:10Z",
+          "datumAsOf": null,
+          "location": "sAID Vault Strategy Memorandum, p.5 Redemptions, rendered Drive preview",
+          "excerpt": "All redemptions remain subject to the liquidity, asset composition, and operational parameters determined at the sole discretion of the Company.",
+          "assertion": "Memorandum p.5 permits caps, freezes, deferral until liquidity restored and discretionary alternative payout; monthly cohort is not guaranteed final settlement."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://gaib.ai/",
+        "https://docs.gaib.ai/llms.txt",
+        "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid",
+        "https://docs.gaib.ai/products/gaib-products/staked-ai-dollar-said",
+        "https://aid.gaib.ai/transparency",
+        "https://docs.gaib.ai/products/gaib-products/transparency.md",
+        "https://docs.gaib.ai/products/gaib-products/protocol-public-api.md",
+        "https://docs.gaib.ai/legal/disclaimers-and-risk-disclosures.md",
+        "https://docs.gaib.ai/legal/terms-of-use/annex-to-gaib-term-of-use.md",
+        "https://drive.google.com/file/d/17Uy4SCY9-D-R3kf-4-atUn_9nR4HeGeC/preview",
+        "https://drive.google.com/file/d/1GMwfOw_XXHKXOXopqU8_QGu_y5ozM9hV/preview"
+      ],
+      "rationale": "The stablecoin-redeem route has no published end-to-end funded completion maximum. Current product docs schedule liquidity on month-three day one, but memorandum p.5 explicitly permits temporary freezes and deferral until liquidity returns. No enforceable SLA overrides that discretion. Source preview recovered despite disabled download; no inaccessible-source inference."
+    },
+    {
+      "id": "uw-aid-gaib-335fdbd69be631ff",
+      "assetId": "aid-gaib",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:10Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R83)",
+      "sources": [
+        {
+          "url": "https://drive.google.com/file/d/17Uy4SCY9-D-R3kf-4-atUn_9nR4HeGeC/preview",
+          "observedAt": "2026-10-03T23:16:10Z",
+          "datumAsOf": "2026-09-01",
+          "location": "McMillan Woods limited-assurance report, pages 1\u20133, rendered Drive preview",
+          "excerpt": "Total Assets Reviewed: USD 18.7 million",
+          "assertion": "McMillan Woods report p.2 totals deployed GPU assets; p.3 recalculates deployed capital, not minted AID liabilities/backing on a common clock."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://gaib.ai/",
+        "https://docs.gaib.ai/llms.txt",
+        "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid",
+        "https://docs.gaib.ai/products/gaib-products/staked-ai-dollar-said",
+        "https://aid.gaib.ai/transparency",
+        "https://docs.gaib.ai/products/gaib-products/transparency.md",
+        "https://docs.gaib.ai/products/gaib-products/protocol-public-api.md",
+        "https://docs.gaib.ai/legal/disclaimers-and-risk-disclosures.md",
+        "https://docs.gaib.ai/legal/terms-of-use/annex-to-gaib-term-of-use.md",
+        "https://drive.google.com/file/d/17Uy4SCY9-D-R3kf-4-atUn_9nR4HeGeC/preview",
+        "https://drive.google.com/file/d/1GMwfOw_XXHKXOXopqU8_QGu_y5ozM9hV/preview"
+      ],
+      "rationale": "No dated whole-issued-AID supply-to-backing reconciliation and actual cadence is published. September 1 Spiceflow limited assurance covers deployed financing assets, not AID mint/burn liabilities or every chain. Dashboard separates circulating AID cash from staked AID; NAV/public API counters and deployment report do not establish the required whole-supply procedure."
+    },
+    {
+      "id": "uw-aid-gaib-2a98f8015ffcf1aa",
+      "assetId": "aid-gaib",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:10Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R83)",
+      "sources": [
+        {
+          "url": "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid.md",
+          "observedAt": "2026-10-03T23:16:10Z",
+          "datumAsOf": null,
+          "location": "Issuer published terms / guide",
+          "excerpt": "AI Dollar (AID) is a **synthetic dollar** fully backed by the U.S. Treasuries and stable assets",
+          "assertion": "Product names broad backing classes but does not publish current whole-issued-AID itemized composition/denominator."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://gaib.ai/",
+        "https://docs.gaib.ai/llms.txt",
+        "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid",
+        "https://docs.gaib.ai/products/gaib-products/staked-ai-dollar-said",
+        "https://aid.gaib.ai/transparency",
+        "https://docs.gaib.ai/products/gaib-products/transparency.md",
+        "https://docs.gaib.ai/products/gaib-products/protocol-public-api.md",
+        "https://docs.gaib.ai/legal/disclaimers-and-risk-disclosures.md",
+        "https://docs.gaib.ai/legal/terms-of-use/annex-to-gaib-term-of-use.md",
+        "https://drive.google.com/file/d/17Uy4SCY9-D-R3kf-4-atUn_9nR4HeGeC/preview",
+        "https://drive.google.com/file/d/1GMwfOw_XXHKXOXopqU8_QGu_y5ozM9hV/preview"
+      ],
+      "rationale": "No current whole-issued-AID composition is disclosed across product/API/terms, rendered dashboard and recovered September 1 deployment attestation. Cash ratio divides redeemer/minter cash by only circulating AID, excluding staked liabilities; GPU report totals assets without AID-specific attribution. Cannot normalize those scoped quantities to 100% of all issued AID."
+    },
+    {
+      "id": "uw-nwisdom-nest-521beb0be2fd5dae",
+      "assetId": "nwisdom-nest",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:nwisdom-nest:queue-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:38Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R91)",
+      "sources": [
+        {
+          "url": "https://docs.nest.credit/about/liquidity-and-redemptions/",
+          "observedAt": "2026-10-03T23:10:17Z",
+          "datumAsOf": null,
+          "location": "Queued (Asynchronous) Redemption",
+          "excerpt": "Larger withdrawals, or redemptions submitted when available liquidity is limited, may require additional time as positions are unwound in an orderly manner.",
+          "assertion": "Generic T+2 to T+5 estimates expressly admit additional time; no binding end-to-end maximum for any of these three legacy vaults is stated."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.nest.credit/",
+        "https://docs.nest.credit/about/available-vaults/",
+        "https://docs.nest.credit/about/liquidity-and-redemptions/",
+        "https://docs.nest.credit/about/vault-operations-and-valuation",
+        "https://docs.nest.credit/security-and-compliance/terms-and-conditions/",
+        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/contracts/README.md",
+        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/nTBILL.json",
+        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/nWISDOM.json",
+        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/inALPHA.json"
+      ],
+      "rationale": "The exact same-notional queue-redemption settlement maximum for nWISDOM, nTBILL and inALPHA is undisclosed. Public policy provides estimates for most strategies and expressly allows larger/illiquid exits additional time. Current vault directory omits these legacy assets; legal terms and contract/config disclosures publish no completion deadline. Async fulfillment is permissioned and can be partial. No generic estimate is converted into a guaranteed SLA."
+    },
+    {
+      "id": "uw-ntbill-nest-0575b59d662a2046",
+      "assetId": "ntbill-nest",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:ntbill-nest:queue-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:38Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R91)",
+      "sources": [
+        {
+          "url": "https://docs.nest.credit/about/liquidity-and-redemptions/",
+          "observedAt": "2026-10-03T23:10:17Z",
+          "datumAsOf": null,
+          "location": "Queued (Asynchronous) Redemption",
+          "excerpt": "Larger withdrawals, or redemptions submitted when available liquidity is limited, may require additional time as positions are unwound in an orderly manner.",
+          "assertion": "Generic T+2 to T+5 estimates expressly admit additional time; no binding end-to-end maximum for any of these three legacy vaults is stated."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.nest.credit/",
+        "https://docs.nest.credit/about/available-vaults/",
+        "https://docs.nest.credit/about/liquidity-and-redemptions/",
+        "https://docs.nest.credit/about/vault-operations-and-valuation",
+        "https://docs.nest.credit/security-and-compliance/terms-and-conditions/",
+        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/contracts/README.md",
+        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/nTBILL.json",
+        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/nWISDOM.json",
+        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/inALPHA.json"
+      ],
+      "rationale": "The exact same-notional queue-redemption settlement maximum for nWISDOM, nTBILL and inALPHA is undisclosed. Public policy provides estimates for most strategies and expressly allows larger/illiquid exits additional time. Current vault directory omits these legacy assets; legal terms and contract/config disclosures publish no completion deadline. Async fulfillment is permissioned and can be partial. No generic estimate is converted into a guaranteed SLA."
+    },
+    {
+      "id": "uw-inalpha-nest-68c96dffccd97cf1",
+      "assetId": "inalpha-nest",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:inalpha-nest:queue-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:38Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R91)",
+      "sources": [
+        {
+          "url": "https://docs.nest.credit/about/liquidity-and-redemptions/",
+          "observedAt": "2026-10-03T23:10:17Z",
+          "datumAsOf": null,
+          "location": "Queued (Asynchronous) Redemption",
+          "excerpt": "Larger withdrawals, or redemptions submitted when available liquidity is limited, may require additional time as positions are unwound in an orderly manner.",
+          "assertion": "Generic T+2 to T+5 estimates expressly admit additional time; no binding end-to-end maximum for any of these three legacy vaults is stated."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.nest.credit/",
+        "https://docs.nest.credit/about/available-vaults/",
+        "https://docs.nest.credit/about/liquidity-and-redemptions/",
+        "https://docs.nest.credit/about/vault-operations-and-valuation",
+        "https://docs.nest.credit/security-and-compliance/terms-and-conditions/",
+        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/contracts/README.md",
+        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/nTBILL.json",
+        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/nWISDOM.json",
+        "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/inALPHA.json"
+      ],
+      "rationale": "The exact same-notional queue-redemption settlement maximum for nWISDOM, nTBILL and inALPHA is undisclosed. Public policy provides estimates for most strategies and expressly allows larger/illiquid exits additional time. Current vault directory omits these legacy assets; legal terms and contract/config disclosures publish no completion deadline. Async fulfillment is permissioned and can be partial. No generic estimate is converted into a guaranteed SLA."
     }
   ]
 }
