@@ -20350,6 +20350,138 @@
         "https://eth.blockscout.com/api/v2/addresses/0xb755506531786c8ac63b756bab1ac387bacb0c04"
       ],
       "rationale": "The exact maximum maturityDaysMax of the entire ZAR fiat reserve slice remains undisclosed. September and February AUP reports identify call/current balances and a trust account, but no complete account investment mandate or maximum term covering all cash equivalents. Issuer docs, legal terms and compliance disclosures do not add that limit. Do not infer zero maturity from call-account labels, token redemption par or bank liquidity."
+    },
+    {
+      "id": "uw-zarm-mento-d9f33a8e420064a8",
+      "assetId": "zarm-mento",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:5c07f7cac6051433ad0dae06",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:08:26Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R95)",
+      "sources": [
+        {
+          "url": "https://static.agora.finance/termsofuse.pdf",
+          "observedAt": "2026-10-03T23:08:23Z",
+          "datumAsOf": "2026-09-01",
+          "location": "Agora Bermuda Terms, AUSD, page 6",
+          "excerpt": "Agora aims to facilitate the redemption of AUSD within 48 business hours under the normal course of business or within 96 business hours under stress scenarios.",
+          "assertion": "Targets are expressly an aim, with reserve-related delay and in-kind rights; not a whole-position final realization maximum for Mento's AUSD."
+        },
+        {
+          "url": "https://docs.agora.finance/api/endpoints/routes/overview",
+          "observedAt": "2026-10-03T23:08:25Z",
+          "datumAsOf": null,
+          "location": "Settlement",
+          "excerpt": "Agora delivers the destination currency to `to.accountId` for the amount received.",
+          "assertion": "Public route mechanics disclose destinations, not a completion bound or Mento account eligibility."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.agora.finance/product/ausd",
+        "https://docs.agora.finance/llms.txt",
+        "https://docs.agora.finance/developer/transparency",
+        "https://docs.agora.finance/api/endpoints/routes/overview",
+        "https://docs.agora.finance/api/endpoints/transactions/overview",
+        "https://static.agora.finance/termsofuse.pdf",
+        "https://static.agora.finance/riskdisclosures.pdf",
+        "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+      ],
+      "rationale": "The exact whole-slice liquidityHorizon for Mento's AUSD is not disclosed. Agora publishes par redemption, verified-customer requirements and 48/96-business-hour aims with delay/in-kind discretion, not final maximum delivery. Mento's API includes Ethereum wallets plus Monad wallet/FPMM positions without a whole-position unwind bound. Instant token transfers or authenticated pair quotes cannot prove the entire position immediately realizable."
+    },
+    {
+      "id": "uw-scusd-rings-9c76af91f44a6436",
+      "assetId": "scusd-rings",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:scusd-rings:queue-redeem"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T23:08:26Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R95)",
+      "sources": [
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3754480db8b3E607fbE125697EB496a44A1Be720",
+          "observedAt": "2026-10-03T23:08:25Z",
+          "datumAsOf": null,
+          "location": "BoringOnChainQueue.sol, previewAssetsOut",
+          "excerpt": "price = price.mulDivDown(1e4 - discount, 1e4);",
+          "assertion": "Exact issuer-listed Ethereum scUSD queue discloses user-selected discount and accountant-rate formula. Existing Pharos documentedVariableFee config does not evaluate the applicable live discount/rate at each notional (W15 disclosed-unquantified)."
+        },
+        {
+          "url": "https://docs.trevee.xyz/trevee-earn/sonic-scassets/developers/smart-contracts",
+          "observedAt": "2026-10-03T23:08:25Z",
+          "datumAsOf": null,
+          "location": "Ethereum contract table",
+          "excerpt": "scUSD withdraw queue",
+          "assertion": "Issuer binds the verified queue address to scUSD, not stkscUSD."
+        }
+      ]
+    },
+    {
+      "id": "uw-scusd-rings-f6e6af250e0bc58c",
+      "assetId": "scusd-rings",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:scusd-rings:queue-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:08:26Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R95)",
+      "sources": [
+        {
+          "url": "https://docs.trevee.xyz/trevee-earn/sonic-scassets/veda-vaults/collateral-vault-ethereum",
+          "observedAt": "2026-10-03T23:08:25Z",
+          "datumAsOf": null,
+          "location": "Collateral vault cooldown notice",
+          "excerpt": "scAssets can be redeemed after a 3 day cooldown.",
+          "assertion": "A cooldown establishes earliest eligibility, not maximum final delivery."
+        },
+        {
+          "url": "https://docs.trevee.xyz/trevee-earn/sonic-scassets/security-framework-and-audits",
+          "observedAt": "2026-10-03T23:08:26Z",
+          "datumAsOf": null,
+          "location": "Safety Mechanisms",
+          "excerpt": "5-day cooldown for scAsset redemptions",
+          "assertion": "Conflicting three/five-day cooldowns still disclose no end-to-end upper settlement bound."
+        },
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3754480db8b3E607fbE125697EB496a44A1Be720",
+          "observedAt": "2026-10-03T23:08:25Z",
+          "datumAsOf": null,
+          "location": "BoringOnChainQueue.sol, solveOnChainWithdraws",
+          "excerpt": "if (block.timestamp > deadline) revert BoringOnChainQueue__DeadlinePassed();",
+          "assertion": "Expiry rejects overdue solves rather than guaranteeing funded final payout by that deadline; solving remains authorized and pausable."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://trevee.xyz/",
+        "https://docs.trevee.xyz/sitemap.xml",
+        "https://docs.trevee.xyz/trevee-earn/sonic-scassets",
+        "https://docs.trevee.xyz/trevee-earn/sonic-scassets/veda-vaults/collateral-vault-ethereum",
+        "https://docs.trevee.xyz/trevee-earn/sonic-scassets/security-framework-and-audits",
+        "https://docs.trevee.xyz/trevee-earn/sonic-scassets/developers/smart-contracts",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x3754480db8b3E607fbE125697EB496a44A1Be720",
+        "https://docs.rings.money/"
+      ],
+      "rationale": "No maximum final stablecoin delivery time is disclosed for scUSD queue redemption. Current issuer documentation contradicts itself on three versus five-day cooldown; neither is a completion SLA. Exact published queue source enforces maturity, expiry, pause and authorized solver calls, not guaranteed solving/funding. The old Rings docs redirect to a GitBook shell; current Trevee docs and exact queue source are the substantive reviewed surfaces."
     }
   ]
 }
