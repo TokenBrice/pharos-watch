@@ -8531,6 +8531,138 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "ousg-ondo-finance",
+      "reviewedAt": "2026-10-03T22:45:58Z",
+      "expiresAt": "2027-10-03T22:45:58Z",
+      "reviewer": "Unknown wave W1R06",
+      "notes": "Dated exact-token issuer operating evidence establishes only a conservative live-history lower bound from publication, not the earliest launch. No redemption throughput, stress recovery, reconciliation continuity or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-token-operation",
+          "label": "Bringing Money Market Funds On-Chain",
+          "publisher": "Ondo Finance",
+          "publishedAt": "2023-04-13",
+          "url": "https://ondo.finance/blog/tokenizing-money-market-funds",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 41,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-token-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usdy-ondo-finance",
+      "reviewedAt": "2026-10-03T22:45:58Z",
+      "expiresAt": "2027-10-03T22:45:58Z",
+      "reviewer": "Unknown wave W1R06",
+      "notes": "Dated exact-token issuer operating evidence establishes only a conservative live-history lower bound from publication, not the earliest launch. No redemption throughput, stress recovery, reconciliation continuity or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-token-operation",
+          "label": "Introducing Ondo USD Yield",
+          "publisher": "Ondo Finance",
+          "publishedAt": "2023-08-03",
+          "url": "https://ondo.finance/blog/introducing-ondo-usd-yield-usdy",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 38,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-token-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "susd1plus-lorenzo",
+      "reviewedAt": "2026-10-03T22:45:58Z",
+      "expiresAt": "2027-10-03T22:45:58Z",
+      "reviewer": "Unknown wave W1R06",
+      "notes": "Dated exact-token issuer operating evidence establishes only a conservative live-history lower bound from publication, not the earliest launch. No redemption throughput, stress recovery, reconciliation continuity or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-token-operation",
+          "label": "USD1+ OTF mainnet launch",
+          "publisher": "Lorenzo Protocol",
+          "publishedAt": "2025-07-21",
+          "url": "https://lorenzo-protocol.ghost.io/usd1-mainnet-launch/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 14,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-token-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usda-avalon",
+      "reviewedAt": "2026-10-03T22:45:58Z",
+      "expiresAt": "2027-10-03T22:45:58Z",
+      "reviewer": "Unknown wave W1R06",
+      "notes": "Dated exact-token issuer operating evidence establishes only a conservative live-history lower bound from publication, not the earliest launch. No redemption throughput, stress recovery, reconciliation continuity or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "dated-token-operation",
+          "label": "Avalon Labs USDa introduction",
+          "publisher": "Avalon Labs (syndicated issuer press release)",
+          "publishedAt": "2024-11-11",
+          "url": "https://decrypt.co/291138/avalon-labs-introduces-usda-a-btc-backed-stablecoin-for-liquidity-in-defi-and-cefi-ecosystems",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 22,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-token-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }
