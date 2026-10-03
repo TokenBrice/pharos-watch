@@ -4262,6 +4262,51 @@
           "url": "https://ethereum-rpc.publicnode.com"
         }
       ]
+    },
+    {
+      "assetId": "syusd-aegis",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2027-01-02",
+      "reviewer": "W1R26 exact two-chain wrapper allocation review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "none",
+      "rationale": "At Ethereum block 26114896 and BSC block 125566915, each canonical wrapper asset is chain-local YUSD and totalAssets equals YUSD.balanceOf(wrapper). Verified implementations expose only ERC-4626 deposits, withdrawals, rewards and cooldown silo custody, not strategy allocation, borrowing or reuse; rescue rejects asset(). Silo code restricts withdrawals to its immutable creating wrapper. This is wrapper-local only; YUSD offchain strategy custody and all existing proxy-upgrade powers remain separate risks.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64",
+          "function": "asset()/totalAssets()/YUSD.balanceOf(wrapper)/silo()",
+          "value": "asset=0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a;totalAssets=balance=11456934692540637269696460;silo=0x39f19a8a9b5075d1400f392d1364cc1a35b807b5;cooldownDuration=604800;INSTANT_UNSTAKING_FEE=50",
+          "block": 26114896
+        },
+        {
+          "chain": "bsc",
+          "address": "0x24db057b19241eefb9b522e8627c293ed8f93af2",
+          "function": "asset()/totalAssets()/YUSD.balanceOf(wrapper)/silo()",
+          "value": "asset=0xab3dbcd9b096c3ff76275038bf58eac10d22c61f;totalAssets=balance=1110687393989725380446;silo=0x72880e2b8c7642c47d8c28d898ed49117ac6a079;cooldownDuration=5",
+          "block": 125566915
+        }
+      ],
+      "sources": [
+        {
+          "label": "Ethereum deployed implementation",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xb0c63bb1667b6e9215aee562af2957739b2676fe?fields=sources,abi"
+        },
+        {
+          "label": "BSC deployed implementation",
+          "url": "https://sourcify.dev/server/v2/contract/56/0x42940c329e2a4d0bd0e828b7815c90111065415e?fields=sources,abi"
+        },
+        {
+          "label": "Ethereum pinned RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "BSC pinned RPC",
+          "url": "https://bsc-rpc.publicnode.com"
+        }
+      ]
     }
   ]
 }

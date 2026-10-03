@@ -9310,6 +9310,166 @@
         "https://arbiscan.io/address/0x3e76bb02286bfeaa89dd35f11253f2cbce634f91"
       ],
       "rationale": "Exact maximum settlement SLA for PGOLD physical issuer redemption and the distinct physical-to-USD issuer cash-sale route is not published. Terms list effort-based delivery with delays and the guide requires waiting for customer support. Instant onchain PUSD/USDT spot settlement is a different route and is not a fiat issuer cash-out maximum."
+    },
+    {
+      "id": "uw-witry-brix-4c257c87c5c1bfcb",
+      "assetId": "witry-brix",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:f622cfd7ae455b88dde43438",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:37Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R26)",
+      "sources": [
+        {
+          "url": "https://docs.brix.money/itry/backing.md",
+          "observedAt": "2026-10-03T22:54:37Z",
+          "datumAsOf": null,
+          "location": "Published document",
+          "excerpt": "iTRY is fully backed by the Digital Liquidity Fund's DLF token, which represents shares of a regulated basket of Turkish money-market funds.",
+          "assertion": "Discloses the DLF fund-share basket, not its maximum claim maturity or a whole-position liquidation bound."
+        },
+        {
+          "url": "https://docs.brix.money/technical/collateral-management.md",
+          "observedAt": "2026-10-03T22:44:45Z",
+          "datumAsOf": null,
+          "location": "Published document",
+          "excerpt": "A limited portion is held onchain in the Fast Access Vault smart contract to support instant redemptions.",
+          "assertion": "Only a limited buffer is instant; full reserve realization timing is not quantified."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.brix.money/itry/backing.md",
+        "https://docs.brix.money/itry/proof-of-reserves.md",
+        "https://docs.brix.money/technical/collateral-management.md",
+        "https://docs.brix.money/itry/staking.md",
+        "https://docs.brix.money/resources/terms-and-policies/itry-token-terms.md",
+        "https://docs.brix.money/resources/contracts.md",
+        "https://sourcify.dev/server/v2/contract/1/0xe346c29b5b60ef870b9724c57ccfbbc631e47dee?fields=sources,abi",
+        "https://accountable.brix.money/"
+      ],
+      "rationale": "The exact maximum maturity of the DLF fund-share reserve claim and whole-position liquidity horizon are undisclosed. Public backing, custody, proof-of-reserves, contracts, risks, token terms and withdrawal docs identify the basket and a limited fast buffer, not a fund-share maturity or complete realization bound. wiTRY cooldown and underlying MMF short-duration descriptions do not answer these reserve datums."
+    },
+    {
+      "id": "uw-witry-brix-9ebcb3b25f0f3110",
+      "assetId": "witry-brix",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:f622cfd7ae455b88dde43438",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:37Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R26)",
+      "sources": [
+        {
+          "url": "https://docs.brix.money/itry/backing.md",
+          "observedAt": "2026-10-03T22:54:37Z",
+          "datumAsOf": null,
+          "location": "Published document",
+          "excerpt": "iTRY is fully backed by the Digital Liquidity Fund's DLF token, which represents shares of a regulated basket of Turkish money-market funds.",
+          "assertion": "Discloses the DLF fund-share basket, not its maximum claim maturity or a whole-position liquidation bound."
+        },
+        {
+          "url": "https://docs.brix.money/technical/collateral-management.md",
+          "observedAt": "2026-10-03T22:44:45Z",
+          "datumAsOf": null,
+          "location": "Published document",
+          "excerpt": "A limited portion is held onchain in the Fast Access Vault smart contract to support instant redemptions.",
+          "assertion": "Only a limited buffer is instant; full reserve realization timing is not quantified."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.brix.money/itry/backing.md",
+        "https://docs.brix.money/itry/proof-of-reserves.md",
+        "https://docs.brix.money/technical/collateral-management.md",
+        "https://docs.brix.money/itry/staking.md",
+        "https://docs.brix.money/resources/terms-and-policies/itry-token-terms.md",
+        "https://docs.brix.money/resources/contracts.md",
+        "https://sourcify.dev/server/v2/contract/1/0xe346c29b5b60ef870b9724c57ccfbbc631e47dee?fields=sources,abi",
+        "https://accountable.brix.money/"
+      ],
+      "rationale": "The exact maximum maturity of the DLF fund-share reserve claim and whole-position liquidity horizon are undisclosed. Public backing, custody, proof-of-reserves, contracts, risks, token terms and withdrawal docs identify the basket and a limited fast buffer, not a fund-share maturity or complete realization bound. wiTRY cooldown and underlying MMF short-duration descriptions do not answer these reserve datums."
+    },
+    {
+      "id": "uw-cumiu-chinaamc-7a41ef5d5c23330a",
+      "assetId": "cumiu-chinaamc",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:37Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R26)",
+      "sources": [
+        {
+          "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/chinaamc/resources/E-KFS-ChinaAMCUSDDigitalMMF(UnlistedClass)(April2026).pdf",
+          "observedAt": "2026-10-03T22:50:32Z",
+          "datumAsOf": null,
+          "location": "Tokenization, page 6",
+          "excerpt": "recorded in the register of shareholders \nmaintained by the Administrator and independently verified by the Manager off-chain",
+          "assertion": "Official record is offchain share registration; no whole-supply-to-backing financial cadence is stated."
+        },
+        {
+          "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/chinaamc/resources/E-25AFS_DigitalOFC_Cover.pdf",
+          "observedAt": "2026-10-03T22:50:35Z",
+          "datumAsOf": "2025-12-31",
+          "location": "Report cover",
+          "excerpt": "For the period ended \n31 December 2025",
+          "assertion": "Annual financial accounts are historical fund assurance, not current all-chain token-to-reserve reconciliation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/E-CleanProspectus-ChinaAMCDigitalOFC-CN(September2026)_1789336483417.pdf",
+        "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/chinaamc/resources/E-KFS-ChinaAMCUSDDigitalMMF(UnlistedClass)(April2026).pdf",
+        "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/chinaamc/resources/E-25AFS_DigitalOFC_Cover.pdf",
+        "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/Factsheet_USDDTMMF_20260831_EN_1789617629732.pdf",
+        "https://www.chinaamc.com.hk/jeecg-boot/mainWebDailyDocument/tMainWebDailyDocument/listByFundId?fundId=USDDMMF",
+        "https://www.chinaamc.com.hk/detail?fundId=USDDMMF&fundName=ChinaAMC-USD-Digital-Money-Market-Fund-%28Tokenized-Unlisted-Class%29&lan=EN",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x37686928ddf77be20fc4199f03f0638d90d9907e"
+      ],
+      "rationale": "Whole-supply on/offchain mint/burn liabilities reconciled to reserve assets on a common observation clock and actual cadence are not disclosed. The prospectus describes daily transaction-triggered book-entry/token-register matching, and KPMG audits historical pooled fund accounts; neither establishes the requested whole minted-supply-to-reserve financial reconciliation. Preserve internal-ledger rather than fabricate periodic financial reconciliation."
+    },
+    {
+      "id": "uw-cumiu-chinaamc-8658d6bba03b8882",
+      "assetId": "cumiu-chinaamc",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T22:55:27Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R26)",
+      "sources": [
+        {
+          "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/Factsheet_USDDTMMF_20260831_EN_1789617629732.pdf",
+          "observedAt": "2026-10-03T22:50:36Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Page 2 asset-class allocation chart (visually read)",
+          "excerpt": "Time Deposit",
+          "assertion": "Whole portfolio chart shows Time Deposit 24.71%, Other Money Market Instrument 63.54%, Cash and Cash Equivalent 11.75%; schema lockstep to historical annual report prevents independent unaudited composition-date admission."
+        }
+      ]
     }
   ]
 }

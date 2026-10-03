@@ -4241,6 +4241,138 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "yusd-aegis",
+      "reviewedAt": "2026-10-03T22:45:31Z",
+      "expiresAt": "2027-10-03T22:45:31Z",
+      "reviewer": "W1R26 primary-source unknown resolver",
+      "notes": "Exact canonical token deployment transaction establishes a conservative history lower bound only. No redemption throughput, independent reconciliation, stress recovery or incident-free history is claimed.",
+      "sources": [
+        {
+          "sourceId": "canonical-deployment",
+          "label": "Canonical token successful creation transaction",
+          "publisher": "Ethereum / Blockscout",
+          "publishedAt": "2025-01-23",
+          "url": "https://eth.blockscout.com/api/v2/transactions/0x68c11c673db80cc1a724d67f6fd33bd5e81a4b9aa391224986d4ed96422f3ab6",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 20,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "canonical-deployment"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "syusd-aegis",
+      "reviewedAt": "2026-10-03T22:45:31Z",
+      "expiresAt": "2027-10-03T22:45:31Z",
+      "reviewer": "W1R26 primary-source unknown resolver",
+      "notes": "Exact canonical token deployment transaction establishes a conservative history lower bound only. No redemption throughput, independent reconciliation, stress recovery or incident-free history is claimed.",
+      "sources": [
+        {
+          "sourceId": "canonical-deployment",
+          "label": "Canonical token successful creation transaction",
+          "publisher": "Ethereum / Blockscout",
+          "publishedAt": "2025-06-03",
+          "url": "https://eth.blockscout.com/api/v2/transactions/0xd36e22b7797b145c3c97826f80c98e953b87995b77a9b622c980fc0a06024404",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 16,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "canonical-deployment"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "witry-brix",
+      "reviewedAt": "2026-10-03T22:45:31Z",
+      "expiresAt": "2027-10-03T22:45:31Z",
+      "reviewer": "W1R26 primary-source unknown resolver",
+      "notes": "Exact canonical token deployment transaction establishes a conservative history lower bound only. No redemption throughput, independent reconciliation, stress recovery or incident-free history is claimed.",
+      "sources": [
+        {
+          "sourceId": "canonical-deployment",
+          "label": "Canonical token successful creation transaction",
+          "publisher": "Ethereum / Blockscout",
+          "publishedAt": "2026-03-12",
+          "url": "https://eth.blockscout.com/api/v2/transactions/0xfa55bf3f9ec45f659ad3529cca5014d964b9e882b0f1228dfad309bd0a4ec4cd",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 6,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "canonical-deployment"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "cumiu-chinaamc",
+      "reviewedAt": "2026-10-03T22:45:31Z",
+      "expiresAt": "2027-10-03T22:45:31Z",
+      "reviewer": "W1R26 primary-source unknown resolver",
+      "notes": "Issuer factsheet identifies exact Class I USD ISIN HK0001153516 with launch date 2025-08-13; full calendar months through review establish only a lower-bound eligibility observation. No redemption throughput, independent reconciliation, stress recovery or incident-free history is claimed.",
+      "sources": [
+        {
+          "sourceId": "class-i-launch",
+          "label": "Issuer August 2026 factsheet, Class I USD launch date",
+          "publisher": "China Asset Management (Hong Kong) Limited",
+          "publishedAt": "2026-08-31",
+          "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/Factsheet_USDDTMMF_20260831_EN_1789617629732.pdf",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 13,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "class-i-launch"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }
