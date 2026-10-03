@@ -10781,6 +10781,105 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "sfrxusd-frax",
+      "reviewedAt": "2026-10-03T23:03:46Z",
+      "expiresAt": "2027-10-03T23:59:59Z",
+      "reviewer": "Unknown wave W1R93 primary-source review",
+      "notes": "Exact-token dated issuer launch confirmation establishes only a conservative full-calendar-month live-history lower bound. No redemption throughput, independently verified continuity, stress performance or incident-free claim is made.",
+      "sources": [
+        {
+          "sourceId": "dated-launch",
+          "label": "Frax project update confirms frxUSD/sfrxUSD launched",
+          "publisher": "Frax Finance",
+          "publishedAt": "2025-02-10",
+          "url": "https://news.frax.com/p/frax-finance-biweekly-project-update-431",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 19,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-launch"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usdsc-startale",
+      "reviewedAt": "2026-10-03T23:03:46Z",
+      "expiresAt": "2027-10-03T23:59:59Z",
+      "reviewer": "Unknown wave W1R93 primary-source review",
+      "notes": "Exact-token dated issuer launch confirmation establishes only a conservative full-calendar-month live-history lower bound. No redemption throughput, independently verified continuity, stress performance or incident-free claim is made.",
+      "sources": [
+        {
+          "sourceId": "dated-launch",
+          "label": "Introducing Startale USD and STAR Points",
+          "publisher": "Startale Group",
+          "publishedAt": "2025-12-03",
+          "url": "https://startale.com/en/blog/startale-usd",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 10,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-launch"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "mxne-real-mxn",
+      "reviewedAt": "2026-10-03T23:03:46Z",
+      "expiresAt": "2027-10-03T23:59:59Z",
+      "reviewer": "Unknown wave W1R93 primary-source review",
+      "notes": "Exact-token dated issuer launch confirmation establishes only a conservative full-calendar-month live-history lower bound. No redemption throughput, independently verified continuity, stress performance or incident-free claim is made.",
+      "sources": [
+        {
+          "sourceId": "dated-launch",
+          "label": "Introducing MXNe",
+          "publisher": "Brale",
+          "publishedAt": "2024-05-22",
+          "url": "https://brale.xyz/blog/introducing-mxne",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 28,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-launch"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

@@ -23615,6 +23615,110 @@
         "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/script/deployment-config/vaults/inALPHA.json"
       ],
       "rationale": "The exact same-notional queue-redemption settlement maximum for nWISDOM, nTBILL and inALPHA is undisclosed. Public policy provides estimates for most strategies and expressly allows larger/illiquid exits additional time. Current vault directory omits these legacy assets; legal terms and contract/config disclosures publish no completion deadline. Async fulfillment is permissioned and can be partial. No generic estimate is converted into a guaranteed SLA."
+    },
+    {
+      "id": "uw-sfrxusd-frax-a9becd93de387e60",
+      "assetId": "sfrxusd-frax",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:32d364f83aa9d4c0a4f3fb53",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R93)",
+      "sources": [
+        {
+          "url": "https://gov.frax.finance/t/fip-434-sfrxusd-amo-deployments-future-strategies/3786",
+          "observedAt": "2026-10-03T23:15:53Z",
+          "datumAsOf": "2025-09-05",
+          "location": "FIP-434, Discretionary Allocation",
+          "excerpt": "Actual allocations are at the discretion of the Frax core team and internal risk team, based on prevailing market conditions, liquidity needs, and risk assessments.",
+          "assertion": "Governance mandate gives dynamic strategy allocation, not a whole-position realization maximum or venue-specific insolvency safeguards."
+        },
+        {
+          "url": "https://api.frax.finance/v2/sfrxusd/balance-sheet/latest/export",
+          "observedAt": "2026-10-03T23:15:53Z",
+          "datumAsOf": "2026-10-03",
+          "location": "Current sfrxUSD balance-sheet CSV, description column",
+          "excerpt": "Underlying frxUSD in KRK RWA Gearbox frxUSD Pool",
+          "assertion": "Current complete export identifies lending, LP and RWA strategy holdings; no realization-time bound or wrapper-holder legal custody/insolvency instrument is included."
+        },
+        {
+          "url": "https://frax.com/frxusd-terms",
+          "observedAt": "2026-10-03T23:15:53Z",
+          "datumAsOf": "2025-11-19",
+          "location": "Rendered terms, section 3.4 Additional Features and Programs",
+          "excerpt": "Participation in any such program may be subject to additional terms and conditions, and may not be available in all jurisdictions.",
+          "assertion": "frxUSD issuer terms describe possible separate yield-program terms; parent FBO reserve intent does not establish sfrxUSD local strategy-holder rights."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frax.com/protocol/assets/frxusd/sfrxusd",
+        "https://gov.frax.finance/t/fip-434-sfrxusd-amo-deployments-future-strategies/3786",
+        "https://frax.com/frxusd-terms",
+        "https://facts.frax.finance/frxusd/sfrxusd-balance-sheet",
+        "https://api.frax.finance/v2/sfrxusd/balance-sheet/latest/export",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xcf62f905562626cfcdd2261162a51fd02fc9c5b6",
+        "https://docs.frax.com/frxusd/stake-and-unstake-quickstart-ethereum"
+      ],
+      "rationale": "The exact whole strategy-position liquidityHorizon is not disclosed. Current holdings are published, including lent assets and LPs, but mandate, export, issuer terms and Hop withdrawal documentation supply no full-position realization maximum. Redemption without price impact is not a complete liquidity horizon."
+    },
+    {
+      "id": "uw-sfrxusd-frax-2bfb9dd234382e37",
+      "assetId": "sfrxusd-frax",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "custodyEscrow",
+        "pillar": "backing",
+        "requiredDatum": "custodyEscrow",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R93)",
+      "sources": [
+        {
+          "url": "https://gov.frax.finance/t/fip-434-sfrxusd-amo-deployments-future-strategies/3786",
+          "observedAt": "2026-10-03T23:15:53Z",
+          "datumAsOf": "2025-09-05",
+          "location": "FIP-434, Discretionary Allocation",
+          "excerpt": "Actual allocations are at the discretion of the Frax core team and internal risk team, based on prevailing market conditions, liquidity needs, and risk assessments.",
+          "assertion": "Governance mandate gives dynamic strategy allocation, not a whole-position realization maximum or venue-specific insolvency safeguards."
+        },
+        {
+          "url": "https://api.frax.finance/v2/sfrxusd/balance-sheet/latest/export",
+          "observedAt": "2026-10-03T23:15:53Z",
+          "datumAsOf": "2026-10-03",
+          "location": "Current sfrxUSD balance-sheet CSV, description column",
+          "excerpt": "Underlying frxUSD in KRK RWA Gearbox frxUSD Pool",
+          "assertion": "Current complete export identifies lending, LP and RWA strategy holdings; no realization-time bound or wrapper-holder legal custody/insolvency instrument is included."
+        },
+        {
+          "url": "https://frax.com/frxusd-terms",
+          "observedAt": "2026-10-03T23:15:53Z",
+          "datumAsOf": "2025-11-19",
+          "location": "Rendered terms, section 3.4 Additional Features and Programs",
+          "excerpt": "Participation in any such program may be subject to additional terms and conditions, and may not be available in all jurisdictions.",
+          "assertion": "frxUSD issuer terms describe possible separate yield-program terms; parent FBO reserve intent does not establish sfrxUSD local strategy-holder rights."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.frax.com/protocol/assets/frxusd/sfrxusd",
+        "https://gov.frax.finance/t/fip-434-sfrxusd-amo-deployments-future-strategies/3786",
+        "https://frax.com/frxusd-terms",
+        "https://facts.frax.finance/frxusd/sfrxusd-balance-sheet",
+        "https://api.frax.finance/v2/sfrxusd/balance-sheet/latest/export",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xcf62f905562626cfcdd2261162a51fd02fc9c5b6",
+        "https://docs.frax.com/frxusd/stake-and-unstake-quickstart-ethereum"
+      ],
+      "rationale": "Wrapper-local custodyEscrow segregation and bankruptcy-remoteness for the separate sfrxUSD strategy book are undisclosed. The complete current roster identifies venues, not enforceable custody or insolvency rights covering the book. Parent frxUSD FBO intentions cannot be transferred to sfrxUSD; the yield mandate and issuer terms provide no such complete instrument."
     }
   ]
 }
