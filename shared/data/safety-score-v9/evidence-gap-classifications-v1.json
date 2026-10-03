@@ -26540,6 +26540,556 @@
         "https://explorer.tempo.xyz/address/0x20c0000000000000000000000a6da882d075a4c3"
       ],
       "rationale": "For each identified EVM/Tempo fiat-minter and administrator EOA, the scoped question\u2019s independently evidenced key-custody/operator/recovery/replacement process remains undisclosed. The report publishes generic Fireblocks two-approval controls, but does not map them to these exact addresses or disclose signer/operator identities, key recovery and replacement. Contract role identity alone cannot supply these off-chain facts."
+    },
+    {
+      "id": "uw-feusd-felix-0581508ec1a0e0c0",
+      "assetId": "feusd-felix",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:292a5c9089c18b180c11ad0a",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:55Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R79)",
+      "sources": [
+        {
+          "url": "https://usefelix.gitbook.io/docs/terms/terms-and-conditions.md",
+          "observedAt": "2026-10-03T23:15:55Z",
+          "datumAsOf": null,
+          "location": "Platform Features, Minting Tokens",
+          "excerpt": "Upon full repayment of the minted amount (including any applicable fees), the corresponding **collateral** becomes available for withdrawal through the **Smart Contracts**.",
+          "assertion": "Collateral is position-encumbered. This does not bound USD cash-equivalent liquidation time for each whole admitted collateral exposure."
+        },
+        {
+          "url": "https://kinetiq.xyz/docs/faq",
+          "observedAt": "2026-10-03T23:15:55Z",
+          "datumAsOf": null,
+          "location": "Withdrawals & timing",
+          "excerpt": "Unstaking has an approximately 8\u20139 day unstaking period.",
+          "assertion": "kHYPE redemption timing is approximate and returns HYPE, not a maximum whole-exposure USD liquidity horizon."
+        },
+        {
+          "url": "https://docs.hyperunit.xyz/faq/how-long-does-a-deposit-withdrawal-take.md",
+          "observedAt": "2026-10-03T23:15:55Z",
+          "datumAsOf": null,
+          "location": "Withdrawal FAQ",
+          "excerpt": "Deposits and withdrawal times vary depending on network block times - particularly Bitcoin.",
+          "assertion": "UBTC transport timing is variable, not a guaranteed USD liquidation horizon for the locked Felix book."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://usefelix.gitbook.io/docs/llms.txt",
+        "https://usefelix.gitbook.io/docs/lending-products/quickstart/faq.md",
+        "https://usefelix.gitbook.io/docs/lending-products/quickstart/publish-your-docs.md",
+        "https://usefelix.gitbook.io/docs/terms/risk-disclosure-statement.md",
+        "https://usefelix.gitbook.io/docs/terms/terms-and-conditions.md",
+        "https://usefelix.gitbook.io/docs/advanced/risk-management.md",
+        "https://hyperevmscan.io/address/0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70",
+        "https://docs.hyperunit.xyz/legal/terms-of-service.md",
+        "https://docs.hyperunit.xyz/developers/key-addresses/mainnet/token-metadata.md",
+        "https://kinetiq.xyz/docs/faq",
+        "https://docs.valantis.xyz/stakedhype/wsthype"
+      ],
+      "rationale": "No maximum liquidityHorizon is disclosed for the full position-encumbered UBTC, kHYPE, wstHYPE or WHYPE exposure in the feUSD reserve book. CDP repayment/redemption mechanics, fungible ERC20 transfers, approximate LST unstaking periods and Unit confirmations do not bound conversion of each entire admitted slice to USD cash-equivalent liquidity. The documents disclose those narrower operations but no qualifying whole-slice bound."
+    },
+    {
+      "id": "uw-feusd-felix-467ae9431c3812e2",
+      "assetId": "feusd-felix",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:4c6a86c5b472b0c68c6b194f",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:55Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R79)",
+      "sources": [
+        {
+          "url": "https://usefelix.gitbook.io/docs/terms/terms-and-conditions.md",
+          "observedAt": "2026-10-03T23:15:55Z",
+          "datumAsOf": null,
+          "location": "Platform Features, Minting Tokens",
+          "excerpt": "Upon full repayment of the minted amount (including any applicable fees), the corresponding **collateral** becomes available for withdrawal through the **Smart Contracts**.",
+          "assertion": "Collateral is position-encumbered. This does not bound USD cash-equivalent liquidation time for each whole admitted collateral exposure."
+        },
+        {
+          "url": "https://kinetiq.xyz/docs/faq",
+          "observedAt": "2026-10-03T23:15:55Z",
+          "datumAsOf": null,
+          "location": "Withdrawals & timing",
+          "excerpt": "Unstaking has an approximately 8\u20139 day unstaking period.",
+          "assertion": "kHYPE redemption timing is approximate and returns HYPE, not a maximum whole-exposure USD liquidity horizon."
+        },
+        {
+          "url": "https://docs.hyperunit.xyz/faq/how-long-does-a-deposit-withdrawal-take.md",
+          "observedAt": "2026-10-03T23:15:55Z",
+          "datumAsOf": null,
+          "location": "Withdrawal FAQ",
+          "excerpt": "Deposits and withdrawal times vary depending on network block times - particularly Bitcoin.",
+          "assertion": "UBTC transport timing is variable, not a guaranteed USD liquidation horizon for the locked Felix book."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://usefelix.gitbook.io/docs/llms.txt",
+        "https://usefelix.gitbook.io/docs/lending-products/quickstart/faq.md",
+        "https://usefelix.gitbook.io/docs/lending-products/quickstart/publish-your-docs.md",
+        "https://usefelix.gitbook.io/docs/terms/risk-disclosure-statement.md",
+        "https://usefelix.gitbook.io/docs/terms/terms-and-conditions.md",
+        "https://usefelix.gitbook.io/docs/advanced/risk-management.md",
+        "https://hyperevmscan.io/address/0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70",
+        "https://docs.hyperunit.xyz/legal/terms-of-service.md",
+        "https://docs.hyperunit.xyz/developers/key-addresses/mainnet/token-metadata.md",
+        "https://kinetiq.xyz/docs/faq",
+        "https://docs.valantis.xyz/stakedhype/wsthype"
+      ],
+      "rationale": "No maximum liquidityHorizon is disclosed for the full position-encumbered UBTC, kHYPE, wstHYPE or WHYPE exposure in the feUSD reserve book. CDP repayment/redemption mechanics, fungible ERC20 transfers, approximate LST unstaking periods and Unit confirmations do not bound conversion of each entire admitted slice to USD cash-equivalent liquidity. The documents disclose those narrower operations but no qualifying whole-slice bound."
+    },
+    {
+      "id": "uw-feusd-felix-06597fd92917103e",
+      "assetId": "feusd-felix",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:5e9be2fa5024e1796eb5eb7c",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:55Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R79)",
+      "sources": [
+        {
+          "url": "https://usefelix.gitbook.io/docs/terms/terms-and-conditions.md",
+          "observedAt": "2026-10-03T23:15:55Z",
+          "datumAsOf": null,
+          "location": "Platform Features, Minting Tokens",
+          "excerpt": "Upon full repayment of the minted amount (including any applicable fees), the corresponding **collateral** becomes available for withdrawal through the **Smart Contracts**.",
+          "assertion": "Collateral is position-encumbered. This does not bound USD cash-equivalent liquidation time for each whole admitted collateral exposure."
+        },
+        {
+          "url": "https://kinetiq.xyz/docs/faq",
+          "observedAt": "2026-10-03T23:15:55Z",
+          "datumAsOf": null,
+          "location": "Withdrawals & timing",
+          "excerpt": "Unstaking has an approximately 8\u20139 day unstaking period.",
+          "assertion": "kHYPE redemption timing is approximate and returns HYPE, not a maximum whole-exposure USD liquidity horizon."
+        },
+        {
+          "url": "https://docs.hyperunit.xyz/faq/how-long-does-a-deposit-withdrawal-take.md",
+          "observedAt": "2026-10-03T23:15:55Z",
+          "datumAsOf": null,
+          "location": "Withdrawal FAQ",
+          "excerpt": "Deposits and withdrawal times vary depending on network block times - particularly Bitcoin.",
+          "assertion": "UBTC transport timing is variable, not a guaranteed USD liquidation horizon for the locked Felix book."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://usefelix.gitbook.io/docs/llms.txt",
+        "https://usefelix.gitbook.io/docs/lending-products/quickstart/faq.md",
+        "https://usefelix.gitbook.io/docs/lending-products/quickstart/publish-your-docs.md",
+        "https://usefelix.gitbook.io/docs/terms/risk-disclosure-statement.md",
+        "https://usefelix.gitbook.io/docs/terms/terms-and-conditions.md",
+        "https://usefelix.gitbook.io/docs/advanced/risk-management.md",
+        "https://hyperevmscan.io/address/0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70",
+        "https://docs.hyperunit.xyz/legal/terms-of-service.md",
+        "https://docs.hyperunit.xyz/developers/key-addresses/mainnet/token-metadata.md",
+        "https://kinetiq.xyz/docs/faq",
+        "https://docs.valantis.xyz/stakedhype/wsthype"
+      ],
+      "rationale": "No maximum liquidityHorizon is disclosed for the full position-encumbered UBTC, kHYPE, wstHYPE or WHYPE exposure in the feUSD reserve book. CDP repayment/redemption mechanics, fungible ERC20 transfers, approximate LST unstaking periods and Unit confirmations do not bound conversion of each entire admitted slice to USD cash-equivalent liquidity. The documents disclose those narrower operations but no qualifying whole-slice bound."
+    },
+    {
+      "id": "uw-feusd-felix-cdb0bff3a4613fc6",
+      "assetId": "feusd-felix",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:9afc2c1712068f660ba1b989",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:55Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R79)",
+      "sources": [
+        {
+          "url": "https://usefelix.gitbook.io/docs/terms/terms-and-conditions.md",
+          "observedAt": "2026-10-03T23:15:55Z",
+          "datumAsOf": null,
+          "location": "Platform Features, Minting Tokens",
+          "excerpt": "Upon full repayment of the minted amount (including any applicable fees), the corresponding **collateral** becomes available for withdrawal through the **Smart Contracts**.",
+          "assertion": "Collateral is position-encumbered. This does not bound USD cash-equivalent liquidation time for each whole admitted collateral exposure."
+        },
+        {
+          "url": "https://kinetiq.xyz/docs/faq",
+          "observedAt": "2026-10-03T23:15:55Z",
+          "datumAsOf": null,
+          "location": "Withdrawals & timing",
+          "excerpt": "Unstaking has an approximately 8\u20139 day unstaking period.",
+          "assertion": "kHYPE redemption timing is approximate and returns HYPE, not a maximum whole-exposure USD liquidity horizon."
+        },
+        {
+          "url": "https://docs.hyperunit.xyz/faq/how-long-does-a-deposit-withdrawal-take.md",
+          "observedAt": "2026-10-03T23:15:55Z",
+          "datumAsOf": null,
+          "location": "Withdrawal FAQ",
+          "excerpt": "Deposits and withdrawal times vary depending on network block times - particularly Bitcoin.",
+          "assertion": "UBTC transport timing is variable, not a guaranteed USD liquidation horizon for the locked Felix book."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://usefelix.gitbook.io/docs/llms.txt",
+        "https://usefelix.gitbook.io/docs/lending-products/quickstart/faq.md",
+        "https://usefelix.gitbook.io/docs/lending-products/quickstart/publish-your-docs.md",
+        "https://usefelix.gitbook.io/docs/terms/risk-disclosure-statement.md",
+        "https://usefelix.gitbook.io/docs/terms/terms-and-conditions.md",
+        "https://usefelix.gitbook.io/docs/advanced/risk-management.md",
+        "https://hyperevmscan.io/address/0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70",
+        "https://docs.hyperunit.xyz/legal/terms-of-service.md",
+        "https://docs.hyperunit.xyz/developers/key-addresses/mainnet/token-metadata.md",
+        "https://kinetiq.xyz/docs/faq",
+        "https://docs.valantis.xyz/stakedhype/wsthype"
+      ],
+      "rationale": "No maximum liquidityHorizon is disclosed for the full position-encumbered UBTC, kHYPE, wstHYPE or WHYPE exposure in the feUSD reserve book. CDP repayment/redemption mechanics, fungible ERC20 transfers, approximate LST unstaking periods and Unit confirmations do not bound conversion of each entire admitted slice to USD cash-equivalent liquidity. The documents disclose those narrower operations but no qualifying whole-slice bound."
+    },
+    {
+      "id": "uw-kgst-kyrgyz-som-ef4964f728d3e696",
+      "assetId": "kgst-kyrgyz-som",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:55Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R79)",
+      "sources": [
+        {
+          "url": "https://www.kgstoken.kg/",
+          "observedAt": "2026-10-03T23:15:55Z",
+          "datumAsOf": null,
+          "location": "Attestation of Reserve",
+          "excerpt": "Attestation process ensures that the total circulating supply of KGST stablecoins is continuously backed on a one-to-one basis by an equivalent value of cash or cash equivalents held securely in licensed banks and custodial institutions.",
+          "assertion": "Issuer promises backing/attestation, but publishes no dated measured reserve composition or inspectable whole-liability supply-to-backing reconciliation procedure/report."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.kgstoken.kg/",
+        "https://www.nava.gov.kg/articles/20260502-binance-KGST-TRON-NEWS",
+        "https://fsa.gov.kg/2025/07/08/\u0434\u0435\u044f\u0442\u0435\u043b\u044c\u043d\u043e\u0441\u0442\u044c-\u0441\u043b\u0443\u0436\u0431\u044b-\u0440\u0435\u0433\u0443\u043b\u0438\u0440\u043e\u0432\u0430\u043d\u0438\u044f-\u0438/",
+        "https://fsa.gov.kg/?s=KGST",
+        "https://bscscan.com/address/0x94be0bba8e1e303fe998c9360b57b826f1a4f828",
+        "https://sourcify.dev/server/v2/contract/56/0xa903a6c1c3bd45927542823528a6fa73a2a410e2?fields=sources",
+        "https://apilist.tronscanapi.com/api/contracts/code?contract=TN3cfcFhLrdNZhMdHZVZ4z2XFWb7uB9CXg"
+      ],
+      "rationale": "The current single-page issuer site covers backing, attestation, technology and Important Disclosures but links no report, legal reserve schedule or archive. Own-site and regulator searches find registration, not dated measured holdings or an evidenced aggregate BSC/TRON supply-to-backing reconciliation cadence. Claimed regular audits/continuous backing do not disclose either required datum."
+    },
+    {
+      "id": "uw-kgst-kyrgyz-som-e93ee99c1d5f0957",
+      "assetId": "kgst-kyrgyz-som",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:55Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R79)",
+      "sources": [
+        {
+          "url": "https://www.kgstoken.kg/",
+          "observedAt": "2026-10-03T23:15:55Z",
+          "datumAsOf": null,
+          "location": "Attestation of Reserve",
+          "excerpt": "Attestation process ensures that the total circulating supply of KGST stablecoins is continuously backed on a one-to-one basis by an equivalent value of cash or cash equivalents held securely in licensed banks and custodial institutions.",
+          "assertion": "Issuer promises backing/attestation, but publishes no dated measured reserve composition or inspectable whole-liability supply-to-backing reconciliation procedure/report."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.kgstoken.kg/",
+        "https://www.nava.gov.kg/articles/20260502-binance-KGST-TRON-NEWS",
+        "https://fsa.gov.kg/2025/07/08/\u0434\u0435\u044f\u0442\u0435\u043b\u044c\u043d\u043e\u0441\u0442\u044c-\u0441\u043b\u0443\u0436\u0431\u044b-\u0440\u0435\u0433\u0443\u043b\u0438\u0440\u043e\u0432\u0430\u043d\u0438\u044f-\u0438/",
+        "https://fsa.gov.kg/?s=KGST",
+        "https://bscscan.com/address/0x94be0bba8e1e303fe998c9360b57b826f1a4f828",
+        "https://sourcify.dev/server/v2/contract/56/0xa903a6c1c3bd45927542823528a6fa73a2a410e2?fields=sources",
+        "https://apilist.tronscanapi.com/api/contracts/code?contract=TN3cfcFhLrdNZhMdHZVZ4z2XFWb7uB9CXg"
+      ],
+      "rationale": "The current single-page issuer site covers backing, attestation, technology and Important Disclosures but links no report, legal reserve schedule or archive. Own-site and regulator searches find registration, not dated measured holdings or an evidenced aggregate BSC/TRON supply-to-backing reconciliation cadence. Claimed regular audits/continuous backing do not disclose either required datum."
+    },
+    {
+      "id": "uw-kgst-kyrgyz-som-5e0c7324e1722ca2",
+      "assetId": "kgst-kyrgyz-som",
+      "scope": {
+        "componentKey": "economic-control:bridge",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "economic-control:bridge",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:55Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R79)",
+      "sources": [
+        {
+          "url": "https://www.kgstoken.kg/",
+          "observedAt": "2026-10-03T23:15:55Z",
+          "datumAsOf": null,
+          "location": "Technology Stack",
+          "excerpt": "KGST is issued on the BNB Chain, which uses the Proof of Staked Authority (PoSA) consensus for transaction finality, immutability, and transparency.",
+          "assertion": "Issuer discloses BSC issuance but no TRON collateral locking, aggregate liability model, bridge provider or security tier."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.kgstoken.kg/",
+        "https://www.nava.gov.kg/articles/20260502-binance-KGST-TRON-NEWS",
+        "https://fsa.gov.kg/2025/07/08/\u0434\u0435\u044f\u0442\u0435\u043b\u044c\u043d\u043e\u0441\u0442\u044c-\u0441\u043b\u0443\u0436\u0431\u044b-\u0440\u0435\u0433\u0443\u043b\u0438\u0440\u043e\u0432\u0430\u043d\u0438\u044f-\u0438/",
+        "https://bscscan.com/address/0x94be0bba8e1e303fe998c9360b57b826f1a4f828",
+        "https://apilist.tronscanapi.com/api/contracts/code?contract=TN3cfcFhLrdNZhMdHZVZ4z2XFWb7uB9CXg",
+        "https://apilist.tronscanapi.com/api/contracts/code?contract=TR9KpxsZ2F94ZnbwHR148d7U5mrFneKMtt"
+      ],
+      "rationale": "TRON integration is publicly confirmed, and its token exposes manual mint and autoMint/autoBurn APIs. Neither issuer disclosures, regulator registration nor those contracts disclose whether TRON is a separate native fiat liability or a backed representation, its aggregate BSC/TRON liability treatment, collateral escrow or provider security model sufficient for bridge risk tier. API names alone cannot establish the economic bridge model."
+    },
+    {
+      "id": "uw-kgst-kyrgyz-som-f78cd83ae8d62d73",
+      "assetId": "kgst-kyrgyz-som",
+      "scope": {
+        "componentKey": "economic-control:bridge",
+        "exposureId": null,
+        "factorKey": "tier",
+        "pillar": "control",
+        "requiredDatum": "tier",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:55Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R79)",
+      "sources": [
+        {
+          "url": "https://www.kgstoken.kg/",
+          "observedAt": "2026-10-03T23:15:55Z",
+          "datumAsOf": null,
+          "location": "Technology Stack",
+          "excerpt": "KGST is issued on the BNB Chain, which uses the Proof of Staked Authority (PoSA) consensus for transaction finality, immutability, and transparency.",
+          "assertion": "Issuer discloses BSC issuance but no TRON collateral locking, aggregate liability model, bridge provider or security tier."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.kgstoken.kg/",
+        "https://www.nava.gov.kg/articles/20260502-binance-KGST-TRON-NEWS",
+        "https://fsa.gov.kg/2025/07/08/\u0434\u0435\u044f\u0442\u0435\u043b\u044c\u043d\u043e\u0441\u0442\u044c-\u0441\u043b\u0443\u0436\u0431\u044b-\u0440\u0435\u0433\u0443\u043b\u0438\u0440\u043e\u0432\u0430\u043d\u0438\u044f-\u0438/",
+        "https://bscscan.com/address/0x94be0bba8e1e303fe998c9360b57b826f1a4f828",
+        "https://apilist.tronscanapi.com/api/contracts/code?contract=TN3cfcFhLrdNZhMdHZVZ4z2XFWb7uB9CXg",
+        "https://apilist.tronscanapi.com/api/contracts/code?contract=TR9KpxsZ2F94ZnbwHR148d7U5mrFneKMtt"
+      ],
+      "rationale": "TRON integration is publicly confirmed, and its token exposes manual mint and autoMint/autoBurn APIs. Neither issuer disclosures, regulator registration nor those contracts disclose whether TRON is a separate native fiat liability or a backed representation, its aggregate BSC/TRON liability treatment, collateral escrow or provider security model sufficient for bridge risk tier. API names alone cannot establish the economic bridge model."
+    },
+    {
+      "id": "uw-eurot-token-teknoloji-e0e0157f96680edb",
+      "assetId": "eurot-token-teknoloji",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:55Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R79)",
+      "sources": [
+        {
+          "url": "https://www.token.com.tr/en/proof-of-reserves/",
+          "observedAt": "2026-10-03T23:15:55Z",
+          "datumAsOf": null,
+          "location": "EUROT reserves",
+          "excerpt": "EURO reserves are kept in EURO at Ziraat Participation Bank and Akbank.",
+          "assertion": "Issuer names reserve banks but not current holdings weights/as-of or a whole-liability same-clock reconciliation."
+        },
+        {
+          "url": "https://www.token.com.tr/wp-content/uploads/2024/08/rezerv_akbank_20240809.pdf",
+          "observedAt": "2026-10-03T23:15:55Z",
+          "datumAsOf": "2024-08-09",
+          "location": "One-page bank letter, visually rendered; date and balance table",
+          "excerpt": "09/08/2024",
+          "assertion": "Historical bank-account balance letter is dated August 2024, not current measured EUROT reserves, token liabilities or ongoing financial reconciliation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.token.com.tr/en/proof-of-reserves/",
+        "https://www.token.com.tr/en/reserve-tokens/euro-token-eurot-2/",
+        "https://www.token.com.tr/rezerv-tokenlar/euro-token-eurot/",
+        "https://www.token.com.tr/en/our-services/",
+        "https://www.token.com.tr/en/about-us/",
+        "https://www.token.com.tr/wp-json/wp/v2/media?search=rezerv&per_page=100&_fields=date,source_url,title",
+        "https://www.token.com.tr/wp-json/wp/v2/pages?search=terms&per_page=100&_fields=link,title",
+        "https://www.token.com.tr/wp-content/uploads/2024/08/rezerv_akbank_20240809.pdf",
+        "https://www.token.com.tr/wp-content/uploads/2024/08/Ziraat-Katilim-08082024.pdf"
+      ],
+      "rationale": "No current dated measured whole-book EUROT reserve composition or periodic aggregate Ethereum/Avalanche/Polygon supply-to-backing financial reconciliation is disclosed. The reserve media archive ends in 2024; product pages give 1:1 euros/bank marketing and historical account letters rather than current holdings attribution or same-clock reserve/liability comparisons. Historical bank balances cannot be promoted to current reserve percentages."
+    },
+    {
+      "id": "uw-eurot-token-teknoloji-db4a60cb5a29fe9b",
+      "assetId": "eurot-token-teknoloji",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:55Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R79)",
+      "sources": [
+        {
+          "url": "https://www.token.com.tr/en/proof-of-reserves/",
+          "observedAt": "2026-10-03T23:15:55Z",
+          "datumAsOf": null,
+          "location": "EUROT reserves",
+          "excerpt": "EURO reserves are kept in EURO at Ziraat Participation Bank and Akbank.",
+          "assertion": "Issuer names reserve banks but not current holdings weights/as-of or a whole-liability same-clock reconciliation."
+        },
+        {
+          "url": "https://www.token.com.tr/wp-content/uploads/2024/08/rezerv_akbank_20240809.pdf",
+          "observedAt": "2026-10-03T23:15:55Z",
+          "datumAsOf": "2024-08-09",
+          "location": "One-page bank letter, visually rendered; date and balance table",
+          "excerpt": "09/08/2024",
+          "assertion": "Historical bank-account balance letter is dated August 2024, not current measured EUROT reserves, token liabilities or ongoing financial reconciliation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.token.com.tr/en/proof-of-reserves/",
+        "https://www.token.com.tr/en/reserve-tokens/euro-token-eurot-2/",
+        "https://www.token.com.tr/rezerv-tokenlar/euro-token-eurot/",
+        "https://www.token.com.tr/en/our-services/",
+        "https://www.token.com.tr/en/about-us/",
+        "https://www.token.com.tr/wp-json/wp/v2/media?search=rezerv&per_page=100&_fields=date,source_url,title",
+        "https://www.token.com.tr/wp-json/wp/v2/pages?search=terms&per_page=100&_fields=link,title",
+        "https://www.token.com.tr/wp-content/uploads/2024/08/rezerv_akbank_20240809.pdf",
+        "https://www.token.com.tr/wp-content/uploads/2024/08/Ziraat-Katilim-08082024.pdf"
+      ],
+      "rationale": "No current dated measured whole-book EUROT reserve composition or periodic aggregate Ethereum/Avalanche/Polygon supply-to-backing financial reconciliation is disclosed. The reserve media archive ends in 2024; product pages give 1:1 euros/bank marketing and historical account letters rather than current holdings attribution or same-clock reserve/liability comparisons. Historical bank balances cannot be promoted to current reserve percentages."
+    },
+    {
+      "id": "uw-zeusd-zoth-64926c40e7f6e3fc",
+      "assetId": "zeusd-zoth",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:55Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R79)",
+      "sources": [
+        {
+          "url": "https://dune.com/zoth/zoth",
+          "observedAt": "2026-10-03T23:15:55Z",
+          "datumAsOf": null,
+          "location": "Text widget 1951712, About ZeUSD",
+          "excerpt": "It is a fully composable, **RWA-backed Collateralised Debt Position (CDP) stable token**, issued on top of high-quality on-chain RWAs such as:",
+          "assertion": "Issuer-linked dashboard describes eligible RWA categories but no measured legacy ZeUSD reserve composition or aggregate financial reconciliation."
+        },
+        {
+          "url": "https://docs.zoth.io/zoth/getting-started-1/glossary.md",
+          "observedAt": "2026-10-03T23:15:55Z",
+          "datumAsOf": null,
+          "location": "Zoth Proof of Reserve definition",
+          "excerpt": "**Zoth Proof of Reserve:** A contract demonstrating the reserve of invoices for lenders and the community.",
+          "assertion": "This invoice-reserve concept is not a same-clock backing-to-liability reconciliation for tracked ZeUSD V1."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.zoth.io/",
+        "https://docs.zoth.io/zoth/llms.txt",
+        "https://docs.zoth.io/zoth/resources-1/onchain-data.md",
+        "https://docs.zoth.io/zoth/security-and-risk-management-framework/oracle-and-attestation-security.md",
+        "https://docs.zoth.io/zoth/legal/risk-disclosure.md",
+        "https://docs.zoth.io/zoth/getting-started-1/glossary.md",
+        "https://dune.com/zoth/zoth",
+        "https://eth.blockscout.com/api/v2/addresses/0x7dc9748da8e762e569f9269f48f69a1a9f8ea761",
+        "https://www.prnewswire.com/news-releases/zoths-zeusd-off-to-a-strong-start-reaching-over-27m-in-tvl-within-6-weeks-in-its-beta-launch--public-access-set-for-march-1st-302385678.html"
+      ],
+      "rationale": "No current dated measured complete reserve composition or continuing whole-liability supply-to-backing reconciliation is disclosed for tracked ZeUSD V1 0x7dc9748da8e762e569f9269f48f69a1a9f8ea761. Successfully fetched issuer-linked dashboard and original issuer announcement give generic RWA categories. Current zToken NAV/biweekly USDZe attestation descriptions belong to a different product and cannot establish either legacy ZeUSD datum. Failed old-document fetches are not the basis for C."
+    },
+    {
+      "id": "uw-zeusd-zoth-dae38ca4cb30230a",
+      "assetId": "zeusd-zoth",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:55Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R79)",
+      "sources": [
+        {
+          "url": "https://dune.com/zoth/zoth",
+          "observedAt": "2026-10-03T23:15:55Z",
+          "datumAsOf": null,
+          "location": "Text widget 1951712, About ZeUSD",
+          "excerpt": "It is a fully composable, **RWA-backed Collateralised Debt Position (CDP) stable token**, issued on top of high-quality on-chain RWAs such as:",
+          "assertion": "Issuer-linked dashboard describes eligible RWA categories but no measured legacy ZeUSD reserve composition or aggregate financial reconciliation."
+        },
+        {
+          "url": "https://docs.zoth.io/zoth/getting-started-1/glossary.md",
+          "observedAt": "2026-10-03T23:15:55Z",
+          "datumAsOf": null,
+          "location": "Zoth Proof of Reserve definition",
+          "excerpt": "**Zoth Proof of Reserve:** A contract demonstrating the reserve of invoices for lenders and the community.",
+          "assertion": "This invoice-reserve concept is not a same-clock backing-to-liability reconciliation for tracked ZeUSD V1."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.zoth.io/",
+        "https://docs.zoth.io/zoth/llms.txt",
+        "https://docs.zoth.io/zoth/resources-1/onchain-data.md",
+        "https://docs.zoth.io/zoth/security-and-risk-management-framework/oracle-and-attestation-security.md",
+        "https://docs.zoth.io/zoth/legal/risk-disclosure.md",
+        "https://docs.zoth.io/zoth/getting-started-1/glossary.md",
+        "https://dune.com/zoth/zoth",
+        "https://eth.blockscout.com/api/v2/addresses/0x7dc9748da8e762e569f9269f48f69a1a9f8ea761",
+        "https://www.prnewswire.com/news-releases/zoths-zeusd-off-to-a-strong-start-reaching-over-27m-in-tvl-within-6-weeks-in-its-beta-launch--public-access-set-for-march-1st-302385678.html"
+      ],
+      "rationale": "No current dated measured complete reserve composition or continuing whole-liability supply-to-backing reconciliation is disclosed for tracked ZeUSD V1 0x7dc9748da8e762e569f9269f48f69a1a9f8ea761. Successfully fetched issuer-linked dashboard and original issuer announcement give generic RWA categories. Current zToken NAV/biweekly USDZe attestation descriptions belong to a different product and cannot establish either legacy ZeUSD datum. Failed old-document fetches are not the basis for C."
     }
   ]
 }
