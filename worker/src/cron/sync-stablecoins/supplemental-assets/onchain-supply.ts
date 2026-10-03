@@ -116,10 +116,14 @@ async function readContractSupplyRaw(input: {
   family: OnchainSupplyProbeFamily;
   allowZeroSupply: boolean;
   signal: AbortSignal;
+  chainRpcs?: Map<string, ChainRpcConfig>;
   rpcUrl?: string;
   fallbackRpcUrl?: string;
 }): Promise<bigint | null> {
   const { supplyContract } = input;
+  const evmContext = input.family === "evm" && input.chainRpcs
+    ? { chainRpcs: input.chainRpcs }
+    : undefined;
 
   if (input.family === "sui") {
     return fetchEearnSuiSupply(supplyContract.address, supplyContract.decimals, input.signal);
@@ -186,7 +190,7 @@ async function readContractSupplyRaw(input: {
         buildEvmProbeInput(supplyContract.chain),
         supplyContract.address,
         input.signal,
-        undefined,
+        evmContext,
         input.rpcUrl,
         input.fallbackRpcUrl,
       );
@@ -197,7 +201,7 @@ async function readContractSupplyRaw(input: {
     buildProbeInput(supplyContract.chain),
     input.signal,
     "fiat-cg",
-    undefined,
+    evmContext,
     input.rpcUrl,
     input.fallbackRpcUrl,
   );
@@ -296,6 +300,9 @@ async function fetchOnChainSupplyForContract(input: {
       family,
       allowZeroSupply,
       signal: supplySignal,
+      // A reviewed supply pin retains its original route; the full map would
+      // otherwise prepend registry endpoints ahead of that pin.
+      chainRpcs: input.curated?.rpcUrl ? undefined : input.chainRpcs,
       rpcUrl,
       fallbackRpcUrl,
     });
