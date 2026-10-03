@@ -16418,6 +16418,174 @@
         "https://eth.blockscout.com/api/v2/smart-contracts/0x271df5517a4daacb7cab988aa64d23debda4c498"
       ],
       "rationale": "No end-to-end settlement maximum or entire wstETH vault liquidityHorizon is disclosed. Imbalance can block initiating redemption until other users mint or close longs; oracle validator windows constrain a successfully initiated action, not time to resolve an imbalance or liquidate the entire vault. A transferable underlying token does not remove those gates."
+    },
+    {
+      "id": "uw-sirloinusdc-steakhouse-3f083bd42e0170f8",
+      "assetId": "sirloinusdc-steakhouse",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:35d7b67d6b6e48e9c8def09d",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:01:25Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R15)",
+      "sources": [
+        {
+          "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults",
+          "observedAt": "2026-10-03T23:01:23Z",
+          "datumAsOf": null,
+          "location": "Services",
+          "excerpt": "We do not possess or control any cryptoassets or user funds.",
+          "assertion": "Operator disclaims custody; no final whole-lending-position realization maximum is promised."
+        },
+        {
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "observedAt": "2026-10-03T23:01:23Z",
+          "datumAsOf": null,
+          "location": "Advanced Liquidity Curation",
+          "excerpt": "If idle assets are insufficient to cover a withdrawal, the vault will automatically pull assets from this market.",
+          "assertion": "Withdrawal is conditional on idle and adapter liquidity, not a time-bound guarantee for the entire lending claim."
+        },
+        {
+          "url": "https://sourcify.dev/server/v2/contract/8453/0xbeeff2490feffa212fac2f6553682c219e6a8845?fields=all",
+          "observedAt": "2026-10-03T22:45:44Z",
+          "datumAsOf": null,
+          "location": "VaultV2.sol exit()",
+          "excerpt": "if (assets > idleAssets && liquidityAdapter != address(0)) {",
+          "assertion": "Exact deployed withdrawal code requires deallocation when idle funds are insufficient; it does not promise a full-position availability horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.steakhouse.financial/",
+        "https://www.steakhouse.financial/docs/llms.txt",
+        "https://www.steakhouse.financial/docs/documents/",
+        "https://www.steakhouse.financial/docs/documents/disclaimers/vaults",
+        "https://www.steakhouse.financial/docs/products/vault-products/current/prime-instant",
+        "https://www.steakhouse.financial/docs/products/vault-products/current/high-yield-instant",
+        "https://www.steakhouse.financial/docs/risk-management/monitoring/allocation-process",
+        "https://docs.morpho.org/learn/concepts/vault-v2/",
+        "https://app.morpho.org/base/vault/0xbeeff2490feffa212fac2f6553682c219e6a8845",
+        "https://sourcify.dev/server/v2/contract/8453/0xbeeff2490feffa212fac2f6553682c219e6a8845?fields=all",
+        "https://sourcify.dev/server/v2/contract/8453/0x4a70dc70cef79f51cc7f79c08f863b2841311165?fields=all"
+      ],
+      "rationale": "The exact whole-position liquidityHorizon for this denominated Morpho lending claim is not disclosed as a guaranteed maximum. Product liquidity targets and instant/Repo marketing do not promise realization of every lender claim; verified exit and adapter code depend on available idle/market liquidity and borrower repayments. Legal terms disclaim operator custody and performance obligations. No timed full-position realization covenant or attestation is published on the searched issuer/docs/legal/contract surfaces."
+    },
+    {
+      "id": "uw-steakeurcv-steakhouse-60282d6cb0988623",
+      "assetId": "steakeurcv-steakhouse",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:0674859ef4815d0522b82c29",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:01:25Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R15)",
+      "sources": [
+        {
+          "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults",
+          "observedAt": "2026-10-03T23:01:23Z",
+          "datumAsOf": null,
+          "location": "Services",
+          "excerpt": "We do not possess or control any cryptoassets or user funds.",
+          "assertion": "Operator disclaims custody; no final whole-lending-position realization maximum is promised."
+        },
+        {
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "observedAt": "2026-10-03T23:01:23Z",
+          "datumAsOf": null,
+          "location": "Advanced Liquidity Curation",
+          "excerpt": "If idle assets are insufficient to cover a withdrawal, the vault will automatically pull assets from this market.",
+          "assertion": "Withdrawal is conditional on idle and adapter liquidity, not a time-bound guarantee for the entire lending claim."
+        },
+        {
+          "url": "https://sourcify.dev/server/v2/contract/1/0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f?fields=all",
+          "observedAt": "2026-10-03T22:45:46Z",
+          "datumAsOf": null,
+          "location": "VaultV2.sol exit()",
+          "excerpt": "if (assets > idleAssets && liquidityAdapter != address(0)) {",
+          "assertion": "Exact deployed withdrawal code requires deallocation when idle funds are insufficient; it does not promise a full-position availability horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.steakhouse.financial/",
+        "https://www.steakhouse.financial/docs/llms.txt",
+        "https://www.steakhouse.financial/docs/documents/",
+        "https://www.steakhouse.financial/docs/documents/disclaimers/vaults",
+        "https://www.steakhouse.financial/docs/products/vault-products/current/prime-instant",
+        "https://www.steakhouse.financial/docs/products/vault-products/current/high-yield-instant",
+        "https://www.steakhouse.financial/docs/risk-management/monitoring/allocation-process",
+        "https://docs.morpho.org/learn/concepts/vault-v2/",
+        "https://app.morpho.org/ethereum/vault/0xbeef0C075Da5D01112AE5cF34d257074fB5DDB2f",
+        "https://sourcify.dev/server/v2/contract/1/0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f?fields=all",
+        "https://sourcify.dev/server/v2/contract/1/0x5e3aca36fe2361e1866752ad74cb429f64cdcf1a?fields=all"
+      ],
+      "rationale": "The exact whole-position liquidityHorizon for this denominated Morpho lending claim is not disclosed as a guaranteed maximum. Product liquidity targets and instant/Repo marketing do not promise realization of every lender claim; verified exit and adapter code depend on available idle/market liquidity and borrower repayments. Legal terms disclaim operator custody and performance obligations. No timed full-position realization covenant or attestation is published on the searched issuer/docs/legal/contract surfaces."
+    },
+    {
+      "id": "uw-steakusdg-steakhouse-2d712f34ddbd8312",
+      "assetId": "steakusdg-steakhouse",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:151fe5376aaec43258061c57",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:01:25Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R15)",
+      "sources": [
+        {
+          "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults",
+          "observedAt": "2026-10-03T23:01:23Z",
+          "datumAsOf": null,
+          "location": "Services",
+          "excerpt": "We do not possess or control any cryptoassets or user funds.",
+          "assertion": "Operator disclaims custody; no final whole-lending-position realization maximum is promised."
+        },
+        {
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "observedAt": "2026-10-03T23:01:23Z",
+          "datumAsOf": null,
+          "location": "Advanced Liquidity Curation",
+          "excerpt": "If idle assets are insufficient to cover a withdrawal, the vault will automatically pull assets from this market.",
+          "assertion": "Withdrawal is conditional on idle and adapter liquidity, not a time-bound guarantee for the entire lending claim."
+        },
+        {
+          "url": "https://sourcify.dev/server/v2/contract/4663/0xbeeff033f34c046626b8d0a041844c5d1a5409dd?fields=all",
+          "observedAt": "2026-10-03T22:45:48Z",
+          "datumAsOf": null,
+          "location": "VaultV2.sol exit()",
+          "excerpt": "if (assets > idleAssets && liquidityAdapter != address(0)) {",
+          "assertion": "Exact deployed withdrawal code requires deallocation when idle funds are insufficient; it does not promise a full-position availability horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.steakhouse.financial/",
+        "https://www.steakhouse.financial/docs/llms.txt",
+        "https://www.steakhouse.financial/docs/documents/",
+        "https://www.steakhouse.financial/docs/documents/disclaimers/vaults",
+        "https://www.steakhouse.financial/docs/products/vault-products/current/prime-instant",
+        "https://www.steakhouse.financial/docs/products/vault-products/current/high-yield-instant",
+        "https://www.steakhouse.financial/docs/risk-management/monitoring/allocation-process",
+        "https://docs.morpho.org/learn/concepts/vault-v2/",
+        "https://app.morpho.org/robinhood-chain/vault/0xBeEff033F34C046626B8D0A041844C5d1A5409dd/steakhouse-usdg",
+        "https://sourcify.dev/server/v2/contract/4663/0xbeeff033f34c046626b8d0a041844c5d1a5409dd?fields=all",
+        "https://sourcify.dev/server/v2/contract/4663/0x44abc1d6ccff2696d98890b92e2157af242179c2?fields=all"
+      ],
+      "rationale": "The exact whole-position liquidityHorizon for this denominated Morpho lending claim is not disclosed as a guaranteed maximum. Product liquidity targets and instant/Repo marketing do not promise realization of every lender claim; verified exit and adapter code depend on available idle/market liquidity and borrower repayments. Legal terms disclaim operator custody and performance obligations. No timed full-position realization covenant or attestation is published on the searched issuer/docs/legal/contract surfaces."
     }
   ]
 }

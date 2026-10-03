@@ -46,13 +46,13 @@
     ]
   },
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
+    "tier": "privileged-internal-pricing",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
-    "summary": "Pinned sole-adapter inventory contains 5 borrower markets and an internal VaultV2 NAV path. Borrower oracle/LLTV identities are matched to engine state, with complete paths and loss mechanisms. The exact current feed-owner, operational heartbeat and independent fallback census remains incomplete; no oracleless lending exemption or redundant-feed credit is asserted.",
+    "summary": "Complete current sole-adapter inventory at robinhood block 79450688: 5 funded borrower markets, with the prior emptied sirloin branch retained diagnostically. Exact pricing roots are immutable Morpho arithmetic or source-resolved EIP-1167 MetaOracle clones. Consumer pricing does not enforce feed timestamp freshness; no redundant-provider credit is asserted. A matched mGLO implementation accepts manually submitted feed-admin prices, so privileged internal pricing remains the binding aggregate tier.",
     "reviewedAt": "2026-10-03",
-    "reviewer": "Sol refinement 2026-10-03 (Refine12, exact source and RPC census)",
-    "confidence": "probable",
+    "reviewer": "Unknown wave W1R15 exact pricing-path review",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Morpho full exact VaultV2 adapter and market inventory",
@@ -69,13 +69,33 @@
       {
         "label": "Exact Ethereum lending-engine source: bad debt reduces totalSupplyAssets",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
+      },
+      {
+        "label": "Exact source-matched arithmetic and immutable input layout",
+        "url": "https://sourcify.dev/server/v2/contract/8453/0x182e072f2c9c58c6f19f144c97986f7496c6a109?fields=all"
+      },
+      {
+        "label": "Exact current sole-adapter executable",
+        "url": "https://sourcify.dev/server/v2/contract/4663/0x44abc1d6ccff2696d98890b92e2157af242179c2?fields=all"
+      },
+      {
+        "label": "Pinned robinhood block 79450688 state",
+        "url": "https://api-robinhood-mainnet-archive.n.dwellir.com"
+      },
+      {
+        "label": "Exact Robinhood MetaOracle clone implementation",
+        "url": "https://sourcify.dev/server/v2/contract/4663/0x6a16d6fe1ba26e6ba52fda03972b1fe2e31ca729?fields=all"
+      },
+      {
+        "label": "Source-matched MGlo manual-admin implementation",
+        "url": "https://sourcify.dev/server/v2/contract/8453/0x4a0a3eab5c75173c760b5a50a8570e5d20d9cc94?fields=all"
       }
     ],
     "branchApplicability": {
       "disposition": "branches-required",
       "reviewedAt": "2026-10-03",
       "reviewer": "Sol refinement 2026-10-03 (Refine12, exact source and RPC census)",
-      "rationale": "Every sole-adapter market has a collateral-price/LLTV liquidation branch. The internal share-NAV path is reviewed separately and does not exempt borrower branches. Adapter and position pagination countTotal confirms complete current inventory.",
+      "rationale": "Current complete marketIds/expectedSupplyAssets census at robinhood block 79450688 and exact Morpho idToMarketParams prove all borrower-price paths. NAV remains loan-unit accounting; no oracleless lending exemption is claimed.",
       "sources": [
         {
           "label": "Morpho full exact VaultV2 adapter and market inventory",
@@ -99,8 +119,8 @@
       {
         "id": "market-127353ba63e08f74d8e9ce8a1c2b41b5f89c7167135b1c09fbed34a71b4cb06b",
         "label": "WETH / steakUSDG borrower market",
-        "tier": "opaque-or-unknown",
-        "summary": "Exact engine idToMarketParams matches collateral, oracle and LLTV from the complete adapter inventory. Getter inputs are pinned; source-verified composition does not establish independent fallback, feed-admin closure or heartbeat. Exact executable feed/fallback and feed-owner/freshness policy remains unverified; opaque topology is nondisclosure, not a proven price-manipulation event.",
+        "tier": "single-source-or-laggy",
+        "summary": "At robinhood block 79450688, exact market parameters identify pricing root 0x5e3645ed6ace5b212ad7cf51c75154897e2f80ad. Executable, after masking only published immutable slots and stripping the CBOR metadata trailer, exactly matches verified MorphoChainlinkOracleV2. All immutable feed/vault inputs were read at this block. No timestamp/freshness check or independent fallback is present in this consumer.",
         "collateralAssets": [
           "WETH"
         ],
@@ -109,25 +129,25 @@
         ],
         "feeds": [
           {
-            "provider": "Morpho immutable market oracle",
-            "path": "IOracle.price for market 0x127353ba63e08f74d8e9ce8a1c2b41b5f89c7167135b1c09fbed34a71b4cb06b",
+            "provider": "MorphoChainlinkOracleV2 matched executable",
+            "path": "price()",
             "address": "0x5e3645ed6ace5b212ad7cf51c75154897e2f80ad",
             "chain": "robinhood",
             "observedAt": "2026-10-03",
-            "observedBlock": 78901968
+            "observedBlock": 79450688
           },
           {
-            "provider": "Pinned oracle input; operator/heartbeat not assumed",
+            "provider": "Pinned single feed or ERC-4626 rate input; no independent heartbeat guarantee asserted",
             "path": "BASE_FEED_1()",
             "address": "0x5058adee53b04e374d8bedbad634bc4778f50b22",
             "chain": "robinhood",
             "observedAt": "2026-10-03",
-            "observedBlock": 78892407
+            "observedBlock": 79450688
           }
         ],
-        "fallbackBehavior": "The exact oracle fallback/freshness and replacement policy was not publicly source-verified; no failover or staleness credit is asserted. Morpho documents that price() reverts can block liquidation.",
+        "fallbackBehavior": "The matched fixed arithmetic uses only recorded feed/rate inputs. Zero addresses contribute unity. ChainlinkDataFeedLib reads latestRoundData answer but not its timestamp; no consumer staleness bound, independent failover or heartbeat credit is asserted. A reverting required input reverts price().",
         "observedAt": "2026-10-03",
-        "observedBlock": 78901968,
+        "observedBlock": 79450688,
         "collateralParameters": [
           {
             "asset": "WETH",
@@ -158,14 +178,34 @@
           {
             "label": "Exact oracle deployment source response",
             "url": "https://sourcify.dev/server/v2/contract/4663/0x5e3645ed6ace5b212ad7cf51c75154897e2f80ad?fields=all"
+          },
+          {
+            "label": "Exact source-matched arithmetic and immutable input layout",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0x182e072f2c9c58c6f19f144c97986f7496c6a109?fields=all"
+          },
+          {
+            "label": "Exact current sole-adapter executable",
+            "url": "https://sourcify.dev/server/v2/contract/4663/0x44abc1d6ccff2696d98890b92e2157af242179c2?fields=all"
+          },
+          {
+            "label": "Pinned robinhood block 79450688 state",
+            "url": "https://api-robinhood-mainnet-archive.n.dwellir.com"
+          },
+          {
+            "label": "Exact Robinhood MetaOracle clone implementation",
+            "url": "https://sourcify.dev/server/v2/contract/4663/0x6a16d6fe1ba26e6ba52fda03972b1fe2e31ca729?fields=all"
+          },
+          {
+            "label": "Source-matched MGlo manual-admin implementation",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0x4a0a3eab5c75173c760b5a50a8570e5d20d9cc94?fields=all"
           }
         ]
       },
       {
         "id": "market-919a9b6b94dae7c86620eaf7a08e597aae8a4c3a9e9c7671771fbaf62b6b61c7",
         "label": "syrupUSDG / steakUSDG borrower market",
-        "tier": "opaque-or-unknown",
-        "summary": "Exact engine idToMarketParams matches collateral, oracle and LLTV from the complete adapter inventory. Getter inputs are pinned; source-verified composition does not establish independent fallback, feed-admin closure or heartbeat. Exact executable feed/fallback and feed-owner/freshness policy remains unverified; opaque topology is nondisclosure, not a proven price-manipulation event.",
+        "tier": "single-source-or-laggy",
+        "summary": "At robinhood block 79450688, exact market parameters identify pricing root 0x152c638fad68913739ee19ba8ef47faeb09dca91. Executable, after masking only published immutable slots and stripping the CBOR metadata trailer, exactly matches verified MorphoChainlinkOracleV2. All immutable feed/vault inputs were read at this block. No timestamp/freshness check or independent fallback is present in this consumer.",
         "collateralAssets": [
           "syrupUSDG"
         ],
@@ -174,25 +214,25 @@
         ],
         "feeds": [
           {
-            "provider": "Morpho immutable market oracle",
-            "path": "IOracle.price for market 0x919a9b6b94dae7c86620eaf7a08e597aae8a4c3a9e9c7671771fbaf62b6b61c7",
+            "provider": "MorphoChainlinkOracleV2 matched executable",
+            "path": "price()",
             "address": "0x152c638fad68913739ee19ba8ef47faeb09dca91",
             "chain": "robinhood",
             "observedAt": "2026-10-03",
-            "observedBlock": 78901968
+            "observedBlock": 79450688
           },
           {
-            "provider": "Pinned oracle input; operator/heartbeat not assumed",
+            "provider": "Pinned single feed or ERC-4626 rate input; no independent heartbeat guarantee asserted",
             "path": "BASE_FEED_1()",
             "address": "0x3bedea9ce3ead0db4ea60dc497568dedde85dba3",
             "chain": "robinhood",
             "observedAt": "2026-10-03",
-            "observedBlock": 78892407
+            "observedBlock": 79450688
           }
         ],
-        "fallbackBehavior": "The exact oracle fallback/freshness and replacement policy was not publicly source-verified; no failover or staleness credit is asserted. Morpho documents that price() reverts can block liquidation.",
+        "fallbackBehavior": "The matched fixed arithmetic uses only recorded feed/rate inputs. Zero addresses contribute unity. ChainlinkDataFeedLib reads latestRoundData answer but not its timestamp; no consumer staleness bound, independent failover or heartbeat credit is asserted. A reverting required input reverts price().",
         "observedAt": "2026-10-03",
-        "observedBlock": 78901968,
+        "observedBlock": 79450688,
         "collateralParameters": [
           {
             "asset": "syrupUSDG",
@@ -223,14 +263,34 @@
           {
             "label": "Exact oracle deployment source response",
             "url": "https://sourcify.dev/server/v2/contract/4663/0x152c638fad68913739ee19ba8ef47faeb09dca91?fields=all"
+          },
+          {
+            "label": "Exact source-matched arithmetic and immutable input layout",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0x182e072f2c9c58c6f19f144c97986f7496c6a109?fields=all"
+          },
+          {
+            "label": "Exact current sole-adapter executable",
+            "url": "https://sourcify.dev/server/v2/contract/4663/0x44abc1d6ccff2696d98890b92e2157af242179c2?fields=all"
+          },
+          {
+            "label": "Pinned robinhood block 79450688 state",
+            "url": "https://api-robinhood-mainnet-archive.n.dwellir.com"
+          },
+          {
+            "label": "Exact Robinhood MetaOracle clone implementation",
+            "url": "https://sourcify.dev/server/v2/contract/4663/0x6a16d6fe1ba26e6ba52fda03972b1fe2e31ca729?fields=all"
+          },
+          {
+            "label": "Source-matched MGlo manual-admin implementation",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0x4a0a3eab5c75173c760b5a50a8570e5d20d9cc94?fields=all"
           }
         ]
       },
       {
         "id": "market-c845da65a020ddca5f132efa8fea79676d8edfdea504226a4c01e7a9e34cddd6",
         "label": "USDe / steakUSDG borrower market",
-        "tier": "opaque-or-unknown",
-        "summary": "Exact engine idToMarketParams matches collateral, oracle and LLTV from the complete adapter inventory. Getter inputs are pinned; source-verified composition does not establish independent fallback, feed-admin closure or heartbeat. Exact executable feed/fallback and feed-owner/freshness policy remains unverified; opaque topology is nondisclosure, not a proven price-manipulation event.",
+        "tier": "single-source-or-laggy",
+        "summary": "At robinhood block 79450688, exact market parameters identify pricing root 0xe64849bd4ad03dfabbe02bb521de19997a19055f. EIP-1167 clone delegates to 0x6a16d6fe1ba26e6ba52fda03972b1fe2e31ca729; primary=0x68b60430a1e2d663ccd975be31d3d31eba8ee501, backup=0xcee05fd68fe4799dbfbb9ad14d74e073c7a194b0, current=0x68b60430a1e2d663ccd975be31d3d31eba8ee501, deviation=5000000000000000/1e18, challenge=57600s, healing=86400s. price() catches selected-oracle reverts and calls the other; persistent deviation switches require the permissionless challenge/heal timelock. No independent-provider or timestamp-freshness guarantee follows.",
         "collateralAssets": [
           "USDe"
         ],
@@ -239,17 +299,41 @@
         ],
         "feeds": [
           {
-            "provider": "Morpho immutable market oracle",
-            "path": "IOracle.price for market 0xc845da65a020ddca5f132efa8fea79676d8edfdea504226a4c01e7a9e34cddd6",
+            "provider": "MetaOracleDeviationTimelock EIP-1167 clone",
+            "path": "price() / currentOracle()",
             "address": "0xe64849bd4ad03dfabbe02bb521de19997a19055f",
             "chain": "robinhood",
             "observedAt": "2026-10-03",
-            "observedBlock": 78901968
+            "observedBlock": 79450688
+          },
+          {
+            "provider": "MorphoChainlinkOracleV2",
+            "path": "primaryOracle()",
+            "address": "0x68b60430a1e2d663ccd975be31d3d31eba8ee501",
+            "chain": "robinhood",
+            "observedAt": "2026-10-03",
+            "observedBlock": 79450688
+          },
+          {
+            "provider": "MorphoChainlinkOracleV2",
+            "path": "backupOracle()",
+            "address": "0xcee05fd68fe4799dbfbb9ad14d74e073c7a194b0",
+            "chain": "robinhood",
+            "observedAt": "2026-10-03",
+            "observedBlock": 79450688
+          },
+          {
+            "provider": "Pinned single feed or ERC-4626 rate input; no independent heartbeat guarantee asserted",
+            "path": "backupOracle() / BASE_FEED_1()",
+            "address": "0xd9b1f2958298f25bf1289b5aab7fb6d1b7416c95",
+            "chain": "robinhood",
+            "observedAt": "2026-10-03",
+            "observedBlock": 79450688
           }
         ],
-        "fallbackBehavior": "The exact oracle fallback/freshness and replacement policy was not publicly source-verified; no failover or staleness credit is asserted. Morpho documents that price() reverts can block liquidation.",
+        "fallbackBehavior": "EIP-1167 clone delegates to 0x6a16d6fe1ba26e6ba52fda03972b1fe2e31ca729; primary=0x68b60430a1e2d663ccd975be31d3d31eba8ee501, backup=0xcee05fd68fe4799dbfbb9ad14d74e073c7a194b0, current=0x68b60430a1e2d663ccd975be31d3d31eba8ee501, deviation=5000000000000000/1e18, challenge=57600s, healing=86400s. price() catches selected-oracle reverts and calls the other; persistent deviation switches require the permissionless challenge/heal timelock. No independent-provider or timestamp-freshness guarantee follows.",
         "observedAt": "2026-10-03",
-        "observedBlock": 78901968,
+        "observedBlock": 79450688,
         "collateralParameters": [
           {
             "asset": "USDe",
@@ -280,14 +364,34 @@
           {
             "label": "Exact oracle deployment source response",
             "url": "https://sourcify.dev/server/v2/contract/4663/0xe64849bd4ad03dfabbe02bb521de19997a19055f?fields=all"
+          },
+          {
+            "label": "Exact source-matched arithmetic and immutable input layout",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0x182e072f2c9c58c6f19f144c97986f7496c6a109?fields=all"
+          },
+          {
+            "label": "Exact current sole-adapter executable",
+            "url": "https://sourcify.dev/server/v2/contract/4663/0x44abc1d6ccff2696d98890b92e2157af242179c2?fields=all"
+          },
+          {
+            "label": "Pinned robinhood block 79450688 state",
+            "url": "https://api-robinhood-mainnet-archive.n.dwellir.com"
+          },
+          {
+            "label": "Exact Robinhood MetaOracle clone implementation",
+            "url": "https://sourcify.dev/server/v2/contract/4663/0x6a16d6fe1ba26e6ba52fda03972b1fe2e31ca729?fields=all"
+          },
+          {
+            "label": "Source-matched MGlo manual-admin implementation",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0x4a0a3eab5c75173c760b5a50a8570e5d20d9cc94?fields=all"
           }
         ]
       },
       {
         "id": "market-1efd13a2d1dc66a2466e7c25820537028e604791f00454d9c686fdfbf70f404d",
         "label": "mGLO / steakUSDG borrower market",
-        "tier": "opaque-or-unknown",
-        "summary": "Exact engine idToMarketParams matches collateral, oracle and LLTV from the complete adapter inventory. Getter inputs are pinned; source-verified composition does not establish independent fallback, feed-admin closure or heartbeat. Exact executable feed/fallback and feed-owner/freshness policy remains unverified; opaque topology is nondisclosure, not a proven price-manipulation event.",
+        "tier": "privileged-internal-pricing",
+        "summary": "At robinhood block 79450688, exact market parameters identify pricing root 0xcb6edd02fdb9b0f2893e590ebed889214f4df650. Executable, after masking only published immutable slots and stripping the CBOR metadata trailer, exactly matches verified MorphoChainlinkOracleV2. All immutable feed/vault inputs were read at this block. No timestamp/freshness check or independent fallback is present in this consumer. BASE_FEED_1 adjusted-feed executable matches the verified Base source; underlying proxy implementation 0x1ae32bfe8b34f718cf4129696c5a02a25ce81159 exactly matches MGloCustomAggregatorFeed, whose prices are manually submitted by feed admins.",
         "collateralAssets": [
           "mGLO"
         ],
@@ -296,25 +400,25 @@
         ],
         "feeds": [
           {
-            "provider": "Morpho immutable market oracle",
-            "path": "IOracle.price for market 0x1efd13a2d1dc66a2466e7c25820537028e604791f00454d9c686fdfbf70f404d",
+            "provider": "MorphoChainlinkOracleV2 matched executable",
+            "path": "price()",
             "address": "0xcb6edd02fdb9b0f2893e590ebed889214f4df650",
             "chain": "robinhood",
             "observedAt": "2026-10-03",
-            "observedBlock": 78901968
+            "observedBlock": 79450688
           },
           {
-            "provider": "Pinned oracle input; operator/heartbeat not assumed",
+            "provider": "Pinned single feed or ERC-4626 rate input; no independent heartbeat guarantee asserted",
             "path": "BASE_FEED_1()",
             "address": "0xe90f5b4a2285f2b8d9cfee2f7ad37ea3ae1bd459",
             "chain": "robinhood",
             "observedAt": "2026-10-03",
-            "observedBlock": 78892407
+            "observedBlock": 79450688
           }
         ],
-        "fallbackBehavior": "The exact oracle fallback/freshness and replacement policy was not publicly source-verified; no failover or staleness credit is asserted. Morpho documents that price() reverts can block liquidation.",
+        "fallbackBehavior": "The matched fixed arithmetic uses only recorded feed/rate inputs. Zero addresses contribute unity. ChainlinkDataFeedLib reads latestRoundData answer but not its timestamp; no consumer staleness bound, independent failover or heartbeat credit is asserted. A reverting required input reverts price().",
         "observedAt": "2026-10-03",
-        "observedBlock": 78901968,
+        "observedBlock": 79450688,
         "collateralParameters": [
           {
             "asset": "mGLO",
@@ -345,14 +449,34 @@
           {
             "label": "Exact oracle deployment source response",
             "url": "https://sourcify.dev/server/v2/contract/4663/0xcb6edd02fdb9b0f2893e590ebed889214f4df650?fields=all"
+          },
+          {
+            "label": "Exact source-matched arithmetic and immutable input layout",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0x182e072f2c9c58c6f19f144c97986f7496c6a109?fields=all"
+          },
+          {
+            "label": "Exact current sole-adapter executable",
+            "url": "https://sourcify.dev/server/v2/contract/4663/0x44abc1d6ccff2696d98890b92e2157af242179c2?fields=all"
+          },
+          {
+            "label": "Pinned robinhood block 79450688 state",
+            "url": "https://api-robinhood-mainnet-archive.n.dwellir.com"
+          },
+          {
+            "label": "Exact Robinhood MetaOracle clone implementation",
+            "url": "https://sourcify.dev/server/v2/contract/4663/0x6a16d6fe1ba26e6ba52fda03972b1fe2e31ca729?fields=all"
+          },
+          {
+            "label": "Source-matched MGlo manual-admin implementation",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0x4a0a3eab5c75173c760b5a50a8570e5d20d9cc94?fields=all"
           }
         ]
       },
       {
         "id": "market-0309c02dabf0be02682af1a2bde9a457f4df0f0b6bc889cde3f948e5315e4114",
         "label": "spUSDG / steakUSDG borrower market",
-        "tier": "opaque-or-unknown",
-        "summary": "Exact engine idToMarketParams matches collateral, oracle and LLTV from the complete adapter inventory. Getter inputs are pinned; source-verified composition does not establish independent fallback, feed-admin closure or heartbeat. Exact executable feed/fallback and feed-owner/freshness policy remains unverified; opaque topology is nondisclosure, not a proven price-manipulation event.",
+        "tier": "single-source-or-laggy",
+        "summary": "At robinhood block 79450688, exact market parameters identify pricing root 0xe694c531f65c4babc88a52d7178476e095e51574. Executable, after masking only published immutable slots and stripping the CBOR metadata trailer, exactly matches verified MorphoChainlinkOracleV2. All immutable feed/vault inputs were read at this block. No timestamp/freshness check or independent fallback is present in this consumer.",
         "collateralAssets": [
           "spUSDG"
         ],
@@ -361,25 +485,25 @@
         ],
         "feeds": [
           {
-            "provider": "Morpho immutable market oracle",
-            "path": "IOracle.price for market 0x0309c02dabf0be02682af1a2bde9a457f4df0f0b6bc889cde3f948e5315e4114",
+            "provider": "MorphoChainlinkOracleV2 matched executable",
+            "path": "price()",
             "address": "0xe694c531f65c4babc88a52d7178476e095e51574",
             "chain": "robinhood",
             "observedAt": "2026-10-03",
-            "observedBlock": 78901968
+            "observedBlock": 79450688
           },
           {
-            "provider": "Pinned oracle input; operator/heartbeat not assumed",
+            "provider": "Pinned single feed or ERC-4626 rate input; no independent heartbeat guarantee asserted",
             "path": "BASE_VAULT()",
             "address": "0xde770c84fe66e063336b31737cfe9790f18c4087",
             "chain": "robinhood",
             "observedAt": "2026-10-03",
-            "observedBlock": 78892407
+            "observedBlock": 79450688
           }
         ],
-        "fallbackBehavior": "The exact oracle fallback/freshness and replacement policy was not publicly source-verified; no failover or staleness credit is asserted. Morpho documents that price() reverts can block liquidation.",
+        "fallbackBehavior": "The matched fixed arithmetic uses only recorded feed/rate inputs. Zero addresses contribute unity. ChainlinkDataFeedLib reads latestRoundData answer but not its timestamp; no consumer staleness bound, independent failover or heartbeat credit is asserted. A reverting required input reverts price().",
         "observedAt": "2026-10-03",
-        "observedBlock": 78901968,
+        "observedBlock": 79450688,
         "collateralParameters": [
           {
             "asset": "spUSDG",
@@ -410,6 +534,26 @@
           {
             "label": "Exact oracle deployment source response",
             "url": "https://sourcify.dev/server/v2/contract/4663/0xe694c531f65c4babc88a52d7178476e095e51574?fields=all"
+          },
+          {
+            "label": "Exact source-matched arithmetic and immutable input layout",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0x182e072f2c9c58c6f19f144c97986f7496c6a109?fields=all"
+          },
+          {
+            "label": "Exact current sole-adapter executable",
+            "url": "https://sourcify.dev/server/v2/contract/4663/0x44abc1d6ccff2696d98890b92e2157af242179c2?fields=all"
+          },
+          {
+            "label": "Pinned robinhood block 79450688 state",
+            "url": "https://api-robinhood-mainnet-archive.n.dwellir.com"
+          },
+          {
+            "label": "Exact Robinhood MetaOracle clone implementation",
+            "url": "https://sourcify.dev/server/v2/contract/4663/0x6a16d6fe1ba26e6ba52fda03972b1fe2e31ca729?fields=all"
+          },
+          {
+            "label": "Source-matched MGlo manual-admin implementation",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0x4a0a3eab5c75173c760b5a50a8570e5d20d9cc94?fields=all"
           }
         ]
       }

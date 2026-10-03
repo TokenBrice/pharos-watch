@@ -7607,6 +7607,138 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "sirloinusdc-steakhouse",
+      "reviewedAt": "2026-10-03T22:50:43Z",
+      "expiresAt": "2027-10-03T22:00:00Z",
+      "reviewer": "Unknown wave W1R15 primary-source review",
+      "notes": "Exact token contract inception establishes only a lower bound of live implementation history. No parent-token longevity, independently verified redemption throughput, stress recovery, reserve reconciliation continuity, or incident-free history is claimed.",
+      "sources": [
+        {
+          "sourceId": "exact-contract-inception",
+          "label": "Exact deployed token creation transaction and block date",
+          "publisher": "Blockscout / chain deployment record",
+          "publishedAt": "2026-05-01",
+          "url": "https://base.blockscout.com/tx/0x365e979eb98424e0fcedad75285d1c9ae4cd4be4a3a3841318666316f4082bf7",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 5,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-contract-inception"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "steakeurcv-steakhouse",
+      "reviewedAt": "2026-10-03T22:50:43Z",
+      "expiresAt": "2027-10-03T22:00:00Z",
+      "reviewer": "Unknown wave W1R15 primary-source review",
+      "notes": "Exact token contract inception establishes only a lower bound of live implementation history. No parent-token longevity, independently verified redemption throughput, stress recovery, reserve reconciliation continuity, or incident-free history is claimed.",
+      "sources": [
+        {
+          "sourceId": "exact-contract-inception",
+          "label": "Exact deployed token creation transaction and block date",
+          "publisher": "Blockscout / chain deployment record",
+          "publishedAt": "2025-12-15",
+          "url": "https://eth.blockscout.com/tx/0x6032d52aed2ef90fbd605848483ba32aa651fd0d4da4bf7d6b1b22e1a01e0110",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 9,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-contract-inception"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "steakusdg-steakhouse",
+      "reviewedAt": "2026-10-03T22:50:43Z",
+      "expiresAt": "2027-10-03T22:00:00Z",
+      "reviewer": "Unknown wave W1R15 primary-source review",
+      "notes": "Exact token contract inception establishes only a lower bound of live implementation history. No parent-token longevity, independently verified redemption throughput, stress recovery, reserve reconciliation continuity, or incident-free history is claimed.",
+      "sources": [
+        {
+          "sourceId": "exact-contract-inception",
+          "label": "Exact deployed token creation transaction and block date",
+          "publisher": "Blockscout / chain deployment record",
+          "publishedAt": "2026-05-29",
+          "url": "https://sourcify.dev/server/v2/contract/4663/0xbeeff033f34c046626b8d0a041844c5d1a5409dd?fields=deployment",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 4,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-contract-inception"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "dusd-alto",
+      "reviewedAt": "2026-10-03T22:50:43Z",
+      "expiresAt": "2027-10-03T22:00:00Z",
+      "reviewer": "Unknown wave W1R15 primary-source review",
+      "notes": "Exact token contract inception establishes only a lower bound of live implementation history. No parent-token longevity, independently verified redemption throughput, stress recovery, reserve reconciliation continuity, or incident-free history is claimed.",
+      "sources": [
+        {
+          "sourceId": "exact-contract-inception",
+          "label": "Exact deployed token creation transaction and block date",
+          "publisher": "Blockscout / chain deployment record",
+          "publishedAt": "2025-12-10",
+          "url": "https://eth.blockscout.com/tx/0xda5741fc0932fe020c3217a89d23c0267fa31d8dd9bd395388c0994bb83e3bf1",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 9,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-contract-inception"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }
