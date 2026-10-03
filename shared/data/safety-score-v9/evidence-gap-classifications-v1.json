@@ -20260,6 +20260,96 @@
         "https://eth.blockscout.com/api/v2/smart-contracts/0xd3fd63209fa2d55b07a0f6db36c2f43900be3094"
       ],
       "rationale": "The whole rUSD-linked reserve slice has no published unconditional realization maximum. Savingcoin code mints rUSD on withdrawal rather than holding a liquid deposit; issuer product and PoR docs condition redemption on available PSM liquidity, and terms warn of delays to liquidate backing without a maximum. Neither ERC4626 transaction speed nor an available-buffer observation proves whole-position immediate realization."
+    },
+    {
+      "id": "uw-zarp-zarp-b944509ac807af36",
+      "assetId": "zarp-zarp",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:zarp-zarp:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:07:26Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R89)",
+      "sources": [
+        {
+          "url": "https://www.zarpstablecoin.com/terms/",
+          "observedAt": "2026-10-03T23:06:36Z",
+          "datumAsOf": "2024-07-01",
+          "location": "Clauses 3.3 and 6",
+          "excerpt": "Any such interest earned may be kept by the Company as fees.",
+          "assertion": "The public agreement permits retained reserve interest and describes partner bank redemption, but supplies no applicable numeric redemption-charge schedule."
+        },
+        {
+          "url": "https://docs.zarpstablecoin.com/zarp-stablecoin/token-redemption.md",
+          "observedAt": "2026-10-03T23:06:36Z",
+          "datumAsOf": null,
+          "location": "Token Redemption",
+          "excerpt": "the tokens are destroyed and a corresponding amount of fiat money is sent to the Partner\u2019s bank account.",
+          "assertion": "Describes payout endpoint but no percentage, flat charge, tier or all-in redemption fee."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.zarpstablecoin.com/terms/",
+        "https://www.zarpstablecoin.com/transparency/",
+        "https://www.zarpstablecoin.com/compliance/",
+        "https://docs.zarpstablecoin.com/zarp-stablecoin/llms.txt",
+        "https://docs.zarpstablecoin.com/zarp-stablecoin/token-redemption.md",
+        "https://docs.zarpstablecoin.com/zarp-stablecoin/zarp-partners.md",
+        "https://docs.zarpstablecoin.com/zarp-stablecoin/custody.md"
+      ],
+      "rationale": "The exact cost for an approved partner redeeming ZARP to its own ZAR bank account is undisclosed: governing terms, full documentation index, partner onboarding, redemption, transparency and compliance pages publish no applicable percentage/flat/minimum or account-specific fee schedule. Retained reserve interest and blockchain gas are not an all-in redemption quote; 1:1 par payout is not a zero-fee assertion."
+    },
+    {
+      "id": "uw-zarp-zarp-62e96e8539caea04",
+      "assetId": "zarp-zarp",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:9b04ed783059e37aa998ae3f",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:07:26Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R89)",
+      "sources": [
+        {
+          "url": "https://kempengroup.co.za/wp-content/uploads/2026/09/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-09-01-signed-draft.pdf",
+          "observedAt": "2026-10-03T23:06:36Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Page 2, Procedures and Findings, procedure 2",
+          "excerpt": "We have obtained access to the call deposit and current bank accounts of the company as well as that of the Old Mutual Wealth Trust Company JHB (Pty) Ltd trust account.",
+          "assertion": "Identifies account categories and verifies balances, but does not disclose all underlying reserve instruments or a whole-slice contractual maturity maximum."
+        },
+        {
+          "url": "https://www.zarpstablecoin.com/terms/",
+          "observedAt": "2026-10-03T23:06:36Z",
+          "datumAsOf": "2024-07-01",
+          "location": "Clause 3.3",
+          "excerpt": "The Company may apply funds in the said account to earn interest on those funds",
+          "assertion": "Reserve account investment permission is not a maximum term covenant."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.zarpstablecoin.com/terms/",
+        "https://www.zarpstablecoin.com/transparency/",
+        "https://www.zarpstablecoin.com/compliance/",
+        "https://docs.zarpstablecoin.com/zarp-stablecoin/llms.txt",
+        "https://docs.zarpstablecoin.com/zarp-stablecoin/master.md",
+        "https://docs.zarpstablecoin.com/zarp-stablecoin/token-redemption.md",
+        "https://kempengroup.co.za/wp-content/uploads/2026/09/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-09-01-signed-draft.pdf",
+        "https://kempengroup.co.za/wp-content/uploads/2026/03/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-02-27-1773397665324.pdf",
+        "https://eth.blockscout.com/api/v2/addresses/0xb755506531786c8ac63b756bab1ac387bacb0c04"
+      ],
+      "rationale": "The exact maximum maturityDaysMax of the entire ZAR fiat reserve slice remains undisclosed. September and February AUP reports identify call/current balances and a trust account, but no complete account investment mandate or maximum term covering all cash equivalents. Issuer docs, legal terms and compliance disclosures do not add that limit. Do not infer zero maturity from call-account labels, token redemption par or bank liquidity."
     }
   ]
 }

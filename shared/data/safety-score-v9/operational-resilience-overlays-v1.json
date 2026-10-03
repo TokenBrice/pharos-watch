@@ -9359,6 +9359,156 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "audm-mento",
+      "reviewedAt": "2026-10-03T23:04:20Z",
+      "expiresAt": "2027-10-03T23:00:00Z",
+      "reviewer": "Pharos unknown-wave W1R89",
+      "notes": "Conservative full-month lower bound from the dated exact-token live-operation evidence, not project founding. Issuer-reported eligibility only. No throughput, stress recovery, reconciliation continuity or incident-free claim. ZARP AUP is not an assurance opinion.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Mento live cAUD announcement",
+          "publisher": "Mento",
+          "publishedAt": "2025-05-05",
+          "url": "https://www.mento.org/blog/mento-expands-global-onchain-fx-access-with-five-new-decentralized-stablecoins",
+          "confidence": "issuer-reported"
+        },
+        {
+          "sourceId": "ticker-continuity",
+          "label": "No contract changes in Mento rebranding",
+          "publisher": "Mento",
+          "publishedAt": "2025-12-17",
+          "url": "https://www.mento.org/blog/a-new-chapter-in-multichain-fx-the-evolution-of-mento-stablecoins",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 16,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation",
+            "ticker-continuity"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "brlm-mento",
+      "reviewedAt": "2026-10-03T23:07:26Z",
+      "expiresAt": "2027-10-03T23:00:00Z",
+      "reviewer": "Pharos unknown-wave W1R89",
+      "notes": "Conservative full-month lower bound from the dated exact-token live-operation evidence, not project founding. Issuer-reported eligibility only. No throughput, stress recovery, reconciliation continuity or incident-free claim. ZARP AUP is not an assurance opinion.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "cREAL operating cash-in and cash-out ecosystem, dated governance record",
+          "publisher": "Celo governance",
+          "publishedAt": "2022-02-14",
+          "url": "https://forum.celo.org/t/cgp-49-creal-liquidity-incentives/2935/2",
+          "confidence": "issuer-reported"
+        },
+        {
+          "sourceId": "ticker-continuity",
+          "label": "No contract changes in Mento rebranding",
+          "publisher": "Mento",
+          "publishedAt": "2025-12-17",
+          "url": "https://www.mento.org/blog/a-new-chapter-in-multichain-fx-the-evolution-of-mento-stablecoins",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 55,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation",
+            "ticker-continuity"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usdz-anzen",
+      "reviewedAt": "2026-10-03T23:04:20Z",
+      "expiresAt": "2027-10-03T23:00:00Z",
+      "reviewer": "Pharos unknown-wave W1R89",
+      "notes": "Conservative full-month lower bound from the dated exact-token live-operation evidence, not project founding. Issuer-reported eligibility only. No throughput, stress recovery, reconciliation continuity or incident-free claim. ZARP AUP is not an assurance opinion.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Dated USDz operating announcement",
+          "publisher": "Anzen",
+          "publishedAt": "2024-11-21",
+          "url": "https://anzen.finance/everything-you-need-to-know-about-anz",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 22,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "zarp-zarp",
+      "reviewedAt": "2026-10-03T23:07:26Z",
+      "expiresAt": "2027-10-03T23:00:00Z",
+      "reviewer": "Pharos unknown-wave W1R89",
+      "notes": "Conservative full-month lower bound from the dated exact-token live-operation evidence, not project founding. Issuer-reported eligibility only. No throughput, stress recovery, reconciliation continuity or incident-free claim. ZARP AUP is not an assurance opinion.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Exact ZARP Ethereum proxy creation at block 16946508",
+          "publisher": "Ethereum via Blockscout",
+          "publishedAt": "2023-03-31",
+          "url": "https://eth.blockscout.com/tx/0x77f7be05b3cd2794fc476804add862af58c6d9c944d25fd42976444d358e04be",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 42,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }
