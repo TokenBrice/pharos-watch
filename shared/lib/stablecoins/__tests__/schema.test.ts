@@ -5,9 +5,9 @@ import {
   StablecoinMintAuthoritySidecarSchema,
   StablecoinRiskReviewSidecarSchema,
 } from "../schema";
-import { MintAuthorityProfileSchema, OracleRiskProfileSchema } from "@shared/types/stablecoin-meta-control-schemas";
-import { V9DeploymentControlFactBaseSchema } from "@shared/types/safety-score-v9-facts";
-import { reviewedScope, SCOPE_CONTROLLER } from "@shared/lib/__tests__/safety-score-v9-control-scope.test-support";
+import { MintAuthorityProfileSchema, OracleRiskProfileSchema } from "../../../types/stablecoin-meta-control-schemas";
+import { V9DeploymentControlFactBaseSchema } from "../../../types/safety-score-v9-facts";
+import { reviewedScope, SCOPE_CONTROLLER } from "../../__tests__/safety-score-v9-control-scope.test-support";
 import { CANONICAL_STABLECOIN_FLAGS, makeRawStablecoinMeta as makeCoin } from "./test-support";
 import { makeSafeControl } from "./schema.test-support";
 
