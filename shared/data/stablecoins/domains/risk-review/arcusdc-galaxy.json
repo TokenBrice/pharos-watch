@@ -98,15 +98,15 @@
     ]
   },
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "All currently enumerated adapter markets have chain-qualified oracle paths and borrower-liquidation branches. Direct share accounting has no independent external price input. Exact oracle feed/rate control, freshness enforcement and fallback closure remain incomplete; no oracleless lending or high-quality feed claim is made.",
+    "tier": "single-source-or-laggy",
+    "summary": "At Arc block 24129914 the sole adapter contains one cirBTC/USDC market. Its oracle has one nonzero BTC/USD feed, no nested vault conversions, and no staleness check. That feed delegates to DualAggregator 0x733fe1ba02ea9003c3cfbf5dcc41cf685ff64362. Exact explorer runtime bytes match pinned RPC for the adapter, Morpho, oracle, feed proxy and aggregator; partial explorer verification is not full compiler certification. No independent fallback or bounded freshness is credited.",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",
       "reviewedAt": "2026-10-03",
-      "reviewer": "Refine07",
-      "rationale": "The exact current lending adapter census establishes 1 borrower markets. Each remains price-sensitive through its configured collateral oracle, separately from direct share accounting.",
+      "reviewer": "W2R21 exact-source and pinned RPC review",
+      "rationale": "At block 24129914 adaptersLength=1 and marketIdsLength=1; exact idToMarketParams resolves the cirBTC/USDC borrower market with LLTV 86%. All six feed/vault getters close the valuation topology: only BASE_FEED_1 is nonzero. Direct share accounting does not exempt this borrower branch.",
       "sources": [
         {
           "label": "Adapter 0xee0080203a76690bca40670dfd0cd1c30fab7c2c marketIdsLength/marketIds census at arc block 24011393, 2026-10-03; adapter.morpho/idToMarketParams collateral/oracle/LLTV all independently match the API",
@@ -127,9 +127,29 @@
       ]
     },
     "reviewedAt": "2026-10-03",
-    "reviewer": "Refine07",
-    "confidence": "limited",
+    "reviewer": "W2R21 exact-source and pinned RPC review",
+    "confidence": "probable",
     "sources": [
+      {
+        "label": "Exact oracle and ChainlinkDataFeedLib source; runtime matched at Arc block 24129914 on 2026-10-03",
+        "url": "https://explorer.arc.io/api/v2/smart-contracts/0x2aa87ff48933ce6aba240bee916fc2e6ec1e51ab"
+      },
+      {
+        "label": "Exact Morpho liquidation, loss writeoff and immutable market-parameter source; runtime matched at block 24129914",
+        "url": "https://explorer.arc.io/api/v2/smart-contracts/0x34cd04070dd72b14e241112f6d83812df5af7fcd"
+      },
+      {
+        "label": "Exact adapter allocation and market enumeration source; runtime matched at block 24129914",
+        "url": "https://explorer.arc.io/api/v2/smart-contracts/0xee0080203a76690bca40670dfd0cd1c30fab7c2c"
+      },
+      {
+        "label": "Exact feed proxy with current aggregator and owner independently read at block 24129914",
+        "url": "https://explorer.arc.io/api/v2/smart-contracts/0x7777547914e03bcbb04ae034942765a0dbb26ae3"
+      },
+      {
+        "label": "Exact current DualAggregator source; runtime matched at block 24129914, ten current transmitters, shared proxy/aggregator owner",
+        "url": "https://explorer.arc.io/api/v2/smart-contracts/0x733fe1ba02ea9003c3cfbf5dcc41cf685ff64362"
+      },
       {
         "label": "Adapter 0xee0080203a76690bca40670dfd0cd1c30fab7c2c marketIdsLength/marketIds census at arc block 24011393, 2026-10-03; adapter.morpho/idToMarketParams collateral/oracle/LLTV all independently match the API",
         "url": "https://rpc.mainnet.arc.io"
@@ -155,8 +175,8 @@
       {
         "id": "0xc2db905f174e5defcce01d321b09f15f78856a36a21b90cc7e1abbc29225815d",
         "label": "cirBTC collateral market 0xc2db905f",
-        "tier": "opaque-or-unknown",
-        "summary": "Exact collateral/oracle identity and LLTV are established. Nested valuation inputs, operator controls, feed staleness enforcement and fallback behavior remain incompletely reviewed; no independence or redundancy credit is claimed.",
+        "tier": "single-source-or-laggy",
+        "summary": "Pinned one-market census and all feed/vault getters establish a single BTC/USD feed and no nested vault conversion. ChainlinkDataFeedLib discards updatedAt and accepts nonnegative answers without a staleness bound. The proxy owner can replace its aggregator; DualAggregator uses OCR signatures and caller-dependent primary/secondary round selection, not an independent backup feed.",
         "collateralAssets": [
           "0x171a4217b86a807a64eb94757db6849fb4bdbaa0"
         ],
@@ -165,16 +185,16 @@
         ],
         "feeds": [
           {
-            "provider": "ChainlinkOracleV2 adapter (Morpho API classification; feed operator/custody not independently established)",
-            "path": "baseFeedOne of 0x2aa87ff48933ce6aba240bee916fc2e6ec1e51ab for market 0xc2db905f174e5defcce01d321b09f15f78856a36a21b90cc7e1abbc29225815d",
+            "provider": "BTC/USD OCR DualAggregator behind owner-controlled EACAggregatorProxy",
+            "path": "Morpho oracle BASE_FEED_1 -> EACAggregatorProxy 0x7777547914e03bcbb04ae034942765a0dbb26ae3 -> DualAggregator 0x733fe1ba02ea9003c3cfbf5dcc41cf685ff64362; all other feed/vault inputs are zero",
             "address": "0x7777547914e03bcbb04ae034942765a0dbb26ae3",
             "chain": "arc",
             "observedAt": "2026-10-03"
           }
         ],
-        "fallbackBehavior": "Market consumes its configured IOracle.price(); nested-feed stale-price handling and fallback/bypass paths are not yet verified for this exact oracle.",
+        "fallbackBehavior": "No alternate feed or local stale-answer rejection exists in the configured Morpho oracle. EACAggregatorProxy delegates to its owner-selected aggregator. DualAggregator has caller-dependent primary/secondary round selection; its secondaryProxy is this same feed proxy, not a separate independent data source. No freshness SLA is asserted.",
         "observedAt": "2026-10-03",
-        "observedBlock": 24011393,
+        "observedBlock": 24129914,
         "collateralParameters": [
           {
             "asset": "0x171a4217b86a807a64eb94757db6849fb4bdbaa0",
@@ -182,10 +202,21 @@
             "note": "Immutable market LLTV per Morpho marketById; this is loan-to-liquidation value, not a vault share mint cap."
           }
         ],
-        "liquidationMechanism": "Referenced Morpho Blue liquidate checks oracle-valued borrower health against LLTV, transfers seized collateral to the liquidator and requires loan-token repayment. Exact deployment bytecode equivalence is not newly certified.",
-        "backstop": "No exact-market funded insurance or discretionary rescue commitment was verified in the cited inventory; that fact remains unknown.",
-        "shutdownOrBadDebtBehavior": "Referenced Morpho Blue writes off remaining debt when borrower collateral reaches zero, subtracting badDebtAssets from totalSupplyAssets; VaultV2 NAV recognizes adapter losses. No guaranteed recovery is inferred.",
+        "liquidationMechanism": "Exact Morpho deployed runtime matches explorer source at block 24129914. Permissionless liquidate accrues interest, checks borrower health using IOracle.price and immutable LLTV, transfers seized collateral, and requires loan-token repayment; liquidator funding and realizable collateral value remain risks.",
+        "shutdownOrBadDebtBehavior": "Exact Morpho liquidate writes off remaining borrow shares when borrower collateral becomes zero and subtracts badDebtAssets from totalSupplyAssets. The adapter values lender shares against that reduced supply book; VaultV2 accrual realizes losses. There is no local shutdown or guaranteed recovery payment in this Morpho market implementation.",
         "sources": [
+          {
+            "label": "Exact configured Morpho deployment, runtime matched at block 24129914",
+            "url": "https://explorer.arc.io/api/v2/smart-contracts/0x34cd04070dd72b14e241112f6d83812df5af7fcd"
+          },
+          {
+            "label": "Exact single-feed oracle and absent staleness/fallback check, runtime matched at block 24129914",
+            "url": "https://explorer.arc.io/api/v2/smart-contracts/0x2aa87ff48933ce6aba240bee916fc2e6ec1e51ab"
+          },
+          {
+            "label": "Exact current BTC/USD DualAggregator, runtime matched at block 24129914",
+            "url": "https://explorer.arc.io/api/v2/smart-contracts/0x733fe1ba02ea9003c3cfbf5dcc41cf685ff64362"
+          },
           {
             "label": "Adapter 0xee0080203a76690bca40670dfd0cd1c30fab7c2c marketIdsLength/marketIds census at arc block 24011393, 2026-10-03; adapter.morpho/idToMarketParams collateral/oracle/LLTV all independently match the API",
             "url": "https://rpc.mainnet.arc.io"
@@ -246,9 +277,9 @@
         "applicability": {
           "disposition": "branches-required",
           "reviewedAt": "2026-10-03",
-          "reviewer": "Refine07",
+          "reviewer": "W2R21 exact-source and pinned RPC review",
           "confidence": "probable",
-          "rationale": "The configured oracle prices cirBTC borrower collateral in market 0xc2db905f174e5defcce01d321b09f15f78856a36a21b90cc7e1abbc29225815d; ERC-4626 accounting does not exempt this lending branch. Feed/operator/freshness topology remains bounded unknown.",
+          "rationale": "At block 24129914 the sole current market oracle prices cirBTC borrower collateral using one BTC/USD feed. All other feeds and vault conversions are zero. Exact oracle and downstream current aggregator runtime bytes match source endpoints; absent staleness enforcement establishes a laggy single-source tier without independence credit.",
           "sources": [
             {
               "label": "Adapter 0xee0080203a76690bca40670dfd0cd1c30fab7c2c marketIdsLength/marketIds census at arc block 24011393, 2026-10-03; adapter.morpho/idToMarketParams collateral/oracle/LLTV all independently match the API",

@@ -6355,138 +6355,6 @@
       "rationale": "The exact maximum maturityDaysMax of the entire ZAR fiat reserve slice remains undisclosed. September and February AUP reports identify call/current balances and a trust account, but no complete account investment mandate or maximum term covering all cash equivalents. Issuer docs, legal terms and compliance disclosures do not add that limit. Do not infer zero maturity from call-account labels, token redemption par or bank liquidity."
     },
     {
-      "id": "uw-zarm-mento-d9f33a8e420064a8",
-      "assetId": "zarm-mento",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:5c07f7cac6051433ad0dae06",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:08:26Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R95)",
-      "sources": [
-        {
-          "url": "https://static.agora.finance/termsofuse.pdf",
-          "observedAt": "2026-10-03T23:08:23Z",
-          "datumAsOf": "2026-09-01",
-          "location": "Agora Bermuda Terms, AUSD, page 6",
-          "excerpt": "Agora aims to facilitate the redemption of AUSD within 48 business hours under the normal course of business or within 96 business hours under stress scenarios.",
-          "assertion": "Targets are expressly an aim, with reserve-related delay and in-kind rights; not a whole-position final realization maximum for Mento's AUSD."
-        },
-        {
-          "url": "https://docs.agora.finance/api/endpoints/routes/overview",
-          "observedAt": "2026-10-03T23:08:25Z",
-          "datumAsOf": null,
-          "location": "Settlement",
-          "excerpt": "Agora delivers the destination currency to `to.accountId` for the amount received.",
-          "assertion": "Public route mechanics disclose destinations, not a completion bound or Mento account eligibility."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.agora.finance/product/ausd",
-        "https://docs.agora.finance/llms.txt",
-        "https://docs.agora.finance/developer/transparency",
-        "https://docs.agora.finance/api/endpoints/routes/overview",
-        "https://docs.agora.finance/api/endpoints/transactions/overview",
-        "https://static.agora.finance/termsofuse.pdf",
-        "https://static.agora.finance/riskdisclosures.pdf",
-        "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
-      ],
-      "rationale": "The exact whole-slice liquidityHorizon for Mento's AUSD is not disclosed. Agora publishes par redemption, verified-customer requirements and 48/96-business-hour aims with delay/in-kind discretion, not final maximum delivery. Mento's API includes Ethereum wallets plus Monad wallet/FPMM positions without a whole-position unwind bound. Instant token transfers or authenticated pair quotes cannot prove the entire position immediately realizable."
-    },
-    {
-      "id": "uw-scusd-rings-9c76af91f44a6436",
-      "assetId": "scusd-rings",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:scusd-rings:queue-redeem"
-      },
-      "cause": "B",
-      "assertion": "required-data-public",
-      "reviewedAt": "2026-10-03T23:08:26Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R95)",
-      "sources": [
-        {
-          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3754480db8b3E607fbE125697EB496a44A1Be720",
-          "observedAt": "2026-10-03T23:08:25Z",
-          "datumAsOf": null,
-          "location": "BoringOnChainQueue.sol, previewAssetsOut",
-          "excerpt": "price = price.mulDivDown(1e4 - discount, 1e4);",
-          "assertion": "Exact issuer-listed Ethereum scUSD queue discloses user-selected discount and accountant-rate formula. Existing Pharos documentedVariableFee config does not evaluate the applicable live discount/rate at each notional (W15 disclosed-unquantified)."
-        },
-        {
-          "url": "https://docs.trevee.xyz/trevee-earn/sonic-scassets/developers/smart-contracts",
-          "observedAt": "2026-10-03T23:08:25Z",
-          "datumAsOf": null,
-          "location": "Ethereum contract table",
-          "excerpt": "scUSD withdraw queue",
-          "assertion": "Issuer binds the verified queue address to scUSD, not stkscUSD."
-        }
-      ]
-    },
-    {
-      "id": "uw-scusd-rings-f6e6af250e0bc58c",
-      "assetId": "scusd-rings",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:scusd-rings:queue-redeem"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:08:26Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R95)",
-      "sources": [
-        {
-          "url": "https://docs.trevee.xyz/trevee-earn/sonic-scassets/veda-vaults/collateral-vault-ethereum",
-          "observedAt": "2026-10-03T23:08:25Z",
-          "datumAsOf": null,
-          "location": "Collateral vault cooldown notice",
-          "excerpt": "scAssets can be redeemed after a 3 day cooldown.",
-          "assertion": "A cooldown establishes earliest eligibility, not maximum final delivery."
-        },
-        {
-          "url": "https://docs.trevee.xyz/trevee-earn/sonic-scassets/security-framework-and-audits",
-          "observedAt": "2026-10-03T23:08:26Z",
-          "datumAsOf": null,
-          "location": "Safety Mechanisms",
-          "excerpt": "5-day cooldown for scAsset redemptions",
-          "assertion": "Conflicting three/five-day cooldowns still disclose no end-to-end upper settlement bound."
-        },
-        {
-          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3754480db8b3E607fbE125697EB496a44A1Be720",
-          "observedAt": "2026-10-03T23:08:25Z",
-          "datumAsOf": null,
-          "location": "BoringOnChainQueue.sol, solveOnChainWithdraws",
-          "excerpt": "if (block.timestamp > deadline) revert BoringOnChainQueue__DeadlinePassed();",
-          "assertion": "Expiry rejects overdue solves rather than guaranteeing funded final payout by that deadline; solving remains authorized and pausable."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://trevee.xyz/",
-        "https://docs.trevee.xyz/sitemap.xml",
-        "https://docs.trevee.xyz/trevee-earn/sonic-scassets",
-        "https://docs.trevee.xyz/trevee-earn/sonic-scassets/veda-vaults/collateral-vault-ethereum",
-        "https://docs.trevee.xyz/trevee-earn/sonic-scassets/security-framework-and-audits",
-        "https://docs.trevee.xyz/trevee-earn/sonic-scassets/developers/smart-contracts",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x3754480db8b3E607fbE125697EB496a44A1Be720",
-        "https://docs.rings.money/"
-      ],
-      "rationale": "No maximum final stablecoin delivery time is disclosed for scUSD queue redemption. Current issuer documentation contradicts itself on three versus five-day cooldown; neither is a completion SLA. Exact published queue source enforces maturity, expiry, pause and authorized solver calls, not guaranteed solving/funding. The old Rings docs redirect to a GitBook shell; current Trevee docs and exact queue source are the substantive reviewed surfaces."
-    },
-    {
       "id": "uw-xgld-unitas-2a23121b3ee490f8",
       "assetId": "xgld-unitas",
       "scope": {
@@ -7772,556 +7640,6 @@
         "https://www.cointree.com/company/pds/audf-pds/"
       ],
       "rationale": "AUDF reserve bank-deposit maximum contractual maturity and whole-position liquidity horizon are not disclosed. Issuer transparency/workflow, August bank reserve audit, complete whitepaper and distributor PDS describe cash backing and conditional redemption but not bank-account term/withdrawal conditions. Open-ended or on-demand holder liabilities do not establish the underlying deposit maturity."
-    },
-    {
-      "id": "uw-chfau-allunity-bd5858edc3a18148",
-      "assetId": "chfau-allunity",
-      "scope": {
-        "componentKey": "reserve-composition",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "backing",
-        "requiredDatum": "reserve-composition",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:53:57Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R25)",
-      "sources": [
-        {
-          "url": "https://allunity.com/trust-center",
-          "observedAt": "2026-10-03T22:47:40Z",
-          "datumAsOf": null,
-          "location": "Issuer documentation",
-          "excerpt": "Reserve audit report (coming soon)",
-          "assertion": "Trust center supplies bank-reserve envelope, but no dated CHFAU book or whole-supply reconciliation report."
-        },
-        {
-          "url": "https://framerusercontent.com/assets/lfHzRwNo9LAdtDuKhicsDSTFM2g.pdf",
-          "observedAt": "2026-10-03T22:47:40Z",
-          "datumAsOf": "2026-06-09",
-          "location": "I.06 and F.4",
-          "excerpt": "either in the form of CHF denominated cash",
-          "assertion": "Whitepaper permits cash/HQLA basket without current category amounts or a recurring all-deployment reconciliation procedure."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://allunity.com/trust-center",
-        "https://framerusercontent.com/assets/lfHzRwNo9LAdtDuKhicsDSTFM2g.pdf",
-        "https://allunity.com/chfau",
-        "https://allunity.com/redemption-policy",
-        "https://allunity.com/terms-and-conditions"
-      ],
-      "rationale": "CHFAU current reserve composition/denominator and dated whole-supply supply-to-reserve reconciliation cadence remain unpublished. Whitepaper defines permitted cash/HQLA assets; bank backing, issuance after receipt and regulatory reporting are not an itemized current book or common-clock reconciliation covering all chains."
-    },
-    {
-      "id": "uw-chfau-allunity-3b418c9ef9040f95",
-      "assetId": "chfau-allunity",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:53:57Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R25)",
-      "sources": [
-        {
-          "url": "https://allunity.com/trust-center",
-          "observedAt": "2026-10-03T22:47:40Z",
-          "datumAsOf": null,
-          "location": "Issuer documentation",
-          "excerpt": "Reserve audit report (coming soon)",
-          "assertion": "Trust center supplies bank-reserve envelope, but no dated CHFAU book or whole-supply reconciliation report."
-        },
-        {
-          "url": "https://framerusercontent.com/assets/lfHzRwNo9LAdtDuKhicsDSTFM2g.pdf",
-          "observedAt": "2026-10-03T22:47:40Z",
-          "datumAsOf": "2026-06-09",
-          "location": "I.06 and F.4",
-          "excerpt": "either in the form of CHF denominated cash",
-          "assertion": "Whitepaper permits cash/HQLA basket without current category amounts or a recurring all-deployment reconciliation procedure."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://allunity.com/trust-center",
-        "https://framerusercontent.com/assets/lfHzRwNo9LAdtDuKhicsDSTFM2g.pdf",
-        "https://allunity.com/chfau",
-        "https://allunity.com/redemption-policy",
-        "https://allunity.com/terms-and-conditions"
-      ],
-      "rationale": "CHFAU current reserve composition/denominator and dated whole-supply supply-to-reserve reconciliation cadence remain unpublished. Whitepaper defines permitted cash/HQLA assets; bank backing, issuance after receipt and regulatory reporting are not an itemized current book or common-clock reconciliation covering all chains."
-    },
-    {
-      "id": "uw-eurau-allunity-189029ef8074e385",
-      "assetId": "eurau-allunity",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:6ee50e3568a681d294d6eb07",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:53:57Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R25)",
-      "sources": [
-        {
-          "url": "https://framerusercontent.com/assets/OfesVRYgYGUO0B0k1xr7EqFHeOQ.pdf",
-          "observedAt": "2026-10-03T22:47:40Z",
-          "datumAsOf": null,
-          "location": "I.06",
-          "excerpt": "either in the form of EUR denominated cash",
-          "assertion": "Mandate permits cash and HQLAs, but gives no maximum term for the exact EUR bank-deposit reserve slice."
-        },
-        {
-          "url": "https://allunity.com/trust-center",
-          "observedAt": "2026-10-03T22:47:40Z",
-          "datumAsOf": null,
-          "location": "Issuer documentation",
-          "excerpt": "fully backed by reserves",
-          "assertion": "Reserve disclosure lacks deposit tenors and maximum contractual maturity."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://allunity.com/trust-center",
-        "https://framerusercontent.com/assets/OfesVRYgYGUO0B0k1xr7EqFHeOQ.pdf",
-        "https://allunity.com/eurau",
-        "https://allunity.com/terms-and-conditions",
-        "https://allunity.com/redemption-policy"
-      ],
-      "rationale": "The maximum contractual maturity of EUR bank reserves at EU CRR credit institutions is not disclosed. Public reserve envelope, bank backing and redemption entitlement do not establish a deposit maturity maximum; no zero-day assumption is made."
-    },
-    {
-      "id": "uw-europ-schuman-c53f346c4b4c3210",
-      "assetId": "europ-schuman",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:53:57Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R25)",
-      "sources": [
-        {
-          "url": "https://schuman.io/wp-content/uploads/2026/07/SALVUS_Attestation_relative_au_nombre_de_jetons_EUROP_30_06_2026.pdf",
-          "observedAt": "2026-10-03T22:49:27Z",
-          "datumAsOf": "2026-06-30",
-          "location": "Reserve Report definitions p.4",
-          "excerpt": "Permitted Blockchains are Ethereum, Polygon, Avalanche, and Plasma",
-          "assertion": "Quarterly report explicitly scopes liabilities to four chains, excluding issuer-listed XRPL and Solana."
-        },
-        {
-          "url": "https://schuman.io/smart-contracts/",
-          "observedAt": "2026-10-03T22:49:27Z",
-          "datumAsOf": null,
-          "location": "Issuer documentation",
-          "excerpt": "XRPL",
-          "assertion": "Issuer roster contains XRPL and Solana beyond the attestation scope."
-        },
-        {
-          "url": "https://schuman.io/wp-content/uploads/EUROP-White-Paper.pdf",
-          "observedAt": "2026-10-03T22:49:27Z",
-          "datumAsOf": "2026-03-23",
-          "location": "I.08",
-          "excerpt": "can be regularly demonstrated through periodic publication of Proof of Reserve",
-          "assertion": "Periodic reserve assertions do not disclose complete common-clock reconciliation for every listed chain."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://schuman.io/reserve-attestations/",
-        "https://schuman.io/wp-content/uploads/2026/07/SALVUS_Attestation_relative_au_nombre_de_jetons_EUROP_30_06_2026.pdf",
-        "https://schuman.io/wp-content/uploads/EUROP-White-Paper.pdf",
-        "https://schuman.io/smart-contracts/",
-        "https://schuman.io/"
-      ],
-      "rationale": "A dated recurring whole-supply reconciliation covering every on/off-chain EUR\u00d8P liability is not published: Q2 KPMG report tests four EVM chains while official roster and whitepaper also list XRPL/Solana. Generic 1:1/periodic PoR statements and controlled minting are not evidence of a complete all-deployment regime."
-    },
-    {
-      "id": "uw-europ-schuman-47acfb4e764e15ef",
-      "assetId": "europ-schuman",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:d106f356c1738a4406cdf97c",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:53:57Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R25)",
-      "sources": [
-        {
-          "url": "https://schuman.io/wp-content/uploads/2026/07/SALVUS_Attestation_relative_au_nombre_de_jetons_EUROP_30_06_2026.pdf",
-          "observedAt": "2026-10-03T22:49:27Z",
-          "datumAsOf": "2026-06-30",
-          "location": "Breakdown p.5",
-          "excerpt": "Cash Equivalents Held at Regulated Financial Institutions",
-          "assertion": "Report names cash/cash-equivalent amounts and banks but no instruments, contractual maxima or cash-equivalent realization bound."
-        },
-        {
-          "url": "https://schuman.io/wp-content/uploads/EUROP-White-Paper.pdf",
-          "observedAt": "2026-10-03T22:49:27Z",
-          "datumAsOf": "2026-03-23",
-          "location": "F.4 financial-risk mitigation",
-          "excerpt": "such as demand deposit accounts and short-term deposits",
-          "assertion": "Whitepaper gives examples, not exhaustive assignment of actual holdings or terms."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://schuman.io/reserve-attestations/",
-        "https://schuman.io/wp-content/uploads/2026/07/SALVUS_Attestation_relative_au_nombre_de_jetons_EUROP_30_06_2026.pdf",
-        "https://schuman.io/wp-content/uploads/EUROP-White-Paper.pdf",
-        "https://schuman.io/",
-        "https://schuman.io/smart-contracts/"
-      ],
-      "rationale": "Maximum contractual maturities for the bank-cash and cash-equivalent slices and liquidityHorizon for cash equivalents are not disclosed. Attestation supplies category totals/banks only; whitepaper examples of demand/short-term deposits and general liquid-asset promises cannot establish exact holdings or all-slice realization bounds."
-    },
-    {
-      "id": "uw-europ-schuman-3cce7356f33aab8f",
-      "assetId": "europ-schuman",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:d6c283580801cd11650d5f2b",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:53:57Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R25)",
-      "sources": [
-        {
-          "url": "https://schuman.io/wp-content/uploads/2026/07/SALVUS_Attestation_relative_au_nombre_de_jetons_EUROP_30_06_2026.pdf",
-          "observedAt": "2026-10-03T22:49:27Z",
-          "datumAsOf": "2026-06-30",
-          "location": "Breakdown p.5",
-          "excerpt": "Cash Equivalents Held at Regulated Financial Institutions",
-          "assertion": "Report names cash/cash-equivalent amounts and banks but no instruments, contractual maxima or cash-equivalent realization bound."
-        },
-        {
-          "url": "https://schuman.io/wp-content/uploads/EUROP-White-Paper.pdf",
-          "observedAt": "2026-10-03T22:49:27Z",
-          "datumAsOf": "2026-03-23",
-          "location": "F.4 financial-risk mitigation",
-          "excerpt": "such as demand deposit accounts and short-term deposits",
-          "assertion": "Whitepaper gives examples, not exhaustive assignment of actual holdings or terms."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://schuman.io/reserve-attestations/",
-        "https://schuman.io/wp-content/uploads/2026/07/SALVUS_Attestation_relative_au_nombre_de_jetons_EUROP_30_06_2026.pdf",
-        "https://schuman.io/wp-content/uploads/EUROP-White-Paper.pdf",
-        "https://schuman.io/",
-        "https://schuman.io/smart-contracts/"
-      ],
-      "rationale": "Maximum contractual maturities for the bank-cash and cash-equivalent slices and liquidityHorizon for cash equivalents are not disclosed. Attestation supplies category totals/banks only; whitepaper examples of demand/short-term deposits and general liquid-asset promises cannot establish exact holdings or all-slice realization bounds."
-    },
-    {
-      "id": "uw-europ-schuman-1ce5043e0d0b7c70",
-      "assetId": "europ-schuman",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:d6c283580801cd11650d5f2b",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:53:57Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R25)",
-      "sources": [
-        {
-          "url": "https://schuman.io/wp-content/uploads/2026/07/SALVUS_Attestation_relative_au_nombre_de_jetons_EUROP_30_06_2026.pdf",
-          "observedAt": "2026-10-03T22:49:27Z",
-          "datumAsOf": "2026-06-30",
-          "location": "Breakdown p.5",
-          "excerpt": "Cash Equivalents Held at Regulated Financial Institutions",
-          "assertion": "Report names cash/cash-equivalent amounts and banks but no instruments, contractual maxima or cash-equivalent realization bound."
-        },
-        {
-          "url": "https://schuman.io/wp-content/uploads/EUROP-White-Paper.pdf",
-          "observedAt": "2026-10-03T22:49:27Z",
-          "datumAsOf": "2026-03-23",
-          "location": "F.4 financial-risk mitigation",
-          "excerpt": "such as demand deposit accounts and short-term deposits",
-          "assertion": "Whitepaper gives examples, not exhaustive assignment of actual holdings or terms."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://schuman.io/reserve-attestations/",
-        "https://schuman.io/wp-content/uploads/2026/07/SALVUS_Attestation_relative_au_nombre_de_jetons_EUROP_30_06_2026.pdf",
-        "https://schuman.io/wp-content/uploads/EUROP-White-Paper.pdf",
-        "https://schuman.io/",
-        "https://schuman.io/smart-contracts/"
-      ],
-      "rationale": "Maximum contractual maturities for the bank-cash and cash-equivalent slices and liquidityHorizon for cash equivalents are not disclosed. Attestation supplies category totals/banks only; whitepaper examples of demand/short-term deposits and general liquid-asset promises cannot establish exact holdings or all-slice realization bounds."
-    },
-    {
-      "id": "uw-iusd-infinifi-2077486d8791d042",
-      "assetId": "iusd-infinifi",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:iusd-infinifi:queue-redeem"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:53:57Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R25)",
-      "sources": [
-        {
-          "url": "https://docs.infinifi.xyz/dev-docs/funding/redemption-pool.md",
-          "observedAt": "2026-10-03T22:49:27Z",
-          "datumAsOf": null,
-          "location": "Issuer documentation",
-          "excerpt": "Funded by: illiquid asset maturities, new deposits, protocol profits",
-          "assertion": "FIFO queue funding is contingent; no final completion maximum is stated."
-        },
-        {
-          "url": "https://docs.infinifi.xyz/whitepaper/index.md",
-          "observedAt": "2026-10-03T22:49:27Z",
-          "datumAsOf": null,
-          "location": "Issuer documentation",
-          "excerpt": "redemptions being processed on a first-come, first-serve basis as illiquid assets reach maturity",
-          "assertion": "Queue design discloses funding sequence, not end-to-end maximum settlement time."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.infinifi.xyz/llms.txt",
-        "https://docs.infinifi.xyz/whitepaper/index.md",
-        "https://docs.infinifi.xyz/dev-docs/funding/redemption-pool.md",
-        "https://docs.infinifi.xyz/dev-docs/funding/redeem-controller.md",
-        "https://docs.infinifi.xyz/risk-disclosures.md",
-        "https://docs.infinifi.xyz/dev-docs/contracts.md"
-      ],
-      "rationale": "The final maximum settlement time for queued iUSD redemption to USDC is not published. FIFO processing depends on maturing assets, new deposits and profits; references to a few weeks or asset buckets are neither guaranteed queue clearance nor an end-to-end SLA."
-    },
-    {
-      "id": "uw-iusd-infinifi-54dccc20b1a5a64b",
-      "assetId": "iusd-infinifi",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:16815d1df501c415b53b47a3",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:53:57Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R25)",
-      "sources": [
-        {
-          "url": "https://docs.infinifi.xyz/vaults.md",
-          "observedAt": "2026-10-03T22:49:27Z",
-          "datumAsOf": null,
-          "location": "Issuer documentation",
-          "excerpt": "New Silver",
-          "assertion": "Protocol identifies this farm and withdrawal bucket, but not its maximum contractual maturity."
-        },
-        {
-          "url": "https://raw.githubusercontent.com/InfiniFi-Labs/documents/master/new-silver/Investor%20Summary-1.pdf",
-          "observedAt": "2026-10-03T22:49:27Z",
-          "datumAsOf": null,
-          "location": "Q2 2026 investor one-pager",
-          "excerpt": "Open-ended fund",
-          "assertion": "Fund describes open-ended structure and average loan term, not a legally binding maximum for the exact held position."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.infinifi.xyz/vaults.md",
-        "https://raw.githubusercontent.com/InfiniFi-Labs/documents/master/new-silver/Investor%20Summary-1.pdf",
-        "https://raw.githubusercontent.com/InfiniFi-Labs/documents/master/new-silver/NS_Fund_PR_Qiro.pdf",
-        "https://docs.infinifi.xyz/dev-docs/integrations/farms.md"
-      ],
-      "rationale": "The maximum contractual maturity of the exact New Silver infiniFi reserve slice is not disclosed. Protocol bucket/redemption frequency, average underlying loan tenor, and general product ranges are not an exhaustive legally binding maximum for this held claim; no maturity scalar is inferred."
-    },
-    {
-      "id": "uw-iusd-infinifi-defa86c889be8204",
-      "assetId": "iusd-infinifi",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:686fe802d2800dfc66492d31",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:53:57Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R25)",
-      "sources": [
-        {
-          "url": "https://docs.infinifi.xyz/vaults.md",
-          "observedAt": "2026-10-03T22:49:27Z",
-          "datumAsOf": null,
-          "location": "Issuer documentation",
-          "excerpt": "Fasanara Genesis Fund",
-          "assertion": "Protocol identifies this farm and withdrawal bucket, but not its maximum contractual maturity."
-        },
-        {
-          "url": "https://raw.githubusercontent.com/InfiniFi-Labs/documents/master/fasanara/Corporate%20Overview%20-%20Fasanara%20Presentation%20(Q4%202025).pdf",
-          "observedAt": "2026-10-03T22:49:27Z",
-          "datumAsOf": null,
-          "location": "Digital and Quant p.14",
-          "excerpt": "Monthly / 30 days\u2019 notice",
-          "assertion": "Redemption frequency is not contractual maximum maturity of the held fund share."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.infinifi.xyz/vaults.md",
-        "https://www.fasanara.com/legal",
-        "https://raw.githubusercontent.com/InfiniFi-Labs/documents/master/fasanara/Corporate%20Overview%20-%20Fasanara%20Presentation%20(Q4%202025).pdf",
-        "https://raw.githubusercontent.com/InfiniFi-Labs/documents/master/fasanara/GDADF%20Factsheet%20(November%202025).pdf"
-      ],
-      "rationale": "The maximum contractual maturity of the exact Fasanara Genesis Fund infiniFi reserve slice is not disclosed. Protocol bucket/redemption frequency, average underlying loan tenor, and general product ranges are not an exhaustive legally binding maximum for this held claim; no maturity scalar is inferred."
-    },
-    {
-      "id": "uw-iusd-infinifi-422efbfb2938f983",
-      "assetId": "iusd-infinifi",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:a6190e24fa51584302baf01c",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:53:57Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R25)",
-      "sources": [
-        {
-          "url": "https://docs.infinifi.xyz/vaults.md",
-          "observedAt": "2026-10-03T22:49:27Z",
-          "datumAsOf": null,
-          "location": "Issuer documentation",
-          "excerpt": "Fasanara mGLOBAL (GDADF)",
-          "assertion": "Protocol identifies this farm and withdrawal bucket, but not its maximum contractual maturity."
-        },
-        {
-          "url": "https://raw.githubusercontent.com/InfiniFi-Labs/documents/master/fasanara/GDADF%20Factsheet%20(November%202025).pdf",
-          "observedAt": "2026-10-03T22:49:27Z",
-          "datumAsOf": null,
-          "location": "Portfolio composition p.2",
-          "excerpt": "Due >180 days",
-          "assertion": "Fund age buckets disclose assets due beyond 180 days, but no hard maximum term."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.infinifi.xyz/vaults.md",
-        "https://www.fasanara.com/legal",
-        "https://raw.githubusercontent.com/InfiniFi-Labs/documents/master/fasanara/Corporate%20Overview%20-%20Fasanara%20Presentation%20(Q4%202025).pdf",
-        "https://raw.githubusercontent.com/InfiniFi-Labs/documents/master/fasanara/GDADF%20Factsheet%20(November%202025).pdf"
-      ],
-      "rationale": "The maximum contractual maturity of the exact Fasanara mGLOBAL (GDADF) infiniFi reserve slice is not disclosed. Protocol bucket/redemption frequency, average underlying loan tenor, and general product ranges are not an exhaustive legally binding maximum for this held claim; no maturity scalar is inferred."
-    },
-    {
-      "id": "uw-iusd-infinifi-7bfcd64a026db951",
-      "assetId": "iusd-infinifi",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:e665ecc9234c56ef61c48a3a",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:53:57Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R25)",
-      "sources": [
-        {
-          "url": "https://docs.infinifi.xyz/vaults.md",
-          "observedAt": "2026-10-03T22:49:27Z",
-          "datumAsOf": null,
-          "location": "Issuer documentation",
-          "excerpt": "New Silver 2 Senior",
-          "assertion": "Protocol identifies this farm and withdrawal bucket, but not its maximum contractual maturity."
-        },
-        {
-          "url": "https://raw.githubusercontent.com/InfiniFi-Labs/documents/master/new-silver/Investor%20Summary-1.pdf",
-          "observedAt": "2026-10-03T22:49:27Z",
-          "datumAsOf": null,
-          "location": "Q2 2026 investor one-pager",
-          "excerpt": "Open-ended fund",
-          "assertion": "Fund describes open-ended structure and average loan term, not a legally binding maximum for the exact held position."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.infinifi.xyz/vaults.md",
-        "https://raw.githubusercontent.com/InfiniFi-Labs/documents/master/new-silver/Investor%20Summary-1.pdf",
-        "https://raw.githubusercontent.com/InfiniFi-Labs/documents/master/new-silver/NS_Fund_PR_Qiro.pdf",
-        "https://docs.infinifi.xyz/dev-docs/integrations/farms.md"
-      ],
-      "rationale": "The maximum contractual maturity of the exact New Silver 2 Senior infiniFi reserve slice is not disclosed. Protocol bucket/redemption frequency, average underlying loan tenor, and general product ranges are not an exhaustive legally binding maximum for this held claim; no maturity scalar is inferred."
-    },
-    {
-      "id": "uw-iusd-infinifi-0baedeeb5e11a357",
-      "assetId": "iusd-infinifi",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:ee4b9fc21326d33de7baea91",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:53:57Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R25)",
-      "sources": [
-        {
-          "url": "https://docs.infinifi.xyz/vaults.md",
-          "observedAt": "2026-10-03T22:49:27Z",
-          "datumAsOf": null,
-          "location": "Issuer documentation",
-          "excerpt": "FalconX Institutional",
-          "assertion": "Protocol identifies this farm and withdrawal bucket, but not its maximum contractual maturity."
-        },
-        {
-          "url": "https://www.falconx.io/services/financing",
-          "observedAt": "2026-10-03T22:49:27Z",
-          "datumAsOf": null,
-          "location": "Issuer documentation",
-          "excerpt": "Fixed and open-term loans available across a wide range of digital assets",
-          "assertion": "Bespoke duration disclosure supplies no infiniFi-specific contractual maximum."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.infinifi.xyz/vaults.md",
-        "https://www.falconx.io/services/financing",
-        "https://www.falconx.io/disclaimers",
-        "https://docs.infinifi.xyz/dev-docs/integrations/farms.md"
-      ],
-      "rationale": "The maximum contractual maturity of the exact FalconX Institutional infiniFi reserve slice is not disclosed. Protocol bucket/redemption frequency, average underlying loan tenor, and general product ranges are not an exhaustive legally binding maximum for this held claim; no maturity scalar is inferred."
     },
     {
       "id": "uw-chfsafo-spiko-708d621780a16eaa",
@@ -36976,6 +36294,987 @@
         "https://docs.morpho.org/learn/resources/risks/"
       ],
       "rationale": "The exact protocol-position slice has no published bounded maximum cash liquidity horizon. Ordinary cash withdrawal depends on available USDC in the active Morpho market; borrower demand/repayment is open-ended and full source contains no contractual cash-settlement deadline. forceDeallocate can obtain an underlying position, not a cash-realization SLA. A current liquidity reading cannot be converted to a fixed maximum horizon."
+    },
+    {
+      "id": "uw-arcusdc-galaxy-7d13156aa68d4c52",
+      "assetId": "arcusdc-galaxy",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:ecbeca15eeb76d1a8bb92f8c",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:54:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R21)",
+      "sources": [
+        {
+          "url": "https://morpho.org/terms-of-use/",
+          "observedAt": "2026-10-03T23:54:12Z",
+          "datumAsOf": "2026-09-11",
+          "location": "Definitions / Lender",
+          "excerpt": "Supplied assets, together with accrued interest, are withdrawable, subject to the liquidity conditions applicable to that Market.",
+          "assertion": "Contractual disclosure conditions lender realization on market liquidity without a whole-position calendar maximum."
+        },
+        {
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "observedAt": "2026-10-03T23:54:12Z",
+          "datumAsOf": null,
+          "location": "In-Kind Redemptions with forceDeallocate",
+          "excerpt": "It does not withdraw assets out of the Morpho protocol; instead, it shifts the user\u2019s exposure from the vault to the underlying positions, even when those positions are illiquid.",
+          "assertion": "Receipt-position exit supplies no entire-sleeve realization bound."
+        },
+        {
+          "url": "https://curation.galaxy.com/vaults/0x91600e31fbedc72433d4a57f16639cfe661be7d8",
+          "observedAt": "2026-10-03T23:54:12Z",
+          "datumAsOf": "2026-10-02",
+          "location": "Current optimal allocation / Notes",
+          "excerpt": "No notes provided.",
+          "assertion": "Galaxy publishes target market allocation percentages but no per-sleeve liquidation or cash-realization maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://curation.galaxy.com/",
+        "https://curation.galaxy.com/vaults/0x91600e31fbedc72433d4a57f16639cfe661be7d8",
+        "https://curation.galaxy.com/vaults/0x71ffb6a81786ec285d429d531cf655107b9d878d",
+        "https://www.galaxy.com/newsroom/galaxy-launches-institutional-vault-curator",
+        "https://www.galaxy.com/insights/research/sec-peirce-defi-vaults-onchain-lending-securities-law-analysis",
+        "https://docs.morpho.org/learn/concepts/vault-v2/",
+        "https://morpho.org/terms-of-use/",
+        "https://api.morpho.org/graphql",
+        "https://explorer.arc.io/api/v2/smart-contracts/0x34cd04070dd72b14e241112f6d83812df5af7fcd",
+        "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+      ],
+      "rationale": "No whole-sleeve liquidityHorizon or contractual calendar realization maximum is published for the three Galaxy lending envelopes. New exact Galaxy allocation/history pages disclose targets, not completion bounds; the USDT page publishes no allocation. Legal terms condition withdrawal on market liquidity, exact Morpho withdrawal enforces available supply minus borrowing, and in-kind exits preserve lending exposure. This is researched nondisclosure of the scalar bound, not a claim that unavailable runtime capacity proves zero liquidity."
+    },
+    {
+      "id": "uw-gusdcq-galaxy-2ced4b5714bdf6f9",
+      "assetId": "gusdcq-galaxy",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:c99936da6a52cb955b1b8d35",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:54:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R21)",
+      "sources": [
+        {
+          "url": "https://morpho.org/terms-of-use/",
+          "observedAt": "2026-10-03T23:54:12Z",
+          "datumAsOf": "2026-09-11",
+          "location": "Definitions / Lender",
+          "excerpt": "Supplied assets, together with accrued interest, are withdrawable, subject to the liquidity conditions applicable to that Market.",
+          "assertion": "Contractual disclosure conditions lender realization on market liquidity without a whole-position calendar maximum."
+        },
+        {
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "observedAt": "2026-10-03T23:54:12Z",
+          "datumAsOf": null,
+          "location": "In-Kind Redemptions with forceDeallocate",
+          "excerpt": "It does not withdraw assets out of the Morpho protocol; instead, it shifts the user\u2019s exposure from the vault to the underlying positions, even when those positions are illiquid.",
+          "assertion": "Receipt-position exit supplies no entire-sleeve realization bound."
+        },
+        {
+          "url": "https://curation.galaxy.com/vaults/0x91600e31fbedc72433d4a57f16639cfe661be7d8",
+          "observedAt": "2026-10-03T23:54:12Z",
+          "datumAsOf": "2026-10-02",
+          "location": "Current optimal allocation / Notes",
+          "excerpt": "No notes provided.",
+          "assertion": "Galaxy publishes target market allocation percentages but no per-sleeve liquidation or cash-realization maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://curation.galaxy.com/",
+        "https://curation.galaxy.com/vaults/0x91600e31fbedc72433d4a57f16639cfe661be7d8",
+        "https://curation.galaxy.com/vaults/0x71ffb6a81786ec285d429d531cf655107b9d878d",
+        "https://www.galaxy.com/newsroom/galaxy-launches-institutional-vault-curator",
+        "https://www.galaxy.com/insights/research/sec-peirce-defi-vaults-onchain-lending-securities-law-analysis",
+        "https://docs.morpho.org/learn/concepts/vault-v2/",
+        "https://morpho.org/terms-of-use/",
+        "https://api.morpho.org/graphql",
+        "https://explorer.arc.io/api/v2/smart-contracts/0x34cd04070dd72b14e241112f6d83812df5af7fcd",
+        "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+      ],
+      "rationale": "No whole-sleeve liquidityHorizon or contractual calendar realization maximum is published for the three Galaxy lending envelopes. New exact Galaxy allocation/history pages disclose targets, not completion bounds; the USDT page publishes no allocation. Legal terms condition withdrawal on market liquidity, exact Morpho withdrawal enforces available supply minus borrowing, and in-kind exits preserve lending exposure. This is researched nondisclosure of the scalar bound, not a claim that unavailable runtime capacity proves zero liquidity."
+    },
+    {
+      "id": "uw-gusdtq-galaxy-546c20416a03d72c",
+      "assetId": "gusdtq-galaxy",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:59709ff6bcf4a35db16b90ec",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:54:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R21)",
+      "sources": [
+        {
+          "url": "https://morpho.org/terms-of-use/",
+          "observedAt": "2026-10-03T23:54:12Z",
+          "datumAsOf": "2026-09-11",
+          "location": "Definitions / Lender",
+          "excerpt": "Supplied assets, together with accrued interest, are withdrawable, subject to the liquidity conditions applicable to that Market.",
+          "assertion": "Contractual disclosure conditions lender realization on market liquidity without a whole-position calendar maximum."
+        },
+        {
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "observedAt": "2026-10-03T23:54:12Z",
+          "datumAsOf": null,
+          "location": "In-Kind Redemptions with forceDeallocate",
+          "excerpt": "It does not withdraw assets out of the Morpho protocol; instead, it shifts the user\u2019s exposure from the vault to the underlying positions, even when those positions are illiquid.",
+          "assertion": "Receipt-position exit supplies no entire-sleeve realization bound."
+        },
+        {
+          "url": "https://curation.galaxy.com/vaults/0x91600e31fbedc72433d4a57f16639cfe661be7d8",
+          "observedAt": "2026-10-03T23:54:12Z",
+          "datumAsOf": "2026-10-02",
+          "location": "Current optimal allocation / Notes",
+          "excerpt": "No notes provided.",
+          "assertion": "Galaxy publishes target market allocation percentages but no per-sleeve liquidation or cash-realization maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://curation.galaxy.com/",
+        "https://curation.galaxy.com/vaults/0x91600e31fbedc72433d4a57f16639cfe661be7d8",
+        "https://curation.galaxy.com/vaults/0x71ffb6a81786ec285d429d531cf655107b9d878d",
+        "https://www.galaxy.com/newsroom/galaxy-launches-institutional-vault-curator",
+        "https://www.galaxy.com/insights/research/sec-peirce-defi-vaults-onchain-lending-securities-law-analysis",
+        "https://docs.morpho.org/learn/concepts/vault-v2/",
+        "https://morpho.org/terms-of-use/",
+        "https://api.morpho.org/graphql",
+        "https://explorer.arc.io/api/v2/smart-contracts/0x34cd04070dd72b14e241112f6d83812df5af7fcd",
+        "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+      ],
+      "rationale": "No whole-sleeve liquidityHorizon or contractual calendar realization maximum is published for the three Galaxy lending envelopes. New exact Galaxy allocation/history pages disclose targets, not completion bounds; the USDT page publishes no allocation. Legal terms condition withdrawal on market liquidity, exact Morpho withdrawal enforces available supply minus borrowing, and in-kind exits preserve lending exposure. This is researched nondisclosure of the scalar bound, not a claim that unavailable runtime capacity proves zero liquidity."
+    },
+    {
+      "id": "uw-arcusdc-galaxy-b5b7835f16abacc2",
+      "assetId": "arcusdc-galaxy",
+      "scope": {
+        "componentKey": "economic-control:oracle:backstop",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "economic-control:oracle:backstop",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:54:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R21)",
+      "sources": [
+        {
+          "url": "https://www.galaxy.com/newsroom/galaxy-launches-institutional-vault-curator",
+          "observedAt": "2026-10-03T23:54:12Z",
+          "datumAsOf": "2026-07-16",
+          "location": "Vault configurations footnote",
+          "excerpt": "Both vault configurations carry additional risk factors, including market, smart contract, and liquidity risk, and depositors should understand the tier and associated exposures before participating.",
+          "assertion": "Galaxy publishes curation and liquidation monitoring, not a funded rescue commitment for the exact Arc cirBTC market."
+        },
+        {
+          "url": "https://explorer.arc.io/api/v2/smart-contracts/0x34cd04070dd72b14e241112f6d83812df5af7fcd",
+          "observedAt": "2026-10-03T23:54:12Z",
+          "datumAsOf": "2026-10-03",
+          "location": "Morpho.sol / liquidate",
+          "excerpt": "market[id].totalSupplyAssets -= badDebtAssets.toUint128();",
+          "assertion": "Pinned exact code writes losses to lenders; no automatic backstop is embedded in this implementation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.galaxy.com/newsroom/galaxy-launches-institutional-vault-curator",
+        "https://curation.galaxy.com/",
+        "https://www.galaxy.com/asset-management-and-infrastructure-solutions",
+        "https://morpho.org/terms-of-use/",
+        "https://docs.morpho.org/learn/concepts/vault-v2/",
+        "https://api.morpho.org/graphql",
+        "https://explorer.arc.io/api/v2/smart-contracts/0x34cd04070dd72b14e241112f6d83812df5af7fcd",
+        "https://explorer.arc.io/api/v2/smart-contracts/0xee0080203a76690bca40670dfd0cd1c30fab7c2c"
+      ],
+      "rationale": "A funded insurance/backstop resource or enforceable rescue commitment for market 0xc2db905f174e5defcce01d321b09f15f78856a36a21b90cc7e1abbc29225815d is not disclosed. The new pinned sole-market census and exact deployed Morpho loss-writeoff source establish the branch; issuer product and legal surfaces describe risk management, not exact-market funding. Galaxy GOFR first-loss capital concerns a distinct financing product and is not imported into arcUSDC."
+    },
+    {
+      "id": "uw-ylds-figure-613bb67244a3248c",
+      "assetId": "ylds-figure",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:54:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R21)",
+      "sources": [
+        {
+          "url": "https://www.ylds.com/",
+          "observedAt": "2026-10-03T23:54:12Z",
+          "datumAsOf": null,
+          "location": "FAQ / How do we see what reserves are backing YLDS? / original HTML",
+          "excerpt": "The reserves for YLDS are reported on a quarterly basis in the financial statements in our public periodic reports filed with the SEC.",
+          "assertion": "Issuer identifies quarterly SEC reports, not current monthly whole-book reserve composition."
+        },
+        {
+          "url": "https://www.sec.gov/Archives/edgar/data/1974395/000197439526000011/fcc-20260630.htm",
+          "observedAt": "2026-10-03T23:54:12Z",
+          "datumAsOf": "2026-06-30",
+          "location": "SEC EDGAR recent filings index returned by reader",
+          "excerpt": "2026-08-14",
+          "assertion": "SEC issuer index identifies the June 30 quarterly report as the latest 10-Q; September 30 entry is advertising form 497AD, not a financial report."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.ylds.com/",
+        "https://www.ylds.com/.well-known/stellar.toml",
+        "https://cdn.figure.com/docs/markets/fcc-prospectus.pdf",
+        "https://www.sec.gov/Archives/edgar/data/1974395/000197439526000011/fcc-20260630.htm",
+        "https://www.sec.gov/Archives/edgar/data/1974395/000149315226044951/form497ad.htm?output=1",
+        "https://www.sec.gov/Archives/edgar/data/1974395/000197439526000006/fcc-20251231.htm"
+      ],
+      "rationale": "A reserve-composition packet current within the 38-day ordinary static budget is not published. New issuer HTML FAQ explicitly identifies quarterly SEC financial statements; the official filing index shows June 30 as the latest quarterly period and only a September 30 advertising filing. No fresh category-level whole-book amounts or measured denominator are disclosed on the issuer transparency page or prospectus. This finding rests on the reporting cadence and archive, not on inability to fetch the raw June filing; stale percentages remain unchanged."
+    },
+    {
+      "id": "uw-scusd-rings-796c042be48da890",
+      "assetId": "scusd-rings",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:54:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R21)",
+      "sources": [
+        {
+          "url": "https://docs.trevee.xyz/trevee-earn/sonic-scassets/treasury-backing-address",
+          "observedAt": "2026-10-03T23:54:12Z",
+          "datumAsOf": null,
+          "location": "ETHEREUM - Underlying Stablecoin",
+          "excerpt": "The Veda BoringVault on Ethereum accepts a select group of stablecoins: USDC, USDT, DAI, and GHO from Ethereum, as well as USDC.e from Sonic.",
+          "assertion": "Issuer identifies eligible assets and wallet dashboards, but not a dated exhaustive realized strategy inventory and consolidated scUSD denominator."
+        },
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae",
+          "observedAt": "2026-10-03T23:54:12Z",
+          "datumAsOf": null,
+          "location": "BoringVault.sol / manage",
+          "excerpt": "Allows manager to make an arbitrary function call from this contract.",
+          "assertion": "Exact verified vault source has arbitrary authorized strategy calls, not an enumerable current reserve roster or totalAssets reconciliation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://trevee.xyz/",
+        "https://docs.trevee.xyz/trevee-earn/sonic-scassets",
+        "https://docs.trevee.xyz/trevee-earn/sonic-scassets/treasury-backing-address",
+        "https://docs.trevee.xyz/trevee-earn/sonic-scassets/veda-vaults/collateral-vault-ethereum",
+        "https://docs.trevee.xyz/trevee-earn/sonic-scassets/developers/smart-contracts",
+        "https://docs.trevee.xyz/trevee-earn/sonic-scassets/security-framework-and-audits",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae",
+        "https://debank.com/profile/0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae",
+        "https://pro.octav.fi/?addresses=0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae"
+      ],
+      "rationale": "No usable issuer-published current whole-scUSD composition/denominator is disclosed. The new exact BoringVault source confirms arbitrary authorized strategy calls and lacks an iterable holdings roster or totalAssets accounting; current issuer docs disclose deposit-eligible assets, example strategies and third-party dashboards, not exhaustive same-checkpoint receipt/strategy amounts and consolidated liabilities. Reused wave-1 dashboard observations are partial and conflicting. Neither eligible assets nor July's opaque basket is re-dated into a current composition."
+    },
+    {
+      "id": "uw-chfau-allunity-bd5858edc3a18148",
+      "assetId": "chfau-allunity",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R25)",
+      "sources": [
+        {
+          "url": "https://allunity.com/trust-center",
+          "observedAt": "2026-10-03T22:47:40Z",
+          "datumAsOf": null,
+          "location": "Issuer documentation",
+          "excerpt": "Reserve audit report (coming soon)",
+          "assertion": "Trust center supplies bank-reserve envelope, but no dated CHFAU book or whole-supply reconciliation report."
+        },
+        {
+          "url": "https://framerusercontent.com/assets/lfHzRwNo9LAdtDuKhicsDSTFM2g.pdf",
+          "observedAt": "2026-10-03T22:47:40Z",
+          "datumAsOf": "2026-06-09",
+          "location": "I.06 and F.4",
+          "excerpt": "either in the form of CHF denominated cash",
+          "assertion": "Whitepaper permits cash/HQLA basket without current category amounts or a recurring all-deployment reconciliation procedure."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://allunity.com/trust-center",
+        "https://framerusercontent.com/assets/lfHzRwNo9LAdtDuKhicsDSTFM2g.pdf",
+        "https://allunity.com/chfau",
+        "https://allunity.com/redemption-policy",
+        "https://allunity.com/terms-and-conditions"
+      ],
+      "rationale": "CHFAU current reserve composition/denominator and dated whole-supply supply-to-reserve reconciliation cadence remain unpublished. Whitepaper defines permitted cash/HQLA assets; bank backing, issuance after receipt and regulatory reporting are not an itemized current book or common-clock reconciliation covering all chains."
+    },
+    {
+      "id": "uw-chfau-allunity-3b418c9ef9040f95",
+      "assetId": "chfau-allunity",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R25)",
+      "sources": [
+        {
+          "url": "https://allunity.com/trust-center",
+          "observedAt": "2026-10-03T22:47:40Z",
+          "datumAsOf": null,
+          "location": "Issuer documentation",
+          "excerpt": "Reserve audit report (coming soon)",
+          "assertion": "Trust center supplies bank-reserve envelope, but no dated CHFAU book or whole-supply reconciliation report."
+        },
+        {
+          "url": "https://framerusercontent.com/assets/lfHzRwNo9LAdtDuKhicsDSTFM2g.pdf",
+          "observedAt": "2026-10-03T22:47:40Z",
+          "datumAsOf": "2026-06-09",
+          "location": "I.06 and F.4",
+          "excerpt": "either in the form of CHF denominated cash",
+          "assertion": "Whitepaper permits cash/HQLA basket without current category amounts or a recurring all-deployment reconciliation procedure."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://allunity.com/trust-center",
+        "https://framerusercontent.com/assets/lfHzRwNo9LAdtDuKhicsDSTFM2g.pdf",
+        "https://allunity.com/chfau",
+        "https://allunity.com/redemption-policy",
+        "https://allunity.com/terms-and-conditions"
+      ],
+      "rationale": "CHFAU current reserve composition/denominator and dated whole-supply supply-to-reserve reconciliation cadence remain unpublished. Whitepaper defines permitted cash/HQLA assets; bank backing, issuance after receipt and regulatory reporting are not an itemized current book or common-clock reconciliation covering all chains."
+    },
+    {
+      "id": "uw-eurau-allunity-189029ef8074e385",
+      "assetId": "eurau-allunity",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:6ee50e3568a681d294d6eb07",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R25)",
+      "sources": [
+        {
+          "url": "https://framerusercontent.com/assets/OfesVRYgYGUO0B0k1xr7EqFHeOQ.pdf",
+          "observedAt": "2026-10-03T22:47:40Z",
+          "datumAsOf": null,
+          "location": "I.06",
+          "excerpt": "either in the form of EUR denominated cash",
+          "assertion": "Mandate permits cash and HQLAs, but gives no maximum term for the exact EUR bank-deposit reserve slice."
+        },
+        {
+          "url": "https://allunity.com/trust-center",
+          "observedAt": "2026-10-03T22:47:40Z",
+          "datumAsOf": null,
+          "location": "Issuer documentation",
+          "excerpt": "fully backed by reserves",
+          "assertion": "Reserve disclosure lacks deposit tenors and maximum contractual maturity."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://allunity.com/trust-center",
+        "https://framerusercontent.com/assets/OfesVRYgYGUO0B0k1xr7EqFHeOQ.pdf",
+        "https://allunity.com/eurau",
+        "https://allunity.com/terms-and-conditions",
+        "https://allunity.com/redemption-policy"
+      ],
+      "rationale": "The maximum contractual maturity of EUR bank reserves at EU CRR credit institutions is not disclosed. Public reserve envelope, bank backing and redemption entitlement do not establish a deposit maturity maximum; no zero-day assumption is made."
+    },
+    {
+      "id": "uw-europ-schuman-c53f346c4b4c3210",
+      "assetId": "europ-schuman",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R25)",
+      "sources": [
+        {
+          "url": "https://schuman.io/wp-content/uploads/2026/07/SALVUS_Attestation_relative_au_nombre_de_jetons_EUROP_30_06_2026.pdf",
+          "observedAt": "2026-10-03T22:49:27Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Reserve Report definitions p.4",
+          "excerpt": "Permitted Blockchains are Ethereum, Polygon, Avalanche, and Plasma",
+          "assertion": "Quarterly report explicitly scopes liabilities to four chains, excluding issuer-listed XRPL and Solana."
+        },
+        {
+          "url": "https://schuman.io/smart-contracts/",
+          "observedAt": "2026-10-03T22:49:27Z",
+          "datumAsOf": null,
+          "location": "Issuer documentation",
+          "excerpt": "XRPL",
+          "assertion": "Issuer roster contains XRPL and Solana beyond the attestation scope."
+        },
+        {
+          "url": "https://schuman.io/wp-content/uploads/EUROP-White-Paper.pdf",
+          "observedAt": "2026-10-03T22:49:27Z",
+          "datumAsOf": "2026-03-23",
+          "location": "I.08",
+          "excerpt": "can be regularly demonstrated through periodic publication of Proof of Reserve",
+          "assertion": "Periodic reserve assertions do not disclose complete common-clock reconciliation for every listed chain."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://schuman.io/reserve-attestations/",
+        "https://schuman.io/wp-content/uploads/2026/07/SALVUS_Attestation_relative_au_nombre_de_jetons_EUROP_30_06_2026.pdf",
+        "https://schuman.io/wp-content/uploads/EUROP-White-Paper.pdf",
+        "https://schuman.io/smart-contracts/",
+        "https://schuman.io/"
+      ],
+      "rationale": "A dated recurring whole-supply reconciliation covering every on/off-chain EUR\u00d8P liability is not published: Q2 KPMG report tests four EVM chains while official roster and whitepaper also list XRPL/Solana. Generic 1:1/periodic PoR statements and controlled minting are not evidence of a complete all-deployment regime."
+    },
+    {
+      "id": "uw-europ-schuman-47acfb4e764e15ef",
+      "assetId": "europ-schuman",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:d106f356c1738a4406cdf97c",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R25)",
+      "sources": [
+        {
+          "url": "https://schuman.io/wp-content/uploads/2026/07/SALVUS_Attestation_relative_au_nombre_de_jetons_EUROP_30_06_2026.pdf",
+          "observedAt": "2026-10-03T22:49:27Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Breakdown p.5",
+          "excerpt": "Cash Equivalents Held at Regulated Financial Institutions",
+          "assertion": "Report names cash/cash-equivalent amounts and banks but no instruments, contractual maxima or cash-equivalent realization bound."
+        },
+        {
+          "url": "https://schuman.io/wp-content/uploads/EUROP-White-Paper.pdf",
+          "observedAt": "2026-10-03T22:49:27Z",
+          "datumAsOf": "2026-03-23",
+          "location": "F.4 financial-risk mitigation",
+          "excerpt": "such as demand deposit accounts and short-term deposits",
+          "assertion": "Whitepaper gives examples, not exhaustive assignment of actual holdings or terms."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://schuman.io/reserve-attestations/",
+        "https://schuman.io/wp-content/uploads/2026/07/SALVUS_Attestation_relative_au_nombre_de_jetons_EUROP_30_06_2026.pdf",
+        "https://schuman.io/wp-content/uploads/EUROP-White-Paper.pdf",
+        "https://schuman.io/",
+        "https://schuman.io/smart-contracts/"
+      ],
+      "rationale": "Maximum contractual maturities for the bank-cash and cash-equivalent slices and liquidityHorizon for cash equivalents are not disclosed. Attestation supplies category totals/banks only; whitepaper examples of demand/short-term deposits and general liquid-asset promises cannot establish exact holdings or all-slice realization bounds."
+    },
+    {
+      "id": "uw-europ-schuman-3cce7356f33aab8f",
+      "assetId": "europ-schuman",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:d6c283580801cd11650d5f2b",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R25)",
+      "sources": [
+        {
+          "url": "https://schuman.io/wp-content/uploads/2026/07/SALVUS_Attestation_relative_au_nombre_de_jetons_EUROP_30_06_2026.pdf",
+          "observedAt": "2026-10-03T22:49:27Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Breakdown p.5",
+          "excerpt": "Cash Equivalents Held at Regulated Financial Institutions",
+          "assertion": "Report names cash/cash-equivalent amounts and banks but no instruments, contractual maxima or cash-equivalent realization bound."
+        },
+        {
+          "url": "https://schuman.io/wp-content/uploads/EUROP-White-Paper.pdf",
+          "observedAt": "2026-10-03T22:49:27Z",
+          "datumAsOf": "2026-03-23",
+          "location": "F.4 financial-risk mitigation",
+          "excerpt": "such as demand deposit accounts and short-term deposits",
+          "assertion": "Whitepaper gives examples, not exhaustive assignment of actual holdings or terms."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://schuman.io/reserve-attestations/",
+        "https://schuman.io/wp-content/uploads/2026/07/SALVUS_Attestation_relative_au_nombre_de_jetons_EUROP_30_06_2026.pdf",
+        "https://schuman.io/wp-content/uploads/EUROP-White-Paper.pdf",
+        "https://schuman.io/",
+        "https://schuman.io/smart-contracts/"
+      ],
+      "rationale": "Maximum contractual maturities for the bank-cash and cash-equivalent slices and liquidityHorizon for cash equivalents are not disclosed. Attestation supplies category totals/banks only; whitepaper examples of demand/short-term deposits and general liquid-asset promises cannot establish exact holdings or all-slice realization bounds."
+    },
+    {
+      "id": "uw-europ-schuman-1ce5043e0d0b7c70",
+      "assetId": "europ-schuman",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:d6c283580801cd11650d5f2b",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R25)",
+      "sources": [
+        {
+          "url": "https://schuman.io/wp-content/uploads/2026/07/SALVUS_Attestation_relative_au_nombre_de_jetons_EUROP_30_06_2026.pdf",
+          "observedAt": "2026-10-03T22:49:27Z",
+          "datumAsOf": "2026-06-30",
+          "location": "Breakdown p.5",
+          "excerpt": "Cash Equivalents Held at Regulated Financial Institutions",
+          "assertion": "Report names cash/cash-equivalent amounts and banks but no instruments, contractual maxima or cash-equivalent realization bound."
+        },
+        {
+          "url": "https://schuman.io/wp-content/uploads/EUROP-White-Paper.pdf",
+          "observedAt": "2026-10-03T22:49:27Z",
+          "datumAsOf": "2026-03-23",
+          "location": "F.4 financial-risk mitigation",
+          "excerpt": "such as demand deposit accounts and short-term deposits",
+          "assertion": "Whitepaper gives examples, not exhaustive assignment of actual holdings or terms."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://schuman.io/reserve-attestations/",
+        "https://schuman.io/wp-content/uploads/2026/07/SALVUS_Attestation_relative_au_nombre_de_jetons_EUROP_30_06_2026.pdf",
+        "https://schuman.io/wp-content/uploads/EUROP-White-Paper.pdf",
+        "https://schuman.io/",
+        "https://schuman.io/smart-contracts/"
+      ],
+      "rationale": "Maximum contractual maturities for the bank-cash and cash-equivalent slices and liquidityHorizon for cash equivalents are not disclosed. Attestation supplies category totals/banks only; whitepaper examples of demand/short-term deposits and general liquid-asset promises cannot establish exact holdings or all-slice realization bounds."
+    },
+    {
+      "id": "uw-iusd-infinifi-2077486d8791d042",
+      "assetId": "iusd-infinifi",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:iusd-infinifi:queue-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R25)",
+      "sources": [
+        {
+          "url": "https://docs.infinifi.xyz/dev-docs/funding/redemption-pool.md",
+          "observedAt": "2026-10-03T22:49:27Z",
+          "datumAsOf": null,
+          "location": "Issuer documentation",
+          "excerpt": "Funded by: illiquid asset maturities, new deposits, protocol profits",
+          "assertion": "FIFO queue funding is contingent; no final completion maximum is stated."
+        },
+        {
+          "url": "https://docs.infinifi.xyz/whitepaper/index.md",
+          "observedAt": "2026-10-03T22:49:27Z",
+          "datumAsOf": null,
+          "location": "Issuer documentation",
+          "excerpt": "redemptions being processed on a first-come, first-serve basis as illiquid assets reach maturity",
+          "assertion": "Queue design discloses funding sequence, not end-to-end maximum settlement time."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.infinifi.xyz/llms.txt",
+        "https://docs.infinifi.xyz/whitepaper/index.md",
+        "https://docs.infinifi.xyz/dev-docs/funding/redemption-pool.md",
+        "https://docs.infinifi.xyz/dev-docs/funding/redeem-controller.md",
+        "https://docs.infinifi.xyz/risk-disclosures.md",
+        "https://docs.infinifi.xyz/dev-docs/contracts.md"
+      ],
+      "rationale": "The final maximum settlement time for queued iUSD redemption to USDC is not published. FIFO processing depends on maturing assets, new deposits and profits; references to a few weeks or asset buckets are neither guaranteed queue clearance nor an end-to-end SLA."
+    },
+    {
+      "id": "uw-iusd-infinifi-54dccc20b1a5a64b",
+      "assetId": "iusd-infinifi",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:16815d1df501c415b53b47a3",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R25)",
+      "sources": [
+        {
+          "url": "https://docs.infinifi.xyz/vaults.md",
+          "observedAt": "2026-10-03T22:49:27Z",
+          "datumAsOf": null,
+          "location": "Issuer documentation",
+          "excerpt": "New Silver",
+          "assertion": "Protocol identifies this farm and withdrawal bucket, but not its maximum contractual maturity."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/InfiniFi-Labs/documents/master/new-silver/Investor%20Summary-1.pdf",
+          "observedAt": "2026-10-03T22:49:27Z",
+          "datumAsOf": null,
+          "location": "Q2 2026 investor one-pager",
+          "excerpt": "Open-ended fund",
+          "assertion": "Fund describes open-ended structure and average loan term, not a legally binding maximum for the exact held position."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.infinifi.xyz/vaults.md",
+        "https://raw.githubusercontent.com/InfiniFi-Labs/documents/master/new-silver/Investor%20Summary-1.pdf",
+        "https://raw.githubusercontent.com/InfiniFi-Labs/documents/master/new-silver/NS_Fund_PR_Qiro.pdf",
+        "https://docs.infinifi.xyz/dev-docs/integrations/farms.md"
+      ],
+      "rationale": "The maximum contractual maturity of the exact New Silver infiniFi reserve slice is not disclosed. Protocol bucket/redemption frequency, average underlying loan tenor, and general product ranges are not an exhaustive legally binding maximum for this held claim; no maturity scalar is inferred."
+    },
+    {
+      "id": "uw-iusd-infinifi-defa86c889be8204",
+      "assetId": "iusd-infinifi",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:686fe802d2800dfc66492d31",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R25)",
+      "sources": [
+        {
+          "url": "https://docs.infinifi.xyz/vaults.md",
+          "observedAt": "2026-10-03T22:49:27Z",
+          "datumAsOf": null,
+          "location": "Issuer documentation",
+          "excerpt": "Fasanara Genesis Fund",
+          "assertion": "Protocol identifies this farm and withdrawal bucket, but not its maximum contractual maturity."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/InfiniFi-Labs/documents/master/fasanara/Corporate%20Overview%20-%20Fasanara%20Presentation%20(Q4%202025).pdf",
+          "observedAt": "2026-10-03T22:49:27Z",
+          "datumAsOf": null,
+          "location": "Digital and Quant p.14",
+          "excerpt": "Monthly / 30 days\u2019 notice",
+          "assertion": "Redemption frequency is not contractual maximum maturity of the held fund share."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.infinifi.xyz/vaults.md",
+        "https://www.fasanara.com/legal",
+        "https://raw.githubusercontent.com/InfiniFi-Labs/documents/master/fasanara/Corporate%20Overview%20-%20Fasanara%20Presentation%20(Q4%202025).pdf",
+        "https://raw.githubusercontent.com/InfiniFi-Labs/documents/master/fasanara/GDADF%20Factsheet%20(November%202025).pdf"
+      ],
+      "rationale": "The maximum contractual maturity of the exact Fasanara Genesis Fund infiniFi reserve slice is not disclosed. Protocol bucket/redemption frequency, average underlying loan tenor, and general product ranges are not an exhaustive legally binding maximum for this held claim; no maturity scalar is inferred."
+    },
+    {
+      "id": "uw-iusd-infinifi-422efbfb2938f983",
+      "assetId": "iusd-infinifi",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:a6190e24fa51584302baf01c",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R25)",
+      "sources": [
+        {
+          "url": "https://docs.infinifi.xyz/vaults.md",
+          "observedAt": "2026-10-03T22:49:27Z",
+          "datumAsOf": null,
+          "location": "Issuer documentation",
+          "excerpt": "Fasanara mGLOBAL (GDADF)",
+          "assertion": "Protocol identifies this farm and withdrawal bucket, but not its maximum contractual maturity."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/InfiniFi-Labs/documents/master/fasanara/GDADF%20Factsheet%20(November%202025).pdf",
+          "observedAt": "2026-10-03T22:49:27Z",
+          "datumAsOf": null,
+          "location": "Portfolio composition p.2",
+          "excerpt": "Due >180 days",
+          "assertion": "Fund age buckets disclose assets due beyond 180 days, but no hard maximum term."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.infinifi.xyz/vaults.md",
+        "https://www.fasanara.com/legal",
+        "https://raw.githubusercontent.com/InfiniFi-Labs/documents/master/fasanara/Corporate%20Overview%20-%20Fasanara%20Presentation%20(Q4%202025).pdf",
+        "https://raw.githubusercontent.com/InfiniFi-Labs/documents/master/fasanara/GDADF%20Factsheet%20(November%202025).pdf"
+      ],
+      "rationale": "The maximum contractual maturity of the exact Fasanara mGLOBAL (GDADF) infiniFi reserve slice is not disclosed. Protocol bucket/redemption frequency, average underlying loan tenor, and general product ranges are not an exhaustive legally binding maximum for this held claim; no maturity scalar is inferred."
+    },
+    {
+      "id": "uw-iusd-infinifi-7bfcd64a026db951",
+      "assetId": "iusd-infinifi",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:e665ecc9234c56ef61c48a3a",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R25)",
+      "sources": [
+        {
+          "url": "https://docs.infinifi.xyz/vaults.md",
+          "observedAt": "2026-10-03T22:49:27Z",
+          "datumAsOf": null,
+          "location": "Issuer documentation",
+          "excerpt": "New Silver 2 Senior",
+          "assertion": "Protocol identifies this farm and withdrawal bucket, but not its maximum contractual maturity."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/InfiniFi-Labs/documents/master/new-silver/Investor%20Summary-1.pdf",
+          "observedAt": "2026-10-03T22:49:27Z",
+          "datumAsOf": null,
+          "location": "Q2 2026 investor one-pager",
+          "excerpt": "Open-ended fund",
+          "assertion": "Fund describes open-ended structure and average loan term, not a legally binding maximum for the exact held position."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.infinifi.xyz/vaults.md",
+        "https://raw.githubusercontent.com/InfiniFi-Labs/documents/master/new-silver/Investor%20Summary-1.pdf",
+        "https://raw.githubusercontent.com/InfiniFi-Labs/documents/master/new-silver/NS_Fund_PR_Qiro.pdf",
+        "https://docs.infinifi.xyz/dev-docs/integrations/farms.md"
+      ],
+      "rationale": "The maximum contractual maturity of the exact New Silver 2 Senior infiniFi reserve slice is not disclosed. Protocol bucket/redemption frequency, average underlying loan tenor, and general product ranges are not an exhaustive legally binding maximum for this held claim; no maturity scalar is inferred."
+    },
+    {
+      "id": "uw-iusd-infinifi-0baedeeb5e11a357",
+      "assetId": "iusd-infinifi",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:ee4b9fc21326d33de7baea91",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:53:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R25)",
+      "sources": [
+        {
+          "url": "https://docs.infinifi.xyz/vaults.md",
+          "observedAt": "2026-10-03T22:49:27Z",
+          "datumAsOf": null,
+          "location": "Issuer documentation",
+          "excerpt": "FalconX Institutional",
+          "assertion": "Protocol identifies this farm and withdrawal bucket, but not its maximum contractual maturity."
+        },
+        {
+          "url": "https://www.falconx.io/services/financing",
+          "observedAt": "2026-10-03T22:49:27Z",
+          "datumAsOf": null,
+          "location": "Issuer documentation",
+          "excerpt": "Fixed and open-term loans available across a wide range of digital assets",
+          "assertion": "Bespoke duration disclosure supplies no infiniFi-specific contractual maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.infinifi.xyz/vaults.md",
+        "https://www.falconx.io/services/financing",
+        "https://www.falconx.io/disclaimers",
+        "https://docs.infinifi.xyz/dev-docs/integrations/farms.md"
+      ],
+      "rationale": "The maximum contractual maturity of the exact FalconX Institutional infiniFi reserve slice is not disclosed. Protocol bucket/redemption frequency, average underlying loan tenor, and general product ranges are not an exhaustive legally binding maximum for this held claim; no maturity scalar is inferred."
+    },
+    {
+      "id": "uw-zarm-mento-d9f33a8e420064a8",
+      "assetId": "zarm-mento",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:5c07f7cac6051433ad0dae06",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:08:26Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R95)",
+      "sources": [
+        {
+          "url": "https://static.agora.finance/termsofuse.pdf",
+          "observedAt": "2026-10-03T23:08:23Z",
+          "datumAsOf": "2026-09-01",
+          "location": "Agora Bermuda Terms, AUSD, page 6",
+          "excerpt": "Agora aims to facilitate the redemption of AUSD within 48 business hours under the normal course of business or within 96 business hours under stress scenarios.",
+          "assertion": "Targets are expressly an aim, with reserve-related delay and in-kind rights; not a whole-position final realization maximum for Mento's AUSD."
+        },
+        {
+          "url": "https://docs.agora.finance/api/endpoints/routes/overview",
+          "observedAt": "2026-10-03T23:08:25Z",
+          "datumAsOf": null,
+          "location": "Settlement",
+          "excerpt": "Agora delivers the destination currency to `to.accountId` for the amount received.",
+          "assertion": "Public route mechanics disclose destinations, not a completion bound or Mento account eligibility."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.agora.finance/product/ausd",
+        "https://docs.agora.finance/llms.txt",
+        "https://docs.agora.finance/developer/transparency",
+        "https://docs.agora.finance/api/endpoints/routes/overview",
+        "https://docs.agora.finance/api/endpoints/transactions/overview",
+        "https://static.agora.finance/termsofuse.pdf",
+        "https://static.agora.finance/riskdisclosures.pdf",
+        "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+      ],
+      "rationale": "The exact whole-slice liquidityHorizon for Mento's AUSD is not disclosed. Agora publishes par redemption, verified-customer requirements and 48/96-business-hour aims with delay/in-kind discretion, not final maximum delivery. Mento's API includes Ethereum wallets plus Monad wallet/FPMM positions without a whole-position unwind bound. Instant token transfers or authenticated pair quotes cannot prove the entire position immediately realizable."
+    },
+    {
+      "id": "uw-scusd-rings-9c76af91f44a6436",
+      "assetId": "scusd-rings",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:scusd-rings:queue-redeem"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T23:08:26Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R95)",
+      "sources": [
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3754480db8b3E607fbE125697EB496a44A1Be720",
+          "observedAt": "2026-10-03T23:08:25Z",
+          "datumAsOf": null,
+          "location": "BoringOnChainQueue.sol, previewAssetsOut",
+          "excerpt": "price = price.mulDivDown(1e4 - discount, 1e4);",
+          "assertion": "Exact issuer-listed Ethereum scUSD queue discloses user-selected discount and accountant-rate formula. Existing Pharos documentedVariableFee config does not evaluate the applicable live discount/rate at each notional (W15 disclosed-unquantified)."
+        },
+        {
+          "url": "https://docs.trevee.xyz/trevee-earn/sonic-scassets/developers/smart-contracts",
+          "observedAt": "2026-10-03T23:08:25Z",
+          "datumAsOf": null,
+          "location": "Ethereum contract table",
+          "excerpt": "scUSD withdraw queue",
+          "assertion": "Issuer binds the verified queue address to scUSD, not stkscUSD."
+        }
+      ]
+    },
+    {
+      "id": "uw-scusd-rings-f6e6af250e0bc58c",
+      "assetId": "scusd-rings",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:scusd-rings:queue-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:08:26Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R95)",
+      "sources": [
+        {
+          "url": "https://docs.trevee.xyz/trevee-earn/sonic-scassets/veda-vaults/collateral-vault-ethereum",
+          "observedAt": "2026-10-03T23:08:25Z",
+          "datumAsOf": null,
+          "location": "Collateral vault cooldown notice",
+          "excerpt": "scAssets can be redeemed after a 3 day cooldown.",
+          "assertion": "A cooldown establishes earliest eligibility, not maximum final delivery."
+        },
+        {
+          "url": "https://docs.trevee.xyz/trevee-earn/sonic-scassets/security-framework-and-audits",
+          "observedAt": "2026-10-03T23:08:26Z",
+          "datumAsOf": null,
+          "location": "Safety Mechanisms",
+          "excerpt": "5-day cooldown for scAsset redemptions",
+          "assertion": "Conflicting three/five-day cooldowns still disclose no end-to-end upper settlement bound."
+        },
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3754480db8b3E607fbE125697EB496a44A1Be720",
+          "observedAt": "2026-10-03T23:08:25Z",
+          "datumAsOf": null,
+          "location": "BoringOnChainQueue.sol, solveOnChainWithdraws",
+          "excerpt": "if (block.timestamp > deadline) revert BoringOnChainQueue__DeadlinePassed();",
+          "assertion": "Expiry rejects overdue solves rather than guaranteeing funded final payout by that deadline; solving remains authorized and pausable."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://trevee.xyz/",
+        "https://docs.trevee.xyz/sitemap.xml",
+        "https://docs.trevee.xyz/trevee-earn/sonic-scassets",
+        "https://docs.trevee.xyz/trevee-earn/sonic-scassets/veda-vaults/collateral-vault-ethereum",
+        "https://docs.trevee.xyz/trevee-earn/sonic-scassets/security-framework-and-audits",
+        "https://docs.trevee.xyz/trevee-earn/sonic-scassets/developers/smart-contracts",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x3754480db8b3E607fbE125697EB496a44A1Be720",
+        "https://docs.rings.money/"
+      ],
+      "rationale": "No maximum final stablecoin delivery time is disclosed for scUSD queue redemption. Current issuer documentation contradicts itself on three versus five-day cooldown; neither is a completion SLA. Exact published queue source enforces maturity, expiry, pause and authorized solver calls, not guaranteed solving/funding. The old Rings docs redirect to a GitBook shell; current Trevee docs and exact queue source are the substantive reviewed surfaces."
     }
   ]
 }
