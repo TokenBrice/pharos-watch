@@ -3086,6 +3086,171 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "usdf-astherus",
+      "reviewedAt": "2026-10-03T22:50:35Z",
+      "expiresAt": "2027-10-03T22:50:35Z",
+      "reviewer": "Unknown-wave W1R51",
+      "notes": "Sparse exact-asset live-history lower bound from dated primary operation/deployment evidence, not earliest inception or independently verified performance. No redemption throughput, stress recovery, reconciliation continuity or incident-free claim.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Dated issuer AMA: USDF already mintable",
+          "publisher": "Aster",
+          "publishedAt": "2024-11-29",
+          "url": "https://medium.com/astherus/ama-with-bedrock-astherus-recap-27f2cd415468",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 22,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "asusdf-astherus",
+      "reviewedAt": "2026-10-03T22:50:35Z",
+      "expiresAt": "2027-10-03T22:50:35Z",
+      "reviewer": "Unknown-wave W1R51",
+      "notes": "Sparse exact-asset live-history lower bound from dated primary operation/deployment evidence, not earliest inception or independently verified performance. No redemption throughput, stress recovery, reconciliation continuity or incident-free claim.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Dated issuer AMA: asUSDF already mintable",
+          "publisher": "Aster",
+          "publishedAt": "2024-11-29",
+          "url": "https://medium.com/astherus/ama-with-bedrock-astherus-recap-27f2cd415468",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 22,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "dgld-gold-token-sa",
+      "reviewedAt": "2026-10-03T22:50:35Z",
+      "expiresAt": "2027-10-03T22:50:35Z",
+      "reviewer": "Unknown-wave W1R51",
+      "notes": "Sparse exact-asset live-history lower bound from dated primary operation/deployment evidence, not earliest inception or independently verified performance. No redemption throughput, stress recovery, reconciliation continuity or incident-free claim.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Dated issuer physical delivery announcement",
+          "publisher": "Gold Token SA",
+          "publishedAt": "2025-07-30",
+          "url": "https://dgld.ch/news/dgld-update",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 14,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "hbd-hive",
+      "reviewedAt": "2026-10-03T22:50:35Z",
+      "expiresAt": "2027-10-03T22:50:35Z",
+      "reviewer": "Unknown-wave W1R51",
+      "notes": "Sparse exact-asset live-history lower bound from dated primary operation/deployment evidence, not earliest inception or independently verified performance. No redemption throughput, stress recovery, reconciliation continuity or incident-free claim.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "HF25 dated roadmap records HBD conversion and savings",
+          "publisher": "Hive",
+          "publishedAt": "2021-06-30",
+          "url": "https://www.hive.io/en/roadmap/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 63,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "axcnh-anchorx",
+      "reviewedAt": "2026-10-03T22:50:35Z",
+      "expiresAt": "2027-10-03T22:50:35Z",
+      "reviewer": "Unknown-wave W1R51",
+      "notes": "Sparse exact-asset live-history lower bound from dated primary operation/deployment evidence, not earliest inception or independently verified performance. No redemption throughput, stress recovery, reconciliation continuity or incident-free claim.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Canonical AxCNH proxy creation at block 23376261",
+          "publisher": "Ethereum blockchain / Blockscout",
+          "publishedAt": "2025-09-16",
+          "url": "https://eth.blockscout.com/tx/0x0308084dedf36f9d9dec671b918fb56d50f9e2e8bbc46190a398ee0f953c07e7",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 12,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

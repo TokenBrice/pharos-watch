@@ -6623,6 +6623,395 @@
         "https://github.com/Satoshi-Protocol/satoshi-core"
       ],
       "rationale": "Current whole-token reserve composition/denominator remains undisclosed. Live app shows collateral TVL and circulation; Prime/Smart docs also describe internal minted liabilities and custodial/external strategies without reconciled holdings and obligations. Gross product deposits cannot be normalized into whole-token backing weights. Preserve selected-slices status and historical evidence; no fabricated remainder."
+    },
+    {
+      "id": "uw-usdf-astherus-48ff6349cb8f32be",
+      "assetId": "usdf-astherus",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R51)",
+      "sources": [
+        {
+          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works.md",
+          "observedAt": "2026-10-03T22:54:08Z",
+          "datumAsOf": null,
+          "location": "Capital flow steps 2-4",
+          "excerpt": "The USDT is transferred to a Ceffu wallet, a custodial solution that securely holds the funds on behalf of Aster.",
+          "assertion": "Describes custodial capital flow, not a common-clock whole-supply-to-reserves reconciliation."
+        },
+        {
+          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
+          "observedAt": "2026-10-03T22:54:08Z",
+          "datumAsOf": null,
+          "location": "Audit and custodial partner risk",
+          "excerpt": "All smart contracts are audited by reputable security firms, and Aster maintains a robust risk monitoring system.",
+          "assertion": "Security audits and Ceffu SOC reports do not establish financial liability reconciliation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.asterdex.com/en/usdf",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works.md",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/faqs.md",
+        "https://docs.asterdex.com/resources/terms-and-conditions.md",
+        "https://docs.asterdex.com/overview/smart-contracts.md",
+        "https://docs.asterdex.com/overview/audit-reports.md",
+        "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/USDFEarn.sol",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/usdf-and-the-stablecoin-landscape.md"
+      ],
+      "rationale": "USDF docs, financial/transparency searches, legal terms, audit index and canonical mint source disclose deposit accounting, weekly yield and custodian security but no dated whole-supply on/off-chain liabilities versus Ceffu/Binance backing reconciliation procedure or cadence. Internal deposit equality and risk monitoring are not that datum."
+    },
+    {
+      "id": "uw-usdf-astherus-33a3b80ee3dfd05d",
+      "assetId": "usdf-astherus",
+      "scope": {
+        "componentKey": "economic-control:oracle",
+        "exposureId": null,
+        "factorKey": "tier",
+        "pillar": "control",
+        "requiredDatum": "tier",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R51)",
+      "sources": [
+        {
+          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works.md",
+          "observedAt": "2026-10-03T22:54:08Z",
+          "datumAsOf": null,
+          "location": "Delta-neutral strategy",
+          "excerpt": "Funds deposited into Binance are used to simultaneously buy spot (long) and short perpetual positions on a specific asset like Bitcoin (BTC) or Ether (ETH)",
+          "assertion": "Backing is offchain price-sensitive; no complete exact reserve valuation/feed/fallback topology disclosed."
+        },
+        {
+          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
+          "observedAt": "2026-10-03T22:54:08Z",
+          "datumAsOf": null,
+          "location": "Liquidation risk",
+          "excerpt": "The Aster account on Ceffu regularly monitors positions and frequently settles profit/loss to keep liquidation risk minimal.",
+          "assertion": "Monitoring does not identify reserve valuation source, governance or failure topology."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.asterdex.com/en/usdf",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works.md",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/faqs.md",
+        "https://docs.asterdex.com/resources/terms-and-conditions.md",
+        "https://docs.asterdex.com/overview/smart-contracts.md",
+        "https://docs.asterdex.com/overview/audit-reports.md",
+        "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/USDFEarn.sol",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/usdf-and-the-stablecoin-landscape.md",
+        "https://docs.asterdex.com/astherusex-orderbook-perp-guide/mark-price-oracle"
+      ],
+      "rationale": "USDF reserve pricing/rebalancing oracle tier is not disclosed: issuer describes offchain hedging and P/L monitoring but not the exact USDF valuation/feed/controller/fallback inventory. Aster perp-trading mark-price docs describe a different product and cannot establish the Binance strategy account topology. Retain opaque tier; no oracleless exemption."
+    },
+    {
+      "id": "uw-usdf-astherus-48ac8d31e0a17263",
+      "assetId": "usdf-astherus",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:105e1a00e54703a4d2b907fd",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R51)",
+      "sources": [
+        {
+          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
+          "observedAt": "2026-10-03T22:54:08Z",
+          "datumAsOf": null,
+          "location": "MirrorX operation",
+          "excerpt": "Withdrawals settle on T+1 basis",
+          "assertion": "Ceffu withdrawal settlement alone is not realization of the entire long/short reserve book."
+        },
+        {
+          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/faqs.md",
+          "observedAt": "2026-10-03T22:54:08Z",
+          "datumAsOf": null,
+          "location": "Redeem on Aster",
+          "excerpt": "Processing takes 1-2 days for standard amounts, up to 7 days for large amounts",
+          "assertion": "Holder request processing does not disclose per-position liquidation horizon for the whole reserve slice."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.asterdex.com/en/usdf",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works.md",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/faqs.md",
+        "https://docs.asterdex.com/resources/terms-and-conditions.md",
+        "https://docs.asterdex.com/overview/smart-contracts.md",
+        "https://docs.asterdex.com/overview/audit-reports.md",
+        "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/USDFEarn.sol",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/usdf-and-the-stablecoin-landscape.md"
+      ],
+      "rationale": "The whole USDT-funded spot/short strategy slice has no published complete realization bound. MirrorX T+1 withdrawal settlement and token redemption processing times do not establish liquidation/unwind of every spot and futures position, funding/margin obligations and final available proceeds. No per-slice maximum was located."
+    },
+    {
+      "id": "uw-usdf-astherus-bcc0f158c5be60b2",
+      "assetId": "usdf-astherus",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdf-astherus:stablecoin-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R51)",
+      "sources": [
+        {
+          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/faqs.md",
+          "observedAt": "2026-10-03T22:54:08Z",
+          "datumAsOf": null,
+          "location": "Redeem on Aster",
+          "excerpt": "Processing takes 1-2 days for standard amounts, up to 7 days for large amounts",
+          "assertion": "Publishes processing guidance, followed by a separate claim step, not guaranteed end-to-end completion."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/Withdrawable.sol",
+          "observedAt": "2026-10-03T22:54:08Z",
+          "datumAsOf": null,
+          "location": "_claimWithdraw",
+          "excerpt": "require(requestWithdrawInfo.receiveAmount > 0 && requestWithdrawInfo.claimable, \"not available\");",
+          "assertion": "Claim requires privileged distribution; elapsed time does not force claimability."
+        },
+        {
+          "url": "https://docs.asterdex.com/resources/terms-and-conditions.md",
+          "observedAt": "2026-10-03T22:54:08Z",
+          "datumAsOf": "2026-02-25",
+          "location": "Services 3.1(c)",
+          "excerpt": "The specific features and functionalities of our Services are described on our Platform, but they do not constitute a guarantee of availability or performance.",
+          "assertion": "Terms do not guarantee FAQ processing times."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.asterdex.com/en/usdf",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works.md",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/faqs.md",
+        "https://docs.asterdex.com/resources/terms-and-conditions.md",
+        "https://docs.asterdex.com/overview/smart-contracts.md",
+        "https://docs.asterdex.com/overview/audit-reports.md",
+        "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/USDFEarn.sol",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/usdf-and-the-stablecoin-landscape.md",
+        "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/Withdrawable.sol"
+      ],
+      "rationale": "No unconditional maximum from accepted request through claimable USDT is disclosed. FAQ gives 1-2/up-to-7-day processing guidance; canonical withdrawal library requires a bot-controlled claimable flag without a forced deadline, and legal terms disclaim availability/performance guarantees. Do not convert this processing target to a guaranteed settlement SLA."
+    },
+    {
+      "id": "uw-asusdf-astherus-c2b1d13d22fa809a",
+      "assetId": "asusdf-astherus",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "custodyEscrow",
+        "pillar": "backing",
+        "requiredDatum": "custodyEscrow",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R51)",
+      "sources": [
+        {
+          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
+          "observedAt": "2026-10-03T22:54:08Z",
+          "datumAsOf": null,
+          "location": "Custody introduction",
+          "excerpt": "Aster partners with Ceffu for the custody of USDF and underlying USDT funds, and to prepare funds for yield strategy execution on behalf of asUSDF holders.",
+          "assertion": "Names upstream custody; does not publish the asUSDF holder-specific escrow/legal segregation regime."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/asUSDFEarn.sol",
+          "observedAt": "2026-10-03T22:54:08Z",
+          "datumAsOf": null,
+          "location": "Deposit transfer",
+          "excerpt": "token.safeTransferFrom(from, address(this), amount);",
+          "assertion": "Local USDF balance custody is visible in code; legal segregation and beneficial ownership rights are not established by a balance."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.asterdex.com/en/usdf",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works.md",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/faqs.md",
+        "https://docs.asterdex.com/resources/terms-and-conditions.md",
+        "https://docs.asterdex.com/overview/smart-contracts.md",
+        "https://docs.asterdex.com/overview/audit-reports.md",
+        "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/USDFEarn.sol",
+        "https://docs.asterdex.com/usdf-stablecoin/overview/usdf-and-the-stablecoin-landscape.md",
+        "https://docs.asterdex.com/earn/overview/mint-asusdf.md",
+        "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/asUSDFEarn.sol",
+        "https://raw.githubusercontent.com/astherus-contract/ass-usdf-earn-contract/752903309d775b12d6583c879d1f64db88e051ee/contracts/Withdrawable.sol",
+        "https://www.ceffu.com/"
+      ],
+      "rationale": "Exact asUSDF custodyEscrow remains incomplete because no holder-specific segregation/escrow entitlement and insolvency-rights terms were published in issuer product/legal/audit surfaces or Ceffu custody descriptions. Local deposits enter asUSDFEarn and withdrawals move to a vault; public code does not establish legal ring-fencing. Do not infer parent custody protection or zero unknown exposure."
+    },
+    {
+      "id": "uw-dgld-gold-token-sa-12ac892f0aa7275a",
+      "assetId": "dgld-gold-token-sa",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:physical-to-usd:dgld-gold-token-sa"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R51)",
+      "sources": [
+        {
+          "url": "https://dgld.ch/docs/terms",
+          "observedAt": "2026-10-03T22:54:57Z",
+          "datumAsOf": null,
+          "location": "Section 8.1 Delivery discretion",
+          "excerpt": "GTSA may refuse, suspend or postpone a Delivery where required by applicable law",
+          "assertion": "Physical delivery may be delayed; no end-to-end maximum is supplied."
+        },
+        {
+          "url": "https://dgld.ch/news/dgld-complete-step-by-step-guide-november-2025",
+          "observedAt": "2026-10-03T22:54:57Z",
+          "datumAsOf": "2025-11-19",
+          "location": "Shipping details",
+          "excerpt": "Europe: 3\u20137 business days, insured post",
+          "assertion": "Shipping leg estimate excludes quoting/KYC, acceptance, gold sale and final bank proceeds."
+        },
+        {
+          "url": "https://files.dgld.ch/dgld-white-paper.pdf",
+          "observedAt": "2026-10-03T22:54:57Z",
+          "datumAsOf": "2026-09-01",
+          "location": "Part I.1 Market volatility",
+          "excerpt": "Neither the Issuer nor any other person is under an obligation to purchase or sell DGLD, provide liquidity, intervene in the secondary market, or otherwise support the price of the DGLD.",
+          "assertion": "Physical co-ownership/delivery is not guaranteed cash settlement."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://dgld.ch/docs/terms",
+        "https://dgld.ch/news/dgld-complete-step-by-step-guide-november-2025",
+        "https://dgld.ch/about-faq",
+        "https://dgld.ch/news/dgld-update",
+        "https://files.dgld.ch/dgld-white-paper.pdf",
+        "https://dgld.ch/audits"
+      ],
+      "rationale": "Neither direct issuer physical delivery nor the composed physical-to-USD route has a published complete maximum. Governing terms permit suspension/postponement, guide provides only Europe shipping 3-7 business days after earlier quote/KYC/payment, and no bounded gold sale-to-spendable-USD endpoint is disclosed. Do not reinterpret shipping estimates as full SLA."
+    },
+    {
+      "id": "uw-dgld-gold-token-sa-108b3e6066f20ead",
+      "assetId": "dgld-gold-token-sa",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:dgld-gold-token-sa:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R51)",
+      "sources": [
+        {
+          "url": "https://dgld.ch/docs/terms",
+          "observedAt": "2026-10-03T22:54:57Z",
+          "datumAsOf": null,
+          "location": "Section 8.1 Delivery discretion",
+          "excerpt": "GTSA may refuse, suspend or postpone a Delivery where required by applicable law",
+          "assertion": "Physical delivery may be delayed; no end-to-end maximum is supplied."
+        },
+        {
+          "url": "https://dgld.ch/news/dgld-complete-step-by-step-guide-november-2025",
+          "observedAt": "2026-10-03T22:54:57Z",
+          "datumAsOf": "2025-11-19",
+          "location": "Shipping details",
+          "excerpt": "Europe: 3\u20137 business days, insured post",
+          "assertion": "Shipping leg estimate excludes quoting/KYC, acceptance, gold sale and final bank proceeds."
+        },
+        {
+          "url": "https://files.dgld.ch/dgld-white-paper.pdf",
+          "observedAt": "2026-10-03T22:54:57Z",
+          "datumAsOf": "2026-09-01",
+          "location": "Part I.1 Market volatility",
+          "excerpt": "Neither the Issuer nor any other person is under an obligation to purchase or sell DGLD, provide liquidity, intervene in the secondary market, or otherwise support the price of the DGLD.",
+          "assertion": "Physical co-ownership/delivery is not guaranteed cash settlement."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://dgld.ch/docs/terms",
+        "https://dgld.ch/news/dgld-complete-step-by-step-guide-november-2025",
+        "https://dgld.ch/about-faq",
+        "https://dgld.ch/news/dgld-update",
+        "https://files.dgld.ch/dgld-white-paper.pdf",
+        "https://dgld.ch/audits"
+      ],
+      "rationale": "Neither direct issuer physical delivery nor the composed physical-to-USD route has a published complete maximum. Governing terms permit suspension/postponement, guide provides only Europe shipping 3-7 business days after earlier quote/KYC/payment, and no bounded gold sale-to-spendable-USD endpoint is disclosed. Do not reinterpret shipping estimates as full SLA."
+    },
+    {
+      "id": "uw-axcnh-anchorx-56ec18d10e20f9d1",
+      "assetId": "axcnh-anchorx",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:axcnh-anchorx:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:57Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R51)",
+      "sources": [
+        {
+          "url": "https://www.anchorx.org/terms",
+          "observedAt": "2026-10-03T22:54:57Z",
+          "datumAsOf": null,
+          "location": "Fees and Taxes",
+          "excerpt": "The Company reserves the right to implement fees for certain Services.",
+          "assertion": "No numeric/formula AxCNH fiat-redemption fee schedule is provided."
+        },
+        {
+          "url": "https://www.anchorx.org/",
+          "observedAt": "2026-10-03T22:54:57Z",
+          "datumAsOf": null,
+          "location": "Stable & Reliable",
+          "excerpt": "AxCNH is pegged 1:1 with CNH and always available for 1:1 CNH redemption",
+          "assertion": "Par denomination does not establish zero redemption or banking fees."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.anchorx.org/",
+        "https://www.anchorx.org/terms",
+        "https://www.anchorx.org/risk",
+        "https://www.anchorx.org/about-us",
+        "https://www.anchorx.org/transparency",
+        "https://onlineportal.anchorx.org/login"
+      ],
+      "rationale": "Public issuer homepage, rendered legal terms, risk/about pages and transparency archive disclose par redemption and discretionary fees but no AxCNH redemption tariff, applicable percentage/formula, minimum or all-in bank/intermediary charges. Professional-investor portal is login-gated; no public fee schedule located. No inference of zero cost from 1:1 redemption."
     }
   ]
 }
