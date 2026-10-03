@@ -4379,6 +4379,40 @@
           "url": "https://ethereum-rpc.publicnode.com"
         }
       ]
+    },
+    {
+      "assetId": "susdf-falcon",
+      "scopeKind": "whole-allocation",
+      "reviewedAt": "2026-10-03",
+      "expiresAt": "2026-11-03",
+      "reviewer": "W1R11 pinned source and allocation review",
+      "custody": "fully-onchain-no-offchain-custodian",
+      "localLeverage": "no-borrowing-surface",
+      "capitalReuse": "none",
+      "rationale": "Immediate wrapper holds only USDf, with totalAssets equal to its USDf balance less unvested rewards. Source has no lending, borrowing, arbitrary external execution or strategy allocation surface; the alternate cooldown silo holds zero at the pin. Offchain reserves and yield strategies are serial USDf parent risks, not an immediate wrapper allocation. Admin upgrades remain separately adverse and can change future code. No legal insolvency or parent reuse protection is asserted.",
+      "observations": [
+        {
+          "chain": "ethereum",
+          "address": "0xc8cf6d7991f15525488b2a83df53468d682ba4b0",
+          "function": "asset()/totalAssets()/getUnvestedAmount()/USDf.balanceOf(vault)/cooldownDuration()/EIP1967 implementation",
+          "value": "asset()=1428219560557373927065207324579117521997385748162; totalAssets()=64539557974853188939861326; totalSupply()=56759550088969071515916994; cooldownDuration()=0; silo()=1342200138100947756833068791604944175888620480487; getUnvestedAmount()=7639802928768888888888; balance=64547197777781957828750214; implementation=0x0d132bee412e6619a4863aeedad97541bfda3f34; siloUSDf=0; blockHash=0x7215bcdfd4a73605d2bafc27738791d6ec1174694cf33890a23fb81811fc7065",
+          "block": 26114891
+        }
+      ],
+      "sources": [
+        {
+          "label": "Verified StakedUSDf complete implementation and ERC4626 dependencies",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0d132bee412e6619a4863aeedad97541bfda3f34"
+        },
+        {
+          "label": "Exact block observation",
+          "url": "https://etherscan.io/block/26114891"
+        },
+        {
+          "label": "Falcon exact staking mechanism",
+          "url": "https://docs.falcon.finance/earn/susdf-yield-bearing-token.md"
+        }
+      ]
     }
   ]
 }

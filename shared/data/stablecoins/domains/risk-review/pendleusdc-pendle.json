@@ -130,8 +130,8 @@
     ]
   },
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "Vault share NAV uses internal asset/share accounting; underlying active Morpho borrower markets require collateral pricing. Exact market/oracle identities and LLTVs are inventoried, including nonzero dust; underlying feed administrators, update/staleness safeguards and complete fallback topology remain unverified. API type names alone do not establish oracle quality. Historical zero-supply positions are excluded from this current-exposure review.",
+    "tier": "single-source-or-laggy",
+    "summary": "Exact oracle topology traced at Ethereum block 26114891: PT-reUSD uses the minimum of a 900-second Pendle TWAP and a fixed linear-discount price; PT-sUSDS uses the same Ojo minimum behind a deviation-timelock selector; PT-sUSDE uses a fixed linear-discount primary behind that selector. Backup paths share the PT pricing leg and add an underlying Chainlink/USD leg with a constant-one USDC quote. No independent live USDC depeg feed is selected. These are known synthetic/single-market pricing paths, not independently redundant dollar feeds. Share NAV remains internal accounting; funded liquidation recovery is not established.",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
@@ -183,9 +183,29 @@
       ]
     },
     "reviewedAt": "2026-10-03",
-    "reviewer": "Sol refinement 2026-10-03 (Refine09)",
-    "confidence": "probable",
+    "reviewer": "W1R11 exact oracle source and block-pinned topology review",
+    "confidence": "verified",
     "sources": [
+      {
+        "label": "Exact block 26114891: immutable oracle, feed and fallback configuration",
+        "url": "https://etherscan.io/block/26114891"
+      },
+      {
+        "label": "Verified Ojo minimum-price feed and timestamp checks",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5aab95e3c6f9ba0ccfa0a17c2c7235633c7c6585"
+      },
+      {
+        "label": "Verified deviation-timelock oracle selector and revert fallback",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9b4655239e91dc9e1f7599bb88fba41b4542de5b"
+      },
+      {
+        "label": "Fixed Pendle PT linear-discount primary price",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa572dad7db3d975e9ce780db1cf3bf959401cd35"
+      },
+      {
+        "label": "PT-reUSD synthetic timestamp adapter",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7cfd3ed001d9d65d4022db4e15c6101db2bbc994"
+      },
       {
         "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
         "url": "https://blue-api.morpho.org/graphql"
@@ -231,8 +251,8 @@
       {
         "id": "market-1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
         "label": "PT-reUSD-10DEC2026 / USDC",
-        "tier": "opaque-or-unknown",
-        "summary": "Morpho API identifies PT-reUSD-10DEC2026 collateral 0xecfafdc7741323a945a163ed068b5a3c43483957, market 0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64, oracle 0x217d6ddcdb95112c51657f6270e8c079cfdb51f0, type ChainlinkOracleV2. Current nonzero supply exposure is established; upstream feed/admin/staleness and per-oracle fallback controls remain unverified. Independently read Morpho 0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb idToMarketParams(bytes32) at block 26110242 confirmed the exact oracle and LLTV; price() returned raw 979076456906618675000000000000000000. A returned price proves callability of pricing at this block, not feed freshness, liquidator execution or safe topology. Current Morpho oracleByAddress publishes baseFeedOne=0x77ee147391eac11c92817e771860ff4aad265d89. This improves the exact feed inventory; heartbeat/staleness enforcement, conversion-leg controls and complete privileged/manual update powers have not been established.",
+        "tier": "single-source-or-laggy",
+        "summary": "Block 26114891 reconfirmed the exact market oracle 0x217d6ddcdb95112c51657f6270e8c079cfdb51f0. Its only nonzero pricing input is OjoPTFeed 0x77ee147391eac11c92817e771860ff4aad265d89, an immutable clone of 0x5aab95e3c6f9ba0ccfa0a17c2c7235633c7c6585. Ojo selects the lower of the 900-second Pendle TWAP at 0x570ea68f11e63a9108514eb73dc4f88232c9e7f6 and a 6%-annualized fixed linear-discount feed at 0x8e42d93eac7dfef8d061dd18a2acfc839e724309 through timestamp adapter 0x7cfd3ed001d9d65d4022db4e15c6101db2bbc994. The adapter replaces updatedAt with block.timestamp; this is not proof of external feed freshness. USDC is assumed one, not externally priced.",
         "collateralAssets": [
           "PT-reUSD-10DEC2026"
         ],
@@ -241,22 +261,22 @@
         ],
         "feeds": [
           {
-            "provider": "Morpho market oracle (ChainlinkOracleV2 API classification; upstream topology unverified)",
+            "provider": "Verified MorphoChainlinkOracleV2 with one Ojo synthetic-price leg",
             "path": "Collateral/USDC price() for market 0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
             "address": "0x217d6ddcdb95112c51657f6270e8c079cfdb51f0",
             "chain": "ethereum",
             "observedAt": "2026-10-03",
-            "observedBlock": 26110242
+            "observedBlock": 26114891
           },
           {
-            "provider": "Chainlink-compatible composite leg (provider/admin/update policy unverified)",
+            "provider": "Ojo minimum of 900-second Pendle TWAP and synthetic linear discount",
             "path": "baseFeedOne of 0x217d6ddcdb95112c51657f6270e8c079cfdb51f0 ; API decimals=18",
             "address": "0x77ee147391eac11c92817e771860ff4aad265d89",
             "chain": "ethereum",
             "observedAt": "2026-10-03"
           }
         ],
-        "fallbackBehavior": "Morpho core invokes the configured market oracle price(); no alternate core oracle is selected. Any fallback or staleness rejection inside this exact oracle remains unverified.",
+        "fallbackBehavior": "No alternate root price source: Ojo calls both feeds and chooses the minimum. Its 24-hour stale check applies only to nonzero updatedAt; the linear feed is wrapped to stamp current block time. A failed feed call reverts Ojo. The outer Morpho oracle checks positive answers but does not enforce updatedAt. No live USDC/USD feed is selected.",
         "collateralParameters": [
           {
             "asset": "PT-reUSD-10DEC2026",
@@ -270,6 +290,14 @@
         "shutdownOrBadDebtBehavior": "Morpho losses reduce the adapter claim; VaultV2 accrual realizes reduced realAssets as proportional share-price depreciation. No exact-market funded shutdown recovery or legal priority is established.",
         "sources": [
           {
+            "label": "Exact Ojo minimum-price code; block 26114891 FEED_1/FEED_2 and 900-second TWAP reads",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5aab95e3c6f9ba0ccfa0a17c2c7235633c7c6585"
+          },
+          {
+            "label": "PT-reUSD timestamp replacement and fixed-price input",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7cfd3ed001d9d65d4022db4e15c6101db2bbc994"
+          },
+          {
             "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
             "url": "https://blue-api.morpho.org/graphql"
           },
@@ -287,13 +315,13 @@
           }
         ],
         "observedAt": "2026-10-03",
-        "observedBlock": 26110242
+        "observedBlock": 26114891
       },
       {
         "id": "market-22fe4c688161863c73571a2b8db65cc11a4a6bceee4f0dea4aa83e4b784f1bd9",
         "label": "PT-sUSDS-26NOV2026 / USDC",
-        "tier": "opaque-or-unknown",
-        "summary": "Morpho API identifies PT-sUSDS-26NOV2026 collateral 0xdc169abe56461a2e0c034da431ac2a3ebf596094, market 0x22fe4c688161863c73571a2b8db65cc11a4a6bceee4f0dea4aa83e4b784f1bd9, oracle 0x3464a61a68c486241fe07201c913f055bdce35bf, type Unknown. Current nonzero supply exposure is established; upstream feed/admin/staleness and per-oracle fallback controls remain unverified. Independently read Morpho 0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb idToMarketParams(bytes32) at block 26110242 confirmed the exact oracle and LLTV; price() returned raw 980874364218670726000000. A returned price proves callability of pricing at this block, not feed freshness, liquidator execution or safe topology. Morpho oracleByAddress returned no structured upstream feed/vault topology for this oracle, so API disclosure does not close this branch.",
+        "tier": "single-source-or-laggy",
+        "summary": "Block 26114891 binds this market to immutable MetaOracleDeviationTimelock clone 0x3464a61a68c486241fe07201c913f055bdce35bf. Primary 0x89dae86eb86cbc4dd2f52031c997a21ab9a950c5 uses Ojo 0x16bdf4c1a1fbd0d3a181dcee4141bb106e22b002: minimum of 900-second Pendle TWAP 0xe7d40a9a3d09108bb9119e0133b99ac02471c100 and 13%-annualized fixed discount 0xf5532b1df22f97a0660386958b5dcdb94be8533c. Backup 0x77ae9b629096d0ae0206878b163cca232276c88e shares that Ojo leg and adds underlying/USD Chainlink 0xff30586cd0f29ed462364c7e81375fc0c71219b1 over constant-one USDC feed 0xc3866d726c204c0836e0677a31973c649888973d. Correlated backup is not independent PT or USDC price discovery.",
         "collateralAssets": [
           "PT-sUSDS-26NOV2026"
         ],
@@ -302,15 +330,15 @@
         ],
         "feeds": [
           {
-            "provider": "Morpho market oracle (Unknown API classification; upstream topology unverified)",
+            "provider": "Immutable deviation-timelock selector over correlated synthetic PT paths",
             "path": "Collateral/USDC price() for market 0x22fe4c688161863c73571a2b8db65cc11a4a6bceee4f0dea4aa83e4b784f1bd9",
             "address": "0x3464a61a68c486241fe07201c913f055bdce35bf",
             "chain": "ethereum",
             "observedAt": "2026-10-03",
-            "observedBlock": 26110242
+            "observedBlock": 26114891
           }
         ],
-        "fallbackBehavior": "Morpho core invokes the configured market oracle price(); no alternate core oracle is selected. Any fallback or staleness rejection inside this exact oracle remains unverified.",
+        "fallbackBehavior": "Primary selected at the pin. Deviation threshold is 0.75%; permissionless challenge lasts 57600 seconds and healing 86400 seconds. price() immediately tries the other configured oracle on a revert. Both paths share Ojo PT pricing; the backup alone adds underlying/USD Chainlink. Ojo ignores zero updatedAt, so its unwrapped fixed-discount feed has no external timestamp requirement.",
         "collateralParameters": [
           {
             "asset": "PT-sUSDS-26NOV2026",
@@ -324,6 +352,14 @@
         "shutdownOrBadDebtBehavior": "Morpho losses reduce the adapter claim; VaultV2 accrual realizes reduced realAssets as proportional share-price depreciation. No exact-market funded shutdown recovery or legal priority is established.",
         "sources": [
           {
+            "label": "Exact immutable MetaOracleDeviationTimelock code; block 26114891 primary/backup, threshold and delays",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9b4655239e91dc9e1f7599bb88fba41b4542de5b"
+          },
+          {
+            "label": "PT-sUSDS primary minimum-price input; block 26114891 feed enumeration",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x89dae86eb86cbc4dd2f52031c997a21ab9a950c5"
+          },
+          {
             "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
             "url": "https://blue-api.morpho.org/graphql"
           },
@@ -341,13 +377,13 @@
           }
         ],
         "observedAt": "2026-10-03",
-        "observedBlock": 26110242
+        "observedBlock": 26114891
       },
       {
         "id": "market-5613b170ded221c588b6e9637b910f49e5508680ceede207f44aa72e5c46cb05",
         "label": "PT-sUSDE-26NOV2026 / USDC",
-        "tier": "opaque-or-unknown",
-        "summary": "Morpho API identifies PT-sUSDE-26NOV2026 collateral 0xb195b618ea52b77cb2a58846f452f59f8dfa9390, market 0x5613b170ded221c588b6e9637b910f49e5508680ceede207f44aa72e5c46cb05, oracle 0xf8b29e7e9c00ce531434775f7923cc9fbca01b08, type Unknown. Current nonzero supply exposure is established; upstream feed/admin/staleness and per-oracle fallback controls remain unverified. Independently read Morpho 0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb idToMarketParams(bytes32) at block 26110242 confirmed the exact oracle and LLTV; price() returned raw 991172783485540335000000. A returned price proves callability of pricing at this block, not feed freshness, liquidator execution or safe topology. Morpho oracleByAddress returned no structured upstream feed/vault topology for this oracle, so API disclosure does not close this branch.",
+        "tier": "single-source-or-laggy",
+        "summary": "Block 26114891 binds this market to immutable MetaOracleDeviationTimelock clone 0xf8b29e7e9c00ce531434775f7923cc9fbca01b08. Primary 0x8fca98c9abee4dcb33ba9f3d17db4ad57f72706d uses only fixed 6%-annualized PT linear-discount oracle 0xa572dad7db3d975e9ce780db1cf3bf959401cd35; this is a maturity/time formula, not a live collateral or USDC dollar price. Backup 0xe2f4cfe07aecd7fd8fb0d293a22cde7d08175465 shares the same PT leg and adds underlying/USD Chainlink 0xa569d910839ae8865da8f8e70fffb0cba869f961 over constant-one USDC feed 0xc3866d726c204c0836e0677a31973c649888973d. Formula independence and live USDC depeg detection are not asserted.",
         "collateralAssets": [
           "PT-sUSDE-26NOV2026"
         ],
@@ -356,15 +392,15 @@
         ],
         "feeds": [
           {
-            "provider": "Morpho market oracle (Unknown API classification; upstream topology unverified)",
+            "provider": "Immutable deviation-timelock selector with fixed linear-discount primary",
             "path": "Collateral/USDC price() for market 0x5613b170ded221c588b6e9637b910f49e5508680ceede207f44aa72e5c46cb05",
             "address": "0xf8b29e7e9c00ce531434775f7923cc9fbca01b08",
             "chain": "ethereum",
             "observedAt": "2026-10-03",
-            "observedBlock": 26110242
+            "observedBlock": 26114891
           }
         ],
-        "fallbackBehavior": "Morpho core invokes the configured market oracle price(); no alternate core oracle is selected. Any fallback or staleness rejection inside this exact oracle remains unverified.",
+        "fallbackBehavior": "Primary selected at the pin. Deviation threshold is 0.75%; challenge lasts 57600 seconds and healing 86400 seconds, with permissionless state transitions. price() tries the other configured oracle on a revert. The fixed linear-discount feed returns zero round timestamps; outer Morpho reads a positive answer without timestamp rejection. Backup shares the PT formula and adds one underlying/USD feed, not a live USDC feed.",
         "collateralParameters": [
           {
             "asset": "PT-sUSDE-26NOV2026",
@@ -378,6 +414,14 @@
         "shutdownOrBadDebtBehavior": "Morpho losses reduce the adapter claim; VaultV2 accrual realizes reduced realAssets as proportional share-price depreciation. No exact-market funded shutdown recovery or legal priority is established.",
         "sources": [
           {
+            "label": "Exact immutable MetaOracleDeviationTimelock code; block 26114891 primary/backup, threshold and delays",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9b4655239e91dc9e1f7599bb88fba41b4542de5b"
+          },
+          {
+            "label": "PT-sUSDE fixed linear-discount primary and zero round timestamps",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa572dad7db3d975e9ce780db1cf3bf959401cd35"
+          },
+          {
             "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
             "url": "https://blue-api.morpho.org/graphql"
           },
@@ -395,7 +439,7 @@
           }
         ],
         "observedAt": "2026-10-03",
-        "observedBlock": 26110242
+        "observedBlock": 26114891
       }
     ],
     "paths": [

@@ -6386,6 +6386,138 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "usdf-falcon",
+      "reviewedAt": "2026-10-03T22:47:24Z",
+      "expiresAt": "2027-10-03T22:46:17Z",
+      "reviewer": "W1R11 primary-source unknown resolver",
+      "notes": "Only a dated exact-token operating/deployment-history lower bound is established. No independent continuous verification, stress throughput, redemption performance, reconciliation cadence or incident-free claim is made.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "USDf live Morpho integration",
+          "publisher": "Falcon Finance",
+          "publishedAt": "2025-04-10",
+          "url": "https://falcon.finance/news/falcon-finance-integrates-usdf-and-susdf-with-morpho-to-enhance-defi-lending-and-yield-generation",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 17,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "susdf-falcon",
+      "reviewedAt": "2026-10-03T22:47:24Z",
+      "expiresAt": "2027-10-03T22:46:17Z",
+      "reviewer": "W1R11 primary-source unknown resolver",
+      "notes": "Only a dated exact-token operating/deployment-history lower bound is established. No independent continuous verification, stress throughput, redemption performance, reconciliation cadence or incident-free claim is made.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "sUSDf live Morpho integration",
+          "publisher": "Falcon Finance",
+          "publishedAt": "2025-04-10",
+          "url": "https://falcon.finance/news/falcon-finance-integrates-usdf-and-susdf-with-morpho-to-enhance-defi-lending-and-yield-generation",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 17,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "pendleusdc-pendle",
+      "reviewedAt": "2026-10-03T22:47:24Z",
+      "expiresAt": "2027-10-03T22:46:17Z",
+      "reviewer": "W1R11 primary-source unknown resolver",
+      "notes": "Only a dated exact-token operating/deployment-history lower bound is established. No independent continuous verification, stress throughput, redemption performance, reconciliation cadence or incident-free claim is made.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "Exact pendleUSDC deployment transaction",
+          "publisher": "Ethereum / Blockscout",
+          "publishedAt": "2026-08-04",
+          "url": "https://eth.blockscout.com/api/v2/transactions/0xebf70c7ce9f67d48351c149db5f34d1d8e51f7f2fbe412e214def4a6cc32cde0",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 1,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "mxnb-juno",
+      "reviewedAt": "2026-10-03T22:47:24Z",
+      "expiresAt": "2027-10-03T22:46:17Z",
+      "reviewer": "W1R11 primary-source unknown resolver",
+      "notes": "Only a dated exact-token operating-history lower bound is established. No independent continuous verification, stress throughput, redemption performance, reconciliation cadence or incident-free claim is made. MXNB history starts at the report observation rather than assuming its older contract always represented the current token.",
+      "sources": [
+        {
+          "sourceId": "dated-live-operation",
+          "label": "MXNB circulation at June 30 2026",
+          "publisher": "MXNB / BDO Mexico",
+          "publishedAt": "2026-07-16",
+          "url": "https://assets-prod.mxnb.mx/commons/attestation-reports/2026/mxnb_attestation_q2_2026_en.pdf",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 3,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-live-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

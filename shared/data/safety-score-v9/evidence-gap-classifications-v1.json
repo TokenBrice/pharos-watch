@@ -13147,6 +13147,360 @@
         "https://eth.blockscout.com/api/v2/smart-contracts/0xe7efc5060b6ad57b68f5911eca6c5cd1952da152"
       ],
       "rationale": "Current whole-supply STBT liability-to-affiliate-backing reconciliation procedure and cadence are not published in the reviewed surfaces. The 2023 PoR integration announcement is historical; daily reserve NAV, asset statements, mutable reserve-feed mint ceilings and on-chain issuance records do not supply a dated current common-clock whole-liability reconciliation. Bullion audit does not cover STBT."
+    },
+    {
+      "id": "uw-usdf-falcon-c9d426d5c4c60882",
+      "assetId": "usdf-falcon",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:21491cae7e9cb70963bcaf46",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:41Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R11)",
+      "sources": [
+        {
+          "url": "https://docs.falcon.finance/mechanism/risk-management/extreme-events-and-market-stress-management.md",
+          "observedAt": "2026-10-03T22:53:55Z",
+          "datumAsOf": null,
+          "location": "Collateral Portfolio Size and Liquidity Management",
+          "excerpt": "Falcon sets maximum altcoin position sizes so that the majority of any position can be unwound within a day.",
+          "assertion": "The stated one-day policy covers only a majority, not realization of the entire admitted other-crypto slice."
+        },
+        {
+          "url": "https://docs.falcon.finance/mechanism/risk-management/extreme-events-and-market-stress-management.md",
+          "observedAt": "2026-10-03T22:53:55Z",
+          "datumAsOf": null,
+          "location": "Market-stress staking withdrawal discussion",
+          "excerpt": "Falcon removes spot coins from staking immediately or when it\u2019s possible.",
+          "assertion": "Staking realization remains conditional; this does not give a complete BTC/WBTC or ETH/liquid-staking slice deadline."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://falcon.finance/transparency",
+        "https://api.falcon.finance/api/v1/transparency",
+        "https://falcon.finance/whitepaper-en.pdf",
+        "https://docs.falcon.finance/sitemap.md",
+        "https://docs.falcon.finance/mechanism/user-deposit-process.md",
+        "https://docs.falcon.finance/mechanism/risk-management/extreme-events-and-market-stress-management.md",
+        "https://docs.falcon.finance/resources/terms-of-use.md",
+        "https://falcon.finance/news/a-guide-to-transparency-and-security-in-falcon-finance",
+        "https://falcon.finance/api/media/file/Falcon%20Letter%20-%2028%20September%202026.pdf?prefix=media",
+        "https://falcon.finance/api/media/file/Final%20Falcon%20assurance%20report%20and%20opinion%20-%20signed%20final%2030%20April%202026.pdf?prefix=media"
+      ],
+      "rationale": "The exact missing datum is a liquidity horizon applying to each entire captured BTC/WBTC, ETH/liquid-staking and other-crypto reserve slice. API and assurance disclose balances/classes, including staking or DeFi exposure, not whole-slice realization times. The public risk policy promises a one-day unwind only for a majority of an altcoin position and conditional unstaking. Custody/mirror-account descriptions, withdrawal instructions and discretionary legal terms do not bound realization of every position in those slices."
+    },
+    {
+      "id": "uw-usdf-falcon-96dbe4b7f8d97738",
+      "assetId": "usdf-falcon",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:cdc0b76dc5a4fa185b21008c",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:41Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R11)",
+      "sources": [
+        {
+          "url": "https://docs.falcon.finance/mechanism/risk-management/extreme-events-and-market-stress-management.md",
+          "observedAt": "2026-10-03T22:53:55Z",
+          "datumAsOf": null,
+          "location": "Collateral Portfolio Size and Liquidity Management",
+          "excerpt": "Falcon sets maximum altcoin position sizes so that the majority of any position can be unwound within a day.",
+          "assertion": "The stated one-day policy covers only a majority, not realization of the entire admitted other-crypto slice."
+        },
+        {
+          "url": "https://docs.falcon.finance/mechanism/risk-management/extreme-events-and-market-stress-management.md",
+          "observedAt": "2026-10-03T22:53:55Z",
+          "datumAsOf": null,
+          "location": "Market-stress staking withdrawal discussion",
+          "excerpt": "Falcon removes spot coins from staking immediately or when it\u2019s possible.",
+          "assertion": "Staking realization remains conditional; this does not give a complete BTC/WBTC or ETH/liquid-staking slice deadline."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://falcon.finance/transparency",
+        "https://api.falcon.finance/api/v1/transparency",
+        "https://falcon.finance/whitepaper-en.pdf",
+        "https://docs.falcon.finance/sitemap.md",
+        "https://docs.falcon.finance/mechanism/user-deposit-process.md",
+        "https://docs.falcon.finance/mechanism/risk-management/extreme-events-and-market-stress-management.md",
+        "https://docs.falcon.finance/resources/terms-of-use.md",
+        "https://falcon.finance/news/a-guide-to-transparency-and-security-in-falcon-finance",
+        "https://falcon.finance/api/media/file/Falcon%20Letter%20-%2028%20September%202026.pdf?prefix=media",
+        "https://falcon.finance/api/media/file/Final%20Falcon%20assurance%20report%20and%20opinion%20-%20signed%20final%2030%20April%202026.pdf?prefix=media"
+      ],
+      "rationale": "The exact missing datum is a liquidity horizon applying to each entire captured BTC/WBTC, ETH/liquid-staking and other-crypto reserve slice. API and assurance disclose balances/classes, including staking or DeFi exposure, not whole-slice realization times. The public risk policy promises a one-day unwind only for a majority of an altcoin position and conditional unstaking. Custody/mirror-account descriptions, withdrawal instructions and discretionary legal terms do not bound realization of every position in those slices."
+    },
+    {
+      "id": "uw-usdf-falcon-68b6110557a12ca7",
+      "assetId": "usdf-falcon",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:e222aa2c108eb0643048420b",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:41Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R11)",
+      "sources": [
+        {
+          "url": "https://docs.falcon.finance/mechanism/risk-management/extreme-events-and-market-stress-management.md",
+          "observedAt": "2026-10-03T22:53:55Z",
+          "datumAsOf": null,
+          "location": "Collateral Portfolio Size and Liquidity Management",
+          "excerpt": "Falcon sets maximum altcoin position sizes so that the majority of any position can be unwound within a day.",
+          "assertion": "The stated one-day policy covers only a majority, not realization of the entire admitted other-crypto slice."
+        },
+        {
+          "url": "https://docs.falcon.finance/mechanism/risk-management/extreme-events-and-market-stress-management.md",
+          "observedAt": "2026-10-03T22:53:55Z",
+          "datumAsOf": null,
+          "location": "Market-stress staking withdrawal discussion",
+          "excerpt": "Falcon removes spot coins from staking immediately or when it\u2019s possible.",
+          "assertion": "Staking realization remains conditional; this does not give a complete BTC/WBTC or ETH/liquid-staking slice deadline."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://falcon.finance/transparency",
+        "https://api.falcon.finance/api/v1/transparency",
+        "https://falcon.finance/whitepaper-en.pdf",
+        "https://docs.falcon.finance/sitemap.md",
+        "https://docs.falcon.finance/mechanism/user-deposit-process.md",
+        "https://docs.falcon.finance/mechanism/risk-management/extreme-events-and-market-stress-management.md",
+        "https://docs.falcon.finance/resources/terms-of-use.md",
+        "https://falcon.finance/news/a-guide-to-transparency-and-security-in-falcon-finance",
+        "https://falcon.finance/api/media/file/Falcon%20Letter%20-%2028%20September%202026.pdf?prefix=media",
+        "https://falcon.finance/api/media/file/Final%20Falcon%20assurance%20report%20and%20opinion%20-%20signed%20final%2030%20April%202026.pdf?prefix=media"
+      ],
+      "rationale": "The exact missing datum is a liquidity horizon applying to each entire captured BTC/WBTC, ETH/liquid-staking and other-crypto reserve slice. API and assurance disclose balances/classes, including staking or DeFi exposure, not whole-slice realization times. The public risk policy promises a one-day unwind only for a majority of an altcoin position and conditional unstaking. Custody/mirror-account descriptions, withdrawal instructions and discretionary legal terms do not bound realization of every position in those slices."
+    },
+    {
+      "id": "uw-usdf-falcon-449a3f3745979bc6",
+      "assetId": "usdf-falcon",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:ce1cb3efb067394a1b818144",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:41Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R11)",
+      "sources": [
+        {
+          "url": "https://docs.falcon.finance/resources/insurance-fund.md",
+          "observedAt": "2026-10-03T22:53:55Z",
+          "datumAsOf": null,
+          "location": "Insurance Fund overview",
+          "excerpt": "Insurance Fund is an onchain, verifiable reserve",
+          "assertion": "Describes the reserve and linked wallet but gives no entire-fund realization deadline or maturity ladder."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://api.falcon.finance/api/v1/transparency",
+        "https://falcon.finance/whitepaper-en.pdf",
+        "https://docs.falcon.finance/resources/insurance-fund.md",
+        "https://docs.falcon.finance/resources/terms-of-use.md",
+        "https://docs.falcon.finance/mechanism/risk-management/extreme-events-and-market-stress-management.md",
+        "https://etherscan.io/address/0x432CDcc4516B21302985b639Ef9a7853727A4e49",
+        "https://falcon.finance/api/media/file/Falcon%20Letter%20-%2028%20September%202026.pdf?prefix=media"
+      ],
+      "rationale": "The exact datum is a liquidity horizon covering the whole current Insurance fund reserve slice. The live API reports a $10m bucket; the insurance page explains use and links a wallet, while the older whitepaper calls the fund stablecoin reserves. Neither publishes a complete reconciled current fund allocation or a deadline for realizing its entire value. Wallet custody, discretionary deployment/buyback language and generic stablecoin holdings do not establish a bound for this whole captured bucket."
+    },
+    {
+      "id": "uw-mxnb-juno-8282dc93762088c0",
+      "assetId": "mxnb-juno",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:64d5656d90a5280d6c1a3e19",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:41Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R11)",
+      "sources": [
+        {
+          "url": "https://buildwithjuno.com/Nvio_El%20Salvador_DIR_%2005.05.2026.pdf",
+          "observedAt": "2026-10-03T22:56:40Z",
+          "datumAsOf": "2026-05-05",
+          "location": "DIR, reserve policy pp.16 and 23",
+          "excerpt": "mientras que hasta un 40 % podr\u00e1 invertirse en instrumentos con vencimiento superior a dicho plazo",
+          "assertion": "The 30-day limit is explicitly partial; the remaining permitted instruments have no published numerical maximum."
+        },
+        {
+          "url": "https://buildwithjuno.com/Nvio_El%20Salvador_DIR_%2005.05.2026.pdf",
+          "observedAt": "2026-10-03T22:56:40Z",
+          "datumAsOf": "2026-05-05",
+          "location": "DIR, certification annex, p.79",
+          "excerpt": "las reservas debe estar invertido en instrumentos liquidables en un plazo no mayor a 30 d\u00edas, y hasta un m\u00e1ximo del 30% en instrumentos con plazos superiores.",
+          "assertion": "The annex also sets only a fractional liquidity policy, not an all-reserves maximum maturity or realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://mxnb.mx/en-US/transparency",
+        "https://mxnb.mx/en-US/learn",
+        "https://mxnb.mx/en-US/faq",
+        "https://assets-prod.mxnb.mx/commons/whitepaper.pdf",
+        "https://assets-prod.mxnb.mx/commons/attestation-reports/2026/mxnb_attestation_q2_2026_en.pdf",
+        "https://buildwithjuno.com/en-US",
+        "https://buildwithjuno.com/legal/DIR",
+        "https://buildwithjuno.com/Nvio_El%20Salvador_DIR_%2005.05.2026.pdf",
+        "https://docs.bitso.com/juno/llms.txt",
+        "https://docs.bitso.com/juno/docs/redeem-your-mxnb-tokens.md"
+      ],
+      "rationale": "The missing data are maximum maturity and a realization horizon for the entire captured bank-reserve slice. The current report aggregates reserves without per-account instruments, contractual withdrawal terms or tenor bounds. Whitepaper and legal DIR allow cash plus government instruments; DIR's 60%/40% policy and its annex's 70%/30% variant constrain only a fraction to 30 days and leave the remainder's maximum unstated. A same-business-day customer redemption target and immediately available cash descriptions do not bound every holding in this aggregate slice."
+    },
+    {
+      "id": "uw-mxnb-juno-dd2e277d14224aeb",
+      "assetId": "mxnb-juno",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:64d5656d90a5280d6c1a3e19",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:41Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R11)",
+      "sources": [
+        {
+          "url": "https://buildwithjuno.com/Nvio_El%20Salvador_DIR_%2005.05.2026.pdf",
+          "observedAt": "2026-10-03T22:56:40Z",
+          "datumAsOf": "2026-05-05",
+          "location": "DIR, reserve policy pp.16 and 23",
+          "excerpt": "mientras que hasta un 40 % podr\u00e1 invertirse en instrumentos con vencimiento superior a dicho plazo",
+          "assertion": "The 30-day limit is explicitly partial; the remaining permitted instruments have no published numerical maximum."
+        },
+        {
+          "url": "https://buildwithjuno.com/Nvio_El%20Salvador_DIR_%2005.05.2026.pdf",
+          "observedAt": "2026-10-03T22:56:40Z",
+          "datumAsOf": "2026-05-05",
+          "location": "DIR, certification annex, p.79",
+          "excerpt": "las reservas debe estar invertido en instrumentos liquidables en un plazo no mayor a 30 d\u00edas, y hasta un m\u00e1ximo del 30% en instrumentos con plazos superiores.",
+          "assertion": "The annex also sets only a fractional liquidity policy, not an all-reserves maximum maturity or realization horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://mxnb.mx/en-US/transparency",
+        "https://mxnb.mx/en-US/learn",
+        "https://mxnb.mx/en-US/faq",
+        "https://assets-prod.mxnb.mx/commons/whitepaper.pdf",
+        "https://assets-prod.mxnb.mx/commons/attestation-reports/2026/mxnb_attestation_q2_2026_en.pdf",
+        "https://buildwithjuno.com/en-US",
+        "https://buildwithjuno.com/legal/DIR",
+        "https://buildwithjuno.com/Nvio_El%20Salvador_DIR_%2005.05.2026.pdf",
+        "https://docs.bitso.com/juno/llms.txt",
+        "https://docs.bitso.com/juno/docs/redeem-your-mxnb-tokens.md"
+      ],
+      "rationale": "The missing data are maximum maturity and a realization horizon for the entire captured bank-reserve slice. The current report aggregates reserves without per-account instruments, contractual withdrawal terms or tenor bounds. Whitepaper and legal DIR allow cash plus government instruments; DIR's 60%/40% policy and its annex's 70%/30% variant constrain only a fraction to 30 days and leave the remainder's maximum unstated. A same-business-day customer redemption target and immediately available cash descriptions do not bound every holding in this aggregate slice."
+    },
+    {
+      "id": "uw-mxnb-juno-8c9e44d9654ad99b",
+      "assetId": "mxnb-juno",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:mxnb-juno:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:41Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R11)",
+      "sources": [
+        {
+          "url": "https://docs.bitso.com/juno/docs/conversions-between-mxnb-and-usd-stablecoins.md",
+          "observedAt": "2026-10-03T22:53:55Z",
+          "datumAsOf": "2026-03-14",
+          "location": "Quote Request and response",
+          "excerpt": "final_amount",
+          "assertion": "Authenticated quote responses disclose a transaction-specific output, not a public fixed spread/fee schedule for MXNB-to-USDC/USDT conversion."
+        },
+        {
+          "url": "https://buildwithjuno.com/Nvio_El%20Salvador_DIR_%2005.05.2026.pdf",
+          "observedAt": "2026-10-03T22:56:40Z",
+          "datumAsOf": "2026-05-05",
+          "location": "DIR, pp.23 and 37, ordinary peso redemption",
+          "excerpt": "No se cobrar\u00e1n comisiones ni penalizaciones por la redenci\u00f3n ordinaria de MXNB.",
+          "assertion": "This zero issuer fee is for ordinary MXN redemption; it does not establish the cost of the captured USDC/USDT conversion route."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://mxnb.mx/en-US/faq",
+        "https://mxnb.mx/en-US/transparency",
+        "https://assets-prod.mxnb.mx/commons/whitepaper.pdf",
+        "https://buildwithjuno.com/en-US",
+        "https://buildwithjuno.com/legal/DIR",
+        "https://docs.bitso.com/juno/llms.txt",
+        "https://docs.bitso.com/juno/docs/conversions-between-mxnb-and-usd-stablecoins.md",
+        "https://docs.bitso.com/juno/docs/redeem-your-mxnb-tokens.md",
+        "https://buildwithjuno.com/Nvio_El%20Salvador_DIR_%2005.05.2026.pdf"
+      ],
+      "rationale": "The exact missing datum is the all-in fee/spread of the modeled MXNB-to-USDC/USDT offchain conversion, not peso redemption. Juno documents a real-time authenticated quote and final output but no public numerical spread, fixed conversion fee or evaluable pricing formula. The historical example quote is not a current fee measurement. DIR's zero ordinary-redemption issuer fee and pass-through bank-transfer charges apply to MXN payout, so cannot be copied onto the USD-stablecoin conversion."
+    },
+    {
+      "id": "uw-pendleusdc-pendle-5f12425be89540b9",
+      "assetId": "pendleusdc-pendle",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:c99936da6a52cb955b1b8d35",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:41Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R11)",
+      "sources": [
+        {
+          "url": "https://docs.morpho.org/developers/earn/tutorials/force-deallocate/",
+          "observedAt": "2026-10-03T22:56:41Z",
+          "datumAsOf": null,
+          "location": "Introductory Callout and withdrawal ceiling",
+          "excerpt": "When the underlying markets themselves lack liquidity (all assets are borrowed), no `forceDeallocate` can help.",
+          "assertion": "USDC realization depends on available lending-market liquidity; in-kind position delivery does not guarantee realization of the entire reserve slice."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://pendle.finance",
+        "https://docs.pendle.finance/pendle-v2/TermsOfUse",
+        "https://blue-api.morpho.org/graphql",
+        "https://docs.morpho.org/learn/concepts/vault-v2/",
+        "https://docs.morpho.org/developers/earn/tutorials/force-deallocate/",
+        "https://docs.morpho.org/curate/tutorials-v2/unwind-vault-v2/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x55c1b6e461a6334b567baf0feb5d728715446f05",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xa2f362079dbc570a6df5bd04ad91002d17c0db9a"
+      ],
+      "rationale": "The exact missing datum is an entire-position liquidity horizon for this vault's USDC lending-reserve slice. Exact deployed vault/adapter code and current allocation enumerate idle USDC plus three lending markets, without a contractual repayment or full-realization deadline. Morpho documentation makes asset exit conditional on available liquidity, and in-kind exit transfers the exposure rather than realizes USDC. General Pendle terms provide no unconditional realization SLA. Current withdrawable amounts are separate producer-owned observations, not a published whole-slice timing bound."
     }
   ]
 }
