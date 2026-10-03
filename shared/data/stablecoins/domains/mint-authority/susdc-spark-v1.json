@@ -1,0 +1,206 @@
+{
+  "id": "susdc-spark-v1",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "sUSDC inherits USDC issuer authority. Native shares are deposit-backed; Spark's official SPARK_PROXY ward can replace share accounting through the reviewed Sky governance execution chain.",
+    "inheritedFrom": "usdc-circle",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xbc65ad17c5c0a2a4d159fa5a503f4992c7b545fe",
+        "deploymentRefs": [
+          "ethereum:0xbc65ad17c5c0a2a4d159fa5a503f4992c7b545fe"
+        ],
+        "label": "Exact deposit-backed ERC-4626 share issuer",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107702,
+        "sources": [
+          {
+            "label": "Spark Savings documentation distinguishes Legacy V1 from V2",
+            "url": "https://docs.spark.finance/products/spark-savings"
+          },
+          {
+            "label": "Official Spark Ethereum deployment registry",
+            "url": "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/Ethereum.sol"
+          },
+          {
+            "label": "Verified exact vault deployment and source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbc65ad17c5c0a2a4d159fa5a503f4992c7b545fe"
+          },
+          {
+            "label": "Verified Legacy UsdcVault implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf943cb8d5f06f2bbf352878ebef3ec5c537a20ba"
+          },
+          {
+            "label": "Credential-free RPC endpoint; pinned read in review notes",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          }
+        ],
+        "evidence": "Observed 2026-10-02T22:43:52.688407+00:00 at ethereum block 26107702 (hash 0x292b4ed6cca79fa476bc17c9ef12dd938dbbf67f4a61564c2fe8f897e07390e6). Native totalSupply 161342339855641335323322489 (18 decimals), asset 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 (6 decimals), totalAssets 179331003650749, convertToAssets(10^18) 1111493. One-share redeem from actual holder 0xa09fe38187abecc2768b98b80ea30afbc2fbd774 returned 1111493 asset base units via eth_call at that same block; no transaction broadcast. Verified source mints receipts only through deposit-backed user operations and documented fee accounting; it does not create the underlying stablecoin."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x3300f198988e4c9c63f75df86de36421f06af8c4",
+        "deploymentRefs": [
+          "ethereum:0xbc65ad17c5c0a2a4d159fa5a503f4992c7b545fe"
+        ],
+        "label": "Legacy UsdcVault Spark SPARK_PROXY ward",
+        "role": "proxy-admin",
+        "authorityType": "dao-governor",
+        "directMintAbility": "upgrade-only",
+        "modulesOrGuardsStatus": "not-applicable",
+        "timelockDelaySec": 172800,
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110183,
+        "sources": [
+          {
+            "label": "Spark Savings documentation distinguishes Legacy V1 from V2",
+            "url": "https://docs.spark.finance/products/spark-savings"
+          },
+          {
+            "label": "Official Spark Ethereum deployment registry",
+            "url": "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/Ethereum.sol"
+          },
+          {
+            "label": "Verified exact vault deployment and source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbc65ad17c5c0a2a4d159fa5a503f4992c7b545fe"
+          },
+          {
+            "label": "Verified Legacy UsdcVault implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf943cb8d5f06f2bbf352878ebef3ec5c537a20ba"
+          },
+          {
+            "label": "Credential-free RPC endpoint; pinned read in review notes",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          },
+          {
+            "label": "Verified SubProxy delegatecall and ward semantics",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3300f198988e4c9c63f75df86de36421f06af8c4"
+          },
+          {
+            "label": "StarGuard whitelist is authorized only by DSPauseProxy at the pin",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6605aa120fe8b656482903e7757babf56947e45e"
+          },
+          {
+            "label": "DSPause scheduled execution and mutable delay",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbe286431454714f511008713973d3b053a2d38f3"
+          },
+          {
+            "label": "Chief voting authority and hat-only authorization",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x929d9a1435662357f54adcf64dcee4d6b867a6f9"
+          },
+          {
+            "label": "Fresh ward, StarGuard and DSPause census at Ethereum block 26110183",
+            "url": "https://etherscan.io/block/26110183"
+          }
+        ],
+        "evidence": "The canonical Spark registry identifies 0x3300f198988e4c9c63f75df86de36421f06af8c4 as SPARK_PROXY. Deployment-to-block-26110183 Rely/Deny census and current getters resolve the vault's only active event-enumerated ward as SPARK_PROXY (deployer 0xd1236a6a111879d9862f8374ba15344b6b233fbd revoked). SPARK_PROXY has three active wards: DSPauseProxy 0xbe8e3e3618f7474f8cb1d074a26affef007e98fb, StarGuard 0x6605aa120fe8b656482903e7757babf56947e45e and ESM 0x09e05ff6142f2f9de8b6b65855a1d56b6cfe4c58. ESM source can deny the governance proxy, not call exec or upgrade this vault. StarGuard's complete Rely/Deny census leaves only DSPauseProxy authorized; spellData is empty. DSPauseProxy.owner() is DSPause 0xbe286431454714f511008713973d3b053a2d38f3, whose owner is zero, delay is 172800 seconds and authority is Chief 0x929d9a1435662357f54adcf64dcee4d6b867a6f9 (hat 0xf01b594af26fc8a8ae1e24dcaf904ecb6fd1badc). Verified Chief canCall permits only the elected hat; DSPause enforces scheduled execution. Delegatecall target selection and changes to wards or delay remain governance powers, not immutable bounds. This is a current role census, not an execution-complete certificate or independent-human/key-custody claim."
+      }
+    ],
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "review": {
+      "sources": [
+        {
+          "label": "Spark Savings documentation distinguishes Legacy V1 from V2",
+          "url": "https://docs.spark.finance/products/spark-savings"
+        },
+        {
+          "label": "Official Spark Ethereum deployment registry",
+          "url": "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/Ethereum.sol"
+        },
+        {
+          "label": "Verified exact vault deployment and source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbc65ad17c5c0a2a4d159fa5a503f4992c7b545fe"
+        },
+        {
+          "label": "Verified Legacy UsdcVault implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf943cb8d5f06f2bbf352878ebef3ec5c537a20ba"
+        },
+        {
+          "label": "Credential-free RPC endpoint; pinned read in review notes",
+          "url": "https://eth-mainnet.g.alchemy.com/v2/"
+        },
+        {
+          "label": "Verified governance proxy and role census",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3300f198988e4c9c63f75df86de36421f06af8c4"
+        },
+        {
+          "label": "DSPause enforced scheduling and delay",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbe286431454714f511008713973d3b053a2d38f3"
+        },
+        {
+          "label": "Role census and current authority getters at Ethereum block 26110183",
+          "url": "https://etherscan.io/block/26110183"
+        }
+      ],
+      "evidence": "Reviewed exact native vault source, unchanged getImplementation()=0xf943cb8d5f06f2bbf352878ebef3ec5c537a20ba and deployment-to-pin authorization events through Ethereum block 26110183. The only active event-enumerated vault ward is Spark SPARK_PROXY. Its DSPauseProxy and StarGuard execution paths converge on the current Chief-authorized DSPause with 172800-second scheduling; the third ESM ward has only revocation access, not vault-upgrade execution. This closes the prior unidentified ward/controller inventory. Governance retains arbitrary delegatecall payload selection and can change wards or the delay through authorized execution; no immutable cap, independent signer identity, key-custody assurance or execution-complete narrowing is claimed. Parent mint authority remains inherited.",
+      "reviewer": "Sol refinement 2026-10-03 (Refine13)",
+      "reviewedAt": "2026-10-03",
+      "disposition": "scoreable",
+      "scopedQuestions": [
+        {
+          "controlRef": "Legacy UsdcVault Spark SPARK_PROXY ward",
+          "question": "What human-control independence, operational signing policy and key-custody assurance support the identified Sky governance execution participants? The verified contract/ward census and current delay do not establish these custody facts.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine13)",
+          "sources": [
+            {"label": "Identified Chief governance authorization", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x929d9a1435662357f54adcf64dcee4d6b867a6f9"},
+            {"label": "Pinned identified governance/ward census", "url": "https://etherscan.io/block/26110183"}
+          ]
+        }
+      ],
+      "unresolvedQuestions": []
+    },
+    "upgradeability": {
+      "model": "uups",
+      "deploymentRefs": [
+        "ethereum:0xbc65ad17c5c0a2a4d159fa5a503f4992c7b545fe"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 172800,
+      "observedAt": "2026-10-03",
+      "observedBlock": 26110183,
+      "sources": [
+        {
+          "label": "Spark Savings documentation distinguishes Legacy V1 from V2",
+          "url": "https://docs.spark.finance/products/spark-savings"
+        },
+        {
+          "label": "Official Spark Ethereum deployment registry",
+          "url": "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/Ethereum.sol"
+        },
+        {
+          "label": "Verified exact vault deployment and source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbc65ad17c5c0a2a4d159fa5a503f4992c7b545fe"
+        },
+        {
+          "label": "Verified Legacy UsdcVault implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf943cb8d5f06f2bbf352878ebef3ec5c537a20ba"
+        },
+        {
+          "label": "Credential-free RPC endpoint; pinned read in review notes",
+          "url": "https://eth-mainnet.g.alchemy.com/v2/"
+        }
+      ],
+      "proxyAddresses": [
+        "0xbc65ad17c5c0a2a4d159fa5a503f4992c7b545fe"
+      ],
+      "implementationAddresses": [
+        "0xf943cb8d5f06f2bbf352878ebef3ec5c537a20ba"
+      ],
+      "adminAddresses": [
+        "0x3300f198988e4c9c63f75df86de36421f06af8c4"
+      ],
+      "controlRef": "Legacy UsdcVault Spark SPARK_PROXY ward"
+    }
+  }
+}

@@ -22,6 +22,7 @@ export const PRICE_SOURCE_HEALTH_BUCKET_KEYS = [
   "curve-oracle",
   "chainlink-nav",
   "superstate-liquidity",
+  "jpmorgan-nav",
   "dex-promoted",
   "fluid-dex",
   "balancer-dex",

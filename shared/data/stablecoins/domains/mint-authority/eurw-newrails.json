@@ -1,0 +1,154 @@
+{
+  "id": "eurw-newrails",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "A genesis-to-block-110115443 RoleGranted/RoleRevoked census identifies one ADMIN_ROLE EOA, one MINTER_ROLE EOA and one MINTER_APPROVER_ROLE EOA. No UPGRADER_ROLE grant is present, but the administrator can grant it immediately. The minter has 320,170.16 EURW remaining allowance; quotas are replaceable and are not an immutable whole-claim cap.",
+    "upgradeability": {
+      "model": "uups",
+      "deploymentRefs": [
+        "monad:0x1111b3ded9f1fe1801ad4ebef8e2788183a24111"
+      ],
+      "proxyAddresses": [
+        "0x1111b3ded9f1fe1801ad4ebef8e2788183a24111"
+      ],
+      "implementationAddresses": [
+        "0x52778511bec5ff87f9b52c7a2434631edcc157f4"
+      ],
+      "adminAddresses": [
+        "0x1c4f1a908ae8c15c3fef774775b8e897c1fc9ca6"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "Newrails EURW ADMIN_ROLE EOA",
+      "observedAt": "2026-10-03",
+      "observedBlock": 110115443,
+      "sources": [
+        {
+          "label": "Hacken Newrails Monad code security audit dated March 12, 2026",
+          "url": "https://cmpl-docs.newrails.xyz/docs/Hacken_Newrails_SCA_Newrails_Stablecoin_Feb2026_P_2026_2028_2_20260312.pdf"
+        },
+        {
+          "label": "Monad mainnet JSON-RPC",
+          "url": "https://rpc.monad.xyz"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "label": "Newrails EURW ADMIN_ROLE EOA",
+        "chain": "monad",
+        "address": "0x1c4f1a908ae8c15c3fef774775b8e897c1fc9ca6",
+        "deploymentRefs": ["monad:0x1111b3ded9f1fe1801ad4ebef8e2788183a24111"],
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 110115443,
+        "sources": [
+          {"label": "Monad mainnet role and account reads", "url": "https://rpc.monad.xyz"},
+          {"label": "Monad full-history role census via Alchemy, blocks 0 through 110115443", "url": "https://www.alchemy.com/docs/chains/monad/monad-api-endpoints/eth-get-logs"},
+          {"label": "Hacken Newrails code audit, March 12, 2026", "url": "https://cmpl-docs.newrails.xyz/docs/Hacken_Newrails_SCA_Newrails_Stablecoin_Feb2026_P_2026_2028_2_20260312.pdf"}
+        ],
+        "evidence": "The complete role log query returned four grants and no revocations: ADMIN_ROLE to this address, BURNER_ROLE to 0xf095cf0a76d6168e37e74c44b5ec11c607e14b5c, MINTER_ROLE to 0x259b74273f2a371f88cbc2cd8ca3339066600757 and MINTER_APPROVER_ROLE to 0x778b36adecb99a5a920106c441598879bfeb184c. All four have eth_getCode=0x. At block 110115443, hasRole confirms the three issuance identities; getRoleAdmin for ADMIN, MINTER, MINTER_APPROVER and UPGRADER returns ADMIN_ROLE. No UPGRADER_ROLE grant is present; the administrator can reactivate immediate audited UUPS upgrades by granting that role. This is not renunciation or timelock protection."
+      },
+      {
+        "label": "Newrails EURW MINTER_ROLE EOA",
+        "chain": "monad",
+        "address": "0x259b74273f2a371f88cbc2cd8ca3339066600757",
+        "deploymentRefs": ["monad:0x1111b3ded9f1fe1801ad4ebef8e2788183a24111"],
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 110115443,
+        "sources": [
+          {"label": "Monad mainnet hasRole and minterAllowance reads", "url": "https://rpc.monad.xyz"},
+          {"label": "Hacken Newrails code audit, March 12, 2026", "url": "https://cmpl-docs.newrails.xyz/docs/Hacken_Newrails_SCA_Newrails_Stablecoin_Feb2026_P_2026_2028_2_20260312.pdf"}
+        ],
+        "evidence": "At block 110115443, hasRole(MINTER_ROLE)=true, ADMIN_ROLE and MINTER_APPROVER_ROLE=false, and minterAllowance(address)=320170160000 raw units, or 320,170.16 EURW. The allowance-consuming mint path is audited; the independent approver can overwrite it. Hacken's accepted F-2026-15201 allowance-overwrite frontrunning finding prevents treating this snapshot as an immutable economic cap."
+      },
+      {
+        "label": "Newrails EURW MINTER_APPROVER_ROLE EOA",
+        "chain": "monad",
+        "address": "0x778b36adecb99a5a920106c441598879bfeb184c",
+        "deploymentRefs": ["monad:0x1111b3ded9f1fe1801ad4ebef8e2788183a24111"],
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 110115443,
+        "sources": [
+          {"label": "Monad mainnet role census and account reads", "url": "https://rpc.monad.xyz"},
+          {"label": "Hacken Newrails code audit, March 12, 2026", "url": "https://cmpl-docs.newrails.xyz/docs/Hacken_Newrails_SCA_Newrails_Stablecoin_Feb2026_P_2026_2028_2_20260312.pdf"}
+        ],
+        "evidence": "The full role log census and current hasRole reads identify this sole MINTER_APPROVER_ROLE holder, an EOA. ADMIN_ROLE, MINTER_ROLE and UPGRADER_ROLE are false for it. The audited approveMinter function sets an arbitrary replacement allowance, so this controller can expand issuance independently of the current minter allowance."
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "prudential",
+    "review": {
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Pharos refinement Refine02 primary-source and RPC review",
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "Hacken Newrails Monad code security audit dated March 12, 2026",
+          "url": "https://cmpl-docs.newrails.xyz/docs/Hacken_Newrails_SCA_Newrails_Stablecoin_Feb2026_P_2026_2028_2_20260312.pdf"
+        },
+        {
+          "label": "Newrails EURW MiCA whitepaper notified May 26, 2026",
+          "url": "https://cmpl-docs.newrails.xyz/docs/Newrails%20EURW%20WP%202026-05-26.xhtml"
+        },
+        {
+          "label": "Bank of Lithuania Newrails EMI and EMT issuer register",
+          "url": "https://www.lb.lt/en/sfi-financial-market-participants/newrails-uab"
+        },
+        {
+          "label": "Monad mainnet JSON-RPC",
+          "url": "https://rpc.monad.xyz"
+        }
+      ],
+      "evidence": "Monad role logs from genesis through block 110115443 close the current ADMIN/MINTER/MINTER_APPROVER roster and establish that no UPGRADER_ROLE grant exists; current role-admin reads retain the administrator's reactivation path. The proxy first has runtime code at block 61584206 (2026-03-15), in transaction 0x3fb231fb1a9045f86604727f233e9ff8885cdc6dec1e9f4f0567fa3f03592f47, and no code at 61584205. The Bank of Lithuania register and exact-token whitepaper support prudential supervision, not independent reserve assurance. Current remaining allowance is observed, not a permanent supply bound. Audited source was not publicly retrievable from the linked repository, so exact source/runtime correspondence and offchain key custody remain qualified. Independent human/key-custody arrangements for the three issuance EOAs and current exact-token financial reserve-to-liability reconciliation remain unverified; these are key-custody and Backing qualifications, not gaps in the identified signer census.",
+      "unresolvedQuestions": [
+        "The current EURW proxy implementation has not been independently bound to the audited source or proven byte-for-byte equal to a verified reference. The administrator can immediately activate an upgrade authority, so exact current mint/grant/upgrade-path runtime semantics remain unverified despite the closed role roster."
+      ],
+      "scopedQuestions": [
+        {
+          "controlRef": "Newrails EURW ADMIN_ROLE EOA",
+          "question": "Which independently verifiable human-independence, key-custody, MPC/HSM and signing-policy arrangements protect the identified administrator EOA and its immediate role-grant and upgrade-reactivation powers?",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Pharos refinement Refine02 primary-source and RPC review",
+          "sources": [
+            {"label": "Hacken Newrails code audit, March 12, 2026", "url": "https://cmpl-docs.newrails.xyz/docs/Hacken_Newrails_SCA_Newrails_Stablecoin_Feb2026_P_2026_2028_2_20260312.pdf"},
+            {"label": "Monad mainnet role and account reads", "url": "https://rpc.monad.xyz"}
+          ]
+        },
+        {
+          "controlRef": "Newrails EURW MINTER_ROLE EOA",
+          "question": "Which independently verifiable human-independence, key-custody, MPC/HSM and signing-policy arrangements protect the identified direct-minter EOA?",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Pharos refinement Refine02 primary-source and RPC review",
+          "sources": [{"label": "Monad mainnet exact role and authority-account reads", "url": "https://rpc.monad.xyz"}, {"label": "Newrails EURW whitepaper", "url": "https://cmpl-docs.newrails.xyz/docs/Newrails%20EURW%20WP%202026-05-26.xhtml"}]
+        },
+        {
+          "controlRef": "Newrails EURW MINTER_APPROVER_ROLE EOA",
+          "question": "Which independently verifiable human-independence, key-custody, MPC/HSM and signing-policy arrangements protect the identified allowance-approver EOA?",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Pharos refinement Refine02 primary-source and RPC review",
+          "sources": [{"label": "Monad mainnet exact role and authority-account reads", "url": "https://rpc.monad.xyz"}, {"label": "Newrails EURW whitepaper", "url": "https://cmpl-docs.newrails.xyz/docs/Newrails%20EURW%20WP%202026-05-26.xhtml"}]
+        }
+      ]
+    }
+  }
+}

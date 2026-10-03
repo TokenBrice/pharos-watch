@@ -1,0 +1,56 @@
+{
+  "liveReservesConfig": {
+    "adapter": "accountable",
+    "version": 1,
+    "semantics": "protocol-reserve",
+    "breakerScope": "usdx-axis",
+    "scoring": { "maxSourceAgeSec": 259200 },
+    "display": { "url": "https://app.axis.to/transparency", "label": "Axis Accountable location observations" },
+    "inputs": { "primary": { "kind": "http-json", "url": "https://axis.accountable.capital:8443/dashboard" } },
+    "params": { "bucket": "reserves_split", "riskMap": {} }
+  },
+  "id": "usdx-axis",
+  "name": "Axis USD",
+  "symbol": "USDx",
+  "oneLiner": "USDx is Axis's synthetic dollar, backed by venue-held assets and market-neutral hedges; approved counterparties redeem through signed orders.",
+  "mechanismArchetype": "synthetic-delta-neutral",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rationale": "The canonical Ethereum V2 USDx token is a synthetic dollar backed by stablecoins and liquid assets deployed at trading venues, with directional inventory offset by hedges. The official reserve documentation explicitly describes delta-neutral exposure and offchain venue custody; it does not establish measured hedge coverage.",
+    "sources": [
+      { "label": "Axis backing and custody disclosure", "url": "https://docs.axis.to/backing-reserves-and-transparency/backing-custody-transparency.md" },
+      { "label": "Axis canonical V2 deployments", "url": "https://docs.axis.to/reference/contract-addresses.md" }
+    ]
+  },
+  "flags": { "backing": "crypto-backed", "governance": "centralized-dependent" },
+  "collateral": "Issuer asset-form snapshot dated October 2, 2026: liquid hedge inventory 70.73%, stablecoins and settlement tokens 21.41%, yield-bearing and staked collateral 6.25%, fiat cash and FX balances 1.31%, and tokenized Treasuries or reserve-backed cash equivalents 0.30%. These are gross backing shares before hedge offsets, not net-risk or per-token allocations.",
+  "pegMechanism": "Approved primary-market accounts sign EIP-712 orders against USDC or USDT collateral; authorized operators settle minting and redemption atomically onchain. Offchain RFQ pricing reflects portfolio unwind costs, and the contract does not independently value collateral using an external oracle. Retail holders rely on secondary markets. Indicative instant and seven-day redemption bands are not committed capacity or settlement guarantees.",
+  "llamaId": "442",
+  "detailProvider": "defillama",
+  "geckoId": "axis-usd",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://axis.accountable.capital:8443/dashboard",
+    "provider": "Accountable read-only venue-account and cryptographic reserve verification; not a signed financial audit or proof of hedge coverage, legal segregation or insolvency priority",
+    "attestorTier": "niche",
+    "cadence": "real-time"
+  },
+  "links": [
+    { "label": "Website", "url": "https://www.axis.to/" },
+    { "label": "Docs", "url": "https://docs.axis.to/" },
+    { "label": "Transparency", "url": "https://app.axis.to/transparency" },
+    { "label": "Terms", "url": "https://www.axis.to/terms-of-service" },
+    { "label": "Canonical V2 deployment, July 23, 2026", "url": "https://etherscan.io/tx/0xc50b87d6c87b63e5b8b97253aecd32724eed0b081afdf2732e654a027adf3432" }
+  ],
+  "jurisdiction": { "country": "British Virgin Islands" },
+  "contracts": [
+    { "chain": "ethereum", "address": "0xa1fa7777974312f7d801a8880714a218f76233f8", "decimals": 18 }
+  ],
+  "collateralQuality": "exotic",
+  "custodyModel": "unknown",
+  "governanceQuality": "multisig",
+  "launchDate": "2026-07-23",
+  "implementationLaunchDate": "2026-07-23"
+}

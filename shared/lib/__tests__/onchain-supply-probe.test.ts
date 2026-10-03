@@ -368,6 +368,57 @@ describe("curated on-chain supply paths", () => {
     expect(selected?.find((entry) => entry.config.chain === "stable")?.config.rpcUrl).toBe("https://rpc.stable.xyz");
   });
 
+  it.each([
+    {
+      id: "uscc-superstate",
+      contracts: [
+        { chain: "ethereum", address: "0x14d60e7fdc0d71d8611742720e4c50e7a974020c", decimals: 6 },
+        { chain: "plume", address: "0x4c21b7577c8fe8b0b0669165ee7c8f67fa1454cf", decimals: 6 },
+        { chain: "solana", address: "BTRR3sj1Bn2ZjuemgbeQ6SCtf84iXS81CS7UDTSxUCaK", decimals: 6 },
+      ],
+    },
+    {
+      id: "pyusdx-moonpay",
+      contracts: ["ethereum", "arbitrum", "monad", "base"].map((chain) => ({
+        chain, address: "0xebdb0942ce16386ab90718c7bd10c91cdb66b14d", decimals: 6,
+      })),
+    },
+    {
+      id: "fiusd-sygnum",
+      contracts: [
+        { chain: "zksync", address: "0x2ab105a3ead22731082b790ca9a00d9a3a7627f9", decimals: 2 },
+        { chain: "arbitrum", address: "0xcded6b899edba762d793f44ed295248049440e1e", decimals: 2 },
+      ],
+    },
+  ])("requires every reviewed native deployment for $id", ({ id, contracts }) => {
+    const meta = makeMeta([...contracts].reverse(), id);
+    expect(selectCuratedAggregateOnchainSupplyProbeContracts(meta)?.map((entry) => entry.contract))
+      .toEqual(contracts);
+    expect(hasRuntimeOnchainSupplyPath(meta)).toBe(true);
+    for (const missing of contracts) {
+      expect(selectCuratedAggregateOnchainSupplyProbeContracts(makeMeta(
+        contracts.filter((contract) => contract !== missing), id,
+      ))).toBeNull();
+    }
+    expect(selectCuratedAggregateOnchainSupplyProbeContracts(makeMeta([
+      ...contracts,
+      { chain: "base", address: "0x1111111111111111111111111111111111111111", decimals: 6 },
+    ], id))).toBeNull();
+  });
+
+  it("cannot silently omit 0G when PYUSDx metadata gains the fifth native deployment", () => {
+    const meta = TRACKED_META_BY_ID.get("pyusdx-moonpay")!;
+    expect(hasRuntimeOnchainSupplyPath(meta)).toBe(true);
+    const expandedMeta = {
+      ...meta,
+      contracts: [...meta.contracts!, {
+        chain: "0g", address: "0xebdb0942ce16386ab90718c7bd10c91cdb66b14d", decimals: 6,
+      }],
+    };
+    expect(selectCuratedAggregateOnchainSupplyProbeContracts(expandedMeta)).toBeNull();
+    expect(hasRuntimeOnchainSupplyPath(expandedMeta)).toBe(false);
+  });
+
   // Shape: Centrifuge V3 burn/mint share bridge. Every reviewed deployment is
   // configured, including two that read exactly zero today - the Solana leg only
   // became configurable once allowZeroSupply started governing Solana reads.

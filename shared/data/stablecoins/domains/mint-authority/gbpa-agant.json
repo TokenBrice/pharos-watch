@@ -1,0 +1,287 @@
+{
+  "id": "gbpa-agant",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciliation-unknown",
+    "confidence": "manual-review",
+    "summary": "GBPA has five issuer-native deployments. Ethereum, Base and Arc retain a direct EOA fiat minter and an EOA owner of upgrade administration. The same codeless minter and sole role/cap administrator are resolved on Tempo by complete role-event history; its additional token-bound transfer proxy retains an execution-closure gap. Solana minting uses a 1-of-2 Token-2022 multisig. LayerZero transfer machinery is reviewed separately under Bridge Risk.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "deploymentRefs": [
+        "ethereum:0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b",
+        "base:0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b",
+        "arc:0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+      ],
+      "proxyAddresses": [
+        "0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+      ],
+      "implementationAddresses": [
+        "0x4b55cc51901ef212a6cb4fa5e5daa6575afdd3f0",
+        "0x302a8a24e79c4f987cb7dd4993a8c998079784b1"
+      ],
+      "adminAddresses": [
+        "0x2ebc550927191e2ef13cedbcf2886dcd810dabc9"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "GBPA EVM ProxyAdmin owner",
+      "observedAt": "2026-10-02",
+      "sources": [
+        {
+          "label": "Verified GBPA Ethereum implementation and imported OFT source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4b55cc51901ef212a6cb4fa5e5daa6575afdd3f0"
+        },
+        {
+          "label": "Ethereum GBPA token and state",
+          "url": "https://etherscan.io/address/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+        },
+        {
+          "label": "Base GBPA token and state",
+          "url": "https://basescan.org/address/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+        },
+        {
+          "label": "Arc GBPA token and state",
+          "url": "https://explorer.arc.io/address/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "label": "GBPA EVM fiat minter",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "chain": "ethereum",
+        "address": "0x5c32ec946062109c61260c738e2fd794b18499d8",
+        "deploymentRefs": [
+          "ethereum:0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b",
+          "base:0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b",
+          "arc:0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+        ],
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107703,
+        "sources": [
+          {
+            "label": "Verified GBPA Ethereum implementation and imported OFT source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4b55cc51901ef212a6cb4fa5e5daa6575afdd3f0"
+          },
+          {
+            "label": "Ethereum GBPA token and state",
+            "url": "https://etherscan.io/address/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+          },
+          {
+            "label": "Base GBPA token and state",
+            "url": "https://basescan.org/address/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+          },
+          {
+            "label": "Arc GBPA token and state",
+            "url": "https://explorer.arc.io/address/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+          }
+        ],
+        "evidence": "Fresh pinned reads at Ethereum block 26107703, Base 52095851, Arc 23952287 return hasMintRole=true for this address and eth_getCode=0x on all three chains. The verified Ethereum/Base implementation permits role-controlled minting without a reserve oracle or fixed numeric issuance cap. Arc uses a different implementation, retained explicitly; complete role and cap inventories are not claimed."
+      },
+      {
+        "label": "GBPA EVM ProxyAdmin owner",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "chain": "ethereum",
+        "address": "0xbecf04e2348d00885c62d97d9629c99e581fe00f",
+        "deploymentRefs": [
+          "ethereum:0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b",
+          "base:0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b",
+          "arc:0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+        ],
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107703,
+        "sources": [
+          {
+            "label": "Ethereum GBPA token and state",
+            "url": "https://etherscan.io/address/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+          },
+          {
+            "label": "Base GBPA token and state",
+            "url": "https://basescan.org/address/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+          },
+          {
+            "label": "Arc GBPA token and state",
+            "url": "https://explorer.arc.io/address/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+          }
+        ],
+        "evidence": "At Ethereum block 26107703, Base 52095851, Arc 23952287, token owner and ProxyAdmin.owner return this codeless address. Current implementations resolve to 0x4b55cc51901ef212a6cb4fa5e5daa6575afdd3f0 on Ethereum/Base and 0x302a8a24e79c4f987cb7dd4993a8c998079784b1 on Arc. The native mint-logic replacement path is controlled here; bridge peer/configuration powers are recorded separately."
+      },
+      {
+        "label": "GBPA Solana native mint multisig",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "chain": "solana",
+        "address": "B97UNTZsqZfmK8shTRvhCZ43t8JizkTYSBokiQr6Xz2c",
+        "deploymentRefs": [
+          "solana:DYoCmA91VE8REbWNw3kM736PN7vv97qc2jr5wmUbuNtZ"
+        ],
+        "threshold": 1,
+        "signerCount": 2,
+        "modulesOrGuardsStatus": "not-applicable",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-10-02",
+        "observedBlock": 452748382,
+        "sources": [
+          {
+            "label": "Solana GBPA Token-2022 mint",
+            "url": "https://explorer.solana.com/address/DYoCmA91VE8REbWNw3kM736PN7vv97qc2jr5wmUbuNtZ"
+          },
+          {
+            "label": "GBPA Solana 1-of-2 mint multisig",
+            "url": "https://explorer.solana.com/address/B97UNTZsqZfmK8shTRvhCZ43t8JizkTYSBokiQr6Xz2c"
+          }
+        ],
+        "evidence": "At finalized slot 452748382, the native Token-2022 mint and initialized mint-authority multisig decode as 1 required signature from 2 valid signers: 2Z1jwnD78v1q4Nt6suH5YkgskqRgNySdbPbdYWcYxug4 and AkRcEoab3ECQ4GoDgVb9jE9wVMVeSksR3TwGCmdNEtB8. The second signer is also the mint permanent delegate. A 1-of-2 threshold is not two-person approval and issuer Fireblocks policy does not upgrade this on-chain quorum."
+      },
+      {
+        "label": "GBPA Tempo native issuance role inventory",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "chain": "tempo",
+        "address": "0x5c32ec946062109c61260c738e2fd794b18499d8",
+        "deploymentRefs": [
+          "tempo:0x20c0000000000000000000000a6da882d075a4c3"
+        ],
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-10-03",
+        "observedBlock": 42377525,
+        "sources": [
+          {
+            "label": "Agant official mainnet deployment registry",
+            "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/networks.md"
+          },
+          {
+            "label": "Tempo GBPA deployment",
+            "url": "https://explorer.tempo.xyz/address/0x20c0000000000000000000000a6da882d075a4c3"
+          },
+          {
+            "label": "TIP-20 protocol-native mint, cap and role-event specification",
+            "url": "https://tempo.xyz/developers/docs/protocol/tip20/spec"
+          }
+        ],
+        "evidence": "An exhaustive 424-query RoleMembershipUpdated/RoleAdminUpdated census from genesis through block 42377525 returned four membership events and no admin-role changes, with no failed chunks. This codeless address holds ISSUER_ROLE and BURN_BLOCKED_ROLE. The other ISSUER_ROLE member is the token-bound LayerZero-endpoint proxy 0x5575151bf6076129d0729c0f40d967d41df34a63; exact executable mint reach of that transfer controller remains unreviewed. TIP-20 supplyCap returns uint128.max (340282366920938463463374607431768211455 base units), changeable by DEFAULT_ADMIN. This direct issuer path is distinct from bridge minting."
+      },
+      {
+        "label": "GBPA Tempo native role and supply-cap administrator",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "chain": "tempo",
+        "address": "0xbecf04e2348d00885c62d97d9629c99e581fe00f",
+        "deploymentRefs": ["tempo:0x20c0000000000000000000000a6da882d075a4c3"],
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 42377525,
+        "sources": [
+          {"label": "TIP-20 role and cap administration specification", "url": "https://tempo.xyz/developers/docs/protocol/tip20/spec"},
+          {"label": "Tempo GBPA exact native token and complete role-event census", "url": "https://explorer.tempo.xyz/address/0x20c0000000000000000000000a6da882d075a4c3"}
+        ],
+        "evidence": "Complete genesis-to-block-42377525 role-event history identifies this as the sole DEFAULT_ADMIN_ROLE member, granted at token creation; eth_getCode is empty. TIP-20 administration permits granting ISSUER_ROLE, changing its admin role and changing supplyCap. No timelock or independent quorum is established. TIP-403 policy 552 queries returned type 2 with zero admin; current composite-policy semantics are unresolved and zero does not prove renunciation."
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
+    "review": {
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Pharos refinement 2026-10-03 (Refine01)",
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "Nephos GBPA reserve attestation as of September 30, 2026",
+          "url": "https://security.agant.io/doc/trust?rid=6abea083a941a8650c35ebf8&r=lz53fv2d0lk02myddnbz7&download=true"
+        },
+        {
+          "label": "Agant GBPA product page",
+          "url": "https://www.agant.io/gbpa"
+        },
+        {
+          "label": "Agant official mainnet deployment registry",
+          "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/networks.md"
+        },
+        {
+          "label": "Verified GBPA Ethereum implementation and imported OFT source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4b55cc51901ef212a6cb4fa5e5daa6575afdd3f0"
+        },
+        {
+          "label": "Ethereum GBPA token and state",
+          "url": "https://etherscan.io/address/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+        },
+        {
+          "label": "Base GBPA token and state",
+          "url": "https://basescan.org/address/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+        },
+        {
+          "label": "Arc GBPA token and state",
+          "url": "https://explorer.arc.io/address/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+        },
+        {
+          "label": "Solana GBPA Token-2022 mint",
+          "url": "https://explorer.solana.com/address/DYoCmA91VE8REbWNw3kM736PN7vv97qc2jr5wmUbuNtZ"
+        },
+        {
+          "label": "GBPA Solana 1-of-2 mint multisig",
+          "url": "https://explorer.solana.com/address/B97UNTZsqZfmK8shTRvhCZ43t8JizkTYSBokiQr6Xz2c"
+        }
+      ],
+      "evidence": "Complete custom role-event history through Ethereum 26110208 and Base 52110932 identifies sole fiat minter 0x5c32ec946062109c61260c738e2fd794b18499d8 and role admin 0xbecf04e2348d00885c62d97d9629c99e581fe00f. Current owner/mint/admin calls corroborate Ethereum/Base and Arc 24011799; Arc chunked history queries returned rate-limit/range failures, so its exhaustive census remains open. A complete 424-chunk Tempo membership/admin-event census with zero failures resolves sole default admin 0xbecf04e2348d00885c62d97d9629c99e581fe00f and issuers 0x5c32ec946062109c61260c738e2fd794b18499d8 plus token-bound proxy 0x5575151bf6076129d0729c0f40d967d41df34a63 at block 42377525. The latter returns GBPA token(), LayerZero endpoint(), approvalRequired=true and the same owner, but exact controller source/reach is unreviewed. supplyCap=uint128.max and transferPolicyId=552. Policy type 2/zero admin does not establish renunciation or policy-controller absence. Earlier Solana 1-of-2 and September 30 financial evidence remain unchanged, including the Nephos assurance-method contradiction. Independent key-custody, signer independence, replacement and recovery policies for the identified Tempo/EVM controllers are not established; these record-keeping questions are scoped to each identified control. Exact transfer-proxy mint reach, upgrade closure and native token-policy controllers remain genuine umbrella mint-path questions under calibration v2 despite their additional bridge/transfer-domain coverage. Public Holder Terms or a trust deed establishing enforceable holder priority and insolvency treatment were not retrieved; this remains a Backing/legal gap. The September 30 report's assurance-method contradiction and procedures language do not establish independent financial assurance or a reviewed recurring reserve-to-total-liability reconciliation cadence. Reconciliation and supervision are therefore unknown; no attestation-only or recurring-cadence mint uplift is claimed, and issuer-disclosed FCA MLR registration is not prudential stablecoin supervision.",
+      "unresolvedQuestions": [
+        "What is the exhaustive current Arc native issuer/admin role roster? Ethereum/Base full role-event censuses are complete through blocks 26110208/52110932, but Arc whole-history and chunked queries returned range/rate-limit failures.",
+        "What is the exact executable native mint reach and upgrade/authorization closure of Tempo transfer proxy 0x5575151bf6076129d0729c0f40d967d41df34a63? Its native ISSUER_ROLE, token(), owner(), endpoint() and proxy slots are observed, but no deployed-runtime equivalence proof or complete upstream controller closure is established.",
+        "Who controls TIP-403 composite policy 552 and what are its exact executable native issuance authorization semantics? The observed type 2 and zero admin do not establish controller absence or renunciation."
+      ],
+      "scopedQuestions": [
+        {
+          "controlRef": "GBPA EVM fiat minter",
+          "question": "What independently evidenced signing policy, key custody, operator independence and recovery/replacement process governs this identified EVM fiat-minter EOA?",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)",
+          "sources": [
+            { "label": "Exact EVM native mint permissions", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4b55cc51901ef212a6cb4fa5e5daa6575afdd3f0" },
+            { "label": "Official GBPA native deployment roster", "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/networks.md" }
+          ]
+        },
+        {
+          "controlRef": "GBPA EVM ProxyAdmin owner",
+          "question": "What independently evidenced signing policy, key custody, operator independence and recovery/replacement process governs this identified EVM mint-logic owner EOA?",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)",
+          "sources": [
+            { "label": "Exact EVM owner and upgrade permissions", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4b55cc51901ef212a6cb4fa5e5daa6575afdd3f0" },
+            { "label": "Official GBPA native deployment roster", "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/networks.md" }
+          ]
+        },
+        {
+          "controlRef": "GBPA Tempo native issuance role inventory",
+          "question": "What independently evidenced signing policy, key custody, operator independence and recovery/replacement process governs this identified Tempo issuer EOA? Its complete role census does not establish human or key-custody independence.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)",
+          "sources": [
+            { "label": "Exact Tempo native GBPA token", "url": "https://explorer.tempo.xyz/address/0x20c0000000000000000000000a6da882d075a4c3" },
+            { "label": "TIP-20 issuer-role semantics", "url": "https://tempo.xyz/developers/docs/protocol/tip20/spec" }
+          ]
+        },
+        {
+          "controlRef": "GBPA Tempo native role and supply-cap administrator",
+          "question": "What independently evidenced signing policy, key custody, operator independence and recovery/replacement process governs this identified Tempo role/cap-admin EOA?",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)",
+          "sources": [
+            { "label": "Exact Tempo native GBPA token", "url": "https://explorer.tempo.xyz/address/0x20c0000000000000000000000a6da882d075a4c3" },
+            { "label": "TIP-20 role/cap administration semantics", "url": "https://tempo.xyz/developers/docs/protocol/tip20/spec" }
+          ]
+        }
+      ]
+    }
+  }
+}

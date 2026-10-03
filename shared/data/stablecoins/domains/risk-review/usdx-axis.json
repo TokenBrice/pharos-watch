@@ -1,0 +1,47 @@
+{
+  "id": "usdx-axis",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      { "label": "Axis token restrictions and transfer enforcement", "url": "https://docs.axis.to/reference/access-control.md" },
+      { "label": "Axis canonical USDx deployment", "url": "https://docs.axis.to/reference/contract-addresses.md" }
+    ],
+    "evidence": "Canonical V2 USDx grants RESTRICTION_ROLE blacklist/unBlacklist functions. Balance-changing paths pass through _update, which enforces restriction and pause checks. This is direct holder-transfer freeze authority, independently of market mint authority or primary-market eligibility. The issuer describes freezing rather than token seizure.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "summary": "Axis Market API supplies the RFQ terms in a user-signed order; an authorized operator accepts or rejects it and settles atomically. The contract does not independently value collateral against an external price oracle.",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "rationale": "Offchain RFQ pricing determines primary-market USDx and collateral exchange amounts. USDx has no borrower-owned collateral positions or token-level liquidation engine requiring collateral-branch reviews. Order-signature integrity does not establish independent price discovery for settlement.",
+      "sources": [
+        { "label": "Axis signed-order primary market", "url": "https://docs.axis.to/usdx-the-synthetic-dollar/mint-and-redeem.md" },
+        { "label": "Axis collateral valuation is not enforced by an external oracle", "url": "https://docs.axis.to/backing-reserves-and-transparency/backing-custody-transparency.md" }
+      ]
+    },
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      { "label": "Axis primary-market pricing and settlement", "url": "https://docs.axis.to/usdx-the-synthetic-dollar/mint-and-redeem.md" },
+      { "label": "Axis backing valuation boundary", "url": "https://docs.axis.to/backing-reserves-and-transparency/backing-custody-transparency.md" }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "Only the canonical Ethereum V2 deployment is authored. Issuer docs state other-chain V2 tokens are not deployed; the Plasma V1 private-beta token is a distinct legacy instrument, not a second canonical USDx route. BRIDGE_ROLE exists in code but is disclosed as unassigned at launch.",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "probable",
+    "sources": [
+      { "label": "Axis canonical V2 and distinct legacy V1 deployment roster", "url": "https://docs.axis.to/reference/contract-addresses.md" },
+      { "label": "Axis unassigned bridge role at launch", "url": "https://docs.axis.to/reference/access-control.md" }
+    ]
+  }
+}

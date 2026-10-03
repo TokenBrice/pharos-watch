@@ -1,0 +1,419 @@
+{
+  "id": "earnusd-lido",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "unknown",
+    "inheritedFrom": "usdc-circle",
+    "summary": "earnUSD is an upgradeable tokenized ShareManager for Lido/Mellow protocol strategies. Base USDC minting remains inherited from Circle; local queues/vault create shares and the observed 5-of-8 Proxy Admin Safe can replace share logic. The curator is currently 3-of-6, not the published 3-of-5.",
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "deploymentRefs": [
+        "ethereum:0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981"
+      ],
+      "proxyAddresses": [
+        "0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981"
+      ],
+      "implementationAddresses": [
+        "0x000000000c79d2b5cd58ae545afc83030233d7b6"
+      ],
+      "adminAddresses": [
+        "0x98a876b68eecb730e692d0ec699b3378bdc71d6f"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Lido EarnUSD Proxy Admin Safe",
+      "observedAt": "2026-10-02",
+      "observedBlock": 26107703,
+      "sources": [
+        {
+          "label": "Verified deployed contract 0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981"
+        },
+        {
+          "label": "Verified deployed contract 0x000000000c79d2b5cd58ae545afc83030233d7b6",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x000000000c79d2b5cd58ae545afc83030233d7b6"
+        },
+        {
+          "label": "Lido earnUSD deployment and actor registry",
+          "url": "https://docs.lido.fi/earn/deployment-contracts"
+        },
+        {
+          "label": "Ethereum RPC observation at block 26107703",
+          "url": "https://eth-mainnet.g.alchemy.com/v2/"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981",
+        "label": "Lido EarnUSD ShareManager",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107703,
+        "sources": [
+          {
+            "label": "Verified deployed contract 0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981"
+          },
+          {
+            "label": "Verified deployed contract 0x000000000c79d2b5cd58ae545afc83030233d7b6",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x000000000c79d2b5cd58ae545afc83030233d7b6"
+          },
+          {
+            "label": "Ethereum RPC observation at block 26107703",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          }
+        ],
+        "evidence": "At block 26107703, the exact share proxy had decimals 18, totalSupply 50902385.14796045, vault() 0x014e6da8f283c4af65b2aa0f201438680a004452 and zero current flags. Verified implementation mint is onlyVaultOrQueue. Its asset()/totalAssets() calls revert; no ordinary ERC-4626 collateral gate or financial reconciliation is asserted.",
+        "deploymentRefs": [
+          "ethereum:0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981"
+        ]
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x81698f87c6482bf1ce9bfcfc0f103c4a0adf0af0",
+        "label": "Lido EarnUSD Proxy Admin Safe",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107703,
+        "sources": [
+          {
+            "label": "Lido earnUSD deployment and actor registry",
+            "url": "https://docs.lido.fi/earn/deployment-contracts"
+          },
+          {
+            "label": "Verified deployed contract 0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981"
+          },
+          {
+            "label": "Ethereum RPC observation at block 26107703",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          }
+        ],
+        "evidence": "At block 26107703, the share's EIP-1967 admin slot pointed to ProxyAdmin 0x98a876b68eecb730e692d0ec699b3378bdc71d6f, whose owner() was this Safe. getThreshold() returned 5 and getOwners() returned 8 addresses. Exact alternate execution routes remain unestablished. Independent re-read 2026-10-03 at Ethereum block 26107703: complete owners roster is recorded; getModulesPaginated(0x1,100) terminates at 0x1 with zero enabled modules; guard is zero; fallback handler=0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4. This resolves coarse module/guard presence, not fallback noninterference or complete vault/queue grants.",
+        "deploymentRefs": [
+          "ethereum:0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981"
+        ],
+        "threshold": 5,
+        "signerCount": 8,
+        "safe": {
+          "threshold": 5,
+          "observedBlock": 26107703,
+          "observedAt": "2026-10-03",
+          "source": "onchain",
+          "owners": [
+            "0xea685f0af4a0bf5e7d6729b2c63edf574d3ee27f",
+            "0x9777af8c6727d57f74f7d381ad47eb4a65f042ff",
+            "0xfb864c1127ff77215d0a8e652bb632f526a4a89f",
+            "0x59f8d74fe49d5ebeac069e3baf07eb4b614bd5a7",
+            "0x185111c113d9b19ea4c424d3cd8628a1ee09be6a",
+            "0x06c3992a6067bea8fb3af7f004edebc13656761f",
+            "0x44a388bbd782ae1d7f4542aeb6c3569e2cfdf5a1",
+            "0x8888843c607f4bbd6ad72128f478085256bdd15d"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4"
+        },
+        "canRaiseCap": "unknown",
+        "failureDomainKeys": [
+          "safe:ethereum:0x81698f87c6482bf1ce9bfcfc0f103c4a0adf0af0"
+        ]
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xe5abcc40196174ae0d12153de286f0d8e401769d",
+        "label": "Lido EarnUSD curator Safe",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107703,
+        "sources": [
+          {
+            "label": "Lido earnUSD deployment and actor registry",
+            "url": "https://docs.lido.fi/earn/deployment-contracts"
+          },
+          {
+            "label": "Ethereum RPC observation at block 26107703",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          }
+        ],
+        "evidence": "At block 26107703, getThreshold() was 3 and getOwners() had 6 addresses, correcting the docs' 3-of-5. The published earnUSD TimelockController 0xda6da82dff8cd29d828e4775cc003f504a968845 returned getMinDelay() 0. This is a current timelock observation, not proof of a protective delay over every proxy or curator action. Complete execution/bypass closure remains unknown. Independent re-read 2026-10-03 at Ethereum block 26107703: complete owners roster is recorded; getModulesPaginated(0x1,100) terminates at 0x1 with zero enabled modules; guard is zero; fallback handler=0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. This resolves coarse module/guard presence, not fallback noninterference or complete vault/queue grants.",
+        "deploymentRefs": [
+          "ethereum:0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981"
+        ],
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "threshold": 3,
+          "observedBlock": 26107703,
+          "observedAt": "2026-10-03",
+          "source": "onchain",
+          "owners": [
+            "0x7a63a5cc7f6a6352d0ae1fe175d745bce5d75657",
+            "0x73b254db9cb71a129c4e73af087d71ac7d34a8d7",
+            "0x75d95ff8d48e2ca5c4235322a8ac8e52a76124cd",
+            "0x9777af8c6727d57f74f7d381ad47eb4a65f042ff",
+            "0x59d07dc34b135b17b87840a86bff7302039e7edf",
+            "0xf2374bcb265505002055942d070459a4d2011012"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99"
+        },
+        "canRaiseCap": "unknown",
+        "failureDomainKeys": [
+          "safe:ethereum:0xe5abcc40196174ae0d12153de286f0d8e401769d"
+        ]
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x0dd73341d6158a72b4d224541f1094188f57076e",
+        "label": "Lido EarnUSD Lazy Vault Admin Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26107703,
+        "deploymentRefs": [
+          "ethereum:0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981"
+        ],
+        "threshold": 5,
+        "signerCount": 8,
+        "safe": {
+          "threshold": 5,
+          "owners": [
+            "0x912e21cda3d7012146da4df33309d860a9eb0beb",
+            "0x75d95ff8d48e2ca5c4235322a8ac8e52a76124cd",
+            "0x73b254db9cb71a129c4e73af087d71ac7d34a8d7",
+            "0xfb864c1127ff77215d0a8e652bb632f526a4a89f",
+            "0x9777af8c6727d57f74f7d381ad47eb4a65f042ff",
+            "0x59f8d74fe49d5ebeac069e3baf07eb4b614bd5a7",
+            "0x59d07dc34b135b17b87840a86bff7302039e7edf",
+            "0xf2374bcb265505002055942d070459a4d2011012"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 26107703,
+          "observedAt": "2026-10-03",
+          "source": "onchain",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99"
+        },
+        "canRaiseCap": "unknown",
+        "sources": [
+          {
+            "label": "Independent supportedRoles / supportedRoleAt / getRoleMembers / getRoleAdmin and queueAt census, Ethereum 26107703",
+            "url": "https://etherscan.io/block/26107703"
+          },
+          {
+            "label": "Verified exact Vault / MellowACL / ShareModule source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0000000615b2771511daa693ac07be5622869e01"
+          },
+          {
+            "label": "Lido deployed actor registry",
+            "url": "https://docs.lido.fi/earn/deployment-contracts"
+          }
+        ],
+        "evidence": "Exact supported-role census binds this Safe to [{\"role\":\"0x0000000000000000000000000000000000000000000000000000000000000000\",\"label\":\"DEFAULT_ADMIN_ROLE\",\"admin\":\"0x0000000000000000000000000000000000000000000000000000000000000000\"},{\"role\":\"0x79abe62d91dbd05fcda41b212f4c8c1f1d8be54ccddf859de3ccd1361b71fcb6\",\"label\":\"SET_SECURITY_PARAMS_ROLE\",\"admin\":\"0x0000000000000000000000000000000000000000000000000000000000000000\"}]. Safe owner roster/quorum, terminating empty modules, zero guard and fallback 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99 independently read. DEFAULT_ADMIN can grant/revoke roles; no immutable economic-cap or blanket timelock guarantee is inferred. Human/key independence and fallback noninterference remain unestablished."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x982ab69785f5329bb59c36b19cbd4865353fef10",
+        "label": "Lido EarnUSD Active Vault Admin Safe",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26107703,
+        "deploymentRefs": [
+          "ethereum:0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981"
+        ],
+        "threshold": 3,
+        "signerCount": 8,
+        "safe": {
+          "threshold": 3,
+          "owners": [
+            "0x78eb634731be1957d370becbbd254f427af5d13b",
+            "0x5fa3b054d91af2e1dc76124d7e774044697b942e",
+            "0xe49384e6aca6a26c82eaa161a9211fa60feee3ef",
+            "0x185111c113d9b19ea4c424d3cd8628a1ee09be6a",
+            "0x06c3992a6067bea8fb3af7f004edebc13656761f",
+            "0x44a388bbd782ae1d7f4542aeb6c3569e2cfdf5a1",
+            "0x8888843c607f4bbd6ad72128f478085256bdd15d",
+            "0x1f3e4c3dbf27056cd7881d8eb376b1d7815757a6"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 26107703,
+          "observedAt": "2026-10-03",
+          "source": "onchain",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99"
+        },
+        "canRaiseCap": "unknown",
+        "sources": [
+          {
+            "label": "Independent supportedRoles / supportedRoleAt / getRoleMembers / getRoleAdmin and queueAt census, Ethereum 26107703",
+            "url": "https://etherscan.io/block/26107703"
+          },
+          {
+            "label": "Verified exact Vault / MellowACL / ShareModule source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0000000615b2771511daa693ac07be5622869e01"
+          },
+          {
+            "label": "Lido deployed actor registry",
+            "url": "https://docs.lido.fi/earn/deployment-contracts"
+          }
+        ],
+        "evidence": "Exact supported-role census binds this Safe to [{\"role\":\"0x2b2a32ecca586a148d15aea321ddbb421a2a3ac6b4d56c0a9ad9de32e84cf5c4\",\"label\":\"SET_VAULT_LIMIT_ROLE\",\"admin\":\"0x0000000000000000000000000000000000000000000000000000000000000000\"},{\"role\":\"0x253eb39d0edc77da10bbc4bcaa23c44e40e3c67ed649fbecb18a3f7c51bfbb10\",\"label\":\"SET_SUBVAULT_LIMIT_ROLE\",\"admin\":\"0x0000000000000000000000000000000000000000000000000000000000000000\"},{\"role\":\"0x4a899e3e648ea55418d9c99177e5c522df621b1953c0ad7e99da3711043ba1c1\",\"label\":\"ALLOW_SUBVAULT_ASSETS_ROLE\",\"admin\":\"0x0000000000000000000000000000000000000000000000000000000000000000\"},{\"role\":\"0x94b8a54d503c6b752e707c591f9345ae8ccc138255588e460ee15622d499fdba\",\"label\":\"MODIFY_VAULT_BALANCE_ROLE\",\"admin\":\"0x0000000000000000000000000000000000000000000000000000000000000000\"},{\"role\":\"0xa7ecfd54b0ab6ce6ecc88746fe62beba4e9a103dbb00d88cfedffbc0c6069ce8\",\"label\":\"0xa7ecfd54b0ab6ce6ecc88746fe62beba4e9a103dbb00d88cfedffbc0c6069ce8\",\"admin\":\"0x0000000000000000000000000000000000000000000000000000000000000000\"}]. Safe owner roster/quorum, terminating empty modules, zero guard and fallback 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99 independently read. DEFAULT_ADMIN can grant/revoke roles; no immutable economic-cap or blanket timelock guarantee is inferred. Human/key independence and fallback noninterference remain unestablished."
+      }
+    ],
+    "review": {
+      "evidence": "At Ethereum block 26107703, the exact earnUSD proxy implementation/admin, ProxyAdmin owner chain, totalSupply, vault, two-subvault count and current curator/proxy-admin quorum sizes were verified. Deployed state corrects the introduction one-subvault claim and published curator 3-of-5. The documented TimelockController has minDelay 0. Full execution/bypass coverage prevents a verified aggregate closure claim; no independent financial reconciliation or complete collateral gate is inferred. Independent refinement records both full Safe owner rosters, terminating empty enabled-module pages, zero guards and exact nonzero fallback handlers. The subsequent independent census enumerates all 15 supported vault roles, their complete member sets and role-admin edges; all 8 queues over 3 assets are enumerated and unpaused. Remaining gaps are execution/upgrade reach, not role-address or queue-address enumeration. Vault roles=[{\"role\":\"0x0000000000000000000000000000000000000000000000000000000000000000\",\"label\":\"DEFAULT_ADMIN_ROLE\",\"members\":[\"0x0dd73341d6158a72b4d224541f1094188f57076e\"],\"admin\":\"0x0000000000000000000000000000000000000000000000000000000000000000\"},{\"role\":\"0x2b2a32ecca586a148d15aea321ddbb421a2a3ac6b4d56c0a9ad9de32e84cf5c4\",\"label\":\"SET_VAULT_LIMIT_ROLE\",\"members\":[\"0x982ab69785f5329bb59c36b19cbd4865353fef10\"],\"admin\":\"0x0000000000000000000000000000000000000000000000000000000000000000\"},{\"role\":\"0x253eb39d0edc77da10bbc4bcaa23c44e40e3c67ed649fbecb18a3f7c51bfbb10\",\"label\":\"SET_SUBVAULT_LIMIT_ROLE\",\"members\":[\"0x982ab69785f5329bb59c36b19cbd4865353fef10\"],\"admin\":\"0x0000000000000000000000000000000000000000000000000000000000000000\"},{\"role\":\"0x4a899e3e648ea55418d9c99177e5c522df621b1953c0ad7e99da3711043ba1c1\",\"label\":\"ALLOW_SUBVAULT_ASSETS_ROLE\",\"members\":[\"0x982ab69785f5329bb59c36b19cbd4865353fef10\"],\"admin\":\"0x0000000000000000000000000000000000000000000000000000000000000000\"},{\"role\":\"0x94b8a54d503c6b752e707c591f9345ae8ccc138255588e460ee15622d499fdba\",\"label\":\"MODIFY_VAULT_BALANCE_ROLE\",\"members\":[\"0x982ab69785f5329bb59c36b19cbd4865353fef10\"],\"admin\":\"0x0000000000000000000000000000000000000000000000000000000000000000\"},{\"role\":\"0xa7ecfd54b0ab6ce6ecc88746fe62beba4e9a103dbb00d88cfedffbc0c6069ce8\",\"label\":\"0xa7ecfd54b0ab6ce6ecc88746fe62beba4e9a103dbb00d88cfedffbc0c6069ce8\",\"members\":[\"0x982ab69785f5329bb59c36b19cbd4865353fef10\"],\"admin\":\"0x0000000000000000000000000000000000000000000000000000000000000000\"},{\"role\":\"0x877766a829235d063c3ba37802a4874fcf1b575d310fbe898df17d8ebabee463\",\"label\":\"0x877766a829235d063c3ba37802a4874fcf1b575d310fbe898df17d8ebabee463\",\"members\":[\"0xe5abcc40196174ae0d12153de286f0d8e401769d\"],\"admin\":\"0x0000000000000000000000000000000000000000000000000000000000000000\"},{\"role\":\"0x68895691ff006f290ca74825ce06ed17fffab55af49f0274f49b7424f752583a\",\"label\":\"PULL_LIQUIDITY_ROLE\",\"members\":[\"0xe5abcc40196174ae0d12153de286f0d8e401769d\"],\"admin\":\"0x0000000000000000000000000000000000000000000000000000000000000000\"},{\"role\":\"0x32a781031f04cc60b32394e40124d1e87f54273bf26d0532a115a424f6a93298\",\"label\":\"PUSH_LIQUIDITY_ROLE\",\"members\":[\"0xe5abcc40196174ae0d12153de286f0d8e401769d\"],\"admin\":\"0x0000000000000000000000000000000000000000000000000000000000000000\"},{\"role\":\"0x78b235a1fa2fd5e00dba7867d599bed6f088684010a7fee7b9fe05fa1082d01e\",\"label\":\"SET_FLAGS_ROLE\",\"members\":[\"0xda6da82dff8cd29d828e4775cc003f504a968845\"],\"admin\":\"0x0000000000000000000000000000000000000000000000000000000000000000\"},{\"role\":\"0xfc199f685d023b44b528c5fcb9cebfe292e64340dd5729b20761da4ad1e93024\",\"label\":\"0xfc199f685d023b44b528c5fcb9cebfe292e64340dd5729b20761da4ad1e93024\",\"members\":[\"0xda6da82dff8cd29d828e4775cc003f504a968845\"],\"admin\":\"0x0000000000000000000000000000000000000000000000000000000000000000\"},{\"role\":\"0x6618a6d92147bbcacfb2ef2375976fc4c529eeeaeb72a66048296571370c6946\",\"label\":\"SET_QUEUE_STATUS_ROLE\",\"members\":[\"0xda6da82dff8cd29d828e4775cc003f504a968845\"],\"admin\":\"0x0000000000000000000000000000000000000000000000000000000000000000\"},{\"role\":\"0xb54eea9408efadf36da92cc5ecd8af0f45d6dd90de54634bbc5a2113ddcb505d\",\"label\":\"SUBMIT_REPORTS_ROLE\",\"members\":[\"0xb105daeefeb1390ce49172c99e3e12c607367156\"],\"admin\":\"0x0000000000000000000000000000000000000000000000000000000000000000\"},{\"role\":\"0x341f4b58682c3a888bdb3eb9a8a4452a6e847be8a380eb3d742794b4f9ac0ab3\",\"label\":\"ACCEPT_REPORT_ROLE\",\"members\":[\"0xb105daeefeb1390ce49172c99e3e12c607367156\"],\"admin\":\"0x0000000000000000000000000000000000000000000000000000000000000000\"},{\"role\":\"0x79abe62d91dbd05fcda41b212f4c8c1f1d8be54ccddf859de3ccd1361b71fcb6\",\"label\":\"SET_SECURITY_PARAMS_ROLE\",\"members\":[\"0x0dd73341d6158a72b4d224541f1094188f57076e\"],\"admin\":\"0x0000000000000000000000000000000000000000000000000000000000000000\"}]. Registered queue callers=[{\"asset\":\"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\",\"queue\":\"0xc75e7e73b25fea8bb23eb55cc48ba55067b5be76\",\"deposit\":1,\"paused\":0},{\"asset\":\"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\",\"queue\":\"0xf6afaf6afcae116dd37a779d50fe6c5fa6f8c8f5\",\"deposit\":1,\"paused\":0},{\"asset\":\"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\",\"queue\":\"0x9e36a74fe278906a76e7615263e46a83fc40c47f\",\"deposit\":0,\"paused\":0},{\"asset\":\"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\",\"queue\":\"0xe0eee7e956a94bd00546d9ca07e5012f11a5059d\",\"deposit\":0,\"paused\":0},{\"asset\":\"0xdac17f958d2ee523a2206206994597c13d831ec7\",\"queue\":\"0xeec5041c47cba1e31321ac6941bf09ad60645b73\",\"deposit\":1,\"paused\":0},{\"asset\":\"0xdac17f958d2ee523a2206206994597c13d831ec7\",\"queue\":\"0x534d0beb82c47cf703bfb9e959297658b65ec8e9\",\"deposit\":1,\"paused\":0},{\"asset\":\"0xdac17f958d2ee523a2206206994597c13d831ec7\",\"queue\":\"0x95092a7a86715246be6395b8d514b3d60a270cd3\",\"deposit\":0,\"paused\":0},{\"asset\":\"0x4c9edd5852cd905f086c759e8383e09bff1e68b3\",\"queue\":\"0xeec37568b01e0c4d5028501a49e024b475e2d7ca\",\"deposit\":1,\"paused\":0}]. ShareManager onlyVaultOrQueue accepts only the exact vault or hasQueue(caller), verified from deployed implementation source. Human signer independence is not inferred. Under calibration rule 3, the recorded none-detected module/guard census and standard CompatibilityFallbackHandler identities do not introduce a separately identified mint path; absence of an execution-complete noninterference certificate remains recorded, not treated as an unidentified authority. Calibration preserves the original scoped observations: Known proxy-admin 5-of-8 owners, zero modules/guard and full current role/queue rosters are pinned. Exact Safe fallback-handler noninterference and every queue/vault/subvault implementation/admin upgrade-chain and alternate-call reach are not execution-complete; no global protective delay is established. | Current 3-of-6 owners, zero modules/guard, all supported role members and all 8 registered queues are pinned. The current verifier/mutable-target call constraints across subvaults and fallback execution are not closed; the TimelockController minimum is verified zero, not a protective delay. V2 calibration preserves the previous scoped observations and their exact controller references: Lido EarnUSD Proxy Admin Safe: Known proxy-admin 5-of-8 owners, zero modules/guard and full current role/queue rosters are pinned. Exact queue/vault/subvault implementation/admin upgrade-chain and alternate-call reach are not execution-complete under this named administrative control; no global protective delay is established. | Lido EarnUSD curator Safe: Current 3-of-6 owners, zero modules/guard, all supported role members and all 8 registered queues are pinned. The current verifier/mutable-target call constraints across subvaults under this named curator control are not closed; the TimelockController minimum is verified zero, not a protective delay. V2 correction: known Safe authority types do not make an unresolved mint/upgrade-path question scoped-only; the two execution gaps remain umbrella questions. Reconciliation and supervision stay unknown: no independent financial assurance/cadence or qualifying supervision was established. V2 rule 1 records the existing signing-policy/human-independence/key-custody observations on every exact identified Safe/EOA control. No custody attestation or human independence is inferred, and no automatic multisig custody-pricing claim is made.",
+      "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
+      "reviewedAt": "2026-10-03",
+      "sources": [
+        {
+          "label": "Lido earnUSD holder deposits and withdrawals",
+          "url": "https://docs.lido.fi/earn/"
+        },
+        {
+          "label": "Lido earnUSD deployment and actor registry",
+          "url": "https://docs.lido.fi/earn/deployment-contracts"
+        },
+        {
+          "label": "Lido ShareManager holder controls",
+          "url": "https://docs.lido.fi/earn/architecture/managers/sharemanager/"
+        },
+        {
+          "label": "Verified deployed contract 0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981"
+        },
+        {
+          "label": "Verified deployed contract 0x000000000c79d2b5cd58ae545afc83030233d7b6",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x000000000c79d2b5cd58ae545afc83030233d7b6"
+        },
+        {
+          "label": "Verified deployed contract 0x0000000615b2771511daa693ac07be5622869e01",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0000000615b2771511daa693ac07be5622869e01"
+        },
+        {
+          "label": "Ethereum RPC observation at block 26107703",
+          "url": "https://eth-mainnet.g.alchemy.com/v2/"
+        },
+        {
+          "label": "Independent supportedRoles / supportedRoleAt / getRoleMembers / getRoleAdmin and queueAt census, Ethereum 26107703",
+          "url": "https://etherscan.io/block/26107703"
+        },
+        {
+          "label": "Verified exact Vault / MellowACL / ShareModule source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0000000615b2771511daa693ac07be5622869e01"
+        },
+        {
+          "label": "Verified standard Safe CompatibilityFallbackHandler source, 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "url": "https://base.blockscout.com/api/v2/smart-contracts/0xfd0732dc9e303f09fcef3a7388ad10a83459ec99"
+        },
+        {
+          "label": "Verified standard Safe CompatibilityFallbackHandler source, 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4"
+        }
+      ],
+      "disposition": "unresolved",
+      "unresolvedQuestions": [
+        "Implementation/admin upgrade-chain and alternate-call reach of all current queues, vault and subvaults in the ShareManager issuance path are not execution-complete; the pinned share proxy, ProxyAdmin owner and vault role/queue rosters do not close those upstream mint-capable paths.",
+        "The current verifier/mutable-target call constraints across subvaults have not been closed; possible alternate execution reaching the authorized vault/queue share issuance path remains unresolved."
+      ],
+      "scopedQuestions": [
+        {
+          "controlRef": "ethereum:0x81698f87c6482bf1ce9bfcfc0f103c4a0adf0af0",
+          "question": "Which human independence, key-custody scheme and signing-policy approval boundary apply to the exact identified Safe owners? The observed roster/quorum and empty modules/guard do not establish independent humans or custody assurances.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
+          "sources": [
+            {
+              "label": "Lido earnUSD deployment and actor registry",
+              "url": "https://docs.lido.fi/earn/deployment-contracts"
+            },
+            {
+              "label": "Verified deployed contract 0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981"
+            },
+            {
+              "label": "Ethereum RPC observation at block 26107703",
+              "url": "https://eth-mainnet.g.alchemy.com/v2/"
+            }
+          ]
+        },
+        {
+          "controlRef": "ethereum:0xe5abcc40196174ae0d12153de286f0d8e401769d",
+          "question": "Which human independence, key-custody scheme and signing-policy approval boundary apply to the exact identified Safe owners? The observed roster/quorum and empty modules/guard do not establish independent humans or custody assurances.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
+          "sources": [
+            {
+              "label": "Lido earnUSD deployment and actor registry",
+              "url": "https://docs.lido.fi/earn/deployment-contracts"
+            },
+            {
+              "label": "Ethereum RPC observation at block 26107703",
+              "url": "https://eth-mainnet.g.alchemy.com/v2/"
+            }
+          ]
+        },
+        {
+          "controlRef": "ethereum:0x0dd73341d6158a72b4d224541f1094188f57076e",
+          "question": "Which human independence, key-custody scheme and signing-policy approval boundary apply to the exact identified Safe owners? The observed roster/quorum and empty modules/guard do not establish independent humans or custody assurances.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
+          "sources": [
+            {
+              "label": "Independent supportedRoles / supportedRoleAt / getRoleMembers / getRoleAdmin and queueAt census, Ethereum 26107703",
+              "url": "https://etherscan.io/block/26107703"
+            },
+            {
+              "label": "Verified exact Vault / MellowACL / ShareModule source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0000000615b2771511daa693ac07be5622869e01"
+            },
+            {
+              "label": "Lido deployed actor registry",
+              "url": "https://docs.lido.fi/earn/deployment-contracts"
+            }
+          ]
+        },
+        {
+          "controlRef": "ethereum:0x982ab69785f5329bb59c36b19cbd4865353fef10",
+          "question": "Which human independence, key-custody scheme and signing-policy approval boundary apply to the exact identified Safe owners? The observed roster/quorum and empty modules/guard do not establish independent humans or custody assurances.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
+          "sources": [
+            {
+              "label": "Independent supportedRoles / supportedRoleAt / getRoleMembers / getRoleAdmin and queueAt census, Ethereum 26107703",
+              "url": "https://etherscan.io/block/26107703"
+            },
+            {
+              "label": "Verified exact Vault / MellowACL / ShareModule source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0000000615b2771511daa693ac07be5622869e01"
+            },
+            {
+              "label": "Lido deployed actor registry",
+              "url": "https://docs.lido.fi/earn/deployment-contracts"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "id": "xgz-goldzip",
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "The token references physical gold or gold-strategy NAV rather than a fixed amount of national-currency monetary value.",
+      "references": [
+        {
+          "label": "GENIUS Act section 2(22) payment stablecoin definition",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-02"
+        },
+        {
+          "label": "Exact token product claim",
+          "url": "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-02"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Explicit scope clarification for a gold-family catalog addition; no GENIUS authorization asserted.",
+    "references": [
+      {
+        "label": "Exact token product claim",
+        "url": "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-02"
+      }
+    ],
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02",
+    "issuerEntity": "GoldZip Digital Pte. Ltd.",
+    "issuerDomicile": "Singapore"
+  }
+}

@@ -2,6 +2,9 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1Strict } from "@shared/test-utils/mock-d1";
 import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS } from "@shared/data/coverage-dispositions/redemption-coverage-dispositions";
+import type { StablecoinData } from "@shared/types/market";
+import type { resolveRedemptionBackstopEntry as ResolveRedemptionBackstopEntry } from "../redemption-backstop/sources";
 import {
   buildEntryFixture,
   dusdOpenQueueMetadata,
@@ -27,6 +30,7 @@ vi.mock("../live-reserves/store", async (importOriginal) => {
 describe("buildRedemptionBackstopEntry", () => {
   let buildRedemptionBackstopEntry: typeof import("../redemption-backstop/sources").buildRedemptionBackstopEntry;
   let buildFailedRedemptionBackstopEntry: typeof import("../redemption-backstop/sources").buildFailedRedemptionBackstopEntry;
+  let resolveRedemptionBackstopEntry: typeof ResolveRedemptionBackstopEntry;
   const now = 1_700_000_000;
   const fixedFeeCases = [
     { feeBps: 0, expectedScore: 100 }, { feeBps: 25, expectedScore: 80 },
@@ -96,6 +100,7 @@ describe("buildRedemptionBackstopEntry", () => {
     const mod = await import("../redemption-backstop/sources");
     buildRedemptionBackstopEntry = mod.buildRedemptionBackstopEntry;
     buildFailedRedemptionBackstopEntry = mod.buildFailedRedemptionBackstopEntry;
+    resolveRedemptionBackstopEntry = mod.resolveRedemptionBackstopEntry;
   });
 
   beforeEach(() => {
@@ -103,6 +108,64 @@ describe("buildRedemptionBackstopEntry", () => {
     getLatestSuccessfulReserveSnapshotMetadataMock.mockReset();
     getReserveSyncStateMock.mockResolvedValue(null);
     getLatestSuccessfulReserveSnapshotMetadataMock.mockResolvedValue(null);
+  });
+
+  it("publishes unrestricted-holder access for native sUSDf unwrap without inheriting parent issuer KYC", async () => {
+    const config = getRedemptionBackstopConfig("susdf-falcon")!;
+    const entry = await buildEntry("susdf-falcon", config, 10_000_000, null, {
+      reserveSnapshotMetadata: liveSnapshot("susdf-falcon", {
+        freshnessMode: "not-applicable",
+        redemption: {
+          capacityUsd: 5_000_000,
+          capacityKind: "live-direct",
+          freshnessKind: "same-run-onchain",
+        },
+      }, { source: "erc4626-single-asset" }),
+    });
+
+    expect(entry.accessModel).toBe("permissionless-onchain");
+    expect(entry.holderEligibility).toBe("any-holder");
+    expect(entry.outputAssetType).toBe("stable-single");
+  });
+
+  it.each([
+    "usdso-somnia",
+    "usdfc-secured-finance",
+    "sparkusdtbc-spark",
+    "sparkusdc-spark",
+  ])("publishes missing capacity rather than a measured zero for unmeasured %s liquidity", async (id) => {
+    const config = getRedemptionBackstopConfig(id);
+    expect(config).not.toBeNull();
+
+    const entry = await buildEntry(id, config!, 100_000_000, null);
+
+    expect(entry.resolutionState).toBe("missing-capacity");
+    expect(entry.immediateCapacityUsd).toBeNull();
+    expect(entry.immediateCapacityRatio).toBeNull();
+    expect(entry.capacityProfile?.scoringUsd ?? null).toBeNull();
+    expect(entry.capacityScore).toBeNull();
+    expect(entry.score).toBeNull();
+    expect(entry.eventualRedeemabilityScore).toBeNull();
+  });
+
+  it.each([
+    "usdfr-forest-road",
+    "usdx-axis",
+    "susdc-spark-v1",
+    "usdr-rise",
+    "mantrausd-mantra",
+    "susdat-saturn",
+    "earnusd-lido",
+    "susdx-axis",
+    "xgld-unitas",
+  ])("withholds the %s entry when no honest exact-route capacity model exists", async (id) => {
+    const entry = await resolveRedemptionBackstopEntry(mockD1Strict([]), { id } as StablecoinData, null, now);
+
+    expect(entry).toBeNull();
+    expect(REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS.find((row) => row.id === id)).toMatchObject({
+      disposition: "defer",
+      reasonCode: "capacity-unpublished",
+    });
   });
 
   it("resolves supply-full capacity with valid supply", async () => {

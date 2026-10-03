@@ -1,0 +1,223 @@
+{
+  "id": "cumiu-chinaamc",
+  "reserves": [
+    {
+      "name": "Investment-grade money-market securities and certificates of deposit",
+      "pct": 45.3087,
+      "risk": "medium",
+      "assetClass": "other",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "custody",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "USD sub-fund time deposits",
+      "pct": 48.3006,
+      "risk": "low",
+      "assetClass": "bank-deposit",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "custody"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "USD sub-fund cash and bank balances",
+      "pct": 6.0251,
+      "risk": "low",
+      "assetClass": "cash",
+      "riskFactors": [
+        "counterparty",
+        "custody"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Other receivables and prepayments",
+      "pct": 0.3656,
+      "risk": "medium",
+      "assetClass": "other",
+      "riskFactors": [
+        "counterparty",
+        "liquidity"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "ChinaAMC June 2026 unaudited accounts",
+        "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/ChinaAMCDigitalOFC-InterimReport20260630Final(Clean)_cover_1787921459710.pdf"
+      },
+      {
+        "label": "ChinaAMC tokenized unlisted class key facts",
+        "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/chinaamc/resources/E-KFS-ChinaAMCUSDDigitalMMF(UnlistedClass)(April2026).pdf"
+      },
+      {
+        "label": "ChinaAMC August 2026 factsheet",
+        "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/Factsheet_USDDTMMF_20260831_EN_1789617629732.pdf"
+      },
+      {
+        "label": "Issuer top-ten holdings as of October 2, 2026",
+        "url": "https://www.chinaamc.com.hk/detail?fundId=USDDMMF&fundName=ChinaAMC-USD-Digital-Money-Market-Fund-%28Tokenized-Unlisted-Class%29&lan=EN"
+      }
+    ],
+    "rationale": "Weights use the complete USD sub-fund June 30 unaudited asset denominator of USD 603,917,339: financial assets 273,627,114, time deposits 291,695,739, cash/bank 36,386,722, other receivables/prepayments 2,207,764. Rounded percentages total 100. These shared sub-fund assets back Class I alongside other classes; they are not CUMIU token supply or current NAV.",
+    "compositionBasis": "Unaudited June 30 USD sub-fund asset-category balance sheet, not October holdings",
+    "compositionAsOf": "2026-06-30",
+    "scope": "full-composition",
+    "observations": [
+      {
+        "scopeId": "cumiu-usd-subfund-june-2026-portfolio",
+        "liabilityBookKey": "chinaamc-usd-subfund-all-share-classes",
+        "deploymentRefs": [
+          "ethereum:0x85d38585c3ac08268f598282a84b7c0ddfc0d04f"
+        ],
+        "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+        "confidence": "verified",
+        "sources": [
+          {
+            "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/ChinaAMCDigitalOFC-InterimReport20260630Final(Clean)_cover_1787921459710.pdf",
+            "accessedAtSec": 1790983017,
+            "sha256": "405593172238852d552b317bb365c8bc1e044fb2efc46ffb8b0e2e74444ddaf9"
+          }
+        ],
+        "reviewedAtSec": 1790983017,
+        "expiresAtSec": 1794266217,
+        "sourceGeneration": "chinaamc-usd-june-2026-interim:405593172238852d552b317bb365c8bc1e044fb2efc46ffb8b0e2e74444ddaf9",
+        "sourceSha256": "405593172238852d552b317bb365c8bc1e044fb2efc46ffb8b0e2e74444ddaf9",
+        "completeness": "partial",
+        "obligations": [
+          {
+            "key": "whole-usd-subfund-gross-assets",
+            "disposition": "included",
+            "reason": "Unaudited June 30 balance sheet discloses all gross asset categories totaling USD 603917339; reported portfolio date remains June 30, not this retrieval date."
+          },
+          {
+            "key": "current-class-i-liability-join",
+            "disposition": "unresolved",
+            "reason": "June whole-subfund assets include multiple share classes and do not establish a current CUMIU-only liability denominator or independent financial assurance."
+          }
+        ],
+        "kind": "portfolio-observation",
+        "observedAtSec": 1782777600,
+        "wholeAssetDenominator": {
+          "amount": "603917339",
+          "asOfSec": 1782777600,
+          "unitBasis": "USD gross assets of ChinaAMC USD sub-fund, all share classes",
+          "sourceSha256": "405593172238852d552b317bb365c8bc1e044fb2efc46ffb8b0e2e74444ddaf9"
+        }
+      },
+      {
+        "scopeId": "cumiu-usd-subfund-october-2026-top-ten",
+        "liabilityBookKey": "chinaamc-usd-subfund-all-share-classes",
+        "deploymentRefs": ["ethereum:0x85d38585c3ac08268f598282a84b7c0ddfc0d04f"],
+        "reviewer": "Refine04 primary-source review",
+        "confidence": "verified",
+        "sources": [{
+          "url": "https://www.chinaamc.com.hk/detail?fundId=USDDMMF&fundName=ChinaAMC-USD-Digital-Money-Market-Fund-%28Tokenized-Unlisted-Class%29&lan=EN",
+          "accessedAtSec": 1791011581,
+          "sha256": "df99652d93088a6aab77a651f2a445e40e5833b370e7c765e7e85b5f03f93982"
+        }],
+        "reviewedAtSec": 1791011581,
+        "expiresAtSec": 1791616381,
+        "sourceGeneration": "chinaamc-rendered-top-ten:df99652d93088a6aab77a651f2a445e40e5833b370e7c765e7e85b5f03f93982",
+        "sourceSha256": "df99652d93088a6aab77a651f2a445e40e5833b370e7c765e7e85b5f03f93982",
+        "completeness": "partial",
+        "obligations": [
+          {
+            "key": "published-top-ten",
+            "disposition": "included",
+            "reason": "Issuer table dated October 2, 2026 reports Credit Agricole CIB 23.85%, Standard Chartered HK bank cash 16.86%, UOB HK 8.71%, United Overseas Bank 5.33%, Huatai International Finance 5.29%, Bocom Leasing 3.51%, CSCIF HK 2.69%, ICBC Singapore 2.36%, China Cinda 2.16% and SMBC HK term deposit 1.79%. Published total is 72.54%; individually rounded rows sum to 72.55%. No normalization or inferred instrument identity is applied."
+          },
+          {
+            "key": "unpublished-portfolio-tail",
+            "disposition": "unresolved",
+            "reason": "The published top-ten total leaves 27.46% unidentified. This partial portfolio observation does not replace the full June balance-sheet composition or establish current Class I liability reconciliation. SHA-256 pins the rendered UTF-8 body text read, with a seven-day observation budget."
+          }
+        ],
+        "kind": "portfolio-observation",
+        "observedAtSec": 1790899200,
+        "wholeAssetDenominator": null
+      }
+    ],
+    "knownUnknownExposure": "June category weights remain historical. The issuer's October 2 top-ten table covers a stated 72.54%, with 27.46% unidentified; named holdings include 16.86% bank cash and 23.85% Credit Agricole CIB exposure. This partial table does not provide a complete current category composition. August WAM 50.85 days is an average, not maximum tenor. Current complete Class I token-to-fund liability reconciliation and exact distributor custody shares remain unestablished.",
+    "knownUnknownExposurePct": 45.6743,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Investment-grade money-market securities and certificates of deposit",
+        "pct": 45.3087,
+        "disposition": "basket-needs-split",
+        "rationale": "Financial statement category lacks current constituent weights."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "USD sub-fund time deposits",
+        "pct": 48.3006,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Off-chain sub-fund accounting asset category is not a tracked stablecoin."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "USD sub-fund cash and bank balances",
+        "pct": 6.0251,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Off-chain sub-fund accounting asset category is not a tracked stablecoin."
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "Other receivables and prepayments",
+        "pct": 0.3656,
+        "disposition": "insufficient-evidence",
+        "rationale": "Receivable counterparties and current recoverability are not identified sufficiently to classify this exposure; the historical accounting category alone is not a resolved reserve asset."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Standard Chartered Trustee (Hong Kong) Limited",
+        "role": "custodian",
+        "jurisdiction": "Hong Kong"
+      },
+      {
+        "name": "Standard Chartered Bank (Hong Kong) Limited",
+        "role": "other",
+        "jurisdiction": "Hong Kong"
+      }
+    ],
+    "segregation": "mixed",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "ChinaAMC September 2026 prospectus",
+        "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/E-CleanProspectus-ChinaAMCDigitalOFC-CN(September2026)_1789336483417.pdf"
+      },
+      {
+        "label": "ChinaAMC tokenized unlisted class key facts",
+        "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/chinaamc/resources/E-KFS-ChinaAMCUSDDigitalMMF(UnlistedClass)(April2026).pdf"
+      },
+      {
+        "label": "KPMG 2025 fund financial audit",
+        "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/chinaamc/resources/E-25AFS_DigitalOFC_Cover.pdf"
+      }
+    ],
+    "uncertainty": "Statutory liability segregation applies between sub-funds, with an explicit foreign-court enforcement caveat. Standard Chartered Trustee provides fund custody; Standard Chartered Bank provides administration, token custody and the authoritative off-chain register. Distributors hold omnibus tokens and separate end-investor records. Current asset custody allocation and distributor protections do not establish a whole-book institutional tier.",
+    "knownUnknownExposurePct": 100
+  }
+}

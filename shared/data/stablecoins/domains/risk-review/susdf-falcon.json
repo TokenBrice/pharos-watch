@@ -1,0 +1,90 @@
+{
+  "id": "susdf-falcon",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Falcon Finance savings documentation",
+        "url": "https://docs.falcon.finance/earn/susdf-yield-bearing-token.md"
+      },
+      {
+        "label": "Falcon Finance official deployment roster",
+        "url": "https://docs.falcon.finance/resources/smart-contracts.md"
+      },
+      {
+        "label": "Verified current sUSDf implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0d132bee412e6619a4863aeedad97541bfda3f34"
+      },
+      {
+        "label": "Ethereum block 26107704, pinned vault identity, supply, custody and NAV reads",
+        "url": "https://etherscan.io/block/26107704"
+      }
+    ],
+    "evidence": "Verified StakedUSDf exposes setRestrictedStatus and redistributeLockedAmount to DEFAULT_ADMIN_ROLE. Deposits and withdrawals reject restricted caller, receiver and owner; administrators can burn or transfer restricted shares to TREASURY. The current transparent-proxy upgrade path can also replace token logic. Parent USDf transfer/compliance controls remain inherited.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  },
+  "oracleRisk": {
+    "tier": "oracleless",
+    "summary": "Native sUSDf mint/redemption conversion uses onchain USDf balances less unvested rewards, not an external feed. Falcon nevertheless publishes live Chainlink-style sUSDf/USDf (0xe471bc940aa9831a0aea21e6f40c1a1236eb4bb3) and USDf/USD (0xb177857a1799aa5f7feb5799fdf12cbe8fdf78b1) aggregators. At Ethereum block 26110183 (2026-10-03T07:01:47Z), latestRoundData answers were 1137020080288662207 (18dp, updatedAt 1791002603) and 99705919 (8dp, updatedAt 1790953859). These informational/market integrations do not set the native unwrap rate; no borrower-liquidation branch exists in the exact savings implementation.",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Sol refinement 2026-10-03 (Refine13)",
+      "rationale": "The ERC-4626 share-to-underlying exchange rate is the top-level mint/redemption authority. There are no borrower-owned collateral branches on the savings token.",
+      "sources": [
+        {
+          "label": "Falcon Finance savings documentation",
+          "url": "https://docs.falcon.finance/earn/susdf-yield-bearing-token.md"
+        },
+        {
+          "label": "Falcon Finance official deployment roster",
+          "url": "https://docs.falcon.finance/resources/smart-contracts.md"
+        },
+        {
+          "label": "Verified current sUSDf implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0d132bee412e6619a4863aeedad97541bfda3f34"
+        },
+        {
+          "label": "Ethereum block 26107704, pinned vault identity, supply, custody and NAV reads",
+          "url": "https://etherscan.io/block/26107704"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Sol refinement 2026-10-03 (Refine13)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Falcon Finance savings documentation",
+        "url": "https://docs.falcon.finance/earn/susdf-yield-bearing-token.md"
+      },
+      {
+        "label": "Falcon Finance official deployment roster",
+        "url": "https://docs.falcon.finance/resources/smart-contracts.md"
+      },
+      {
+        "label": "Verified current sUSDf implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0d132bee412e6619a4863aeedad97541bfda3f34"
+      },
+      {
+        "label": "Ethereum block 26107704, pinned vault identity, supply, custody and NAV reads",
+        "url": "https://etherscan.io/block/26107704"
+      },
+      {
+        "label": "Published sUSDf/USDf informational aggregator",
+        "url": "https://etherscan.io/address/0xe471bc940aa9831a0aea21e6f40c1a1236eb4bb3"
+      },
+      {
+        "label": "Published USDf/USD market aggregator",
+        "url": "https://etherscan.io/address/0xb177857a1799aa5f7feb5799fdf12cbe8fdf78b1"
+      },
+      {
+        "label": "Pinned latestRoundData and decimals for both published aggregators",
+        "url": "https://etherscan.io/block/26110183"
+      }
+    ]
+  }
+}

@@ -1,9 +1,9 @@
 import { decodeAbiParameters, encodeAbiParameters, keccak256, parseAbiParameters, toFunctionSelector } from "viem/utils";
 import { CIRCUIT_SOURCE, DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../constants";
-import { fetchEvmBlockNumber, fetchEvmBlockHeader, fetchEvmRpcBatch } from "../evm-rpc";
+import { fetchEvmBlockHeader, fetchEvmRpcBatch } from "../evm-rpc";
 import { throwIfAborted } from "../abort";
 import { hasPublishableCurrentPrice } from "../price-publication-state";
-import { getPublicFallbackRpcUrls } from "../public-rpc-registry";
+import { fetchPinnedEthereumRuntime } from "./pinned-ethereum-runtime";
 import { resolveTrustedOverrideParent, type CurrentPriceOverride, type LivePriceContext, type PriceSourceProvider } from "./helpers";
 
 const USDAF = "0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8";
@@ -38,18 +38,9 @@ export async function fetchUsdafUniswapV4Price(context: LivePriceContext, signal
   const parentAge = Math.floor(Date.now() / 1000) - parent.trustedParent.observedAt;
   if (parentAge < 0 || parentAge >= 300) return reject("parent-age");
   if (keccak256(encodeAbiParameters(parseAbiParameters("address,address,uint24,int24,address"), KEY)) !== POOL_ID) return reject("pool-identity");
-  const options = { signal, chainRpcs: context.chainRpcs, extraRpcUrls: getPublicFallbackRpcUrls("ethereum"), maxRetries: 0 };
-  const block = await fetchEvmBlockNumber("ethereum", options);
-  if (block == null) return reject("block-unavailable");
-  const head = await fetchEvmBlockHeader("ethereum", block, options);
-  const now = Math.floor(Date.now() / 1000);
-  if (!head || head.timestamp > now || now - head.timestamp >= 300) return reject("block-age");
-  const tag = `0x${block.toString(16)}`;
-  const codes = await fetchEvmRpcBatch("ethereum", REVIEWED_RUNTIME.map(([address]) => ({ method: "eth_getCode", params: [address, tag] })), options);
-  throwIfAborted(signal);
-  if (!codes || codes.length !== REVIEWED_RUNTIME.length || codes.some((code, i) =>
-    typeof code !== "string" || code.length % 2 !== 0 || !/^0x[0-9a-fA-F]+$/.test(code) ||
-    keccak256(code as `0x${string}`) !== REVIEWED_RUNTIME[i][1])) return reject("runtime-code");
+  const pinned = await fetchPinnedEthereumRuntime(context, REVIEWED_RUNTIME, reject, signal);
+  if (!pinned) return null;
+  const { options, block, head, tag } = pinned;
   // Direct pinned calls preserve Quoter sender semantics. ReservesLens integrates
   // actual tick-range principal: active liquidity's virtual reserves are NOT TVL.
   const tvlCalldata = TVL_SELECTOR +

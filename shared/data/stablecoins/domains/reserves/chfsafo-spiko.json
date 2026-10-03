@@ -1,0 +1,122 @@
+{
+  "id": "chfsafo-spiko",
+  "reserves": [
+    {
+      "sourceKey": "spiko-api:chfsafo:total-assets",
+      "name": "Spiko Amundi Overnight Swap Fund (CHF) shares",
+      "pct": 100,
+      "risk": "medium",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Spiko SICAV, SAFO sub-fund and total-return swap counterparties",
+      "riskFactors": [
+        "counterparty",
+        "market",
+        "liquidity",
+        "custody",
+        "legal",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "one-day"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Spiko SICAV prospectus, 1 September 2026",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+      },
+      {
+        "label": "Exact CHF KID, ISIN FR0014015LG6",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/KID_chfSAFO_EN.pdf"
+      },
+      {
+        "label": "Exact CHF native registers and five share decimals",
+        "url": "https://public-api.spiko.io/share-classes/chfSAFO"
+      },
+      {
+        "label": "CHF shares, assets and NAV at 2 October 2026",
+        "url": "https://public-api.spiko.io/share-classes/chfSAFO/totals"
+      },
+      {
+        "label": "SAFO physical and signed derivative inventory at 2 October 2026",
+        "url": "https://public-api.spiko.io/fund-assets/?fundId=59c2c924-ebf8-492d-a4b0-72d72ebf61e6"
+      },
+      {
+        "label": "AMF-hosted June 2026 SAFO semiannual report, not an audit opinion",
+        "url": "https://geco.amf-france.org/back-office/document/download/429960"
+      }
+    ],
+    "rationale": "The 100% slice is the immediate proportional fund-share claim, not a measured 100% derivative allocation. The current API publishes 134 physical, cash and signed swap rows valued at 2 October 2026. Negative swap market values are not normalized to positive portfolio weights. June SAFO filing independently anchors the portfolio model; current complete NAV and collateral reconciliation remains unavailable.",
+    "compositionBasis": "Issuer CHF fund-share identity, exact KID/prospectus, current signed inventory and AMF-filed June report",
+    "compositionAsOf": "2026-10-02",
+    "scope": "full-composition",
+    "observations": [
+      {
+        "kind": "standing-structure",
+        "scopeId": "chfsafo:whole-ucits-share-standing-identity:1790983053",
+        "liabilityBookKey": "chfsafo:fr0014015lg6-fund-shares",
+        "deploymentRefs": [],
+        "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+        "confidence": "verified",
+        "sources": [
+          {
+            "url": "https://cdn.spiko.finance/legal_docs/EN/KID_chfSAFO_EN.pdf",
+            "accessedAtSec": 1790983053,
+            "sha256": "2c56657f278899bc8c30f80a7351636dbd768d38e0a77ca8688552b0044b2514"
+          }
+        ],
+        "reviewedAtSec": 1790983053,
+        "expiresAtSec": 1798759053,
+        "sourceGeneration": "discovery:chfsafo:standing-identity:1790983053",
+        "sourceSha256": "2c56657f278899bc8c30f80a7351636dbd768d38e0a77ca8688552b0044b2514",
+        "completeness": "complete",
+        "obligations": [
+          {
+            "key": "whole-holder-instrument-identity",
+            "disposition": "included",
+            "reason": "Exact CHF KID identifies ISIN FR0014015LG6 as the accumulating CHF UCITS share with proportional ownership and legal fund/depositary segregation."
+          },
+          {
+            "key": "current-fund-assets-liabilities-and-collateral-reconciliation",
+            "disposition": "unresolved",
+            "reason": "Standing claim identity is complete; current independently signed fund/share-class liability, signed-derivative and collateral reconciliation remains unavailable. The June report is separate historical financial disclosure, not current assurance."
+          }
+        ],
+        "observedAtSec": null,
+        "wholeHolderClaim": true,
+        "instrumentKey": "SPIKO SICAV, Spiko Amundi Overnight Swap Fund CHF accumulation share FR0014015LG6"
+      }
+    ],
+    "knownUnknownExposure": "Immediate share claim is identified. Complete derivatives netting, actual reuse, counterparty allocation, custody suballocations and current independent assets/liabilities reconciliation remain unverified; zero unknown immediate slices does not mean zero economic risk.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "CACEIS Bank",
+        "role": "custodian",
+        "jurisdiction": "France"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Spiko SICAV prospectus, 1 September 2026",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+      },
+      {
+        "label": "Exact CHF KID, ISIN FR0014015LG6",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/KID_chfSAFO_EN.pdf"
+      }
+    ],
+    "uncertainty": "Exact CHF KID states product assets are separate from the management company and legally segregated from depositary assets. The prospectus identifies CACEIS Bank and delegated custody arrangements. Actual subcustodian/collateral allocations and reuse remain unverified."
+  }
+}

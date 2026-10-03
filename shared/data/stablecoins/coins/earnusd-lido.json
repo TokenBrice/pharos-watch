@@ -1,0 +1,122 @@
+{
+  "id": "earnusd-lido",
+  "name": "Lido EarnUSD",
+  "symbol": "earnUSD",
+  "oneLiner": "earnUSD is Lido's Mellow-curated vault share for dollar-denominated strategies; returns compound into NAV and USDC withdrawals use a request-and-claim queue.",
+  "flags": {
+    "backing": "crypto-backed",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "navToken": true
+  },
+  "variantOf": "usdc-circle",
+  "variantKind": "strategy-vault",
+  "pegReferenceId": "usdc-circle",
+  "collateral": "Lido/Mellow earnUSD MetaVault allocates across earnUSDc (conservative) and earnUSDe (experimental) underlying vaults; USDC/USDT deposits and USDC withdrawal denomination do not establish current allocation weights, holdings or encumbrances.",
+  "pegMechanism": "Returns compound into vault shares using privileged oracle reports. Deposits and request-and-claim withdrawals are processed by queues; the documented USDC withdrawal wait is typically about three days, not a guaranteed maximum.",
+  "mechanismArchetype": "protocol-position",
+  "archetypeOverride": true,
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rationale": "The exact Ethereum 0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981 is the deployed BurnableTokenizedShareManager proxy for vault 0x014e6da8f283c4af65b2aa0f201438680a004452. It records 50902385.14796045 transferable shares at block 26107703; vault.subvaults() returned 2. Lido documents compounded protocol-strategy returns and queued USDC exits; asset() and totalAssets() revert on this share token, so it is not an ordinary ERC-4626 reserve receipt. The protocol-position override records this exact operational claim rather than inheriting USDC's fiat-cash model. No legal segregation, current allocation or independent reconciliation is inferred.",
+    "sources": [
+      {
+        "label": "Lido earnUSD holder deposits and withdrawals",
+        "url": "https://docs.lido.fi/earn/"
+      },
+      {
+        "label": "Lido earnUSD deployment and actor registry",
+        "url": "https://docs.lido.fi/earn/deployment-contracts"
+      },
+      {
+        "label": "Lido ShareManager holder controls",
+        "url": "https://docs.lido.fi/earn/architecture/managers/sharemanager/"
+      },
+      {
+        "label": "Verified deployed contract 0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981"
+      },
+      {
+        "label": "Verified deployed contract 0x000000000c79d2b5cd58ae545afc83030233d7b6",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x000000000c79d2b5cd58ae545afc83030233d7b6"
+      },
+      {
+        "label": "Verified deployed contract 0x0000000615b2771511daa693ac07be5622869e01",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0000000615b2771511daa693ac07be5622869e01"
+      },
+      {
+        "label": "Ethereum RPC observation at block 26107703",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Mellow earnUSD underlying-vault structure; weights undisclosed",
+        "url": "https://docs.mellow.finance/lido-earn/earnusd"
+      },
+      {
+        "label": "Exact earnUSD share deployment creation transaction, Ethereum block 24602425, 2026-03-07T01:54:35Z",
+        "url": "https://etherscan.io/tx/0x5097bdcbdf5be3b9b9e4210d2938d411bc1391bd498eb30c5b373471e3e7300e"
+      },
+      {
+        "label": "Exact current earnUSD ShareManager implementation activation Upgraded event, block 24602425, 2026-03-07",
+        "url": "https://etherscan.io/tx/0x5097bdcbdf5be3b9b9e4210d2938d411bc1391bd498eb30c5b373471e3e7300e"
+      }
+    ]
+  },
+  "detailProvider": "coingecko",
+  "geckoId": "lido-earnusd",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://earn.lido.fi/"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.lido.fi/earn/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981",
+      "decimals": 18
+    }
+  ],
+  "custodyModel": "unknown",
+  "governanceQuality": "wrapper",
+  "yieldConfig": {
+    "yieldSource": "Lido EarnUSD Mellow-curated protocol strategies",
+    "yieldType": "nav-appreciation"
+  },
+  "dependencyReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Lido earnUSD holder deposits and withdrawals",
+        "url": "https://docs.lido.fi/earn/"
+      },
+      {
+        "label": "Lido earnUSD deployment and actor registry",
+        "url": "https://docs.lido.fi/earn/deployment-contracts"
+      },
+      {
+        "label": "Ethereum RPC observation at block 26107703",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      }
+    ],
+    "rationale": "USDC is the adjudicated accounting parent and documented ordinary withdrawal asset. USDT deposits and a protocol-position portfolio do not establish a current 100% USDC reserve allocation.",
+    "relationships": [
+      {
+        "id": "usdc-circle",
+        "weight": 1,
+        "type": "wrapper",
+        "reason": "Documented USDC settlement for earnUSD vault-share withdrawals"
+      }
+    ]
+  },
+  "launchDate": "2026-03-07",
+  "implementationLaunchDate": "2026-03-07"
+}

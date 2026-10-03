@@ -1,0 +1,122 @@
+{
+  "id": "mxnt-tether",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "Native issuance remains under issuer authority. MXNT Ethereum is controlled by a legacy 3-of-6 wallet that also owns ProxyAdmin; signer independence is unverified.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828",
+        "deploymentRefs": [
+          "ethereum:0xed03ed872159e199065401b6d0d487d78d9464aa"
+        ],
+        "label": "MXNT Ethereum token owner and ProxyAdmin owner",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "threshold": 3,
+        "signerCount": 6,
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110183,
+        "sources": [
+          {
+            "label": "Verified token implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566"
+          },
+          {
+            "label": "Verified owner MultiSigWallet",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828"
+          }
+        ],
+        "evidence": "At Ethereum block 26110183, owner() and ProxyAdmin.owner() return this legacy MultiSigWallet; required()=3 and getOwners() returns 0xac3b242e2e561da9f4ce34746e67d004e6341fa0, 0xee5207d3c88562fc814496af0845b34cfd4afc8c, 0x61d5a4d5bd270e59e9320243e574288e2a199fed, 0x25bb61643e4881147e6aabb65e6dd45cf2904155, 0x4096a34e582664f969753b34da6e72d55b3c85c1 and 0x4d915dd2c56814bd3db51a1da35b302bcc9c8973. Re-fetched verified wallet code executes arbitrary calls once three owners confirm, with no module, guard, delegatecall execution or mandatory time delay. Owner-only token minting and immediate ProxyAdmin upgrades retain economically unbounded issuance. The threshold proves cryptographic signatures only; no human-independence or HSM attestation is claimed."
+      }
+    ],
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "deploymentRefs": [
+        "ethereum:0xed03ed872159e199065401b6d0d487d78d9464aa"
+      ],
+      "proxyAddresses": [
+        "0xed03ed872159e199065401b6d0d487d78d9464aa"
+      ],
+      "implementationAddresses": [
+        "0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566"
+      ],
+      "adminAddresses": [
+        "0x856fcc085290ac1e40392442211e6a333afb873e"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "MXNT Ethereum token owner and ProxyAdmin owner",
+      "observedAt": "2026-10-03",
+      "observedBlock": 26110183,
+      "sources": [
+        {
+          "label": "Verified token implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566"
+        },
+        {
+          "label": "Verified owner MultiSigWallet",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828"
+        },
+        {
+          "label": "Verified MXNT ProxyAdmin immediate owner-only upgrade source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x856fcc085290ac1e40392442211e6a333afb873e"
+        }
+      ]
+    },
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "prudential",
+    "review": {
+      "sources": [
+        {
+          "label": "Issuer issuance and holder terms",
+          "url": "https://tether.to/en/legal/"
+        },
+        {
+          "label": "Retrieved independent reserve report",
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf"
+        },
+        {
+          "label": "Verified token implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566"
+        },
+        {
+          "label": "Verified owner MultiSigWallet",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828"
+        },
+        {
+          "label": "CNAD registered stablecoin issuer Tether International EME-0003",
+          "url": "https://cnad.gob.sv/es/issuers/#expand-25eec8d"
+        },
+        {
+          "label": "Shared Tether legacy-wallet compiler match status",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828"
+        },
+        {
+          "label": "Ethereum current sibling-owner and runtime identity reads",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ],
+      "evidence": "The named owner and proxy administrator are closed at Ethereum block 26110183, including all six current signer addresses and the code-enforced absence of a timelock or Safe-style modules. Quarterly BDO ISAE3000R reasonable-assurance reports reconcile shared fiat-token reserves to aggregate liabilities, not a dedicated MXNT allocation. BDO excludes Notes 2.2's CNAD authorization assertion from its assurance scope. That issuer assertion is now independently anchored: on 2026-10-03 the rendered CNAD registry's Emisores de Ofertas Publicas de Monedas Estables tab named Tether International S.A. de C.V., EME-0003, registered May 19, 2025. Current Tether holder terms bind fiat-token obligations to that same entity and explicitly include MXNT in section 4.1. This supports prudential supervision under the same CNAD registered-issuer convention used for XAUT's separate TG Commodities entity; USAT's OCC-supervised Anchorage issuer is distinct and is not imputed to MXNT. Periodic reconciliation retains the same BDO fiat-token report family that covers USDT and MXNT. Dedicated MXNT asset-liability, custody and segregation evidence remains absent; named custodian allocation, enforceable bankruptcy priority and independent reserve mix remain unavailable. Issuer redemption has a USD100,000-equivalent minimum and fee floor; SLA and capacity are not guaranteed, with no proved small-holder DEX backstop. Independent human/key-custody/HSM arrangements for the six identified signers and operational hold periods remain undisclosed. The official zero-supply Tron token has decimals=0 and lacks a full local issuance/upgrader/freeze review: it remains inactive and excluded from the reviewed Ethereum deployment. Do not author the nonresolving geckoId mexican-peso-tether (detail 404, stale price and zero cap); its historical chart is not a current trustworthy peg record. Fresh current owner() calls for MXNT, USDT and XAUT all returned the exact same Ethereum MultiSigWallet 0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828. Its 5,705-byte deployed runtime has SHA-256 a658996593d84755b24195fc9c863efc567cd43610e736c461a85a229671eac2 and equals Blockscout's reviewed deployed reference bytes. Blockscout's is_fully_verified=false/is_partially_verified=true and Sourcify's runtimeMatch=match remain explicit compiler-verification qualifications, not a unique MXNT umbrella penalty on the byte-identical wallet already accepted for USDT/XAUT. Human independence and signing-policy questions remain scoped to that shared control.",
+      "reviewer": "Pharos refinement Refine02 primary-source and RPC review",
+      "reviewedAt": "2026-10-03",
+      "disposition": "scoreable",
+      "unresolvedQuestions": [],
+      "scopedQuestions": [
+        {
+          "controlRef": "MXNT Ethereum token owner and ProxyAdmin owner",
+          "question": "Which independently verifiable human-independence, key-custody/HSM and signing-policy arrangements protect the six identified signer addresses in the 3-of-6 legacy wallet? Operational hold periods remain undisclosed and are not code-enforced delays.",
+          "reviewedAt": "2026-10-03", "reviewer": "Pharos refinement Refine02 primary-source and RPC review",
+          "sources": [{"label": "Verified exact owner MultiSigWallet", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828"}, {"label": "Tether holder and operational terms", "url": "https://tether.to/en/legal/"}]
+        }
+      ]
+    }
+  }
+}

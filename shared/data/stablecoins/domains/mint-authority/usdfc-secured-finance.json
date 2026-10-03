@@ -1,0 +1,205 @@
+{
+  "id": "usdfc-secured-finance",
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "unknown",
+    "summary": "BorrowerOperations issues USDFC against FIL Troves, but a live 2-of-3 Safe controls token ownership and the ProxyAdmin that can replace mint logic.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "deploymentRefs": [
+        "filecoin:0x80b98d3aa09ffff255c3ba4a241111ff1262f045"
+      ],
+      "proxyAddresses": [
+        "0x80b98d3aa09ffff255c3ba4a241111ff1262f045"
+      ],
+      "implementationAddresses": [
+        "0x584c1fa4ab299ae8f7154fce5b1bea7bddacfd0b"
+      ],
+      "adminAddresses": [
+        "0xa3122c3ee71cbdc9e60b47f502b015c2d82f5fcc"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "USDFC owner and ProxyAdmin-owner Safe",
+      "observedAt": "2026-10-02",
+      "observedBlock": 6422489,
+      "sources": [
+        {
+          "label": "Secured Finance FIL-only CDP overview",
+          "url": "https://docs.secured.finance/usdfc-stablecoin/overview"
+        },
+        {
+          "label": "Filecoin mainnet contract graph",
+          "url": "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts"
+        },
+        {
+          "label": "Filecoin GLIF RPC pinned block 6422489",
+          "url": "https://api.node.glif.io/rpc/v1"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "filecoin",
+        "address": "0x1de3c2e21dd5af7e5109d2502d0d570d57a1abb0",
+        "deploymentRefs": [
+          "filecoin:0x80b98d3aa09ffff255c3ba4a241111ff1262f045"
+        ],
+        "label": "USDFC BorrowerOperations",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 6422489,
+        "sources": [
+          {
+            "label": "Secured Finance FIL-only CDP overview",
+            "url": "https://docs.secured.finance/usdfc-stablecoin/overview"
+          },
+          {
+            "label": "Filecoin mainnet contract graph",
+            "url": "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts"
+          },
+          {
+            "label": "Filecoin GLIF RPC pinned block 6422489",
+            "url": "https://api.node.glif.io/rpc/v1"
+          },
+          {
+            "label": "DebtToken mint-authorizer source",
+            "url": "https://raw.githubusercontent.com/Secured-Finance/stablecoin-contracts/develop/contracts/DebtToken.sol"
+          }
+        ],
+        "evidence": "Pinned token borrowerOperationsAddress() returns this protocol contract. Official DebtToken source restricts mint() to BorrowerOperations; ordinary minting is governed by FIL Trove rules, not an immutable end-to-end issuance constraint."
+      },
+      {
+        "chain": "filecoin",
+        "address": "0x874aed75ab58ba84d5008cfcbf9b9c7b5eb17d57",
+        "deploymentRefs": [
+          "filecoin:0x80b98d3aa09ffff255c3ba4a241111ff1262f045"
+        ],
+        "label": "USDFC owner and ProxyAdmin-owner Safe",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "threshold": 2,
+        "signerCount": 3,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x09fca6c975ea841505bd9fd1d6a67279c224100f0",
+            "0xe27b953dbfde5a06daf71363d8e9f2b2814055c0",
+            "0xbf86d350c0764f14b5aa63bdc73bf3ff288a00b6"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": null,
+          "observedAt": "2026-10-02",
+          "observedBlock": 6422489,
+          "source": "onchain"
+        },
+        "observedAt": "2026-10-02",
+        "observedBlock": 6422489,
+        "sources": [
+          {
+            "label": "Secured Finance FIL-only CDP overview",
+            "url": "https://docs.secured.finance/usdfc-stablecoin/overview"
+          },
+          {
+            "label": "Filecoin mainnet contract graph",
+            "url": "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts"
+          },
+          {
+            "label": "Filecoin GLIF RPC pinned block 6422489",
+            "url": "https://api.node.glif.io/rpc/v1"
+          }
+        ],
+        "evidence": "At Filecoin block 6422489, token owner and ProxyAdmin owner are this Safe. getThreshold()=2, getOwners() returns three addresses, paginated modules are empty and guard storage is zero. Signer independence and an enforced upgrade delay are not established."
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "review": {
+      "sources": [
+        {
+          "label": "Secured Finance FIL-only CDP overview",
+          "url": "https://docs.secured.finance/usdfc-stablecoin/overview"
+        },
+        {
+          "label": "Filecoin mainnet contract graph",
+          "url": "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts"
+        },
+        {
+          "label": "Filecoin GLIF RPC pinned block 6422489",
+          "url": "https://api.node.glif.io/rpc/v1"
+        },
+        {
+          "label": "Upgradeable DebtToken source",
+          "url": "https://raw.githubusercontent.com/Secured-Finance/stablecoin-contracts/develop/contracts/DebtToken.sol"
+        },
+        {
+          "label": "Hexens core code-security audit (2025-01)",
+          "url": "https://github.com/Secured-Finance/stablecoin-contracts/blob/develop/audits/2025-01-Hexens.pdf"
+        },
+        {
+          "label": "Decurity core code-security audit (2025-03)",
+          "url": "https://github.com/Secured-Finance/stablecoin-contracts/blob/develop/audits/2025-03-Decurity.pdf"
+        },
+        {
+          "label": "Hexens EIP-2612/EIP-3009 upgrade audit (2025-08)",
+          "url": "https://github.com/Secured-Finance/stablecoin-contracts/blob/develop/audits/2025-08-Hexens.pdf"
+        },
+        {
+          "label": "Published Safe-executed oracle upgrade history",
+          "url": "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts/contract-upgrade-history.md"
+        },
+        {
+          "label": "Current DebtToken verification metadata (partial, not full)",
+          "url": "https://filecoin.blockscout.com/api/v2/smart-contracts/0x584c1fa4ab299ae8f7154fce5b1bea7bddacfd0b"
+        }
+      ],
+      "evidence": "Token owner(), Safe getThreshold() and getOwners() were independently re-read at Filecoin block 6423483 on 2026-10-03: the same 2-of-3 Safe controls token ownership. Published September 2026 upgrade-history transactions demonstrate exercised Safe upgrade authority. Three dated Hexens/Decurity code audits cover core and token-authorization logic, not financial reserves or signer independence. Safe signer independence remains unverified. Current implementation Blockscout metadata explicitly has is_partially_verified=true and is_fully_verified=false; the audit links do not close exact executable correspondence. No enforceable upgrade timelock is established, so collateral-gated economic semantics would overstate the mutable mint path. Financial reserve reconciliation is not applicable to native FIL collateral.",
+      "reviewer": "Sol refinement Refine03",
+      "reviewedAt": "2026-10-03",
+      "disposition": "unresolved",
+      "unresolvedQuestions": [
+        "Does the exact current DebtToken implementation 0x584c1fa4ab299ae8f7154fce5b1bea7bddacfd0b runtime match the reviewed mint-authorizer source that restricts mint() to the identified BorrowerOperations contract? Blockscout reports partial rather than full verification, and no proof that deployed runtime equals a verified reference is established; exact mint-path source-to-runtime-bytecode equivalence remains unproved."
+      ],
+      "scopedQuestions": [
+        {
+          "controlRef": "USDFC owner and ProxyAdmin-owner Safe",
+          "question": "Is any enforceable delay imposed on this identified Safe's upgrade authority over the exact USDFC token proxy? No enforceable upgrade timelock is established by the current sources; signer independence is separately retained in evidence, not treated as missing control identity.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement Refine03",
+          "sources": [
+            {
+              "label": "Identified Filecoin Safe and ProxyAdmin-owner relationship",
+              "url": "https://api.node.glif.io/rpc/v1"
+            },
+            {
+              "label": "Safe-executed USDFC upgrade history",
+              "url": "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts/contract-upgrade-history.md"
+            }
+          ]
+        },
+        {
+          "controlRef": "USDFC owner and ProxyAdmin-owner Safe",
+          "question": "Safe signer independence remains unverified. What beneficial signer identities, key-custody safeguards and signing policy protect this identified 2-of-3 Safe's token ownership and ProxyAdmin-owner authority? Its on-chain owners and quorum do not establish independent human control.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement Refine03",
+          "sources": [
+            {
+              "label": "Identified Safe owner set and quorum",
+              "url": "https://api.node.glif.io/rpc/v1"
+            },
+            {
+              "label": "Published Safe-executed upgrade history",
+              "url": "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts/contract-upgrade-history.md"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

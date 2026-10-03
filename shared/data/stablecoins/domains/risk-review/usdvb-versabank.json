@@ -1,0 +1,19 @@
+{
+  "id": "usdvb-versabank",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Reviewed primary evidence",
+        "url": "https://www.versabank.com/versabank-announces-versabank-usa-launch-of-tokenized-deposit-pilot-program-in-united-states/"
+      },
+      {
+        "label": "Reviewed primary evidence",
+        "url": "https://www.versabank.com/wp-content/uploads/2026/09/VB-Q326-MDA-vF.pdf"
+      }
+    ],
+    "evidence": "Bank-managed wallet access/control and BSA/OFAC pilot objectives support a custodial restriction expectation. No USDVB-specific selective freeze/seizure implementation is published.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  }
+}

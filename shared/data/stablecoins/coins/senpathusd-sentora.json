@@ -1,0 +1,121 @@
+{
+  "id": "senpathusd-sentora",
+  "name": "Sentora pathUSD",
+  "symbol": "senpathUSD",
+  "oneLiner": "senpathUSD is Sentora's pathUSD vault on Tempo; shares hold idle pathUSD and cbBTC-backed lending positions, redeemable as liquidity allows.",
+  "flags": {
+    "backing": "crypto-backed",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "navToken": true
+  },
+  "variantOf": "pathusd-bridge",
+  "variantKind": "strategy-vault",
+  "pegReferenceId": "pathusd-bridge",
+  "collateral": "pathUSD held idle in an immutable Morpho Vault V2 and supplied by a MorphoMarketV1AdapterV2 to a cbBTC-collateralized lending market. Allocations can change under curator controls.",
+  "pegMechanism": "ERC-4626 shares convert to pathUSD at the live assets-per-share rate. Interest increases and recognized losses reduce share value; withdrawals use idle assets and configured adapter liquidity rather than a fixed dollar promise.",
+  "mechanismArchetype": "protocol-position",
+  "archetypeOverride": true,
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rationale": "The current exact holder instrument tempo:0x9a044ae05e5e6290dcf56afd69548565e957a626 is an immutable ERC-4626 operational claim on idle pathUSD plus Morpho lender positions, not a direct fiat reserve claim. Deposit/mint requires underlying assets and accrual can issue fee shares. At tempo block 42323768, asset() was 0x20c0000000000000000000000000000000000000, share decimals 18 and underlying decimals 6; totalAssets raw 38668628815373, totalSupply raw 19338159753529440843074671, idle raw 38165213421856, sole adapter market assets raw 503415393517, with an exact zero accounting difference. The only funded market lent pathUSD against cbBTC at 77% LLTV. The adapter position had zero borrowing and zero posted collateral. Exact deployment creation: Morpho vaultV2ByAddress creationBlockNumber=18585504, creationTimestamp=1778092871 (2026-05-06T18:41:11.000Z); independently retrieved 2026-10-03.",
+    "sources": [
+      {
+        "label": "Exact Sentora vault",
+        "url": "https://app.morpho.org/tempo/vault/0x9a044ae05e5e6290dcf56afd69548565e957a626"
+      },
+      {
+        "label": "Pinned RPC identity, accounting and controls",
+        "url": "https://rpc.tempo.xyz"
+      },
+      {
+        "label": "Morpho Vault V2 documentation",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+      },
+      {
+        "label": "VaultV2 source matched to Tempo runtime apart from immutable asset",
+        "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+      },
+      {
+        "label": "MorphoMarketV1AdapterV2 source",
+        "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+      },
+      {
+        "label": "Tempo TIP-20 restriction specification",
+        "url": "https://docs.tempo.xyz/protocol/tip20/spec"
+      },
+      {
+        "label": "Exact Morpho Vault V2 creation block and timestamp",
+        "url": "https://api.morpho.org/graphql"
+      }
+    ]
+  },
+  "detailProvider": "coingecko",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://app.morpho.org/tempo/vault/0x9a044ae05e5e6290dcf56afd69548565e957a626"
+    },
+    {
+      "label": "Sentora",
+      "url": "https://sentora.com/"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "tempo",
+      "address": "0x9a044ae05e5e6290dcf56afd69548565e957a626",
+      "decimals": 18
+    }
+  ],
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "custodyModel": "onchain",
+  "governanceQuality": "wrapper",
+  "yieldConfig": {
+    "yieldSource": "Sentora pathUSD Morpho lending interest net of vault fees",
+    "yieldType": "lending-vault"
+  },
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "senpathusd-sentora",
+    "display": {
+      "url": "https://app.morpho.org/tempo/vault/0x9a044ae05e5e6290dcf56afd69548565e957a626",
+      "label": "Sentora pathUSD"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "tempo",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "pathUSD held idle and supplied to Sentora pathUSD Morpho lending positions",
+        "risk": "high",
+        "coinId": "pathusd-bridge",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0x20c0000000000000000000000000000000000000"
+      },
+      "deployedExposure": {
+        "basis": "At tempo block 42323768, asset() was 0x20c0000000000000000000000000000000000000, share decimals 18 and underlying decimals 6; totalAssets raw 38668628815373, totalSupply raw 19338159753529440843074671, idle raw 38165213421856, sole adapter market assets raw 503415393517, with an exact zero accounting difference. The only funded market lent pathUSD against cbBTC at 77% LLTV. The adapter position had zero borrowing and zero posted collateral. The reviewed descriptor is the entire parent-denominated strategy claim; 100% denotes denomination, not 100% idle cash.",
+        "reviewedAt": "2026-10-02",
+        "sourceUrl": "https://app.morpho.org/tempo/vault/0x9a044ae05e5e6290dcf56afd69548565e957a626"
+      },
+      "redemptionLiquidity": {
+        "source": "morpho-vault-v2",
+        "chainId": 4217
+      }
+    }
+  },
+  "launchDate": "2026-05-06",
+  "implementationLaunchDate": "2026-05-06"
+}

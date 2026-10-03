@@ -2,6 +2,24 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.41",
+    title: "Reviewed pricing routes and fiat references for expanded asset coverage",
+    date: "2026-10-03",
+    effectiveAt: 1791048600,
+    summary:
+      "Universal USD gains a guarded Uniswap v3 missing-price route, and JLTXX uses exact-class JPMorgan NAV telemetry. CZK, PLN and AED become first-class FX pegs. Reviewed ERC-4626 vaults share live and pre-intake NAV valuation, while ONED and PYUSDx gain issuer-conversion references that preserve fresh own market prices.",
+    impact: [
+      "USDU recovery binds the exact Ethereum USDU/USDT 0.01% pool, canonical factory and QuoterV2, reviewed runtime hashes and USDU implementation slot. Pinned 1,000- and 100,000-USDU sell quotes must agree within 5%, move price in the correct direction and fit actual token inventory. Both inventories must meet 10,000-token floors and normalized TVL must clear $50,000; token pause/blacklist and closing canonical-block checks remain mandatory",
+      "USDU proceeds use a fresh trusted tracked USDT price. Both block and parent are newer than five minutes; provenance uses their older timestamp. `uniswap-v3-exact` remains fallback-confidence, non-replay-safe and non-depeg-authoritative, retains severe-downside and temporal-jump publication guards, and never replaces a publishable incumbent. No synthetic historical par or replay route is introduced. Serial body-consumed RPC batches do not increase the trigger-wide connection peak",
+      "`jpmorgan-nav` joins primary reserve-NAV telemetry at weight 3 through matched successful snapshots and the shared `reserve-nav-price.ts` decoder. Exact JLTXX Token Class identity, positive transaction NAV and a matching valid dealing date are required; fetch age and upstream source age are checked independently under the five-day business-day NAV policy. Positive native supply can be valued before a previous cache row exists; issuer class assets remain diagnostic, not circulating supply or independent portfolio assurance",
+      "CZK and PLN use business-daily ECB/Frankfurter quotes; AED uses calendar-daily secondary currency-API quotes, with existing full-set recovery and OXR overlay support. All references are USD per currency unit. Canonical fiat_fx peg types and native CoinGecko quotes are supported. No-reference USD price bands are CZK [0.02, 0.1], PLN [0.1, 0.5] and AED [0.2, 0.35]; FX bands are CZK [0.02, 0.1], PLN [0.1, 0.5] and AED [0.25, 0.3]. These are validation bands, never replacement prices or hardcoded AED parity",
+      "Reviewed ERC-4626 NAV routes cover additional vaults on Ethereum, Base, Tempo, Arc, Robinhood and Monad, including distinct Legacy Spark USDC with 18-decimal shares and 6-decimal assets. Live pricing and pre-intake supply valuation use the same NAV allowlist and fresh trusted tracked-parent denomination, including EURCV; missing or untrusted parents fail closed. Supplemental intake forwards the existing configured `chainRpcs` map so Robinhood's keyed Dwellir route is available without adding an endpoint",
+      "ONED inherits a reviewed one-for-one USDC issuer-conversion reference and PYUSDx a reviewed one-for-one PYUSD issuer-conversion reference. Fresh admitted own market prices take precedence, including discounts. These references do not establish direct-wrapper classifications or guaranteed liquid market pegs, and historical replay remains on each asset's own market-price sources rather than synthesized parent history",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.40",
     title: "DEX aggregate leg bounded by the primary freshness budget",
     date: "2026-09-28",

@@ -1,0 +1,94 @@
+{
+  "id": "syrupusdg-maple",
+  "reserves": [
+    {
+      "sourceKey": "erc4626-single-asset:ethereum:0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a:pooled-claim",
+      "name": "Maple syrupUSDG pooled loans and strategy claim",
+      "pct": 100,
+      "risk": "medium",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Maple International Operations SPC, Maple USDG Segregated Portfolio 1",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "counterparty",
+        "legal",
+        "concentration",
+        "smart-contract",
+        "basis"
+      ],
+      "liquidityHorizon": "over-seven-days"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Maple syrupUSDG legal claim and risk disclosures",
+        "url": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md"
+      },
+      {
+        "label": "Maple syrupUSDG defaults and impairments",
+        "url": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-defaults-and-impairments.md"
+      },
+      {
+        "label": "Maple pool accounting and impairment authority",
+        "url": "https://docs.maple.finance/technical-resources/pools/accounting/pool-accounting.md"
+      },
+      {
+        "label": "Verified deployed contract 0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a"
+      },
+      {
+        "label": "Verified deployed contract 0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8"
+      },
+      {
+        "label": "Ethereum RPC observation at block 26107703",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      }
+    ],
+    "rationale": "The entire holder instrument is a proportional claim on a managed pooled portfolio. This 100% row identifies the claim itself; it does not assert a measured allocation to loans, idle USDG or supporting strategies.",
+    "compositionBasis": "Standing whole-token claim identity corroborated by exact deployed code and pinned chain state; not a measured look-through allocation",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Current borrower, cash, strategy, collateral and custodian weights, maturities and independent reserve-to-liability reconciliation remain unavailable. The Network Firm dashboard covers syrupUSDC and syrupUSDT only.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Maple syrupUSDG pooled loans and strategy claim",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "Exact whole-token claim is identified, but no reconciled constituent allocation is available; denomination is not a reserve weighting."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Maple USDG Segregated Portfolio 1 (claim issuer; not a complete custodian census)",
+        "role": "other"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "conditional",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Maple syrupUSDG legal claim and risk disclosures",
+        "url": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md"
+      },
+      {
+        "label": "Chainlink exact syrupUSDG deployments and pools",
+        "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"
+      }
+    ],
+    "knownUnknownExposurePct": 100,
+    "uncertainty": "Maple documents statutory ring-fencing and permits lending and supporting strategies. Named current syrupUSDG collateral custodians, provider allocations, reuse terms and failure-continuity arrangements are not disclosed in the reviewed scope; sibling custodians and assurance are not copied."
+  }
+}

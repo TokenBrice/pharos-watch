@@ -1,0 +1,14 @@
+{
+  "id": "jpydf-deltaforesight",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      { "label": "DeltaForesight development announcement", "url": "https://prtimes.jp/main/html/rd/p/000000001.000190693.html" },
+      { "label": "DeltaForesight product design", "url": "https://deltaforesight.com/products/" },
+      { "label": "DeltaForesight Fusion roadmap", "url": "https://deltaforesight.com/en/news/fusion-vaults-20260929/" }
+    ],
+    "evidence": "The developer describes smart-contract issue and burn rules, cryptoasset and stablecoin collateral, and ongoing legal and operational review before mainnet. The reviewed sources disclose no JPYdf contract or direct freeze, blacklist or seizure authority. DeFi branding does not prove the absence of such controls. Possible stablecoin collateral also leaves indirect freeze exposure unresolved because assets and weights are unpublished. The possible verdict records uncertainty, not a confirmed freeze function.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  }
+}

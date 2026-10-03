@@ -23,8 +23,12 @@ describe("commodity-claim archetype consumers", () => {
   );
 
   it("covers the migrated set", () => {
-    // XNK's sourced 2026-08-18 wind-down moved it out of the active migrated set.
-    expect(migrated.length).toBe(12);
+    // XNK's wind-down removed it; GoldZip's active addition joins the migrated set.
+    expect(migrated.map((meta) => meta.id)).toEqual([
+      "xaut-tether", "paxg-paxos", "kau-kinesis", "xaum-matrixdock", "xagm-matrixdock",
+      "vnxau-vnx", "cgo-comtech", "dgld-gold-token-sa", "xgz-goldzip", "pgold-pleasing",
+      "ggbr-goldfish-gold", "gldt-gold-dao", "kag-kinesis",
+    ]);
     expect(migrated.every((meta) => meta.flags?.pegCurrency === "GOLD" || meta.flags?.pegCurrency === "SILVER")).toBe(
       true,
     );

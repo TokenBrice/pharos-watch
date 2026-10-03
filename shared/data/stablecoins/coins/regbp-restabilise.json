@@ -1,0 +1,41 @@
+{
+  "id": "regbp-restabilise",
+  "name": "ReStabilise reGBP",
+  "symbol": "reGBP",
+  "oneLiner": "reGBP is ReStabilise's planned institutional sterling stablecoin, proposing 1:1 liquid-asset backing held on trust and T+1 par redemption.",
+  "collateral": "Proposed 1:1 high-quality liquid assets held on trust for holders. Exact portfolio, named trustee/custodians, trust deed, insolvency priority and independent reserve reconciliation remain unpublished in the reviewed issuer material.",
+  "pegMechanism": "Restabilise Ltd proposes a GBP stablecoin redeemable at par by any holder on a T+1 basis for institutional and enterprise use. Eligibility, fees, minima, cash-settlement cutoffs and executable capacity are not publicly bounded. The issuer invites pilots and early access; no production chain or contract is disclosed.",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://restabilise.com/"
+    },
+    {
+      "label": "FCA sandbox selection",
+      "url": "https://www.fca.org.uk/news/press-releases/4-firms-selected-test-stablecoin-regulatory-sandbox"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United Kingdom"
+  },
+  "announcedDate": "2026-02-25",
+  "launchPhase": "announced",
+  "launchPhaseDetail": "FCA selected ReStabilise for its stablecoin issuance sandbox on 25 February 2026. The issuer names reGBP and invites partnerships, pilots and early access, while describing the product as built to become FCA-authorised. Sandbox selection does not establish final issuance authorization. No production chain, contract, token price, public circulation or commercial launch date is verified.",
+  "milestones": [
+    {
+      "date": "2026-02-25",
+      "type": "regulatory",
+      "title": "FCA selects ReStabilise for stablecoin sandbox",
+      "sourceUrl": "https://www.fca.org.uk/news/press-releases/4-firms-selected-test-stablecoin-regulatory-sandbox",
+      "description": "Programme selection, not a first product-publication date, final authorization or public launch."
+    }
+  ],
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "GBP",
+    "governance": "centralized"
+  },
+  "mechanismArchetype": "fiat-cash",
+  "custodyModel": "unknown",
+  "status": "pre-launch"
+}

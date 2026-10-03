@@ -184,6 +184,10 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "trusd-tori::Unverified USDC Morpho dust on Base::USDC",
     "The Base Morpho vault and token representation are unverified, so the dust remains unlinked with its measured share preserved.",
   ],
+  [
+    "xgld-unitas::XAUt collateral and borrowed-USDT strategy book (net allocation undisclosed)::USDT",
+    "Issuer-disclosed leveraged strategy basket lacks net constituent weights after borrowed USDT liabilities; a USDT coinId would misrepresent the undisclosed net allocation.",
+  ],
 ]);
 
 // Reviewed wrapper spellings, not arbitrary substrings (USDT is not USDtb).

@@ -1,0 +1,139 @@
+{
+  "id": "senrlusdv2-sentora",
+  "reserves": [
+    {
+      "sourceKey": "erc4626-single-asset:ethereum:0x8292bb45bf1ee4d140127049757c2e0ff06317ed",
+      "name": "Sentora RLUSD Main idle underlying",
+      "pct": 10.9915,
+      "risk": "medium",
+      "coinId": "rlusd-ripple",
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Ripple",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "sourceKey": "erc4626-single-asset:ethereum:0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf:deployed",
+      "name": "Sentora RLUSD Main deployed strategy positions",
+      "pct": 89.0085,
+      "risk": "high",
+      "coinId": "rlusd-ripple",
+      "depType": "wrapper",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Sentora-curated Morpho markets and their borrowers",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "counterparty",
+        "smart-contract",
+        "concentration",
+        "legal"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Sentora RLUSD Main exact vault",
+        "url": "https://app.morpho.org/ethereum/vault/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf"
+      },
+      {
+        "label": "Exact verified VaultV2 source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf"
+      },
+      {
+        "label": "Exact current MorphoMarketV1AdapterV2 source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff"
+      },
+      {
+        "label": "Morpho Vault V2 accounting and redemption mechanics",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+      },
+      {
+        "label": "Ethereum RPC, pinned block 26107702",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Morpho exact-vault portfolio API",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Sentora Terms of Use, June 2026, sections 4.3 and 21.4",
+        "url": "https://sentora.com/legal/terms-of-use"
+      }
+    ],
+    "rationale": "At block 26107702, asset()=0x8292bb45bf1ee4d140127049757c2e0ff06317ed; totalAssets=451873322385272395066245035, idle underlying=49667525480716097356989360, current adapter realAssets=402205796904556297709255675, in underlying smallest units. Idle plus adapter assets reconcile exactly to totalAssets. The 10 current pinned lender positions have zero borrow shares and zero posted collateral. RLUSD lending positions against cbBTC, FXRP, syrupUSDC, wstETH, USDe, weETH, kBTC and WBTC, plus 1-wei lender dust positions against PT-sUSDE-13AUG2026 and WETH. Allocations change under curator controls; borrower collateral is distinct from the underlying deposited token. The parent link denotes denomination and inherited token risk, not ownership of the parent issuer reserves.",
+    "compositionBasis": "Pinned exact vault underlying balance and sole adapter realAssets; percentages of totalAssets, rounded to four decimals",
+    "compositionAsOf": "2026-10-02",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Current vault/adapter accounting is identified. Collateral custody, enforceable insolvency priority, borrower losses and stressed liquidation capacity are not established across every underlying layer.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Sentora RLUSD Main immutable VaultV2 and 0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff Morpho adapter",
+        "role": "other"
+      },
+      {
+        "name": "Morpho borrower markets",
+        "role": "other"
+      },
+      {
+        "name": "Sentora Digital Holdings (BVI) Ltd, risk curator; issuer states it is not a custodian",
+        "role": "other",
+        "jurisdiction": "British Virgin Islands"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Sentora RLUSD Main exact vault",
+        "url": "https://app.morpho.org/ethereum/vault/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf"
+      },
+      {
+        "label": "Exact verified VaultV2 source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf"
+      },
+      {
+        "label": "Exact current MorphoMarketV1AdapterV2 source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff"
+      },
+      {
+        "label": "Morpho Vault V2 accounting and redemption mechanics",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+      },
+      {
+        "label": "Ethereum RPC, pinned block 26107702",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Morpho exact-vault portfolio API",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Sentora Terms of Use, June 2026, sections 4.3 and 21.4",
+        "url": "https://sentora.com/legal/terms-of-use"
+      },
+      {
+        "label": "Morpho Vault V2 and MarketV1AdapterV2 security audits; no financial assurance",
+        "url": "https://docs.morpho.org/get-started/resources/audits/"
+      }
+    ],
+    "uncertainty": "Immediate lender positions are held in contracts and intentionally reused as loans. No whole-book claim of exclusively on-chain ultimate collateral custody is made. Parent issuer custody remains inherited; underlying collateral legal/custody layers and recoveries are unresolved. June 2026 Sentora terms section 4.3 describes non-custodial vault configurations; section 21.4 specifies BVI governing law and arbitration. This is an issuer legal statement, not evidence of borrower collateral segregation or removal of observed curator powers."
+  }
+}

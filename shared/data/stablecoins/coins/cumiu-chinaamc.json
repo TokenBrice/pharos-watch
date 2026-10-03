@@ -1,0 +1,99 @@
+{
+  "id": "cumiu-chinaamc",
+  "name": "ChinaAMC USD Digital Money Market Fund Class I USD",
+  "symbol": "CUMIU",
+  "oneLiner": "CUMIU is ChinaAMC's accumulating USD money-market fund share, redeemable at daily NAV through eligible distributors.",
+  "flags": {
+    "backing": "rwa-backed",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": true
+  },
+  "collateral": "USD short-term bank deposits and investment-grade money-market instruments; the fund may hold government and financial-institution debt and limited hedges.",
+  "pegMechanism": "One CUMIU token represents one accumulating Class I USD fund share. Daily NAV subscriptions and redemptions run through eligible distributors; the official shareholder register and cash settlement remain off-chain. No peer-to-peer or secondary trading is permitted.",
+  "mechanismArchetype": "tbill",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rationale": "CUMIU is the Ethereum representation of ChinaAMC's Class I USD accumulating money-market fund shares (ISIN HK0001153516), not the listed ETF class or HKD fund. The USD NAV fund mandate supports the tbill cash-equivalent family without implying Treasury-only backing.",
+    "sources": [
+      {
+        "label": "ChinaAMC September 2026 prospectus",
+        "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/E-CleanProspectus-ChinaAMCDigitalOFC-CN(September2026)_1789336483417.pdf"
+      },
+      {
+        "label": "ChinaAMC tokenized unlisted class key facts",
+        "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/chinaamc/resources/E-KFS-ChinaAMCUSDDigitalMMF(UnlistedClass)(April2026).pdf"
+      }
+    ]
+  },
+  "detailProvider": "coingecko",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/chinaamc/resources/E-25AFS_DigitalOFC_Cover.pdf",
+    "provider": "KPMG financial-statement audit of ChinaAMC Digital OFC and its sub-funds; annual, not current monthly token reconciliation",
+    "attestorTier": "big4",
+    "cadence": "annual",
+    "attestorJurisdiction": "Hong Kong",
+    "latestReport": {
+      "periodEnd": "2025-12-31",
+      "publishedAt": "2026-04-30",
+      "publishedAtBasis": "explicit",
+      "assuranceMethod": "audit",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "KPMG 2025 fund financial audit",
+          "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/chinaamc/resources/E-25AFS_DigitalOFC_Cover.pdf"
+        },
+        {
+          "label": "Issuer annual-report publication index",
+          "url": "https://www.chinaamc.com.hk/jeecg-boot/mainWebDailyDocument/tMainWebDailyDocument/listByFundId?fundId=USDDMMF"
+        }
+      ]
+    }
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.chinaamc.com.hk/detail?fundId=USDDMMF&fundName=ChinaAMC-USD-Digital-Money-Market-Fund-%28Tokenized-Unlisted-Class%29&lan=EN"
+    },
+    {
+      "label": "Fund key facts",
+      "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/chinaamc/resources/E-KFS-ChinaAMCUSDDigitalMMF(UnlistedClass)(April2026).pdf"
+    },
+    {
+      "label": "Prospectus",
+      "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/E-CleanProspectus-ChinaAMCDigitalOFC-CN(September2026)_1789336483417.pdf"
+    },
+    {
+      "label": "CUMIU implementation creation, block 23038249 (2025-07-31)",
+      "url": "https://etherscan.io/tx/0xf2cfe5b23b0f54b1ea036e028011daad7d89315ef04c3413ac8d81582f992b53"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Hong Kong",
+    "regulator": "Securities and Futures Commission",
+    "license": "Section 104 SFO authorized collective investment scheme; Hong Kong public open-ended fund company"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x85d38585c3ac08268f598282a84b7c0ddfc0d04f",
+      "decimals": 18
+    }
+  ],
+  "collateralQuality": "rwa",
+  "custodyModel": "unknown",
+  "yieldConfig": {
+    "yieldSource": "ChinaAMC USD money-market portfolio",
+    "yieldType": "nav-appreciation"
+  },
+  "launchDate": "2025-08-13",
+  "implementationLaunchDate": "2025-08-13"
+}

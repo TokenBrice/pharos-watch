@@ -1,0 +1,659 @@
+{
+  "id": "kpkusdcyield-kpk",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "none-resolved-mint",
+    "confidence": "unknown",
+    "summary": "KPK USDC Yield V2 uses deposit-backed VaultV2 share issuance with configured fee-share accrual; parent USDC issuance remains inherited, while local admins control strategy parameters.",
+    "inheritedFrom": "usdc-circle",
+    "economicCapSemantics": "bounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13",
+        "deploymentRefs": [
+          "ethereum:0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+        ],
+        "label": "KPK USDC Yield V2 deposit-backed share accounting",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107704,
+        "sources": [
+          {
+            "label": "Exact KPK USDC Yield V2 Morpho Vault V2 deployment",
+            "url": "https://app.morpho.org/ethereum/vault/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+          },
+          {
+            "label": "Partially verified VaultV2 source; explorer deployed bytecode matches pinned RPC",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+          },
+          {
+            "label": "Ethereum RPC pinned block 26107704, observed 2026-10-02T22:44:52.884200+00:00",
+            "url": "https://eth-mainnet.g.alchemy.com"
+          },
+          {
+            "label": "Morpho itemized vault and adapter data observed 2026-10-02T22:44:52.884200+00:00",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho gate semantics and irreversible abdication",
+            "url": "https://docs.morpho.org/curate/concepts/gates.md"
+          },
+          {
+            "label": "Exact current MorphoMarketV1AdapterV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4f74895557bea2de5d51d8c06e944da92dbc8550"
+          }
+        ],
+        "capDescription": "Deposits require transferred underlying; performance and management fee accrual may mint configured fee shares. No arbitrary owner share-mint entrypoint in reviewed source.",
+        "evidence": "At Ethereum block 26107704, asset()=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, totalSupply()=9792630120840452584390720 raw 18-decimal shares and totalAssets()=10295065635649 raw 6-decimal USDC. One adapter 0x4f74895557bea2de5d51d8c06e944da92dbc8550 enumerates 5 current market IDs; summed expectedSupplyAssets=9983200606668, idle underlying=311865028981; their sum equals totalAssets. All current positions have zero borrow shares and zero posted collateral. Source and zero EIP-1967 implementation/admin/beacon slots support non-proxy VaultV2; functional executable correspondence is now independently reproduced in review.evidence; complete target creation-bytecode/metadata identity is not claimed."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x8b884f80b3b839f52b6ce168f133e7a5d1f0a537",
+        "deploymentRefs": [
+          "ethereum:0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+        ],
+        "label": "KPK USDC Yield V2 owner parameter authority",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107704,
+        "sources": [
+          {
+            "label": "Exact KPK USDC Yield V2 Morpho Vault V2 deployment",
+            "url": "https://app.morpho.org/ethereum/vault/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+          },
+          {
+            "label": "Partially verified VaultV2 source; explorer deployed bytecode matches pinned RPC",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+          },
+          {
+            "label": "Ethereum RPC pinned block 26107704, observed 2026-10-02T22:44:52.884200+00:00",
+            "url": "https://eth-mainnet.g.alchemy.com"
+          },
+          {
+            "label": "Morpho itemized vault and adapter data observed 2026-10-02T22:44:52.884200+00:00",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho gate semantics and irreversible abdication",
+            "url": "https://docs.morpho.org/curate/concepts/gates.md"
+          },
+          {
+            "label": "Exact current MorphoMarketV1AdapterV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4f74895557bea2de5d51d8c06e944da92dbc8550"
+          },
+          {
+            "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+            "url": "https://blue-api.morpho.org/graphql"
+          }
+        ],
+        "evidence": "Pinned owner()=0x8b884f80b3b839f52b6ce168f133e7a5d1f0a537. Safe threshold and complete owners/modules are pinned below; signer independence and enabled-module permissions are not established. Owner appointment and curator adapter/cap/fee powers can change future allocations; these are not arbitrary parent-token issuance. Current API timelock census, independently reconfirmed by RPC on 2026-10-03 at block 26110242: setPerformanceFee(uint256)=1209601 sec; setManagementFee(uint256)=1209601 sec. No blanket all-action timelock is inferred. On 2026-10-03 at ethereum block 26110242, isSentinel(address) returned true. This role can revoke pending changes, reduce allocation caps and deallocate; it cannot call arbitrary share mint or mint parent USDC.",
+        "capDescription": "addAdapter timelock=259201 seconds; performance/management fee setters each 1209601 seconds. Both current fee rates are zero. Module reach and role replacement do not inherit a blanket delay guarantee.",
+        "threshold": 5,
+        "signerCount": 8,
+        "safe": {
+          "owners": [
+            "0xb45e9b1cd8cdfa602d494af2b3d92d46aaa15dd6",
+            "0x76d6705cd03c5c12b87f7a40be1e916f5e8beba8",
+            "0x4cf1072ff925e0f7aeeb495c6db92c4c97394209",
+            "0xdaf763adba152ee5e42f05488ea1cdc4e58af987",
+            "0xd3c14771993de5984225f2cc6b91b21266526625",
+            "0x97c0567cda7d4e34e49bad8fd5469d9e91a89c61",
+            "0x3eb10e2d37a3c95fec4d4d0f19025409b46e8e2f",
+            "0xc4105307f2f09cf5d08e0a565783ffdf365b7343"
+          ],
+          "threshold": 5,
+          "enabledModules": [],
+          "observedBlock": 26107704,
+          "observedAt": "2026-10-02",
+          "source": "onchain",
+          "guard": "0x0000000000000000000000000000000000000000"
+        }
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x7e43df1c1c5a2245858b60d4655fda83704e4171",
+        "deploymentRefs": [
+          "ethereum:0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+        ],
+        "label": "KPK USDC Yield V2 curator parameter authority",
+        "role": "other",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "modulesOrGuardsStatus": "present",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107704,
+        "sources": [
+          {
+            "label": "Exact KPK USDC Yield V2 Morpho Vault V2 deployment",
+            "url": "https://app.morpho.org/ethereum/vault/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+          },
+          {
+            "label": "Partially verified VaultV2 source; explorer deployed bytecode matches pinned RPC",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+          },
+          {
+            "label": "Ethereum RPC pinned block 26107704, observed 2026-10-02T22:44:52.884200+00:00",
+            "url": "https://eth-mainnet.g.alchemy.com"
+          },
+          {
+            "label": "Morpho itemized vault and adapter data observed 2026-10-02T22:44:52.884200+00:00",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho gate semantics and irreversible abdication",
+            "url": "https://docs.morpho.org/curate/concepts/gates.md"
+          },
+          {
+            "label": "Exact current MorphoMarketV1AdapterV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4f74895557bea2de5d51d8c06e944da92dbc8550"
+          },
+          {
+            "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+            "url": "https://blue-api.morpho.org/graphql"
+          },
+          {
+            "label": "Enabled Zodiac Roles EIP-1167 module and implementation identity",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc3a8702bc57e0b787bd62d429a993265f596be1e"
+          },
+          {
+            "label": "Zodiac Roles partial implementation source; mutable role and target permissions",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9646fdad06d3e24444381f44362a3b0eb343d337"
+          },
+          {
+            "label": "Exact Zodiac Roles complete public grant log (34 records; pagination end) and current module-member census, reviewed 2026-10-03",
+            "url": "https://eth.blockscout.com/api/v2/addresses/0xc3a8702bc57e0b787bd62d429a993265f596be1e/logs"
+          }
+        ],
+        "evidence": "Pinned curator()=0x7e43df1c1c5a2245858b60d4655fda83704e4171. Safe threshold and complete owners/modules are pinned below; signer independence and enabled-module permissions are not established. Owner appointment and curator adapter/cap/fee powers can change future allocations; these are not arbitrary parent-token issuance. Current API timelock census, independently reconfirmed by RPC on 2026-10-03 at block 26110242: setPerformanceFee(uint256)=1209601 sec; setManagementFee(uint256)=1209601 sec. No blanket all-action timelock is inferred. Enabled module 0xc3a8702bc57e0b787bd62d429a993265f596be1e is an EIP-1167 proxy to Zodiac Roles 0x9646fdad06d3e24444381f44362a3b0eb343d337; exact proxy bytes matched archive RPC. owner(), avatar() and target() all returned this curator Safe at Ethereum block 26107704. Roles supports mutable assignRoles, scope/allow target/function, allowances and unwrappers; the public role/member/function event census is now reconstructed, while exact permission storage, executable implementation correspondence and unwrap-adapter noninterference remain unverified. On 2026-10-03 at ethereum block 26110242, isAllocator(address) returned true. This role can allocate/deallocate within configured adapter/cap bounds, set liquidity adapter/data and maxRate; it cannot call arbitrary share mint or mint parent USDC. Blockscout returned all 34 decoded events with next_page_params=null. Applying AllowFunction/RevokeFunction and AssignRoles events yields {\"grants\":[[\"MORPHO_REBALANCER_AGENT\",\"0x9178ebe0691593184c1d785a864b62a326cc3509\",\"0x7299aa31\"],[\"MORPHO_SHUTDOWN_AGENT\",\"0x9178ebe0691593184c1d785a864b62a326cc3509\",\"0x3b24c2bf\"],[\"MORPHO_SHUTDOWN_AGENT\",\"0x9178ebe0691593184c1d785a864b62a326cc3509\",\"0x7299aa31\"],[\"MORPHO_SHUTDOWN_AGENT\",\"0x9178ebe0691593184c1d785a864b62a326cc3509\",\"0x41b67833\"],[\"MORPHO_REBALANCER_AGENT\",\"0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13\",\"0x5c9ce04d\"],[\"MORPHO_REBALANCER_AGENT\",\"0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13\",\"0x4b219d16\"],[\"MORPHO_SHUTDOWN_AGENT\",\"0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13\",\"0x5c9ce04d\"],[\"MORPHO_SHUTDOWN_AGENT\",\"0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13\",\"0x4b219d16\"],[\"MORPHO_SHUTDOWN_AGENT\",\"0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13\",\"0x8c54519b\"],[\"MORPHO_SHUTDOWN_AGENT\",\"0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13\",\"0x57975270\"],[\"MORPHO_MONITORING_AGENT\",\"0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13\",\"0x3e9d2ac7\"],[\"MORPHO_MONITORING_AGENT\",\"0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13\",\"0x7fb6caad\"],[\"MORPHO_MONITORING_AGENT\",\"0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13\",\"0xef7fa71b\"]],\"members\":[[\"0x7a35f5dcd3faa4bd617b7d7c3cc9b9ea6353291f\",\"MORPHO_REBALANCER_AGENT\"],[\"0x769605006f6feee3494c72236130067526af848f\",\"MORPHO_SHUTDOWN_AGENT\"],[\"0x393d8d9c3dae91b2d0530673c57e9c7e13ff4c9a\",\"MORPHO_MONITORING_AGENT\"]],\"unwrappers\":[[\"0x38869bf66a61cf6bdb996a6ae40d5853fd43b526\",\"0x8d80ff0a\",\"0xb4cd4bb764c089f20da18700ce8bc5e49f369efd\"],[\"0x9641d764fc13c8b624c04430c7356c1c7c8102e2\",\"0x8d80ff0a\",\"0xb4cd4bb764c089f20da18700ce8bc5e49f369efd\"]]}. Current getModulesPaginated(0x1,100) returned the same three assigned EOA agents with next=0x1 at Ethereum block 26110242. Current unwrap adapters are mutable; event history alone is not a complete execution-scope certificate.",
+        "capDescription": "addAdapter timelock=259201 seconds; performance/management fee setters each 1209601 seconds. Both current fee rates are zero. Module reach and role replacement do not inherit a blanket delay guarantee.",
+        "threshold": 2,
+        "signerCount": 5,
+        "safe": {
+          "owners": [
+            "0xaf150c6d108d0c2c96bbfc3cef9b4848b5d99440",
+            "0xf0cf1e3ec6264b03241826f5b2abda17b4352a75",
+            "0x331d9c769185ae25233314859d53c2b9203a1204",
+            "0x7f99cf4919ccdf311c12ee22540e2c05b6ab5fa1",
+            "0x8b884f80b3b839f52b6ce168f133e7a5d1f0a537"
+          ],
+          "threshold": 2,
+          "enabledModules": [
+            "0xc3a8702bc57e0b787bd62d429a993265f596be1e"
+          ],
+          "observedBlock": 26107704,
+          "observedAt": "2026-10-02",
+          "source": "onchain",
+          "guard": "0x0000000000000000000000000000000000000000"
+        }
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x331d9c769185ae25233314859d53c2b9203a1204",
+        "deploymentRefs": [
+          "ethereum:0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+        ],
+        "label": "KPK USDC Yield allocator 0x331d9c769185ae25233314859d53c2b9203a1204",
+        "role": "governor",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110242,
+        "sources": [
+          {
+            "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+            "url": "https://blue-api.morpho.org/graphql"
+          },
+          {
+            "label": "ethereum RPC role/code census at block 26110242; credentials omitted",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "On 2026-10-03 at ethereum block 26110242, isAllocator(address) returned true. This role can allocate/deallocate within configured adapter/cap bounds, set liquidity adapter/data and maxRate; it cannot call arbitrary share mint or mint parent USDC."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xaf150c6d108d0c2c96bbfc3cef9b4848b5d99440",
+        "deploymentRefs": [
+          "ethereum:0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+        ],
+        "label": "KPK USDC Yield allocator 0xaf150c6d108d0c2c96bbfc3cef9b4848b5d99440",
+        "role": "governor",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110242,
+        "sources": [
+          {
+            "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+            "url": "https://blue-api.morpho.org/graphql"
+          },
+          {
+            "label": "ethereum RPC role/code census at block 26110242; credentials omitted",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "On 2026-10-03 at ethereum block 26110242, isAllocator(address) returned true. This role can allocate/deallocate within configured adapter/cap bounds, set liquidity adapter/data and maxRate; it cannot call arbitrary share mint or mint parent USDC."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xf0cf1e3ec6264b03241826f5b2abda17b4352a75",
+        "deploymentRefs": [
+          "ethereum:0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+        ],
+        "label": "KPK USDC Yield allocator 0xf0cf1e3ec6264b03241826f5b2abda17b4352a75",
+        "role": "governor",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110242,
+        "sources": [
+          {
+            "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+            "url": "https://blue-api.morpho.org/graphql"
+          },
+          {
+            "label": "ethereum RPC role/code census at block 26110242; credentials omitted",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "On 2026-10-03 at ethereum block 26110242, isAllocator(address) returned true. This role can allocate/deallocate within configured adapter/cap bounds, set liquidity adapter/data and maxRate; it cannot call arbitrary share mint or mint parent USDC."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x7a35f5dcd3faa4bd617b7d7c3cc9b9ea6353291f",
+        "deploymentRefs": [
+          "ethereum:0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+        ],
+        "label": "KPK USDC Yield Zodiac MORPHO_REBALANCER_AGENT",
+        "role": "governor",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110242,
+        "sources": [
+          {
+            "label": "Exact Zodiac Roles complete public grant log (34 records; pagination end) and current module-member census, reviewed 2026-10-03",
+            "url": "https://eth.blockscout.com/api/v2/addresses/0xc3a8702bc57e0b787bd62d429a993265f596be1e/logs"
+          },
+          {
+            "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+            "url": "https://blue-api.morpho.org/graphql"
+          },
+          {
+            "label": "Exact VaultV2 ABI/source for role-granted selectors",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+          }
+        ],
+        "evidence": "The enabled Zodiac Roles module 0xc3a8702bc57e0b787bd62d429a993265f596be1e assigns this EOA to MORPHO_REBALANCER_AGENT; current enabled-member pagination matches the grant events and eth_getCode returned 0x. Public events grant exact-vault selectors allocate(address,bytes,uint256), deallocate(address,bytes,uint256). Allowed functions execute through the curator Safe. submit(bytes) may schedule arbitrary curator changes subject to vault selector timelocks and irreversible abdications; the Safe can mutate role grants and unwrap targets. No independent-human attribution, key-custody assurance, exhaustive executable permission certificate or arbitrary USDC minting is established."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x769605006f6feee3494c72236130067526af848f",
+        "deploymentRefs": [
+          "ethereum:0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+        ],
+        "label": "KPK USDC Yield Zodiac MORPHO_SHUTDOWN_AGENT",
+        "role": "governor",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110242,
+        "sources": [
+          {
+            "label": "Exact Zodiac Roles complete public grant log (34 records; pagination end) and current module-member census, reviewed 2026-10-03",
+            "url": "https://eth.blockscout.com/api/v2/addresses/0xc3a8702bc57e0b787bd62d429a993265f596be1e/logs"
+          },
+          {
+            "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+            "url": "https://blue-api.morpho.org/graphql"
+          },
+          {
+            "label": "Exact VaultV2 ABI/source for role-granted selectors",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+          }
+        ],
+        "evidence": "The enabled Zodiac Roles module 0xc3a8702bc57e0b787bd62d429a993265f596be1e assigns this EOA to MORPHO_SHUTDOWN_AGENT; current enabled-member pagination matches the grant events and eth_getCode returned 0x. Public events grant exact-vault selectors allocate(address,bytes,uint256), deallocate(address,bytes,uint256), decreaseAbsoluteCap(bytes,uint256), decreaseRelativeCap(bytes,uint256). Allowed functions execute through the curator Safe. submit(bytes) may schedule arbitrary curator changes subject to vault selector timelocks and irreversible abdications; the Safe can mutate role grants and unwrap targets. No independent-human attribution, key-custody assurance, exhaustive executable permission certificate or arbitrary USDC minting is established."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x393d8d9c3dae91b2d0530673c57e9c7e13ff4c9a",
+        "deploymentRefs": [
+          "ethereum:0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+        ],
+        "label": "KPK USDC Yield Zodiac MORPHO_MONITORING_AGENT",
+        "role": "governor",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110242,
+        "sources": [
+          {
+            "label": "Exact Zodiac Roles complete public grant log (34 records; pagination end) and current module-member census, reviewed 2026-10-03",
+            "url": "https://eth.blockscout.com/api/v2/addresses/0xc3a8702bc57e0b787bd62d429a993265f596be1e/logs"
+          },
+          {
+            "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+            "url": "https://blue-api.morpho.org/graphql"
+          },
+          {
+            "label": "Exact VaultV2 ABI/source for role-granted selectors",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+          }
+        ],
+        "evidence": "The enabled Zodiac Roles module 0xc3a8702bc57e0b787bd62d429a993265f596be1e assigns this EOA to MORPHO_MONITORING_AGENT; current enabled-member pagination matches the grant events and eth_getCode returned 0x. Public events grant exact-vault selectors setForceDeallocatePenalty(address,uint256), setLiquidityAdapterAndData(address,bytes), submit(bytes). Allowed functions execute through the curator Safe. submit(bytes) may schedule arbitrary curator changes subject to vault selector timelocks and irreversible abdications; the Safe can mutate role grants and unwrap targets. No independent-human attribution, key-custody assurance, exhaustive executable permission certificate or arbitrary USDC minting is established."
+      }
+    ],
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "controlRef": "KPK USDC Yield V2 deposit-backed share accounting",
+      "observedAt": "2026-10-02",
+      "observedBlock": 26107704,
+      "sources": [
+        {
+          "label": "Exact KPK USDC Yield V2 Morpho Vault V2 deployment",
+          "url": "https://app.morpho.org/ethereum/vault/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+        },
+        {
+          "label": "Partially verified VaultV2 source; explorer deployed bytecode matches pinned RPC",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+        },
+        {
+          "label": "Ethereum RPC pinned block 26107704, observed 2026-10-02T22:44:52.884200+00:00",
+          "url": "https://eth-mainnet.g.alchemy.com"
+        },
+        {
+          "label": "Morpho itemized vault and adapter data observed 2026-10-02T22:44:52.884200+00:00",
+          "url": "https://api.morpho.org/graphql"
+        },
+        {
+          "label": "Morpho gate semantics and irreversible abdication",
+          "url": "https://docs.morpho.org/curate/concepts/gates.md"
+        },
+        {
+          "label": "Exact current MorphoMarketV1AdapterV2 source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4f74895557bea2de5d51d8c06e944da92dbc8550"
+        },
+        {
+          "label": "Sourcify verified VaultV2 compiler/runtime reference; exact pinned target functional equivalence independently reproduced 2026-10-03",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c?fields=sources,compilation,runtimeBytecode"
+        },
+        {
+          "label": "Sourcify verified MorphoMarketV1AdapterV2 compiler/runtime reference; exact pinned target functional equivalence independently reproduced 2026-10-03",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0x812b71c33ae5eafebae967c5670e37eca3cab0ac?fields=sources,compilation,runtimeBytecode"
+        }
+      ]
+    },
+    "review": {
+      "sources": [
+        {
+          "label": "Exact KPK USDC Yield V2 Morpho Vault V2 deployment",
+          "url": "https://app.morpho.org/ethereum/vault/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+        },
+        {
+          "label": "Partially verified VaultV2 source; explorer deployed bytecode matches pinned RPC",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+        },
+        {
+          "label": "Ethereum RPC pinned block 26107704, observed 2026-10-02T22:44:52.884200+00:00",
+          "url": "https://eth-mainnet.g.alchemy.com"
+        },
+        {
+          "label": "Morpho itemized vault and adapter data observed 2026-10-02T22:44:52.884200+00:00",
+          "url": "https://api.morpho.org/graphql"
+        },
+        {
+          "label": "Morpho gate semantics and irreversible abdication",
+          "url": "https://docs.morpho.org/curate/concepts/gates.md"
+        },
+        {
+          "label": "Exact current MorphoMarketV1AdapterV2 source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4f74895557bea2de5d51d8c06e944da92dbc8550"
+        },
+        {
+          "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+          "url": "https://blue-api.morpho.org/graphql"
+        },
+        {
+          "label": "ChainSecurity VaultV2 code assessment, 2025-09-16 (reference code, not financial assurance)",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/main/audits/2025-09-15-chainsecurity.pdf"
+        },
+        {
+          "label": "Cantina Managed adapter review, report 2025-12-15; final code tag 2025-12-04 (not exact-vault assurance)",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/main/audits/2025-12-04-market-v1-adapter-v2-spearbit.pdf"
+        },
+        {
+          "label": "Exact Zodiac Roles complete public grant log (34 records; pagination end) and current module-member census, reviewed 2026-10-03",
+          "url": "https://eth.blockscout.com/api/v2/addresses/0xc3a8702bc57e0b787bd62d429a993265f596be1e/logs"
+        },
+        {
+          "label": "Sourcify verified VaultV2 compiler/runtime reference; exact pinned target functional equivalence independently reproduced 2026-10-03",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c?fields=sources,compilation,runtimeBytecode"
+        },
+        {
+          "label": "Sourcify verified MorphoMarketV1AdapterV2 compiler/runtime reference; exact pinned target functional equivalence independently reproduced 2026-10-03",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0x812b71c33ae5eafebae967c5670e37eca3cab0ac?fields=sources,compilation,runtimeBytecode"
+        }
+      ],
+      "evidence": "At Ethereum block 26107704, asset()=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, totalSupply()=9792630120840452584390720 raw 18-decimal shares and totalAssets()=10295065635649 raw 6-decimal USDC. One adapter 0x4f74895557bea2de5d51d8c06e944da92dbc8550 enumerates 5 current market IDs; summed expectedSupplyAssets=9983200606668, idle underlying=311865028981; their sum equals totalAssets. All current positions have zero borrow shares and zero posted collateral. This is an operational proportional lending-position claim. It is not direct ownership of the parent issuer reserve, an independently signed financial reconciliation, or proof of legal segregation and insolvency priority. Blockscout is_fully_verified=false; bytecode equality is not a complete compiler/source verification. Current performance and management fees are zero; governed fee settings can create accrual fee shares. Parent issuer authority is inherited rather than copied as favorable wrapper supervision. On 2026-10-03 the exact owner/curator returned by Morpho were independently reconfirmed by RPC. Published allocator/sentinel addresses were each checked with isAllocator/isSentinel at block 26110242. Selector-specific fee delays and the published role census are recorded below; no exhaustive module-permission or independent-human-signer closure is claimed. Calibration retention (2026-10-03): Human signer attribution, independent human control and key custody are undisclosed. Module role/member/function events and current member pagination are reconstructed; exact permission-storage validation, full executable source correspondence and current unwrap-adapter execution/noninterference remain unverified. Exact-vault signed financial assurance and legal insolvency priority. Mint reconciliation remains not-applicable to this deposit-backed local share/fee-share mechanism; independent financial assurance, reserve-to-liability reconciliation and holder insolvency priority remain separate Backing observations, not a claim that such assurance exists. Parent durable-token issuance is inherited and is not resolved by this local share review. Calibration v2 (2026-10-03): Matching explorer-reported deployed bytecode to pinned RPC does not establish equality to a fully verified reference runtime. The previously scoped compiler/source-completeness and executable Zodiac permission/unwrap gaps remain genuine local mint/authorization-path unknowns and are restored to the aggregate unresolved review; no unidentified signer custody is added to that aggregate flag. Calibration v2 custody retention: signer independence, actual key custody and signing-policy questions are restored separately for each identified Safe/EOA controller; known controller addresses and quorum evidence do not establish the human/key-custody facts. Reconciliation remains not-applicable because this is a local deposit-backed ERC-4626 share/fee-share mechanism, not an issuer supply-to-reserve reconciliation regime; parent durable issuance and independent financial assurance are not established by this local review. Supervision remains none: no local prudential or assurance-opinion credit is claimed. Independently reproduced functional compiler/runtime correspondence on 2026-10-03 at ethereum block 26107704 for exact VaultV2 0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13 and its complete one-adapter inventory 0x4f74895557bea2de5d51d8c06e944da92dbc8550, also the observed liquidityAdapter. Vault reference is Sourcify chain 8453, 0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c, runtimeMatch=match, matchId 30034094, verifiedAt 2026-05-26T22:26:25Z; compiler solc 0.8.28+commit.7893614a, viaIR, optimizer 100000. Pinned target runtime length is 21808 bytes. Masked only compiler-declared immutable references AST37 asset (6 occurrences), AST39 decimals (1), AST41 virtualShares (5), and declared 12-byte CBOR auxdata including length trailer at byte offset 21796. All 12 immutable 32-byte occurrences independently match exact target getters: asset=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, decimals=18, virtualShares=1000000000000. Every remaining executable runtime byte equals the verified reference recompiled runtime; normalized SHA-256=cf17ab0161388ea9277000e692e929216da2618e441c54bcd677def1000dd12e. Adapter independently matches a separate Sourcify-verified MorphoMarketV1AdapterV2 reference, chain 8453 0x812b71c33ae5eafebae967c5670e37eca3cab0ac, runtimeMatch=match, matchId 33231859, verifiedAt 2026-06-21T06:48:43Z, same compiler/viaIR/optimizer settings. Pinned adapter runtime length is 11784 bytes; masked only declared immutable AST2265 factory (1 occurrence), AST2267 parentVault (6), AST2269 asset (3), AST2271 morpho (4), AST2273 adapterId (2), AST2275 adaptiveCurveIrm (4), and 12-byte CBOR auxdata at offset 11772. All 20 immutable occurrences match exact same-block adapter getters: factory=0x32bb1c0d48d8b1b3363e86eeb9a0300bad61ccc1; parentVault=0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13; asset=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48; morpho=0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb; adapterId=0x9e6db6cbaceaa8946a86cf8d688574746d10ffe2b6633a44843d07209f4e705e; adaptiveCurveIrm=0x870ac11d48b15db9a138cf899d20f13f79ba00bc. Every remaining adapter executable byte equals its verified reference recompiled runtime; normalized SHA-256=355d973d7a246e5d4c02bb68e7415b9d62bf584a57f6101357b57c5d2fc40113. This closes the earlier partial-explorer/compiler source-identity unknown for this vault and its mint-accounting adapter under calibration v2 R4. It is functional executable correspondence, not complete target creation-bytecode/metadata identity or financial assurance. Previously recorded code-identity uncertainty is superseded by this direct proof; signer-custody and any separately listed Zodiac permission/unwrap execution gaps remain unresolved.",
+      "reviewer": "Sol functional runtime correspondence 2026-10-03 (Refine09)",
+      "reviewedAt": "2026-10-03",
+      "disposition": "unresolved",
+      "unresolvedQuestions": [
+        "Module role/member/function events and current member pagination are reconstructed; exact permission-storage validation, full executable source correspondence and current unwrap-adapter execution/noninterference remain unverified."
+      ],
+      "scopedQuestions": [
+        {
+          "controlRef": "ethereum:0x8b884f80b3b839f52b6ce168f133e7a5d1f0a537",
+          "question": "For this identified KPK USDC Yield V2 owner parameter authority controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address and Safe quorum/owner inventory is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
+          "sources": [
+            {
+              "label": "Exact KPK USDC Yield V2 Morpho Vault V2 deployment",
+              "url": "https://app.morpho.org/ethereum/vault/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+            },
+            {
+              "label": "Partially verified VaultV2 source; explorer deployed bytecode matches pinned RPC",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+            },
+            {
+              "label": "Ethereum RPC pinned block 26107704, observed 2026-10-02T22:44:52.884200+00:00",
+              "url": "https://eth-mainnet.g.alchemy.com"
+            },
+            {
+              "label": "Morpho itemized vault and adapter data observed 2026-10-02T22:44:52.884200+00:00",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Morpho gate semantics and irreversible abdication",
+              "url": "https://docs.morpho.org/curate/concepts/gates.md"
+            },
+            {
+              "label": "Exact current MorphoMarketV1AdapterV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4f74895557bea2de5d51d8c06e944da92dbc8550"
+            },
+            {
+              "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+              "url": "https://blue-api.morpho.org/graphql"
+            }
+          ]
+        },
+        {
+          "controlRef": "ethereum:0x7e43df1c1c5a2245858b60d4655fda83704e4171",
+          "question": "For this identified KPK USDC Yield V2 curator parameter authority controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address and Safe quorum/owner inventory is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
+          "sources": [
+            {
+              "label": "Exact KPK USDC Yield V2 Morpho Vault V2 deployment",
+              "url": "https://app.morpho.org/ethereum/vault/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+            },
+            {
+              "label": "Partially verified VaultV2 source; explorer deployed bytecode matches pinned RPC",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+            },
+            {
+              "label": "Ethereum RPC pinned block 26107704, observed 2026-10-02T22:44:52.884200+00:00",
+              "url": "https://eth-mainnet.g.alchemy.com"
+            },
+            {
+              "label": "Morpho itemized vault and adapter data observed 2026-10-02T22:44:52.884200+00:00",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Morpho gate semantics and irreversible abdication",
+              "url": "https://docs.morpho.org/curate/concepts/gates.md"
+            },
+            {
+              "label": "Exact current MorphoMarketV1AdapterV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4f74895557bea2de5d51d8c06e944da92dbc8550"
+            },
+            {
+              "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+              "url": "https://blue-api.morpho.org/graphql"
+            },
+            {
+              "label": "Enabled Zodiac Roles EIP-1167 module and implementation identity",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc3a8702bc57e0b787bd62d429a993265f596be1e"
+            },
+            {
+              "label": "Zodiac Roles partial implementation source; mutable role and target permissions",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9646fdad06d3e24444381f44362a3b0eb343d337"
+            },
+            {
+              "label": "Exact Zodiac Roles complete public grant log (34 records; pagination end) and current module-member census, reviewed 2026-10-03",
+              "url": "https://eth.blockscout.com/api/v2/addresses/0xc3a8702bc57e0b787bd62d429a993265f596be1e/logs"
+            }
+          ]
+        },
+        {
+          "controlRef": "ethereum:0x331d9c769185ae25233314859d53c2b9203a1204",
+          "question": "For this identified KPK USDC Yield allocator 0x331d9c769185ae25233314859d53c2b9203a1204 controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
+          "sources": [
+            {
+              "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+              "url": "https://blue-api.morpho.org/graphql"
+            },
+            {
+              "label": "ethereum RPC role/code census at block 26110242; credentials omitted",
+              "url": "https://ethereum-rpc.publicnode.com"
+            }
+          ]
+        },
+        {
+          "controlRef": "ethereum:0xaf150c6d108d0c2c96bbfc3cef9b4848b5d99440",
+          "question": "For this identified KPK USDC Yield allocator 0xaf150c6d108d0c2c96bbfc3cef9b4848b5d99440 controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
+          "sources": [
+            {
+              "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+              "url": "https://blue-api.morpho.org/graphql"
+            },
+            {
+              "label": "ethereum RPC role/code census at block 26110242; credentials omitted",
+              "url": "https://ethereum-rpc.publicnode.com"
+            }
+          ]
+        },
+        {
+          "controlRef": "ethereum:0xf0cf1e3ec6264b03241826f5b2abda17b4352a75",
+          "question": "For this identified KPK USDC Yield allocator 0xf0cf1e3ec6264b03241826f5b2abda17b4352a75 controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
+          "sources": [
+            {
+              "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+              "url": "https://blue-api.morpho.org/graphql"
+            },
+            {
+              "label": "ethereum RPC role/code census at block 26110242; credentials omitted",
+              "url": "https://ethereum-rpc.publicnode.com"
+            }
+          ]
+        },
+        {
+          "controlRef": "ethereum:0x7a35f5dcd3faa4bd617b7d7c3cc9b9ea6353291f",
+          "question": "For this identified KPK USDC Yield Zodiac MORPHO_REBALANCER_AGENT controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
+          "sources": [
+            {
+              "label": "Exact Zodiac Roles complete public grant log (34 records; pagination end) and current module-member census, reviewed 2026-10-03",
+              "url": "https://eth.blockscout.com/api/v2/addresses/0xc3a8702bc57e0b787bd62d429a993265f596be1e/logs"
+            },
+            {
+              "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+              "url": "https://blue-api.morpho.org/graphql"
+            },
+            {
+              "label": "Exact VaultV2 ABI/source for role-granted selectors",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+            }
+          ]
+        },
+        {
+          "controlRef": "ethereum:0x769605006f6feee3494c72236130067526af848f",
+          "question": "For this identified KPK USDC Yield Zodiac MORPHO_SHUTDOWN_AGENT controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
+          "sources": [
+            {
+              "label": "Exact Zodiac Roles complete public grant log (34 records; pagination end) and current module-member census, reviewed 2026-10-03",
+              "url": "https://eth.blockscout.com/api/v2/addresses/0xc3a8702bc57e0b787bd62d429a993265f596be1e/logs"
+            },
+            {
+              "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+              "url": "https://blue-api.morpho.org/graphql"
+            },
+            {
+              "label": "Exact VaultV2 ABI/source for role-granted selectors",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+            }
+          ]
+        },
+        {
+          "controlRef": "ethereum:0x393d8d9c3dae91b2d0530673c57e9c7e13ff4c9a",
+          "question": "For this identified KPK USDC Yield Zodiac MORPHO_MONITORING_AGENT controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
+          "sources": [
+            {
+              "label": "Exact Zodiac Roles complete public grant log (34 records; pagination end) and current module-member census, reviewed 2026-10-03",
+              "url": "https://eth.blockscout.com/api/v2/addresses/0xc3a8702bc57e0b787bd62d429a993265f596be1e/logs"
+            },
+            {
+              "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+              "url": "https://blue-api.morpho.org/graphql"
+            },
+            {
+              "label": "Exact VaultV2 ABI/source for role-granted selectors",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

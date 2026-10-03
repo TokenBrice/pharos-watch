@@ -1,0 +1,41 @@
+{
+  "id": "ustx-tx",
+  "name": "USTX",
+  "symbol": "USTX",
+  "oneLiner": "USTX is a planned Brale-issued dollar stablecoin for native settlement of tokenized stocks, ETFs and other assets on tx.",
+  "flags": {
+    "backing": "rwa-backed",
+    "governance": "centralized"
+  },
+  "collateral": "Pre-launch: tx promises full 1:1 backing for USTX issued by Brale. Brale's program-level policy specifies segregated reserves held separately from corporate assets, daily reconciliation and monthly independent CPA attestations, with reserves in US Treasury bills of at most 90 days, government money market funds and bank deposits. These issuer commitments do not establish USTX-specific allocations, custodians or a retrieved independent reserve report.",
+  "pegMechanism": "Planned native USD settlement asset on tx, issued by Brale. Exact USTX mint and redemption eligibility, fees, minimums, timing and capacity are unpublished. Brale general terms restrict purchases and redemptions to qualifying accounts and permit suspension.",
+  "mechanismArchetype": "fiat-cash",
+  "links": [
+    {
+      "label": "Announcement",
+      "url": "https://www.linkedin.com/feed/update/urn:li:ugcPost:7508604753505964033/"
+    },
+    {
+      "label": "Issuer security and reserve policies",
+      "url": "https://brale.xyz/security"
+    },
+    {
+      "label": "Issuer end user agreement",
+      "url": "https://brale.xyz/legal/end-user-agreement"
+    }
+  ],
+  "status": "pre-launch",
+  "announcedDate": "2026-09-23",
+  "expectedLaunchDate": "2026-10",
+  "launchPhase": "announced",
+  "launchPhaseDetail": "tx announced USTX on September 23, 2026 as a fully backed 1:1 stablecoin issued by Brale, native to tx, with an October 2026 launch window. No exact launch day, native asset address, decimals or token-specific control and redemption terms are established. tx is a planned ecosystem, not an authored supported deployment.",
+  "milestones": [
+    {
+      "date": "2026-09-23",
+      "type": "announcement",
+      "title": "tx announces native USTX issued by Brale",
+      "sourceUrl": "https://www.linkedin.com/feed/update/urn:li:ugcPost:7508604753505964033/",
+      "description": "The issuer partnership promises full 1:1 backing and an October launch for settlement of tokenized stocks, ETFs and other real-world assets."
+    }
+  ]
+}

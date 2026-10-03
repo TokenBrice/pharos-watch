@@ -1,0 +1,46 @@
+{
+  "id": "syrupusdg-maple",
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "Maple expressly describes syrupUSDG as a proportional pooled-credit/strategy share, denies one-to-one USDG backing and guarantees no fixed principal redemption. It is a yield-bearing strategy receipt rather than a fixed-value payment token; this explicit review follows the syrupUSDC precedent.",
+      "references": [
+        {
+          "label": "GENIUS Act section 2 payment-stablecoin definition",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-02"
+        },
+        {
+          "label": "Maple syrupUSDG legal claim and risk disclosures",
+          "url": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-02"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "This is an informational payment-stablecoin scope finding, not a securities-law opinion or an authorization claim. The token name and tracked USDG parent can obscure its pooled-credit exposure. No issuer license, GENIUS approval or MiCA finding is inferred from the parent.",
+    "references": [
+      {
+        "label": "GENIUS Act section 2 payment-stablecoin definition",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-02"
+      },
+      {
+        "label": "Maple syrupUSDG legal claim and risk disclosures",
+        "url": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-02"
+      }
+    ],
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  }
+}

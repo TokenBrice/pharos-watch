@@ -1,0 +1,100 @@
+{
+  "id": "zaru-blocktower",
+  "reserves": [
+    {
+      "name": "ZAR cash and bank deposits at Standard Bank",
+      "pct": 43.4,
+      "risk": "low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Standard Bank of South Africa Limited",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "ZAR unit-trust money-market funds at Sanlam",
+      "pct": 56.6,
+      "risk": "low",
+      "assetClass": "money-market-fund",
+      "issuerOrObligor": "Sanlam Investment Management (Pty) Ltd; underlying fund constituents undisclosed",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Issuer holder and reserve terms",
+        "url": "https://zaru.network/blog/zar-universal-white-paper"
+      },
+      {
+        "label": "Retrieved independent reserve report",
+        "url": "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf"
+      }
+    ],
+    "rationale": "Historical July 31 book only: ZAR 23,314,336.68 bank deposits and 30,402,618.53 money-market funds total 53,716,955.21 against 52,946,200.1241 circulating ZARU. Percentages are rounded from those amounts and do not assert current weights. Moore obtained supporting documents directly from Standard Bank and Sanlam; segregation and lack of encumbrance primarily rely on management representations. No assurance opinion is expressed.",
+    "compositionBasis": "Retrieved independent report; historical snapshot and scope retained",
+    "compositionAsOf": "2026-07-31",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Current allocations, fund look-through, maximum maturity, and enforceable insolvency priority remain undisclosed or unverified.",
+    "knownUnknownExposurePct": 56.6,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "ZAR cash and bank deposits at Standard Bank",
+        "pct": 43.4,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Off-chain fiat deposit or fund share, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "ZAR unit-trust money-market funds at Sanlam",
+        "pct": 56.6,
+        "disposition": "insufficient-evidence",
+        "rationale": "The historical report identifies the off-chain Sanlam money-market fund balance, but does not disclose its underlying constituent exposures or maturity limits. The entire 56.6% fund slice remains unresolved for look-through classification; no tracked stablecoin dependency is inferred."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Standard Bank of South Africa Limited",
+        "role": "bank",
+        "jurisdiction": "South Africa"
+      },
+      {
+        "name": "Sanlam Investment Management (Pty) Ltd",
+        "role": "custodian",
+        "jurisdiction": "South Africa"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Issuer holder and reserve terms",
+        "url": "https://zaru.network/blog/zar-universal-white-paper"
+      },
+      {
+        "label": "Retrieved independent reserve report",
+        "url": "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf"
+      }
+    ],
+    "uncertainty": "Current allocations, fund look-through, maximum maturity, and enforceable insolvency priority remain undisclosed or unverified. Segregation labels for the rand tokens reflect issuer terms and management representations, not independently proven bankruptcy remoteness."
+  }
+}

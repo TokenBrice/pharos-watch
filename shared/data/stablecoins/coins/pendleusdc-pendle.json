@@ -1,0 +1,120 @@
+{
+  "id": "pendleusdc-pendle",
+  "name": "Pendle Ecosystem USDC",
+  "symbol": "pendleUSDC",
+  "oneLiner": "pendleUSDC is Pendle Ecosystem's USDC lending vault on Ethereum; shares redeem at NAV when liquidity is available and bear strategy losses.",
+  "flags": {
+    "backing": "crypto-backed",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "navToken": true
+  },
+  "variantOf": "usdc-circle",
+  "variantKind": "strategy-vault",
+  "pegReferenceId": "usdc-circle",
+  "collateral": "USDC lender positions in three Morpho markets secured by PT-reUSD-10DEC2026, PT-sUSDS-26NOV2026 and PT-sUSDE-26NOV2026",
+  "pegMechanism": "ERC-4626 shares accrue lending interest and realize losses against USDC; direct redemption uses idle USDC and a configured liquidity adapter, subject to market liquidity. In-kind deallocation retains underlying lending-position exposure.",
+  "mechanismArchetype": "protocol-position",
+  "archetypeOverride": true,
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rationale": "Pendle Ecosystem USDC at ethereum:0x55c1b6e461a6334b567baf0feb5d728715446f05 is an ERC-4626 share over USDC with a code-enforced pro-rata claim on the current Morpho lending inventory. The claim bears lending losses and liquidity constraints, so protocol-position intentionally differs from the fiat-cash parent and older Morpho precedents. At ethereum block 26107703 (0x18e5f37), captured 2026-10-02T22:44:09.665742+00:00, totalSupply=57223770882007511486234678 atomic shares; accrueInterestView returned assets=57750429995940, pending performance shares=41086454487993768052, pending management shares=0. Idle USDC=0; complete adapter inventory sums to 57750429995940 USDC atomic units. Asset decimals=6, share decimals=18. convertToAssets(1e18)=1009202 USDC atomic units. ",
+    "sources": [
+      {
+        "label": "Pendle Ecosystem USDC exact vault identity and accounting",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Morpho Vault V2 mechanism documentation",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+      },
+      {
+        "label": "Pinned VaultV2 primary source, gate and loss semantics",
+        "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+      },
+      {
+        "label": "Pinned MorphoMarketV1AdapterV2 primary source",
+        "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+      },
+      {
+        "label": "Ethereum block 26107703 replay locator; observed via Alchemy Ethereum RPC (credential omitted)",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Exact VaultV2 partial source with matching deployed bytecode",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x55c1b6e461a6334b567baf0feb5d728715446f05"
+      },
+      {
+        "label": "Exact adapter partial source with matching deployed bytecode",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa2f362079dbc570a6df5bd04ad91002d17c0db9a"
+      },
+      {
+        "label": "Exact vault creationTimestamp 1785859775, creationBlockNumber 25682655; RPC block timestamp independently matches, reviewed 2026-10-03",
+        "url": "https://blue-api.morpho.org/graphql"
+      }
+    ]
+  },
+  "detailProvider": "coingecko",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://app.morpho.org/ethereum/vault/0x55c1b6e461a6334b567baf0feb5d728715446f05"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x55c1b6e461a6334b567baf0feb5d728715446f05",
+      "decimals": 18
+    }
+  ],
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "custodyModel": "onchain",
+  "governanceQuality": "wrapper",
+  "yieldConfig": {
+    "yieldSource": "Pendle Ecosystem USDC Morpho USDC lending vault",
+    "yieldType": "lending-vault"
+  },
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "pendleusdc-pendle",
+    "display": {
+      "url": "https://app.morpho.org/ethereum/vault/0x55c1b6e461a6334b567baf0feb5d728715446f05",
+      "label": "Pendle Ecosystem USDC"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "Pendle Ecosystem USDC deployed Morpho lending positions",
+        "risk": "high",
+        "coinId": "usdc-circle",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+      },
+      "deployedExposure": {
+        "basis": "Pinned complete adapter inventory consists of USDC-denominated lender positions, not idle cash: USDC lender positions in three Morpho markets secured by PT-reUSD-10DEC2026, PT-sUSDS-26NOV2026 and PT-sUSDE-26NOV2026",
+        "reviewedAt": "2026-10-02",
+        "sourceUrl": "https://api.morpho.org/graphql"
+      },
+      "redemptionLiquidity": {
+        "source": "morpho-vault-v2",
+        "chainId": 1
+      }
+    }
+  },
+  "implementationLaunchDate": "2026-08-04"
+}

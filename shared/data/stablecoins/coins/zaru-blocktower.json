@@ -1,0 +1,96 @@
+{
+  "id": "zaru-blocktower",
+  "name": "ZAR Universal",
+  "symbol": "ZARU",
+  "oneLiner": "ZARU is BlockTower's rand token, backed by cash and money-market funds with institutional redemption and retail partner access.",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "ZAR",
+    "governance": "centralized"
+  },
+  "collateral": "Rand bank deposits at Standard Bank and unit-trust money-market funds at Sanlam; the retrieved Moore report measures the July 31, 2026 book, not current allocations.",
+  "pegMechanism": "One ZAR per token through BlockTower's verified institutional mint/redemption service; retail access through network partners. Fiat settlement may take up to five business days, and partner fees and minimums vary.",
+  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Pharos refinement Refine02 primary-source and RPC review",
+    "rationale": "The whitepaper defines a fixed-rand, issuer-native liability backed by bank deposits and money-market instruments, not a variable-NAV fund share. Canonical Solana mint creation and initialization at slot 373091718 on 2025-10-13 bind the implementation date; later EVM native deployments are not substituted for that canonical mint's age.",
+    "sources": [
+      {"label": "ZARU whitepaper 4.04, 4.08 and 4.17", "url": "https://zaru.network/blog/zar-universal-white-paper"},
+      {"label": "Canonical mint creation and initialization", "url": "https://solscan.io/tx/5ujgjg4P8ciRqDaQkMjM135KoWkMJUmRbxXj5nQUdxkEhkMFrx8rFDnaqCtU27Vv8RtkbbRP2Xmay41pMBJUJNW9"}
+    ]
+  },
+  "detailProvider": "coingecko",
+  "implementationLaunchDate": "2025-10-13",
+  "contracts": [
+    {
+      "chain": "solana",
+      "address": "2WvREMqcoxtGuKTyyuzVMH7xDkeH8mY6phduvUofPRXN",
+      "decimals": 6
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5",
+      "decimals": 18
+    },
+    {
+      "chain": "arc",
+      "address": "0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5",
+      "decimals": 18
+    }
+  ],
+  "jurisdiction": {
+    "country": "South Africa"
+  },
+  "custodyModel": "unknown",
+  "collateralQuality": "rwa",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://zaru.network/"
+    },
+    {
+      "label": "Holder terms and issuance",
+      "url": "https://zaru.network/blog/zar-universal-white-paper"
+    },
+    {
+      "label": "Reserve report",
+      "url": "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf"
+    },
+    {
+      "label": "Canonical Solana mint creation and initialization, slot 373091718",
+      "url": "https://solscan.io/tx/5ujgjg4P8ciRqDaQkMjM135KoWkMJUmRbxXj5nQUdxkEhkMFrx8rFDnaqCtU27Vv8RtkbbRP2Xmay41pMBJUJNW9"
+    }
+  ],
+  "geckoId": "zar-universal",
+  "proofOfReserves": {
+    "type": "agreed-upon-procedures",
+    "url": "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf",
+    "provider": "Moore Blockchain and Digital Assets JHB (Pty) Ltd; ISRS 4400 (Revised) procedures expressly provide no assurance opinion",
+    "attestorTier": "regional",
+    "cadence": "ad-hoc",
+    "attestorJurisdiction": "South Africa",
+    "latestReport": {
+      "periodEnd": "2026-07-31",
+      "publishedAt": "2026-08-28",
+      "publishedAtBasis": "signed-date-standin",
+      "assuranceMethod": "agreed-upon-procedures",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Retrieved independent reserve report",
+          "url": "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf"
+        }
+      ]
+    }
+  }
+}

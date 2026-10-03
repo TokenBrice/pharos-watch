@@ -1,0 +1,19 @@
+{
+  "id": "gbp-vvtx",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "VVTX issuer",
+        "url": "https://www.vvtx.com/"
+      },
+      {
+        "label": "FCA sandbox selection",
+        "url": "https://www.fca.org.uk/news/press-releases/4-firms-selected-test-stablecoin-regulatory-sandbox"
+      }
+    ],
+    "evidence": "VVTX describes a custodial wallet and proprietary Layer-1 embedded control architecture, alongside controlled mint/burn. No token-specific address freezing, seizure, validator authority or upgrade interface is published. Controlled minting and sandbox selection do not establish definite holder-address freezing; the capability remains unresolved.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  }
+}

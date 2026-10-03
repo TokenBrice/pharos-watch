@@ -1,0 +1,66 @@
+{
+  "id": "stbt-matrixdock",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Verified transfer-control implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe7efc5060b6ad57b68f5911eca6c5cd1952da152"
+      },
+      {
+        "label": "STBT January 2025 terms",
+        "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FzHip8cJaP5aud3KfdVud%2FSTBT%20Token%C2%A0Terms%20and%20Conditions.pdf?alt=media&token=79d5fd49-deae-41b4-a809-9e1afaa02f32"
+      }
+    ],
+    "evidence": "STBTv2 setPermission controls send/receive permissions; controllerTransfer and controllerRedeem permit forced transfer and burn. Native contract controller/moderator were both 0x22276a1bd16bc3052b362c2e0f65aace04ed6f99 at block 26107703.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "STBT native issue/distribution relies on an issuer-controlled reserve feed and mutable owner parameters; independent feed governance was not established.",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Verified NAV or reserve-feed source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe7efc5060b6ad57b68f5911eca6c5cd1952da152"
+      },
+      {
+        "label": "STBT January 2025 terms",
+        "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FzHip8cJaP5aud3KfdVud%2FSTBT%20Token%C2%A0Terms%20and%20Conditions.pdf?alt=media&token=79d5fd49-deae-41b4-a809-9e1afaa02f32"
+      }
+    ],
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "rationale": "Administered NAV/reserve-feed pricing authority applies to fund/share issuance or rebase; no borrower collateral/liquidation branches exist.",
+      "sources": [
+        {
+          "label": "Deployed valuation and mint implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe7efc5060b6ad57b68f5911eca6c5cd1952da152"
+        }
+      ]
+    },
+    "paths": [
+      {
+        "id": "ethereum:0x530824da86689c9c17cdc2871ff29b058345b44a",
+        "chain": "ethereum",
+        "address": "0x530824da86689c9c17cdc2871ff29b058345b44a",
+        "pricingAuthority": "internal-price",
+        "applicability": {
+          "disposition": "top-level-only",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine04 deployed source review",
+          "confidence": "verified",
+          "rationale": "Native STBT uses privileged reserve updates and interest distribution, not collateral-vault liquidation branches. Block 26110197 getLatestReserve returns 23791487760000000000000000; the getter has no report timestamp. Selector-specific controller delays are 14400 seconds for issue/distributeInterests and 86400 seconds for implementation replacement. This establishes pricing authority and path scope, not reserve financial correctness.",
+          "sources": [{"label": "Exact STBT implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe7efc5060b6ad57b68f5911eca6c5cd1952da152"}, {"label": "Deployed selector-delay controller", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x22276a1bd16bc3052b362c2e0f65aace04ed6f99"}]
+        }
+      }
+    ]
+  }
+}

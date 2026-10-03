@@ -1,0 +1,120 @@
+{
+  "liveReservesConfig": {
+    "adapter": "attestation-pdf-index",
+    "version": 1,
+    "semantics": "attestation-mix",
+    "breakerScope": "usdu-universal",
+    "display": { "url": "https://www.universal.ae/transparency", "label": "Universal USDU examination index" },
+    "inputs": { "primary": { "kind": "http-html", "url": "https://www.universal.ae/transparency" } },
+    "params": {
+      "linkMatch": "USDU.*Examination",
+      "reviewedReport": {
+        "url": "https://cdn.prod.website-files.com/68cf1072d23d4d5b68d8f496/6aba3d94e9697870784a49e5_Final%20USDU%20Examination%20Report%20-%20August%202026%20Countersigned.pdf",
+        "balanceDate": "2026-08-31"
+      },
+      "slices": [{
+        "name": "USD bank deposits", "pct": 100, "risk": "low", "assetClass": "bank-deposit",
+        "issuerOrObligor": "UAE Central Bank-regulated reserve banks",
+        "riskFactors": ["credit", "counterparty", "custody", "legal", "concentration"],
+        "liquidityHorizon": "unknown"
+      }]
+    }
+  },
+  "id": "usdu-universal",
+  "name": "Universal USD",
+  "symbol": "USDU",
+  "oneLiner": "USDU is Universal Digital’s ADGM-authorized dollar, backed by USD bank deposits and redeemable at par by onboarded professional clients.",
+  "flags": {
+    "backing": "rwa-backed",
+    "governance": "centralized"
+  },
+  "collateral": "U.S. dollar deposits at UAE banks; the August 31, 2026 Crowe examination reconciles $30,651,543.81 of deposits to the same number of Ethereum USDU tokens.",
+  "pegMechanism": "Universal mints against validated USD reserve deposits through Aquanow; onboarded professional clients redeem at $1 per USDU, generally within two business days after due diligence, with fees and extension rights.",
+  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Pharos refinement Refine02 primary-source and RPC review",
+    "rationale": "USDU is an issuer-native fixed-dollar fiat obligation supported by bank deposits, deposit validation and par redemption, not an oracle-valued share or borrower collateral mechanism. Ethereum receipts bind the exact current TokenV1 logic creation to block 23076876 and proxy creation to block 23076878, both on 2025-08-05. The dated CertiK audit reference is code-security evidence, not reserve assurance.",
+    "sources": [
+      {"label": "USDU January 30, 2026 whitepaper", "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf"},
+      {"label": "Exact current TokenV1 implementation creation", "url": "https://etherscan.io/tx/0xbdaaa67b4efbe639b70a452d981ac4c024abb8b5d8ae0a0fb6ea09dddb0eedc0"},
+      {"label": "Ethereum proxy creation", "url": "https://etherscan.io/tx/0xb26eb7562ed95893f67960b2deaf1eb4c98609b7759e366449b4a708548c6a9d"}
+    ]
+  },
+  "llamaId": "410",
+  "detailProvider": "defillama",
+  "geckoId": "universal-usd",
+  "launchDate": "2025-08-05",
+  "implementationLaunchDate": "2025-08-05",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://www.universal.ae/transparency",
+    "provider": "Crowe Mak LLP",
+    "attestorTier": "regional",
+    "cadence": "monthly",
+    "attestorJurisdiction": "United Arab Emirates",
+    "attestorLicense": "Registration No. 000002075",
+    "latestReport": {
+      "periodEnd": "2026-08-31",
+      "publishedAt": "2026-09-18",
+      "publishedAtBasis": "signed-date-standin",
+      "assuranceMethod": "examination",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Crowe August 2026 ISAE3000 examination",
+          "url": "https://cdn.prod.website-files.com/68cf1072d23d4d5b68d8f496/6aba3d94e9697870784a49e5_Final%20USDU%20Examination%20Report%20-%20August%202026%20Countersigned.pdf"
+        }
+      ]
+    }
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.universal.ae/"
+    },
+    {
+      "label": "Transparency",
+      "url": "https://www.universal.ae/transparency"
+    },
+    {
+      "label": "Whitepaper",
+      "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf"
+    },
+    {
+      "label": "FSRA issuer register",
+      "url": "https://www.adgm.com/public-registers/fsra/firms/financial-firms/universal-digital-intl-limited-250089"
+    },
+    {
+      "label": "Current TokenV1 implementation creation, block 23076876",
+      "url": "https://etherscan.io/tx/0xbdaaa67b4efbe639b70a452d981ac4c024abb8b5d8ae0a0fb6ea09dddb0eedc0"
+    },
+    {
+      "label": "Ethereum proxy creation, block 23076878",
+      "url": "https://etherscan.io/tx/0xb26eb7562ed95893f67960b2deaf1eb4c98609b7759e366449b4a708548c6a9d"
+    },
+    {
+      "label": "CertiK Aquanow USDU audit archive, delivered May 2, 2025",
+      "url": "https://v1.skynet.cdn.certik.com/projects/usdu"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United Arab Emirates",
+    "regulator": "ADGM Financial Services Regulatory Authority",
+    "license": "FSP 250089: Issuing a Fiat-Referenced Token; no Retail Clients"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xe4ca6596d2c28014c6f89964f57838e0be9f369b",
+      "decimals": 6
+    }
+  ],
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity"
+}

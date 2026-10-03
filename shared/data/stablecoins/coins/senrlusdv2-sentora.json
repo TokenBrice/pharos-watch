@@ -1,0 +1,112 @@
+{
+  "id": "senrlusdv2-sentora",
+  "name": "Sentora RLUSD Main",
+  "symbol": "senRLUSDv2",
+  "oneLiner": "senRLUSDv2 is Sentora's RLUSD Morpho Vault V2 share; yield and losses change NAV, and cash redemption depends on idle RLUSD.",
+  "flags": {
+    "backing": "crypto-backed",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "navToken": true
+  },
+  "variantOf": "rlusd-ripple",
+  "variantKind": "strategy-vault",
+  "pegReferenceId": "rlusd-ripple",
+  "collateral": "RLUSD lending positions against cbBTC, FXRP, syrupUSDC, wstETH, USDe, weETH, kBTC and WBTC, plus 1-wei lender dust positions against PT-sUSDE-13AUG2026 and WETH. Allocations change under curator controls; borrower collateral is distinct from the underlying deposited token.",
+  "pegMechanism": "ERC-4626 deposit/mint and withdraw/redeem exchange shares for RLUSD at the current asset conversion rate. Lending interest, fees and realized losses change NAV. liquidityAdapter() is zero at the pinned review; ordinary cash redemptions use idle assets unless assets are first deallocated. Shared market liquidity and an in-kind position exit do not promise full-size cash redemption.",
+  "mechanismArchetype": "protocol-position",
+  "archetypeOverride": true,
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rationale": "Exact Ethereum deployment 0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf is immutable VaultV2, issuing transferable ERC-4626 operational shares over RLUSD, not a direct fiat or parent-reserve ownership claim. asset(), decimals(), totalSupply(), convertToAssets() and ordinary one-share redeem simulation were reverified at Ethereum block 26107702. The protocol-position archetype intentionally differs from the fiat-cash parent. Exact deployment creation: Morpho vaultV2ByAddress creationBlockNumber=24587448, creationTimestamp=1772667719 (2026-03-04T23:41:59.000Z); independently retrieved 2026-10-03.",
+    "sources": [
+      {
+        "label": "Sentora RLUSD Main exact vault",
+        "url": "https://app.morpho.org/ethereum/vault/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf"
+      },
+      {
+        "label": "Exact verified VaultV2 source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf"
+      },
+      {
+        "label": "Exact current MorphoMarketV1AdapterV2 source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff"
+      },
+      {
+        "label": "Morpho Vault V2 accounting and redemption mechanics",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+      },
+      {
+        "label": "Ethereum RPC, pinned block 26107702",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Morpho exact-vault portfolio API",
+        "url": "https://api.morpho.org/graphql"
+      }
+    ]
+  },
+  "detailProvider": "coingecko",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://app.morpho.org/ethereum/vault/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf"
+    },
+    {
+      "label": "Issuer",
+      "url": "https://sentora.com"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
+      "decimals": 18
+    }
+  ],
+  "collateralQuality": "exotic",
+  "custodyModel": "unknown",
+  "governanceQuality": "wrapper",
+  "yieldConfig": {
+    "yieldSource": "Sentora RLUSD Main Morpho lending vault",
+    "yieldType": "lending-vault"
+  },
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "senrlusdv2-sentora",
+    "display": {
+      "url": "https://app.morpho.org/ethereum/vault/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
+      "label": "Sentora RLUSD Main"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "RLUSD deposited into Sentora-curated Morpho lending markets",
+        "risk": "medium",
+        "coinId": "rlusd-ripple",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0x8292bb45bf1ee4d140127049757c2e0ff06317ed"
+      },
+      "redemptionLiquidity": {
+        "source": "morpho-vault-v2",
+        "chainId": 1
+      }
+    }
+  },
+  "launchDate": "2026-03-04",
+  "implementationLaunchDate": "2026-03-04"
+}

@@ -1,0 +1,38 @@
+{
+  "id": "mxnt-tether",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "Transferable single-fiat-reference token with issuer or partner redemption terms and payment/settlement use.",
+      "references": [
+        {
+          "label": "Issuer token terms",
+          "url": "https://tether.to/en/legal/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-02"
+        }
+      ]
+    },
+    "authorizationStatus": "unknown",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Tether International, S.A. de C.V.",
+    "issuerDomicile": "El Salvador",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "unknown",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "references": [
+      {
+        "label": "Issuer token terms",
+        "url": "https://tether.to/en/legal/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-02"
+      }
+    ],
+    "notes": "GENIUS authorization and foreign-exception status are unresolved. Local financial-service or issuer claims do not prove U.S. permission. MiCA scope was not resolved and no MiCA row is authored. No negative authorization or enforcement finding is asserted. Reserve report engagement is aggregate quarterly reasonable assurance, not dedicated MXNT reserves.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  }
+}

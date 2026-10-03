@@ -1,4 +1,4 @@
-import { logWorkerEventArgs } from "../../../lib/structured-log";
+import { logWorkerEvent, logWorkerEventArgs } from "../../../lib/structured-log";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { throwIfAborted } from "../../../lib/abort";
 import type { ChainRpcConfig } from "../../../lib/chain-registry";
@@ -6,6 +6,7 @@ import { mapWithConcurrency } from "../../../lib/concurrency";
 import type { PeggedAsset } from "../enrich-prices";
 import { buildZephyrProtocolPeggedAsset, fetchZephyrProtocolStats, isZephyrScannerAssetId } from "../zephyr-zsd";
 import { resolveVaultNavSupplyPrice } from "../../../lib/authoritative-price-sources";
+import { loadReserveNavSupplyPrice, reserveNavSupplyScopeReason } from "../../../lib/reserve-nav-price";
 import { fetchCuratedAggregateOnChainMcap, fetchOnChainMcap, prefersOnChainSupplyMcap, toPublicChainCirculating } from "./onchain-supply";
 import {
   fetchSupplementalPriceData,
@@ -75,8 +76,15 @@ export async function fetchFiatCoinGeckoTokens(
         // for supply valuation only; the published price stays with the live
         // override stage. Fail-closed: no trusted NAV -> the coin stays out.
         let navSupplyPrice: number | undefined;
-        if (navLikeAsset && !priceResolution && previousAssetsById) {
-          const navOverride = await resolveVaultNavSupplyPrice(meta.id, previousAssetsById, db, signal);
+        const requiresClassScope = meta.liveReservesConfig?.adapter === "jpmorgan-nav";
+        const reserveNav = navLikeAsset && (!priceResolution || requiresClassScope)
+          ? await loadReserveNavSupplyPrice(meta, db, nowSec) : null;
+        if (navLikeAsset && !priceResolution) {
+          const navUsdRate = meta.flags.pegCurrency === "USD" ? 1 : pegReferencePrice;
+          if (reserveNav && navUsdRate != null) navSupplyPrice = reserveNav.price * navUsdRate;
+        }
+        if (navLikeAsset && !priceResolution && navSupplyPrice == null && previousAssetsById) {
+          const navOverride = await resolveVaultNavSupplyPrice(meta.id, previousAssetsById, db, signal, chainRpcs);
           if (navOverride) {
             navSupplyPrice = navOverride.price;
             logWorkerEventArgs(
@@ -100,6 +108,7 @@ export async function fetchFiatCoinGeckoTokens(
 
         const preferOnChainMcap = prefersOnChainSupplyMcap(meta);
         let mcap = preferOnChainMcap ? undefined : mcapMap[meta.id];
+        const needsClassScope = requiresClassScope && !mcap;
         let supplySource: string = "coingecko-fallback";
         let supplyObservedAt = mcap && meta.geckoId ? cgData[meta.geckoId]?.last_updated_at ?? null : null;
         let chainCirculating: PeggedAsset["chainCirculating"] = {};
@@ -123,6 +132,26 @@ export async function fetchFiatCoinGeckoTokens(
             supplySource = onChainMcap.supplySource;
             supplyObservedAt = onChainMcap.observedAt ?? null;
             chainCirculating = toPublicChainCirculating(onChainMcap.chainCirculating);
+          }
+        }
+
+        if (needsClassScope) {
+          // Recover native shares from the chosen supply valuation, then compare at issuer NAV,
+          // even when the published valuation uses a different observed market price.
+          const onchainNavValuationUsd = ((mcap ?? 0) / (priceForSupply ?? 1)) * (reserveNav?.price ?? 0);
+          const reason = reserveNavSupplyScopeReason(reserveNav, onchainNavValuationUsd);
+          if (reason) {
+            logWorkerEvent({
+              scope: "handler", level: "warn", event: "reserve-nav-supply-withheld",
+              message: `[fiat-cg] ${meta.symbol} on-chain supply scope unproven`,
+              metadata: {
+                stablecoinId: meta.id, reason, rule: "R4", onchainNavValuationUsd,
+                classAssetsUsd: reserveNav?.metadata?.classAssetsUsd ?? null,
+                sourceObservedAt: reserveNav?.observedAt ?? null,
+                reserveFetchedAt: reserveNav?.metadata?.reserveFetchedAt ?? null,
+              },
+            });
+            return null;
           }
         }
 

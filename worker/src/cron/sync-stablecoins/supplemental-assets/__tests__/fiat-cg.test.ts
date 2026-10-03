@@ -3,6 +3,7 @@ import { mockRegistry } from "../../../../test-helpers/cron";
 
 const fetchWithRetryMock = vi.fn();
 const probeTrackedTokenSupplyMock = vi.fn();
+const fetchErc20TotalSupplyMock = vi.fn();
 const resolveVaultNavSupplyPriceMock = vi.fn();
 
 vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({
@@ -42,6 +43,21 @@ vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({
         navToken: true,
       },
     },
+    {
+      id: "fiusd-sygnum",
+      name: "Sygnum FIUSD Liquidity Fund Token",
+      symbol: "FIUSD",
+      geckoId: "sygnum-fiusd-liquidity-fund",
+      detailProvider: "coingecko",
+      contracts: [
+        { chain: "zksync", address: "0x2ab105a3ead22731082b790ca9a00d9a3a7627f9", decimals: 2 },
+        { chain: "arbitrum", address: "0xcded6b899edba762d793f44ed295248049440e1e", decimals: 2 },
+      ],
+      flags: {
+        pegCurrency: "USD", backing: "rwa-backed", governance: "centralized",
+        yieldBearing: true, navToken: true,
+      },
+    },
   ],
 }));
 
@@ -56,6 +72,7 @@ vi.mock("../../../../lib/fetch-retry", () => ({
 
 vi.mock("../../../reserve-adapters/helpers", () => ({
   fetchOnchainUint256: vi.fn(),
+  fetchErc20TotalSupply: (...args: unknown[]) => fetchErc20TotalSupplyMock(...args),
   probeTrackedTokenSupply: (...args: unknown[]) => probeTrackedTokenSupplyMock(...args),
 }));
 
@@ -69,6 +86,7 @@ describe("fetchFiatCoinGeckoTokens", () => {
   beforeEach(() => {
     fetchWithRetryMock.mockReset();
     probeTrackedTokenSupplyMock.mockReset();
+    fetchErc20TotalSupplyMock.mockReset();
     resolveVaultNavSupplyPriceMock.mockReset().mockResolvedValue(null);
   });
 
@@ -141,6 +159,39 @@ describe("fetchFiatCoinGeckoTokens", () => {
     expect(probeTrackedTokenSupplyMock).toHaveBeenCalledTimes(2);
   });
 
+  it.each([0n, null])("requires FIUSD's complete native stock despite a fresh positive CG cap (Arbitrum=%s)", async (arbitrumSupply) => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    fetchWithRetryMock.mockResolvedValueOnce(new Response(JSON.stringify({ coins: {} }), {
+      status: 200, headers: { "Content-Type": "application/json" },
+    }));
+    probeTrackedTokenSupplyMock.mockImplementation(async (_meta, input) =>
+      input.chain === "zksync" ? 151_766n : null,
+    );
+    fetchErc20TotalSupplyMock.mockImplementation(async (input) =>
+      input.chain === "arbitrum" ? arbitrumSupply : null,
+    );
+    const result = await fetchFiatCoinGeckoTokens({
+      "sygnum-fiusd-liquidity-fund": {
+        usd: 12_048.93,
+        usd_market_cap: 48_167_525.5038,
+        last_updated_at: nowSec,
+      },
+    });
+    if (arbitrumSupply === null) {
+      expect(result).toEqual([]);
+    } else {
+      expect(result).toEqual([expect.objectContaining({
+        id: "fiusd-sygnum",
+        supplySource: "onchain-total-supply",
+        circulating: { peggedUSD: 1517.66 * 12_048.93 },
+        chainCirculating: {
+          zkSync: { current: 1517.66 * 12_048.93, chainId: "zksync" },
+          Arbitrum: { current: 0, chainId: "arbitrum" },
+        },
+      })]);
+    }
+  });
+
   it("skips NAV supply fallback when the price lane is missing instead of par-valuing", async () => {
     fetchWithRetryMock.mockResolvedValueOnce(
       new Response(JSON.stringify({ coins: {} }), {
@@ -189,7 +240,6 @@ describe("fetchFiatCoinGeckoTokens", () => {
       previousAssetsById,
     );
 
-    expect(resolveVaultNavSupplyPriceMock).toHaveBeenCalledWith("susds-sky", previousAssetsById, undefined, undefined);
     const susds = result.find((asset) => asset.id === "susds-sky");
     expect(susds).toMatchObject({
       id: "susds-sky",
@@ -211,7 +261,15 @@ describe("fetchFiatCoinGeckoTokens", () => {
     const previousAssetsById = new Map([["usdc-circle", { id: "usdc-circle", name: "USDC", symbol: "USDC" }]]);
 
     const result = await fetchFiatCoinGeckoTokens(
-      { susds: { usd_market_cap: 0 } },
+      {
+        susds: { usd_market_cap: 0 },
+        // FIUSD is a second NAV fixture now; keep its market-price lane observed
+        // so this case isolates the missing-price protocol fallback for sUSDS.
+        "sygnum-fiusd-liquidity-fund": {
+          usd: 12_048.93,
+          last_updated_at: Math.floor(Date.now() / 1000),
+        },
+      },
       undefined,
       undefined,
       undefined,

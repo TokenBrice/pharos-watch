@@ -62,6 +62,13 @@ describe("USDaf exact Uniswap v4 recovery", () => {
     rpcBatch.mockResolvedValueOnce(reviewedRuntime.map((r) => r.code)).mockResolvedValueOnce(["0x"]);
     expect(await fetchUsdafUniswapV4Price(ctx)).toBeNull(); expect(ctx.lastRejectionReason).toBe("uniswap-v4-exact:state-unavailable");
   });
+  it("rejects ABI-incomplete state even when every result is a valid word", async () => {
+    rpcBatch.mockResolvedValueOnce(reviewedRuntime.map((r) => r.code))
+      .mockResolvedValueOnce(Array(7).fill(encode("uint256", [1n])));
+    const ctx = context();
+    expect(await fetchUsdafUniswapV4Price(ctx)).toBeNull();
+    expect(ctx.lastRejectionReason).toBe("uniswap-v4-exact:state-malformed");
+  });
   it("rejects a stale parent, stale block and a reorganized block", async () => {
     const ctx = context(); ctx.assetsById.get("usdt-tether")!.priceObservedAt = NOW - 300;
     expect(await fetchUsdafUniswapV4Price(ctx)).toBeNull(); expect(rpcBatch).not.toHaveBeenCalled();

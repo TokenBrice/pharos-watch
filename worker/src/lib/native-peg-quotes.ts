@@ -40,6 +40,7 @@ async function readNativePegResponseSnippet(response: Response, signal?: AbortSi
  * CoinGecko does not serve are documented in the registry-coverage test.
  */
 const SUPPORTED_COINGECKO_NATIVE_PEG_CURRENCIES = new Map<string, string[]>([
+  ["AED", ["aed"]],
   ["AUD", ["aud"]],
   ["ARS", ["ars"]],
   ["BRL", ["brl"]],
@@ -48,6 +49,7 @@ const SUPPORTED_COINGECKO_NATIVE_PEG_CURRENCIES = new Map<string, string[]>([
   ["CLP", ["clp"]],
   ["CNY", ["cny", "cnh"]],
   ["CNH", ["cny", "cnh"]],
+  ["CZK", ["czk"]],
   ["EUR", ["eur"]],
   ["GBP", ["gbp"]],
   ["HKD", ["hkd"]],
@@ -59,6 +61,7 @@ const SUPPORTED_COINGECKO_NATIVE_PEG_CURRENCIES = new Map<string, string[]>([
   ["MYR", ["myr"]],
   ["NGN", ["ngn"]],
   ["PHP", ["php"]],
+  ["PLN", ["pln"]],
   ["RUB", ["rub"]],
   ["SGD", ["sgd"]],
   ["TRY", ["try"]],

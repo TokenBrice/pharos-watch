@@ -694,7 +694,7 @@ function buildSafetyScoreV9CandidatePipeline(
     if (!retainIntermediates) compiledFacts = null;
     return facts;
   };
-  let evaluatedSet: Readonly<V9EvaluatedSet>;
+  let evaluatedSet: Readonly<V9EvaluatedSet> | null;
   while (true) {
     try {
       evaluatedSet = evaluateValidatedV9FactSet(takeEvaluationFacts(), policy);
@@ -725,7 +725,7 @@ function buildSafetyScoreV9CandidatePipeline(
   // The published response does not expose replay intermediates. Release each
   // large graph as soon as its compact projection has been captured; replay and
   // verification callers keep the same graphs through `retained`.
-  const retained = retainIntermediates ? { extension: extension!, compiledFacts: compiledFacts! } : null;
+  const retained = retainIntermediates ? { extension: extension!, compiledFacts: compiledFacts!, evaluatedSet } : null;
   extension = null;
   compiledFacts = null;
   const candidateIdentity = SafetyScoreV9CandidateIdentityV1Schema.parse({
@@ -748,13 +748,8 @@ function buildSafetyScoreV9CandidatePipeline(
     resultDigest: evaluatedSet.scoreResultDigest,
     publishedAtSec: input.publishedAtSec,
   })}`;
-  const candidate = buildSafetyScoreV9Response({
-    candidateId,
-    policyVersion,
-    publicationGenerationId,
-    publishedAtSec: input.publishedAtSec,
-    commonModeGroups: evaluatedSet.dependencyPlan.commonModeGroups,
-    results: evaluatedSet.assets.map((asset) => ({
+  const takePublicResults = () => {
+    const results = evaluatedSet!.assets.map((asset) => ({
       trace: asset.trace,
       ...(asset.providerRowExclusions?.length ? { providerRowExclusions: asset.providerRowExclusions } : {}),
       backingFromLiveReserves: scoreGradeLiveReserveIds.has(asset.assetId),
@@ -770,7 +765,17 @@ function buildSafetyScoreV9CandidatePipeline(
       freshness: {
         exit: exitPillarFreshnessFromDexInput(fixedInput, asset.assetId, dexExitRouteMaxAgeSec),
       },
-    })),
+    }));
+    if (!retainIntermediates) evaluatedSet = null;
+    return results;
+  };
+  const candidate = buildSafetyScoreV9Response({
+    candidateId,
+    policyVersion,
+    publicationGenerationId,
+    publishedAtSec: input.publishedAtSec,
+    commonModeGroups: evaluatedSet.dependencyPlan.commonModeGroups,
+    results: takePublicResults(),
   });
 
   if (retained === null) {
@@ -788,7 +793,7 @@ function buildSafetyScoreV9CandidatePipeline(
     fixedInput,
     extension: retained.extension,
     compiledFacts: retained.compiledFacts,
-    evaluatedSet,
+    evaluatedSet: retained.evaluatedSet,
     candidate,
     compilerFactSchemaIdentity: compilerIdentity,
     compilerFactSchemaDigest,

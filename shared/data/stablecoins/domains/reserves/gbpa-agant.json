@@ -1,0 +1,101 @@
+{
+  "id": "gbpa-agant",
+  "reserves": [
+    {
+      "name": "GBP cash in Griffin Bank designated trust account",
+      "pct": 31.392169,
+      "risk": "low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Griffin Bank",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "custody",
+        "concentration",
+        "legal"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "GBP State Street money-market fund reserve holdings",
+      "pct": 68.607831,
+      "risk": "low",
+      "assetClass": "money-market-fund",
+      "issuerOrObligor": "State Street; exact fund and underlying obligors undisclosed",
+      "riskFactors": [
+        "counterparty",
+        "duration",
+        "liquidity",
+        "custody",
+        "concentration",
+        "legal"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Nephos GBPA reserve attestation as of September 30, 2026",
+        "url": "https://security.agant.io/doc/trust?rid=6abea083a941a8650c35ebf8&r=lz53fv2d0lk02myddnbz7&download=true"
+      }
+    ],
+    "rationale": "The retrieved September 30, 2026 Nephos report identifies GBP 597,711.32 cash at Griffin Bank and GBP 1,306,302.77 State Street MMF holdings, totaling GBP 1,904,014.09 against 1,900,346.94 issued GBPA across five networks. Percentages divide each reported balance by that reserve total and round to six decimals. The report confirms direct bank-statement observation, but its no-formal-assurance disclaimer conflicts with its examination opening; composition is retained without audit-grade assurance. Low legacy risk is conservative for named regulated bank/MMF exposure with incomplete legal and fund details.",
+    "compositionBasis": "September 30, 2026 Nephos reserve-account balance table, normalized to GBP 1,904,014.09",
+    "compositionAsOf": "2026-09-30",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Both reported asset classes and immediate providers are identified. Exact State Street fund/share class, underlying securities, maturities, redemption horizon, custody succession and enforceable insolvency priority remain undisclosed.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "GBP cash in Griffin Bank designated trust account",
+        "pct": 31.392169,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Off-chain GBP bank deposits do not create a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "GBP State Street money-market fund reserve holdings",
+        "pct": 68.607831,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Off-chain GBP MMF holdings do not create a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Griffin Bank",
+        "role": "bank",
+        "sharePct": 31.392169,
+        "jurisdiction": "United Kingdom"
+      },
+      {
+        "name": "State Street",
+        "role": "other",
+        "sharePct": 68.607831
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "contractual-only",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Nephos GBPA reserve attestation as of September 30, 2026",
+        "url": "https://security.agant.io/doc/trust?rid=6abea083a941a8650c35ebf8&r=lz53fv2d0lk02myddnbz7&download=true"
+      },
+      {
+        "label": "Agant business platform terms",
+        "url": "https://app.agant.io/terms-of-service"
+      }
+    ],
+    "uncertainty": "Provider percentages reflect the September 30 report, not a live feed. Nephos describes holder-benefit trust accounts segregated from operating funds and calls the designated reserve accounts unencumbered. No public trust deed, full Holder Terms, specific State Street fund/share class, successor-custody agreement or independent legal insolvency opinion was retrieved; report language alone is not proof of bankruptcy remoteness."
+  }
+}

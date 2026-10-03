@@ -1,0 +1,268 @@
+{
+  "id": "sxsrlusd-sentora",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "none-resolved-mint",
+    "confidence": "verified",
+    "summary": "sxsRLUSD shares issue against deposited RLUSD and protocol fee accrual; no arbitrary privileged local share issuance is resolved. Curator allocation and fee authority remains material, while RLUSD issuance is inherited.",
+    "inheritedFrom": "rlusd-ripple",
+    "economicCapSemantics": "bounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "controlRef": "Sentora x Spark RLUSD immutable share accounting",
+      "observedAt": "2026-10-02",
+      "observedBlock": 26107706,
+      "sources": [
+        {
+          "label": "Exact Sentora vault",
+          "url": "https://app.morpho.org/ethereum/vault/0xfc8c624b6080a0a780583799f2a862de936f6e22"
+        },
+        {
+          "label": "Pinned RPC identity, accounting and controls",
+          "url": "https://eth-mainnet.g.alchemy.com/v2"
+        },
+        {
+          "label": "Morpho Vault V2 documentation",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+        },
+        {
+          "label": "Exact VaultV2 source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfc8c624b6080a0a780583799f2a862de936f6e22"
+        },
+        {
+          "label": "MorphoMarketV1AdapterV2 source",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+        },
+        {
+          "label": "Ripple RLUSD terms, section 11.5",
+          "url": "https://ripple.com/legal/stablecoin/"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xfc8c624b6080a0a780583799f2a862de936f6e22",
+        "deploymentRefs": [
+          "ethereum:0xfc8c624b6080a0a780583799f2a862de936f6e22"
+        ],
+        "label": "Sentora x Spark RLUSD immutable share accounting",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107706,
+        "sources": [
+          {
+            "label": "Exact Sentora vault",
+            "url": "https://app.morpho.org/ethereum/vault/0xfc8c624b6080a0a780583799f2a862de936f6e22"
+          },
+          {
+            "label": "Pinned RPC identity, accounting and controls",
+            "url": "https://eth-mainnet.g.alchemy.com/v2"
+          },
+          {
+            "label": "Morpho Vault V2 documentation",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "Exact VaultV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfc8c624b6080a0a780583799f2a862de936f6e22"
+          },
+          {
+            "label": "MorphoMarketV1AdapterV2 source",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+          },
+          {
+            "label": "Ripple RLUSD terms, section 11.5",
+            "url": "https://ripple.com/legal/stablecoin/"
+          }
+        ],
+        "evidence": "Exact immutable VaultV2 source and pinned asset reads establish underlying-backed deposit/mint, plus accrued fee-share issuance, without an arbitrary privileged share-mint entrypoint. At ethereum block 26107706, asset() was 0x8292bb45bf1ee4d140127049757c2e0ff06317ed, share decimals 18 and underlying decimals 18; totalAssets raw 250001199783394711178689552, totalSupply raw 249994918735505772044961482, idle raw 225673066061791758611500399, sole adapter market assets raw 24328133721602952567189153, with an exact zero accounting difference. The only funded market lent RLUSD against WBTC at 86% LLTV. The adapter position had zero borrowing and zero posted collateral."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x3300f198988e4c9c63f75df86de36421f06af8c4",
+        "deploymentRefs": [
+          "ethereum:0xfc8c624b6080a0a780583799f2a862de936f6e22"
+        ],
+        "label": "Sentora x Spark RLUSD owner",
+        "role": "other",
+        "authorityType": "dao-governor",
+        "directMintAbility": "parameter-only",
+        "modulesOrGuardsStatus": "not-applicable",
+        "timelockDelaySec": 172800,
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110183,
+        "sources": [
+          {
+            "label": "Exact Sentora vault",
+            "url": "https://app.morpho.org/ethereum/vault/0xfc8c624b6080a0a780583799f2a862de936f6e22"
+          },
+          {
+            "label": "Pinned RPC identity, accounting and controls",
+            "url": "https://eth-mainnet.g.alchemy.com/v2"
+          },
+          {
+            "label": "Morpho Vault V2 documentation",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "Exact VaultV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfc8c624b6080a0a780583799f2a862de936f6e22"
+          },
+          {
+            "label": "MorphoMarketV1AdapterV2 source",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+          },
+          {
+            "label": "Verified SubProxy owner source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x3300f198988e4c9c63f75df86de36421f06af8c4?fields=all"
+          },
+          {
+            "label": "Official Spark registry names the owner SPARK_PROXY",
+            "url": "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/Ethereum.sol"
+          },
+          {
+            "label": "DSPause governance scheduling and mutable delay",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbe286431454714f511008713973d3b053a2d38f3"
+          },
+          {
+            "label": "Current SubProxy ward and governance-chain census at block 26110183",
+            "url": "https://etherscan.io/block/26110183"
+          }
+        ],
+        "evidence": "At Ethereum block 26110183, owner() is Spark's official SPARK_PROXY. Its complete Rely/Deny history from creation, rechecked with wards getters, leaves DSPauseProxy 0xbe8e3e3618f7474f8cb1d074a26affef007e98fb, StarGuard 0x6605aa120fe8b656482903e7757babf56947e45e and revocation-only ESM 0x09e05ff6142f2f9de8b6b65855a1d56b6cfe4c58. StarGuard has only DSPauseProxy as its active event-enumerated ward and no scheduled spell. DSPauseProxy.owner()=DSPause 0xbe286431454714f511008713973d3b053a2d38f3; DSPause delay()=172800, owner()=zero, authority()=Chief 0x929d9a1435662357f54adcf64dcee4d6b867a6f9, whose elected hat alone authorizes scheduling. The owner can change curator/sentinel/owner parameters but cannot replace immutable VaultV2 code or bypass its asset-backed share and fee arithmetic. Governance retains arbitrary delegatecall payload and future ward/delay changes; this is not an execution-complete certificate or an independent signer/key-custody assertion."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xff070333654aae76a0a77465e4f0fd101c57c03f",
+        "deploymentRefs": [
+          "ethereum:0xfc8c624b6080a0a780583799f2a862de936f6e22"
+        ],
+        "label": "Sentora x Spark RLUSD curator",
+        "role": "cap-admin",
+        "authorityType": "safe",
+        "safe": {
+          "owners": [
+            "0x9e396de3312d373b87f9bd8763fb48184b42aac0",
+            "0xab5710211458fc8d7e0be628202f47ddbd3f38eb"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 26110183,
+          "observedAt": "2026-10-03",
+          "source": "onchain"
+        },
+        "directMintAbility": "parameter-only",
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110183,
+        "sources": [
+          {
+            "label": "Exact Sentora vault",
+            "url": "https://app.morpho.org/ethereum/vault/0xfc8c624b6080a0a780583799f2a862de936f6e22"
+          },
+          {
+            "label": "Pinned RPC identity, accounting and controls",
+            "url": "https://eth-mainnet.g.alchemy.com/v2"
+          },
+          {
+            "label": "Morpho Vault V2 documentation",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "Exact VaultV2 source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfc8c624b6080a0a780583799f2a862de936f6e22"
+          },
+          {
+            "label": "MorphoMarketV1AdapterV2 source",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+          },
+          {
+            "label": "Ripple RLUSD terms, section 11.5",
+            "url": "https://ripple.com/legal/stablecoin/"
+          }
+        ],
+        "evidence": "At Ethereum block 26110183, getThreshold()=2 and getOwners() names the listed two nested Safe branches; paginated modules are empty with sentinel next=0x1, and guard storage is zero. Nested Safe 0x9e396de3312d373b87f9bd8763fb48184b42aac0 is 1-of-1 with owner 0x992592e073aa9b98daed79ee05c4af832e1d0abe. Nested Safe 0xab5710211458fc8d7e0be628202f47ddbd3f38eb is 1-of-2 with owners 0xb81b1dd68887e1ef77966d8f60b3448531315330 and 0x06c36d4e8a5606aaf75655f60307ad73af8d56d8c. Both nested paginated module lists are empty. Cryptographic 2-of-2 branches are not two proven independent humans. Exact addAdapter and increaseAbsoluteCap timelocks are 604800 seconds; setPerformanceFee timelock is 259200 seconds. No universal seven-day fee delay or independent key custody is claimed.",
+        "threshold": 2,
+        "signerCount": 2,
+        "canRaiseCap": true,
+        "timelockDelaySec": 604800,
+        "capDescription": "Adapter and cap increases wait 604800 seconds; existing allocations remain dynamic. Fees can mint protocol fee shares, not arbitrary asset-unbacked issuance."
+      }
+    ],
+    "review": {
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "Exact Sentora vault",
+          "url": "https://app.morpho.org/ethereum/vault/0xfc8c624b6080a0a780583799f2a862de936f6e22"
+        },
+        {
+          "label": "Pinned RPC identity, accounting and controls",
+          "url": "https://eth-mainnet.g.alchemy.com/v2"
+        },
+        {
+          "label": "Morpho Vault V2 documentation",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+        },
+        {
+          "label": "Exact VaultV2 source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfc8c624b6080a0a780583799f2a862de936f6e22"
+        },
+        {
+          "label": "MorphoMarketV1AdapterV2 source",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+        },
+        {
+          "label": "Verified SubProxy owner source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x3300f198988e4c9c63f75df86de36421f06af8c4?fields=all"
+        },
+        {
+          "label": "Official Spark owner identity registry",
+          "url": "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/Ethereum.sol"
+        },
+        {
+          "label": "Current governance, nested Safe and function-specific delay census",
+          "url": "https://etherscan.io/block/26110183"
+        },
+        {
+          "label": "DSPause scheduling and mutable delay",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbe286431454714f511008713973d3b053a2d38f3"
+        }
+      ],
+      "evidence": "The technical local mint/parameter inventory is reverified at Ethereum block 26110183: immutable exact VaultV2 issues deposit-backed and accrued fee shares; governance cannot replace its bytecode. Owner is Spark SPARK_PROXY with current DSPauseProxy/StarGuard governance execution converging on Chief-authorized DSPause (172800-second scheduling), plus revocation-only ESM. Curator is the listed 2-of-2 Safe with re-read 1-of-1 and 1-of-2 nested branches; adapter/cap increases wait 604800 seconds and fee changes 259200 seconds. Governance payload/ward/delay changes and parameter-driven economic loss remain powers, not unknown identities or immutable protections. Human signer independence and key custody are not established or credited. Missing financial assurance and legal insolvency priority remain in Backing evidence, not an unresolved native mint identity.",
+      "reviewer": "Sol refinement 2026-10-03 (Refine13)",
+      "reviewedAt": "2026-10-03",
+      "scopedQuestions": [
+        {
+          "controlRef": "Sentora x Spark RLUSD owner",
+          "question": "What human-control independence, operational signing policy and key-custody assurance support the identified Sky governance execution participants? Verified Spark owner/ward/governance contracts and current scheduling do not establish those custody facts.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine13)",
+          "sources": [
+            {"label": "Identified Chief governance authorization", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x929d9a1435662357f54adcf64dcee4d6b867a6f9"},
+            {"label": "Pinned identified owner execution chain", "url": "https://etherscan.io/block/26110183"}
+          ]
+        },
+        {
+          "controlRef": "Sentora x Spark RLUSD curator",
+          "question": "What human independence, signing policy and key-custody assurance support the identified outer 2-of-2 curator Safe and its nested 1-of-1 and 1-of-2 signer branches? Distinct verified addresses and thresholds do not establish independent human custody.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine13)",
+          "sources": [
+            {"label": "Exact curator Safe", "url": "https://etherscan.io/address/0xff070333654aae76a0a77465e4f0fd101c57c03f"},
+            {"label": "Pinned identified outer and nested signer census", "url": "https://etherscan.io/block/26110183"}
+          ]
+        }
+      ],
+      "unresolvedQuestions": []
+    }
+  }
+}

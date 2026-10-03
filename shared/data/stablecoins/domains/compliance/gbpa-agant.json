@@ -1,0 +1,52 @@
+{
+  "id": "gbpa-agant",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "The issuer describes a transferable fiat-referenced payment token with face-value redemption, rather than a bank deposit or fund share. U.S. offer/sale scope and token-specific GENIUS authorization have not been established."
+    },
+    "authorizationStatus": "unknown",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Agant Finance Limited",
+    "issuerDomicile": "United Kingdom",
+    "foreignExceptionStatus": "unknown",
+    "redemptionPolicyPresent": true,
+    "notes": "The review maps the exact token to its foreign issuer and does not establish U.S. distribution, official GENIUS approval/application or a registered foreign-issuer exception. Agant's current company-page disclosure identifies FCA cryptoasset registration under the Money Laundering Regulations 2017, FRN 1037671, and explicitly excludes GBPA services from FSCS and FOS coverage. This is an issuer-disclosed AML registration, not evidence of prudential stablecoin authorization; the linked FCA register page returned a client-rendered loading shell in this review. Foreign licensing and reserve disclosures are not substituted for U.S. authorization. A complete U.S. negative-evidence census was not performed; authorization is unknown, not no-public-authorization-found.",
+    "references": [
+      {
+        "label": "Agant GBPA token design",
+        "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/gbp-stablecoin-gbpa.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-02"
+      },
+      {
+        "label": "Agant business platform terms",
+        "url": "https://app.agant.io/terms-of-service",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-02"
+      },
+      {
+        "label": "Nephos GBPA reserve attestation as of September 30, 2026",
+        "url": "https://security.agant.io/doc/trust?rid=6abea083a941a8650c35ebf8&r=lz53fv2d0lk02myddnbz7&download=true",
+        "sourceKind": "auditor-report",
+        "accessedAt": "2026-10-02"
+      },
+      {
+        "label": "OCC digital-assets licensing applications inventory",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-02"
+      },
+      {
+        "label": "Agant company-page regulatory footer: FCA FRN 1037671, MLR registration and FSCS/FOS exclusions",
+        "url": "https://www.agant.io/company/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-03"
+      }
+    ],
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://security.agant.io/doc/trust?rid=6abea083a941a8650c35ebf8&r=lz53fv2d0lk02myddnbz7&download=true"
+  }
+}

@@ -1,0 +1,89 @@
+{
+  "id": "umint-ubs",
+  "name": "UBS USD Money Market Investment Fund Token",
+  "symbol": "UMINT",
+  "oneLiner": "UMINT is UBS's accumulating Ethereum money-market fund share, redeemable through authorized distributors with privately disclosed portfolio terms.",
+  "flags": {
+    "backing": "rwa-backed",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": true
+  },
+  "collateral": "Native tokenized participating shares in a Singapore VCC money-market sub-fund managed by UBS Asset Management (Singapore). The distributor names State Street Bank and Trust as custodian/administrator and high-quality money-market instruments; exact underlying strategy, private placement memorandum and current position weights are not publicly disclosed.",
+  "pegMechanism": "Accumulating native Ethereum money-market fund share, subscribed and redeemed through authorized distributors such as DigiFT at NAV. UBS confirms an in-production subscription and redemption workflow. The 2025 distributor dossier describes daily T+0 dealing, but current contractual cutoffs, fees, minimums and unconditional capacity are not publicly established. DigiFT DR-uMINT is a separate receipt and is excluded from native identity and supply.",
+  "mechanismArchetype": "tbill",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rationale": "The exact deployment represents a USD short-duration money-market fund share with ordinary NAV redemption. The tbill family models the fund/NAV mechanism; it does not imply Treasury-only holdings. The share is not a wrapper of any tracked stablecoin.",
+    "sources": [
+      {
+        "label": "DigiFT native uMINT disclosure within STEP2 application (March 20, 2025)",
+        "url": "https://forum.arbitrum.foundation/t/digift-dr-umint-step2-application/28764"
+      },
+      {
+        "label": "UBS production subscription and redemption (November 4, 2025)",
+        "url": "https://www.ubs.com/global/en/media/display-page-ndp/en-20251104-chainlink.html"
+      },
+      {
+        "label": "UBS Ethereum uMINT launch",
+        "url": "https://www.ubs.com/global/en/media/display-page-ndp/en-20241101-first-tokenized-investment-fund.html"
+      },
+      {
+        "label": "Verified deployed token implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc06036793272219179f846ef6bfc3b16e820df0b"
+      },
+      {
+        "label": "Ethereum token deployment",
+        "url": "https://etherscan.io/address/0xc06036793272219179f846ef6bfc3b16e820df0b#code"
+      }
+    ]
+  },
+  "detailProvider": "coingecko",
+  "geckoId": "ubs_umint_eth",
+  "links": [
+    {
+      "label": "DigiFT native uMINT disclosure within STEP2 application (March 20, 2025)",
+      "url": "https://forum.arbitrum.foundation/t/digift-dr-umint-step2-application/28764"
+    },
+    {
+      "label": "UBS production subscription and redemption (November 4, 2025)",
+      "url": "https://www.ubs.com/global/en/media/display-page-ndp/en-20251104-chainlink.html"
+    },
+    {
+      "label": "UBS Ethereum uMINT launch",
+      "url": "https://www.ubs.com/global/en/media/display-page-ndp/en-20241101-first-tokenized-investment-fund.html"
+    },
+    {
+      "label": "Native uMINT standalone contract creation, block 21091537 (2024-11-01)",
+      "url": "https://etherscan.io/tx/0x21e749199e5f709d4a201fb16a16e16c473118d25d5fc1096288a33f21f6c554"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Singapore"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xc06036793272219179f846ef6bfc3b16e820df0b",
+      "decimals": 18
+    }
+  ],
+  "collateralQuality": "rwa",
+  "custodyModel": "unknown",
+  "yieldConfig": {
+    "yieldSource": "UBS USD money-market fund accumulating share NAV",
+    "yieldType": "nav-appreciation"
+  },
+  "launchDate": "2024-11-01",
+  "implementationLaunchDate": "2024-11-01",
+  "notices": [
+    {
+      "type": "info",
+      "title": "Native fund share only",
+      "message": "Pharos tracks the native Ethereum uMINT fund share, excluding DigiFT depositary receipts. Public portfolio and current contractual redemption terms are incomplete; stale CoinGecko market cap is not used."
+    }
+  ]
+}

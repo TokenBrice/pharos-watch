@@ -1,0 +1,84 @@
+{
+  "id": "sdai-gnosis",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "none-resolved-mint",
+    "confidence": "verified",
+    "summary": "Deposits mint locally asset-backed shares; parent durable issuance remains inherited.",
+    "inheritedFrom": "xdai-gnosis",
+    "economicCapSemantics": "bounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "controls": [
+      {
+        "chain": "gnosis",
+        "address": "0xaf204776c7245bf4147c2612bf6e5972ee483701",
+        "deploymentRefs": [
+          "gnosis:0xaf204776c7245bf4147c2612bf6e5972ee483701"
+        ],
+        "label": "SavingsXDai ERC-4626 wrapper",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 48557408,
+        "sources": [
+          {
+            "label": "Gnosis verified SavingsXDai and imported ERC-4626 source",
+            "url": "https://gnosis.blockscout.com/api/v2/smart-contracts/0xaf204776c7245bf4147c2612bf6e5972ee483701"
+          },
+          {
+            "label": "Gnosis xDAI bridge and savings infrastructure",
+            "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge"
+          },
+          {
+            "label": "Pinned Gnosis block 48557408",
+            "url": "https://gnosis.blockscout.com/block/48557408"
+          }
+        ],
+        "evidence": "Reviewed source and asset/share reads establish deposit-backed share minting, not an unrestricted privileged native share minter."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Gnosis verified SavingsXDai and imported ERC-4626 source",
+          "url": "https://gnosis.blockscout.com/api/v2/smart-contracts/0xaf204776c7245bf4147c2612bf6e5972ee483701"
+        },
+        {
+          "label": "Gnosis xDAI bridge and savings infrastructure",
+          "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge"
+        },
+        {
+          "label": "Pinned Gnosis block 48557408",
+          "url": "https://gnosis.blockscout.com/block/48557408"
+        }
+      ],
+      "evidence": "Fresh pinned Gnosis reads show a zero EIP-1967 implementation slot and owner() reverting. Complete verified SavingsXDai plus imported ERC-4626 code has fixed WXDAI asset, no local owner, proxy upgrade or privileged share mint. Parent xDAI mint control is not treated as absent.",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewedAt": "2026-10-02",
+      "disposition": "scoreable"
+    },
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-10-02",
+      "observedBlock": 48557408,
+      "sources": [
+        {
+          "label": "Gnosis verified SavingsXDai and imported ERC-4626 source",
+          "url": "https://gnosis.blockscout.com/api/v2/smart-contracts/0xaf204776c7245bf4147c2612bf6e5972ee483701"
+        },
+        {
+          "label": "Gnosis xDAI bridge and savings infrastructure",
+          "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge"
+        },
+        {
+          "label": "Pinned Gnosis block 48557408",
+          "url": "https://gnosis.blockscout.com/block/48557408"
+        }
+      ]
+    }
+  }
+}

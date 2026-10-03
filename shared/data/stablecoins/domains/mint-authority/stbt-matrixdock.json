@@ -1,0 +1,120 @@
+{
+  "id": "stbt-matrixdock",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "verified",
+    "summary": "STBT's custom proxy has selector-specific timelock delays: 24-hour mint-logic/issuer replacement and four-hour mint/rebase scheduling, despite getMinDelay() returning zero.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x22276a1bd16bc3052b362c2e0f65aace04ed6f99",
+        "deploymentRefs": [
+          "ethereum:0x530824da86689c9c17cdc2871ff29b058345b44a"
+        ],
+        "label": "STBT issuer and owner controller",
+        "role": "direct-minter",
+        "authorityType": "timelock",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "timelockDelaySec": 14400,
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110197,
+        "sources": [
+          {
+            "label": "Verified deployed mint implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe7efc5060b6ad57b68f5911eca6c5cd1952da152"
+          },
+          {
+            "label": "Verified selector-delay controller",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x22276a1bd16bc3052b362c2e0f65aace04ed6f99"
+          }
+        ],
+        "evidence": "At block 26110197 delayMap(resetImplementation)=86400, delayMap(setIssuer)=86400, delayMap(issue)=14400, delayMap(distributeInterests)=14400 and delayMap(grantRole)=14400. Verified schedule ignores the supplied delay and requires its immutable selector-map delay to be positive; scheduleBatch and updateDelay revert. getMinDelay=0 does not mean immediate execution. Event census: self-admin only; proposers 0x65ff5a67d8d7292bd4ea7b6cd863d9f3ca14f046 and Minter 0xca241823d4bfe8b29610709db617407fbc9ae02b; executor 0xd32a1441872774f30ec9c453983cf5c95a720123; canceller 0x520839e886a285e196c8fa3d161797b4bafabe94. All memberships were confirmed by hasRole. Non-contract role accounts have empty code. Minter owner is the executor EOA and its user mint path schedules the same four-hour issue call."
+      }
+    ],
+    "upgradeability": {
+      "model": "custom",
+      "deploymentRefs": [
+        "ethereum:0x530824da86689c9c17cdc2871ff29b058345b44a"
+      ],
+      "proxyAddresses": [
+        "0x530824da86689c9c17cdc2871ff29b058345b44a"
+      ],
+      "implementationAddresses": [
+        "0xe7efc5060b6ad57b68f5911eca6c5cd1952da152"
+      ],
+      "adminAddresses": [
+        "0x22276a1bd16bc3052b362c2e0f65aace04ed6f99"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 86400,
+      "controlRef": "STBT issuer and owner controller",
+      "observedAt": "2026-10-03",
+      "observedBlock": 26110197,
+      "sources": [
+        {
+          "label": "Deployed upgrade authorization",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x530824da86689c9c17cdc2871ff29b058345b44a"
+        },
+        {
+          "label": "Verified selector-delay controller",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x22276a1bd16bc3052b362c2e0f65aace04ed6f99"
+        }
+      ]
+    },
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
+    "review": {
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Refine04 pinned selector-delay and role census",
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "Deployed mint implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe7efc5060b6ad57b68f5911eca6c5cd1952da152"
+        },
+        {
+          "label": "STBT January 2025 terms",
+          "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FzHip8cJaP5aud3KfdVud%2FSTBT%20Token%C2%A0Terms%20and%20Conditions.pdf?alt=media&token=79d5fd49-deae-41b4-a809-9e1afaa02f32"
+        },
+        {
+          "label": "Verified selector-delay controller",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x22276a1bd16bc3052b362c2e0f65aace04ed6f99"
+        },
+        {
+          "label": "Verified proposer Minter",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xca241823d4bfe8b29610709db617407fbc9ae02b"
+        },
+        {
+          "label": "Matrixdock July 2026 XAUm and XAGm reserve verification scope",
+          "url": "https://www.prnewswire.com/apac/news-releases/reserve-transparency-built-through-continuous-operation-matrixdock-marks-two-years-of-independent-verification-302829449.html"
+        },
+        {
+          "label": "STBT issuer reserve dashboard",
+          "url": "https://www.matrixdock.com/stbt?language=en"
+        },
+        {
+          "label": "STBT token-specific transparency documentation",
+          "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/treasury-bill-token-stbt/token-features"
+        }
+      ],
+      "evidence": "Full controller RoleGranted/RoleRevoked/RoleAdminChanged replay from deployment through block 26110197 and hasRole checks resolve all current members: admin is the controller itself; proposers are 0x65ff5a67d8d7292bd4ea7b6cd863d9f3ca14f046 and 0xca241823d4bfe8b29610709db617407fbc9ae02b (verified user Minter); executor 0xd32a1441872774f30ec9c453983cf5c95a720123; canceller 0x520839e886a285e196c8fa3d161797b4bafabe94. The Minter owner is the executor EOA. Selector reads and verified override establish 86400s implementation/issuer replacement and 14400s issue/rebase/role changes. Issuer reserve budget remains mutable, so this is not immutable collateral gating. Organizational signing and financial reconciliation remain undisclosed. Organizational key-custody/independence of proposer, executor and canceller EOAs and current independent STBT reserve-to-liability reconciliation remain undisclosed. Sibling comparison on 2026-10-03: XAUm/XAGm's attestation-only supervision and periodic reconciliation cite Matrixdock's July 2026 Bureau Veritas physical gold/silver inventory verification and issuer-published token-supply comparison. That release explicitly extends the existing XAUm audit to XAGm for the first time and describes monthly reserve statements and on-chain proof of reserves for precious-metal products; it does not include STBT's Treasury/debt reserve book. STBT's public dashboard supplies issuer reserve NAV and asset composition, while its token-specific transparency documentation says underlying-asset reporting documents may be uploaded, not that the bullion attestation series covers STBT. Holding some BUIDL/USTB reserve assets likewise does not reconcile the whole STBT liability. No current STBT-specific recurring independent reserve/token-liability verification was established in the reviewed primary sources. Reconciliation and supervision therefore remain unknown, and the concentrated-admin posture is not promoted by borrowing the siblings' product-scoped assurance.",
+      "unresolvedQuestions": [],
+      "scopedQuestions": [
+        {
+          "controlRef": "STBT issuer and owner controller",
+          "question": "Organizational identity, independence and MPC/HSM/key custody of this controller's identified proposer, executor and canceller EOAs remain undisclosed. The proposer Minter is owned by the identified executor EOA. The role census and selector-specific timelock execution are established; this question concerns human/signing custody, not an unidentified mint path.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine04 calibration v2",
+          "sources": [
+            {"label": "Verified controller and role/delay source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x22276a1bd16bc3052b362c2e0f65aace04ed6f99"},
+            {"label": "Verified proposer Minter source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xca241823d4bfe8b29610709db617407fbc9ae02b"}
+          ]
+        }
+      ]
+    }
+  }
+}

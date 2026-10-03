@@ -1,0 +1,111 @@
+{
+  "liveReservesConfig": {
+    "adapter": "m0-wrapper-underlying",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "mantrausd-mantra",
+    "display": { "url": "https://mantrausd.com/", "label": "mantraUSD M custody" },
+    "inputs": { "primary": { "kind": "onchain-evm", "chain": "mantra", "rpcMode": "public-rpc" } },
+    "params": {
+      "mode": "m-extension",
+      "wrapperAddress": "0xd2b95283011e47257917770d28bb3ee44c849f6f",
+      "expectedMTokenAddress": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
+      "expectedSwapFacilityAddress": "0xb6807116b3b1b321a390594e31ecd6e0076f6278",
+      "swapperAddress": "0x0000000000000000000000000000000000000001",
+      "slice": { "name": "M token held by Mantra USD", "risk": "low", "coinId": "m-m0", "depType": "wrapper" },
+      "sourceUrls": ["https://mantrausd.com/", "https://docs.m0.org/resources/addresses/m0-platform", "https://blockscout.mantrascan.io/api/v2/smart-contracts/0x21a657d7dae3f33548252d350ebbe48c82c23c3c"],
+      "rpcUrl": "https://evm.mantrachain.io"
+    }
+  },
+  "id": "mantrausd-mantra",
+  "launchDate": "2025-10-27",
+  "name": "Mantra USD",
+  "symbol": "mantraUSD",
+  "oneLiner": "MANTRA's dollar wraps M0's M; public conversion is to wM, and a single externally owned address controls token upgrades.",
+  "flags": {
+    "backing": "rwa-backed",
+    "governance": "centralized",
+    "rwa": true
+  },
+  "variantOf": "m-m0",
+  "variantKind": "pure-wrapper",
+  "pegReferenceId": "m-m0",
+  "collateral": "M0 M tokens held by the chain-local extension; the M parent provides the Treasury-backed issuance and custody layer.",
+  "pegMechanism": "M-extension wrapping and unwrapping conserve the deposited M claim. The current SwapFacility restricts direct M output to approved swappers; an unprivileged sample canSwapViaPath(child,wM) returned true while child-to-M returned false. This is technical conversion eligibility, not a sent transaction or a cash redemption right.",
+  "mechanismArchetype": "tbill",
+  "llamaId": "333",
+  "detailProvider": "defillama",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://mantrausd.com/"
+    },
+    {
+      "label": "Token explorer",
+      "url": "https://blockscout.mantrascan.io/address/0xd2b95283011e47257917770d28bb3ee44c849f6f"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "mantra",
+      "address": "0xd2b95283011e47257917770d28bb3ee44c849f6f",
+      "decimals": 6
+    }
+  ],
+  "collateralQuality": "rwa",
+  "custodyModel": "unknown",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://blockscout.mantrascan.io/address/0xd2b95283011e47257917770d28bb3ee44c849f6f",
+    "provider": "On-chain parent-token custody; not independent financial assurance",
+    "cadence": "real-time"
+  },
+  "dependencyReview": {
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Refine07 primary-source review 2026-10-03",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Verified token implementation",
+        "url": "https://blockscout.mantrascan.io/api/v2/smart-contracts/0x9d7a7b406568668e7943740f5b370c86e13dcca8"
+      },
+      {
+        "label": "Pinned mantra RPC at block 18531313",
+        "url": "https://evm.mantrachain.io"
+      },
+      {
+        "label": "M0 published platform deployments",
+        "url": "https://docs.m0.org/resources/addresses/m0-platform"
+      },
+      {
+        "label": "M0 liquidity routes and issuer onboarding",
+        "url": "https://docs.m0.org/build/accessing-liquidity"
+      },
+      {
+        "label": "M0 published EVM-extension security audits (framework scope only)",
+        "url": "https://docs.m0.org/resources/audits"
+      },
+      {
+        "label": "Guardian JMI/MYieldToOne/Freezable/SwapFacility code review, 2025-12-12; not a reserve audit or exact deployment certification",
+        "url": "https://github.com/m0-foundation/evm-m-extensions/blob/main/audits/JMI/M0_EVM-M_Extensions_Review_report.pdf"
+      },
+      {
+        "label": "Exact mantraUSD deployment transaction, block 9668419, 2025-10-27T12:11:32Z",
+        "url": "https://blockscout.mantrascan.io/api/v2/transactions/0x1b6b068ea8f955e074d80cf7b07e2c62b66cf5eb077f5a33bdd8e59a18934d7c"
+      }
+    ],
+    "rationale": "At mantra block 18531313, symbol/decimals and EIP-1967 implementation/admin were re-read. Local backing balance was 439,646.447844 M against 434,703.845695 mantraUSD supply. M-extension wrapping and unwrapping conserve the deposited M claim. The current SwapFacility restricts direct M output to approved swappers; an unprivileged sample canSwapViaPath(child,wM) returned true while child-to-M returned false. This is technical conversion eligibility, not a sent transaction or a cash redemption right. The exact deployment launch date is 2025-10-27, established by the explorer creation transaction. The Guardian report dated 2025-12-12 covers JMI and changes to MYieldToOne, Freezable and SwapFacility at its named audit commits; this is framework corroboration, not exact deployed-commit certification, custody assurance or reserve-to-liability audit.",
+    "relationships": [
+      {
+        "id": "m-m0",
+        "weight": 1,
+        "type": "wrapper",
+        "reason": "The immediate serial claim is the verified parent stablecoin, not a direct child allocation of off-chain Treasury reserves."
+      }
+    ]
+  },
+  "geckoId": "mantra-usd",
+  "infrastructures": [
+    "m0"
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "id": "weur-aplauz",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Current WEUR whitepaper",
+        "url": "https://www.weur.io/protocol/whitepaper/v2"
+      }
+    ],
+    "evidence": "Whitepaper D.1 explicitly permits freezing WEUR or associated funds for restricted persons. E.3 and F.4 describe pausing and address restrictions accessible to authorized roles. This is a disclosed token-design capability, not a production contract inspection: deployment addresses, exact seizure scope, role holders, signer thresholds and upgrade delays are unpublished.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  }
+}

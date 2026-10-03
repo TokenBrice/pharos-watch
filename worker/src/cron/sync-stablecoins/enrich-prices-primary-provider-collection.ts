@@ -6,7 +6,7 @@ import { fetchCoingeckoSimplePrices, type CoingeckoSimplePriceEntry } from "../.
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { shouldAttemptFetch, recordOutcome, recoverBreakerOnNoCandidate } from "../../lib/circuit-breaker";
 import { mapWithConcurrency } from "../../lib/concurrency";
-import { parsePositiveNumber } from "../../lib/number-utils";
+import { decodeReserveNavPrice, isReserveNavPriceSource, RESERVE_NAV_PRICE_SOURCES } from "../../lib/reserve-nav-price";
 import { throwIfAborted } from "../../lib/abort";
 import {
   BITSTAMP_KNOWN_SYMBOLS,
@@ -49,7 +49,6 @@ const CRVUSD_PRICE_SELECTOR = "0xa035b1fe"; // price() — returns crvUSD price 
 export type PrimaryDexRows = Awaited<ReturnType<typeof loadDexPriceRows>>;
 export type PrimaryDexPriceSources = Awaited<ReturnType<typeof loadDexPriceSources>>;
 
-type NavTelemetryPriceSource = NavTelemetryQuote["source"];
 
 interface ReserveNavRow {
   stablecoin_id: string;
@@ -58,7 +57,6 @@ interface ReserveNavRow {
   metadata: string;
 }
 
-const NAV_TELEMETRY_PRICE_SOURCES = new Set<NavTelemetryPriceSource>(["chainlink-nav", "superstate-liquidity"]);
 
 export interface PrimaryPricePlan {
   candidates: PeggedAsset[];
@@ -129,28 +127,15 @@ export function createEmptyPrimaryConsensusQuoteMaps(): PrimaryConsensusQuoteMap
   };
 }
 
-function isNavTelemetryPriceSource(value: string | null | undefined): value is NavTelemetryPriceSource {
-  return value != null && NAV_TELEMETRY_PRICE_SOURCES.has(value as NavTelemetryPriceSource);
-}
 
 function isNavTelemetryPriceEligible(
   assetId: string,
   metaById: Map<string, (typeof ACTIVE_STABLECOINS)[number]>,
 ): boolean {
   const adapter = metaById.get(assetId)?.liveReservesConfig?.adapter;
-  return isNavTelemetryPriceSource(adapter);
+  return isReserveNavPriceSource(adapter);
 }
 
-function getMetadataRecord(value: string): Record<string, unknown> | null {
-  try {
-    const parsed = JSON.parse(value) as unknown;
-    return typeof parsed === "object" && parsed != null && !Array.isArray(parsed)
-      ? (parsed as Record<string, unknown>)
-      : null;
-  } catch {
-    return null;
-  }
-}
 
 function resolveNavUsdRate(params: {
   asset: PeggedAsset;
@@ -188,9 +173,10 @@ async function loadReserveNavPriceQuotes(params: {
            FROM reserve_composition c
            JOIN reserve_sync_state s
              ON s.stablecoin_id = c.stablecoin_id
-          WHERE c.source IN ('chainlink-nav', 'superstate-liquidity')
+          WHERE c.source IN (${RESERVE_NAV_PRICE_SOURCES.map(() => "?").join(", ")})
             AND s.last_success_at = c.fetched_at`,
       )
+      .bind(...RESERVE_NAV_PRICE_SOURCES)
       .all<ReserveNavRow>());
 
     const assetById = new Map(params.candidates.map((asset) => [asset.id, asset]));
@@ -199,18 +185,13 @@ async function loadReserveNavPriceQuotes(params: {
       if (!eligibleIds.has(row.stablecoin_id)) continue;
       // last_success_at/fetched_at agreement is enforced by the query's
       // `s.last_success_at = c.fetched_at` equality — the only data path here.
-      if (!isNavTelemetryPriceSource(row.source)) continue;
+      if (row.source !== metaById.get(row.stablecoin_id)?.liveReservesConfig?.adapter) continue;
 
       const asset = assetById.get(row.stablecoin_id);
       if (!asset) continue;
 
-      const metadata = getMetadataRecord(row.metadata);
-      if (!metadata) continue;
-
-      const navPerToken = parsePositiveNumber(metadata.navPerToken);
-      const sourceTimestamp =
-        parsePositiveNumber(metadata.sourceTimestamp) ?? parsePositiveNumber(metadata.oracleUpdatedAt);
-      if (navPerToken == null || sourceTimestamp == null) continue;
+      const navQuote = decodeReserveNavPrice(row);
+      if (!navQuote) continue;
 
       const usdRate = resolveNavUsdRate({
         asset,
@@ -219,17 +200,15 @@ async function loadReserveNavPriceQuotes(params: {
       });
       if (usdRate == null) continue;
 
-      const price = navPerToken * usdRate;
+      const price = navQuote.price * usdRate;
       if (!Number.isFinite(price) || price <= 0) continue;
 
       quotes.set(row.stablecoin_id, {
-        source: row.source,
+        ...navQuote,
         price,
-        observedAt: Math.floor(sourceTimestamp),
-        observedAtMode: "upstream",
         metadata: {
           reserveFetchedAt: row.fetched_at,
-          navPerToken,
+          navPerToken: navQuote.price,
           navUsdRate: usdRate,
         },
       });

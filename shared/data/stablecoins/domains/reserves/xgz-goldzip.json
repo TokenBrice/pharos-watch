@@ -1,0 +1,81 @@
+{
+  "id": "xgz-goldzip",
+  "reserves": [
+    {
+      "name": "Issuer-reported physical gold in HKGX-recognised depositories (allocation unverified)",
+      "pct": 100,
+      "risk": "medium",
+      "assetClass": "other",
+      "issuerOrObligor": "GoldZip Digital Pte. Ltd.",
+      "riskFactors": [
+        "market",
+        "custody",
+        "counterparty",
+        "legal",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Refine06 primary-source review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "GoldZip issuer-claimed HKGX group affiliation",
+        "url": "https://goldzip.info/"
+      },
+      {
+        "label": "GoldZip physical gold claim",
+        "url": "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf"
+      },
+      {
+        "label": "GoldZip transparency report gap",
+        "url": "https://goldzip.info/transparency/"
+      }
+    ],
+    "rationale": "The complete issuer-described reserve category is physical gold; 100% records promised backing type, not verified bars, allocated title or sufficiency. Homepage identifies GoldZip Digital Pte. Ltd. as an HKGX group member and the litepaper describes issuance by an HKGX wholly owned subsidiary. HKGX both affiliates with the issuer and recognizes refiners/depositories: this related-party concentration is not independent custody or assurance. No current MinLaw register confirmation or PSPM credit is inferred from issuer marketing.",
+    "compositionBasis": "Issuer product and backing disclosures reopened 2026-10-02",
+    "compositionAsOf": "2026-10-02",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Current bar inventory, named custodians, provider shares, segregation and independent reserve-liability reconciliation are unavailable.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Issuer-reported physical gold in HKGX-recognised depositories (allocation unverified)",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "The issuer promises physical gold, but no current bar inventory or independent reserve-liability reconciliation verifies the assets actually held; the full reserve envelope remains unresolved rather than a verified exogenous gold holding."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "HKGX-recognised third-party depositories (not publicly named)",
+        "role": "custodian"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "GoldZip physical gold claim",
+        "url": "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf"
+      },
+      {
+        "label": "GoldZip transparency report gap",
+        "url": "https://goldzip.info/transparency/"
+      }
+    ],
+    "uncertainty": "Current bar inventory, named custodians, provider shares, segregation and independent reserve-liability reconciliation are unavailable.",
+    "knownUnknownExposurePct": 100
+  }
+}

@@ -1653,7 +1653,7 @@ const unitedPorParamsSchema = z
 
 const tetherTransparencyParamsSchema = z
   .object({
-    currencyIso: z.enum(["usdt", "xaut"]),
+    currencyIso: z.enum(["usdt", "xaut", "mxnt"]),
     slices: z.array(ReserveSliceSchema).min(1),
     compositionAsOf: StrictIsoDateSchema.optional(),
   })
@@ -2223,6 +2223,21 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     // emit and are not unused-telemetry candidates.
     redemptionTelemetry: { capacity: "direct", capacityParamsGated: true, fee: "none" },
     validation: TIMESTAMPED_FEED_VALIDATION,
+  },
+  "jpmorgan-nav": {
+    primaryInputKinds: ["http-html"],
+    paramsSchema: noParamsSchema,
+    sourceModel: "single-bucket",
+    evidenceClass: "static-validated",
+    sourceOriginClass: "issuer-attested",
+    preferredFreshnessMode: "verified",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_SINGLE_ASSET_V1,
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: {
+      allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
+      maxSourceAgeSec: BUSINESS_DAY_NAV_SOURCE_MAX_AGE_SEC,
+    },
   },
   "ondo-ousg": {
     primaryInputKinds: ["onchain-evm"],
@@ -3273,6 +3288,68 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
       // The basket is 100% opaque by design: a permanent structural fact
       // surfaced as info, not a per-run degradation.
       maxUnknownExposurePct: 100,
+      allowedFreshnessModes: ["unverified"],
+    },
+  },
+  "frnt-ledgerlens": {
+    primaryInputKinds: ["http-json"],
+    paramsSchema: noParamsSchema,
+    sourceModel: "dynamic-mix",
+    evidenceClass: "weak-live-probe",
+    sourceOriginClass: "issuer-attested",
+    preferredFreshnessMode: "verified",
+    displayBadgeKind: "proof",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: DASHBOARD_VERIFIED_VALIDATION,
+    provenance: {
+      status: "active",
+      rationale: "FRNT LedgerLens supplemental dashboard JSON measures gross FBO composition and reconciled net reserve coverage. Unallocated administrative payable prevents net backing composition attribution; no AT-C 205 report verification or redemption capacity is claimed. Reviewed 2026-10-03.",
+    },
+  },
+  "coinbase-oned-por": {
+    primaryInputKinds: ["http-json"],
+    paramsSchema: noParamsSchema,
+    sourceModel: "single-bucket",
+    evidenceClass: "weak-live-probe",
+    sourceOriginClass: "issuer-attested",
+    preferredFreshnessMode: "verified",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_SINGLE_ASSET_V1,
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: DASHBOARD_VERIFIED_VALIDATION,
+    provenance: {
+      status: "active",
+      rationale: "Ordinary public persisted GraphQL GET verified200 on 2026-10-03; exact Base ONED stock and complete published USDC wallets reconcile. Source-controlled query hash/schema drift fail closed with stable machine reasons, without HTML/stale/partial fallback. This remains issuer-attested telemetry, not independent financial assurance or funded redemption capacity.",
+    },
+  },
+  "blackrock-brsrv-holdings": {
+    primaryInputKinds: ["http-html"],
+    paramsSchema: noParamsSchema,
+    sourceModel: "dynamic-mix",
+    evidenceClass: "weak-live-probe",
+    sourceOriginClass: "issuer-attested",
+    preferredFreshnessMode: "verified",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: {
+      maxSourceAgeSec: BUSINESS_DAY_NAV_SOURCE_MAX_AGE_SEC,
+      allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
+    },
+  },
+  "matrixdock-stbt": {
+    primaryInputKinds: ["http-html"],
+    paramsSchema: noParamsSchema,
+    sourceModel: "dynamic-mix",
+    evidenceClass: "weak-live-probe",
+    sourceOriginClass: "issuer-attested",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: {
+      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
       allowedFreshnessModes: ["unverified"],
     },
   },

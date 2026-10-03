@@ -1,0 +1,136 @@
+{
+  "id": "xgz-goldzip",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciliation-unknown",
+    "confidence": "verified",
+    "summary": "The Ethereum UUPS owner can mint, grant every role and replace mint logic. Its custom wallet permits one administrator signature; the alternative operator-plus-validator path does not remove that bypass.",
+    "controls": [
+      {
+        "label": "GoldZip owner mint and UUPS administration",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "chain": "ethereum",
+        "address": "0xd173e69192b9ff22069aa913ef6e6e94b19f0778",
+        "threshold": 1,
+        "signerCount": 3,
+        "modulesOrGuardsStatus": "not-applicable",
+        "deploymentRefs": [
+          "ethereum:0x69af64f409c08e9076bf7f3ed9db3a7409717161"
+        ],
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110184,
+        "sources": [
+          {
+            "label": "GoldZip Ethereum proxy",
+            "url": "https://etherscan.io/address/0x69af64f409c08e9076bf7f3ed9db3a7409717161"
+          },
+          {
+            "label": "Verified HKGXToken implementation",
+            "url": "https://etherscan.io/address/0x29ed41cb1013a4df63d87b82346b384847db7511#code"
+          },
+          {
+            "label": "Exact HKGXToken and custom AccessControl source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x29ed41cb1013a4df63d87b82346b384847db7511?fields=sources,abi"
+          },
+          {
+            "label": "Custom wallet signature and owner-manager source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x06b7c1460154a4d0cf79954298d6ba8d5b2d38f7?fields=sources,abi"
+          },
+          {
+            "label": "GoldZip issuance claim",
+            "url": "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf"
+          }
+        ],
+        "evidence": "At Ethereum block 26110184, owner() is this wallet, hasRole(MINT_ROLE,owner) is true, and wallet storage slot 0 binds 0x06b7c1460154a4d0cf79954298d6ba8d5b2d38f7. Verified AccessControl.hasRole returns true for the owner for every role; _authorizeUpgrade is onlyOwner. Complete RoleGranted/RoleRevoked log search from creation block 23231220 through 26110184 returns no rows: no additional role grantees are recorded. getOwners returns three account/role tuples; direct role getters identify administrator 0xf22386da1a906a586ffaf176c9e38a282584ae6b, operator 0x396656e13098632264748c8b08994031844f61a9 and validator 0x56083e333a23ed70ba8fabba11490407fbc939c4. adminThreshold/operatorThreshold/validatorThreshold and each count are 1. Verified checkSignature accepts one administrator signature OR one operator plus one validator signature; execTransaction supports delegatecall and enforces no time delay. This is not a 2-of-3 Safe, and signer-human independence is not established."
+      }
+    ],
+    "upgradeability": {
+      "model": "uups",
+      "deploymentRefs": [
+        "ethereum:0x69af64f409c08e9076bf7f3ed9db3a7409717161"
+      ],
+      "proxyAddresses": [
+        "0x69af64f409c08e9076bf7f3ed9db3a7409717161"
+      ],
+      "implementationAddresses": [
+        "0x29ed41cb1013a4df63d87b82346b384847db7511"
+      ],
+      "adminAddresses": [
+        "0xd173e69192b9ff22069aa913ef6e6e94b19f0778"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "GoldZip owner mint and UUPS administration",
+      "observedAt": "2026-10-03",
+      "observedBlock": 26110184,
+      "sources": [
+        {
+          "label": "GoldZip Ethereum proxy",
+          "url": "https://etherscan.io/address/0x69af64f409c08e9076bf7f3ed9db3a7409717161"
+        },
+        {
+          "label": "Verified HKGXToken implementation",
+          "url": "https://etherscan.io/address/0x29ed41cb1013a4df63d87b82346b384847db7511#code"
+        },
+        {
+          "label": "Exact owner-only UUPS authorization source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x29ed41cb1013a4df63d87b82346b384847db7511?fields=sources,abi"
+        },
+        {
+          "label": "Custom wallet signature and owner-manager source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x06b7c1460154a4d0cf79954298d6ba8d5b2d38f7?fields=sources,abi"
+        },
+        {
+          "label": "GoldZip issuance claim",
+          "url": "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf"
+        }
+      ]
+    },
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
+    "review": {
+      "sources": [
+        {
+          "label": "GoldZip Ethereum proxy",
+          "url": "https://etherscan.io/address/0x69af64f409c08e9076bf7f3ed9db3a7409717161"
+        },
+        {
+          "label": "Verified HKGXToken implementation",
+          "url": "https://etherscan.io/address/0x29ed41cb1013a4df63d87b82346b384847db7511#code"
+        },
+        {
+          "label": "Exact HKGXToken and custom AccessControl source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x29ed41cb1013a4df63d87b82346b384847db7511?fields=sources,abi"
+        },
+        {
+          "label": "Custom wallet signature and owner-manager source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x06b7c1460154a4d0cf79954298d6ba8d5b2d38f7?fields=sources,abi"
+        },
+        {
+          "label": "GoldZip issuance claim",
+          "url": "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf"
+        }
+      ],
+      "evidence": "Current owner, no additional role grants since deployment, owner role bypass and owner-only UUPS authorization are resolved by exact verified source and pinned RPC reads. Mint takes an arbitrary uint256 amount with no collateral verification or economic cap. The custom wallet's administrator path requires one signature, with unrestricted call/delegatecall execution and no delay. getThreshold() is absent from the executable ABI; its revert is not evidence of an unreadable policy because the three role-specific threshold getters are public and return 1. Physical reserve/liability reconciliation and independent human/key custody remain undisclosed.",
+      "reviewer": "Refine06 primary-source and pinned RPC review",
+      "reviewedAt": "2026-10-03",
+      "disposition": "scoreable",
+      "unresolvedQuestions": [],
+      "scopedQuestions": [
+        {
+          "controlRef": "GoldZip owner mint and UUPS administration",
+          "question": "Human independence and key-custody safeguards for the three identified custom-wallet accounts are not publicly established. The verified one-administrator authorization path is unchanged; this question concerns signer custody and independence rather than unknown executable authorization.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine06 mint-authority calibration v2",
+          "sources": [{
+            "label": "Exact custom wallet and identified owner-manager accounts",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x06b7c1460154a4d0cf79954298d6ba8d5b2d38f7?fields=sources,abi"
+          }]
+        }
+      ]
+    }
+  }
+}

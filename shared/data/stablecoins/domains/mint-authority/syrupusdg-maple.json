@@ -1,0 +1,261 @@
+{
+  "id": "syrupusdg-maple",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "verified",
+    "inheritedFrom": "usdg-paxos",
+    "summary": "syrupUSDG is the canonical Ethereum Maple lending-pool share. Base USDG issuance is inherited from Paxos; local share eligibility and accounting depend on an upgradeable PoolManager and privileged protocol controls. CCIP representation mint/burn powers belong to Bridge Risk, not native issuance.",
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
+    "upgradeability": {
+      "model": "custom",
+      "deploymentRefs": [
+        "ethereum:0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a"
+      ],
+      "proxyAddresses": [
+        "0x6c48cd22086f3db3f23e7ceedd5c429d93ff3327"
+      ],
+      "implementationAddresses": [
+        "0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8"
+      ],
+      "adminAddresses": [
+        "0x2efff88747eb5a3ff00d4d8d0f0800e306c0426b",
+        "0x6b1a78c1943b03086f7ee53360f9b0672bd60818",
+        "0x54e28bb2d530ee10386dbca6e7e84efac809292c"
+      ],
+      "delaySec": 0,
+      "canChangeMintLogic": true,
+      "controlRef": "Maple syrupUSDG PoolManager",
+      "observedAt": "2026-10-03",
+      "observedBlock": 26110183,
+      "sources": [
+        {
+          "label": "Verified deployed contract 0x6c48cd22086f3db3f23e7ceedd5c429d93ff3327",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6c48cd22086f3db3f23e7ceedd5c429d93ff3327"
+        },
+        {
+          "label": "Verified deployed contract 0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8"
+        },
+        {
+          "label": "Maple syrupUSDG legal claim and risk disclosures",
+          "url": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md"
+        },
+        {
+          "label": "Ethereum RPC observation at block 26107703",
+          "url": "https://eth-mainnet.g.alchemy.com/v2/"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a",
+        "label": "Maple syrupUSDG canonical share contract",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107703,
+        "sources": [
+          {
+            "label": "Verified deployed contract 0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a"
+          },
+          {
+            "label": "Ethereum RPC observation at block 26107703",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          }
+        ],
+        "evidence": "At block 26107703, asset() was USDG 0xe343167631d89b6ffc58b88d6b7fb0228795491d, decimals 6, totalSupply 188334976.708895 and totalAssets 190837163.740225. The token's EIP-1967 implementation/admin slots were zero. Verified mint/deposit/transfer paths check the manager; token non-proxy identity is not whole-protocol immutability.",
+        "deploymentRefs": [
+          "ethereum:0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a"
+        ],
+        "canRaiseCap": false
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x6c48cd22086f3db3f23e7ceedd5c429d93ff3327",
+        "label": "Maple syrupUSDG PoolManager",
+        "role": "proxy-admin",
+        "authorityType": "contract",
+        "directMintAbility": "upgrade-only",
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110183,
+        "sources": [
+          {
+            "label": "Verified deployed contract 0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8"
+          },
+          {
+            "label": "Verified deployed contract 0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a"
+          },
+          {
+            "label": "Ethereum RPC observation at block 26107703",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          }
+        ],
+        "evidence": "At Ethereum block 26110183 current bindings remain implementation 0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8, delegate 0x54e28bb2d530ee10386dbca6e7e84efac809292c (EOA), Globals 0x804a6f5f667170f545bf14e5ddb48c70b788390c, WithdrawalManager 0xaf63c06970086d535f338565d77c5fa3bdc5fd79 and PoolPermissionManager 0xbe10adce8b6e3e02db384e7fada5395dd113d8b3. Verified upgrade() admits the delegate only after a valid Globals PM:UPGRADE scheduled call (override 0/0 falls back to 604800-second delay, 172800-second execution window), or Globals securityAdmin without that delay. Factory 0xe463cd473ecc1d1a4ecf20b62624d84dd20a8339 must have an enabled version path; only governor registers implementations/enables paths. Thus DAO-approved versions are a real constraint, but there is no universal seven-day protective upgrade floor. These powers govern local share accounting, not base USDG issuance.",
+        "deploymentRefs": [
+          "ethereum:0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a"
+        ],
+        "canRaiseCap": true
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x2efff88747eb5a3ff00d4d8d0f0800e306c0426b",
+        "label": "Maple GovernorTimelock",
+        "role": "governor",
+        "authorityType": "timelock",
+        "directMintAbility": "upgrade-only",
+        "timelockDelaySec": 259200,
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110183,
+        "deploymentRefs": ["ethereum:0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a"],
+        "evidence": "Pinned Globals governor/admin is this verified GovernorTimelock, not an OpenZeppelin timelock. Current default delay/window are 259200/172800 seconds; factory registerImplementation/enableUpgradePath and Globals setImplementation/setSecurityAdmin have 0/0 overrides and therefore use the default. MIN_DELAY is 86400 and parameters can change through scheduled onlySelf calls. Complete RoleUpdated history and hasRole(address,bytes32) checks identify ROLE_ADMIN EOA 0xa04bddfb5bce1afc0a939749dc721ba762019b2a and Safe 0xd6d4bcde6c816f17889f1dd3000af0261b03a196; the same Safe is sole PROPOSER. EXECUTOR is EOA 0x6d9f3a385796a5407c06a5bf18e903916548993e plus operational Safe 0xce1ce7c7f436dcc4e28bc8bf86115514d3dc34e8. Sole CANCELLER is security Safe 0x6b1a78c1943b03086f7ee53360f9b0672bd60818. Execution-role holders cannot admit unscheduled proposals. Proposer Safe is 4-of-7, owners 0xa16abf89ab821f5abfa0b6f83cf3544693e3e72c, 0x0f4430f1cec6b976a9358effa95399ee8fc8bd40, 0xf4b33586ee31dc6db89da7fb64b853e99f984b7f, 0xf3869ff0c3c3c6b246c75da983b192a4a6218eac, 0x96481cb0fcd7673254ebccc42dce9b92da10ea04, 0x04ebb8201bc767bd96932d33b12bd2eaa661e918, 0x588c6eb6e68f3cb03243835c1c67864c84df85bd; modules empty and guard zero. Distinct addresses do not establish independent humans or key custody.",
+        "sources": [
+          {"label": "Verified GovernorTimelock", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2efff88747eb5a3ff00d4d8d0f0800e306c0426b"},
+          {"label": "Verified Globals implementation / scheduled-call semantics", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9beabb1b6f3ad1ddb87b65148ba5eb6102334956"},
+          {"label": "Verified manager factory / authorized upgrade paths", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe463cd473ecc1d1a4ecf20b62624d84dd20a8339"},
+          {"label": "Pinned role history, live role getters, delay overrides and Safe census", "url": "https://etherscan.io/block/26110183"}
+        ]
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x6b1a78c1943b03086f7ee53360f9b0672bd60818",
+        "label": "Maple security-admin Safe",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "directMintAbility": "upgrade-only",
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "source": "onchain",
+          "observedAt": "2026-10-03",
+          "observedBlock": 26110183,
+          "enabledModules": [],
+          "guard": null,
+          "threshold": 3,
+          "owners": [
+            "0x4e107c30a68c9fe7236f0091160198ddad074e4b",
+            "0x8ce4d92ce97b4e970f95281c8fd75c90d2808624",
+            "0x4109372c415e383814a73e1de65fc631a93c1ed1",
+            "0x54ccab4d3e6694a092b0db186e5150b3669e3b74",
+            "0x44a6dd2749309691d0912258245de288fd3733ca",
+            "0x063087cfa971cc237d7bf5810d7ce64adf894ff8"
+          ]
+        },
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110183,
+        "deploymentRefs": ["ethereum:0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a"],
+        "evidence": "Current Globals securityAdmin is this 3-of-6 Safe. getOwners/getThreshold, complete module pagination (empty sentinel) and guard storage (zero) are pinned at Ethereum block 26110183. Manager upgrade accepts this actor without delegate schedule delay, but factory version paths must still be enabled. No independent-human or custody credit is asserted.",
+        "sources": [
+          {"label": "Security Safe verified deployment", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6b1a78c1943b03086f7ee53360f9b0672bd60818"},
+          {"label": "Manager security-admin exception", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8"},
+          {"label": "Pinned Safe census", "url": "https://etherscan.io/block/26110183"}
+        ]
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x54e28bb2d530ee10386dbca6e7e84efac809292c",
+        "label": "Maple syrupUSDG pool delegate",
+        "role": "governor",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "timelockDelaySec": 604800,
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110183,
+        "deploymentRefs": ["ethereum:0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a"],
+        "evidence": "poolDelegate() resolves to this address and eth_getCode is empty at the pin. Its PM:UPGRADE branch checks calldata-bound Globals scheduling and the current seven-day fallback delay, then uses an enabled factory path. Other delegate parameters are not covered by a universal seven-day delay. EOA concentration is retained; no multisig or human-independence inference.",
+        "sources": [
+          {"label": "Delegate upgrade branch", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8"},
+          {"label": "Globals fallback delay implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9beabb1b6f3ad1ddb87b65148ba5eb6102334956"},
+          {"label": "Pinned delegate code and current delay", "url": "https://etherscan.io/block/26110183"}
+        ]
+      }
+    ],
+    "review": {
+      "evidence": "Exact native liability, current manager/factory/Globals binding and present governor/security/delegate execution roles were independently checked at Ethereum block 26110183. Governor role history from its deployment plus live hasRole checks identify every current role holder. Proposer 4-of-7, security 3-of-6 and operational 3-of-5 Safes all have empty module pages and zero guards; operational owners are 0x57d1b1d5271390e161155a4594657facf05ccc7c, 0x8be3eb3c4f748f0ec660b996ef7e1d44f5d89736, 0x4024b08d3ffef9f7bced48c820e53edbc983307b, 0xf5703815842e06ce68940fa64eaa5bf36817d827 and 0x7371da5ac817c05547da65a84eacd72d653027af. Security-admin bypass makes the whole local upgrade floor zero despite delegate and governor delays. This is a current technical inventory, not execution-complete/key-custody certification, financial reconciliation or borrower underwriting. Sibling financial dashboards do not cover syrupUSDG. Sibling-evidence comparison on 2026-10-03: syrupUSDC and syrupUSDT cite Maple's May 7, 2026 Proof of Reserves announcement and The Network Firm's LedgerLens Maple collateral-verification series. The current attestor dashboard, last verified September 29, 2026 at 01:00 UTC, explicitly names only syrupUSDC 0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b and syrupUSDT 0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d. It does not include syrupUSDG 0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a. The reviewed issuer announcement likewise limits its regular third-party custodian-sourced collateral reports to those two siblings. Maple's current transparency page displays syrupUSDG AUM/yield, but that issuer analytics coverage is not token coverage in the sibling attestor series. Therefore attestation-only supervision and recurring reconciliation credit cannot be inherited for syrupUSDG from this evidence; supervision/reconciliation remain unknown and the stricter local posture is retained, without changing the sibling convention.",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewedAt": "2026-10-03",
+      "sources": [
+        {
+          "label": "Sibling report series: issuer announcement explicitly covers syrupUSDC and syrupUSDT",
+          "url": "https://maple.finance/insights/introducing-proof-of-reserves"
+        },
+        {
+          "label": "The Network Firm current Maple dashboard explicitly lists only the two sibling tokens; last verified 2026-09-29 01:00 UTC",
+          "url": "https://dashboard.ledgerlens.io/c/maple"
+        },
+        {
+          "label": "Issuer transparency includes syrupUSDG analytics, distinct from independent attestor coverage",
+          "url": "https://maple.finance/transparency"
+        },
+        {
+          "label": "Maple syrupUSDG legal claim and risk disclosures",
+          "url": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md"
+        },
+        {
+          "label": "Maple syrupUSDG defaults and impairments",
+          "url": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-defaults-and-impairments.md"
+        },
+        {
+          "label": "Maple pool accounting and impairment authority",
+          "url": "https://docs.maple.finance/technical-resources/pools/accounting/pool-accounting.md"
+        },
+        {
+          "label": "Verified deployed contract 0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a"
+        },
+        {
+          "label": "Verified deployed contract 0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8"
+        },
+        {
+          "label": "Ethereum RPC observation at block 26107703",
+          "url": "https://eth-mainnet.g.alchemy.com/v2/"
+        }
+      ],
+      "scopedQuestions": [
+        {
+          "controlRef": "Maple GovernorTimelock",
+          "question": "What human signer independence, signing policy and key-custody assurance support the identified governor role holders, including the 4-of-7 proposer Safe and operational executor Safe/EOA? Current role census, thresholds and scheduling do not establish those custody facts.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine13)",
+          "sources": [
+            {"label": "Identified GovernorTimelock role semantics", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2efff88747eb5a3ff00d4d8d0f0800e306c0426b"},
+            {"label": "Pinned identified role holders and Safe census", "url": "https://etherscan.io/block/26110183"}
+          ]
+        },
+        {
+          "controlRef": "Maple security-admin Safe",
+          "question": "What human signer independence, signing policy and key-custody assurance support the identified 3-of-6 security-admin Safe owners? Its verified threshold, empty modules and zero guard do not establish independent custody for the immediate authorized upgrade branch.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine13)",
+          "sources": [
+            {"label": "Exact security-admin Safe", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6b1a78c1943b03086f7ee53360f9b0672bd60818"},
+            {"label": "Pinned identified security-admin signer census", "url": "https://etherscan.io/block/26110183"}
+          ]
+        },
+        {
+          "controlRef": "Maple syrupUSDG pool delegate",
+          "question": "What signing policy and key-custody assurance support the identified pool-delegate EOA? Its verified address, empty code and calldata-bound upgrade scheduling do not establish MPC/HSM protection or operational custody.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine13)",
+          "sources": [
+            {"label": "Identified delegate upgrade authorization", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8"},
+            {"label": "Pinned identified delegate and delay", "url": "https://etherscan.io/block/26110183"}
+          ]
+        }
+      ],
+      "disposition": "scoreable"
+    }
+  }
+}

@@ -5,7 +5,7 @@
   "oneLiner": "AED-RAKBANK is RAKBank's pre-launch dirham stablecoin, granted CBUAE in-principle approval in January 2026, to be backed 1:1 by segregated AED reserves.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "OTHER",
+    "pegCurrency": "AED",
     "governance": "centralized"
   },
   "collateral": "Planned 1:1 AED reserves held in segregated, regulated accounts supporting full redemption at par, governed by audited smart contracts with real-time reserve attestations; custodian and reserve composition not yet disclosed",

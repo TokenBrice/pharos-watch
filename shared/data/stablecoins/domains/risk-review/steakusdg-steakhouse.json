@@ -1,0 +1,603 @@
+{
+  "id": "steakusdg-steakhouse",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Morpho exact Steakhouse USDG deployment",
+        "url": "https://app.morpho.org/robinhood-chain/vault/0xBeEff033F34C046626B8D0A041844C5d1A5409dd/steakhouse-usdg"
+      },
+      {
+        "label": "Exact verified VaultV2 source (robinhood, 0xbeeff033f34c046626b8d0a041844c5d1a5409dd)",
+        "url": "https://sourcify.dev/server/v2/contract/4663/0xbeeff033f34c046626b8d0a041844c5d1a5409dd?fields=all"
+      },
+      {
+        "label": "Morpho current vault identity and asset API",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Steakhouse DeFi vault governing terms",
+        "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
+      }
+    ],
+    "evidence": "At robinhood block 78597801, receiveSharesGate, sendSharesGate and receiveAssetsGate were zero and their setters permanently abdicated. Matched immutable core has no direct holder seizure or discretionary forced burn. The USDG-denominated lending claim inherits upstream parent freeze exposure; deposit gate/curator authority is distinct from a holder blacklist.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "Only the exact native robinhood vault share is authored. No source-verified share bridge representation is included; underlying parent chain routes remain upstream.",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Morpho exact Steakhouse USDG deployment",
+        "url": "https://app.morpho.org/robinhood-chain/vault/0xBeEff033F34C046626B8D0A041844C5d1A5409dd/steakhouse-usdg"
+      },
+      {
+        "label": "Exact verified VaultV2 source (robinhood, 0xbeeff033f34c046626b8d0a041844c5d1a5409dd)",
+        "url": "https://sourcify.dev/server/v2/contract/4663/0xbeeff033f34c046626b8d0a041844c5d1a5409dd?fields=all"
+      },
+      {
+        "label": "Morpho current vault identity and asset API",
+        "url": "https://api.morpho.org/graphql"
+      }
+    ]
+  },
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "role": "collateral-pricing",
+    "branchModel": "multi-branch",
+    "summary": "Pinned sole-adapter inventory contains 5 borrower markets and an internal VaultV2 NAV path. Borrower oracle/LLTV identities are matched to engine state, with complete paths and loss mechanisms. The exact current feed-owner, operational heartbeat and independent fallback census remains incomplete; no oracleless lending exemption or redundant-feed credit is asserted.",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Sol refinement 2026-10-03 (Refine12, exact source and RPC census)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Morpho full exact VaultV2 adapter and market inventory",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Pinned engine market parameters and immutable oracle getters",
+        "url": "https://rpc.mainnet.chain.robinhood.com"
+      },
+      {
+        "label": "Morpho Blue borrower and liquidation specification",
+        "url": "https://docs.morpho.org/developers/contracts/blue/"
+      },
+      {
+        "label": "Exact Ethereum lending-engine source: bad debt reduces totalSupplyAssets",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
+      }
+    ],
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Sol refinement 2026-10-03 (Refine12, exact source and RPC census)",
+      "rationale": "Every sole-adapter market has a collateral-price/LLTV liquidation branch. The internal share-NAV path is reviewed separately and does not exempt borrower branches. Adapter and position pagination countTotal confirms complete current inventory.",
+      "sources": [
+        {
+          "label": "Morpho full exact VaultV2 adapter and market inventory",
+          "url": "https://api.morpho.org/graphql"
+        },
+        {
+          "label": "Pinned engine market parameters and immutable oracle getters",
+          "url": "https://rpc.mainnet.chain.robinhood.com"
+        },
+        {
+          "label": "Morpho Blue borrower and liquidation specification",
+          "url": "https://docs.morpho.org/developers/contracts/blue/"
+        },
+        {
+          "label": "Exact Ethereum lending-engine source: bad debt reduces totalSupplyAssets",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
+        }
+      ]
+    },
+    "branches": [
+      {
+        "id": "market-127353ba63e08f74d8e9ce8a1c2b41b5f89c7167135b1c09fbed34a71b4cb06b",
+        "label": "WETH / steakUSDG borrower market",
+        "tier": "opaque-or-unknown",
+        "summary": "Exact engine idToMarketParams matches collateral, oracle and LLTV from the complete adapter inventory. Getter inputs are pinned; source-verified composition does not establish independent fallback, feed-admin closure or heartbeat. Exact executable feed/fallback and feed-owner/freshness policy remains unverified; opaque topology is nondisclosure, not a proven price-manipulation event.",
+        "collateralAssets": [
+          "WETH"
+        ],
+        "chains": [
+          "robinhood"
+        ],
+        "feeds": [
+          {
+            "provider": "Morpho immutable market oracle",
+            "path": "IOracle.price for market 0x127353ba63e08f74d8e9ce8a1c2b41b5f89c7167135b1c09fbed34a71b4cb06b",
+            "address": "0x5e3645ed6ace5b212ad7cf51c75154897e2f80ad",
+            "chain": "robinhood",
+            "observedAt": "2026-10-03",
+            "observedBlock": 78901968
+          },
+          {
+            "provider": "Pinned oracle input; operator/heartbeat not assumed",
+            "path": "BASE_FEED_1()",
+            "address": "0x5058adee53b04e374d8bedbad634bc4778f50b22",
+            "chain": "robinhood",
+            "observedAt": "2026-10-03",
+            "observedBlock": 78892407
+          }
+        ],
+        "fallbackBehavior": "The exact oracle fallback/freshness and replacement policy was not publicly source-verified; no failover or staleness credit is asserted. Morpho documents that price() reverts can block liquidation.",
+        "observedAt": "2026-10-03",
+        "observedBlock": 78901968,
+        "collateralParameters": [
+          {
+            "asset": "WETH",
+            "maximumLtvPct": 86.0,
+            "note": "LLTV verified from exact chain engine idToMarketParams; no additional shutdown ratio inferred."
+          }
+        ],
+        "liquidationMechanism": "Morpho liquidate reads this market IOracle.price and rejects healthy positions; an incentivized liquidator repays debt for seized collateral. No timelocked liquidation or guaranteed keeper execution is established.",
+        "backstop": "The reviewed Morpho lending mechanism does not promise external capital covering realized borrower bad debt; this review establishes no independently funded exact-vault rescue.",
+        "shutdownOrBadDebtBehavior": "When borrower collateral reaches zero, the verified Ethereum Morpho implementation subtracts residual debt from totalSupplyAssets; VaultV2 realizes lending-position losses in NAV. Chain-local Morpho API identity does not prove byte-identical Robinhood runtime.",
+        "sources": [
+          {
+            "label": "Morpho full exact VaultV2 adapter and market inventory",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Pinned engine market parameters and immutable oracle getters",
+            "url": "https://rpc.mainnet.chain.robinhood.com"
+          },
+          {
+            "label": "Morpho Blue borrower and liquidation specification",
+            "url": "https://docs.morpho.org/developers/contracts/blue/"
+          },
+          {
+            "label": "Exact Ethereum lending-engine source: bad debt reduces totalSupplyAssets",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
+          },
+          {
+            "label": "Exact oracle deployment source response",
+            "url": "https://sourcify.dev/server/v2/contract/4663/0x5e3645ed6ace5b212ad7cf51c75154897e2f80ad?fields=all"
+          }
+        ]
+      },
+      {
+        "id": "market-919a9b6b94dae7c86620eaf7a08e597aae8a4c3a9e9c7671771fbaf62b6b61c7",
+        "label": "syrupUSDG / steakUSDG borrower market",
+        "tier": "opaque-or-unknown",
+        "summary": "Exact engine idToMarketParams matches collateral, oracle and LLTV from the complete adapter inventory. Getter inputs are pinned; source-verified composition does not establish independent fallback, feed-admin closure or heartbeat. Exact executable feed/fallback and feed-owner/freshness policy remains unverified; opaque topology is nondisclosure, not a proven price-manipulation event.",
+        "collateralAssets": [
+          "syrupUSDG"
+        ],
+        "chains": [
+          "robinhood"
+        ],
+        "feeds": [
+          {
+            "provider": "Morpho immutable market oracle",
+            "path": "IOracle.price for market 0x919a9b6b94dae7c86620eaf7a08e597aae8a4c3a9e9c7671771fbaf62b6b61c7",
+            "address": "0x152c638fad68913739ee19ba8ef47faeb09dca91",
+            "chain": "robinhood",
+            "observedAt": "2026-10-03",
+            "observedBlock": 78901968
+          },
+          {
+            "provider": "Pinned oracle input; operator/heartbeat not assumed",
+            "path": "BASE_FEED_1()",
+            "address": "0x3bedea9ce3ead0db4ea60dc497568dedde85dba3",
+            "chain": "robinhood",
+            "observedAt": "2026-10-03",
+            "observedBlock": 78892407
+          }
+        ],
+        "fallbackBehavior": "The exact oracle fallback/freshness and replacement policy was not publicly source-verified; no failover or staleness credit is asserted. Morpho documents that price() reverts can block liquidation.",
+        "observedAt": "2026-10-03",
+        "observedBlock": 78901968,
+        "collateralParameters": [
+          {
+            "asset": "syrupUSDG",
+            "maximumLtvPct": 91.5,
+            "note": "LLTV verified from exact chain engine idToMarketParams; no additional shutdown ratio inferred."
+          }
+        ],
+        "liquidationMechanism": "Morpho liquidate reads this market IOracle.price and rejects healthy positions; an incentivized liquidator repays debt for seized collateral. No timelocked liquidation or guaranteed keeper execution is established.",
+        "backstop": "The reviewed Morpho lending mechanism does not promise external capital covering realized borrower bad debt; this review establishes no independently funded exact-vault rescue.",
+        "shutdownOrBadDebtBehavior": "When borrower collateral reaches zero, the verified Ethereum Morpho implementation subtracts residual debt from totalSupplyAssets; VaultV2 realizes lending-position losses in NAV. Chain-local Morpho API identity does not prove byte-identical Robinhood runtime.",
+        "sources": [
+          {
+            "label": "Morpho full exact VaultV2 adapter and market inventory",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Pinned engine market parameters and immutable oracle getters",
+            "url": "https://rpc.mainnet.chain.robinhood.com"
+          },
+          {
+            "label": "Morpho Blue borrower and liquidation specification",
+            "url": "https://docs.morpho.org/developers/contracts/blue/"
+          },
+          {
+            "label": "Exact Ethereum lending-engine source: bad debt reduces totalSupplyAssets",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
+          },
+          {
+            "label": "Exact oracle deployment source response",
+            "url": "https://sourcify.dev/server/v2/contract/4663/0x152c638fad68913739ee19ba8ef47faeb09dca91?fields=all"
+          }
+        ]
+      },
+      {
+        "id": "market-c845da65a020ddca5f132efa8fea79676d8edfdea504226a4c01e7a9e34cddd6",
+        "label": "USDe / steakUSDG borrower market",
+        "tier": "opaque-or-unknown",
+        "summary": "Exact engine idToMarketParams matches collateral, oracle and LLTV from the complete adapter inventory. Getter inputs are pinned; source-verified composition does not establish independent fallback, feed-admin closure or heartbeat. Exact executable feed/fallback and feed-owner/freshness policy remains unverified; opaque topology is nondisclosure, not a proven price-manipulation event.",
+        "collateralAssets": [
+          "USDe"
+        ],
+        "chains": [
+          "robinhood"
+        ],
+        "feeds": [
+          {
+            "provider": "Morpho immutable market oracle",
+            "path": "IOracle.price for market 0xc845da65a020ddca5f132efa8fea79676d8edfdea504226a4c01e7a9e34cddd6",
+            "address": "0xe64849bd4ad03dfabbe02bb521de19997a19055f",
+            "chain": "robinhood",
+            "observedAt": "2026-10-03",
+            "observedBlock": 78901968
+          }
+        ],
+        "fallbackBehavior": "The exact oracle fallback/freshness and replacement policy was not publicly source-verified; no failover or staleness credit is asserted. Morpho documents that price() reverts can block liquidation.",
+        "observedAt": "2026-10-03",
+        "observedBlock": 78901968,
+        "collateralParameters": [
+          {
+            "asset": "USDe",
+            "maximumLtvPct": 91.5,
+            "note": "LLTV verified from exact chain engine idToMarketParams; no additional shutdown ratio inferred."
+          }
+        ],
+        "liquidationMechanism": "Morpho liquidate reads this market IOracle.price and rejects healthy positions; an incentivized liquidator repays debt for seized collateral. No timelocked liquidation or guaranteed keeper execution is established.",
+        "backstop": "The reviewed Morpho lending mechanism does not promise external capital covering realized borrower bad debt; this review establishes no independently funded exact-vault rescue.",
+        "shutdownOrBadDebtBehavior": "When borrower collateral reaches zero, the verified Ethereum Morpho implementation subtracts residual debt from totalSupplyAssets; VaultV2 realizes lending-position losses in NAV. Chain-local Morpho API identity does not prove byte-identical Robinhood runtime.",
+        "sources": [
+          {
+            "label": "Morpho full exact VaultV2 adapter and market inventory",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Pinned engine market parameters and immutable oracle getters",
+            "url": "https://rpc.mainnet.chain.robinhood.com"
+          },
+          {
+            "label": "Morpho Blue borrower and liquidation specification",
+            "url": "https://docs.morpho.org/developers/contracts/blue/"
+          },
+          {
+            "label": "Exact Ethereum lending-engine source: bad debt reduces totalSupplyAssets",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
+          },
+          {
+            "label": "Exact oracle deployment source response",
+            "url": "https://sourcify.dev/server/v2/contract/4663/0xe64849bd4ad03dfabbe02bb521de19997a19055f?fields=all"
+          }
+        ]
+      },
+      {
+        "id": "market-1efd13a2d1dc66a2466e7c25820537028e604791f00454d9c686fdfbf70f404d",
+        "label": "mGLO / steakUSDG borrower market",
+        "tier": "opaque-or-unknown",
+        "summary": "Exact engine idToMarketParams matches collateral, oracle and LLTV from the complete adapter inventory. Getter inputs are pinned; source-verified composition does not establish independent fallback, feed-admin closure or heartbeat. Exact executable feed/fallback and feed-owner/freshness policy remains unverified; opaque topology is nondisclosure, not a proven price-manipulation event.",
+        "collateralAssets": [
+          "mGLO"
+        ],
+        "chains": [
+          "robinhood"
+        ],
+        "feeds": [
+          {
+            "provider": "Morpho immutable market oracle",
+            "path": "IOracle.price for market 0x1efd13a2d1dc66a2466e7c25820537028e604791f00454d9c686fdfbf70f404d",
+            "address": "0xcb6edd02fdb9b0f2893e590ebed889214f4df650",
+            "chain": "robinhood",
+            "observedAt": "2026-10-03",
+            "observedBlock": 78901968
+          },
+          {
+            "provider": "Pinned oracle input; operator/heartbeat not assumed",
+            "path": "BASE_FEED_1()",
+            "address": "0xe90f5b4a2285f2b8d9cfee2f7ad37ea3ae1bd459",
+            "chain": "robinhood",
+            "observedAt": "2026-10-03",
+            "observedBlock": 78892407
+          }
+        ],
+        "fallbackBehavior": "The exact oracle fallback/freshness and replacement policy was not publicly source-verified; no failover or staleness credit is asserted. Morpho documents that price() reverts can block liquidation.",
+        "observedAt": "2026-10-03",
+        "observedBlock": 78901968,
+        "collateralParameters": [
+          {
+            "asset": "mGLO",
+            "maximumLtvPct": 91.5,
+            "note": "LLTV verified from exact chain engine idToMarketParams; no additional shutdown ratio inferred."
+          }
+        ],
+        "liquidationMechanism": "Morpho liquidate reads this market IOracle.price and rejects healthy positions; an incentivized liquidator repays debt for seized collateral. No timelocked liquidation or guaranteed keeper execution is established.",
+        "backstop": "The reviewed Morpho lending mechanism does not promise external capital covering realized borrower bad debt; this review establishes no independently funded exact-vault rescue.",
+        "shutdownOrBadDebtBehavior": "When borrower collateral reaches zero, the verified Ethereum Morpho implementation subtracts residual debt from totalSupplyAssets; VaultV2 realizes lending-position losses in NAV. Chain-local Morpho API identity does not prove byte-identical Robinhood runtime.",
+        "sources": [
+          {
+            "label": "Morpho full exact VaultV2 adapter and market inventory",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Pinned engine market parameters and immutable oracle getters",
+            "url": "https://rpc.mainnet.chain.robinhood.com"
+          },
+          {
+            "label": "Morpho Blue borrower and liquidation specification",
+            "url": "https://docs.morpho.org/developers/contracts/blue/"
+          },
+          {
+            "label": "Exact Ethereum lending-engine source: bad debt reduces totalSupplyAssets",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
+          },
+          {
+            "label": "Exact oracle deployment source response",
+            "url": "https://sourcify.dev/server/v2/contract/4663/0xcb6edd02fdb9b0f2893e590ebed889214f4df650?fields=all"
+          }
+        ]
+      },
+      {
+        "id": "market-0309c02dabf0be02682af1a2bde9a457f4df0f0b6bc889cde3f948e5315e4114",
+        "label": "spUSDG / steakUSDG borrower market",
+        "tier": "opaque-or-unknown",
+        "summary": "Exact engine idToMarketParams matches collateral, oracle and LLTV from the complete adapter inventory. Getter inputs are pinned; source-verified composition does not establish independent fallback, feed-admin closure or heartbeat. Exact executable feed/fallback and feed-owner/freshness policy remains unverified; opaque topology is nondisclosure, not a proven price-manipulation event.",
+        "collateralAssets": [
+          "spUSDG"
+        ],
+        "chains": [
+          "robinhood"
+        ],
+        "feeds": [
+          {
+            "provider": "Morpho immutable market oracle",
+            "path": "IOracle.price for market 0x0309c02dabf0be02682af1a2bde9a457f4df0f0b6bc889cde3f948e5315e4114",
+            "address": "0xe694c531f65c4babc88a52d7178476e095e51574",
+            "chain": "robinhood",
+            "observedAt": "2026-10-03",
+            "observedBlock": 78901968
+          },
+          {
+            "provider": "Pinned oracle input; operator/heartbeat not assumed",
+            "path": "BASE_VAULT()",
+            "address": "0xde770c84fe66e063336b31737cfe9790f18c4087",
+            "chain": "robinhood",
+            "observedAt": "2026-10-03",
+            "observedBlock": 78892407
+          }
+        ],
+        "fallbackBehavior": "The exact oracle fallback/freshness and replacement policy was not publicly source-verified; no failover or staleness credit is asserted. Morpho documents that price() reverts can block liquidation.",
+        "observedAt": "2026-10-03",
+        "observedBlock": 78901968,
+        "collateralParameters": [
+          {
+            "asset": "spUSDG",
+            "maximumLtvPct": 91.5,
+            "note": "LLTV verified from exact chain engine idToMarketParams; no additional shutdown ratio inferred."
+          }
+        ],
+        "liquidationMechanism": "Morpho liquidate reads this market IOracle.price and rejects healthy positions; an incentivized liquidator repays debt for seized collateral. No timelocked liquidation or guaranteed keeper execution is established.",
+        "backstop": "The reviewed Morpho lending mechanism does not promise external capital covering realized borrower bad debt; this review establishes no independently funded exact-vault rescue.",
+        "shutdownOrBadDebtBehavior": "When borrower collateral reaches zero, the verified Ethereum Morpho implementation subtracts residual debt from totalSupplyAssets; VaultV2 realizes lending-position losses in NAV. Chain-local Morpho API identity does not prove byte-identical Robinhood runtime.",
+        "sources": [
+          {
+            "label": "Morpho full exact VaultV2 adapter and market inventory",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Pinned engine market parameters and immutable oracle getters",
+            "url": "https://rpc.mainnet.chain.robinhood.com"
+          },
+          {
+            "label": "Morpho Blue borrower and liquidation specification",
+            "url": "https://docs.morpho.org/developers/contracts/blue/"
+          },
+          {
+            "label": "Exact Ethereum lending-engine source: bad debt reduces totalSupplyAssets",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
+          },
+          {
+            "label": "Exact oracle deployment source response",
+            "url": "https://sourcify.dev/server/v2/contract/4663/0xe694c531f65c4babc88a52d7178476e095e51574?fields=all"
+          }
+        ]
+      }
+    ],
+    "paths": [
+      {
+        "id": "native-vault-nav",
+        "chain": "robinhood",
+        "address": "0xbeeff033f34c046626b8d0a041844c5d1a5409dd",
+        "pricingAuthority": "internal-price",
+        "applicability": {
+          "disposition": "top-level-only",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine12, exact source and RPC census)",
+          "confidence": "verified",
+          "rationale": "Exact immutable VaultV2 accrueInterest/adapter realAssets determine the share-to-underlying rate; this local NAV path is internal accounting, not a borrower-price oracle. Borrower markets are separately enumerated below, not exempted.",
+          "sources": [
+            {
+              "label": "Morpho exact Steakhouse USDG deployment",
+              "url": "https://app.morpho.org/robinhood-chain/vault/0xBeEff033F34C046626B8D0A041844C5d1A5409dd/steakhouse-usdg"
+            },
+            {
+              "label": "Exact verified VaultV2 source (robinhood, 0xbeeff033f34c046626b8d0a041844c5d1a5409dd)",
+              "url": "https://sourcify.dev/server/v2/contract/4663/0xbeeff033f34c046626b8d0a041844c5d1a5409dd?fields=all"
+            }
+          ]
+        }
+      },
+      {
+        "id": "market-127353ba63e08f74d8e9ce8a1c2b41b5f89c7167135b1c09fbed34a71b4cb06b",
+        "chain": "robinhood",
+        "address": "0x5e3645ed6ace5b212ad7cf51c75154897e2f80ad",
+        "pricingAuthority": "external-price",
+        "branchId": "market-127353ba63e08f74d8e9ce8a1c2b41b5f89c7167135b1c09fbed34a71b4cb06b",
+        "applicability": {
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine12, exact source and RPC census)",
+          "confidence": "verified",
+          "rationale": "Exact engine idToMarketParams binds this oracle to the borrower collateral, LLTV and market ID; the market is in the full sole-adapter position inventory. Borrower/liquidation oracle risk applies notwithstanding internal ERC-4626 share accounting.",
+          "sources": [
+            {
+              "label": "Morpho full exact VaultV2 adapter and market inventory",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Pinned engine market parameters and immutable oracle getters",
+              "url": "https://rpc.mainnet.chain.robinhood.com"
+            },
+            {
+              "label": "Morpho Blue borrower and liquidation specification",
+              "url": "https://docs.morpho.org/developers/contracts/blue/"
+            },
+            {
+              "label": "Exact Ethereum lending-engine source: bad debt reduces totalSupplyAssets",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
+            }
+          ]
+        }
+      },
+      {
+        "id": "market-919a9b6b94dae7c86620eaf7a08e597aae8a4c3a9e9c7671771fbaf62b6b61c7",
+        "chain": "robinhood",
+        "address": "0x152c638fad68913739ee19ba8ef47faeb09dca91",
+        "pricingAuthority": "external-price",
+        "branchId": "market-919a9b6b94dae7c86620eaf7a08e597aae8a4c3a9e9c7671771fbaf62b6b61c7",
+        "applicability": {
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine12, exact source and RPC census)",
+          "confidence": "verified",
+          "rationale": "Exact engine idToMarketParams binds this oracle to the borrower collateral, LLTV and market ID; the market is in the full sole-adapter position inventory. Borrower/liquidation oracle risk applies notwithstanding internal ERC-4626 share accounting.",
+          "sources": [
+            {
+              "label": "Morpho full exact VaultV2 adapter and market inventory",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Pinned engine market parameters and immutable oracle getters",
+              "url": "https://rpc.mainnet.chain.robinhood.com"
+            },
+            {
+              "label": "Morpho Blue borrower and liquidation specification",
+              "url": "https://docs.morpho.org/developers/contracts/blue/"
+            },
+            {
+              "label": "Exact Ethereum lending-engine source: bad debt reduces totalSupplyAssets",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
+            }
+          ]
+        }
+      },
+      {
+        "id": "market-c845da65a020ddca5f132efa8fea79676d8edfdea504226a4c01e7a9e34cddd6",
+        "chain": "robinhood",
+        "address": "0xe64849bd4ad03dfabbe02bb521de19997a19055f",
+        "pricingAuthority": "external-price",
+        "branchId": "market-c845da65a020ddca5f132efa8fea79676d8edfdea504226a4c01e7a9e34cddd6",
+        "applicability": {
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine12, exact source and RPC census)",
+          "confidence": "verified",
+          "rationale": "Exact engine idToMarketParams binds this oracle to the borrower collateral, LLTV and market ID; the market is in the full sole-adapter position inventory. Borrower/liquidation oracle risk applies notwithstanding internal ERC-4626 share accounting.",
+          "sources": [
+            {
+              "label": "Morpho full exact VaultV2 adapter and market inventory",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Pinned engine market parameters and immutable oracle getters",
+              "url": "https://rpc.mainnet.chain.robinhood.com"
+            },
+            {
+              "label": "Morpho Blue borrower and liquidation specification",
+              "url": "https://docs.morpho.org/developers/contracts/blue/"
+            },
+            {
+              "label": "Exact Ethereum lending-engine source: bad debt reduces totalSupplyAssets",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
+            }
+          ]
+        }
+      },
+      {
+        "id": "market-1efd13a2d1dc66a2466e7c25820537028e604791f00454d9c686fdfbf70f404d",
+        "chain": "robinhood",
+        "address": "0xcb6edd02fdb9b0f2893e590ebed889214f4df650",
+        "pricingAuthority": "external-price",
+        "branchId": "market-1efd13a2d1dc66a2466e7c25820537028e604791f00454d9c686fdfbf70f404d",
+        "applicability": {
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine12, exact source and RPC census)",
+          "confidence": "verified",
+          "rationale": "Exact engine idToMarketParams binds this oracle to the borrower collateral, LLTV and market ID; the market is in the full sole-adapter position inventory. Borrower/liquidation oracle risk applies notwithstanding internal ERC-4626 share accounting.",
+          "sources": [
+            {
+              "label": "Morpho full exact VaultV2 adapter and market inventory",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Pinned engine market parameters and immutable oracle getters",
+              "url": "https://rpc.mainnet.chain.robinhood.com"
+            },
+            {
+              "label": "Morpho Blue borrower and liquidation specification",
+              "url": "https://docs.morpho.org/developers/contracts/blue/"
+            },
+            {
+              "label": "Exact Ethereum lending-engine source: bad debt reduces totalSupplyAssets",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
+            }
+          ]
+        }
+      },
+      {
+        "id": "market-0309c02dabf0be02682af1a2bde9a457f4df0f0b6bc889cde3f948e5315e4114",
+        "chain": "robinhood",
+        "address": "0xe694c531f65c4babc88a52d7178476e095e51574",
+        "pricingAuthority": "external-price",
+        "branchId": "market-0309c02dabf0be02682af1a2bde9a457f4df0f0b6bc889cde3f948e5315e4114",
+        "applicability": {
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine12, exact source and RPC census)",
+          "confidence": "verified",
+          "rationale": "Exact engine idToMarketParams binds this oracle to the borrower collateral, LLTV and market ID; the market is in the full sole-adapter position inventory. Borrower/liquidation oracle risk applies notwithstanding internal ERC-4626 share accounting.",
+          "sources": [
+            {
+              "label": "Morpho full exact VaultV2 adapter and market inventory",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Pinned engine market parameters and immutable oracle getters",
+              "url": "https://rpc.mainnet.chain.robinhood.com"
+            },
+            {
+              "label": "Morpho Blue borrower and liquidation specification",
+              "url": "https://docs.morpho.org/developers/contracts/blue/"
+            },
+            {
+              "label": "Exact Ethereum lending-engine source: bad debt reduces totalSupplyAssets",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

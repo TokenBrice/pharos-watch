@@ -1,0 +1,43 @@
+{
+  "id": "oned-gennius",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "ONED is a transferable USD-referenced settlement token convertible 1:1 with USDC through eligible Coinbase accounts."
+    },
+    "authorizationStatus": "unknown",
+    "issuerPathway": "unknown",
+    "redemptionPolicyPresent": true,
+    "notes": "Token-specific U.S. GENIUS authorization, legal issuer pathway and independent financial assurance were not established by the reviewed product, holder and reserve disclosures. Upstream PYUSD/USDC authorization is not local-token authorization. MiCA status is intentionally unassessed; geographic platform restrictions are not a regulatory out-of-scope ruling.",
+    "references": [
+      {
+        "label": "Coinbase ONED custody and conversion",
+        "url": "https://help.coinbase.com/en/coinbase/getting-started/crypto-education/cb-custom-stablecoins",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-02"
+      },
+      {
+        "label": "Coinbase ONED itemized reserve dashboard",
+        "url": "https://www.coinbase.com/en-in/oned/proof-of-reserves",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-02"
+      },
+      {
+        "label": "ONED native holder terms",
+        "url": "https://oned.global/#/end-user-terms-and-conditions",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-02"
+      },
+      {
+        "label": "Gennius ONED platform terms",
+        "url": "https://tc.oned.global/#/oned",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-02"
+      }
+    ],
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.coinbase.com/en-in/oned/proof-of-reserves"
+  }
+}

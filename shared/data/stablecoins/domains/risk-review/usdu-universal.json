@@ -1,0 +1,53 @@
+{
+  "id": "usdu-universal",
+  "oracleRisk": {
+    "tier": "oracleless",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "USDU mints after fiat reserve deposits are validated and redeems at USD 1. Its TokenV1 minter allowances do not consume collateral or share-NAV prices. The USDU/USDT DEX quote used for market-price monitoring is not an issuer mint or redemption oracle and retains its separate quote-provider dependency.",
+    "reviewedAt": "2026-10-03", "reviewer": "Pharos refinement Refine02 primary-source review", "confidence": "verified",
+    "sources": [{"label": "USDU whitepaper page 10: mint after validated deposits and par burn/redemption", "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf"}, {"label": "Verified TokenV1 implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7df0b1f63e0a467b6aa95b4ed6d299dab9f73750"}],
+    "branchApplicability": {
+      "disposition": "not-applicable", "reviewedAt": "2026-10-03", "reviewer": "Pharos refinement Refine02 primary-source review",
+      "rationale": "USDU is a fixed-dollar fiat obligation; deposit validation and configurable native mint allowances do not create a collateralized borrower, liquidation branch or variable share-NAV path. Third-party trading/market-monitoring feeds do not authorize issuance or change the USD-par redemption claim.",
+      "sources": [{"label": "USDU exact-token whitepaper", "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf"}]
+    },
+    "paths": [{
+      "id": "usdu-ethereum-fiat-par", "chain": "ethereum", "address": "0xe4ca6596d2c28014c6f89964f57838e0be9f369b", "pricingAuthority": "none",
+      "applicability": {"disposition": "not-applicable", "reviewedAt": "2026-10-03", "reviewer": "Pharos refinement Refine02 primary-source review", "confidence": "verified", "rationale": "TokenV1 native minters issue fixed-dollar liabilities against issuer-validated fiat deposits; there is no borrower collateral or share-NAV oracle.", "sources": [{"label": "Verified TokenV1", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7df0b1f63e0a467b6aa95b4ed6d299dab9f73750"}]}
+    }]
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "The reviewed USDU token is native Ethereum issuance, matched to the whitepaper and Crowe's exact Ethereum liability book. Additional networks are prospective; no existing bridge is established and no current whole-liability attribution is manufactured.",
+    "reviewedAt": "2026-10-03", "reviewer": "Pharos refinement Refine02 primary-source and RPC review", "confidence": "verified",
+    "sources": [{"label": "USDU whitepaper: inaugural Ethereum issuance", "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf"}],
+    "routes": [{
+      "id": "ethereum:0xe4ca6596d2c28014c6f89964f57838e0be9f369b", "destinationChain": "ethereum", "contractAddress": "0xe4ca6596d2c28014c6f89964f57838e0be9f369b",
+      "protocol": "Universal native USDU", "issuanceModel": "native-issuance", "routeClass": "native", "riskTier": "single-chain-or-native", "semantics": "native-mint", "scope": "canonical",
+      "reviewDisposition": "reviewed", "reviewNote": "Current TokenV1 implementation and MasterMinter calls show configurable native issuance on the whitepaper's inaugural Ethereum network; future network plans do not create active bridge routes.",
+      "controllerChain": "ethereum", "controllerAddress": "0x5ec8a285f6c1f08c812c591a3263eef52d22fe19", "observedAt": "2026-10-03", "observedBlock": 26110183,
+      "sources": [{"label": "Verified current TokenV1 implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7df0b1f63e0a467b6aa95b4ed6d299dab9f73750"}, {"label": "USDU whitepaper", "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf"}]
+    }]
+  },
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Exact-match USDU implementation source",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x7df0b1f63e0a467b6aa95b4ed6d299dab9f73750?fields=all"
+      },
+      {
+        "label": "Ethereum pinned block 26107709",
+        "url": "https://etherscan.io/block/26107709"
+      },
+      {
+        "label": "USDU mint and redemption whitepaper",
+        "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf"
+      }
+    ],
+    "evidence": "Sourcify reports exact runtime and creation match for the live implementation. Blacklistable and TokenV1 implement blacklist/unBlacklist and wipeBlacklistedAddress. Pinned getBlacklister() returns0x91462fc34e6b1fda7675e3729eeb1e762f5ac80d, also the permission admin and pauser. Whitepaper explicitly describes transaction revocation.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  }
+}

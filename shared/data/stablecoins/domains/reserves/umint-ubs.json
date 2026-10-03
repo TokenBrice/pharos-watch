@@ -1,0 +1,92 @@
+{
+  "id": "umint-ubs",
+  "reserves": [
+    {
+      "name": "UBS USD money-market participating shares",
+      "pct": 100,
+      "risk": "medium",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "UBS (SG) Global Opportunities VCC",
+      "riskFactors": [
+        "counterparty",
+        "duration",
+        "liquidity",
+        "custody",
+        "credit",
+        "market"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "DigiFT native uMINT disclosure within STEP2 application (March 20, 2025)",
+        "url": "https://forum.arbitrum.foundation/t/digift-dr-umint-step2-application/28764"
+      },
+      {
+        "label": "UBS production subscription and redemption (November 4, 2025)",
+        "url": "https://www.ubs.com/global/en/media/display-page-ndp/en-20251104-chainlink.html"
+      },
+      {
+        "label": "UBS Ethereum uMINT launch",
+        "url": "https://www.ubs.com/global/en/media/display-page-ndp/en-20241101-first-tokenized-investment-fund.html"
+      },
+      {
+        "label": "Verified deployed token implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc06036793272219179f846ef6bfc3b16e820df0b"
+      },
+      {
+        "label": "Ethereum token deployment",
+        "url": "https://etherscan.io/address/0xc06036793272219179f846ef6bfc3b16e820df0b#code"
+      }
+    ],
+    "rationale": "The 100% slice describes the authenticated native Singapore VCC fund-share claim without inventing current portfolio weights. The March 20, 2025 DigiFT dossier names State Street as custodian/administrator and claims underlying-fund Moody's AAAmmf and Fitch AAA-mf assessments. Those historical distributor assertions have not been matched to an identified current rating-agency record and grant no independent-assurance credit. Exact underlying strategy, native PPM and current position weights remain private.",
+    "compositionBasis": "Standing authenticated fund-share identity, not a current position-weighted portfolio or token-to-assets reconciliation",
+    "scope": "classification-only",
+    "knownUnknownExposure": "All current underlying position weights and complete token-to-fund asset/liability reconciliation remain unavailable. Named custodians and auditors do not prove current whole-book custody allocation or financial assurance.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "UBS USD money-market participating shares",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The direct fund-share identity is authenticated, but current look-through security weights are unavailable. The entire fund-share basket remains unresolved for constituent-weight mapping; no tracked stablecoin constituent is asserted."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "State Street Bank and Trust Company",
+        "role": "custodian"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "DigiFT native uMINT disclosure within STEP2 application (March 20, 2025)",
+        "url": "https://forum.arbitrum.foundation/t/digift-dr-umint-step2-application/28764"
+      },
+      {
+        "label": "UBS production subscription and redemption (November 4, 2025)",
+        "url": "https://www.ubs.com/global/en/media/display-page-ndp/en-20251104-chainlink.html"
+      },
+      {
+        "label": "UBS Ethereum uMINT launch",
+        "url": "https://www.ubs.com/global/en/media/display-page-ndp/en-20241101-first-tokenized-investment-fund.html"
+      }
+    ],
+    "uncertainty": "The March 2025 distributor dossier names State Street for the native fund. Private native PPM and current custody allocations remain unavailable; DR-wrapper bare-trust and bankruptcy-remoteness claims are not applied to native uMINT.",
+    "knownUnknownExposurePct": 100
+  }
+}

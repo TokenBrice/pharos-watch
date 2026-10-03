@@ -1,0 +1,361 @@
+{
+  "id": "gldon-ondo",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "manual-review",
+    "summary": "Ondo GM native managers issue GLDon on Ethereum, BNB and Solana; EVM beacon-owner timelocks can replace mint logic. OFT representation powers are segregated into Bridge Risk.",
+    "controls": [
+      {
+        "label": "GLDon ethereum native GMTokenManager",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "chain": "ethereum",
+        "address": "0x2c158bc456e027b2affccadf1bdbd9f5fc4c5c8c",
+        "deploymentRefs": [
+          "ethereum:0x423d42e505e64f99b6e277eb7ed324cc5606f139"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107702,
+        "sources": [
+          {
+            "label": "Ondo native managers",
+            "url": "https://docs.ondo.finance/addresses.md"
+          },
+          {
+            "label": "Ondo GLDon exact deployment and issuer",
+            "url": "https://app.ondo.finance/api/v2/assets/gldon/info"
+          },
+          {
+            "label": "GLDon Ethereum token",
+            "url": "https://etherscan.io/address/0x423d42e505e64f99b6e277eb7ed324cc5606f139"
+          },
+          {
+            "label": "GLDon BNB token",
+            "url": "https://bscscan.com/address/0xfa9a1e901085e269f6d428f79cd5252d8b919344"
+          },
+          {
+            "label": "Solana finalized RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "Pinned MINTER_ROLE enumeration returns the issuer-documented native GMTokenManager and a distinct OndoOFT minter. Only the GMTokenManager is native issuance; the OndoOFT is recorded under Bridge Risk."
+      },
+      {
+        "label": "GLDon bsc native GMTokenManager",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "chain": "bsc",
+        "address": "0x91f8aff3738825e8eb16fc6f6b1a7a4647bdb299",
+        "deploymentRefs": [
+          "bsc:0xfa9a1e901085e269f6d428f79cd5252d8b919344"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 125374463,
+        "sources": [
+          {
+            "label": "Ondo native managers",
+            "url": "https://docs.ondo.finance/addresses.md"
+          },
+          {
+            "label": "Ondo GLDon exact deployment and issuer",
+            "url": "https://app.ondo.finance/api/v2/assets/gldon/info"
+          },
+          {
+            "label": "GLDon Ethereum token",
+            "url": "https://etherscan.io/address/0x423d42e505e64f99b6e277eb7ed324cc5606f139"
+          },
+          {
+            "label": "GLDon BNB token",
+            "url": "https://bscscan.com/address/0xfa9a1e901085e269f6d428f79cd5252d8b919344"
+          },
+          {
+            "label": "Solana finalized RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "Pinned MINTER_ROLE enumeration returns the issuer-documented native GMTokenManager and a distinct OndoOFT minter. Only the GMTokenManager is native issuance; the OndoOFT is recorded under Bridge Risk."
+      },
+      {
+        "label": "GLDon Solana native mint authority",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "chain": "solana",
+        "address": "9foMHsSDq7nMg4WPusSz9eY7tyxyukqborA8GyU5cUxD",
+        "deploymentRefs": [
+          "solana:hWfiw4mcxT8rnNFkk6fsCQSxoxgZ9yVhB6tyeVcondo"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 452748021,
+        "sources": [
+          {
+            "label": "Ondo native managers",
+            "url": "https://docs.ondo.finance/addresses.md"
+          },
+          {
+            "label": "Ondo GLDon exact deployment and issuer",
+            "url": "https://app.ondo.finance/api/v2/assets/gldon/info"
+          },
+          {
+            "label": "GLDon Ethereum token",
+            "url": "https://etherscan.io/address/0x423d42e505e64f99b6e277eb7ed324cc5606f139"
+          },
+          {
+            "label": "GLDon BNB token",
+            "url": "https://bscscan.com/address/0xfa9a1e901085e269f6d428f79cd5252d8b919344"
+          },
+          {
+            "label": "Solana finalized RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "Finalized getAccountInfo returns this mint authority on the GLDon Token-2022 mint with 9 decimals; issuer identifies Solana as a native minting network. No signer threshold or immutable cap is inferred from the program PDA."
+      },
+      {
+        "label": "GLDon native beacon-owner timelocks",
+        "role": "proxy-admin",
+        "authorityType": "timelock",
+        "directMintAbility": "upgrade-only",
+        "chain": "ethereum",
+        "address": "0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1",
+        "deploymentRefs": [
+          "ethereum:0x423d42e505e64f99b6e277eb7ed324cc5606f139"
+        ],
+        "timelockDelaySec": 7200,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110184,
+        "sources": [
+          {
+            "label": "Ondo native managers",
+            "url": "https://docs.ondo.finance/addresses.md"
+          },
+          {
+            "label": "Ondo GLDon exact deployment and issuer",
+            "url": "https://app.ondo.finance/api/v2/assets/gldon/info"
+          },
+          {
+            "label": "GLDon Ethereum token",
+            "url": "https://etherscan.io/address/0x423d42e505e64f99b6e277eb7ed324cc5606f139"
+          },
+          {
+            "label": "GLDon BNB token",
+            "url": "https://bscscan.com/address/0xfa9a1e901085e269f6d428f79cd5252d8b919344"
+          },
+          {
+            "label": "Solana finalized RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "Ethereum beacon 0x985462c9aa4d6c3ad59ae6e1e9c0c11347ed1598 is controlled by this 7200-second timelock. At block 26110184 enumerable role census: proposer 0x71a4d411b5f7941dee020417fca30413712f1646 (getThreshold 4, getOwners 7); executors/cancellers 0x2e55b738f5969eea10fb67e326bee5e2fa15a2cc (threshold 1, owners 9) and zero-code 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b; DEFAULT_ADMIN_ROLE this timelock and 0xcd35671dcab88d05ee29dc4d360181529390b17f (threshold 5, owners 9). Proposer owners: 0xdb867df5187d61e8e85c2c9822549e54ad1b553c, 0x60f030d621a4ab27dff024a8e43eb36e2d95fb02, 0x59702bb067eeae05ac2c1b8c6f30dffd1cc29893, 0x189d409b807ac1949fe82c143270992fe9457607, 0x020679ff2bc53758bebad1bbe0ab0cf7c1bed241, 0x40482b9538a418cb62b92f14cc13d20092b3dbb4, 0x74a4c329aa5a6bfa16bd32baf37209f4c632173d. Execution/cancellation quorum is not the upgrade proposal quorum. Fresh reads at the same block close the proposer/admin module question: both Safes have no enabled modules, zero guard, singleton 0x41675c099f32341bf84bfc5382af534df5c7461a and standard CompatibilityFallbackHandler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. Verified TimelockController source gates grantRole by the role administrator, scheduling by PROPOSER_ROLE, execution by a ready operation, and delay changes by a timelock self-call. Human signer independence/key custody remain unverified."
+      },
+      {
+        "label": "GLDon BNB beacon-owner timelock",
+        "role": "proxy-admin",
+        "authorityType": "timelock",
+        "directMintAbility": "upgrade-only",
+        "chain": "bsc",
+        "address": "0x8860bbfc7a83e4788a981f4e9f30878331413b26",
+        "deploymentRefs": ["bsc:0xfa9a1e901085e269f6d428f79cd5252d8b919344"],
+        "timelockDelaySec": 7200,
+        "observedAt": "2026-10-03",
+        "observedBlock": 125441304,
+        "sources": [{
+          "label": "BNB native beacon timelock; enumerable roles and current Safe reads",
+          "url": "https://bscscan.com/address/0x8860bbfc7a83e4788a981f4e9f30878331413b26"
+        }],
+        "evidence": "Beacon 0xc046b05a920e4b412815934dd8e58904dda73315 owner is this timelock. At BNB block 125441304: proposer 0xa307e57ca7f9712af3557af8c5624bef214aa913 (threshold 4, seven owner addresses identical to the enumerated Ethereum proposer); executors/cancellers 0x80120c4d44ffd6f86716fd8dacd5e395d8bbbe97 (threshold 1, nine owners) and zero-code 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b; DEFAULT_ADMIN_ROLE this timelock and 0xa3a3c71380128972f172ff4052af7b6405da6364 (threshold 5, nine owners). At that same block proposer/admin Safes have no enabled modules, zero guard, verified SafeL2 singleton 0x29fcb43b46531bca003ddc8fcb67ffe91900c762 and CompatibilityFallbackHandler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99; fallback runtime is identical to the verified Ethereum deployment. Verified TimelockController source gates role grants by the role administrator, scheduling by PROPOSER_ROLE, execution by operation readiness and delay changes by self-call. Human independence and key custody remain unclosed."
+      },
+      {
+        "label": "GLDon Solana GM program upgrade authority",
+        "role": "proxy-admin",
+        "authorityType": "unknown",
+        "directMintAbility": "upgrade-only",
+        "chain": "solana",
+        "address": "9ECeczLtFZDYE3NX6G7uNw5BUGjoJAu1kFyEihA5hMaM",
+        "deploymentRefs": ["solana:hWfiw4mcxT8rnNFkk6fsCQSxoxgZ9yVhB6tyeVcondo"],
+        "observedAt": "2026-10-03",
+        "observedBlock": 452861844,
+        "sources": [
+          {
+            "label": "Issuer-published Solana GM program",
+            "url": "https://docs.ondo.finance/addresses.md"
+          },
+          {
+            "label": "Exact GM program-data upgrade authority account",
+            "url": "https://solscan.io/account/F4F1ZdqwmT4KfCfCnXrqLp9R6Liq4vEqJcs64xVKTKeU"
+          }
+        ],
+        "evidence": "Finalized slot 452861844 getAccountInfo(jsonParsed) binds program XzTT4XB8m7sLD2xi6snefSasaswsKCxx5Tifjondogm to program-data F4F1ZdqwmT4KfCfCnXrqLp9R6Liq4vEqJcs64xVKTKeU and this non-null upgrade authority; last upgrade slot 429073863. The authority account is system-program-owned. Its executable signing policy/PDA authority provenance is not publicly resolved, so no EOA, Squads quorum or immutable-program claim is inferred."
+      }
+    ],
+    "upgradeability": {
+      "model": "beacon",
+      "deploymentRefs": [
+        "ethereum:0x423d42e505e64f99b6e277eb7ed324cc5606f139",
+        "bsc:0xfa9a1e901085e269f6d428f79cd5252d8b919344"
+      ],
+      "proxyAddresses": [
+        "0x423d42e505e64f99b6e277eb7ed324cc5606f139",
+        "0xfa9a1e901085e269f6d428f79cd5252d8b919344"
+      ],
+      "implementationAddresses": [
+        "0xebbcb2cee51c2fee4062c9c1270dcb98b0b22250",
+        "0x578f397ca4661d1db4d9a65065d6b284a1a850fd"
+      ],
+      "adminAddresses": [
+        "0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1",
+        "0x8860bbfc7a83e4788a981f4e9f30878331413b26"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 7200,
+      "controlRef": "GLDon native beacon-owner timelocks",
+      "observedAt": "2026-10-02",
+      "sources": [
+        {
+          "label": "Ondo native managers",
+          "url": "https://docs.ondo.finance/addresses.md"
+        },
+        {
+          "label": "Ondo GLDon exact deployment and issuer",
+          "url": "https://app.ondo.finance/api/v2/assets/gldon/info"
+        },
+        {
+          "label": "GLDon Ethereum token",
+          "url": "https://etherscan.io/address/0x423d42e505e64f99b6e277eb7ed324cc5606f139"
+        },
+        {
+          "label": "GLDon BNB token",
+          "url": "https://bscscan.com/address/0xfa9a1e901085e269f6d428f79cd5252d8b919344"
+        },
+        {
+          "label": "Solana finalized RPC",
+          "url": "https://api.mainnet-beta.solana.com"
+        }
+      ]
+    },
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
+    "review": {
+      "sources": [
+        {
+          "label": "Shared Ondo tokenized-stocks Ankura daily verification and monthly reconciliation scope",
+          "url": "https://docs.ondo.finance/ondo-stocks/trust-and-transparency.md"
+        },
+        {
+          "label": "Verified Ethereum native timelock role-grant and delay logic",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1?fields=compilation,sources"
+        },
+        {
+          "label": "Verified BNB native timelock role-grant and delay logic",
+          "url": "https://sourcify.dev/server/v2/contract/56/0x8860bbfc7a83e4788a981f4e9f30878331413b26?fields=compilation,sources"
+        },
+        {
+          "label": "Verified shared Ethereum Safe singleton",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x41675c099f32341bf84bfc5382af534df5c7461a?fields=compilation,sources"
+        },
+        {
+          "label": "Verified shared BNB SafeL2 singleton",
+          "url": "https://sourcify.dev/server/v2/contract/56/0x29fcb43b46531bca003ddc8fcb67ffe91900c762?fields=compilation,sources"
+        },
+        {
+          "label": "Verified standard Safe CompatibilityFallbackHandler",
+          "url": "https://etherscan.io/address/0xfd0732dc9e303f09fcef3a7388ad10a83459ec99#code"
+        },
+        {
+          "label": "Solana off-curve PDA signing semantics",
+          "url": "https://solana.com/docs/core/pda"
+        },
+        {
+          "label": "Exact Ethereum beacon-owner timelock and role census",
+          "url": "https://etherscan.io/address/0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1"
+        },
+        {
+          "label": "Exact BNB beacon-owner timelock and role census",
+          "url": "https://bscscan.com/address/0x8860bbfc7a83e4788a981f4e9f30878331413b26"
+        },
+        {
+          "label": "Ondo native managers",
+          "url": "https://docs.ondo.finance/addresses.md"
+        },
+        {
+          "label": "Ondo GLDon exact deployment and issuer",
+          "url": "https://app.ondo.finance/api/v2/assets/gldon/info"
+        },
+        {
+          "label": "GLDon Ethereum token",
+          "url": "https://etherscan.io/address/0x423d42e505e64f99b6e277eb7ed324cc5606f139"
+        },
+        {
+          "label": "GLDon BNB token",
+          "url": "https://bscscan.com/address/0xfa9a1e901085e269f6d428f79cd5252d8b919344"
+        },
+        {
+          "label": "Solana finalized RPC",
+          "url": "https://api.mainnet-beta.solana.com"
+        },
+        {
+          "label": "Cantina BridgeRegistrar and USDonConverter, October 9 2025; commit 18afc35a",
+          "url": "https://docs-v2-git-prod-ondo-docs.vercel.app/pdf/GM-USDonConverter-BridgeRegistrar-Cantina-10-06-2025.pdf"
+        },
+        {
+          "label": "Cantina GM limit-order audit, February 6 2026; commit e89c9020",
+          "url": "https://docs-v2-git-prod-ondo-docs.vercel.app/pdf/GM-LimitOrder-Protocol-Cantina-01-30-2026.pdf"
+        },
+        {
+          "label": "Solana GM program-data current upgrade authority",
+          "url": "https://solscan.io/account/F4F1ZdqwmT4KfCfCnXrqLp9R6Liq4vEqJcs64xVKTKeU"
+        },
+        {
+          "label": "GLDon Final Terms",
+          "url": "https://cdn.sanity.io/files/8k2tqa6n/production/a598be5156bcda440276f01eea9258f82f851bd0.pdf"
+        },
+        {
+          "label": "Ondo Base Prospectus",
+          "url": "https://cdn.sanity.io/files/8k2tqa6n/production/ae1f1ca8ce2c2197a45b563e3e9add041924a249.pdf"
+        }
+      ],
+      "evidence": "Exact native role membership, EVM beacon owners, timelock proposer/executor/canceller/admin rosters and wallet quorums are identified. Fresh Ethereum block 26110184 and BNB block 125441304 reads additionally show no modules or guards on the proposer/admin Safes and the standard Safe fallback handler; verified timelock and singleton source closes the previously recorded executable bypass questions. Final Terms allow increasing nominal issue volume. GLDon belongs to the same Ondo Global Markets issuer/product family as IAUon and SLVon: the shared Trust & Transparency disclosure appoints Ankura as daily verification agent for all tokenized-stock holdings, expressly confirms investor-liability/fund-reserve reconciliation, and publishes a monthly reconciliation series. This is the identical program-scoped evidence used by the siblings, so periodic reconciliation, attestation-only supervision and unbounded-reconciled posture are aligned. This does not establish issuer prudential supervision, exact GLDon reserve weights, or GLDon-specific Other Collateral allocation in the retrieved aggregate reports; those backing gaps remain. Program code audits cover stated commits, not current financial assurance. Human signer independence/key custody remain unverified. Solana upgrade authority 9ECeczLtFZDYE3NX6G7uNw5BUGjoJAu1kFyEihA5hMaM is off-curve under canonical Ed25519 point decompression, despite being system-program-owned; its program-signing provenance remains unresolved and is not authored as an EOA.",
+      "reviewer": "Refine06 primary-source and pinned RPC review",
+      "reviewedAt": "2026-10-03",
+      "disposition": "scoreable",
+      "unresolvedQuestions": [],
+      "scopedQuestions": [
+        {
+          "controlRef": "GLDon native beacon-owner timelocks",
+          "question": "Human independence and operational signer-key custody for the identified Ethereum timelock proposer/admin Safe owners remain unpublished. Current on-chain quorums, module inventory, guard and standard fallback-handler identity are verified separately.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine06 sibling-consistency review",
+          "sources": [{
+            "label": "Exact Ethereum timelock and downstream identified Safe authority",
+            "url": "https://etherscan.io/address/0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1"
+          }]
+        },
+        {
+          "controlRef": "GLDon BNB beacon-owner timelock",
+          "question": "Human independence and operational signer-key custody for the identified BNB timelock proposer/admin Safe owners remain unpublished. Current on-chain quorums, module inventory, guard and standard fallback-handler identity are verified separately.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine06 sibling-consistency review",
+          "sources": [{
+            "label": "Exact BNB timelock and downstream identified Safe authority",
+            "url": "https://bscscan.com/address/0x8860bbfc7a83e4788a981f4e9f30878331413b26"
+          }]
+        },
+        {
+          "controlRef": "GLDon Solana GM program upgrade authority",
+          "question": "Upgrade authority 9ECeczLtFZDYE3NX6G7uNw5BUGjoJAu1kFyEihA5hMaM is identified and off-curve, but its controlling program and executable program-signing authorization paths remain unverified. System-program account ownership alone does not establish an externally signed EOA; no whole-chain census gap is inferred.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine06 mint-authority calibration",
+          "sources": [{
+            "label": "Exact GM program-data upgrade-authority account",
+            "url": "https://solscan.io/account/F4F1ZdqwmT4KfCfCnXrqLp9R6Liq4vEqJcs64xVKTKeU"
+          }]
+        }
+      ]
+    }
+  }
+}

@@ -514,9 +514,13 @@ describe("authoritative-price-sources", () => {
     });
   });
 
-  it("leaves WEUSD historical replay to market-price sources", async () => {
+  it.each([
+    ["weusd-picwe", "Wrapped eUSD", "WEUSD"],
+    ["oned-gennius", "ONED USD", "ONED"],
+    ["pyusdx-moonpay", "PYUSDx", "PYUSDx"],
+  ])("leaves %s historical replay to its own market-price sources", async (id, name, symbol) => {
     const result = await fetchAuthoritativeHistoricalPriceSeries(
-      makeHistoricalMeta("weusd-picwe", "Wrapped eUSD", "WEUSD"),
+      makeHistoricalMeta(id, name, symbol),
       {
         candidateTimestamps: [1_776_000_000, 1_776_003_600],
       },

@@ -1,0 +1,128 @@
+{
+  "liveReservesConfig": {
+    "adapter": "accountable",
+    "version": 1,
+    "semantics": "protocol-reserve",
+    "breakerScope": "xgld-unitas",
+    "scoring": { "maxSourceAgeSec": 259200 },
+    "display": { "url": "https://accountable.unitas.so/?type=xgld", "label": "Unitas Accountable location observations" },
+    "inputs": { "primary": { "kind": "http-json", "url": "https://api-accountable.unitas.so/v1/dashboard?type=xgld" } },
+    "params": { "bucket": "reserves_split", "riskMap": {} }
+  },
+  "id": "xgld-unitas",
+  "name": "Unitas Gold",
+  "symbol": "xGLD",
+  "flags": {
+    "backing": "crypto-backed",
+    "governance": "centralized",
+    "pegCurrency": "VAR",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": true
+  },
+  "detailProvider": "coingecko",
+  "geckoId": "unitas-gold",
+  "contracts": [
+    {
+      "chain": "bsc",
+      "address": "0xe60106a5cab7e7c64830919d36ab20caaf50ac91",
+      "decimals": 6
+    },
+    {
+      "chain": "base",
+      "address": "0xea953ea6634d55dac6697c436b1e81a679db5882",
+      "decimals": 6
+    }
+  ],
+  "mechanismArchetype": "protocol-position",
+  "custodyModel": "unknown",
+  "implementationLaunchDate": "2026-05-19",
+  "oneLiner": "xGLD is Unitas’s XAUt-backed gold strategy position, earning NAV growth from borrowed USDT strategies with whitelisted redemption into XAUt.",
+  "variantOf": "xaut-tether",
+  "variantKind": "strategy-vault",
+  "pegReferenceId": "xaut-tether",
+  "archetypeOverride": true,
+  "collateral": "XAUt collateral supporting USDT borrowing through BYBIT Stake & Borrow and a basket of delta-neutral strategies; OES mirrors collateral for exchange execution.",
+  "pegMechanism": "Transferable Unitas strategy position whose NAV reflects XAUt and net strategy returns. Whitelisted users mint and redeem on BNB Chain; redemption releases XAUt after a 7-day cooldown and charges 0.1%. Base holders bridge to BNB Chain. Regular users rely on swaps.",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rationale": "Exact XGLD on BNB Chain 0xe60106a5cab7e7c64830919d36ab20caaf50ac91 and Base 0xea953ea6634d55dac6697c436b1e81a679db5882 is a transferable operational claim on an XAUt-backed leveraged strategy position, not a fixed-ounce direct commodity claim. Issuer documents XAUt collateral, borrowed USDT and NAV appreciation; both deployments return XGLD and 6 decimals. This intentionally departs from the parent commodity-claim archetype.",
+    "sources": [
+      {
+        "label": "Unitas XGLD claim, strategy and deployments",
+        "url": "https://docs.unitas.so/overview/xgld.md"
+      }
+    ]
+  },
+  "parentBackingInheritance": {
+    "state": "withheld",
+    "reason": "mixed-strategy-without-measured-parent-claim",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rationale": "The borrowed USDT strategy book and debt encumbrance are not quantitatively disclosed; no measured net XAUt share supports treating the position as 100% parent backing.",
+    "sources": [
+      {
+        "label": "XGLD strategy structure",
+        "url": "https://docs.unitas.so/overview/xgld.md"
+      }
+    ]
+  },
+  "dependencyReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "XGLD tracked-parent exposure",
+        "url": "https://docs.unitas.so/overview/xgld.md"
+      }
+    ],
+    "rationale": "The wrapper relationship records direct XAUt exposure, not a measured collateral allocation; borrowing and strategy weights remain undisclosed.",
+    "relationships": [
+      {
+        "id": "xaut-tether",
+        "weight": 1,
+        "type": "wrapper",
+        "reason": "XAUt is the parent collateral and whitelisted redemption asset."
+      }
+    ]
+  },
+  "yieldConfig": {
+    "yieldType": "nav-appreciation",
+    "yieldSource": "Borrowed USDT deployed into Unitas delta-neutral strategies"
+  },
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://accountable.unitas.so/?type=xgld",
+    "provider": "Accountable direct-source cryptographic verification dashboard; gross reserves are not independent financial assurance or a fully netted debt reconciliation.",
+    "attestorTier": "undisclosed",
+    "cadence": "real-time"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://unitas.so/"
+    },
+    {
+      "label": "XGLD documentation",
+      "url": "https://docs.unitas.so/overview/xgld.md"
+    },
+    {
+      "label": "BNB native deployment (block 99201716)",
+      "url": "https://bscscan.com/tx/0x566485655aa376b658b3a4e0dc680522fcbc579896ee583058c43cb3066446c0"
+    },
+    {
+      "label": "Reserve dashboard",
+      "url": "https://accountable.unitas.so/?type=xgld"
+    }
+  ],
+  "notices": [
+    {
+      "type": "info",
+      "title": "Leveraged gold strategy position",
+      "message": "NAV depends on XAUt and borrowed-USDT strategies. Direct XAUt redemption requires whitelisting and a 7-day cooldown; full debt and custody allocation are not disclosed."
+    }
+  ]
+}

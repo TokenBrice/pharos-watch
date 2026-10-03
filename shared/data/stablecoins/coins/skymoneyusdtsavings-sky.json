@@ -1,0 +1,111 @@
+{
+  "id": "skymoneyusdtsavings-sky",
+  "name": "sky.money USDT Savings",
+  "symbol": "skyMoneyUsdtSavings",
+  "oneLiner": "skyMoneyUsdtSavings is a Sky.money-curated Morpho lending vault over USDT; interest and losses change its share value, and exits depend on liquidity.",
+  "flags": {
+    "backing": "crypto-backed",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "navToken": true
+  },
+  "variantOf": "usdt-tether",
+  "variantKind": "strategy-vault",
+  "pegReferenceId": "usdt-tether",
+  "collateral": "USDT held idle or supplied through Sky.money-curated Morpho lending markets",
+  "pegMechanism": "ERC-4626 shares represent a pro-rata USDT-denominated claim on idle tokens and Morpho lender positions. Interest accrual and realized losses change the exchange rate; redeem/withdraw delivers USDT when vault and market liquidity allow.",
+  "mechanismArchetype": "protocol-position",
+  "archetypeOverride": true,
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rationale": "The exact Ethereum deployment 0x23f5e9c35820f4bab695ac1f19c203cc3f8e1e11 is an immutable Morpho Vault V2 lender share over USDT. The holder has an operational pro-rata vault claim, not direct title to borrower collateral or a fiat claim. Its local conservation, allocation and recovery mechanics differ from the tracked parent. Exact implementation creation is pinned by transaction 0x96ad4f7253a603dced0009beb518702260d31a4dc75dfa9216deaef6173b0a40, block 24568955, timestamp 2026-03-02T09:46:23+00:00, independently joined from Blockscout to RPC receipt and block timestamp on2026-10-03. This is the implementation launch, not issuer founding or parent-token launch.",
+    "sources": [
+      {
+        "label": "Sky.money curated vault disclosure",
+        "url": "https://sky.money/vaults"
+      },
+      {
+        "label": "Verified exact deployed VaultV2 source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x23f5e9c35820f4bab695ac1f19c203cc3f8e1e11"
+      },
+      {
+        "label": "Ethereum block 26107702, fixed-block vault, adapter and Safe reads",
+        "url": "https://etherscan.io/block/26107702"
+      },
+      {
+        "label": "Morpho Vault V2 accounting, curation and withdrawal specification",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+      },
+      {
+        "label": "Morpho exact-vault accounting and controls GraphQL API",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Exact implementation creation transaction",
+        "url": "https://eth.blockscout.com/tx/0x96ad4f7253a603dced0009beb518702260d31a4dc75dfa9216deaef6173b0a40"
+      }
+    ]
+  },
+  "detailProvider": "coingecko",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://sky.money/vaults"
+    },
+    {
+      "label": "Exact vault contract",
+      "url": "https://etherscan.io/address/0x23f5e9c35820f4bab695ac1f19c203cc3f8e1e11"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x23f5e9c35820f4bab695ac1f19c203cc3f8e1e11",
+      "decimals": 18
+    }
+  ],
+  "custodyModel": "unknown",
+  "governanceQuality": "wrapper",
+  "implementationLaunchDate": "2026-03-02",
+  "yieldConfig": {
+    "yieldSource": "Sky.money-curated Morpho USDT lending",
+    "yieldType": "lending-vault"
+  },
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "skymoneyusdtsavings-sky",
+    "display": {
+      "url": "https://sky.money/vaults",
+      "label": "sky.money USDT Savings"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "sky.money USDT Savings idle underlying and Morpho lender claims",
+        "risk": "high",
+        "coinId": "usdt-tether",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0xdac17f958d2ee523a2206206994597c13d831ec7"
+      },
+      "deployedExposure": {
+        "basis": "At Ethereum block 26107702 (2026-10-02T22:43:47+00:00), totalAssets=60340093.055146 USDT; totalSupply=59334016.791589 shares; convertToAssets(1e18)=1.016956 USDT (raw 1016956 at 6 decimals); idle balance=0.000000 USDT. Complete current adapter census contains 1 adapter, 2 markets: 0x3274643db77a064abd3bc851de77556a4ad2e2f502f4f0c80845fa8f909ecf0b (sUSDS, LLTV 0.965): 0.020553 USDT lender claim; 0x26b178d49895f80ca3c39b2745efc4cd9adcddfcc73dae93e531e86977ec4d96 (sUSDS, LLTV 0.965): 60340093.034593 USDT lender claim. The API snapshot is separately observed and is not the pinned-block denominator. The reviewed slice includes both the idle parent token and the complete parent-denominated lender claim inventory.",
+        "reviewedAt": "2026-10-02",
+        "sourceUrl": "https://sky.money/vaults"
+      },
+      "redemptionLiquidity": {
+        "source": "morpho-vault-v2",
+        "chainId": 1
+      }
+    }
+  }
+}

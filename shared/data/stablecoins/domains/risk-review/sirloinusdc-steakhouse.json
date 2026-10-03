@@ -1,0 +1,834 @@
+{
+  "id": "sirloinusdc-steakhouse",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Morpho exact Steakhouse High Yield USDC Edition deployment",
+        "url": "https://app.morpho.org/base/vault/0xbeeff2490feffa212fac2f6553682c219e6a8845"
+      },
+      {
+        "label": "Exact verified VaultV2 source (base, 0xbeeff2490feffa212fac2f6553682c219e6a8845)",
+        "url": "https://sourcify.dev/server/v2/contract/8453/0xbeeff2490feffa212fac2f6553682c219e6a8845?fields=all"
+      },
+      {
+        "label": "Morpho current vault identity and asset API",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Steakhouse DeFi vault governing terms",
+        "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
+      }
+    ],
+    "evidence": "At base block 52095842, receiveSharesGate, sendSharesGate and receiveAssetsGate were zero and their setters permanently abdicated. Matched immutable core has no direct holder seizure or discretionary forced burn. The USDC-denominated lending claim inherits upstream parent freeze exposure; deposit gate/curator authority is distinct from a holder blacklist.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "Only the exact native base vault share is authored. No source-verified share bridge representation is included; underlying parent chain routes remain upstream.",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Morpho exact Steakhouse High Yield USDC Edition deployment",
+        "url": "https://app.morpho.org/base/vault/0xbeeff2490feffa212fac2f6553682c219e6a8845"
+      },
+      {
+        "label": "Exact verified VaultV2 source (base, 0xbeeff2490feffa212fac2f6553682c219e6a8845)",
+        "url": "https://sourcify.dev/server/v2/contract/8453/0xbeeff2490feffa212fac2f6553682c219e6a8845?fields=all"
+      },
+      {
+        "label": "Morpho current vault identity and asset API",
+        "url": "https://api.morpho.org/graphql"
+      }
+    ]
+  },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "collateral-pricing",
+    "summary": "Exact block-52095842 complete adapter marketIds census identifies 8 borrower-price branches. Local share accounting has no price read; borrower health and bad-debt liquidation remain oracle-sensitive. Feed/vault identities and unknown executable paths are itemized without inheriting parent oracle quality. The mGLO branch uses verified manually submitted administrator pricing; two exact oracle executables remain undisclosed.",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Sol refinement Refine11",
+      "rationale": "The complete current native lending-market census is oracle-sensitive even though local ERC-4626 mint/NAV/redemption is loan-unit accounting. Unknown feed paths remain explicitly unresolved.",
+      "sources": [
+        {
+          "label": "Exact verified native vault source",
+          "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff2490feffa212fac2f6553682c219e6a8845"
+        },
+        {
+          "label": "Morpho core market, liquidation and bad-debt source",
+          "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Sol refinement Refine11",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "Exact verified native vault source",
+        "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff2490feffa212fac2f6553682c219e6a8845"
+      },
+      {
+        "label": "Morpho core market, liquidation and bad-debt source",
+        "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
+      }
+    ],
+    "branches": [
+      {
+        "id": "0x29ae7ac08be3a58e11151fed74701fb8e6ffd8e76b1870cf17ad70f332752d0b",
+        "label": "Borrower market 1 (0x29ae7ac0)",
+        "tier": "privileged-internal-pricing",
+        "summary": "Pinned market 0x29ae7ac08be3a58e11151fed74701fb8e6ffd8e76b1870cf17ad70f332752d0b at block 52095842: collateral 0xfcc9cc1209651ed8867332d6f664cf82743a2584, loan 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913, LLTV=915000000000000000/1e18. Oracle 0x182e072f2c9c58c6f19f144c97986f7496c6a109. CustomAggregatorV3CompatibleFeedAdjusted immutable/current parameters: {\"underlyingFeed\":\"0x6b593a5fabb90f36e125562db833f761d274fcbc\",\"adjustmentPercentage\":-600000000}. The adjusted feed underlyingFeed=0x6b593a5fabb90f36e125562db833f761d274fcbc is a TransparentUpgradeableProxy. At the same block, implementation=0x4a0a3eab5c75173c760b5a50a8570e5d20d9cc94 and admin=0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac. Verified implementation MGloCustomAggregatorFeed explicitly specifies prices submitted manually by feed admins. This borrower NAV feed is privileged internal pricing, not an independently medianized Chainlink market quote.",
+        "collateralAssets": [
+          "0xfcc9cc1209651ed8867332d6f664cf82743a2584"
+        ],
+        "chains": [
+          "base"
+        ],
+        "feeds": [
+          {
+            "provider": "MorphoChainlinkOracleV2",
+            "path": "Morpho idToMarketParams(marketId).oracle / price()",
+            "address": "0x182e072f2c9c58c6f19f144c97986f7496c6a109",
+            "chain": "base",
+            "observedAt": "2026-10-03",
+            "observedBlock": 52095842
+          },
+          {
+            "provider": "CustomAggregatorV3CompatibleFeedAdjusted",
+            "path": "BASE_FEED_1()",
+            "address": "0x3732f1e48499922426f9ddad37d79c98b1fbf29e",
+            "chain": "base",
+            "observedAt": "2026-10-03",
+            "observedBlock": 52095842
+          },
+          {
+            "provider": "MGloCustomAggregatorFeed manual-admin pricing",
+            "path": "BASE_FEED_1.underlyingFeed proxy implementation",
+            "address": "0x6b593a5fabb90f36e125562db833f761d274fcbc",
+            "chain": "base",
+            "observedAt": "2026-10-03",
+            "observedBlock": 52095842
+          }
+        ],
+        "fallbackBehavior": "The verified fixed arithmetic composes the recorded feeds/vault conversions, with zero feed addresses treated as unity. There is no independent failover branch or consumer-enforced heartbeat/staleness bound in the reviewed ChainlinkDataFeedLib; negative answers revert. External feed refresh remains provider-dependent.",
+        "observedAt": "2026-10-03",
+        "observedBlock": 52095842,
+        "collateralParameters": [
+          {
+            "asset": "0xfcc9cc1209651ed8867332d6f664cf82743a2584",
+            "maximumLtvPct": 91.5
+          }
+        ],
+        "liquidationMechanism": "Morpho core checks borrower health at the market oracle price and immutable market LLTV; permissionless liquidators repay debt and seize collateral.",
+        "backstop": "No independently verified dedicated funded default-recovery backstop for this exact lender receipt is established by these code and state reads.",
+        "shutdownOrBadDebtBehavior": "When seized collateral is exhausted, Morpho realizes residual badDebtAssets by reducing totalBorrowAssets and totalSupplyAssets; lender NAV absorbs the shortfall. No guaranteed par recovery is claimed.",
+        "sources": [
+          {
+            "label": "Exact verified native vault source",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff2490feffa212fac2f6553682c219e6a8845"
+          },
+          {
+            "label": "Morpho core market, liquidation and bad-debt source",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
+          },
+          {
+            "label": "Exact borrower oracle verified source or disclosure location",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x182e072f2c9c58c6f19f144c97986f7496c6a109"
+          },
+          {
+            "label": "BASE_FEED_1 exact upstream CustomAggregatorV3CompatibleFeedAdjusted",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x3732f1e48499922426f9ddad37d79c98b1fbf29e"
+          },
+          {
+            "label": "Underlying mGLO price-feed proxy",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x6b593a5fabb90f36e125562db833f761d274fcbc"
+          },
+          {
+            "label": "Pinned manual-admin MGloCustomAggregatorFeed implementation",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x4a0a3eab5c75173c760b5a50a8570e5d20d9cc94"
+          }
+        ]
+      },
+      {
+        "id": "0x54cf9be57fdfa6457a660991907434ff9d295c465a603a50126ff647d50b7354",
+        "label": "Borrower market 2 (0x54cf9be5)",
+        "tier": "opaque-or-unknown",
+        "summary": "Pinned market 0x54cf9be57fdfa6457a660991907434ff9d295c465a603a50126ff647d50b7354 at block 52095842: collateral 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34, loan 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913, LLTV=915000000000000000/1e18. Oracle 0xf4b17c79492d68775e22e8dd0a2bb22854a39a47. Exact executable source and feed/refresh/failover authority were unavailable from Blockscout; standard Morpho feed getters reverted. No quality or staleness exemption is inferred. Sourcify exact Base contract lookup also returned HTTP404 (no verified match); missing fact is executable pricing source and feed/refresh/failover authority for this exact address.",
+        "collateralAssets": [
+          "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+        ],
+        "chains": [
+          "base"
+        ],
+        "feeds": [
+          {
+            "provider": "Unverified oracle deployment",
+            "path": "Morpho idToMarketParams(marketId).oracle / price()",
+            "address": "0xf4b17c79492d68775e22e8dd0a2bb22854a39a47",
+            "chain": "base",
+            "observedAt": "2026-10-03",
+            "observedBlock": 52095842
+          }
+        ],
+        "fallbackBehavior": "Exact oracle executable source, underlying feed inventory and fallback/staleness behavior remain unresolved; failed getters are not evidence of absence.",
+        "observedAt": "2026-10-03",
+        "observedBlock": 52095842,
+        "collateralParameters": [
+          {
+            "asset": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+            "maximumLtvPct": 91.5
+          }
+        ],
+        "liquidationMechanism": "Morpho core checks borrower health at the market oracle price and immutable market LLTV; permissionless liquidators repay debt and seize collateral.",
+        "backstop": "No independently verified dedicated funded default-recovery backstop for this exact lender receipt is established by these code and state reads.",
+        "shutdownOrBadDebtBehavior": "When seized collateral is exhausted, Morpho realizes residual badDebtAssets by reducing totalBorrowAssets and totalSupplyAssets; lender NAV absorbs the shortfall. No guaranteed par recovery is claimed.",
+        "sources": [
+          {
+            "label": "Exact verified native vault source",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff2490feffa212fac2f6553682c219e6a8845"
+          },
+          {
+            "label": "Morpho core market, liquidation and bad-debt source",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
+          },
+          {
+            "label": "Exact borrower oracle verified source or disclosure location",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xf4b17c79492d68775e22e8dd0a2bb22854a39a47"
+          }
+        ]
+      },
+      {
+        "id": "0x76629002c9fdb20fb2092053a4f22c5c65e04a81887218b9546f2a2d82b4c0a8",
+        "label": "Borrower market 3 (0x76629002)",
+        "tier": "standard-external",
+        "summary": "Pinned market 0x76629002c9fdb20fb2092053a4f22c5c65e04a81887218b9546f2a2d82b4c0a8 at block 52095842: collateral 0xb200000000000000000000451d033a5000cb479e, loan 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913, LLTV=625000000000000000/1e18. Oracle 0x7fad8b8de2ddb7b4b415e1aa3613e45eef9e4bff.",
+        "collateralAssets": [
+          "0xb200000000000000000000451d033a5000cb479e"
+        ],
+        "chains": [
+          "base"
+        ],
+        "feeds": [
+          {
+            "provider": "MorphoChainlinkOracleV2",
+            "path": "Morpho idToMarketParams(marketId).oracle / price()",
+            "address": "0x7fad8b8de2ddb7b4b415e1aa3613e45eef9e4bff",
+            "chain": "base",
+            "observedAt": "2026-10-03",
+            "observedBlock": 52095842
+          },
+          {
+            "provider": "EACAggregatorProxy",
+            "path": "BASE_FEED_1()",
+            "address": "0xadb55ef366459c94a318af2b05a44eee463f8e63",
+            "chain": "base",
+            "observedAt": "2026-10-03",
+            "observedBlock": 52095842
+          }
+        ],
+        "fallbackBehavior": "The verified fixed arithmetic composes the recorded feeds/vault conversions, with zero feed addresses treated as unity. There is no independent failover branch or consumer-enforced heartbeat/staleness bound in the reviewed ChainlinkDataFeedLib; negative answers revert. External feed refresh remains provider-dependent.",
+        "observedAt": "2026-10-03",
+        "observedBlock": 52095842,
+        "collateralParameters": [
+          {
+            "asset": "0xb200000000000000000000451d033a5000cb479e",
+            "maximumLtvPct": 62.5
+          }
+        ],
+        "liquidationMechanism": "Morpho core checks borrower health at the market oracle price and immutable market LLTV; permissionless liquidators repay debt and seize collateral.",
+        "backstop": "No independently verified dedicated funded default-recovery backstop for this exact lender receipt is established by these code and state reads.",
+        "shutdownOrBadDebtBehavior": "When seized collateral is exhausted, Morpho realizes residual badDebtAssets by reducing totalBorrowAssets and totalSupplyAssets; lender NAV absorbs the shortfall. No guaranteed par recovery is claimed.",
+        "sources": [
+          {
+            "label": "Exact verified native vault source",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff2490feffa212fac2f6553682c219e6a8845"
+          },
+          {
+            "label": "Morpho core market, liquidation and bad-debt source",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
+          },
+          {
+            "label": "Exact borrower oracle verified source or disclosure location",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x7fad8b8de2ddb7b4b415e1aa3613e45eef9e4bff"
+          },
+          {
+            "label": "BASE_FEED_1 exact upstream EACAggregatorProxy",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xadb55ef366459c94a318af2b05a44eee463f8e63"
+          }
+        ]
+      },
+      {
+        "id": "0xd4a903dc6d949519060c7707f9604fdc9772c046e05c2e3a8fce0bd7196e4109",
+        "label": "Borrower market 4 (0xd4a903dc)",
+        "tier": "standard-external",
+        "summary": "Pinned market 0xd4a903dc6d949519060c7707f9604fdc9772c046e05c2e3a8fce0bd7196e4109 at block 52095842: collateral 0xcb585250f852c6c6bf90434ab21a00f02833a4af, loan 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913, LLTV=625000000000000000/1e18. Oracle 0x031b2efc8d70042ac8d9f5c793c4149ec4b60fde.",
+        "collateralAssets": [
+          "0xcb585250f852c6c6bf90434ab21a00f02833a4af"
+        ],
+        "chains": [
+          "base"
+        ],
+        "feeds": [
+          {
+            "provider": "MorphoChainlinkOracleV2",
+            "path": "Morpho idToMarketParams(marketId).oracle / price()",
+            "address": "0x031b2efc8d70042ac8d9f5c793c4149ec4b60fde",
+            "chain": "base",
+            "observedAt": "2026-10-03",
+            "observedBlock": 52095842
+          },
+          {
+            "provider": "EACAggregatorProxy",
+            "path": "BASE_FEED_1()",
+            "address": "0x9f0c1dd78c4cbdf5b9cf923a549a201edc676d34",
+            "chain": "base",
+            "observedAt": "2026-10-03",
+            "observedBlock": 52095842
+          }
+        ],
+        "fallbackBehavior": "The verified fixed arithmetic composes the recorded feeds/vault conversions, with zero feed addresses treated as unity. There is no independent failover branch or consumer-enforced heartbeat/staleness bound in the reviewed ChainlinkDataFeedLib; negative answers revert. External feed refresh remains provider-dependent.",
+        "observedAt": "2026-10-03",
+        "observedBlock": 52095842,
+        "collateralParameters": [
+          {
+            "asset": "0xcb585250f852c6c6bf90434ab21a00f02833a4af",
+            "maximumLtvPct": 62.5
+          }
+        ],
+        "liquidationMechanism": "Morpho core checks borrower health at the market oracle price and immutable market LLTV; permissionless liquidators repay debt and seize collateral.",
+        "backstop": "No independently verified dedicated funded default-recovery backstop for this exact lender receipt is established by these code and state reads.",
+        "shutdownOrBadDebtBehavior": "When seized collateral is exhausted, Morpho realizes residual badDebtAssets by reducing totalBorrowAssets and totalSupplyAssets; lender NAV absorbs the shortfall. No guaranteed par recovery is claimed.",
+        "sources": [
+          {
+            "label": "Exact verified native vault source",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff2490feffa212fac2f6553682c219e6a8845"
+          },
+          {
+            "label": "Morpho core market, liquidation and bad-debt source",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
+          },
+          {
+            "label": "Exact borrower oracle verified source or disclosure location",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x031b2efc8d70042ac8d9f5c793c4149ec4b60fde"
+          },
+          {
+            "label": "BASE_FEED_1 exact upstream EACAggregatorProxy",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x9f0c1dd78c4cbdf5b9cf923a549a201edc676d34"
+          }
+        ]
+      },
+      {
+        "id": "0xe458a501c1103ca3b256f2bcb45d223263fb34b6349d82675494ce3a94ce1327",
+        "label": "Borrower market 5 (0xe458a501)",
+        "tier": "standard-external",
+        "summary": "Pinned market 0xe458a501c1103ca3b256f2bcb45d223263fb34b6349d82675494ce3a94ce1327 at block 52095842: collateral 0xb2000000000000000000008501b13360000cb2ec, loan 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913, LLTV=625000000000000000/1e18. Oracle 0xa3cb2d7204f47a468b82c6fab1ca9675e9f7a272.",
+        "collateralAssets": [
+          "0xb2000000000000000000008501b13360000cb2ec"
+        ],
+        "chains": [
+          "base"
+        ],
+        "feeds": [
+          {
+            "provider": "MorphoChainlinkOracleV2",
+            "path": "Morpho idToMarketParams(marketId).oracle / price()",
+            "address": "0xa3cb2d7204f47a468b82c6fab1ca9675e9f7a272",
+            "chain": "base",
+            "observedAt": "2026-10-03",
+            "observedBlock": 52095842
+          },
+          {
+            "provider": "EACAggregatorProxy",
+            "path": "BASE_FEED_1()",
+            "address": "0xc4a161651546983083aedddec5878a2eaf604890",
+            "chain": "base",
+            "observedAt": "2026-10-03",
+            "observedBlock": 52095842
+          }
+        ],
+        "fallbackBehavior": "The verified fixed arithmetic composes the recorded feeds/vault conversions, with zero feed addresses treated as unity. There is no independent failover branch or consumer-enforced heartbeat/staleness bound in the reviewed ChainlinkDataFeedLib; negative answers revert. External feed refresh remains provider-dependent.",
+        "observedAt": "2026-10-03",
+        "observedBlock": 52095842,
+        "collateralParameters": [
+          {
+            "asset": "0xb2000000000000000000008501b13360000cb2ec",
+            "maximumLtvPct": 62.5
+          }
+        ],
+        "liquidationMechanism": "Morpho core checks borrower health at the market oracle price and immutable market LLTV; permissionless liquidators repay debt and seize collateral.",
+        "backstop": "No independently verified dedicated funded default-recovery backstop for this exact lender receipt is established by these code and state reads.",
+        "shutdownOrBadDebtBehavior": "When seized collateral is exhausted, Morpho realizes residual badDebtAssets by reducing totalBorrowAssets and totalSupplyAssets; lender NAV absorbs the shortfall. No guaranteed par recovery is claimed.",
+        "sources": [
+          {
+            "label": "Exact verified native vault source",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff2490feffa212fac2f6553682c219e6a8845"
+          },
+          {
+            "label": "Morpho core market, liquidation and bad-debt source",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
+          },
+          {
+            "label": "Exact borrower oracle verified source or disclosure location",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xa3cb2d7204f47a468b82c6fab1ca9675e9f7a272"
+          },
+          {
+            "label": "BASE_FEED_1 exact upstream EACAggregatorProxy",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xc4a161651546983083aedddec5878a2eaf604890"
+          }
+        ]
+      },
+      {
+        "id": "0x9103c3b4e834476c9a62ea009ba2c884ee42e94e6e314a26f04d312434191836",
+        "label": "Borrower market 6 (0x9103c3b4)",
+        "tier": "standard-external",
+        "summary": "Pinned market 0x9103c3b4e834476c9a62ea009ba2c884ee42e94e6e314a26f04d312434191836 at block 52095842: collateral 0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf, loan 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913, LLTV=860000000000000000/1e18. Oracle 0x663becd10dae6c4a3dcd89f1d76c1174199639b9.",
+        "collateralAssets": [
+          "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf"
+        ],
+        "chains": [
+          "base"
+        ],
+        "feeds": [
+          {
+            "provider": "MorphoChainlinkOracleV2",
+            "path": "Morpho idToMarketParams(marketId).oracle / price()",
+            "address": "0x663becd10dae6c4a3dcd89f1d76c1174199639b9",
+            "chain": "base",
+            "observedAt": "2026-10-03",
+            "observedBlock": 52095842
+          },
+          {
+            "provider": "EACAggregatorProxy",
+            "path": "BASE_FEED_1()",
+            "address": "0x64c911996d3c6ac71f9b455b1e8e7266bcbd848f",
+            "chain": "base",
+            "observedAt": "2026-10-03",
+            "observedBlock": 52095842
+          }
+        ],
+        "fallbackBehavior": "The verified fixed arithmetic composes the recorded feeds/vault conversions, with zero feed addresses treated as unity. There is no independent failover branch or consumer-enforced heartbeat/staleness bound in the reviewed ChainlinkDataFeedLib; negative answers revert. External feed refresh remains provider-dependent.",
+        "observedAt": "2026-10-03",
+        "observedBlock": 52095842,
+        "collateralParameters": [
+          {
+            "asset": "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
+            "maximumLtvPct": 86.0
+          }
+        ],
+        "liquidationMechanism": "Morpho core checks borrower health at the market oracle price and immutable market LLTV; permissionless liquidators repay debt and seize collateral.",
+        "backstop": "No independently verified dedicated funded default-recovery backstop for this exact lender receipt is established by these code and state reads.",
+        "shutdownOrBadDebtBehavior": "When seized collateral is exhausted, Morpho realizes residual badDebtAssets by reducing totalBorrowAssets and totalSupplyAssets; lender NAV absorbs the shortfall. No guaranteed par recovery is claimed.",
+        "sources": [
+          {
+            "label": "Exact verified native vault source",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff2490feffa212fac2f6553682c219e6a8845"
+          },
+          {
+            "label": "Morpho core market, liquidation and bad-debt source",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
+          },
+          {
+            "label": "Exact borrower oracle verified source or disclosure location",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x663becd10dae6c4a3dcd89f1d76c1174199639b9"
+          },
+          {
+            "label": "BASE_FEED_1 exact upstream EACAggregatorProxy",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x64c911996d3c6ac71f9b455b1e8e7266bcbd848f"
+          }
+        ]
+      },
+      {
+        "id": "0x0ca10126f6c94cbd9cf0a48cc9516ae5e3dec5aa68303e6d988ee37c5149bf0d",
+        "label": "Borrower market 7 (0x0ca10126)",
+        "tier": "standard-external",
+        "summary": "Pinned market 0x0ca10126f6c94cbd9cf0a48cc9516ae5e3dec5aa68303e6d988ee37c5149bf0d at block 52095842: collateral 0x2ae3f1ec7f1f5012cfeab0185bfc7aa3cf0dec22, loan 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913, LLTV=770000000000000000/1e18. Oracle 0x97ff9cbd7e77348b2b8ffbb883bf29452ad18295.",
+        "collateralAssets": [
+          "0x2ae3f1ec7f1f5012cfeab0185bfc7aa3cf0dec22"
+        ],
+        "chains": [
+          "base"
+        ],
+        "feeds": [
+          {
+            "provider": "MorphoChainlinkOracleV2",
+            "path": "Morpho idToMarketParams(marketId).oracle / price()",
+            "address": "0x97ff9cbd7e77348b2b8ffbb883bf29452ad18295",
+            "chain": "base",
+            "observedAt": "2026-10-03",
+            "observedBlock": 52095842
+          },
+          {
+            "provider": "EACAggregatorProxy",
+            "path": "BASE_FEED_1()",
+            "address": "0xd7818272b9e248357d13057aab0b417af31e817d",
+            "chain": "base",
+            "observedAt": "2026-10-03",
+            "observedBlock": 52095842
+          }
+        ],
+        "fallbackBehavior": "The verified fixed arithmetic composes the recorded feeds/vault conversions, with zero feed addresses treated as unity. There is no independent failover branch or consumer-enforced heartbeat/staleness bound in the reviewed ChainlinkDataFeedLib; negative answers revert. External feed refresh remains provider-dependent.",
+        "observedAt": "2026-10-03",
+        "observedBlock": 52095842,
+        "collateralParameters": [
+          {
+            "asset": "0x2ae3f1ec7f1f5012cfeab0185bfc7aa3cf0dec22",
+            "maximumLtvPct": 77.0
+          }
+        ],
+        "liquidationMechanism": "Morpho core checks borrower health at the market oracle price and immutable market LLTV; permissionless liquidators repay debt and seize collateral.",
+        "backstop": "No independently verified dedicated funded default-recovery backstop for this exact lender receipt is established by these code and state reads.",
+        "shutdownOrBadDebtBehavior": "When seized collateral is exhausted, Morpho realizes residual badDebtAssets by reducing totalBorrowAssets and totalSupplyAssets; lender NAV absorbs the shortfall. No guaranteed par recovery is claimed.",
+        "sources": [
+          {
+            "label": "Exact verified native vault source",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff2490feffa212fac2f6553682c219e6a8845"
+          },
+          {
+            "label": "Morpho core market, liquidation and bad-debt source",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
+          },
+          {
+            "label": "Exact borrower oracle verified source or disclosure location",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x97ff9cbd7e77348b2b8ffbb883bf29452ad18295"
+          },
+          {
+            "label": "BASE_FEED_1 exact upstream EACAggregatorProxy",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xd7818272b9e248357d13057aab0b417af31e817d"
+          }
+        ]
+      },
+      {
+        "id": "0x2319fa118eb9f7353609796b6f70018a5384d42169503515da52bfa0b194c6ac",
+        "label": "Borrower market 8 (0x2319fa11)",
+        "tier": "opaque-or-unknown",
+        "summary": "Pinned market 0x2319fa118eb9f7353609796b6f70018a5384d42169503515da52bfa0b194c6ac at block 52095842: collateral 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2, loan 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913, LLTV=915000000000000000/1e18. Oracle 0xefe4a8e53ff7c65fe07a079b54e26b48d1a51967. Exact executable source and feed/refresh/failover authority were unavailable from Blockscout; standard Morpho feed getters reverted. No quality or staleness exemption is inferred. Sourcify exact Base contract lookup also returned HTTP404 (no verified match); missing fact is executable pricing source and feed/refresh/failover authority for this exact address.",
+        "collateralAssets": [
+          "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
+        ],
+        "chains": [
+          "base"
+        ],
+        "feeds": [
+          {
+            "provider": "Unverified oracle deployment",
+            "path": "Morpho idToMarketParams(marketId).oracle / price()",
+            "address": "0xefe4a8e53ff7c65fe07a079b54e26b48d1a51967",
+            "chain": "base",
+            "observedAt": "2026-10-03",
+            "observedBlock": 52095842
+          }
+        ],
+        "fallbackBehavior": "Exact oracle executable source, underlying feed inventory and fallback/staleness behavior remain unresolved; failed getters are not evidence of absence.",
+        "observedAt": "2026-10-03",
+        "observedBlock": 52095842,
+        "collateralParameters": [
+          {
+            "asset": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+            "maximumLtvPct": 91.5
+          }
+        ],
+        "liquidationMechanism": "Morpho core checks borrower health at the market oracle price and immutable market LLTV; permissionless liquidators repay debt and seize collateral.",
+        "backstop": "No independently verified dedicated funded default-recovery backstop for this exact lender receipt is established by these code and state reads.",
+        "shutdownOrBadDebtBehavior": "When seized collateral is exhausted, Morpho realizes residual badDebtAssets by reducing totalBorrowAssets and totalSupplyAssets; lender NAV absorbs the shortfall. No guaranteed par recovery is claimed.",
+        "sources": [
+          {
+            "label": "Exact verified native vault source",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff2490feffa212fac2f6553682c219e6a8845"
+          },
+          {
+            "label": "Morpho core market, liquidation and bad-debt source",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
+          },
+          {
+            "label": "Exact borrower oracle verified source or disclosure location",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xefe4a8e53ff7c65fe07a079b54e26b48d1a51967"
+          }
+        ]
+      }
+    ],
+    "paths": [
+      {
+        "id": "local-share-accounting",
+        "chain": "base",
+        "address": "0xbeeff2490feffa212fac2f6553682c219e6a8845",
+        "pricingAuthority": "none",
+        "applicability": {
+          "disposition": "not-applicable",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement Refine11",
+          "confidence": "verified",
+          "rationale": "The immutable local ERC-4626 share exchange rate uses deposited loan assets, accrued lending interest and fee shares rather than a price oracle. This exemption is local accounting only; every enumerated borrower market is reviewed separately.",
+          "sources": [
+            {
+              "label": "Exact verified native vault source",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff2490feffa212fac2f6553682c219e6a8845"
+            }
+          ]
+        }
+      },
+      {
+        "id": "borrower-oracle-1",
+        "chain": "base",
+        "address": "0x182e072f2c9c58c6f19f144c97986f7496c6a109",
+        "pricingAuthority": "internal-price",
+        "branchId": "0x29ae7ac08be3a58e11151fed74701fb8e6ffd8e76b1870cf17ad70f332752d0b",
+        "applicability": {
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement Refine11",
+          "confidence": "verified",
+          "rationale": "Exact Morpho market parameters positively identify this price authority on borrower collateral health and liquidation; lender-only share accounting does not exempt the borrower branch.",
+          "sources": [
+            {
+              "label": "Exact verified native vault source",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff2490feffa212fac2f6553682c219e6a8845"
+            },
+            {
+              "label": "Morpho core market, liquidation and bad-debt source",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
+            },
+            {
+              "label": "Exact borrower oracle verified source or disclosure location",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0x182e072f2c9c58c6f19f144c97986f7496c6a109"
+            },
+            {
+              "label": "BASE_FEED_1 exact upstream CustomAggregatorV3CompatibleFeedAdjusted",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0x3732f1e48499922426f9ddad37d79c98b1fbf29e"
+            },
+            {
+              "label": "Underlying mGLO price-feed proxy",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0x6b593a5fabb90f36e125562db833f761d274fcbc"
+            },
+            {
+              "label": "Pinned manual-admin MGloCustomAggregatorFeed implementation",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0x4a0a3eab5c75173c760b5a50a8570e5d20d9cc94"
+            }
+          ]
+        }
+      },
+      {
+        "id": "borrower-oracle-2",
+        "chain": "base",
+        "address": "0xf4b17c79492d68775e22e8dd0a2bb22854a39a47",
+        "pricingAuthority": "unknown",
+        "branchId": "0x54cf9be57fdfa6457a660991907434ff9d295c465a603a50126ff647d50b7354",
+        "applicability": {
+          "disposition": "unresolved",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement Refine11",
+          "confidence": "limited",
+          "rationale": "Exact Morpho market parameters positively identify this price authority on borrower collateral health and liquidation; lender-only share accounting does not exempt the borrower branch.",
+          "sources": [
+            {
+              "label": "Exact verified native vault source",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff2490feffa212fac2f6553682c219e6a8845"
+            },
+            {
+              "label": "Morpho core market, liquidation and bad-debt source",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
+            },
+            {
+              "label": "Exact borrower oracle verified source or disclosure location",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0xf4b17c79492d68775e22e8dd0a2bb22854a39a47"
+            }
+          ]
+        }
+      },
+      {
+        "id": "borrower-oracle-3",
+        "chain": "base",
+        "address": "0x7fad8b8de2ddb7b4b415e1aa3613e45eef9e4bff",
+        "pricingAuthority": "external-price",
+        "branchId": "0x76629002c9fdb20fb2092053a4f22c5c65e04a81887218b9546f2a2d82b4c0a8",
+        "applicability": {
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement Refine11",
+          "confidence": "verified",
+          "rationale": "Exact Morpho market parameters positively identify this price authority on borrower collateral health and liquidation; lender-only share accounting does not exempt the borrower branch.",
+          "sources": [
+            {
+              "label": "Exact verified native vault source",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff2490feffa212fac2f6553682c219e6a8845"
+            },
+            {
+              "label": "Morpho core market, liquidation and bad-debt source",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
+            },
+            {
+              "label": "Exact borrower oracle verified source or disclosure location",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0x7fad8b8de2ddb7b4b415e1aa3613e45eef9e4bff"
+            },
+            {
+              "label": "BASE_FEED_1 exact upstream EACAggregatorProxy",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0xadb55ef366459c94a318af2b05a44eee463f8e63"
+            }
+          ]
+        }
+      },
+      {
+        "id": "borrower-oracle-4",
+        "chain": "base",
+        "address": "0x031b2efc8d70042ac8d9f5c793c4149ec4b60fde",
+        "pricingAuthority": "external-price",
+        "branchId": "0xd4a903dc6d949519060c7707f9604fdc9772c046e05c2e3a8fce0bd7196e4109",
+        "applicability": {
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement Refine11",
+          "confidence": "verified",
+          "rationale": "Exact Morpho market parameters positively identify this price authority on borrower collateral health and liquidation; lender-only share accounting does not exempt the borrower branch.",
+          "sources": [
+            {
+              "label": "Exact verified native vault source",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff2490feffa212fac2f6553682c219e6a8845"
+            },
+            {
+              "label": "Morpho core market, liquidation and bad-debt source",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
+            },
+            {
+              "label": "Exact borrower oracle verified source or disclosure location",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0x031b2efc8d70042ac8d9f5c793c4149ec4b60fde"
+            },
+            {
+              "label": "BASE_FEED_1 exact upstream EACAggregatorProxy",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0x9f0c1dd78c4cbdf5b9cf923a549a201edc676d34"
+            }
+          ]
+        }
+      },
+      {
+        "id": "borrower-oracle-5",
+        "chain": "base",
+        "address": "0xa3cb2d7204f47a468b82c6fab1ca9675e9f7a272",
+        "pricingAuthority": "external-price",
+        "branchId": "0xe458a501c1103ca3b256f2bcb45d223263fb34b6349d82675494ce3a94ce1327",
+        "applicability": {
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement Refine11",
+          "confidence": "verified",
+          "rationale": "Exact Morpho market parameters positively identify this price authority on borrower collateral health and liquidation; lender-only share accounting does not exempt the borrower branch.",
+          "sources": [
+            {
+              "label": "Exact verified native vault source",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff2490feffa212fac2f6553682c219e6a8845"
+            },
+            {
+              "label": "Morpho core market, liquidation and bad-debt source",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
+            },
+            {
+              "label": "Exact borrower oracle verified source or disclosure location",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0xa3cb2d7204f47a468b82c6fab1ca9675e9f7a272"
+            },
+            {
+              "label": "BASE_FEED_1 exact upstream EACAggregatorProxy",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0xc4a161651546983083aedddec5878a2eaf604890"
+            }
+          ]
+        }
+      },
+      {
+        "id": "borrower-oracle-6",
+        "chain": "base",
+        "address": "0x663becd10dae6c4a3dcd89f1d76c1174199639b9",
+        "pricingAuthority": "external-price",
+        "branchId": "0x9103c3b4e834476c9a62ea009ba2c884ee42e94e6e314a26f04d312434191836",
+        "applicability": {
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement Refine11",
+          "confidence": "verified",
+          "rationale": "Exact Morpho market parameters positively identify this price authority on borrower collateral health and liquidation; lender-only share accounting does not exempt the borrower branch.",
+          "sources": [
+            {
+              "label": "Exact verified native vault source",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff2490feffa212fac2f6553682c219e6a8845"
+            },
+            {
+              "label": "Morpho core market, liquidation and bad-debt source",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
+            },
+            {
+              "label": "Exact borrower oracle verified source or disclosure location",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0x663becd10dae6c4a3dcd89f1d76c1174199639b9"
+            },
+            {
+              "label": "BASE_FEED_1 exact upstream EACAggregatorProxy",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0x64c911996d3c6ac71f9b455b1e8e7266bcbd848f"
+            }
+          ]
+        }
+      },
+      {
+        "id": "borrower-oracle-7",
+        "chain": "base",
+        "address": "0x97ff9cbd7e77348b2b8ffbb883bf29452ad18295",
+        "pricingAuthority": "external-price",
+        "branchId": "0x0ca10126f6c94cbd9cf0a48cc9516ae5e3dec5aa68303e6d988ee37c5149bf0d",
+        "applicability": {
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement Refine11",
+          "confidence": "verified",
+          "rationale": "Exact Morpho market parameters positively identify this price authority on borrower collateral health and liquidation; lender-only share accounting does not exempt the borrower branch.",
+          "sources": [
+            {
+              "label": "Exact verified native vault source",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff2490feffa212fac2f6553682c219e6a8845"
+            },
+            {
+              "label": "Morpho core market, liquidation and bad-debt source",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
+            },
+            {
+              "label": "Exact borrower oracle verified source or disclosure location",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0x97ff9cbd7e77348b2b8ffbb883bf29452ad18295"
+            },
+            {
+              "label": "BASE_FEED_1 exact upstream EACAggregatorProxy",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0xd7818272b9e248357d13057aab0b417af31e817d"
+            }
+          ]
+        }
+      },
+      {
+        "id": "borrower-oracle-8",
+        "chain": "base",
+        "address": "0xefe4a8e53ff7c65fe07a079b54e26b48d1a51967",
+        "pricingAuthority": "unknown",
+        "branchId": "0x2319fa118eb9f7353609796b6f70018a5384d42169503515da52bfa0b194c6ac",
+        "applicability": {
+          "disposition": "unresolved",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement Refine11",
+          "confidence": "limited",
+          "rationale": "Exact Morpho market parameters positively identify this price authority on borrower collateral health and liquidation; lender-only share accounting does not exempt the borrower branch.",
+          "sources": [
+            {
+              "label": "Exact verified native vault source",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff2490feffa212fac2f6553682c219e6a8845"
+            },
+            {
+              "label": "Morpho core market, liquidation and bad-debt source",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
+            },
+            {
+              "label": "Exact borrower oracle verified source or disclosure location",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0xefe4a8e53ff7c65fe07a079b54e26b48d1a51967"
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

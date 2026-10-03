@@ -1,0 +1,660 @@
+{
+  "id": "pyusdx-moonpay",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "sources": [
+      {
+        "label": "MoonPay PYUSDx holder and counterparty terms",
+        "url": "https://www.moonpay.com/legal/pyusdx_terms"
+      },
+      {
+        "label": "M0 exact PYUSDx mainnet deployments",
+        "url": "https://docs.m0.org/resources/addresses/pyusdx-platform"
+      },
+      {
+        "label": "M0 PYUSDx compliance controls",
+        "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"
+      },
+      {
+        "label": "M0 PYUSDx token and reward issuance",
+        "url": "https://docs.m0.org/raw/protocol/pyusdx/token-and-yield.md"
+      }
+    ],
+    "evidence": "Token source and security docs expose per-account freezing, forced transfers and global pause. Current independent role reads on Ethereum, Arbitrum, Monad and Base confirm the issuer holds FREEZE_MANAGER_ROLE and FORCED_TRANSFER_MANAGER_ROLE. Base block52110793 totalSupply=100000raw(0.1PYUSDx). An additional0G exact native deployment has zero supply at block46024355 but its transfer controls are not reviewed or added to the catalog. Terms section11 applies freezing, seizure, forfeiture and potential destruction to all holders, not only eligible counterparties."
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "Four catalogued native deployments transfer through Portal burn/mint and LayerZero V2. Independent RPC resolves the shared3-of-5 Safe v1.4.1 administrator, both bridge ProxyAdmin owners, exact getPeer(uint32) native-chain mappings and two-required-DVN configurations on the eight active directed pathways (Ethereum/Arbitrum/Monad plus Ethereum/Base). No Safe modules or guard are detected at the current pins; fallback handler0xfd0732dc9e303f09fcef3a7388ad10a83459ec99 is present. Signer independence, fallback execution safeguards, enforced upgrade delay and numeric route limits remain unresolved. Ethereum additionally peers to0G(chain16661); that exact native token has zero supply at block46024355 and is evidenced without registering the chain.",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Sol refinement Refine03",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "M0 mainnet deployment roster",
+        "url": "https://docs.m0.org/resources/addresses/pyusdx-platform"
+      },
+      {
+        "label": "M0 Portal burn/mint transfer specification",
+        "url": "https://docs.m0.org/raw/protocol/pyusdx/bridging.md"
+      },
+      {
+        "label": "M0 compliance and upgrade specification",
+        "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"
+      },
+      {
+        "label": "LayerZero exact endpoint, ULN and DVN deployment metadata",
+        "url": "https://metadata.layerzero-api.com/v1/metadata/deployments"
+      },
+      {
+        "label": "Exact Base native token and Portal controls",
+        "url": "https://basescan.org/address/0xebdb0942ce16386ab90718c7bd10c91cdb66b14d#code"
+      },
+      {
+        "label": "Verified LayerZeroBridgeAdapter getPeer and native-chain mapping ABI",
+        "url": "https://etherscan.io/address/0xd26efc0b5754c59bbd7b309aa2befe276709c58f#code"
+      },
+      {
+        "label": "Known zero-supply0G native token",
+        "url": "https://chainscan.0g.ai/address/0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xebdb0942ce16386ab90718c7bd10c91cdb66b14d",
+        "protocol": "M0 PYUSDx native issuance with LayerZero Portal transfer rail",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x48670b46380fe1645f0e3e821a25162db2589d19",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "entity:m0-pyusdx-portal"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107703,
+        "sources": [
+          {
+            "label": "M0 native token and Portal deployments",
+            "url": "https://docs.m0.org/resources/addresses/pyusdx-platform"
+          },
+          {
+            "label": "M0 cross-chain burn/mint and adapter semantics",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/bridging.md"
+          },
+          {
+            "label": "M0 upgrade and pause permissions",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"
+          },
+          {
+            "label": "Pinned Portal controller membership",
+            "url": "https://etherscan.io/address/0xaad1466fe33d373189fb9dcc47270e608feee8a7"
+          }
+        ],
+        "reviewNote": "Ethereum26110185: shared3-of-5 Safe VERSION1.4.1 administers Portal and owns both bridge ProxyAdmins. getPeer(uint32) returns exact adapter0xeff09b0c726789f4c123397c04f5ed4a9a20070d for native chains42161,143,8453,16661. The reviewed Ethereum/Arbitrum/Monad triangle and Ethereum/Base pair require two DVNs and no optional DVNs.0G token supply is zero at46024355. Numeric route limits remain unresolved."
+      },
+      {
+        "id": "arbitrum:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0xebdb0942ce16386ab90718c7bd10c91cdb66b14d",
+        "protocol": "M0 PYUSDx native issuance with LayerZero Portal transfer rail",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x48670b46380fe1645f0e3e821a25162db2589d19",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "entity:m0-pyusdx-portal"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 511123860,
+        "sources": [
+          {
+            "label": "M0 native token and Portal deployments",
+            "url": "https://docs.m0.org/resources/addresses/pyusdx-platform"
+          },
+          {
+            "label": "M0 cross-chain burn/mint and adapter semantics",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/bridging.md"
+          },
+          {
+            "label": "M0 upgrade and pause permissions",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"
+          },
+          {
+            "label": "Pinned Portal controller membership",
+            "url": "https://arbiscan.io/address/0xaad1466fe33d373189fb9dcc47270e608feee8a7"
+          }
+        ],
+        "reviewNote": "Arbitrum511230133: shared3-of-5 Safe VERSION1.4.1 administers Portal and owns both bridge ProxyAdmins. getPeer(uint32) resolves Ethereum1 and Monad143 to adapter0xeff09b0c726789f4c123397c04f5ed4a9a20070d. Both remote pathways require two DVNs and no optional DVNs; numeric route limits remain unresolved."
+      },
+      {
+        "id": "monad:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d",
+        "destinationChain": "monad",
+        "contractAddress": "0xebdb0942ce16386ab90718c7bd10c91cdb66b14d",
+        "protocol": "M0 PYUSDx native issuance with LayerZero Portal transfer rail",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "monad",
+        "controllerAddress": "0x48670b46380fe1645f0e3e821a25162db2589d19",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "entity:m0-pyusdx-portal"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 110016384,
+        "sources": [
+          {
+            "label": "M0 native token and Portal deployments",
+            "url": "https://docs.m0.org/resources/addresses/pyusdx-platform"
+          },
+          {
+            "label": "M0 cross-chain burn/mint and adapter semantics",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/bridging.md"
+          },
+          {
+            "label": "M0 upgrade and pause permissions",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"
+          },
+          {
+            "label": "Pinned Portal controller membership",
+            "url": "https://monadscan.com/address/0xaad1466fe33d373189fb9dcc47270e608feee8a7"
+          }
+        ],
+        "reviewNote": "Monad110115415: shared3-of-5 Safe VERSION1.4.1 administers Portal and owns both bridge ProxyAdmins. getPeer(uint32) resolves Ethereum1 and Arbitrum42161 to adapter0xeff09b0c726789f4c123397c04f5ed4a9a20070d. Both remote pathways require two DVNs and no optional DVNs; numeric route limits remain unresolved."
+      },
+      {
+        "id": "base:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d",
+        "destinationChain": "base",
+        "contractAddress": "0xebdb0942ce16386ab90718c7bd10c91cdb66b14d",
+        "protocol": "M0 PYUSDx native issuance with LayerZero Portal transfer rail",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "base",
+        "controllerAddress": "0x48670b46380fe1645f0e3e821a25162db2589d19",
+        "failureDomainKeys": ["protocol:layerzero-v2", "entity:m0-pyusdx-portal"],
+        "observedAt": "2026-10-03",
+        "observedBlock": 52110793,
+        "sources": [{"label": "Exact Base native token", "url": "https://basescan.org/address/0xebdb0942ce16386ab90718c7bd10c91cdb66b14d#code"}, {"label": "Exact Base Portal", "url": "https://basescan.org/address/0xaad1466fe33d373189fb9dcc47270e608feee8a7#code"}, {"label": "LayerZero endpoint and EID metadata", "url": "https://metadata.layerzero-api.com/v1/metadata/deployments"}],
+        "reviewNote": "Base52110793: native supply0.1PYUSDx; getPeer(1) returns exact shared adapter, getPeer(42161) and getPeer(143) return zero. The Base/Ethereum pathway is active with two required DVNs; shared Safe VERSION1.4.1 threshold3/5 administers Portal and both bridge ProxyAdmins."
+      }
+    ],
+    "controls": [
+      {
+        "id": "pyusdx-ethereum-portal",
+        "routeRefs": [
+          "ethereum:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xaad1466fe33d373189fb9dcc47270e608feee8a7",
+        "label": "PYUSDx ethereum Portal transfer rail",
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "entity:m0-pyusdx-portal"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107703,
+        "sources": [
+          {
+            "label": "M0 native token and Portal deployments",
+            "url": "https://docs.m0.org/resources/addresses/pyusdx-platform"
+          },
+          {
+            "label": "M0 cross-chain burn/mint and adapter semantics",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/bridging.md"
+          },
+          {
+            "label": "M0 upgrade and pause permissions",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"
+          },
+          {
+            "label": "Pinned Portal controller membership",
+            "url": "https://etherscan.io/address/0xaad1466fe33d373189fb9dcc47270e608feee8a7"
+          }
+        ],
+        "evidence": "The exact official Portal deployment burns source PYUSDx and mints destination PYUSDx after an adapter-authenticated message. Messages bind destination chain and peer and have replay protection. These cross-chain capabilities belong in Bridge Risk, separately from IssuerGateway and reward issuance.",
+        "capDescription": "Ethereum26110185: endpoint getConfig(adapter,library,remoteEid,2) requires two DVNs and no optional DVNs. ArbitrumEID30110:0x589dedbd617e0cbcb916a9223f4d1300c294236b+0xd56e4eab23cb81f43168f9f45211eb027b9ac7cc, send15/receive20. MonadEID30390:0x589dedbd617e0cbcb916a9223f4d1300c294236b+0xa59ba433ac34d2927232918ef5b2eaafcf130ba5, send15/receive4. BaseEID30184:0x589dedbd617e0cbcb916a9223f4d1300c294236b+0xd56e4eab23cb81f43168f9f45211eb027b9ac7cc, send15/receive10. Numeric route limits unresolved."
+      },
+      {
+        "id": "pyusdx-ethereum-portal-admin",
+        "routeRefs": [
+          "ethereum:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+        ],
+        "capabilities": [
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x48670b46380fe1645f0e3e821a25162db2589d19",
+        "label": "PYUSDx ethereum Portal administrator",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "failureDomainKeys": [
+          "entity:m0-pyusdx-portal"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107703,
+        "sources": [
+          {
+            "label": "M0 native token and Portal deployments",
+            "url": "https://docs.m0.org/resources/addresses/pyusdx-platform"
+          },
+          {
+            "label": "M0 cross-chain burn/mint and adapter semantics",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/bridging.md"
+          },
+          {
+            "label": "M0 upgrade and pause permissions",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"
+          },
+          {
+            "label": "Pinned Portal controller membership",
+            "url": "https://etherscan.io/address/0xaad1466fe33d373189fb9dcc47270e608feee8a7"
+          }
+        ],
+        "evidence": "Complete Portal role census through Ethereum26110185 leaves this sole DEFAULT_ADMIN_ROLE member. getThreshold()=3 and getOwners() returns 0x02490f751d7d69115d2466239391faad0a00b650, 0xa00baef9adb918bf57a124ec0ca469b68362ee3a, 0xa10f81bcaa44135fd15f15446b4e7531b753e698, 0xcf4d90c0ce49e0db337b3bd8042916145d5387be and 0x9ced0724b8b93c2c7ce6c6c314d21cbf88d93687. VERSION()=1.4.1, not1.3.0. Beneficial independence, Safe modules, guards and enforceable timelock remain unresolved."
+      },
+      {
+        "id": "pyusdx-arbitrum-portal",
+        "routeRefs": [
+          "arbitrum:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0xaad1466fe33d373189fb9dcc47270e608feee8a7",
+        "label": "PYUSDx arbitrum Portal transfer rail",
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "entity:m0-pyusdx-portal"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 511123860,
+        "sources": [
+          {
+            "label": "M0 native token and Portal deployments",
+            "url": "https://docs.m0.org/resources/addresses/pyusdx-platform"
+          },
+          {
+            "label": "M0 cross-chain burn/mint and adapter semantics",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/bridging.md"
+          },
+          {
+            "label": "M0 upgrade and pause permissions",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"
+          },
+          {
+            "label": "Pinned Portal controller membership",
+            "url": "https://arbiscan.io/address/0xaad1466fe33d373189fb9dcc47270e608feee8a7"
+          }
+        ],
+        "evidence": "The exact official Portal deployment burns source PYUSDx and mints destination PYUSDx after an adapter-authenticated message. Messages bind destination chain and peer and have replay protection. These cross-chain capabilities belong in Bridge Risk, separately from IssuerGateway and reward issuance.",
+        "capDescription": "Arbitrum block 511230133: LayerZero endpoint getConfig(adapter,library,remoteEid,2) requires both DVNs, zero optional DVNs. Ethereum EID30101: 0x2f55c492897526677c5b68fb199ea31e2c126416 + 0xd56e4eab23cb81f43168f9f45211eb027b9ac7cc, send20/receive15 confirmations. Monad EID30390: 0x2f55c492897526677c5b68fb199ea31e2c126416 + 0xa7b5189bca84cd304d8553977c7c614329750d99, send20/receive4 confirmations. Numeric route limits remain unresolved."
+      },
+      {
+        "id": "pyusdx-arbitrum-portal-admin",
+        "routeRefs": [
+          "arbitrum:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+        ],
+        "capabilities": [
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x48670b46380fe1645f0e3e821a25162db2589d19",
+        "label": "PYUSDx arbitrum Portal administrator",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "failureDomainKeys": [
+          "entity:m0-pyusdx-portal"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 511123860,
+        "sources": [
+          {
+            "label": "M0 native token and Portal deployments",
+            "url": "https://docs.m0.org/resources/addresses/pyusdx-platform"
+          },
+          {
+            "label": "M0 cross-chain burn/mint and adapter semantics",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/bridging.md"
+          },
+          {
+            "label": "M0 upgrade and pause permissions",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"
+          },
+          {
+            "label": "Pinned Portal controller membership",
+            "url": "https://arbiscan.io/address/0xaad1466fe33d373189fb9dcc47270e608feee8a7"
+          }
+        ],
+        "evidence": "Complete Portal role census through Arbitrum511230133 leaves this sole DEFAULT_ADMIN_ROLE member. Independent getThreshold()=3, getOwners() returns the same five signer addresses as Ethereum and VERSION()=1.4.1. Beneficial independence, Safe modules, guards and enforceable timelock remain unresolved."
+      },
+      {
+        "id": "pyusdx-monad-portal",
+        "routeRefs": [
+          "monad:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "monad",
+        "controllerAddress": "0xaad1466fe33d373189fb9dcc47270e608feee8a7",
+        "label": "PYUSDx monad Portal transfer rail",
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "entity:m0-pyusdx-portal"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 110016384,
+        "sources": [
+          {
+            "label": "M0 native token and Portal deployments",
+            "url": "https://docs.m0.org/resources/addresses/pyusdx-platform"
+          },
+          {
+            "label": "M0 cross-chain burn/mint and adapter semantics",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/bridging.md"
+          },
+          {
+            "label": "M0 upgrade and pause permissions",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"
+          },
+          {
+            "label": "Pinned Portal controller membership",
+            "url": "https://monadscan.com/address/0xaad1466fe33d373189fb9dcc47270e608feee8a7"
+          }
+        ],
+        "evidence": "The exact official Portal deployment burns source PYUSDx and mints destination PYUSDx after an adapter-authenticated message. Messages bind destination chain and peer and have replay protection. These cross-chain capabilities belong in Bridge Risk, separately from IssuerGateway and reward issuance.",
+        "capDescription": "Monad block 110115415: LayerZero endpoint getConfig(adapter,library,remoteEid,2) requires both DVNs 0x282b3386571f7f794450d5789911a9804fa346b4 + 0xacde1f22eeab249d3ca6ba8805c8fee9f52a16e7, zero optional DVNs on Ethereum EID30101 and Arbitrum EID30110 pathways. Send4 confirmations; receive15 from Ethereum and20 from Arbitrum. Numeric route limits remain unresolved."
+      },
+      {
+        "id": "pyusdx-monad-portal-admin",
+        "routeRefs": [
+          "monad:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+        ],
+        "capabilities": [
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "monad",
+        "controllerAddress": "0x48670b46380fe1645f0e3e821a25162db2589d19",
+        "label": "PYUSDx monad Portal administrator",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "failureDomainKeys": [
+          "entity:m0-pyusdx-portal"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 110016384,
+        "sources": [
+          {
+            "label": "M0 native token and Portal deployments",
+            "url": "https://docs.m0.org/resources/addresses/pyusdx-platform"
+          },
+          {
+            "label": "M0 cross-chain burn/mint and adapter semantics",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/bridging.md"
+          },
+          {
+            "label": "M0 upgrade and pause permissions",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"
+          },
+          {
+            "label": "Pinned Portal controller membership",
+            "url": "https://monadscan.com/address/0xaad1466fe33d373189fb9dcc47270e608feee8a7"
+          }
+        ],
+        "evidence": "Complete Portal role census through Monad110115415 leaves this sole DEFAULT_ADMIN_ROLE member. Independent getThreshold()=3, getOwners() returns the same five signer addresses as Ethereum and VERSION()=1.4.1. Beneficial independence, Safe modules, guards and enforceable timelock remain unresolved."
+      },
+      {
+        "id": "pyusdx-ethereum-bridge-upgrade",
+        "routeRefs": [
+          "ethereum:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+        ],
+        "capabilities": ["upgrade"],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x48670b46380fe1645f0e3e821a25162db2589d19",
+        "label": "PYUSDx ethereum Portal and adapter upgrade Safe",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110185,
+        "sources": [
+          {
+            "label": "M0 bridge and Portal upgrade/pause specification",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"
+          },
+          {
+            "label": "M0 Portal independent send/receive pause model",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/bridging.md"
+          }
+        ],
+        "evidence": "Ethereum26110185: both bridge ProxyAdmin owner() calls return shared3-of-5 Safe VERSION1.4.1. getModulesPaginated(sentinel1,100) returns empty module list and sentinel1; guard slot keccak256(guard_manager.guard.address)=zero; fallback handler0xfd0732dc9e303f09fcef3a7388ad10a83459ec99 exists. Signer independence, fallback execution safeguards and enforced upgrade delay remain unverified."
+      },
+      {
+        "id": "pyusdx-arbitrum-bridge-upgrade",
+        "routeRefs": [
+          "arbitrum:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+        ],
+        "capabilities": ["upgrade"],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x48670b46380fe1645f0e3e821a25162db2589d19",
+        "label": "PYUSDx arbitrum Portal and adapter upgrade Safe",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-03",
+        "observedBlock": 511230133,
+        "sources": [
+          {
+            "label": "M0 bridge and Portal upgrade/pause specification",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"
+          },
+          {
+            "label": "M0 Portal independent send/receive pause model",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/bridging.md"
+          }
+        ],
+        "evidence": "Arbitrum511230133: both bridge ProxyAdmin owner() calls return shared3-of-5 Safe VERSION1.4.1. getModulesPaginated(sentinel1,100) returns empty module list and sentinel1; guard slot keccak256(guard_manager.guard.address)=zero; fallback handler0xfd0732dc9e303f09fcef3a7388ad10a83459ec99 exists. Signer independence, fallback execution safeguards and enforced upgrade delay remain unverified."
+      },
+      {
+        "id": "pyusdx-monad-bridge-upgrade",
+        "routeRefs": [
+          "monad:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+        ],
+        "capabilities": ["upgrade"],
+        "controllerChain": "monad",
+        "controllerAddress": "0x48670b46380fe1645f0e3e821a25162db2589d19",
+        "label": "PYUSDx monad Portal and adapter upgrade Safe",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-03",
+        "observedBlock": 110115415,
+        "sources": [
+          {
+            "label": "M0 bridge and Portal upgrade/pause specification",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"
+          },
+          {
+            "label": "M0 Portal independent send/receive pause model",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/bridging.md"
+          }
+        ],
+        "evidence": "Monad110115415: both bridge ProxyAdmin owner() calls return shared3-of-5 Safe VERSION1.4.1. getModulesPaginated(sentinel1,100) returns empty module list and sentinel1; guard slot keccak256(guard_manager.guard.address)=zero; fallback handler0xfd0732dc9e303f09fcef3a7388ad10a83459ec99 exists. Signer independence, fallback execution safeguards and enforced upgrade delay remain unverified."
+      },
+      {
+        "id": "pyusdx-ethereum-portal-pause",
+        "routeRefs": ["ethereum:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"],
+        "capabilities": ["pause"],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xf2f1acbe0ba726fee8d75f3e32900526874740bb",
+        "label": "PYUSDx ethereum Portal delegated-account pauser",
+        "authorityType": "unknown",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110185,
+        "sources": [{"label": "Exact Portal role and pause deployment", "url": "https://etherscan.io/address/0xaad1466fe33d373189fb9dcc47270e608feee8a7"}],
+        "evidence": "Complete Portal role-event census leaves this sole PAUSER_ROLE member. eth_getCode returns EIP-7702 delegation designator 0xef010063c0c19a282a1b52b07dd5a65b58948a07dae32b; delegated execution and signer safeguards are unresolved, not an inferred EOA."
+      },
+      {
+        "id": "pyusdx-arbitrum-portal-pause",
+        "routeRefs": ["arbitrum:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"],
+        "capabilities": ["pause"],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0xf2f1acbe0ba726fee8d75f3e32900526874740bb",
+        "label": "PYUSDx arbitrum Portal pauser",
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 511230133,
+        "sources": [{"label": "Exact Portal role and pause deployment", "url": "https://arbiscan.io/address/0xaad1466fe33d373189fb9dcc47270e608feee8a7"}],
+        "evidence": "Complete Portal role-event census leaves this sole PAUSER_ROLE member. eth_getCode(address)=0x; key-custody safeguards are undisclosed."
+      },
+      {
+        "id": "pyusdx-monad-portal-pause",
+        "routeRefs": ["monad:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"],
+        "capabilities": ["pause"],
+        "controllerChain": "monad",
+        "controllerAddress": "0xf2f1acbe0ba726fee8d75f3e32900526874740bb",
+        "label": "PYUSDx monad Portal delegated-account pauser",
+        "authorityType": "unknown",
+        "observedAt": "2026-10-03",
+        "observedBlock": 110115415,
+        "sources": [{"label": "Exact Portal role and pause deployment", "url": "https://monadscan.com/address/0xaad1466fe33d373189fb9dcc47270e608feee8a7"}],
+        "evidence": "Complete Portal role-event census leaves this sole PAUSER_ROLE member. eth_getCode returns EIP-7702 delegation designator 0xef010063c0c19a282a1b52b07dd5a65b58948a07dae32b; delegated execution and signer safeguards are unresolved, not an inferred EOA."
+      },
+      {
+        "id": "pyusdx-base-portal",
+        "routeRefs": ["base:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"],
+        "capabilities": ["bridge-mint", "bridge-burn"],
+        "controllerChain": "base",
+        "controllerAddress": "0xaad1466fe33d373189fb9dcc47270e608feee8a7",
+        "label": "PYUSDx Base Portal burn/mint transfer rail",
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": ["protocol:layerzero-v2", "entity:m0-pyusdx-portal"],
+        "observedAt": "2026-10-03",
+        "observedBlock": 52110793,
+        "sources": [{"label": "Exact Base Portal", "url": "https://basescan.org/address/0xaad1466fe33d373189fb9dcc47270e608feee8a7#code"}],
+        "evidence": "Independent receipt2026-10-03T07:30:25.992Z: Base52110793(timestamp2026-10-03T07:02:13Z) exact native supply100000raw=0.1PYUSDx;0G46024355(timestamp2026-10-03T07:21:18Z) same exact token supply0. Token role census confirms Portal ISSUER_ROLE; getPeer(1) authenticates the exact Ethereum adapter. Base stock is additive burn/mint supply, not locked canonical stock.0G is evidenced but not registered per current catalog scope; no exhaustive five-chain liability claim is made.",
+        "capDescription": "Base52110793 endpoint getSendLibrary/getReceiveLibrary and getConfig for remoteEID30101 require DVNs0x9e059a54699a285714207b43b055483e78faac25+0xd56e4eab23cb81f43168f9f45211eb027b9ac7cc, zero optional DVNs; send10/receive15 confirmations. Numeric route limits unresolved."
+      },
+      {
+        "id": "pyusdx-base-portal-admin",
+        "routeRefs": ["base:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"],
+        "capabilities": ["admin", "upgrade"],
+        "controllerChain": "base",
+        "controllerAddress": "0x48670b46380fe1645f0e3e821a25162db2589d19",
+        "label": "PYUSDx Base Portal administrator and bridge upgrade Safe",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "failureDomainKeys": ["entity:m0-pyusdx-portal"],
+        "observedAt": "2026-10-03",
+        "observedBlock": 52110793,
+        "sources": [{"label": "Exact Base shared Safe", "url": "https://basescan.org/address/0x48670b46380fe1645f0e3e821a25162db2589d19#code"}],
+        "evidence": "VERSION1.4.1, threshold3, five owners match the other chains. Both Portal ProxyAdmin0x65ce3f3c4732f171e3e7b759f4249dc9cd49a68f and adapter ProxyAdmin0x3ddb1389e0bb7c627e9acc73ea62e9ae99819a3c owner() return this Safe. Modules are empty with sentinel1; guard slot zero; fallback handler0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. Signer independence, fallback execution safeguards and enforced upgrade delay are unverified."
+      },
+      {
+        "id": "pyusdx-base-portal-pause",
+        "routeRefs": ["base:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"],
+        "capabilities": ["pause"],
+        "controllerChain": "base",
+        "controllerAddress": "0xf2f1acbe0ba726fee8d75f3e32900526874740bb",
+        "label": "PYUSDx Base Portal pauser",
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 52110793,
+        "sources": [{"label": "Exact Base Portal", "url": "https://basescan.org/address/0xaad1466fe33d373189fb9dcc47270e608feee8a7#code"}],
+        "evidence": "hasRole(PAUSER_ROLE,address)=true and eth_getCode(address)=0x. Key-custody safeguards remain undisclosed."
+      }
+    ],
+    "scopedQuestions": [
+      {
+        "controlRef": "pyusdx-ethereum-portal-admin",
+        "question": "Quorum, bridge ProxyAdmin owners, absent modules/guard, exact peer mappings and reviewed DVN sets are resolved; beneficial signer independence, fallback-handler execution safeguards, enforced upgrade delay and numeric route limits remain unresolved.",
+        "reviewedAt": "2026-10-03",
+        "reviewer": "Sol refinement Refine03",
+        "sources": [
+          {
+            "label": "M0 Portal controls",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/bridging.md"
+          }
+        ]
+      },
+      {
+        "controlRef": "pyusdx-arbitrum-portal-admin",
+        "question": "Quorum, bridge ProxyAdmin owners, absent modules/guard, exact peer mappings and reviewed DVN sets are resolved; beneficial signer independence, fallback-handler execution safeguards, enforced upgrade delay and numeric route limits remain unresolved.",
+        "reviewedAt": "2026-10-03",
+        "reviewer": "Sol refinement Refine03",
+        "sources": [
+          {
+            "label": "M0 Portal controls",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/bridging.md"
+          }
+        ]
+      },
+      {
+        "controlRef": "pyusdx-monad-portal-admin",
+        "question": "Quorum, bridge ProxyAdmin owners, absent modules/guard, exact peer mappings and reviewed DVN sets are resolved; beneficial signer independence, fallback-handler execution safeguards, enforced upgrade delay and numeric route limits remain unresolved.",
+        "reviewedAt": "2026-10-03",
+        "reviewer": "Sol refinement Refine03",
+        "sources": [
+          {
+            "label": "M0 Portal controls",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/bridging.md"
+          }
+        ]
+      }
+    ]
+  }
+}

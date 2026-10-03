@@ -1,0 +1,124 @@
+{
+  "id": "mantrausd-mantra",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "M0 MANTRA platform deployment inventory",
+        "url": "https://docs.m0.org/resources/addresses/m0-platform"
+      },
+      {
+        "label": "Verified token implementation",
+        "url": "https://blockscout.mantrascan.io/api/v2/smart-contracts/0x9d7a7b406568668e7943740f5b370c86e13dcca8"
+      },
+      {
+        "label": "Pinned mantra RPC at block 18531313",
+        "url": "https://evm.mantrachain.io"
+      },
+      {
+        "label": "M0 published platform deployments",
+        "url": "https://docs.m0.org/resources/addresses/m0-platform"
+      },
+      {
+        "label": "M0 liquidity routes and issuer onboarding",
+        "url": "https://docs.m0.org/build/accessing-liquidity"
+      },
+      {
+        "label": "M0 published EVM-extension security audits (framework scope only)",
+        "url": "https://docs.m0.org/resources/audits"
+      },
+      {
+        "label": "Guardian JMI/MYieldToOne/Freezable/SwapFacility code review, 2025-12-12; not a reserve audit or exact deployment certification",
+        "url": "https://github.com/m0-foundation/evm-m-extensions/blob/main/audits/JMI/M0_EVM-M_Extensions_Review_report.pdf"
+      }
+    ],
+    "evidence": "At mantra block 18531313, symbol/decimals and EIP-1967 implementation/admin were re-read. Local backing balance was 439,646.447844 M against 434,703.845695 mantraUSD supply. The verified MYieldToOne/Freezable source exposes role-gated holder freezes and rejects frozen-account transfers and wrap/unwrap interactions. The packet-identified FREEZE_MANAGER 0x9cb81ad5423e0ca22d3e3af3004c85d865b70efe still returned hasRole=true; operational DEFAULT_ADMIN is a 3-of-5 Safe. The token has direct local freeze controls beyond inherited M exposure.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "Sole authored native child-token deployment. The reviewed local wrapping/custodian mint path issues the child on this chain; parent-token cross-chain and custody risks remain inherited. No global uncatalogued bridge-liability absence is asserted.",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Refine07",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "M0 MANTRA platform deployment inventory",
+        "url": "https://docs.m0.org/resources/addresses/m0-platform"
+      },
+      {
+        "label": "Verified token implementation",
+        "url": "https://blockscout.mantrascan.io/api/v2/smart-contracts/0x9d7a7b406568668e7943740f5b370c86e13dcca8"
+      },
+      {
+        "label": "Pinned mantra RPC at block 18531313",
+        "url": "https://evm.mantrachain.io"
+      },
+      {
+        "label": "M0 published platform deployments",
+        "url": "https://docs.m0.org/resources/addresses/m0-platform"
+      },
+      {
+        "label": "M0 liquidity routes and issuer onboarding",
+        "url": "https://docs.m0.org/build/accessing-liquidity"
+      },
+      {
+        "label": "M0 published EVM-extension security audits (framework scope only)",
+        "url": "https://docs.m0.org/resources/audits"
+      },
+      {
+        "label": "Guardian JMI/MYieldToOne/Freezable/SwapFacility code review, 2025-12-12; not a reserve audit or exact deployment certification",
+        "url": "https://github.com/m0-foundation/evm-m-extensions/blob/main/audits/JMI/M0_EVM-M_Extensions_Review_report.pdf"
+      }
+    ],
+    "routes": [
+      {
+        "id": "mantra:0xd2b95283011e47257917770d28bb3ee44c849f6f",
+        "destinationChain": "mantra",
+        "canonicalChain": "mantra",
+        "contractAddress": "0xd2b95283011e47257917770d28bb3ee44c849f6f",
+        "protocol": "M0 local extension",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "The sole authored child token is locally minted against parent-token custody. No child bridge path is established; this does not certify absence of uncatalogued integrations or parent bridge risks.",
+        "observedAt": "2026-10-02",
+        "observedBlock": 18531313,
+        "sources": [
+          {
+            "label": "M0 MANTRA platform deployment inventory",
+            "url": "https://docs.m0.org/resources/addresses/m0-platform"
+          },
+          {
+            "label": "Verified token implementation",
+            "url": "https://blockscout.mantrascan.io/api/v2/smart-contracts/0x9d7a7b406568668e7943740f5b370c86e13dcca8"
+          },
+          {
+            "label": "Pinned mantra RPC at block 18531313",
+            "url": "https://evm.mantrachain.io"
+          },
+          {
+            "label": "M0 published platform deployments",
+            "url": "https://docs.m0.org/resources/addresses/m0-platform"
+          },
+          {
+            "label": "M0 liquidity routes and issuer onboarding",
+            "url": "https://docs.m0.org/build/accessing-liquidity"
+          },
+          {
+            "label": "M0 published EVM-extension security audits (framework scope only)",
+            "url": "https://docs.m0.org/resources/audits"
+          },
+          {
+            "label": "Guardian JMI/MYieldToOne/Freezable/SwapFacility code review, 2025-12-12; not a reserve audit or exact deployment certification",
+            "url": "https://github.com/m0-foundation/evm-m-extensions/blob/main/audits/JMI/M0_EVM-M_Extensions_Review_report.pdf"
+          }
+        ]
+      }
+    ]
+  }
+}

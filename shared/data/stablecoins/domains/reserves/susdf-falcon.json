@@ -1,0 +1,90 @@
+{
+  "id": "susdf-falcon",
+  "reserves": [
+    {
+      "sourceKey": "erc4626-single-asset:ethereum:0xfa2b947eec368f42195f24f36d2af29f7c24cec2",
+      "name": "USDf savings vault position",
+      "pct": 100,
+      "risk": "high",
+      "coinId": "usdf-falcon",
+      "depType": "wrapper",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Falcon Finance sUSDf vault and USDf",
+      "riskFactors": [
+        "smart-contract",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "market",
+        "legal"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Falcon Finance savings documentation",
+        "url": "https://docs.falcon.finance/earn/susdf-yield-bearing-token.md"
+      },
+      {
+        "label": "Falcon Finance official deployment roster",
+        "url": "https://docs.falcon.finance/resources/smart-contracts.md"
+      },
+      {
+        "label": "Verified current sUSDf implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0d132bee412e6619a4863aeedad97541bfda3f34"
+      },
+      {
+        "label": "Ethereum block 26107704, pinned vault identity, supply, custody and NAV reads",
+        "url": "https://etherscan.io/block/26107704"
+      }
+    ],
+    "rationale": "At Ethereum block 26107704 (2026-10-02T22:44:11Z), asset() is 0xfa2b947eec368f42195f24f36d2af29f7c24cec2; decimals() is 18, totalSupply() is 56876949.092047125101 shares, totalAssets() is 64669136.889719046652 USDf, and balanceOf(vault) is 64670233.223213575780 USDf. convertToAssets(1e18) and previewRedeem(1e18) return 1.137000804756 USDf. The complete local reserve envelope is the named parent token; unvested rewards are excluded from redeemable totalAssets until released. No upstream reserve percentages or financial-assurance claims are assigned to the child.",
+    "compositionBasis": "Official single-asset vault documentation, verified accounting source and fixed-block Ethereum reads at 26107704",
+    "compositionAsOf": "2026-10-02",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Local underlying identity is fully identified. Upstream parent custody, collateral realization and stressed liquidity remain parent-layer risks; the local percentage is not an end-to-end solvency claim.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Falcon Finance sUSDf vault (Ethereum 0xc8cf6d7991f15525488b2a83df53468d682ba4b0)",
+        "role": "other"
+      },
+      {
+        "name": "Falcon USDf withdrawal silo (Ethereum 0xeb1a55f406c1dc08f017ce8f424b178a5b0667e7)",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Falcon Finance savings documentation",
+        "url": "https://docs.falcon.finance/earn/susdf-yield-bearing-token.md"
+      },
+      {
+        "label": "Falcon Finance official deployment roster",
+        "url": "https://docs.falcon.finance/resources/smart-contracts.md"
+      },
+      {
+        "label": "Verified current sUSDf implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0d132bee412e6619a4863aeedad97541bfda3f34"
+      },
+      {
+        "label": "Ethereum block 26107704, pinned vault identity, supply, custody and NAV reads",
+        "url": "https://etherscan.io/block/26107704"
+      }
+    ],
+    "uncertainty": "Onchain custody describes only the immediate wrapper token holdings. It does not assert legal segregation, bankruptcy priority, upstream custodial safeguards or administrator independence. The silo holds zero USDf at this pin while cooldownDuration is zero; administrators can later activate the silo withdrawal path."
+  }
+}

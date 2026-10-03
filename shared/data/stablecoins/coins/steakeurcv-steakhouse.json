@@ -1,0 +1,107 @@
+{
+  "id": "steakeurcv-steakhouse",
+  "name": "Steakhouse Prime EURCV",
+  "symbol": "steakEURCV",
+  "oneLiner": "steakEURCV is Steakhouse’s Morpho V2 EURCV lending vault; shares accrue yield, absorb strategy losses, and redeem against available liquidity.",
+  "flags": {
+    "backing": "crypto-backed",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "navToken": true,
+    "pegCurrency": "EUR"
+  },
+  "variantOf": "eurcv-societe-generale-forge",
+  "variantKind": "strategy-vault",
+  "pegReferenceId": "eurcv-societe-generale-forge",
+  "collateral": "EURCV held idle in the exact Morpho VaultV2 and supplied through its sole MorphoMarketV1 adapter; borrower collateral and market liquidity determine strategy risk.",
+  "pegMechanism": "ERC-4626 shares represent a proportional EURCV-denominated lending position. Interest and fee-share accrual change assets per share; bad debt reduces NAV. Holder withdrawals burn shares and pay EURCV atomically when idle assets plus the selected liquidity adapter suffice.",
+  "mechanismArchetype": "protocol-position",
+  "archetypeOverride": true,
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rationale": "The current holder claim is the operational ERC-4626 claim at ethereum:0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f, not direct ownership of the parent’s fiat reserves. Exact verified immutable VaultV2 code pulls underlying before user mint, can mint fee shares during interest accrual, and burns receipts against available underlying on exit. Reverified at block 26107702; parent fiat-cash protections remain upstream.",
+    "sources": [
+      {
+        "label": "Morpho exact Steakhouse Prime EURCV deployment",
+        "url": "https://app.morpho.org/ethereum/vault/0xbeef0C075Da5D01112AE5cF34d257074fB5DDB2f"
+      },
+      {
+        "label": "Exact verified VaultV2 source (ethereum, 0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f)",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f?fields=all"
+      },
+      {
+        "label": "Morpho current vault identity and asset API",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Steakhouse DeFi vault governing terms",
+        "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
+      }
+    ]
+  },
+  "detailProvider": "coingecko",
+  "links": [
+    {
+      "label": "Morpho exact Steakhouse Prime EURCV deployment",
+      "url": "https://app.morpho.org/ethereum/vault/0xbeef0C075Da5D01112AE5cF34d257074fB5DDB2f"
+    },
+    {
+      "label": "Steakhouse documentation",
+      "url": "https://www.steakhouse.financial/docs"
+    },
+    {
+      "label": "Morpho Vault V2 mechanics",
+      "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f",
+      "decimals": 18
+    }
+  ],
+  "custodyModel": "unknown",
+  "yieldConfig": {
+    "yieldSource": "Steakhouse Morpho EURCV lending vault",
+    "yieldType": "lending-vault"
+  },
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "steakeurcv-steakhouse",
+    "display": {
+      "url": "https://app.morpho.org/ethereum/vault/0xbeef0C075Da5D01112AE5cF34d257074fB5DDB2f",
+      "label": "Steakhouse Prime EURCV"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "EURCV-denominated Steakhouse Morpho lending claim",
+        "risk": "high",
+        "coinId": "eurcv-societe-generale-forge",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0x5f7827fdeb7c20b443265fc2f40845b715385ff2"
+      },
+      "deployedExposure": {
+        "basis": "Exact asset() returned 0x5f7827fdeb7c20b443265fc2f40845b715385ff2; sole adapter 0x5e3aca36fe2361e1866752ad74cb429f64cdcf1a is identified by Morpho as MorphoMarketV1 over the same loan asset. This 100% slice is the underlying lending claim, not an estimate of borrower collateral or idle cash.",
+        "reviewedAt": "2026-10-02",
+        "sourceUrl": "https://app.morpho.org/ethereum/vault/0xbeef0C075Da5D01112AE5cF34d257074fB5DDB2f"
+      },
+      "redemptionLiquidity": {
+        "source": "morpho-vault-v2",
+        "chainId": 1
+      }
+    }
+  },
+  "launchDate": "2025-12-15"
+}

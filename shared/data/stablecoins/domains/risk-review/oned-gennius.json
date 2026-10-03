@@ -1,0 +1,52 @@
+{
+  "id": "oned-gennius",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Sol refinement Refine03",
+    "sources": [
+      {
+        "label": "ONED native holder terms",
+        "url": "https://oned.global/#/end-user-terms-and-conditions"
+      },
+      {
+        "label": "Verified current ONED implementation",
+        "url": "https://basescan.org/address/0x57ab1e54fca80105a93a735b59f850f8420b5e2c#code"
+      },
+      {
+        "label": "Coinbase EVM Custom Stablecoin source",
+        "url": "https://github.com/coinbase/custom-stablecoin/blob/main/evm/src/Stablecoin.sol"
+      },
+      {
+        "label": "Coinbase transfer and blocklist technical reference",
+        "url": "https://docs.cdp.coinbase.com/custom-stablecoins/stablecoin-contract/reference"
+      },
+      {
+        "label": "Cantina EVM code-security audit (published 2026-04-07)",
+        "url": "https://github.com/coinbase/custom-stablecoin/blob/main/audits/cantina_coinbase_custom_stablecoin_mar2026.pdf"
+      }
+    ],
+    "evidence": "Base block 52110793 independently confirms hasRole(BLOCKLIST_ROLE,0x2c34489fd3b7cc2a5dc4a47b34b117d3f62b6e9e)=true and paused()=false. Coinbase technical reference states transfer/transferFrom fail for blocklisted accounts or global pause; role/event census corroborates the exact implementation's local restrictions. April 7 Cantina report reviews EVM Stablecoin, MutableBeaconProxy, Blocklist and RateLimit; this is code-security evidence, not financial assurance. August 2026 Cantina report covers Solana mint-controller only and does not support this Base deployment."
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "The reviewed native ONED liability exists only on Base. Coinbase identifies the exact Base token; native holder terms explicitly exclude redemption of copies, wrapped tokens and bridged versions. No additional representation is authored.",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Coinbase ONED custody and conversion",
+        "url": "https://help.coinbase.com/en/coinbase/getting-started/crypto-education/cb-custom-stablecoins"
+      },
+      {
+        "label": "Coinbase ONED itemized reserve dashboard",
+        "url": "https://www.coinbase.com/en-in/oned/proof-of-reserves"
+      },
+      {
+        "label": "ONED native holder terms",
+        "url": "https://oned.global/#/end-user-terms-and-conditions"
+      }
+    ]
+  }
+}

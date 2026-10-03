@@ -1,0 +1,47 @@
+{
+  "id": "susdx-axis",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      { "label": "Axis StakedUSDx restriction role", "url": "https://docs.axis.to/reference/access-control.md" },
+      { "label": "Vault transfer hook and frozen-request redistribution", "url": "https://docs.axis.to/reference/staking-contracts.md" }
+    ],
+    "evidence": "The canonical V2 vault's RESTRICTION_ROLE can apply full restrictions in the _update share-transfer hook, preventing transfers and redemption actions. It can also relocate liquid shares or in-flight redeem requests from a fully restricted account to an unrestricted recipient. This is a direct local holder-control surface, so reviewedStatus is true rather than inherited. The USDx underlying adds separate parent freeze exposure.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "summary": "StakedUSDx values shares using accountedAssets plus vested rewards, not an external market oracle or the raw token balance. Reward and accounting policy is governed, and the wrapper inherits the parent USDx offchain pricing and hedge exposures.",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "rationale": "The vault's exchangeRate determines deposit/share conversion and the assets reserved when shares are burned for an async redemption request. It is a price-sensitive top-level internal NAV authority. The savings vault creates no borrower-owned debt positions or liquidation markets and requires no CDP branch rows.",
+      "sources": [
+        { "label": "Axis canonical share-price and redemption accounting", "url": "https://docs.axis.to/reference/staking-contracts.md" }
+      ]
+    },
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      { "label": "Axis accountedAssets and exchangeRate formula", "url": "https://docs.axis.to/reference/staking-contracts.md" },
+      { "label": "Axis reward and redemption parameter authority", "url": "https://docs.axis.to/reference/access-control.md" },
+      { "label": "Ethereum block 26107703 exchange-rate observation", "url": "https://etherscan.io/block/26107703" }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "The canonical V2 sUSDx vault is deployed only on Ethereum. Issuer docs publish no other-chain V2 deployment, and the legacy Plasma staking system is a different V1 instrument. No active sUSDx bridge route is authored.",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "probable",
+    "sources": [
+      { "label": "Axis canonical V2 and legacy V1 contract roster", "url": "https://docs.axis.to/reference/contract-addresses.md" },
+      { "label": "Axis V2 single-contract vault without V1 silo", "url": "https://docs.axis.to/reference/staking-contracts.md" }
+    ]
+  }
+}

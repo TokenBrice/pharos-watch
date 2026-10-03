@@ -1,0 +1,46 @@
+{
+  "id": "susdc-spark-v1",
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "This is an appreciating ERC-4626 yield receipt redeemable at an asset exchange rate, not an issuer promise to redeem for a fixed amount of monetary value.",
+      "references": [
+        {
+          "label": "GENIUS Act payment stablecoin definition, section 2(22)",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-02"
+        },
+        {
+          "label": "Spark Savings documentation distinguishes Legacy V1 from V2",
+          "url": "https://docs.spark.finance/products/spark-savings",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-02"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Reviewed as a yield share under GENIUS section 2(22). No payment-stablecoin authorization is asserted. MiCA is intentionally unassessed: transferable share mechanics alone do not resolve EU offering or instrument classification.",
+    "references": [
+      {
+        "label": "GENIUS Act payment stablecoin definition, section 2(22)",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-02"
+      },
+      {
+        "label": "Spark Savings documentation distinguishes Legacy V1 from V2",
+        "url": "https://docs.spark.finance/products/spark-savings",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-02"
+      }
+    ],
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  }
+}

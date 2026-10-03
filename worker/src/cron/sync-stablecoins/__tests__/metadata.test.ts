@@ -114,6 +114,34 @@ function allMissingSizeGuardFixture(): {
     },
   };
 }
+// Measure the current catalog's retained ID/streak floor rather than pinning a
+// byte budget that accidentally selects a different rung after coin additions.
+function sizeGuardRungBudget(
+  guard: Parameters<typeof buildSizeGuardedStablecoinsSyncMetadata>[0],
+  detailCount: number,
+  recordCount: number,
+): number {
+  const metadata = JSON.parse(buildSizeGuardedStablecoinsSyncMetadata(guard, Infinity)) as {
+    activePriceCoverage: { missingActiveAssets: unknown[]; missingActiveAssetsTruncated: number };
+    priceSourceAttemptLedger: {
+      missingActiveIds?: string[];
+      missingActiveIdCount?: number;
+      records: unknown[];
+      truncated: number;
+    };
+  };
+  metadata.activePriceCoverage.missingActiveAssets =
+    metadata.activePriceCoverage.missingActiveAssets.slice(0, detailCount);
+  metadata.activePriceCoverage.missingActiveAssetsTruncated =
+    guard.activePriceCoverage.missingActiveAssets.length - detailCount;
+  const ledger = metadata.priceSourceAttemptLedger;
+  delete ledger.missingActiveIds;
+  ledger.missingActiveIdCount = guard.priceSourceAttemptLedger.missingActiveIds.length;
+  ledger.truncated += ledger.records.length - recordCount;
+  ledger.records = ledger.records.slice(0, recordCount);
+  return new TextEncoder().encode(JSON.stringify(metadata)).byteLength + 1;
+}
+
 describe("stablecoins pricing metadata", () => {
   it.each(["kava-pricefeed", "mento-fpmm", "mento-broker", "protocol-redeem-cached-rate"])(
     "retains %s fallback observations in source health",
@@ -450,7 +478,7 @@ describe("stablecoins pricing metadata", () => {
           id: asset.id,
           symbol: asset.symbol,
           price: 1,
-          priceSource: "intentionally-overlong-source-".repeat(20),
+          priceSource: "coingecko",
           priceObservedAt: 1_776_999_000,
         },
       ])),
@@ -547,16 +575,18 @@ describe("stablecoins pricing metadata", () => {
 
     // A mid-ladder budget sheds verbose gap details but keeps the exact ID
     // sets, the full compact streak state, and every attempt record.
-    const midBudget = buildSizeGuardedStablecoinsSyncMetadata(guard, 32_000);
-    expect(new TextEncoder().encode(midBudget).byteLength).toBeLessThan(32_000);
+    const midBudgetBytes = sizeGuardRungBudget(guard, 10, 6);
+    const midBudget = buildSizeGuardedStablecoinsSyncMetadata(guard, midBudgetBytes);
+    expect(new TextEncoder().encode(midBudget).byteLength).toBeLessThan(midBudgetBytes);
     const mid = JSON.parse(midBudget) as {
       metadataCompactedBySizeGuard: boolean;
-      activePriceCoverage: { missingActiveState: unknown[]; missingActiveIds: string[] };
+      activePriceCoverage: { missingActiveState: unknown[]; missingActiveIds: string[]; missingActiveAssets: unknown[] };
       priceSourceAttemptLedger: { records: unknown[][] };
     };
     expect(mid.metadataCompactedBySizeGuard).toBe(true);
     expect(mid.activePriceCoverage.missingActiveIds).toHaveLength(ACTIVE_STABLECOINS.length);
     expect(mid.activePriceCoverage.missingActiveState).toHaveLength(ACTIVE_STABLECOINS.length);
+    expect(mid.activePriceCoverage.missingActiveAssets).toHaveLength(10);
     expect(mid.priceSourceAttemptLedger.records).toHaveLength(6);
 
     // No rung can satisfy an impossible budget: the guard fails closed with
@@ -589,7 +619,7 @@ describe("stablecoins pricing metadata", () => {
     // A late rung that drops every verbose gap detail still round-trips: the
     // loader restores the full missing set with its streak state, and the next
     // generation builds on those streaks instead of restarting them.
-    const lateRungMetadata = buildSizeGuardedStablecoinsSyncMetadata(guard, 27_600);
+    const lateRungMetadata = buildSizeGuardedStablecoinsSyncMetadata(guard, sizeGuardRungBudget(guard, 0, 0));
     const lateRung = JSON.parse(lateRungMetadata) as {
       activePriceCoverage: { missingActiveAssets: unknown[]; missingActiveAssetsTruncated: number };
     };

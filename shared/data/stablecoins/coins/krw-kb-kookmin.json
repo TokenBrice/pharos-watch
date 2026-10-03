@@ -1,0 +1,48 @@
+{
+  "id": "krw-kb-kookmin",
+  "name": "KB Kookmin KRW stablecoin",
+  "symbol": "KRW-KB",
+  "oneLiner": "KB Financial Group's pre-launch won stablecoin programme completed a Kaia payments and remittance pilot; commercial service is law-dependent.",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "KRW",
+    "governance": "centralized"
+  },
+  "collateral": "Pre-launch: a bank-led Korean won issuance programme. Kaia describes its KRW issuance infrastructure as 1:1 won-backed, but KB-specific reserve composition, bank accounts, segregation, reconciliation and assurance are not disclosed. The final legal token issuer is unpublished; KB Kookmin is a pilot participant in the KB Financial Group programme.",
+  "pegMechanism": "Pre-launch: KB Financial Group designed an integrated won-stablecoin issuance, offline QR payment, merchant settlement and overseas-remittance proof of concept with KG Inicis, Kaia and OpenAsset. The demonstration converted won tokens into dollar stablecoins for receipt into a Vietnam bank account. This technical pilot does not establish public-holder redemption eligibility, fees, minimums, settlement guarantees or reserve claims. Actual services are planned for implementation of Korean digital-asset legislation.",
+  "mechanismArchetype": "fiat-cash",
+  "links": [
+    { "label": "Programme announcement", "url": "https://www.kbfg.com/kor/pr/press/view.htm?B=8&CONTENT=15055" },
+    { "label": "Kaia KRW pilot overview", "url": "https://www.kaia.io/krw" },
+    { "label": "Kaia pilot confirmation", "url": "https://blog.kaia.io/kaia-q2-2026-ecosystem-round-up-scaling-onchain-finance-and-rwas/" }
+  ],
+  "jurisdiction": { "country": "South Korea" },
+  "status": "pre-launch",
+  "announcedDate": "2026-05-17",
+  "launchPhaseDetail": "KB Financial Group's May 17, 2026 release records a completed issuance, offline payments, merchant settlement and Vietnam remittance proof of concept with KG Inicis, Kaia and OpenAsset, including Hollys kiosk QR payments. Kaia identifies KB Kookmin as the bank pilot participant on its network. Commercial services are conditional on Korean digital-asset legislation; no launch date is announced. Final product name, legal issuer and official ticker are unpublished. KRW-KB is an editorial display label, not an issuer-assigned ticker. The closed pilot is not described as a public testnet or beta.",
+  "featuredContent": [
+    {
+      "type": "article",
+      "url": "https://www.kbfg.com/kor/pr/press/view.htm?B=8&CONTENT=15055",
+      "title": "KB Financial Group completes integrated won-stablecoin proof of concept",
+      "description": "KB reports issuance, Hollys offline payments, merchant settlement and Vietnam remittance tests, and preparation for actual services when legislation is implemented.",
+      "source": "KB Financial Group"
+    }
+  ],
+  "milestones": [
+    {
+      "date": "2026-05-17",
+      "type": "announcement",
+      "title": "KB announces completed payments and remittance proof of concept",
+      "description": "KB Financial Group describes the integrated won-token issuance, offline QR payments, smart-contract settlement and Vietnam bank-account receipt demonstration with KG Inicis, Kaia and OpenAsset. Actual services are planned for implementation of digital-asset legislation.",
+      "sourceUrl": "https://www.kbfg.com/kor/pr/press/view.htm?B=8&CONTENT=15055"
+    },
+    {
+      "date": "2026-06-29",
+      "type": "milestone",
+      "title": "Kaia confirms KB Kookmin's May pilot",
+      "description": "Kaia's Q2 report confirms that KB Kookmin and iM Bank separately piloted won-stablecoin offline payments, remittances and settlement on its network during May. It does not announce a publicly circulating KB token.",
+      "sourceUrl": "https://blog.kaia.io/kaia-q2-2026-ecosystem-round-up-scaling-onchain-finance-and-rwas/"
+    }
+  ]
+}

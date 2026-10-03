@@ -1,0 +1,144 @@
+{
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "sparkusdc-spark",
+    "display": {
+      "url": "https://app.morpho.org/base/vault/0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a",
+      "label": "Spark USDC lender vault"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "base",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "Spark USDC idle underlying and Morpho lender claims",
+        "risk": "high",
+        "coinId": "usdc-circle",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+      },
+      "deployedExposure": {
+        "basis": "Reviewed complete USDC-denominated claim scope at Base block 52095837: idle native USDC plus the funded cbBTC-secured Morpho lender position; current reviewed WETH and collateral-free queue entries carry zero supplied assets. Borrower cbBTC is not directly held vault collateral. This bucket describes the whole parent-denominated lender claim, not idle cash or guaranteed redemption capacity.",
+        "reviewedAt": "2026-10-02",
+        "sourceUrl": "https://api.morpho.org/graphql"
+      },
+      "redemptionLiquidity": {
+        "source": "morpho-vault-v1",
+        "chainId": 8453
+      },
+      "rpcUrl": "https://base-rpc.publicnode.com"
+    }
+  },
+  "id": "sparkusdc-spark",
+  "name": "Spark USDC Vault",
+  "symbol": "sparkUSDC",
+  "oneLiner": "sparkUSDC is Spark's Morpho USDC lending-vault share, redeemable at its accruing asset NAV subject to market liquidity.",
+  "flags": {
+    "backing": "crypto-backed",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "navToken": true
+  },
+  "variantOf": "usdc-circle",
+  "variantKind": "strategy-vault",
+  "pegReferenceId": "usdc-circle",
+  "mechanismArchetype": "protocol-position",
+  "archetypeOverride": true,
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rationale": "Exact base holder instrument 0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a is an operational ERC-4626 protocol-position claim. USDC-denominated Morpho lending claims on Base, concentrated in a cbBTC-collateralized market; the lender vault does not directly hold the borrowers' cbBTC collateral. Verified deployment code and native accounting distinguish this receipt from direct parent fiat ownership and from Spark Savings V2. Exact implementation creation is pinned by transaction 0x4ce6e5d051d2a7951781dc6dd7dc7e0e0cbac3d4723d0ba63faa4f24850370cd, block 24392934, timestamp 2024-12-30T16:13:35+00:00, independently joined from Blockscout to RPC receipt and block timestamp on2026-10-03. This is the implementation launch, not issuer founding or parent-token launch.",
+    "sources": [
+      {
+        "label": "Morpho exact vault portfolio and control API, accessed 2026-10-02",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Verified exact vault deployment and source",
+        "url": "https://base.blockscout.com/api/v2/smart-contracts/0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a"
+      },
+      {
+        "label": "Credential-free RPC endpoint; pinned read in review notes",
+        "url": "https://base-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Morpho vault framework and holder exit mechanics",
+        "url": "https://docs.morpho.org/curate/tutorials-v1/vault-creation/"
+      },
+      {
+        "label": "Exact implementation creation transaction",
+        "url": "https://base.blockscout.com/tx/0x4ce6e5d051d2a7951781dc6dd7dc7e0e0cbac3d4723d0ba63faa4f24850370cd"
+      }
+    ]
+  },
+  "collateral": "USDC-denominated Morpho lending claims on Base, concentrated in a cbBTC-collateralized market; the lender vault does not directly hold the borrowers' cbBTC collateral.",
+  "pegMechanism": "Deposit USDC to mint ERC-4626 lending-vault shares. Accrued lending interest increases USDC per share; redemption burns shares and withdraws available underlying liquidity from Morpho positions. Borrower defaults, collateral liquidation and vault fees affect share value.",
+  "detailProvider": "coingecko",
+  "contracts": [
+    {
+      "chain": "base",
+      "address": "0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a",
+      "decimals": 18
+    }
+  ],
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://spark.fi"
+    },
+    {
+      "label": "Exact vault",
+      "url": "https://app.morpho.org/base/vault/0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a"
+    },
+    {
+      "label": "Verified exact vault deployment and source",
+      "url": "https://base.blockscout.com/api/v2/smart-contracts/0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a"
+    }
+  ],
+  "custodyModel": "unknown",
+  "governanceQuality": "wrapper",
+  "implementationLaunchDate": "2024-12-30",
+  "yieldConfig": {
+    "yieldSource": "Morpho lending interest net of vault fees",
+    "yieldType": "lending-vault"
+  },
+  "dependencyReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Morpho exact vault portfolio and control API, accessed 2026-10-02",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Verified exact vault deployment and source",
+        "url": "https://base.blockscout.com/api/v2/smart-contracts/0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a"
+      },
+      {
+        "label": "Credential-free RPC endpoint; pinned read in review notes",
+        "url": "https://base-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Morpho vault framework and holder exit mechanics",
+        "url": "https://docs.morpho.org/curate/tutorials-v1/vault-creation/"
+      }
+    ],
+    "rationale": "USDC is the exact native deposit/redemption denomination and tracked variant parent. Reserve composition records separate held positions; borrower collateral is not custody of the lender receipt.",
+    "relationships": [
+      {
+        "id": "usdc-circle",
+        "weight": 1,
+        "type": "wrapper",
+        "reason": "Exact asset() is native USDC; this is the serial denomination and inherited parent issuer constraint."
+      }
+    ]
+  }
+}

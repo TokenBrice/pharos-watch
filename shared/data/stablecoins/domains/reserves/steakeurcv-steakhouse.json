@@ -1,0 +1,93 @@
+{
+  "id": "steakeurcv-steakhouse",
+  "reserves": [
+    {
+      "sourceKey": "erc4626-single-asset:ethereum:0x5f7827fdeb7c20b443265fc2f40845b715385ff2",
+      "name": "EURCV-denominated Steakhouse Morpho lending claim",
+      "pct": 100,
+      "risk": "high",
+      "coinId": "eurcv-societe-generale-forge",
+      "depType": "wrapper",
+      "blacklistable": true,
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "EURCV parent issuer and borrowers in Steakhouse-curated Morpho markets",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "liquidity",
+        "smart-contract",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Morpho exact Steakhouse Prime EURCV deployment",
+        "url": "https://app.morpho.org/ethereum/vault/0xbeef0C075Da5D01112AE5cF34d257074fB5DDB2f"
+      },
+      {
+        "label": "Exact verified VaultV2 source (ethereum, 0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f)",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f?fields=all"
+      },
+      {
+        "label": "Morpho current vault identity and asset API",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Steakhouse DeFi vault governing terms",
+        "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
+      }
+    ],
+    "rationale": "Exact asset, 18 share decimals, 18 underlying decimals, positive totalAssets and totalSupply were independently read at ethereum block 26107702. Sole adapter 0x5e3aca36fe2361e1866752ad74cb429f64cdcf1a matches the current Morpho API. The complete direct reserve relationship is the EURCV-denominated protocol position, not idle fiat or an independently attested loan book.",
+    "compositionBasis": "Standing underlying-asset relationship corroborated by fixed-block RPC and exact Morpho current deployment inventory",
+    "compositionAsOf": "2026-10-02",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Borrower collateral allocations and realizable stress exit vary. The 100% underlying-token claim does not assert any collateral-market weighting, signed reconciliation, legal segregation or funded recovery.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Steakhouse Prime EURCV VaultV2 and Morpho adapter 0x5e3aca36fe2361e1866752ad74cb429f64cdcf1a",
+        "role": "other",
+        "jurisdiction": "ethereum"
+      },
+      {
+        "name": "Carniceria Tropical SA (Steakhouse vault service operator and curator)",
+        "role": "other",
+        "jurisdiction": "Panama"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Morpho exact Steakhouse Prime EURCV deployment",
+        "url": "https://app.morpho.org/ethereum/vault/0xbeef0C075Da5D01112AE5cF34d257074fB5DDB2f"
+      },
+      {
+        "label": "Exact verified VaultV2 source (ethereum, 0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f)",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f?fields=all"
+      },
+      {
+        "label": "Morpho current vault identity and asset API",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Steakhouse DeFi vault governing terms",
+        "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
+      }
+    ],
+    "uncertainty": "Immediate assets sit in vault and adapter/market contracts; the curator terms deny custody and fiduciary obligations. Ultimate parent reserve custody, borrower-collateral custody, legal priority, continuity resources and legal reuse rights are not fully established for this exact share. Whole-book custody therefore remains unknown."
+  }
+}

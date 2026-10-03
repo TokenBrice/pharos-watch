@@ -1,0 +1,205 @@
+{
+  "id": "sparkusdtbc-spark",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "none-resolved-mint",
+    "confidence": "unknown",
+    "summary": "sparkUSDTbc inherits USDT issuer authority. Native shares are deposit-backed; immutable local vault code constrains issuance while Spark controllers can change strategy parameters.",
+    "inheritedFrom": "usdt-tether",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xb0c424116172b55cbb6dd3136f5989f7959e5b91",
+        "deploymentRefs": [
+          "ethereum:0xb0c424116172b55cbb6dd3136f5989f7959e5b91"
+        ],
+        "label": "Exact deposit-backed ERC-4626 share issuer",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107702,
+        "sources": [
+          {
+            "label": "Morpho exact vault portfolio and control API, accessed 2026-10-02",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Verified exact vault deployment and source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb0c424116172b55cbb6dd3136f5989f7959e5b91"
+          },
+          {
+            "label": "Credential-free RPC endpoint; pinned read in review notes",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          },
+          {
+            "label": "Morpho vault framework and holder exit mechanics",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          }
+        ],
+        "evidence": "Observed 2026-10-02T22:43:49.516688+00:00 at ethereum block 26107702 (hash 0x292b4ed6cca79fa476bc17c9ef12dd938dbbf67f4a61564c2fe8f897e07390e6). Native totalSupply 88558225018782413763816976 (18 decimals), asset 0xdac17f958d2ee523a2206206994597c13d831ec7 (6 decimals), totalAssets 89911293130474, convertToAssets(10^18) 1015278. One-share redeem from actual holder 0x1601843c5e9bc251a3272907010afa41fa18347e returned 1015278 asset base units via eth_call at that same block; no transaction broadcast. Verified source mints receipts only through deposit-backed user operations and documented fee accounting; it does not create the underlying stablecoin."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x3300f198988e4c9c63f75df86de36421f06af8c4",
+        "deploymentRefs": [
+          "ethereum:0xb0c424116172b55cbb6dd3136f5989f7959e5b91"
+        ],
+        "label": "Spark vault owner configuration authority",
+        "role": "governor",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107702,
+        "sources": [
+          {
+            "label": "Morpho exact vault portfolio and control API, accessed 2026-10-02",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Verified exact vault deployment and source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb0c424116172b55cbb6dd3136f5989f7959e5b91"
+          },
+          {
+            "label": "Credential-free RPC endpoint; pinned read in review notes",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          },
+          {
+            "label": "Morpho vault framework and holder exit mechanics",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "Exact owner authorization and delegatecall source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3300f198988e4c9c63f75df86de36421f06af8c4"
+          }
+        ],
+        "evidence": "Pinned owner() returned this contract. The verified immutable vault supports owner/curator configuration and fee/cap changes; owner permissions do not provide an arbitrary external share minter. SubProxy wards for DSPauseProxy, StarGuard and ESM each returned 1. DSPause delay() returned 172800; that proves this one path, not an all-path mandatory delay. Independent full-address Rely/Deny eth_getLogs from block0 through26107702 found5 events; current wards census=[{\"address\":\"0xd1236a6a111879d9862f8374ba15344b6b233fbd\",\"active\":0},{\"address\":\"0xbe8e3e3618f7474f8cb1d074a26affef007e98fb\",\"active\":1},{\"address\":\"0x09e05ff6142f2f9de8b6b65855a1d56b6cfe4c58\",\"active\":1},{\"address\":\"0x6605aa120fe8b656482903e7757babf56947e45e\",\"active\":1}]. DSPauseProxy.owner()=0xbe286431454714f511008713973d3b053a2d38f3 and delay()=172800. ESM and StarGuard are independently active ward alternatives, so this delay is not universal. Arbitrary authorized delegatecall can write ward storage without Rely/Deny, so event enumeration cannot certify exhaustive mutable execution closure."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x0f963a8a8c01042b69054e787e5763abbb0646a3",
+        "deploymentRefs": [
+          "ethereum:0xb0c424116172b55cbb6dd3136f5989f7959e5b91"
+        ],
+        "label": "Spark current curator Safe",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0xba638112360d6ba325329e3881d61bf926a36811",
+            "0x5a2e65bc3b383f04136b0a9d190db82e72e7deac",
+            "0x1cae4d7efdd34d6c4d54d365c3583a62d8041ea8",
+            "0xdc473772ed710e36853a7c278754ddbe9bec76be",
+            "0x7de4bb4fc0e55b7beeae238dbe665f8475451f63"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 26107702,
+          "observedAt": "2026-10-03",
+          "source": "onchain"
+        },
+        "observedAt": "2026-10-03",
+        "observedBlock": 26107702,
+        "sources": [
+          {
+            "label": "Exact current Safe controller",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0f963a8a8c01042b69054e787e5763abbb0646a3"
+          },
+          {
+            "label": "Exact vault source and native authorization",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb0c424116172b55cbb6dd3136f5989f7959e5b91"
+          }
+        ],
+        "evidence": "Independently re-read at block 26107702 on 2026-10-03: getOwners and getThreshold give the listed quorum; getModulesPaginated(0x1,100) returned empty with terminal next=0x1, and the Safe guard slot was zero. This identifies cryptographic owners, not independent people or attested key custody. Parameter scope does not create native underlying stablecoin liabilities."
+      }
+    ],
+    "economicCapSemantics": "collateral-gated",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "review": {
+      "sources": [
+        {
+          "label": "Morpho exact vault portfolio and control API, accessed 2026-10-02",
+          "url": "https://api.morpho.org/graphql"
+        },
+        {
+          "label": "Verified exact vault deployment and source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb0c424116172b55cbb6dd3136f5989f7959e5b91"
+        },
+        {
+          "label": "Credential-free RPC endpoint; pinned read in review notes",
+          "url": "https://eth-mainnet.g.alchemy.com/v2/"
+        },
+        {
+          "label": "Morpho vault framework and holder exit mechanics",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+        },
+        {
+          "label": "Exact deployment creation transaction and timestamp",
+          "url": "https://eth.blockscout.com/tx/0x9ddf415a09a25af3a72dd6a81acb61ab7771e7304a5cc50ce33b51f50ed6da95"
+        }
+      ],
+      "evidence": "Observed 2026-10-02T22:43:49.516688+00:00 at ethereum block 26107702 (hash 0x292b4ed6cca79fa476bc17c9ef12dd938dbbf67f4a61564c2fe8f897e07390e6). Native totalSupply 88558225018782413763816976 (18 decimals), asset 0xdac17f958d2ee523a2206206994597c13d831ec7 (6 decimals), totalAssets 89911293130474, convertToAssets(10^18) 1015278. One-share redeem from actual holder 0x1601843c5e9bc251a3272907010afa41fa18347e returned 1015278 asset base units via eth_call at that same block; no transaction broadcast. Parent mint authority remains inherited. Current exact-token operational controls are recorded without promoting local accounting into independent reserve assurance. Exact implementation creation transaction 0x9ddf415a09a25af3a72dd6a81acb61ab7771e7304a5cc50ce33b51f50ed6da95, block 24794487, timestamp 2026-04-02T21:02:35+00:00, was independently joined from Blockscout creation identity to RPC transaction receipt and block timestamp; issuer founding and parent launch were not substituted. Separate signer/key-custody observation, recorded per identified control rather than as an aggregate issuance-census gap: Safe signer independence and offchain key custody are not publicly established. Calibration v2 field re-justification: reconciliation=not-applicable describes the immutable deposit-backed local share mechanism and does not assert parent reserve-to-total-liability financial assurance; supervision=none grants no prudential-supervision credit. Source-defined share accounting and independent financial assurance retain separate scopes.",
+      "reviewer": "Sol refinement Refine11",
+      "reviewedAt": "2026-10-03",
+      "disposition": "unresolved",
+      "unresolvedQuestions": [
+        "Complete executable/storage-write closure of SubProxy delegatecall targets and governance authorizations behind active DSPauseProxy/ESM/StarGuard alternatives is not established. Full recorded Rely/Deny census and current wards do not exclude unlogged delegatecall changes."
+      ],
+      "scopedQuestions": [
+        {
+          "controlRef": "ethereum:0x0f963a8a8c01042b69054e787e5763abbb0646a3",
+          "question": "For Spark current curator Safe (ethereum:0x0f963a8a8c01042b69054e787e5763abbb0646a3): Safe signer independence and offchain key custody are not publicly established.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement Refine11",
+          "sources": [
+            {
+              "label": "Exact current Safe controller",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0f963a8a8c01042b69054e787e5763abbb0646a3"
+            },
+            {
+              "label": "Exact vault source and native authorization",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb0c424116172b55cbb6dd3136f5989f7959e5b91"
+            }
+          ]
+        }
+      ]
+    },
+    "upgradeability": {
+      "model": "immutable",
+      "deploymentRefs": [
+        "ethereum:0xb0c424116172b55cbb6dd3136f5989f7959e5b91"
+      ],
+      "canChangeMintLogic": false,
+      "observedAt": "2026-10-02",
+      "observedBlock": 26107702,
+      "sources": [
+        {
+          "label": "Morpho exact vault portfolio and control API, accessed 2026-10-02",
+          "url": "https://api.morpho.org/graphql"
+        },
+        {
+          "label": "Verified exact vault deployment and source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb0c424116172b55cbb6dd3136f5989f7959e5b91"
+        },
+        {
+          "label": "Credential-free RPC endpoint; pinned read in review notes",
+          "url": "https://eth-mainnet.g.alchemy.com/v2/"
+        },
+        {
+          "label": "Morpho vault framework and holder exit mechanics",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+        }
+      ]
+    }
+  }
+}

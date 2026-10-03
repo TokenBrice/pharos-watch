@@ -1,0 +1,20 @@
+{
+  "id": "weur-aplauz",
+  "mica": {
+    "status": "authorized",
+    "tokenType": "EMT",
+    "authorizationType": "emi",
+    "competentAuthority": "DNB",
+    "authorizedEntity": "Aplauz NL B.V.",
+    "references": [
+      {
+        "label": "ESMA EMT register names exact issuer and token, checked 2026-10-02",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "Token-specific whitepaper: EMI issuer and holder rights; notification is not whitepaper approval",
+        "url": "https://www.weur.io/protocol/whitepaper/v2"
+      }
+    ]
+  }
+}

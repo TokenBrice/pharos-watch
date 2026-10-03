@@ -852,10 +852,10 @@ Returns reviewed redemption paths and backstop evidence.
 {
   "coins": {},
   "methodology": {
-    "version": "4.45",
-    "versionLabel": "v4.45",
-    "currentVersion": "4.45",
-    "currentVersionLabel": "v4.45",
+    "version": "4.46",
+    "versionLabel": "v4.46",
+    "currentVersion": "4.46",
+    "currentVersionLabel": "v4.46",
     "changelogPath": "/methodology/redemption-backstop-changelog/",
     "asOf": 0,
     "isCurrent": true,

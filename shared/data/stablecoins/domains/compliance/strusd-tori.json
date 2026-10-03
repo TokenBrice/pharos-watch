@@ -1,0 +1,22 @@
+{
+  "id": "strusd-tori",
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "This exact token is a yield-accruing ERC-4626 savings share redeemable into its tracked parent, rather than a fixed-dollar payment claim.",
+      "references": [
+        {
+          "label": "Tori strUSD staking and unstaking terms",
+          "url": "https://docs.tori.finance/products/strusd.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-02"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "notes": "Savings-share applicability review only. Parent payment-token posture is not copied; EU offering and issuer-authorization scope remain unassessed.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  }
+}

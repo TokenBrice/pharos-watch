@@ -1,0 +1,159 @@
+{
+  "id": "usdx-axis",
+  "mintAuthority": {
+    "mintPath": "offchain-attested-minter",
+    "authorityPosture": "unbounded-reconciliation-unknown",
+    "confidence": "verified",
+    "summary": "Canonical Ethereum USDx has two live MARKET_ROLE holders: USDxMarket and the 3-of-5 governance Safe. The Safe can call token mint directly without market capacity or collateral checks, as well as administer roles, routes and capacity. Proxy upgrades separately require a two-day timelock whose proposer and executor are the same Safe. Offchain reconciliation and key independence remain unverified.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x5ae365ac83638418c4c30555d32f9a91ccaef58c",
+        "deploymentRefs": ["ethereum:0xa1fa7777974312f7d801a8880714a218f76233f8"],
+        "label": "Axis USDxMarket canonical issuer",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "capDescription": "Signed orders must pass account eligibility, signer, enabled route/channel, nonce and configured CapConfig capacity checks. Exact current cap amounts and complete latent route closure are not asserted.",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107703,
+        "sources": [
+          { "label": "USDxMarket signed-order settlement and capacity checks", "url": "https://docs.axis.to/usdx-the-synthetic-dollar/mint-and-redeem.md" },
+          { "label": "Axis MARKET_ROLE issuance permissions", "url": "https://docs.axis.to/reference/access-control.md" },
+          { "label": "Pinned Ethereum control observation", "url": "https://etherscan.io/block/26107703" }
+        ],
+        "evidence": "At block 26107703, USDx.hasRole(MARKET_ROLE, USDxMarket) returned true. Official documentation identifies the market as the live launch issuance route and documents cap-limited atomic settlement of user-signed orders. The market does not independently value collateral through an external price oracle. Future BRIDGE_ROLE assignment is an admin expansion surface, not an authored active bridge deployment."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xdeca86926d2aec9c3b0eeeb54aacfde6d0249370",
+        "deploymentRefs": ["ethereum:0xa1fa7777974312f7d801a8880714a218f76233f8"],
+        "label": "Axis published mint operator",
+        "role": "backend-signer",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "capDescription": "Executes approved signed mint orders under USDxMarket capacity and routing constraints; exact cap values remain unreviewed.",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107703,
+        "sources": [
+          { "label": "Published Axis operator wallet", "url": "https://docs.axis.to/reference/contract-addresses.md" },
+          { "label": "Mint operator permissions", "url": "https://docs.axis.to/reference/access-control.md" },
+          { "label": "Pinned role observation block", "url": "https://etherscan.io/block/26107703" }
+        ],
+        "evidence": "USDxMarket.hasRole(MINT_OPERATOR_ROLE, this published wallet) returned true at block 26107703. Complete RoleGranted/RoleRevoked history from deployment through block 26110188 identifies this as the sole current mint operator, corroborated by hasRole. Docs call it KMS-secured; no independent HSM/MPC key-custody attestation was retrieved. It executes signed settlement, while the governance Safe separately retains direct token mint authority."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xdeb538917b1c1ae6b81550a6c42a66d818cc6d6d",
+        "deploymentRefs": ["ethereum:0xa1fa7777974312f7d801a8880714a218f76233f8"],
+        "label": "Axis governance Safe native issuance administration",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110188,
+        "safe": {
+          "owners": ["0xae89fd944a412a3e1f6a8dec586f9a040e8d69a3", "0x79170f93ca5d2d3cb56c3cdff84015960259c41a", "0xc39fdd5c692f8778f7357e7f6cb72f359b96151b", "0x1623016a129e3acd16cb4a56d215e60f7f7a7027", "0x73a50922f75a2e4a7cdb949489738f23251b7fb7"],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "observedBlock": 26110188,
+          "observedAt": "2026-10-03",
+          "source": "onchain"
+        },
+        "sources": [
+          { "label": "Axis risk-up governance and role administration", "url": "https://docs.axis.to/reference/access-control.md" },
+          { "label": "Governance Safe", "url": "https://etherscan.io/address/0xdeb538917b1c1ae6b81550a6c42a66d818cc6d6d" },
+          { "label": "Pinned complete role census and Safe observation, block 26110188", "url": "https://etherscan.io/block/26110188" },
+          { "label": "Verified USDx direct-mint implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7c4ba7477f180b0370338f722c3717b3fbfda1c6" }
+        ],
+        "evidence": "At Ethereum block 26110188, complete RoleGranted/RoleRevoked history and hasRole confirm this Safe holds both DEFAULT_ADMIN_ROLE and MARKET_ROLE on USDx. The verified deployed USDx.mint(address,uint256) only checks MARKET_ROLE and transfer restrictions: this path bypasses signed orders and market caps. getThreshold=3, getOwners lists the same five owners, complete getModulesPaginated(0x1,100) terminates empty, and the standard guard slot is zero. The fallback-handler slot is 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99, whose exact bypass reach remains unreviewed. Signer independence is not established."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xd6bb04711e41aa41b9130ad41ee6884755914c0b",
+        "deploymentRefs": ["ethereum:0xa1fa7777974312f7d801a8880714a218f76233f8"],
+        "label": "Axis native USDx proxy-upgrade timelock",
+        "role": "timelock",
+        "authorityType": "timelock",
+        "directMintAbility": "upgrade-only",
+        "timelockDelaySec": 172800,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110188,
+        "sources": [
+          { "label": "Axis transparent-proxy upgrade authority", "url": "https://docs.axis.to/reference/access-control.md" },
+          { "label": "USDx ProxyAdmin", "url": "https://etherscan.io/address/0xde4552a601e0424bdf5407b2b465d63a3df6a271#code" },
+          { "label": "Complete timelock role history through block 26110188", "url": "https://etherscan.io/block/26110188" }
+        ],
+        "evidence": "ProxyAdmin 0xde4552a601e0424bdf5407b2b465d63a3df6a271 owns the transparent upgrade entrypoint and owner() identifies this timelock. At block 26110188, complete RoleGranted/RoleRevoked history since deployment identifies DEFAULT_ADMIN_ROLE only on the timelock itself and PROPOSER_ROLE, EXECUTOR_ROLE and CANCELLER_ROLE only on governance Safe 0xdeb538917b1c1ae6b81550a6c42a66d818cc6d6d; each active membership was corroborated by hasRole. getMinDelay=172800. The implementation is 0x7c4ba7477f180b0370338f722c3717b3fbfda1c6; its sole activation was the July 23 deployment. This delay does not constrain direct Safe minting or role grants."
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "deploymentRefs": ["ethereum:0xa1fa7777974312f7d801a8880714a218f76233f8"],
+      "proxyAddresses": ["0xa1fa7777974312f7d801a8880714a218f76233f8"],
+      "implementationAddresses": ["0x7c4ba7477f180b0370338f722c3717b3fbfda1c6"],
+      "adminAddresses": ["0xde4552a601e0424bdf5407b2b465d63a3df6a271"],
+      "canChangeMintLogic": true,
+      "delaySec": 172800,
+      "controlRef": "Axis native USDx proxy-upgrade timelock",
+      "observedAt": "2026-10-02",
+      "observedBlock": 26107703,
+      "sources": [
+        { "label": "Axis canonical V2 proxy and upgrade model", "url": "https://docs.axis.to/reference/access-control.md" },
+        { "label": "Pinned Ethereum proxy observation", "url": "https://etherscan.io/block/26107703" }
+      ]
+    },
+    "review": {
+      "sources": [
+        { "label": "Axis access control", "url": "https://docs.axis.to/reference/access-control.md" },
+        { "label": "Axis contract roster", "url": "https://docs.axis.to/reference/contract-addresses.md" },
+        { "label": "Axis primary market", "url": "https://docs.axis.to/usdx-the-synthetic-dollar/mint-and-redeem.md" },
+        { "label": "Complete native and timelock role census through Ethereum block 26110188", "url": "https://etherscan.io/block/26110188" },
+        { "label": "Exact USDx implementation source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7c4ba7477f180b0370338f722c3717b3fbfda1c6" },
+        { "label": "Exact standard Safe CompatibilityFallbackHandler deployed source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfd0732dc9e303f09fcef3a7388ad10a83459ec99" }
+      ],
+      "evidence": "The deployment-to-block-26110188 event census confirms the Safe is sole DEFAULT_ADMIN on token, market and MarketConfig; MARKET_ROLE has both market and Safe; MINT_OPERATOR_ROLE has only 0xdeca86926d2aec9c3b0eeeb54aacfde6d0249370; BRIDGE_ROLE has no grants. Timelock proposer/executor/canceller are the Safe, with self-only admin and 172800-second delay. Current hasRole and Safe quorum calls corroborate the census. Direct uncapped Safe token minting contradicts the documentation's market-only assertion, so global issuance is unbounded despite market-specific capacities. Accountable reporting does not establish full issuance-ledger reconciliation or prudential supervision. The known fallback handler has not received execution-complete review; no bypass exclusion or human-independence credit is claimed. Its exact verified deployed source identifies the standard Safe CompatibilityFallbackHandler; with no enabled modules or standard guard detected, that generic noninterference question is not a separate mint-identity gap. Independent signer/key-custody evidence remains unavailable. Current market capacities and configurable latent route inventory remain unpinned and are scoped to USDxMarket; they do not bound direct Safe minting.",
+      "reviewer": "Pharos refinement 2026-10-03 (Refine01)",
+      "reviewedAt": "2026-10-03",
+      "disposition": "scoreable",
+      "unresolvedQuestions": [
+        "What are the exact current USDxMarket capacities and complete configurable latent route inventory? Full deployed market execution/configuration closure is not established by the current role census and issuer documentation; these gaps do not bound the independently verified direct Safe token-mint path."
+      ],
+      "scopedQuestions": [
+        {
+          "controlRef": "Axis governance Safe native issuance administration",
+          "question": "What independent signer, key-custody and recovery evidence establishes separation of the five observed owners of this 3-of-5 Safe? The onchain owner roster and threshold do not establish human independence or signing policy.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)",
+          "sources": [
+            { "label": "Exact Safe and observed quorum", "url": "https://etherscan.io/address/0xdeb538917b1c1ae6b81550a6c42a66d818cc6d6d" },
+            { "label": "Pinned complete role and Safe observation", "url": "https://etherscan.io/block/26110188" }
+          ]
+        },
+        {
+          "controlRef": "Axis published mint operator",
+          "question": "What independent HSM/KMS signing policy, operator independence and recovery evidence governs this identified mint operator? Issuer KMS disclosure does not establish a signing threshold or independent custody assurance.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)",
+          "sources": [
+            { "label": "Published Axis operator and KMS disclosure", "url": "https://docs.axis.to/reference/contract-addresses.md" },
+            { "label": "Native mint operator permissions", "url": "https://docs.axis.to/reference/access-control.md" }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,534 @@
+{
+  "id": "gldon-ondo",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Ondo native managers",
+        "url": "https://docs.ondo.finance/addresses.md"
+      },
+      {
+        "label": "Ondo GLDon exact deployment and issuer",
+        "url": "https://app.ondo.finance/api/v2/assets/gldon/info"
+      },
+      {
+        "label": "GLDon Ethereum token",
+        "url": "https://etherscan.io/address/0x423d42e505e64f99b6e277eb7ed324cc5606f139"
+      },
+      {
+        "label": "GLDon BNB token",
+        "url": "https://bscscan.com/address/0xfa9a1e901085e269f6d428f79cd5252d8b919344"
+      },
+      {
+        "label": "Solana finalized RPC",
+        "url": "https://api.mainnet-beta.solana.com"
+      },
+      {
+        "label": "Ondo issuer and holder restrictions",
+        "url": "https://docs.ondo.finance/ondo-stocks/important-notes.md"
+      }
+    ],
+    "evidence": "EVM GLDon exposes issuer-selected compliance and tokenPauseManager contracts; current role getters retain these controllers on Ethereum, BNB and HyperEVM. Finalized Solana mint metadata exposes freeze authority 51QVCuHfL1FeNjd8BDeffCKhCcAYoULnVB3yjNhShiuK and a pausable extension. These establish direct holder-control exposure independently of issuer minting.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "GLDon Final Terms appoint the issuer and Ondo Finance as calculation agents, reference broker-provided GLD prices and multiply those prices by the attributable shares per token for issuance/redemption. Issuer-published SyntheticSharesOracle addresses are Ethereum 0x9bc39db6fbb44b91a48b8d5a6c208b82b1741be6 and BNB 0xf4fd8a1b412633e10527454137a29db7aa35f15e; these publish stock-to-token multipliers, not an independent GLD/USD price or reserve reconciliation. Off-hours valuation remains issuer-discretionary.",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Refine06 primary-source review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "GLDon Final Terms: Reference Sources and calculation agents",
+        "url": "https://cdn.sanity.io/files/8k2tqa6n/production/a598be5156bcda440276f01eea9258f82f851bd0.pdf"
+      },
+      {
+        "label": "Issuer-published SyntheticSharesOracle addresses and scope",
+        "url": "https://docs.ondo.finance/addresses.md"
+      },
+      {
+        "label": "May 2026 prospectus supplement: off-hours valuation discretion",
+        "url": "https://cdn.sanity.io/files/8k2tqa6n/production/c526d3cb52fc1e92988e2db1b33d563864ad6b5d.pdf"
+      }
+    ],
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Refine06 primary-source review",
+      "rationale": "This open-ended secured tracker uses contractual fund-security issuance/redemption valuation rather than borrower collateral/liquidation markets. Its underlying GLD ETF price and stock-to-token multiplier remain applicable; fixed physical-gold redemption is not a GLDon right.",
+      "sources": [{
+        "label": "Exact GLDon contractual tracker, issue and redemption formulas",
+        "url": "https://cdn.sanity.io/files/8k2tqa6n/production/a598be5156bcda440276f01eea9258f82f851bd0.pdf"
+      }]
+    }
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "Native Ethereum/BNB/Solana issuance and HyperEVM representation are inventoried. Current review binds custom OFT storage to the actual Messenger OApps and reads ETH/BNB↔HyperEVM peer, library, DVN and delegate state. Complete Solana messaging, rate limits, owner/delegate bypass closure and fresh liability materiality remain unresolved.",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Refine06 primary-source and pinned RPC review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Exact Ethereum OndoOFT verified bytecode/ABI; Messenger stored in slot 1",
+        "url": "https://etherscan.io/address/0x6d119ebada730583ef8dc7b8506fa317a374796a#code"
+      },
+      {
+        "label": "Ethereum Messenger exact OApp",
+        "url": "https://etherscan.io/address/0xff2baba46df92919705e60120c477ae5b7341eb3"
+      },
+      {
+        "label": "BNB Messenger exact OApp",
+        "url": "https://bscscan.com/address/0x5f7d50242206993a4476c76b21950219a4ed2c91"
+      },
+      {
+        "label": "HyperEVM Messenger exact OApp",
+        "url": "https://hyperevmscan.io/address/0xdcf29fa293125ae2361e12fb83fc096699c4fc2f"
+      },
+      {
+        "label": "Ondo native managers",
+        "url": "https://docs.ondo.finance/addresses.md"
+      },
+      {
+        "label": "Ondo GLDon exact deployment and issuer",
+        "url": "https://app.ondo.finance/api/v2/assets/gldon/info"
+      },
+      {
+        "label": "GLDon Ethereum token",
+        "url": "https://etherscan.io/address/0x423d42e505e64f99b6e277eb7ed324cc5606f139"
+      },
+      {
+        "label": "GLDon BNB token",
+        "url": "https://bscscan.com/address/0xfa9a1e901085e269f6d428f79cd5252d8b919344"
+      },
+      {
+        "label": "Solana finalized RPC",
+        "url": "https://api.mainnet-beta.solana.com"
+      },
+      {
+        "label": "Cantina BridgeRegistrar and USDonConverter, October 9 2025; commit 18afc35a",
+        "url": "https://docs-v2-git-prod-ondo-docs.vercel.app/pdf/GM-USDonConverter-BridgeRegistrar-Cantina-10-06-2025.pdf"
+      },
+      {
+        "label": "Cantina GM limit-order audit, February 6 2026; commit e89c9020",
+        "url": "https://docs-v2-git-prod-ondo-docs.vercel.app/pdf/GM-LimitOrder-Protocol-Cantina-01-30-2026.pdf"
+      },
+      {
+        "label": "Ondo Stocks technical classification",
+        "url": "https://docs.ondo.finance/ondo-stocks/technical.md"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x423d42e505e64f99b6e277eb7ed324cc5606f139",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x423d42e505e64f99b6e277eb7ed324cc5606f139",
+        "protocol": "Issuer-native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Current MINTER_ROLE includes native GMTokenManager and a distinct token-specific OFT bridge minter; native issuance and bridge powers remain separated.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107702,
+        "sources": [
+          {
+            "label": "Ondo native managers",
+            "url": "https://docs.ondo.finance/addresses.md"
+          },
+          {
+            "label": "Ondo GLDon exact deployment and issuer",
+            "url": "https://app.ondo.finance/api/v2/assets/gldon/info"
+          },
+          {
+            "label": "GLDon Ethereum token",
+            "url": "https://etherscan.io/address/0x423d42e505e64f99b6e277eb7ed324cc5606f139"
+          },
+          {
+            "label": "GLDon BNB token",
+            "url": "https://bscscan.com/address/0xfa9a1e901085e269f6d428f79cd5252d8b919344"
+          },
+          {
+            "label": "Solana finalized RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ]
+      },
+      {
+        "id": "bsc:0xfa9a1e901085e269f6d428f79cd5252d8b919344",
+        "destinationChain": "bsc",
+        "canonicalChain": "bsc",
+        "contractAddress": "0xfa9a1e901085e269f6d428f79cd5252d8b919344",
+        "protocol": "Issuer-native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Current MINTER_ROLE includes native GMTokenManager and a distinct token-specific OFT bridge minter; native issuance and bridge powers remain separated.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-02",
+        "observedBlock": 125374463,
+        "sources": [
+          {
+            "label": "Ondo native managers",
+            "url": "https://docs.ondo.finance/addresses.md"
+          },
+          {
+            "label": "Ondo GLDon exact deployment and issuer",
+            "url": "https://app.ondo.finance/api/v2/assets/gldon/info"
+          },
+          {
+            "label": "GLDon Ethereum token",
+            "url": "https://etherscan.io/address/0x423d42e505e64f99b6e277eb7ed324cc5606f139"
+          },
+          {
+            "label": "GLDon BNB token",
+            "url": "https://bscscan.com/address/0xfa9a1e901085e269f6d428f79cd5252d8b919344"
+          },
+          {
+            "label": "Solana finalized RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ]
+      },
+      {
+        "id": "solana:hWfiw4mcxT8rnNFkk6fsCQSxoxgZ9yVhB6tyeVcondo",
+        "destinationChain": "solana",
+        "canonicalChain": "solana",
+        "contractAddress": "hWfiw4mcxT8rnNFkk6fsCQSxoxgZ9yVhB6tyeVcondo",
+        "protocol": "Issuer-native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Finalized GLDon mint exposes the Ondo GM mint authority; issuer docs classify Solana as native issuance.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-02",
+        "observedBlock": 452748021,
+        "sources": [
+          {
+            "label": "Ondo native managers",
+            "url": "https://docs.ondo.finance/addresses.md"
+          },
+          {
+            "label": "Ondo GLDon exact deployment and issuer",
+            "url": "https://app.ondo.finance/api/v2/assets/gldon/info"
+          },
+          {
+            "label": "GLDon Ethereum token",
+            "url": "https://etherscan.io/address/0x423d42e505e64f99b6e277eb7ed324cc5606f139"
+          },
+          {
+            "label": "GLDon BNB token",
+            "url": "https://bscscan.com/address/0xfa9a1e901085e269f6d428f79cd5252d8b919344"
+          },
+          {
+            "label": "Solana finalized RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ]
+      },
+      {
+        "id": "hyperevm:0x95febdd6f447b5278c9b98743b4254eb02c6ea1d",
+        "destinationChain": "hyperevm",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x95febdd6f447b5278c9b98743b4254eb02c6ea1d",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer classifies HyperEVM as bridged. MINTER_ROLE has only the exact OndoOFT, whose token() matches this deployment and approvalRequired() is false.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-02",
+        "observedBlock": 47503251,
+        "sources": [
+          {
+            "label": "Ondo native managers",
+            "url": "https://docs.ondo.finance/addresses.md"
+          },
+          {
+            "label": "Ondo GLDon exact deployment and issuer",
+            "url": "https://app.ondo.finance/api/v2/assets/gldon/info"
+          },
+          {
+            "label": "GLDon Ethereum token",
+            "url": "https://etherscan.io/address/0x423d42e505e64f99b6e277eb7ed324cc5606f139"
+          },
+          {
+            "label": "GLDon BNB token",
+            "url": "https://bscscan.com/address/0xfa9a1e901085e269f6d428f79cd5252d8b919344"
+          },
+          {
+            "label": "Solana finalized RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "gldon-ethereum-oft",
+        "label": "GLDon ethereum OndoOFT bridge minter",
+        "routeRefs": [
+          "ethereum:0x423d42e505e64f99b6e277eb7ed324cc5606f139"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x6d119ebada730583ef8dc7b8506fa317a374796a",
+        "authorityType": "contract",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107702,
+        "sources": [
+          {
+            "label": "Ondo native managers",
+            "url": "https://docs.ondo.finance/addresses.md"
+          },
+          {
+            "label": "Ondo GLDon exact deployment and issuer",
+            "url": "https://app.ondo.finance/api/v2/assets/gldon/info"
+          },
+          {
+            "label": "GLDon Ethereum token",
+            "url": "https://etherscan.io/address/0x423d42e505e64f99b6e277eb7ed324cc5606f139"
+          },
+          {
+            "label": "GLDon BNB token",
+            "url": "https://bscscan.com/address/0xfa9a1e901085e269f6d428f79cd5252d8b919344"
+          },
+          {
+            "label": "Solana finalized RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "routeChecks": {
+          "lockboxOrEscrow": "token() matches GLDon and approvalRequired() is false; no GLDon-specific escrow is proven.",
+          "trustedPeerOrRemote": "At Ethereum block 26110184, OFT slot 1 binds Messenger 0xff2baba46df92919705e60120c477ae5b7341eb3; Messenger peers(30367) matches HyperEVM 0xdcf29fa293125ae2361e12fb83fc096699c4fc2f. Endpoint 0x1a44076050125825900e736c501f859c50fe728c send library 0xbb2ea70c9e858123480642cf96acbcce1372dce1 requires 65 confirmations; receive library 0xc02ab410f0734efa3f14628780e6e695156024c2 requires 120. Both require all three DVNs 0x241c66a979125f230c239e79d103e0c2128c6618, 0x589dedbd617e0cbcb916a9223f4d1300c294236b and 0xa4fe5a5b9a846458a70cd0748228aed3bf65c2cd; no optional DVNs. This is selected-remote evidence, not complete Solana or arbitrary-remote closure.",
+          "rateLimits": "No current exact GLDon per-remote rate-limit inventory is established.",
+          "pausersAdminsUpgraders": "OFT and Messenger owner are 0xbc6d5c103a3f586e68bd475942a49d041b171c3e; endpoint delegate for Messenger is 0x71a4d411b5f7941dee020417fca30413712f1646, whose current threshold is 4 with 7 owners. Complete owner/delegate module, configuration and bypass control remains unverified."
+        },
+        "evidence": "Pinned native token MINTER_ROLE enumeration binds this OndoOFT, and token() matches the authored GLDon deployment. HyperEVM has only this minter. Issuer technical docs identify the HyperEVM representation; this capability is not native issuance."
+      },
+      {
+        "id": "gldon-ethereum-oft-owner",
+        "label": "GLDon ethereum OndoOFT owner administration",
+        "routeRefs": [
+          "ethereum:0x423d42e505e64f99b6e277eb7ed324cc5606f139"
+        ],
+        "capabilities": [
+          "admin"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xbc6d5c103a3f586e68bd475942a49d041b171c3e",
+        "authorityType": "contract",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107702,
+        "sources": [
+          {
+            "label": "Ondo native managers",
+            "url": "https://docs.ondo.finance/addresses.md"
+          },
+          {
+            "label": "Ondo GLDon exact deployment and issuer",
+            "url": "https://app.ondo.finance/api/v2/assets/gldon/info"
+          },
+          {
+            "label": "GLDon Ethereum token",
+            "url": "https://etherscan.io/address/0x423d42e505e64f99b6e277eb7ed324cc5606f139"
+          },
+          {
+            "label": "GLDon BNB token",
+            "url": "https://bscscan.com/address/0xfa9a1e901085e269f6d428f79cd5252d8b919344"
+          },
+          {
+            "label": "Solana finalized RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "Current OndoOFT owner() returns this controller. Complete downstream signer and bypass inventory remains unavailable; no Safe threshold or timelock protection is claimed."
+      },
+      {
+        "id": "gldon-bsc-oft",
+        "label": "GLDon bsc OndoOFT bridge minter",
+        "routeRefs": [
+          "bsc:0xfa9a1e901085e269f6d428f79cd5252d8b919344"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0x6b2cdc221a2ef9c3c35dac38514154c5c35dab57",
+        "authorityType": "contract",
+        "observedAt": "2026-10-02",
+        "observedBlock": 125374463,
+        "sources": [
+          {
+            "label": "Ondo native managers",
+            "url": "https://docs.ondo.finance/addresses.md"
+          },
+          {
+            "label": "Ondo GLDon exact deployment and issuer",
+            "url": "https://app.ondo.finance/api/v2/assets/gldon/info"
+          },
+          {
+            "label": "GLDon Ethereum token",
+            "url": "https://etherscan.io/address/0x423d42e505e64f99b6e277eb7ed324cc5606f139"
+          },
+          {
+            "label": "GLDon BNB token",
+            "url": "https://bscscan.com/address/0xfa9a1e901085e269f6d428f79cd5252d8b919344"
+          },
+          {
+            "label": "Solana finalized RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "routeChecks": {
+          "lockboxOrEscrow": "token() matches GLDon and approvalRequired() is false; no GLDon-specific escrow is proven.",
+          "trustedPeerOrRemote": "At BNB block 125441304, OFT slot 1 binds Messenger 0x5f7d50242206993a4476c76b21950219a4ed2c91; peers(30367) matches HyperEVM Messenger 0xdcf29fa293125ae2361e12fb83fc096699c4fc2f. Endpoint 0x1a44076050125825900e736c501f859c50fe728c send library 0x9f8c645f2d0b2159767bd6e0839de4be49e823de requires 70 confirmations; receive library 0xb217266c3a98c8b2709ee26836c98cf12f6ccec1 requires 120. Both require all three DVNs 0x00efecf8714c2bc9376f8391f47a2ffce8bcdfea, 0xfa9ba83c102283958b997adc8b44ed3a3cdb5dda and 0xfd6865c841c2d64565562fcc7e05e619a30615f0, with no optional DVNs. Other-remote and Solana inventory remain incomplete.",
+          "rateLimits": "No current exact GLDon per-remote rate-limit inventory is established.",
+          "pausersAdminsUpgraders": "OFT/Messenger owner is 0x4d4e562d6882dc523b8d629d2e9df9230b699933; Messenger endpoint delegate is 0xa307e57ca7f9712af3557af8c5624bef214aa913, observed 4-of-7 on BNB. Complete owner/delegate signing, modules and configuration bypass closure remains unverified."
+        },
+        "evidence": "Pinned native token MINTER_ROLE enumeration binds this OndoOFT, and token() matches the authored GLDon deployment. HyperEVM has only this minter. Issuer technical docs identify the HyperEVM representation; this capability is not native issuance."
+      },
+      {
+        "id": "gldon-bsc-oft-owner",
+        "label": "GLDon bsc OndoOFT owner administration",
+        "routeRefs": [
+          "bsc:0xfa9a1e901085e269f6d428f79cd5252d8b919344"
+        ],
+        "capabilities": [
+          "admin"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0x4d4e562d6882dc523b8d629d2e9df9230b699933",
+        "authorityType": "contract",
+        "observedAt": "2026-10-02",
+        "observedBlock": 125374463,
+        "sources": [
+          {
+            "label": "Ondo native managers",
+            "url": "https://docs.ondo.finance/addresses.md"
+          },
+          {
+            "label": "Ondo GLDon exact deployment and issuer",
+            "url": "https://app.ondo.finance/api/v2/assets/gldon/info"
+          },
+          {
+            "label": "GLDon Ethereum token",
+            "url": "https://etherscan.io/address/0x423d42e505e64f99b6e277eb7ed324cc5606f139"
+          },
+          {
+            "label": "GLDon BNB token",
+            "url": "https://bscscan.com/address/0xfa9a1e901085e269f6d428f79cd5252d8b919344"
+          },
+          {
+            "label": "Solana finalized RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "Current OndoOFT owner() returns this controller. Complete downstream signer and bypass inventory remains unavailable; no Safe threshold or timelock protection is claimed."
+      },
+      {
+        "id": "gldon-hyperevm-oft",
+        "label": "GLDon hyperevm OndoOFT bridge minter",
+        "routeRefs": [
+          "hyperevm:0x95febdd6f447b5278c9b98743b4254eb02c6ea1d"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0x1750c8e2546338aca047e3b9ece8d8d986579115",
+        "authorityType": "contract",
+        "observedAt": "2026-10-02",
+        "observedBlock": 47503251,
+        "sources": [
+          {
+            "label": "Ondo native managers",
+            "url": "https://docs.ondo.finance/addresses.md"
+          },
+          {
+            "label": "Ondo GLDon exact deployment and issuer",
+            "url": "https://app.ondo.finance/api/v2/assets/gldon/info"
+          },
+          {
+            "label": "GLDon Ethereum token",
+            "url": "https://etherscan.io/address/0x423d42e505e64f99b6e277eb7ed324cc5606f139"
+          },
+          {
+            "label": "GLDon BNB token",
+            "url": "https://bscscan.com/address/0xfa9a1e901085e269f6d428f79cd5252d8b919344"
+          },
+          {
+            "label": "Solana finalized RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "routeChecks": {
+          "lockboxOrEscrow": "token() matches GLDon and approvalRequired() is false; no GLDon-specific escrow is proven.",
+          "trustedPeerOrRemote": "At HyperEVM block 47534625, OFT slot 1 binds Messenger 0xdcf29fa293125ae2361e12fb83fc096699c4fc2f; peers(30101) matches Ethereum Messenger 0xff2baba46df92919705e60120c477ae5b7341eb3. Endpoint 0x3a73033c0b1407574c76bdbac67f126f6b4a9aa9 send library 0xfd76d9cb0bac839725ab79127e7411fe71b1e3ca requires 120 confirmations; receive library 0x7cacbe439ead55fa1c22790330b12835c6884a91 requires 65. Both require all three DVNs 0x83342ec538df0460e730a8f543fe63063e2d44c4, 0x8614fb9ed4b75d83f781ce836c785eff04379a37 and 0xc097ab8cd7b053326dfe9fb3e3a31a0cce3b526f, with no optional DVNs. Complete other-remote/replay-bypass closure is not established.",
+          "rateLimits": "No current exact GLDon per-remote rate-limit inventory is established.",
+          "pausersAdminsUpgraders": "OFT/Messenger owner is 0x2e59565b98ec5339cb9767ddb903d9b1e2127e5d; endpoint delegate is 0xa307e57ca7f9712af3557af8c5624bef214aa913. Its HyperEVM signing/module state is not inherited from the same-address BNB Safe; full local signing and bypass control remains unverified."
+        },
+        "evidence": "Pinned native token MINTER_ROLE enumeration binds this OndoOFT, and token() matches the authored GLDon deployment. HyperEVM has only this minter. Issuer technical docs identify the HyperEVM representation; this capability is not native issuance."
+      },
+      {
+        "id": "gldon-hyperevm-oft-owner",
+        "label": "GLDon hyperevm OndoOFT owner administration",
+        "routeRefs": [
+          "hyperevm:0x95febdd6f447b5278c9b98743b4254eb02c6ea1d"
+        ],
+        "capabilities": [
+          "admin"
+        ],
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0x2e59565b98ec5339cb9767ddb903d9b1e2127e5d",
+        "authorityType": "contract",
+        "observedAt": "2026-10-02",
+        "observedBlock": 47503251,
+        "sources": [
+          {
+            "label": "Ondo native managers",
+            "url": "https://docs.ondo.finance/addresses.md"
+          },
+          {
+            "label": "Ondo GLDon exact deployment and issuer",
+            "url": "https://app.ondo.finance/api/v2/assets/gldon/info"
+          },
+          {
+            "label": "GLDon Ethereum token",
+            "url": "https://etherscan.io/address/0x423d42e505e64f99b6e277eb7ed324cc5606f139"
+          },
+          {
+            "label": "GLDon BNB token",
+            "url": "https://bscscan.com/address/0xfa9a1e901085e269f6d428f79cd5252d8b919344"
+          },
+          {
+            "label": "Solana finalized RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "Current OndoOFT owner() returns this controller. Complete downstream signer and bypass inventory remains unavailable; no Safe threshold or timelock protection is claimed."
+      }
+    ]
+  }
+}

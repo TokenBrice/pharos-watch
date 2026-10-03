@@ -1,0 +1,43 @@
+{
+  "liveReservesConfig": {
+    "adapter": "frnt-ledgerlens",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "frnt-wyoming",
+    "display": { "url": "https://dashboard.ledgerlens.io/c/wystc", "label": "LedgerLens supplemental FRNT dashboard" },
+    "inputs": { "primary": { "kind": "http-json", "url": "https://dashboard.ledgerlens.io/_serverFn/48773d105fce9df473395d17bdd97f0cc8215fa6b7fa5355237e98db44e0ab8f" } }
+  },
+  "id": "frnt-wyoming",
+  "name": "Frontier Stable Token",
+  "symbol": "FRNT",
+  "oneLiner": "FRNT is Wyoming's dollar token, backed by a holder-benefit reserve trust and redeemable through approved service providers without a state guarantee.",
+  "flags": { "backing": "rwa-backed", "governance": "centralized", "rwa": true },
+  "collateral": "U.S. Treasury bills, repurchase agreements and USD cash in holder-benefit trust accounts managed by Franklin Advisers and held by Fiduciary Trust International",
+  "pegMechanism": "The Wyoming Stable Token Commission issues and redeems FRNT at USD par through KYB-approved Licensed Service Providers. Reserve rules require ordinary redemption within two business days subject to specified exceptions; direct token-holder fallback is conditional. FRNT is a special obligation limited to trust assets, not Wyoming's general obligation or federally insured money. Native deployment liabilities share the reserve book; current cross-chain transfers use Chainlink CCIP.",
+  "mechanismArchetype": "fiat-cash",
+  "llamaId": "441",
+  "detailProvider": "defillama",
+  "geckoId": "frontier-stable-token",
+  "proofOfReserves": { "type": "self-reported", "url": "https://dashboard.ledgerlens.io/c/wystc", "provider": "FRNT supplemental LedgerLens dashboard; The Network Firm LLP's separately issued AT-C 205 reports were not retrieved", "attestorTier": "self", "cadence": "daily" },
+  "links": [
+    { "label": "Website", "url": "https://stabletoken.wyo.gov/" },
+    { "label": "Transparency dashboard", "url": "https://dashboard.ledgerlens.io/c/wystc" },
+    { "label": "Reserve and redemption rules", "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf" },
+    { "label": "Contracts", "url": "https://github.com/wyostable/frontier-stable-token" }
+  ],
+  "jurisdiction": { "country": "United States", "regulator": "Wyoming Stable Token Commission", "license": "Wyoming Stable Token Act statutory public issuer" },
+  "contracts": [
+    { "chain": "ethereum", "address": "0x5e817f2abccb9095585d26c2a3ce234a440574fc", "decimals": 6 },
+    { "chain": "avalanche", "address": "0x5e817f2abccb9095585d26c2a3ce234a440574fc", "decimals": 6 },
+    { "chain": "base", "address": "0x5e817f2abccb9095585d26c2a3ce234a440574fc", "decimals": 6 },
+    { "chain": "polygon", "address": "0x5e817f2abccb9095585d26c2a3ce234a440574fc", "decimals": 6 },
+    { "chain": "arbitrum", "address": "0x5e817f2abccb9095585d26c2a3ce234a440574fc", "decimals": 6 },
+    { "chain": "optimism", "address": "0x5e817f2abccb9095585d26c2a3ce234a440574fc", "decimals": 6 },
+    { "chain": "hedera", "address": "0x5e817f2abccb9095585d26c2a3ce234a440574fc", "decimals": 6 },
+    { "chain": "solana", "address": "FRNTPi9V3Sw9b9U8d5Q3WY7tNANT6Q394d7dYtv7Jdog", "decimals": 6 }
+  ],
+  "collateralQuality": "rwa",
+  "custodyModel": "unknown",
+  "governanceQuality": "regulated-entity",
+  "launchDate": "2025-08-19"
+}

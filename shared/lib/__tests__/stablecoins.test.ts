@@ -41,7 +41,7 @@ const { getVariants, isTrackedVariant } = createVariantRelationshipHelpers({
 });
 
 const EURR_PRE_LAUNCH_ID = "eurr-revolut";
-const EXPECTED_TRACKED_STABLECOIN_COUNT = 411;
+const EXPECTED_TRACKED_STABLECOIN_COUNT = 488;
 
 function makeStablecoinAsset(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -123,6 +123,8 @@ describe("tracked stablecoin metadata", () => {
       "pgold-polaris",
       "klarnausd-klarna",
       "rgbp-revolut",
+      "regbp-restabilise",
+      "gbp-vvtx",
       "usdb-bridge",
       "hkdap-anchorpoint",
       "hkd-hsbc",
@@ -135,8 +137,12 @@ describe("tracked stablecoin metadata", () => {
       "krw1-bdacs",
       "rusd-revolut",
       EURR_PRE_LAUNCH_ID,
+      "weur-aplauz",
+      "plnq-quantoz",
+      "czkc-czkc",
       "brl-itau",
       "krw-imbank",
+      "krw-kb-kookmin",
       "gynusd-gyndore",
       "gelt-tether",
       "tgld-tenbin",
@@ -147,7 +153,12 @@ describe("tracked stablecoin metadata", () => {
       "kusd-kerne",
       "rd-rai-dollar",
       "usd-bank-consortium",
+      "ustx-tx",
+      "net-cloudflare",
+      "usdvb-versabank",
+      "btd-alpen",
       "jpy-megabank-consortium",
+      "jpydf-deltaforesight",
     ]);
   });
 
@@ -376,62 +387,31 @@ describe("tracked stablecoin metadata", () => {
     const variantIds = ACTIVE_STABLECOINS.filter((coin) => isTrackedVariant(coin.id)).map((coin) => coin.id);
 
     expect(variantIds).toEqual([
-      "susdt-spark",
-      "steakusdt-steakhouse",
-      "susdc-spark",
-      "gtusdcp-gauntlet",
-      "gtusdc-gauntlet",
-      "yvusdc-yearn",
-      "steakusdc-steakhouse",
-      "bbqusdc-steakhouse",
-      "srusde-strata",
-      "susde-ethena",
-      "susds-sky",
-      "stusds-sky",
-      "susd1plus-lorenzo",
-      "sdai-sky",
-      "aa-falconx-mev-capital",
-      "susdd-tron-dao-reserve",
-      "susdai-usd-ai",
-      "sgho-aave",
-      "stkgho-umbrella-aave",
-      "stcusd-cap",
-      "scrvusd-curve",
-      "sdola-inverse-finance",
-      "asusdf-astherus",
-      "sfrxusd-frax",
-      "savusd-avant",
-      "cusdo-openeden",
-      "usd3-3jane",
-      "musd-metamask",
-      "syusd-aegis",
-      "sbold-k3-capital",
-      "ybold-yearn",
-      "fxsave-f-x-protocol",
-      "usdn-noble",
-      "susn-noon",
-      "syzusd-yuzu",
-      "usdsc-startale",
-      "ctusd-citrea",
-      "wm-m0",
-      "usdnr-nerona",
-      "pusd-plume",
-      "sdusd-dtrinity",
-      "wsrusd-reservoir",
-      "srusd-reservoir",
-      "syrupusdc-maple",
-      "syrupusdt-maple",
-      "yousd-yield-optimizer",
-      "zys-zephyr-protocol",
-      "autousd-auto-finance",
-      "eearn-ember",
-      "dusd-dialectic",
-      "yusd-yieldfi",
-      "said-gaib",
-      "apyusd-apyx",
-      "stusd-stoneyield",
-      "hbusdt-hyperbeat",
-      "iusd-initia",
+      "susdt-spark", "steakusdt-steakhouse", "skymoneyusdtsavings-sky", "sparkusdtbc-spark",
+      "susdc-spark", "gtusdcp-gauntlet", "gtusdc-gauntlet", "krusdc-keyrock",
+      "arcusdc-galaxy", "armusdcs-wintermute", "pendleusdc-pendle", "yvusdc-yearn",
+      "steakusdc-steakhouse", "bbqusdc-steakhouse", "earnusd-lido", "hyperusdca-hyperithm",
+      "bbqusdc-steakhouse-v2", "cscbusdc-clearstar", "steakcusdc-steakhouse", "ethenausdc-steakhouse",
+      "sparkusdc-spark", "susdc-spark-v1", "srusde-strata", "susde-ethena",
+      "susds-sky", "stusds-sky", "skymoneyusdsflagship-sky", "susd1plus-lorenzo",
+      "sdai-sky", "senpyusdmain-sentora", "senpyusdprimev2-sentora", "senpyusdpst-sentora",
+      "senpyusdmwin-sentora", "susdf-falcon", "aa-falconx-mev-capital", "steakusdg-steakhouse",
+      "syrupusdg-maple", "senrlusdv2-sentora", "sxsrlusd-sentora", "susdd-tron-dao-reserve",
+      "susdai-usd-ai", "sgho-aave", "stkgho-umbrella-aave", "stcusd-cap",
+      "susdx-axis", "scrvusd-curve", "sfrax-frax", "sdola-inverse-finance",
+      "asusdf-astherus", "sfrxusd-frax", "usdso-somnia", "savusd-avant",
+      "sdai-gnosis", "cusdo-openeden", "usd3-3jane", "steakeurcv-steakhouse",
+      "sreusd-resupply", "musd-metamask", "syusd-aegis", "sbold-k3-capital",
+      "ybold-yearn", "fxsave-f-x-protocol", "usdn-noble", "susn-noon",
+      "syzusd-yuzu", "usdsc-startale", "ctusd-citrea", "wm-m0",
+      "usdnr-nerona", "usdr-rise", "mantrausd-mantra", "susdat-saturn",
+      "pusd-plume", "sdusd-dtrinity", "wsrusd-reservoir", "srusd-reservoir",
+      "xgld-unitas", "syrupusdc-maple", "syrupusdt-maple", "yousd-yield-optimizer",
+      "zys-zephyr-protocol", "autousd-auto-finance", "eearn-ember", "dusd-dialectic",
+      "yusd-yieldfi", "said-gaib", "apyusd-apyx", "stusd-stoneyield",
+      "kpkusdcprime-kpk", "sirloinusdc-steakhouse", "kpkusdcyield-kpk", "gusdcq-galaxy",
+      "senpathusd-sentora", "strusd-tori", "hbusdt-hyperbeat", "gusdtq-galaxy",
+      "gtusdtp-gauntlet", "iusd-initia",
     ]);
   });
 
@@ -443,7 +423,9 @@ describe("tracked stablecoin metadata", () => {
   });
 
   it("keeps multi-variant parents explicit", () => {
-    expect(getVariants("usds-sky").map((coin) => coin.id)).toEqual(["susds-sky", "stusds-sky"]);
+    expect(getVariants("usds-sky").map((coin) => coin.id)).toEqual([
+      "susds-sky", "stusds-sky", "skymoneyusdsflagship-sky",
+    ]);
     expect(getVariants("bold-liquity").map((coin) => coin.id)).toEqual(["sbold-k3-capital", "ybold-yearn"]);
   });
 

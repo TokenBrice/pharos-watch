@@ -1,0 +1,125 @@
+{
+  "id": "steakcusdc-steakhouse",
+  "launchDate": "2026-06-19",
+  "name": "Steakhouse Confidential Prime USDC",
+  "symbol": "steakcUSDC",
+  "oneLiner": "steakcUSDC is Steakhouse's public USDC vault share behind a confidential deposit surface; withdrawals use liquid USDC and losses reduce NAV.",
+  "flags": {
+    "backing": "crypto-backed",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "navToken": true
+  },
+  "variantOf": "usdc-circle",
+  "variantKind": "strategy-vault",
+  "pegReferenceId": "usdc-circle",
+  "collateral": "USDC in the Steakhouse-curated Morpho Vault V2 on ethereum, held idle or lent through its MorphoMarketV1AdapterV2; borrower collateral and credit losses remain local strategy exposure",
+  "pegMechanism": "ERC-4626 shares accrue net USDC lending interest and realize losses at NAV. Ordinary withdraw/redeem uses idle USDC and the configured liquidity adapter, subject to liquidity; force-deallocation and in-kind exits are separate, not guaranteed dollar settlement",
+  "mechanismArchetype": "protocol-position",
+  "archetypeOverride": true,
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rationale": "Steakhouse Confidential Prime USDC (steakcUSDC) at ethereum:0xbeef00a59b577423653a1526c7009bde103f542b is the current public ERC-4626 VaultV2 share over USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48. Deposits transfer underlying before minting; interest accrual can mint configured fee shares and recognizes adapter losses. Holder rights are residual proportional code-enforced NAV redemption, not beneficial ownership of Circle reserves or proven statutory segregation. One current adapter 0x17bc9aa135cef1a5c3a91925e0f865d526318718 holds 3 enumerated Morpho market IDs. This intentionally differs from the fiat-cash parent and older Morpho precedent classifications.",
+    "sources": [
+      {
+        "label": "Exact Morpho Vault V2 deployment",
+        "url": "https://app.morpho.org/ethereum/vault/0xbeef00a59b577423653a1526c7009bde103f542b"
+      },
+      {
+        "label": "Verified deployment code identity",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef00a59b577423653a1526c7009bde103f542b"
+      },
+      {
+        "label": "Pinned ethereum block 26107704",
+        "url": "https://etherscan.io/block/26107704"
+      },
+      {
+        "label": "Morpho complete current vault inventory",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Morpho Vault V2 gates",
+        "url": "https://docs.morpho.org/curate/concepts/gates.md"
+      },
+      {
+        "label": "Morpho share accounting and loss realization",
+        "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+      },
+      {
+        "label": "Exact Morpho lending adapter",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x17bc9aa135cef1a5c3a91925e0f865d526318718"
+      }
+    ]
+  },
+  "detailProvider": "coingecko",
+  "links": [
+    {
+      "label": "Morpho vault",
+      "url": "https://app.morpho.org/ethereum/vault/0xbeef00a59b577423653a1526c7009bde103f542b"
+    },
+    {
+      "label": "Vault mechanics",
+      "url": "https://docs.morpho.org/developers/earn/tutorials/assets-flow.md"
+    },
+    {
+      "label": "Gate documentation",
+      "url": "https://docs.morpho.org/curate/concepts/gates.md"
+    },
+    {
+      "label": "Zama confidential deposit surface",
+      "url": "https://www.zama.org/post/morpho-zama-steakhouse-launch-confidential-usdc-vault"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xbeef00a59b577423653a1526c7009bde103f542b",
+      "decimals": 18
+    }
+  ],
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "custodyModel": "unknown",
+  "governanceQuality": "wrapper",
+  "yieldConfig": {
+    "yieldSource": "Steakhouse Confidential Prime USDC Morpho Vault V2",
+    "yieldType": "lending-vault"
+  },
+  "geckoId": "steakhouse-confidential-prime-usdc",
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "steakcusdc-steakhouse",
+    "display": {
+      "url": "https://app.morpho.org/ethereum/vault/0xbeef00a59b577423653a1526c7009bde103f542b",
+      "label": "Steakhouse Confidential Prime USDC"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "Steakhouse Confidential Prime USDC deployed strategy positions",
+        "risk": "high",
+        "coinId": "usdc-circle",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+      },
+      "deployedExposure": {
+        "basis": "Pinned sole MorphoMarketV1AdapterV2 and complete market inventory; supplied USDC is a lending position, not idle cash",
+        "reviewedAt": "2026-10-02",
+        "sourceUrl": "https://app.morpho.org/ethereum/vault/0xbeef00a59b577423653a1526c7009bde103f542b"
+      },
+      "redemptionLiquidity": {
+        "source": "morpho-vault-v2",
+        "chainId": 1
+      }
+    }
+  }
+}

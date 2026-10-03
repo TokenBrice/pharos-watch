@@ -1,0 +1,56 @@
+{
+  "id": "jltxx-jpmorgan",
+  "reserves": [
+    {
+      "sourceKey": "jpmorgan-nav:class:4397",
+      "name": "JPMorgan JLTXX government money-market fund shares",
+      "pct": 100,
+      "risk": "low",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "JPMorgan OnChain Liquidity-Token Money Market Fund, a series of JPMorgan Trust IV",
+      "riskFactors": ["duration", "liquidity", "custody", "legal", "counterparty"],
+      "liquidityHorizon": "seven-days"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      { "label": "SEC-filed JLTXX prospectus and SAI", "url": "https://www.sec.gov/Archives/edgar/data/1659326/000119312526217424/d44657d485bpos.htm" },
+      { "label": "JPMorgan exact-class NAV publisher", "url": "https://am.jpmorgan.com/FundsMarketingHandler/slim/product.md?cusip=46655r119&country=us&role=adv&language=en" },
+      { "label": "Issuer JLTXX launch and Ethereum identity", "url": "https://am.jpmorgan.com/us/en/asset-management/institutional/about-us/media/press-releases/jp-morgan-asset-management-launches-second-tokenized-fund-on-ethereum/" }
+    ],
+    "rationale": "The single slice identifies the direct government-MMF shareholder claim, matching the live adapter's exact class4397 key, rather than fabricating Treasury/repo/cash percentages from NAV. The filed mandate limits Treasury purchases to remaining or original maturities of 93 days and permits fully collateralized overnight repos. The October 1 issuer statistics give WAM/WAL of 13 days and daily/weekly liquid assets of 99.99%; these are dated issuer figures, not independent whole-book assurance or measured unconditional redemption capacity.",
+    "compositionBasis": "Direct Token Class fund-share exposure, valued by the exact issuer class publisher; no position-level look-through allocation asserted",
+    "compositionAsOf": "2026-10-01",
+    "compositionSource": "live-adapter",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The direct instrument is fully identified. Current underlying security weights, repo counterparties, subcustody allocation, encumbrance and an exact-fund independent reserve-to-liability report remain unverified; the single fund-share slice does not claim a complete look-through census.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "JPMorgan JLTXX government money-market fund shares",
+        "pct": 100,
+        "disposition": "self-reserve",
+        "rationale": "The slice represents this token's direct fund-share claim, not a distinct tracked upstream stablecoin or an additional reserve asset. NAV verifies valuation, not independent portfolio assurance."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      { "name": "JPMorgan Chase Bank, N.A.", "role": "custodian", "jurisdiction": "United States" }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      { "label": "SEC-filed JLTXX SAI, Part II custody and fund accounting", "url": "https://www.sec.gov/Archives/edgar/data/1659326/000119312526217424/d44657d485bpos.htm" }
+    ],
+    "uncertainty": "The SAI names JPMorgan Chase Bank as custodian and fund accountant holding portfolio securities/cash and books of account; it is affiliated with the adviser and administrator. This establishes its service role, not independent assurance, current provider shares, every material repo/subcustody layer, account segregation, rehypothecation or a complete insolvency waterfall. Aggregate custodyModel stays unknown rather than treating the named bank as complete custody coverage."
+  }
+}

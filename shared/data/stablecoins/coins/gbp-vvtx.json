@@ -1,0 +1,41 @@
+{
+  "id": "gbp-vvtx",
+  "name": "VVTX GBP stablecoin",
+  "symbol": "GBP-VVTX",
+  "oneLiner": "VVTX's pre-launch sterling stablecoin programme combines proposed 1:1 liquid-asset backing with a proprietary UK Layer-1, wallet and card.",
+  "collateral": "Proposed full 1:1 GBP backing with high-quality liquid assets. Reserve composition, custodians, segregation and insolvency terms, and dated independent reserve attestation remain undisclosed; the reserve-attestation heading links no retrieved report.",
+  "pegMechanism": "VVTX Limited proposes a 1:1 GBP-pegged stablecoin with controlled mint and burn on a purpose-built UK Layer-1, accessed through a custodial wallet and planned debit card. Public-holder direct redemption terms, eligibility, fees, minima, settlement timing and capacity are unpublished. Card spending does not establish issuer par redemption.",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.vvtx.com/"
+    },
+    {
+      "label": "FCA sandbox selection",
+      "url": "https://www.fca.org.uk/news/press-releases/4-firms-selected-test-stablecoin-regulatory-sandbox"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United Kingdom"
+  },
+  "announcedDate": "2026-02-25",
+  "launchPhase": "announced",
+  "launchPhaseDetail": "FCA selected VVTX for its stablecoin sandbox on 25 February 2026. The issuer still invites a waitlist for its GBP stablecoin, custodial wallet and card, describing a proprietary UK Layer-1 with unpublished technical identifiers. GBP-VVTX is an editorial display label following ticker-less programme precedents, not an issuer-published token ticker. Sandbox selection does not establish final stablecoin authorization; no production contracts, decimals, public price/circulation or launch date are verified.",
+  "milestones": [
+    {
+      "date": "2026-02-25",
+      "type": "regulatory",
+      "title": "FCA selects VVTX for stablecoin sandbox",
+      "sourceUrl": "https://www.fca.org.uk/news/press-releases/4-firms-selected-test-stablecoin-regulatory-sandbox",
+      "description": "Testing programme, not full authorization or a public token launch."
+    }
+  ],
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "GBP",
+    "governance": "centralized"
+  },
+  "mechanismArchetype": "fiat-cash",
+  "custodyModel": "unknown",
+  "status": "pre-launch"
+}

@@ -1,0 +1,135 @@
+{
+  "id": "usdfc-secured-finance",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Secured Finance FIL-only CDP overview",
+        "url": "https://docs.secured.finance/usdfc-stablecoin/overview"
+      },
+      {
+        "label": "Filecoin mainnet contract graph",
+        "url": "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts"
+      },
+      {
+        "label": "Filecoin GLIF RPC pinned block 6422489",
+        "url": "https://api.node.glif.io/rpc/v1"
+      },
+      {
+        "label": "DebtToken source",
+        "url": "https://raw.githubusercontent.com/Secured-Finance/stablecoin-contracts/develop/contracts/DebtToken.sol"
+      }
+    ],
+    "evidence": "Official DebtToken source restricts only fixed invalid recipient sinks and protocol burn callers; no arbitrary holder denylist was found there. Live transparent-proxy upgradeability and Safe control can replace this logic, so an unconditional no-freeze verdict is unsupported; exact runtime equivalence remains unproved.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  },
+  "oracleRisk": {
+    "tier": "single-source-or-laggy",
+    "summary": "RedStone FIL/USD is primary, with Tellor fallback updated by a Secured Finance-operated job roughly every12hours; fallback is not independent and cached prices persist up to48hours.",
+    "role": "collateral-pricing",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "rationale": "The single FIL Trove market has liquidation thresholds, Stability Pool, redistribution and oracle failure behavior that require one collateral branch.",
+      "sources": [
+        {
+          "label": "USDFC oracle design",
+          "url": "https://docs.secured.finance/usdfc-stablecoin/core-mechanics/price-oracle"
+        },
+        {
+          "label": "USDFC liquidations",
+          "url": "https://docs.secured.finance/usdfc-stablecoin/core-mechanics/liquidation"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Secured Finance FIL-only CDP overview",
+        "url": "https://docs.secured.finance/usdfc-stablecoin/overview"
+      },
+      {
+        "label": "Filecoin mainnet contract graph",
+        "url": "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts"
+      },
+      {
+        "label": "Filecoin GLIF RPC pinned block 6422489",
+        "url": "https://api.node.glif.io/rpc/v1"
+      },
+      {
+        "label": "USDFC oracle design",
+        "url": "https://docs.secured.finance/usdfc-stablecoin/core-mechanics/price-oracle"
+      }
+    ],
+    "branches": [
+      {
+        "id": "fil-troves",
+        "label": "Filecoin FIL Troves",
+        "tier": "single-source-or-laggy",
+        "summary": "One FIL market uses RedStone with operator-submitted Tellor fallback and last-good-price caching.",
+        "collateralAssets": [
+          "FIL"
+        ],
+        "chains": [
+          "filecoin"
+        ],
+        "feeds": [
+          {
+            "provider": "RedStone",
+            "path": "FIL/USD -> PriceFeed -> FIL Trove collateral ratios",
+            "address": "0x434f8d17c0301cfea143dba912972e24b827c968",
+            "chain": "filecoin",
+            "stalenessBoundSec": 57600
+          },
+          {
+            "provider": "Tellor (Secured Finance-operated update job)",
+            "path": "TellorCaller fallback FIL/USD",
+            "address": "0x3ea890431c85f40405bbf5be74d03802672afe3b",
+            "chain": "filecoin"
+          }
+        ],
+        "fallbackBehavior": "Primary timeout16hours; failed or invalid calls or doubled/halved prices cause fallback. If both feeds fail, last-good-price may persist48hours; beyond that price-sensitive operations revert.",
+        "observedAt": "2026-10-02",
+        "observedBlock": 6422489,
+        "collateralParameters": [
+          {
+            "asset": "FIL",
+            "minimumCollateralRatioPct": 110,
+            "note": "Recovery Mode begins below150% system collateralization; minimum Trove debt200USDFC."
+          }
+        ],
+        "liquidationMechanism": "Permissionless Trove liquidation first offsets debt with Stability Pool deposits, then redistributes uncovered debt and collateral among active Troves.",
+        "liquidationDelaySec": 0,
+        "backstop": "Funded Stability Pool with redistribution to surviving FIL Troves; deposits are variable.",
+        "shutdownOrBadDebtBehavior": "Recovery Mode tightens borrowing below150% system ratio. Oracle outage eventually halts price-sensitive operations; an emergency shutdown or loss-recovery guarantee is not established.",
+        "sources": [
+          {
+            "label": "Secured Finance FIL-only CDP overview",
+            "url": "https://docs.secured.finance/usdfc-stablecoin/overview"
+          },
+          {
+            "label": "Filecoin mainnet contract graph",
+            "url": "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts"
+          },
+          {
+            "label": "Filecoin GLIF RPC pinned block 6422489",
+            "url": "https://api.node.glif.io/rpc/v1"
+          },
+          {
+            "label": "USDFC oracle design",
+            "url": "https://docs.secured.finance/usdfc-stablecoin/core-mechanics/price-oracle"
+          },
+          {
+            "label": "USDFC liquidations",
+            "url": "https://docs.secured.finance/usdfc-stablecoin/core-mechanics/liquidation"
+          }
+        ]
+      }
+    ]
+  }
+}

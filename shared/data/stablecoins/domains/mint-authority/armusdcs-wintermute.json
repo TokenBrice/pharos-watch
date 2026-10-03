@@ -1,0 +1,289 @@
+{
+  "id": "armusdcs-wintermute",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "none-resolved-mint",
+    "confidence": "manual-review",
+    "summary": "Wintermute USDC Select mints USDC-backed deposit shares and may mint fee shares during accrual. Circle USDC issuance is inherited; owner and curator retain strategy parameter powers. The six-market borrower basket also includes nested Morpho V1 USDC vault shares (v-wmtUSDC), separately from PT-reUSD and PT-USDat collateral.",
+    "inheritedFrom": "usdc-circle",
+    "economicCapSemantics": "bounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd",
+        "deploymentRefs": [
+          "ethereum:0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd"
+        ],
+        "label": "Wintermute USDC Select asset-backed share contract",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107703,
+        "sources": [
+          {
+            "label": "Wintermute USDC Select exact vault identity and accounting",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho Vault V2 mechanism documentation",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "Pinned VaultV2 primary source, gate and loss semantics",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          },
+          {
+            "label": "Pinned MorphoMarketV1AdapterV2 primary source",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+          },
+          {
+            "label": "Ethereum block 26107703 replay locator; observed via Alchemy Ethereum RPC (credential omitted)",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Exact VaultV2 partial source with matching deployed bytecode",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd"
+          },
+          {
+            "label": "Exact adapter partial source with matching deployed bytecode",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3b9e060a2b05588126fda01b95e9485687fc91d7"
+          },
+          {
+            "label": "Sourcify matched VaultV2 compiler sources/output and declared immutable/CBOR masks; exact deployment functional correspondence independently reproduced",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c?fields=sources,compilation,runtimeBytecode"
+          },
+          {
+            "label": "Exact Ethereum RPC runtime/getter observations at block 26110193; Alchemy archive credential omitted",
+            "url": "https://eth-mainnet.g.alchemy.com"
+          },
+          {
+            "label": "Sourcify fully matched MorphoMarketV1AdapterV2 compiler output/source and immutable/CBOR layout; exact pinned adapter correspondence independently reproduced",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0x812b71c33ae5eafebae967c5670e37eca3cab0ac?fields=sources,compilation,runtimeBytecode"
+          }
+        ],
+        "evidence": "At ethereum block 26107703 (0x18e5f37), captured 2026-10-02T22:44:09.665742+00:00, totalSupply=44986944522361979656587662 atomic shares; accrueInterestView returned assets=45890229418936, pending performance shares=0, pending management shares=0. Idle USDC=0; complete adapter inventory sums to 45890229418936 USDC atomic units. Asset decimals=6, share decimals=18. convertToAssets(1e18)=1020078 USDC atomic units. Reference VaultV2 code mints shares against transferred USDC and accrual can mint fee shares. No discretionary Circle USDC minting power is conveyed. Functional compiler/runtime correspondence independently reproduced on 2026-10-03 at block 26110193 for vault 0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd. Sourcify reference runtimeMatch=match, matchId=30034094, verifiedAt=2026-05-26T22:26:25Z, solc 0.8.28+commit.7893614a, viaIR, optimizer 100000, EVM cancun. Runtime length 21808 bytes. Masked ONLY compiler-declared immutable offsets (asset AST37:6 occurrences; decimals AST39:1; virtualShares AST41:5) and the 12-byte CBOR compiler-tag tail at offset 21796 including its two-byte length trailer; every remaining executable byte exactly equals the verified reference recompiled runtime. Every immutable occurrence separately equals the exact pinned asset()/decimals()/virtualShares() getter: asset=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, decimals=18, virtualShares=1000000000000. Normalized VaultV2 SHA-256=cf17ab0161388ea9277000e692e929216da2618e441c54bcd677def1000dd12e. Complete current adaptersLength()/adapters(0) census contains one mint-accounting adapter 0x3b9e060a2b05588126fda01b95e9485687fc91d7. Its complete cited Blockscout source/import units were independently compiled with solc 0.8.28+commit.7893614a, viaIR, optimizer 100000, EVM cancun, bytecodeHash=none. Adapter runtime length 11784 bytes; only compiler-declared immutable offsets (factory AST2265, parentVault AST2267, asset AST2269, morpho AST2271, adapterId AST2273, adaptiveCurveIrm AST2275) and its 12-byte CBOR tail at offset 11772 were masked. All remaining executable bytes exactly equal independently compiled adapter runtime; all 20 immutable occurrences separately match exact pinned getters (factory=0x32bb1c0d48d8b1b3363e86eeb9a0300bad61ccc1; parentVault=0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd; asset=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48; morpho=0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb; adapterId=0x867c752e0e0e5d73ff7e349f1b7e45a8170884aaba4a8fd1234991db870cf476; adaptiveCurveIrm=0x870ac11d48b15db9a138cf899d20f13f79ba00bc), with parentVault and asset also matching the reviewed vault. Normalized adapter SHA-256=355d973d7a246e5d4c02bb68e7415b9d62bf584a57f6101357b57c5d2fc40113. These proofs CLOSE the prior executable-source/mint-code identity questions under calibration v2 R4; earlier partial-verification observations are historical limitations superseded for functional runtime identity, not claims of full metadata/creation-bytecode identity or financial assurance. Adapter correspondence was additionally independently checked against Sourcify runtimeMatch=match reference matchId=33231859, verifiedAt=2026-06-21T06:48:43Z: its recompiled executable bytes, all immutable offsets and CBOR layout exactly equal the independently compiled adapter output and both pinned target adapter normalized runtimes; normalized SHA-256=355d973d7a246e5d4c02bb68e7415b9d62bf584a57f6101357b57c5d2fc40113. The adapter proof therefore also establishes correspondence to an independently verified reference, not merely explorer-supplied onchain bytecode."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xb83a77677c51aaf6c45b0b64199eae6938559e5e",
+        "deploymentRefs": [
+          "ethereum:0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd"
+        ],
+        "label": "Wintermute USDC Select owner parameter authority",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110202,
+        "sources": [
+          {
+            "label": "Wintermute USDC Select exact vault identity and accounting",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho Vault V2 mechanism documentation",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "Pinned VaultV2 primary source, gate and loss semantics",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          },
+          {
+            "label": "Pinned MorphoMarketV1AdapterV2 primary source",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+          },
+          {
+            "label": "Ethereum block 26107703 replay locator; observed via Alchemy Ethereum RPC (credential omitted)",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Exact VaultV2 partial source with matching deployed bytecode",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd"
+          },
+          {
+            "label": "Exact adapter partial source with matching deployed bytecode",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3b9e060a2b05588126fda01b95e9485687fc91d7"
+          },
+          {
+            "label": "Exact Safe getOwners/getThreshold/modules pagination + guard/fallback storage at block 26110202, 2026-10-03",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At ethereum block 26107703 (0x18e5f37), captured 2026-10-02T22:44:09.665742+00:00, owner=0xb83a77677c51aaf6c45b0b64199eae6938559e5e; curator=0x4687e45bb5518a995913a24bb2816fe2031d74d8. Owner getThreshold=4, owners=6, enabled modules empty and guard zero; signer independence unestablished. addAdapter delay=604800 sec; increaseAbsoluteCap delay=604800 sec; fee-setting delays=0. Fee rates performance=0.0, management=0.0. Independent 2026-10-03 census at block 26110202: getOwners returned the authored 6 owners; threshold 4; getModulesPaginated(0x1,100) returned [] and terminal next=0x1; fallback handler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. Guard storage returned a zero word. Signer independence, operational key custody and executable fallback noninterference remain unestablished.",
+        "failureDomainKeys": [
+          "safe:ethereum:0xb83a77677c51aaf6c45b0b64199eae6938559e5e"
+        ],
+        "threshold": 4,
+        "signerCount": 6,
+        "safe": {
+          "owners": [
+            "0xfdc7917dce08a4a0a169c1ea60ac19fc569bd42c",
+            "0x910c2847ee5e636e7592128bc87df8df1ec8a751",
+            "0x0f6351a7bcd1881e2cff382de2e3473ea819a7d9",
+            "0x88f7a5761882da521a7ad761c4f62d8ca41f052f",
+            "0x51464d67ead940040023e28b5afdaa1764de329d",
+            "0xd512cf03acf13125ed49cb90e30cc9beaa9af2ea"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 26110202,
+          "observedAt": "2026-10-03",
+          "source": "onchain",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99"
+        }
+      }
+    ],
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-10-02",
+      "observedBlock": 26107703,
+      "sources": [
+        {
+          "label": "Wintermute USDC Select exact vault identity and accounting",
+          "url": "https://api.morpho.org/graphql"
+        },
+        {
+          "label": "Morpho Vault V2 mechanism documentation",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+        },
+        {
+          "label": "Pinned VaultV2 primary source, gate and loss semantics",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+        },
+        {
+          "label": "Pinned MorphoMarketV1AdapterV2 primary source",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+        },
+        {
+          "label": "Ethereum block 26107703 replay locator; observed via Alchemy Ethereum RPC (credential omitted)",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Exact VaultV2 partial source with matching deployed bytecode",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd"
+        },
+        {
+          "label": "Exact adapter partial source with matching deployed bytecode",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3b9e060a2b05588126fda01b95e9485687fc91d7"
+        },
+        {
+          "label": "Sourcify matched VaultV2 compiler sources/output and declared immutable/CBOR masks; exact deployment functional correspondence independently reproduced",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c?fields=sources,compilation,runtimeBytecode"
+        },
+        {
+          "label": "Exact Ethereum RPC runtime/getter observations at block 26110193; Alchemy archive credential omitted",
+          "url": "https://eth-mainnet.g.alchemy.com"
+        },
+        {
+          "label": "Sourcify fully matched MorphoMarketV1AdapterV2 compiler output/source and immutable/CBOR layout; exact pinned adapter correspondence independently reproduced",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0x812b71c33ae5eafebae967c5670e37eca3cab0ac?fields=sources,compilation,runtimeBytecode"
+        }
+      ]
+    },
+    "review": {
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "Wintermute USDC Select exact vault identity and accounting",
+          "url": "https://api.morpho.org/graphql"
+        },
+        {
+          "label": "Morpho Vault V2 mechanism documentation",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+        },
+        {
+          "label": "Pinned VaultV2 primary source, gate and loss semantics",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+        },
+        {
+          "label": "Pinned MorphoMarketV1AdapterV2 primary source",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+        },
+        {
+          "label": "Ethereum block 26107703 replay locator; observed via Alchemy Ethereum RPC (credential omitted)",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Exact VaultV2 partial source with matching deployed bytecode",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd"
+        },
+        {
+          "label": "Exact adapter partial source with matching deployed bytecode",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3b9e060a2b05588126fda01b95e9485687fc91d7"
+        },
+        {
+          "label": "Morpho published VaultV2 security audit index (framework scope only)",
+          "url": "https://docs.morpho.org/get-started/resources/audits/"
+        },
+        {
+          "label": "Morpho VaultV2 dated framework audit artifacts; no exact-vault financial assurance",
+          "url": "https://github.com/morpho-org/vault-v2/tree/main/audits"
+        },
+        {
+          "label": "Sourcify matched VaultV2 compiler sources/output and declared immutable/CBOR masks; exact deployment functional correspondence independently reproduced",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c?fields=sources,compilation,runtimeBytecode"
+        },
+        {
+          "label": "Exact Ethereum RPC runtime/getter observations at block 26110193; Alchemy archive credential omitted",
+          "url": "https://eth-mainnet.g.alchemy.com"
+        },
+        {
+          "label": "Sourcify fully matched MorphoMarketV1AdapterV2 compiler output/source and immutable/CBOR layout; exact pinned adapter correspondence independently reproduced",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0x812b71c33ae5eafebae967c5670e37eca3cab0ac?fields=sources,compilation,runtimeBytecode"
+        }
+      ],
+      "evidence": "At ethereum block 26107703 (0x18e5f37), captured 2026-10-02T22:44:09.665742+00:00, owner=0xb83a77677c51aaf6c45b0b64199eae6938559e5e; curator=0x4687e45bb5518a995913a24bb2816fe2031d74d8. Owner getThreshold=4, owners=6, enabled modules empty and guard zero; signer independence unestablished. addAdapter delay=604800 sec; increaseAbsoluteCap delay=604800 sec; fee-setting delays=0. Fee rates performance=0.0, management=0.0. Local financial attestation or prudential supervision is not inherited from Circle. Partial exact deployed VaultV2 source and matching RPC bytecode corroborate the documented immutable model; full compiler/source verification is not claimed. Calibration provenance (2026-10-03): original umbrella observations retained verbatim: [\"Signer independence and actual key custody are undisclosed.\"]. Human independence and key custody remain unverified and are priced by their dedicated control signals; financial/legal safeguards remain Backing-domain gaps. Calibration v2 (2026-10-03) reconsidered every prior removal and scoped move. Prior scoped observations retained verbatim: []. Genuine unknown implementation, controller authorization and unreadable execution state are retained as umbrella questions; identified-signer custody/independence is recorded per control, not asserted to be independently scored or resolved. Field re-justification: reconciliation=not-applicable concerns the bounded asset-backed native share-issuance path, not a declaration of independently audited financial reconciliation. Underlying USDC issuance/assurance remains inherited; supervision=none grants no prudential credit, and exact-vault financial assurance and statutory holder priority remain unverified in Backing evidence. Functional compiler/runtime correspondence independently reproduced on 2026-10-03 at block 26110193 for vault 0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd. Sourcify reference runtimeMatch=match, matchId=30034094, verifiedAt=2026-05-26T22:26:25Z, solc 0.8.28+commit.7893614a, viaIR, optimizer 100000, EVM cancun. Runtime length 21808 bytes. Masked ONLY compiler-declared immutable offsets (asset AST37:6 occurrences; decimals AST39:1; virtualShares AST41:5) and the 12-byte CBOR compiler-tag tail at offset 21796 including its two-byte length trailer; every remaining executable byte exactly equals the verified reference recompiled runtime. Every immutable occurrence separately equals the exact pinned asset()/decimals()/virtualShares() getter: asset=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, decimals=18, virtualShares=1000000000000. Normalized VaultV2 SHA-256=cf17ab0161388ea9277000e692e929216da2618e441c54bcd677def1000dd12e. Complete current adaptersLength()/adapters(0) census contains one mint-accounting adapter 0x3b9e060a2b05588126fda01b95e9485687fc91d7. Its complete cited Blockscout source/import units were independently compiled with solc 0.8.28+commit.7893614a, viaIR, optimizer 100000, EVM cancun, bytecodeHash=none. Adapter runtime length 11784 bytes; only compiler-declared immutable offsets (factory AST2265, parentVault AST2267, asset AST2269, morpho AST2271, adapterId AST2273, adaptiveCurveIrm AST2275) and its 12-byte CBOR tail at offset 11772 were masked. All remaining executable bytes exactly equal independently compiled adapter runtime; all 20 immutable occurrences separately match exact pinned getters (factory=0x32bb1c0d48d8b1b3363e86eeb9a0300bad61ccc1; parentVault=0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd; asset=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48; morpho=0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb; adapterId=0x867c752e0e0e5d73ff7e349f1b7e45a8170884aaba4a8fd1234991db870cf476; adaptiveCurveIrm=0x870ac11d48b15db9a138cf899d20f13f79ba00bc), with parentVault and asset also matching the reviewed vault. Normalized adapter SHA-256=355d973d7a246e5d4c02bb68e7415b9d62bf584a57f6101357b57c5d2fc40113. These proofs CLOSE the prior executable-source/mint-code identity questions under calibration v2 R4; earlier partial-verification observations are historical limitations superseded for functional runtime identity, not claims of full metadata/creation-bytecode identity or financial assurance. Closed questions retained as provenance: [\"Exact Wintermute VaultV2 executable source identity remains incompletely established: the cited Blockscout result supplies partial source and matching deployed RPC bytecode, but equality to an independently verified compiled reference including imported source units has not been proved.\"]. Adapter correspondence was additionally independently checked against Sourcify runtimeMatch=match reference matchId=33231859, verifiedAt=2026-06-21T06:48:43Z: its recompiled executable bytes, all immutable offsets and CBOR layout exactly equal the independently compiled adapter output and both pinned target adapter normalized runtimes; normalized SHA-256=355d973d7a246e5d4c02bb68e7415b9d62bf584a57f6101357b57c5d2fc40113. The adapter proof therefore also establishes correspondence to an independently verified reference, not merely explorer-supplied onchain bytecode.",
+      "reviewer": "Refine07 compiler/runtime correspondence 2026-10-03",
+      "reviewedAt": "2026-10-03",
+      "unresolvedQuestions": [],
+      "scopedQuestions": [
+        {
+          "controlRef": "Wintermute USDC Select owner parameter authority",
+          "question": "Independent human control, operational key custody and signing policy of the identified Wintermute USDC Select owner parameter authority at ethereum:0xb83a77677c51aaf6c45b0b64199eae6938559e5e are not publicly established; enumerated owners/threshold or a codeless EOA do not certify these safeguards.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine07 calibration v2 2026-10-03",
+          "sources": [
+            {
+              "label": "Wintermute USDC Select exact vault identity and accounting",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Morpho Vault V2 mechanism documentation",
+              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+            },
+            {
+              "label": "Pinned VaultV2 primary source, gate and loss semantics",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            },
+            {
+              "label": "Pinned MorphoMarketV1AdapterV2 primary source",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+            },
+            {
+              "label": "Ethereum block 26107703 replay locator; observed via Alchemy Ethereum RPC (credential omitted)",
+              "url": "https://ethereum-rpc.publicnode.com"
+            },
+            {
+              "label": "Exact VaultV2 partial source with matching deployed bytecode",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd"
+            },
+            {
+              "label": "Exact adapter partial source with matching deployed bytecode",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3b9e060a2b05588126fda01b95e9485687fc91d7"
+            },
+            {
+              "label": "Exact Safe getOwners/getThreshold/modules pagination + guard/fallback storage at block 26110202, 2026-10-03",
+              "url": "https://ethereum-rpc.publicnode.com"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

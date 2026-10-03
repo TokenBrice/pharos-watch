@@ -5,6 +5,7 @@ import type { LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-ada
 import {
   parseLiveReserveAdapterParams,
 } from "@shared/lib/live-reserve-adapters";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   DECIMALS_SELECTOR,
   PAUSED_SELECTOR,
@@ -317,6 +318,16 @@ export async function fetchErc4626SingleAssetReserves(
         configured: configuredCapacity,
         pause: pauseProbe,
       });
+      const underlyingPeg = (sliceConfig.coinId
+        ? TRACKED_META_BY_ID.get(sliceConfig.coinId)?.flags.pegCurrency
+        : undefined) ?? coin.flags.pegCurrency;
+      if (redemptionCapacity && underlyingPeg !== "USD") {
+        redemptionCapacity = null;
+        warnings.push(reserveInfoWarning(
+          "erc4626-capacity-non-usd-unvalued",
+          `Underlying denomination ${underlyingPeg} has no same-path USD valuation; nominal asset units are not USD redemption capacity`,
+        ));
+      }
     }
   }
   // A withdrawal window limits when a matured request can execute; it is not

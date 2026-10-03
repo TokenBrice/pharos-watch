@@ -81,18 +81,8 @@
   },
   "contracts": [
     {
-      "chain": "solana",
-      "address": "8fr7WGTVFszfyNWRMXj6fRjZZAnDwmXwEpCrtzmUkdih",
-      "decimals": 6
-    },
-    {
       "chain": "provenance",
       "address": "uylds.fcc",
-      "decimals": 6
-    },
-    {
-      "chain": "ethereum",
-      "address": "0x6ad038ca6c04e885630851278ca0a856ad9a66cc",
       "decimals": 6
     },
     {
@@ -104,21 +94,6 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-top",
   "governanceQuality": "regulated-entity",
-  "liveReservesConfig": {
-    "adapter": "curated-validated",
-    "version": 1,
-    "semantics": "single-asset",
-    "breakerScope": "ylds-figure",
-    "display": {
-      "url": "https://www.ylds.com/",
-      "label": "Figure Markets"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-solana"
-      }
-    }
-  },
   "yieldConfig": {
     "yieldSource": "Figure yield fund",
     "yieldType": "nav-appreciation"

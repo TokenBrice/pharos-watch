@@ -1,0 +1,38 @@
+{
+  "id": "net-cloudflare",
+  "name": "NET Dollar",
+  "symbol": "NET",
+  "oneLiner": "NET Dollar is Cloudflare’s planned USD-backed stablecoin for automated web payments; legal issuer and deployment details remain unpublished.",
+  "flags": {
+    "backing": "rwa-backed",
+    "governance": "centralized"
+  },
+  "collateral": "Pre-launch: Cloudflare promises each NET Dollar will be fully collateralized by one U.S. dollar. Reserve allocation, custodians, segregation, holder priority and independent token-specific assurance remain undisclosed.",
+  "pegMechanism": "Planned 1:1 USD-backed payment instrument for automated agent transactions and interoperable web commerce. The FAQ explains stablecoin redemption generically; NET-specific holder eligibility and redemption minimums, fees, timing and capacity are unpublished.",
+  "mechanismArchetype": "fiat-cash",
+  "detailProvider": "coingecko",
+  "geckoId": "net-dollar",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://netdollar.cloudflare.com/"
+    },
+    {
+      "label": "Announcement",
+      "url": "https://www.cloudflare.com/press/press-releases/2025/cloudflare-introduces-net-dollar-to-support-a-new-business-model-for-the-ai-driven-internet/"
+    }
+  ],
+  "status": "pre-launch",
+  "announcedDate": "2025-09-25",
+  "launchPhase": "announced",
+  "launchPhaseDetail": "Cloudflare announced NET Dollar on September 25, 2025 for agentic web commerce. The product FAQ inspected 2026-10-02 still says it will be made available soon, without a dated launch window. CoinGecko verifies the net-dollar identity and NET symbol but publishes no current price, market cap or deployments. NET is provider-confirmed, not an issuer-confirmed ticker. The exact legal issuer, chains and holder terms are undisclosed.",
+  "milestones": [
+    {
+      "date": "2025-09-25",
+      "type": "announcement",
+      "title": "Cloudflare announces NET Dollar for agentic commerce",
+      "sourceUrl": "https://www.cloudflare.com/press/press-releases/2025/cloudflare-introduces-net-dollar-to-support-a-new-business-model-for-the-ai-driven-internet/",
+      "description": "The announcement commits to a U.S. dollar-backed stablecoin for automated payments by agents, developers and creators."
+    }
+  ]
+}

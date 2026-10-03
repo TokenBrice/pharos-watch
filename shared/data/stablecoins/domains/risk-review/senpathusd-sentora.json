@@ -1,0 +1,355 @@
+{
+  "id": "senpathusd-sentora",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Exact Sentora vault",
+        "url": "https://app.morpho.org/tempo/vault/0x9a044ae05e5e6290dcf56afd69548565e957a626"
+      },
+      {
+        "label": "Pinned RPC identity, accounting and controls",
+        "url": "https://rpc.tempo.xyz"
+      },
+      {
+        "label": "Morpho Vault V2 documentation",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+      },
+      {
+        "label": "VaultV2 source matched to Tempo runtime apart from immutable asset",
+        "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+      },
+      {
+        "label": "MorphoMarketV1AdapterV2 source",
+        "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+      },
+      {
+        "label": "Tempo TIP-20 restriction specification",
+        "url": "https://docs.tempo.xyz/protocol/tip20/spec"
+      }
+    ],
+    "evidence": "At tempo block 42323768, receiveSharesGate, sendSharesGate and receiveAssetsGate were zero and their setters permanently abdicated. Exact immutable VaultV2 code forbids executing abdicated setters. Local share transfer and withdrawal gates are disabled; upstream pathUSD blacklist/pause or reserve-access powers remain inherited from pathusd-bridge. Allocator liquidity configuration and lending losses are distinct risks.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "Only the exact native tempo vault-share deployment is authored. No share bridge representation is evidenced; upstream parent routes are separate inherited exposure.",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Exact Sentora vault",
+        "url": "https://app.morpho.org/tempo/vault/0x9a044ae05e5e6290dcf56afd69548565e957a626"
+      },
+      {
+        "label": "Pinned RPC identity, accounting and controls",
+        "url": "https://rpc.tempo.xyz"
+      },
+      {
+        "label": "Morpho Vault V2 documentation",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+      },
+      {
+        "label": "VaultV2 source matched to Tempo runtime apart from immutable asset",
+        "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+      },
+      {
+        "label": "MorphoMarketV1AdapterV2 source",
+        "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+      },
+      {
+        "label": "Tempo TIP-20 restriction specification",
+        "url": "https://docs.tempo.xyz/protocol/tip20/spec"
+      }
+    ],
+    "routes": [
+      {
+        "id": "tempo:0x9a044ae05e5e6290dcf56afd69548565e957a626",
+        "destinationChain": "tempo",
+        "canonicalChain": "tempo",
+        "contractAddress": "0x9a044ae05e5e6290dcf56afd69548565e957a626",
+        "protocol": "Morpho Vault V2",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Exact immutable vault share totalSupply is created by deposit/mint and accrual fee accounting in this deployment. No share bridge or remote mint entrypoint appears in the reviewed implementation; parent-token bridge exposure remains inherited separately.",
+        "observedAt": "2026-10-02",
+        "observedBlock": 42323768,
+        "sources": [
+          {
+            "label": "Exact Sentora vault",
+            "url": "https://app.morpho.org/tempo/vault/0x9a044ae05e5e6290dcf56afd69548565e957a626"
+          },
+          {
+            "label": "Pinned RPC identity, accounting and controls",
+            "url": "https://rpc.tempo.xyz"
+          },
+          {
+            "label": "Morpho Vault V2 documentation",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "VaultV2 source matched to Tempo runtime apart from immutable asset",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          },
+          {
+            "label": "MorphoMarketV1AdapterV2 source",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+          },
+          {
+            "label": "Tempo TIP-20 restriction specification",
+            "url": "https://docs.tempo.xyz/protocol/tip20/spec"
+          }
+        ]
+      }
+    ]
+  },
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "role": "collateral-pricing",
+    "branchModel": "multi-branch",
+    "summary": "Pinned block 42323768: 1 funded Morpho markets have exact oracle/LLTV identities and all six BASE/QUOTE feed/vault getter values. Vault accounting is verified price-feed-independent; borrower liquidation pricing remains applicable. Upstream feed administrator, heartbeat and mutable NAV-controller closure remain incomplete, so no standard-external or redundant tier is asserted.",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "Exact Sentora vault",
+        "url": "https://app.morpho.org/tempo/vault/0x9a044ae05e5e6290dcf56afd69548565e957a626"
+      },
+      {
+        "label": "Pinned RPC identity, accounting and controls",
+        "url": "https://rpc.tempo.xyz"
+      },
+      {
+        "label": "Morpho Vault V2 documentation",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+      },
+      {
+        "label": "VaultV2 source matched to Tempo runtime apart from immutable asset",
+        "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+      },
+      {
+        "label": "MorphoMarketV1AdapterV2 source",
+        "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+      },
+      {
+        "label": "Tempo TIP-20 restriction specification",
+        "url": "https://docs.tempo.xyz/protocol/tip20/spec"
+      },
+      {
+        "label": "Morpho borrower liquidation and loss socialization",
+        "url": "https://docs.morpho.org/learn/concepts/liquidation/"
+      },
+      {
+        "label": "Morpho price interface and oracle implementation",
+        "url": "https://docs.morpho.org/developers/contracts/oracles/"
+      }
+    ],
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+      "rationale": "Vault conversion is accounting-only, but every current funded lending market uses collateral-price-dependent liquidation. The borrower branches cannot be exempted merely because the wrapper is ERC-4626.",
+      "sources": [
+        {
+          "label": "Exact Sentora vault",
+          "url": "https://app.morpho.org/tempo/vault/0x9a044ae05e5e6290dcf56afd69548565e957a626"
+        },
+        {
+          "label": "Pinned RPC identity, accounting and controls",
+          "url": "https://rpc.tempo.xyz"
+        },
+        {
+          "label": "Morpho Vault V2 documentation",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+        },
+        {
+          "label": "VaultV2 source matched to Tempo runtime apart from immutable asset",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+        },
+        {
+          "label": "MorphoMarketV1AdapterV2 source",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+        },
+        {
+          "label": "Tempo TIP-20 restriction specification",
+          "url": "https://docs.tempo.xyz/protocol/tip20/spec"
+        }
+      ]
+    },
+    "paths": [
+      {
+        "id": "vault-accounting",
+        "chain": "tempo",
+        "address": "0x9a044ae05e5e6290dcf56afd69548565e957a626",
+        "pricingAuthority": "none",
+        "applicability": {
+          "disposition": "not-applicable",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+          "confidence": "verified",
+          "rationale": "Exact VaultV2 conversion reads underlying token balance plus adapter realAssets and accrued fee shares; it calls no external spot-price feed. This exemption is limited to the vault accounting entrypoint, not its borrowers.",
+          "sources": [
+            {
+              "label": "Exact Sentora vault",
+              "url": "https://app.morpho.org/tempo/vault/0x9a044ae05e5e6290dcf56afd69548565e957a626"
+            },
+            {
+              "label": "Pinned RPC identity, accounting and controls",
+              "url": "https://rpc.tempo.xyz"
+            },
+            {
+              "label": "Morpho Vault V2 documentation",
+              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+            },
+            {
+              "label": "VaultV2 source matched to Tempo runtime apart from immutable asset",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            },
+            {
+              "label": "MorphoMarketV1AdapterV2 source",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+            },
+            {
+              "label": "Tempo TIP-20 restriction specification",
+              "url": "https://docs.tempo.xyz/protocol/tip20/spec"
+            }
+          ]
+        }
+      },
+      {
+        "id": "market-0x75add2f66f5c81917f6fd3b9603481defc1098359515d91c652913437ada14f5",
+        "chain": "tempo",
+        "address": "0xa59e9acd8499343ae7b944df898fc20388acd245",
+        "pricingAuthority": "external-price",
+        "branchId": "0x75add2f66f5c81917f6fd3b9603481defc1098359515d91c652913437ada14f5",
+        "applicability": {
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+          "confidence": "verified",
+          "rationale": "Morpho.idToMarketParams at block 42323768 binds this oracle to collateral 0x20c000000000000000000000c412ec89d0c08be5 with 77% LLTV and 503415393517 raw lender assets.",
+          "sources": [
+            {
+              "label": "Exact Sentora vault",
+              "url": "https://app.morpho.org/tempo/vault/0x9a044ae05e5e6290dcf56afd69548565e957a626"
+            },
+            {
+              "label": "Pinned RPC identity, accounting and controls",
+              "url": "https://rpc.tempo.xyz"
+            },
+            {
+              "label": "Morpho Vault V2 documentation",
+              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+            },
+            {
+              "label": "VaultV2 source matched to Tempo runtime apart from immutable asset",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            },
+            {
+              "label": "MorphoMarketV1AdapterV2 source",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+            },
+            {
+              "label": "Tempo TIP-20 restriction specification",
+              "url": "https://docs.tempo.xyz/protocol/tip20/spec"
+            }
+          ]
+        }
+      }
+    ],
+    "branches": [
+      {
+        "id": "0x75add2f66f5c81917f6fd3b9603481defc1098359515d91c652913437ada14f5",
+        "label": "Morpho market 0x75add2f66f5c81917f6fd3b9603481defc1098359515d91c652913437ada14f5",
+        "tier": "opaque-or-unknown",
+        "summary": "Exact market oracle 0xa59e9acd8499343ae7b944df898fc20388acd245: BASE/QUOTE getter-compatible oracle; immutable input configuration {\"BASE_FEED_1\":\"0x6b1e20c88fe56ba3bbd488556170927c3c799084\",\"BASE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_FEED_1\":\"0xf5528a63c0d6e5f23fe8a4f0dac2ae7a04174753\",\"QUOTE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"BASE_VAULT\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_VAULT\":\"0x0000000000000000000000000000000000000000\"}. Upstream feed/embedded-vault authority is not fully closed.",
+        "collateralAssets": [
+          "0x20c000000000000000000000c412ec89d0c08be5"
+        ],
+        "chains": [
+          "tempo"
+        ],
+        "feeds": [
+          {
+            "provider": "BASE/QUOTE getter-compatible Morpho IOracle",
+            "path": "price(): collateral/loan token conversion; scale 1e36",
+            "address": "0xa59e9acd8499343ae7b944df898fc20388acd245",
+            "chain": "tempo",
+            "observedAt": "2026-10-02",
+            "observedBlock": 42323768
+          },
+          {
+            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "path": "BASE_FEED_1",
+            "address": "0x6b1e20c88fe56ba3bbd488556170927c3c799084",
+            "chain": "tempo",
+            "observedAt": "2026-10-02",
+            "observedBlock": 42323768
+          },
+          {
+            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "path": "QUOTE_FEED_1",
+            "address": "0xf5528a63c0d6e5f23fe8a4f0dac2ae7a04174753",
+            "chain": "tempo",
+            "observedAt": "2026-10-02",
+            "observedBlock": 42323768
+          }
+        ],
+        "fallbackBehavior": "Pinned BASE/QUOTE feed/vault getter configuration is identified; exact Tempo source/runtime correspondence, fallback and timestamp enforcement remain unverified.",
+        "observedAt": "2026-10-02",
+        "observedBlock": 42323768,
+        "collateralParameters": [
+          {
+            "asset": "0x20c000000000000000000000c412ec89d0c08be5",
+            "maximumLtvPct": 77,
+            "note": "Liquidation LLTV from pinned idToMarketParams, not a legal collateral-recovery guarantee."
+          }
+        ],
+        "liquidationMechanism": "Morpho protocol liquidation permits third parties to repay unhealthy debt for collateral when oracle-valued LTV exceeds LLTV; exact collateral realization capacity is unverified.",
+        "backstop": "No exact-vault funded loss backstop was identified in the reviewed vault source and protocol documentation.",
+        "shutdownOrBadDebtBehavior": "Underlying bad debt reduces reported adapter realAssets; VaultV2 recognizes losses through pro-rata share-value depreciation. No legal recovery waterfall is established.",
+        "sources": [
+          {
+            "label": "Exact Sentora vault",
+            "url": "https://app.morpho.org/tempo/vault/0x9a044ae05e5e6290dcf56afd69548565e957a626"
+          },
+          {
+            "label": "Pinned RPC identity, accounting and controls",
+            "url": "https://rpc.tempo.xyz"
+          },
+          {
+            "label": "Morpho Vault V2 documentation",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "VaultV2 source matched to Tempo runtime apart from immutable asset",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          },
+          {
+            "label": "MorphoMarketV1AdapterV2 source",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+          },
+          {
+            "label": "Tempo TIP-20 restriction specification",
+            "url": "https://docs.tempo.xyz/protocol/tip20/spec"
+          },
+          {
+            "label": "Morpho borrower liquidation and loss socialization",
+            "url": "https://docs.morpho.org/learn/concepts/liquidation/"
+          },
+          {
+            "label": "Morpho oracle conversion interface",
+            "url": "https://docs.morpho.org/developers/contracts/oracles/"
+          }
+        ]
+      }
+    ]
+  }
+}

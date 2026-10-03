@@ -244,6 +244,52 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
     { sourceFilePath: SOURCE_FILE_PATH },
   ),
   ...defineCollateralRecordEntries({
+    "usdso-somnia": defineCollateralConfig({
+      outputAssetType: "stable-single",
+      outputAssets: ["frxusd-frax"],
+      capacityModel: { kind: "reserve-sync-metadata" },
+      v9RouteReviewTerms: {
+        scoringDisposition: "bounded-terms-gap",
+        missingScoringFields: ["capacity"],
+        rationale: "Reviewed local frxUSD backing alone does not establish executable output. Current capacity requires fresh exact-custodian redemption telemetry; historical custody and child supply are not static capacity bounds.",
+        reviewedAt: "2026-10-03",
+        docs: [sourceRefFull("USD Somnia holder redemption", "https://somnia.network/usdso-stablecoin")],
+      },
+      costModel: documentedVariableFee("BrandedCustodian redeemFee() is owner-configurable and was zero at the research pin; the reviewed variable-fee formula requires a current read rather than a permanent zero bound. Gas and downstream frxUSD issuer costs are separate.", "formula"),
+      reviewedAt: "2026-10-03",
+      docs: [
+        sourceRefFull("USD Somnia holder redemption", "https://somnia.network/usdso-stablecoin"),
+        sourceRefFull("Verified BrandedCustodian implementation", "https://explorer.somnia.network/api/v2/smart-contracts/0xd2478f5db285e7d4f1a260c9f142168124d02370"),
+        sourceRef("USDso issuer terms", "https://somnia.network/usdso-terms-of-service", ["access"]),
+      ],
+      notes: [
+        "The BrandedCustodian burns caller-owned USDso with allowance and returns Somnia frxUSD. Token freezes, available custody and isolated-backing configuration govern execution; isolatedBackingEnabled was false at the research pin.",
+        "Matching local frxUSD custody and child supply at Somnia block 428274392 is backing evidence, not a perpetual full-supply capacity bound or downstream fiat promise. Capacity requires fresh exact-custodian frxUSD redemption telemetry; no static fallback is configured.",
+        "Without fresh exact-route telemetry, capacity remains missing rather than an observed zero.",
+      ],
+    }),
+    "usdfc-secured-finance": defineCollateralConfig({
+      outputAssets: ["asset:fil"],
+      capacityModel: { kind: "reserve-sync-metadata" },
+      v9RouteReviewTerms: {
+        scoringDisposition: "bounded-terms-gap",
+        missingScoringFields: ["capacity"],
+        rationale: "The FIL holder-redemption mechanism is verified, but reviewed documentation alone does not establish current eligible Trove debt, collateral and oracle state. Fresh exact-route telemetry is required; no full-supply or historical FIL capacity is inferred.",
+        reviewedAt: "2026-10-03",
+        docs: [sourceRefFull("USDFC redemption mechanics", "https://docs.secured.finance/usdfc-stablecoin/core-mechanics/redemption")],
+      },
+      costModel: documentedVariableFee("USDFC redemption charges 50 bps plus the dynamic Base Rate, applied after the request's own Base Rate increase and paid in FIL; unlike borrowing, redemption has no 5% fee cap.", "formula"),
+      reviewedAt: "2026-10-03",
+      docs: [
+        sourceRefFull("USDFC redemption mechanics", "https://docs.secured.finance/usdfc-stablecoin/core-mechanics/redemption"),
+        sourceRef("USDFC deployed TroveManager", "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts", ["route", "capacity"]),
+      ],
+      notes: [
+        "Any Filecoin holder may redeem into FIL when system TCR is at least 110% and the oracle is valid. Redemptions select eligible Troves by collateral ratio; a partial redemption stops before violating the 200 USDFC residual Trove debt floor. That floor is not a holder-wide minimum.",
+        "Executable capacity needs fresh current eligible Trove debt, collateral and oracle/fee telemetry. No historical numeric FIL capacity, LUSD ETH capacity or full-supply fallback is configured.",
+        "Without fresh exact-route telemetry, FIL redemption capacity remains missing rather than an observed zero.",
+      ],
+    }),
     "bold-liquity": defineLiveCollateralConfig({
       outputAssets: ["asset:weth", "asset:wsteth", "asset:reth"],
       costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),

@@ -1,0 +1,50 @@
+{
+  "id": "susdx-axis",
+  "reserves": [
+    {
+      "name": "USDx principal and vested rewards in the StakedUSDx vault",
+      "pct": 100,
+      "risk": "high",
+      "coinId": "usdx-axis",
+      "depType": "wrapper",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Axis StakedUSDx vault and canonical Axis USDx",
+      "riskFactors": ["credit", "liquidity", "custody", "counterparty", "smart-contract", "market", "legal"],
+      "liquidityHorizon": "unknown",
+      "blacklistabilityExposure": "upstream"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      { "label": "Axis staking accounting and solvency invariant", "url": "https://docs.axis.to/reference/staking-contracts.md" },
+      { "label": "Canonical V2 vault deployment", "url": "https://docs.axis.to/reference/contract-addresses.md" },
+      { "label": "Ethereum block 26107703 used for asset and accounting reads", "url": "https://etherscan.io/block/26107703" },
+      { "label": "StakedUSDx vault", "url": "https://etherscan.io/address/0xeb892628d1e58bc475a6dcb7f5dbc4f591632aa4#code" }
+    ],
+    "rationale": "At Ethereum block 26107703 (October 2, 2026, 22:43:59 UTC), asset() returned canonical USDx 0xa1fa7777974312f7d801a8880714a218f76233f8, totalAssets() returned 38,968,347.92779699 USDx, totalSupply() returned 37,749,108.3697981 shares, and exchangeRate() returned 1.032298499505073350 USDx per share. Pending and claimable liabilities were 1,703,978.4035580596 and 4,837.895991089497 USDx. The single-asset wrapper dependency is 100% USDx; liability buckets and unvested rewards are excluded from active-share totalAssets. These observations are accounting evidence, not a second portfolio or independent financial assurance. Legacy risk is high because the parent is a venue-dependent synthetic dollar.",
+    "compositionBasis": "Exact single-asset ERC-4626/ERC-7540 claim confirmed by asset() and published vault accounting; active shares are backed by USDx principal and vested rewards.",
+    "compositionAsOf": "2026-10-02",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No unidentified direct wrapper asset is asserted. All underlying portfolio, hedge, custody and legal uncertainty remains on usdx-axis; asynchronous servicing and upgrade risk are local wrapper exposures.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      { "name": "Axis StakedUSDx Ethereum vault 0xeb892628d1e58bc475a6dcb7f5dbc4f591632aa4", "role": "other" }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      { "label": "Axis in-vault principal, reward and redemption accounting", "url": "https://docs.axis.to/reference/staking-contracts.md" },
+      { "label": "Ethereum block 26107703 accounting observation", "url": "https://etherscan.io/block/26107703" }
+    ],
+    "uncertainty": "The onchain label covers direct USDx custody in the canonical vault, including its pending and claimable liability buckets; V2 has no separate silo. It does not describe or upgrade upstream USDx venue custody. The vault is upgradeable, the queue is permissioned and pausable, and no enforceable holder segregation or insolvency priority is established. No provider allocation or independent reserve assurance is inferred."
+  }
+}

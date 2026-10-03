@@ -1,0 +1,66 @@
+{
+  "id": "jltxx-jpmorgan",
+  "name": "JPMorgan OnChain Liquidity-Token Money Market Fund",
+  "symbol": "JLTXX",
+  "oneLiner": "JLTXX represents JPMorgan's registered government money-market fund shares, with institutional cash redemption and issuer-controlled token balances.",
+  "flags": {
+    "backing": "rwa-backed",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": true
+  },
+  "mechanismArchetype": "tbill",
+  "detailProvider": "coingecko",
+  "geckoId": "jpmorgan-onchain-liquidity-token-money-market-fund",
+  "collateral": "Fund shares backed by U.S. Treasury securities, overnight repurchase agreements fully collateralized by U.S. Treasury securities and/or cash, and operational cash; JPMorgan Chase Bank is securities custodian and fund accountant.",
+  "pegMechanism": "The registered government money-market fund seeks a $1 NAV, publishes transaction NAV, and reinvests dividends daily. Eligible registered shareholders redeem cash through Morgan Money, the service center or approved token-burn requests. The off-chain Investor Register determines legal ownership; on-chain balances can temporarily differ.",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://am.jpmorgan.com/FundsMarketingHandler/slim/product.md?cusip=46655r119&country=us&role=adv&language=en",
+    "provider": "J.P. Morgan Asset Management exact Token Class NAV and class-assets publisher; the SAI names PwC as annual auditor, but no current exact-fund audit report was retrieved",
+    "attestorTier": "self",
+    "cadence": "daily-nav",
+    "attestorJurisdiction": "United States"
+  },
+  "links": [
+    { "label": "Website", "url": "https://am.jpmorgan.com/us/en/asset-management/adv/products/jpmorgan-onchain-liquidity-token-money-market-fund-token-class-46655r119" },
+    { "label": "NAV and fund statistics", "url": "https://am.jpmorgan.com/FundsMarketingHandler/slim/product.md?cusip=46655r119&country=us&role=adv&language=en" },
+    { "label": "SEC prospectus and SAI", "url": "https://www.sec.gov/Archives/edgar/data/1659326/000119312526217424/d44657d485bpos.htm" },
+    { "label": "Solana availability supplement", "url": "https://www.sec.gov/Archives/edgar/data/1659326/000119312526410014/d172947d497.htm" }
+  ],
+  "jurisdiction": {
+    "country": "United States",
+    "regulator": "SEC",
+    "license": "Registered government money-market fund under the Investment Company Act of 1940; a series of JPMorgan Trust IV"
+  },
+  "contracts": [
+    { "chain": "ethereum", "address": "0x09864f52b035ae22ee739dfa5c748fa080d07bd8", "decimals": 2 }
+  ],
+  "collateralQuality": "rwa",
+  "custodyModel": "unknown",
+  "governanceQuality": "regulated-entity",
+  "yieldConfig": {
+    "yieldSource": "Government money-market fund income distributed through daily dividend reinvestment",
+    "yieldType": "rebase"
+  },
+  "liveReservesConfig": {
+    "adapter": "jpmorgan-nav",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "jltxx-jpmorgan",
+    "display": {
+      "url": "https://am.jpmorgan.com/us/en/asset-management/adv/products/jpmorgan-onchain-liquidity-token-money-market-fund-token-class-46655r119",
+      "label": "JPMorgan Token Class NAV"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-html",
+        "url": "https://am.jpmorgan.com/FundsMarketingHandler/slim/product.md?cusip=46655r119&country=us&role=adv&language=en"
+      }
+    },
+    "scoring": { "maxSourceAgeSec": 432000 },
+    "params": {}
+  },
+  "launchDate": "2026-05-13"
+}

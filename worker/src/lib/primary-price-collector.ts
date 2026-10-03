@@ -35,7 +35,7 @@ interface DexAggregateQuote {
 }
 
 export interface NavTelemetryQuote {
-  source: "chainlink-nav" | "superstate-liquidity";
+  source: "chainlink-nav" | "superstate-liquidity" | "jpmorgan-nav";
   price: number;
   observedAt: number;
   observedAtMode?: PriceObservedAtMode | null;

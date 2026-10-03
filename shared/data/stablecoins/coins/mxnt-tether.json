@@ -1,0 +1,108 @@
+{
+  "liveReservesConfig": {
+    "adapter": "tether-transparency",
+    "version": 2,
+    "semantics": "attestation-mix",
+    "breakerScope": "mxnt-tether",
+    "display": { "url": "https://tether.to/en/transparency", "label": "Tether MXNT transparency" },
+    "inputs": { "primary": { "kind": "http-json", "url": "https://app.tether.to/transparency.json" } },
+    "params": {
+      "currencyIso": "mxnt",
+      "compositionAsOf": "2026-06-30",
+      "slices": [{
+        "name": "Shared Tether fiat-token reserve pool; MXNT allocation undisclosed",
+        "pct": 100,
+        "risk": "high",
+        "assetClass": "other",
+        "issuerOrObligor": "Tether International, S.A. de C.V.; underlying MXNT allocation undisclosed",
+        "riskFactors": ["market", "credit", "custody", "legal", "liquidity"],
+        "liquidityHorizon": "unknown"
+      }]
+    }
+  },
+  "id": "mxnt-tether",
+  "name": "Mexican Peso Tether",
+  "symbol": "MXNT",
+  "oneLiner": "MXNT is Tether's peso token backed by its shared fiat-token reserve pool, redeemable by verified clients above a large minimum.",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "MXN",
+    "governance": "centralized"
+  },
+  "collateral": "Tether's shared reserves for fiat-denominated tokens include Treasuries, reverse repos, bank cash, gold, bitcoin, secured loans, equities and other investments; no dedicated MXNT allocation is disclosed.",
+  "pegMechanism": "Verified Tether clients may mint and redeem at one Mexican peso per MXNT less fees. The USD 100,000-equivalent minimum and fee floor restrict access; timing and capacity are not guaranteed.",
+  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Pharos refinement Refine02 primary-source and RPC review",
+    "rationale": "MXNT is a fixed-peso issuer fiat-token claim on the shared reserve book, not a variable-NAV share or borrower instrument. Ethereum receipts bind the proxy's creation to block 14750719 on 2022-05-10 and the exact current TetherToken logic deployment to block 17310207 on 2023-05-21; dates do not imply a proven unchanged runtime since deployment.",
+    "sources": [
+      {"label": "Tether fiat-token holder terms", "url": "https://tether.to/en/legal/"},
+      {"label": "Current TetherToken implementation creation", "url": "https://etherscan.io/tx/0xf9aebec57c6be2bc1ffe2254f3dc8dd4bd330ade48f456f7bb82ed2bd8de7129"},
+      {"label": "Ethereum proxy creation", "url": "https://etherscan.io/tx/0xae1b0c17afb159552f6edc69488a3b8d5053e5626c4ad2f7474ea42b37b025b3"}
+    ]
+  },
+  "detailProvider": "defillama",
+  "launchDate": "2022-05-10",
+  "implementationLaunchDate": "2023-05-21",
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xed03ed872159e199065401b6d0d487d78d9464aa",
+      "decimals": 6
+    }
+  ],
+  "jurisdiction": {
+    "country": "El Salvador"
+  },
+  "custodyModel": "unknown",
+  "collateralQuality": "exotic",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://tether.to/en/"
+    },
+    {
+      "label": "Holder terms and issuance",
+      "url": "https://tether.to/en/legal/"
+    },
+    {
+      "label": "Reserve report",
+      "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf"
+    },
+    {
+      "label": "Ethereum proxy creation, block 14750719",
+      "url": "https://etherscan.io/tx/0xae1b0c17afb159552f6edc69488a3b8d5053e5626c4ad2f7474ea42b37b025b3"
+    },
+    {
+      "label": "Current TetherToken implementation creation, block 17310207",
+      "url": "https://etherscan.io/tx/0xf9aebec57c6be2bc1ffe2254f3dc8dd4bd330ade48f456f7bb82ed2bd8de7129"
+    }
+  ],
+  "llamaId": "281",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+    "provider": "BDO Advisory Services S.r.l.; ISAE 3000 (Revised) reasonable assurance of aggregate fiat-token assets and liabilities, not dedicated MXNT reserves",
+    "attestorTier": "regional",
+    "cadence": "quarterly",
+    "attestorJurisdiction": "Italy",
+    "latestReport": {
+      "periodEnd": "2026-06-30",
+      "publishedAt": "2026-07-31",
+      "publishedAtBasis": "signed-date-standin",
+      "assuranceMethod": "examination",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Retrieved independent reserve report",
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf"
+        }
+      ]
+    }
+  }
+}

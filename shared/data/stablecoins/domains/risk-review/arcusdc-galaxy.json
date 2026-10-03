@@ -1,0 +1,274 @@
+{
+  "id": "arcusdc-galaxy",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Galaxy USDC exact vault identity and accounting",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Morpho Vault V2 mechanism documentation",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+      },
+      {
+        "label": "Pinned VaultV2 primary source, gate and loss semantics",
+        "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+      },
+      {
+        "label": "Pinned MorphoMarketV1AdapterV2 primary source",
+        "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+      },
+      {
+        "label": "arc fixed-block RPC observation 23952285",
+        "url": "https://rpc.mainnet.arc.io"
+      },
+      {
+        "label": "Exact Arc VaultV2 partial source; explorer deployed bytecode equals RPC at block 24011393, full compiler verification unclaimed",
+        "url": "https://explorer.arc.io/api/v2/smart-contracts/0x8e357432cc12ff425c36432f312968aeb16112af"
+      }
+    ],
+    "evidence": "At arc block 23952285 (0x16d7b9d), captured 2026-10-02T22:44:09.665742+00:00, all four gate addresses were zero; setReceiveSharesGate, setSendSharesGate and setReceiveAssetsGate were abdicated. setSendAssetsGate remains mutable and gates deposits/mints, not direct withdrawal/redeem. Deposit-funded in-kind exit may be obstructed by deposit gating. Underlying USDC freeze powers remain inherited. Reference source is pinned; exact-deployment compiler/source completeness is unestablished on Arc. Official Arc explorer now supplies exact partial VaultV2 source with runtime bytecode matching RPC at block 24011393; full compiler verification remains unclaimed.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "Galaxy USDC has one reviewed native vault-share deployment; no second share deployment or bridge representation is established. Underlying collateral bridge/custody exposure is separate.",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Refine07",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Galaxy USDC exact vault identity and accounting",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Morpho Vault V2 mechanism documentation",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+      },
+      {
+        "label": "Pinned VaultV2 primary source, gate and loss semantics",
+        "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+      },
+      {
+        "label": "Pinned MorphoMarketV1AdapterV2 primary source",
+        "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+      },
+      {
+        "label": "arc fixed-block RPC observation 23952285",
+        "url": "https://rpc.mainnet.arc.io"
+      }
+    ],
+    "routes": [
+      {
+        "id": "arc:0x8e357432cc12ff425c36432f312968aeb16112af",
+        "destinationChain": "arc",
+        "canonicalChain": "arc",
+        "contractAddress": "0x8e357432cc12ff425c36432f312968aeb16112af",
+        "protocol": "Morpho Vault V2",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Sole authored native VaultV2 share deployment. No share bridge route is established by the current inventory; underlying collateral bridges and future integrations are separate.",
+        "observedAt": "2026-10-03",
+        "observedBlock": 24011393,
+        "sources": [
+          {
+            "label": "Adapter 0xee0080203a76690bca40670dfd0cd1c30fab7c2c marketIdsLength/marketIds census at arc block 24011393, 2026-10-03; adapter.morpho/idToMarketParams collateral/oracle/LLTV all independently match the API",
+            "url": "https://rpc.mainnet.arc.io"
+          },
+          {
+            "label": "Morpho marketById chain-qualified collateral/oracle/LLTV and oracle.data feed inventory, accessed 2026-10-03",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Pinned Morpho Blue liquidation and bad-debt source (framework semantics, not exact deployment verification)",
+            "url": "https://raw.githubusercontent.com/morpho-org/morpho-blue/8f89ede29ec9d2cfa9688aa670346226a3571f06/src/Morpho.sol"
+          },
+          {
+            "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          }
+        ]
+      }
+    ]
+  },
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "All currently enumerated adapter markets have chain-qualified oracle paths and borrower-liquidation branches. Direct share accounting has no independent external price input. Exact oracle feed/rate control, freshness enforcement and fallback closure remain incomplete; no oracleless lending or high-quality feed claim is made.",
+    "role": "collateral-pricing",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Refine07",
+      "rationale": "The exact current lending adapter census establishes 1 borrower markets. Each remains price-sensitive through its configured collateral oracle, separately from direct share accounting.",
+      "sources": [
+        {
+          "label": "Adapter 0xee0080203a76690bca40670dfd0cd1c30fab7c2c marketIdsLength/marketIds census at arc block 24011393, 2026-10-03; adapter.morpho/idToMarketParams collateral/oracle/LLTV all independently match the API",
+          "url": "https://rpc.mainnet.arc.io"
+        },
+        {
+          "label": "Morpho marketById chain-qualified collateral/oracle/LLTV and oracle.data feed inventory, accessed 2026-10-03",
+          "url": "https://api.morpho.org/graphql"
+        },
+        {
+          "label": "Pinned Morpho Blue liquidation and bad-debt source (framework semantics, not exact deployment verification)",
+          "url": "https://raw.githubusercontent.com/morpho-org/morpho-blue/8f89ede29ec9d2cfa9688aa670346226a3571f06/src/Morpho.sol"
+        },
+        {
+          "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Refine07",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "Adapter 0xee0080203a76690bca40670dfd0cd1c30fab7c2c marketIdsLength/marketIds census at arc block 24011393, 2026-10-03; adapter.morpho/idToMarketParams collateral/oracle/LLTV all independently match the API",
+        "url": "https://rpc.mainnet.arc.io"
+      },
+      {
+        "label": "Morpho marketById chain-qualified collateral/oracle/LLTV and oracle.data feed inventory, accessed 2026-10-03",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Pinned Morpho Blue liquidation and bad-debt source (framework semantics, not exact deployment verification)",
+        "url": "https://raw.githubusercontent.com/morpho-org/morpho-blue/8f89ede29ec9d2cfa9688aa670346226a3571f06/src/Morpho.sol"
+      },
+      {
+        "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
+        "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+      },
+      {
+        "label": "Exact Arc VaultV2 partial source; explorer deployed bytecode equals RPC at block 24011393, full compiler verification unclaimed",
+        "url": "https://explorer.arc.io/api/v2/smart-contracts/0x8e357432cc12ff425c36432f312968aeb16112af"
+      }
+    ],
+    "branches": [
+      {
+        "id": "0xc2db905f174e5defcce01d321b09f15f78856a36a21b90cc7e1abbc29225815d",
+        "label": "cirBTC collateral market 0xc2db905f",
+        "tier": "opaque-or-unknown",
+        "summary": "Exact collateral/oracle identity and LLTV are established. Nested valuation inputs, operator controls, feed staleness enforcement and fallback behavior remain incompletely reviewed; no independence or redundancy credit is claimed.",
+        "collateralAssets": [
+          "0x171a4217b86a807a64eb94757db6849fb4bdbaa0"
+        ],
+        "chains": [
+          "arc"
+        ],
+        "feeds": [
+          {
+            "provider": "ChainlinkOracleV2 adapter (Morpho API classification; feed operator/custody not independently established)",
+            "path": "baseFeedOne of 0x2aa87ff48933ce6aba240bee916fc2e6ec1e51ab for market 0xc2db905f174e5defcce01d321b09f15f78856a36a21b90cc7e1abbc29225815d",
+            "address": "0x7777547914e03bcbb04ae034942765a0dbb26ae3",
+            "chain": "arc",
+            "observedAt": "2026-10-03"
+          }
+        ],
+        "fallbackBehavior": "Market consumes its configured IOracle.price(); nested-feed stale-price handling and fallback/bypass paths are not yet verified for this exact oracle.",
+        "observedAt": "2026-10-03",
+        "observedBlock": 24011393,
+        "collateralParameters": [
+          {
+            "asset": "0x171a4217b86a807a64eb94757db6849fb4bdbaa0",
+            "maximumLtvPct": 86.0,
+            "note": "Immutable market LLTV per Morpho marketById; this is loan-to-liquidation value, not a vault share mint cap."
+          }
+        ],
+        "liquidationMechanism": "Referenced Morpho Blue liquidate checks oracle-valued borrower health against LLTV, transfers seized collateral to the liquidator and requires loan-token repayment. Exact deployment bytecode equivalence is not newly certified.",
+        "backstop": "No exact-market funded insurance or discretionary rescue commitment was verified in the cited inventory; that fact remains unknown.",
+        "shutdownOrBadDebtBehavior": "Referenced Morpho Blue writes off remaining debt when borrower collateral reaches zero, subtracting badDebtAssets from totalSupplyAssets; VaultV2 NAV recognizes adapter losses. No guaranteed recovery is inferred.",
+        "sources": [
+          {
+            "label": "Adapter 0xee0080203a76690bca40670dfd0cd1c30fab7c2c marketIdsLength/marketIds census at arc block 24011393, 2026-10-03; adapter.morpho/idToMarketParams collateral/oracle/LLTV all independently match the API",
+            "url": "https://rpc.mainnet.arc.io"
+          },
+          {
+            "label": "Morpho marketById chain-qualified collateral/oracle/LLTV and oracle.data feed inventory, accessed 2026-10-03",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Pinned Morpho Blue liquidation and bad-debt source (framework semantics, not exact deployment verification)",
+            "url": "https://raw.githubusercontent.com/morpho-org/morpho-blue/8f89ede29ec9d2cfa9688aa670346226a3571f06/src/Morpho.sol"
+          },
+          {
+            "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          }
+        ]
+      }
+    ],
+    "paths": [
+      {
+        "id": "arc:0x8e357432cc12ff425c36432f312968aeb16112af",
+        "chain": "arc",
+        "address": "0x8e357432cc12ff425c36432f312968aeb16112af",
+        "pricingAuthority": "none",
+        "applicability": {
+          "disposition": "not-applicable",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine07",
+          "confidence": "probable",
+          "rationale": "The referenced VaultV2 share accounting computes NAV from underlying assets and adapter realAssets, without a separate external price input on the deposit/mint/redeem accounting path. This exemption does not cover borrower collateral liquidation or nested-vault valuation. Exact-deployment verification caveats remain.",
+          "sources": [
+            {
+              "label": "Adapter 0xee0080203a76690bca40670dfd0cd1c30fab7c2c marketIdsLength/marketIds census at arc block 24011393, 2026-10-03; adapter.morpho/idToMarketParams collateral/oracle/LLTV all independently match the API",
+              "url": "https://rpc.mainnet.arc.io"
+            },
+            {
+              "label": "Morpho marketById chain-qualified collateral/oracle/LLTV and oracle.data feed inventory, accessed 2026-10-03",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Pinned Morpho Blue liquidation and bad-debt source (framework semantics, not exact deployment verification)",
+              "url": "https://raw.githubusercontent.com/morpho-org/morpho-blue/8f89ede29ec9d2cfa9688aa670346226a3571f06/src/Morpho.sol"
+            },
+            {
+              "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            }
+          ]
+        }
+      },
+      {
+        "id": "arc:0x2aa87ff48933ce6aba240bee916fc2e6ec1e51ab",
+        "chain": "arc",
+        "address": "0x2aa87ff48933ce6aba240bee916fc2e6ec1e51ab",
+        "pricingAuthority": "external-price",
+        "branchId": "0xc2db905f174e5defcce01d321b09f15f78856a36a21b90cc7e1abbc29225815d",
+        "applicability": {
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine07",
+          "confidence": "probable",
+          "rationale": "The configured oracle prices cirBTC borrower collateral in market 0xc2db905f174e5defcce01d321b09f15f78856a36a21b90cc7e1abbc29225815d; ERC-4626 accounting does not exempt this lending branch. Feed/operator/freshness topology remains bounded unknown.",
+          "sources": [
+            {
+              "label": "Adapter 0xee0080203a76690bca40670dfd0cd1c30fab7c2c marketIdsLength/marketIds census at arc block 24011393, 2026-10-03; adapter.morpho/idToMarketParams collateral/oracle/LLTV all independently match the API",
+              "url": "https://rpc.mainnet.arc.io"
+            },
+            {
+              "label": "Morpho marketById chain-qualified collateral/oracle/LLTV and oracle.data feed inventory, accessed 2026-10-03",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Pinned Morpho Blue liquidation and bad-debt source (framework semantics, not exact deployment verification)",
+              "url": "https://raw.githubusercontent.com/morpho-org/morpho-blue/8f89ede29ec9d2cfa9688aa670346226a3571f06/src/Morpho.sol"
+            },
+            {
+              "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,215 @@
+{
+  "id": "usdsm-stable-mint",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciliation-unknown",
+    "confidence": "verified",
+    "summary": "Two codeless EOAs hold native Etherlink MINTER_ROLE, and the default-admin EOA also controls the transparent proxy administrator. Native issuance has no reserve-gated numeric cap. MPC remains an issuer claim without disclosed signer independence or threshold. The additional adapter-only minter/burner and satellite representations are reviewed separately under Bridge Risk.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "deploymentRefs": [
+        "etherlink:0x6bde51212203ae5d592cc5180da2abbd41c922de"
+      ],
+      "proxyAddresses": [
+        "0x6bde51212203ae5d592cc5180da2abbd41c922de"
+      ],
+      "implementationAddresses": [
+        "0x7089856110b005a40e8d16da1da31313b0f60561"
+      ],
+      "adminAddresses": [
+        "0xb31865ef2a9a1cf842f79f53e3aa868ad7eabe2b"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "USDSM Etherlink proxy owner",
+      "observedAt": "2026-10-02",
+      "observedBlock": 54792510,
+      "sources": [
+        {
+          "label": "Stable Mint current deployment and interoperability roster",
+          "url": "https://stablemint.io/stablecoins/"
+        },
+        {
+          "label": "USDSM whitepaper, issuer administration and MPC claim",
+          "url": "https://stablemintpublicdocs.blob.core.windows.net/docs/StableMint_Whitepaper_USD.html"
+        },
+        {
+          "label": "Etherlink verified deployed implementation",
+          "url": "https://explorer.etherlink.com/api/v2/smart-contracts/0x7089856110b005a40e8d16da1da31313b0f60561"
+        },
+        {
+          "label": "Etherlink RPC",
+          "url": "https://node.mainnet.etherlink.com"
+        },
+        {
+          "label": "ESMA exact issuer and USD whitepaper register row",
+          "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "etherlink",
+        "address": "0x1bb0b2666edd827f74b558136fdbe69e4ecec5fd",
+        "deploymentRefs": [
+          "etherlink:0x6bde51212203ae5d592cc5180da2abbd41c922de"
+        ],
+        "label": "USDSM Etherlink native minter and role admin",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "not-applicable",
+        "keyCustodyAttestation": {
+          "kind": "mpc",
+          "sources": [
+            {
+              "label": "USDSM whitepaper, issuer administration and MPC claim",
+              "url": "https://stablemintpublicdocs.blob.core.windows.net/docs/StableMint_Whitepaper_USD.html"
+            }
+          ]
+        },
+        "failureDomainKeys": [
+          "issuer-backend:usdsm-stable-mint:stable-mint"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 54792510,
+        "sources": [
+          {
+            "label": "Stable Mint current deployment and interoperability roster",
+            "url": "https://stablemint.io/stablecoins/"
+          },
+          {
+            "label": "USDSM whitepaper, issuer administration and MPC claim",
+            "url": "https://stablemintpublicdocs.blob.core.windows.net/docs/StableMint_Whitepaper_USD.html"
+          },
+          {
+            "label": "Etherlink verified deployed implementation",
+            "url": "https://explorer.etherlink.com/api/v2/smart-contracts/0x7089856110b005a40e8d16da1da31313b0f60561"
+          },
+          {
+            "label": "Etherlink RPC",
+            "url": "https://node.mainnet.etherlink.com"
+          },
+          {
+            "label": "ESMA exact issuer and USD whitepaper register row",
+            "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+          }
+        ],
+        "evidence": "Pinned Etherlink block 54792510 returns this defaultAdmin and true MINTER_ROLE and BLACKLIST_ROLE membership; bytecode is empty. Verified mint is role-gated without a collateral check or economic cap. defaultAdminDelay=604800 delays admin transfer only, not normal minting or upgrades."
+      },
+      {
+        "chain": "etherlink",
+        "address": "0x1bb0b2666edd827f74b558136fdbe69e4ecec5fd",
+        "deploymentRefs": [
+          "etherlink:0x6bde51212203ae5d592cc5180da2abbd41c922de"
+        ],
+        "label": "USDSM Etherlink proxy owner",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 54792510,
+        "sources": [
+          {
+            "label": "Stable Mint current deployment and interoperability roster",
+            "url": "https://stablemint.io/stablecoins/"
+          },
+          {
+            "label": "USDSM whitepaper, issuer administration and MPC claim",
+            "url": "https://stablemintpublicdocs.blob.core.windows.net/docs/StableMint_Whitepaper_USD.html"
+          },
+          {
+            "label": "Etherlink verified deployed implementation",
+            "url": "https://explorer.etherlink.com/api/v2/smart-contracts/0x7089856110b005a40e8d16da1da31313b0f60561"
+          },
+          {
+            "label": "Etherlink RPC",
+            "url": "https://node.mainnet.etherlink.com"
+          },
+          {
+            "label": "ESMA exact issuer and USD whitepaper register row",
+            "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+          }
+        ],
+        "evidence": "EIP-1967 implementation remains 0x7089856110b005a40e8d16da1da31313b0f60561 at block 54792510. The research packet pinned ProxyAdmin 0xb31865ef2a9a1cf842f79f53e3aa868ad7eabe2b owner as this issuer EOA; fresh owner read is recorded with the fragment. No mint-logic timelock is established."
+      },
+      {
+        "chain": "etherlink",
+        "address": "0xab42b550b6d757f3d17eac8e045af095961d75bc",
+        "deploymentRefs": ["etherlink:0x6bde51212203ae5d592cc5180da2abbd41c922de"],
+        "label": "USDSM additional Etherlink native minter",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 54814410,
+        "sources": [
+          {"label": "Complete MINTER_ROLE event census from native deployment", "url": "https://explorer.etherlink.com/api?module=logs&action=getLogs&fromBlock=0&toBlock=54814410&address=0x6bde51212203ae5d592cc5180da2abbd41c922de&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"},
+          {"label": "Exact native implementation", "url": "https://explorer.etherlink.com/api/v2/smart-contracts/0x7089856110b005a40e8d16da1da31313b0f60561"}
+        ],
+        "evidence": "Complete RoleGranted/RoleRevoked history through Etherlink block 54814410 identifies this additional active MINTER_ROLE holder; pinned hasRole confirms membership and eth_getCode is empty. mint(address,uint256,string) checks the role and request-ID uniqueness without reserve collateral or a numeric issuance ceiling. No independent key-custody or signing threshold evidence was found for this EOA."
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "prudential",
+    "review": {
+      "sources": [
+        {
+          "label": "Stable Mint current deployment and interoperability roster",
+          "url": "https://stablemint.io/stablecoins/"
+        },
+        {
+          "label": "USDSM whitepaper, issuer administration and MPC claim",
+          "url": "https://stablemintpublicdocs.blob.core.windows.net/docs/StableMint_Whitepaper_USD.html"
+        },
+        {
+          "label": "Etherlink verified deployed implementation",
+          "url": "https://explorer.etherlink.com/api/v2/smart-contracts/0x7089856110b005a40e8d16da1da31313b0f60561"
+        },
+        {
+          "label": "Etherlink RPC",
+          "url": "https://node.mainnet.etherlink.com"
+        },
+        {
+          "label": "ESMA exact issuer and USD whitepaper register row",
+          "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+        },
+        {
+          "label": "Complete native role-event census through Etherlink block 54814410",
+          "url": "https://explorer.etherlink.com/api?module=logs&action=getLogs&fromBlock=0&toBlock=54814410&address=0x6bde51212203ae5d592cc5180da2abbd41c922de&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+        }
+      ],
+      "evidence": "The complete native RoleGranted/RoleRevoked event census from deployment through Etherlink block 54814410 and pinned hasRole calls identify sole DEFAULT_ADMIN 0x1bb0b2666edd827f74b558136fdbe69e4ecec5fd and three live MINTER_ROLE holders: that EOA, additional codeless EOA 0xab42b550b6d757f3d17eac8e045af095961d75bc, and bridge-only USDSMMinterBurner 0x28da1dfaf5dca1af226a2e56b834e8ec3c495c5a. The verified middleware restricts mint to its one-time-set adapter 0xe7f117f87fa650350c3e363ca2c644951d273d1f, recorded under Bridge Risk rather than native issuance. ProxyAdmin.owner at the same block returns the default-admin EOA, with no mint-logic timelock. Current implementation activation was block 21653650 on July 22, 2025. Public MPC policy and independent reserve-to-liability reconciliation remain unverified; exact role census does not imply human independence or full executable bypass closure. MPC quorum, signer independence and key recovery remain undisclosed for both native EOAs, including 0xab42b550b6d757f3d17eac8e045af095961d75bc. Complete adapter peer/DVN/configuration and executable bypass closure remain unproved in the existing Bridge Risk review. Because that adapter can reach a native token MINTER_ROLE holder, its unresolved executable/authorization closure remains an umbrella mint-path question under calibration v2 despite separate bridge-domain ownership. Independent current reconciliation remains unavailable in Backing; mintAuthority.reconciliation stays unknown. Prudential supervision is independently supported by the ESMA exact Stable mint Ltd LEI/EMI/MFSA authorization row, not the issuer's self-reported reserve ratio or cadence. Verified confidence refers to the complete onchain native controller census and verified native token implementation, not adapter execution, financial or human-independence assurance.",
+      "reviewer": "Pharos refinement 2026-10-03 (Refine01)",
+      "reviewedAt": "2026-10-03",
+      "disposition": "scoreable",
+      "unresolvedQuestions": [
+        "What is the complete executable, authorization, peer/DVN and upgrade closure of adapter 0xe7f117f87fa650350c3e363ca2c644951d273d1f behind native MINTER_ROLE holder USDSMMinterBurner 0x28da1dfaf5dca1af226a2e56b834e8ec3c495c5a? Verified adapter-only middleware does not prove the upstream adapter's mint reach or bypass exclusion."
+      ],
+      "scopedQuestions": [
+        {
+          "controlRef": "etherlink:0x1bb0b2666edd827f74b558136fdbe69e4ecec5fd",
+          "question": "What independent MPC quorum, signer-independence and key-recovery evidence governs this EOA's native mint/admin and ProxyAdmin-owner powers? The issuer's MPC claim is not an independently established signing threshold.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)",
+          "sources": [
+            { "label": "Issuer MPC and administration disclosure", "url": "https://stablemintpublicdocs.blob.core.windows.net/docs/StableMint_Whitepaper_USD.html" },
+            { "label": "Pinned Etherlink native observations", "url": "https://node.mainnet.etherlink.com" }
+          ]
+        },
+        {
+          "controlRef": "USDSM additional Etherlink native minter",
+          "question": "What independently evidenced signing quorum, operator independence and key-recovery policy governs this additional codeless native minter? No such policy was established by the complete role census.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)",
+          "sources": [
+            { "label": "Exact native implementation and minter permissions", "url": "https://explorer.etherlink.com/api/v2/smart-contracts/0x7089856110b005a40e8d16da1da31313b0f60561" },
+            { "label": "Issuer MPC disclosure", "url": "https://stablemintpublicdocs.blob.core.windows.net/docs/StableMint_Whitepaper_USD.html" }
+          ]
+        }
+      ]
+    }
+  }
+}

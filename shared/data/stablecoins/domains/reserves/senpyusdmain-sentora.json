@@ -1,0 +1,139 @@
+{
+  "id": "senpyusdmain-sentora",
+  "reserves": [
+    {
+      "sourceKey": "erc4626-single-asset:ethereum:0x6c3ea9036406852006290770bedfcaba0e23a0e8",
+      "name": "Paypal USD Main idle underlying",
+      "pct": 6.2815,
+      "risk": "medium",
+      "coinId": "pyusd-paypal",
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Paxos",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "sourceKey": "erc4626-single-asset:ethereum:0xb576765fb15505433af24fee2c0325895c559fb2:deployed",
+      "name": "Paypal USD Main deployed strategy positions",
+      "pct": 93.7185,
+      "risk": "high",
+      "coinId": "pyusd-paypal",
+      "depType": "wrapper",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Sentora-curated Morpho markets and their borrowers",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "counterparty",
+        "smart-contract",
+        "concentration",
+        "legal"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Paypal USD Main exact vault",
+        "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2"
+      },
+      {
+        "label": "Exact verified VaultV2 source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb576765fb15505433af24fee2c0325895c559fb2"
+      },
+      {
+        "label": "Exact current MorphoMarketV1AdapterV2 source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc2a11ba52ad80124ccc60774c881f93738f334d4"
+      },
+      {
+        "label": "Morpho Vault V2 accounting and redemption mechanics",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+      },
+      {
+        "label": "Ethereum RPC, pinned block 26107702",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Morpho exact-vault portfolio API",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Sentora Terms of Use, June 2026, sections 4.3 and 21.4",
+        "url": "https://sentora.com/legal/terms-of-use"
+      }
+    ],
+    "rationale": "At block 26107702, asset()=0x6c3ea9036406852006290770bedfcaba0e23a0e8; totalAssets=388049489417230, idle underlying=24375516077801, current adapter realAssets=363673973339429, in underlying smallest units. Idle plus adapter assets reconcile exactly to totalAssets. The 8 current pinned lender positions have zero borrow shares and zero posted collateral. PYUSD lending positions against cbBTC, WBTC, LBTC, syrupUSDC, wstETH, weETH, sUSDe, kBTC. Allocations change under curator controls; borrower collateral is distinct from the underlying deposited token. The parent link denotes denomination and inherited token risk, not ownership of the parent issuer reserves.",
+    "compositionBasis": "Pinned exact vault underlying balance and sole adapter realAssets; percentages of totalAssets, rounded to four decimals",
+    "compositionAsOf": "2026-10-02",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Current vault/adapter accounting is identified. Collateral custody, enforceable insolvency priority, borrower losses and stressed liquidation capacity are not established across every underlying layer.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Paypal USD Main immutable VaultV2 and 0xc2a11ba52ad80124ccc60774c881f93738f334d4 Morpho adapter",
+        "role": "other"
+      },
+      {
+        "name": "Morpho borrower markets",
+        "role": "other"
+      },
+      {
+        "name": "Sentora Digital Holdings (BVI) Ltd, risk curator; issuer states it is not a custodian",
+        "role": "other",
+        "jurisdiction": "British Virgin Islands"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Paypal USD Main exact vault",
+        "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2"
+      },
+      {
+        "label": "Exact verified VaultV2 source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb576765fb15505433af24fee2c0325895c559fb2"
+      },
+      {
+        "label": "Exact current MorphoMarketV1AdapterV2 source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc2a11ba52ad80124ccc60774c881f93738f334d4"
+      },
+      {
+        "label": "Morpho Vault V2 accounting and redemption mechanics",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+      },
+      {
+        "label": "Ethereum RPC, pinned block 26107702",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Morpho exact-vault portfolio API",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Sentora Terms of Use, June 2026, sections 4.3 and 21.4",
+        "url": "https://sentora.com/legal/terms-of-use"
+      },
+      {
+        "label": "Morpho Vault V2 and MarketV1AdapterV2 security audits; no financial assurance",
+        "url": "https://docs.morpho.org/get-started/resources/audits/"
+      }
+    ],
+    "uncertainty": "Immediate lender positions are held in contracts and intentionally reused as loans. No whole-book claim of exclusively on-chain ultimate collateral custody is made. Parent issuer custody remains inherited; underlying collateral legal/custody layers and recoveries are unresolved. June 2026 Sentora terms section 4.3 describes non-custodial vault configurations; section 21.4 specifies BVI governing law and arbitration. This is an issuer legal statement, not evidence of borrower collateral segregation or removal of observed curator powers."
+  }
+}

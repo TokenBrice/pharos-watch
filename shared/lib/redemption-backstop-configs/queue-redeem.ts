@@ -106,6 +106,45 @@ function erc4626ReserveTelemetryQueueConfig(options: {
 }
 
 const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
+  "strusd-tori": defineQueueRedeemConfig({
+    accessModel: "whitelisted-onchain",
+    settlementModel: "days",
+    executionModel: "deterministic-onchain",
+    outputAssets: ["trusd-tori"],
+    capacityModel: { kind: "reserve-sync-metadata" },
+    costModel: fixedFee(0, "Tori explicitly states staking and unstaking are free; gas, rounding and downstream trUSD issuer repurchase are separate."),
+    reviewedAt: "2026-10-03",
+    docs: [
+      sourceRefFull("Tori strUSD staking and unstaking", "https://docs.tori.finance/products/strusd.md"),
+      sourceRefFull("Verified StakedTrUSD implementation", "https://eth.blockscout.com/api/v2/smart-contracts/0x6561272e3ebc9f2e07cdb12b7c474db9132b977a"),
+      sourceRef("Tori native and bridged deployments", "https://docs.tori.finance/resources/contracts.md", ["route"]),
+    ],
+    notes: [
+      "Native Ethereum shares redeem to trUSD, subject to restricted-address checks. Bridged shares must return to the native vault first; trUSD issuer repurchase is a separate KYC-approved discretionary rail.",
+      "The seven-day cooldown observed at Ethereum block 26107706 is mutable up to 90 days, not a permanently fixed settlement SLA. The aggregate 1e18-share floor is not a holder-wide economic redemption minimum.",
+      "The configured erc4626-single-asset reader measures fresh native idle trUSD, capped by current convertible share backing. Separate cooldown-silo assets already fund burned claims and are not additive available capacity for new requests. No static full-supply fallback is configured.",
+    ],
+  }),
+  "syrupusdg-maple": defineQueueRedeemConfig({
+    accessModel: "whitelisted-onchain",
+    outputAssets: ["usdg-paxos"],
+    capacityModel: { kind: "reserve-sync-metadata" },
+    costModel: undisclosedReviewedFee("The exact syrupUSDG redemption-fee schedule is unavailable; sibling syrupUSDC/USDT zero-fee terms are not inherited."),
+    reviewedAt: "2026-10-03",
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+      rationale: "FIFO withdrawals depend on funded liquidity and impairments; the reported average below 24 hours is not a guaranteed completion maximum. Exact executable queue throughput and the holder fee schedule are unavailable.",
+      reviewedAt: "2026-10-03",
+      docs: [sourceRefFull("Maple syrupUSDG withdrawal risk disclosures", "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md")],
+    },
+    docs: [
+      sourceRefFull("Maple syrupUSDG withdrawal risk disclosures", "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md"),
+      sourceRef("Maple defaults and impairments", "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-defaults-and-impairments.md", ["capacity", "settlement"]),
+      sourceRef("Exact syrupUSDG deployed contract", "https://eth.blockscout.com/api/v2/smart-contracts/0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a", ["route", "access"]),
+    ],
+    notes: ["Protocol permission checks and published jurisdiction restrictions apply, including exclusions for the United States and Australia. The configured erc4626-single-asset reader measures fresh idle USDG but does not infer FIFO allocation, funded processing throughput or queue completion from that balance. No holder minimum, 30-day sibling maximum, 10% queue buffer, DEX capacity or static fallback is inferred."],
+  }),
   "alusd-alchemix": defineReviewedQueueRedeemConfig(REVIEWED_QUEUE_REDEMPTION_AT, {
     outputAssets: ["dai-makerdao"],
     settlementModel: "days",

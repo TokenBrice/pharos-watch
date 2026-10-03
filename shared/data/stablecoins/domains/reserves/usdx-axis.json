@@ -1,0 +1,93 @@
+{
+  "id": "usdx-axis",
+  "reserves": [
+    {
+      "name": "Liquid hedge inventory",
+      "pct": 70.73,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Axis trading venues and instrument issuers for BTC, ETH, SOL, xNVDA and other approved liquid inventory",
+      "riskFactors": ["market", "basis", "counterparty", "custody", "liquidity", "concentration"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Stablecoins and settlement tokens",
+      "pct": 21.41,
+      "risk": "medium",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Approved fiat-backed stablecoin issuers and Axis settlement venues; constituent weights undisclosed",
+      "riskFactors": ["credit", "counterparty", "custody", "liquidity", "legal"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Yield-bearing and staked collateral",
+      "pct": 6.25,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "stETH, bnSOL and approved yield-bearing or staked instrument providers; constituent weights undisclosed",
+      "riskFactors": ["market", "basis", "smart-contract", "counterparty", "custody", "liquidity"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Fiat cash and FX balances",
+      "pct": 1.31,
+      "risk": "medium",
+      "assetClass": "cash",
+      "issuerOrObligor": "Axis bank, venue and settlement-account counterparties for USD, EUR, JPY, TRY, GBP, HKD, SGD and other approved currencies",
+      "riskFactors": ["market", "credit", "counterparty", "custody", "legal"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Tokenized Treasuries and reserve-backed cash equivalents",
+      "pct": 0.30,
+      "risk": "medium",
+      "assetClass": "other",
+      "issuerOrObligor": "USYC, USDG and approved short-duration Treasury or reserve-backed instrument issuers; constituent weights undisclosed",
+      "riskFactors": ["credit", "duration", "counterparty", "custody", "liquidity", "legal"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      { "label": "Axis Asset Composition tab, reporting date October 2, 2026", "url": "https://app.axis.to/transparency" },
+      { "label": "Axis backing and custody disclosure", "url": "https://docs.axis.to/backing-reserves-and-transparency/backing-custody-transparency.md" },
+      { "label": "Accountable independently operated reserve dashboard", "url": "https://axis.accountable.capital:8443/dashboard" }
+    ],
+    "rationale": "The rendered Asset Composition tab publishes five gross asset-form categories totaling 100%, before hedge offsets. Percentages are copied without extrapolating constituent holdings or hedge notional. Accountable independently reports reserve and supply totals and anonymized venue splits, but does not reconcile these five categories or establish hedge coverage. The issuer dashboard's 06:34 UTC reporting checkpoint is separate from live RPC supply and the later Accountable checkpoint; no cross-source ratio or liability partition is asserted. Mixed inventory and unallocated instrument baskets retain conservative legacy risk tiers rather than borrowing the best named constituent's tier.",
+    "compositionBasis": "Issuer Asset Composition tab: 70.73/21.41/6.25/1.31/0.30 percent of gross backing at the October 2, 2026 reporting date; gross asset form before hedge offsets, not delta-adjusted net exposure.",
+    "compositionAsOf": "2026-10-02",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Unresolved constituent identities and dependency weights cover the 27.96% stablecoin, staked/yield and tokenized-Treasury baskets. The remaining liquid inventory and fiat/FX categories are classified as untracked exogenous assets, not resolved custody or hedging protections. Across the complete portfolio, exact venue identities and allocation, hedge notionals, margin headroom, legal ownership and enforceable recovery rights remain unresolved; custodyProfile separately retains 100% uncertainty. Named USYC and USDG do not establish measurable tracked-coin dependency weights.",
+    "knownUnknownExposurePct": 27.96,
+    "nonLinkDispositions": [
+      { "reserveIndex": 0, "reserveName": "Liquid hedge inventory", "pct": 70.73, "disposition": "untracked-exogenous-asset", "rationale": "BTC, ETH, SOL, xNVDA and other approved liquid inventory are external assets; no tracked stablecoin share or per-position hedge allocation is supplied." },
+      { "reserveIndex": 1, "reserveName": "Stablecoins and settlement tokens", "pct": 21.41, "disposition": "basket-needs-split", "rationale": "The dashboard describes approved fiat-backed stablecoins without exact identities and weights. Accepted USDC/USDT deposits do not prove current reserve allocations." },
+      { "reserveIndex": 2, "reserveName": "Yield-bearing and staked collateral", "pct": 6.25, "disposition": "basket-needs-split", "rationale": "stETH and bnSOL are named examples alongside other approved instruments, without exhaustive identities or weights. No synthetic dollar dependency is inferred." },
+      { "reserveIndex": 3, "reserveName": "Fiat cash and FX balances", "pct": 1.31, "disposition": "untracked-exogenous-asset", "rationale": "Fiat and FX balances at bank, venue or settlement accounts are not tracked stablecoin token holdings." },
+      { "reserveIndex": 4, "reserveName": "Tokenized Treasuries and reserve-backed cash equivalents", "pct": 0.30, "disposition": "basket-needs-split", "rationale": "USYC and USDG are named but no constituent balances or exhaustive split is published; no dependency weights can be assigned.", "candidateCoinIds": ["usyc-hashnote", "usdg-paxos"] }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      { "name": "Axis registered deposit custody address 0x0d0491260f18281ca59ef110f907fa69da0ff519", "role": "other" },
+      { "name": "Anonymized centralized exchanges and trading venues in Accountable reserve reporting", "role": "other" }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      { "label": "Axis custody and on-venue inventory disclosure", "url": "https://docs.axis.to/backing-reserves-and-transparency/backing-custody-transparency.md" },
+      { "label": "Axis Capital Location reporting boundary", "url": "https://app.axis.to/transparency" },
+      { "label": "Accountable anonymized venue reserves", "url": "https://axis.accountable.capital:8443/dashboard" },
+      { "label": "Axis registered deposit custody address", "url": "https://docs.axis.to/reference/contract-addresses.md" }
+    ],
+    "uncertainty": "The deposit address is an entry point, not a whole-book custodian. Docs say no current off-exchange custody, while the same reporting-date dashboard assigns 2.83% to qualified custody and 1.04% to onchain derivatives margin. This contradiction remains unresolved, so custodyModel is unknown rather than a whole-book CEX or institutional tier. Dashboard location percentages are not named-provider shares or legal segregation evidence; no share is assigned to the deposit address or a guessed venue.",
+    "knownUnknownExposurePct": 100
+  }
+}

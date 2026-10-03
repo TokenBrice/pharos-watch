@@ -1,0 +1,14 @@
+{
+  "id": "krw-kb-kookmin",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      { "label": "KB programme announcement", "url": "https://www.kbfg.com/kor/pr/press/view.htm?B=8&CONTENT=15055" },
+      { "label": "KB announcement content API", "url": "https://www.kbfg.com/api/kbfg/post/8/15055" },
+      { "label": "Kaia KRW infrastructure overview", "url": "https://www.kaia.io/krw" }
+    ],
+    "evidence": "KB's primary announcement confirms a closed issuance, payment, settlement and remittance proof of concept and law-dependent future services, but publishes no token contract, production holder policy or freeze authority. Kaia's overview describes bank deposit, KYC/AML and dual-signature compliance infrastructure generally; it does not prove that an exact KB token implements particular blacklist functions. The possible verdict records unresolved token-specific control scope rather than inferring a confirmed freeze capability from bank participation.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  }
+}

@@ -1,0 +1,124 @@
+{
+  "id": "senpathusd-sentora",
+  "reserves": [
+    {
+      "sourceKey": "erc4626-single-asset:tempo:0x20c0000000000000000000000000000000000000",
+      "name": "pathUSD held idle and supplied to Sentora pathUSD Morpho lending positions",
+      "pct": 100,
+      "risk": "high",
+      "coinId": "pathusd-bridge",
+      "depType": "wrapper",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Sentora pathUSD, Morpho lending borrowers and the pathUSD issuer",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "liquidity",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Exact Sentora vault",
+        "url": "https://app.morpho.org/tempo/vault/0x9a044ae05e5e6290dcf56afd69548565e957a626"
+      },
+      {
+        "label": "Pinned RPC identity, accounting and controls",
+        "url": "https://rpc.tempo.xyz"
+      },
+      {
+        "label": "Morpho Vault V2 documentation",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+      },
+      {
+        "label": "VaultV2 source matched to Tempo runtime apart from immutable asset",
+        "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+      },
+      {
+        "label": "MorphoMarketV1AdapterV2 source",
+        "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+      },
+      {
+        "label": "Tempo TIP-20 restriction specification",
+        "url": "https://docs.tempo.xyz/protocol/tip20/spec"
+      },
+      {
+        "label": "Sentora Terms of Use, June 2026, sections 4.3 and 21.4",
+        "url": "https://sentora.com/legal/terms-of-use"
+      }
+    ],
+    "rationale": "At tempo block 42323768, asset() was 0x20c0000000000000000000000000000000000000, share decimals 18 and underlying decimals 6; totalAssets raw 38668628815373, totalSupply raw 19338159753529440843074671, idle raw 38165213421856, sole adapter market assets raw 503415393517, with an exact zero accounting difference. The only funded market lent pathUSD against cbBTC at 77% LLTV. The adapter position had zero borrowing and zero posted collateral. The single 100% slice records the verified denomination and position claim, not an invented allocation or underlying borrower-credit rating.",
+    "compositionBasis": "Complete pinned idle-plus-sole-adapter accounting; single parent-denominated strategy dependency",
+    "compositionAsOf": "2026-10-02",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Current immediate asset and adapter inventory are identified. Borrower legal recovery, default liquidation proceeds and future allocations remain uncertain.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Sentora pathUSD VaultV2",
+        "role": "other",
+        "jurisdiction": "tempo"
+      },
+      {
+        "name": "MorphoMarketV1AdapterV2 0x799cd096e5ebc436daecef85392b2ecf196dfbe6",
+        "role": "other",
+        "jurisdiction": "tempo"
+      },
+      {
+        "name": "Sentora Digital Holdings (BVI) Ltd, risk curator; issuer states it is not a custodian",
+        "role": "other",
+        "jurisdiction": "British Virgin Islands"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Exact Sentora vault",
+        "url": "https://app.morpho.org/tempo/vault/0x9a044ae05e5e6290dcf56afd69548565e957a626"
+      },
+      {
+        "label": "Pinned RPC identity, accounting and controls",
+        "url": "https://rpc.tempo.xyz"
+      },
+      {
+        "label": "Morpho Vault V2 documentation",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+      },
+      {
+        "label": "VaultV2 source matched to Tempo runtime apart from immutable asset",
+        "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+      },
+      {
+        "label": "MorphoMarketV1AdapterV2 source",
+        "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+      },
+      {
+        "label": "Tempo TIP-20 restriction specification",
+        "url": "https://docs.tempo.xyz/protocol/tip20/spec"
+      },
+      {
+        "label": "Sentora Terms of Use, June 2026, sections 4.3 and 21.4",
+        "url": "https://sentora.com/legal/terms-of-use"
+      },
+      {
+        "label": "Morpho Vault V2 and MarketV1AdapterV2 security audits; no financial assurance",
+        "url": "https://docs.morpho.org/get-started/resources/audits/"
+      }
+    ],
+    "uncertainty": "Immediate assets are held in on-chain vault and lender-position contracts; borrower collateral and upstream stablecoin reserve custody are separate exposures. No exact-share legal insolvency priority or whole-book off-chain collateral-custody safeguards were established. Lending reuse is explicit. June 2026 Sentora terms section 4.3 describes non-custodial vault configurations; section 21.4 specifies BVI governing law and arbitration. This is an issuer legal statement, not evidence of borrower collateral segregation or removal of observed curator powers."
+  }
+}

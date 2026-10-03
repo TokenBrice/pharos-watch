@@ -1,0 +1,94 @@
+{
+  "id": "filqa-fidelity-international",
+  "name": "Fidelity USD Digital Liquidity Fund-Acc",
+  "symbol": "FILQ-A",
+  "oneLiner": "FILQ-A is Fidelity International's accumulating dollar money-market fund share, with credit and derivative permissions and redemption-only exit.",
+  "flags": {
+    "backing": "rwa-backed",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": true
+  },
+  "collateral": "Participating shares in Fidelity International Strategies Funds SPC's USD Digital Liquidity Fund SP. The July 31, 2026 factsheet reports commercial paper 49.2%, certificates of deposit 25.1%, time deposits 17.6% and cash 8.0% of total net assets (rounded). Securitisations, asset-backed commercial paper, other money-market instruments and derivatives are permitted; J.P. Morgan SE Dublin Branch is depositary/custodian.",
+  "pegMechanism": "Accumulating USD money-market share priced at daily NAV; normal valuation is at 21:00 UK time, with two valuation points only during a declared stressed market environment. On-chain investors exit by redemption through the transfer agent or Token Distributor: transfers of tokens are not accepted or recognized in the register. Usual market hours are 01:00 to 21:00 London on eligible weekdays; off-hours facilities depend on liquidity, and gates or suspension may apply.",
+  "mechanismArchetype": "tbill",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rationale": "The exact deployment represents a USD short-duration money-market fund share with ordinary NAV redemption. The tbill family models the fund/NAV mechanism; it does not imply Treasury-only holdings. The share is not a wrapper of any tracked stablecoin.",
+    "sources": [
+      {
+        "label": "Fidelity September 14, 2026 fund prospectus",
+        "url": "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf"
+      },
+      {
+        "label": "Retrieved Fidelity prospectus text",
+        "url": "https://r.jina.ai/https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf"
+      },
+      {
+        "label": "Verified deployed token implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7030fe438be6ed196b8886616bbf5a245c267339"
+      },
+      {
+        "label": "Ethereum token deployment",
+        "url": "https://etherscan.io/address/0x54a4fc78431f9201824643e99bec891bb7462a1d#code"
+      }
+    ]
+  },
+  "detailProvider": "coingecko",
+  "geckoId": "fidelity-usd-digital-liquidity-fund-acc",
+  "links": [
+    {
+      "label": "Fidelity September 14, 2026 fund prospectus",
+      "url": "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf"
+    },
+    {
+      "label": "Retrieved Fidelity prospectus text",
+      "url": "https://r.jina.ai/https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf"
+    },
+    {
+      "label": "July 31, 2026 fund composition and Class 1 ACC launch factsheet",
+      "url": "https://www.fidelityinternational.com/legal/documents/en/hffs.en.xx.6470869.pdf"
+    },
+    {
+      "label": "FILQ-A implementation creation, block 24877962 (2026-04-14)",
+      "url": "https://etherscan.io/tx/0xf27b1d0e942b4539f3b4f9c939a83759389e20a5f372462aab70d638b63c804e"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Cayman Islands",
+    "regulator": "Cayman Islands Monetary Authority",
+    "license": "Mutual Funds Act regulated segregated portfolio company"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x54a4fc78431f9201824643e99bec891bb7462a1d",
+      "decimals": 2
+    }
+  ],
+  "collateralQuality": "rwa",
+  "custodyModel": "unknown",
+  "yieldConfig": {
+    "yieldSource": "Fidelity USD Digital Liquidity Fund accumulating net income",
+    "yieldType": "nav-appreciation"
+  },
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf",
+    "provider": "Fidelity daily NAV policy and named JPMorgan fund accountant; prospectus names Deloitte & Touche LLP Cayman Islands, but no current signed financial report was retrieved",
+    "attestorTier": "self",
+    "cadence": "daily-nav"
+  },
+  "notices": [
+    {
+      "type": "info",
+      "title": "Redemption-only tokenized share",
+      "message": "The prospectus prohibits token transfers for on-chain investors. Redemption through the transfer agent or Token Distributor is the recognized exit, subject to liquidity gates and suspension powers."
+    }
+  ],
+  "launchDate": "2026-05-06",
+  "implementationLaunchDate": "2026-05-06"
+}

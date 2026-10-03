@@ -1,0 +1,31 @@
+{
+  "id": "pyusdx-moonpay",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "Issuer terms prohibit describing PYUSDx as a GENIUS payment stablecoin, exclude U.S./EEA distribution and provide contractual PYUSD redemption only for eligible counterparties. That disclaimer does not settle statutory applicability."
+    },
+    "authorizationStatus": "unknown",
+    "issuerPathway": "unknown",
+    "redemptionPolicyPresent": true,
+    "notes": "Token-specific U.S. GENIUS authorization, legal issuer pathway and independent financial assurance were not established by the reviewed product, holder and reserve disclosures. Upstream PYUSD/USDC authorization is not local-token authorization. MiCA status is intentionally unassessed; geographic platform restrictions are not a regulatory out-of-scope ruling.",
+    "references": [
+      {
+        "label": "MoonPay PYUSDx holder and counterparty terms",
+        "url": "https://www.moonpay.com/legal/pyusdx_terms",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-02"
+      },
+      {
+        "label": "M0 exact PYUSDx mainnet deployments",
+        "url": "https://docs.m0.org/resources/addresses/pyusdx-platform",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-02"
+      }
+    ],
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02",
+    "issuerEntity": "MoonPay Digital Assets Limited",
+    "issuerDomicile": "British Virgin Islands"
+  }
+}

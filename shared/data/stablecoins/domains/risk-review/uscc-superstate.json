@@ -1,0 +1,225 @@
+{
+  "id": "uscc-superstate",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "USCC fund, service providers and October 1 holdings",
+        "url": "https://superstate.com/assets/uscc"
+      },
+      {
+        "label": "USCC current investor terms",
+        "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc"
+      },
+      {
+        "label": "Superstate deployments and administrative powers",
+        "url": "https://docs.superstate.com/investors/smart-contracts"
+      }
+    ],
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02",
+    "evidence": "Official EVM contracts check a centrally administered allowlist and permit forced administrative burn. Solana at finalized slot 452748144 is default-frozen and retains freeze authority/permanent delegate 2Yq4T3mPNfjtEyTxSbRjRKqLf1pwbTasuCQrWe6QpM7x. These are direct native holder restrictions, not inferred from mint authority."
+  },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "NAV Fund Services marks the USCC fund using daily 4pm prices, staking rates and dealer OTC marks. Chainlink republishes that centrally originated NAV; an oracle transport does not independently reconcile the fund.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "rationale": "The applicable price authority prices subscriptions, redemptions and fund NAV; no borrower liquidation branches are disclosed for the holder instrument.",
+      "sources": [
+        {
+          "label": "USCC fund, service providers and October 1 holdings",
+          "url": "https://superstate.com/assets/uscc"
+        },
+        {
+          "label": "USCC current investor terms",
+          "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc"
+        },
+        {
+          "label": "Superstate deployments and administrative powers",
+          "url": "https://docs.superstate.com/investors/smart-contracts"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Refine05 primary-source and pinned-RPC review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "USCC Chainlink NAV transport 0xaffd8f5578e8590665de561bde9e7badb99300d9, answer 11772765 at 2026-10-02T13:10:47Z; read at Ethereum block 26110192",
+        "url": "https://etherscan.io/address/0xaffd8f5578e8590665de561bde9e7badb99300d9"
+      },
+      {
+        "label": "USCC fund, service providers and October 1 holdings",
+        "url": "https://superstate.com/assets/uscc"
+      },
+      {
+        "label": "USCC current investor terms",
+        "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc"
+      },
+      {
+        "label": "Superstate deployments and administrative powers",
+        "url": "https://docs.superstate.com/investors/smart-contracts"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "USCC shares are issued natively on Ethereum, Plume and Solana. Superstate documents issuer-mediated EVM source burn/destination reissue; Solana has no ordinary bridge and uses redemption and repurchase instead. Book-entry conversion removes public tokens rather than creating an extra aggregate supply leg.",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "USCC fund, service providers and October 1 holdings",
+        "url": "https://superstate.com/assets/uscc"
+      },
+      {
+        "label": "USCC current investor terms",
+        "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc"
+      },
+      {
+        "label": "Superstate deployments and administrative powers",
+        "url": "https://docs.superstate.com/investors/smart-contracts"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x14d60e7fdc0d71d8611742720e4c50e7a974020c",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x14d60e7fdc0d71d8611742720e4c50e7a974020c",
+        "protocol": "Superstate native USCC shares",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Current issuer investor terms explicitly permit tokenization on this network; separate burn/reissue rails conserve shares and do not convert the token into a wrapped claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107704,
+        "sources": [
+          {
+            "label": "USCC fund, service providers and October 1 holdings",
+            "url": "https://superstate.com/assets/uscc"
+          },
+          {
+            "label": "USCC current investor terms",
+            "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc"
+          },
+          {
+            "label": "Superstate deployments and administrative powers",
+            "url": "https://docs.superstate.com/investors/smart-contracts"
+          }
+        ]
+      },
+      {
+        "id": "plume:0x4c21b7577c8fe8b0b0669165ee7c8f67fa1454cf",
+        "destinationChain": "plume",
+        "canonicalChain": "plume",
+        "contractAddress": "0x4c21b7577c8fe8b0b0669165ee7c8f67fa1454cf",
+        "protocol": "Superstate native USCC shares",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Current issuer investor terms explicitly permit tokenization on this network; separate burn/reissue rails conserve shares and do not convert the token into a wrapped claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-02",
+        "observedBlock": 96961184,
+        "sources": [
+          {
+            "label": "USCC fund, service providers and October 1 holdings",
+            "url": "https://superstate.com/assets/uscc"
+          },
+          {
+            "label": "USCC current investor terms",
+            "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc"
+          },
+          {
+            "label": "Superstate deployments and administrative powers",
+            "url": "https://docs.superstate.com/investors/smart-contracts"
+          }
+        ]
+      },
+      {
+        "id": "solana:BTRR3sj1Bn2ZjuemgbeQ6SCtf84iXS81CS7UDTSxUCaK",
+        "destinationChain": "solana",
+        "canonicalChain": "solana",
+        "contractAddress": "BTRR3sj1Bn2ZjuemgbeQ6SCtf84iXS81CS7UDTSxUCaK",
+        "protocol": "Superstate native USCC shares",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Current issuer investor terms explicitly permit tokenization on this network; separate burn/reissue rails conserve shares and do not convert the token into a wrapped claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-02",
+        "observedBlock": 452748144,
+        "sources": [
+          {
+            "label": "USCC fund, service providers and October 1 holdings",
+            "url": "https://superstate.com/assets/uscc"
+          },
+          {
+            "label": "USCC current investor terms",
+            "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc"
+          },
+          {
+            "label": "Superstate deployments and administrative powers",
+            "url": "https://docs.superstate.com/investors/smart-contracts"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "uscc-evm-issuer-burn-reissue",
+        "label": "USCC EVM share-conserving transfer controller",
+        "routeRefs": [
+          "ethereum:0x14d60e7fdc0d71d8611742720e4c50e7a974020c",
+          "plume:0x4c21b7577c8fe8b0b0669165ee7c8f67fa1454cf"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "upgrade",
+          "peer-config"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x8abc89d9b56dfd90da18e8e18cfac9111100bdd1",
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107704,
+        "sources": [
+          {
+            "label": "USCC fund, service providers and October 1 holdings",
+            "url": "https://superstate.com/assets/uscc"
+          },
+          {
+            "label": "USCC current investor terms",
+            "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc"
+          },
+          {
+            "label": "Superstate deployments and administrative powers",
+            "url": "https://docs.superstate.com/investors/smart-contracts"
+          }
+        ],
+        "evidence": "Superstate documents bridge() source burn and specified-amount delivery on supported EVM destination networks, plus bridgeToBookEntry. The shared issuer owner controls Ethereum/Plume token and ProxyAdmin contracts. Native subscription minting is a separate capability retained in Mint Authority. No external validator, cryptographic threshold, independent rate limit or timelock is established."
+      }
+    ]
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "id": "plnq-quantoz",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "PLNQ whitepaper",
+        "url": "https://www.quantoz.com/documents/plnq-wp-v1.1-30-4-2026.pdf"
+      },
+      {
+        "label": "Ethereum PLNQ contract",
+        "url": "https://etherscan.io/token/0x00b81d7b21955837890d9346e4978b6b43762b3a"
+      },
+      {
+        "label": "Ethereum PLNQ owner contract",
+        "url": "https://etherscan.io/address/0x284df7b9d9f471554e9257bd9b116189f7997d45"
+      },
+      {
+        "label": "Ethereum controller observation block",
+        "url": "https://etherscan.io/block/26110052"
+      }
+    ],
+    "evidence": "PLNQ whitepaper D.1 reserves the right to blacklist addresses and freeze PLNQ for illegal activity or terms violations; F.3/F.4 disclose recovery and freezing controls. Whitepaper E.9/E.10 attributes the Ethereum/Polygon ERC-20 implementation audit to ChainSecurity with no known vulnerabilities and states Quantoz has been ISO/IEC 27001 certified since 2020; this is issuer-reported audit evidence, not an independently retrieved report or a verified deployed-bytecode match. Alchemy Ethereum RPC reads re-verified on 2026-10-03 at block 26110052 returned zero totalSupply, EIP-1967 implementation 0x8b98bcd9b1f8ae112fb2b58b45c3bc9a75cc4d0e, admin 0xa6724f792002d5677a7bc370986e1b580b8773e7 and owner() 0x284df7b9d9f471554e9257bd9b116189f7997d45. The owner's getOwners() returned five addresses; getThreshold() returned empty data, so no signature threshold is verified. Nested owner/proxy-admin authorization and upgrade delays remain unresolved; planned-chain controls are not verified deployments.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-03"
+  }
+}

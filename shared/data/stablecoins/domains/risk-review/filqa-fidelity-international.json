@@ -1,0 +1,78 @@
+{
+  "id": "filqa-fidelity-international",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Fidelity September 14, 2026 fund prospectus",
+        "url": "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf"
+      },
+      {
+        "label": "Retrieved Fidelity prospectus text",
+        "url": "https://r.jina.ai/https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf"
+      },
+      {
+        "label": "Verified deployed token implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7030fe438be6ed196b8886616bbf5a245c267339"
+      },
+      {
+        "label": "Ethereum token deployment",
+        "url": "https://etherscan.io/address/0x54a4fc78431f9201824643e99bec891bb7462a1d#code"
+      }
+    ],
+    "evidence": "At Ethereum block 26107703 the exact deployment points to verified SygToken implementation 0x7030fe438be6ed196b8886616bbf5a245c267339. Source implements blacklistTokenUser, forcedTransfer and pause under permission-manager authorization. Prospectus gives compulsory-redemption and registry correction powers and prohibits token transfers for on-chain investors.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "Primary subscription and redemption use administrator-determined fund NAV, not borrower liquidation oracles. The token's configured BundleAggregatorProxy publishes class NAV but native getPrice reverts at the observed pin; publication is not an external authority or reconciliation guarantee.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "rationale": "The token is a direct NAV fund-share claim, with no evidenced borrower-vault or liquidation-price branches. Primary NAV authority applies to the share price and redemption.",
+      "sources": [
+        {
+          "label": "Fidelity September 14, 2026 fund prospectus",
+          "url": "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf"
+        },
+        {
+          "label": "Retrieved Fidelity prospectus text",
+          "url": "https://r.jina.ai/https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Fidelity September 14, 2026 fund prospectus",
+        "url": "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf"
+      },
+      {
+        "label": "Retrieved Fidelity prospectus text",
+        "url": "https://r.jina.ai/https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf"
+      }
+    ],
+    "paths": [
+      {
+        "id": "ethereum:0x54a4fc78431f9201824643e99bec891bb7462a1d",
+        "chain": "ethereum",
+        "address": "0x54a4fc78431f9201824643e99bec891bb7462a1d",
+        "pricingAuthority": "internal-price",
+        "applicability": {
+          "disposition": "top-level-only",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine04 source and publication review",
+          "confidence": "verified",
+          "rationale": "The class is an administered money-market fund share with no borrower-vault or liquidation branch in its native SygToken. At block 26110197 the configured oracle is BundleAggregatorProxy 0x0c6c789a375cc4ee9ce6008715c915a91da5ac5c (aggregator 0x16b53825c8ceaea593507274d4c1aaec9e261433). latestBundle reports class ISIN KYG3R61G1088 and NAV 1014013/10000; latestBundleTimestamp=1790975700. Native token getPrice reverts at that pin, so no working token price getter or oracle independence is claimed. Daily issuer NAV remains the primary pricing authority.",
+          "sources": [{"label": "Exact native token implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7030fe438be6ed196b8886616bbf5a245c267339"}, {"label": "Deployed BundleAggregatorProxy", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0c6c789a375cc4ee9ce6008715c915a91da5ac5c"}, {"label": "Fidelity fund valuation terms", "url": "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf"}]
+        }
+      }
+    ]
+  }
+}

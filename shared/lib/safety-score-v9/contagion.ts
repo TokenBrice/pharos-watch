@@ -38,9 +38,14 @@ export function evaluateV9ContagionScenario(input: V9ContagionInput, definition:
       })),
     };
   })();
-  // Facts are a validated JSON DTO. Break interned aliases before mutations:
-  // structuredClone preserves shared arrays across assets and fact fields.
-  const raw: V9FactSetCoreV3 = JSON.parse(JSON.stringify(input.rawCompileInput));
+  // Break interned aliases within and across assets before mutations. Clone one
+  // JSON DTO at a time so the full registry's serialized text never overlaps
+  // the decoded hypothetical graph (structuredClone would preserve aliases).
+  const { assets, ...envelope } = input.rawCompileInput;
+  const raw: V9FactSetCoreV3 = {
+    ...JSON.parse(JSON.stringify(envelope)),
+    assets: assets.map((asset) => JSON.parse(JSON.stringify(asset))),
+  };
   for (const shock of scenario.shocks) {
     const asset = raw.assets.find((row) => row.assetId === shock.assetId)!;
     if (shock.kind === "score-limit") continue;

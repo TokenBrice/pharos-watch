@@ -1,0 +1,100 @@
+{
+  "liveReservesConfig": {
+    "adapter": "chainlink-nav",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "fiusd-sygnum",
+    "display": { "url": "https://era.zksync.network/address/0xc406104c42211abd1a2cd411ddd071511515bddd", "label": "FIUSD onchain NAV oracle" },
+    "inputs": { "primary": { "kind": "onchain-evm", "chain": "zksync", "rpcMode": "public-rpc" } },
+    "params": {
+      "navScope": "portfolio",
+      "oracleAddress": "0xc406104c42211abd1a2cd411ddd071511515bddd",
+      "tokenAddress": "0x2ab105a3ead22731082b790ca9a00d9a3a7627f9",
+      "assetLabel": "Fidelity ILF USD Fund Class G Acc unit exposure",
+      "assetRisk": "medium",
+      "rpcUrl": "https://mainnet.era.zksync.io"
+    }
+  },
+  "id": "fiusd-sygnum",
+  "name": "Sygnum FIUSD Liquidity Fund Token",
+  "symbol": "FIUSD",
+  "oneLiner": "FIUSD is Sygnum's tokenized Fidelity liquidity-fund unit, with NAV-based returns and redemption through a permissioned bank-client account.",
+  "flags": {
+    "backing": "rwa-backed",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": true
+  },
+  "mechanismArchetype": "tbill",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rationale": "FIUSD is a Swiss ledger-based security representing one Fidelity Institutional Liquidity Fund USD Class G Acc unit held through Sygnum. It is a money-market fund claim with accumulating NAV and daily fund dealing, not the unrelated Fiserv payment stablecoin. The tbill family models its cash-equivalent fund claim while the underlying government and non-government instruments retain credit and custody risk.",
+    "sources": [
+      {
+        "label": "Sygnum issuer-authored FIUSD application dated March 20, 2025",
+        "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779"
+      },
+      {
+        "label": "Verified deployed Arbitrum implementation",
+        "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x7616b08676117e1aab542e53fe3f7b12f7596d37"
+      }
+    ]
+  },
+  "collateral": "Fidelity Institutional Liquidity Fund PLC, United States Dollar Fund Class G Acc units held by Sygnum in a fiduciary arrangement. The underlying Irish short-term money-market fund can hold government and non-government money-market instruments, deposits, repos, ABCP and other money-market funds; it is not exclusively Treasury-backed.",
+  "pegMechanism": "One FIUSD represents one subscribed fund unit at accumulating USD NAV. Sygnum issues after subscription and burns when units are sold or redeemed. Onboarded professional investors use Sygnum-custodied whitelisted wallets; redemption requests trigger burn, a JPMorgan fund sell order and proceeds credited to the bank-client account. Current binding token-level deadlines and same-notional capacity are not publicly established.",
+  "detailProvider": "coingecko",
+  "geckoId": "sygnum-fiusd-liquidity-fund",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779",
+    "provider": "Deloitte Ireland LLP is named as annual underlying-fund financial auditor in the March 2025 application. No current signed token-to-fund-unit reconciliation or token-scoped financial report was retrieved.",
+    "attestorTier": "big4",
+    "cadence": "annual",
+    "attestorJurisdiction": "Ireland"
+  },
+  "links": [
+    {
+      "label": "FIUSD zkSync proxy creation, 21 February 2024, block 27141850",
+      "url": "https://era.zksync.network/tx/0x71a851d8023d213b57ef1c5d9782151a3436380bf33ed1809aaead95fbe768b4"
+    },
+    {
+      "label": "Issuer application and product terms",
+      "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779"
+    },
+    {
+      "label": "zkSync token",
+      "url": "https://era.zksync.network/address/0x2ab105a3ead22731082b790ca9a00d9a3a7627f9"
+    },
+    {
+      "label": "Arbitrum token",
+      "url": "https://arbiscan.io/address/0xcded6b899edba762d793f44ed295248049440e1e"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Switzerland",
+    "license": "Issuer describes ledger-based securities under Swiss Code of Obligations art. 973d; underlying fund domiciled in Ireland"
+  },
+  "contracts": [
+    {
+      "chain": "zksync",
+      "address": "0x2ab105a3ead22731082b790ca9a00d9a3a7627f9",
+      "decimals": 2
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0xcded6b899edba762d793f44ed295248049440e1e",
+      "decimals": 2
+    }
+  ],
+  "collateralQuality": "rwa",
+  "custodyModel": "unknown",
+  "governanceQuality": "single-entity",
+  "launchDate": "2024-02-21",
+  "yieldConfig": {
+    "yieldSource": "Fidelity ILF USD Fund Class G Acc NAV appreciation",
+    "yieldType": "nav-appreciation"
+  }
+}

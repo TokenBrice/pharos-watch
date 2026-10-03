@@ -1,0 +1,48 @@
+{
+  "id": "czkc-czkc",
+  "name": "CZKC Czech Koruna",
+  "symbol": "CZKC",
+  "oneLiner": "CZKC is a pre-launch Czech koruna token from CZKC a.s., with a reserve-backed design and public testnet documentation.",
+  "collateral": "Proposed full CZK reserve backing. Issuer documentation requires CZK reserve value to cover rCZKC, the issuer-controlled reserve representation, and outstanding CZKC. Reserve custodian, actual portfolio, legal segregation and independent assets-and-liabilities assurance are not disclosed in the reviewed material.",
+  "pegMechanism": "CZKC a.s. describes a fully CZK-backed electronic-money token and xERC-20 burn-and-mint bridging with issuer-set bridge capacity limits. Planned Ethereum, Arbitrum and Gnosis production entrypoints and implementations are all marked to be published. Public faucet tokens are for development and training, not verified redeemable CZK circulation; binding holder redemption terms are unavailable.",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.czkc.cz/"
+    },
+    {
+      "label": "Issuer",
+      "url": "https://www.czkc.cz/about/"
+    },
+    {
+      "label": "Developer documentation",
+      "url": "https://book.czkc.dev/print.html"
+    },
+    {
+      "label": "CzechInvest sandbox milestone",
+      "url": "https://czechinvest.gov.cz/en/Homepage/News/February-2026/Czechia%E2%80%99s-first-regulatory-sandbox-commences-testing-phase-for-21-fintech-projects"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Czech Republic"
+  },
+  "launchPhase": "testnet",
+  "launchPhaseDetail": "CZKC a.s., company number 19989971, invites public testnet use and describes CZK-backed tokens. Developer documentation lists Ethereum, Arbitrum and Gnosis but marks all production and public-testnet addresses to be published. CzechInvest named CZKC among 21 sandbox testing projects on 3 February 2026; participation is not MiCA authorization. The original product announcement date and a confirmed commercial launch date remain unverified.",
+  "milestones": [
+    {
+      "date": "2026-02-03",
+      "type": "regulatory",
+      "title": "CzechInvest names CZKC in sandbox testing cohort",
+      "sourceUrl": "https://czechinvest.gov.cz/en/Homepage/News/February-2026/Czechia%E2%80%99s-first-regulatory-sandbox-commences-testing-phase-for-21-fintech-projects",
+      "description": "Dated programme milestone, not an inferred first token announcement or issuance authorization."
+    }
+  ],
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "CZK",
+    "governance": "centralized"
+  },
+  "mechanismArchetype": "fiat-cash",
+  "custodyModel": "unknown",
+  "status": "pre-launch"
+}

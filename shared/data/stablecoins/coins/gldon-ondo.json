@@ -1,0 +1,105 @@
+{
+  "id": "gldon-ondo",
+  "name": "SPDR Gold Shares (Ondo Tokenized)",
+  "symbol": "GLDON",
+  "flags": {
+    "backing": "rwa-backed",
+    "governance": "centralized",
+    "rwa": true,
+    "navToken": true
+  },
+  "detailProvider": "coingecko",
+  "geckoId": "spdr-gold-shares-ondo-tokenized",
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x423d42e505e64f99b6e277eb7ed324cc5606f139",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0xfa9a1e901085e269f6d428f79cd5252d8b919344",
+      "decimals": 18
+    },
+    {
+      "chain": "solana",
+      "address": "hWfiw4mcxT8rnNFkk6fsCQSxoxgZ9yVhB6tyeVcondo",
+      "decimals": 9
+    },
+    {
+      "chain": "hyperevm",
+      "address": "0x95febdd6f447b5278c9b98743b4254eb02c6ea1d",
+      "decimals": 18
+    }
+  ],
+  "mechanismArchetype": "rwa-credit-fund",
+  "custodyModel": "institutional-regulated",
+  "implementationLaunchDate": "2025-12-10",
+  "oneLiner": "GLDON is Ondo’s NAV-style SPDR Gold Shares tracker, redeemable by eligible investors through issuer stablecoin rails without ETF delivery rights.",
+  "collateral": "SPDR Gold Shares (GLD) ETF exposure and cash in transit held for Ondo Global Markets (BVI) Limited; tokenholders hold a debt-security claim rather than direct ETF shares.",
+  "pegMechanism": "Total-return tracker of SPDR Gold Shares with issuer-calculated NAV and eligible-investor subscription/redemption. Ordinary redemption is to USDon; conversion to USDC depends on stablecoin-swapper liquidity. No fixed $1 peg or physical-gold redemption.",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rationale": "The March 26, 2026 GLDon Final Terms bind the Ethereum token 0x423d42e505e64f99b6e277eb7ed324cc5606f139 to a debt instrument tracking SPDR Gold Shares. Ondo identifies native Ethereum, BNB and Solana issuance and bridged HyperEVM. This fund-security tracker belongs to the same rwa-credit-fund investment surface as IAUon and SLVon, not direct allocated gold.",
+    "sources": [
+      {
+        "label": "GLDon Final Terms",
+        "url": "https://cdn.sanity.io/files/8k2tqa6n/production/a598be5156bcda440276f01eea9258f82f851bd0.pdf"
+      },
+      {
+        "label": "Ondo Stocks technical deployments",
+        "url": "https://docs.ondo.finance/ondo-stocks/technical.md"
+      }
+    ]
+  },
+  "proofOfReserves": {
+    "type": "attestation",
+    "url": "https://docs.ondo.finance/ondo-stocks/trust-and-transparency.md",
+    "provider": "Ankura Trust Company. Retrieved September 23, 2026 daily report reconciles aggregate Ondo Stocks, USDY and USDon assets and obligations; it does not identify GLDON-specific GLD shares, cash or liabilities. Aggregate reference evidence does not establish exact-token financial assurance.",
+    "attestorTier": "niche",
+    "cadence": "daily-nav"
+  },
+  "jurisdiction": {
+    "country": "British Virgin Islands"
+  },
+  "collateralQuality": "rwa",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://app.ondo.finance/assets/gldon"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.ondo.finance/ondo-stocks/trust-and-transparency.md"
+    },
+    {
+      "label": "Final Terms",
+      "url": "https://cdn.sanity.io/files/8k2tqa6n/production/a598be5156bcda440276f01eea9258f82f851bd0.pdf"
+    },
+    {
+      "label": "GLDon Key Information Document (ISIN VGG7001ABQ63)",
+      "url": "https://cdn.sanity.io/files/8k2tqa6n/production/8008c418f50a3ecaf509fe80578eb9df5cca59e0.pdf"
+    },
+    {
+      "label": "May 2026 Base Prospectus Supplement",
+      "url": "https://cdn.sanity.io/files/8k2tqa6n/production/c526d3cb52fc1e92988e2db1b33d563864ad6b5d.pdf"
+    },
+    {
+      "label": "Ethereum deployment (block 23984676; implementation history, not public issue date)",
+      "url": "https://etherscan.io/tx/0xd44893c63ea157f403239cb968ffee492e53423c283b42c222260882e5a1e2a1"
+    },
+    {
+      "label": "Important Notes",
+      "url": "https://docs.ondo.finance/ondo-stocks/important-notes.md"
+    }
+  ],
+  "notices": [
+    {
+      "type": "info",
+      "title": "Tokenized ETF exposure",
+      "message": "GLDON provides economic exposure to SPDR Gold Shares. Holders have no right to receive ETF shares or physical gold; investor eligibility and issuer redemption restrictions apply."
+    }
+  ]
+}

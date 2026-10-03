@@ -1,0 +1,306 @@
+{
+  "id": "arcusdc-galaxy",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "none-resolved-mint",
+    "confidence": "manual-review",
+    "summary": "Galaxy USDC mints USDC-backed deposit shares and may mint fee shares during accrual. Circle USDC issuance is inherited; owner and curator retain strategy parameter powers.",
+    "inheritedFrom": "usdc-circle",
+    "economicCapSemantics": "bounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "controls": [
+      {
+        "chain": "arc",
+        "address": "0x8e357432cc12ff425c36432f312968aeb16112af",
+        "deploymentRefs": [
+          "arc:0x8e357432cc12ff425c36432f312968aeb16112af"
+        ],
+        "label": "Galaxy USDC asset-backed share contract",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "observedAt": "2026-10-02",
+        "observedBlock": 23952285,
+        "sources": [
+          {
+            "label": "Galaxy USDC exact vault identity and accounting",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho Vault V2 mechanism documentation",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "Pinned VaultV2 primary source, gate and loss semantics",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          },
+          {
+            "label": "Pinned MorphoMarketV1AdapterV2 primary source",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+          },
+          {
+            "label": "arc fixed-block RPC observation 23952285",
+            "url": "https://rpc.mainnet.arc.io"
+          },
+          {
+            "label": "Exact Arc VaultV2 partial source; explorer deployed bytecode equals RPC at block 24011393, full compiler verification unclaimed",
+            "url": "https://explorer.arc.io/api/v2/smart-contracts/0x8e357432cc12ff425c36432f312968aeb16112af"
+          },
+          {
+            "label": "Sourcify matched VaultV2 compiler sources/output and declared immutable/CBOR masks; exact deployment functional correspondence independently reproduced",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c?fields=sources,compilation,runtimeBytecode"
+          },
+          {
+            "label": "MorphoMarketV1AdapterV2 complete explorer source/compiler settings; independently recompiled with solc 0.8.28 and compared against the pinned deployment",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3b9e060a2b05588126fda01b95e9485687fc91d7"
+          },
+          {
+            "label": "Sourcify fully matched MorphoMarketV1AdapterV2 compiler output/source and immutable/CBOR layout; exact pinned adapter correspondence independently reproduced",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0x812b71c33ae5eafebae967c5670e37eca3cab0ac?fields=sources,compilation,runtimeBytecode"
+          }
+        ],
+        "evidence": "At arc block 23952285 (0x16d7b9d), captured 2026-10-02T22:44:09.665742+00:00, totalSupply=89746600641673546252952918 atomic shares; accrueInterestView returned assets=89710295395927, pending performance shares=0, pending management shares=0. Idle USDC=0; complete adapter inventory sums to 89710295395927 USDC atomic units. Asset decimals=6, share decimals=18. convertToAssets(1e18)=999595 USDC atomic units. Reference VaultV2 code mints shares against transferred USDC and accrual can mint fee shares. No discretionary Circle USDC minting power is conveyed. Exact Arc explorer partial source and deployed runtime bytecode match are now linked; proxy slots are zero and the reviewed source has no implementation replacement path. Full compiler verification remains unclaimed. Functional compiler/runtime correspondence independently reproduced on 2026-10-03 at block 24011393 for vault 0x8e357432cc12ff425c36432f312968aeb16112af. Sourcify reference runtimeMatch=match, matchId=30034094, verifiedAt=2026-05-26T22:26:25Z, solc 0.8.28+commit.7893614a, viaIR, optimizer 100000, EVM cancun. Runtime length 21808 bytes. Masked ONLY compiler-declared immutable offsets (asset AST37:6 occurrences; decimals AST39:1; virtualShares AST41:5) and the 12-byte CBOR compiler-tag tail at offset 21796 including its two-byte length trailer; every remaining executable byte exactly equals the verified reference recompiled runtime. Every immutable occurrence separately equals the exact pinned asset()/decimals()/virtualShares() getter: asset=0x3600000000000000000000000000000000000000, decimals=18, virtualShares=1000000000000. Normalized VaultV2 SHA-256=cf17ab0161388ea9277000e692e929216da2618e441c54bcd677def1000dd12e. Complete current adaptersLength()/adapters(0) census contains one mint-accounting adapter 0xee0080203a76690bca40670dfd0cd1c30fab7c2c. Its complete cited Blockscout source/import units were independently compiled with solc 0.8.28+commit.7893614a, viaIR, optimizer 100000, EVM cancun, bytecodeHash=none. Adapter runtime length 11784 bytes; only compiler-declared immutable offsets (factory AST2265, parentVault AST2267, asset AST2269, morpho AST2271, adapterId AST2273, adaptiveCurveIrm AST2275) and its 12-byte CBOR tail at offset 11772 were masked. All remaining executable bytes exactly equal independently compiled adapter runtime; all 20 immutable occurrences separately match exact pinned getters (factory=0x6c2ff5114e45b50bc7195c2f1f87c98cbdad62cc; parentVault=0x8e357432cc12ff425c36432f312968aeb16112af; asset=0x3600000000000000000000000000000000000000; morpho=0x34cd04070dd72b14e241112f6d83812df5af7fcd; adapterId=0xc4b3a1af59dbbe8bfc6f6082320273e5af05ffb400b9d39d479aa613ba5866ac; adaptiveCurveIrm=0xf02615d094fc02fc031c35fe705e175aa4653f20), with parentVault and asset also matching the reviewed vault. Normalized adapter SHA-256=355d973d7a246e5d4c02bb68e7415b9d62bf584a57f6101357b57c5d2fc40113. These proofs CLOSE the prior executable-source/mint-code identity questions under calibration v2 R4; earlier partial-verification observations are historical limitations superseded for functional runtime identity, not claims of full metadata/creation-bytecode identity or financial assurance. Adapter correspondence was additionally independently checked against Sourcify runtimeMatch=match reference matchId=33231859, verifiedAt=2026-06-21T06:48:43Z: its recompiled executable bytes, all immutable offsets and CBOR layout exactly equal the independently compiled adapter output and both pinned target adapter normalized runtimes; normalized SHA-256=355d973d7a246e5d4c02bb68e7415b9d62bf584a57f6101357b57c5d2fc40113. The adapter proof therefore also establishes correspondence to an independently verified reference, not merely explorer-supplied onchain bytecode."
+      },
+      {
+        "chain": "arc",
+        "address": "0x032a292de0127fdef849eff31b5b4df7e5f069c0",
+        "deploymentRefs": [
+          "arc:0x8e357432cc12ff425c36432f312968aeb16112af"
+        ],
+        "label": "Galaxy USDC owner parameter authority",
+        "role": "governor",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-02",
+        "observedBlock": 23952285,
+        "sources": [
+          {
+            "label": "Galaxy USDC exact vault identity and accounting",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho Vault V2 mechanism documentation",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "Pinned VaultV2 primary source, gate and loss semantics",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          },
+          {
+            "label": "Pinned MorphoMarketV1AdapterV2 primary source",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+          },
+          {
+            "label": "arc fixed-block RPC observation 23952285",
+            "url": "https://rpc.mainnet.arc.io"
+          }
+        ],
+        "evidence": "At arc block 23952285 (0x16d7b9d), captured 2026-10-02T22:44:09.665742+00:00, owner=0x032a292de0127fdef849eff31b5b4df7e5f069c0; curator=0xec1a7a08b538c685f5d188d81e3545d69f1b4178. Both owner and curator eth_getCode returned 0x; no multisignature or key-custody attestation is established. addAdapter delay=604800 sec; increaseAbsoluteCap delay=604800 sec; fee-setting delays=0. Fee rates performance=0.0, management=0.0.",
+        "failureDomainKeys": [
+          "eoa:arc:0x032a292de0127fdef849eff31b5b4df7e5f069c0"
+        ]
+      },
+      {
+        "chain": "arc",
+        "address": "0xec1a7a08b538c685f5d188d81e3545d69f1b4178",
+        "deploymentRefs": [
+          "arc:0x8e357432cc12ff425c36432f312968aeb16112af"
+        ],
+        "label": "Galaxy USDC curator parameter authority",
+        "role": "governor",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-02",
+        "observedBlock": 23952285,
+        "sources": [
+          {
+            "label": "Galaxy USDC exact vault identity and accounting",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho Vault V2 mechanism documentation",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "Pinned VaultV2 primary source, gate and loss semantics",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          },
+          {
+            "label": "Pinned MorphoMarketV1AdapterV2 primary source",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+          },
+          {
+            "label": "arc fixed-block RPC observation 23952285",
+            "url": "https://rpc.mainnet.arc.io"
+          }
+        ],
+        "evidence": "At arc block 23952285 (0x16d7b9d), captured 2026-10-02T22:44:09.665742+00:00, owner=0x032a292de0127fdef849eff31b5b4df7e5f069c0; curator=0xec1a7a08b538c685f5d188d81e3545d69f1b4178. Both owner and curator eth_getCode returned 0x; no multisignature or key-custody attestation is established. addAdapter delay=604800 sec; increaseAbsoluteCap delay=604800 sec; fee-setting delays=0. Fee rates performance=0.0, management=0.0.",
+        "failureDomainKeys": [
+          "eoa:arc:0xec1a7a08b538c685f5d188d81e3545d69f1b4178"
+        ]
+      }
+    ],
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-10-02",
+      "observedBlock": 23952285,
+      "sources": [
+        {
+          "label": "Galaxy USDC exact vault identity and accounting",
+          "url": "https://api.morpho.org/graphql"
+        },
+        {
+          "label": "Morpho Vault V2 mechanism documentation",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+        },
+        {
+          "label": "Pinned VaultV2 primary source, gate and loss semantics",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+        },
+        {
+          "label": "Pinned MorphoMarketV1AdapterV2 primary source",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+        },
+        {
+          "label": "arc fixed-block RPC observation 23952285",
+          "url": "https://rpc.mainnet.arc.io"
+        },
+        {
+          "label": "Exact Arc VaultV2 partial source; explorer deployed bytecode equals RPC at block 24011393, full compiler verification unclaimed",
+          "url": "https://explorer.arc.io/api/v2/smart-contracts/0x8e357432cc12ff425c36432f312968aeb16112af"
+        },
+        {
+          "label": "Sourcify matched VaultV2 compiler sources/output and declared immutable/CBOR masks; exact deployment functional correspondence independently reproduced",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c?fields=sources,compilation,runtimeBytecode"
+        },
+        {
+          "label": "MorphoMarketV1AdapterV2 complete explorer source/compiler settings; independently recompiled with solc 0.8.28 and compared against the pinned deployment",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3b9e060a2b05588126fda01b95e9485687fc91d7"
+        },
+        {
+          "label": "Sourcify fully matched MorphoMarketV1AdapterV2 compiler output/source and immutable/CBOR layout; exact pinned adapter correspondence independently reproduced",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0x812b71c33ae5eafebae967c5670e37eca3cab0ac?fields=sources,compilation,runtimeBytecode"
+        }
+      ],
+      "controlRef": "Galaxy USDC asset-backed share contract",
+      "deploymentRefs": [
+        "arc:0x8e357432cc12ff425c36432f312968aeb16112af"
+      ]
+    },
+    "review": {
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "Galaxy USDC exact vault identity and accounting",
+          "url": "https://api.morpho.org/graphql"
+        },
+        {
+          "label": "Morpho Vault V2 mechanism documentation",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+        },
+        {
+          "label": "Pinned VaultV2 primary source, gate and loss semantics",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+        },
+        {
+          "label": "Pinned MorphoMarketV1AdapterV2 primary source",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+        },
+        {
+          "label": "arc fixed-block RPC observation 23952285",
+          "url": "https://rpc.mainnet.arc.io"
+        },
+        {
+          "label": "Morpho published VaultV2 security audit index (framework scope only)",
+          "url": "https://docs.morpho.org/get-started/resources/audits/"
+        },
+        {
+          "label": "Morpho VaultV2 dated framework audit artifacts; no exact-vault financial assurance",
+          "url": "https://github.com/morpho-org/vault-v2/tree/main/audits"
+        },
+        {
+          "label": "Exact Arc VaultV2 partial source; explorer deployed bytecode equals RPC at block 24011393, full compiler verification unclaimed",
+          "url": "https://explorer.arc.io/api/v2/smart-contracts/0x8e357432cc12ff425c36432f312968aeb16112af"
+        },
+        {
+          "label": "Sourcify matched VaultV2 compiler sources/output and declared immutable/CBOR masks; exact deployment functional correspondence independently reproduced",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c?fields=sources,compilation,runtimeBytecode"
+        },
+        {
+          "label": "MorphoMarketV1AdapterV2 complete explorer source/compiler settings; independently recompiled with solc 0.8.28 and compared against the pinned deployment",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3b9e060a2b05588126fda01b95e9485687fc91d7"
+        },
+        {
+          "label": "Sourcify fully matched MorphoMarketV1AdapterV2 compiler output/source and immutable/CBOR layout; exact pinned adapter correspondence independently reproduced",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0x812b71c33ae5eafebae967c5670e37eca3cab0ac?fields=sources,compilation,runtimeBytecode"
+        }
+      ],
+      "evidence": "At arc block 23952285 (0x16d7b9d), captured 2026-10-02T22:44:09.665742+00:00, owner=0x032a292de0127fdef849eff31b5b4df7e5f069c0; curator=0xec1a7a08b538c685f5d188d81e3545d69f1b4178. Both owner and curator eth_getCode returned 0x; no multisignature or key-custody attestation is established. addAdapter delay=604800 sec; increaseAbsoluteCap delay=604800 sec; fee-setting delays=0. Fee rates performance=0.0, management=0.0. Local financial attestation or prudential supervision is not inherited from Circle. Arc factory/API and reference source identify VaultV2, but exact deployment source-to-bytecode completeness and mint-logic replacement protection remain unverified. On 2026-10-03, official explorer API returned partial exact VaultV2 source (is_partially_verified=true, is_fully_verified=false); deployed_bytecode matched pinned RPC code exactly at Arc block 24011393. Implementation/admin/beacon slots were zero. The reviewed source has no arbitrary implementation/upgrade entrypoint; multicall delegates only to address(this). This supports the immutable model under the same partial-source convention as Wintermute; full compiler verification of all imports is not claimed. Calibration provenance (2026-10-03): original umbrella observations retained verbatim: [\"EOA owner/curator operational key custody is undisclosed.\", \"Full compiler verification of the exact Arc deployment and all imported source units remains unavailable; explorer verification is partial, although its runtime bytecode matches pinned RPC.\"]. Human independence and key custody remain unverified and are priced by their dedicated control signals; financial/legal safeguards remain Backing-domain gaps. Calibration v2 (2026-10-03) reconsidered every prior removal and scoped move. Prior scoped observations retained verbatim: [\"Full compiler verification of the exact Arc deployment and all imported source units remains unavailable; explorer verification is partial, although its runtime bytecode matches pinned RPC.\"]. Genuine unknown implementation, controller authorization and unreadable execution state are retained as umbrella questions; identified-signer custody/independence is recorded per control, not asserted to be independently scored or resolved. Field re-justification: reconciliation=not-applicable concerns the bounded asset-backed native share-issuance path, not a declaration of independently audited financial reconciliation. Underlying USDC issuance/assurance remains inherited; supervision=none grants no prudential credit, and exact-vault financial assurance and statutory holder priority remain unverified in Backing evidence. Functional compiler/runtime correspondence independently reproduced on 2026-10-03 at block 24011393 for vault 0x8e357432cc12ff425c36432f312968aeb16112af. Sourcify reference runtimeMatch=match, matchId=30034094, verifiedAt=2026-05-26T22:26:25Z, solc 0.8.28+commit.7893614a, viaIR, optimizer 100000, EVM cancun. Runtime length 21808 bytes. Masked ONLY compiler-declared immutable offsets (asset AST37:6 occurrences; decimals AST39:1; virtualShares AST41:5) and the 12-byte CBOR compiler-tag tail at offset 21796 including its two-byte length trailer; every remaining executable byte exactly equals the verified reference recompiled runtime. Every immutable occurrence separately equals the exact pinned asset()/decimals()/virtualShares() getter: asset=0x3600000000000000000000000000000000000000, decimals=18, virtualShares=1000000000000. Normalized VaultV2 SHA-256=cf17ab0161388ea9277000e692e929216da2618e441c54bcd677def1000dd12e. Complete current adaptersLength()/adapters(0) census contains one mint-accounting adapter 0xee0080203a76690bca40670dfd0cd1c30fab7c2c. Its complete cited Blockscout source/import units were independently compiled with solc 0.8.28+commit.7893614a, viaIR, optimizer 100000, EVM cancun, bytecodeHash=none. Adapter runtime length 11784 bytes; only compiler-declared immutable offsets (factory AST2265, parentVault AST2267, asset AST2269, morpho AST2271, adapterId AST2273, adaptiveCurveIrm AST2275) and its 12-byte CBOR tail at offset 11772 were masked. All remaining executable bytes exactly equal independently compiled adapter runtime; all 20 immutable occurrences separately match exact pinned getters (factory=0x6c2ff5114e45b50bc7195c2f1f87c98cbdad62cc; parentVault=0x8e357432cc12ff425c36432f312968aeb16112af; asset=0x3600000000000000000000000000000000000000; morpho=0x34cd04070dd72b14e241112f6d83812df5af7fcd; adapterId=0xc4b3a1af59dbbe8bfc6f6082320273e5af05ffb400b9d39d479aa613ba5866ac; adaptiveCurveIrm=0xf02615d094fc02fc031c35fe705e175aa4653f20), with parentVault and asset also matching the reviewed vault. Normalized adapter SHA-256=355d973d7a246e5d4c02bb68e7415b9d62bf584a57f6101357b57c5d2fc40113. These proofs CLOSE the prior executable-source/mint-code identity questions under calibration v2 R4; earlier partial-verification observations are historical limitations superseded for functional runtime identity, not claims of full metadata/creation-bytecode identity or financial assurance. Closed questions retained as provenance: [\"Exact Arc VaultV2 executable source identity remains incompletely established: the explorer reports partial verification and its supplied deployed bytecode matches RPC, but equality to an independently verified compiled reference including imported source units has not been proved.\"]. Adapter correspondence was additionally independently checked against Sourcify runtimeMatch=match reference matchId=33231859, verifiedAt=2026-06-21T06:48:43Z: its recompiled executable bytes, all immutable offsets and CBOR layout exactly equal the independently compiled adapter output and both pinned target adapter normalized runtimes; normalized SHA-256=355d973d7a246e5d4c02bb68e7415b9d62bf584a57f6101357b57c5d2fc40113. The adapter proof therefore also establishes correspondence to an independently verified reference, not merely explorer-supplied onchain bytecode.",
+      "reviewer": "Refine07 compiler/runtime correspondence 2026-10-03",
+      "reviewedAt": "2026-10-03",
+      "unresolvedQuestions": [],
+      "scopedQuestions": [
+        {
+          "controlRef": "Galaxy USDC owner parameter authority",
+          "question": "Independent human control, operational key custody and signing policy of the identified Galaxy USDC owner parameter authority at arc:0x032a292de0127fdef849eff31b5b4df7e5f069c0 are not publicly established; enumerated owners/threshold or a codeless EOA do not certify these safeguards.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine07 calibration v2 2026-10-03",
+          "sources": [
+            {
+              "label": "Galaxy USDC exact vault identity and accounting",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Morpho Vault V2 mechanism documentation",
+              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+            },
+            {
+              "label": "Pinned VaultV2 primary source, gate and loss semantics",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            },
+            {
+              "label": "Pinned MorphoMarketV1AdapterV2 primary source",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+            },
+            {
+              "label": "arc fixed-block RPC observation 23952285",
+              "url": "https://rpc.mainnet.arc.io"
+            }
+          ]
+        },
+        {
+          "controlRef": "Galaxy USDC curator parameter authority",
+          "question": "Independent human control, operational key custody and signing policy of the identified Galaxy USDC curator parameter authority at arc:0xec1a7a08b538c685f5d188d81e3545d69f1b4178 are not publicly established; enumerated owners/threshold or a codeless EOA do not certify these safeguards.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine07 calibration v2 2026-10-03",
+          "sources": [
+            {
+              "label": "Galaxy USDC exact vault identity and accounting",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Morpho Vault V2 mechanism documentation",
+              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+            },
+            {
+              "label": "Pinned VaultV2 primary source, gate and loss semantics",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            },
+            {
+              "label": "Pinned MorphoMarketV1AdapterV2 primary source",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+            },
+            {
+              "label": "arc fixed-block RPC observation 23952285",
+              "url": "https://rpc.mainnet.arc.io"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

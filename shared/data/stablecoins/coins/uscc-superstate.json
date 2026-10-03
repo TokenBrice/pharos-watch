@@ -1,0 +1,42 @@
+{
+  "liveReservesConfig": {
+    "adapter": "chainlink-nav",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "uscc-superstate",
+    "display": { "url": "https://superstate.com/assets/uscc", "label": "Superstate USCC NAV oracle" },
+    "inputs": { "primary": { "kind": "onchain-evm", "chain": "ethereum", "rpcMode": "etherscan-proxy" } },
+    "params": {
+      "navScope": "native-fund-share",
+      "oracleAddress": "0xAfFd8F5578E8590665de561bdE9E7BAdb99300d9",
+      "tokenAddress": "0x14d60e7fdc0d71d8611742720e4c50e7a974020c",
+      "sourceKey": "chainlink-nav:token:0x14d60e7fdc0d71d8611742720e4c50e7a974020c",
+      "assetLabel": "Bitwise Crypto Carry Fund share exposure",
+      "assetRisk": "high"
+    }
+  },
+  "id": "uscc-superstate",
+  "name": "Bitwise Crypto Carry Fund",
+  "symbol": "USCC",
+  "oneLiner": "USCC is Bitwise's crypto carry fund share, earning basis and staking income with market-day USD or USDC redemption through Superstate.",
+  "flags": {"backing": "crypto-backed", "governance": "centralized", "yieldBearing": true, "navToken": true},
+  "mechanismArchetype": "synthetic-delta-neutral",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved", "reviewedAt": "2026-10-02", "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rationale": "USCC is a direct NAV-accreting fund share issued by a Delaware statutory-trust series. Its cash-and-carry strategy combines crypto spot and staking positions with short derivatives and Treasury exposure. This supports the synthetic-delta-neutral archetype; navToken independently establishes cash-equivalent listing class under the listing-policy precedence rules, without classifying the fund as a Treasury-only book.",
+    "sources": [{"label": "Bitwise USCC investor terms", "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc"}, {"label": "USCC fund and dated holdings", "url": "https://superstate.com/assets/uscc"}]
+  },
+  "collateral": "Managed crypto cash-and-carry portfolio including BTC, ETH, SOL staking and XRP spot exposure, CME/Coinbase derivatives, USD collateral and USTB fund shares. Published holdings include signed derivative marks and negative USDC balances, not a Treasury-only reserve basket.",
+  "pegMechanism": "NAV-accreting fund share, not a $1 peg. NAV is assets less liabilities divided by shares, marked each business day using crypto and futures closes, staking conversion rates and dealer OTC marks. Qualified Purchasers with allowlisted wallets redeem through Superstate for USD or USDC; requests before 5pm ET settle T+1 and later requests T+2.",
+  "detailProvider": "coingecko",
+  "geckoId": "superstate-uscc",
+  "launchDate": "2024-07-09",
+  "proofOfReserves": {"type": "independent-audit", "url": "https://superstate.com/assets/uscc", "provider": "Ernst & Young LLP is the named fund auditor; public holdings are unaudited and no signed current scoped financial report or token-to-share reconciliation was retrieved.", "attestorTier": "big4", "cadence": "undisclosed", "attestorJurisdiction": "United States"},
+  "links": [{"label": "Website", "url": "https://superstate.com/assets/uscc"}, {"label": "Investor terms", "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc"}, {"label": "Smart contracts", "url": "https://docs.superstate.com/investors/smart-contracts"}, {"label": "USCC Ethereum token creation, 9 July 2024, block 20270220", "url": "https://eth.blockscout.com/tx/0xbe8d18baf6aa7b9c40d8e099bbb44ef50ce83ba955589a4993127ed0434aabb1"}],
+  "jurisdiction": {"country": "United States", "license": "Delaware Statutory Trust series; fund access restricted to Qualified Purchasers in supported jurisdictions"},
+  "contracts": [{"chain": "ethereum", "address": "0x14d60e7fdc0d71d8611742720e4c50e7a974020c", "decimals": 6}, {"chain": "plume", "address": "0x4c21b7577c8fe8b0b0669165ee7c8f67fa1454cf", "decimals": 6}, {"chain": "solana", "address": "BTRR3sj1Bn2ZjuemgbeQ6SCtf84iXS81CS7UDTSxUCaK", "decimals": 6}],
+  "collateralQuality": "exotic",
+  "custodyModel": "unknown",
+  "governanceQuality": "single-entity",
+  "yieldConfig": {"yieldSource": "Bitwise crypto basis, carry and staking strategy", "yieldType": "nav-appreciation"}
+}

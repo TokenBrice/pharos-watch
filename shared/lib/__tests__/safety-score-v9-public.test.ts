@@ -341,6 +341,38 @@ describe("Safety Score v9 public projection", () => {
     ]]);
     expect(resolveCauseGapId(decoded, card, facts[0]![2]!)).toBe(gapId);
   });
+  it("remaps separately admitted foreign gaps to the shared publication authority", () => {
+    const results = ([["alpha", "parent-z:gap:mint"], ["beta", "parent-a:gap:mint"]] as const).map(([assetId, gapId]) => {
+      const input = fixture(assetId, { score: 91.8, grade: "A+" });
+      input.trace.unresolvedFacts = [{
+        code: "unresolved-control-identity", path: `control:mint:cause:${gapId}`,
+        reason: "Mint authority is unresolved.", critical: false, responsibility: "unresearched",
+        sourceGapId: gapId, cause: "U", causeGapIds: [gapId], scoringDisposition: "bounded-uncertainty",
+      }];
+      return input;
+    });
+    const response = buildSafetyScoreV9Response({
+      candidateId: "safety-score-v9:v1:foreign-gap-test", policyVersion: "9.0",
+      publicationGenerationId: "report-cards:v9:v1:foreign-gap-test",
+      publishedAtSec: 1_001, results,
+    });
+    expect(response.foreignCauseGaps).toEqual(["parent-a:gap:mint", "parent-z:gap:mint"]);
+    expect(response.cards.map((card) => card.foreignCauseGapRefs)).toEqual([[1], [0]]);
+    const resolved = response.cards.map((card) => {
+      const [fact] = [...iterateEvidenceResponsibilityFacts(card.scoreTrace.evidenceResponsibility)];
+      return resolveCauseGapId(response, card, fact![2]!);
+    });
+    expect(resolved).toEqual(["parent-z:gap:mint", "parent-a:gap:mint"]);
+  });
+
+  it("keeps the publication clock boundary after individual card admission", () => {
+    expect(() => buildSafetyScoreV9Response({
+      candidateId: "safety-score-v9:v1:clock-test", policyVersion: "9.0",
+      publicationGenerationId: "report-cards:v9:v1:clock-test", publishedAtSec: 999,
+      results: [fixture("alpha", { score: 91.8, grade: "A+" })],
+    })).toThrow("Publication cannot predate evidence");
+  });
+
   it("keeps a pipeline gap distinct from NR while retaining the surviving diagnostic pillar", () => {
     const card = projectSafetyScoreV9Card(fixture("pipeline-gap", {
       score: null, grade: null, pillars: { backing: null, exit: null, control: 94 },

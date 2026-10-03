@@ -85,6 +85,9 @@ describe("syncFxRates", () => {
     expect(cachedRates.peggedVND).toBe(1 / 26_000);
     expect(cachedRates.peggedIDR).toBe(1 / 15_800);
     expect(cachedRates.peggedCOP).toBe(1 / 3_200);
+    expect(cachedRates.peggedCZK).toBe(1 / 21.8);
+    expect(cachedRates.peggedPLN).toBe(1 / 3.8998);
+    expect(cachedRates.peggedAED).toBe(1 / 3.6725);
     expect(cachedRates.peggedRUB).toBeUndefined();
     expect(findCacheWrite(db, "cron:event:sync-fx-rates:hardcoded-rate-used")).toBeUndefined();
 
@@ -103,6 +106,10 @@ describe("syncFxRates", () => {
     expect(cachedMeta.sourceCadenceByPeg.peggedCNH).toBe("calendar-daily");
     expect(cachedMeta.sourceDateByPeg.peggedEUR).toBe("2025-06-15");
     expect(cachedMeta.sourceDateByPeg.peggedCNH).toBe("2025-06-15");
+    expect(cachedMeta.sourceCadenceByPeg.peggedCZK).toBe("business-daily");
+    expect(cachedMeta.sourceCadenceByPeg.peggedPLN).toBe("business-daily");
+    expect(cachedMeta.sourceCadenceByPeg.peggedAED).toBe("calendar-daily");
+    expect(cachedMeta.sourceDateByPeg.peggedAED).toBe("2025-06-15");
   });
   it.each([
     ["fx-rates", "fx-rates-meta"],
@@ -263,6 +270,7 @@ describe("syncFxRates", () => {
             eur: 0.93, gbp: 0.8, chf: 0.88, brl: 5.01, jpy: 149.8, idr: 15810, sgd: 1.35, try: 36.1,
             aud: 1.56, zar: 18.4, cad: 1.38, cny: 7.26, php: 56.1, mxn: 17.3, cnh: 7.31, rub: 90.5, uah: 41.2, ars: 1401, kgs: 87.1, ngn: 1371, xof: 561,
             myr: 4.51, krw: 1382, hkd: 7.82, inr: 85.6, vnd: 25000, kes: 129.1, ghs: 11.7, cop: 3201, clp: 951, pen: 3.41,
+            czk: 21.9, pln: 3.91, aed: 3.6725,
           },
         },
       },
@@ -273,6 +281,7 @@ describe("syncFxRates", () => {
             eur: 0.925, gbp: 0.79, chf: 0.88, brl: 5.0, jpy: 149.5, idr: 15800, sgd: 1.35, try: 36,
             aud: 1.55, zar: 18.3, cad: 1.37, cny: 7.25, php: 56, mxn: 17.2, cnh: 7.28, rub: 90, uah: 41, ars: 1400, kgs: 87, ngn: 1370, xof: 560,
             myr: 4.5, krw: 1380, hkd: 7.81, inr: 85.5, vnd: 25000, kes: 129, ghs: 11.6, cop: 3200, clp: 950, pen: 3.4,
+            czk: 21.8, pln: 3.8998, aed: 3.6725,
           },
         },
       },
@@ -364,6 +373,7 @@ describe("syncFxRates", () => {
             EUR: 0.925, GBP: 0.79, CHF: 0.88, BRL: 5.0, JPY: 149.5, IDR: 15800, SGD: 1.35, TRY: 36,
             AUD: 1.55, ZAR: 18.3, CAD: 1.37, CNY: 7.25, PHP: 56, MXN: 17.2, CNH: 7.28, RUB: 90, UAH: 41, ARS: 1400, KGS: 87, NGN: 1370, XOF: 560,
             MYR: 4.5, KRW: 1380, HKD: 7.81, INR: 85.5, VND: 25000, KES: 129, GHS: 11.6, COP: 3200, CLP: 950, PEN: 3.4,
+            CZK: 21.8, PLN: 3.8998, AED: 3.6725,
           },
         },
       },
@@ -409,6 +419,7 @@ describe("syncFxRates", () => {
             AUD: 1.55, ZAR: 18.3, CAD: 1.37, CNY: 7.25, PHP: 56, MXN: 17.2, CNH: 7.28, RUB: 90,
             UAH: 41, ARS: 1400, KGS: 87, NGN: 1370, XOF: 560, MYR: 4.5, KRW: 1380, HKD: 7.81,
             INR: 85.5, VND: 25000, KES: 129, GHS: 11.6, COP: 3200, CLP: 950, PEN: 3.4,
+            CZK: 21.8, PLN: 3.8998, AED: 3.6725,
           },
         },
       },
@@ -447,11 +458,16 @@ describe("syncFxRates", () => {
     }));
 
     const fullPrevRates = makeCompleteFxRates();
-    const calendarDailyPegs = new Set(["peggedCNH", "peggedRUB", "peggedUAH", "peggedARS", "peggedKGS", "peggedNGN", "peggedXOF", "peggedVND", "peggedKES", "peggedGHS", "peggedCOP", "peggedCLP", "peggedPEN"]);
+    const calendarDailyPegs: Record<string, true> = {
+      peggedCNH: true, peggedRUB: true, peggedUAH: true, peggedARS: true,
+      peggedKGS: true, peggedNGN: true, peggedXOF: true, peggedVND: true,
+      peggedKES: true, peggedGHS: true, peggedCOP: true, peggedCLP: true,
+      peggedPEN: true, peggedAED: true,
+    };
     const sourceUpdatedAtByPeg = Object.fromEntries(
       Object.keys(fullPrevRates).map((pegKey) => [
         pegKey,
-        calendarDailyPegs.has(pegKey)
+        calendarDailyPegs[pegKey]
           ? Math.floor(Date.parse("2025-06-15T00:02:31Z") / 1000)
           : Math.floor(Date.parse("2025-06-13T16:00:00Z") / 1000),
       ]),
@@ -459,13 +475,13 @@ describe("syncFxRates", () => {
     const sourceCadenceByPeg = Object.fromEntries(
       Object.keys(fullPrevRates).map((pegKey) => [
         pegKey,
-        calendarDailyPegs.has(pegKey) ? "calendar-daily" : "business-daily",
+        calendarDailyPegs[pegKey] ? "calendar-daily" : "business-daily",
       ]),
     );
     const sourceDateByPeg = Object.fromEntries(
       Object.keys(fullPrevRates).map((pegKey) => [
         pegKey,
-        calendarDailyPegs.has(pegKey) ? "2025-06-15" : "2025-06-13",
+        calendarDailyPegs[pegKey] ? "2025-06-15" : "2025-06-13",
       ]),
     );
     const sourceModeByPeg = Object.fromEntries(
@@ -506,20 +522,32 @@ describe("syncFxRates", () => {
     expect(cachedMeta.consecutiveFallbackRuns).toBe(0);
   });
 
-  it("uses secondary API for CNH/RUB/UAH/ARS/KGS/NGN/XOF/KES/GHS/COP/CLP/PEN rates", async () => {
+  it("uses secondary API for non-ECB fiat rates including AED", async () => {
     mockFetch(fxMirrors({
       secondary: {
-        body: secondaryBody({ kes: 129, ghs: 11.6, cop: 3200, clp: 950, pen: 3.4 }, { date: null }),
+        body: secondaryBody({ kes: 129, ghs: 11.6, cop: 3200, clp: 950, pen: 3.4, aed: 3.672 }, { date: null }),
       },
     }));
 
     const db = makeFxRatesDb();
 
-    const result = await syncFxRates(db);
-    const metadata = JSON.parse(result.metadata ?? "{}");
-    // Should include gold and silver prices
-    expect(metadata.rateCount).toBeGreaterThanOrEqual(20);
-    expect(metadata.secondaryCoverage).toBe(12);
+    await syncFxRates(db);
+    const cachedRates = JSON.parse(String(findCacheWrite(db, "fx-rates")?.binds[1] ?? "{}"));
+    expect(cachedRates.peggedAED).toBe(1 / 3.672);
+  });
+
+  it("does not synthesize an AED reference when live providers cannot supply a valid dirham quote", async () => {
+    mockFetch(fxMirrors({
+      secondary: { body: secondaryBody({ aed: 0 }) },
+      exchangeRate: "unavailable",
+    }));
+    const db = makeFxRatesDb();
+    await syncFxRates(db);
+
+    const cachedRates = JSON.parse(String(findCacheWrite(db, "fx-rates")?.binds[1] ?? "{}"));
+    expect(cachedRates.peggedCZK).toBe(1 / 21.8);
+    expect(cachedRates.peggedPLN).toBe(1 / 3.8998);
+    expect(cachedRates.peggedAED).toBeUndefined();
   });
 
   it("prefers the fresher secondary FX mirror when the CDN payload lags a day behind", async () => {
@@ -708,6 +736,7 @@ describe("syncFxRates", () => {
             EUR: 0.925, GBP: 0.79, CHF: 0.88, BRL: 5.0, JPY: 149.5, IDR: 15800, SGD: 1.35, TRY: 36,
             AUD: 1.55, ZAR: 18.3, CAD: 1.37, CNY: 7.25, CNH: 7.28, PHP: 56, MXN: 17.2, RUB: 90, UAH: 41, ARS: 1400, KGS: 87, NGN: 1370, XOF: 560,
             MYR: 4.5, KRW: 1380, HKD: 7.81, INR: 85.5, VND: 25000, KES: 129, GHS: 11.6, COP: 3200, CLP: 950, PEN: 3.4,
+            CZK: 21.8, PLN: 3.8998, AED: 3.6725,
           },
         },
       },
@@ -752,6 +781,7 @@ describe("syncFxRates", () => {
     const fullPrevRates = makeCompleteFxRates({}, [
       "peggedMYR", "peggedKRW", "peggedHKD", "peggedINR", "peggedVND",
       "peggedKES", "peggedGHS", "peggedCOP", "peggedCLP", "peggedPEN",
+      "peggedCZK", "peggedPLN", "peggedAED",
     ]);
     const staleUpdatedAt = Math.floor(Date.parse("2025-06-12T12:00:00Z") / 1000);
     const oxrObservedAt = Math.floor(Date.now() / 1000) - 600;

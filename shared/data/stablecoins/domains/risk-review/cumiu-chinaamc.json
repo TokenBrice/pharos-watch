@@ -1,0 +1,66 @@
+{
+  "id": "cumiu-chinaamc",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Verified transfer-control implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x37686928ddf77be20fc4199f03f0638d90d9907e"
+      },
+      {
+        "label": "ChinaAMC September 2026 prospectus",
+        "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/E-CleanProspectus-ChinaAMCDigitalOFC-CN(September2026)_1789336483417.pdf"
+      }
+    ],
+    "evidence": "CMTAT ENFORCER freezes and unfreezes individual accounts, PAUSER halts transfers and the rule engine restricts transfers. DEFAULT_ADMIN holds all roles. Legal KFS also forbids peer-to-peer trading and permits record correction.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "Issuer MINTER sets CUMIU NAV; at block 26107703 latestNAV 1045891 divided by NAVScalingFactor 10000 equals USD 104.5891. This is administered fund NAV, not an independent oracle.",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Verified NAV or reserve-feed source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x37686928ddf77be20fc4199f03f0638d90d9907e"
+      },
+      {
+        "label": "ChinaAMC September 2026 prospectus",
+        "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/E-CleanProspectus-ChinaAMCDigitalOFC-CN(September2026)_1789336483417.pdf"
+      }
+    ],
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "rationale": "Administered NAV/reserve-feed pricing authority applies to fund/share issuance or rebase; no borrower collateral/liquidation branches exist.",
+      "sources": [
+        {
+          "label": "Deployed valuation and mint implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x37686928ddf77be20fc4199f03f0638d90d9907e"
+        }
+      ]
+    },
+    "paths": [
+      {
+        "id": "ethereum:0x85d38585c3ac08268f598282a84b7c0ddfc0d04f",
+        "chain": "ethereum",
+        "address": "0x85d38585c3ac08268f598282a84b7c0ddfc0d04f",
+        "pricingAuthority": "internal-price",
+        "applicability": {
+          "disposition": "top-level-only",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine04 deployed source review",
+          "confidence": "verified",
+          "rationale": "This exact native fund-share implementation exposes privileged NAV publication under MINTER_ROLE (also inherited by DEFAULT_ADMIN). It contains no borrower-vault or collateral-liquidation branch. Publishing NAV is not reserve reconciliation.",
+          "sources": [{"label": "Exact deployed NAV and mint implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x37686928ddf77be20fc4199f03f0638d90d9907e"}]
+        }
+      }
+    ]
+  }
+}

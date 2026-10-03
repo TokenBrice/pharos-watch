@@ -192,7 +192,7 @@ describe("buildTrackedIdSet", () => {
     expect(allVariants.has("iusd-initia")).toBe(true);
     expect(allVariants.has("usds-sky")).toBe(false);
     expect(allVariants.has("ctusd-citrea")).toBe(true);
-    expect(allVariants.size).toBe(56);
+    expect(allVariants.size).toBe(98);
 
     const strategy = buildTrackedIdSet(["variant-strategy-vault"]);
     expect(strategy).toEqual(
@@ -224,6 +224,38 @@ describe("buildTrackedIdSet", () => {
         "yvusdc-yearn",
         "ybold-yearn",
         "yusd-yieldfi",
+        "skymoneyusdtsavings-sky",
+        "sparkusdtbc-spark",
+        "krusdc-keyrock",
+        "arcusdc-galaxy",
+        "armusdcs-wintermute",
+        "pendleusdc-pendle",
+        "earnusd-lido",
+        "hyperusdca-hyperithm",
+        "bbqusdc-steakhouse-v2",
+        "cscbusdc-clearstar",
+        "steakcusdc-steakhouse",
+        "ethenausdc-steakhouse",
+        "sparkusdc-spark",
+        "skymoneyusdsflagship-sky",
+        "senpyusdmain-sentora",
+        "senpyusdprimev2-sentora",
+        "senpyusdpst-sentora",
+        "senpyusdmwin-sentora",
+        "steakusdg-steakhouse",
+        "syrupusdg-maple",
+        "senrlusdv2-sentora",
+        "sxsrlusd-sentora",
+        "steakeurcv-steakhouse",
+        "susdat-saturn",
+        "xgld-unitas",
+        "kpkusdcprime-kpk",
+        "sirloinusdc-steakhouse",
+        "kpkusdcyield-kpk",
+        "gusdcq-galaxy",
+        "senpathusd-sentora",
+        "gusdtq-galaxy",
+        "gtusdtp-gauntlet",
       ]),
     );
 

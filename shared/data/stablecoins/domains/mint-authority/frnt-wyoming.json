@@ -1,0 +1,1143 @@
+{
+  "id": "frnt-wyoming",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciliation-unknown",
+    "confidence": "manual-review",
+    "summary": "Commission-operated role holders can mint native liabilities on seven EVM-compatible deployments, including Hedera, and through the Solana Token-2022 mint authority. UUPS upgraders can replace EVM issuance rules. Fireblocks HSM custody is disclosed, but full live membership and signing independence are not verified.",
+    "upgradeability": {
+      "model": "uups",
+      "deploymentRefs": [
+        "ethereum:0x5e817f2abccb9095585d26c2a3ce234a440574fc",
+        "avalanche:0x5e817f2abccb9095585d26c2a3ce234a440574fc",
+        "base:0x5e817f2abccb9095585d26c2a3ce234a440574fc",
+        "polygon:0x5e817f2abccb9095585d26c2a3ce234a440574fc",
+        "arbitrum:0x5e817f2abccb9095585d26c2a3ce234a440574fc",
+        "optimism:0x5e817f2abccb9095585d26c2a3ce234a440574fc",
+        "hedera:0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+      ],
+      "proxyAddresses": [
+        "0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+      ],
+      "implementationAddresses": [
+        "0x87b589879ab3e22de54c980396bd944ac2b5dc6c"
+      ],
+      "adminAddresses": [
+        "0x7f6cc8151ac948429911dab959d9e305501079ba"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "FRNT ethereum UUPS upgrader",
+      "observedAt": "2026-10-02",
+      "sources": [
+        {
+          "label": "Commission current technology and Fireblocks HSM disclosure",
+          "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+        },
+        {
+          "label": "Frontier role-gated mint, recovery and upgrade source",
+          "url": "https://raw.githubusercontent.com/wyostable/frontier-stable-token/main/contracts/fireblocks/ERC20F.sol"
+        },
+        {
+          "label": "Frontier implementation on Ethereum",
+          "url": "https://etherscan.io/address/0x87b589879ab3e22de54c980396bd944ac2b5dc6c#code"
+        },
+        {
+          "label": "Frontier holder trust and reserve rules",
+          "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x83465b1bac70dc63c0d6b72e9f012af4a1e7138a",
+        "deploymentRefs": [
+          "ethereum:0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+        ],
+        "label": "FRNT ethereum native minter",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "keyCustodyAttestation": {
+          "kind": "hsm",
+          "sources": [
+            {
+              "label": "Commission current technology and Fireblocks HSM disclosure",
+              "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+            }
+          ]
+        },
+        "failureDomainKeys": [
+          "issuer-backend:frnt-wyoming:commission"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107704,
+        "sources": [
+          {
+            "label": "ethereum exact deployment",
+            "url": "https://etherscan.io/address/0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+          },
+          {
+            "label": "Commission current technology and Fireblocks HSM disclosure",
+            "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+          },
+          {
+            "label": "Frontier role-gated mint, recovery and upgrade source",
+            "url": "https://raw.githubusercontent.com/wyostable/frontier-stable-token/main/contracts/fireblocks/ERC20F.sol"
+          },
+          {
+            "label": "Frontier implementation on Ethereum",
+            "url": "https://etherscan.io/address/0x87b589879ab3e22de54c980396bd944ac2b5dc6c#code"
+          },
+          {
+            "label": "Frontier holder trust and reserve rules",
+            "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
+          }
+        ],
+        "evidence": "At ethereum block 26107704, hasRole confirms this native minter membership. The implementation slot remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c. ERC20F mint has no reserve-value check and UUPS authorization is UPGRADER_ROLE without a built-in execution delay. This does not prove complete membership or signing independence."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x5e3372f9a1c04e789ef86df9ec35f87e000bb15b",
+        "deploymentRefs": [
+          "ethereum:0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+        ],
+        "label": "FRNT ethereum role administrator",
+        "role": "minter-admin",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "can-authorize",
+        "keyCustodyAttestation": {
+          "kind": "hsm",
+          "sources": [
+            {
+              "label": "Commission current technology and Fireblocks HSM disclosure",
+              "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+            }
+          ]
+        },
+        "failureDomainKeys": [
+          "issuer-backend:frnt-wyoming:commission"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107704,
+        "sources": [
+          {
+            "label": "ethereum exact deployment",
+            "url": "https://etherscan.io/address/0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+          },
+          {
+            "label": "Commission current technology and Fireblocks HSM disclosure",
+            "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+          },
+          {
+            "label": "Frontier role-gated mint, recovery and upgrade source",
+            "url": "https://raw.githubusercontent.com/wyostable/frontier-stable-token/main/contracts/fireblocks/ERC20F.sol"
+          },
+          {
+            "label": "Frontier implementation on Ethereum",
+            "url": "https://etherscan.io/address/0x87b589879ab3e22de54c980396bd944ac2b5dc6c#code"
+          },
+          {
+            "label": "Frontier holder trust and reserve rules",
+            "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
+          }
+        ],
+        "evidence": "At ethereum block 26107704, hasRole confirms this role administrator membership. The implementation slot remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c. ERC20F mint has no reserve-value check and UUPS authorization is UPGRADER_ROLE without a built-in execution delay. This does not prove complete membership or signing independence."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x7f6cc8151ac948429911dab959d9e305501079ba",
+        "deploymentRefs": [
+          "ethereum:0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+        ],
+        "label": "FRNT ethereum UUPS upgrader",
+        "role": "proxy-admin",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "upgrade-only",
+        "keyCustodyAttestation": {
+          "kind": "hsm",
+          "sources": [
+            {
+              "label": "Commission current technology and Fireblocks HSM disclosure",
+              "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+            }
+          ]
+        },
+        "failureDomainKeys": [
+          "issuer-backend:frnt-wyoming:commission"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107704,
+        "sources": [
+          {
+            "label": "ethereum exact deployment",
+            "url": "https://etherscan.io/address/0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+          },
+          {
+            "label": "Commission current technology and Fireblocks HSM disclosure",
+            "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+          },
+          {
+            "label": "Frontier role-gated mint, recovery and upgrade source",
+            "url": "https://raw.githubusercontent.com/wyostable/frontier-stable-token/main/contracts/fireblocks/ERC20F.sol"
+          },
+          {
+            "label": "Frontier implementation on Ethereum",
+            "url": "https://etherscan.io/address/0x87b589879ab3e22de54c980396bd944ac2b5dc6c#code"
+          },
+          {
+            "label": "Frontier holder trust and reserve rules",
+            "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
+          }
+        ],
+        "evidence": "At ethereum block 26107704, hasRole confirms this UUPS upgrader membership. The implementation slot remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c. ERC20F mint has no reserve-value check and UUPS authorization is UPGRADER_ROLE without a built-in execution delay. This does not prove complete membership or signing independence."
+      },
+      {
+        "chain": "avalanche",
+        "address": "0x83465b1bac70dc63c0d6b72e9f012af4a1e7138a",
+        "deploymentRefs": [
+          "avalanche:0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+        ],
+        "label": "FRNT avalanche native minter",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "keyCustodyAttestation": {
+          "kind": "hsm",
+          "sources": [
+            {
+              "label": "Commission current technology and Fireblocks HSM disclosure",
+              "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+            }
+          ]
+        },
+        "failureDomainKeys": [
+          "issuer-backend:frnt-wyoming:commission"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 96633151,
+        "sources": [
+          {
+            "label": "avalanche exact deployment",
+            "url": "https://snowscan.xyz/address/0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+          },
+          {
+            "label": "Commission current technology and Fireblocks HSM disclosure",
+            "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+          },
+          {
+            "label": "Frontier role-gated mint, recovery and upgrade source",
+            "url": "https://raw.githubusercontent.com/wyostable/frontier-stable-token/main/contracts/fireblocks/ERC20F.sol"
+          },
+          {
+            "label": "Frontier implementation on Ethereum",
+            "url": "https://etherscan.io/address/0x87b589879ab3e22de54c980396bd944ac2b5dc6c#code"
+          },
+          {
+            "label": "Frontier holder trust and reserve rules",
+            "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
+          }
+        ],
+        "evidence": "At avalanche block 96633151, hasRole confirms this native minter membership. The implementation slot remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c. ERC20F mint has no reserve-value check and UUPS authorization is UPGRADER_ROLE without a built-in execution delay. This does not prove complete membership or signing independence."
+      },
+      {
+        "chain": "avalanche",
+        "address": "0x5e3372f9a1c04e789ef86df9ec35f87e000bb15b",
+        "deploymentRefs": [
+          "avalanche:0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+        ],
+        "label": "FRNT avalanche role administrator",
+        "role": "minter-admin",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "can-authorize",
+        "keyCustodyAttestation": {
+          "kind": "hsm",
+          "sources": [
+            {
+              "label": "Commission current technology and Fireblocks HSM disclosure",
+              "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+            }
+          ]
+        },
+        "failureDomainKeys": [
+          "issuer-backend:frnt-wyoming:commission"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 96633151,
+        "sources": [
+          {
+            "label": "avalanche exact deployment",
+            "url": "https://snowscan.xyz/address/0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+          },
+          {
+            "label": "Commission current technology and Fireblocks HSM disclosure",
+            "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+          },
+          {
+            "label": "Frontier role-gated mint, recovery and upgrade source",
+            "url": "https://raw.githubusercontent.com/wyostable/frontier-stable-token/main/contracts/fireblocks/ERC20F.sol"
+          },
+          {
+            "label": "Frontier implementation on Ethereum",
+            "url": "https://etherscan.io/address/0x87b589879ab3e22de54c980396bd944ac2b5dc6c#code"
+          },
+          {
+            "label": "Frontier holder trust and reserve rules",
+            "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
+          }
+        ],
+        "evidence": "At avalanche block 96633151, hasRole confirms this role administrator membership. The implementation slot remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c. ERC20F mint has no reserve-value check and UUPS authorization is UPGRADER_ROLE without a built-in execution delay. This does not prove complete membership or signing independence."
+      },
+      {
+        "chain": "avalanche",
+        "address": "0x7f6cc8151ac948429911dab959d9e305501079ba",
+        "deploymentRefs": [
+          "avalanche:0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+        ],
+        "label": "FRNT avalanche UUPS upgrader",
+        "role": "proxy-admin",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "upgrade-only",
+        "keyCustodyAttestation": {
+          "kind": "hsm",
+          "sources": [
+            {
+              "label": "Commission current technology and Fireblocks HSM disclosure",
+              "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+            }
+          ]
+        },
+        "failureDomainKeys": [
+          "issuer-backend:frnt-wyoming:commission"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 96633151,
+        "sources": [
+          {
+            "label": "avalanche exact deployment",
+            "url": "https://snowscan.xyz/address/0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+          },
+          {
+            "label": "Commission current technology and Fireblocks HSM disclosure",
+            "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+          },
+          {
+            "label": "Frontier role-gated mint, recovery and upgrade source",
+            "url": "https://raw.githubusercontent.com/wyostable/frontier-stable-token/main/contracts/fireblocks/ERC20F.sol"
+          },
+          {
+            "label": "Frontier implementation on Ethereum",
+            "url": "https://etherscan.io/address/0x87b589879ab3e22de54c980396bd944ac2b5dc6c#code"
+          },
+          {
+            "label": "Frontier holder trust and reserve rules",
+            "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
+          }
+        ],
+        "evidence": "At avalanche block 96633151, hasRole confirms this UUPS upgrader membership. The implementation slot remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c. ERC20F mint has no reserve-value check and UUPS authorization is UPGRADER_ROLE without a built-in execution delay. This does not prove complete membership or signing independence."
+      },
+      {
+        "chain": "base",
+        "address": "0x83465b1bac70dc63c0d6b72e9f012af4a1e7138a",
+        "deploymentRefs": [
+          "base:0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+        ],
+        "label": "FRNT base native minter",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "keyCustodyAttestation": {
+          "kind": "hsm",
+          "sources": [
+            {
+              "label": "Commission current technology and Fireblocks HSM disclosure",
+              "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+            }
+          ]
+        },
+        "failureDomainKeys": [
+          "issuer-backend:frnt-wyoming:commission"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 52095853,
+        "sources": [
+          {
+            "label": "base exact deployment",
+            "url": "https://basescan.org/address/0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+          },
+          {
+            "label": "Commission current technology and Fireblocks HSM disclosure",
+            "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+          },
+          {
+            "label": "Frontier role-gated mint, recovery and upgrade source",
+            "url": "https://raw.githubusercontent.com/wyostable/frontier-stable-token/main/contracts/fireblocks/ERC20F.sol"
+          },
+          {
+            "label": "Frontier implementation on Ethereum",
+            "url": "https://etherscan.io/address/0x87b589879ab3e22de54c980396bd944ac2b5dc6c#code"
+          },
+          {
+            "label": "Frontier holder trust and reserve rules",
+            "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
+          }
+        ],
+        "evidence": "At base block 52095853, hasRole confirms this native minter membership. The implementation slot remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c. ERC20F mint has no reserve-value check and UUPS authorization is UPGRADER_ROLE without a built-in execution delay. This does not prove complete membership or signing independence."
+      },
+      {
+        "chain": "base",
+        "address": "0x5e3372f9a1c04e789ef86df9ec35f87e000bb15b",
+        "deploymentRefs": [
+          "base:0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+        ],
+        "label": "FRNT base role administrator",
+        "role": "minter-admin",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "can-authorize",
+        "keyCustodyAttestation": {
+          "kind": "hsm",
+          "sources": [
+            {
+              "label": "Commission current technology and Fireblocks HSM disclosure",
+              "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+            }
+          ]
+        },
+        "failureDomainKeys": [
+          "issuer-backend:frnt-wyoming:commission"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 52095853,
+        "sources": [
+          {
+            "label": "base exact deployment",
+            "url": "https://basescan.org/address/0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+          },
+          {
+            "label": "Commission current technology and Fireblocks HSM disclosure",
+            "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+          },
+          {
+            "label": "Frontier role-gated mint, recovery and upgrade source",
+            "url": "https://raw.githubusercontent.com/wyostable/frontier-stable-token/main/contracts/fireblocks/ERC20F.sol"
+          },
+          {
+            "label": "Frontier implementation on Ethereum",
+            "url": "https://etherscan.io/address/0x87b589879ab3e22de54c980396bd944ac2b5dc6c#code"
+          },
+          {
+            "label": "Frontier holder trust and reserve rules",
+            "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
+          }
+        ],
+        "evidence": "At base block 52095853, hasRole confirms this role administrator membership. The implementation slot remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c. ERC20F mint has no reserve-value check and UUPS authorization is UPGRADER_ROLE without a built-in execution delay. This does not prove complete membership or signing independence."
+      },
+      {
+        "chain": "base",
+        "address": "0x7f6cc8151ac948429911dab959d9e305501079ba",
+        "deploymentRefs": [
+          "base:0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+        ],
+        "label": "FRNT base UUPS upgrader",
+        "role": "proxy-admin",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "upgrade-only",
+        "keyCustodyAttestation": {
+          "kind": "hsm",
+          "sources": [
+            {
+              "label": "Commission current technology and Fireblocks HSM disclosure",
+              "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+            }
+          ]
+        },
+        "failureDomainKeys": [
+          "issuer-backend:frnt-wyoming:commission"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 52095853,
+        "sources": [
+          {
+            "label": "base exact deployment",
+            "url": "https://basescan.org/address/0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+          },
+          {
+            "label": "Commission current technology and Fireblocks HSM disclosure",
+            "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+          },
+          {
+            "label": "Frontier role-gated mint, recovery and upgrade source",
+            "url": "https://raw.githubusercontent.com/wyostable/frontier-stable-token/main/contracts/fireblocks/ERC20F.sol"
+          },
+          {
+            "label": "Frontier implementation on Ethereum",
+            "url": "https://etherscan.io/address/0x87b589879ab3e22de54c980396bd944ac2b5dc6c#code"
+          },
+          {
+            "label": "Frontier holder trust and reserve rules",
+            "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
+          }
+        ],
+        "evidence": "At base block 52095853, hasRole confirms this UUPS upgrader membership. The implementation slot remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c. ERC20F mint has no reserve-value check and UUPS authorization is UPGRADER_ROLE without a built-in execution delay. This does not prove complete membership or signing independence."
+      },
+      {
+        "chain": "polygon",
+        "address": "0x83465b1bac70dc63c0d6b72e9f012af4a1e7138a",
+        "deploymentRefs": [
+          "polygon:0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+        ],
+        "label": "FRNT polygon native minter",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "keyCustodyAttestation": {
+          "kind": "hsm",
+          "sources": [
+            {
+              "label": "Commission current technology and Fireblocks HSM disclosure",
+              "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+            }
+          ]
+        },
+        "failureDomainKeys": [
+          "issuer-backend:frnt-wyoming:commission"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 94850610,
+        "sources": [
+          {
+            "label": "polygon exact deployment",
+            "url": "https://polygonscan.com/address/0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+          },
+          {
+            "label": "Commission current technology and Fireblocks HSM disclosure",
+            "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+          },
+          {
+            "label": "Frontier role-gated mint, recovery and upgrade source",
+            "url": "https://raw.githubusercontent.com/wyostable/frontier-stable-token/main/contracts/fireblocks/ERC20F.sol"
+          },
+          {
+            "label": "Frontier implementation on Ethereum",
+            "url": "https://etherscan.io/address/0x87b589879ab3e22de54c980396bd944ac2b5dc6c#code"
+          },
+          {
+            "label": "Frontier holder trust and reserve rules",
+            "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
+          }
+        ],
+        "evidence": "At polygon block 94850610, hasRole confirms this native minter membership. The implementation slot remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c. ERC20F mint has no reserve-value check and UUPS authorization is UPGRADER_ROLE without a built-in execution delay. This does not prove complete membership or signing independence."
+      },
+      {
+        "chain": "polygon",
+        "address": "0x5e3372f9a1c04e789ef86df9ec35f87e000bb15b",
+        "deploymentRefs": [
+          "polygon:0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+        ],
+        "label": "FRNT polygon role administrator",
+        "role": "minter-admin",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "can-authorize",
+        "keyCustodyAttestation": {
+          "kind": "hsm",
+          "sources": [
+            {
+              "label": "Commission current technology and Fireblocks HSM disclosure",
+              "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+            }
+          ]
+        },
+        "failureDomainKeys": [
+          "issuer-backend:frnt-wyoming:commission"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 94850610,
+        "sources": [
+          {
+            "label": "polygon exact deployment",
+            "url": "https://polygonscan.com/address/0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+          },
+          {
+            "label": "Commission current technology and Fireblocks HSM disclosure",
+            "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+          },
+          {
+            "label": "Frontier role-gated mint, recovery and upgrade source",
+            "url": "https://raw.githubusercontent.com/wyostable/frontier-stable-token/main/contracts/fireblocks/ERC20F.sol"
+          },
+          {
+            "label": "Frontier implementation on Ethereum",
+            "url": "https://etherscan.io/address/0x87b589879ab3e22de54c980396bd944ac2b5dc6c#code"
+          },
+          {
+            "label": "Frontier holder trust and reserve rules",
+            "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
+          }
+        ],
+        "evidence": "At polygon block 94850610, hasRole confirms this role administrator membership. The implementation slot remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c. ERC20F mint has no reserve-value check and UUPS authorization is UPGRADER_ROLE without a built-in execution delay. This does not prove complete membership or signing independence."
+      },
+      {
+        "chain": "polygon",
+        "address": "0x7f6cc8151ac948429911dab959d9e305501079ba",
+        "deploymentRefs": [
+          "polygon:0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+        ],
+        "label": "FRNT polygon UUPS upgrader",
+        "role": "proxy-admin",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "upgrade-only",
+        "keyCustodyAttestation": {
+          "kind": "hsm",
+          "sources": [
+            {
+              "label": "Commission current technology and Fireblocks HSM disclosure",
+              "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+            }
+          ]
+        },
+        "failureDomainKeys": [
+          "issuer-backend:frnt-wyoming:commission"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 94850610,
+        "sources": [
+          {
+            "label": "polygon exact deployment",
+            "url": "https://polygonscan.com/address/0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+          },
+          {
+            "label": "Commission current technology and Fireblocks HSM disclosure",
+            "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+          },
+          {
+            "label": "Frontier role-gated mint, recovery and upgrade source",
+            "url": "https://raw.githubusercontent.com/wyostable/frontier-stable-token/main/contracts/fireblocks/ERC20F.sol"
+          },
+          {
+            "label": "Frontier implementation on Ethereum",
+            "url": "https://etherscan.io/address/0x87b589879ab3e22de54c980396bd944ac2b5dc6c#code"
+          },
+          {
+            "label": "Frontier holder trust and reserve rules",
+            "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
+          }
+        ],
+        "evidence": "At polygon block 94850610, hasRole confirms this UUPS upgrader membership. The implementation slot remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c. ERC20F mint has no reserve-value check and UUPS authorization is UPGRADER_ROLE without a built-in execution delay. This does not prove complete membership or signing independence."
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x83465b1bac70dc63c0d6b72e9f012af4a1e7138a",
+        "deploymentRefs": [
+          "arbitrum:0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+        ],
+        "label": "FRNT arbitrum native minter",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "keyCustodyAttestation": {
+          "kind": "hsm",
+          "sources": [
+            {
+              "label": "Commission current technology and Fireblocks HSM disclosure",
+              "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+            }
+          ]
+        },
+        "failureDomainKeys": [
+          "issuer-backend:frnt-wyoming:commission"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 511123897,
+        "sources": [
+          {
+            "label": "arbitrum exact deployment",
+            "url": "https://arbiscan.io/address/0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+          },
+          {
+            "label": "Commission current technology and Fireblocks HSM disclosure",
+            "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+          },
+          {
+            "label": "Frontier role-gated mint, recovery and upgrade source",
+            "url": "https://raw.githubusercontent.com/wyostable/frontier-stable-token/main/contracts/fireblocks/ERC20F.sol"
+          },
+          {
+            "label": "Frontier implementation on Ethereum",
+            "url": "https://etherscan.io/address/0x87b589879ab3e22de54c980396bd944ac2b5dc6c#code"
+          },
+          {
+            "label": "Frontier holder trust and reserve rules",
+            "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
+          }
+        ],
+        "evidence": "At arbitrum block 511123897, hasRole confirms this native minter membership. The implementation slot remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c. ERC20F mint has no reserve-value check and UUPS authorization is UPGRADER_ROLE without a built-in execution delay. This does not prove complete membership or signing independence."
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x5e3372f9a1c04e789ef86df9ec35f87e000bb15b",
+        "deploymentRefs": [
+          "arbitrum:0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+        ],
+        "label": "FRNT arbitrum role administrator",
+        "role": "minter-admin",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "can-authorize",
+        "keyCustodyAttestation": {
+          "kind": "hsm",
+          "sources": [
+            {
+              "label": "Commission current technology and Fireblocks HSM disclosure",
+              "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+            }
+          ]
+        },
+        "failureDomainKeys": [
+          "issuer-backend:frnt-wyoming:commission"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 511123897,
+        "sources": [
+          {
+            "label": "arbitrum exact deployment",
+            "url": "https://arbiscan.io/address/0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+          },
+          {
+            "label": "Commission current technology and Fireblocks HSM disclosure",
+            "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+          },
+          {
+            "label": "Frontier role-gated mint, recovery and upgrade source",
+            "url": "https://raw.githubusercontent.com/wyostable/frontier-stable-token/main/contracts/fireblocks/ERC20F.sol"
+          },
+          {
+            "label": "Frontier implementation on Ethereum",
+            "url": "https://etherscan.io/address/0x87b589879ab3e22de54c980396bd944ac2b5dc6c#code"
+          },
+          {
+            "label": "Frontier holder trust and reserve rules",
+            "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
+          }
+        ],
+        "evidence": "At arbitrum block 511123897, hasRole confirms this role administrator membership. The implementation slot remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c. ERC20F mint has no reserve-value check and UUPS authorization is UPGRADER_ROLE without a built-in execution delay. This does not prove complete membership or signing independence."
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x7f6cc8151ac948429911dab959d9e305501079ba",
+        "deploymentRefs": [
+          "arbitrum:0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+        ],
+        "label": "FRNT arbitrum UUPS upgrader",
+        "role": "proxy-admin",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "upgrade-only",
+        "keyCustodyAttestation": {
+          "kind": "hsm",
+          "sources": [
+            {
+              "label": "Commission current technology and Fireblocks HSM disclosure",
+              "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+            }
+          ]
+        },
+        "failureDomainKeys": [
+          "issuer-backend:frnt-wyoming:commission"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 511123897,
+        "sources": [
+          {
+            "label": "arbitrum exact deployment",
+            "url": "https://arbiscan.io/address/0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+          },
+          {
+            "label": "Commission current technology and Fireblocks HSM disclosure",
+            "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+          },
+          {
+            "label": "Frontier role-gated mint, recovery and upgrade source",
+            "url": "https://raw.githubusercontent.com/wyostable/frontier-stable-token/main/contracts/fireblocks/ERC20F.sol"
+          },
+          {
+            "label": "Frontier implementation on Ethereum",
+            "url": "https://etherscan.io/address/0x87b589879ab3e22de54c980396bd944ac2b5dc6c#code"
+          },
+          {
+            "label": "Frontier holder trust and reserve rules",
+            "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
+          }
+        ],
+        "evidence": "At arbitrum block 511123897, hasRole confirms this UUPS upgrader membership. The implementation slot remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c. ERC20F mint has no reserve-value check and UUPS authorization is UPGRADER_ROLE without a built-in execution delay. This does not prove complete membership or signing independence."
+      },
+      {
+        "chain": "optimism",
+        "address": "0x83465b1bac70dc63c0d6b72e9f012af4a1e7138a",
+        "deploymentRefs": [
+          "optimism:0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+        ],
+        "label": "FRNT optimism native minter",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "keyCustodyAttestation": {
+          "kind": "hsm",
+          "sources": [
+            {
+              "label": "Commission current technology and Fireblocks HSM disclosure",
+              "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+            }
+          ]
+        },
+        "failureDomainKeys": [
+          "issuer-backend:frnt-wyoming:commission"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 157691139,
+        "sources": [
+          {
+            "label": "optimism exact deployment",
+            "url": "https://optimistic.etherscan.io/address/0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+          },
+          {
+            "label": "Commission current technology and Fireblocks HSM disclosure",
+            "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+          },
+          {
+            "label": "Frontier role-gated mint, recovery and upgrade source",
+            "url": "https://raw.githubusercontent.com/wyostable/frontier-stable-token/main/contracts/fireblocks/ERC20F.sol"
+          },
+          {
+            "label": "Frontier implementation on Ethereum",
+            "url": "https://etherscan.io/address/0x87b589879ab3e22de54c980396bd944ac2b5dc6c#code"
+          },
+          {
+            "label": "Frontier holder trust and reserve rules",
+            "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
+          }
+        ],
+        "evidence": "At optimism block 157691139, hasRole confirms this native minter membership. The implementation slot remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c. ERC20F mint has no reserve-value check and UUPS authorization is UPGRADER_ROLE without a built-in execution delay. This does not prove complete membership or signing independence."
+      },
+      {
+        "chain": "optimism",
+        "address": "0x5e3372f9a1c04e789ef86df9ec35f87e000bb15b",
+        "deploymentRefs": [
+          "optimism:0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+        ],
+        "label": "FRNT optimism role administrator",
+        "role": "minter-admin",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "can-authorize",
+        "keyCustodyAttestation": {
+          "kind": "hsm",
+          "sources": [
+            {
+              "label": "Commission current technology and Fireblocks HSM disclosure",
+              "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+            }
+          ]
+        },
+        "failureDomainKeys": [
+          "issuer-backend:frnt-wyoming:commission"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 157691139,
+        "sources": [
+          {
+            "label": "optimism exact deployment",
+            "url": "https://optimistic.etherscan.io/address/0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+          },
+          {
+            "label": "Commission current technology and Fireblocks HSM disclosure",
+            "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+          },
+          {
+            "label": "Frontier role-gated mint, recovery and upgrade source",
+            "url": "https://raw.githubusercontent.com/wyostable/frontier-stable-token/main/contracts/fireblocks/ERC20F.sol"
+          },
+          {
+            "label": "Frontier implementation on Ethereum",
+            "url": "https://etherscan.io/address/0x87b589879ab3e22de54c980396bd944ac2b5dc6c#code"
+          },
+          {
+            "label": "Frontier holder trust and reserve rules",
+            "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
+          }
+        ],
+        "evidence": "At optimism block 157691139, hasRole confirms this role administrator membership. The implementation slot remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c. ERC20F mint has no reserve-value check and UUPS authorization is UPGRADER_ROLE without a built-in execution delay. This does not prove complete membership or signing independence."
+      },
+      {
+        "chain": "optimism",
+        "address": "0x7f6cc8151ac948429911dab959d9e305501079ba",
+        "deploymentRefs": [
+          "optimism:0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+        ],
+        "label": "FRNT optimism UUPS upgrader",
+        "role": "proxy-admin",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "upgrade-only",
+        "keyCustodyAttestation": {
+          "kind": "hsm",
+          "sources": [
+            {
+              "label": "Commission current technology and Fireblocks HSM disclosure",
+              "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+            }
+          ]
+        },
+        "failureDomainKeys": [
+          "issuer-backend:frnt-wyoming:commission"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 157691139,
+        "sources": [
+          {
+            "label": "optimism exact deployment",
+            "url": "https://optimistic.etherscan.io/address/0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+          },
+          {
+            "label": "Commission current technology and Fireblocks HSM disclosure",
+            "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+          },
+          {
+            "label": "Frontier role-gated mint, recovery and upgrade source",
+            "url": "https://raw.githubusercontent.com/wyostable/frontier-stable-token/main/contracts/fireblocks/ERC20F.sol"
+          },
+          {
+            "label": "Frontier implementation on Ethereum",
+            "url": "https://etherscan.io/address/0x87b589879ab3e22de54c980396bd944ac2b5dc6c#code"
+          },
+          {
+            "label": "Frontier holder trust and reserve rules",
+            "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
+          }
+        ],
+        "evidence": "At optimism block 157691139, hasRole confirms this UUPS upgrader membership. The implementation slot remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c. ERC20F mint has no reserve-value check and UUPS authorization is UPGRADER_ROLE without a built-in execution delay. This does not prove complete membership or signing independence."
+      },
+      {
+        "chain": "hedera",
+        "address": "0x83465b1bac70dc63c0d6b72e9f012af4a1e7138a",
+        "deploymentRefs": [
+          "hedera:0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+        ],
+        "label": "FRNT hedera native minter",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "keyCustodyAttestation": {
+          "kind": "hsm",
+          "sources": [
+            {
+              "label": "Commission current technology and Fireblocks HSM disclosure",
+              "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+            }
+          ]
+        },
+        "failureDomainKeys": [
+          "issuer-backend:frnt-wyoming:commission"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 100653016,
+        "sources": [
+          {
+            "label": "hedera exact deployment",
+            "url": "https://mainnet-public.mirrornode.hedera.com/api/v1/contracts/0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+          },
+          {
+            "label": "Commission current technology and Fireblocks HSM disclosure",
+            "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+          },
+          {
+            "label": "Frontier role-gated mint, recovery and upgrade source",
+            "url": "https://raw.githubusercontent.com/wyostable/frontier-stable-token/main/contracts/fireblocks/ERC20F.sol"
+          },
+          {
+            "label": "Frontier implementation on Ethereum",
+            "url": "https://etherscan.io/address/0x87b589879ab3e22de54c980396bd944ac2b5dc6c#code"
+          },
+          {
+            "label": "Frontier holder trust and reserve rules",
+            "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
+          }
+        ],
+        "evidence": "At hedera block 100653016, hasRole confirms this native minter membership. The implementation slot remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c. ERC20F mint has no reserve-value check and UUPS authorization is UPGRADER_ROLE without a built-in execution delay. This does not prove complete membership or signing independence."
+      },
+      {
+        "chain": "hedera",
+        "address": "0x5e3372f9a1c04e789ef86df9ec35f87e000bb15b",
+        "deploymentRefs": [
+          "hedera:0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+        ],
+        "label": "FRNT hedera role administrator",
+        "role": "minter-admin",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "can-authorize",
+        "keyCustodyAttestation": {
+          "kind": "hsm",
+          "sources": [
+            {
+              "label": "Commission current technology and Fireblocks HSM disclosure",
+              "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+            }
+          ]
+        },
+        "failureDomainKeys": [
+          "issuer-backend:frnt-wyoming:commission"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 100653016,
+        "sources": [
+          {
+            "label": "hedera exact deployment",
+            "url": "https://mainnet-public.mirrornode.hedera.com/api/v1/contracts/0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+          },
+          {
+            "label": "Commission current technology and Fireblocks HSM disclosure",
+            "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+          },
+          {
+            "label": "Frontier role-gated mint, recovery and upgrade source",
+            "url": "https://raw.githubusercontent.com/wyostable/frontier-stable-token/main/contracts/fireblocks/ERC20F.sol"
+          },
+          {
+            "label": "Frontier implementation on Ethereum",
+            "url": "https://etherscan.io/address/0x87b589879ab3e22de54c980396bd944ac2b5dc6c#code"
+          },
+          {
+            "label": "Frontier holder trust and reserve rules",
+            "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
+          }
+        ],
+        "evidence": "At hedera block 100653016, hasRole confirms this role administrator membership. The implementation slot remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c. ERC20F mint has no reserve-value check and UUPS authorization is UPGRADER_ROLE without a built-in execution delay. This does not prove complete membership or signing independence."
+      },
+      {
+        "chain": "hedera",
+        "address": "0x7f6cc8151ac948429911dab959d9e305501079ba",
+        "deploymentRefs": [
+          "hedera:0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+        ],
+        "label": "FRNT hedera UUPS upgrader",
+        "role": "proxy-admin",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "upgrade-only",
+        "keyCustodyAttestation": {
+          "kind": "hsm",
+          "sources": [
+            {
+              "label": "Commission current technology and Fireblocks HSM disclosure",
+              "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+            }
+          ]
+        },
+        "failureDomainKeys": [
+          "issuer-backend:frnt-wyoming:commission"
+        ],
+        "observedAt": "2026-10-02",
+        "observedBlock": 100653016,
+        "sources": [
+          {
+            "label": "hedera exact deployment",
+            "url": "https://mainnet-public.mirrornode.hedera.com/api/v1/contracts/0x5e817f2abccb9095585d26c2a3ce234a440574fc"
+          },
+          {
+            "label": "Commission current technology and Fireblocks HSM disclosure",
+            "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+          },
+          {
+            "label": "Frontier role-gated mint, recovery and upgrade source",
+            "url": "https://raw.githubusercontent.com/wyostable/frontier-stable-token/main/contracts/fireblocks/ERC20F.sol"
+          },
+          {
+            "label": "Frontier implementation on Ethereum",
+            "url": "https://etherscan.io/address/0x87b589879ab3e22de54c980396bd944ac2b5dc6c#code"
+          },
+          {
+            "label": "Frontier holder trust and reserve rules",
+            "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
+          }
+        ],
+        "evidence": "At hedera block 100653016, hasRole confirms this UUPS upgrader membership. The implementation slot remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c. ERC20F mint has no reserve-value check and UUPS authorization is UPGRADER_ROLE without a built-in execution delay. This does not prove complete membership or signing independence."
+      },
+      {
+        "chain": "solana",
+        "address": "DsRa7mCpCfcTxdNJvaTzbRe73FuBbrs8U8NEAxFunWnr",
+        "deploymentRefs": [
+          "solana:FRNTPi9V3Sw9b9U8d5Q3WY7tNANT6Q394d7dYtv7Jdog"
+        ],
+        "label": "FRNT Solana Token-2022 mint authority",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "failureDomainKeys": [
+          "issuer-backend:frnt-wyoming:commission"
+        ],
+        "observedAt": "2026-10-02",
+        "sources": [
+          {
+            "label": "solana exact deployment",
+            "url": "https://solscan.io/token/FRNTPi9V3Sw9b9U8d5Q3WY7tNANT6Q394d7dYtv7Jdog"
+          },
+          {
+            "label": "Commission current technology and Fireblocks HSM disclosure",
+            "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+          }
+        ],
+        "evidence": "Finalized Solana slot 452748113 returns this mintAuthority, 6 decimals and supply 394346942696 base units. Freeze/permanent delegate CBxsYp2sByWC5AgrEjze7Z8QTdDX56JJRgSEX7BUWady is separately covered in blacklistability review. Threshold, key independence and program upgrade closure are unresolved."
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
+    "review": {
+      "sources": [
+        {
+          "label": "Commission current technology and Fireblocks HSM disclosure",
+          "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+        },
+        {
+          "label": "Frontier role-gated mint, recovery and upgrade source",
+          "url": "https://raw.githubusercontent.com/wyostable/frontier-stable-token/main/contracts/fireblocks/ERC20F.sol"
+        },
+        {
+          "label": "Frontier implementation on Ethereum",
+          "url": "https://etherscan.io/address/0x87b589879ab3e22de54c980396bd944ac2b5dc6c#code"
+        },
+        {
+          "label": "Frontier holder trust and reserve rules",
+          "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
+        }
+      ],
+      "evidence": "Complete RoleGranted/RoleRevoked history from genesis to pinned October 3 blocks was retrieved for Ethereum 26110208, Avalanche 96655718, Base 52110947, Polygon 94870735, Arbitrum 511231213 and Optimism 157706232. All six have sole DEFAULT_ADMIN_ROLE 0x5e3372f9a1c04e789ef86df9ec35f87e000bb15b, sole UPGRADER_ROLE 0x7f6cc8151ac948429911dab959d9e305501079ba and direct issuer MINTER_ROLE 0x83465b1bac70dc63c0d6b72e9f012af4a1e7138a, plus one chain-local CCIP pool minter. Admin/upgrader membership was corroborated by hasRole on each pinned block. Verified ERC20F._authorizeUpgrade is UPGRADER_ROLE-only with no contract delay. Hedera's whole-history RPC query was rejected by the seven-day window limit, so no all-chain completeness claim is made. Solana authority remains the earlier finalized read. The public October 2 signed TNF report API returned 403 Missing verification token on October 3; supplemental dashboard observations do not establish independent financial assurance or reserve-gated Secure Mint activation. HSM signing quorum, operator independence and recovery policies remain unestablished and receive no independent key-custody credit; these record-keeping questions are scoped to each identified controller. The named Solana mint authority's program upgrade/recovery closure remains incomplete and is an umbrella mint-path question under calibration v2, alongside Hedera's whole-deployment role census gap. Reconciliation and supervision both remain unknown: self-reported dashboard/PoR cadence, Commission status and Fireblocks HSM custody are not independently reviewed financial reconciliation or prudential stablecoin supervision.",
+      "reviewer": "Pharos refinement 2026-10-03 (Refine01)",
+      "reviewedAt": "2026-10-03",
+      "disposition": "scoreable",
+      "unresolvedQuestions": [
+        "Hedera full historical issuer/admin/upgrader role census remains unresolved; the six other EVM deployment role censuses are complete.",
+        "What is the complete program upgrade/recovery governance behind named Solana mint authority DsRa7mCpCfcTxdNJvaTzbRe73FuBbrs8U8NEAxFunWnr? Its finalized address is known, but executable program and recovery authorization closure remain incomplete."
+      ],
+      "scopedQuestions": [
+        {"controlRef": "FRNT ethereum native minter", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified native minter?", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
+        {"controlRef": "FRNT ethereum role administrator", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified role administrator?", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
+        {"controlRef": "FRNT ethereum UUPS upgrader", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified mint-logic upgrader?", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
+        {"controlRef": "FRNT avalanche native minter", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified native minter?", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
+        {"controlRef": "FRNT avalanche role administrator", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified role administrator?", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
+        {"controlRef": "FRNT avalanche UUPS upgrader", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified mint-logic upgrader?", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
+        {"controlRef": "FRNT base native minter", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified native minter?", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
+        {"controlRef": "FRNT base role administrator", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified role administrator?", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
+        {"controlRef": "FRNT base UUPS upgrader", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified mint-logic upgrader?", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
+        {"controlRef": "FRNT polygon native minter", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified native minter?", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
+        {"controlRef": "FRNT polygon role administrator", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified role administrator?", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
+        {"controlRef": "FRNT polygon UUPS upgrader", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified mint-logic upgrader?", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
+        {"controlRef": "FRNT arbitrum native minter", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified native minter?", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
+        {"controlRef": "FRNT arbitrum role administrator", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified role administrator?", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
+        {"controlRef": "FRNT arbitrum UUPS upgrader", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified mint-logic upgrader?", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
+        {"controlRef": "FRNT optimism native minter", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified native minter?", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
+        {"controlRef": "FRNT optimism role administrator", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified role administrator?", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
+        {"controlRef": "FRNT optimism UUPS upgrader", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified mint-logic upgrader?", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
+        {"controlRef": "FRNT hedera native minter", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified native minter? The separate whole-deployment role census remains open.", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
+        {"controlRef": "FRNT hedera role administrator", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified role administrator? The separate whole-deployment role census remains open.", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
+        {"controlRef": "FRNT hedera UUPS upgrader", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified mint-logic upgrader? The separate whole-deployment role census remains open.", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
+        {"controlRef": "FRNT Solana Token-2022 mint authority", "question": "What independently evidenced signing quorum, operator independence and key-recovery policy governs this identified Solana mint authority? Executable program and recovery authorization closure remain a separate umbrella question.", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)", "sources": [{"label": "Exact Solana FRNT mint", "url": "https://solscan.io/token/FRNTPi9V3Sw9b9U8d5Q3WY7tNANT6Q394d7dYtv7Jdog"}, {"label": "Commission current custody disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]}
+      ]
+    }
+  }
+}

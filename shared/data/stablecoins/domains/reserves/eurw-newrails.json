@@ -1,0 +1,84 @@
+{
+  "id": "eurw-newrails",
+  "reserves": [
+    {
+      "name": "Safeguarded EUR cash and permitted liquid investments (allocation undisclosed)",
+      "pct": 100,
+      "risk": "medium",
+      "assetClass": "other",
+      "issuerOrObligor": "Undisclosed regulated EU credit institutions and euro government money-market funds or similar permitted investments",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "counterparty",
+        "custody",
+        "concentration",
+        "legal"
+      ],
+      "liquidityHorizon": "unknown",
+      "unclassifiedResidual": true,
+      "residualReason": "insufficient-evidence"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Newrails EURW MiCA whitepaper notified May 26, 2026",
+        "url": "https://cmpl-docs.newrails.xyz/docs/Newrails%20EURW%20WP%202026-05-26.xhtml"
+      },
+      {
+        "label": "Newrails EURW product and reserve disclosure",
+        "url": "https://www.newrails.xyz/en/platform/eurw"
+      },
+      {
+        "label": "Newrails public download centre",
+        "url": "https://www.newrails.xyz/en/download-centre"
+      }
+    ],
+    "rationale": "The whitepaper specifies at least 30% cash at regulated EU credit institutions and up to 70% euro government MMFs or similar investments. These are policy bounds, not measured weights. The full reserve envelope is therefore one explicitly unclassified basket; no 30/70 allocation is invented. The current product page claims monthly independent reports, but its linked artifact is a smart-contract security audit and the retrieved download inventory exposes no exact-token financial reserve reconciliation. Medium legacy risk records the unresolved permitted-investment basket, not an observed loss.",
+    "compositionBasis": "Issuer whitepaper and product-page reserve eligibility, with no observed cash/investment allocation",
+    "scope": "classification-only",
+    "knownUnknownExposure": "No dated portfolio inventory, allocation, named reserve bank, fund identity, maturity schedule or exact-token independent financial reconciliation was retrieved. Corporate financial audit and code audit do not establish reserve assurance.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Safeguarded EUR cash and permitted liquid investments (allocation undisclosed)",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "Cash/MMF policy bounds cannot identify a measured composition or tracked token dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Undisclosed EU-regulated credit institutions under safeguarding agreements",
+        "role": "bank",
+        "jurisdiction": "European Union"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "contractual-only",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Newrails EURW MiCA whitepaper notified May 26, 2026",
+        "url": "https://cmpl-docs.newrails.xyz/docs/Newrails%20EURW%20WP%202026-05-26.xhtml"
+      },
+      {
+        "label": "Newrails EMT redemption policy effective February 9, 2026",
+        "url": "https://www.newrails.xyz/en/legal/emt-redemption-policy"
+      }
+    ],
+    "knownUnknownExposurePct": 100,
+    "uncertainty": "The issuer whitepaper describes segregated safeguarding accounts held for EURW holders and creditor-priority protections; account agreements, bank identities, MMF providers, provider allocations, rehypothecation terms and failure/replacement mechanics are not published. The aggregate custody label remains unknown because provider evidence does not establish current whole-book custody."
+  }
+}

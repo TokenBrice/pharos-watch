@@ -1,0 +1,86 @@
+{
+  "liveReservesConfig": {
+    "adapter": "matrixdock-stbt",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "stbt-matrixdock",
+    "display": { "url": "https://www.matrixdock.com/stbt", "label": "Matrixdock STBT issuer reserve dashboard" },
+    "inputs": { "primary": { "kind": "http-html", "url": "https://www.matrixdock.com/stbt" } }
+  },
+  "id": "stbt-matrixdock",
+  "name": "Matrixdock Short-Term Treasury Bill Token",
+  "symbol": "STBT",
+  "oneLiner": "STBT is Matrixdock's rebasing Treasury-backed issuer debt, redeemable by eligible investors subject to losses and settlement limits.",
+  "flags": {
+    "backing": "rwa-backed",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": true
+  },
+  "collateral": "Short-term U.S. Treasury bills and tokenized USTB and BUIDL fund interests held through issuer affiliates; holders have an unsecured Prometheus debt claim.",
+  "pegMechanism": "Daily business-day rebasing distributes underlying investment returns while targeting $1 per token. Eligible holders can request issuer redemption into USD-pegged digital assets, less applicable losses and costs; T+0 capacity is limited and larger redemptions settle T+2.",
+  "mechanismArchetype": "tbill",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rationale": "Native Ethereum STBT is rebasing unsecured Prometheus debt backed through affiliates by short-duration Treasury assets and Treasury fund interests. The tbill family describes the backing and NAV process without granting holders direct Treasury or fund-share title.",
+    "sources": [
+      {
+        "label": "STBT January 2025 terms",
+        "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FzHip8cJaP5aud3KfdVud%2FSTBT%20Token%C2%A0Terms%20and%20Conditions.pdf?alt=media&token=79d5fd49-deae-41b4-a809-9e1afaa02f32"
+      },
+      {
+        "label": "Matrixdock reserve and rebasing disclosures",
+        "url": "https://www.matrixdock.com/stbt"
+      }
+    ]
+  },
+  "detailProvider": "coingecko",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://www.matrixdock.com/stbt",
+    "provider": "Matrixdock issuer reserve dashboard; no current signed STBT financial assurance retrieved",
+    "attestorTier": "self",
+    "cadence": "daily-nav"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.matrixdock.com/stbt"
+    },
+    {
+      "label": "Terms and conditions",
+      "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FzHip8cJaP5aud3KfdVud%2FSTBT%20Token%C2%A0Terms%20and%20Conditions.pdf?alt=media&token=79d5fd49-deae-41b4-a809-9e1afaa02f32"
+    },
+    {
+      "label": "Docs",
+      "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/treasury-bill-token-stbt/smart-contract/contract-address.md"
+    },
+    {
+      "label": "Current STBTv2 implementation creation, block 23193805 (2025-08-22)",
+      "url": "https://etherscan.io/tx/0x771e318a79a6ed1ad486c41c96a636eeb43e9e7ca2bf776b8bce6a8a71517b7d"
+    },
+    {
+      "label": "Current STBTv2 activation, block 23279728 (2025-09-03)",
+      "url": "https://etherscan.io/tx/0xc137039da347ca5ab92b990a2f496e5bb70c70a60216849e6e5904a67e4a8c85"
+    }
+  ],
+  "jurisdiction": {
+    "country": "British Virgin Islands"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x530824da86689c9c17cdc2871ff29b058345b44a",
+      "decimals": 18
+    }
+  ],
+  "collateralQuality": "rwa",
+  "custodyModel": "unknown",
+  "yieldConfig": {
+    "yieldSource": "Matrixdock short-term Treasury portfolio",
+    "yieldType": "rebase"
+  },
+  "implementationLaunchDate": "2025-09-03"
+}

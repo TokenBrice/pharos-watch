@@ -1,5 +1,6 @@
 import type { PricingSourceRegistryEntry } from "./pricing-source-registry-types";
 import { definePricingSource, PRICING_SOURCE_PRESETS } from "./pricing-source-registry-presets";
+import { BUSINESS_DAY_NAV_SOURCE_MAX_AGE_SEC } from "../types/live-reserve-adapter-policy";
 
 export const PRICING_SOURCE_REGISTRY_MARKET_FEEDS = [
   definePricingSource(PRICING_SOURCE_PRESETS.hardMarket, {
@@ -182,6 +183,17 @@ export const PRICING_SOURCE_REGISTRY_MARKET_FEEDS = [
     shortLabel: "Superstate",
     depegSourceFamily: "protocol:superstate-nav",
     maxTrustedAgeSec: 4 * 24 * 60 * 60,
+    defaultWeight: 3,
+    freshnessKind: "upstream",
+    supportsUpstreamObservedAt: true,
+    requiresObservedAt: true,
+  }),
+  definePricingSource(PRICING_SOURCE_PRESETS.hardProtocol, {
+    key: "jpmorgan-nav",
+    label: "JPMorgan fund NAV",
+    shortLabel: "JPMorgan NAV",
+    depegSourceFamily: "protocol:jpmorgan-nav",
+    maxTrustedAgeSec: BUSINESS_DAY_NAV_SOURCE_MAX_AGE_SEC,
     defaultWeight: 3,
     freshnessKind: "upstream",
     supportsUpstreamObservedAt: true,

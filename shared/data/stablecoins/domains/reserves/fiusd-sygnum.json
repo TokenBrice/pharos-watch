@@ -1,0 +1,81 @@
+{
+  "id": "fiusd-sygnum",
+  "reserves": [
+    {
+      "name": "Fidelity ILF USD Fund Class G Acc unit exposure",
+      "pct": 100,
+      "risk": "medium",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Fidelity Institutional Liquidity Fund PLC, United States Dollar Fund",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "counterparty",
+        "custody",
+        "liquidity"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Sygnum issuer-authored FIUSD application dated March 20, 2025",
+        "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779"
+      },
+      {
+        "label": "Verified deployed Arbitrum implementation",
+        "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x7616b08676117e1aab542e53fe3f7b12f7596d37"
+      }
+    ],
+    "rationale": "The 100% row identifies the disclosed one-token/one-fund-unit claim, not a retrieved current portfolio. The issuer's March 20, 2025 application reports underlying fund ratings Aaa-mf (Moody's) and AAAm (S&P) as of December 2024, same-day fund settlement and multiple cutoffs; these are dated mandate/credit context, not current FIUSD assurance or executable capacity. Current constituent weights, fiduciary unit-to-token reconciliation and complete deposit/repo/subcustody allocations remain unknown. Historical WAM and maximum maturity are mandate context only.",
+    "compositionBasis": "Whole holder-instrument claim; no fabricated normalization of underlying positions",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The 100% row identifies the disclosed one-token/one-fund-unit claim, not a retrieved current portfolio. Current constituent weights, fiduciary unit-to-token reconciliation and complete deposit/repo/subcustody allocations remain unknown. Historical WAM and maximum maturity are mandate context only.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Fidelity ILF USD Fund Class G Acc unit exposure",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The 100% row identifies the disclosed one-token/one-fund-unit claim, not a retrieved current portfolio. Current constituent weights, fiduciary unit-to-token reconciliation and complete deposit/repo/subcustody allocations remain unknown. Historical WAM and maximum maturity are mandate context only."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Sygnum Bank AG",
+        "role": "custodian",
+        "jurisdiction": "Switzerland"
+      },
+      {
+        "name": "J.P. Morgan SE, Dublin Branch",
+        "role": "custodian",
+        "jurisdiction": "Ireland"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Sygnum issuer-authored FIUSD application dated March 20, 2025",
+        "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779"
+      },
+      {
+        "label": "Verified deployed Arbitrum implementation",
+        "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x7616b08676117e1aab542e53fe3f7b12f7596d37"
+      }
+    ],
+    "uncertainty": "The issuer describes Swiss Banking Act art. 16/37d fiduciary segregation for units held on behalf of clients. Definitive current client terms and whole-book unit/deposit/repo/subcustodian exposure are not independently established; this does not turn Sygnum custody into a bank-deposit claim.",
+    "knownUnknownExposurePct": 100
+  }
+}

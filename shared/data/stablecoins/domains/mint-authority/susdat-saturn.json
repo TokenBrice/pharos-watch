@@ -1,0 +1,262 @@
+{
+  "id": "susdat-saturn",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "inheritedFrom": "usdat-saturn",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "Canonical shares mint through the USDat ERC-4626 vault. Complete native role/timelock census is pinned; a five-day self-administered timelock can replace mint logic, and a one-hour timelock controls parameters including oracle replacement. Current operator/surplus/market-mode EOA and undisclosed V2 signing policies remain adverse/uncertain. Independent financial and legal recovery reconciliation remains unavailable; representation powers stay in Bridge Risk.",
+    "controls": [
+      {
+        "label": "Saturn sUSDat native ERC-4626 wrapper",
+        "chain": "ethereum",
+        "address": "0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
+        "deploymentRefs": [
+          "ethereum:0xd166337499e176bbc38a1fbd113ab144e5bd2df7"
+        ],
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26108096,
+        "sources": [
+          {
+            "label": "Verified deployed StakedUSDat implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2b7074cf6681382b70e239063931ebe83c0f4e0a"
+          },
+          {
+            "label": "Saturn vault mechanics",
+            "url": "https://saturncredit.gitbook.io/saturn-docs/solution/susdat-overview.md"
+          }
+        ],
+        "evidence": "At Ethereum block 26108096, asset() returned the tracked USDat contract, decimals() returned 18, totalSupply() was 64,115,192.98239439 and paused() was false. The verified deployed source exposes deposit/mint share issuance against USDat rather than native creation of USDat. This is not a proof that upgrades, reserve accounting or all roles are harmless."
+      },
+      {
+        "label": "Saturn sUSDat default-admin upgrade timelock",
+        "chain": "ethereum",
+        "address": "0xfd5782e3bff366601da3973ae30c583de4f08a67",
+        "deploymentRefs": [
+          "ethereum:0xd166337499e176bbc38a1fbd113ab144e5bd2df7"
+        ],
+        "role": "proxy-admin",
+        "authorityType": "timelock",
+        "directMintAbility": "upgrade-only",
+        "timelockDelaySec": 432000,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110187,
+        "sources": [
+          {
+            "label": "Verified deployed role-gated UUPS implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2b7074cf6681382b70e239063931ebe83c0f4e0a"
+          },
+          {
+            "label": "Saturn V2 deployment and timelock runbook",
+            "url": "https://raw.githubusercontent.com/saturn-organization/saturn-yield-dollar/main/docs/v2-deployment-runbook.md"
+          },
+          {
+            "label": "Ethereum block 26108096",
+            "url": "https://etherscan.io/block/26108096"
+          },
+          {
+            "label": "Saturn operational wallets: issuer-disclosed Fireblocks 2-of-3 MPC",
+            "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/key-addresses.md"
+          },
+          {
+            "label": "Complete native role replay/current membership and timelock pin",
+            "url": "https://etherscan.io/block/26110187"
+          }
+        ],
+        "evidence": "At block 26108096, the proxy EIP-1967 implementation slot was 0x2b7074cf6681382b70e239063931ebe83c0f4e0a; hasRole(DEFAULT_ADMIN_ROLE, this timelock) returned true and getMinDelay() returned 432000 seconds. The verified _authorizeUpgrade function requires DEFAULT_ADMIN_ROLE. This confirms one active upgrade controller and its delay, not exclusive membership, signer independence or absence of bypasses. Complete role-event replay and current hasRole checks identify sole proposer/canceller 0x610182581c93687ca03f4a8e7f124f8cec616820, open executor (zero address), and self-only DEFAULT_ADMIN. No additional timelock admin or role member was active at the pin."
+      },
+      {
+        "label": "Saturn sUSDat parameter-manager timelock",
+        "chain": "ethereum",
+        "address": "0x6f72de4f529a03bfa883825152656a8c62cbb626",
+        "deploymentRefs": [
+          "ethereum:0xd166337499e176bbc38a1fbd113ab144e5bd2df7"
+        ],
+        "role": "other",
+        "authorityType": "timelock",
+        "directMintAbility": "parameter-only",
+        "timelockDelaySec": 3600,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110187,
+        "sources": [
+          {
+            "label": "Saturn V2 parameter-manager and migration runbook",
+            "url": "https://raw.githubusercontent.com/saturn-organization/saturn-yield-dollar/main/docs/v2-deployment-runbook.md"
+          },
+          {
+            "label": "Ethereum block 26108096",
+            "url": "https://etherscan.io/block/26108096"
+          },
+          {
+            "label": "Saturn operational wallets: issuer-disclosed Fireblocks 2-of-3 MPC",
+            "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/key-addresses.md"
+          },
+          {
+            "label": "Complete native role replay/current membership and timelock pin",
+            "url": "https://etherscan.io/block/26110187"
+          }
+        ],
+        "evidence": "The issuer V2 runbook identifies this PARAMETER_MANAGER_ROLE timelock for migration configuration; getMinDelay() at block 26108096 returned 3600 seconds. Exact currently authorized proposers, executors, complete parameter powers and role membership are not independently enumerated in this addition. Complete role-event replay and current hasRole checks identify sole proposer/canceller 0x7a5a4064005584bc727666ec82548a9139d5f21e, open executor (zero address), and self-only DEFAULT_ADMIN. No additional timelock admin or role member was active at the pin."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xc35580434261f667d6abbda9e3dc1dc31e5a1b92",
+        "deploymentRefs": [
+          "ethereum:0xd166337499e176bbc38a1fbd113ab144e5bd2df7"
+        ],
+        "label": "Saturn V2 operator/surplus/market-mode EOA",
+        "role": "other",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110187,
+        "sources": [
+          {
+            "label": "Complete native role replay/current membership and timelock pin",
+            "url": "https://etherscan.io/block/26110187"
+          },
+          {
+            "label": "Current V2 role/valuation powers",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2b7074cf6681382b70e239063931ebe83c0f4e0a"
+          }
+        ],
+        "evidence": "Current role census and hasRole bind OPERATOR_ROLE, SURPLUS_MANAGER_ROLE and MARKET_MODE_MANAGER_ROLE to this code-empty address. It controls trade/batch processing, declared surplus and market-mode operations; this is not an independently verified Fireblocks wallet. No direct USDat mint or cryptographic quorum is inferred."
+      }
+    ],
+    "upgradeability": {
+      "model": "uups",
+      "deploymentRefs": [
+        "ethereum:0xd166337499e176bbc38a1fbd113ab144e5bd2df7"
+      ],
+      "proxyAddresses": [
+        "0xd166337499e176bbc38a1fbd113ab144e5bd2df7"
+      ],
+      "implementationAddresses": [
+        "0x2b7074cf6681382b70e239063931ebe83c0f4e0a"
+      ],
+      "adminAddresses": [
+        "0xfd5782e3bff366601da3973ae30c583de4f08a67"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 432000,
+      "controlRef": "Saturn sUSDat default-admin upgrade timelock",
+      "observedAt": "2026-10-03",
+      "observedBlock": 26108096,
+      "sources": [
+        {
+          "label": "Deployed StakedUSDat UUPS implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2b7074cf6681382b70e239063931ebe83c0f4e0a"
+        },
+        {
+          "label": "Ethereum block 26108096",
+          "url": "https://etherscan.io/block/26108096"
+        }
+      ]
+    },
+    "reconciliation": "unknown",
+    "supervision": "unknown",
+    "review": {
+      "reviewer": "Sol refinement 2026-10-03 (Refine12, exact source and RPC census)",
+      "reviewedAt": "2026-10-03",
+      "disposition": "scoreable",
+      "unresolvedQuestions": [],
+      "scopedQuestions": [
+        {
+          "controlRef": "Saturn V2 operator/surplus/market-mode EOA",
+          "question": "What signed/MPC policy, operational independence and key custody bind the V2 operator/surplus/market-mode EOA 0xc35580434261f667d6abbda9e3dc1dc31e5a1b92? The older Fireblocks wallet roster does not bind this exact current role holder.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol mint-authority calibration v2 (Refine12)",
+          "sources": [
+            {
+              "label": "Complete native and timelock role replay with current membership at Ethereum block 26110187",
+              "url": "https://etherscan.io/block/26110187"
+            },
+            {
+              "label": "Saturn disclosed legacy Fireblocks MPC wallet roster",
+              "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/key-addresses.md"
+            }
+          ]
+        },
+        {
+          "controlRef": "Saturn sUSDat parameter-manager timelock",
+          "question": "What signed/MPC policy, operational independence and key custody bind the parameter-manager timelock's sole proposer/canceller EOA 0x7a5a4064005584bc727666ec82548a9139d5f21e? The genesis-to-pin role census and current getters identify that proposer, but the older Fireblocks wallet roster does not attest this exact address.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol mint-authority calibration v2 (Refine12)",
+          "sources": [
+            {
+              "label": "Complete native and timelock role replay with current membership at Ethereum block 26110187",
+              "url": "https://etherscan.io/block/26110187"
+            },
+            {
+              "label": "Saturn disclosed legacy Fireblocks MPC wallet roster",
+              "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/key-addresses.md"
+            }
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "label": "Current V2 role and migration runbook",
+          "url": "https://raw.githubusercontent.com/saturn-organization/saturn-yield-dollar/main/docs/v2-deployment-runbook.md"
+        },
+        {
+          "label": "Verified deployed StakedUSDat implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2b7074cf6681382b70e239063931ebe83c0f4e0a"
+        },
+        {
+          "label": "Saturn incomplete assurance disclosure",
+          "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/transparency-and-audits.md"
+        },
+        {
+          "label": "Saturn hosted audit index (including V2 draft security review)",
+          "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/transparency-and-audits.md"
+        },
+        {
+          "label": "Certora - Audit #2.pdf (downloaded and scope checked)",
+          "url": "https://3131394583-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FaoxN2WzhSM74tsJUct0C%2Fuploads%2FKNrnqGyTv1VPM2rbBIp0%2FCertora%20-%20Audit%20%232.pdf?alt=media&token=1249bd80-ea7f-4447-a7f3-ba2b5e21fd9d"
+        },
+        {
+          "label": "Certora - Formal Verification.pdf (downloaded and scope checked)",
+          "url": "https://3131394583-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FaoxN2WzhSM74tsJUct0C%2Fuploads%2FM1TsQVTqUghMuZSes4wu%2FCertora%20-%20Formal%20Verification.pdf?alt=media&token=923bdc63-98c3-49d7-92cc-f9e7c760d575"
+        },
+        {
+          "label": "Three Sigma - Audit #1.pdf (downloaded and scope checked)",
+          "url": "https://3131394583-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FaoxN2WzhSM74tsJUct0C%2Fuploads%2FPKsYColQZJy0e2AlTX7K%2FThree%20Sigma%20-%20Audit%20%231.pdf?alt=media&token=27dc0f4e-6882-4188-b46b-6f0b65f8ef9c"
+        },
+        {
+          "label": "Certora - Audit #3.pdf (downloaded and scope checked)",
+          "url": "https://3131394583-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FaoxN2WzhSM74tsJUct0C%2Fuploads%2FjP4Ej0FXvClHiADGwKLd%2FCertora%20-%20Audit%20%233.pdf?alt=media&token=a2fe3d9b-b81f-4e23-b40d-0b3aa3178646"
+        },
+        {
+          "label": "Certora - Saturn-sUSDat v2.pdf (downloaded and scope checked)",
+          "url": "https://3131394583-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FaoxN2WzhSM74tsJUct0C%2Fuploads%2FmH2VnHMcqzc5l5eygoPP%2FCertora%20-%20Saturn-sUSDat%20v2.pdf?alt=media&token=937d6687-03b4-4c9b-a525-5f180793a6a2"
+        },
+        {
+          "label": "Saturn operational wallets: issuer-disclosed Fireblocks 2-of-3 MPC",
+          "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/key-addresses.md"
+        },
+        {
+          "label": "Original canonical vault creation transaction",
+          "url": "https://etherscan.io/tx/0xc4615dbc25d1aea6442f64e08b3308972817a17bc092b3368e3589589106102b"
+        },
+        {
+          "label": "Current V2 implementation activation Upgraded event",
+          "url": "https://etherscan.io/tx/0xead3a4bde840e188af9dfdd42f5aaa1187dd3b60abb628f461df6d9d5406f50f"
+        },
+        {
+          "label": "Complete native role replay/current membership and timelock pin",
+          "url": "https://etherscan.io/block/26110187"
+        }
+      ],
+      "evidence": "Native issuance is a USDat share wrapper with an observed five-day upgrade controller and one-hour parameter timelock. The current implementation, USDat asset, share supply, totalAssets and default-admin membership were re-observed at Ethereum block 26108096. Public custody/assurance prose remains on the legacy STRC structure, while the deployed vault holds STRCon. The unresolved review preserves observed adverse/local powers without asserting a complete safe control inventory or scoreable whole financial claim. Native proxy genesis-to-pin RoleGranted/RoleRevoked replay (17 events), joined to current exact implementation role constants and current hasRole checks, resolves {\"DEFAULT_ADMIN_ROLE\":[\"0xfd5782e3bff366601da3973ae30c583de4f08a67\"],\"OPERATOR_ROLE\":[\"0xc35580434261f667d6abbda9e3dc1dc31e5a1b92\"],\"BLACKLISTER_ROLE\":[\"0xf5a93281ac8604f99755cc489317e75ac334cfe2\"],\"ENFORCER_ROLE\":[\"0x6f72de4f529a03bfa883825152656a8c62cbb626\"],\"PARAMETER_MANAGER_ROLE\":[\"0x6f72de4f529a03bfa883825152656a8c62cbb626\"],\"PAUSER_ROLE\":[\"0xf5a93281ac8604f99755cc489317e75ac334cfe2\"],\"UNPAUSER_ROLE\":[\"0x6f72de4f529a03bfa883825152656a8c62cbb626\"],\"SURPLUS_MANAGER_ROLE\":[\"0xc35580434261f667d6abbda9e3dc1dc31e5a1b92\"],\"MARKET_MODE_MANAGER_ROLE\":[\"0xc35580434261f667d6abbda9e3dc1dc31e5a1b92\"]}. Default-admin timelock: sole proposer/canceller 0x610182581c93687ca03f4a8e7f124f8cec616820, open EXECUTOR_ROLE, DEFAULT_ADMIN held only by itself, delay 432000. Parameter timelock: sole proposer/canceller 0x7a5a4064005584bc727666ec82548a9139d5f21e, open executor, self-only default admin, delay 3600. Both proposers and current operator are code-empty addresses; no Safe quorum is inferred. The official Fireblocks 2/3 disclosure covers listed Admin/Compliance/Processor/Asset-Cap wallets, but does not establish MPC custody for new V2 operator 0xc35580434261f667d6abbda9e3dc1dc31e5a1b92 or parameter proposer. Upgrade authority can replace native mint logic; no fixed non-raiseable issuance bound is established. Downloaded audits: Three Sigma 30 Dec 2025–12 Jan 2026; Certora 16–23 Jan 2026; Certora M0 review 23–27 Feb 2026; Certora M0/FV 23 Feb–9 Apr 2026; Certora sUSDat V2 27 Jul–5 Aug 2026 covers vault, queue, STRCon module/oracle/execution policy at commits 4157ff8/f9bb4f9, but the PDF is marked DRAFT. No report is financial assurance or proves identity with the deployed September build. Calibration 2026-10-03: non-census disclosure observations retained outside the umbrella mint-path flag: What signed/MPC policy and operational independence control the V2 operator 0xc35580434261f667d6abbda9e3dc1dc31e5a1b92 and parameter timelock proposer 0x7a5a4064005584bc727666ec82548a9139d5f21e? The older Fireblocks wallet roster does not bind these addresses. What executed legal and independent financial reconciliation constrains recognized STRCon NAV against sUSDat liabilities after the migration? The public code audits, including a V2 draft, are not financial assurance."
+    },
+    "economicCapSemantics": "unbounded"
+  }
+}

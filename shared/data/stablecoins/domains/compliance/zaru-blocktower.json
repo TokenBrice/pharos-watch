@@ -1,0 +1,38 @@
+{
+  "id": "zaru-blocktower",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "Transferable single-fiat-reference token with issuer or partner redemption terms and payment/settlement use.",
+      "references": [
+        {
+          "label": "Issuer token terms",
+          "url": "https://zaru.network/blog/zar-universal-white-paper",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-02"
+        }
+      ]
+    },
+    "authorizationStatus": "unknown",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Loop South Africa (Pty) Ltd trading as BlockTower",
+    "issuerDomicile": "South Africa",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "unknown",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "references": [
+      {
+        "label": "Issuer token terms",
+        "url": "https://zaru.network/blog/zar-universal-white-paper",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-02"
+      }
+    ],
+    "notes": "GENIUS authorization and foreign-exception status are unresolved. Local financial-service or issuer claims do not prove U.S. permission. MiCA scope was not resolved and no MiCA row is authored. No negative authorization or enforcement finding is asserted. Reserve report engagement is AUP, not audit assurance.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  }
+}

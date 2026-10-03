@@ -1,0 +1,499 @@
+{
+  "id": "pendleusdc-pendle",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "none-resolved-mint",
+    "confidence": "verified",
+    "summary": "Pendle Ecosystem USDC mints USDC-backed deposit shares and may mint fee shares during accrual. Circle USDC issuance is inherited; owner and curator retain strategy parameter powers.",
+    "inheritedFrom": "usdc-circle",
+    "economicCapSemantics": "bounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x55c1b6e461a6334b567baf0feb5d728715446f05",
+        "deploymentRefs": [
+          "ethereum:0x55c1b6e461a6334b567baf0feb5d728715446f05"
+        ],
+        "label": "Pendle Ecosystem USDC asset-backed share contract",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107703,
+        "sources": [
+          {
+            "label": "Pendle Ecosystem USDC exact vault identity and accounting",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho Vault V2 mechanism documentation",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "Pinned VaultV2 primary source, gate and loss semantics",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          },
+          {
+            "label": "Pinned MorphoMarketV1AdapterV2 primary source",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+          },
+          {
+            "label": "Ethereum block 26107703 replay locator; observed via Alchemy Ethereum RPC (credential omitted)",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Exact VaultV2 partial source with matching deployed bytecode",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x55c1b6e461a6334b567baf0feb5d728715446f05"
+          },
+          {
+            "label": "Exact adapter partial source with matching deployed bytecode",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa2f362079dbc570a6df5bd04ad91002d17c0db9a"
+          }
+        ],
+        "evidence": "At ethereum block 26107703 (0x18e5f37), captured 2026-10-02T22:44:09.665742+00:00, totalSupply=57223770882007511486234678 atomic shares; accrueInterestView returned assets=57750429995940, pending performance shares=41086454487993768052, pending management shares=0. Idle USDC=0; complete adapter inventory sums to 57750429995940 USDC atomic units. Asset decimals=6, share decimals=18. convertToAssets(1e18)=1009202 USDC atomic units. Reference VaultV2 code mints shares against transferred USDC and accrual can mint fee shares. No discretionary Circle USDC minting power is conveyed."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xb83a77677c51aaf6c45b0b64199eae6938559e5e",
+        "deploymentRefs": [
+          "ethereum:0x55c1b6e461a6334b567baf0feb5d728715446f05"
+        ],
+        "label": "Pendle Ecosystem USDC owner parameter authority",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107703,
+        "sources": [
+          {
+            "label": "Pendle Ecosystem USDC exact vault identity and accounting",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Morpho Vault V2 mechanism documentation",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "Pinned VaultV2 primary source, gate and loss semantics",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          },
+          {
+            "label": "Pinned MorphoMarketV1AdapterV2 primary source",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+          },
+          {
+            "label": "Ethereum block 26107703 replay locator; observed via Alchemy Ethereum RPC (credential omitted)",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Exact VaultV2 partial source with matching deployed bytecode",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x55c1b6e461a6334b567baf0feb5d728715446f05"
+          },
+          {
+            "label": "Exact adapter partial source with matching deployed bytecode",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa2f362079dbc570a6df5bd04ad91002d17c0db9a"
+          },
+          {
+            "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+            "url": "https://blue-api.morpho.org/graphql"
+          }
+        ],
+        "evidence": "At ethereum block 26107703 (0x18e5f37), captured 2026-10-02T22:44:09.665742+00:00, owner=0xb83a77677c51aaf6c45b0b64199eae6938559e5e; curator=0x4687e45bb5518a995913a24bb2816fe2031d74d8. Owner getThreshold=4, owners=6, enabled modules empty and guard zero; signer independence unestablished. addAdapter delay=604800 sec; increaseAbsoluteCap delay=259200 sec; fee-setting delays=0. Fee rates performance=0.05, management=0.0. Current API timelock census, independently reconfirmed by RPC on 2026-10-03 at block 26110242: setPerformanceFee(uint256)=0 sec; setManagementFee(uint256)=0 sec. No blanket all-action timelock is inferred.",
+        "failureDomainKeys": [
+          "safe:ethereum:0xb83a77677c51aaf6c45b0b64199eae6938559e5e"
+        ],
+        "threshold": 4,
+        "signerCount": 6,
+        "safe": {
+          "owners": [
+            "0xfdc7917dce08a4a0a169c1ea60ac19fc569bd42c",
+            "0x910c2847ee5e636e7592128bc87df8df1ec8a751",
+            "0x0f6351a7bcd1881e2cff382de2e3473ea819a7d9",
+            "0x88f7a5761882da521a7ad761c4f62d8ca41f052f",
+            "0x51464d67ead940040023e28b5afdaa1764de329d",
+            "0xd512cf03acf13125ed49cb90e30cc9beaa9af2ea"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 26107703,
+          "observedAt": "2026-10-02",
+          "source": "onchain"
+        }
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x4687e45bb5518a995913a24bb2816fe2031d74d8",
+        "deploymentRefs": [
+          "ethereum:0x55c1b6e461a6334b567baf0feb5d728715446f05"
+        ],
+        "label": "Pendle Ecosystem USDC curator — Armitage by Wintermute",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "threshold": 3,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0xfdc7917dce08a4a0a169c1ea60ac19fc569bd42c",
+            "0x910c2847ee5e636e7592128bc87df8df1ec8a751",
+            "0x0f6351a7bcd1881e2cff382de2e3473ea819a7d9",
+            "0x88f7a5761882da521a7ad761c4f62d8ca41f052f",
+            "0x51464d67ead940040023e28b5afdaa1764de329d"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 26107703,
+          "observedAt": "2026-10-03",
+          "source": "onchain",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99"
+        },
+        "observedAt": "2026-10-03",
+        "observedBlock": 26107703,
+        "sources": [
+          {
+            "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+            "url": "https://blue-api.morpho.org/graphql"
+          },
+          {
+            "label": "Wintermute Armitage exact Pendle Ecosystem USDC vault attribution",
+            "url": "https://armitage.wintermute.com/vaults/ethereum/pendle-ecosystem-usdc"
+          },
+          {
+            "label": "Ethereum archive RPC curator Safe quorum/modules/guard at block 26107703; credentials omitted",
+            "url": "https://eth-mainnet.g.alchemy.com"
+          }
+        ],
+        "evidence": "curator() is this Safe. Archive getThreshold()=3, getOwners() returned the listed five owners, getModulesPaginated(0x1,100) returned empty with next=0x1, and guard slot was zero. Fallback-handler slot points to 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99; no exhaustive handler execution-scope certificate is claimed. Curator submits timelocked adapter/cap/fee changes and can reduce caps/revoke operations. Armitage is publicly named as curator and Pendle approves collateral selection; neither page identifies the individual key holders or proves their independence."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x12f6e7646808aa948ba7a625ef6e02f55efc684b",
+        "deploymentRefs": [
+          "ethereum:0x55c1b6e461a6334b567baf0feb5d728715446f05"
+        ],
+        "label": "Pendle Ecosystem USDC deallocation helper",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110242,
+        "sources": [
+          {
+            "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+            "url": "https://blue-api.morpho.org/graphql"
+          },
+          {
+            "label": "ethereum RPC role/code census at block 26110242; credentials omitted",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Fully verified DeallocateProxy source (only authorized deallocation forwarding)",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x12f6e7646808aa948ba7a625ef6e02f55efc684b"
+          }
+        ],
+        "evidence": "On 2026-10-03 at ethereum block 26110242, isAllocator(address) returned true. This role can allocate/deallocate within configured adapter/cap bounds, set liquidity adapter/data and maxRate; it cannot call arbitrary share mint or mint parent USDC. Fully verified immutable DeallocateProxy exposes only deallocate and requires the caller to be a vault allocator; no allocate, fee, cap, upgrade or maxRate forwarding entrypoint exists."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x73b40e49eb625e6b2ee8e41c8a5509f3e206a53b",
+        "deploymentRefs": [
+          "ethereum:0x55c1b6e461a6334b567baf0feb5d728715446f05"
+        ],
+        "label": "Pendle Ecosystem USDC allocator 0x73b40e49eb625e6b2ee8e41c8a5509f3e206a53b",
+        "role": "governor",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110242,
+        "sources": [
+          {
+            "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+            "url": "https://blue-api.morpho.org/graphql"
+          },
+          {
+            "label": "ethereum RPC role/code census at block 26110242; credentials omitted",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "On 2026-10-03 at ethereum block 26110242, isAllocator(address) returned true. This role can allocate/deallocate within configured adapter/cap bounds, set liquidity adapter/data and maxRate; it cannot call arbitrary share mint or mint parent USDC."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xc007eb51e3d3285d192f43a35a7a5dacc35a8d99",
+        "deploymentRefs": [
+          "ethereum:0x55c1b6e461a6334b567baf0feb5d728715446f05"
+        ],
+        "label": "Pendle Ecosystem USDC allocator 0xc007eb51e3d3285d192f43a35a7a5dacc35a8d99",
+        "role": "governor",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110242,
+        "sources": [
+          {
+            "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+            "url": "https://blue-api.morpho.org/graphql"
+          },
+          {
+            "label": "ethereum RPC role/code census at block 26110242; credentials omitted",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "On 2026-10-03 at ethereum block 26110242, isAllocator(address) returned true. This role can allocate/deallocate within configured adapter/cap bounds, set liquidity adapter/data and maxRate; it cannot call arbitrary share mint or mint parent USDC."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x77fcf2c8bb9c6a0da2d21f331e15fd83a63e9fbe",
+        "deploymentRefs": [
+          "ethereum:0x55c1b6e461a6334b567baf0feb5d728715446f05"
+        ],
+        "label": "Pendle Ecosystem USDC sentinel 0x77fcf2c8bb9c6a0da2d21f331e15fd83a63e9fbe",
+        "role": "other",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03",
+        "observedBlock": 26110242,
+        "sources": [
+          {
+            "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+            "url": "https://blue-api.morpho.org/graphql"
+          },
+          {
+            "label": "ethereum RPC role/code census at block 26110242; credentials omitted",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "On 2026-10-03 at ethereum block 26110242, isSentinel(address) returned true. This role can revoke pending changes, reduce allocation caps and deallocate; it cannot call arbitrary share mint or mint parent USDC."
+      }
+    ],
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-10-02",
+      "observedBlock": 26107703,
+      "sources": [
+        {
+          "label": "Pendle Ecosystem USDC exact vault identity and accounting",
+          "url": "https://api.morpho.org/graphql"
+        },
+        {
+          "label": "Morpho Vault V2 mechanism documentation",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+        },
+        {
+          "label": "Pinned VaultV2 primary source, gate and loss semantics",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+        },
+        {
+          "label": "Pinned MorphoMarketV1AdapterV2 primary source",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+        },
+        {
+          "label": "Ethereum block 26107703 replay locator; observed via Alchemy Ethereum RPC (credential omitted)",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Exact VaultV2 partial source with matching deployed bytecode",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x55c1b6e461a6334b567baf0feb5d728715446f05"
+        },
+        {
+          "label": "Exact adapter partial source with matching deployed bytecode",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa2f362079dbc570a6df5bd04ad91002d17c0db9a"
+        },
+        {
+          "label": "Sourcify verified VaultV2 compiler/runtime reference; exact pinned target functional equivalence independently reproduced 2026-10-03",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c?fields=sources,compilation,runtimeBytecode"
+        },
+        {
+          "label": "Sourcify verified MorphoMarketV1AdapterV2 compiler/runtime reference; exact pinned target functional equivalence independently reproduced 2026-10-03",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0x812b71c33ae5eafebae967c5670e37eca3cab0ac?fields=sources,compilation,runtimeBytecode"
+        }
+      ]
+    },
+    "review": {
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "Pendle Ecosystem USDC exact vault identity and accounting",
+          "url": "https://api.morpho.org/graphql"
+        },
+        {
+          "label": "Morpho Vault V2 mechanism documentation",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+        },
+        {
+          "label": "Pinned VaultV2 primary source, gate and loss semantics",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+        },
+        {
+          "label": "Pinned MorphoMarketV1AdapterV2 primary source",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+        },
+        {
+          "label": "Ethereum block 26107703 replay locator; observed via Alchemy Ethereum RPC (credential omitted)",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Exact VaultV2 partial source with matching deployed bytecode",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x55c1b6e461a6334b567baf0feb5d728715446f05"
+        },
+        {
+          "label": "Exact adapter partial source with matching deployed bytecode",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa2f362079dbc570a6df5bd04ad91002d17c0db9a"
+        },
+        {
+          "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+          "url": "https://blue-api.morpho.org/graphql"
+        },
+        {
+          "label": "ChainSecurity VaultV2 code assessment, 2025-09-16 (reference code, not financial assurance)",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/main/audits/2025-09-15-chainsecurity.pdf"
+        },
+        {
+          "label": "Cantina Managed adapter review, report 2025-12-15; final code tag 2025-12-04 (not exact-vault assurance)",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/main/audits/2025-12-04-market-v1-adapter-v2-spearbit.pdf"
+        },
+        {
+          "label": "Wintermute Armitage exact Pendle Ecosystem USDC vault attribution",
+          "url": "https://armitage.wintermute.com/vaults/ethereum/pendle-ecosystem-usdc"
+        },
+        {
+          "label": "Sourcify verified VaultV2 compiler/runtime reference; exact pinned target functional equivalence independently reproduced 2026-10-03",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c?fields=sources,compilation,runtimeBytecode"
+        },
+        {
+          "label": "Sourcify verified MorphoMarketV1AdapterV2 compiler/runtime reference; exact pinned target functional equivalence independently reproduced 2026-10-03",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0x812b71c33ae5eafebae967c5670e37eca3cab0ac?fields=sources,compilation,runtimeBytecode"
+        }
+      ],
+      "evidence": "At ethereum block 26107703 (0x18e5f37), captured 2026-10-02T22:44:09.665742+00:00, owner=0xb83a77677c51aaf6c45b0b64199eae6938559e5e; curator=0x4687e45bb5518a995913a24bb2816fe2031d74d8. Owner getThreshold=4, owners=6, enabled modules empty and guard zero; signer independence unestablished. addAdapter delay=604800 sec; increaseAbsoluteCap delay=259200 sec; fee-setting delays=0. Fee rates performance=0.05, management=0.0. Local financial attestation or prudential supervision is not inherited from Circle. Partial exact deployed VaultV2 source and matching RPC bytecode corroborate the documented immutable model; full compiler/source verification is not claimed. On 2026-10-03 the exact owner/curator returned by Morpho were independently reconfirmed by RPC. Published allocator/sentinel addresses were each checked with isAllocator/isSentinel at block 26110242. Selector-specific fee delays and the published role census are recorded below; no exhaustive module-permission or independent-human-signer closure is claimed. Calibration retention (2026-10-03): Signer independence and actual key custody are undisclosed. Calibration v2 (2026-10-03): Matching explorer-reported deployed bytecode to pinned RPC does not establish equality to a fully verified reference runtime. The previously scoped compiler/source-completeness gaps remain genuine local mint/authorization-path unknowns and are restored to the aggregate unresolved review; no unidentified signer custody is added to that aggregate flag. Calibration v2 custody retention: signer independence, actual key custody and signing-policy questions are restored separately for each identified Safe/EOA controller; known controller addresses and quorum evidence do not establish the human/key-custody facts. Reconciliation remains not-applicable because this is a local deposit-backed ERC-4626 share/fee-share mechanism, not an issuer supply-to-reserve reconciliation regime; parent durable issuance and independent financial assurance are not established by this local review. Supervision remains none: no local prudential or assurance-opinion credit is claimed. Independently reproduced functional compiler/runtime correspondence on 2026-10-03 at ethereum block 26107703 for exact VaultV2 0x55c1b6e461a6334b567baf0feb5d728715446f05 and its complete one-adapter inventory 0xa2f362079dbc570a6df5bd04ad91002d17c0db9a, also the observed liquidityAdapter. Vault reference is Sourcify chain 8453, 0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c, runtimeMatch=match, matchId 30034094, verifiedAt 2026-05-26T22:26:25Z; compiler solc 0.8.28+commit.7893614a, viaIR, optimizer 100000. Pinned target runtime length is 21808 bytes. Masked only compiler-declared immutable references AST37 asset (6 occurrences), AST39 decimals (1), AST41 virtualShares (5), and declared 12-byte CBOR auxdata including length trailer at byte offset 21796. All 12 immutable 32-byte occurrences independently match exact target getters: asset=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, decimals=18, virtualShares=1000000000000. Every remaining executable runtime byte equals the verified reference recompiled runtime; normalized SHA-256=cf17ab0161388ea9277000e692e929216da2618e441c54bcd677def1000dd12e. Adapter independently matches a separate Sourcify-verified MorphoMarketV1AdapterV2 reference, chain 8453 0x812b71c33ae5eafebae967c5670e37eca3cab0ac, runtimeMatch=match, matchId 33231859, verifiedAt 2026-06-21T06:48:43Z, same compiler/viaIR/optimizer settings. Pinned adapter runtime length is 11784 bytes; masked only declared immutable AST2265 factory (1 occurrence), AST2267 parentVault (6), AST2269 asset (3), AST2271 morpho (4), AST2273 adapterId (2), AST2275 adaptiveCurveIrm (4), and 12-byte CBOR auxdata at offset 11772. All 20 immutable occurrences match exact same-block adapter getters: factory=0x32bb1c0d48d8b1b3363e86eeb9a0300bad61ccc1; parentVault=0x55c1b6e461a6334b567baf0feb5d728715446f05; asset=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48; morpho=0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb; adapterId=0xfedec349ee09b28220002495ffdd04bc287f1e59751e5828c24e4d075e746732; adaptiveCurveIrm=0x870ac11d48b15db9a138cf899d20f13f79ba00bc. Every remaining adapter executable byte equals its verified reference recompiled runtime; normalized SHA-256=355d973d7a246e5d4c02bb68e7415b9d62bf584a57f6101357b57c5d2fc40113. This closes the earlier partial-explorer/compiler source-identity unknown for this vault and its mint-accounting adapter under calibration v2 R4. It is functional executable correspondence, not complete target creation-bytecode/metadata identity or financial assurance. Previously recorded code-identity uncertainty is superseded by this direct proof; signer-custody and any separately listed Zodiac permission/unwrap execution gaps remain unresolved.",
+      "reviewer": "Sol functional runtime correspondence 2026-10-03 (Refine09)",
+      "reviewedAt": "2026-10-03",
+      "unresolvedQuestions": [],
+      "scopedQuestions": [
+        {
+          "controlRef": "ethereum:0xb83a77677c51aaf6c45b0b64199eae6938559e5e",
+          "question": "For this identified Pendle Ecosystem USDC owner parameter authority controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address and Safe quorum/owner inventory is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
+          "sources": [
+            {
+              "label": "Pendle Ecosystem USDC exact vault identity and accounting",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Morpho Vault V2 mechanism documentation",
+              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+            },
+            {
+              "label": "Pinned VaultV2 primary source, gate and loss semantics",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            },
+            {
+              "label": "Pinned MorphoMarketV1AdapterV2 primary source",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+            },
+            {
+              "label": "Ethereum block 26107703 replay locator; observed via Alchemy Ethereum RPC (credential omitted)",
+              "url": "https://ethereum-rpc.publicnode.com"
+            },
+            {
+              "label": "Exact VaultV2 partial source with matching deployed bytecode",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x55c1b6e461a6334b567baf0feb5d728715446f05"
+            },
+            {
+              "label": "Exact adapter partial source with matching deployed bytecode",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa2f362079dbc570a6df5bd04ad91002d17c0db9a"
+            },
+            {
+              "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+              "url": "https://blue-api.morpho.org/graphql"
+            }
+          ]
+        },
+        {
+          "controlRef": "ethereum:0x4687e45bb5518a995913a24bb2816fe2031d74d8",
+          "question": "For this identified Pendle Ecosystem USDC curator — Armitage by Wintermute controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address and Safe quorum/owner inventory is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
+          "sources": [
+            {
+              "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+              "url": "https://blue-api.morpho.org/graphql"
+            },
+            {
+              "label": "Wintermute Armitage exact Pendle Ecosystem USDC vault attribution",
+              "url": "https://armitage.wintermute.com/vaults/ethereum/pendle-ecosystem-usdc"
+            },
+            {
+              "label": "Ethereum archive RPC curator Safe quorum/modules/guard at block 26107703; credentials omitted",
+              "url": "https://eth-mainnet.g.alchemy.com"
+            }
+          ]
+        },
+        {
+          "controlRef": "ethereum:0x73b40e49eb625e6b2ee8e41c8a5509f3e206a53b",
+          "question": "For this identified Pendle Ecosystem USDC allocator 0x73b40e49eb625e6b2ee8e41c8a5509f3e206a53b controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
+          "sources": [
+            {
+              "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+              "url": "https://blue-api.morpho.org/graphql"
+            },
+            {
+              "label": "ethereum RPC role/code census at block 26110242; credentials omitted",
+              "url": "https://ethereum-rpc.publicnode.com"
+            }
+          ]
+        },
+        {
+          "controlRef": "ethereum:0xc007eb51e3d3285d192f43a35a7a5dacc35a8d99",
+          "question": "For this identified Pendle Ecosystem USDC allocator 0xc007eb51e3d3285d192f43a35a7a5dacc35a8d99 controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
+          "sources": [
+            {
+              "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+              "url": "https://blue-api.morpho.org/graphql"
+            },
+            {
+              "label": "ethereum RPC role/code census at block 26110242; credentials omitted",
+              "url": "https://ethereum-rpc.publicnode.com"
+            }
+          ]
+        },
+        {
+          "controlRef": "ethereum:0x77fcf2c8bb9c6a0da2d21f331e15fd83a63e9fbe",
+          "question": "For this identified Pendle Ecosystem USDC sentinel 0x77fcf2c8bb9c6a0da2d21f331e15fd83a63e9fbe controller, what evidence establishes independent human signers/operators, actual key custody and signing policy? The address is identified on-chain, but human independence and custody procedures remain unestablished.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
+          "sources": [
+            {
+              "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
+              "url": "https://blue-api.morpho.org/graphql"
+            },
+            {
+              "label": "ethereum RPC role/code census at block 26110242; credentials omitted",
+              "url": "https://ethereum-rpc.publicnode.com"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

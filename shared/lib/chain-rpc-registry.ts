@@ -81,6 +81,9 @@ export const EXTRA_FALLBACK_RPC_URLS: Readonly<Record<string, readonly string[]>
 // profile (notably Monad and Blast); neither profile implicitly expands the other.
 export const SUPPLY_RPC_DEFAULTS = {
   "aptos": { rpcUrl: APTOS_PUBLIC_REST_URL },
+  // 0G mainnet (16661 / 0x4115), eth_chainId and PYUSDx totalSupply verified
+  // 2026-10-03. Supply-only guard profile; 0G is not a registered product chain.
+  "0g": { rpcUrl: "https://evmrpc.0g.ai" },
   "plume": { rpcUrl: PUBLIC_RPC_URLS["plume"], fallbackRpcUrl: "https://plume.drpc.org" },
   "plasma": { rpcUrl: PUBLIC_RPC_URLS["plasma"], fallbackRpcUrl: "https://plasma.drpc.org" },
   "monad": { rpcUrl: PUBLIC_RPC_URLS["monad"], fallbackRpcUrl: "https://rpc-mainnet.monadinfra.com" },
@@ -116,6 +119,13 @@ export const SUPPLY_RPC_DEFAULTS = {
   "codex": { rpcUrl: "https://rpc.codex.xyz", fallbackRpcUrl: "https://81224.rpc.thirdweb.com" },
   "robinhood": { rpcUrl: "https://rpc.mainnet.chain.robinhood.com" },
   "tempo": { rpcUrl: PUBLIC_RPC_URLS["tempo"] },
+  // Official keyless endpoints, eth_chainId/totalSupply/decimals verified
+  // 2026-10-03. Keep these latest-state supply profiles out of PUBLIC_RPC_URLS:
+  // Worker registry and transfer-materiality fallback readers currently treat
+  // that map's endpoints as archive-capable, which was not verified here.
+  "rise": { rpcUrl: "https://rpc.risechain.com" },
+  "somnia": { rpcUrl: "https://api.infra.mainnet.somnia.network" },
+  "filecoin": { rpcUrl: "https://api.node.glif.io/rpc/v1" },
   "apechain": { rpcUrl: "https://rpc.apechain.com/http", fallbackRpcUrl: "https://apechain.calderachain.xyz/http" },
   "rootstock": { rpcUrl: "https://public-node.rsk.co" },
   "conflux": { rpcUrl: "https://evm.confluxrpc.com", fallbackRpcUrl: "https://evm.confluxrpc.org" },

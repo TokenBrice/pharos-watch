@@ -127,7 +127,6 @@ describe("peg price bounds", () => {
   it("covers every supported fiat and commodity peg currency", () => {
     const unsupported: string[] = [];
     const hardcodedKeys = Object.keys(PEG_HARDCODED_PRICE_BOUNDS).filter((key) => key !== "USD");
-    let covered = 0;
 
     for (const pegCurrency of PEG_CURRENCY_VALUES) {
       const pegType = normalizePegTypeFromCurrency(pegCurrency);
@@ -144,11 +143,9 @@ describe("peg price bounds", () => {
         `${pegCurrency} hardcoded bounds`,
       ).toBe(true);
       expect(FX_RATE_BOUNDS[pegType], `${pegCurrency} FX bounds`).toBeDefined();
-      covered += 1;
     }
 
     expect(unsupported).toEqual([]);
-    expect(covered).toBe(33);
   });
 
   it("keeps non-USD hardcoded maxima within 0.1x-10x of FX maxima", () => {

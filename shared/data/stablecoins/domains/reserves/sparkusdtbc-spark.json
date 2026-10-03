@@ -1,0 +1,85 @@
+{
+  "id": "sparkusdtbc-spark",
+  "reserves": [
+    {
+      "sourceKey": "erc4626-single-asset:ethereum:0xb0c424116172b55cbb6dd3136f5989f7959e5b91:deployed",
+      "name": "Morpho USDT lender receivables across sUSDS, cbBTC, WBTC and wstETH markets",
+      "coinId": "usdt-tether",
+      "depType": "wrapper",
+      "blacklistable": true,
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Morpho market borrowers",
+      "riskFactors": [
+        "smart-contract",
+        "credit",
+        "liquidity"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Morpho exact vault portfolio and control API, accessed 2026-10-02",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Verified exact vault deployment and source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb0c424116172b55cbb6dd3136f5989f7959e5b91"
+      },
+      {
+        "label": "Credential-free RPC endpoint; pinned read in review notes",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Morpho vault framework and holder exit mechanics",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+      }
+    ],
+    "rationale": "Observed 2026-10-02T22:43:49.516688+00:00 at ethereum block 26107702 (hash 0x292b4ed6cca79fa476bc17c9ef12dd938dbbf67f4a61564c2fe8f897e07390e6). Native totalSupply 88558225018782413763816976 (18 decimals), asset 0xdac17f958d2ee523a2206206994597c13d831ec7 (6 decimals), totalAssets 89911293130474, convertToAssets(10^18) 1015278. One-share redeem from actual holder 0x1601843c5e9bc251a3272907010afa41fa18347e returned 1015278 asset base units via eth_call at that same block; no transaction broadcast. Current API itemizes all four supplied positions through adapter 0xef4cb7e87f212f128f0b24cf35861e52b3c78a6a. Market percentages normalize the contemporaneous API supplyAssets sum, not a different-block vault total or borrower collateral: sUSDS 6.056372003677845%, cbBTC 2.748265055721146e-09%, WBTC 26.16577323454757%, wstETH 67.77785475902633%. The single reviewed deployed slice aggregates these same-asset lender receivables to match the live ERC-4626 reader's vault-level deployed claim; it does not turn borrower collateral into directly owned assets or an underlying-token dependency. Exact position raw amounts: {\"0x3274643db77a064abd3bc851de77556a4ad2e2f502f4f0c80845fa8f909ecf0b\": 5445360952334, \"0x45671fb8d5dea1c4fbca0b8548ad742f6643300eeb8dbd34ad64a658b2b05bca\": 2471, \"0xa921ef34e2fc7a27ccc50ae7e4b154e16c9799d3387076c421423ef52ac4df99\": 23525978881830, \"0xe7e9694b754c4d4f7e21faf7223f6fa71abaeb10296a4c43a54a7977149687d2\": 60939929633391}.",
+    "compositionBasis": "Exact-vault operational position accounting; no independent financial assurance or legal segregation is inferred",
+    "compositionAsOf": "2026-10-02",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No unresolved composition-link dispositions remain within the immediate position accounting denominator. This does not establish stressed realization, enforceable priority or independently reconciled ultimate backing; those protections remain unproven. Underlying issuer and protocol risk remains serial, and whole-book custody uncertainty is recorded separately in custodyProfile.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Exact Spark Morpho vault and Morpho lending contracts",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Morpho exact vault portfolio and control API, accessed 2026-10-02",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Verified exact vault deployment and source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb0c424116172b55cbb6dd3136f5989f7959e5b91"
+      },
+      {
+        "label": "Credential-free RPC endpoint; pinned read in review notes",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Morpho vault framework and holder exit mechanics",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+      }
+    ],
+    "uncertainty": "On-chain position location is verified. Complete ultimate custody, enforceable segregation, successor custody and legal insolvency protection are not established by the receipt code or parent reserve disclosures.",
+    "knownUnknownExposurePct": 100
+  }
+}

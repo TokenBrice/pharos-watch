@@ -31,14 +31,6 @@ export const YIELD_VARIANT_MAP: Record<string, YieldVariant> = {
     yieldSource: "infiniFi savings (siUSD)",
     yieldType: "lending-vault",
   },
-  // Falcon USD -> sUSDf (savings wrapper, $87M TVL)
-  "usdf-falcon": {
-    variantSymbol: "sUSDf",
-    variantAddress: "0xc8cf6d7991f15525488b2a83df53468d682ba4b0",
-    variantChain: "ethereum",
-    yieldSource: "Falcon Finance savings (sUSDf)",
-    yieldType: "lending-vault",
-  },
   // Unitas -> sUSDu (savings wrapper, $64M TVL — governance-set rate)
   "usdu-unitas": {
     variantSymbol: "sUSDu",
@@ -78,14 +70,6 @@ export const YIELD_VARIANT_MAP: Record<string, YieldVariant> = {
     variantChain: "stacks",
     yieldSource: "Hermetica staking (sUSDh)",
     yieldType: "lending-vault",
-  },
-  // USDat -> sUSDat (Saturn staking ERC-4626 vault — STRC + Treasuries dynamic mix, target ~11% APY)
-  "usdat-saturn": {
-    variantSymbol: "sUSDat",
-    variantAddress: "0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
-    variantChain: "ethereum",
-    yieldSource: "Saturn staking (sUSDat)",
-    yieldType: "nav-appreciation",
   },
   // thUSD -> sthUSD (Theo staking ERC-4626 vault — delta-neutral gold carry yield)
   "thusd-theo": {

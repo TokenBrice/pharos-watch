@@ -38,6 +38,9 @@ const ALL_SLUGS: Record<PegCurrency, string> = {
   GHS: "ghs",
   KES: "kes",
   PEN: "pen",
+  CZK: "czk",
+  PLN: "pln",
+  AED: "aed",
   IDR: "idr",
   INR: "inr",
   HKD: "hkd",
@@ -105,6 +108,12 @@ export const PEG_INTRO: Partial<Record<PegCurrency, string>> = {
 
   XOF: `West African CFA franc stablecoins provide on-chain XOF exposure for West African payments, settlement, and remittance flows. Pharos tracks peg performance and supply data for XOF-pegged tokens.`,
 
+  CZK: `Czech Koruna stablecoins provide on-chain CZK exposure. Pharos tracks peg performance and supply data for CZK-pegged tokens against a live Czech koruna FX reference.`,
+
+  PLN: `Polish Zloty stablecoins provide on-chain PLN exposure. Pharos tracks peg performance and supply data for PLN-pegged tokens against a live Polish zloty FX reference.`,
+
+  AED: `UAE Dirham stablecoins provide on-chain AED exposure. Pharos tracks peg performance and supply data for AED-pegged tokens against a live dirham FX reference rather than treating them as USD pegs.`,
+
   GOLD: `Gold-pegged stablecoins tokenize physical gold, with each token typically backed by one troy ounce of London Good Delivery gold held in insured vaults. PAXG and XAUT are the largest, both regulated and fully reserved. Unlike fiat pegs, gold stablecoin prices track the spot gold market, making them a hedge against both crypto volatility and fiat inflation. Pharos monitors their peg accuracy against live gold prices, supply changes, and safety grades.`,
 
   SILVER: `Silver-pegged stablecoins tokenize physical silver, tracking the spot silver market on-chain. Pharos monitors peg accuracy and supply for silver-backed tokens.`,
@@ -135,6 +144,9 @@ export const PEG_MARKET_CONTEXT: Partial<Record<PegCurrency, string>> = {
   KGS: "KGS pegs are early Central Asian payment rails; use the page to verify whether tracked supply, chain coverage, and market data are deep enough for the intended use.",
   NGN: "NGN pegs connect African settlement and remittance demand to on-chain rails, where local banking access and liquidity depth are core risk inputs.",
   XOF: "XOF pegs map West African CFA franc exposure on-chain, so local redemption design and issuer operating jurisdiction are central to the review.",
+  CZK: "CZK pegs reference the Czech koruna; review issuer authorization, reserve composition, redemption access, and venue liquidity separately from the currency's FX rate.",
+  PLN: "PLN pegs reference the Polish zloty; compare issuer authorization, reserve composition, redemption access, and venue liquidity before relying on them for settlement.",
+  AED: "AED pegs reference the UAE dirham, not a dollar token; the currency's USD peg does not remove token issuer, reserve, or redemption risk.",
   IDR: "IDR pegs provide Indonesian rupiah exposure; assess issuer licensing, local rails, and venue depth before relying on them for treasury flows.",
   GOLD: "Gold pegs are commodity exposure, not fiat cash equivalents; review custody, bar allocation, redemption terms, and tracking against spot gold rather than a fixed 1.00 target.",
   SILVER: "Silver pegs inherit commodity-market volatility and custody questions, so peg accuracy means tracking spot silver rather than holding a fiat unit.",

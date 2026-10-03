@@ -1,0 +1,136 @@
+{
+  "id": "bbqusdc-steakhouse-v2",
+  "reserves": [
+    {
+      "sourceKey": "erc4626-single-asset:ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "name": "Steakhouse High Yield USDC idle USDC",
+      "pct": 0.0,
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "depType": "wrapper",
+      "blacklistable": true,
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle USDC",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "sourceKey": "erc4626-single-asset:ethereum:0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757:deployed",
+      "name": "Steakhouse High Yield USDC deployed strategy positions",
+      "pct": 100.0,
+      "risk": "high",
+      "coinId": "usdc-circle",
+      "depType": "wrapper",
+      "blacklistable": true,
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Morpho market borrowers and Circle USDC",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "liquidity",
+        "smart-contract",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Exact Morpho Vault V2 deployment",
+        "url": "https://app.morpho.org/ethereum/vault/0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757"
+      },
+      {
+        "label": "Verified deployment code identity",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757"
+      },
+      {
+        "label": "Pinned ethereum block 26107704",
+        "url": "https://etherscan.io/block/26107704"
+      },
+      {
+        "label": "Morpho complete current vault inventory",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Morpho Vault V2 gates",
+        "url": "https://docs.morpho.org/curate/concepts/gates.md"
+      },
+      {
+        "label": "Morpho share accounting and loss realization",
+        "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+      },
+      {
+        "label": "Exact Morpho lending adapter",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbfe734baab130048e20a64e800c4c2ec25756284"
+      }
+    ],
+    "rationale": "At ethereum block 26107704 (0x18e5f38), observed 2026-10-02T22:44:15.742108+00:00, totalAssets was 45743313.031731 USDC, totalSupply 43515419.935051016510 shares, idle USDC 0.000000; all 10 adapter market IDs and expectedSupplyAssets were enumerated. Idle and deployed percentages use the same-block totalAssets denominator. The itemized market balances plus idle USDC reconcile to totalAssets. These slices classify the direct USDC-denominated claim; they do not reclassify all borrower collateral as cash.",
+    "compositionBasis": "Pinned ERC-4626 accounting assets and idle USDC, complete sole-adapter market census",
+    "compositionAsOf": "2026-10-02",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Direct idle and deployed categories are classified. Borrower collateral custody, legal priority and future allocations remain unresolved, and USDC parent reserve quality is not vault financial assurance.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Steakhouse High Yield USDC VaultV2 0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757",
+        "role": "other"
+      },
+      {
+        "name": "MorphoMarketV1AdapterV2 0xbfe734baab130048e20a64e800c4c2ec25756284",
+        "role": "other"
+      },
+      {
+        "name": "Morpho lending markets 0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Exact Morpho Vault V2 deployment",
+        "url": "https://app.morpho.org/ethereum/vault/0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757"
+      },
+      {
+        "label": "Verified deployment code identity",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757"
+      },
+      {
+        "label": "Pinned ethereum block 26107704",
+        "url": "https://etherscan.io/block/26107704"
+      },
+      {
+        "label": "Morpho complete current vault inventory",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Morpho Vault V2 gates",
+        "url": "https://docs.morpho.org/curate/concepts/gates.md"
+      },
+      {
+        "label": "Morpho share accounting and loss realization",
+        "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+      },
+      {
+        "label": "Exact Morpho lending adapter",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbfe734baab130048e20a64e800c4c2ec25756284"
+      }
+    ],
+    "uncertainty": "The complete current immediate inventory is held by onchain vault/adapter/Morpho contracts. USDC is intentionally lent to borrowers. This identifies operational position custody, not legal segregation, borrower-collateral whole-book custody, signer independence or insolvency priority. The aggregate custodyModel remains unknown rather than inheriting an all-onchain claim from older precedents."
+  }
+}

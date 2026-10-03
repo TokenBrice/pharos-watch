@@ -35,7 +35,24 @@ describe("yield identity and ownership boundaries", () => {
   it("does not attach Axis USDx to Hex Trust even with a matching ticker", () => {
     const candidates = ["0xa1fa7777974312f7d801a8880714a218f76233f8", "0xf8750b54d86be7ae9e32b4a0c826811198d63313"].map((address) => ({ symbol: "USDX", chain: "ethereum", address, yield: source({ sourceKey: address, dataSource: "protocol-api", yieldType: "fixed-yield" }) }));
     const resolved = resolve([], candidates);
-    expect(resolved.map((entry) => [entry.id, entry.yield?.sourceKey])).toEqual([["usdx-hex-trust", candidates[1].address]]);
+    expect(resolved.map((entry) => [entry.id, entry.yield?.sourceKey])).toEqual([
+      ["usdx-axis", candidates[0].address],
+      ["usdx-hex-trust", candidates[1].address],
+    ]);
+  });
+
+  it("assigns each addressed USDx pool to its issuer and rejects ambiguous Ethereum tickers", () => {
+    const pools = [
+      pool({ pool: "axis-usdx", symbol: "USDX", underlyingTokens: ["0xa1fa7777974312f7d801a8880714a218f76233f8"] }),
+      pool({ pool: "hex-usdx", symbol: "USDX", underlyingTokens: ["0xf8750b54d86be7ae9e32b4a0c826811198d63313"] }),
+      pool({ pool: "unknown-usdx", symbol: "USDX", underlyingTokens: ["0x0000000000000000000000000000000000000001"] }),
+      pool({ pool: "ambiguous-usdx", symbol: "USDX", tvlUsd: 9_000_000 }),
+    ];
+    const resolved = resolve(pools);
+    expect(resolved.map((entry) => [entry.id, entry.yield?.sourcePool]).sort()).toEqual([
+      ["usdx-axis", "axis-usdx"],
+      ["usdx-hex-trust", "hex-usdx"],
+    ]);
   });
 
   it("types auto deposit rows before the final absent-supply gate", () => {

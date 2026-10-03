@@ -1,0 +1,76 @@
+{
+  "id": "plnq-quantoz",
+  "name": "Quantoz PLNQ",
+  "symbol": "PLNQ",
+  "oneLiner": "PLNQ is Quantoz's pre-launch Polish złoty e-money token; its verified Ethereum deployment has zero supply and no observed market price.",
+  "collateral": "Planned 1:1 PLN reserve backing through Stichting Quantoz, separately from Quantoz Payments assets: at least 30% deposits with credit institutions, with the remainder in eligible low-risk, highly liquid PLN instruments. The issuer currently states PLNQ has no circulation and no reserve. No PLNQ-specific independent reconciliation was retrieved.",
+  "pegMechanism": "Quantoz Payments B.V. describes par redemption after KYC/AML and bank verification. Whitepaper D.1 rejects requests of PLN 1 or less and gives processing bands of 1 business day below PLN 1 million, 3 for PLN 1 to 10 million, 5 for PLN 10 to 100 million and 20 above PLN 100 million. Registered holders must give no advance notice below PLN 1 million, 2 business days for PLN 1 to 10 million and 5 above PLN 10 million. Separately, the issuer commits to dispatch PLN within two business days after token receipt; the summary gives two business days to acknowledge a compliant request. Non-registered holders can use partners or an issuer redemption form with enhanced due diligence; the summary directs non-EEA residents to partners. A per-person daily request cap is numerically undisclosed; stress terms permit temporary limits or suspension. The referenced quantoz.com/fees page returned 404 on 3 October 2026. Par is a contractual claim, not a market quote.",
+  "detailProvider": "coingecko",
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x00b81d7b21955837890d9346e4978b6b43762b3a",
+      "decimals": 6
+    }
+  ],
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.quantoz.com/"
+    },
+    {
+      "label": "Token identities",
+      "url": "https://www.quantoz.com/tokens/"
+    },
+    {
+      "label": "PLNQ whitepaper",
+      "url": "https://www.quantoz.com/documents/plnq-wp-v1.1-30-4-2026.pdf"
+    },
+    {
+      "label": "Ethereum token contract",
+      "url": "https://etherscan.io/token/0x00b81d7b21955837890d9346e4978b6b43762b3a"
+    },
+    {
+      "label": "ESMA EMT issuer register",
+      "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Netherlands",
+    "regulator": "De Nederlandsche Bank (DNB)",
+    "license": "Electronic Money Institution"
+  },
+  "announcedDate": "2026-04-07",
+  "launchPhase": "announced",
+  "launchPhaseDetail": "PLNQ is deployed on Ethereum but the issuer states no tokens are in circulation and no reserve exists. Ethereum block 26107706 observed 2026-10-02 confirms symbol PLNQ, six decimals and zero totalSupply; the exact-contract DefiLlama price response is empty. The whitepaper plans Polygon, Algorand, XRP Ledger and Xahau, but those production identities are not verified. No CoinGecko identity or launch date is published. The cover states original AFM notification on 6 April 2026, while ESMA records notification on 7 April and the whitepaper was amended on 30 April.",
+  "milestones": [
+    {
+      "date": "2026-04-06",
+      "type": "regulatory",
+      "title": "Whitepaper cover states original AFM notification",
+      "sourceUrl": "https://www.quantoz.com/documents/plnq-wp-v1.1-30-4-2026.pdf",
+      "description": "The document I.01 field instead gives 6 March; the cover date is retained as an attributed statement."
+    },
+    {
+      "date": "2026-04-07",
+      "type": "regulatory",
+      "title": "ESMA records PLNQ whitepaper notification",
+      "sourceUrl": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv",
+      "description": "Not a confirmed circulation date or approval of the whitepaper."
+    },
+    {
+      "date": "2026-04-30",
+      "type": "milestone",
+      "title": "PLNQ whitepaper amended to version 1.1",
+      "sourceUrl": "https://www.quantoz.com/documents/plnq-wp-v1.1-30-4-2026.pdf"
+    }
+  ],
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "PLN",
+    "governance": "centralized"
+  },
+  "mechanismArchetype": "fiat-cash",
+  "custodyModel": "unknown",
+  "status": "pre-launch"
+}

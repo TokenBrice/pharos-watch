@@ -113,7 +113,7 @@ function buildChainDetails(blockChains: unknown): {
 }
 
 export interface TetherTransparencyParams {
-  currencyIso: "usdt" | "xaut";
+  currencyIso: "usdt" | "xaut" | "mxnt";
   slices: ReserveSlice[];
   compositionAsOf?: string;
 }

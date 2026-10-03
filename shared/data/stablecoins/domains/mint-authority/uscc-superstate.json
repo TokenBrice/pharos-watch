@@ -1,0 +1,178 @@
+{
+  "id": "uscc-superstate",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "manual-review",
+    "summary": "Superstate controls native fund-share minting on Ethereum, Plume and Solana. EVM owner and proxy paths and the Solana mint key are centrally controlled; the public ledger is not independently reconciled against the full fund liabilities.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x8abc89d9b56dfd90da18e8e18cfac9111100bdd1",
+        "deploymentRefs": [
+          "ethereum:0x14d60e7fdc0d71d8611742720e4c50e7a974020c"
+        ],
+        "label": "USCC ethereum issuer owner",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "not-applicable",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107704,
+        "sources": [
+          {
+            "label": "USCC fund, service providers and October 1 holdings",
+            "url": "https://superstate.com/assets/uscc"
+          },
+          {
+            "label": "USCC current investor terms",
+            "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc"
+          },
+          {
+            "label": "Superstate deployments and administrative powers",
+            "url": "https://docs.superstate.com/investors/smart-contracts"
+          }
+        ],
+        "evidence": "At block 26107704, token owner and ProxyAdmin owner returned 0x8abc89d9b56dfd90da18e8e18cfac9111100bdd1; owner eth_getCode returned 0x. The official source gives the Superstate admin native mint authority, and the mutable proxy can replace mint logic. No cryptographic threshold, economic cap, reserve-gated issuance or key-custody attestation is established."
+      },
+      {
+        "chain": "plume",
+        "address": "0x8abc89d9b56dfd90da18e8e18cfac9111100bdd1",
+        "deploymentRefs": [
+          "plume:0x4c21b7577c8fe8b0b0669165ee7c8f67fa1454cf"
+        ],
+        "label": "USCC plume issuer owner",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "not-applicable",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-10-02",
+        "observedBlock": 96961184,
+        "sources": [
+          {
+            "label": "USCC fund, service providers and October 1 holdings",
+            "url": "https://superstate.com/assets/uscc"
+          },
+          {
+            "label": "USCC current investor terms",
+            "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc"
+          },
+          {
+            "label": "Superstate deployments and administrative powers",
+            "url": "https://docs.superstate.com/investors/smart-contracts"
+          }
+        ],
+        "evidence": "At block 96961184, token owner and ProxyAdmin owner returned 0x8abc89d9b56dfd90da18e8e18cfac9111100bdd1; owner eth_getCode returned 0x. The official source gives the Superstate admin native mint authority, and the mutable proxy can replace mint logic. No cryptographic threshold, economic cap, reserve-gated issuance or key-custody attestation is established."
+      },
+      {
+        "chain": "solana",
+        "address": "LEZGws32A591zEyNrnqjdbTxTw9AYg6wbVCCRAvMoHX",
+        "deploymentRefs": [
+          "solana:BTRR3sj1Bn2ZjuemgbeQ6SCtf84iXS81CS7UDTSxUCaK"
+        ],
+        "label": "USCC Solana mint authority",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 452748144,
+        "sources": [
+          {
+            "label": "USCC fund, service providers and October 1 holdings",
+            "url": "https://superstate.com/assets/uscc"
+          },
+          {
+            "label": "USCC current investor terms",
+            "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc"
+          },
+          {
+            "label": "Superstate deployments and administrative powers",
+            "url": "https://docs.superstate.com/investors/smart-contracts"
+          },
+          {
+            "label": "Solana USCC Token-2022 mint",
+            "url": "https://explorer.solana.com/address/BTRR3sj1Bn2ZjuemgbeQ6SCtf84iXS81CS7UDTSxUCaK"
+          }
+        ],
+        "evidence": "Finalized slot 452748144 reports this live mintAuthority and six decimals, scaled-UI multiplier 1. The authority is a non-executable System Program-owned zero-data account at slot 452748477. Off-chain signing/key independence is unknown; the allowlist freeze/permanent-delegate concerns are holder-transfer controls, not native mint authority."
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "deploymentRefs": [
+        "ethereum:0x14d60e7fdc0d71d8611742720e4c50e7a974020c",
+        "plume:0x4c21b7577c8fe8b0b0669165ee7c8f67fa1454cf"
+      ],
+      "proxyAddresses": [
+        "0x14d60e7fdc0d71d8611742720e4c50e7a974020c",
+        "0x4c21b7577c8fe8b0b0669165ee7c8f67fa1454cf"
+      ],
+      "implementationAddresses": [
+        "0x7e906c0006d3f08be94ef4685c59b5cde4fb4fef",
+        "0x14422a660e508858c20fd3a73d15c625eab12c4d"
+      ],
+      "adminAddresses": [
+        "0x2bb7b8b4df7fd96baf7cb9a2ce9e292ecd5baf3d",
+        "0x02dbbebcda529d849b9b92cb97f028140fea5cf2"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "USCC ethereum issuer owner",
+      "observedAt": "2026-10-02",
+      "sources": [
+        {
+          "label": "USCC fund, service providers and October 1 holdings",
+          "url": "https://superstate.com/assets/uscc"
+        },
+        {
+          "label": "USCC current investor terms",
+          "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc"
+        },
+        {
+          "label": "Superstate deployments and administrative powers",
+          "url": "https://docs.superstate.com/investors/smart-contracts"
+        }
+      ]
+    },
+    "review": {
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "USCC fund, service providers and October 1 holdings",
+          "url": "https://superstate.com/assets/uscc"
+        },
+        {
+          "label": "USCC current investor terms",
+          "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc"
+        },
+        {
+          "label": "USTB sibling's same NAV Fund Services / Superstate Services administrator and transfer-agent framework",
+          "url": "https://superstate.com/assets/ustb"
+        },
+        {
+          "label": "Superstate deployments and administrative powers",
+          "url": "https://docs.superstate.com/investors/smart-contracts"
+        }
+      ],
+      "reviewer": "Refine05 Superstate sibling consistency review",
+      "reviewedAt": "2026-10-03",
+      "evidence": "Official deployment and fund terms expressly permit direct tokenization of fund shares on all three networks. Fresh EVM owner, ProxyAdmin owner, implementation and Solana authority reads identify the adverse centralized mint paths. This differs from USTB Plume representation treatment: USCC current terms affirm direct tokenization on Plume. Cross-chain EVM burn/reissue is separately reviewed in Bridge Risk, and book-entry shares are excluded from the public token supply. USCC and USTB both name NAV Fund Services as NAV calculation agent and Superstate Services LLC as transfer agent, with native tokens or issuer book-entry ownership. Exact USCC terms describe each-business-day portfolio marking and outstanding shares derived from prior-day balances adjusted for subscriptions/redemptions. This is the same recurring administrator/transfer-agent evidence class used by the USTB catalog's periodic reconciliation convention. USCC names Ernst & Young LLP as auditor whereas USTB names PwC; the attestation-only authoring convention is aligned for the named external-auditor/administrator framework, not an assertion that a USTB/PwC report covers USCC. No current independently signed full fund-to-native-token/book-entry reconciliation, verified USCC audit opinion or enforceable economic cap is claimed. Publicly enforceable complete fund liability/default-waterfall terms remain unavailable, financial assurance and holder-priority gaps rather than unidentified mint paths. Solana issuer key custody remains unverified for the identified System-owned zero-data native mint-authority account. Allowlist program upgrade/signing closure remains unresolved holder-transfer machinery, not an additional native mint path attributed to that EOA.",
+      "unresolvedQuestions": [],
+      "scopedQuestions": [
+        {
+          "controlRef": "USCC Solana mint authority",
+          "question": "Establish issuer key-custody and signing-policy evidence for the identified Solana native mint-authority EOA; its System-owned zero-data account does not establish independent or hardened key custody.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine05 mint-authority calibration v2",
+          "sources": [{"label": "Exact USCC native Solana mint", "url": "https://explorer.solana.com/address/BTRR3sj1Bn2ZjuemgbeQ6SCtf84iXS81CS7UDTSxUCaK"}, {"label": "Issuer SVM mint versus allowlist-program design", "url": "https://docs.superstate.com/investors/smart-contracts"}]
+        }
+      ]
+    }
+  }
+}

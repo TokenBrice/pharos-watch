@@ -1,0 +1,104 @@
+{
+  "liveReservesConfig": {
+    "adapter": "attestation-pdf-index",
+    "version": 1,
+    "semantics": "attestation-mix",
+    "breakerScope": "zarsc-supercoin",
+    "display": { "url": "https://www.supercoin.co.za/assurance-reports", "label": "Supercoin reviewed reserve-report index" },
+    "inputs": { "primary": { "kind": "http-html", "url": "https://www.supercoin.co.za/assurance-reports" } },
+    "params": {
+      "reviewedReport": {
+        "url": "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6aab8e272c83908780b26065_ZARSC%20AUG%202026%20Stablecoin%20Attestation%2031082026%20FINAL.pdf",
+        "balanceDate": "2026-08-31"
+      },
+      "slices": [{
+        "name": "ZAR cash in Absa current account", "pct": 100, "risk": "low",
+        "assetClass": "bank-deposit", "issuerOrObligor": "Absa Bank Limited",
+        "riskFactors": ["counterparty", "custody", "concentration"], "liquidityHorizon": "immediate"
+      }]
+    }
+  },
+  "id": "zarsc-supercoin",
+  "name": "ZAR Supercoin",
+  "symbol": "ZARsc",
+  "oneLiner": "ZARsc is Super Money SA's cash-backed rand token on Solana; exchange exits are live, while direct app redemption awaits launch.",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "ZAR",
+    "governance": "centralized"
+  },
+  "collateral": "Rand cash in an Absa Bank current account in Super Money SA's name, independently supported in Moore's August 31, 2026 agreed-upon-procedures report.",
+  "pegMechanism": "One ZAR per token is the issuer reference. Supported exchange sale/off-ramp is live without guaranteed price or liquidity; direct redemption within two business days is conditional on the future Supercoin App launch.",
+  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Pharos refinement Refine02 primary-source and RPC review",
+    "rationale": "Binding terms describe one-rand reserve-backed native Solana tokens, with no interest or collective-investment share. The exact Token-2022 mint creation and initializeMint transaction at slot 361067527 on 2025-08-19 establishes implementation age independently of recent exchange-listing history.",
+    "sources": [
+      {"label": "Supercoin binding issuance and redemption terms", "url": "https://www.supercoin.co.za/terms-of-service"},
+      {"label": "Exact mint creation and initialization", "url": "https://solscan.io/tx/3PacyyoqY8ik8smXoNF6ED6MLUt9Jxk9w7ie7vcrVqYouxcLwtyn5xdsRGKrMwV17xfjLWShhraik7Yb95Xdrx3r"}
+    ]
+  },
+  "detailProvider": "coingecko",
+  "implementationLaunchDate": "2025-08-19",
+  "contracts": [
+    {
+      "chain": "solana",
+      "address": "5ekaHEqpRUXH4RoZVRMErdJE74bibWAzihMtPcjKyceQ",
+      "decimals": 6
+    }
+  ],
+  "jurisdiction": {
+    "country": "South Africa"
+  },
+  "custodyModel": "unknown",
+  "collateralQuality": "rwa",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.supercoin.co.za/"
+    },
+    {
+      "label": "Holder terms and issuance",
+      "url": "https://www.supercoin.co.za/terms-of-service"
+    },
+    {
+      "label": "Reserve report",
+      "url": "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6aab8e272c83908780b26065_ZARSC%20AUG%202026%20Stablecoin%20Attestation%2031082026%20FINAL.pdf"
+    },
+    {
+      "label": "Monthly Moore assurance report archive",
+      "url": "https://www.supercoin.co.za/assurance-reports"
+    },
+    {
+      "label": "Solana mint creation and initialization, slot 361067527",
+      "url": "https://solscan.io/tx/3PacyyoqY8ik8smXoNF6ED6MLUt9Jxk9w7ie7vcrVqYouxcLwtyn5xdsRGKrMwV17xfjLWShhraik7Yb95Xdrx3r"
+    }
+  ],
+  "geckoId": "zar-supercoin",
+  "proofOfReserves": {
+    "type": "agreed-upon-procedures",
+    "url": "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6aab8e272c83908780b26065_ZARSC%20AUG%202026%20Stablecoin%20Attestation%2031082026%20FINAL.pdf",
+    "provider": "Moore Blockchain and Digital Assets JHB (Pty) Ltd; ISRS 4400 (Revised) procedures expressly provide no assurance opinion",
+    "attestorTier": "regional",
+    "cadence": "monthly",
+    "attestorJurisdiction": "South Africa",
+    "latestReport": {
+      "periodEnd": "2026-08-31",
+      "publishedAt": "2026-09-16",
+      "publishedAtBasis": "signed-date-standin",
+      "assuranceMethod": "agreed-upon-procedures",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "partial",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Retrieved independent reserve report",
+          "url": "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6aab8e272c83908780b26065_ZARSC%20AUG%202026%20Stablecoin%20Attestation%2031082026%20FINAL.pdf"
+        }
+      ]
+    }
+  }
+}

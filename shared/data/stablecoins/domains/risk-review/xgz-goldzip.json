@@ -1,0 +1,68 @@
+{
+  "id": "xgz-goldzip",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "GoldZip Ethereum proxy",
+        "url": "https://etherscan.io/address/0x69af64f409c08e9076bf7f3ed9db3a7409717161"
+      },
+      {
+        "label": "Verified HKGXToken implementation",
+        "url": "https://etherscan.io/address/0x29ed41cb1013a4df63d87b82346b384847db7511#code"
+      },
+      {
+        "label": "GoldZip issuance claim",
+        "url": "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf"
+      }
+    ],
+    "evidence": "The current proxy EIP-1967 implementation slot binds verified HKGXToken. Its ABI exposes freezeAccount, unfreezeAccount, isFrozen and forceBurn with privileged freeze/burn roles; direct holder controls are distinct from mint authority.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  },
+  "oracleRisk": {
+    "tier": "oracleless",
+    "role": "coin-price-feed",
+    "summary": "The exact HKGXToken mint and transfer code operates on token quantities and has no price-feed or price-based liquidation path. Physical issuance and delivery are defined in grams (1 gram per token; 1,000-token minimum delivery), not an oracle-valued collateral debt position. Market quotes do not govern the token's native issuance or physical claim.",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Refine06 primary-source review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Exact HKGXToken source; quantity mint and transfers",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x29ed41cb1013a4df63d87b82346b384847db7511?fields=sources,abi"
+      },
+      {
+        "label": "GoldZip fixed-gram physical issuance and delivery terms",
+        "url": "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf"
+      }
+    ],
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Refine06 primary-source review",
+      "rationale": "Physical gold claim uses fixed grams and the token code has no borrower markets, collateral-price comparison or liquidation entrypoint. Absence of an oracle does not verify actual gold allocation or backing.",
+      "sources": [{
+        "label": "Exact HKGXToken source",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x29ed41cb1013a4df63d87b82346b384847db7511?fields=sources,abi"
+      }]
+    },
+    "paths": [{
+      "id": "xgz-fixed-gram-claim",
+      "chain": "ethereum",
+      "address": "0x69af64f409c08e9076bf7f3ed9db3a7409717161",
+      "pricingAuthority": "none",
+      "applicability": {
+        "disposition": "not-applicable",
+        "reviewedAt": "2026-10-03",
+        "reviewer": "Refine06 primary-source review",
+        "confidence": "verified",
+        "rationale": "Exact quantity-only token implementation and fixed-gram redemption terms contain no price-sensitive collateral or borrower branch.",
+        "sources": [{
+          "label": "GoldZip fixed-gram terms",
+          "url": "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf"
+        }]
+      }
+    }]
+  }
+}

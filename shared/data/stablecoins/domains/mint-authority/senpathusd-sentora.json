@@ -1,0 +1,395 @@
+{
+  "id": "senpathusd-sentora",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "none-resolved-mint",
+    "confidence": "verified",
+    "summary": "senpathUSD shares issue against deposited pathUSD and protocol fee accrual; no arbitrary privileged local share issuance is resolved. Curator allocation and fee authority remains material, while pathUSD issuance is inherited.",
+    "inheritedFrom": "pathusd-bridge",
+    "economicCapSemantics": "bounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "controlRef": "Sentora pathUSD immutable share accounting",
+      "observedAt": "2026-10-02",
+      "observedBlock": 42323768,
+      "sources": [
+        {
+          "label": "Exact Sentora vault",
+          "url": "https://app.morpho.org/tempo/vault/0x9a044ae05e5e6290dcf56afd69548565e957a626"
+        },
+        {
+          "label": "Pinned RPC identity, accounting and controls",
+          "url": "https://rpc.tempo.xyz"
+        },
+        {
+          "label": "Morpho Vault V2 documentation",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+        },
+        {
+          "label": "VaultV2 source matched to Tempo runtime apart from immutable asset",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+        },
+        {
+          "label": "MorphoMarketV1AdapterV2 source",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+        },
+        {
+          "label": "Tempo TIP-20 restriction specification",
+          "url": "https://docs.tempo.xyz/protocol/tip20/spec"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "tempo",
+        "address": "0x9a044ae05e5e6290dcf56afd69548565e957a626",
+        "deploymentRefs": [
+          "tempo:0x9a044ae05e5e6290dcf56afd69548565e957a626"
+        ],
+        "label": "Sentora pathUSD immutable share accounting",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 42323768,
+        "sources": [
+          {
+            "label": "Exact Sentora vault",
+            "url": "https://app.morpho.org/tempo/vault/0x9a044ae05e5e6290dcf56afd69548565e957a626"
+          },
+          {
+            "label": "Pinned RPC identity, accounting and controls",
+            "url": "https://rpc.tempo.xyz"
+          },
+          {
+            "label": "Morpho Vault V2 documentation",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "VaultV2 source matched to Tempo runtime apart from immutable asset",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          },
+          {
+            "label": "MorphoMarketV1AdapterV2 source",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+          },
+          {
+            "label": "Tempo TIP-20 restriction specification",
+            "url": "https://docs.tempo.xyz/protocol/tip20/spec"
+          }
+        ],
+        "evidence": "Exact immutable VaultV2 source and pinned asset reads establish underlying-backed deposit/mint, plus accrued fee-share issuance, without an arbitrary privileged share-mint entrypoint. At tempo block 42323768, asset() was 0x20c0000000000000000000000000000000000000, share decimals 18 and underlying decimals 6; totalAssets raw 38668628815373, totalSupply raw 19338159753529440843074671, idle raw 38165213421856, sole adapter market assets raw 503415393517, with an exact zero accounting difference. The only funded market lent pathUSD against cbBTC at 77% LLTV. The adapter position had zero borrowing and zero posted collateral."
+      },
+      {
+        "chain": "tempo",
+        "address": "0xe8c9c99ecad0686a14a00d8521c572281e938008",
+        "deploymentRefs": [
+          "tempo:0x9a044ae05e5e6290dcf56afd69548565e957a626"
+        ],
+        "label": "Sentora pathUSD owner",
+        "role": "other",
+        "authorityType": "safe",
+        "safe": {
+          "owners": [
+            "0x295df6b70f4ed2be704bd802a4d805fe700bd7e9"
+          ],
+          "threshold": 1,
+          "enabledModules": [],
+          "guard": null,
+          "observedBlock": 42323768,
+          "observedAt": "2026-10-02",
+          "source": "onchain"
+        },
+        "directMintAbility": "parameter-only",
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-02",
+        "observedBlock": 42323768,
+        "sources": [
+          {
+            "label": "Exact Sentora vault",
+            "url": "https://app.morpho.org/tempo/vault/0x9a044ae05e5e6290dcf56afd69548565e957a626"
+          },
+          {
+            "label": "Pinned RPC identity, accounting and controls",
+            "url": "https://rpc.tempo.xyz"
+          },
+          {
+            "label": "Morpho Vault V2 documentation",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "VaultV2 source matched to Tempo runtime apart from immutable asset",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          },
+          {
+            "label": "MorphoMarketV1AdapterV2 source",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+          },
+          {
+            "label": "Tempo TIP-20 restriction specification",
+            "url": "https://docs.tempo.xyz/protocol/tip20/spec"
+          }
+        ],
+        "evidence": "Pinned getThreshold/getOwners, empty module list and zero guard establish this controller; signer independence and off-chain key custody remain unknown.",
+        "threshold": 1,
+        "signerCount": 1
+      },
+      {
+        "chain": "tempo",
+        "address": "0x9e396de3312d373b87f9bd8763fb48184b42aac0",
+        "deploymentRefs": [
+          "tempo:0x9a044ae05e5e6290dcf56afd69548565e957a626"
+        ],
+        "label": "Sentora pathUSD curator",
+        "role": "cap-admin",
+        "authorityType": "safe",
+        "safe": {
+          "owners": [
+            "0x992592e073aa9b98daed79ee05c4af832e1d0abe"
+          ],
+          "threshold": 1,
+          "enabledModules": [],
+          "guard": null,
+          "observedBlock": 42323768,
+          "observedAt": "2026-10-02",
+          "source": "onchain"
+        },
+        "directMintAbility": "parameter-only",
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-02",
+        "observedBlock": 42323768,
+        "sources": [
+          {
+            "label": "Exact Sentora vault",
+            "url": "https://app.morpho.org/tempo/vault/0x9a044ae05e5e6290dcf56afd69548565e957a626"
+          },
+          {
+            "label": "Pinned RPC identity, accounting and controls",
+            "url": "https://rpc.tempo.xyz"
+          },
+          {
+            "label": "Morpho Vault V2 documentation",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "VaultV2 source matched to Tempo runtime apart from immutable asset",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          },
+          {
+            "label": "MorphoMarketV1AdapterV2 source",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+          },
+          {
+            "label": "Tempo TIP-20 restriction specification",
+            "url": "https://docs.tempo.xyz/protocol/tip20/spec"
+          }
+        ],
+        "evidence": "Pinned getThreshold/getOwners, empty module list and zero guard establish this controller; signer independence and off-chain key custody remain unknown. Source review distinguishes sendAssetsGate (deposits) from permanently abdicated receiveAssetsGate (withdrawals); no future gate-setting withdrawal power is claimed. At pinned block 42323768, full deployment-history role logs and current mapping reads establish allocator and sentinel authority. Allocator can allocate/deallocate within caps, change liquidityAdapter/data and maxRate without delay; this can affect future fee accrual and cash-exit routing but is not arbitrary share minting. Sentinel can deallocate, reduce caps and revoke pending changes.",
+        "threshold": 1,
+        "signerCount": 1,
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "capDescription": "addAdapter and increaseAbsoluteCap have 259200-second delay, but deposit-gate and management/performance fee setters have zero delay. A single blanket three-day delay does not cover curator economic authority."
+      },
+      {
+        "chain": "tempo",
+        "address": "0xc4ba4e822c420452fe2bab93211208d3ccbd79d3",
+        "deploymentRefs": [
+          "tempo:0x9a044ae05e5e6290dcf56afd69548565e957a626"
+        ],
+        "label": "Sentora allocator 0xc4ba4e822c420452fe2bab93211208d3ccbd79d3",
+        "role": "other",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 42323768,
+        "sources": [
+          {
+            "label": "Exact Sentora vault",
+            "url": "https://app.morpho.org/tempo/vault/0x9a044ae05e5e6290dcf56afd69548565e957a626"
+          },
+          {
+            "label": "Pinned RPC identity, accounting and controls",
+            "url": "https://rpc.tempo.xyz"
+          },
+          {
+            "label": "Morpho Vault V2 documentation",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "VaultV2 source matched to Tempo runtime apart from immutable asset",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          },
+          {
+            "label": "MorphoMarketV1AdapterV2 source",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+          },
+          {
+            "label": "Sentora Terms of Use, June 2026, sections 4.3 and 21.4",
+            "url": "https://sentora.com/legal/terms-of-use"
+          }
+        ],
+        "evidence": "At pinned block 42323768, full deployment-history role logs and current mapping reads establish allocator authority. Allocator can allocate/deallocate within caps, change liquidityAdapter/data and maxRate without delay; this can affect future fee accrual and cash-exit routing but is not arbitrary share minting. Sentinel can deallocate, reduce caps and revoke pending changes. Pinned account code is empty."
+      },
+      {
+        "chain": "tempo",
+        "address": "0x74d1672d0b90f6e7c322dec9d5396ff6ace61618",
+        "deploymentRefs": [
+          "tempo:0x9a044ae05e5e6290dcf56afd69548565e957a626"
+        ],
+        "label": "Sentora sentinel 0x74d1672d0b90f6e7c322dec9d5396ff6ace61618",
+        "role": "other",
+        "authorityType": "eoa",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-02",
+        "observedBlock": 42323768,
+        "sources": [
+          {
+            "label": "Exact Sentora vault",
+            "url": "https://app.morpho.org/tempo/vault/0x9a044ae05e5e6290dcf56afd69548565e957a626"
+          },
+          {
+            "label": "Pinned RPC identity, accounting and controls",
+            "url": "https://rpc.tempo.xyz"
+          },
+          {
+            "label": "Morpho Vault V2 documentation",
+            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "VaultV2 source matched to Tempo runtime apart from immutable asset",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          },
+          {
+            "label": "MorphoMarketV1AdapterV2 source",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+          },
+          {
+            "label": "Sentora Terms of Use, June 2026, sections 4.3 and 21.4",
+            "url": "https://sentora.com/legal/terms-of-use"
+          }
+        ],
+        "evidence": "At pinned block 42323768, full deployment-history role logs and current mapping reads establish sentinel authority. Allocator can allocate/deallocate within caps, change liquidityAdapter/data and maxRate without delay; this can affect future fee accrual and cash-exit routing but is not arbitrary share minting. Sentinel can deallocate, reduce caps and revoke pending changes. Pinned account code is empty."
+      }
+    ],
+    "review": {
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "Exact Sentora vault",
+          "url": "https://app.morpho.org/tempo/vault/0x9a044ae05e5e6290dcf56afd69548565e957a626"
+        },
+        {
+          "label": "Pinned RPC identity, accounting and controls",
+          "url": "https://rpc.tempo.xyz"
+        },
+        {
+          "label": "Morpho Vault V2 documentation",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+        },
+        {
+          "label": "VaultV2 source matched to Tempo runtime apart from immutable asset",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+        },
+        {
+          "label": "MorphoMarketV1AdapterV2 source",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+        },
+        {
+          "label": "Sentora Terms of Use, June 2026, sections 4.3 and 21.4",
+          "url": "https://sentora.com/legal/terms-of-use"
+        }
+      ],
+      "evidence": "Pinned identity, zero implementation slot, exact immutable source and gate/role reads bound the local share mint path. User issuance requires underlying assets; interest accrual may mint fee shares. Parent issuance is inherited and parent financial attestations do not reconcile this vault. At tempo block 42323768, asset() was 0x20c0000000000000000000000000000000000000, share decimals 18 and underlying decimals 6; totalAssets raw 38668628815373, totalSupply raw 19338159753529440843074671, idle raw 38165213421856, sole adapter market assets raw 503415393517, with an exact zero accounting difference. The only funded market lent pathUSD against cbBTC at 77% LLTV. The adapter position had zero borrowing and zero posted collateral. Rechecked 2026-10-03 at the same pin: owner and curator each have threshold 1 and one owner; getModulesPaginated(0x1,100) reaches sentinel 0x1 with no modules. addAdapter and increaseAbsoluteCap delays are 259200s; setPerformanceFee, setManagementFee and setSendAssetsGate delays are zero. The sendAssetsGate restricts deposit/mint, not withdrawal/redeem; receiveAssetsGate and share-gate setters are permanently abdicated. Sentora terms assert non-custody but do not negate on-chain allocation and fee authority. Complete constructor-to-pin SetIsAllocator/SetIsSentinel log scan, followed by isAllocator/isSentinel reads, establishes allocators [0xc4ba4e822c420452fe2bab93211208d3ccbd79d3, 0x9e396de3312d373b87f9bd8763fb48184b42aac0] and sentinels [0x9e396de3312d373b87f9bd8763fb48184b42aac0, 0x74d1672d0b90f6e7c322dec9d5396ff6ace61618]. Registry 0xb118227c728b5ce52445a5aaee48c8a281c429e0 has owner 0x645890a0b5632e2cf4cb774994ebeab01230fbbc and current subregistries [0x3978101957db6f7c2687cb501e441a4cdb78d4c7]. Calibration v1 moved signer/key-custody nondisclosure outside the aggregate mint-closure flag; v2 records it on each identified owner/curator Safe as a sourced scoped question: Who controls the two sole signer EOAs organizationally, and what independently attested key custody protects them? Sentora terms do not identify the key holders. Calibration v2 restores the unresolved registry/subregistry authorization and any delegated allocator execution census to unresolvedQuestions; known controller types are not relabeled unknown. Reconciliation remains not-applicable to native asset-backed share/fee accounting; exact-vault financial assurance and holder recovery are Backing gaps. Supervision remains none, so no prudential or attestation-only credit is claimed.",
+      "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+      "reviewedAt": "2026-10-03",
+      "unresolvedQuestions": [
+        "Current role census is complete, but registry owner 0x645890a0b5632e2cf4cb774994ebeab01230fbbc and subregistry authority/bypass closure across [0x3978101957db6f7c2687cb501e441a4cdb78d4c7] is not established."
+      ],
+      "scopedQuestions": [
+        {
+          "controlRef": "tempo:0xe8c9c99ecad0686a14a00d8521c572281e938008",
+          "question": "The identified 1-of-1 Safe has sole signer 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9; the human or organizational key controller, independence from other Sentora role signers, and independently attested key custody/signing policy are undisclosed. Sentora terms do not identify the key holder.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+          "sources": [
+            {
+              "label": "Exact Sentora vault",
+              "url": "https://app.morpho.org/tempo/vault/0x9a044ae05e5e6290dcf56afd69548565e957a626"
+            },
+            {
+              "label": "Pinned RPC identity, accounting and controls",
+              "url": "https://rpc.tempo.xyz"
+            },
+            {
+              "label": "Morpho Vault V2 documentation",
+              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+            },
+            {
+              "label": "VaultV2 source matched to Tempo runtime apart from immutable asset",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            },
+            {
+              "label": "MorphoMarketV1AdapterV2 source",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+            },
+            {
+              "label": "Tempo TIP-20 restriction specification",
+              "url": "https://docs.tempo.xyz/protocol/tip20/spec"
+            },
+            {
+              "label": "Sentora Terms of Use, June 2026, sections 4.3 and 21.4",
+              "url": "https://sentora.com/legal/terms-of-use"
+            }
+          ]
+        },
+        {
+          "controlRef": "tempo:0x9e396de3312d373b87f9bd8763fb48184b42aac0",
+          "question": "The identified 1-of-1 Safe has sole signer 0x992592e073aa9b98daed79ee05c4af832e1d0abe; the human or organizational key controller, independence from other Sentora role signers, and independently attested key custody/signing policy are undisclosed. Sentora terms do not identify the key holder.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+          "sources": [
+            {
+              "label": "Exact Sentora vault",
+              "url": "https://app.morpho.org/tempo/vault/0x9a044ae05e5e6290dcf56afd69548565e957a626"
+            },
+            {
+              "label": "Pinned RPC identity, accounting and controls",
+              "url": "https://rpc.tempo.xyz"
+            },
+            {
+              "label": "Morpho Vault V2 documentation",
+              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+            },
+            {
+              "label": "VaultV2 source matched to Tempo runtime apart from immutable asset",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            },
+            {
+              "label": "MorphoMarketV1AdapterV2 source",
+              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+            },
+            {
+              "label": "Tempo TIP-20 restriction specification",
+              "url": "https://docs.tempo.xyz/protocol/tip20/spec"
+            },
+            {
+              "label": "Sentora Terms of Use, June 2026, sections 4.3 and 21.4",
+              "url": "https://sentora.com/legal/terms-of-use"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

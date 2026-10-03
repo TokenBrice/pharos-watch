@@ -1,0 +1,111 @@
+{
+  "id": "gtusdtp-gauntlet",
+  "reserves": [
+    {
+      "sourceKey": "erc4626-single-asset:ethereum:0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "name": "USDT deposited into Gauntlet-curated Morpho lending markets",
+      "pct": 100,
+      "risk": "high",
+      "coinId": "usdt-tether",
+      "depType": "wrapper",
+      "blacklistable": true,
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Gauntlet-curated Morpho lending markets and their borrowers",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "counterparty",
+        "smart-contract",
+        "market",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Exact Gauntlet USDT Prime V2 Morpho Vault V2 deployment",
+        "url": "https://app.morpho.org/ethereum/vault/0xf3557ad5e984211ac8a0874a670344f2c3376471"
+      },
+      {
+        "label": "Partially verified VaultV2 source; explorer deployed bytecode matches pinned RPC",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf3557ad5e984211ac8a0874a670344f2c3376471"
+      },
+      {
+        "label": "Ethereum RPC pinned block 26107704, observed 2026-10-02T22:44:52.884200+00:00",
+        "url": "https://eth-mainnet.g.alchemy.com"
+      },
+      {
+        "label": "Morpho itemized vault and adapter data observed 2026-10-02T22:44:52.884200+00:00",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Morpho gate semantics and irreversible abdication",
+        "url": "https://docs.morpho.org/curate/concepts/gates.md"
+      },
+      {
+        "label": "Exact current MorphoMarketV1AdapterV2 source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0fc9b889756e1241a4d89472db701c0417c26d89"
+      }
+    ],
+    "rationale": "At Ethereum block 26107704, asset()=0xdac17f958d2ee523a2206206994597c13d831ec7, totalSupply()=4983174896491884983364107 raw 18-decimal shares and totalAssets()=5109830264097 raw 6-decimal USDT. One adapter 0x0fc9b889756e1241a4d89472db701c0417c26d89 enumerates 8 current market IDs; summed expectedSupplyAssets=5109830264096, idle underlying=1; their sum equals totalAssets. All current positions have zero borrow shares and zero posted collateral. The 100% slice identifies the denomination and standing parent dependency across idle and deployed lending positions; it does not assert that every asset is idle cash or invent borrower-collateral reserve weights.",
+    "compositionBasis": "Pinned full adapter census and underlying-asset denomination",
+    "compositionAsOf": "2026-10-02",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Parent denomination and current positions are identified. Borrower collateral custody and recovery protections, independent vault financial assurance and legal segregation remain unproven.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Gauntlet USDT Prime V2 VaultV2 0xf3557ad5e984211ac8a0874a670344f2c3376471",
+        "role": "other"
+      },
+      {
+        "name": "MorphoMarketV1AdapterV2 0x0fc9b889756e1241a4d89472db701c0417c26d89",
+        "role": "other"
+      },
+      {
+        "name": "Morpho Blue Ethereum lending markets",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Exact Gauntlet USDT Prime V2 Morpho Vault V2 deployment",
+        "url": "https://app.morpho.org/ethereum/vault/0xf3557ad5e984211ac8a0874a670344f2c3376471"
+      },
+      {
+        "label": "Partially verified VaultV2 source; explorer deployed bytecode matches pinned RPC",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf3557ad5e984211ac8a0874a670344f2c3376471"
+      },
+      {
+        "label": "Ethereum RPC pinned block 26107704, observed 2026-10-02T22:44:52.884200+00:00",
+        "url": "https://eth-mainnet.g.alchemy.com"
+      },
+      {
+        "label": "Morpho itemized vault and adapter data observed 2026-10-02T22:44:52.884200+00:00",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Morpho gate semantics and irreversible abdication",
+        "url": "https://docs.morpho.org/curate/concepts/gates.md"
+      },
+      {
+        "label": "Exact current MorphoMarketV1AdapterV2 source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0fc9b889756e1241a4d89472db701c0417c26d89"
+      }
+    ],
+    "uncertainty": "At Ethereum block 26107704, asset()=0xdac17f958d2ee523a2206206994597c13d831ec7, totalSupply()=4983174896491884983364107 raw 18-decimal shares and totalAssets()=5109830264097 raw 6-decimal USDT. One adapter 0x0fc9b889756e1241a4d89472db701c0417c26d89 enumerates 8 current market IDs; summed expectedSupplyAssets=5109830264096, idle underlying=1; their sum equals totalAssets. All current positions have zero borrow shares and zero posted collateral. Immediate holders are on-chain contracts; downstream collateral issuer/custodian and legal rights remain separate. Lending deployment does not establish custodian reuse rights. This is an operational proportional lending-position claim. It is not direct ownership of the parent issuer reserve, an independently signed financial reconciliation, or proof of legal segregation and insolvency priority. Blockscout is_fully_verified=false; bytecode equality is not a complete compiler/source verification."
+  }
+}

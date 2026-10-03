@@ -1,0 +1,39 @@
+{
+  "id": "usdfr-forest-road",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "USDfr is a 1:1 USDC-minted transferable credit-backed dollar, but the issuer reserves token characterization and eligibility to definitive onboarding legal materials that are not public. Payment-stablecoin versus securities applicability remains unresolved.",
+      "references": [
+        {
+          "label": "Definitive legal characterization and related-party facility",
+          "url": "https://forestroadvault.com/legal",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-02"
+        }
+      ]
+    },
+    "authorizationStatus": "unknown",
+    "issuerPathway": "unknown",
+    "notes": "Forest Road is the named protocol operator/originator, but the exact token-contracting legal entity is not established by the reviewed public legal page. No approval or absence-of-authorization finding is inferred from KYC or timelocked governance. MiCA is intentionally unassessed because fund/security characterization and EU offering scope are unverified.",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://forestroadvault.com/transparency",
+    "redemptionPolicyPresent": true,
+    "references": [
+      {
+        "label": "Definitive legal characterization and related-party facility",
+        "url": "https://forestroadvault.com/legal",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-02"
+      },
+      {
+        "label": "USDfr primary redemption and holder controls",
+        "url": "https://forestroadvault.com/docs/how-to",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-02"
+      }
+    ],
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  }
+}

@@ -18,6 +18,7 @@ import type { PriceValidationReferences } from "../price-validation";
 import { usdvJupiterProvider } from "./usdv-jupiter";
 import { susdSolayerNavProvider } from "./susd-solayer";
 import { usdafUniswapV4Provider } from "./usdaf-uniswap-v4";
+import { usduUniswapV3Provider } from "./usdu-uniswap-v3";
 import { bdAerodromeProvider } from "./bd-aerodrome";
 import { azndCurvePoolProvider } from "./aznd-curve-pool";
 import { mentoFpmmProvider } from "./mento-fpmm";
@@ -62,6 +63,7 @@ const AUTHORITATIVE_PRICE_PROVIDERS: PriceSourceProvider[] = [
   usdvJupiterProvider,
   susdSolayerNavProvider,
   usdafUniswapV4Provider,
+  usduUniswapV3Provider,
   mentoFpmmProvider,
   mentoBrokerProvider,
   kavaUsdxPricefeedProvider,

@@ -1,0 +1,87 @@
+{
+  "id": "pyusdx-moonpay",
+  "name": "PYUSDx",
+  "symbol": "PYUSDx",
+  "oneLiner": "PYUSDx is MoonPay's PYUSD-backed dollar token, redeemable 1:1 in PYUSD by eligible counterparties, with local freeze and mint controls.",
+  "flags": {
+    "backing": "crypto-backed",
+    "governance": "centralized"
+  },
+  "detailProvider": "coingecko",
+  "collateral": "PYUSD received by MoonPay Digital Assets Limited for 1:1 issuance; custody, segregation and independent PYUSDx liability reconciliation are undisclosed.",
+  "pegMechanism": "Eligible MoonPay counterparties mint against PYUSD and redeem burned PYUSDx for the same quantity of PYUSD. Downstream holders have no direct redemption right without onboarding. Cross-chain transfers burn and mint through M0 Portal and LayerZero adapters.",
+  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rationale": "MoonPay issues a distinct contractual token backed by PYUSD; eligible-counterparty redemption is 1:1 in PYUSD. Holder terms deny ownership or trust interests in specific reserves, so this is a core fiat-cash instrument with PYUSD collateral, not a direct escrow receipt or tracked variant.",
+    "sources": [
+      {
+        "label": "MoonPay PYUSDx holder and counterparty terms",
+        "url": "https://www.moonpay.com/legal/pyusdx_terms"
+      },
+      {
+        "label": "M0 exact PYUSDx mainnet deployments",
+        "url": "https://docs.m0.org/resources/addresses/pyusdx-platform"
+      }
+    ]
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.moonpay.com/enterprise/pyusdx"
+    },
+    {
+      "label": "MoonPay PYUSDx holder and counterparty terms",
+      "url": "https://www.moonpay.com/legal/pyusdx_terms"
+    },
+    {
+      "label": "M0 exact PYUSDx mainnet deployments",
+      "url": "https://docs.m0.org/resources/addresses/pyusdx-platform"
+    },
+    {
+      "label": "M0 PYUSDx compliance controls",
+      "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"
+    },
+    {
+      "label": "M0 PYUSDx token and reward issuance",
+      "url": "https://docs.m0.org/raw/protocol/pyusdx/token-and-yield.md"
+    },
+    {
+      "label": "Exact Base PYUSDx native deployment",
+      "url": "https://basescan.org/address/0xebdb0942ce16386ab90718c7bd10c91cdb66b14d#code"
+    }
+  ],
+  "jurisdiction": {
+    "country": "British Virgin Islands"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xebdb0942ce16386ab90718c7bd10c91cdb66b14d",
+      "decimals": 6
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0xebdb0942ce16386ab90718c7bd10c91cdb66b14d",
+      "decimals": 6
+    },
+    {
+      "chain": "monad",
+      "address": "0xebdb0942ce16386ab90718c7bd10c91cdb66b14d",
+      "decimals": 6
+    },
+    {
+      "chain": "base",
+      "address": "0xebdb0942ce16386ab90718c7bd10c91cdb66b14d",
+      "decimals": 6
+    }
+  ],
+  "collateralQuality": "rwa",
+  "custodyModel": "unknown",
+  "infrastructures": [
+    "m0"
+  ],
+  "launchDate": "2026-06-02"
+}

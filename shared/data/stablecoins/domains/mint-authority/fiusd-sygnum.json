@@ -1,0 +1,190 @@
+{
+  "id": "fiusd-sygnum",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unknown",
+    "confidence": "unknown",
+    "summary": "Sygnum's current native mint paths are permissioned but not reserve-capped on-chain. A complete event/member census identifies eleven zkSync and seven Arbitrum operator EOAs, with six and five admin EOAs respectively, no live system/relay members. Arbitrum proxy administration is an EOA; zkSync proxy administration is a 3-of-6 Safe. Public token-to-fund-unit reconciliation and the provider/native supply contradiction remain unresolved.",
+    "controls": [
+      {
+        "chain": "zksync",
+        "address": "0x159d8a100d5a869edda532626fde7737056c06c5",
+        "deploymentRefs": [
+          "zksync:0x2ab105a3ead22731082b790ca9a00d9a3a7627f9"
+        ],
+        "label": "FIUSD zksync operators registry",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-10-03",
+        "observedBlock": 72316592,
+        "sources": [
+          {
+            "label": "Verified zkSync registry source and executable artifact",
+            "url": "https://zksync2-mainnet-explorer.zksync.io/contract_verification/info/0x159d8a100d5a869edda532626fde7737056c06c5"
+          },
+          {
+            "label": "Verified zkSync implementation source and executable artifact",
+            "url": "https://zksync2-mainnet-explorer.zksync.io/contract_verification/info/0x8dd51341147a2d50566b9910f515689d3decaee8"
+          },
+          {
+            "label": "Sygnum issuer-authored FIUSD application dated March 20, 2025",
+            "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779"
+          },
+          {
+            "label": "Verified deployed Arbitrum implementation",
+            "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x7616b08676117e1aab542e53fe3f7b12f7596d37"
+          }
+        ],
+        "evidence": "At block 72316592 getOperatorsContract() binds this registry. Verified zkSync registry and SygnumTokenLatest artifacts exactly match eth_getCode bytes; SygnumTokenV3 permits whitelisted-recipient operator minting without the ordinary pause guard, with no aggregate economic collateral cap. Complete eth_getLogs from block zero to the pin returned 19 registry events; replay and isOperator/isAdmin validation identifies eleven operator EOAs: 0x1c30ad3322216ed5d53c8cfabe6b82ec117d9992, 0x28fa8488614191b4ea2b62b93de323e24b605c95, 0x648ff7486be15fe61bf359be1139b74b5a2338d7, 0x67ad5e9456dab8976d04d0d3dc5e26a1c3ae5eb7, 0x6dd3cd76290210f4f80e63acb993c5ec488baac9, 0x75d919bca08a02413bb41852d01e9dd3c2dcac97, 0x87d64596a9a506d46f53abef0f80405795c6b409, 0xd66c5dca0957467043b20d283f77bc7b394206df, 0xe853a8ed4371af675440c3c69a0119948e5d8462, 0xf67cbd2ec2c668f1b313f22da9a08237e2e5e3fc, 0xfe311cb41ec1c6b1195c8bca6744b47cbe27a917. Admin EOAs: 0x64294e70a34476e994e570af6b544f13542de165, 0x648ff7486be15fe61bf359be1139b74b5a2338d7, 0xad3fb7373c9341143d262347ce5e3cb9ce6a0265, 0xaff271f2fafc904ab777a885b8c64cef787a438a, 0xcd766c796a6a97ce3efe95d7d86bbe6f6e775145, 0xd523412bd856237ce7e296b1e221e0cc7a667b04. No current System/Relay members occur in the complete event census. All listed accounts have no code; key custody and human independence are not inferred."
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0xbf9060880363a61e7462039aa8a4aa98fe486067",
+        "deploymentRefs": [
+          "arbitrum:0xcded6b899edba762d793f44ed295248049440e1e"
+        ],
+        "label": "FIUSD arbitrum operators registry",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-10-03",
+        "observedBlock": 511230438,
+        "sources": [
+          {
+            "label": "Verified immutable Arbitrum BaseOperators registry",
+            "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xbf9060880363a61e7462039aa8a4aa98fe486067"
+          },
+          {
+            "label": "Complete Arbitrum registry event census, 12 logs and pagination end",
+            "url": "https://arbitrum.blockscout.com/api/v2/addresses/0xbf9060880363a61e7462039aa8a4aa98fe486067/logs"
+          },
+          {
+            "label": "Sygnum issuer-authored FIUSD application dated March 20, 2025",
+            "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779"
+          },
+          {
+            "label": "Verified deployed Arbitrum implementation",
+            "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x7616b08676117e1aab542e53fe3f7b12f7596d37"
+          }
+        ],
+        "evidence": "At block 511230438 getOperatorsContract() binds this immutable verified BaseOperators. Complete 12-event history and isOperator/isAdmin reads identify operator EOAs 0x28fa8488614191b4ea2b62b93de323e24b605c95, 0x6dd3cd76290210f4f80e63acb993c5ec488baac9, 0x75d919bca08a02413bb41852d01e9dd3c2dcac97, 0x87d64596a9a506d46f53abef0f80405795c6b409, 0xd66c5dca0957467043b20d283f77bc7b394206df, 0xe853a8ed4371af675440c3c69a0119948e5d8462, 0xf67cbd2ec2c668f1b313f22da9a08237e2e5e3fc; admin EOAs 0x61776319fc4c120e9b1ec41306f2db968be1e95f, 0x64294e70a34476e994e570af6b544f13542de165, 0x648ff7486be15fe61bf359be1139b74b5a2338d7, 0xcd766c796a6a97ce3efe95d7d86bbe6f6e775145, 0xd523412bd856237ce7e296b1e221e0cc7a667b04. No system/relay/multisig events occur. Verified SygnumTokenV3 permits operator minting to whitelisted recipients without a reserve or supply ceiling. All listed members have no code; no cryptographic multi-key requirement or independent human/key custody is established."
+      },
+      {
+        "label": "FIUSD Arbitrum proxy-admin EOA",
+        "chain": "arbitrum",
+        "address": "0x61776319fc4c120e9b1ec41306f2db968be1e95f",
+        "deploymentRefs": ["arbitrum:0xcded6b899edba762d793f44ed295248049440e1e"],
+        "role": "proxy-admin", "authorityType": "eoa", "directMintAbility": "upgrade-only",
+        "canRaiseCap": true, "timelockDelaySec": 0, "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-03", "observedBlock": 511230438,
+        "evidence": "Exact current EIP-1967 admin slot is this no-code account. Verified SygnumTokenProxy inherits TransparentUpgradeableProxy; its admin can replace native mint logic without a local timelock. The same account remains an operator-registry admin. This is not a Safe or a cryptographic quorum.",
+        "sources": [{"label": "Verified SygnumTokenProxy and constructor", "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xcded6b899edba762d793f44ed295248049440e1e"}, {"label": "Pinned Arbitrum RPC admin/code reads", "url": "https://arb1.arbitrum.io/rpc"}]
+      },
+      {
+        "label": "FIUSD zkSync proxy-admin Safe",
+        "chain": "zksync", "address": "0xaf50a7d823f89e5dfbfcf3ff9817b370e1a3dbff",
+        "deploymentRefs": ["zksync:0x2ab105a3ead22731082b790ca9a00d9a3a7627f9"],
+        "role": "proxy-admin", "authorityType": "safe", "directMintAbility": "upgrade-only",
+        "canRaiseCap": true, "threshold": 3, "signerCount": 6, "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-03", "observedBlock": 72316592,
+        "safe": {
+          "version": "1.3.0", "threshold": 3,
+          "owners": ["0xa234b71a23699783462d739440a5af46dddaffc5", "0xd523412bd856237ce7e296b1e221e0cc7a667b04", "0x849f9d8880c5fa40527c494c7014db51e61a150d", "0xc2cae78f24aa8d555a4480fcd285aba415abcdf5", "0x5b217198f0c5f08685398730293d771f42eaffc5", "0x749d3cf26866bc09ca2a08f2e5c5b2bea8c1d32d"],
+          "enabledModules": [], "observedAt": "2026-10-03", "observedBlock": 72316592, "source": "onchain"
+        },
+        "evidence": "Exact EIP-1967 admin slot binds this Safe to the FIUSD proxy. VERSION=1.3.0; getOwners/getThreshold returns the listed 3-of-6 roster; getModulesPaginated(sentinel,256) returns no modules and sentinel end. This Safe is not currently a BaseOperators admin. Guard/fallback-handler and independent key custody remain unverified; no absence-of-bypass or delay credit is claimed.",
+        "sources": [{"label": "Pinned zkSync proxy-admin and Safe census", "url": "https://mainnet.era.zksync.io"}, {"label": "Exact FIUSD zkSync proxy", "url": "https://era.zksync.network/address/0x2ab105a3ead22731082b790ca9a00d9a3a7627f9"}]
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "internal-ledger",
+    "supervision": "unknown",
+    "upgradeability": {
+      "model": "unknown",
+      "deploymentRefs": [
+        "zksync:0x2ab105a3ead22731082b790ca9a00d9a3a7627f9",
+        "arbitrum:0xcded6b899edba762d793f44ed295248049440e1e"
+      ],
+      "proxyAddresses": [
+        "0x2ab105a3ead22731082b790ca9a00d9a3a7627f9",
+        "0xcded6b899edba762d793f44ed295248049440e1e"
+      ],
+      "implementationAddresses": [
+        "0x8dd51341147a2d50566b9910f515689d3decaee8",
+        "0x7616b08676117e1aab542e53fe3f7b12f7596d37"
+      ],
+      "adminAddresses": ["0xaf50a7d823f89e5dfbfcf3ff9817b370e1a3dbff", "0x61776319fc4c120e9b1ec41306f2db968be1e95f"],
+      "canChangeMintLogic": "unknown",
+      "observedAt": "2026-10-02",
+      "sources": [
+        {
+          "label": "Verified Arbitrum transparent proxy and current admin slot",
+          "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xcded6b899edba762d793f44ed295248049440e1e"
+        },
+        {
+          "label": "zkSync current EIP-1967 admin/implementation and Safe reads at block 72316592",
+          "url": "https://mainnet.era.zksync.io"
+        },
+        {
+          "label": "Sygnum issuer-authored FIUSD application dated March 20, 2025",
+          "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779"
+        },
+        {
+          "label": "Verified deployed Arbitrum implementation",
+          "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x7616b08676117e1aab542e53fe3f7b12f7596d37"
+        }
+      ]
+    },
+    "review": {
+      "disposition": "unresolved",
+      "sources": [
+        {
+          "label": "Sygnum issuer-authored FIUSD application dated March 20, 2025",
+          "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779"
+        },
+        {
+          "label": "Verified deployed Arbitrum implementation",
+          "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x7616b08676117e1aab542e53fe3f7b12f7596d37"
+        }
+      ],
+      "reviewer": "Refine05 primary-source and pinned-RPC review",
+      "reviewedAt": "2026-10-03",
+      "evidence": "Current registry mutation history and positive member reads now close the operator/admin/system/relay roster on both chains, and verified zkSync implementation/registry artifacts exactly match deployed bytes. Native operator minting is not collateral-capped; Arbitrum proxy administration is a single EOA while zkSync has a 3-of-6 Safe. Sygnum's disclosed daily CBS/database/blockchain report supports internal-ledger semantics only. The 2480-unit provider/native supply contradiction and independently signed token-to-unit reconciliation remain unresolved; no financial assurance or human/key independence is claimed. Issuer key custody remains undisclosed despite the identified operator/admin rosters and is recorded per control. The native cross-chain reallocation and burn-conservation policy remains unpublished, a liability reconciliation gap retained outside the mint census. The named zkSync proxy-admin Safe still requires a guard/fallback-handler census and exact proxy-runtime upgrade/bypass verification beyond current EIP-1967 slots. These are genuine technical mint/upgrade path gaps behind a known-authority control, so the umbrella remains unresolved even though the operator census and implementation/registry bytecode identity are closed.",
+      "unresolvedQuestions": [
+        "Complete the FIUSD zkSync proxy-admin Safe guard/fallback-handler census; enabled-module pagination ended empty, but no standard-handler or absence-of-bypass closure has been established.",
+        "Verify the administered FIUSD zkSync proxy runtime's upgrade/bypass implementation beyond its current EIP-1967 slots; verified implementation/registry artifact matches do not verify the proxy wrapper."
+      ],
+      "scopedQuestions": [
+        {
+          "controlRef": "FIUSD zksync operators registry",
+          "question": "Establish issuer key-custody and signing-policy evidence for the identified zkSync registry operator/admin EOAs; the complete on-chain member census does not attest beneficial key independence.",
+          "reviewedAt": "2026-10-03", "reviewer": "Refine05 mint-authority calibration v2",
+          "sources": [{"label": "Verified exact zkSync operator registry", "url": "https://zksync2-mainnet-explorer.zksync.io/contract_verification/info/0x159d8a100d5a869edda532626fde7737056c06c5"}, {"label": "Issuer CBS and client mint-accounting process", "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779"}]
+        },
+        {
+          "controlRef": "FIUSD arbitrum operators registry",
+          "question": "Establish issuer key-custody and signing-policy evidence for the identified Arbitrum registry operator/admin EOAs; the complete on-chain member census does not attest beneficial key independence.",
+          "reviewedAt": "2026-10-03", "reviewer": "Refine05 mint-authority calibration v2",
+          "sources": [{"label": "Verified exact Arbitrum operator registry", "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xbf9060880363a61e7462039aa8a4aa98fe486067"}, {"label": "Issuer CBS and client mint-accounting process", "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779"}]
+        },
+        {
+          "controlRef": "FIUSD Arbitrum proxy-admin EOA",
+          "question": "Establish issuer key-custody and signing-policy evidence for the identified single Arbitrum proxy-admin EOA; a no-code account and direct upgrade authority do not attest independent or hardened key custody.",
+          "reviewedAt": "2026-10-03", "reviewer": "Refine05 mint-authority calibration v2",
+          "sources": [{"label": "Verified exact Arbitrum administered proxy", "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xcded6b899edba762d793f44ed295248049440e1e"}, {"label": "Pinned Arbitrum admin and code reads", "url": "https://arb1.arbitrum.io/rpc"}]
+        },
+        {
+          "controlRef": "FIUSD zkSync proxy-admin Safe",
+          "question": "Establish independent key custody, human signer independence and signing policy for the identified zkSync 3-of-6 proxy-admin Safe signers; observed owners and threshold do not attest beneficial key separation.",
+          "reviewedAt": "2026-10-03", "reviewer": "Refine05 mint-authority calibration v2",
+          "sources": [{"label": "Pinned exact zkSync admin slot and Safe owners/threshold", "url": "https://mainnet.era.zksync.io"}, {"label": "Exact administered FIUSD proxy", "url": "https://era.zksync.network/address/0x2ab105a3ead22731082b790ca9a00d9a3a7627f9"}]
+        }
+      ]
+    }
+  }
+}

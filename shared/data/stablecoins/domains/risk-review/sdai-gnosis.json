@@ -1,0 +1,119 @@
+{
+  "id": "sdai-gnosis",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Gnosis verified SavingsXDai and imported ERC-4626 source",
+        "url": "https://gnosis.blockscout.com/api/v2/smart-contracts/0xaf204776c7245bf4147c2612bf6e5972ee483701"
+      },
+      {
+        "label": "Gnosis xDAI bridge and savings infrastructure",
+        "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge"
+      },
+      {
+        "label": "Pinned Gnosis block 48557408",
+        "url": "https://gnosis.blockscout.com/block/48557408"
+      }
+    ],
+    "evidence": "Complete immutable SavingsXDai and imported ERC-4626 source has no holder blacklist, pause, seizure or privileged arbitrary-holder burn. Inherited xDAI bridge and Sky dependencies remain exposed.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  },
+  "oracleRisk": {
+    "tier": "oracleless",
+    "summary": "The share conversion uses fixed-asset balance/share arithmetic and has no external oracle or borrower liquidation branch.",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "rationale": "The ERC-4626 asset-per-share rate controls deposit and withdrawal amounts, without borrower debt or local liquidation branches.",
+      "sources": [
+        {
+          "label": "Gnosis verified SavingsXDai and imported ERC-4626 source",
+          "url": "https://gnosis.blockscout.com/api/v2/smart-contracts/0xaf204776c7245bf4147c2612bf6e5972ee483701"
+        },
+        {
+          "label": "Gnosis xDAI bridge and savings infrastructure",
+          "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge"
+        },
+        {
+          "label": "Pinned Gnosis block 48557408",
+          "url": "https://gnosis.blockscout.com/block/48557408"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Gnosis verified SavingsXDai and imported ERC-4626 source",
+        "url": "https://gnosis.blockscout.com/api/v2/smart-contracts/0xaf204776c7245bf4147c2612bf6e5972ee483701"
+      },
+      {
+        "label": "Gnosis xDAI bridge and savings infrastructure",
+        "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge"
+      },
+      {
+        "label": "Pinned Gnosis block 48557408",
+        "url": "https://gnosis.blockscout.com/block/48557408"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "SavingsXDai shares are native ERC-4626 issuance on Gnosis at the exact reviewed deployment. The wrapper does not mint a bridge representation; xDAI bridge validator, Sky reserve and bridged-underlying risks remain inherited through xdai-gnosis rather than reclassified as a share-token bridge.",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Sol refinement 2026-10-03 (Refine09)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Gnosis verified SavingsXDai and imported ERC-4626 source",
+        "url": "https://gnosis.blockscout.com/api/v2/smart-contracts/0xaf204776c7245bf4147c2612bf6e5972ee483701"
+      },
+      {
+        "label": "Gnosis xDAI bridge and savings infrastructure",
+        "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge"
+      },
+      {
+        "label": "Pinned Gnosis block 48557408",
+        "url": "https://gnosis.blockscout.com/block/48557408"
+      }
+    ],
+    "routes": [
+      {
+        "id": "gnosis:0xaf204776c7245bf4147c2612bf6e5972ee483701",
+        "destinationChain": "gnosis",
+        "canonicalChain": "gnosis",
+        "contractAddress": "0xaf204776c7245bf4147c2612bf6e5972ee483701",
+        "protocol": "SavingsXDai ERC-4626",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Complete verified source fixes WXDAI as the asset and contains no bridge mint, messaging, remote-peer or upgrade entrypoint. Parent bridged-system exposure remains in the reserve dependency.",
+        "observedAt": "2026-10-03",
+        "observedBlock": 48557408,
+        "sources": [
+          {
+            "label": "Gnosis verified SavingsXDai and imported ERC-4626 source",
+            "url": "https://gnosis.blockscout.com/api/v2/smart-contracts/0xaf204776c7245bf4147c2612bf6e5972ee483701"
+          },
+          {
+            "label": "Gnosis xDAI bridge and savings infrastructure",
+            "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge"
+          },
+          {
+            "label": "Pinned Gnosis block 48557408",
+            "url": "https://gnosis.blockscout.com/block/48557408"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -40,6 +40,9 @@ interface InheritedTrackedPriceConfig {
 
 const INHERITED_TRACKED_PRICE_CONFIGS = {
   [USDAI_USD_AI_ID]: { parentId: PYUSD_PAYPAL_ID },
+  // Reviewed issuer conversion references, not unconditional market-price pegs.
+  "oned-gennius": { parentId: USDC_CIRCLE_ID, marketPriceWins: true },
+  "pyusdx-moonpay": { parentId: PYUSD_PAYPAL_ID, marketPriceWins: true },
   "iusd-initia": { parentId: AUSD_AGORA_ID },
   "usdcx-movement": { parentId: USDC_CIRCLE_ID },
   [M_M0_ID]: {

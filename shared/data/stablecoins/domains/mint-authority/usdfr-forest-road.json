@@ -1,0 +1,160 @@
+{
+  "id": "usdfr-forest-road",
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "unknown",
+    "summary": "Only the controller holds the reviewed USDfr mint role; KYC user deposits and authorized yield issuance are checked against ReserveManager backing. Forest-Road-controlled governance can replace UUPS mint logic after a 172800-second timelock; collateral marks and loan facts rely on approved attesters.",
+    "upgradeability": {
+      "model": "uups",
+      "deploymentRefs": [
+        "ethereum:0xcc07e7c4e5e35affd47b351e420a22c667d7f83d"
+      ],
+      "proxyAddresses": [
+        "0xcc07e7c4e5e35affd47b351e420a22c667d7f83d"
+      ],
+      "adminAddresses": [
+        "0x28b36b6a48ed3f7409464c811a9ed538a824120e"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 172800,
+      "controlRef": "Forest Road governance timelock",
+      "observedAt": "2026-10-02",
+      "observedBlock": 26107707,
+      "sources": [
+        {
+          "label": "Canonical Ethereum deployment addresses",
+          "url": "https://forestroadvault.com/docs/addresses"
+        },
+        {
+          "label": "Timelocked but Forest-Road-controlled governance",
+          "url": "https://forestroadvault.com/docs/roles-and-governance"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "label": "USDfr MintRedeemController",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "chain": "ethereum",
+        "address": "0x50ac018eb6400f247ffe0fa7f1d4e0e900cdb47c",
+        "deploymentRefs": [
+          "ethereum:0xcc07e7c4e5e35affd47b351e420a22c667d7f83d"
+        ],
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107707,
+        "capDescription": "Every user mint is gated by KYC and the reserve-to-liability invariant; authenticated credit interest may create yield liabilities through authorized modules. Upgrade authority can replace this logic.",
+        "evidence": "At block 26107707 hasRole(keccak256(MINTER_ROLE),controller) returned true. Primary topology docs assign native mint only to this controller and explain canonical USDC deposits and backed yield issuance.",
+        "sources": [
+          {
+            "label": "Forest Road USDfr and credit-book mechanism",
+            "url": "https://forestroadvault.com/docs/overview"
+          },
+          {
+            "label": "Canonical Ethereum deployment addresses",
+            "url": "https://forestroadvault.com/docs/addresses"
+          },
+          {
+            "label": "Timelocked but Forest-Road-controlled governance",
+            "url": "https://forestroadvault.com/docs/roles-and-governance"
+          }
+        ]
+      },
+      {
+        "label": "Forest Road governance timelock",
+        "role": "proxy-admin",
+        "authorityType": "timelock",
+        "chain": "ethereum",
+        "address": "0x28b36b6a48ed3f7409464c811a9ed538a824120e",
+        "deploymentRefs": [
+          "ethereum:0xcc07e7c4e5e35affd47b351e420a22c667d7f83d"
+        ],
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "timelockDelaySec": 172800,
+        "observedAt": "2026-10-02",
+        "observedBlock": 26107707,
+        "failureDomainKeys": [
+          "issuer-governance:forest-road:grove-treasury"
+        ],
+        "evidence": "At block 26107707 token hasRole(DEFAULT_ADMIN_ROLE,timelock) returned true and timelock getMinDelay returned 172800. Primary docs identify timelock UPGRADER and DEFAULT_ADMIN and state Forest Road treasury controls GROVE voting at launch. No independent electorate or Safe signer separation is inferred.",
+        "sources": [
+          {
+            "label": "Canonical Ethereum deployment addresses",
+            "url": "https://forestroadvault.com/docs/addresses"
+          },
+          {
+            "label": "Timelocked but Forest-Road-controlled governance",
+            "url": "https://forestroadvault.com/docs/roles-and-governance"
+          }
+        ]
+      }
+    ],
+    "economicCapSemantics": "bounded",
+    "reconciliation": "internal-ledger",
+    "supervision": "unknown",
+    "review": {
+      "disposition": "unresolved",
+      "reviewedAt": "2026-10-03",
+      "reviewer": "Refine05 primary-source and pinned-RPC review",
+      "sources": [
+        {
+          "label": "Complete USDfr token role history, 175 logs through pagination end",
+          "url": "https://eth.blockscout.com/api/v2/addresses/0xcc07e7c4e5e35affd47b351e420a22c667d7f83d/logs"
+        },
+        {
+          "label": "Complete attester role history and current threshold ABI",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x870deb459512099e70e9a640cf3140a0d969fc18"
+        },
+        {
+          "label": "Forest Road USDfr and credit-book mechanism",
+          "url": "https://forestroadvault.com/docs/overview"
+        },
+        {
+          "label": "Canonical Ethereum deployment addresses",
+          "url": "https://forestroadvault.com/docs/addresses"
+        },
+        {
+          "label": "USDfr primary redemption and holder controls",
+          "url": "https://forestroadvault.com/docs/how-to"
+        },
+        {
+          "label": "Timelocked but Forest-Road-controlled governance",
+          "url": "https://forestroadvault.com/docs/roles-and-governance"
+        },
+        {
+          "label": "Definitive legal characterization and related-party facility",
+          "url": "https://forestroadvault.com/legal"
+        },
+        {
+          "label": "Disclosed open economic findings and security-review scope",
+          "url": "https://forestroadvault.com/docs/security"
+        },
+        {
+          "label": "Default and recovery pricing mechanics",
+          "url": "https://forestroadvault.com/docs/recovery"
+        },
+        {
+          "label": "Public onchain backing and loan-book disclosure",
+          "url": "https://forestroadvault.com/transparency"
+        }
+      ],
+      "evidence": "Exact USDfr grant/revoke event replay identifies only MintRedeemController 0x50ac018eb6400f247ffe0fa7f1d4e0e900cdb47c as MINTER and the timelock 0x28b36b6a48ed3f7409464c811a9ed538a824120e as DEFAULT_ADMIN/UPGRADER. The complete AttestationOracle history and membership checks at block 26110192 identify two attester keys, 0x759c2cd90594fdb114c5d37c5c3ea78a0033ed35 and 0xe2e544eded1189b8a5bda86a6f474011a397efb0; threshold is one for kinds 0/1 and two for kinds 2-9. Continuous ledger reconciliation is accounting, not financial assurance of receivables. The on-chain ReserveManager invariant and issuer-approved loan marks establish internal-ledger accounting only, not independent reconciliation of the material offchain book to total token liabilities, so no continuous financial-reconciliation rung is credited. Rechecked security disclosure includes Medium/Open LMV-18 from Round 75, in addition to LMV-09, LMV-11 and LMV-12..16. LMV-17 was withdrawn/refuted and is not a confirmed High finding. No remediation/retest closure is claimed. Attester key custody remains unverified despite the observed two-key roster and thresholds. Executed offchain collateral and token holder-priority instruments, and independent remediation/retest evidence for open economic findings, remain unavailable; these are backing/economic-loss gaps rather than an incomplete token mint-role census. Upstream governance-treasury/operations Safe signer and bypass closure remains incomplete: these upstream controllers have not been enumerated, so the complete mint/upgrade control census remains unresolved despite the named downstream governance timelock.",
+      "unresolvedQuestions": [
+        "Complete the unenumerated upstream governance-treasury/operations Safe signer and bypass census for the governance timelock's mint-logic replacement path."
+      ],
+      "scopedQuestions": [
+        {
+          "controlRef": "USDfr MintRedeemController",
+          "question": "Establish key-custody and signing-policy evidence for the two observed oracle attester keys whose marks authorize backing/yield accounting used by this mint controller; the current key roster and per-kind thresholds do not attest human independence.",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Refine05 mint-authority calibration v2",
+          "sources": [{"label": "Verified current oracle authorization and thresholds", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x870deb459512099e70e9a640cf3140a0d969fc18"}, {"label": "Mint controller, authenticated marks and yield path", "url": "https://forestroadvault.com/docs/overview"}]
+        }
+      ]
+    }
+  }
+}

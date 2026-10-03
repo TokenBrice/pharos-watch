@@ -17,9 +17,11 @@ import {
 const ROOT = resolve(import.meta.dirname, "../../../..");
 const TEST_DIRECTORY = resolve(import.meta.dirname);
 const HEAP_LIMIT_MIB = 128;
-// The 6.75 MB ceiling preserves readable lossless tuples and at least15% raw headroom under8 MB.
+// The 7.0 MB ceiling preserves readable lossless tuples and 12.5% raw headroom under the 8 MB
+// publication limit. Owner decision 2026-10-03: raised from 6.75 MB for the 397-active registry
+// (6,882,271 B; gzip 606,409 B and stored 809,514 B remain far below their 1.35/1.9 MB ceilings).
 // The compile memory probe is the true gate, not a tighter incidental JSON ratio.
-const PUBLICATION_BYTE_BUDGET = 6_750_000;
+const PUBLICATION_BYTE_BUDGET = 7_000_000;
 // Frozen pre-Phase-2 BASE from 335ecb0f5, smoke-out/base-20261003-0149.json
 // .pipeline.candidate encoded with stableJsonStringifyV1 and gzipCanonicalJson;
 // uncompressedBytes/contentSha256 below are the persisted pre-gzip bytes.
@@ -218,7 +220,9 @@ describe("Safety Score V9 canonical publication resource budget", {
       {
         cwd: ROOT,
         encoding: "utf8",
-        timeout: 45_000,
+        // Wall-clock guard only (memory is the asserted bound): the 397-active registry
+        // runs near the 128 MiB ceiling, and shared CI runners exceeded 45s under GC pressure.
+        timeout: 100_000,
         env: { ...process.env, SAFETY_SCORE_V9_RESOURCE_CAPTURE: "" },
       },
     );
@@ -289,6 +293,8 @@ describe("Safety Score V9 canonical publication resource budget", {
       expect(count.evaluated).toBe(output.expected);
       expect(count.failed).toBe(0);
     }
-    expect(output.wallMs).toBeLessThan(45_000);
+    // Scales with the evaluated asset count (45s at 331 assets; 397 assets measured 49s on a
+    // shared CI runner). Production publication runs under a 300s CPU budget at ~25s CPU.
+    expect(output.wallMs).toBeLessThan(60_000);
   });
 });

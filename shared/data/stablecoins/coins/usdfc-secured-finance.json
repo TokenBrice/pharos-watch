@@ -1,0 +1,117 @@
+{
+  "liveReservesConfig": {
+    "adapter": "liquity-native-active-pool",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "usdfc-secured-finance",
+    "display": { "url": "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts.md", "label": "USDFC active FIL collateral" },
+    "inputs": { "primary": { "kind": "onchain-evm", "chain": "filecoin", "rpcMode": "public-rpc" } },
+    "params": {
+      "activePoolAddress": "0x8637ac7fdbb4c763b72e26504afb659df71c7803",
+      "collateralLabel": "Native FIL",
+      "collateralRisk": "medium",
+      "collateralDecimals": 18,
+      "debtSelector": "0x14a6bf0f",
+      "debtDecimals": 18,
+      "collateralBalanceSelector": "0xc5c3937e",
+      "priceFeedAddress": "0x80e651c9739c1ed15a267c11b85361780164a368",
+      "priceSelector": "0x0fdb11cf",
+      "priceDecimals": 18,
+      "troveManagerAddress": "0x5ab87c2398454125dd424425e39c8909bbe16022",
+      "tcrSelector": "0xb82f263d",
+      "mcrSelector": "0x794e5724",
+      "borrowerOperationsAddress": "0x5ab87c2398454125dd424425e39c8909bbe16022",
+      "redemptionRateSelector": "0x1f68f20a",
+      "redemptionRateDecimals": 18,
+      "sourceUrls": ["https://docs.secured.finance/usdfc-stablecoin/deployed-contracts.md", "https://docs.secured.finance/usdfc-stablecoin/core-mechanics/redemption.md"],
+      "rpcUrl": "https://api.node.glif.io/rpc/v1"
+    }
+  },
+  "id": "usdfc-secured-finance",
+  "name": "USDFC",
+  "symbol": "USDFC",
+  "oneLiner": "USDFC is Secured Finance’s FIL-backed dollar on Filecoin, minted through collateralized Troves and redeemable on-chain for oracle-valued FIL.",
+  "flags": {
+    "backing": "crypto-backed",
+    "governance": "centralized-dependent"
+  },
+  "collateral": "Native FIL held in Filecoin ActivePool and DefaultPool contracts; 110% minimum Trove collateralization and 150% system Recovery Mode threshold.",
+  "pegMechanism": "Any holder can redeem USDFC for $1 of oracle-valued FIL less 0.5% plus the dynamic Base Rate when system collateralization is at least 110%; permissionless liquidation uses the Stability Pool and redistributes uncovered debt and collateral.",
+  "mechanismArchetype": "cdp",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "Sol refinement Refine03",
+    "rationale": "The exact Filecoin token is a native FIL-collateralized Trove liability with borrower issuance, liquidations, Stability Pool and protocol redemptions, supporting CDP classification despite mutable token control. Proxy creation at block 4807452 dates native launch to 2025-03-21; current DebtToken implementation creation at block 5282290 dates the reviewed code to 2025-09-02, not issuer founding. Partial Blockscout source verification does not establish full runtime equivalence.",
+    "sources": [
+      {
+        "label": "USDFC native FIL Trove mechanism and security inventory",
+        "url": "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts.md"
+      },
+      {
+        "label": "Exact Filecoin proxy creation",
+        "url": "https://filecoin.blockscout.com/tx/0x33a9a6b95bbcaae7da70ec4a0161d98acaf0898f09fc548533156597c22cb81d"
+      },
+      {
+        "label": "Current DebtToken implementation creation",
+        "url": "https://filecoin.blockscout.com/tx/0x1901268ce7b039f342030e2a8edc6f9924ffdd7f47787800c5c0a736deb1d86d"
+      }
+    ]
+  },
+  "llamaId": "248",
+  "detailProvider": "defillama",
+  "geckoId": "usdfc",
+  "launchDate": "2025-03-21",
+  "implementationLaunchDate": "2025-09-02",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://app.usdfc.net"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.secured.finance/usdfc-stablecoin/overview"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/Secured-Finance/stablecoin-contracts"
+    },
+    {
+      "label": "USDFC proxy creation (Filecoin block 4807452, 2025-03-21)",
+      "url": "https://filecoin.blockscout.com/tx/0x33a9a6b95bbcaae7da70ec4a0161d98acaf0898f09fc548533156597c22cb81d"
+    },
+    {
+      "label": "Current DebtToken implementation creation (Filecoin block 5282290, 2025-09-02)",
+      "url": "https://filecoin.blockscout.com/tx/0x1901268ce7b039f342030e2a8edc6f9924ffdd7f47787800c5c0a736deb1d86d"
+    },
+    {
+      "label": "Hexens core protocol audit (2024-12-30 to 2025-01-20)",
+      "url": "https://github.com/Secured-Finance/stablecoin-contracts/blob/develop/audits/2025-01-Hexens.pdf"
+    },
+    {
+      "label": "Decurity core protocol audit (2025-02-19 to 2025-03-05)",
+      "url": "https://github.com/Secured-Finance/stablecoin-contracts/blob/develop/audits/2025-03-Decurity.pdf"
+    },
+    {
+      "label": "Hexens EIP-2612/EIP-3009 token audit (2025-08-20 to 2025-08-28)",
+      "url": "https://github.com/Secured-Finance/stablecoin-contracts/blob/develop/audits/2025-08-Hexens.pdf"
+    },
+    {
+      "label": "Published contract upgrade history",
+      "url": "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts/contract-upgrade-history.md"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "filecoin",
+      "address": "0x80b98d3aa09ffff255c3ba4a241111ff1262f045",
+      "decimals": 18
+    }
+  ],
+  "collateralQuality": "native",
+  "custodyModel": "onchain",
+  "governanceQuality": "multisig",
+  "infrastructures": [
+    "liquity-v1"
+  ]
+}

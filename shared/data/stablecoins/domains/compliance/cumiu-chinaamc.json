@@ -1,0 +1,36 @@
+{
+  "id": "cumiu-chinaamc",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA MiCA financial-instrument exclusion",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
+      },
+      {
+        "label": "ChinaAMC September 2026 prospectus",
+        "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/E-CleanProspectus-ChinaAMCDigitalOFC-CN(September2026)_1789336483417.pdf"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "excluded-security",
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "ChinaAMC Digital OFC",
+    "issuerDomicile": "Hong Kong",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Tokenized accumulating money-market fund shares, not a GENIUS payment-stablecoin authorization claim.",
+    "references": [
+      {
+        "label": "ChinaAMC September 2026 prospectus",
+        "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/E-CleanProspectus-ChinaAMCDigitalOFC-CN(September2026)_1789336483417.pdf",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-02"
+      }
+    ],
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  }
+}

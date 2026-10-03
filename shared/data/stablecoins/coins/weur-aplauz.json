@@ -1,0 +1,68 @@
+{
+  "id": "weur-aplauz",
+  "name": "Aplauz WEUR",
+  "symbol": "WEUR",
+  "oneLiner": "WEUR is Aplauz's planned euro e-money token, with safeguarded reserves and par redemption; public circulation remains unverified.",
+  "collateral": "Planned 1:1 EUR reserve backing safeguarded through Stichting Aplauz Foundation: at least 30% cash deposits with EEA credit institutions and at most 70% highly liquid, low-risk EUR instruments. The issuer names ABN AMRO for reserve banking and safeguarding, Fireblocks for digital-asset custody and transfer, Elliptic for AML analytics and Shufti for identity verification. These are issuer-claimed arrangements and whitepaper commitments, not an observed current portfolio or independent reserve reconciliation.",
+  "pegMechanism": "Aplauz NL B.V., Dutch company number 77446844, describes a direct issuer claim redeemable at par by any holder after onboarding and compliance checks. Its issuance/redemption terms v1.1 of 24 August 2026 specify no redemption minimum and a 100,000 WEUR minimum per initial issuance request. End-to-end redemption should not exceed five business days in most cases, but additional information requests or extraordinary circumstances can extend it; this is not an unconditional settlement maximum. Redemption-only applicants need an EEA EUR bank account; contracted clients may use eligible non-EEA bank accounts. Ethereum and BNB Smart Chain are planned initial networks; production addresses are unpublished.",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.weur.io/"
+    },
+    {
+      "label": "Current whitepaper",
+      "url": "https://www.weur.io/protocol/whitepaper/v2"
+    },
+    {
+      "label": "ESMA EMT issuer register",
+      "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+    },
+    {
+      "label": "Specific issuance and redemption terms",
+      "url": "https://www.weur.io/protocol/weur-issuance-redemption-terms"
+    },
+    {
+      "label": "Redemption-only applicant terms",
+      "url": "https://www.weur.io/protocol/redemption-terms"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Netherlands",
+    "regulator": "De Nederlandsche Bank (DNB)",
+    "license": "Electronic Money Institution R180692"
+  },
+  "announcedDate": "2026-07-08",
+  "launchPhase": "announced",
+  "launchPhaseDetail": "The current whitepaper, amended 24 August 2026, states in Part G that WEUR has not yet launched or entered circulation. The homepage offers account creation, issuance and redemption and claims public on-chain verification, creating a lifecycle ambiguity without independently verified production contracts or circulation. Whitepaper publication and offer-start on 8 July are not confirmed issuance dates. ESMA records whitepaper notification on 25 June 2026, separately from its 26 May last-update field. No confirmed launch date is published.",
+  "milestones": [
+    {
+      "date": "2026-06-25",
+      "type": "regulatory",
+      "title": "ESMA records WEUR whitepaper notification",
+      "sourceUrl": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv",
+      "description": "Notification is not whitepaper approval or evidence of circulation."
+    },
+    {
+      "date": "2026-07-08",
+      "type": "announcement",
+      "title": "Whitepaper publication and offer-start date",
+      "sourceUrl": "https://www.weur.io/protocol/whitepaper/v2",
+      "description": "The disclosed offer date does not establish public token issuance."
+    },
+    {
+      "date": "2026-08-24",
+      "type": "milestone",
+      "title": "Amended whitepaper states WEUR has not launched",
+      "sourceUrl": "https://www.weur.io/protocol/whitepaper/v2"
+    }
+  ],
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "EUR",
+    "governance": "centralized"
+  },
+  "mechanismArchetype": "fiat-cash",
+  "custodyModel": "unknown",
+  "status": "pre-launch"
+}

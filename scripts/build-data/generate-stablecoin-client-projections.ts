@@ -13,6 +13,7 @@ import {
   PRE_LAUNCH_STABLECOINS,
   TRACKED_STABLECOINS,
 } from "@shared/lib/stablecoins/registry";
+import { PEG_CURRENCY_VALUES, type PegCurrency } from "@shared/types/core";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
@@ -21,44 +22,20 @@ const REPO_ROOT = resolve(__dirname, "../..");
 const STATIC_OUTPUT = resolve(REPO_ROOT, "src/generated/stablecoin-static-data.ts");
 const PALETTE_OUTPUT = resolve(REPO_ROOT, "src/generated/command-palette-search-data.ts");
 
-const PEG_ORDER = [
-  "USD",
-  "EUR",
-  "GBP",
-  "CHF",
-  "BRL",
-  "JPY",
-  "KRW",
-  "SGD",
-  "MYR",
-  "TRY",
-  "AUD",
-  "ZAR",
-  "CAD",
-  "PHP",
-  "RUB",
-  "CNY",
-  "CNH",
-  "MXN",
-  "VND",
-  "UAH",
-  "ARS",
-  "KGS",
-  "NGN",
-  "XOF",
-  "COP",
-  "CLP",
-  "GHS",
-  "KES",
-  "PEN",
-  "IDR",
-  "INR",
-  "HKD",
-  "GOLD",
-  "SILVER",
-  "VAR",
-  "OTHER",
-] as const;
+// Keep the schema vocabulary authoritative while preserving the established
+// route order for currencies displayed outside their schema position.
+const PEG_ORDER: PegCurrency[] = [...PEG_CURRENCY_VALUES];
+for (const [currency, before] of [
+  ["SGD", "MYR"],
+  ["PHP", "CNY"],
+  ["RUB", "CNY"],
+  ["IDR", "GOLD"],
+  ["INR", "GOLD"],
+  ["HKD", "GOLD"],
+] as const) {
+  PEG_ORDER.splice(PEG_ORDER.indexOf(currency), 1);
+  PEG_ORDER.splice(PEG_ORDER.indexOf(before), 0, currency);
+}
 
 // Preserve the established serialized key order independently from the route
 // order above. New active peg currencies fall back to registry encounter order.
@@ -93,6 +70,9 @@ const PEG_COUNT_ORDER = [
   "GHS",
   "KES",
   "PEN",
+  "CZK",
+  "PLN",
+  "AED",
 ] as const;
 
 export interface StablecoinClientProjectionCoin {
@@ -189,7 +169,7 @@ export const DEAD_STABLECOIN_COUNT = ${projection.deadStablecoinCount};
 
 export const ACTIVE_PEG_CURRENCY_COUNTS = ${JSON.stringify(projection.activePegCurrencyCounts, null, 2)} as const;
 
-export const ACTIVE_PEG_CURRENCIES = ${JSON.stringify(projection.activePegCurrencies, null, 2)} as const;
+export const ACTIVE_PEG_CURRENCIES = ${JSON.stringify(projection.activePegCurrencies)} as const;
 
 export const ACTIVE_PEG_CURRENCY_COUNT = ACTIVE_PEG_CURRENCIES.length;
 

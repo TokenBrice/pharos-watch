@@ -1,0 +1,105 @@
+{
+  "id": "sdai-gnosis",
+  "name": "Savings xDAI",
+  "symbol": "sDAI",
+  "oneLiner": "sDAI is Gnosis's savings vault over wrapped xDAI, redeemable on-chain for WXDAI at its accrued exchange rate.",
+  "flags": {
+    "backing": "crypto-backed",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "navToken": true
+  },
+  "variantOf": "xdai-gnosis",
+  "variantKind": "savings-passthrough",
+  "pegReferenceId": "xdai-gnosis",
+  "detailProvider": "coingecko",
+  "geckoId": "savings-xdai",
+  "contracts": [
+    {
+      "chain": "gnosis",
+      "address": "0xaf204776c7245bf4147c2612bf6e5972ee483701",
+      "decimals": 18
+    }
+  ],
+  "mechanismArchetype": "protocol-position",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-02",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rationale": "Exact Gnosis SavingsXDai is an immutable ERC-4626 operational share claim against WXDAI held by 0xaf204776c7245bf4147c2612bf6e5972ee483701. It is distinct from Ethereum Savings Dai; xDAI bridge and Sky reserve risks remain inherited.",
+    "sources": [
+      {
+        "label": "Gnosis verified SavingsXDai and imported ERC-4626 source",
+        "url": "https://gnosis.blockscout.com/api/v2/smart-contracts/0xaf204776c7245bf4147c2612bf6e5972ee483701"
+      },
+      {
+        "label": "Gnosis xDAI bridge and savings infrastructure",
+        "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge"
+      },
+      {
+        "label": "Pinned Gnosis block 48557408",
+        "url": "https://gnosis.blockscout.com/block/48557408"
+      },
+      {
+        "label": "SavingsXDai creation transaction 2023-09-28T11:21:40Z, Gnosis block 30195209",
+        "url": "https://gnosis.blockscout.com/tx/0xaf1e7513a4e5f219f195249c370a8babf0039eee866969ec86deeb9235a52066"
+      }
+    ]
+  },
+  "collateral": "WXDAI held directly in the immutable Gnosis SavingsXDai vault; underlying xDAI bridge and Sky backing remains inherited.",
+  "pegMechanism": "Holders deposit WXDAI for ERC-4626 shares and redeem for WXDAI at the current asset-per-share rate, then may unwrap WXDAI into native xDAI. No local cooldown or withdrawal fee is implemented; gas applies. Conversion is not a fiat-dollar redemption guarantee.",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://gnosis.blockscout.com/api/v2/smart-contracts/0xaf204776c7245bf4147c2612bf6e5972ee483701",
+    "provider": "SavingsXDai onchain WXDAI asset and share accounting",
+    "cadence": "real-time"
+  },
+  "links": [
+    {
+      "label": "Gnosis verified SavingsXDai and imported ERC-4626 source",
+      "url": "https://gnosis.blockscout.com/api/v2/smart-contracts/0xaf204776c7245bf4147c2612bf6e5972ee483701"
+    },
+    {
+      "label": "Gnosis xDAI bridge and savings infrastructure",
+      "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge"
+    }
+  ],
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "custodyModel": "unknown",
+  "yieldConfig": {
+    "yieldSource": "Gnosis xDAI bridge savings yield",
+    "yieldType": "nav-appreciation"
+  },
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "sdai-gnosis",
+    "display": {
+      "url": "https://gnosis.blockscout.com/api/v2/smart-contracts/0xaf204776c7245bf4147c2612bf6e5972ee483701",
+      "label": "Gnosis SavingsXDai"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "gnosis",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "WXDAI held by SavingsXDai",
+        "risk": "medium",
+        "coinId": "xdai-gnosis",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0xe91d153e0b41518a2ce8dd3d7944fa863463a97d"
+      },
+      "rpcUrl": "https://rpc.gnosischain.com",
+      "redemptionLiquidity": {
+        "source": "atomic-full-backing"
+      }
+    }
+  },
+  "archetypeOverride": true,
+  "implementationLaunchDate": "2023-09-28"
+}

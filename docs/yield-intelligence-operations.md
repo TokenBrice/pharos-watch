@@ -100,6 +100,25 @@ When promoting an adapter out of `quarantined` or `intentional-gap`, remove the 
 
 When a lifecycle review date comes due and the adapter stays quarantined or intentionally uncovered, update the typed reason `note` with the review date and disposition, then move `nextReviewAt` to the next concrete review window. Past-due dates are no longer advisory-only: the audit publishes `reviewDueAdapters` / `lifecycleReviewDueCount` and emits the `lifecycle-review-due` warning cron event, so a review that comes due is visible on the operator surface in the same cycle. Do not leave past-due review dates in the registry after a coverage-drain pass.
 
+## Coverage Extension Reviewed 2026-10-03
+
+The 48 yield-bearing additions have 35 ERC-4626 rate paths, one Axis exchange-rate path, one native DeFiLlama-only path, six existing price-derived paths, and five intentional gaps. These counts describe source configuration, not published APYs or Safety Score eligibility. No new benchmark proxy, direct protocol API adapter, or rebase estimator is introduced.
+
+- ERC-4626 sources cover the new Morpho vaults plus strUSD, syrupUSDG, sFRAX, sreUSD, Gnosis sDAI, legacy Spark sUSDC, and Falcon sUSDf. Read one whole share using share decimals, decode the return using underlying-asset decimals, and preserve rate history before annualizing. USD-underlying vaults also read `totalAssets`; the EURCV vault does not relabel EUR assets as USD TVL.
+- Saturn sUSDat owns its exact Ethereum ERC-4626 rate and `totalAssets` source. The USDat parent remains non-yield-bearing and no longer carries an sUSDat wrapper mapping. The observed NAV includes STRCon preferred-credit valuation as well as income, so annualized rate changes can reflect gains or losses and do not certify a cash savings rate.
+- Axis sUSDx uses `exchangeRate()` (`0x3ba0b9a9`). Exact selector-only and generic zero-padded calls matched at Ethereum block 26108099. The padded word is ignored by this deployment, not treated as an ERC-4626 share amount.
+- Steakhouse USDG uses native DeFiLlama pool `32f586b4-5358-5aa2-88ee-c842139e7023` because Robinhood has no generic Worker rate-RPC route. The live [pool inventory](https://yields.llama.fi/pools) contains one Robinhood `STEAKUSDG` row with the exact USDG underlying. A pinned read of the [tracked vault](https://app.morpho.org/robinhood-chain/vault/0xBeEff033F34C046626B8D0A041844C5d1A5409dd/steakhouse-usdg) confirms its symbol and asset.
+- earnUSD, FILQA, FIUSD, CUMIU, USCC, and uMINT use the existing `navToken` plus `nav-appreciation` price-derived eligibility. The runtime reads priced `supply_history`, not the proposed CoinGecko endpoint directly. It requires a priced anchor at least seven days old and no more than 45 days old. uMINT's reviewed CoinGecko 90-day response contained no prices; configuration does not imply an immediately publishable APY.
+- BRSRV, STBT, and JLTXX remain intentional gaps because income is distributed in shares or through rebasing, which a stable NAV cannot measure. XGLD remains a gap until principal-adjusted returns separate gold appreciation from strategy income. CHF SAFO remains a gap until a reviewed native-CHF NAV-history adapter consumes the [Spiko share-class feed](https://public-api.spiko.io/share-classes/chfSAFO/totals); USD price returns include currency movements.
+
+### Historical Ownership Cutover
+
+The live Falcon savings pool and exchange-rate config move from `usdf-falcon` to `susdf-falcon`, and the obsolete parent variant is removed. USDf and xDAI already have no holder-yield flag or `yieldConfig`, so their metadata stays unchanged. The Gnosis pool `13392973-be6e-4b2f-bce9-4f7dd53d1c3a` moves from `sdai-sky` to `sdai-gnosis`; the Ethereum Sky rate remains owned by `sdai-sky`.
+
+No historical database rows are rewritten by these config changes. Before any operator-led history migration, identify Falcon records by the sUSDf pool UUID or legacy `onchain:usdf-falcon` key, and review whether to move them to `susdf-falcon` / `onchain:susdf-falcon`. For sDAI, review only records tied to Gnosis pool UUID `13392973-be6e-4b2f-bce9-4f7dd53d1c3a` under `sdai-sky`. Never bulk-relabel `sdai-sky` history: its `onchain:sdai-sky` series belongs to the distinct Ethereum vault. Historical decisions and publication evidence need a coordinated, reviewed cutover rather than ad hoc D1 updates.
+
+For Saturn, review any historical yield rows under `usdat-saturn` against the exact Ethereum sUSDat contract `0xd166337499e176bbc38a1fbd113ab144e5bd2df7` before assigning them to `susdat-saturn`. Do not move USDat supply or price history, and do not infer sUSDat ownership from a parent symbol alone. No D1 migration or historical backfill is part of this source cutover.
+
 ## Decision Ledger Retention (v8.14)
 
 - Every stored `yield_source_decisions` row is tagged with a final `retention_reason` of `trend` or `audit`.

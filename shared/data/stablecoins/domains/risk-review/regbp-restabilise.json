@@ -1,0 +1,19 @@
+{
+  "id": "regbp-restabilise",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "ReStabilise issuer",
+        "url": "https://restabilise.com/"
+      },
+      {
+        "label": "FCA sandbox selection",
+        "url": "https://www.fca.org.uk/news/press-releases/4-firms-selected-test-stablecoin-regulatory-sandbox"
+      }
+    ],
+    "evidence": "The issuer SCaaS proposal describes programmable, customisable asset-level controls, but no reGBP-specific freeze, blacklist or seizure interface or production deployment is published. The possibility is retained as an explicit source gap, not a definite freeze inference from the separate platform proposal or sandbox selection.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  }
+}

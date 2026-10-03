@@ -1,0 +1,16 @@
+{
+  "id": "susdf-falcon",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Falcon terms clause 7.2(f), issuer states no active EU offering",
+        "url": "https://docs.falcon.finance/resources/terms-of-use.md"
+      },
+      {
+        "label": "Falcon sUSDf variable-exchange-rate savings product",
+        "url": "https://docs.falcon.finance/earn/susdf-yield-bearing-token.md"
+      }
+    ]
+  }
+}

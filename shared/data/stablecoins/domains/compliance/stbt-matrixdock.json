@@ -1,0 +1,36 @@
+{
+  "id": "stbt-matrixdock",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA MiCA financial-instrument exclusion",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
+      },
+      {
+        "label": "STBT January 2025 terms",
+        "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FzHip8cJaP5aud3KfdVud%2FSTBT%20Token%C2%A0Terms%20and%20Conditions.pdf?alt=media&token=79d5fd49-deae-41b4-a809-9e1afaa02f32"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "excluded-security",
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "Prometheus Solutions Ltd",
+    "issuerDomicile": "British Virgin Islands",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Treasury investment token issued as unsecured debt under accredited-investor and securities selling restrictions, not a GENIUS payment-stablecoin authorization claim.",
+    "references": [
+      {
+        "label": "STBT January 2025 terms",
+        "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FzHip8cJaP5aud3KfdVud%2FSTBT%20Token%C2%A0Terms%20and%20Conditions.pdf?alt=media&token=79d5fd49-deae-41b4-a809-9e1afaa02f32",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-02"
+      }
+    ],
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  }
+}

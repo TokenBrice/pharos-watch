@@ -1,0 +1,19 @@
+{
+  "id": "czkc-czkc",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "CZKC developer documentation",
+        "url": "https://book.czkc.dev/print.html"
+      },
+      {
+        "label": "CZKC issuer",
+        "url": "https://www.czkc.cz/about/"
+      }
+    ],
+    "evidence": "Production entrypoint and implementation addresses are explicitly unpublished. The reserve representation is issuer-controlled and bridges have issuer-set capacity limits, but neither establishes token-holder address freezing or seizure. Direct blacklist/freeze powers remain unresolved; no definite freeze verdict is inferred from the issuer electronic-money-token description or sandbox participation.",
+    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-02"
+  }
+}

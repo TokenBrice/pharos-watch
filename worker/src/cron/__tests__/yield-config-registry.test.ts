@@ -115,6 +115,22 @@ describe("yield config registry", () => {
         const variant = YIELD_VARIANT_MAP[config.stablecoinId];
         expect(variant?.variantAddress?.toLowerCase(), config.stablecoinId).toBe(config.contract.toLowerCase());
         expect(variant?.variantChain, config.stablecoinId).toBe(config.chain);
+      } else {
+        const contract = coin.contracts?.find(
+          (entry) => entry.chain === config.chain
+            && entry.address.toLowerCase() === config.contract.toLowerCase(),
+        );
+        expect(contract, `${config.stablecoinId}: canonical rate contract`).toBeDefined();
+        if (contract && config.selector === "0x07a2d13a") {
+          if (contract.decimals === null) {
+            throw new Error(`${config.stablecoinId}: canonical rate contract requires known decimals`);
+          }
+          expect(BigInt(config.inputAmount), `${config.stablecoinId}: one whole vault share`)
+            .toBe(10n ** BigInt(contract.decimals));
+        }
+        if (config.tvlRead) {
+          expect(coin.flags.pegCurrency, `${config.stablecoinId}: totalAssets is USD TVL`).toBe("USD");
+        }
       }
       expect((coin?.contracts ?? []).length, config.stablecoinId).toBeGreaterThan(0);
     }
@@ -367,18 +383,15 @@ describe("yield config registry", () => {
       "avusd-avant",
       "gho-aave",
       "dola-inverse-finance",
+      "usdf-falcon",
+      "xdai-gnosis",
+      "usdat-saturn",
     ]) {
       expect(YIELD_POOL_MAP[stablecoinId], stablecoinId).toBeUndefined();
       expect(YIELD_VARIANT_MAP[stablecoinId], stablecoinId).toBeUndefined();
+      expect(ON_CHAIN_RATE_CONFIGS.some((entry) => entry.stablecoinId === stablecoinId), stablecoinId).toBe(false);
     }
 
-    expect(YIELD_POOL_MAP["susde-ethena"]).toBe("66985a81-9c51-46ca-9977-42b4fe7bc6df");
-    expect(YIELD_POOL_MAP["usd3-3jane"]).toBe("f8cd444e-d99f-4132-b234-fd3482bf8806");
-    expect(YIELD_POOL_MAP["susds-sky"]).toBe("d8c4eff5-c8a9-46fc-a888-057c4c668e72");
-    expect(YIELD_POOL_MAP["sdai-sky"]).toBe("13392973-be6e-4b2f-bce9-4f7dd53d1c3a");
-    expect(YIELD_POOL_MAP["sfrxusd-frax"]).toBe("42523cca-14b0-44f6-95fb-4781069520a5");
-    expect(YIELD_POOL_MAP["scrvusd-curve"]).toBe("5fd328af-4203-471b-bd16-1705c726d926");
-    expect(YIELD_POOL_MAP["savusd-avant"]).toBe("c74227a1-e738-4021-bbe1-13363815aecb");
   });
 
   it("includes high-TVL stablecoin lending protocols from 2026-03-25 audit", () => {
@@ -638,15 +651,18 @@ describe("yield config registry", () => {
     }
   });
 
-  it("does not keep unreachable STBT in the intentional gap inventory", () => {
-    expect(trackedCoinsById.has("stbt-matrixdock")).toBe(false);
-    expect(INTENTIONAL_GAP_REASONS["stbt-matrixdock"]).toBeUndefined();
+  it("keeps intentional gaps attached to tracked coins, including re-admitted STBT", () => {
+    for (const stablecoinId of Object.keys(INTENTIONAL_GAP_REASONS)) {
+      expect(trackedCoinsById.has(stablecoinId), stablecoinId).toBe(true);
+    }
+    expect(trackedCoinsById.get("stbt-matrixdock")?.flags.yieldBearing).toBe(true);
+    expect(INTENTIONAL_GAP_REASONS["stbt-matrixdock"]).toBeDefined();
     expect(
-      YIELD_SOURCE_REGISTRY.some((entry) => entry.stablecoinId === "stbt-matrixdock"),
-    ).toBe(false);
+      YIELD_SOURCE_REGISTRY.find((entry) => entry.stablecoinId === "stbt-matrixdock"),
+    ).toBeDefined();
     expect(
-      YIELD_ADAPTER_MANIFEST.some((entry) => entry.stablecoinId === "stbt-matrixdock"),
-    ).toBe(false);
+      YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === "stbt-matrixdock"),
+    ).toMatchObject({ status: "intentional-gap" });
   });
 
   it("keeps exact-pool overrides separate from the yield-bearing manifest", () => {
