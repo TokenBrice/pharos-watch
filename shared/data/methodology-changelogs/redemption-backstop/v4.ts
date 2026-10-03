@@ -5,7 +5,7 @@ export const REDEMPTION_BACKSTOP_V4: readonly MethodologyChangelogEntry[] = [
     version: "4.46",
     title: "Executable vault capacity and unavailable-evidence cutover",
     date: "2026-10-03",
-    effectiveAt: 1791048600,
+    effectiveAt: 1791052928,
     summary:
       "Morpho Vault V2 capacity now requires a same-run selected-liquidity-adapter read, generic ERC-4626 capacity no longer labels non-USD underlying units as dollars, and newly reviewed routes keep unmeasured capacity unavailable rather than publishing a fixed zero.",
     impact: [
