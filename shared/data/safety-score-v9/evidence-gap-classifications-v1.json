@@ -12765,6 +12765,86 @@
         "https://docs.morpho.org/curate/tutorials-v1/unwind-vault-v1.md"
       ],
       "rationale": "For the scoped Morpho USDU Core vault shares, issuer transparency identifies curated variable-rate lending and adapter-held shares. Issuer redemption terms, complete docs index, verified adapter/core source and underlying protocol unwind terms show liquidity-dependent access, but no full-position realization maximum or contractual SLA. The adapter's curator-only redemption is not a guaranteed immediate holder cash exit."
+    },
+    {
+      "id": "uw-mtbill-midas-29bc2d8735a1d968",
+      "assetId": "mtbill-midas",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:mtbill-midas:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:36Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R59)",
+      "sources": [
+        {
+          "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FUDquVH8yRhSxnVqxp0X4%2F20260714_mTBILL_FT_signed_final.pdf?alt=media&token=bf215cdc-f549-474d-8ca9-5a1810fabeb8",
+          "observedAt": "2026-10-03T22:52:36Z",
+          "datumAsOf": "2026-07-17",
+          "location": "Part A section 3; Overview, Market disruption and Redemption",
+          "excerpt": "A market disruption event may delay inter alia subscriptions, redemptions and settlement of redemption amounts.",
+          "assertion": "One-business-day realisation, 25% daily gates and up-to-5% holdback are disclosed; they do not establish a maximum to final delivery of the entire requested notional."
+        },
+        {
+          "url": "https://midas-docs.gitbook.io/midas-docs/how-does-it-work/issuance-and-redemption.md",
+          "observedAt": "2026-10-03T22:52:36Z",
+          "datumAsOf": null,
+          "location": "Standard Mode",
+          "excerpt": "Midas will acknowledge the request and process it as quickly as possible, typically within two business days.",
+          "assertion": "The generic documentation describes typical processing, not a contractual calendar-time final settlement maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://midas-docs.gitbook.io/midas-docs/how-does-it-work/issuance-and-redemption.md",
+        "https://midas-docs.gitbook.io/midas-docs/resources/legal-documents/prospectus-documents.md",
+        "https://midas-docs.gitbook.io/midas-docs/resources/legal-documents/terms-and-conditions.md",
+        "https://midas-docs.gitbook.io/midas-docs/resources/smart-contracts-addresses.md",
+        "https://midas-docs.gitbook.io/midas-docs/tokens/mtbill/independent-reporting.md",
+        "https://docs.superstate.com/investors/tokenized-funds/redeem.md",
+        "https://midas.app/transparency?token=mtbill"
+      ],
+      "rationale": "The current signed July 2026 mTBILL final terms and incorporated overview disclose conditional redemption, realisation, gates, holdback and disruption postponement, but no unconditional maximum for delivery of the complete same-notional proceeds. Generic 1-7 business-day queue language and typical two-day processing are not that datum. This conclusion rests on the successfully retrieved governing terms, not the site's Cloudflare access failure."
+    },
+    {
+      "id": "uw-mapollo-midas-88da1002f69024de",
+      "assetId": "mapollo-midas",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:mapollo-midas:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:52:36Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R59)",
+      "sources": [
+        {
+          "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2F7sSYvDMJYrWvBsvKGQFI%2F20260714_mAPOLLO_FT_signed_final.pdf?alt=media",
+          "observedAt": "2026-10-03T22:52:36Z",
+          "datumAsOf": "2026-07-17",
+          "location": "Part A section 3, p.6; Overview Market disruption and Redemption",
+          "excerpt": "A market disruption event may delay inter alia subscriptions, redemptions and settlement of redemption amounts.",
+          "assertion": "A one-business-day realisation period coexists with a 15% daily gate, up-to-50% holdback and market-disruption deferrals. No final whole-notional settlement maximum is specified."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://midas-docs.gitbook.io/midas-docs/how-does-it-work/issuance-and-redemption.md",
+        "https://midas-docs.gitbook.io/midas-docs/how-does-it-work/fees.md",
+        "https://midas-docs.gitbook.io/midas-docs/resources/legal-documents/prospectus-documents.md",
+        "https://midas-docs.gitbook.io/midas-docs/resources/legal-documents/terms-and-conditions.md",
+        "https://midas-docs.gitbook.io/midas-docs/resources/smart-contracts-addresses.md",
+        "https://midas.app/mapollo",
+        "https://midas.app/transparency?token=mapollo"
+      ],
+      "rationale": "The retrieved signed July 2026 mAPOLLO terms disclose realisation, redemption gates and deferred-price holdback, not an end-to-end maximum for fully paid proceeds. The conditional position-exit mandate also is not the tokenholder settlement SLA. The successfully read governing terms support the non-disclosure finding; failed access to the dynamic site is not used as evidence of silence."
     }
   ]
 }

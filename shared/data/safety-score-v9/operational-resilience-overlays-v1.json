@@ -6089,6 +6089,171 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "mhyper-midas",
+      "reviewedAt": "2026-10-03T22:48:15Z",
+      "expiresAt": "2027-10-03T22:48:15Z",
+      "reviewer": "Unknown wave W1R59",
+      "notes": "March 25 2026 issuer announcement explicitly offers live mHYPER mint and redemption. This is a six-full-month lower bound, not the launch date. Throughput, stress settlement, reconciliation and incident review are not established. No incident-free claim.",
+      "sources": [
+        {
+          "sourceId": "dated-operating-evidence",
+          "label": "Exact-token dated issuer operating evidence",
+          "publisher": "Midas Software GmbH",
+          "publishedAt": "2026-03-25",
+          "url": "https://blog.midas.app/ledger-officially-integrates-midas-products-mtbill-mhyper-are-now-live-on-ledger-wallet/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 6,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-operating-evidence"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "mtbill-midas",
+      "reviewedAt": "2026-10-03T22:48:15Z",
+      "expiresAt": "2027-10-03T22:48:15Z",
+      "reviewer": "Unknown wave W1R59",
+      "notes": "March 25 2026 issuer announcement explicitly offers live mTBILL mint and redemption. Six full months is a conservative lower bound, not a claim that its history began then. Throughput, stress settlement, reconciliation and incident review are not established. No incident-free claim.",
+      "sources": [
+        {
+          "sourceId": "dated-operating-evidence",
+          "label": "Exact-token dated issuer operating evidence",
+          "publisher": "Midas Software GmbH",
+          "publishedAt": "2026-03-25",
+          "url": "https://blog.midas.app/ledger-officially-integrates-midas-products-mtbill-mhyper-are-now-live-on-ledger-wallet/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 6,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-operating-evidence"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "mapollo-midas",
+      "reviewedAt": "2026-10-03T22:48:15Z",
+      "expiresAt": "2027-10-03T22:48:15Z",
+      "reviewer": "Unknown wave W1R59",
+      "notes": "July 17 2026 signed final terms confirm exact mAPOLLO initial issue date August 11 2025. Thirteen full months from issuance to review; no independent performance claim. Throughput, stress settlement, reconciliation and incident review are not established. No incident-free claim.",
+      "sources": [
+        {
+          "sourceId": "dated-operating-evidence",
+          "label": "Exact-token dated issuer operating evidence",
+          "publisher": "Midas Software GmbH",
+          "publishedAt": "2026-07-17",
+          "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2F7sSYvDMJYrWvBsvKGQFI%2F20260714_mAPOLLO_FT_signed_final.pdf?alt=media",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 13,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-operating-evidence"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "mre7yield-midas",
+      "reviewedAt": "2026-10-03T22:48:15Z",
+      "expiresAt": "2027-10-03T22:48:15Z",
+      "reviewer": "Unknown wave W1R59",
+      "notes": "July 17 2025 re-filed exact mRe7YIELD final terms establish live offer; use that later unambiguous date, not the inconsistent February 2024 initial-issue field. Fourteen full months lower bound. Throughput, stress settlement, reconciliation and incident review are not established. No incident-free claim.",
+      "sources": [
+        {
+          "sourceId": "dated-operating-evidence",
+          "label": "Exact-token dated issuer operating evidence",
+          "publisher": "Midas Software GmbH",
+          "publishedAt": "2025-07-17",
+          "url": "https://content.gitbook.com/content/MndxFHqGeA4nzBBeKDTV/blobs/TXP3spquPMlsrPCVKmtu/Midas_Final_Terms_mRE7YIELD_Update_2025.pdf",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 14,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-operating-evidence"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "mmev-midas",
+      "reviewedAt": "2026-10-03T22:48:15Z",
+      "expiresAt": "2027-10-03T22:48:15Z",
+      "reviewer": "Unknown wave W1R59",
+      "notes": "September 8 2026 issuer report separately enumerates issued mMEV tokens in the joint mMEV/mROX report. Less than one full month since this observed residual operation means zero evidenced full months, not absence of history. April 30 announced discontinuation prevents extrapolating uninterrupted operation from earlier launch. Throughput, stress settlement, reconciliation and incident review are not established. No incident-free claim.",
+      "sources": [
+        {
+          "sourceId": "dated-operating-evidence",
+          "label": "Exact-token dated issuer operating evidence",
+          "publisher": "Midas Software GmbH",
+          "publishedAt": "2026-09-08",
+          "url": "https://drive.google.com/file/d/1Z7pi3nyarivuVjduAYHJ6ILvG4p2QkkZ/view",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 0,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-operating-evidence"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }
