@@ -122,9 +122,9 @@
     ]
   },
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
+    "tier": "standard-external",
     "role": "collateral-pricing",
-    "summary": "Complete pinned adapter census: 8 Morpho markets, 8 distinct borrower oracle paths, plus separately reviewed oracle-free share accounting. External pricing branches cannot inherit the share-accounting exemption. No measured debt/liability shares, independent failover or heartbeat budget is invented.",
+    "summary": "Eight reviewed Morpho borrower oracle paths use external feeds. The formerly opaque JitoSOL path is an EIP-1167 MetaOracleDeviationTimelock with Chainlink-compliant primary and backup composers, pinned at Base block 52139743. No independent-provider redundancy, heartbeat budget or measured debt shares are asserted.",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",
@@ -155,9 +155,17 @@
       ]
     },
     "reviewedAt": "2026-10-03",
-    "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
+    "reviewer": "Sol refinement Refine08 census; Unknown-wave W1R67 exact meta-oracle resolution",
     "confidence": "verified",
     "sources": [
+      {
+        "label": "Resolved JitoSOL meta-oracle implementation and deviation/timelock logic",
+        "url": "https://base.blockscout.com/api/v2/smart-contracts/0x846e726a1bf5fd5cbe08c179ee491b085b1cac3e"
+      },
+      {
+        "label": "Pinned primary/backup oracle and external feed configuration",
+        "url": "https://basescan.org/block/52139743"
+      },
       {
         "label": "Exact base block 52095852; independent role, Safe, gate and market census re-read 2026-10-03",
         "url": "https://basescan.org/block/52095852"
@@ -489,8 +497,8 @@
       {
         "id": "oracle-0x78f772f5fcc03256260cc1165e34da9bb3f9be1c",
         "label": "Morpho borrower oracle 0x78f772f5fcc03256260cc1165e34da9bb3f9be1c",
-        "tier": "opaque-or-unknown",
-        "summary": "Exact adapter market census binds 0x09276541cfecb6920a80679a1deced4dde3ae64bf5fc2c9c1f9c21e0c152e1a5 to this oracle and the recorded collateral/LLTV. Downstream feed/configuration topology remains unresolved: source is unavailable and standard composer getters revert; no redundancy, heartbeat or pricing-administrator claim is made.",
+        "tier": "standard-external",
+        "summary": "Exact market 0x09276541cfecb6920a80679a1deced4dde3ae64bf5fc2c9c1f9c21e0c152e1a5 oracle is an EIP-1167 clone of verified MetaOracleDeviationTimelock 0x846e726a1bf5fd5cbe08c179ee491b085b1cac3e. Base block 52139743 pins primary 0x2be831d635f3d6fe4fa63c78f66cf793fa3b3e5b, backup 0x41b5637a347a6c199a503fddef466080d7256acc, 2% deviation threshold, 10800-second challenge and 28800-second healing. Both composers use external Chainlink-compliant feeds; no independent-provider redundancy or freshness bound is established.",
         "collateralAssets": [
           "0x97be14dd8f994a5364573bc035d85309e7cb34de"
         ],
@@ -499,16 +507,16 @@
         ],
         "feeds": [
           {
-            "provider": "Unresolved exact market oracle; Blockscout source unavailable and Morpho oracleByAddress type Unknown",
-            "path": "price() for 0x09276541cfecb6920a80679a1deced4dde3ae64bf5fc2c9c1f9c21e0c152e1a5",
+            "provider": "Chainlink-compliant primary JITOSOL-SOL Calculated × SOL/USD; backup JITOSOL/USD",
+            "path": "MetaOracleDeviationTimelock.price(): primary feeds 0x4b28dfaf2acaf982524a75409ab59dff85942ad7 and 0xb221fff161c23c6473a6316294e2d510cfb667b0; backup feed 0x0ca181015d21a5ed19bafc17f2138883c2b16d54. Both composers have zero quote feeds and zero ERC4626 vault inputs.",
             "address": "0x78f772f5fcc03256260cc1165e34da9bb3f9be1c",
             "chain": "base",
             "observedAt": "2026-10-03",
-            "observedBlock": 52095852
+            "observedBlock": 52139743
           }
         ],
         "observedAt": "2026-10-03",
-        "observedBlock": 52095852,
+        "observedBlock": 52139743,
         "collateralParameters": [
           {
             "asset": "0x97be14dd8f994a5364573bc035d85309e7cb34de",
@@ -519,6 +527,22 @@
         "backstop": "Reviewed Morpho liquidate has no protocol-funded insurance payment or mandatory external rescuer. No independent insurer or guaranteed liquidator capacity is established.",
         "shutdownOrBadDebtBehavior": "When liquidation exhausts borrower collateral, residual borrow shares/assets are removed and badDebtAssets reduces that market totalSupplyAssets. Vault adapter realAssets then carries supplier losses into share NAV; there is no guaranteed par redemption.",
         "sources": [
+          {
+            "label": "Verified clone implementation: MetaOracleDeviationTimelock",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x846e726a1bf5fd5cbe08c179ee491b085b1cac3e"
+          },
+          {
+            "label": "Verified primary external-feed composer",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x2be831d635f3d6fe4fa63c78f66cf793fa3b3e5b"
+          },
+          {
+            "label": "Verified backup external-feed composer",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x41b5637a347a6c199a503fddef466080d7256acc"
+          },
+          {
+            "label": "Base oracle state pin",
+            "url": "https://basescan.org/block/52139743"
+          },
           {
             "label": "Exact base block 52095852; independent role, Safe, gate and market census re-read 2026-10-03",
             "url": "https://basescan.org/block/52095852"

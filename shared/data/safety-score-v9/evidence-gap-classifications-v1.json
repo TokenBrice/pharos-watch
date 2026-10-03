@@ -28970,6 +28970,270 @@
         "https://solomondao.org/"
       ],
       "rationale": "The exact new-USDv legal issuer and licence/activity covering its token issuance are undisclosed. Main-site terms name Panama interface operator Genesee and Marshall Islands IP owner SOLOMON DAO LLC but expressly separate issuer arrangements. Token docs, legal terms, current authority/deployment disclosure and scoped issuer/regulatory search establish no issuer register identity; no supervision:none inference is made."
+    },
+    {
+      "id": "uw-zaru-blocktower-ba1560f82a3602ec",
+      "assetId": "zaru-blocktower",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:01Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R67)",
+      "sources": [
+        {
+          "url": "https://zaru.network/",
+          "observedAt": "2026-10-03T23:16:00Z",
+          "datumAsOf": null,
+          "location": "Reserves & Verification latest report link",
+          "excerpt": "Report Date: August, 2026",
+          "assertion": "The latest linked report is issued August 28 but measures July 31; no current whole-book weights are published."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://zaru.network/",
+        "https://zaru.network/blog/zar-universal-white-paper",
+        "https://blocktower.tech/legal/zaru-terms-of-use",
+        "https://blocktower.tech/legal/platform-user-agreement",
+        "https://blocktower.tech/legal/fais-disclosure-notice",
+        "https://blocktower.tech/legal",
+        "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62",
+        "https://solscan.io/token/2WvREMqcoxtGuKTyyuzVMH7xDkeH8mY6phduvUofPRXN"
+      ],
+      "rationale": "Current reserve composition and whole-book weights are not disclosed. The official latest-report link still points to the July 31 snapshot (signed August 28), older than the ordinary 38-day budget; the report is AUP, not a named-firm assurance opinion. Holder terms publish permitted classes and backing policy, not a newer measured denominator. No date bump or guessed allocation is authored."
+    },
+    {
+      "id": "uw-zaru-blocktower-5182d03363bd0872",
+      "assetId": "zaru-blocktower",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:01Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R67)",
+      "sources": [
+        {
+          "url": "https://zaru.network/blog/zar-universal-white-paper",
+          "observedAt": "2026-10-03T23:16:00Z",
+          "datumAsOf": "2026-07-21",
+          "location": "4.14 monthly scope",
+          "excerpt": "Reconciliation of liabilities vs. reserves",
+          "assertion": "A planned monthly scope is published, but the one retrieved snapshot does not prove recurring all-native supply reconciliation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://zaru.network/",
+        "https://zaru.network/blog/zar-universal-white-paper",
+        "https://blocktower.tech/legal/zaru-terms-of-use",
+        "https://blocktower.tech/legal/platform-user-agreement",
+        "https://blocktower.tech/legal/fais-disclosure-notice",
+        "https://blocktower.tech/legal",
+        "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62",
+        "https://solscan.io/token/2WvREMqcoxtGuKTyyuzVMH7xDkeH8mY6phduvUofPRXN"
+      ],
+      "rationale": "An actual recurring whole-supply supply-to-reserve reconciliation cadence covering all four native deployments is not disclosed. Whitepaper monthly procedures and transaction-level deposit validation do not establish that actual cadence; the sole July AUP expressly excludes events outside its snapshot and identifies only Solana. Legal mint/burn processing does not supply recurring financial reconciliation."
+    },
+    {
+      "id": "uw-zaru-blocktower-546af7adc83172a3",
+      "assetId": "zaru-blocktower",
+      "scope": {
+        "componentKey": "control:mint-meta:zaru-blocktower:1660b417cce0e7f5b4d4",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:zaru-blocktower:1660b417cce0e7f5b4d4",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:01Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R67)",
+      "sources": [
+        {
+          "url": "https://zaru.network/blog/zar-universal-white-paper",
+          "observedAt": "2026-10-03T23:16:00Z",
+          "datumAsOf": "2026-07-21",
+          "location": "4.09 Architecture & Access Control",
+          "excerpt": "secured under multi-signature controls and hardware security modules (HSMs) to prevent unauthorised issuance.",
+          "assertion": "Generic security claim supplies no exact ordinary-signer quorum, HSM attestation, independent operator roster or recovery/signing policy."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://zaru.network/",
+        "https://zaru.network/blog/zar-universal-white-paper",
+        "https://blocktower.tech/legal/zaru-terms-of-use",
+        "https://blocktower.tech/legal/platform-user-agreement",
+        "https://blocktower.tech/legal/fais-disclosure-notice",
+        "https://blocktower.tech/legal",
+        "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62",
+        "https://solscan.io/token/2WvREMqcoxtGuKTyyuzVMH7xDkeH8mY6phduvUofPRXN"
+      ],
+      "rationale": "For each of the four named ordinary native mint signers, independently verifiable human independence, HSM/key-custody attestation and exact signing/recovery policy are undisclosed. Whitepaper security claims do not bind these arrangements to the Solana signer or shared EVM EOA. Legal terms address customer account security, not issuer signer safeguards. Existing source/runtime and Arc census uncertainty is retained; no incident-free state is claimed."
+    },
+    {
+      "id": "uw-zaru-blocktower-b5aaafe1be7346b5",
+      "assetId": "zaru-blocktower",
+      "scope": {
+        "componentKey": "control:mint-meta:zaru-blocktower:9271bbd8a2c2d4204d5b",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:zaru-blocktower:9271bbd8a2c2d4204d5b",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:01Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R67)",
+      "sources": [
+        {
+          "url": "https://zaru.network/blog/zar-universal-white-paper",
+          "observedAt": "2026-10-03T23:16:00Z",
+          "datumAsOf": "2026-07-21",
+          "location": "4.09 Architecture & Access Control",
+          "excerpt": "secured under multi-signature controls and hardware security modules (HSMs) to prevent unauthorised issuance.",
+          "assertion": "Generic security claim supplies no exact ordinary-signer quorum, HSM attestation, independent operator roster or recovery/signing policy."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://zaru.network/",
+        "https://zaru.network/blog/zar-universal-white-paper",
+        "https://blocktower.tech/legal/zaru-terms-of-use",
+        "https://blocktower.tech/legal/platform-user-agreement",
+        "https://blocktower.tech/legal/fais-disclosure-notice",
+        "https://blocktower.tech/legal",
+        "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62",
+        "https://solscan.io/token/2WvREMqcoxtGuKTyyuzVMH7xDkeH8mY6phduvUofPRXN"
+      ],
+      "rationale": "For each of the four named ordinary native mint signers, independently verifiable human independence, HSM/key-custody attestation and exact signing/recovery policy are undisclosed. Whitepaper security claims do not bind these arrangements to the Solana signer or shared EVM EOA. Legal terms address customer account security, not issuer signer safeguards. Existing source/runtime and Arc census uncertainty is retained; no incident-free state is claimed."
+    },
+    {
+      "id": "uw-zaru-blocktower-6367c80c64d1cbce",
+      "assetId": "zaru-blocktower",
+      "scope": {
+        "componentKey": "control:mint-meta:zaru-blocktower:96d61cf9294a798a2697",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:zaru-blocktower:96d61cf9294a798a2697",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:01Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R67)",
+      "sources": [
+        {
+          "url": "https://zaru.network/blog/zar-universal-white-paper",
+          "observedAt": "2026-10-03T23:16:00Z",
+          "datumAsOf": "2026-07-21",
+          "location": "4.09 Architecture & Access Control",
+          "excerpt": "secured under multi-signature controls and hardware security modules (HSMs) to prevent unauthorised issuance.",
+          "assertion": "Generic security claim supplies no exact ordinary-signer quorum, HSM attestation, independent operator roster or recovery/signing policy."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://zaru.network/",
+        "https://zaru.network/blog/zar-universal-white-paper",
+        "https://blocktower.tech/legal/zaru-terms-of-use",
+        "https://blocktower.tech/legal/platform-user-agreement",
+        "https://blocktower.tech/legal/fais-disclosure-notice",
+        "https://blocktower.tech/legal",
+        "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62",
+        "https://solscan.io/token/2WvREMqcoxtGuKTyyuzVMH7xDkeH8mY6phduvUofPRXN"
+      ],
+      "rationale": "For each of the four named ordinary native mint signers, independently verifiable human independence, HSM/key-custody attestation and exact signing/recovery policy are undisclosed. Whitepaper security claims do not bind these arrangements to the Solana signer or shared EVM EOA. Legal terms address customer account security, not issuer signer safeguards. Existing source/runtime and Arc census uncertainty is retained; no incident-free state is claimed."
+    },
+    {
+      "id": "uw-zaru-blocktower-9670a89fe65f5293",
+      "assetId": "zaru-blocktower",
+      "scope": {
+        "componentKey": "control:mint-meta:zaru-blocktower:da3ca105f723823b246c",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:zaru-blocktower:da3ca105f723823b246c",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:01Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R67)",
+      "sources": [
+        {
+          "url": "https://zaru.network/blog/zar-universal-white-paper",
+          "observedAt": "2026-10-03T23:16:00Z",
+          "datumAsOf": "2026-07-21",
+          "location": "4.09 Architecture & Access Control",
+          "excerpt": "secured under multi-signature controls and hardware security modules (HSMs) to prevent unauthorised issuance.",
+          "assertion": "Generic security claim supplies no exact ordinary-signer quorum, HSM attestation, independent operator roster or recovery/signing policy."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://zaru.network/",
+        "https://zaru.network/blog/zar-universal-white-paper",
+        "https://blocktower.tech/legal/zaru-terms-of-use",
+        "https://blocktower.tech/legal/platform-user-agreement",
+        "https://blocktower.tech/legal/fais-disclosure-notice",
+        "https://blocktower.tech/legal",
+        "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62",
+        "https://solscan.io/token/2WvREMqcoxtGuKTyyuzVMH7xDkeH8mY6phduvUofPRXN"
+      ],
+      "rationale": "For each of the four named ordinary native mint signers, independently verifiable human independence, HSM/key-custody attestation and exact signing/recovery policy are undisclosed. Whitepaper security claims do not bind these arrangements to the Solana signer or shared EVM EOA. Legal terms address customer account security, not issuer signer safeguards. Existing source/runtime and Arc census uncertainty is retained; no incident-free state is claimed."
+    },
+    {
+      "id": "uw-ctusd-citrea-ed9a79233d0b7b35",
+      "assetId": "ctusd-citrea",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "withdrawalTerms",
+        "pillar": "backing",
+        "requiredDatum": "withdrawalTerms",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:17:16Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R67)",
+      "sources": [
+        {
+          "url": "https://www.moonpay.com/legal/stablecoin_terms",
+          "observedAt": "2026-10-03T23:16:01Z",
+          "datumAsOf": null,
+          "location": "3.3 redemption schedule",
+          "excerpt": "Once a redemption order has passed compliance checks, it will be processed according to the redemption schedule.",
+          "assertion": "The operative redemption schedule and end-to-end bounded settlement SLA are not published here."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.moonpay.com/legal/stablecoin_terms",
+        "https://docs.citrea.xyz/developer-documentation/citrea-usd-ctusd",
+        "https://www.blog.citrea.xyz/introducing-citrea-usd-ctusd-the-native-stablecoin-for-bitcoin-issued-by-moonpay-and-powered-by-m0/",
+        "https://docs.m0.org/protocol/extensions",
+        "https://dashboard.m0.org/stablecoins/ctusd",
+        "https://dev.moonpay.com/",
+        "https://docs.iron.xyz/"
+      ],
+      "rationale": "The issuer withdrawal schedule, bounded settlement SLA and current minimum are undisclosed. Terms specify customer onboarding, one-for-one USD redemption and no current issuer fee, but invoke an unpublished redemption schedule and changeable minimum. Generic M0 swapOutM permissions do not establish MoonPay fiat settlement; no instant/permissionless full-holder exit is inferred."
     }
   ]
 }

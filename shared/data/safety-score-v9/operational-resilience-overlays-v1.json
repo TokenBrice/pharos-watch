@@ -12662,6 +12662,138 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "zaru-blocktower",
+      "reviewedAt": "2026-10-03T23:05:33Z",
+      "expiresAt": "2027-10-03T23:59:59Z",
+      "reviewer": "Unknown-wave W1R67 primary-source review",
+      "notes": "Exact-token operating or deployment age lower bound only. No verified operational performance, redemption throughput, report continuity or incident-free history is asserted. Creation date is deployment history, not first customer distribution.",
+      "sources": [
+        {
+          "sourceId": "dated-operation",
+          "label": "Historical ZARU issued circulation snapshot",
+          "publisher": "Moore",
+          "publishedAt": "2026-08-28",
+          "url": "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 2,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "ctusd-citrea",
+      "reviewedAt": "2026-10-03T23:05:33Z",
+      "expiresAt": "2027-10-03T23:59:59Z",
+      "reviewer": "Unknown-wave W1R67 primary-source review",
+      "notes": "Exact-token operating or deployment age lower bound only. No verified operational performance, redemption throughput, report continuity or incident-free history is asserted. Creation date is deployment history, not first customer distribution.",
+      "sources": [
+        {
+          "sourceId": "dated-operation",
+          "label": "Citrea mainnet launches live ctUSD",
+          "publisher": "Citrea",
+          "publishedAt": "2026-01-27",
+          "url": "https://www.blog.citrea.xyz/citrea-mainnet-is-live/",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 8,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "cscbusdc-clearstar",
+      "reviewedAt": "2026-10-03T23:05:33Z",
+      "expiresAt": "2027-10-03T23:59:59Z",
+      "reviewer": "Unknown-wave W1R67 primary-source review",
+      "notes": "Exact-token operating or deployment age lower bound only. No verified operational performance, redemption throughput, report continuity or incident-free history is asserted. Creation date is deployment history, not first customer distribution.",
+      "sources": [
+        {
+          "sourceId": "dated-operation",
+          "label": "Exact Clearstar VaultV2 creation transaction",
+          "publisher": "Base Blockscout",
+          "publishedAt": "2026-01-22",
+          "url": "https://base.blockscout.com/tx/0xebe8310f28cb502a87403f501db7fce667c7fafd95d65c56d5e913bd7139e6f2",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 8,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "gusd-gemini",
+      "reviewedAt": "2026-10-03T23:05:33Z",
+      "expiresAt": "2027-10-03T23:59:59Z",
+      "reviewer": "Unknown-wave W1R67 primary-source review",
+      "notes": "Exact-token operating or deployment age lower bound only. No verified operational performance, redemption throughput, report continuity or incident-free history is asserted. Creation date is deployment history, not first customer distribution.",
+      "sources": [
+        {
+          "sourceId": "dated-operation",
+          "label": "GUSD public launch",
+          "publisher": "Gemini",
+          "publishedAt": "2018-09-10",
+          "url": "https://www.gemini.com/blog/gemini-launches-the-gemini-dollar-us-dollars-on-the-blockchain",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 96,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "dated-operation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }
