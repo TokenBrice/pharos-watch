@@ -932,6 +932,72 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "m-m0",
+      "reviewedAt": "2026-10-03T22:45:04Z",
+      "expiresAt": "2027-10-03T22:45:04Z",
+      "reviewer": "Unknown wave W1R43",
+      "notes": "Exact token deployment documented by M0; full elapsed calendar months are an issuer-reported live-history lower bound only. No redemption throughput, stress performance, reserve-report continuity or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "m0-exact-deployment",
+          "label": "M0 exact token deployments and dates",
+          "publisher": "M0",
+          "publishedAt": "2024-05-07",
+          "url": "https://docs.m0.org/resources/addresses/m0-platform",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 28,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "m0-exact-deployment"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "wm-m0",
+      "reviewedAt": "2026-10-03T22:45:04Z",
+      "expiresAt": "2027-10-03T22:45:04Z",
+      "reviewer": "Unknown wave W1R43",
+      "notes": "Exact token deployment documented by M0; full elapsed calendar months are an issuer-reported live-history lower bound only. No redemption throughput, stress performance, reserve-report continuity or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "m0-exact-deployment",
+          "label": "M0 exact token deployments and dates",
+          "publisher": "M0",
+          "publishedAt": "2024-08-14",
+          "url": "https://docs.m0.org/resources/addresses/m0-platform",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 25,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "m0-exact-deployment"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

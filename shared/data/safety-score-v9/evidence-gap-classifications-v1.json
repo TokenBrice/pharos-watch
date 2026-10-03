@@ -2135,6 +2135,102 @@
         "https://109607783-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2F44900wRUr08Ym1oXIDzr%2Fuploads%2FOqk5A8l99vA7cE70MSNT%2FWhitepaper%20May%202026.pdf?alt=media&token=b41923ad-1f3b-42af-9ef3-625a1a029e21"
       ],
       "rationale": "For the allowlisted USX-to-USDG institutional route, the current public docs disclose no spread, but legal section 4 reserves discretionary service fees and passes through blockchain/third-party charges without amounts, maxima or a schedule. Product, documentation index, governing redemption/account terms, whitepaper, contract and integration disclosures were searched. No evaluable applicable all-in cost formula was located; therefore not B and not zero-cost KNOWN. YieldVault unlock fees belong to another route."
+    },
+    {
+      "id": "uw-wm-m0-846e60bc3e5fda8e",
+      "assetId": "wm-m0",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:cd90caea07dec56c93f5e7e6",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:49:48Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R43)",
+      "sources": [
+        {
+          "url": "https://www.mxon.co/terms-of-use",
+          "observedAt": "2026-10-03T22:49:48Z",
+          "datumAsOf": null,
+          "location": "Section 2",
+          "excerpt": "Any services provided by Minter One will be subject to separate written agreements entered into between Minter One and the relevant counterparty.",
+          "assertion": "Public terms defer commercial services to private agreements; no whole-position maximum realization bound is specified."
+        },
+        {
+          "url": "https://forum.arbitrum.foundation/t/m-0-step-application/28781",
+          "observedAt": "2026-10-03T22:49:48Z",
+          "datumAsOf": "2025-03-20",
+          "location": "Plan design, liquidation timeline",
+          "excerpt": "Current redemption times via Minter are T+1, while onchain transactions would be atomic.",
+          "assertion": "Historical minter timing is disclosed, not a current contractual maximum for all collateral or all wrapper-held M."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.m0.org/protocol/m-token",
+        "https://docs.m0.org/protocol/minting-burning",
+        "https://docs.m0.org/protocol/wrapped-m",
+        "https://docs.m0.org/get-started/protocol-mechanics",
+        "https://dashboard.m0.org/",
+        "https://github.com/m0-foundation/documentation",
+        "https://www.m0.org/terms-conditions",
+        "https://www.mxon.co/home",
+        "https://www.mxon.co/terms-of-use",
+        "https://forum.arbitrum.foundation/t/m-0-step-application/28781",
+        "https://research.m0.org/research/expanding-available-collateral-structures-for-minters"
+      ],
+      "rationale": "No current whole-slice maximum liquidity horizon for M held by wM is published on the searched surfaces. Historical T+1 minter redemption is not an all-minter/full-position guarantee. Wrapper code adds facility, pause and freeze conditions; atomic unwrap to M is not unrestricted realization at known USD value. No immediate/one-day bound is inferred."
+    },
+    {
+      "id": "uw-m-m0-36739942efe7915c",
+      "assetId": "m-m0",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:63d6ecb59fa2e77c7c5a7f18",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:49:48Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R43)",
+      "sources": [
+        {
+          "url": "https://www.mxon.co/terms-of-use",
+          "observedAt": "2026-10-03T22:49:48Z",
+          "datumAsOf": null,
+          "location": "Section 2",
+          "excerpt": "Any services provided by Minter One will be subject to separate written agreements entered into between Minter One and the relevant counterparty.",
+          "assertion": "Public terms defer commercial services to private agreements; no whole-position maximum realization bound is specified."
+        },
+        {
+          "url": "https://forum.arbitrum.foundation/t/m-0-step-application/28781",
+          "observedAt": "2026-10-03T22:49:48Z",
+          "datumAsOf": "2025-03-20",
+          "location": "Plan design, liquidation timeline",
+          "excerpt": "Current redemption times via Minter are T+1, while onchain transactions would be atomic.",
+          "assertion": "Historical minter timing is disclosed, not a current contractual maximum for all collateral or all wrapper-held M."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.m0.org/protocol/m-token",
+        "https://docs.m0.org/protocol/minting-burning",
+        "https://docs.m0.org/protocol/wrapped-m",
+        "https://docs.m0.org/get-started/protocol-mechanics",
+        "https://dashboard.m0.org/",
+        "https://github.com/m0-foundation/documentation",
+        "https://www.m0.org/terms-conditions",
+        "https://www.mxon.co/home",
+        "https://www.mxon.co/terms-of-use",
+        "https://forum.arbitrum.foundation/t/m-0-step-application/28781",
+        "https://research.m0.org/research/expanding-available-collateral-structures-for-minters"
+      ],
+      "rationale": "No current whole-slice maximum liquidity horizon for the aggregate M0 eligible-collateral position is published on the searched surfaces. Historical T+1 minter redemption is not an all-minter/full-position guarantee. Wrapper code adds facility, pause and freeze conditions; atomic unwrap to M is not unrestricted realization at known USD value. No immediate/one-day bound is inferred."
     }
   ]
 }
