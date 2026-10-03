@@ -20106,6 +20106,160 @@
         "https://raw.githubusercontent.com/mento-protocol/bold/main/README.md"
       ],
       "rationale": "The exact missing datum is liquidityHorizon for the entire USDm CDP-collateral slice backing GBPm. Issuer site/legal navigation, full docs index, reserve dashboard/API, collateral withdrawal/redemption terms and fork mechanics disclose USDm collateral, debt repayment, collateral-ratio constraints, conditional amounts and weekend/holiday gates, but no whole-position maximum realization horizon. Stability Pool withdraw-anytime language concerns debt-token deposits, not the locked USDm collateral slice. No maximum is invented from transaction atomicity or ordinary market reopening."
+    },
+    {
+      "id": "uw-dusd-standx-9ba3e292f276ffd5",
+      "assetId": "dusd-standx",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:05:58Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R76)",
+      "sources": [
+        {
+          "url": "https://docs.standx.com/docs/dusd-solutions",
+          "observedAt": "2026-10-03T23:05:58Z",
+          "datumAsOf": null,
+          "location": "Components and Principles",
+          "excerpt": "Hedging System: Operates across multiple centralized exchanges (CEXs) to maintain delta-neutral positions and generate funding fee revenue.",
+          "assertion": "Discloses backing architecture, not dated whole-book balances, weights, offchain hedge liabilities or a supply-to-backing reconciliation cadence."
+        },
+        {
+          "url": "https://docs.standx.com/docs/dusd-overview/product-faq",
+          "observedAt": "2026-10-03T23:05:58Z",
+          "datumAsOf": null,
+          "location": "How does the reserve fund work?",
+          "excerpt": "The reserve ratio may fluctuate based on market conditions; please refer to our website for the current reserve ratio.",
+          "assertion": "Reserve ratio is not an itemized common-clock whole-asset denominator or a reconciliation procedure."
+        },
+        {
+          "url": "https://docs.standx.com/docs/resources/audits",
+          "observedAt": "2026-10-03T23:05:58Z",
+          "datumAsOf": null,
+          "location": "Audit index",
+          "excerpt": "WatchPug StandX DUSD EVM Audit Report",
+          "assertion": "Published security audit index does not provide reserve amounts or financial supply-to-reserve reconciliation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://standx.com/",
+        "https://standx.com/dusd",
+        "https://docs.standx.com/docs/dusd-solutions",
+        "https://docs.standx.com/docs/dusd-solutions/minting-dusd",
+        "https://docs.standx.com/docs/dusd-solutions/redeeming-dusd",
+        "https://docs.standx.com/docs/dusd-solutions/risks-hedging-system",
+        "https://docs.standx.com/docs/dusd-overview/product-faq",
+        "https://docs.standx.com/docs/resources/audits",
+        "https://docs.standx.com/docs/resources/user-terms-conditions",
+        "https://docs.standx.com/docs/dusd-solutions/key-addresses"
+      ],
+      "rationale": "Current whole-DUSD reserve composition/denominator and whole-supply on/offchain liabilities-to-backing reconciliation procedure/cadence are undisclosed across issuer docs, legal terms, audit archive and deployment index. Hydrated DUSD UI shows mint quote/yield, not holdings. Mint collateral transfers, market-neutral strategy and risk monitoring are not actual weights or common-clock reconciliation. No allocation percentages or favorable cadence were inferred."
+    },
+    {
+      "id": "uw-dusd-standx-580320bdd74582bd",
+      "assetId": "dusd-standx",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:05:58Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R76)",
+      "sources": [
+        {
+          "url": "https://docs.standx.com/docs/dusd-solutions",
+          "observedAt": "2026-10-03T23:05:58Z",
+          "datumAsOf": null,
+          "location": "Components and Principles",
+          "excerpt": "Hedging System: Operates across multiple centralized exchanges (CEXs) to maintain delta-neutral positions and generate funding fee revenue.",
+          "assertion": "Discloses backing architecture, not dated whole-book balances, weights, offchain hedge liabilities or a supply-to-backing reconciliation cadence."
+        },
+        {
+          "url": "https://docs.standx.com/docs/dusd-overview/product-faq",
+          "observedAt": "2026-10-03T23:05:58Z",
+          "datumAsOf": null,
+          "location": "How does the reserve fund work?",
+          "excerpt": "The reserve ratio may fluctuate based on market conditions; please refer to our website for the current reserve ratio.",
+          "assertion": "Reserve ratio is not an itemized common-clock whole-asset denominator or a reconciliation procedure."
+        },
+        {
+          "url": "https://docs.standx.com/docs/resources/audits",
+          "observedAt": "2026-10-03T23:05:58Z",
+          "datumAsOf": null,
+          "location": "Audit index",
+          "excerpt": "WatchPug StandX DUSD EVM Audit Report",
+          "assertion": "Published security audit index does not provide reserve amounts or financial supply-to-reserve reconciliation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://standx.com/",
+        "https://standx.com/dusd",
+        "https://docs.standx.com/docs/dusd-solutions",
+        "https://docs.standx.com/docs/dusd-solutions/minting-dusd",
+        "https://docs.standx.com/docs/dusd-solutions/redeeming-dusd",
+        "https://docs.standx.com/docs/dusd-solutions/risks-hedging-system",
+        "https://docs.standx.com/docs/dusd-overview/product-faq",
+        "https://docs.standx.com/docs/resources/audits",
+        "https://docs.standx.com/docs/resources/user-terms-conditions",
+        "https://docs.standx.com/docs/dusd-solutions/key-addresses"
+      ],
+      "rationale": "Current whole-DUSD reserve composition/denominator and whole-supply on/offchain liabilities-to-backing reconciliation procedure/cadence are undisclosed across issuer docs, legal terms, audit archive and deployment index. Hydrated DUSD UI shows mint quote/yield, not holdings. Mint collateral transfers, market-neutral strategy and risk monitoring are not actual weights or common-clock reconciliation. No allocation percentages or favorable cadence were inferred."
+    },
+    {
+      "id": "uw-wsrusd-reservoir-0a4187d97561642d",
+      "assetId": "wsrusd-reservoir",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:1f3a917f5d1e57e8cbfaa577",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:05:58Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R76)",
+      "sources": [
+        {
+          "url": "https://docs.reservoir.xyz/products/savings-srusd-and-wsrusd",
+          "observedAt": "2026-10-03T23:05:58Z",
+          "datumAsOf": null,
+          "location": "Key features",
+          "excerpt": "Redemptions will be fulfilled immediately when the PSM has available liquidity",
+          "assertion": "Conditional liquidity does not disclose a full-position realization maximum when PSM liquidity is insufficient."
+        },
+        {
+          "url": "https://docs.reservoir.xyz/products/proof-of-reserves",
+          "observedAt": "2026-10-03T23:05:58Z",
+          "datumAsOf": null,
+          "location": "Liabilities / wsrUSD - Savings",
+          "excerpt": "Users can redeem wsrUSD for rUSD anytime up to the amount of liquidity available in the PSM.",
+          "assertion": "Explicit availability condition; no maximum realization horizon for the whole rUSD-linked slice."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.reservoir.xyz/llms.txt",
+        "https://docs.reservoir.xyz/products/savings-srusd-and-wsrusd",
+        "https://docs.reservoir.xyz/products/proof-of-reserves",
+        "https://docs.reservoir.xyz/security-and-compliance/terms-of-service",
+        "https://docs.reservoir.xyz/security-and-compliance/risk-factors",
+        "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xd3fd63209fa2d55b07a0f6db36c2f43900be3094"
+      ],
+      "rationale": "The whole rUSD-linked reserve slice has no published unconditional realization maximum. Savingcoin code mints rUSD on withdrawal rather than holding a liquid deposit; issuer product and PoR docs condition redemption on available PSM liquidity, and terms warn of delays to liquidate backing without a maximum. Neither ERC4626 transaction speed nor an available-buffer observation proves whole-position immediate realization."
     }
   ]
 }

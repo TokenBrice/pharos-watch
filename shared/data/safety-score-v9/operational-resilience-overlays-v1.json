@@ -9293,6 +9293,72 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "wsrusd-reservoir",
+      "reviewedAt": "2026-10-03T23:05:58Z",
+      "expiresAt": "2027-10-03T23:05:58Z",
+      "reviewer": "Unknown resolver W1R76",
+      "notes": "Exact-token dated launch/deployment supports only the lower bound of operating history. No independently verified continuity, redemption throughput, stress settlement, financial reconciliation or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-token-inception",
+          "label": "Exact Savingcoin creation transaction, block 22275492",
+          "publisher": "Ethereum Blockscout",
+          "publishedAt": "2025-04-15",
+          "url": "https://eth.blockscout.com/api/v2/transactions/0x81d263dc04cdf047b637f8159ca2e756e4fadfe376448a73855a7f418f8234bd",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 17,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-token-inception"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "dusd-standx",
+      "reviewedAt": "2026-10-03T23:05:58Z",
+      "expiresAt": "2027-10-03T23:05:58Z",
+      "reviewer": "Unknown resolver W1R76",
+      "notes": "Exact-token dated launch/deployment supports only the lower bound of operating history. No independently verified continuity, redemption throughput, stress settlement, financial reconciliation or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-token-inception",
+          "label": "StandX official DUSD launch announcement",
+          "publisher": "StandX Team",
+          "publishedAt": "2024-12-08",
+          "url": "https://docs.standx.com/blog/articles/introducing-dusd-transforming-stablecoins-with-natural-yielding",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 21,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-token-inception"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }
