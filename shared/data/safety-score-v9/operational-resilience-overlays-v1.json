@@ -11111,6 +11111,171 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "sdusd-dtrinity",
+      "reviewedAt": "2026-10-03T23:06:40Z",
+      "expiresAt": "2027-10-03T23:06:40Z",
+      "reviewer": "W1R80 primary-source research",
+      "notes": "Dated exact-token live-operation lower bound only. The dTRINITY dates refer to initial Fraxtal operation, not every later chain deployment. No independent assurance, continuous operation guarantee, redemption throughput, stress recovery or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-token-live-history",
+          "label": "Introducing Staked dUSD",
+          "publisher": "dTRINITY",
+          "publishedAt": "2025-08-04",
+          "url": "https://www.dtrinity.org/post/introducing-staked-dusd-sdusd",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 13,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-token-live-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "dusd-dtrinity",
+      "reviewedAt": "2026-10-03T23:06:40Z",
+      "expiresAt": "2027-10-03T23:06:40Z",
+      "reviewer": "W1R80 primary-source research",
+      "notes": "Dated exact-token live-operation lower bound only. The dTRINITY dates refer to initial Fraxtal operation, not every later chain deployment. No independent assurance, continuous operation guarantee, redemption throughput, stress recovery or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-token-live-history",
+          "label": "dUSD Fraxtal mainnet debut",
+          "publisher": "dTRINITY",
+          "publishedAt": "2024-12-18",
+          "url": "https://www.dtrinity.org/post/pr-dtrinity-launches-subsidized-stablecoin-lending-protocol-on-fraxtal-l2",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 21,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-token-live-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "usdn-noble",
+      "reviewedAt": "2026-10-03T23:06:40Z",
+      "expiresAt": "2027-10-03T23:06:40Z",
+      "reviewer": "W1R80 primary-source research",
+      "notes": "Dated exact-token live-operation lower bound only. The dTRINITY dates refer to initial Fraxtal operation, not every later chain deployment. No independent assurance, continuous operation guarantee, redemption throughput, stress recovery or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-token-live-history",
+          "label": "Noble USDN launch",
+          "publisher": "M0 and Noble",
+          "publishedAt": "2025-03-05",
+          "url": "https://www.m0.org/press-releases/noble-launches-usdn-a-programmatic-and-composable-yield-stablecoin-for-application-developers",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 18,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-token-live-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "musd-metamask",
+      "reviewedAt": "2026-10-03T23:06:40Z",
+      "expiresAt": "2027-10-03T23:06:40Z",
+      "reviewer": "W1R80 primary-source research",
+      "notes": "Dated exact-token live-operation lower bound only. The dTRINITY dates refer to initial Fraxtal operation, not every later chain deployment. No independent assurance, continuous operation guarantee, redemption throughput, stress recovery or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-token-live-history",
+          "label": "mUSD available now",
+          "publisher": "MetaMask",
+          "publishedAt": "2025-09-15",
+          "url": "https://metamask.io/news/introducing-metamask-usd-your-dollar-your-wallet",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 12,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-token-live-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "eurs-stasis",
+      "reviewedAt": "2026-10-03T23:06:40Z",
+      "expiresAt": "2027-10-03T23:06:40Z",
+      "reviewer": "W1R80 primary-source research",
+      "notes": "Dated exact-token live-operation lower bound only. The dTRINITY dates refer to initial Fraxtal operation, not every later chain deployment. No independent assurance, continuous operation guarantee, redemption throughput, stress recovery or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "exact-token-live-history",
+          "label": "EURS contract creation at block 5835251",
+          "publisher": "Ethereum explorer",
+          "publishedAt": "2018-06-22",
+          "url": "https://eth.blockscout.com/tx/0xb6270a6707da34b048d245fef08bac198dfae729b0f14112a407e1d669ea005e",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 99,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-token-live-history"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

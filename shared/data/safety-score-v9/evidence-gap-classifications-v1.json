@@ -24273,6 +24273,423 @@
         "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/why-cygnus.md"
       ],
       "rationale": "Queue-redeem end-to-end settlement maximum is unpublished. FAQ gives two business days for sales, three for conversion and normal 5-7 days; mechanics gives typically 2-5 days followed by an oracle update/claim. Policy explicitly disclaims deterministic transit timing. Website and legal terms add no funded request-to-spendable-USDC upper guarantee. Do not convert normal windows, business-day legs or oracle batching into a calendar-second maximum."
+    },
+    {
+      "id": "uw-sdusd-dtrinity-02a8280e0601e237",
+      "assetId": "sdusd-dtrinity",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:4de57642127ec5384ce3e34a",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:40Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R80)",
+      "sources": [
+        {
+          "url": "https://docs.dtrinity.org/protocol-components/sdusd",
+          "observedAt": "2026-10-03T23:09:35Z",
+          "datumAsOf": null,
+          "location": "Issuer public documentation",
+          "excerpt": "Unstaking capacity is based on unutilized liquidity that\u2019s available for withdrawal from dLEND.",
+          "assertion": "Discloses utilization-dependent withdrawal, not a whole-position time bound."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.dtrinity.org/protocol-components/sdusd",
+        "https://docs.dtrinity.org/protocol-components/dusd",
+        "https://docs.dtrinity.org/protocol-components/dlend",
+        "https://docs.dtrinity.org/informational/terms-of-use",
+        "https://docs.dtrinity.org/security/addresses",
+        "https://docs.dtrinity.org/security/security-audits",
+        "https://docs.dtrinity.org/key-concepts/stablecoinomics-101"
+      ],
+      "rationale": "Exact sdUSD whole-position liquidity horizon is not published. Permissionless atomic unstaking is contingent on available dLEND liquidity and is not a guaranteed current realization bound."
+    },
+    {
+      "id": "uw-sdusd-dtrinity-b4c8c9c2759ba8f8",
+      "assetId": "sdusd-dtrinity",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "custodyEscrow",
+        "pillar": "backing",
+        "requiredDatum": "custodyEscrow",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:40Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R80)",
+      "sources": [
+        {
+          "url": "https://docs.dtrinity.org/informational/terms-of-use",
+          "observedAt": "2026-10-03T23:09:35Z",
+          "datumAsOf": null,
+          "location": "Issuer public documentation",
+          "excerpt": "No fiduciary duties",
+          "assertion": "Nearby legal disclaimer does not establish whole-allocation segregation or remoteness."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.dtrinity.org/protocol-components/sdusd",
+        "https://docs.dtrinity.org/protocol-components/dusd",
+        "https://docs.dtrinity.org/protocol-components/dlend",
+        "https://docs.dtrinity.org/informational/terms-of-use",
+        "https://docs.dtrinity.org/security/addresses",
+        "https://docs.dtrinity.org/security/security-audits",
+        "https://docs.dtrinity.org/key-concepts/stablecoinomics-101"
+      ],
+      "rationale": "Exact whole-sdUSD allocation legal segregation/bankruptcy remoteness, leverage and reuse/correlation bounds are not published. dLEND default collateral rehypothecation settings and loan LTVs are not an exhaustive current sdUSD allocation certificate; technical noncustody is not legal escrow."
+    },
+    {
+      "id": "uw-sdusd-dtrinity-847706772559b29e",
+      "assetId": "sdusd-dtrinity",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "leverage",
+        "pillar": "backing",
+        "requiredDatum": "leverage",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:40Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R80)",
+      "sources": [
+        {
+          "url": "https://docs.dtrinity.org/informational/terms-of-use",
+          "observedAt": "2026-10-03T23:09:35Z",
+          "datumAsOf": null,
+          "location": "Issuer public documentation",
+          "excerpt": "No fiduciary duties",
+          "assertion": "Nearby legal disclaimer does not establish whole-allocation segregation or remoteness."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.dtrinity.org/protocol-components/sdusd",
+        "https://docs.dtrinity.org/protocol-components/dusd",
+        "https://docs.dtrinity.org/protocol-components/dlend",
+        "https://docs.dtrinity.org/informational/terms-of-use",
+        "https://docs.dtrinity.org/security/addresses",
+        "https://docs.dtrinity.org/security/security-audits",
+        "https://docs.dtrinity.org/key-concepts/stablecoinomics-101"
+      ],
+      "rationale": "Exact whole-sdUSD allocation legal segregation/bankruptcy remoteness, leverage and reuse/correlation bounds are not published. dLEND default collateral rehypothecation settings and loan LTVs are not an exhaustive current sdUSD allocation certificate; technical noncustody is not legal escrow."
+    },
+    {
+      "id": "uw-sdusd-dtrinity-32eb3d952092b0bd",
+      "assetId": "sdusd-dtrinity",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "rehypothecationCorrelation",
+        "pillar": "backing",
+        "requiredDatum": "rehypothecationCorrelation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:40Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R80)",
+      "sources": [
+        {
+          "url": "https://docs.dtrinity.org/informational/terms-of-use",
+          "observedAt": "2026-10-03T23:09:35Z",
+          "datumAsOf": null,
+          "location": "Issuer public documentation",
+          "excerpt": "No fiduciary duties",
+          "assertion": "Nearby legal disclaimer does not establish whole-allocation segregation or remoteness."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.dtrinity.org/protocol-components/sdusd",
+        "https://docs.dtrinity.org/protocol-components/dusd",
+        "https://docs.dtrinity.org/protocol-components/dlend",
+        "https://docs.dtrinity.org/informational/terms-of-use",
+        "https://docs.dtrinity.org/security/addresses",
+        "https://docs.dtrinity.org/security/security-audits",
+        "https://docs.dtrinity.org/key-concepts/stablecoinomics-101"
+      ],
+      "rationale": "Exact whole-sdUSD allocation legal segregation/bankruptcy remoteness, leverage and reuse/correlation bounds are not published. dLEND default collateral rehypothecation settings and loan LTVs are not an exhaustive current sdUSD allocation certificate; technical noncustody is not legal escrow."
+    },
+    {
+      "id": "uw-dusd-dtrinity-b71d41b45aa1c254",
+      "assetId": "dusd-dtrinity",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:40Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R80)",
+      "sources": [
+        {
+          "url": "https://docs.dtrinity.org/protocol-components/dusd",
+          "observedAt": "2026-10-03T23:09:35Z",
+          "datumAsOf": null,
+          "location": "Issuer public documentation",
+          "excerpt": "Each network deployment maintains fully isolated reserves.",
+          "assertion": "Discloses reserve isolation but not a dated complete reconciliation or weights."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.dtrinity.org/protocol-components/sdusd",
+        "https://docs.dtrinity.org/protocol-components/dusd",
+        "https://docs.dtrinity.org/protocol-components/dlend",
+        "https://docs.dtrinity.org/informational/terms-of-use",
+        "https://docs.dtrinity.org/security/addresses",
+        "https://docs.dtrinity.org/security/security-audits",
+        "https://docs.dtrinity.org/key-concepts/stablecoinomics-101"
+      ],
+      "rationale": "No current complete dUSD reserve weight table or independently verified whole-supply reserve/liability reconciliation is published in the searched issuer disclosures. Asset lists, reserve-ratio formulas, contract addresses and smart-contract audits do not supply complete chain-wide reserve/AMO/LP denominators or a recurring reconciliation cadence."
+    },
+    {
+      "id": "uw-dusd-dtrinity-b948728c69487048",
+      "assetId": "dusd-dtrinity",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:40Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R80)",
+      "sources": [
+        {
+          "url": "https://docs.dtrinity.org/protocol-components/dusd",
+          "observedAt": "2026-10-03T23:09:35Z",
+          "datumAsOf": null,
+          "location": "Issuer public documentation",
+          "excerpt": "Each network deployment maintains fully isolated reserves.",
+          "assertion": "Discloses reserve isolation but not a dated complete reconciliation or weights."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.dtrinity.org/protocol-components/sdusd",
+        "https://docs.dtrinity.org/protocol-components/dusd",
+        "https://docs.dtrinity.org/protocol-components/dlend",
+        "https://docs.dtrinity.org/informational/terms-of-use",
+        "https://docs.dtrinity.org/security/addresses",
+        "https://docs.dtrinity.org/security/security-audits",
+        "https://docs.dtrinity.org/key-concepts/stablecoinomics-101"
+      ],
+      "rationale": "No current complete dUSD reserve weight table or independently verified whole-supply reserve/liability reconciliation is published in the searched issuer disclosures. Asset lists, reserve-ratio formulas, contract addresses and smart-contract audits do not supply complete chain-wide reserve/AMO/LP denominators or a recurring reconciliation cadence."
+    },
+    {
+      "id": "uw-usdn-noble-ccb8d0cf1f4a5932",
+      "assetId": "usdn-noble",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdn-noble:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:40Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R80)",
+      "sources": [
+        {
+          "url": "https://dollar.noble.xyz/",
+          "observedAt": "2026-10-03T23:09:35Z",
+          "datumAsOf": null,
+          "location": "Issuer public documentation",
+          "excerpt": "Move your USDN to Ethereum as wM.",
+          "assertion": "Discloses a redemption pathway, not fixed fees or end-to-end settlement bounds."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.noble.xyz/learn/usdn/overview/",
+        "https://docs.noble.xyz/learn/usdn/architecture/",
+        "https://dollar.noble.xyz/",
+        "https://noble.xyz/terms-of-use"
+      ],
+      "rationale": "Exact USDN issuer redemption cost schedule and guaranteed whole-wrapper withdrawal terms are not published. Current claim/transfer/relay/wM conversion steps do not disclose a fixed USDN fee or maximum completion window; generic Noble site terms do not establish them."
+    },
+    {
+      "id": "uw-usdn-noble-1dbea78a422ad5df",
+      "assetId": "usdn-noble",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "withdrawalTerms",
+        "pillar": "backing",
+        "requiredDatum": "withdrawalTerms",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:40Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R80)",
+      "sources": [
+        {
+          "url": "https://dollar.noble.xyz/",
+          "observedAt": "2026-10-03T23:09:35Z",
+          "datumAsOf": null,
+          "location": "Issuer public documentation",
+          "excerpt": "Move your USDN to Ethereum as wM.",
+          "assertion": "Discloses a redemption pathway, not fixed fees or end-to-end settlement bounds."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.noble.xyz/learn/usdn/overview/",
+        "https://docs.noble.xyz/learn/usdn/architecture/",
+        "https://dollar.noble.xyz/",
+        "https://noble.xyz/terms-of-use"
+      ],
+      "rationale": "Exact USDN issuer redemption cost schedule and guaranteed whole-wrapper withdrawal terms are not published. Current claim/transfer/relay/wM conversion steps do not disclose a fixed USDN fee or maximum completion window; generic Noble site terms do not establish them."
+    },
+    {
+      "id": "uw-musd-metamask-807a7bda02f166cc",
+      "assetId": "musd-metamask",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:musd-metamask:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:40Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R80)",
+      "sources": [
+        {
+          "url": "https://apidocs.bridge.xyz/platform/issuance/faq.md",
+          "observedAt": "2026-10-03T23:09:35Z",
+          "datumAsOf": null,
+          "location": "Issuer public documentation",
+          "excerpt": "USDC/T or USD",
+          "assertion": "Bridge discloses redemption output choices, not a token-specific complete fee or liquidity bound."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://metamask.io/news/introducing-metamask-usd-your-dollar-your-wallet",
+        "https://diligence.security/audits/2025/08/metamask-usd-token/",
+        "https://apidocs.bridge.xyz/platform/issuance/faq.md",
+        "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
+        "https://www.bridge.xyz/legal/fee-disclosure-statement/overview"
+      ],
+      "rationale": "No mUSD-specific complete redemption fee schedule, whole-position liquidity horizon, or guaranteed end-to-end wrapper withdrawal bound is published. Bridge terms condition processing on compliance determination; partner charges, gas and conversion charges remain variable. A reversible swap facility alone establishes no realizable whole-allocation time bound."
+    },
+    {
+      "id": "uw-musd-metamask-3bca800702eb2049",
+      "assetId": "musd-metamask",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:cd90caea07dec56c93f5e7e6",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:40Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R80)",
+      "sources": [
+        {
+          "url": "https://apidocs.bridge.xyz/platform/issuance/faq.md",
+          "observedAt": "2026-10-03T23:09:35Z",
+          "datumAsOf": null,
+          "location": "Issuer public documentation",
+          "excerpt": "USDC/T or USD",
+          "assertion": "Bridge discloses redemption output choices, not a token-specific complete fee or liquidity bound."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://metamask.io/news/introducing-metamask-usd-your-dollar-your-wallet",
+        "https://diligence.security/audits/2025/08/metamask-usd-token/",
+        "https://apidocs.bridge.xyz/platform/issuance/faq.md",
+        "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
+        "https://www.bridge.xyz/legal/fee-disclosure-statement/overview"
+      ],
+      "rationale": "No mUSD-specific complete redemption fee schedule, whole-position liquidity horizon, or guaranteed end-to-end wrapper withdrawal bound is published. Bridge terms condition processing on compliance determination; partner charges, gas and conversion charges remain variable. A reversible swap facility alone establishes no realizable whole-allocation time bound."
+    },
+    {
+      "id": "uw-musd-metamask-5e6536c813fabef7",
+      "assetId": "musd-metamask",
+      "scope": {
+        "componentKey": "wrapper-local",
+        "exposureId": null,
+        "factorKey": "withdrawalTerms",
+        "pillar": "backing",
+        "requiredDatum": "withdrawalTerms",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:40Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R80)",
+      "sources": [
+        {
+          "url": "https://apidocs.bridge.xyz/platform/issuance/faq.md",
+          "observedAt": "2026-10-03T23:09:35Z",
+          "datumAsOf": null,
+          "location": "Issuer public documentation",
+          "excerpt": "USDC/T or USD",
+          "assertion": "Bridge discloses redemption output choices, not a token-specific complete fee or liquidity bound."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://metamask.io/news/introducing-metamask-usd-your-dollar-your-wallet",
+        "https://diligence.security/audits/2025/08/metamask-usd-token/",
+        "https://apidocs.bridge.xyz/platform/issuance/faq.md",
+        "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
+        "https://www.bridge.xyz/legal/fee-disclosure-statement/overview"
+      ],
+      "rationale": "No mUSD-specific complete redemption fee schedule, whole-position liquidity horizon, or guaranteed end-to-end wrapper withdrawal bound is published. Bridge terms condition processing on compliance determination; partner charges, gas and conversion charges remain variable. A reversible swap facility alone establishes no realizable whole-allocation time bound."
+    },
+    {
+      "id": "uw-eurs-stasis-ea24f3f8d4acca6b",
+      "assetId": "eurs-stasis",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:2da42fd87a81a8fc6097e261",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:15:40Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R80)",
+      "sources": [
+        {
+          "url": "https://stasis.net/terms",
+          "observedAt": "2026-10-03T23:09:35Z",
+          "datumAsOf": null,
+          "location": "Issuer public documentation",
+          "excerpt": "You may hold EURS and we may hold funds/assets corresponding to your EURS indefinitely.",
+          "assertion": "Terms disclose backing and indefinite holding, not a maximum deposit maturity."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://stasis.net/terms",
+        "https://stasis.net/transparency",
+        "https://stasis.net/faq",
+        "https://stasis.net/eurs-info"
+      ],
+      "rationale": "The exact maximum contractual maturity of the captured EURS bank-deposit reserve slice is not published. Liquid safeguarded accounts, daily statements and a holder right to redeem at par do not specify a per-deposit maximum maturity."
     }
   ]
 }
