@@ -2234,6 +2234,12 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sharedSourceMode: "none",
     configValidation: CONFIG_SINGLE_ASSET_V1,
     redemptionTelemetry: { capacity: "none", fee: "none" },
+    provenance: {
+      status: "staged",
+      rationale: "bound to jltxx-jpmorgan, quarantined until its first class-assets snapshot; reactivates when the asset is re-admitted",
+      parkedSince: "2026-10-03",
+      nextReview: "2026-10-10",
+    },
     validation: {
       allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
       maxSourceAgeSec: BUSINESS_DAY_NAV_SOURCE_MAX_AGE_SEC,
