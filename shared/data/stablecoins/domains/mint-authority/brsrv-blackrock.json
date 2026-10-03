@@ -145,7 +145,7 @@
     ],
     "economicCapSemantics": "unknown",
     "reconciliation": "unknown",
-    "supervision": "unknown",
+    "supervision": "attestation-only",
     "review": {
       "disposition": "unresolved",
       "sources": [
@@ -184,10 +184,14 @@
         {
           "label": "Chronicle source-level asset verification methodology",
           "url": "https://docs.chroniclelabs.org/Products/VerifiedAssetOracle/proofOfAssets"
+        },
+        {
+          "label": "SEC-filed BRSRV prospectus and SAI: Deloitte audit oversight",
+          "url": "https://www.sec.gov/Archives/edgar/data/844779/000119312526327203/d283147d485bpos.htm"
         }
       ],
-      "evidence": "Ethereum block 26110197 native TrustService RoleAdded/RoleRemoved replay and getRole/code checks resolve one MASTER, six ISSUERs and one TRANSFER_AGENT listed in the native service control. Four issuer contracts are ERC-1967 proxies, two with unverified current implementations; issuer role membership is known but complete implementation authorization/bypass closure is not. MASTER can mint and immediately upgrade both token and trust service. Solana finalized account reads bind the mint authority to executable upgradeable program 7tXjmbkZVY3Gmg9kDBebcNXT1yC5pyoxxXVLwdbv9tvP and ProgramData upgrade authority 8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6; they do not prove signing policy. Tempo native path remains independently unresolved. Daily issuer portfolio/NAV publication supplies no current independently signed token-liability reconciliation. Organizational key custody of the four identified Ethereum ISSUER proxies remains unestablished. Current independently signed whole-token fund reconciliation remains unavailable. Sibling comparison on 2026-10-03: BUIDL's attestation-only supervision, continuous reconciliation and unbounded-reconciled posture cite Chronicle's BUIDL-specific proof-of-asset service. Chronicle's methodology describes independently validated data sourced from custodians, NAV administrators or authorized agents and published on-chain; its rendered fund directory and BUIDL dashboard identify BlackRock USD Institutional Digital Liquidity Fund/BUIDL, not BlackRock Daily Reinvestment Stablecoin Reserve Vehicle/BRSRV/RSVXX. No BRSRV-specific coverage entry or equivalent continuous source-level verification series was established in that inventory or the reviewed BRSRV primary disclosures. The common Securitize transfer agent and similar programmable-share administration do not establish that Chronicle's BUIDL assurance also covers this distinct fund. BRSRV's daily issuer holdings/NAV and monthly SEC N-MFP3 portfolio/NAV disclosure do not themselves supply the missing whole-token continuous reserve/liability verification. Reconciliation and supervision therefore remain unknown, with concentrated-admin posture and the separately unresolved technical paths retained rather than inheriting the sibling's product-scoped assurance.",
-      "reviewer": "Refine04 pinned EVM roles and Solana program observations",
+      "evidence": "Ethereum block 26110197 native TrustService RoleAdded/RoleRemoved replay and getRole/code checks resolve one MASTER, six ISSUERs and one TRANSFER_AGENT. Four issuer contracts are ERC-1967 proxies, two with unverified implementations; full authorization/bypass closure is not established. MASTER can mint and immediately upgrade token and trust service. Solana account reads bind the authority to upgradeable program 7tXjmbkZVY3Gmg9kDBebcNXT1yC5pyoxxXVLwdbv9tvP and ProgramData upgrade authority 8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6, not a signing policy. Tempo execution and census remain unresolved. Wave-2 SEC 485BPOS prospectus/SAI review establishes product-specific independent financial oversight: Deloitte & Touche LLP serves as this Fund's independent registered public accounting firm and provides audit services; the Board reviews its reports. Supervision is attestation-only, not bank-style prudential supervision, and no completed audit, continuous token attestation or audit history is claimed. The SAI also says the transfer agent typically reconciles records with blockchain transactions at least daily, and BNY reconciles securities/cash with the custodian. These separate register and portfolio processes do not establish all on/off-chain token liabilities reconciled to backing on one common clock; reconciliation remains unknown. Chronicle BUIDL coverage cannot be inherited by this separate fund. The unverified Ethereum implementations, Tempo paths and Solana deployed-runtime correspondence remain independently unresolved.",
+      "reviewer": "Refine04 pinned EVM roles and Solana observations; W2R10 SEC product-specific audit-oversight review",
       "reviewedAt": "2026-10-03",
       "unresolvedQuestions": [
         "The whole Tempo native deployment's issuer/master role census remains unestablished.",

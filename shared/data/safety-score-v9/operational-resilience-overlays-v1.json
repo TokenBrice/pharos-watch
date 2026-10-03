@@ -13397,6 +13397,39 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "brsrv-blackrock",
+      "reviewedAt": "2026-10-03T23:51:12Z",
+      "expiresAt": "2027-10-03T23:59:59Z",
+      "reviewer": "Pharos unknown-wave W2R10",
+      "notes": "Exact OnChain fund launch observed on 2026-08-03 establishes zero full live months at that observation. No operating continuity from launch to review is extrapolated. No throughput, stress, reconciliation continuity or incident-free claim is made.",
+      "sources": [
+        {
+          "sourceId": "brsrv-dated-launch",
+          "label": "BlackRock launches BRSRV OnChain fund",
+          "publisher": "BlackRock",
+          "publishedAt": "2026-08-03",
+          "url": "https://www.blackrock.com/cash/en-us/press-release-t3",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 0,
+          "observedAt": "2026-08-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "brsrv-dated-launch"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

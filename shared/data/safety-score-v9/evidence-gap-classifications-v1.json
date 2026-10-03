@@ -9643,99 +9643,6 @@
       "rationale": "Queue-redeem end-to-end settlement maximum is unpublished. FAQ gives two business days for sales, three for conversion and normal 5-7 days; mechanics gives typically 2-5 days followed by an oracle update/claim. Policy explicitly disclaims deterministic transit timing. Website and legal terms add no funded request-to-spendable-USDC upper guarantee. Do not convert normal windows, business-day legs or oracle batching into a calendar-second maximum."
     },
     {
-      "id": "uw-nxusd-nereus-2cf669e993693ebe",
-      "assetId": "nxusd-nereus",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:16:22Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R88)",
-      "sources": [
-        {
-          "url": "https://medium.com/nereus-protocol/the-nxusd-genesis-event-41d22f8b2020?source=collection_home---4------0-----------------------",
-          "observedAt": "2026-10-03T23:03:39Z",
-          "datumAsOf": "2022-05-20",
-          "location": "NXUSD Genesis Event",
-          "excerpt": "15 million NXUSDs were minted and collateralized with 4 billion WXTs.",
-          "assertion": "A historical genesis issuance/backing pair is disclosed, not a current recurring whole-supply reconciliation across native deployments."
-        },
-        {
-          "url": "https://resources.cryptocompare.com/asset-management/558/1692883376123.pdf",
-          "observedAt": "2026-10-03T23:09:43Z",
-          "datumAsOf": null,
-          "location": "November 2022 audit, p.1, Introduction",
-          "excerpt": "The scope of the audit is NXUSDV2, ProtocolAddressesProvider, TokenOracle, NXUSDStakingOneTier and NXUSDStakingOneTierCalculation contracts.",
-          "assertion": "The located independent audit is scoped to code, not financial reserve/liability reconciliation."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.nereus.finance/",
-        "https://docs.nereus.finance/",
-        "https://www.nereus.finance/blog",
-        "https://nxusd.nereus.finance/",
-        "https://nxusd.nereus.finance/js/app.60bde321.js",
-        "https://github.com/nereusfinance/nereus-stablecoin-core",
-        "https://sourcify.dev/server/v2/contract/43114/0xf14f4ce569cb3679e99d5059909e23b07bd2f387?fields=abi,sources",
-        "https://resources.cryptocompare.com/asset-management/558/1692883376123.pdf"
-      ],
-      "rationale": "No dated whole-supply mint/burn-to-backing reconciliation procedure or cadence covering Avalanche and Polygon native NXUSD and collateral was located. Genesis collateral, owner-only mint throttles, individual Cauldron debt accounting and code assurance do not prove that exact datum. Current issuer/docs redirect and disclaimer, application bundle, repository/deployments and audit disclose operating machinery but no common-clock whole-supply reconciliation. Preserve reconciliation unknown, not none."
-    },
-    {
-      "id": "uw-home-homecoin-62c98762ed768d3a",
-      "assetId": "home-homecoin",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:16:22Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R88)",
-      "sources": [
-        {
-          "url": "https://raw.githubusercontent.com/homecoin-finance/gitbook/live/getting-started/faq.md",
-          "observedAt": "2026-10-03T23:09:43Z",
-          "datumAsOf": null,
-          "location": "Are there a predetermined amount of HOME tokens?",
-          "excerpt": "HOME is minted when a home owner takes out a loan. There\u2019s not a predetermined number of HOME available.",
-          "assertion": "Mint origination is described; a current recurring whole-supply/backing reconciliation is not."
-        },
-        {
-          "url": "https://social-feed-media.s3.ap-southeast-1.amazonaws.com/pdfs/1674044427141-BACON.pdf",
-          "observedAt": "2026-10-03T23:04:08Z",
-          "datumAsOf": "2022-07-25",
-          "location": "Whitepaper v1.4, Pans, p.6",
-          "excerpt": "The amount of USDC in the Pan plus the amount of outstanding loans is always equal to the amount of outstanding HOME.",
-          "assertion": "Historical design invariant, not a dated procedure/cadence reconciling current lien validity, borrower payment status and all HOME liabilities."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.homecoin.finance/",
-        "https://www.homecoin.finance/home-benefits",
-        "https://github.com/homecoin-finance/gitbook",
-        "https://raw.githubusercontent.com/homecoin-finance/gitbook/live/SUMMARY.md",
-        "https://raw.githubusercontent.com/homecoin-finance/gitbook/live/getting-started/faq.md",
-        "https://social-feed-media.s3.ap-southeast-1.amazonaws.com/pdfs/1674044427141-BACON.pdf",
-        "https://app.homecoin.finance/",
-        "https://etherscan.io/address/0xb8919522331c59f5c16bdfaa6a121a6e03a91f62",
-        "https://raw.githubusercontent.com/homecoin-finance/HomeDAO/e2742bb707aa6d75eb310ed8729c3ca04f91d296/contracts/PoolCore/Pool16.sol",
-        "https://files.baconcoin.com/baconcoin-blocksec-audit.pdf",
-        "https://files.baconcoin.finance/bacon-protocol-full-audit.pdf"
-      ],
-      "rationale": "No dated recurring reconciliation of all HOME liabilities/mint-burn movements against current USDC, outstanding loan balances and enforceable lien backing is disclosed in the issuer website, complete docs index/FAQ, whitepaper or Pool16 accounting source. Public lien descriptors and a historical design equality are not this datum. Linked code-audit hosts fail DNS; those failures are not evidence of financial non-disclosure. Preserve unknown, not none."
-    },
-    {
       "id": "uw-gbpa-agant-0013c532d5a15e5c",
       "assetId": "gbpa-agant",
       "scope": {
@@ -27467,125 +27374,6 @@
       "rationale": "No finite contractual maturityDaysMax is published for the Apollo fund-share reserve claim in the exact feeder launch/offering and public filing index. Current rendered offering confirms quarterly redemptions, not a share maturity date. Underlying credit maturity schedules, feeder annual NAV performance and the parent fund's inception cannot supply that scalar. The open-ended share claim is not treated as zero-day cash."
     },
     {
-      "id": "uw-eurc-circle-2549905cf243db45",
-      "assetId": "eurc-circle",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:eurc-circle:offchain-issuer"
-      },
-      "cause": "B",
-      "assertion": "required-data-public",
-      "reviewedAt": "2026-10-03T22:32:38Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (PilotRwa)",
-      "sources": [
-        {
-          "url": "https://help.circle.com/support/en/usdc-eurc-redemption-structure?id=kb_article_view&sysparm_article=KB0010644&sysparm_language=en",
-          "observedAt": "2026-10-03T22:32:38Z",
-          "datumAsOf": null,
-          "location": "Updated August 2026; fee table effective March 15, 2026 and FAQ",
-          "excerpt": "The daily free redemption threshold is calculated per currency, not combined across USDC and EURC.",
-          "assertion": "Public USDC/EURC tiered fees depend on daily gross/net redemption, monthly flows and credits. The current route lacks customer tier/flow state and formula evaluation; W15 supports B, not invented zero or a universal fixed fee."
-        }
-      ]
-    },
-    {
-      "id": "uw-usdc-circle-32b0b029346dba98",
-      "assetId": "usdc-circle",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdc-circle:offchain-issuer"
-      },
-      "cause": "B",
-      "assertion": "required-data-public",
-      "reviewedAt": "2026-10-03T22:32:38Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (PilotRwa)",
-      "sources": [
-        {
-          "url": "https://help.circle.com/support/en/usdc-eurc-redemption-structure?id=kb_article_view&sysparm_article=KB0010644&sysparm_language=en",
-          "observedAt": "2026-10-03T22:32:38Z",
-          "datumAsOf": null,
-          "location": "Updated August 2026; fee table effective March 15, 2026 and FAQ",
-          "excerpt": "The daily free redemption threshold is calculated per currency, not combined across USDC and EURC.",
-          "assertion": "Public USDC/EURC tiered fees depend on daily gross/net redemption, monthly flows and credits. The current route lacks customer tier/flow state and formula evaluation; W15 supports B, not invented zero or a universal fixed fee."
-        }
-      ]
-    },
-    {
-      "id": "uw-eurc-circle-cb63db797c44cac1",
-      "assetId": "eurc-circle",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:60326ba3ee3552a8d97c55c0",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:32:38Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (PilotRwa)",
-      "sources": [
-        {
-          "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/EURC%20Attestations/2026%20EURC_Examination%20Report%20August%2026.pdf",
-          "observedAt": "2026-10-03T22:32:38Z",
-          "datumAsOf": "2026-08-31",
-          "location": "EURC Reserve Report pp.2-4, reserve criteria and cash balances",
-          "excerpt": "Bank balances have been adjusted for timing and settlement differences, which include: deposits/withdrawals occurring after the bank statement cut-off time (but before the Report Dates).",
-          "assertion": "Discloses bank cash and net settlement adjustments, but no contractual maximum term for the entire bank-deposit slice."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.circle.com/transparency",
-        "https://www.circle.com/legal/eurc-terms",
-        "https://www.circle.com/legal/eea-terms",
-        "https://www.circle.com/legal/mica-eurc-whitepaper",
-        "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/EURC%20Attestations/2026%20EURC_Examination%20Report%20August%2026.pdf"
-      ],
-      "rationale": "The exact missing datum is maturityDaysMax for Cash at Regulated Financial Institutions (net settlement adjustments). The current signed reserve report, archive, issuer terms and regulator-notified white paper disclose segregated euro balances and liquidity/redemption rights, not deposit account contracts or a hard maximum term covering this entire composite slice. Token holder redemption and bank cash liquidity are not contractual maturity. Bank-deposit is not the compiler's cash N/A class; no zero or class relabel is authored."
-    },
-    {
-      "id": "uw-usdc-circle-eb842dec09f88eee",
-      "assetId": "usdc-circle",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:b842f343c9aa3c612f5caafc",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:32:38Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (PilotRwa)",
-      "sources": [
-        {
-          "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20August%2026.pdf",
-          "observedAt": "2026-10-03T22:32:38Z",
-          "datumAsOf": "2026-08-31",
-          "location": "USDC Reserve Report pp.2-5, reserve criteria and bank balances",
-          "excerpt": "Segregated Accounts are unencumbered accounts held on behalf of USDC holders that are segregated from other accounts of Circle, including general corporate funds.",
-          "assertion": "Treasury maturity dates and overnight repo term are disclosed separately; bank cash and net settlement adjustments have no stated maximum contractual term."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.circle.com/transparency",
-        "https://www.circle.com/legal/usdc-terms",
-        "https://www.circle.com/legal/eea-terms",
-        "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20August%2026.pdf"
-      ],
-      "rationale": "The exact missing datum is maturityDaysMax for Cash at Regulated Financial Institutions (net settlement adjustments). The current signed report and transparency archive identify bank cash and settlement adjustments, and the legal terms explain segregated USD-denominated reserves. None supplies account contracts or a maximum term applying to every claim in this scoped bank-deposit slice. Published Treasury maturity dates and overnight repo maturities cannot be transferred to bank claims; holder redemption at par is not deposit maturity."
-    },
-    {
       "id": "uw-ousg-ondo-finance-0033ae758cecad04",
       "assetId": "ousg-ondo-finance",
       "scope": {
@@ -35270,6 +35058,574 @@
         "https://joinopenstandard.com/blog/ousd-is-live"
       ],
       "rationale": "No single whole-route maximum settlement time to final spendable USD is published. Legal terms promise processing within two business days only after compliance determination and except outside-control delay. API documentation distinguishes reserve release, rail sending, eligible ACH/FedNow windows and independent recipient-bank processing. None bounds the complete offchain-issuer redemption path for all supported users; no typical or calendar-converted SLA is inferred."
+    },
+    {
+      "id": "uw-brsrv-blackrock-9f4eac200f2c9d44",
+      "assetId": "brsrv-blackrock",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:51:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R10)",
+      "sources": [
+        {
+          "url": "https://www.sec.gov/Archives/edgar/data/844779/000119312526327203/d283147d485bpos.htm",
+          "observedAt": "2026-10-03T23:51:12Z",
+          "datumAsOf": "2026-07-31",
+          "location": "SAI: blockchain recordkeeping and accounting services",
+          "excerpt": "Typically, the Fund\u2019s transfer agent will reconcile its records with blockchain transactions on at least a daily basis.",
+          "assertion": "Daily register reconciliation is disclosed, not all token liabilities to backing on a common observation clock."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.blackrock.com/cash/literature/prospectus/pro-brsrv.pdf",
+        "https://www.sec.gov/Archives/edgar/data/844779/000119312526327203/d283147d485bpos.htm",
+        "https://www.sec.gov/Archives/edgar/data/844779/000119312526328877/d227999d497j.htm",
+        "https://www.blackrock.com/cash/en-us/products/351891/blackrock-daily-reinvestment-stablecoin-reserve-vehicle",
+        "https://chroniclelabs.org/dashboard/proof-of-asset",
+        "https://chroniclelabs.org/dashboard/proof-of-asset/blackrock-buidl"
+      ],
+      "rationale": "The exact missing datum is whole-supply mint/backing reconciliation and cadence. The recovered SEC SAI discloses daily transfer-agent register reconciliation and separate BNY securities/cash reconciliation. Neither joins every on/off-chain token liability and backing on a common clock. The prospectus, holdings, financial-services disclosures and product coverage inventory do not publish that procedure. Chronicle methodology access failures are not the basis for C."
+    },
+    {
+      "id": "uw-brsrv-blackrock-50601287bdbf1829",
+      "assetId": "brsrv-blackrock",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:d5795b3beca7d8d732d6ea73",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:51:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R10)",
+      "sources": [
+        {
+          "url": "https://www.blackrock.com/cash/literature/prospectus/pro-brsrv.pdf",
+          "observedAt": "2026-10-03T23:51:12Z",
+          "datumAsOf": "2026-07-31",
+          "location": "Prospectus p.10: portfolio liquidity requirement",
+          "excerpt": "more than 5% of the Fund\u2019s total assets are invested in illiquid securities.",
+          "assertion": "The permitted illiquid fraction means this portfolio mandate is not a whole Treasury-slice sale/settlement maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.blackrock.com/cash/literature/prospectus/pro-brsrv.pdf",
+        "https://www.sec.gov/Archives/edgar/data/844779/000119312526327203/d283147d485bpos.htm",
+        "https://www.blackrock.com/cash/en-us/products/351891/blackrock-daily-reinvestment-stablecoin-reserve-vehicle",
+        "https://www.sec.gov/Archives/edgar/data/844779/000119312526328877/d227999d497j.htm"
+      ],
+      "rationale": "The exact missing datum is liquidityHorizon for the entire Treasury-bill slice. The complete SEC prospectus/SAI, current portfolio disclosure and legal terms publish 93-day maturity, daily/weekly liquid-asset ratios and a permitted illiquid fraction, but no maximum sale-and-final-cash realization horizon covering every bill. Shareholder redemption and instrument maturity are not the slice realization datum."
+    },
+    {
+      "id": "uw-brsrv-blackrock-2c23044033396013",
+      "assetId": "brsrv-blackrock",
+      "scope": {
+        "componentKey": "access:transfer",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "access:transfer",
+        "routeKey": null
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T23:51:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R10)",
+      "sources": [
+        {
+          "url": "https://www.blackrock.com/cash/literature/prospectus/pro-brsrv.pdf",
+          "observedAt": "2026-10-03T23:51:12Z",
+          "datumAsOf": "2026-07-31",
+          "location": "Prospectus pp.5-6, permissioned wallet structure",
+          "excerpt": "Permission to hold OnChain Shares is granted only to registered wallets",
+          "assertion": "All Ethereum, Tempo and Solana OnChain rails are legally permissioned; existing exact deployment rows are blocked by material-authoritative scope admission, not absent posture disclosure."
+        }
+      ]
+    },
+    {
+      "id": "uw-ftusd-flying-tulip-effac2af1e6107c7",
+      "assetId": "ftusd-flying-tulip",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:c133bac79bb7b18eba7d8780",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:51:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R10)",
+      "sources": [
+        {
+          "url": "https://docs.flyingtulip.com/risks/",
+          "observedAt": "2026-10-03T23:51:12Z",
+          "datumAsOf": null,
+          "location": "Market, Liquidity & Volatility Risk",
+          "excerpt": "On\u2011chain markets can move quickly; liquidity can disappear in stress.",
+          "assertion": "No bounded whole-position realization horizon is promised for the USDC, USDT, USSD or USDe strategy wrappers."
+        },
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x095d8B8D4503D590F647343F7cD880Fa2abbbf59",
+          "observedAt": "2026-10-03T23:51:12Z",
+          "datumAsOf": null,
+          "location": "Verified ftYieldWrapper: canWithdraw",
+          "excerpt": "return (availableToWithdraw() >= amount);",
+          "assertion": "Withdrawal availability depends on strategy liquidity; queue methods provide no all-position final-cash time guarantee."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.flyingtulip.com/product-suite/ft-usd/",
+        "https://docs.flyingtulip.com/risks/",
+        "https://docs.flyingtulip.com/contract-addresses/",
+        "https://flyingtulip.com/address-book/flying-tulip-address-book-prod.json",
+        "https://api.flyingtulip.com/status/ftusd/dashboard?days=30&include_series=false&include_events=false",
+        "https://flyingtulip.com/ftusd/dashboard/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x095d8B8D4503D590F647343F7cD880Fa2abbbf59"
+      ],
+      "rationale": "The exact missing data are whole-slice liquidityHorizon for USDC/USDT/USSD/USDe strategy wrappers. Docs, risks, deployment book, live issuer dashboard and verified wrapper withdrawal/queue code disclose mutable venues, liquidity-dependent withdrawals, rate-limit buffers and queue servicing, not a guaranteed all-position final-cash horizon. Dashboard availableToWithdraw/replenishment are conditional current fractions, not that bound; no scalar is inferred from Aave or token transfer speed."
+    },
+    {
+      "id": "uw-ftusd-flying-tulip-d597b3a967b2535d",
+      "assetId": "ftusd-flying-tulip",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:dfcc5635d873d2412f9a7650",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:51:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R10)",
+      "sources": [
+        {
+          "url": "https://docs.flyingtulip.com/risks/",
+          "observedAt": "2026-10-03T23:51:12Z",
+          "datumAsOf": null,
+          "location": "Market, Liquidity & Volatility Risk",
+          "excerpt": "On\u2011chain markets can move quickly; liquidity can disappear in stress.",
+          "assertion": "No bounded whole-position realization horizon is promised for the USDC, USDT, USSD or USDe strategy wrappers."
+        },
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x095d8B8D4503D590F647343F7cD880Fa2abbbf59",
+          "observedAt": "2026-10-03T23:51:12Z",
+          "datumAsOf": null,
+          "location": "Verified ftYieldWrapper: canWithdraw",
+          "excerpt": "return (availableToWithdraw() >= amount);",
+          "assertion": "Withdrawal availability depends on strategy liquidity; queue methods provide no all-position final-cash time guarantee."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.flyingtulip.com/product-suite/ft-usd/",
+        "https://docs.flyingtulip.com/risks/",
+        "https://docs.flyingtulip.com/contract-addresses/",
+        "https://flyingtulip.com/address-book/flying-tulip-address-book-prod.json",
+        "https://api.flyingtulip.com/status/ftusd/dashboard?days=30&include_series=false&include_events=false",
+        "https://flyingtulip.com/ftusd/dashboard/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x095d8B8D4503D590F647343F7cD880Fa2abbbf59"
+      ],
+      "rationale": "The exact missing data are whole-slice liquidityHorizon for USDC/USDT/USSD/USDe strategy wrappers. Docs, risks, deployment book, live issuer dashboard and verified wrapper withdrawal/queue code disclose mutable venues, liquidity-dependent withdrawals, rate-limit buffers and queue servicing, not a guaranteed all-position final-cash horizon. Dashboard availableToWithdraw/replenishment are conditional current fractions, not that bound; no scalar is inferred from Aave or token transfer speed."
+    },
+    {
+      "id": "uw-ftusd-flying-tulip-7b94df76a280a3d4",
+      "assetId": "ftusd-flying-tulip",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:f6242e3dbcc4f20c9651ee54",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:51:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R10)",
+      "sources": [
+        {
+          "url": "https://docs.flyingtulip.com/risks/",
+          "observedAt": "2026-10-03T23:51:12Z",
+          "datumAsOf": null,
+          "location": "Market, Liquidity & Volatility Risk",
+          "excerpt": "On\u2011chain markets can move quickly; liquidity can disappear in stress.",
+          "assertion": "No bounded whole-position realization horizon is promised for the USDC, USDT, USSD or USDe strategy wrappers."
+        },
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x095d8B8D4503D590F647343F7cD880Fa2abbbf59",
+          "observedAt": "2026-10-03T23:51:12Z",
+          "datumAsOf": null,
+          "location": "Verified ftYieldWrapper: canWithdraw",
+          "excerpt": "return (availableToWithdraw() >= amount);",
+          "assertion": "Withdrawal availability depends on strategy liquidity; queue methods provide no all-position final-cash time guarantee."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.flyingtulip.com/product-suite/ft-usd/",
+        "https://docs.flyingtulip.com/risks/",
+        "https://docs.flyingtulip.com/contract-addresses/",
+        "https://flyingtulip.com/address-book/flying-tulip-address-book-prod.json",
+        "https://api.flyingtulip.com/status/ftusd/dashboard?days=30&include_series=false&include_events=false",
+        "https://flyingtulip.com/ftusd/dashboard/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x095d8B8D4503D590F647343F7cD880Fa2abbbf59"
+      ],
+      "rationale": "The exact missing data are whole-slice liquidityHorizon for USDC/USDT/USSD/USDe strategy wrappers. Docs, risks, deployment book, live issuer dashboard and verified wrapper withdrawal/queue code disclose mutable venues, liquidity-dependent withdrawals, rate-limit buffers and queue servicing, not a guaranteed all-position final-cash horizon. Dashboard availableToWithdraw/replenishment are conditional current fractions, not that bound; no scalar is inferred from Aave or token transfer speed."
+    },
+    {
+      "id": "uw-ftusd-flying-tulip-c9732f69911f3c16",
+      "assetId": "ftusd-flying-tulip",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:f8963f38762ea9a32c166957",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:51:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R10)",
+      "sources": [
+        {
+          "url": "https://docs.flyingtulip.com/risks/",
+          "observedAt": "2026-10-03T23:51:12Z",
+          "datumAsOf": null,
+          "location": "Market, Liquidity & Volatility Risk",
+          "excerpt": "On\u2011chain markets can move quickly; liquidity can disappear in stress.",
+          "assertion": "No bounded whole-position realization horizon is promised for the USDC, USDT, USSD or USDe strategy wrappers."
+        },
+        {
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x095d8B8D4503D590F647343F7cD880Fa2abbbf59",
+          "observedAt": "2026-10-03T23:51:12Z",
+          "datumAsOf": null,
+          "location": "Verified ftYieldWrapper: canWithdraw",
+          "excerpt": "return (availableToWithdraw() >= amount);",
+          "assertion": "Withdrawal availability depends on strategy liquidity; queue methods provide no all-position final-cash time guarantee."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.flyingtulip.com/product-suite/ft-usd/",
+        "https://docs.flyingtulip.com/risks/",
+        "https://docs.flyingtulip.com/contract-addresses/",
+        "https://flyingtulip.com/address-book/flying-tulip-address-book-prod.json",
+        "https://api.flyingtulip.com/status/ftusd/dashboard?days=30&include_series=false&include_events=false",
+        "https://flyingtulip.com/ftusd/dashboard/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x095d8B8D4503D590F647343F7cD880Fa2abbbf59"
+      ],
+      "rationale": "The exact missing data are whole-slice liquidityHorizon for USDC/USDT/USSD/USDe strategy wrappers. Docs, risks, deployment book, live issuer dashboard and verified wrapper withdrawal/queue code disclose mutable venues, liquidity-dependent withdrawals, rate-limit buffers and queue servicing, not a guaranteed all-position final-cash horizon. Dashboard availableToWithdraw/replenishment are conditional current fractions, not that bound; no scalar is inferred from Aave or token transfer speed."
+    },
+    {
+      "id": "uw-home-homecoin-617b845a7e3711c9",
+      "assetId": "home-homecoin",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:51:12Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R10)",
+      "sources": [
+        {
+          "url": "https://raw.githubusercontent.com/homecoin-finance/gitbook/live/getting-started/faq.md",
+          "observedAt": "2026-10-03T23:51:12Z",
+          "datumAsOf": null,
+          "location": "Home NFT data disclosure",
+          "excerpt": "The NFT contains basic data about the lien and the house.",
+          "assertion": "Origination lien metadata is public, but not a current economically valued whole-reserve composition."
+        },
+        {
+          "url": "https://www.homecoin.finance/",
+          "observedAt": "2026-10-03T23:51:12Z",
+          "datumAsOf": null,
+          "location": "Homes backing HOME",
+          "excerpt": "Total HOME Value",
+          "assertion": "The undated property-value aggregate does not identify financially valued current loan backing plus USDC on a common denominator."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.homecoin.finance/",
+        "https://www.homecoin.finance/home-benefits",
+        "https://raw.githubusercontent.com/homecoin-finance/gitbook/live/SUMMARY.md",
+        "https://raw.githubusercontent.com/homecoin-finance/gitbook/live/getting-started/faq.md",
+        "https://social-feed-media.s3.ap-southeast-1.amazonaws.com/pdfs/1674044427141-BACON.pdf",
+        "https://app.homecoin.finance/",
+        "https://etherscan.io/address/0xb8919522331c59f5c16bdfaa6a121a6e03a91f62",
+        "https://raw.githubusercontent.com/homecoin-finance/HomeDAO/e2742bb707aa6d75eb310ed8729c3ca04f91d296/contracts/PoolCore/Pool16.sol"
+      ],
+      "rationale": "The exact missing datum is a current whole-asset economically valued reserve composition. Public origination liens, loan principal/accrual getters and historical design equality are not a current loan valuation/default/enforceability report joined to current USDC and every HOME liability. Reused full wave-1 legal/whitepaper search plus fresh issuer/docs/source review finds no such denominator or valuation disclosure; no property equity or lien face amount is normalized to 100%."
+    },
+    {
+      "id": "uw-buidl-blackrock-5062d9ebc54cfac1",
+      "assetId": "buidl-blackrock",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:463361ebb493d93a40ab1f30",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:53:46Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R10)",
+      "sources": [
+        {
+          "url": "https://securitize.io/blackrock/buidl",
+          "observedAt": "2026-10-03T23:53:46Z",
+          "datumAsOf": null,
+          "location": "Rendered issuer product page, Liquid Asset Mix",
+          "excerpt": "Experience the deep liquidity of USD money markets, with core investments of overnight repo and 3-month Treasuries.",
+          "assertion": "Underlying investment terms are disclosed, not a contractual maximum maturity of the fund-share claim."
+        },
+        {
+          "url": "https://securitize.io/learn/press/blackrock-launches-first-tokenized-fund-buidl-on-the-ethereum-network",
+          "observedAt": "2026-10-03T23:53:46Z",
+          "datumAsOf": "2024-03-21",
+          "location": "Rendered press release, private placement terms",
+          "excerpt": "The Fund will issue shares pursuant to Rule 506(c) under the Securities Act of 1933 and Section3(c)(7) of the Investment Company Act.",
+          "assertion": "The token represents private fund shares; public launch terms do not state a finite share-level maturity."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://securitize.io/blackrock/buidl",
+        "https://securitize.io/learn/press/blackrock-launches-first-tokenized-fund-buidl-on-the-ethereum-network",
+        "https://securitize.io/learn/blog/buidl-the-tokenized-treasury-fund-leading-the-way",
+        "https://www.sec.gov/Archives/edgar/data/2013810/000201439024000001/xslFormDX01/primary_doc.xml"
+      ],
+      "rationale": "The exact missing datum is maturityDaysMax of BUIDL fund shares, not underlying Treasury bills. Browser recovery resolves the wave-1 unread rendered pages: official product/legal launch disclosures and SEC Form D disclose private pooled-fund interests, underlying overnight repo/3-month Treasuries and distributions, but no share-level contractual maturity maximum. The public offering surfaces do not publish that covenant; do not substitute 90 days, dividend cadence or redemption settlement."
+    },
+    {
+      "id": "uw-eurc-circle-2549905cf243db45",
+      "assetId": "eurc-circle",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:eurc-circle:offchain-issuer"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T22:32:38Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (PilotRwa)",
+      "sources": [
+        {
+          "url": "https://help.circle.com/support/en/usdc-eurc-redemption-structure?id=kb_article_view&sysparm_article=KB0010644&sysparm_language=en",
+          "observedAt": "2026-10-03T22:32:38Z",
+          "datumAsOf": null,
+          "location": "Updated August 2026; fee table effective March 15, 2026 and FAQ",
+          "excerpt": "The daily free redemption threshold is calculated per currency, not combined across USDC and EURC.",
+          "assertion": "Public USDC/EURC tiered fees depend on daily gross/net redemption, monthly flows and credits. The current route lacks customer tier/flow state and formula evaluation; W15 supports B, not invented zero or a universal fixed fee."
+        }
+      ]
+    },
+    {
+      "id": "uw-usdc-circle-32b0b029346dba98",
+      "assetId": "usdc-circle",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdc-circle:offchain-issuer"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T22:32:38Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (PilotRwa)",
+      "sources": [
+        {
+          "url": "https://help.circle.com/support/en/usdc-eurc-redemption-structure?id=kb_article_view&sysparm_article=KB0010644&sysparm_language=en",
+          "observedAt": "2026-10-03T22:32:38Z",
+          "datumAsOf": null,
+          "location": "Updated August 2026; fee table effective March 15, 2026 and FAQ",
+          "excerpt": "The daily free redemption threshold is calculated per currency, not combined across USDC and EURC.",
+          "assertion": "Public USDC/EURC tiered fees depend on daily gross/net redemption, monthly flows and credits. The current route lacks customer tier/flow state and formula evaluation; W15 supports B, not invented zero or a universal fixed fee."
+        }
+      ]
+    },
+    {
+      "id": "uw-eurc-circle-cb63db797c44cac1",
+      "assetId": "eurc-circle",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:60326ba3ee3552a8d97c55c0",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:32:38Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (PilotRwa)",
+      "sources": [
+        {
+          "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/EURC%20Attestations/2026%20EURC_Examination%20Report%20August%2026.pdf",
+          "observedAt": "2026-10-03T22:32:38Z",
+          "datumAsOf": "2026-08-31",
+          "location": "EURC Reserve Report pp.2-4, reserve criteria and cash balances",
+          "excerpt": "Bank balances have been adjusted for timing and settlement differences, which include: deposits/withdrawals occurring after the bank statement cut-off time (but before the Report Dates).",
+          "assertion": "Discloses bank cash and net settlement adjustments, but no contractual maximum term for the entire bank-deposit slice."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.circle.com/transparency",
+        "https://www.circle.com/legal/eurc-terms",
+        "https://www.circle.com/legal/eea-terms",
+        "https://www.circle.com/legal/mica-eurc-whitepaper",
+        "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/EURC%20Attestations/2026%20EURC_Examination%20Report%20August%2026.pdf"
+      ],
+      "rationale": "The exact missing datum is maturityDaysMax for Cash at Regulated Financial Institutions (net settlement adjustments). The current signed reserve report, archive, issuer terms and regulator-notified white paper disclose segregated euro balances and liquidity/redemption rights, not deposit account contracts or a hard maximum term covering this entire composite slice. Token holder redemption and bank cash liquidity are not contractual maturity. Bank-deposit is not the compiler's cash N/A class; no zero or class relabel is authored."
+    },
+    {
+      "id": "uw-usdc-circle-eb842dec09f88eee",
+      "assetId": "usdc-circle",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:b842f343c9aa3c612f5caafc",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:32:38Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (PilotRwa)",
+      "sources": [
+        {
+          "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20August%2026.pdf",
+          "observedAt": "2026-10-03T22:32:38Z",
+          "datumAsOf": "2026-08-31",
+          "location": "USDC Reserve Report pp.2-5, reserve criteria and bank balances",
+          "excerpt": "Segregated Accounts are unencumbered accounts held on behalf of USDC holders that are segregated from other accounts of Circle, including general corporate funds.",
+          "assertion": "Treasury maturity dates and overnight repo term are disclosed separately; bank cash and net settlement adjustments have no stated maximum contractual term."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.circle.com/transparency",
+        "https://www.circle.com/legal/usdc-terms",
+        "https://www.circle.com/legal/eea-terms",
+        "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20August%2026.pdf"
+      ],
+      "rationale": "The exact missing datum is maturityDaysMax for Cash at Regulated Financial Institutions (net settlement adjustments). The current signed report and transparency archive identify bank cash and settlement adjustments, and the legal terms explain segregated USD-denominated reserves. None supplies account contracts or a maximum term applying to every claim in this scoped bank-deposit slice. Published Treasury maturity dates and overnight repo maturities cannot be transferred to bank claims; holder redemption at par is not deposit maturity."
+    },
+    {
+      "id": "uw-nxusd-nereus-2cf669e993693ebe",
+      "assetId": "nxusd-nereus",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:22Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R88)",
+      "sources": [
+        {
+          "url": "https://medium.com/nereus-protocol/the-nxusd-genesis-event-41d22f8b2020?source=collection_home---4------0-----------------------",
+          "observedAt": "2026-10-03T23:03:39Z",
+          "datumAsOf": "2022-05-20",
+          "location": "NXUSD Genesis Event",
+          "excerpt": "15 million NXUSDs were minted and collateralized with 4 billion WXTs.",
+          "assertion": "A historical genesis issuance/backing pair is disclosed, not a current recurring whole-supply reconciliation across native deployments."
+        },
+        {
+          "url": "https://resources.cryptocompare.com/asset-management/558/1692883376123.pdf",
+          "observedAt": "2026-10-03T23:09:43Z",
+          "datumAsOf": null,
+          "location": "November 2022 audit, p.1, Introduction",
+          "excerpt": "The scope of the audit is NXUSDV2, ProtocolAddressesProvider, TokenOracle, NXUSDStakingOneTier and NXUSDStakingOneTierCalculation contracts.",
+          "assertion": "The located independent audit is scoped to code, not financial reserve/liability reconciliation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.nereus.finance/",
+        "https://docs.nereus.finance/",
+        "https://www.nereus.finance/blog",
+        "https://nxusd.nereus.finance/",
+        "https://nxusd.nereus.finance/js/app.60bde321.js",
+        "https://github.com/nereusfinance/nereus-stablecoin-core",
+        "https://sourcify.dev/server/v2/contract/43114/0xf14f4ce569cb3679e99d5059909e23b07bd2f387?fields=abi,sources",
+        "https://resources.cryptocompare.com/asset-management/558/1692883376123.pdf"
+      ],
+      "rationale": "No dated whole-supply mint/burn-to-backing reconciliation procedure or cadence covering Avalanche and Polygon native NXUSD and collateral was located. Genesis collateral, owner-only mint throttles, individual Cauldron debt accounting and code assurance do not prove that exact datum. Current issuer/docs redirect and disclaimer, application bundle, repository/deployments and audit disclose operating machinery but no common-clock whole-supply reconciliation. Preserve reconciliation unknown, not none."
+    },
+    {
+      "id": "uw-home-homecoin-62c98762ed768d3a",
+      "assetId": "home-homecoin",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:22Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R88)",
+      "sources": [
+        {
+          "url": "https://raw.githubusercontent.com/homecoin-finance/gitbook/live/getting-started/faq.md",
+          "observedAt": "2026-10-03T23:09:43Z",
+          "datumAsOf": null,
+          "location": "Are there a predetermined amount of HOME tokens?",
+          "excerpt": "HOME is minted when a home owner takes out a loan. There\u2019s not a predetermined number of HOME available.",
+          "assertion": "Mint origination is described; a current recurring whole-supply/backing reconciliation is not."
+        },
+        {
+          "url": "https://social-feed-media.s3.ap-southeast-1.amazonaws.com/pdfs/1674044427141-BACON.pdf",
+          "observedAt": "2026-10-03T23:04:08Z",
+          "datumAsOf": "2022-07-25",
+          "location": "Whitepaper v1.4, Pans, p.6",
+          "excerpt": "The amount of USDC in the Pan plus the amount of outstanding loans is always equal to the amount of outstanding HOME.",
+          "assertion": "Historical design invariant, not a dated procedure/cadence reconciling current lien validity, borrower payment status and all HOME liabilities."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.homecoin.finance/",
+        "https://www.homecoin.finance/home-benefits",
+        "https://github.com/homecoin-finance/gitbook",
+        "https://raw.githubusercontent.com/homecoin-finance/gitbook/live/SUMMARY.md",
+        "https://raw.githubusercontent.com/homecoin-finance/gitbook/live/getting-started/faq.md",
+        "https://social-feed-media.s3.ap-southeast-1.amazonaws.com/pdfs/1674044427141-BACON.pdf",
+        "https://app.homecoin.finance/",
+        "https://etherscan.io/address/0xb8919522331c59f5c16bdfaa6a121a6e03a91f62",
+        "https://raw.githubusercontent.com/homecoin-finance/HomeDAO/e2742bb707aa6d75eb310ed8729c3ca04f91d296/contracts/PoolCore/Pool16.sol",
+        "https://files.baconcoin.com/baconcoin-blocksec-audit.pdf",
+        "https://files.baconcoin.finance/bacon-protocol-full-audit.pdf"
+      ],
+      "rationale": "No dated recurring reconciliation of all HOME liabilities/mint-burn movements against current USDC, outstanding loan balances and enforceable lien backing is disclosed in the issuer website, complete docs index/FAQ, whitepaper or Pool16 accounting source. Public lien descriptors and a historical design equality are not this datum. Linked code-audit hosts fail DNS; those failures are not evidence of financial non-disclosure. Preserve unknown, not none."
     }
   ]
 }
