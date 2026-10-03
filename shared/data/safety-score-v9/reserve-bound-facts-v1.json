@@ -471,6 +471,33 @@
         "governingInstrument": "Hive native consensus HBD-to-HIVE conversion and debt haircut rule",
         "allInScope": true
       }
+    ],
+    "usdt-tether": [
+      {
+        "factKey": "w2r01-usdt-physical-gold-maturity-applicability",
+        "scope": {
+          "kind": "exposure",
+          "exposureKey": "reserve:1b2583bf4492894b18779c24"
+        },
+        "asOfSec": 1782863940,
+        "publisher": "Tether International, S.A. de C.V.",
+        "sourceUrls": [
+          "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf"
+        ],
+        "assertion": "Report page 9 footnote 9 identifies the entire Precious Metals category as LBMA-standard physical gold bars owned by the Company. The direct physical inventory is not a dated debt or receipt claim and has no contractual maturity; this does not establish any liquidity bound.",
+        "contentDigest": "aa7322474c671beb4d02e2052dce36f4c0dc4482851021f782bf44ab7aba5ea1",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "W2R01 primary-source maturity applicability review",
+          "confidence": "high"
+        },
+        "kind": "maturity-applicability",
+        "claimId": "usdt-tether:precious-metals:physical-gold-inventory",
+        "conclusion": "not-applicable",
+        "governingInstrument": "Tether June 30 2026 Financial Figures and Reserves Report, Assets table and footnote 9",
+        "allInScope": true
+      }
     ]
   }
 }

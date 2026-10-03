@@ -2278,338 +2278,6 @@
       "rationale": "The exact deployed lending-position slice has no published whole-slice maximum realization horizon. Reviewed issuer product/risk documents, legal terms and document archive, protocol withdrawal docs and exact verified source disclose liquidity dependence, not a bounded repayment SLA. Instant branding, atomic execution when liquid, and current idle balances do not prove immediate realizability of the complete position. This is a noncustodial protocol vault, not an attested fund with a regulator-mandated redemption term."
     },
     {
-      "id": "uw-mxnt-tether-92b4f5b791b4b92c",
-      "assetId": "mxnt-tether",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:63270a616c9f076f331322d9",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:56:07Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R01)",
-      "sources": [
-        {
-          "url": "https://tether.to/en/legal/",
-          "observedAt": "2026-10-03T22:55:50Z",
-          "datumAsOf": "2026-02-26",
-          "location": "Section 4.1",
-          "excerpt": "The Reserves are comprised of cash, cash equivalents and other assets and may include loan receivables and other assets from Affiliates.",
-          "assertion": "The shared reserve basket does not disclose an MXNT-specific allocation, maximum maturity or whole-basket liquidation bound."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://tether.to/en/legal/",
-        "https://tether.to/en/faqs/",
-        "https://tether.to/en/how-it-works/",
-        "https://tether.to/en/transparency/?tab=reports",
-        "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
-        "https://tether.to/public/Relevant_Information_Document_-_Tether_International%2C_S.A._de_C.V..pdf"
-      ],
-      "rationale": "MXNT-specific maturityDaysMax and liquidityHorizon are not disclosed in current legal terms, issuer FAQ, transparency/report index, full Q2 reserve report or CNAD-filed RID. They disclose a shared changing basket, not MXNT-specific holdings or a complete realization deadline. USDT category maturities cannot be imported as an MXNT maximum."
-    },
-    {
-      "id": "uw-mxnt-tether-dc82f3c48ca42263",
-      "assetId": "mxnt-tether",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:63270a616c9f076f331322d9",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:56:07Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R01)",
-      "sources": [
-        {
-          "url": "https://tether.to/en/legal/",
-          "observedAt": "2026-10-03T22:55:50Z",
-          "datumAsOf": "2026-02-26",
-          "location": "Section 4.1",
-          "excerpt": "The Reserves are comprised of cash, cash equivalents and other assets and may include loan receivables and other assets from Affiliates.",
-          "assertion": "The shared reserve basket does not disclose an MXNT-specific allocation, maximum maturity or whole-basket liquidation bound."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://tether.to/en/legal/",
-        "https://tether.to/en/faqs/",
-        "https://tether.to/en/how-it-works/",
-        "https://tether.to/en/transparency/?tab=reports",
-        "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
-        "https://tether.to/public/Relevant_Information_Document_-_Tether_International%2C_S.A._de_C.V..pdf"
-      ],
-      "rationale": "MXNT-specific maturityDaysMax and liquidityHorizon are not disclosed in current legal terms, issuer FAQ, transparency/report index, full Q2 reserve report or CNAD-filed RID. They disclose a shared changing basket, not MXNT-specific holdings or a complete realization deadline. USDT category maturities cannot be imported as an MXNT maximum."
-    },
-    {
-      "id": "uw-usdt-tether-ff8af77bfdec2f9a",
-      "assetId": "usdt-tether",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:bbe3851d64bce9dedc4fb999",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:56:07Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R01)",
-      "sources": [
-        {
-          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
-          "observedAt": "2026-10-03T22:55:49Z",
-          "datumAsOf": "2026-06-30",
-          "location": "PDF page 9 footnote 7",
-          "excerpt": "The \u201cCash & Bank Deposits\u201d category comprises cash deposits at financial institutions.",
-          "assertion": "No demand/term split or maximum term of the whole deposit slice is stated."
-        },
-        {
-          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
-          "observedAt": "2026-10-03T22:55:49Z",
-          "datumAsOf": "2026-06-30",
-          "location": "PDF page 9 footnote 11",
-          "excerpt": "The \u201cPublic Equities\u201d category comprises indirect gold, bitcoin, and other asset exposure",
-          "assertion": "The report does not identify instruments or state contractual maturity applicability/maximum term of the indirect exposures."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://tether.to/en/legal/",
-        "https://tether.to/en/faqs/",
-        "https://tether.to/en/how-it-works/",
-        "https://tether.to/en/transparency/?tab=reports",
-        "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
-        "https://tether.to/public/Relevant_Information_Document_-_Tether_International%2C_S.A._de_C.V..pdf"
-      ],
-      "rationale": "Exact slice maximum maturities for cash/bank deposits and indirect public-equity exposures are not published in the full report, current transparency disclosures, FAQ, legal terms or CNAD-filed RID. Cash-deposit wording does not prove all are demand deposits; active-market indirect exposures do not establish instrument-level maturity or applicability."
-    },
-    {
-      "id": "uw-usdt-tether-ae7153e3f83418f4",
-      "assetId": "usdt-tether",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:c271d604eb64f6f89594867f",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:56:07Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R01)",
-      "sources": [
-        {
-          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
-          "observedAt": "2026-10-03T22:55:49Z",
-          "datumAsOf": "2026-06-30",
-          "location": "PDF page 9 footnote 7",
-          "excerpt": "The \u201cCash & Bank Deposits\u201d category comprises cash deposits at financial institutions.",
-          "assertion": "No demand/term split or maximum term of the whole deposit slice is stated."
-        },
-        {
-          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
-          "observedAt": "2026-10-03T22:55:49Z",
-          "datumAsOf": "2026-06-30",
-          "location": "PDF page 9 footnote 11",
-          "excerpt": "The \u201cPublic Equities\u201d category comprises indirect gold, bitcoin, and other asset exposure",
-          "assertion": "The report does not identify instruments or state contractual maturity applicability/maximum term of the indirect exposures."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://tether.to/en/legal/",
-        "https://tether.to/en/faqs/",
-        "https://tether.to/en/how-it-works/",
-        "https://tether.to/en/transparency/?tab=reports",
-        "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
-        "https://tether.to/public/Relevant_Information_Document_-_Tether_International%2C_S.A._de_C.V..pdf"
-      ],
-      "rationale": "Exact slice maximum maturities for cash/bank deposits and indirect public-equity exposures are not published in the full report, current transparency disclosures, FAQ, legal terms or CNAD-filed RID. Cash-deposit wording does not prove all are demand deposits; active-market indirect exposures do not establish instrument-level maturity or applicability."
-    },
-    {
-      "id": "uw-usdt-tether-a5ac49ecd1562e98",
-      "assetId": "usdt-tether",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdt-tether:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:56:07Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R01)",
-      "sources": [
-        {
-          "url": "https://tether.to/en/redeem-tethers-to-fiat-currency/",
-          "observedAt": "2026-10-03T22:55:50Z",
-          "datumAsOf": null,
-          "location": "Step 3",
-          "excerpt": "You will also be notified when the request has been processed.",
-          "assertion": "The step-by-step bank redemption guide has no maximum request-to-final-bank-credit interval."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://tether.to/en/legal/",
-        "https://tether.to/en/faqs/",
-        "https://tether.to/en/how-it-works/",
-        "https://tether.to/en/transparency/?tab=reports",
-        "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
-        "https://tether.to/public/Relevant_Information_Document_-_Tether_International%2C_S.A._de_C.V..pdf",
-        "https://tether.to/en/knowledge-base/",
-        "https://tether.to/en/redeem-tethers-to-fiat-currency/"
-      ],
-      "rationale": "USDT direct fiat redemption terms and exact bank redemption guide disclose verified bank payment, KYC and discretionary suspensions, not an end-to-end final-bank-credit maximum SLA. RID, legal terms and FAQs also provide no such bound; token transfer speed is not fiat completion."
-    },
-    {
-      "id": "uw-xaut-tether-dca1228a7aacb8b6",
-      "assetId": "xaut-tether",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:xaut-tether:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:56:07Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R01)",
-      "sources": [
-        {
-          "url": "https://gold.tether.to/legal/termsofservice",
-          "observedAt": "2026-10-03T22:56:07Z",
-          "datumAsOf": "2025-09-09",
-          "location": "Section 5.3",
-          "excerpt": "However, it may take several business days for any redemption to be completed.",
-          "assertion": "Several business days is not a maximum for physical delivery, sale/wire or whole-reserve realization."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://gold.tether.to/faq",
-        "https://gold.tether.to/legal/termsofservice",
-        "https://gold.tether.to/legal/feeschedule",
-        "https://gold.tether.to/Relevant%20Information%20Document%20-%20TG%20Commodities,%20S.A.%20de%20C.V.%20(ENG).pdf",
-        "https://gold.tether.to/docs/reports/attestations/ISAE_3000R_-_Opinion_TGRR_30.06.2026_RC187322026DV0170.pdf"
-      ],
-      "rationale": "Exact physical-redemption settlement maximum and whole-slice liquidityHorizon are undisclosed. Terms promise commercially reasonable processing with possible delays; full-bar delivery and Swiss gold sale/wire have no maximum. FAQ, fee schedule, reserve report and CNAD-filed RID do not supply a full-position realization bound. Gold market availability is not instant whole-slice USD liquidity."
-    },
-    {
-      "id": "uw-xaut-tether-adcec5b7eb565f8e",
-      "assetId": "xaut-tether",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:3cf818dc42a5e2c91af7720d",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:56:07Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R01)",
-      "sources": [
-        {
-          "url": "https://gold.tether.to/legal/termsofservice",
-          "observedAt": "2026-10-03T22:56:07Z",
-          "datumAsOf": "2025-09-09",
-          "location": "Section 5.3",
-          "excerpt": "However, it may take several business days for any redemption to be completed.",
-          "assertion": "Several business days is not a maximum for physical delivery, sale/wire or whole-reserve realization."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://gold.tether.to/faq",
-        "https://gold.tether.to/legal/termsofservice",
-        "https://gold.tether.to/legal/feeschedule",
-        "https://gold.tether.to/Relevant%20Information%20Document%20-%20TG%20Commodities,%20S.A.%20de%20C.V.%20(ENG).pdf",
-        "https://gold.tether.to/docs/reports/attestations/ISAE_3000R_-_Opinion_TGRR_30.06.2026_RC187322026DV0170.pdf"
-      ],
-      "rationale": "Exact physical-redemption settlement maximum and whole-slice liquidityHorizon are undisclosed. Terms promise commercially reasonable processing with possible delays; full-bar delivery and Swiss gold sale/wire have no maximum. FAQ, fee schedule, reserve report and CNAD-filed RID do not supply a full-position realization bound. Gold market availability is not instant whole-slice USD liquidity."
-    },
-    {
-      "id": "uw-xaut-tether-a54258f4e7371188",
-      "assetId": "xaut-tether",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:xaut-tether:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:56:07Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R01)",
-      "sources": [
-        {
-          "url": "https://gold.tether.to/legal/feeschedule",
-          "observedAt": "2026-10-03T22:56:07Z",
-          "datumAsOf": "2025-01-27",
-          "location": "Footnote 4",
-          "excerpt": "Physical delivery of the bullion bar(s) requires payment of fees to defray the associated delivery cost.",
-          "assertion": "The 25-bps base fee is disclosed but delivery surcharge lacks a numerical schedule or maximum."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://gold.tether.to/faq",
-        "https://gold.tether.to/legal/termsofservice",
-        "https://gold.tether.to/legal/feeschedule",
-        "https://gold.tether.to/Relevant%20Information%20Document%20-%20TG%20Commodities,%20S.A.%20de%20C.V.%20(ENG).pdf",
-        "https://gold.tether.to/docs/reports/attestations/ISAE_3000R_-_Opinion_TGRR_30.06.2026_RC187322026DV0170.pdf"
-      ],
-      "rationale": "Exact total physical-redemption cost remains undisclosed: schedule gives 25 bps plus applicable fees, with delivery cost and potential broker mark-up but no numeric surcharge formula or maximum. Base fee is already modeled; this partial formula is not the missing complete same-notional cost, and is not a B justification."
-    },
-    {
-      "id": "uw-usat-tether-6ba19618ecac9828",
-      "assetId": "usat-tether",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usat-tether:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:56:07Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R01)",
-      "sources": [
-        {
-          "url": "https://www.anchorage.com/usat-policies-disclosures",
-          "observedAt": "2026-10-03T22:55:50Z",
-          "datumAsOf": "2026-08-21",
-          "location": "Issuance and Redemption Policy",
-          "excerpt": "net of any fees disclosed in the USAT Fee Schedule.",
-          "assertion": "The USAT policy references fees but does not supply the USAT table."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://usat.io/",
-        "https://usat.io/terms/",
-        "https://www.anchorage.com/terms-and-disclosures",
-        "https://www.anchorage.com/usat-policies-disclosures",
-        "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-terms",
-        "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-service-fee-schedule",
-        "https://docs.anchorage.com/knowledge-base/platform/users/stablecoins",
-        "https://www.anchorage.com/platform/usat-reserve-attestations"
-      ],
-      "rationale": "Exact USAT issuer redemption fee schedule is not publicly supplied on issuer legal center, USAT policies, supported-stablecoin docs, website terms or reserve archive. The public covered-stablecoin fee table only specifies USDtb/USDPT/USDGO; USAT requires separate onboarding. Neither par redemption nor other assets zero fees establishes USAT cost."
-    },
-    {
       "id": "uw-usde-ethena-e5e042b07e93180e",
       "assetId": "usde-ethena",
       "scope": {
@@ -5458,485 +5126,6 @@
           "assertion": "Whole portfolio chart shows Time Deposit 24.71%, Other Money Market Instrument 63.54%, Cash and Cash Equivalent 11.75%; schema lockstep to historical annual report prevents independent unaudited composition-date admission."
         }
       ]
-    },
-    {
-      "id": "uw-usdh-hermetica-851032530e21fc36",
-      "assetId": "usdh-hermetica",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:8f4df462b8245ee19d12626d",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:54:53Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R31)",
-      "sources": [
-        {
-          "url": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026",
-          "observedAt": "2026-10-03T22:54:53Z",
-          "datumAsOf": "2026-09-30",
-          "location": "Location balances and STRCx itemization",
-          "excerpt": "At 14:00 UTC September 30, there was $8,036.50 in the Redeeming Reserve on Stacks, $1,501,041.77 in the Ethereum Settlement Wallet, and $100,148.12 in the Reserve Fund.",
-          "assertion": "Publishes location totals but no finite maximum maturity or whole-slice realization horizon for the unitemized Stacks, Copper and other settlement-wallet positions."
-        },
-        {
-          "url": "https://docs.hermetica.fi/usdh/risk-disclosures/liquidity-risk.md",
-          "observedAt": "2026-10-03T22:54:53Z",
-          "datumAsOf": null,
-          "location": "Liquidity Risk",
-          "excerpt": "If for any reason Hermetica is not able to source enough liquidity to either increase or unwind a derivative position, it will not be able to either mint or redeem USDh tokens.",
-          "assertion": "Describes unwind restrictions, not an enforceable per-location liquidity horizon or maturity maximum."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026",
-        "https://docs.hermetica.fi/usdh/how-it-works/backing.md",
-        "https://app.hermetica.fi/transparency/usdh/reserves",
-        "https://docs.hermetica.fi/usdh/how-it-works/security.md",
-        "https://docs.hermetica.fi/usdh/risk-disclosures/liquidity-risk.md",
-        "https://docs.hermetica.fi/resources/legal/terms-of-service.md",
-        "https://github.com/hermetica-fi/hermetica-contracts/blob/master/mainnet/contracts/usdh/protocol/redeeming-reserve-v1-2.clar"
-      ],
-      "rationale": "The September report and signed Copper image disclose account totals (Copper aggregate BTC/USDT/USDC including P&L), not the residual instruments, lock terms or per-slice maximum maturity and realization horizon. Backing archive, live dashboard, custody design, liquidity risks, legal terms and reserve transfer code provide no such bounds for these three scoped residuals. Generic OES recovery and manager-authorized transfers do not prove the entire positions immediately realizable."
-    },
-    {
-      "id": "uw-usdh-hermetica-c7087430f918d783",
-      "assetId": "usdh-hermetica",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:8f4df462b8245ee19d12626d",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:54:53Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R31)",
-      "sources": [
-        {
-          "url": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026",
-          "observedAt": "2026-10-03T22:54:53Z",
-          "datumAsOf": "2026-09-30",
-          "location": "Location balances and STRCx itemization",
-          "excerpt": "At 14:00 UTC September 30, there was $8,036.50 in the Redeeming Reserve on Stacks, $1,501,041.77 in the Ethereum Settlement Wallet, and $100,148.12 in the Reserve Fund.",
-          "assertion": "Publishes location totals but no finite maximum maturity or whole-slice realization horizon for the unitemized Stacks, Copper and other settlement-wallet positions."
-        },
-        {
-          "url": "https://docs.hermetica.fi/usdh/risk-disclosures/liquidity-risk.md",
-          "observedAt": "2026-10-03T22:54:53Z",
-          "datumAsOf": null,
-          "location": "Liquidity Risk",
-          "excerpt": "If for any reason Hermetica is not able to source enough liquidity to either increase or unwind a derivative position, it will not be able to either mint or redeem USDh tokens.",
-          "assertion": "Describes unwind restrictions, not an enforceable per-location liquidity horizon or maturity maximum."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026",
-        "https://docs.hermetica.fi/usdh/how-it-works/backing.md",
-        "https://app.hermetica.fi/transparency/usdh/reserves",
-        "https://docs.hermetica.fi/usdh/how-it-works/security.md",
-        "https://docs.hermetica.fi/usdh/risk-disclosures/liquidity-risk.md",
-        "https://docs.hermetica.fi/resources/legal/terms-of-service.md",
-        "https://github.com/hermetica-fi/hermetica-contracts/blob/master/mainnet/contracts/usdh/protocol/redeeming-reserve-v1-2.clar"
-      ],
-      "rationale": "The September report and signed Copper image disclose account totals (Copper aggregate BTC/USDT/USDC including P&L), not the residual instruments, lock terms or per-slice maximum maturity and realization horizon. Backing archive, live dashboard, custody design, liquidity risks, legal terms and reserve transfer code provide no such bounds for these three scoped residuals. Generic OES recovery and manager-authorized transfers do not prove the entire positions immediately realizable."
-    },
-    {
-      "id": "uw-usdh-hermetica-3f357368dd8b15c4",
-      "assetId": "usdh-hermetica",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:d72b0bc8bcdfd369c0c261da",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:54:53Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R31)",
-      "sources": [
-        {
-          "url": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026",
-          "observedAt": "2026-10-03T22:54:53Z",
-          "datumAsOf": "2026-09-30",
-          "location": "Location balances and STRCx itemization",
-          "excerpt": "At 14:00 UTC September 30, there was $8,036.50 in the Redeeming Reserve on Stacks, $1,501,041.77 in the Ethereum Settlement Wallet, and $100,148.12 in the Reserve Fund.",
-          "assertion": "Publishes location totals but no finite maximum maturity or whole-slice realization horizon for the unitemized Stacks, Copper and other settlement-wallet positions."
-        },
-        {
-          "url": "https://docs.hermetica.fi/usdh/risk-disclosures/liquidity-risk.md",
-          "observedAt": "2026-10-03T22:54:53Z",
-          "datumAsOf": null,
-          "location": "Liquidity Risk",
-          "excerpt": "If for any reason Hermetica is not able to source enough liquidity to either increase or unwind a derivative position, it will not be able to either mint or redeem USDh tokens.",
-          "assertion": "Describes unwind restrictions, not an enforceable per-location liquidity horizon or maturity maximum."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026",
-        "https://docs.hermetica.fi/usdh/how-it-works/backing.md",
-        "https://app.hermetica.fi/transparency/usdh/reserves",
-        "https://docs.hermetica.fi/usdh/how-it-works/security.md",
-        "https://docs.hermetica.fi/usdh/risk-disclosures/liquidity-risk.md",
-        "https://docs.hermetica.fi/resources/legal/terms-of-service.md",
-        "https://github.com/hermetica-fi/hermetica-contracts/blob/master/mainnet/contracts/usdh/protocol/redeeming-reserve-v1-2.clar"
-      ],
-      "rationale": "The September report and signed Copper image disclose account totals (Copper aggregate BTC/USDT/USDC including P&L), not the residual instruments, lock terms or per-slice maximum maturity and realization horizon. Backing archive, live dashboard, custody design, liquidity risks, legal terms and reserve transfer code provide no such bounds for these three scoped residuals. Generic OES recovery and manager-authorized transfers do not prove the entire positions immediately realizable."
-    },
-    {
-      "id": "uw-usdh-hermetica-15cb6c7e1204e57f",
-      "assetId": "usdh-hermetica",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:d72b0bc8bcdfd369c0c261da",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:54:53Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R31)",
-      "sources": [
-        {
-          "url": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026",
-          "observedAt": "2026-10-03T22:54:53Z",
-          "datumAsOf": "2026-09-30",
-          "location": "Location balances and STRCx itemization",
-          "excerpt": "At 14:00 UTC September 30, there was $8,036.50 in the Redeeming Reserve on Stacks, $1,501,041.77 in the Ethereum Settlement Wallet, and $100,148.12 in the Reserve Fund.",
-          "assertion": "Publishes location totals but no finite maximum maturity or whole-slice realization horizon for the unitemized Stacks, Copper and other settlement-wallet positions."
-        },
-        {
-          "url": "https://docs.hermetica.fi/usdh/risk-disclosures/liquidity-risk.md",
-          "observedAt": "2026-10-03T22:54:53Z",
-          "datumAsOf": null,
-          "location": "Liquidity Risk",
-          "excerpt": "If for any reason Hermetica is not able to source enough liquidity to either increase or unwind a derivative position, it will not be able to either mint or redeem USDh tokens.",
-          "assertion": "Describes unwind restrictions, not an enforceable per-location liquidity horizon or maturity maximum."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026",
-        "https://docs.hermetica.fi/usdh/how-it-works/backing.md",
-        "https://app.hermetica.fi/transparency/usdh/reserves",
-        "https://docs.hermetica.fi/usdh/how-it-works/security.md",
-        "https://docs.hermetica.fi/usdh/risk-disclosures/liquidity-risk.md",
-        "https://docs.hermetica.fi/resources/legal/terms-of-service.md",
-        "https://github.com/hermetica-fi/hermetica-contracts/blob/master/mainnet/contracts/usdh/protocol/redeeming-reserve-v1-2.clar"
-      ],
-      "rationale": "The September report and signed Copper image disclose account totals (Copper aggregate BTC/USDT/USDC including P&L), not the residual instruments, lock terms or per-slice maximum maturity and realization horizon. Backing archive, live dashboard, custody design, liquidity risks, legal terms and reserve transfer code provide no such bounds for these three scoped residuals. Generic OES recovery and manager-authorized transfers do not prove the entire positions immediately realizable."
-    },
-    {
-      "id": "uw-usdh-hermetica-33ef26ba1f8ffcf4",
-      "assetId": "usdh-hermetica",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:d81c2d1959e0c643d5d1e8fc",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:54:53Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R31)",
-      "sources": [
-        {
-          "url": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026",
-          "observedAt": "2026-10-03T22:54:53Z",
-          "datumAsOf": "2026-09-30",
-          "location": "Location balances and STRCx itemization",
-          "excerpt": "At 14:00 UTC September 30, there was $8,036.50 in the Redeeming Reserve on Stacks, $1,501,041.77 in the Ethereum Settlement Wallet, and $100,148.12 in the Reserve Fund.",
-          "assertion": "Publishes location totals but no finite maximum maturity or whole-slice realization horizon for the unitemized Stacks, Copper and other settlement-wallet positions."
-        },
-        {
-          "url": "https://docs.hermetica.fi/usdh/risk-disclosures/liquidity-risk.md",
-          "observedAt": "2026-10-03T22:54:53Z",
-          "datumAsOf": null,
-          "location": "Liquidity Risk",
-          "excerpt": "If for any reason Hermetica is not able to source enough liquidity to either increase or unwind a derivative position, it will not be able to either mint or redeem USDh tokens.",
-          "assertion": "Describes unwind restrictions, not an enforceable per-location liquidity horizon or maturity maximum."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026",
-        "https://docs.hermetica.fi/usdh/how-it-works/backing.md",
-        "https://app.hermetica.fi/transparency/usdh/reserves",
-        "https://docs.hermetica.fi/usdh/how-it-works/security.md",
-        "https://docs.hermetica.fi/usdh/risk-disclosures/liquidity-risk.md",
-        "https://docs.hermetica.fi/resources/legal/terms-of-service.md",
-        "https://github.com/hermetica-fi/hermetica-contracts/blob/master/mainnet/contracts/usdh/protocol/redeeming-reserve-v1-2.clar"
-      ],
-      "rationale": "The September report and signed Copper image disclose account totals (Copper aggregate BTC/USDT/USDC including P&L), not the residual instruments, lock terms or per-slice maximum maturity and realization horizon. Backing archive, live dashboard, custody design, liquidity risks, legal terms and reserve transfer code provide no such bounds for these three scoped residuals. Generic OES recovery and manager-authorized transfers do not prove the entire positions immediately realizable."
-    },
-    {
-      "id": "uw-usdh-hermetica-8d3efcedfd47407e",
-      "assetId": "usdh-hermetica",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:d81c2d1959e0c643d5d1e8fc",
-        "factorKey": "maturity",
-        "pillar": "backing",
-        "requiredDatum": "maturityDaysMax",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:54:53Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R31)",
-      "sources": [
-        {
-          "url": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026",
-          "observedAt": "2026-10-03T22:54:53Z",
-          "datumAsOf": "2026-09-30",
-          "location": "Location balances and STRCx itemization",
-          "excerpt": "At 14:00 UTC September 30, there was $8,036.50 in the Redeeming Reserve on Stacks, $1,501,041.77 in the Ethereum Settlement Wallet, and $100,148.12 in the Reserve Fund.",
-          "assertion": "Publishes location totals but no finite maximum maturity or whole-slice realization horizon for the unitemized Stacks, Copper and other settlement-wallet positions."
-        },
-        {
-          "url": "https://docs.hermetica.fi/usdh/risk-disclosures/liquidity-risk.md",
-          "observedAt": "2026-10-03T22:54:53Z",
-          "datumAsOf": null,
-          "location": "Liquidity Risk",
-          "excerpt": "If for any reason Hermetica is not able to source enough liquidity to either increase or unwind a derivative position, it will not be able to either mint or redeem USDh tokens.",
-          "assertion": "Describes unwind restrictions, not an enforceable per-location liquidity horizon or maturity maximum."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026",
-        "https://docs.hermetica.fi/usdh/how-it-works/backing.md",
-        "https://app.hermetica.fi/transparency/usdh/reserves",
-        "https://docs.hermetica.fi/usdh/how-it-works/security.md",
-        "https://docs.hermetica.fi/usdh/risk-disclosures/liquidity-risk.md",
-        "https://docs.hermetica.fi/resources/legal/terms-of-service.md",
-        "https://github.com/hermetica-fi/hermetica-contracts/blob/master/mainnet/contracts/usdh/protocol/redeeming-reserve-v1-2.clar"
-      ],
-      "rationale": "The September report and signed Copper image disclose account totals (Copper aggregate BTC/USDT/USDC including P&L), not the residual instruments, lock terms or per-slice maximum maturity and realization horizon. Backing archive, live dashboard, custody design, liquidity risks, legal terms and reserve transfer code provide no such bounds for these three scoped residuals. Generic OES recovery and manager-authorized transfers do not prove the entire positions immediately realizable."
-    },
-    {
-      "id": "uw-usdh-hermetica-06cf4b749a0765b3",
-      "assetId": "usdh-hermetica",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdh-hermetica:queue-redeem"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:54:53Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R31)",
-      "sources": [
-        {
-          "url": "https://docs.hermetica.fi/usdh/how-it-works/mint",
-          "observedAt": "2026-10-03T22:54:53Z",
-          "datumAsOf": null,
-          "location": "Redemptions",
-          "excerpt": "Approved Participants may redeem USDh for USDC or USDT via a redemption process that mirrors the minting flow in reverse.",
-          "assertion": "Discloses eligible redeemers and payout assets, plus pause conditions, but no final settlement maximum."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.hermetica.fi/usdh/how-it-works/mint",
-        "https://docs.hermetica.fi/resources/faqs.md",
-        "https://docs.hermetica.fi/usdh/how-it-works/security.md",
-        "https://docs.hermetica.fi/resources/legal/terms-of-service.md",
-        "https://docs.hermetica.fi/usdh/risk-disclosures/liquidity-risk.md",
-        "https://github.com/hermetica-fi/hermetica-contracts/blob/master/mainnet/contracts/usdh/protocol/redeeming-reserve-v1-2.clar"
-      ],
-      "rationale": "USDh AP redemption documentation, FAQ, legal terms and reserve-transfer code publish no request-to-delivered-USDC/USDT maximum. Risk terms permit pauses and liquidity-dependent unwind. hBTC's separate three-day/four-hour cooldowns are not USDh terms; arbitrage examples using 'immediately' are not an end-to-end SLA."
-    },
-    {
-      "id": "uw-usdh-hermetica-803829bb86374dd2",
-      "assetId": "usdh-hermetica",
-      "scope": {
-        "componentKey": "economic-control:oracle",
-        "exposureId": null,
-        "factorKey": "tier",
-        "pillar": "control",
-        "requiredDatum": "tier",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:54:53Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R31)",
-      "sources": [
-        {
-          "url": "https://docs.hermetica.fi/usdh/how-it-works/stability",
-          "observedAt": "2026-10-03T22:54:53Z",
-          "datumAsOf": null,
-          "location": "Risk Management System",
-          "excerpt": "To minimize this possibility, our risk engine runs checks every 100 milliseconds and reconciles our liabilities with assets and perpetual futures positions.",
-          "assertion": "Discloses the issuer's valuation-sensitive engine but not its actual price-source topology, stale-feed thresholds or failover."
-        },
-        {
-          "url": "https://www.diadata.org/blog/post/hermetica-usdh-reserve-backed-fair-value-oracle/",
-          "observedAt": "2026-10-03T22:54:53Z",
-          "datumAsOf": "2026-03-11",
-          "location": "How the Oracle Works",
-          "excerpt": "The feed is live on the Stacks public good oracle, where any protocol or user can query the USDh/USD value in real time.",
-          "assertion": "A public DIA consumer feed is disclosed; this does not establish the price topology used by Hermetica's own redemption/hedge risk engine."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.hermetica.fi/usdh/how-it-works/stability",
-        "https://docs.hermetica.fi/usdh/how-it-works/mint",
-        "https://docs.hermetica.fi/usdh/how-it-works/technical-primitives.md",
-        "https://docs.hermetica.fi/resources/faqs.md",
-        "https://docs.hermetica.fi/resources/legal/terms-of-service.md",
-        "https://blog.hermetica.fi/p/weekly-update-march-13-2026",
-        "https://www.diadata.org/blog/post/hermetica-usdh-reserve-backed-fair-value-oracle/",
-        "https://github.com/hermetica-fi/hermetica-contracts"
-      ],
-      "rationale": "The authored top-level-only review scopes USDh's issuer valuation/rebalancing and redemption-pause authority. Its docs disclose 100ms checks and price-feed failure pauses, not actual engine sources, redundancy or delay. The March DIA reserve-backed public-good USDh/USD feed is for integrating lending/trading/liquidation markets; neither party establishes that it supplies Hermetica's internal hedge/redemption engine. Thus that scoped tier remains undisclosed, not an assertion that no public USDh oracle exists."
-    },
-    {
-      "id": "uw-sofid-sofi-3f557166054a9fae",
-      "assetId": "sofid-sofi",
-      "scope": {
-        "componentKey": "mechanism-review:custodyContinuity",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "backing",
-        "requiredDatum": "mechanism-review:custodyContinuity",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:54:53Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R31)",
-      "sources": [
-        {
-          "url": "https://d32ijn7u0aqfv4.cloudfront.net/wp/wp-content/uploads/raw/SoFiUSD-Stablecoin-Attestation-Report-7.31.2026.pdf",
-          "observedAt": "2026-10-03T22:54:53Z",
-          "datumAsOf": "2026-07-31",
-          "location": "Schedule II, page 5",
-          "excerpt": "In a fiduciary account at a depository institution established by BitGo Trust Company, Inc.",
-          "assertion": "Names BitGo and the Federal Reserve, allocation and non-reuse safeguards, but not the commercial depository or substitute/failure-continuity arrangements."
-        },
-        {
-          "url": "https://d32ijn7u0aqfv4.cloudfront.net/wp/wp-content/uploads/raw/SOFID-Risk-Disclosure-1.pdf",
-          "observedAt": "2026-10-03T22:54:53Z",
-          "datumAsOf": "2026-05-27",
-          "location": "Section 5.2 Third-Party Risk",
-          "excerpt": "Failures, insolvency, misconduct, or service interruptions of third parties may adversely affect SOFID.",
-          "assertion": "Warns of continuity failure without a token-specific substitute-custodian or recovery commitment."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.sofi.com/crypto/sofiusd/",
-        "https://d32ijn7u0aqfv4.cloudfront.net/wp/wp-content/uploads/raw/SoFiUSD-Stablecoin-Attestation-Report-7.31.2026.pdf",
-        "https://d32ijn7u0aqfv4.cloudfront.net/wp/wp-content/uploads/raw/SOFID-Terms-of-Use-1.pdf",
-        "https://d32ijn7u0aqfv4.cloudfront.net/wp/wp-content/uploads/raw/SOFID-Risk-Disclosure-1.pdf",
-        "https://www.bitgo.com/resources/blog/bitgo-selected-by-sofi-to-provide-stablecoin-infrastructure/",
-        "https://www.bitgo.com/legal/bitgo-additional-terms/"
-      ],
-      "rationale": "The independent July examination establishes unencumbered cash at the Federal Reserve and a BitGo-created fiduciary bank account, with allocation and segregation from BitGo. The commercial depository remains unnamed and no SOFID-specific substitute-provider, continuity or failure-recovery arrangement is disclosed in the report, holder terms, risk disclosures or BitGo service materials. Existing adverse holder-claim evidence is preserved; no favorable whole-component quality is inferred."
-    },
-    {
-      "id": "uw-weusd-picwe-5bdd18b60a5fb6bc",
-      "assetId": "weusd-picwe",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:54:53Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R31)",
-      "sources": [
-        {
-          "url": "https://docs.picwe.org/what-is-weusd",
-          "observedAt": "2026-10-03T22:54:53Z",
-          "datumAsOf": "2026-04-27",
-          "location": "Definition and Core Properties",
-          "excerpt": "Today, WEUSD is minted 1:1 against USDC.",
-          "assertion": "A design/backing claim, not a dated whole-asset reserve inventory or supply-to-backing reconciliation cadence."
-        },
-        {
-          "url": "https://docs.picwe.org/developers/security",
-          "observedAt": "2026-10-03T22:54:53Z",
-          "datumAsOf": "2026-04-27",
-          "location": "Operational Security",
-          "excerpt": "Real-time transaction monitoring",
-          "assertion": "Transaction/security monitoring does not establish all-chain token liabilities reconciled to reserves on a common clock."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.picwe.org/en",
-        "https://docs.picwe.org/",
-        "https://docs.picwe.org/what-is-weusd",
-        "https://docs.picwe.org/mint-and-redeem",
-        "https://docs.picwe.org/faq",
-        "https://docs.picwe.org/developers/contracts",
-        "https://docs.picwe.org/developers/api-reference",
-        "https://docs.picwe.org/developers/security",
-        "https://mainnet.movementnetwork.xyz/v1/accounts/0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6/module/weusd_mint_redeem"
-      ],
-      "rationale": "Current docs claim USDC backing and reserve-lock minting but publish no dated measured whole-WEUSD book/denominator or recurring common-clock reconciliation covering all native deployments, mint/burn and cross-chain reserves/deficits. Security audits, transaction monitoring and local reserve getter ABIs do not establish that financial scope. Prior conflicting basket descriptions remain unresolved; no 100% USDC composition or favorable reconciliation is invented."
-    },
-    {
-      "id": "uw-weusd-picwe-60a64c405e7394b7",
-      "assetId": "weusd-picwe",
-      "scope": {
-        "componentKey": "reserve-composition",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "backing",
-        "requiredDatum": "reserve-composition",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:54:53Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R31)",
-      "sources": [
-        {
-          "url": "https://docs.picwe.org/what-is-weusd",
-          "observedAt": "2026-10-03T22:54:53Z",
-          "datumAsOf": "2026-04-27",
-          "location": "Definition and Core Properties",
-          "excerpt": "Today, WEUSD is minted 1:1 against USDC.",
-          "assertion": "A design/backing claim, not a dated whole-asset reserve inventory or supply-to-backing reconciliation cadence."
-        },
-        {
-          "url": "https://docs.picwe.org/developers/security",
-          "observedAt": "2026-10-03T22:54:53Z",
-          "datumAsOf": "2026-04-27",
-          "location": "Operational Security",
-          "excerpt": "Real-time transaction monitoring",
-          "assertion": "Transaction/security monitoring does not establish all-chain token liabilities reconciled to reserves on a common clock."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.picwe.org/en",
-        "https://docs.picwe.org/",
-        "https://docs.picwe.org/what-is-weusd",
-        "https://docs.picwe.org/mint-and-redeem",
-        "https://docs.picwe.org/faq",
-        "https://docs.picwe.org/developers/contracts",
-        "https://docs.picwe.org/developers/api-reference",
-        "https://docs.picwe.org/developers/security",
-        "https://mainnet.movementnetwork.xyz/v1/accounts/0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6/module/weusd_mint_redeem"
-      ],
-      "rationale": "Current docs claim USDC backing and reserve-lock minting but publish no dated measured whole-WEUSD book/denominator or recurring common-clock reconciliation covering all native deployments, mint/burn and cross-chain reserves/deficits. Security audits, transaction monitoring and local reserve getter ABIs do not establish that financial scope. Prior conflicting basket descriptions remain unresolved; no 100% USDC composition or favorable reconciliation is invented."
     },
     {
       "id": "uw-usdo-openeden-2ad47a6e40d5fada",
@@ -12223,350 +11412,6 @@
       "rationale": "Exact USDon platform conversion/redemption fee schedule and same-notional all-in cost bound remain unpublished. Current docs disclose liquidity-conditioned USDC swaps and user-paid gas, but no standalone USDon fee/minimum/maximum. ETF-token Final Terms' 0.1% underlying-market-price fee limit does not establish a USDon settlement-cash fee."
     },
     {
-      "id": "uw-usdd-tron-dao-reserve-138c319fe3470eb2",
-      "assetId": "usdd-tron-dao-reserve",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:87935c7af5eb97539e6ff53f",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:02:26Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R08)",
-      "sources": [
-        {
-          "url": "https://docs.usdd.io/system-architecture/smart-allocator.md",
-          "observedAt": "2026-10-03T22:55:04Z",
-          "datumAsOf": null,
-          "location": "Smart Allocator introduction",
-          "excerpt": "Smart Allocator is a yield-sharing initiative where capital from USDD\u2019s cash reserve is deployed into investment opportunities to earn returns in the form of interest and platform rewards.",
-          "assertion": "Describes investment deployment, not a guaranteed maximum time to realize the entire Smart Allocator reserve slice."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.usdd.io/llms.txt",
-        "https://docs.usdd.io/system-architecture/smart-allocator.md",
-        "https://docs.usdd.io/introduction/collateral-asset-contract-addresses.md",
-        "https://openapi.usdd.io/api/v1/smart-allocator/detail-overview",
-        "https://docs.usdd.io/legals/terms-of-use.md",
-        "https://www.chainsecurity.com/security-audit/usdd-rwa-smart-contracts"
-      ],
-      "rationale": "No maximum liquidityHorizon for realization of the entire Smart Allocator slice is published. Official docs describe team-selected investments; the current API identifies Aave/JustLend/Spark/Plasma holdings, earnings and rates, not a whole-slice realization guarantee. Interface terms and the access-control audit add no bound. Liquid investment marketing or one protocol withdrawal path cannot establish the slice-wide horizon."
-    },
-    {
-      "id": "uw-meusd-mezo-881509c484b0c573",
-      "assetId": "meusd-mezo",
-      "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:26756f39072e8bc2e09da2d2",
-        "factorKey": "liquidity",
-        "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:02:26Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R08)",
-      "sources": [
-        {
-          "url": "https://mezo.org/docs/developers/musd/musd-redemptions/",
-          "observedAt": "2026-10-03T22:56:02Z",
-          "datumAsOf": null,
-          "location": "Common Issues: TCR condition",
-          "excerpt": "System TCR is below 110%. Wait until it recovers.",
-          "assertion": "Redemption is conditional on system collateralization and eligible Troves; no maximum realization horizon for the entire ActivePool BTC slice is specified."
-        },
-        {
-          "url": "https://mezo.org/legal/terms",
-          "observedAt": "2026-10-03T22:56:03Z",
-          "datumAsOf": "2026-03-16",
-          "location": "Section 3.1.1 MUSD Protocol",
-          "excerpt": "We are not responsible for minting nor redemption of MUSD, which instead occurs through smart contract interactions.",
-          "assertion": "Terms describe automated mint/redemption; they do not add a financial assurance or whole-supply reconciliation report/cadence."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://mezo.org/docs/developers/musd/",
-        "https://mezo.org/docs/developers/musd/musd-redemptions/",
-        "https://mezo.org/docs/users/borrow/",
-        "https://mezo.org/docs/users/resources/audits/",
-        "https://mezo.org/legal/terms",
-        "https://mezo.org/docs/users/resources/contracts-reference"
-      ],
-      "rationale": "No maximum liquidityHorizon for the entire BTC-in-ActivePool reserve slice is specified. Redemptions require TCR >=110%, eligible Troves and feasible iteration/gas limits; some MUSD can remain unredeemed. Terms disclaim availability/reliability. Native BTC being transferable and an individual successful redemption do not bound realization of the whole protocol collateral slice."
-    },
-    {
-      "id": "uw-meusd-mezo-0a03c0b848509961",
-      "assetId": "meusd-mezo",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:02:26Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R08)",
-      "sources": [
-        {
-          "url": "https://mezo.org/docs/developers/musd/",
-          "observedAt": "2026-10-03T22:56:02Z",
-          "datumAsOf": null,
-          "location": "Architectural Overview",
-          "excerpt": "The BTC is routed to the `ActivePool`, where it stays until a user either:",
-          "assertion": "Documents per-Trove collateral/debt mechanisms, not a dated whole-supply reconciliation cadence covering owner-authorized mint paths and bridged liabilities."
-        },
-        {
-          "url": "https://mezo.org/legal/terms",
-          "observedAt": "2026-10-03T22:56:03Z",
-          "datumAsOf": "2026-03-16",
-          "location": "Section 3.1.1 MUSD Protocol",
-          "excerpt": "We are not responsible for minting nor redemption of MUSD, which instead occurs through smart contract interactions.",
-          "assertion": "Terms describe automated mint/redemption; they do not add a financial assurance or whole-supply reconciliation report/cadence."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://mezo.org/docs/developers/musd/",
-        "https://mezo.org/docs/users/resources/contracts-reference",
-        "https://mezo.org/docs/users/resources/audits/",
-        "https://mezo.org/legal/terms",
-        "https://raw.githubusercontent.com/mezo-org/ntt-bridge-musd-mainnet/main/deployment.json",
-        "https://api.explorer.mezo.org/api/v2/smart-contracts/0x3ea98a11d349b515e628c1cc74ca999230744c43"
-      ],
-      "rationale": "No whole-supply reconciliation procedure and actual recurring cadence is published for all MUSD mint paths and cross-chain liabilities on a common backing observation clock. Docs disclose Trove accounting; security audits are not financial reconciliation. The owner-controlled mint list additionally authorizes InterestRateManager and EnclaveDebtManager. Per-position debt/fees and NTT lock/burn mechanics do not establish full supply-to-backing assurance or justify not-applicable."
-    },
-    {
-      "id": "uw-brz-transfero-3eac793dc2bddbe7",
-      "assetId": "brz-transfero",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:02:26Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R08)",
-      "sources": [
-        {
-          "url": "https://transfero.com/brz-stablecoin",
-          "observedAt": "2026-10-03T22:56:03Z",
-          "datumAsOf": null,
-          "location": "Transparency section",
-          "excerpt": "On-chain activity is publicly verifiable, with independent audits conducted by Parsiq.",
-          "assertion": "Nearby audit claim has no current whole-supply reconciliation date/cadence; the linked report is a 31 March 2024 snapshot."
-        },
-        {
-          "url": "https://framerusercontent.com/assets/C3GwAo6yZKzxjtKD1yDo43k0rAg.pdf",
-          "observedAt": "2026-10-03T22:56:03Z",
-          "datumAsOf": "2024-03-31",
-          "location": "Page 2, reserves composition",
-          "excerpt": "The BRZ reserve is held in custody at a financial institution authorized by the Central Bank of Brazil.",
-          "assertion": "The current issuer-linked reserve report discloses a bank-held aggregate at 31 March 2024, not a fresh reserve composition or current whole-supply assurance procedure."
-        },
-        {
-          "url": "https://framerusercontent.com/assets/GFtIQP1hPK7HoQ6lvk68orcX3o.pdf",
-          "observedAt": "2026-10-03T23:02:26Z",
-          "datumAsOf": null,
-          "location": "Section 6.2.2 Reserve Managers",
-          "excerpt": "A periodical proof of funds shall be disclosed for checking the existence of enough funds to back the tokens.",
-          "assertion": "Promises periodic proof of funds without stating a verified recurring cadence, whole-liability reconciliation procedure, or a current dated report."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://transfero.com/brz-stablecoin",
-        "https://framerusercontent.com/assets/C3GwAo6yZKzxjtKD1yDo43k0rAg.pdf",
-        "https://framerusercontent.com/assets/GFtIQP1hPK7HoQ6lvk68orcX3o.pdf",
-        "https://transfero.com/policy-and-terms/privacy",
-        "https://transfero.com/policy-and-terms/licenses",
-        "https://panoramacrypto.transfero.com/auditoria-independente-confirma-lastro-do-brz-superior-aos-tokens-emitidos/"
-      ],
-      "rationale": "The current issuer page links only a 31 March 2024 bank-held aggregate reserve snapshot; no fresh dated reserve composition is disclosed. Its audit claim and historical independent backing checks do not provide current whole-supply financial assurance. The whitepaper describes mint orders after BRL deposits and promises periodical proof of funds, but states no verified recurring reconciliation cadence covering all issued/treasury tokens and Reserve Manager accounts. No report dates are advanced."
-    },
-    {
-      "id": "uw-brz-transfero-f14034b375f0f2e8",
-      "assetId": "brz-transfero",
-      "scope": {
-        "componentKey": "mechanism-review:assuranceAndReconciliation",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "backing",
-        "requiredDatum": "mechanism-review:assuranceAndReconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:02:26Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R08)",
-      "sources": [
-        {
-          "url": "https://transfero.com/brz-stablecoin",
-          "observedAt": "2026-10-03T22:56:03Z",
-          "datumAsOf": null,
-          "location": "Transparency section",
-          "excerpt": "On-chain activity is publicly verifiable, with independent audits conducted by Parsiq.",
-          "assertion": "Nearby audit claim has no current whole-supply reconciliation date/cadence; the linked report is a 31 March 2024 snapshot."
-        },
-        {
-          "url": "https://framerusercontent.com/assets/C3GwAo6yZKzxjtKD1yDo43k0rAg.pdf",
-          "observedAt": "2026-10-03T22:56:03Z",
-          "datumAsOf": "2024-03-31",
-          "location": "Page 2, reserves composition",
-          "excerpt": "The BRZ reserve is held in custody at a financial institution authorized by the Central Bank of Brazil.",
-          "assertion": "The current issuer-linked reserve report discloses a bank-held aggregate at 31 March 2024, not a fresh reserve composition or current whole-supply assurance procedure."
-        },
-        {
-          "url": "https://framerusercontent.com/assets/GFtIQP1hPK7HoQ6lvk68orcX3o.pdf",
-          "observedAt": "2026-10-03T23:02:26Z",
-          "datumAsOf": null,
-          "location": "Section 6.2.2 Reserve Managers",
-          "excerpt": "A periodical proof of funds shall be disclosed for checking the existence of enough funds to back the tokens.",
-          "assertion": "Promises periodic proof of funds without stating a verified recurring cadence, whole-liability reconciliation procedure, or a current dated report."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://transfero.com/brz-stablecoin",
-        "https://framerusercontent.com/assets/C3GwAo6yZKzxjtKD1yDo43k0rAg.pdf",
-        "https://framerusercontent.com/assets/GFtIQP1hPK7HoQ6lvk68orcX3o.pdf",
-        "https://transfero.com/policy-and-terms/privacy",
-        "https://transfero.com/policy-and-terms/licenses",
-        "https://panoramacrypto.transfero.com/auditoria-independente-confirma-lastro-do-brz-superior-aos-tokens-emitidos/"
-      ],
-      "rationale": "The current issuer page links only a 31 March 2024 bank-held aggregate reserve snapshot; no fresh dated reserve composition is disclosed. Its audit claim and historical independent backing checks do not provide current whole-supply financial assurance. The whitepaper describes mint orders after BRL deposits and promises periodical proof of funds, but states no verified recurring reconciliation cadence covering all issued/treasury tokens and Reserve Manager accounts. No report dates are advanced."
-    },
-    {
-      "id": "uw-brz-transfero-21c1a9e164ae43e4",
-      "assetId": "brz-transfero",
-      "scope": {
-        "componentKey": "reserve-composition",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "backing",
-        "requiredDatum": "reserve-composition",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:02:26Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R08)",
-      "sources": [
-        {
-          "url": "https://transfero.com/brz-stablecoin",
-          "observedAt": "2026-10-03T22:56:03Z",
-          "datumAsOf": null,
-          "location": "Transparency section",
-          "excerpt": "On-chain activity is publicly verifiable, with independent audits conducted by Parsiq.",
-          "assertion": "Nearby audit claim has no current whole-supply reconciliation date/cadence; the linked report is a 31 March 2024 snapshot."
-        },
-        {
-          "url": "https://framerusercontent.com/assets/C3GwAo6yZKzxjtKD1yDo43k0rAg.pdf",
-          "observedAt": "2026-10-03T22:56:03Z",
-          "datumAsOf": "2024-03-31",
-          "location": "Page 2, reserves composition",
-          "excerpt": "The BRZ reserve is held in custody at a financial institution authorized by the Central Bank of Brazil.",
-          "assertion": "The current issuer-linked reserve report discloses a bank-held aggregate at 31 March 2024, not a fresh reserve composition or current whole-supply assurance procedure."
-        },
-        {
-          "url": "https://framerusercontent.com/assets/GFtIQP1hPK7HoQ6lvk68orcX3o.pdf",
-          "observedAt": "2026-10-03T23:02:26Z",
-          "datumAsOf": null,
-          "location": "Section 6.2.2 Reserve Managers",
-          "excerpt": "A periodical proof of funds shall be disclosed for checking the existence of enough funds to back the tokens.",
-          "assertion": "Promises periodic proof of funds without stating a verified recurring cadence, whole-liability reconciliation procedure, or a current dated report."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://transfero.com/brz-stablecoin",
-        "https://framerusercontent.com/assets/C3GwAo6yZKzxjtKD1yDo43k0rAg.pdf",
-        "https://framerusercontent.com/assets/GFtIQP1hPK7HoQ6lvk68orcX3o.pdf",
-        "https://transfero.com/policy-and-terms/privacy",
-        "https://transfero.com/policy-and-terms/licenses",
-        "https://panoramacrypto.transfero.com/auditoria-independente-confirma-lastro-do-brz-superior-aos-tokens-emitidos/"
-      ],
-      "rationale": "The current issuer page links only a 31 March 2024 bank-held aggregate reserve snapshot; no fresh dated reserve composition is disclosed. Its audit claim and historical independent backing checks do not provide current whole-supply financial assurance. The whitepaper describes mint orders after BRL deposits and promises periodical proof of funds, but states no verified recurring reconciliation cadence covering all issued/treasury tokens and Reserve Manager accounts. No report dates are advanced."
-    },
-    {
-      "id": "uw-usdfc-secured-finance-4699791c1a8172a5",
-      "assetId": "usdfc-secured-finance",
-      "scope": {
-        "componentKey": "control:mint-meta:usdfc-secured-finance:64f231a10265f0186544",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "control:mint-meta:usdfc-secured-finance:64f231a10265f0186544",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:02:26Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R08)",
-      "sources": [
-        {
-          "url": "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts/contract-upgrade-history.md",
-          "observedAt": "2026-10-03T22:56:04Z",
-          "datumAsOf": "2026-09-25",
-          "location": "Execution status",
-          "excerpt": "Both transactions were successfully executed through the Safe multisig wallet on Filecoin.",
-          "assertion": "Discloses exercised Safe upgrade authority, not beneficial signer identities, independence, key custody or a signing policy for the identified 2-of-3 controller."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts.md",
-        "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts/contract-upgrade-history.md",
-        "https://docs.secured.finance/llms.txt",
-        "https://docs.secured.finance/resources/legal/risk-disclaimer.md",
-        "https://secured.finance",
-        "https://api.node.glif.io/rpc/v1",
-        "https://sourcify.dev/server/v2/contract/314/0x584c1fa4ab299ae8f7154fce5b1bea7bddacfd0b?fields=compilation,sources,proxyResolution"
-      ],
-      "rationale": "The identified owner/ProxyAdmin-owner Safe has an on-chain 2-of-3 quorum and exercised upgrade authority, but beneficial signer identities, independence, key-custody safeguards and signing policy are not disclosed. Thus the reviewer-scoped signer-safeguard question is researched non-disclosure, not missing controller identity. Addresses/quorum and published upgrade transactions cannot establish independent human control or off-chain safeguards; no favorable timelock is inferred."
-    },
-    {
-      "id": "uw-susdd-tron-dao-reserve-c122c31bff8b344e",
-      "assetId": "susdd-tron-dao-reserve",
-      "scope": {
-        "componentKey": "access:transfer",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "control",
-        "requiredDatum": "access:transfer",
-        "routeKey": null
-      },
-      "cause": "B",
-      "assertion": "required-data-public",
-      "reviewedAt": "2026-10-03T23:05:28Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R08)",
-      "sources": [
-        {
-          "url": "https://sourcify.dev/server/v2/contract/1/0xc5d6a7b61d18afa11435a889557b068bb9f29930?fields=compilation,sources,proxyResolution",
-          "observedAt": "2026-10-03T23:05:28Z",
-          "datumAsOf": null,
-          "location": "Chain 1, exact-match direct SavingsUsdd, src/dsr/SavingsUsdd.sol transferFrom()",
-          "excerpt": "emit Transfer(from, to, value);",
-          "assertion": "Exact-match direct shares transfer by local balance/allowance logic with no holder restriction. The producer has only aggregate supply and lacks measured material deployment scope; its gate rejects even both reviewed native deployments. The multi-deployment asset cannot use singleton attribution."
-        },
-        {
-          "url": "https://sourcify.dev/server/v2/contract/56/0x8ba9da757d1d66c58b1ae7e2ed6c04087348a82d?fields=compilation,sources,proxyResolution",
-          "observedAt": "2026-10-03T23:05:28Z",
-          "datumAsOf": null,
-          "location": "Chain 56, exact-match direct SavingsUsdd, src/dsr/SavingsUsdd.sol transferFrom()",
-          "excerpt": "emit Transfer(from, to, value);",
-          "assertion": "Exact-match direct shares transfer by local balance/allowance logic with no holder restriction. The producer has only aggregate supply and lacks measured material deployment scope; its gate rejects even both reviewed native deployments. The multi-deployment asset cannot use singleton attribution."
-        }
-      ]
-    },
-    {
       "id": "uw-rusd-reservoir-b88a8899f64be564",
       "assetId": "rusd-reservoir",
       "scope": {
@@ -15104,198 +13949,6 @@
         "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/why-cygnus.md"
       ],
       "rationale": "Queue-redeem end-to-end settlement maximum is unpublished. FAQ gives two business days for sales, three for conversion and normal 5-7 days; mechanics gives typically 2-5 days followed by an oracle update/claim. Policy explicitly disclaims deterministic transit timing. Website and legal terms add no funded request-to-spendable-USDC upper guarantee. Do not convert normal windows, business-day legs or oracle batching into a calendar-second maximum."
-    },
-    {
-      "id": "uw-usdm-monetrix-4666f87fa6422b40",
-      "assetId": "usdm-monetrix",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdm-monetrix:queue-redeem"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:08:53Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R83)",
-      "sources": [
-        {
-          "url": "https://doc.monetrix.xyz/resources/terms-and-disclaimer.md",
-          "observedAt": "2026-10-03T23:08:53Z",
-          "datumAsOf": null,
-          "location": "Issuer published terms / guide",
-          "excerpt": "Monetrix does not guarantee a fixed yield, fixed return, or fixed redemption timing.",
-          "assertion": "Three-day cooldown is a configurable earliest claim time, not a guaranteed final funded settlement maximum."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.monetrix.xyz/app/transparency",
-        "https://api.monetrix.xyz/data/api/collateral",
-        "https://doc.monetrix.xyz/guide/getting-started/redeem.md",
-        "https://doc.monetrix.xyz/guide/getting-started/faq.md",
-        "https://doc.monetrix.xyz/risk-and-security/audits-and-contracts.md",
-        "https://doc.monetrix.xyz/resources/terms-and-disclaimer.md"
-      ],
-      "rationale": "No end-to-end maximum for final delivered USDC is published for queue-redeem. The guide documents governance-adjustable three-day cooldown and claim call; FAQ says liquidity must be realized from positions, and current legal notice expressly denies fixed timing. This does not assert no redemption or zero capacity."
-    },
-    {
-      "id": "uw-krwq-iq-d4d7dfc23c949165",
-      "assetId": "krwq-iq",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
-        "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:krwq-iq:offchain-issuer"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:08:53Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R83)",
-      "sources": [
-        {
-          "url": "https://www.krwq.cash/terms",
-          "observedAt": "2026-10-03T23:08:53Z",
-          "datumAsOf": "2026-06-03",
-          "location": "Issuer published terms / guide",
-          "excerpt": "Access to certain features, including minting and redemption, may be restricted to whitelisted or verified participants",
-          "assertion": "Terms disclose redemption eligibility but no applicable institution/fiat-redemption fee schedule."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://www.krwq.cash/",
-        "https://www.krwq.cash/mint",
-        "https://www.krwq.cash/whitepaper.pdf",
-        "https://www.krwq.cash/transparency",
-        "https://www.krwq.cash/terms",
-        "https://www.krwq.cash/disclaimer",
-        "https://www.krwq.cash/api/custodian-assets",
-        "https://github.com/KRWQcash/.github/blob/7bf83efba994a555ca1f63b352ed28e91ff3fd44/profile/README.md"
-      ],
-      "rationale": "The exact offchain-issuer cost datum is undisclosed: no numeric institutional fiat-redemption fee, applicable formula/minimum or all-in partner/bank/FX charge schedule is published across site, mint UI, whitepaper, terms and transparency. Whitepaper network-transfer costs are not fees for institutional fiat redemption. No zero-fee inference."
-    },
-    {
-      "id": "uw-said-gaib-9c9d0a787af9334e",
-      "assetId": "said-gaib",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:said-gaib:stablecoin-redeem"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:16:10Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R83)",
-      "sources": [
-        {
-          "url": "https://drive.google.com/file/d/1GMwfOw_XXHKXOXopqU8_QGu_y5ozM9hV/preview",
-          "observedAt": "2026-10-03T23:16:10Z",
-          "datumAsOf": null,
-          "location": "sAID Vault Strategy Memorandum, p.5 Redemptions, rendered Drive preview",
-          "excerpt": "All redemptions remain subject to the liquidity, asset composition, and operational parameters determined at the sole discretion of the Company.",
-          "assertion": "Memorandum p.5 permits caps, freezes, deferral until liquidity restored and discretionary alternative payout; monthly cohort is not guaranteed final settlement."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://gaib.ai/",
-        "https://docs.gaib.ai/llms.txt",
-        "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid",
-        "https://docs.gaib.ai/products/gaib-products/staked-ai-dollar-said",
-        "https://aid.gaib.ai/transparency",
-        "https://docs.gaib.ai/products/gaib-products/transparency.md",
-        "https://docs.gaib.ai/products/gaib-products/protocol-public-api.md",
-        "https://docs.gaib.ai/legal/disclaimers-and-risk-disclosures.md",
-        "https://docs.gaib.ai/legal/terms-of-use/annex-to-gaib-term-of-use.md",
-        "https://drive.google.com/file/d/17Uy4SCY9-D-R3kf-4-atUn_9nR4HeGeC/preview",
-        "https://drive.google.com/file/d/1GMwfOw_XXHKXOXopqU8_QGu_y5ozM9hV/preview"
-      ],
-      "rationale": "The stablecoin-redeem route has no published end-to-end funded completion maximum. Current product docs schedule liquidity on month-three day one, but memorandum p.5 explicitly permits temporary freezes and deferral until liquidity returns. No enforceable SLA overrides that discretion. Source preview recovered despite disabled download; no inaccessible-source inference."
-    },
-    {
-      "id": "uw-aid-gaib-335fdbd69be631ff",
-      "assetId": "aid-gaib",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "reconciliation",
-        "pillar": "control",
-        "requiredDatum": "reconciliation",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:16:10Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R83)",
-      "sources": [
-        {
-          "url": "https://drive.google.com/file/d/17Uy4SCY9-D-R3kf-4-atUn_9nR4HeGeC/preview",
-          "observedAt": "2026-10-03T23:16:10Z",
-          "datumAsOf": "2026-09-01",
-          "location": "McMillan Woods limited-assurance report, pages 1\u20133, rendered Drive preview",
-          "excerpt": "Total Assets Reviewed: USD 18.7 million",
-          "assertion": "McMillan Woods report p.2 totals deployed GPU assets; p.3 recalculates deployed capital, not minted AID liabilities/backing on a common clock."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://gaib.ai/",
-        "https://docs.gaib.ai/llms.txt",
-        "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid",
-        "https://docs.gaib.ai/products/gaib-products/staked-ai-dollar-said",
-        "https://aid.gaib.ai/transparency",
-        "https://docs.gaib.ai/products/gaib-products/transparency.md",
-        "https://docs.gaib.ai/products/gaib-products/protocol-public-api.md",
-        "https://docs.gaib.ai/legal/disclaimers-and-risk-disclosures.md",
-        "https://docs.gaib.ai/legal/terms-of-use/annex-to-gaib-term-of-use.md",
-        "https://drive.google.com/file/d/17Uy4SCY9-D-R3kf-4-atUn_9nR4HeGeC/preview",
-        "https://drive.google.com/file/d/1GMwfOw_XXHKXOXopqU8_QGu_y5ozM9hV/preview"
-      ],
-      "rationale": "No dated whole-issued-AID supply-to-backing reconciliation and actual cadence is published. September 1 Spiceflow limited assurance covers deployed financing assets, not AID mint/burn liabilities or every chain. Dashboard separates circulating AID cash from staked AID; NAV/public API counters and deployment report do not establish the required whole-supply procedure."
-    },
-    {
-      "id": "uw-aid-gaib-2a98f8015ffcf1aa",
-      "assetId": "aid-gaib",
-      "scope": {
-        "componentKey": "reserve-composition",
-        "exposureId": null,
-        "factorKey": null,
-        "pillar": "backing",
-        "requiredDatum": "reserve-composition",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:16:10Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R83)",
-      "sources": [
-        {
-          "url": "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid.md",
-          "observedAt": "2026-10-03T23:16:10Z",
-          "datumAsOf": null,
-          "location": "Issuer published terms / guide",
-          "excerpt": "AI Dollar (AID) is a **synthetic dollar** fully backed by the U.S. Treasuries and stable assets",
-          "assertion": "Product names broad backing classes but does not publish current whole-issued-AID itemized composition/denominator."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://gaib.ai/",
-        "https://docs.gaib.ai/llms.txt",
-        "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid",
-        "https://docs.gaib.ai/products/gaib-products/staked-ai-dollar-said",
-        "https://aid.gaib.ai/transparency",
-        "https://docs.gaib.ai/products/gaib-products/transparency.md",
-        "https://docs.gaib.ai/products/gaib-products/protocol-public-api.md",
-        "https://docs.gaib.ai/legal/disclaimers-and-risk-disclosures.md",
-        "https://docs.gaib.ai/legal/terms-of-use/annex-to-gaib-term-of-use.md",
-        "https://drive.google.com/file/d/17Uy4SCY9-D-R3kf-4-atUn_9nR4HeGeC/preview",
-        "https://drive.google.com/file/d/1GMwfOw_XXHKXOXopqU8_QGu_y5ozM9hV/preview"
-      ],
-      "rationale": "No current whole-issued-AID composition is disclosed across product/API/terms, rendered dashboard and recovered September 1 deployment attestation. Cash ratio divides redeemer/minter cash by only circulating AID, excluding staked liabilities; GPU report totals assets without AID-specific attribution. Cannot normalize those scoped quantities to 100% of all issued AID."
     },
     {
       "id": "uw-nxusd-nereus-2cf669e993693ebe",
@@ -33745,6 +32398,1397 @@
         "https://midas.app/transparency?token=mapollo"
       ],
       "rationale": "The retrieved signed July 2026 mAPOLLO terms disclose realisation, redemption gates and deferred-price holdback, not an end-to-end maximum for fully paid proceeds. The conditional position-exit mandate also is not the tokenholder settlement SLA. The successfully read governing terms support the non-disclosure finding; failed access to the dynamic site is not used as evidence of silence."
+    },
+    {
+      "id": "uw-usat-tether-42433ebe4e780a73",
+      "assetId": "usat-tether",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:4a28c5b1649aad4b67f65051",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:49:35Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R01)",
+      "sources": [
+        {
+          "url": "https://learn.anchorage.com/08.31.26_USAT_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf",
+          "observedAt": "2026-10-03T23:49:35Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Schedule II, Cash, page 6",
+          "excerpt": "Demand deposit accounts at FDIC-insured depository institutions, held directly",
+          "assertion": "Discloses account class and balance, not account-specific original/remaining maturity or a universal no-fixed-maturity covenant."
+        },
+        {
+          "url": "https://www.federalreserve.gov/frrs/regulations/section-2042-definitions.htm",
+          "observedAt": "2026-10-03T23:49:35Z",
+          "datumAsOf": null,
+          "location": "12 CFR 204.2(b)(1)",
+          "excerpt": "Demand deposit means a deposit that is payable on demand, or a deposit issued with an original maturity or required notice period of less than seven days",
+          "assertion": "Unlike wave 1, the legal definition does not prove every demand deposit has no fixed maturity; exact bank-account terms are needed."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://usat.io/",
+        "https://usat.io/terms/",
+        "https://www.anchorage.com/usat-policies-disclosures",
+        "https://www.anchorage.com/platform/usat-reserve-attestations",
+        "https://learn.anchorage.com/08.31.26_USAT_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf",
+        "https://docs.anchorage.com/knowledge-base/platform/users/stablecoins",
+        "https://www.federalreserve.gov/frrs/regulations/section-2042-definitions.htm"
+      ],
+      "rationale": "The exact maturityDaysMax for the August demand-deposit slice is undisclosed across issuer policy/terms, reserve archive/current full report and stablecoin docs. Wave 1 inferred no fixed maturity from the account label; Federal Reserve 204.2(b)(1) expressly also includes deposits originally maturing in less than seven days. No exact account contracts or universal no-fixed-maturity covenant are published. Neither zero nor six days is an observed whole-slice maximum."
+    },
+    {
+      "id": "uw-mxnt-tether-92b4f5b791b4b92c",
+      "assetId": "mxnt-tether",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:63270a616c9f076f331322d9",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:07Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R01)",
+      "sources": [
+        {
+          "url": "https://tether.to/en/legal/",
+          "observedAt": "2026-10-03T22:55:50Z",
+          "datumAsOf": "2026-02-26",
+          "location": "Section 4.1",
+          "excerpt": "The Reserves are comprised of cash, cash equivalents and other assets and may include loan receivables and other assets from Affiliates.",
+          "assertion": "The shared reserve basket does not disclose an MXNT-specific allocation, maximum maturity or whole-basket liquidation bound."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://tether.to/en/legal/",
+        "https://tether.to/en/faqs/",
+        "https://tether.to/en/how-it-works/",
+        "https://tether.to/en/transparency/?tab=reports",
+        "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+        "https://tether.to/public/Relevant_Information_Document_-_Tether_International%2C_S.A._de_C.V..pdf"
+      ],
+      "rationale": "MXNT-specific maturityDaysMax and liquidityHorizon are not disclosed in current legal terms, issuer FAQ, transparency/report index, full Q2 reserve report or CNAD-filed RID. They disclose a shared changing basket, not MXNT-specific holdings or a complete realization deadline. USDT category maturities cannot be imported as an MXNT maximum."
+    },
+    {
+      "id": "uw-mxnt-tether-dc82f3c48ca42263",
+      "assetId": "mxnt-tether",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:63270a616c9f076f331322d9",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:07Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R01)",
+      "sources": [
+        {
+          "url": "https://tether.to/en/legal/",
+          "observedAt": "2026-10-03T22:55:50Z",
+          "datumAsOf": "2026-02-26",
+          "location": "Section 4.1",
+          "excerpt": "The Reserves are comprised of cash, cash equivalents and other assets and may include loan receivables and other assets from Affiliates.",
+          "assertion": "The shared reserve basket does not disclose an MXNT-specific allocation, maximum maturity or whole-basket liquidation bound."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://tether.to/en/legal/",
+        "https://tether.to/en/faqs/",
+        "https://tether.to/en/how-it-works/",
+        "https://tether.to/en/transparency/?tab=reports",
+        "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+        "https://tether.to/public/Relevant_Information_Document_-_Tether_International%2C_S.A._de_C.V..pdf"
+      ],
+      "rationale": "MXNT-specific maturityDaysMax and liquidityHorizon are not disclosed in current legal terms, issuer FAQ, transparency/report index, full Q2 reserve report or CNAD-filed RID. They disclose a shared changing basket, not MXNT-specific holdings or a complete realization deadline. USDT category maturities cannot be imported as an MXNT maximum."
+    },
+    {
+      "id": "uw-usdt-tether-ff8af77bfdec2f9a",
+      "assetId": "usdt-tether",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:bbe3851d64bce9dedc4fb999",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:07Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R01)",
+      "sources": [
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T22:55:49Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 9 footnote 7",
+          "excerpt": "The \u201cCash & Bank Deposits\u201d category comprises cash deposits at financial institutions.",
+          "assertion": "No demand/term split or maximum term of the whole deposit slice is stated."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T22:55:49Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 9 footnote 11",
+          "excerpt": "The \u201cPublic Equities\u201d category comprises indirect gold, bitcoin, and other asset exposure",
+          "assertion": "The report does not identify instruments or state contractual maturity applicability/maximum term of the indirect exposures."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://tether.to/en/legal/",
+        "https://tether.to/en/faqs/",
+        "https://tether.to/en/how-it-works/",
+        "https://tether.to/en/transparency/?tab=reports",
+        "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+        "https://tether.to/public/Relevant_Information_Document_-_Tether_International%2C_S.A._de_C.V..pdf"
+      ],
+      "rationale": "Exact slice maximum maturities for cash/bank deposits and indirect public-equity exposures are not published in the full report, current transparency disclosures, FAQ, legal terms or CNAD-filed RID. Cash-deposit wording does not prove all are demand deposits; active-market indirect exposures do not establish instrument-level maturity or applicability."
+    },
+    {
+      "id": "uw-usdt-tether-ae7153e3f83418f4",
+      "assetId": "usdt-tether",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:c271d604eb64f6f89594867f",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:07Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R01)",
+      "sources": [
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T22:55:49Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 9 footnote 7",
+          "excerpt": "The \u201cCash & Bank Deposits\u201d category comprises cash deposits at financial institutions.",
+          "assertion": "No demand/term split or maximum term of the whole deposit slice is stated."
+        },
+        {
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+          "observedAt": "2026-10-03T22:55:49Z",
+          "datumAsOf": "2026-06-30",
+          "location": "PDF page 9 footnote 11",
+          "excerpt": "The \u201cPublic Equities\u201d category comprises indirect gold, bitcoin, and other asset exposure",
+          "assertion": "The report does not identify instruments or state contractual maturity applicability/maximum term of the indirect exposures."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://tether.to/en/legal/",
+        "https://tether.to/en/faqs/",
+        "https://tether.to/en/how-it-works/",
+        "https://tether.to/en/transparency/?tab=reports",
+        "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+        "https://tether.to/public/Relevant_Information_Document_-_Tether_International%2C_S.A._de_C.V..pdf"
+      ],
+      "rationale": "Exact slice maximum maturities for cash/bank deposits and indirect public-equity exposures are not published in the full report, current transparency disclosures, FAQ, legal terms or CNAD-filed RID. Cash-deposit wording does not prove all are demand deposits; active-market indirect exposures do not establish instrument-level maturity or applicability."
+    },
+    {
+      "id": "uw-usdt-tether-a5ac49ecd1562e98",
+      "assetId": "usdt-tether",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdt-tether:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:07Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R01)",
+      "sources": [
+        {
+          "url": "https://tether.to/en/redeem-tethers-to-fiat-currency/",
+          "observedAt": "2026-10-03T22:55:50Z",
+          "datumAsOf": null,
+          "location": "Step 3",
+          "excerpt": "You will also be notified when the request has been processed.",
+          "assertion": "The step-by-step bank redemption guide has no maximum request-to-final-bank-credit interval."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://tether.to/en/legal/",
+        "https://tether.to/en/faqs/",
+        "https://tether.to/en/how-it-works/",
+        "https://tether.to/en/transparency/?tab=reports",
+        "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+        "https://tether.to/public/Relevant_Information_Document_-_Tether_International%2C_S.A._de_C.V..pdf",
+        "https://tether.to/en/knowledge-base/",
+        "https://tether.to/en/redeem-tethers-to-fiat-currency/"
+      ],
+      "rationale": "USDT direct fiat redemption terms and exact bank redemption guide disclose verified bank payment, KYC and discretionary suspensions, not an end-to-end final-bank-credit maximum SLA. RID, legal terms and FAQs also provide no such bound; token transfer speed is not fiat completion."
+    },
+    {
+      "id": "uw-xaut-tether-dca1228a7aacb8b6",
+      "assetId": "xaut-tether",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:xaut-tether:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:07Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R01)",
+      "sources": [
+        {
+          "url": "https://gold.tether.to/legal/termsofservice",
+          "observedAt": "2026-10-03T22:56:07Z",
+          "datumAsOf": "2025-09-09",
+          "location": "Section 5.3",
+          "excerpt": "However, it may take several business days for any redemption to be completed.",
+          "assertion": "Several business days is not a maximum for physical delivery, sale/wire or whole-reserve realization."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://gold.tether.to/faq",
+        "https://gold.tether.to/legal/termsofservice",
+        "https://gold.tether.to/legal/feeschedule",
+        "https://gold.tether.to/Relevant%20Information%20Document%20-%20TG%20Commodities,%20S.A.%20de%20C.V.%20(ENG).pdf",
+        "https://gold.tether.to/docs/reports/attestations/ISAE_3000R_-_Opinion_TGRR_30.06.2026_RC187322026DV0170.pdf"
+      ],
+      "rationale": "Exact physical-redemption settlement maximum and whole-slice liquidityHorizon are undisclosed. Terms promise commercially reasonable processing with possible delays; full-bar delivery and Swiss gold sale/wire have no maximum. FAQ, fee schedule, reserve report and CNAD-filed RID do not supply a full-position realization bound. Gold market availability is not instant whole-slice USD liquidity."
+    },
+    {
+      "id": "uw-xaut-tether-adcec5b7eb565f8e",
+      "assetId": "xaut-tether",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:3cf818dc42a5e2c91af7720d",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:07Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R01)",
+      "sources": [
+        {
+          "url": "https://gold.tether.to/legal/termsofservice",
+          "observedAt": "2026-10-03T22:56:07Z",
+          "datumAsOf": "2025-09-09",
+          "location": "Section 5.3",
+          "excerpt": "However, it may take several business days for any redemption to be completed.",
+          "assertion": "Several business days is not a maximum for physical delivery, sale/wire or whole-reserve realization."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://gold.tether.to/faq",
+        "https://gold.tether.to/legal/termsofservice",
+        "https://gold.tether.to/legal/feeschedule",
+        "https://gold.tether.to/Relevant%20Information%20Document%20-%20TG%20Commodities,%20S.A.%20de%20C.V.%20(ENG).pdf",
+        "https://gold.tether.to/docs/reports/attestations/ISAE_3000R_-_Opinion_TGRR_30.06.2026_RC187322026DV0170.pdf"
+      ],
+      "rationale": "Exact physical-redemption settlement maximum and whole-slice liquidityHorizon are undisclosed. Terms promise commercially reasonable processing with possible delays; full-bar delivery and Swiss gold sale/wire have no maximum. FAQ, fee schedule, reserve report and CNAD-filed RID do not supply a full-position realization bound. Gold market availability is not instant whole-slice USD liquidity."
+    },
+    {
+      "id": "uw-xaut-tether-a54258f4e7371188",
+      "assetId": "xaut-tether",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:xaut-tether:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:07Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R01)",
+      "sources": [
+        {
+          "url": "https://gold.tether.to/legal/feeschedule",
+          "observedAt": "2026-10-03T22:56:07Z",
+          "datumAsOf": "2025-01-27",
+          "location": "Footnote 4",
+          "excerpt": "Physical delivery of the bullion bar(s) requires payment of fees to defray the associated delivery cost.",
+          "assertion": "The 25-bps base fee is disclosed but delivery surcharge lacks a numerical schedule or maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://gold.tether.to/faq",
+        "https://gold.tether.to/legal/termsofservice",
+        "https://gold.tether.to/legal/feeschedule",
+        "https://gold.tether.to/Relevant%20Information%20Document%20-%20TG%20Commodities,%20S.A.%20de%20C.V.%20(ENG).pdf",
+        "https://gold.tether.to/docs/reports/attestations/ISAE_3000R_-_Opinion_TGRR_30.06.2026_RC187322026DV0170.pdf"
+      ],
+      "rationale": "Exact total physical-redemption cost remains undisclosed: schedule gives 25 bps plus applicable fees, with delivery cost and potential broker mark-up but no numeric surcharge formula or maximum. Base fee is already modeled; this partial formula is not the missing complete same-notional cost, and is not a B justification."
+    },
+    {
+      "id": "uw-usat-tether-6ba19618ecac9828",
+      "assetId": "usat-tether",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usat-tether:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:56:07Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R01)",
+      "sources": [
+        {
+          "url": "https://www.anchorage.com/usat-policies-disclosures",
+          "observedAt": "2026-10-03T22:55:50Z",
+          "datumAsOf": "2026-08-21",
+          "location": "Issuance and Redemption Policy",
+          "excerpt": "net of any fees disclosed in the USAT Fee Schedule.",
+          "assertion": "The USAT policy references fees but does not supply the USAT table."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://usat.io/",
+        "https://usat.io/terms/",
+        "https://www.anchorage.com/terms-and-disclosures",
+        "https://www.anchorage.com/usat-policies-disclosures",
+        "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-terms",
+        "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-service-fee-schedule",
+        "https://docs.anchorage.com/knowledge-base/platform/users/stablecoins",
+        "https://www.anchorage.com/platform/usat-reserve-attestations"
+      ],
+      "rationale": "Exact USAT issuer redemption fee schedule is not publicly supplied on issuer legal center, USAT policies, supported-stablecoin docs, website terms or reserve archive. The public covered-stablecoin fee table only specifies USDtb/USDPT/USDGO; USAT requires separate onboarding. Neither par redemption nor other assets zero fees establishes USAT cost."
+    },
+    {
+      "id": "uw-usdd-tron-dao-reserve-138c319fe3470eb2",
+      "assetId": "usdd-tron-dao-reserve",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:87935c7af5eb97539e6ff53f",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:26Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R08)",
+      "sources": [
+        {
+          "url": "https://docs.usdd.io/system-architecture/smart-allocator.md",
+          "observedAt": "2026-10-03T22:55:04Z",
+          "datumAsOf": null,
+          "location": "Smart Allocator introduction",
+          "excerpt": "Smart Allocator is a yield-sharing initiative where capital from USDD\u2019s cash reserve is deployed into investment opportunities to earn returns in the form of interest and platform rewards.",
+          "assertion": "Describes investment deployment, not a guaranteed maximum time to realize the entire Smart Allocator reserve slice."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.usdd.io/llms.txt",
+        "https://docs.usdd.io/system-architecture/smart-allocator.md",
+        "https://docs.usdd.io/introduction/collateral-asset-contract-addresses.md",
+        "https://openapi.usdd.io/api/v1/smart-allocator/detail-overview",
+        "https://docs.usdd.io/legals/terms-of-use.md",
+        "https://www.chainsecurity.com/security-audit/usdd-rwa-smart-contracts"
+      ],
+      "rationale": "No maximum liquidityHorizon for realization of the entire Smart Allocator slice is published. Official docs describe team-selected investments; the current API identifies Aave/JustLend/Spark/Plasma holdings, earnings and rates, not a whole-slice realization guarantee. Interface terms and the access-control audit add no bound. Liquid investment marketing or one protocol withdrawal path cannot establish the slice-wide horizon."
+    },
+    {
+      "id": "uw-meusd-mezo-881509c484b0c573",
+      "assetId": "meusd-mezo",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:26756f39072e8bc2e09da2d2",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:26Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R08)",
+      "sources": [
+        {
+          "url": "https://mezo.org/docs/developers/musd/musd-redemptions/",
+          "observedAt": "2026-10-03T22:56:02Z",
+          "datumAsOf": null,
+          "location": "Common Issues: TCR condition",
+          "excerpt": "System TCR is below 110%. Wait until it recovers.",
+          "assertion": "Redemption is conditional on system collateralization and eligible Troves; no maximum realization horizon for the entire ActivePool BTC slice is specified."
+        },
+        {
+          "url": "https://mezo.org/legal/terms",
+          "observedAt": "2026-10-03T22:56:03Z",
+          "datumAsOf": "2026-03-16",
+          "location": "Section 3.1.1 MUSD Protocol",
+          "excerpt": "We are not responsible for minting nor redemption of MUSD, which instead occurs through smart contract interactions.",
+          "assertion": "Terms describe automated mint/redemption; they do not add a financial assurance or whole-supply reconciliation report/cadence."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://mezo.org/docs/developers/musd/",
+        "https://mezo.org/docs/developers/musd/musd-redemptions/",
+        "https://mezo.org/docs/users/borrow/",
+        "https://mezo.org/docs/users/resources/audits/",
+        "https://mezo.org/legal/terms",
+        "https://mezo.org/docs/users/resources/contracts-reference"
+      ],
+      "rationale": "No maximum liquidityHorizon for the entire BTC-in-ActivePool reserve slice is specified. Redemptions require TCR >=110%, eligible Troves and feasible iteration/gas limits; some MUSD can remain unredeemed. Terms disclaim availability/reliability. Native BTC being transferable and an individual successful redemption do not bound realization of the whole protocol collateral slice."
+    },
+    {
+      "id": "uw-meusd-mezo-0a03c0b848509961",
+      "assetId": "meusd-mezo",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:26Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R08)",
+      "sources": [
+        {
+          "url": "https://mezo.org/docs/developers/musd/",
+          "observedAt": "2026-10-03T22:56:02Z",
+          "datumAsOf": null,
+          "location": "Architectural Overview",
+          "excerpt": "The BTC is routed to the `ActivePool`, where it stays until a user either:",
+          "assertion": "Documents per-Trove collateral/debt mechanisms, not a dated whole-supply reconciliation cadence covering owner-authorized mint paths and bridged liabilities."
+        },
+        {
+          "url": "https://mezo.org/legal/terms",
+          "observedAt": "2026-10-03T22:56:03Z",
+          "datumAsOf": "2026-03-16",
+          "location": "Section 3.1.1 MUSD Protocol",
+          "excerpt": "We are not responsible for minting nor redemption of MUSD, which instead occurs through smart contract interactions.",
+          "assertion": "Terms describe automated mint/redemption; they do not add a financial assurance or whole-supply reconciliation report/cadence."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://mezo.org/docs/developers/musd/",
+        "https://mezo.org/docs/users/resources/contracts-reference",
+        "https://mezo.org/docs/users/resources/audits/",
+        "https://mezo.org/legal/terms",
+        "https://raw.githubusercontent.com/mezo-org/ntt-bridge-musd-mainnet/main/deployment.json",
+        "https://api.explorer.mezo.org/api/v2/smart-contracts/0x3ea98a11d349b515e628c1cc74ca999230744c43"
+      ],
+      "rationale": "No whole-supply reconciliation procedure and actual recurring cadence is published for all MUSD mint paths and cross-chain liabilities on a common backing observation clock. Docs disclose Trove accounting; security audits are not financial reconciliation. The owner-controlled mint list additionally authorizes InterestRateManager and EnclaveDebtManager. Per-position debt/fees and NTT lock/burn mechanics do not establish full supply-to-backing assurance or justify not-applicable."
+    },
+    {
+      "id": "uw-brz-transfero-3eac793dc2bddbe7",
+      "assetId": "brz-transfero",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:26Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R08)",
+      "sources": [
+        {
+          "url": "https://transfero.com/brz-stablecoin",
+          "observedAt": "2026-10-03T22:56:03Z",
+          "datumAsOf": null,
+          "location": "Transparency section",
+          "excerpt": "On-chain activity is publicly verifiable, with independent audits conducted by Parsiq.",
+          "assertion": "Nearby audit claim has no current whole-supply reconciliation date/cadence; the linked report is a 31 March 2024 snapshot."
+        },
+        {
+          "url": "https://framerusercontent.com/assets/C3GwAo6yZKzxjtKD1yDo43k0rAg.pdf",
+          "observedAt": "2026-10-03T22:56:03Z",
+          "datumAsOf": "2024-03-31",
+          "location": "Page 2, reserves composition",
+          "excerpt": "The BRZ reserve is held in custody at a financial institution authorized by the Central Bank of Brazil.",
+          "assertion": "The current issuer-linked reserve report discloses a bank-held aggregate at 31 March 2024, not a fresh reserve composition or current whole-supply assurance procedure."
+        },
+        {
+          "url": "https://framerusercontent.com/assets/GFtIQP1hPK7HoQ6lvk68orcX3o.pdf",
+          "observedAt": "2026-10-03T23:02:26Z",
+          "datumAsOf": null,
+          "location": "Section 6.2.2 Reserve Managers",
+          "excerpt": "A periodical proof of funds shall be disclosed for checking the existence of enough funds to back the tokens.",
+          "assertion": "Promises periodic proof of funds without stating a verified recurring cadence, whole-liability reconciliation procedure, or a current dated report."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://transfero.com/brz-stablecoin",
+        "https://framerusercontent.com/assets/C3GwAo6yZKzxjtKD1yDo43k0rAg.pdf",
+        "https://framerusercontent.com/assets/GFtIQP1hPK7HoQ6lvk68orcX3o.pdf",
+        "https://transfero.com/policy-and-terms/privacy",
+        "https://transfero.com/policy-and-terms/licenses",
+        "https://panoramacrypto.transfero.com/auditoria-independente-confirma-lastro-do-brz-superior-aos-tokens-emitidos/"
+      ],
+      "rationale": "The current issuer page links only a 31 March 2024 bank-held aggregate reserve snapshot; no fresh dated reserve composition is disclosed. Its audit claim and historical independent backing checks do not provide current whole-supply financial assurance. The whitepaper describes mint orders after BRL deposits and promises periodical proof of funds, but states no verified recurring reconciliation cadence covering all issued/treasury tokens and Reserve Manager accounts. No report dates are advanced."
+    },
+    {
+      "id": "uw-brz-transfero-f14034b375f0f2e8",
+      "assetId": "brz-transfero",
+      "scope": {
+        "componentKey": "mechanism-review:assuranceAndReconciliation",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "mechanism-review:assuranceAndReconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:26Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R08)",
+      "sources": [
+        {
+          "url": "https://transfero.com/brz-stablecoin",
+          "observedAt": "2026-10-03T22:56:03Z",
+          "datumAsOf": null,
+          "location": "Transparency section",
+          "excerpt": "On-chain activity is publicly verifiable, with independent audits conducted by Parsiq.",
+          "assertion": "Nearby audit claim has no current whole-supply reconciliation date/cadence; the linked report is a 31 March 2024 snapshot."
+        },
+        {
+          "url": "https://framerusercontent.com/assets/C3GwAo6yZKzxjtKD1yDo43k0rAg.pdf",
+          "observedAt": "2026-10-03T22:56:03Z",
+          "datumAsOf": "2024-03-31",
+          "location": "Page 2, reserves composition",
+          "excerpt": "The BRZ reserve is held in custody at a financial institution authorized by the Central Bank of Brazil.",
+          "assertion": "The current issuer-linked reserve report discloses a bank-held aggregate at 31 March 2024, not a fresh reserve composition or current whole-supply assurance procedure."
+        },
+        {
+          "url": "https://framerusercontent.com/assets/GFtIQP1hPK7HoQ6lvk68orcX3o.pdf",
+          "observedAt": "2026-10-03T23:02:26Z",
+          "datumAsOf": null,
+          "location": "Section 6.2.2 Reserve Managers",
+          "excerpt": "A periodical proof of funds shall be disclosed for checking the existence of enough funds to back the tokens.",
+          "assertion": "Promises periodic proof of funds without stating a verified recurring cadence, whole-liability reconciliation procedure, or a current dated report."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://transfero.com/brz-stablecoin",
+        "https://framerusercontent.com/assets/C3GwAo6yZKzxjtKD1yDo43k0rAg.pdf",
+        "https://framerusercontent.com/assets/GFtIQP1hPK7HoQ6lvk68orcX3o.pdf",
+        "https://transfero.com/policy-and-terms/privacy",
+        "https://transfero.com/policy-and-terms/licenses",
+        "https://panoramacrypto.transfero.com/auditoria-independente-confirma-lastro-do-brz-superior-aos-tokens-emitidos/"
+      ],
+      "rationale": "The current issuer page links only a 31 March 2024 bank-held aggregate reserve snapshot; no fresh dated reserve composition is disclosed. Its audit claim and historical independent backing checks do not provide current whole-supply financial assurance. The whitepaper describes mint orders after BRL deposits and promises periodical proof of funds, but states no verified recurring reconciliation cadence covering all issued/treasury tokens and Reserve Manager accounts. No report dates are advanced."
+    },
+    {
+      "id": "uw-brz-transfero-21c1a9e164ae43e4",
+      "assetId": "brz-transfero",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:26Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R08)",
+      "sources": [
+        {
+          "url": "https://transfero.com/brz-stablecoin",
+          "observedAt": "2026-10-03T22:56:03Z",
+          "datumAsOf": null,
+          "location": "Transparency section",
+          "excerpt": "On-chain activity is publicly verifiable, with independent audits conducted by Parsiq.",
+          "assertion": "Nearby audit claim has no current whole-supply reconciliation date/cadence; the linked report is a 31 March 2024 snapshot."
+        },
+        {
+          "url": "https://framerusercontent.com/assets/C3GwAo6yZKzxjtKD1yDo43k0rAg.pdf",
+          "observedAt": "2026-10-03T22:56:03Z",
+          "datumAsOf": "2024-03-31",
+          "location": "Page 2, reserves composition",
+          "excerpt": "The BRZ reserve is held in custody at a financial institution authorized by the Central Bank of Brazil.",
+          "assertion": "The current issuer-linked reserve report discloses a bank-held aggregate at 31 March 2024, not a fresh reserve composition or current whole-supply assurance procedure."
+        },
+        {
+          "url": "https://framerusercontent.com/assets/GFtIQP1hPK7HoQ6lvk68orcX3o.pdf",
+          "observedAt": "2026-10-03T23:02:26Z",
+          "datumAsOf": null,
+          "location": "Section 6.2.2 Reserve Managers",
+          "excerpt": "A periodical proof of funds shall be disclosed for checking the existence of enough funds to back the tokens.",
+          "assertion": "Promises periodic proof of funds without stating a verified recurring cadence, whole-liability reconciliation procedure, or a current dated report."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://transfero.com/brz-stablecoin",
+        "https://framerusercontent.com/assets/C3GwAo6yZKzxjtKD1yDo43k0rAg.pdf",
+        "https://framerusercontent.com/assets/GFtIQP1hPK7HoQ6lvk68orcX3o.pdf",
+        "https://transfero.com/policy-and-terms/privacy",
+        "https://transfero.com/policy-and-terms/licenses",
+        "https://panoramacrypto.transfero.com/auditoria-independente-confirma-lastro-do-brz-superior-aos-tokens-emitidos/"
+      ],
+      "rationale": "The current issuer page links only a 31 March 2024 bank-held aggregate reserve snapshot; no fresh dated reserve composition is disclosed. Its audit claim and historical independent backing checks do not provide current whole-supply financial assurance. The whitepaper describes mint orders after BRL deposits and promises periodical proof of funds, but states no verified recurring reconciliation cadence covering all issued/treasury tokens and Reserve Manager accounts. No report dates are advanced."
+    },
+    {
+      "id": "uw-usdfc-secured-finance-4699791c1a8172a5",
+      "assetId": "usdfc-secured-finance",
+      "scope": {
+        "componentKey": "control:mint-meta:usdfc-secured-finance:64f231a10265f0186544",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "control:mint-meta:usdfc-secured-finance:64f231a10265f0186544",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:02:26Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R08)",
+      "sources": [
+        {
+          "url": "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts/contract-upgrade-history.md",
+          "observedAt": "2026-10-03T22:56:04Z",
+          "datumAsOf": "2026-09-25",
+          "location": "Execution status",
+          "excerpt": "Both transactions were successfully executed through the Safe multisig wallet on Filecoin.",
+          "assertion": "Discloses exercised Safe upgrade authority, not beneficial signer identities, independence, key custody or a signing policy for the identified 2-of-3 controller."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts.md",
+        "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts/contract-upgrade-history.md",
+        "https://docs.secured.finance/llms.txt",
+        "https://docs.secured.finance/resources/legal/risk-disclaimer.md",
+        "https://secured.finance",
+        "https://api.node.glif.io/rpc/v1",
+        "https://sourcify.dev/server/v2/contract/314/0x584c1fa4ab299ae8f7154fce5b1bea7bddacfd0b?fields=compilation,sources,proxyResolution"
+      ],
+      "rationale": "The identified owner/ProxyAdmin-owner Safe has an on-chain 2-of-3 quorum and exercised upgrade authority, but beneficial signer identities, independence, key-custody safeguards and signing policy are not disclosed. Thus the reviewer-scoped signer-safeguard question is researched non-disclosure, not missing controller identity. Addresses/quorum and published upgrade transactions cannot establish independent human control or off-chain safeguards; no favorable timelock is inferred."
+    },
+    {
+      "id": "uw-susdd-tron-dao-reserve-c122c31bff8b344e",
+      "assetId": "susdd-tron-dao-reserve",
+      "scope": {
+        "componentKey": "access:transfer",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "control",
+        "requiredDatum": "access:transfer",
+        "routeKey": null
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-03T23:05:28Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R08)",
+      "sources": [
+        {
+          "url": "https://sourcify.dev/server/v2/contract/1/0xc5d6a7b61d18afa11435a889557b068bb9f29930?fields=compilation,sources,proxyResolution",
+          "observedAt": "2026-10-03T23:05:28Z",
+          "datumAsOf": null,
+          "location": "Chain 1, exact-match direct SavingsUsdd, src/dsr/SavingsUsdd.sol transferFrom()",
+          "excerpt": "emit Transfer(from, to, value);",
+          "assertion": "Exact-match direct shares transfer by local balance/allowance logic with no holder restriction. The producer has only aggregate supply and lacks measured material deployment scope; its gate rejects even both reviewed native deployments. The multi-deployment asset cannot use singleton attribution."
+        },
+        {
+          "url": "https://sourcify.dev/server/v2/contract/56/0x8ba9da757d1d66c58b1ae7e2ed6c04087348a82d?fields=compilation,sources,proxyResolution",
+          "observedAt": "2026-10-03T23:05:28Z",
+          "datumAsOf": null,
+          "location": "Chain 56, exact-match direct SavingsUsdd, src/dsr/SavingsUsdd.sol transferFrom()",
+          "excerpt": "emit Transfer(from, to, value);",
+          "assertion": "Exact-match direct shares transfer by local balance/allowance logic with no holder restriction. The producer has only aggregate supply and lacks measured material deployment scope; its gate rejects even both reviewed native deployments. The multi-deployment asset cannot use singleton attribution."
+        }
+      ]
+    },
+    {
+      "id": "uw-usdh-hermetica-851032530e21fc36",
+      "assetId": "usdh-hermetica",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:8f4df462b8245ee19d12626d",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R31)",
+      "sources": [
+        {
+          "url": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026",
+          "observedAt": "2026-10-03T22:54:53Z",
+          "datumAsOf": "2026-09-30",
+          "location": "Location balances and STRCx itemization",
+          "excerpt": "At 14:00 UTC September 30, there was $8,036.50 in the Redeeming Reserve on Stacks, $1,501,041.77 in the Ethereum Settlement Wallet, and $100,148.12 in the Reserve Fund.",
+          "assertion": "Publishes location totals but no finite maximum maturity or whole-slice realization horizon for the unitemized Stacks, Copper and other settlement-wallet positions."
+        },
+        {
+          "url": "https://docs.hermetica.fi/usdh/risk-disclosures/liquidity-risk.md",
+          "observedAt": "2026-10-03T22:54:53Z",
+          "datumAsOf": null,
+          "location": "Liquidity Risk",
+          "excerpt": "If for any reason Hermetica is not able to source enough liquidity to either increase or unwind a derivative position, it will not be able to either mint or redeem USDh tokens.",
+          "assertion": "Describes unwind restrictions, not an enforceable per-location liquidity horizon or maturity maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026",
+        "https://docs.hermetica.fi/usdh/how-it-works/backing.md",
+        "https://app.hermetica.fi/transparency/usdh/reserves",
+        "https://docs.hermetica.fi/usdh/how-it-works/security.md",
+        "https://docs.hermetica.fi/usdh/risk-disclosures/liquidity-risk.md",
+        "https://docs.hermetica.fi/resources/legal/terms-of-service.md",
+        "https://github.com/hermetica-fi/hermetica-contracts/blob/master/mainnet/contracts/usdh/protocol/redeeming-reserve-v1-2.clar"
+      ],
+      "rationale": "The September report and signed Copper image disclose account totals (Copper aggregate BTC/USDT/USDC including P&L), not the residual instruments, lock terms or per-slice maximum maturity and realization horizon. Backing archive, live dashboard, custody design, liquidity risks, legal terms and reserve transfer code provide no such bounds for these three scoped residuals. Generic OES recovery and manager-authorized transfers do not prove the entire positions immediately realizable."
+    },
+    {
+      "id": "uw-usdh-hermetica-c7087430f918d783",
+      "assetId": "usdh-hermetica",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:8f4df462b8245ee19d12626d",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R31)",
+      "sources": [
+        {
+          "url": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026",
+          "observedAt": "2026-10-03T22:54:53Z",
+          "datumAsOf": "2026-09-30",
+          "location": "Location balances and STRCx itemization",
+          "excerpt": "At 14:00 UTC September 30, there was $8,036.50 in the Redeeming Reserve on Stacks, $1,501,041.77 in the Ethereum Settlement Wallet, and $100,148.12 in the Reserve Fund.",
+          "assertion": "Publishes location totals but no finite maximum maturity or whole-slice realization horizon for the unitemized Stacks, Copper and other settlement-wallet positions."
+        },
+        {
+          "url": "https://docs.hermetica.fi/usdh/risk-disclosures/liquidity-risk.md",
+          "observedAt": "2026-10-03T22:54:53Z",
+          "datumAsOf": null,
+          "location": "Liquidity Risk",
+          "excerpt": "If for any reason Hermetica is not able to source enough liquidity to either increase or unwind a derivative position, it will not be able to either mint or redeem USDh tokens.",
+          "assertion": "Describes unwind restrictions, not an enforceable per-location liquidity horizon or maturity maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026",
+        "https://docs.hermetica.fi/usdh/how-it-works/backing.md",
+        "https://app.hermetica.fi/transparency/usdh/reserves",
+        "https://docs.hermetica.fi/usdh/how-it-works/security.md",
+        "https://docs.hermetica.fi/usdh/risk-disclosures/liquidity-risk.md",
+        "https://docs.hermetica.fi/resources/legal/terms-of-service.md",
+        "https://github.com/hermetica-fi/hermetica-contracts/blob/master/mainnet/contracts/usdh/protocol/redeeming-reserve-v1-2.clar"
+      ],
+      "rationale": "The September report and signed Copper image disclose account totals (Copper aggregate BTC/USDT/USDC including P&L), not the residual instruments, lock terms or per-slice maximum maturity and realization horizon. Backing archive, live dashboard, custody design, liquidity risks, legal terms and reserve transfer code provide no such bounds for these three scoped residuals. Generic OES recovery and manager-authorized transfers do not prove the entire positions immediately realizable."
+    },
+    {
+      "id": "uw-usdh-hermetica-3f357368dd8b15c4",
+      "assetId": "usdh-hermetica",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:d72b0bc8bcdfd369c0c261da",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R31)",
+      "sources": [
+        {
+          "url": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026",
+          "observedAt": "2026-10-03T22:54:53Z",
+          "datumAsOf": "2026-09-30",
+          "location": "Location balances and STRCx itemization",
+          "excerpt": "At 14:00 UTC September 30, there was $8,036.50 in the Redeeming Reserve on Stacks, $1,501,041.77 in the Ethereum Settlement Wallet, and $100,148.12 in the Reserve Fund.",
+          "assertion": "Publishes location totals but no finite maximum maturity or whole-slice realization horizon for the unitemized Stacks, Copper and other settlement-wallet positions."
+        },
+        {
+          "url": "https://docs.hermetica.fi/usdh/risk-disclosures/liquidity-risk.md",
+          "observedAt": "2026-10-03T22:54:53Z",
+          "datumAsOf": null,
+          "location": "Liquidity Risk",
+          "excerpt": "If for any reason Hermetica is not able to source enough liquidity to either increase or unwind a derivative position, it will not be able to either mint or redeem USDh tokens.",
+          "assertion": "Describes unwind restrictions, not an enforceable per-location liquidity horizon or maturity maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026",
+        "https://docs.hermetica.fi/usdh/how-it-works/backing.md",
+        "https://app.hermetica.fi/transparency/usdh/reserves",
+        "https://docs.hermetica.fi/usdh/how-it-works/security.md",
+        "https://docs.hermetica.fi/usdh/risk-disclosures/liquidity-risk.md",
+        "https://docs.hermetica.fi/resources/legal/terms-of-service.md",
+        "https://github.com/hermetica-fi/hermetica-contracts/blob/master/mainnet/contracts/usdh/protocol/redeeming-reserve-v1-2.clar"
+      ],
+      "rationale": "The September report and signed Copper image disclose account totals (Copper aggregate BTC/USDT/USDC including P&L), not the residual instruments, lock terms or per-slice maximum maturity and realization horizon. Backing archive, live dashboard, custody design, liquidity risks, legal terms and reserve transfer code provide no such bounds for these three scoped residuals. Generic OES recovery and manager-authorized transfers do not prove the entire positions immediately realizable."
+    },
+    {
+      "id": "uw-usdh-hermetica-15cb6c7e1204e57f",
+      "assetId": "usdh-hermetica",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:d72b0bc8bcdfd369c0c261da",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R31)",
+      "sources": [
+        {
+          "url": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026",
+          "observedAt": "2026-10-03T22:54:53Z",
+          "datumAsOf": "2026-09-30",
+          "location": "Location balances and STRCx itemization",
+          "excerpt": "At 14:00 UTC September 30, there was $8,036.50 in the Redeeming Reserve on Stacks, $1,501,041.77 in the Ethereum Settlement Wallet, and $100,148.12 in the Reserve Fund.",
+          "assertion": "Publishes location totals but no finite maximum maturity or whole-slice realization horizon for the unitemized Stacks, Copper and other settlement-wallet positions."
+        },
+        {
+          "url": "https://docs.hermetica.fi/usdh/risk-disclosures/liquidity-risk.md",
+          "observedAt": "2026-10-03T22:54:53Z",
+          "datumAsOf": null,
+          "location": "Liquidity Risk",
+          "excerpt": "If for any reason Hermetica is not able to source enough liquidity to either increase or unwind a derivative position, it will not be able to either mint or redeem USDh tokens.",
+          "assertion": "Describes unwind restrictions, not an enforceable per-location liquidity horizon or maturity maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026",
+        "https://docs.hermetica.fi/usdh/how-it-works/backing.md",
+        "https://app.hermetica.fi/transparency/usdh/reserves",
+        "https://docs.hermetica.fi/usdh/how-it-works/security.md",
+        "https://docs.hermetica.fi/usdh/risk-disclosures/liquidity-risk.md",
+        "https://docs.hermetica.fi/resources/legal/terms-of-service.md",
+        "https://github.com/hermetica-fi/hermetica-contracts/blob/master/mainnet/contracts/usdh/protocol/redeeming-reserve-v1-2.clar"
+      ],
+      "rationale": "The September report and signed Copper image disclose account totals (Copper aggregate BTC/USDT/USDC including P&L), not the residual instruments, lock terms or per-slice maximum maturity and realization horizon. Backing archive, live dashboard, custody design, liquidity risks, legal terms and reserve transfer code provide no such bounds for these three scoped residuals. Generic OES recovery and manager-authorized transfers do not prove the entire positions immediately realizable."
+    },
+    {
+      "id": "uw-usdh-hermetica-33ef26ba1f8ffcf4",
+      "assetId": "usdh-hermetica",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:d81c2d1959e0c643d5d1e8fc",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R31)",
+      "sources": [
+        {
+          "url": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026",
+          "observedAt": "2026-10-03T22:54:53Z",
+          "datumAsOf": "2026-09-30",
+          "location": "Location balances and STRCx itemization",
+          "excerpt": "At 14:00 UTC September 30, there was $8,036.50 in the Redeeming Reserve on Stacks, $1,501,041.77 in the Ethereum Settlement Wallet, and $100,148.12 in the Reserve Fund.",
+          "assertion": "Publishes location totals but no finite maximum maturity or whole-slice realization horizon for the unitemized Stacks, Copper and other settlement-wallet positions."
+        },
+        {
+          "url": "https://docs.hermetica.fi/usdh/risk-disclosures/liquidity-risk.md",
+          "observedAt": "2026-10-03T22:54:53Z",
+          "datumAsOf": null,
+          "location": "Liquidity Risk",
+          "excerpt": "If for any reason Hermetica is not able to source enough liquidity to either increase or unwind a derivative position, it will not be able to either mint or redeem USDh tokens.",
+          "assertion": "Describes unwind restrictions, not an enforceable per-location liquidity horizon or maturity maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026",
+        "https://docs.hermetica.fi/usdh/how-it-works/backing.md",
+        "https://app.hermetica.fi/transparency/usdh/reserves",
+        "https://docs.hermetica.fi/usdh/how-it-works/security.md",
+        "https://docs.hermetica.fi/usdh/risk-disclosures/liquidity-risk.md",
+        "https://docs.hermetica.fi/resources/legal/terms-of-service.md",
+        "https://github.com/hermetica-fi/hermetica-contracts/blob/master/mainnet/contracts/usdh/protocol/redeeming-reserve-v1-2.clar"
+      ],
+      "rationale": "The September report and signed Copper image disclose account totals (Copper aggregate BTC/USDT/USDC including P&L), not the residual instruments, lock terms or per-slice maximum maturity and realization horizon. Backing archive, live dashboard, custody design, liquidity risks, legal terms and reserve transfer code provide no such bounds for these three scoped residuals. Generic OES recovery and manager-authorized transfers do not prove the entire positions immediately realizable."
+    },
+    {
+      "id": "uw-usdh-hermetica-8d3efcedfd47407e",
+      "assetId": "usdh-hermetica",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:d81c2d1959e0c643d5d1e8fc",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R31)",
+      "sources": [
+        {
+          "url": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026",
+          "observedAt": "2026-10-03T22:54:53Z",
+          "datumAsOf": "2026-09-30",
+          "location": "Location balances and STRCx itemization",
+          "excerpt": "At 14:00 UTC September 30, there was $8,036.50 in the Redeeming Reserve on Stacks, $1,501,041.77 in the Ethereum Settlement Wallet, and $100,148.12 in the Reserve Fund.",
+          "assertion": "Publishes location totals but no finite maximum maturity or whole-slice realization horizon for the unitemized Stacks, Copper and other settlement-wallet positions."
+        },
+        {
+          "url": "https://docs.hermetica.fi/usdh/risk-disclosures/liquidity-risk.md",
+          "observedAt": "2026-10-03T22:54:53Z",
+          "datumAsOf": null,
+          "location": "Liquidity Risk",
+          "excerpt": "If for any reason Hermetica is not able to source enough liquidity to either increase or unwind a derivative position, it will not be able to either mint or redeem USDh tokens.",
+          "assertion": "Describes unwind restrictions, not an enforceable per-location liquidity horizon or maturity maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026",
+        "https://docs.hermetica.fi/usdh/how-it-works/backing.md",
+        "https://app.hermetica.fi/transparency/usdh/reserves",
+        "https://docs.hermetica.fi/usdh/how-it-works/security.md",
+        "https://docs.hermetica.fi/usdh/risk-disclosures/liquidity-risk.md",
+        "https://docs.hermetica.fi/resources/legal/terms-of-service.md",
+        "https://github.com/hermetica-fi/hermetica-contracts/blob/master/mainnet/contracts/usdh/protocol/redeeming-reserve-v1-2.clar"
+      ],
+      "rationale": "The September report and signed Copper image disclose account totals (Copper aggregate BTC/USDT/USDC including P&L), not the residual instruments, lock terms or per-slice maximum maturity and realization horizon. Backing archive, live dashboard, custody design, liquidity risks, legal terms and reserve transfer code provide no such bounds for these three scoped residuals. Generic OES recovery and manager-authorized transfers do not prove the entire positions immediately realizable."
+    },
+    {
+      "id": "uw-usdh-hermetica-06cf4b749a0765b3",
+      "assetId": "usdh-hermetica",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdh-hermetica:queue-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R31)",
+      "sources": [
+        {
+          "url": "https://docs.hermetica.fi/usdh/how-it-works/mint",
+          "observedAt": "2026-10-03T22:54:53Z",
+          "datumAsOf": null,
+          "location": "Redemptions",
+          "excerpt": "Approved Participants may redeem USDh for USDC or USDT via a redemption process that mirrors the minting flow in reverse.",
+          "assertion": "Discloses eligible redeemers and payout assets, plus pause conditions, but no final settlement maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.hermetica.fi/usdh/how-it-works/mint",
+        "https://docs.hermetica.fi/resources/faqs.md",
+        "https://docs.hermetica.fi/usdh/how-it-works/security.md",
+        "https://docs.hermetica.fi/resources/legal/terms-of-service.md",
+        "https://docs.hermetica.fi/usdh/risk-disclosures/liquidity-risk.md",
+        "https://github.com/hermetica-fi/hermetica-contracts/blob/master/mainnet/contracts/usdh/protocol/redeeming-reserve-v1-2.clar"
+      ],
+      "rationale": "USDh AP redemption documentation, FAQ, legal terms and reserve-transfer code publish no request-to-delivered-USDC/USDT maximum. Risk terms permit pauses and liquidity-dependent unwind. hBTC's separate three-day/four-hour cooldowns are not USDh terms; arbitrage examples using 'immediately' are not an end-to-end SLA."
+    },
+    {
+      "id": "uw-usdh-hermetica-803829bb86374dd2",
+      "assetId": "usdh-hermetica",
+      "scope": {
+        "componentKey": "economic-control:oracle",
+        "exposureId": null,
+        "factorKey": "tier",
+        "pillar": "control",
+        "requiredDatum": "tier",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R31)",
+      "sources": [
+        {
+          "url": "https://docs.hermetica.fi/usdh/how-it-works/stability",
+          "observedAt": "2026-10-03T22:54:53Z",
+          "datumAsOf": null,
+          "location": "Risk Management System",
+          "excerpt": "To minimize this possibility, our risk engine runs checks every 100 milliseconds and reconciles our liabilities with assets and perpetual futures positions.",
+          "assertion": "Discloses the issuer's valuation-sensitive engine but not its actual price-source topology, stale-feed thresholds or failover."
+        },
+        {
+          "url": "https://www.diadata.org/blog/post/hermetica-usdh-reserve-backed-fair-value-oracle/",
+          "observedAt": "2026-10-03T22:54:53Z",
+          "datumAsOf": "2026-03-11",
+          "location": "How the Oracle Works",
+          "excerpt": "The feed is live on the Stacks public good oracle, where any protocol or user can query the USDh/USD value in real time.",
+          "assertion": "A public DIA consumer feed is disclosed; this does not establish the price topology used by Hermetica's own redemption/hedge risk engine."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://docs.hermetica.fi/usdh/how-it-works/stability",
+        "https://docs.hermetica.fi/usdh/how-it-works/mint",
+        "https://docs.hermetica.fi/usdh/how-it-works/technical-primitives.md",
+        "https://docs.hermetica.fi/resources/faqs.md",
+        "https://docs.hermetica.fi/resources/legal/terms-of-service.md",
+        "https://blog.hermetica.fi/p/weekly-update-march-13-2026",
+        "https://www.diadata.org/blog/post/hermetica-usdh-reserve-backed-fair-value-oracle/",
+        "https://github.com/hermetica-fi/hermetica-contracts"
+      ],
+      "rationale": "The authored top-level-only review scopes USDh's issuer valuation/rebalancing and redemption-pause authority. Its docs disclose 100ms checks and price-feed failure pauses, not actual engine sources, redundancy or delay. The March DIA reserve-backed public-good USDh/USD feed is for integrating lending/trading/liquidation markets; neither party establishes that it supplies Hermetica's internal hedge/redemption engine. Thus that scoped tier remains undisclosed, not an assertion that no public USDh oracle exists."
+    },
+    {
+      "id": "uw-sofid-sofi-3f557166054a9fae",
+      "assetId": "sofid-sofi",
+      "scope": {
+        "componentKey": "mechanism-review:custodyContinuity",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "mechanism-review:custodyContinuity",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R31)",
+      "sources": [
+        {
+          "url": "https://d32ijn7u0aqfv4.cloudfront.net/wp/wp-content/uploads/raw/SoFiUSD-Stablecoin-Attestation-Report-7.31.2026.pdf",
+          "observedAt": "2026-10-03T22:54:53Z",
+          "datumAsOf": "2026-07-31",
+          "location": "Schedule II, page 5",
+          "excerpt": "In a fiduciary account at a depository institution established by BitGo Trust Company, Inc.",
+          "assertion": "Names BitGo and the Federal Reserve, allocation and non-reuse safeguards, but not the commercial depository or substitute/failure-continuity arrangements."
+        },
+        {
+          "url": "https://d32ijn7u0aqfv4.cloudfront.net/wp/wp-content/uploads/raw/SOFID-Risk-Disclosure-1.pdf",
+          "observedAt": "2026-10-03T22:54:53Z",
+          "datumAsOf": "2026-05-27",
+          "location": "Section 5.2 Third-Party Risk",
+          "excerpt": "Failures, insolvency, misconduct, or service interruptions of third parties may adversely affect SOFID.",
+          "assertion": "Warns of continuity failure without a token-specific substitute-custodian or recovery commitment."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.sofi.com/crypto/sofiusd/",
+        "https://d32ijn7u0aqfv4.cloudfront.net/wp/wp-content/uploads/raw/SoFiUSD-Stablecoin-Attestation-Report-7.31.2026.pdf",
+        "https://d32ijn7u0aqfv4.cloudfront.net/wp/wp-content/uploads/raw/SOFID-Terms-of-Use-1.pdf",
+        "https://d32ijn7u0aqfv4.cloudfront.net/wp/wp-content/uploads/raw/SOFID-Risk-Disclosure-1.pdf",
+        "https://www.bitgo.com/resources/blog/bitgo-selected-by-sofi-to-provide-stablecoin-infrastructure/",
+        "https://www.bitgo.com/legal/bitgo-additional-terms/"
+      ],
+      "rationale": "The independent July examination establishes unencumbered cash at the Federal Reserve and a BitGo-created fiduciary bank account, with allocation and segregation from BitGo. The commercial depository remains unnamed and no SOFID-specific substitute-provider, continuity or failure-recovery arrangement is disclosed in the report, holder terms, risk disclosures or BitGo service materials. Existing adverse holder-claim evidence is preserved; no favorable whole-component quality is inferred."
+    },
+    {
+      "id": "uw-weusd-picwe-5bdd18b60a5fb6bc",
+      "assetId": "weusd-picwe",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R31)",
+      "sources": [
+        {
+          "url": "https://docs.picwe.org/what-is-weusd",
+          "observedAt": "2026-10-03T22:54:53Z",
+          "datumAsOf": "2026-04-27",
+          "location": "Definition and Core Properties",
+          "excerpt": "Today, WEUSD is minted 1:1 against USDC.",
+          "assertion": "A design/backing claim, not a dated whole-asset reserve inventory or supply-to-backing reconciliation cadence."
+        },
+        {
+          "url": "https://docs.picwe.org/developers/security",
+          "observedAt": "2026-10-03T22:54:53Z",
+          "datumAsOf": "2026-04-27",
+          "location": "Operational Security",
+          "excerpt": "Real-time transaction monitoring",
+          "assertion": "Transaction/security monitoring does not establish all-chain token liabilities reconciled to reserves on a common clock."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.picwe.org/en",
+        "https://docs.picwe.org/",
+        "https://docs.picwe.org/what-is-weusd",
+        "https://docs.picwe.org/mint-and-redeem",
+        "https://docs.picwe.org/faq",
+        "https://docs.picwe.org/developers/contracts",
+        "https://docs.picwe.org/developers/api-reference",
+        "https://docs.picwe.org/developers/security",
+        "https://mainnet.movementnetwork.xyz/v1/accounts/0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6/module/weusd_mint_redeem"
+      ],
+      "rationale": "Current docs claim USDC backing and reserve-lock minting but publish no dated measured whole-WEUSD book/denominator or recurring common-clock reconciliation covering all native deployments, mint/burn and cross-chain reserves/deficits. Security audits, transaction monitoring and local reserve getter ABIs do not establish that financial scope. Prior conflicting basket descriptions remain unresolved; no 100% USDC composition or favorable reconciliation is invented."
+    },
+    {
+      "id": "uw-weusd-picwe-60a64c405e7394b7",
+      "assetId": "weusd-picwe",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R31)",
+      "sources": [
+        {
+          "url": "https://docs.picwe.org/what-is-weusd",
+          "observedAt": "2026-10-03T22:54:53Z",
+          "datumAsOf": "2026-04-27",
+          "location": "Definition and Core Properties",
+          "excerpt": "Today, WEUSD is minted 1:1 against USDC.",
+          "assertion": "A design/backing claim, not a dated whole-asset reserve inventory or supply-to-backing reconciliation cadence."
+        },
+        {
+          "url": "https://docs.picwe.org/developers/security",
+          "observedAt": "2026-10-03T22:54:53Z",
+          "datumAsOf": "2026-04-27",
+          "location": "Operational Security",
+          "excerpt": "Real-time transaction monitoring",
+          "assertion": "Transaction/security monitoring does not establish all-chain token liabilities reconciled to reserves on a common clock."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.picwe.org/en",
+        "https://docs.picwe.org/",
+        "https://docs.picwe.org/what-is-weusd",
+        "https://docs.picwe.org/mint-and-redeem",
+        "https://docs.picwe.org/faq",
+        "https://docs.picwe.org/developers/contracts",
+        "https://docs.picwe.org/developers/api-reference",
+        "https://docs.picwe.org/developers/security",
+        "https://mainnet.movementnetwork.xyz/v1/accounts/0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6/module/weusd_mint_redeem"
+      ],
+      "rationale": "Current docs claim USDC backing and reserve-lock minting but publish no dated measured whole-WEUSD book/denominator or recurring common-clock reconciliation covering all native deployments, mint/burn and cross-chain reserves/deficits. Security audits, transaction monitoring and local reserve getter ABIs do not establish that financial scope. Prior conflicting basket descriptions remain unresolved; no 100% USDC composition or favorable reconciliation is invented."
+    },
+    {
+      "id": "uw-usdm-monetrix-4666f87fa6422b40",
+      "assetId": "usdm-monetrix",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usdm-monetrix:queue-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:08:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R83)",
+      "sources": [
+        {
+          "url": "https://doc.monetrix.xyz/resources/terms-and-disclaimer.md",
+          "observedAt": "2026-10-03T23:08:53Z",
+          "datumAsOf": null,
+          "location": "Issuer published terms / guide",
+          "excerpt": "Monetrix does not guarantee a fixed yield, fixed return, or fixed redemption timing.",
+          "assertion": "Three-day cooldown is a configurable earliest claim time, not a guaranteed final funded settlement maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.monetrix.xyz/app/transparency",
+        "https://api.monetrix.xyz/data/api/collateral",
+        "https://doc.monetrix.xyz/guide/getting-started/redeem.md",
+        "https://doc.monetrix.xyz/guide/getting-started/faq.md",
+        "https://doc.monetrix.xyz/risk-and-security/audits-and-contracts.md",
+        "https://doc.monetrix.xyz/resources/terms-and-disclaimer.md"
+      ],
+      "rationale": "No end-to-end maximum for final delivered USDC is published for queue-redeem. The guide documents governance-adjustable three-day cooldown and claim call; FAQ says liquidity must be realized from positions, and current legal notice expressly denies fixed timing. This does not assert no redemption or zero capacity."
+    },
+    {
+      "id": "uw-krwq-iq-d4d7dfc23c949165",
+      "assetId": "krwq-iq",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:krwq-iq:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:08:53Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R83)",
+      "sources": [
+        {
+          "url": "https://www.krwq.cash/terms",
+          "observedAt": "2026-10-03T23:08:53Z",
+          "datumAsOf": "2026-06-03",
+          "location": "Issuer published terms / guide",
+          "excerpt": "Access to certain features, including minting and redemption, may be restricted to whitelisted or verified participants",
+          "assertion": "Terms disclose redemption eligibility but no applicable institution/fiat-redemption fee schedule."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.krwq.cash/",
+        "https://www.krwq.cash/mint",
+        "https://www.krwq.cash/whitepaper.pdf",
+        "https://www.krwq.cash/transparency",
+        "https://www.krwq.cash/terms",
+        "https://www.krwq.cash/disclaimer",
+        "https://www.krwq.cash/api/custodian-assets",
+        "https://github.com/KRWQcash/.github/blob/7bf83efba994a555ca1f63b352ed28e91ff3fd44/profile/README.md"
+      ],
+      "rationale": "The exact offchain-issuer cost datum is undisclosed: no numeric institutional fiat-redemption fee, applicable formula/minimum or all-in partner/bank/FX charge schedule is published across site, mint UI, whitepaper, terms and transparency. Whitepaper network-transfer costs are not fees for institutional fiat redemption. No zero-fee inference."
+    },
+    {
+      "id": "uw-said-gaib-9c9d0a787af9334e",
+      "assetId": "said-gaib",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:said-gaib:stablecoin-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:10Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R83)",
+      "sources": [
+        {
+          "url": "https://drive.google.com/file/d/1GMwfOw_XXHKXOXopqU8_QGu_y5ozM9hV/preview",
+          "observedAt": "2026-10-03T23:16:10Z",
+          "datumAsOf": null,
+          "location": "sAID Vault Strategy Memorandum, p.5 Redemptions, rendered Drive preview",
+          "excerpt": "All redemptions remain subject to the liquidity, asset composition, and operational parameters determined at the sole discretion of the Company.",
+          "assertion": "Memorandum p.5 permits caps, freezes, deferral until liquidity restored and discretionary alternative payout; monthly cohort is not guaranteed final settlement."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://gaib.ai/",
+        "https://docs.gaib.ai/llms.txt",
+        "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid",
+        "https://docs.gaib.ai/products/gaib-products/staked-ai-dollar-said",
+        "https://aid.gaib.ai/transparency",
+        "https://docs.gaib.ai/products/gaib-products/transparency.md",
+        "https://docs.gaib.ai/products/gaib-products/protocol-public-api.md",
+        "https://docs.gaib.ai/legal/disclaimers-and-risk-disclosures.md",
+        "https://docs.gaib.ai/legal/terms-of-use/annex-to-gaib-term-of-use.md",
+        "https://drive.google.com/file/d/17Uy4SCY9-D-R3kf-4-atUn_9nR4HeGeC/preview",
+        "https://drive.google.com/file/d/1GMwfOw_XXHKXOXopqU8_QGu_y5ozM9hV/preview"
+      ],
+      "rationale": "The stablecoin-redeem route has no published end-to-end funded completion maximum. Current product docs schedule liquidity on month-three day one, but memorandum p.5 explicitly permits temporary freezes and deferral until liquidity returns. No enforceable SLA overrides that discretion. Source preview recovered despite disabled download; no inaccessible-source inference."
+    },
+    {
+      "id": "uw-aid-gaib-335fdbd69be631ff",
+      "assetId": "aid-gaib",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:10Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R83)",
+      "sources": [
+        {
+          "url": "https://drive.google.com/file/d/17Uy4SCY9-D-R3kf-4-atUn_9nR4HeGeC/preview",
+          "observedAt": "2026-10-03T23:16:10Z",
+          "datumAsOf": "2026-09-01",
+          "location": "McMillan Woods limited-assurance report, pages 1\u20133, rendered Drive preview",
+          "excerpt": "Total Assets Reviewed: USD 18.7 million",
+          "assertion": "McMillan Woods report p.2 totals deployed GPU assets; p.3 recalculates deployed capital, not minted AID liabilities/backing on a common clock."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://gaib.ai/",
+        "https://docs.gaib.ai/llms.txt",
+        "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid",
+        "https://docs.gaib.ai/products/gaib-products/staked-ai-dollar-said",
+        "https://aid.gaib.ai/transparency",
+        "https://docs.gaib.ai/products/gaib-products/transparency.md",
+        "https://docs.gaib.ai/products/gaib-products/protocol-public-api.md",
+        "https://docs.gaib.ai/legal/disclaimers-and-risk-disclosures.md",
+        "https://docs.gaib.ai/legal/terms-of-use/annex-to-gaib-term-of-use.md",
+        "https://drive.google.com/file/d/17Uy4SCY9-D-R3kf-4-atUn_9nR4HeGeC/preview",
+        "https://drive.google.com/file/d/1GMwfOw_XXHKXOXopqU8_QGu_y5ozM9hV/preview"
+      ],
+      "rationale": "No dated whole-issued-AID supply-to-backing reconciliation and actual cadence is published. September 1 Spiceflow limited assurance covers deployed financing assets, not AID mint/burn liabilities or every chain. Dashboard separates circulating AID cash from staked AID; NAV/public API counters and deployment report do not establish the required whole-supply procedure."
+    },
+    {
+      "id": "uw-aid-gaib-2a98f8015ffcf1aa",
+      "assetId": "aid-gaib",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T23:16:10Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R83)",
+      "sources": [
+        {
+          "url": "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid.md",
+          "observedAt": "2026-10-03T23:16:10Z",
+          "datumAsOf": null,
+          "location": "Issuer published terms / guide",
+          "excerpt": "AI Dollar (AID) is a **synthetic dollar** fully backed by the U.S. Treasuries and stable assets",
+          "assertion": "Product names broad backing classes but does not publish current whole-issued-AID itemized composition/denominator."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://gaib.ai/",
+        "https://docs.gaib.ai/llms.txt",
+        "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid",
+        "https://docs.gaib.ai/products/gaib-products/staked-ai-dollar-said",
+        "https://aid.gaib.ai/transparency",
+        "https://docs.gaib.ai/products/gaib-products/transparency.md",
+        "https://docs.gaib.ai/products/gaib-products/protocol-public-api.md",
+        "https://docs.gaib.ai/legal/disclaimers-and-risk-disclosures.md",
+        "https://docs.gaib.ai/legal/terms-of-use/annex-to-gaib-term-of-use.md",
+        "https://drive.google.com/file/d/17Uy4SCY9-D-R3kf-4-atUn_9nR4HeGeC/preview",
+        "https://drive.google.com/file/d/1GMwfOw_XXHKXOXopqU8_QGu_y5ozM9hV/preview"
+      ],
+      "rationale": "No current whole-issued-AID composition is disclosed across product/API/terms, rendered dashboard and recovered September 1 deployment attestation. Cash ratio divides redeemer/minter cash by only circulating AID, excluding staked liabilities; GPU report totals assets without AID-specific attribution. Cannot normalize those scoped quantities to 100% of all issued AID."
     }
   ]
 }
