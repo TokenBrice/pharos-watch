@@ -2690,6 +2690,171 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "xsgd-straitsx",
+      "reviewedAt": "2026-10-03T22:48:33Z",
+      "expiresAt": "2027-10-03T22:48:33Z",
+      "reviewer": "W1R40 primary-source research",
+      "notes": "Exact-token dated launch/deployment establishes a conservative live-history lower bound only. No redemption throughput, stress recovery, continuous assurance or incident-free performance is asserted.",
+      "sources": [
+        {
+          "sourceId": "token-live-inception",
+          "label": "Exact token public launch or successful canonical creation",
+          "publisher": "StraitsX",
+          "publishedAt": "2020-10-05",
+          "url": "https://www.straitsx.com/blog-post/introducing-xsgd-the-singapore-dollar-backed-and-travel-rule1-compliant-stablecoin",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 71,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "token-live-inception"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "xusd-straitsx",
+      "reviewedAt": "2026-10-03T22:48:33Z",
+      "expiresAt": "2027-10-03T22:48:33Z",
+      "reviewer": "W1R40 primary-source research",
+      "notes": "Exact-token dated launch/deployment establishes a conservative live-history lower bound only. No redemption throughput, stress recovery, continuous assurance or incident-free performance is asserted.",
+      "sources": [
+        {
+          "sourceId": "token-live-inception",
+          "label": "Exact token public launch or successful canonical creation",
+          "publisher": "StraitsX",
+          "publishedAt": "2024-07-17",
+          "url": "https://www.straitsx.com/blog-post/straitsx-secures-major-payment-institution-licenses-and-launches-xusd-stablecoin",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 26,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "token-live-inception"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "deuro-deuro",
+      "reviewedAt": "2026-10-03T22:48:33Z",
+      "expiresAt": "2027-10-03T22:48:33Z",
+      "reviewer": "W1R40 primary-source research",
+      "notes": "Exact-token dated launch/deployment establishes a conservative live-history lower bound only. No redemption throughput, stress recovery, continuous assurance or incident-free performance is asserted.",
+      "sources": [
+        {
+          "sourceId": "token-live-inception",
+          "label": "Exact token public launch or successful canonical creation",
+          "publisher": "Ethereum Blockscout",
+          "publishedAt": "2025-03-20",
+          "url": "https://eth.blockscout.com/tx/0x1fff69e237f7bdb9f1a1715b52b5ef0e6da60e753f2bee46406d25728250ffbe",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 18,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "token-live-inception"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "cash-phantom",
+      "reviewedAt": "2026-10-03T22:48:33Z",
+      "expiresAt": "2027-10-03T22:48:33Z",
+      "reviewer": "W1R40 primary-source research",
+      "notes": "Exact-token dated launch/deployment establishes a conservative live-history lower bound only. No redemption throughput, stress recovery, continuous assurance or incident-free performance is asserted.",
+      "sources": [
+        {
+          "sourceId": "token-live-inception",
+          "label": "Exact token public launch or successful canonical creation",
+          "publisher": "Phantom",
+          "publishedAt": "2025-09-30",
+          "url": "https://phantom.com/learn/blog/introducing-phantom-cash",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 12,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "token-live-inception"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "uusd-anything-labs",
+      "reviewedAt": "2026-10-03T22:50:49Z",
+      "expiresAt": "2027-10-03T22:50:49Z",
+      "reviewer": "W1R40 primary-source research",
+      "notes": "Canonical Ethereum token creation supplies only an issuer-reported seven-month inception lower bound under the wave's creation-transaction rule. Official launch page links this exact address, states BNB active and Ethereum paused; no uninterrupted chain operation, redemption performance or incident-free history is inferred.",
+      "sources": [
+        {
+          "sourceId": "token-creation",
+          "label": "Canonical UUSD successful CREATE2 deployment transaction",
+          "publisher": "Ethereum Blockscout",
+          "publishedAt": "2026-02-03",
+          "url": "https://eth.blockscout.com/tx/0x07dff864ecb1b33febf8c60d7e3f9a423a5440d93cef8d4f9a84a4b99507485d",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 7,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "token-creation"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }

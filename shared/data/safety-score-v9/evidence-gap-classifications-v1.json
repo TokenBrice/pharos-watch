@@ -5567,6 +5567,292 @@
         "https://ethereum-rpc.publicnode.com"
       ],
       "rationale": "For the exact aggregate deployed protocol-position slice, no enforceable or unconditional one-day/seven-day whole-position realization bound is disclosed. The official withdrawal guide offers on-demand attempts but explicitly conditions execution on configured market liquidity and slippage; security docs allow local/global pauses. The 18 current registered destinations and four queue entries do not turn that conditional mechanism into a guaranteed maximum. Idle underlying is separately curated and is not generalized to this slice."
+    },
+    {
+      "id": "uw-xsgd-straitsx-dceba177a79d91d5",
+      "assetId": "xsgd-straitsx",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:418d874f941087ef32a15045",
+        "factorKey": "liquidity",
+        "pillar": "backing",
+        "requiredDatum": "liquidityHorizon",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:35Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R40)",
+      "sources": [
+        {
+          "url": "https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/6abb46bca92eaa67297d7500_XSGD%20SCS%20Reserve%20Account%20Report%20(31%20August%202026).pdf",
+          "observedAt": "2026-10-03T22:50:49Z",
+          "datumAsOf": "2026-08-31",
+          "location": "Page 5, reserve composition",
+          "excerpt": "Bonds or notes denominated in SGD with no more than three months residual maturity",
+          "assertion": "Maximum residual maturity is disclosed, but the combined bill/repo slice has no whole-slice liquidation horizon."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.straitsx.com/xsgd",
+        "https://www.straitsx.com/legal/risk-warnings-regulatory-notices-disclosures",
+        "https://www.straitsx.com/legal/purchasing-and-redemption",
+        "https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/6abb46bca92eaa67297d7500_XSGD%20SCS%20Reserve%20Account%20Report%20(31%20August%202026).pdf"
+      ],
+      "rationale": "The exact liquidityHorizon for the entire sovereign-instrument/overnight-repo slice is undisclosed. The report aggregates the two components without weights and states maturity, not time-to-cash. Redemption timing is not reserve liquidation timing; an overnight repo term cannot be applied to all sovereign bills."
+    },
+    {
+      "id": "uw-xsgd-straitsx-7b11beb47ffedafe",
+      "assetId": "xsgd-straitsx",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:xsgd-straitsx:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:35Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R40)",
+      "sources": [
+        {
+          "url": "https://www.straitsx.com/legal/purchasing-and-redemption",
+          "observedAt": "2026-10-03T22:50:49Z",
+          "datumAsOf": "2026-07-18",
+          "location": "Direct issuer redemption, clause 4.2",
+          "excerpt": "Please note that the above-reflected Redemption Fees are exclusive of applicable blockchain network fees",
+          "assertion": "S$1 administration plus prevailing redemption fee is disclosed, but does not bound total route cost."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.straitsx.com/legal/purchasing-and-redemption",
+        "https://support.straitsx.com/support/solutions/articles/157000366301-straitsx-business-account-transaction-fee-schedule",
+        "https://support.straitsx.com/support/solutions/articles/157000365665-straitsx-personal-account-transaction-fee-schedule",
+        "https://support.straitsx.com/support/solutions/articles/157000366277-usd-deposit-withdrawal-service-fee",
+        "https://www.straitsx.com/xsgd",
+        "https://www.straitsx.com/xusd"
+      ],
+      "rationale": "The exact all-in same-notional cost or maximum for each direct-issuer fiat redemption route is undisclosed. Published rail fees (XSGD FAST/MEPS/SWIFT, XUSD USD40 withdrawal) and S$1 administration do not establish the contractual direct-issuer fee or cap network and third-party bank charges. Preserve these published components; do not substitute zero or one rail's fee for the aggregate route cost."
+    },
+    {
+      "id": "uw-xusd-straitsx-be0cb0e14c118624",
+      "assetId": "xusd-straitsx",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "cost",
+        "pillar": "exit",
+        "requiredDatum": "cost",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:xusd-straitsx:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:35Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R40)",
+      "sources": [
+        {
+          "url": "https://www.straitsx.com/legal/purchasing-and-redemption",
+          "observedAt": "2026-10-03T22:50:49Z",
+          "datumAsOf": "2026-07-18",
+          "location": "Direct issuer redemption, clause 4.2",
+          "excerpt": "Please note that the above-reflected Redemption Fees are exclusive of applicable blockchain network fees",
+          "assertion": "S$1 administration plus prevailing redemption fee is disclosed, but does not bound total route cost."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.straitsx.com/legal/purchasing-and-redemption",
+        "https://support.straitsx.com/support/solutions/articles/157000366301-straitsx-business-account-transaction-fee-schedule",
+        "https://support.straitsx.com/support/solutions/articles/157000365665-straitsx-personal-account-transaction-fee-schedule",
+        "https://support.straitsx.com/support/solutions/articles/157000366277-usd-deposit-withdrawal-service-fee",
+        "https://www.straitsx.com/xsgd",
+        "https://www.straitsx.com/xusd"
+      ],
+      "rationale": "The exact all-in same-notional cost or maximum for each direct-issuer fiat redemption route is undisclosed. Published rail fees (XSGD FAST/MEPS/SWIFT, XUSD USD40 withdrawal) and S$1 administration do not establish the contractual direct-issuer fee or cap network and third-party bank charges. Preserve these published components; do not substitute zero or one rail's fee for the aggregate route cost."
+    },
+    {
+      "id": "uw-xusd-straitsx-219e7c7c2fc227be",
+      "assetId": "xusd-straitsx",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:xusd-straitsx:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:35Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R40)",
+      "sources": [
+        {
+          "url": "https://www.straitsx.com/legal/purchasing-and-redemption",
+          "observedAt": "2026-10-03T22:50:49Z",
+          "datumAsOf": "2026-07-18",
+          "location": "Direct issuer redemption, clause 4.1.3",
+          "excerpt": "Once your redemption request is processed",
+          "assertion": "The five-business-day bank-transfer clock starts after processing, whose duration is not bounded."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.straitsx.com/legal/purchasing-and-redemption",
+        "https://www.straitsx.com/xusd",
+        "https://support.straitsx.com/support/solutions/articles/157000366277-usd-deposit-withdrawal-service-fee",
+        "https://www.straitsx.com/legal/risk-warnings-regulatory-notices-disclosures"
+      ],
+      "rationale": "No end-to-end maximum settlement interval from submitted eligible direct-issuer XUSD redemption request to fiat receipt is published. Five business days begins only once the request is processed; verification and risk review may delay processing without a maximum. Retain the known post-processing transfer term, but it cannot supply the required full-route bound."
+    },
+    {
+      "id": "uw-cash-phantom-e954dba394b50eb2",
+      "assetId": "cash-phantom",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:8b02da47c7df0f789089a989",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:35Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R40)",
+      "sources": [
+        {
+          "url": "https://reserves.bridge.xyz/cash",
+          "observedAt": "2026-10-03T22:50:49Z",
+          "datumAsOf": "2026-10-03",
+          "location": "Reserve assets and investment allocation",
+          "excerpt": "Treasuries include money-market funds comprised of T-bill ladders with less than 3-month duration.",
+          "assertion": "Duration is disclosed, not constituent maximum residual maturity; deposit account term is not specified."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://reserves.bridge.xyz/cash",
+        "https://www.usecash.xyz",
+        "https://docs.phantom.com/cash",
+        "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
+        "https://apidocs.bridge.xyz/platform/issuance/reserve-management.md",
+        "https://apidocs.bridge.xyz/platform/issuance/reporting-and-transparency.md",
+        "https://apidocs.bridge.xyz/platform/issuance/faq.md"
+      ],
+      "rationale": "Exact maturityDaysMax is undisclosed for both the admitted bank-deposit slice and mixed Treasury/MMF slice. Demand/business-hour redemption is not proof that every deposit has zero term. The Treasury dashboard's less-than-three-month duration is not maximum residual maturity of all fund holdings. Bridge provides class totals and optional fee-gated quarterly attestations, not a public CASH-specific holdings maturity schedule."
+    },
+    {
+      "id": "uw-cash-phantom-b724e6f2daf10430",
+      "assetId": "cash-phantom",
+      "scope": {
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:ab5b22096058fae964938e4c",
+        "factorKey": "maturity",
+        "pillar": "backing",
+        "requiredDatum": "maturityDaysMax",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:35Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R40)",
+      "sources": [
+        {
+          "url": "https://reserves.bridge.xyz/cash",
+          "observedAt": "2026-10-03T22:50:49Z",
+          "datumAsOf": "2026-10-03",
+          "location": "Reserve assets and investment allocation",
+          "excerpt": "Treasuries include money-market funds comprised of T-bill ladders with less than 3-month duration.",
+          "assertion": "Duration is disclosed, not constituent maximum residual maturity; deposit account term is not specified."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://reserves.bridge.xyz/cash",
+        "https://www.usecash.xyz",
+        "https://docs.phantom.com/cash",
+        "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
+        "https://apidocs.bridge.xyz/platform/issuance/reserve-management.md",
+        "https://apidocs.bridge.xyz/platform/issuance/reporting-and-transparency.md",
+        "https://apidocs.bridge.xyz/platform/issuance/faq.md"
+      ],
+      "rationale": "Exact maturityDaysMax is undisclosed for both the admitted bank-deposit slice and mixed Treasury/MMF slice. Demand/business-hour redemption is not proof that every deposit has zero term. The Treasury dashboard's less-than-three-month duration is not maximum residual maturity of all fund holdings. Bridge provides class totals and optional fee-gated quarterly attestations, not a public CASH-specific holdings maturity schedule."
+    },
+    {
+      "id": "uw-uusd-anything-labs-ddc9f97265ae2913",
+      "assetId": "uusd-anything-labs",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:35Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R40)",
+      "sources": [
+        {
+          "url": "https://uusd.ai/solutions/",
+          "observedAt": "2026-10-03T22:50:49Z",
+          "datumAsOf": null,
+          "location": "Programmable Settlement / Institutional Issuance",
+          "excerpt": "Software systems can authorize, move, and reconcile value without custodial intermediaries or human-scale payment latency.",
+          "assertion": "Transaction reconciliation and audited contract standards are disclosed, not financial liability reconciliation or reserve allocation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://uusd.ai/",
+        "https://uusd.ai/sitemap.xml",
+        "https://uusd.ai/solutions/",
+        "https://uusd.ai/issuance/",
+        "https://uusd.ai/developers/",
+        "https://uusd.ai/get/",
+        "https://uusd.ai/whitepaper.pdf",
+        "https://uusd.ai/launch/",
+        "https://github.com/uusdai/uusd",
+        "https://etherscan.io/address/0x61a10E8556BEd032eA176330e7F17D6a12a10000"
+      ],
+      "rationale": "Neither exact reserve composition nor financial issuer liability/reserve reconciliation is disclosed. The complete official sitemap and linked whitepaper/source/deployment materials disclose infrastructure, mint controls, contract security audit and liquidity claims, but no dated reserve asset allocation, financial attestation, accountant liability reconciliation or legal reserve claim. On-chain balances and security audits do not establish financial backing."
+    },
+    {
+      "id": "uw-uusd-anything-labs-a63f57009f76fffa",
+      "assetId": "uusd-anything-labs",
+      "scope": {
+        "componentKey": "reserve-composition",
+        "exposureId": null,
+        "factorKey": null,
+        "pillar": "backing",
+        "requiredDatum": "reserve-composition",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-03T22:54:35Z",
+      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R40)",
+      "sources": [
+        {
+          "url": "https://uusd.ai/solutions/",
+          "observedAt": "2026-10-03T22:50:49Z",
+          "datumAsOf": null,
+          "location": "Programmable Settlement / Institutional Issuance",
+          "excerpt": "Software systems can authorize, move, and reconcile value without custodial intermediaries or human-scale payment latency.",
+          "assertion": "Transaction reconciliation and audited contract standards are disclosed, not financial liability reconciliation or reserve allocation."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://uusd.ai/",
+        "https://uusd.ai/sitemap.xml",
+        "https://uusd.ai/solutions/",
+        "https://uusd.ai/issuance/",
+        "https://uusd.ai/developers/",
+        "https://uusd.ai/get/",
+        "https://uusd.ai/whitepaper.pdf",
+        "https://uusd.ai/launch/",
+        "https://github.com/uusdai/uusd",
+        "https://etherscan.io/address/0x61a10E8556BEd032eA176330e7F17D6a12a10000"
+      ],
+      "rationale": "Neither exact reserve composition nor financial issuer liability/reserve reconciliation is disclosed. The complete official sitemap and linked whitepaper/source/deployment materials disclose infrastructure, mint controls, contract security audit and liquidity claims, but no dated reserve asset allocation, financial attestation, accountant liability reconciliation or legal reserve claim. On-chain balances and security audits do not establish financial backing."
     }
   ]
 }
