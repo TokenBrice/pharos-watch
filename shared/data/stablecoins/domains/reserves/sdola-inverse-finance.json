@@ -2,7 +2,7 @@
   "id": "sdola-inverse-finance",
   "reserves": [
     {
-      "sourceKey": "erc4626-single-asset:ethereum:0x865377367054516e17014ccded1e7d814edc9ce4",
+      "sourceKey": "erc4626-single-asset:ethereum:0xb45ad160634c528cc3d2926d9807104fa3157305:deployed",
       "name": "Inverse Staked DOLA deployed strategy positions",
       "pct": 100,
       "risk": "high",
@@ -20,8 +20,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Slice5)",
+    "reviewedAt": "2026-10-03",
+    "reviewer": "W1R58 unknown-wave primary-source classification review",
     "confidence": "verified",
     "sources": [
       {
@@ -37,7 +37,7 @@
         "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/about/transparency"
       }
     ],
-    "rationale": "sDOLA is an ERC-4626 claim on DOLA held through the DOLA Savings Account. Inverse states that deposited DOLA remains in the sDOLA contract, is not rehypothecated or loaned, and can be unwrapped without a lock-up. The live adapter's deployed row therefore retains the tracked DOLA wrapper dependency rather than being treated as an unidentified strategy basket.",
+    "rationale": "The captured deployed-position source key identifies the canonical sDOLA vault, not the underlying DOLA token. The exact pinned sDola.sol implementation stakes deposits into DolaSavings and totalAssets() measures its DOLA balance less undistributed weekly revenue; beforeWithdraw() unstakes DOLA atomically while retaining MIN_BALANCE and MIN_SHARES. The issuer describes instant permissionless DOLA unwrapping with no lock-up. This metadata review corrects the live-row join and identifies the parent DOLA stablecoin claim; it does not refresh September 21 weights or establish same-notional USD liquidation.",
     "compositionBasis": "Live ERC-4626 deployed-position observation on 2026-09-21 plus Inverse sDOLA product disclosure",
     "compositionAsOf": "2026-09-21",
     "scope": "full-composition",

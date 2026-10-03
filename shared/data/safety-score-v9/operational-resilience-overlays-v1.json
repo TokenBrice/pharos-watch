@@ -13100,6 +13100,105 @@
       "incidentReview": {
         "state": "not-reviewed"
       }
+    },
+    {
+      "assetId": "sdola-inverse-finance",
+      "reviewedAt": "2026-10-03T22:47:57Z",
+      "expiresAt": "2027-10-03T22:00:00Z",
+      "reviewer": "W1R58 unknown-wave primary-source research",
+      "notes": "Exact-token launch/creation establishes a conservative lower bound of operating history only. Creation evidence uses the weakest issuer-reported confidence. No redemption throughput, stress recovery, reserve assurance, or incident-free claim is made.",
+      "sources": [
+        {
+          "sourceId": "exact-token-inception",
+          "label": "Executed sDOLA launch proposal",
+          "publisher": "Inverse Finance DAO",
+          "publishedAt": "2024-02-06",
+          "url": "https://www.inverse.finance/governance/proposals/mills/167",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 31,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-token-inception"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "dola-inverse-finance",
+      "reviewedAt": "2026-10-03T22:47:57Z",
+      "expiresAt": "2027-10-03T22:00:00Z",
+      "reviewer": "W1R58 unknown-wave primary-source research",
+      "notes": "Exact-token launch/creation establishes a conservative lower bound of operating history only. Creation evidence uses the weakest issuer-reported confidence. No redemption throughput, stress recovery, reserve assurance, or incident-free claim is made.",
+      "sources": [
+        {
+          "sourceId": "exact-token-inception",
+          "label": "Canonical DOLA creation transaction",
+          "publisher": "Ethereum blockchain",
+          "publishedAt": "2021-02-23",
+          "url": "https://eth.blockscout.com/tx/0x22c2e58044be9d96b22f7e4350a812d007eb7fdba4be24967815cf6bd5ecda06",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 67,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-token-inception"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    },
+    {
+      "assetId": "lvusd-leverup",
+      "reviewedAt": "2026-10-03T22:47:57Z",
+      "expiresAt": "2027-10-03T22:00:00Z",
+      "reviewer": "W1R58 unknown-wave primary-source research",
+      "notes": "Exact-token launch/creation establishes a conservative lower bound of operating history only. Creation evidence uses the weakest issuer-reported confidence. No redemption throughput, stress recovery, reserve assurance, or incident-free claim is made.",
+      "sources": [
+        {
+          "sourceId": "exact-token-inception",
+          "label": "Exact LVUSD creation transaction",
+          "publisher": "Monad blockchain",
+          "publishedAt": "2025-10-28",
+          "url": "https://monadscan.com/tx/0x6752e0a90a52ad24ba2037d9e3b38e5050cf4d7ba45a4b384177fce2fc64b7cb",
+          "confidence": "issuer-reported"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 11,
+          "observedAt": "2026-10-03",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "exact-token-inception"
+          ]
+        }
+      },
+      "redemptionThroughput": null,
+      "stressEpisodes": [],
+      "reserveReconciliation": null,
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
     }
   ]
 }
