@@ -3098,7 +3098,7 @@
           "sourceId": "dated-live-operation",
           "label": "Dated issuer AMA: USDF already mintable",
           "publisher": "Aster",
-          "publishedAt": "2024-11-29",
+          "publishedAt": "2024-11-27",
           "url": "https://medium.com/astherus/ama-with-bedrock-astherus-recap-27f2cd415468",
           "confidence": "issuer-reported"
         }
@@ -3131,7 +3131,7 @@
           "sourceId": "dated-live-operation",
           "label": "Dated issuer AMA: asUSDF already mintable",
           "publisher": "Aster",
-          "publishedAt": "2024-11-29",
+          "publishedAt": "2024-11-27",
           "url": "https://medium.com/astherus/ama-with-bedrock-astherus-recap-27f2cd415468",
           "confidence": "issuer-reported"
         }

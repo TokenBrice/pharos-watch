@@ -444,6 +444,33 @@
         "governingInstrument": "KMS Labs KAU and KAG Terms and Conditions, sections 3, 5 and 8; section 2(j) gives these terms precedence",
         "allInScope": true
       }
+    ],
+    "hbd-hive": [
+      {
+        "factKey": "hbd-hive:endogenous-hive-conversion:maturity-not-applicable",
+        "kind": "maturity-applicability",
+        "scope": {
+          "kind": "exposure",
+          "exposureKey": "hive-hbd-protocol:hive"
+        },
+        "asOfSec": 1791071378,
+        "publisher": "Hive protocol",
+        "sourceUrls": [
+          "https://hive.io/hbd/"
+        ],
+        "assertion": "HBD backing is the native protocol conversion creating HIVE at the median witness price, subject to the haircut rule. The entire named endogenous-conversion exposure is not a dated debt instrument or an external reserve portfolio; its 3.5-day conversion delay is settlement, not contractual instrument maturity.",
+        "contentDigest": "4b203bcff0191015035a69f2978ec5dc92e64e5b7a4e0db2ec90b52952e953d9",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "W2R27 primary-source maturity applicability review",
+          "confidence": "high"
+        },
+        "claimId": "hive-native-hbd-to-hive-conversion",
+        "conclusion": "not-applicable",
+        "governingInstrument": "Hive native consensus HBD-to-HIVE conversion and debt haircut rule",
+        "allInScope": true
+      }
     ]
   }
 }
