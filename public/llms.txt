@@ -378,7 +378,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [dTRINITY dUSD (dUSD)](https://pharos.watch/stablecoin/dusd-dtrinity/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [dTRINITY Staked dUSD (sdUSD)](https://pharos.watch/stablecoin/sdusd-dtrinity/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Alto DUSD (DUSD)](https://pharos.watch/stablecoin/dusd-alto/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
-- [USDFC (USDFC)](https://pharos.watch/stablecoin/usdfc-secured-finance/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
+- [USDFC (USDFC)](https://pharos.watch/stablecoin/usdfc-secured-finance/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Invesco Short Duration US Government Securities Fund (USTB)](https://pharos.watch/stablecoin/ustb-superstate/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Ondo OUSG (OUSG)](https://pharos.watch/stablecoin/ousg-ondo-finance/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [iShares Silver Trust (Ondo Tokenized) (SLVon)](https://pharos.watch/stablecoin/slvon-ondo/): centralized stablecoin backed by real-world assets pegged to US Dollar.

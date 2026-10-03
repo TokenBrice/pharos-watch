@@ -406,6 +406,19 @@ describe("curated on-chain supply paths", () => {
     ], id))).toBeNull();
   });
 
+  it("cannot silently omit 0G when PYUSDx metadata gains the fifth native deployment", () => {
+    const meta = TRACKED_META_BY_ID.get("pyusdx-moonpay")!;
+    expect(hasRuntimeOnchainSupplyPath(meta)).toBe(true);
+    const expandedMeta = {
+      ...meta,
+      contracts: [...meta.contracts!, {
+        chain: "0g", address: "0xebdb0942ce16386ab90718c7bd10c91cdb66b14d", decimals: 6,
+      }],
+    };
+    expect(selectCuratedAggregateOnchainSupplyProbeContracts(expandedMeta)).toBeNull();
+    expect(hasRuntimeOnchainSupplyPath(expandedMeta)).toBe(false);
+  });
+
   // Shape: Centrifuge V3 burn/mint share bridge. Every reviewed deployment is
   // configured, including two that read exactly zero today - the Solana leg only
   // became configurable once allowZeroSupply started governing Solana reads.

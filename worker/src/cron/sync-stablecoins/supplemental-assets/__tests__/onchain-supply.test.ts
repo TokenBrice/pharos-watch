@@ -637,7 +637,7 @@ describe("discovery native supply aggregates", () => {
   });
 
   function installReads(contracts: NonNullable<StablecoinMeta["contracts"]>, supplies: (bigint | null)[]): void {
-    const read = (chain: string) => supplies[contracts.findIndex((contract) => contract.chain === chain)] ?? null;
+    const read = (chain: string) => chain === "0g" ? 0n : supplies[contracts.findIndex((contract) => contract.chain === chain)] ?? null;
     probeTrackedTokenSupplyMock.mockImplementation(async (_meta, input) => read(input.chain));
     fetchErc20TotalSupplyMock.mockImplementation(async (input) => read(input.chain));
     fetchSolanaTokenSupplyMock.mockImplementation(async () => read("solana"));
@@ -659,6 +659,42 @@ describe("discovery native supply aggregates", () => {
       await expect(fetchCuratedAggregateOnChainMcap(
         makeMeta({ id, name: id, symbol: id, contracts }), 1.25,
       )).resolves.toBeNull();
+    }
+  });
+
+  it.each([
+    { raw: 0n, reason: null },
+    { raw: 1n, reason: "zero-supply-guard-positive" },
+    { raw: null, reason: "zero-supply-guard-unavailable" },
+    { raw: new Error("RPC unavailable"), reason: "zero-supply-guard-unavailable" },
+  ])("publishes PYUSDx only after a same-run 0G zero read ($raw)", async ({ raw, reason }) => {
+    const { id, contracts, supplies, units } = cases[1];
+    installReads(contracts, supplies);
+    const nativeRead = fetchErc20TotalSupplyMock.getMockImplementation()!;
+    fetchErc20TotalSupplyMock.mockImplementation(async (input, ...args) => {
+      if (input.chain !== "0g") return nativeRead(input, ...args);
+      if (raw instanceof Error) throw raw;
+      return raw;
+    });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const meta = makeMeta({ id, name: id, symbol: id, contracts });
+      const result = await fetchCuratedAggregateOnChainMcap(meta, 1.25, buildChainRpcs());
+      if (reason === null) {
+        expect(result?.mcap).toBeCloseTo(units * 1.25, 6);
+        expect(Object.values(result?.chainCirculating ?? {}).reduce((sum, row) => sum + row.current, 0))
+          .toBeCloseTo(units * 1.25, 6);
+      } else {
+        expect(result).toBeNull();
+        const events = warn.mock.calls.map(([line]) => JSON.parse(String(line)));
+        expect(events).toContainEqual(expect.objectContaining({
+          event: "onchain-supply-aggregate-withheld",
+          metadata: expect.objectContaining({ stablecoinId: id, chain: "0g", reason }),
+        }));
+      }
+      expect(fetchErc20TotalSupplyMock.mock.calls.filter(([input]) => input.chain === "0g")).toHaveLength(1);
+    } finally {
+      warn.mockRestore();
     }
   });
 });

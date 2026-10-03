@@ -7,6 +7,7 @@ import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import {
   CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS,
   CURATED_AGGREGATE_ESCROW_RESIDUALS,
+  CURATED_AGGREGATE_ZERO_SUPPLY_GUARDS,
   onchainSupplyProbeFamily,
   selectCuratedAggregateOnchainSupplyProbeContracts,
   selectSupplementalOnchainSupplyProbeContract,
@@ -530,6 +531,37 @@ export async function fetchCuratedAggregateOnChainMcap(
   }
 
   if (!Number.isFinite(totalMcap) || totalMcap <= 0) return null;
+  const zeroGuard = CURATED_AGGREGATE_ZERO_SUPPLY_GUARDS[meta.id];
+  if (zeroGuard) {
+    throwIfAborted(signal);
+    let raw: bigint | null = null;
+    try {
+      raw = await fetchErc20TotalSupply(
+        buildEvmProbeInput(zeroGuard.chain),
+        zeroGuard.address,
+        signal ?? AbortSignal.timeout(10_000),
+        undefined,
+        zeroGuard.rpcUrl,
+      );
+    } catch {
+      throwIfAborted(signal);
+    }
+    if (raw !== 0n) {
+      logWorkerEvent({
+        scope: "handler",
+        level: "warn",
+        event: "onchain-supply-aggregate-withheld",
+        message: `[fiat-cg] ${meta.symbol} aggregate failed its same-run zero-supply guard`,
+        metadata: {
+          rule: "R4",
+          stablecoinId: meta.id,
+          chain: zeroGuard.chain,
+          reason: raw != null && raw > 0n ? "zero-supply-guard-positive" : "zero-supply-guard-unavailable",
+        },
+      });
+      return null;
+    }
+  }
   return {
     mcap: totalMcap,
     supplySource: "onchain-total-supply",

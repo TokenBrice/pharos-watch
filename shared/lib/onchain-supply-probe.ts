@@ -102,6 +102,7 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   ],
   // PYUSDx native Portal burn/mint supplies sum. Extension-held balances are
   // already in these totalSupply reads, so never add CUSD/ConcUSD separately.
+  // The unregistered 0G deployment must pass the same-run zero guard below.
   "pyusdx-moonpay": [
     { chain: "ethereum" },
     { chain: "arbitrum" },
@@ -792,6 +793,21 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   // representations (including Lisk and Asset Chain) cannot prove its global
   // supply; leave it on upstream supply until canonical accounting is available.
 
+};
+
+/**
+ * Known native deployments outside the product-chain catalog cannot be silently
+ * omitted from a fresh aggregate. Require exactly zero in the same run; positive
+ * or unavailable stock withholds publication until its chain can join the roster.
+ */
+export const CURATED_AGGREGATE_ZERO_SUPPLY_GUARDS: Readonly<
+  Record<string, { chain: string; address: string; rpcUrl: string }>
+> = {
+  "pyusdx-moonpay": {
+    chain: "0g",
+    address: "0xebdb0942ce16386ab90718c7bd10c91cdb66b14d",
+    ...SUPPLY_RPC_DEFAULTS["0g"],
+  },
 };
 
 // These canonical-chain totalSupply values already include tokens escrowed for
